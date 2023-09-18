@@ -1,0 +1,12 @@
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository#configuring-the-template-chooser
+blank_issues_enabled: true
+contact_links:
+  - name: Security Problem
+    url: mailto:security@temper.systems
+    about: Please report security problems directly and we'll coordinate via a [Github Security Advisory](https://docs.github.com/en/code-security/security-advisories/repository-security-advisories/about-repository-security-advisories) to fix the problem in a way that's safe for the community.
+  - name: Questions
+    url: https://stackoverflow.com/questions/tagged/temper
+    about: Issues are not a great way to ask questions about the language.  Language contributors monitor the "temper" tag on Stack Overflow so use that and we'll try to help.
+  - name: Discord
+    url: https://discord.com/invite/6Jb83cq5FH
+    about: A Discord server for discussing everything related to the Temper language.
