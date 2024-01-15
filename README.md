@@ -1,4 +1,4 @@
-# Temper private &Beta;
+# Temper private &beta;
 
 Please bear with us while we figure out how to ensure Temper is viable
 as a piece of technology infrastructure over the long term and dot our
