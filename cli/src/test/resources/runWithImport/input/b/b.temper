@@ -1,0 +1,4 @@
+export let logSomething(): Void {
+  // Side effect here to prevent inlining.
+  console.log("bar");
+}

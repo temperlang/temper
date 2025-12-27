@@ -1,0 +1,112 @@
+// This is a JSON list of logger names from which our logger APIs
+// are generated.  See kcodegen:
+
+[
+    // High level groupings
+    "frontend",
+    "backend",
+    "docgen",
+
+    // Within the frontend, we can configure logging per stage.
+    "frontend.lexStage",
+    "frontend.parseStage",
+    "frontend.importStage",
+    "frontend.disAmbiguateStage",
+    "frontend.syntaxMacroStage",
+    "frontend.defineStage",
+    "frontend.typeStage",
+    "frontend.functionMacroStage",
+    "frontend.exportStage",
+    "frontend.queryStage",
+    "frontend.generateCodeStage",
+
+    // We have specific points that we snapshot ASTs at.
+    // Before and after each stage.
+    "frontend.lexStage.before",
+    "frontend.lexStage.after",
+
+    "frontend.parseStage.before",
+    "frontend.parseStage.after",
+
+    "frontend.importStage.before",
+    "frontend.importStage.after",
+
+    "frontend.disAmbiguateStage.before",
+    "frontend.disAmbiguateStage.after",
+
+    "frontend.syntaxMacroStage.before",
+    "frontend.syntaxMacroStage.afterInterpretation",
+    "frontend.syntaxMacroStage.after",
+
+    "frontend.defineStage.before",
+    "frontend.defineStage.afterInterpretation",
+    "frontend.defineStage.afterInheritPropertyReassignability",
+    "frontend.defineStage.desugarDotOperations",
+    "frontend.defineStage.afterDesugarDotOperations",
+    "frontend.defineStage.linkThis",
+    "frontend.defineStage.afterLinkThis",
+    "frontend.defineStage.convertClasses",
+    "frontend.defineStage.afterConvertClasses",
+    "frontend.defineStage.afterAddTemperTestInstructions",
+    "frontend.defineStage.simplifyDeclarations",
+    "frontend.defineStage.afterSimplifyDeclarations",
+    "frontend.defineStage.convertObjectSyntax",
+    "frontend.defineStage.after",
+
+    // The type-stage is the first place quite a few micro-passes run, so it can be useful to
+    // be able to benchmark and observe the AST in multiple places.
+    "frontend.typeStage.before",
+    "frontend.typeStage.beforeInterpretation",
+    "frontend.typeStage.afterInterpretation",
+    "frontend.typeStage.magicSecurityDust",
+    "frontend.typeStage.afterSprinkle",
+    "frontend.typeStage.weaver",
+    "frontend.typeStage.afterWeave",
+    "frontend.typeStage.simplifyFlow",
+    "frontend.typeStage.afterSimplifyFlow",
+    "frontend.typeStage.makeResultsExplicit",
+    "frontend.typeStage.afterExplicitResults",
+    "frontend.typeStage.type",
+    "frontend.typeStage.afterTyper",
+    "frontend.typeStage.useBeforeInit",
+    "frontend.typeStage.afterUseBeforeInit",
+    "frontend.typeStage.reorderArgs",
+    "frontend.typeStage.afterReorderArgs",
+    "frontend.typeStage.simplifyFlow2",
+    "frontend.typeStage.afterSimplifyFlow2",
+    "frontend.typeStage.cleanupTemporaries",
+    "frontend.typeStage.afterCleanupTemporaries",
+    "frontend.typeStage.simplifyFlow3",
+    "frontend.typeStage.afterSimplifyFlow3",
+    "frontend.typeStage.repairUnrealizedGoals",
+    "frontend.typeStage.afterRepairUnrealizedGoals",
+    "frontend.typeStage.after",
+
+    "frontend.functionMacroStage.before",
+    "frontend.functionMacroStage.after",
+
+    "frontend.exportStage.before",
+    "frontend.exportStage.after",
+    "frontend.exportStage.exports",
+
+    "frontend.queryStage.before",
+    "frontend.queryStage.after",
+
+    "frontend.generateCodeStage.before",
+    "frontend.generateCodeStage.beforeInterpretation",
+    "frontend.generateCodeStage.afterInterpretation",
+    "frontend.generateCodeStage.magicSecurityDust",
+    "frontend.generateCodeStage.afterSprinkle",
+    "frontend.generateCodeStage.weaver",
+    "frontend.generateCodeStage.afterWeave",
+    "frontend.generateCodeStage.type",
+    "frontend.generateCodeStage.afterTyper",
+    "frontend.generateCodeStage.typeCheck",
+    "frontend.generateCodeStage.afterTypeCheck",
+    "frontend.generateCodeStage.simplifyFlow",
+    "frontend.generateCodeStage.afterSimplifyFlow",
+    "frontend.generateCodeStage.cleanupTemporaries",
+    "frontend.generateCodeStage.afterCleanupTemporaries",
+    "frontend.generateCodeStage.simplifyFlow2",
+    "frontend.generateCodeStage.after",
+]

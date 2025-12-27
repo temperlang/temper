@@ -1,0 +1,93 @@
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform'
+    id 'org.jetbrains.kotlin.plugin.serialization'
+}
+ext.temperProject = 'mpp'
+//apply plugin: 'maven-publish'
+
+kotlin {
+    sourceSets {
+        all {
+            languageSettings {
+                languageVersion = gradle.kotlin_language_version
+                apiVersion = gradle.kotlin_api_version
+                //enableLanguageFeature('InlineClasses')
+                progressiveMode = true
+                //verbose = true
+                optIn("kotlin.RequiresOptIn")
+            }
+        }
+    }
+
+    jvm()
+//  js() {
+//      nodejs {
+//      }
+//  }
+    // For ARM, should be changed to iosArm32 or iosArm64
+    // For Linux, should be changed to e.g. linuxX64
+    // For MacOS, should be changed to e.g. macosX64
+    // For Windows, should be changed to e.g. mingwX64
+//  linuxX64('linux')
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation kotlin('stdlib-common')
+                implementation kotlin('reflect')
+                implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coro_version"
+                implementation project(':common')
+                implementation project(':log')
+                implementation project(':be')
+                implementation project(':builtin')
+                implementation project(':format')
+                implementation project(':frontend')
+                implementation project(':fs')
+                implementation project(':fundamentals')
+                implementation project(':interp')
+                implementation project(':lexer')
+                implementation project(':library')
+                implementation project(':name')
+                implementation project(':result-helpers')
+                implementation project(':stage')
+                implementation "org.jetbrains.kotlinx:kotlinx-serialization-core:$kotlinx_serialization_version"
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test-common')
+                implementation kotlin('test-annotations-common')
+            }
+        }
+        jvmMain {
+            dependencies {
+                implementation kotlin('stdlib-jdk8')
+                implementation kotlin('test')
+                implementation kotlin('test-junit5')
+            }
+        }
+        jvmTest {
+            dependencies {
+                implementation kotlin('test')
+                implementation kotlin('test-junit5')
+                implementation("io.github.pdvrieze.xmlutil:core-jvm:$serialization_xml_version")
+                implementation("io.github.pdvrieze.xmlutil:xmlserializable-jvm:$serialization_xml_version")
+
+            }
+        }
+//      jsMain {
+//          dependencies {
+//              implementation kotlin('stdlib-js')
+//              implementation kotlin('test-js')
+//          }
+//      }
+//      jsTest {
+//          dependencies {
+//              implementation kotlin('test-js')
+//          }
+//      }
+//      linuxMain {
+//      }
+//      linuxTest {
+//      }
+    }
+}

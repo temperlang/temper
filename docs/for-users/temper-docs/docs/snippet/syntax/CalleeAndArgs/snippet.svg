@@ -1,0 +1,352 @@
+<svg class="railroad-diagram" width="642" height="287" viewBox="0 0 642 287" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>CalleeAndArgs &#58;&#61; CalleeAndArgs &#34;&#58;&#34; Type &#124; CalleeAndArgs &#40;&#34;extends&#34; &#124; &#34;implements&#34;&#41; Type &#40;&#34;&#44;&#34; Type&#41;&#42; &#124; CalleeAndArgs &#34;forbids&#34; Type &#40;&#34;&#44;&#34; Type&#41;&#42; &#124; CalleeAndArgs &#34;supports&#34; Type &#40;&#34;&#44;&#34; Type&#41;&#42; &#124; Callee CallArgs &#124; Callee</title>
+<style><![CDATA[
+svg.railroad-diagram {
+    background-color: hsl(30,20%,95%);
+}
+svg.railroad-diagram path {
+    stroke-width: 3;
+    stroke: black;
+    fill: rgba(0,0,0,0);
+}
+svg.railroad-diagram text {
+    font: bold 14px monospace;
+    text-anchor: middle;
+    white-space: pre;
+}
+svg.railroad-diagram text.diagram-text {
+    font-size: 12px;
+}
+svg.railroad-diagram text.diagram-arrow {
+    font-size: 16px;
+}
+svg.railroad-diagram text.label {
+    text-anchor: start;
+}
+svg.railroad-diagram text.comment {
+    font: italic 12px monospace;
+}
+svg.railroad-diagram g.non-terminal text {
+    /*font-style: italic;*/
+}
+svg.railroad-diagram rect {
+    stroke-width: 3;
+    stroke: black;
+    fill: hsl(120,100%,90%);
+}
+svg.railroad-diagram rect.group-box {
+    stroke: gray;
+    stroke-dasharray: 10 5;
+    fill: none;
+}
+svg.railroad-diagram path.diagram-text {
+    stroke-width: 3;
+    stroke: black;
+    fill: white;
+    cursor: help;
+}
+svg.railroad-diagram g.diagram-text:hover path.diagram-text {
+    fill: #eee;
+}
+
+]]></style>
+
+<g transform="translate(.5 .5)">
+<g>
+<path d="M20 177v20m10 -20v20m-10 -10h20"></path>
+</g>
+<g>
+<path d="M40 187h0"></path>
+<path d="M602 187h0"></path>
+<path d="M40 187a10 10 0 0 0 10 -10v-28a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M60 139h22.75"></path>
+<path d="M559.25 139h22.75"></path>
+<g class="non-terminal">
+<path d="M82.75 139h0"></path>
+<path d="M213.25 139h0"></path>
+<rect x="82.75" y="128" width="130.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-calleeandargs"><text x="148" y="143">CalleeAndArgs</text>
+</a>
+</g>
+<path d="M213.25 139h10"></path>
+<path d="M223.25 139h10"></path>
+<g class="terminal">
+<path d="M233.25 139h0"></path>
+<path d="M312.75 139h0"></path>
+<rect x="233.25" y="128" width="79.5" height="22" rx="10" ry="10"></rect>
+<text x="273" y="143">forbids</text>
+</g>
+<path d="M312.75 139h10"></path>
+<path d="M322.75 139h10"></path>
+<g class="non-terminal">
+<path d="M332.75 139h0"></path>
+<path d="M386.75 139h0"></path>
+<rect x="332.75" y="128" width="54" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-type"><text x="359.75" y="143">Type</text>
+</a>
+</g>
+<path d="M386.75 139h10"></path>
+<g>
+<path d="M396.75 139h0"></path>
+<path d="M559.25 139h0"></path>
+<path d="M396.75 139a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M416.75 119h122.5"></path>
+</g>
+<path d="M539.25 119a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M396.75 139h20"></path>
+<g>
+<path d="M416.75 139h0"></path>
+<path d="M539.25 139h0"></path>
+<path d="M416.75 139h10"></path>
+<g>
+<path d="M426.75 139h0"></path>
+<path d="M529.25 139h0"></path>
+<g class="terminal">
+<path d="M426.75 139h0"></path>
+<path d="M455.25 139h0"></path>
+<rect x="426.75" y="128" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="441" y="143">,</text>
+</g>
+<path d="M455.25 139h10"></path>
+<path d="M465.25 139h10"></path>
+<g class="non-terminal">
+<path d="M475.25 139h0"></path>
+<path d="M529.25 139h0"></path>
+<rect x="475.25" y="128" width="54" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-type"><text x="502.25" y="143">Type</text>
+</a>
+</g>
+</g>
+<path d="M529.25 139h10"></path>
+<path d="M426.75 139a10 10 0 0 0 -10 10v0a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M426.75 159h102.5"></path>
+</g>
+<path d="M529.25 159a10 10 0 0 0 10 -10v0a10 10 0 0 0 -10 -10"></path>
+</g>
+<path d="M539.25 139h20"></path>
+</g>
+</g>
+<path d="M582 139a10 10 0 0 1 10 10v28a10 10 0 0 0 10 10"></path>
+<path d="M40 187a10 10 0 0 0 10 -10v-76a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M60 91h0"></path>
+<path d="M582 91h0"></path>
+<g class="non-terminal">
+<path d="M60 91h0"></path>
+<path d="M190.5 91h0"></path>
+<rect x="60" y="80" width="130.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-calleeandargs"><text x="125.25" y="95">CalleeAndArgs</text>
+</a>
+</g>
+<path d="M190.5 91h10"></path>
+<g>
+<path d="M200.5 91h0"></path>
+<path d="M345.5 91h0"></path>
+<path d="M200.5 91a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
+<g class="terminal">
+<path d="M220.5 61h12.75"></path>
+<path d="M312.75 61h12.75"></path>
+<rect x="233.25" y="50" width="79.5" height="22" rx="10" ry="10"></rect>
+<text x="273" y="65">extends</text>
+</g>
+<path d="M325.5 61a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
+<path d="M200.5 91h20"></path>
+<g class="terminal">
+<path d="M220.5 91h0"></path>
+<path d="M325.5 91h0"></path>
+<rect x="220.5" y="80" width="105" height="22" rx="10" ry="10"></rect>
+<text x="273" y="95">implements</text>
+</g>
+<path d="M325.5 91h20"></path>
+</g>
+<path d="M345.5 91h10"></path>
+<g class="non-terminal">
+<path d="M355.5 91h0"></path>
+<path d="M409.5 91h0"></path>
+<rect x="355.5" y="80" width="54" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-type"><text x="382.5" y="95">Type</text>
+</a>
+</g>
+<path d="M409.5 91h10"></path>
+<g>
+<path d="M419.5 91h0"></path>
+<path d="M582 91h0"></path>
+<path d="M419.5 91a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M439.5 71h122.5"></path>
+</g>
+<path d="M562 71a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M419.5 91h20"></path>
+<g>
+<path d="M439.5 91h0"></path>
+<path d="M562 91h0"></path>
+<path d="M439.5 91h10"></path>
+<g>
+<path d="M449.5 91h0"></path>
+<path d="M552 91h0"></path>
+<g class="terminal">
+<path d="M449.5 91h0"></path>
+<path d="M478 91h0"></path>
+<rect x="449.5" y="80" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="463.75" y="95">,</text>
+</g>
+<path d="M478 91h10"></path>
+<path d="M488 91h10"></path>
+<g class="non-terminal">
+<path d="M498 91h0"></path>
+<path d="M552 91h0"></path>
+<rect x="498" y="80" width="54" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-type"><text x="525" y="95">Type</text>
+</a>
+</g>
+</g>
+<path d="M552 91h10"></path>
+<path d="M449.5 91a10 10 0 0 0 -10 10v0a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M449.5 111h102.5"></path>
+</g>
+<path d="M552 111a10 10 0 0 0 10 -10v0a10 10 0 0 0 -10 -10"></path>
+</g>
+<path d="M562 91h20"></path>
+</g>
+</g>
+<path d="M582 91a10 10 0 0 1 10 10v76a10 10 0 0 0 10 10"></path>
+<path d="M40 187a10 10 0 0 0 10 -10v-136a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M60 31h134.5"></path>
+<path d="M447.5 31h134.5"></path>
+<g class="non-terminal">
+<path d="M194.5 31h0"></path>
+<path d="M325 31h0"></path>
+<rect x="194.5" y="20" width="130.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-calleeandargs"><text x="259.75" y="35">CalleeAndArgs</text>
+</a>
+</g>
+<path d="M325 31h10"></path>
+<path d="M335 31h10"></path>
+<g class="terminal">
+<path d="M345 31h0"></path>
+<path d="M373.5 31h0"></path>
+<rect x="345" y="20" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="359.25" y="35">:</text>
+</g>
+<path d="M373.5 31h10"></path>
+<path d="M383.5 31h10"></path>
+<g class="non-terminal">
+<path d="M393.5 31h0"></path>
+<path d="M447.5 31h0"></path>
+<rect x="393.5" y="20" width="54" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-type"><text x="420.5" y="35">Type</text>
+</a>
+</g>
+</g>
+<path d="M582 31a10 10 0 0 1 10 10v136a10 10 0 0 0 10 10"></path>
+<path d="M40 187h20"></path>
+<g>
+<path d="M60 187h18.5"></path>
+<path d="M563.5 187h18.5"></path>
+<g class="non-terminal">
+<path d="M78.5 187h0"></path>
+<path d="M209 187h0"></path>
+<rect x="78.5" y="176" width="130.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-calleeandargs"><text x="143.75" y="191">CalleeAndArgs</text>
+</a>
+</g>
+<path d="M209 187h10"></path>
+<path d="M219 187h10"></path>
+<g class="terminal">
+<path d="M229 187h0"></path>
+<path d="M317 187h0"></path>
+<rect x="229" y="176" width="88" height="22" rx="10" ry="10"></rect>
+<text x="273" y="191">supports</text>
+</g>
+<path d="M317 187h10"></path>
+<path d="M327 187h10"></path>
+<g class="non-terminal">
+<path d="M337 187h0"></path>
+<path d="M391 187h0"></path>
+<rect x="337" y="176" width="54" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-type"><text x="364" y="191">Type</text>
+</a>
+</g>
+<path d="M391 187h10"></path>
+<g>
+<path d="M401 187h0"></path>
+<path d="M563.5 187h0"></path>
+<path d="M401 187a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M421 167h122.5"></path>
+</g>
+<path d="M543.5 167a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M401 187h20"></path>
+<g>
+<path d="M421 187h0"></path>
+<path d="M543.5 187h0"></path>
+<path d="M421 187h10"></path>
+<g>
+<path d="M431 187h0"></path>
+<path d="M533.5 187h0"></path>
+<g class="terminal">
+<path d="M431 187h0"></path>
+<path d="M459.5 187h0"></path>
+<rect x="431" y="176" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="445.25" y="191">,</text>
+</g>
+<path d="M459.5 187h10"></path>
+<path d="M469.5 187h10"></path>
+<g class="non-terminal">
+<path d="M479.5 187h0"></path>
+<path d="M533.5 187h0"></path>
+<rect x="479.5" y="176" width="54" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-type"><text x="506.5" y="191">Type</text>
+</a>
+</g>
+</g>
+<path d="M533.5 187h10"></path>
+<path d="M431 187a10 10 0 0 0 -10 10v0a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M431 207h102.5"></path>
+</g>
+<path d="M533.5 207a10 10 0 0 0 10 -10v0a10 10 0 0 0 -10 -10"></path>
+</g>
+<path d="M543.5 187h20"></path>
+</g>
+</g>
+<path d="M582 187h20"></path>
+<path d="M40 187a10 10 0 0 1 10 10v19a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M60 226h171.5"></path>
+<path d="M410.5 226h171.5"></path>
+<g class="non-terminal">
+<path d="M231.5 226h0"></path>
+<path d="M302.5 226h0"></path>
+<rect x="231.5" y="215" width="71" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-callee"><text x="267" y="230">Callee</text>
+</a>
+</g>
+<path d="M302.5 226h10"></path>
+<path d="M312.5 226h10"></path>
+<g class="non-terminal">
+<path d="M322.5 226h0"></path>
+<path d="M410.5 226h0"></path>
+<rect x="322.5" y="215" width="88" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-callargs"><text x="366.5" y="230">CallArgs</text>
+</a>
+</g>
+</g>
+<path d="M582 226a10 10 0 0 0 10 -10v-19a10 10 0 0 1 10 -10"></path>
+<path d="M40 187a10 10 0 0 1 10 10v49a10 10 0 0 0 10 10"></path>
+<g class="non-terminal">
+<path d="M60 256h225.5"></path>
+<path d="M356.5 256h225.5"></path>
+<rect x="285.5" y="245" width="71" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-callee"><text x="321" y="260">Callee</text>
+</a>
+</g>
+<path d="M582 256a10 10 0 0 0 10 -10v-49a10 10 0 0 1 10 -10"></path>
+</g>
+<path d="M 602 187 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+</g>
+</svg>

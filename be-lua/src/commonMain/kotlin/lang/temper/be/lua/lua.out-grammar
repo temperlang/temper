@@ -1,0 +1,98 @@
+let namespace = "Lua";
+
+let imports = """
+  "lang.temper.name.OutName
+  "lang.temper.name.TemperName
+;
+
+Program = Chunk;
+
+Chunk ::= body%Stmt*"" & last%LastStmt?;
+
+Stmt = LabelStmt | DoStmt | WhileStmt | IfStmt | SetStmt | FunctionStmt | LocalDeclStmt | LocalStmt | LocalFunctionStmt | CallStmt | Comment | GotoStmt;
+LastStmt = ReturnStmt | BreakStmt | GotoStmt;
+
+CallStmt ::= callExpr%CallExpr & ";";
+CallExpr = MethodCallExpr | FunctionCallExpr;
+FunctionCallExpr ::= func%Expr & args%Args;
+MethodCallExpr ::= func%Expr & ":" & method%Name & args%Args;
+
+LabelStmt ::= "::" & name%Name & "::";
+DoStmt ::= "do" & body%Chunk & "end";
+WhileStmt ::= "while" & cond%Expr & "do" & body%Chunk & "end";
+IfStmt ::= "if" & cond%Expr & "then" & then%Chunk & elseIfs%ElseIf*"" & els%Else? & "end";
+ElseIf ::= "elseif" & cond%Expr & "then" & then%Chunk;
+Else ::= "else" & then%Chunk;
+FunctionStmt ::= "function" & dest%SetTarget & params%Params & body%Chunk & "end";
+LocalFunctionStmt ::= "local" & "function" & name%Name & params%Params & body%Chunk & "end";
+SetStmt ::= targets%SetTargets & "=" & exprs%Exprs & ";";
+LocalDeclStmt ::= "local" & targets%SetTargets & ";";
+LocalStmt ::= "local" & targets%SetTargets & "=" & exprs%Exprs & ";";
+
+ReturnStmt ::= "return" & exprs%Exprs & ";";
+BreakStmt ::= "break" & ";";
+GotoStmt ::= "goto" & name%Name & ";";
+
+Params ::= "(" & params%ParamOrRest*"," & ")";
+ParamOrRest = Param | RestExpr;
+Param ::= name%Name;
+Rest ::= "...";
+
+SetTargets ::= targets%SetTarget*",";
+
+SetTargetOrWrapped = SetTarget | WrappedExpr;
+SetTarget = NameSetTarget | DotSetTarget | IndexSetTarget;
+NameSetTarget ::= target%Name;
+DotSetTarget ::= obj%SetTargetOrWrapped & "." & index%Name;
+IndexSetTarget ::= obj%SetTargetOrWrapped & "[" & index%Expr & "]";
+
+Args ::= "(" & exprs%Exprs & ")";
+
+Exprs ::= exprs%Expr*",";
+Expr = BinaryExpr | LiteralExpr | UnaryExpr | CallExpr | FunctionExpr | RestExpr;
+BinaryExpr ::= "(" & left%Expr & op%BinaryOp & right%Expr & ")";
+UnaryExpr ::= op%UnaryOp & right%Expr;
+FunctionExpr ::= "function" & params%Params & body%Chunk & "end";
+
+DotIndexExpr ::= obj%LiteralExpr & "." & index%Name;
+WrappedExpr ::= "(" & expr%Expr & ")";
+
+TableExpr ::= "{" & args%TableEntry*"," & "}";
+TableEntry = NamedTableEntry | WrappedTableEntry | IndexTableEntry;
+NamedTableEntry ::= key%Name & "=" & value%Expr;
+WrappedTableEntry ::= "[(" & key%Expr & ")]" & "=" & value%Expr;
+IndexTableEntry ::= value%Expr;
+
+LiteralExpr = Num | Name | Str | DotIndexExpr | IndexExpr | WrappedExpr | TableExpr;
+
+IndexExpr ::= obj%LiteralExpr & "[" & index%Expr & "]";
+
+BinaryOp(opEnum%`BinaryOpEnum`, expressionOperatorDefinition%`LuaOperatorDefinition`);
+BinaryOp.renderTo = `opEnum.renderTo(tokenSink)`;
+BinaryOp.operatorDefinition = `null`;
+
+Num(n%`Number`);
+Num.renderTo = `tokenSink.number("$n")`;
+Num.operatorDefinition = `null`;
+
+RestExpr;
+RestExpr.renderTo = `tokenSink.punctuation("...")`;
+RestExpr.operatorDefinition = `null`;
+
+Comment(text%`String`);
+Comment.renderTo = `tokenSink.comment("--[[${text}]]")`;
+Comment.operatorDefinition = `null`;
+
+Str(s%`String`);
+Str.renderTo = `tokenSink.quoted(stringTokenText(s))`;
+Str.operatorDefinition = `null`;
+
+UnaryOp(opEnum%`UnaryOpEnum`, expressionOperatorDefinition%`LuaOperatorDefinition`);
+UnaryOp.renderTo = `opEnum.renderTo(tokenSink)`;
+UnaryOp.operatorDefinition = `null`;
+
+Name(id%`LuaName`, sourceIdentifier%`TemperName?`);
+Name.sourceIdentifier.default = `null`;
+Name.outName%`OutName` = `OutName(id.text, sourceIdentifier)`;
+Name.renderTo = `tokenSink.emit(outName.toToken(inOperatorPosition = false))`;
+Name.operatorDefinition = `null`;

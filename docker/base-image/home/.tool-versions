@@ -1,0 +1,31 @@
+asdf-plugin-manager 1.1.1
+
+# Per https://github.com/asdf-vm/asdf/issues/929 the order is not
+# relevant; added here for readability.
+
+# Java
+java temurin-21.0.6+7.0.LTS temurin-8.0.442+6
+gradle 8.5
+maven 3.9.6
+
+# Lua
+lua 5.4.6
+# luajit 2.1.0-beta3--3.4.0
+
+# .NET
+dotnet 6.0.418
+
+# NodeJS
+nodejs 18.20.8
+
+# Python
+python 3.11.11
+# poetry -- deferred
+
+# Rust
+rust 1.71.1
+
+# VIM
+vim 9.1.0
+
+# Added by post-asdf-helpers

@@ -1,0 +1,134 @@
+name: release-dev
+permissions:
+  contents: read
+
+on:
+  # Maybe every push to main is more churn than needed.
+  # push:
+  #   branches: [main]
+  schedule:
+    # Push things a bit later for UTC.
+    - cron: "0 5 * * 2,3,4,5,6"
+    # Global perspective might just ask for simple, though.
+    # - cron: "0 0 * * *"
+  # This enables a button in Actions that lets you manually initiate a workflow on any branch.
+  workflow_dispatch:
+    inputs:
+      skip_build:
+        description: "Skip build and release"
+        default: false
+        type: boolean
+      skip_release:
+        description: "Skip releasing the build"
+        default: false
+        type: boolean
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      runners: ${{ steps.runners.outputs.runners }}
+    steps:
+      - name: Check out code
+        if: ${{ ! inputs.skip_build }}
+        uses: actions/checkout@v4
+        timeout-minutes: 3
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up JDK
+        if: ${{ ! inputs.skip_build }}
+        uses: actions/setup-java@v4
+        timeout-minutes: 3
+        with:
+          distribution: "zulu"
+          java-version: 21
+
+      # Build first first separately so bundlings below are more comparable.
+      - name: Build Temper combo jar
+        if: ${{ ! inputs.skip_build }}
+        # TODO Use simpler bundling until ProGuard works for Kotlin 2.2.
+        # run: ./gradlew shrinkJars
+        run: ./gradlew shadowJar
+
+      - name: Retrieve JRE prebake release
+        if: ${{ ! inputs.skip_build }}
+        uses: robinraju/release-downloader@v1.10
+        with:
+          tag: jre_bundle
+          repository: temperlang/jre4temper
+          fileName: '*'
+          out-file-path: cli/build/distributions
+
+      - name: Determine runners for test
+        id: runners
+        run: |
+          # boolean stringifies to true or false, which happen to be bash primitives
+          if ${{ ! inputs.skip_build }}; then
+            echo "runners=$(jq -c '[.[] | .runner]' < cli/build/distributions/manifest.json)"
+          else
+            echo "runners=[]"
+          fi >> "$GITHUB_OUTPUT"
+
+      - name: Generate bundles
+        if: ${{ ! inputs.skip_build }}
+        run: |
+          jq -r '.[] | @sh "./gradlew bundleTemperJre -Pjre=\(.tarball | gsub(".tgz$"; "")) -Pplatform=\(.platform)"' \
+            < cli/build/distributions/manifest.json > cli/build/bundle-commands.sh
+          source cli/build/bundle-commands.sh
+
+      # Back to single step for all OS options here.
+      - name: Upload artifacts
+        if: ${{ ! inputs.skip_build && ! inputs.skip_release }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release
+          # At present, this pattern gets just the bundles, and it also
+          # represents something called "temper" that's followed up with things
+          # like version label and so on. So it ought to be reliable going
+          # forward as well.
+          # It misses "temper.jar" at the moment, and I think that's ok.
+          # If we decide we want to publish it independently, we should probably
+          # still tarball it and/or put version info on the jar file.
+          path: cli/build/distributions/temper-*
+          # Keep just a bit of history for now for manual inspection.
+          retention-days: 2
+
+  release:
+    needs: bundle
+    runs-on: ubuntu-latest
+    permissions:
+      # No write on main build because of gradle build.
+      # Here we run less arbitrary code.
+      contents: write
+    steps:
+      - name: Download artifacts
+        if: ${{ ! inputs.skip_build && ! inputs.skip_release }}
+        uses: actions/download-artifact@v4
+        timeout-minutes: 30
+
+      - name: Review artifacts
+        if: ${{ ! inputs.skip_build && ! inputs.skip_release }}
+        run: ls -l release/
+
+      - name: Update dev release
+        if: ${{ ! inputs.skip_build && ! inputs.skip_release }}
+        uses: temperlang/nightly-release@original
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: dev
+          name: "Dev/Nightly Build $$"
+          draft: false
+          prerelease: true
+          body: "Use these automated builds at your own risk!"
+          files: release/*
+
+  test:
+    needs: [release, bundle]
+    uses: ./.github/workflows/integration-tests.yml
+    with:
+      args: ""
+      runners: ${{ needs.bundle.outputs.runners }}

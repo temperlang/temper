@@ -1,0 +1,70 @@
+#!/usr/bin/env node
+
+let process = require("process");
+let child_process = require("child_process");
+let fs = require("fs");
+let path = require("path");
+
+let [, /*scriptName*/, scriptToRun] = process.argv;
+
+// Unpack --args '["path/to/js/file.js"]' --out path/to/output/file.svg
+let inputOutputPairs = [];
+{
+    // First two arguments on argv are
+    // - node
+    // - this script
+    let args = process.argv.slice(2);
+
+    // See Kotlin `class SnippetDocContent` for details on this calling
+    // convention.
+    let scriptToRun = null;
+    for (let i = 0, n = args.length; i < n; i += 2) {
+        let next = args[i + 1];
+        switch (args[i]) {
+        case "--args":
+            if (scriptToRun !== null) {
+                throw new Error(`Unused --arg argument in ${JSON.stringify(args)}`);
+            }
+            [scriptToRun] = JSON.parse(next);
+            break;
+        case "--out":
+            if (typeof scriptToRun !== 'string') {
+                throw new Error(`arg ${i} in ${JSON.stringify(args)}`);
+            }
+            inputOutputPairs.push([scriptToRun, next]);
+            scriptToRun = null;
+            break;
+        default:
+            throw new Error(`Unexpected arg ${i} in ${JSON.stringify(args)}`);
+        }
+    }
+    if (scriptToRun !== null) {
+        throw new Error(`Unused --arg argument in ${JSON.stringify(args)}`);
+    }
+}
+if (inputOutputPairs.length === 0) { return; }
+
+// We try to install a dependency for the scripts.
+// We do that in the build-user-docs/build directory
+// so that it's an ancestor of the snippet JS files.
+const pathElements = inputOutputPairs[0][0].split(/[/\\]/g);
+const buildDir = path.join(
+    ...pathElements.slice(0, pathElements.indexOf("build") + 1)
+);
+if (
+    !fs.existsSync(path.join(
+        buildDir, "node_modules", "@prantlf", "railroad-diagrams", "package.json"
+    ))
+) {
+    child_process.execSync(
+        "npm install @prantlf/railroad-diagrams",
+        { cwd: buildDir }
+    );
+}
+
+for (let [scriptToRun, outputPath] of inputOutputPairs) {
+    const svg = require(`./${
+        path.relative(__dirname, scriptToRun).split(path.delimiter).join('/')
+    }`);
+    fs.writeFileSync(outputPath, svg);
+}

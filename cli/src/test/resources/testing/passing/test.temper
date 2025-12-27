@@ -1,0 +1,9 @@
+// Define the same name twice to see if that works.
+
+test("--== a test case ==--") {
+  assert(true) { "Oh noes" }
+}
+
+test("--== a test case ==--") {
+  assert(true) { "Oh noes" }
+}

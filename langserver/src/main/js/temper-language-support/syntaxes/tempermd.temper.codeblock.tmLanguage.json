@@ -1,0 +1,41 @@
+{
+  "scopeName": "tempermd.temper.codeblock",
+  "// Note": "The selector subtraction helps prevent close ``` from being seen as temper open blocks.",
+  "//  ...": "If we get plain ``` seen as temper for tempermd blocks, might need to work subtraction out for those, too.",
+  "injectionSelector": "L:meta.embedded.block.tempermd, L:source.tempermd - (comment.block.html, meta.embedded.block.temper, markup.fenced_code.block.markdown)",
+  "patterns": [
+    { "include": "#temperCodeBlock" },
+    { "include": "#temperIndentedCodeBlock" }
+  ],
+  "repository": {
+    "temperCodeBlock": {
+      "name": "markup.fenced_code.block.markdown",
+      "begin": "(^|\\G)(\\s*)(\\`{3,}|~{3,})\\s*(?i:(temper)?(?:\\s+(inert))?(?:\\s+([^`~]*))?$)",
+      "beginCaptures": {
+        "3": { "name": "punctuation.definition.markdown" },
+        "4": { "name": "fenced_code.block.language.markdown" },
+        "5": { "name": "keyword.control.inert.temper" },
+        "6": { "name": "fenced_code.block.language.attributes.markdown" }
+      },
+      "end": "(^|\\G)(\\2|\\s{0,3})(\\3)\\s*$",
+      "endCaptures": {
+        "3": { "name": "punctuation.definition.markdown" }
+      },
+      "patterns": [
+        {
+          "begin": "(^|\\G)(\\s*)(.*)",
+          "while": "(^|\\G)(?!\\s*([`~]{3,})\\s*$)",
+          "contentName": "meta.embedded.block.temper",
+          "patterns": [{ "include": "source.temper" }]
+        }
+      ]
+    },
+    "temperIndentedCodeBlock": {
+      "// Based on": "https://github.com/microsoft/vscode/blob/d772411ae2f1c6436244d9f5c5ded758ab9c57bf/extensions/markdown-basics/syntaxes/markdown.tmLanguage.json#L2475",
+      "name": "meta.embedded.block.temper",
+      "begin": "(^|\\G)([ ]{4}|\\t)",
+      "while": "(^|\\G)([ ]{4}|\\t)",
+      "patterns": [{ "include": "source.temper" }]
+    }
+  }
+}

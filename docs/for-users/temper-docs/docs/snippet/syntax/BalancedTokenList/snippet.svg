@@ -1,0 +1,101 @@
+<svg class="railroad-diagram" width="344.5" height="106" viewBox="0 0 344.5 106" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>BalancedTokenList &#58;&#61; &#40;BalancedTokenList &#124; any token&#41;&#42;</title>
+<style><![CDATA[
+svg.railroad-diagram {
+    background-color: hsl(30,20%,95%);
+}
+svg.railroad-diagram path {
+    stroke-width: 3;
+    stroke: black;
+    fill: rgba(0,0,0,0);
+}
+svg.railroad-diagram text {
+    font: bold 14px monospace;
+    text-anchor: middle;
+    white-space: pre;
+}
+svg.railroad-diagram text.diagram-text {
+    font-size: 12px;
+}
+svg.railroad-diagram text.diagram-arrow {
+    font-size: 16px;
+}
+svg.railroad-diagram text.label {
+    text-anchor: start;
+}
+svg.railroad-diagram text.comment {
+    font: italic 12px monospace;
+}
+svg.railroad-diagram g.non-terminal text {
+    /*font-style: italic;*/
+}
+svg.railroad-diagram rect {
+    stroke-width: 3;
+    stroke: black;
+    fill: hsl(120,100%,90%);
+}
+svg.railroad-diagram rect.group-box {
+    stroke: gray;
+    stroke-dasharray: 10 5;
+    fill: none;
+}
+svg.railroad-diagram path.diagram-text {
+    stroke-width: 3;
+    stroke: black;
+    fill: white;
+    cursor: help;
+}
+svg.railroad-diagram g.diagram-text:hover path.diagram-text {
+    fill: #eee;
+}
+
+]]></style>
+
+<g transform="translate(.5 .5)">
+<g>
+<path d="M20 56v20m10 -20v20m-10 -10h20"></path>
+</g>
+<g>
+<path d="M40 66h0"></path>
+<path d="M304.5 66h0"></path>
+<path d="M40 66a10 10 0 0 0 10 -10v-26a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M60 20h224.5"></path>
+</g>
+<path d="M284.5 20a10 10 0 0 1 10 10v26a10 10 0 0 0 10 10"></path>
+<path d="M40 66h20"></path>
+<g>
+<path d="M60 66h0"></path>
+<path d="M284.5 66h0"></path>
+<path d="M60 66h10"></path>
+<g>
+<path d="M70 66h0"></path>
+<path d="M274.5 66h0"></path>
+<path d="M70 66a10 10 0 0 0 10 -10v-7a10 10 0 0 1 10 -10"></path>
+<g class="non-terminal">
+<path d="M90 39h0"></path>
+<path d="M254.5 39h0"></path>
+<rect x="90" y="28" width="164.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-balancedtokenlist"><text x="172.25" y="43">BalancedTokenList</text>
+</a>
+</g>
+<path d="M254.5 39a10 10 0 0 1 10 10v7a10 10 0 0 0 10 10"></path>
+<path d="M70 66h20"></path>
+<g>
+<path d="M90 66h45.75"></path>
+<path d="M208.75 66h45.75"></path>
+<text x="172.25" y="71" class="comment">any token</text>
+</g>
+<path d="M254.5 66h20"></path>
+</g>
+<path d="M274.5 66h10"></path>
+<path d="M70 66a10 10 0 0 0 -10 10v0a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M70 86h204.5"></path>
+</g>
+<path d="M274.5 86a10 10 0 0 0 10 -10v0a10 10 0 0 0 -10 -10"></path>
+</g>
+<path d="M284.5 66h20"></path>
+</g>
+<path d="M 304.5 66 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+</g>
+</svg>

@@ -1,0 +1,7 @@
+// This is all busywork to prevent inlining.
+let foo(): List<Int> {
+  return [21 + 21, 42];
+}
+var a = foo()[0];
+a = a;
+export let magicNumber = a;

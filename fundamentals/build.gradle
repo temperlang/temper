@@ -1,0 +1,70 @@
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform'
+}
+ext.temperProject = 'mpp'
+//apply plugin: 'maven-publish'
+
+kotlin {
+    sourceSets {
+        all {
+            languageSettings {
+                languageVersion = gradle.kotlin_language_version
+                apiVersion = gradle.kotlin_api_version
+                //enableLanguageFeature('InlineClasses')
+                progressiveMode = true
+                //verbose = true
+            }
+        }
+    }
+
+    jvm()
+    // For ARM, should be changed to iosArm32 or iosArm64
+    // For Linux, should be changed to e.g. linuxX64
+    // For MacOS, should be changed to e.g. macosX64
+    // For Windows, should be changed to e.g. mingwX64
+//  linuxX64('linux')
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation kotlin('stdlib-common')
+                implementation kotlin('reflect')
+                implementation project(':common')
+                implementation project(':cst')
+                implementation project(':format')
+                implementation project(':log')
+                implementation project(':lexer')
+                implementation project(':name')
+                implementation project(':stage')
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test-common')
+                implementation kotlin('test-annotations-common')
+                implementation project(':test-helpers')
+                implementation project(':ast')
+                implementation project(':astbuild')
+                implementation project(':builtin')
+                implementation project(':cst')
+                implementation project(':parser')
+            }
+        }
+        jvmMain {
+            dependencies {
+                implementation kotlin('stdlib-jdk8')
+            }
+        }
+        jvmTest {
+            dependencies {
+                implementation kotlin('test')
+                implementation kotlin('test-junit5')
+                implementation project(':frontend')
+                implementation project(':interp')
+            }
+        }
+//      linuxMain {
+//      }
+//      linuxTest {
+//      }
+    }
+}

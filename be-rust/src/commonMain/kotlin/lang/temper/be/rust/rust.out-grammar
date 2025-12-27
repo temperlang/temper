@@ -1,0 +1,514 @@
+// See: https://doc.rust-lang.org/reference/notation.html#grammar
+// Also: https://doc.rust-lang.org/reference/crates-and-source-files.html
+// Also: https://github.com/rust-lang/rust-analyzer/blob/master/crates/syntax/rust.ungram
+
+let namespace = "Rust";
+
+let imports = """
+  "lang.temper.format.TokenSerializable
+  "lang.temper.format.TokenSink
+  "lang.temper.name.OutName
+  "lang.temper.name.name
+;
+
+Program = SourceFile;
+
+// https://doc.rust-lang.org/reference/crates-and-source-files.html
+SourceFile ::=
+      attrs%AttrInner*"\n"
+    & items%Item*"\n";
+SourceFile.attrs.default = `listOf()`;
+
+Array ::= "[" & values%Expr*"," & "]";
+
+AttrInner ::= "#![" & expr%Expr & "]";
+AttrOuter ::= "#[" & expr%Expr & "]";
+
+// Claim is that attributes are only allowed in limited cases but they include
+// them generally in main docs like here because that's simpler grammar.
+// Here we go further, allowing needlessly nested attributed exprs. This route
+// simplifies usage of the output tree node types.
+AttrExprWithBlock ::= attrs%AttrOuter*"\n" & expr%ExprWithBlock;
+AttrExprWithoutBlock ::= attrs%AttrOuter*"\n" & expr%ExprWithoutBlock;
+
+Block ::=
+      "{"
+    & attrs%AttrInner*"\n"
+    & statements%Statement*"\n"
+    & ((result%Expr => result) || ())
+    & "}";
+Block.attrs.default = `listOf()`;
+Block.statements.default = `listOf()`;
+Block.result.default = `null`;
+
+BreakExpr ::=
+      "break"
+    & ((id%Id => "'" & id) || ())
+    & ((value%Expr => value) || ())
+    ;
+BreakExpr.value.default = `null`;
+
+Call ::=
+      ((needsParens%`Boolean` == true => "(" & callee%Expr & ")") || callee)
+    & "(" & args%Expr*"," & ")"
+    ;
+Call.needsParens.default = `
+    (callee as? Operation)?.operator?.operator == RustOperator.MemberNotMethod
+`;
+
+Closure ::=
+      ((move%Move => move) || ())
+    & "|"
+    & params%FunctionParamOption*","
+    & "|"
+    // Return type requires block expr, but meh.
+    & ((returnType%Type => "->" & returnType) || ())
+    & value%Expr
+    ;
+Closure.move.default = `null`;
+Closure.returnType.default = `null`;
+
+ContinueExpr ::=
+      "continue"
+    & ((id%Id => "'" & id) || ())
+    ;
+
+Enum ::=
+      "enum"
+    & id%Id
+    & "{"
+    & items%EnumItem*","
+    & "}"
+    ;
+
+EnumItem =
+      EnumItemStruct
+    | EnumItemTuple
+    ;
+
+EnumItemStruct ::=
+      id%Id
+    & "{"
+    & fields%StructField*","
+    & "}"
+    ;
+
+EnumItemTuple ::=
+      id%Id
+    & "("
+    & fields%TupleField*","
+    & ")"
+    ;
+
+Expr =
+      ExprWithBlock
+    | ExprWithoutBlock
+    ;
+
+ExprWithBlock =
+      AttrExprWithBlock
+    | Block
+    | IfExpr
+    | LabeledExpr
+    | Loop
+    | Match
+    | WhileLoop
+    ;
+
+ExprWithoutBlock =
+      Array
+    | AttrExprWithoutBlock
+    | BreakExpr
+    | Call
+    | Closure // officially "without block" although it might have one
+    | ContinueExpr
+    | IndexExpr
+    | Literal
+    | MacroCall
+    | Operation
+    | Path
+    | ReturnExpr
+    | StructExpr
+    | Tuple
+    | Type // just for macro args
+    ;
+
+ExprStatement ::= expr%Expr & ";";
+
+Function ::=
+      "fn" & id%Id
+    & ((generics%GenericParam => "<" & generics%GenericParam*"," & ">") || ())
+    & "("
+    & params%FunctionParamOption*","
+    & ")"
+    & ((returnType%Type => "->" & returnType) || ())
+    & ((whereItems%WhereItem => "where" & whereItems%WhereItem*",") || ())
+    & ((block%Block => block) || ";")
+    ;
+Function.generics.default = `listOf()`;
+Function.returnType.default = `null`;
+Function.whereItems.default = `listOf()`;
+
+// TODO Destructuring patterns and attributes. Do we care?
+FunctionParam ::=
+      pattern%Pattern
+    // Only optional for closures, but meh.
+    & ((type%Type => ":" & type) || ())
+    ;
+
+FunctionParamOption =
+      FunctionParam
+    // Hacks to supports self or &self in first position.
+    | Id
+    | RefType;
+
+FunctionType ::=
+      "Fn" // | "FnMut" or whatever
+    & "("
+    & params%Type*","
+    & ")"
+    & ((returnsUnit => ()) || ("->" & returnType%Type!))
+    ;
+FunctionType.returnsUnit%`Boolean` = `returnType.isUnit()`;
+
+GenericArg = Type;
+// | Lifetime | GenericArgsConst | GenericArgsBinding | GenericArgsBounds
+
+GenericArgs ::= "<" & args%GenericArg*"," & ">";
+
+GenericParam = Path | TypeParam; // | LifetimeParam | ConstParam
+
+// Technically related to TypePathSegment.
+// TODO Still need a turbofish option.
+GenericType ::= path%Path & "<" & args%GenericArg*"," & ">";
+
+Id(outName%`OutName`);
+Id.renderTo = `tokenSink.name(outName, inOperatorPosition = false)`;
+
+IdPattern ::= ((mut%IdPatternMut => mut) || ()) & id%Id;
+IdPattern.mut.default = `null`;
+
+IdPatternMut ::= "mut";
+
+IfExpr ::=
+      "if" & test%Expr
+    & consequent%Block
+    & ((alternate%IfOrBlock => "else" & alternate) || ())
+    ;
+
+IfOrBlock = Block | IfExpr;
+
+Impl ::=
+      "impl"
+    & ((generics%GenericParam => "<" & generics%GenericParam*"," & ">") || ())
+    & ((trait%Type => trait & "for") || ())
+    & type%Type
+    & ((whereItems%WhereItem => "where" & whereItems%WhereItem*",") || ())
+    & "{"
+    & attrs%AttrInner*"\n"
+    // Not all Item kinds are legal, just AssociatedItem kinds, but meh.
+    & items%Item*"\n"
+    & "}"
+    ;
+Impl.attrs.default = `listOf()`;
+Impl.generics.default = `listOf()`;
+Impl.whereItems.default = `listOf()`;
+
+ImplTraitType ::=
+      "impl"
+    & ((bounds%TypeParamBound => bounds+"+") || ())
+    ;
+
+IndexExpr ::= expr%Expr & "[" & index%Expr & "]";
+
+Item ::=
+      attrs%AttrOuter*"\n"
+    & ((pub%VisibilityPub => pub) || ())
+    & item%ItemBase;
+Item.attrs.default = `listOf()`;
+Item.pub.default = `null`;
+
+ItemBase =
+      ExprStatement // just for macro calls
+    | Function
+    | Enum
+    | Impl
+    | Module
+    | Static
+    | Struct
+    | Trait
+    | TupleStruct
+    | TypeAlias
+    | Use
+    ;
+
+// This still is overly permissive on labels, but meh.
+LabeledExpr ::= "'" & id%Id & ":" & expr%ExprWithBlock;
+
+LetStatement ::=
+      attrs%AttrOuter*"\n"
+    & "let"
+    & pattern%Pattern
+    & ((type%Type => ":" & type) || ())
+    & ((value%Expr => "=" & value) || ())
+    // TODO else value
+    & ";"
+    ;
+LetStatement.attrs.default = `listOf()`;
+
+Literal =
+      NumberLiteral
+    | StringLiteral
+    ;
+
+Loop ::= "loop" & block%Block;
+
+// This is a simplified, but it ought to handle common cases.
+MacroArgs = Array | Block | Tuple;
+
+// And just include the "!" on the end of the path for now.
+MacroCall ::= path%Path & args%MacroArgs;
+
+Match ::=
+      "match" & expr%Expr
+    & "{"
+    // Comma's optional for block exprs, but meh.
+    & arms%MatchArm*",\n"
+    & "}"
+    ;
+
+MatchArm ::= pattern%PatternAny & "=>" & expr%Expr;
+
+Module ::=
+      ((pub%VisibilityPub => pub) || ())
+    & "mod" & id%Id
+    & ((block%Block => block) || ";")
+    ;
+Module.block.default = `null`;
+Module.pub.default = `null`;
+
+Move ::= "move";
+
+// For simple numbers. We might also want suffixed numbers in the future.
+NumberLiteral(value%`Number`);
+NumberLiteral.renderTo = `tokenSink.number("$value$suffix")`;
+NumberLiteral.suffix%`String` = `
+when (value) {
+    is Double -> "f64"
+    // is Long -> "i32" // TODO Ever needed?
+    else -> ""
+}
+`;
+
+Operation ::=
+      ((left%Expr => left) || ())
+    & operator%Operator
+    & ((right%Expr => right) || ());
+    ;
+Operation.operatorDefinition = `operator.operator.operatorDefinition`;
+
+Operator(operator%`RustOperator`);
+Operator.renderTo = `operator.emit(tokenSink)` ;
+
+Path = Id | PathSegments;
+
+PathSegment = GenericArgs | Id;
+
+PathSegments ::= segments%PathSegment*"::";
+
+// TODO Even if abusive, just use Expr for Pattern?
+Pattern =
+      Id
+    | IdPattern
+    | Literal
+    | Rest
+    | TupleStructPattern
+    // | ...
+    ;
+
+PatternAlt ::= patterns%Pattern*"|";
+
+PatternAny = Pattern | PatternAlt;
+
+RefType ::=
+      "&"
+    // & lifetime
+    // & ((mut%Mut => mut) || ())
+    & type%Type
+    ;
+
+Rest ::= "..";
+
+ReturnExpr ::= "return" & ((value%Expr => value) || ());
+
+// Scope ::= "crate";
+
+Statement =
+      Item
+    | ExprStatement
+    | ExprWithBlock
+    | LetStatement
+    | Semi
+    ;
+
+Static ::=
+      "static"
+    & id%Id
+    & ":" & type%Type
+    & ((value%Expr => "=" & value) || ())
+    & ";"
+    ;
+
+Semi ::= ";";
+
+StringLiteral(value%`String`);
+StringLiteral.renderTo = `tokenSink.quoted(stringTokenText(value))`;
+
+Struct ::=
+      "struct"
+    & id%Id
+    & ((generics%GenericParam => "<" & generics%GenericParam*"," & ">") || ())
+    & ((whereItems%WhereItem => "where" & whereItems%WhereItem*",") || ())
+    & "{"
+    & fields%StructField*","
+    & "}"
+    ;
+Struct.generics.default = `listOf()`;
+Struct.whereItems.default = `listOf()`;
+
+StructBase ::= ".." & expr%Expr;
+
+StructExpr ::=
+      id%Id // TODO General path.
+    & "{"
+    & members%StructExprMember*","
+    & "}"
+    ;
+
+StructExprMember = StructExprField | StructBase;
+
+StructExprField ::=
+      id%Id // TODO Or number if we want fancy tuple exprs.
+    & ((expr%Expr => ":" & expr) || ())
+    ;
+
+StructField ::=
+      attrs%AttrOuter*"\n"
+    & ((pub%VisibilityPub => pub) || ())
+    & id%Id
+    & ((type%Type => ":" & type) || ())
+    ;
+StructField.attrs.default = `listOf()`;
+StructField.pub.default = `null`;
+
+Trait ::=
+      "trait"
+    & id%Id
+    & ((generics%GenericParam => "<" & generics%GenericParam*"," & ">") || ())
+    & ((bounds%TypeParamBound => ":" & bounds*"+") || ())
+    & ((whereItems%WhereItem => "where" & whereItems%WhereItem*",") || ())
+    & "{"
+    & attrs%AttrInner*"\n"
+    // Not all Item kinds are legal, just AssociatedItem kinds, but meh.
+    & items%Item*"\n"
+    & "}"
+    ;
+Trait.generics.default = `listOf()`;
+Trait.bounds.default = `listOf()`;
+Trait.whereItems.default = `listOf()`;
+Trait.attrs.default = `listOf()`;
+
+TraitObjectType ::=
+      "dyn"
+    & ((bounds%TypeParamBound => bounds+"+") || ())
+    ;
+
+Tuple ::= "(" & values%Expr*"," & ")";
+
+TupleField ::=
+      attrs%AttrOuter*"\n"
+    & ((pub%VisibilityPub => pub) || ())
+    // & no id
+    & ((type%Type => type) || ())
+    ;
+TupleField.attrs.default = `listOf()`;
+TupleField.pub.default = `null`;
+
+TupleStruct ::=
+      "struct"
+    & id%Id
+    & ((generics%GenericParam => "<" & generics%GenericParam*"," & ">") || ())
+    & "("
+    & fields%TupleField*","
+    & ")"
+    & ((whereItems%WhereItem => "where" & whereItems%WhereItem*",") || ())
+    & ";"
+    ;
+TupleStruct.generics.default = `listOf()`;
+TupleStruct.whereItems.default = `listOf()`;
+
+TupleStructPattern ::=
+      path%Path
+    & "("
+    & patterns%Pattern*","
+    & ")"
+    ;
+
+TupleType ::= "(" & types%Type*"," & ")";
+
+Type =
+      FunctionType
+    | GenericType
+    | ImplTraitType
+    | Path
+    | RefType
+    | TraitObjectType
+    | TupleType
+    ;
+
+TypeAlias ::=
+      "type"
+    & id%Id
+    & ((generics%GenericParam => "<" & generics%GenericParam*"," & ">") || ())
+    // & ((bounds%TypeParamBound => ":" & bounds*"+") || ())
+    // & ((whereItems%WhereItem => "where" & whereItems%WhereItem*",") || ())
+    & "="
+    & type%Type
+    & ";"
+    ;
+TypeAlias.generics.default = `listOf()`;
+
+TypeParam ::=
+      // attrs%AttrOuter*" " &
+      id%Id
+    & ((bounds%TypeParamBound => ":" & bounds*"+") || ())
+    & ((default%Type => "=" & default) || ())
+    ;
+TypeParam.bounds.default = `listOf()`;
+TypeParam.default.default = `null`;
+
+TypeParamBound = Type; // | Lifetime | TraitBound
+
+Use ::= "use" & what%UseWhat & ";";
+
+UseWhat = Path; // | UseAs | UseTree | UseWild;
+
+VisibilityPub ::=
+      "pub"
+    & ((scope%VisibilityScope => "(" & scope & ")") || ())
+    ;
+VisibilityPub.scope.default = `null`;
+
+VisibilityScope ::=
+    (scope%VisibilityScopeOption == Crate => "crate")
+    || (scope == Self => "self")
+    || (scope == Super => "super")
+    || ()
+    ;
+
+enum VisibilityScopeOption = Crate | Self | Super;
+
+// Technically TypeParam isn't quite right, but it's close enough for now.
+WhereItem = TypeParam; // | LifetimeItem
+
+WhileLoop ::= "while" & test%Expr & block%Block;

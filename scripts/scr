@@ -1,0 +1,9 @@
+#!/bin/bash
+# Convenience to run a python script under this (the scripts) directory.
+# Requires `poetry` be installed and available in the path.
+
+if [[ -z $1 ]]; then
+    poetry run -C "$(dirname $0)" help
+else
+    poetry run -C "$(dirname $0)" "$@"
+fi

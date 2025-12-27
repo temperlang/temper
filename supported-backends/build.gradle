@@ -1,0 +1,148 @@
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform'
+    id 'com.github.node-gradle.node'
+}
+ext.temperProject = 'mpp'
+//apply plugin: 'maven-publish'
+
+kotlin {
+    sourceSets {
+        all {
+            languageSettings {
+                optIn("kotlin.RequiresOptIn")
+                languageVersion = gradle.kotlin_language_version
+                apiVersion = gradle.kotlin_api_version
+                //enableLanguageFeature('InlineClasses')
+                progressiveMode = true
+                //verbose = true
+            }
+        }
+    }
+
+    jvm()
+//  js {
+//      nodejs {
+//      }
+//  }
+    // For ARM, should be changed to iosArm32 or iosArm64
+    // For Linux, should be changed to e.g. linuxX64
+    // For MacOS, should be changed to e.g. macosX64
+    // For Windows, should be changed to e.g. mingwX64
+//  linuxX64('linux')
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation kotlin('stdlib-common')
+                implementation kotlin('reflect')
+                implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coro_version"
+                implementation project(':common')
+                implementation project(':log')
+                implementation project(':be')
+                implementation project(':fs')
+                implementation project(':library')
+                implementation project(':name')
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test-common')
+                implementation kotlin('test-annotations-common')
+                implementation project(':test-helpers')
+            }
+        }
+        jvmMain {
+            dependencies {
+                implementation kotlin('stdlib-jdk8')
+            }
+        }
+        jvmTest {
+            dependencies {
+                implementation kotlin('test')
+                implementation kotlin('test-junit5')
+            }
+        }
+//      jsMain {
+//          dependencies {
+//              implementation kotlin('stdlib-js')
+//          }
+//      }
+//      jsTest {
+//          dependencies {
+//              implementation kotlin('test-js')
+//          }
+//      }
+//      linuxMain {
+//      }
+//      linuxTest {
+//      }
+    }
+}
+
+// Combine
+//
+//     src/commonMain/resources/lang/temper/supportedBackends/basic-plugin-list.json
+//
+// and any plugin-lists from properietary backends into a resource that is available
+// at runtime to load plugins:
+//
+//     build/resources/lang/temper/supportedBackends/plugin-list.json
+// Task to generate the combined plugin list
+task generatePluginList {
+    description = 'Generates combined plugin list resource from basic and external sources'
+    group = 'build'
+
+    def basicPluginFile = file('src/commonMain/resources/lang/temper/supportedBackends/basic-plugin-list.json')
+    inputs.file(basicPluginFile)
+
+    // Look for external sub-projects as created in ../settings.gradle
+    // Here, we're enumerating ../external/*/*/temper-plugin-list.json
+    def extraPluginFiles = []
+    def externalDir = file("../external")
+    if (externalDir.isDirectory()) {
+        for (extDir in externalDir.listFiles()) {
+            if (!extDir.isDirectory()) { continue }
+            for (subDir in extDir.listFiles()) {
+                def extraPluginFile = new File(subDir, "temper-plugin-list.json")
+                if (new File(subDir, "build.gradle").isFile() &&
+                    extraPluginFile.isFile()
+                ) {
+                    extraPluginFiles.add(extraPluginFile)
+                    inputs.file(extraPluginFile)
+                }
+            }
+        }
+    }
+
+    def outputDir = file("${buildDir}/generated/resources/commonMain")
+    def outputFile = file("${outputDir}/lang/temper/supportedBackends/plugin-list.json")
+    outputs.file(outputFile)
+
+    doLast {
+        outputFile.parentFile.mkdirs()
+
+        def basicPlugins = (List) new groovy.json.JsonSlurper().parseText(basicPluginFile.text)
+
+        // Add the extra plugins if the file exists
+        def extraPlugins = []
+        for (extraPluginFile in extraPluginFiles) {
+            extraPlugins += (List) new groovy.json.JsonSlurper().parseText(extraPluginFile.text)
+        }
+
+        // Write the combined result
+        def jsonBuilder = new groovy.json.JsonBuilder(basicPlugins + extraPlugins)
+        outputFile.text = jsonBuilder.toPrettyString()
+    }
+}
+
+// Make the task run automatically when building source sets
+kotlin.sourceSets.commonMain.resources.srcDir("${buildDir}/generated/resources/commonMain")
+
+// Ensure the task runs before processing resources
+tasks.withType(ProcessResources).configureEach {
+    dependsOn generatePluginList
+}
+
+// Also ensure it runs before any compile tasks
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    dependsOn generatePluginList
+}

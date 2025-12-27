@@ -1,0 +1,99 @@
+<svg class="railroad-diagram" width="250.5" height="131" viewBox="0 0 250.5 131" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>UnicodeRunPartRaw &#58;&#61; &#34;raw string&#34;&#43; &#124; &#34;&#44;&#34; &#124; StringHoleRaw</title>
+<style><![CDATA[
+svg.railroad-diagram {
+    background-color: hsl(30,20%,95%);
+}
+svg.railroad-diagram path {
+    stroke-width: 3;
+    stroke: black;
+    fill: rgba(0,0,0,0);
+}
+svg.railroad-diagram text {
+    font: bold 14px monospace;
+    text-anchor: middle;
+    white-space: pre;
+}
+svg.railroad-diagram text.diagram-text {
+    font-size: 12px;
+}
+svg.railroad-diagram text.diagram-arrow {
+    font-size: 16px;
+}
+svg.railroad-diagram text.label {
+    text-anchor: start;
+}
+svg.railroad-diagram text.comment {
+    font: italic 12px monospace;
+}
+svg.railroad-diagram g.non-terminal text {
+    /*font-style: italic;*/
+}
+svg.railroad-diagram rect {
+    stroke-width: 3;
+    stroke: black;
+    fill: hsl(120,100%,90%);
+}
+svg.railroad-diagram rect.group-box {
+    stroke: gray;
+    stroke-dasharray: 10 5;
+    fill: none;
+}
+svg.railroad-diagram path.diagram-text {
+    stroke-width: 3;
+    stroke: black;
+    fill: white;
+    cursor: help;
+}
+svg.railroad-diagram g.diagram-text:hover path.diagram-text {
+    fill: #eee;
+}
+
+]]></style>
+
+<g transform="translate(.5 .5)">
+<g>
+<path d="M20 60v20m10 -20v20m-10 -10h20"></path>
+</g>
+<g>
+<path d="M40 70h0"></path>
+<path d="M210.5 70h0"></path>
+<path d="M40 70a10 10 0 0 0 10 -10v-19a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M60 31h2.75"></path>
+<path d="M187.75 31h2.75"></path>
+<path d="M62.75 31h10"></path>
+<g class="terminal">
+<path d="M72.75 31h0"></path>
+<path d="M177.75 31h0"></path>
+<rect x="72.75" y="20" width="105" height="22" rx="10" ry="10"></rect>
+<text x="125.25" y="35">raw string</text>
+</g>
+<path d="M177.75 31h10"></path>
+<path d="M72.75 31a10 10 0 0 0 -10 10v0a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M72.75 51h105"></path>
+</g>
+<path d="M177.75 51a10 10 0 0 0 10 -10v0a10 10 0 0 0 -10 -10"></path>
+</g>
+<path d="M190.5 31a10 10 0 0 1 10 10v19a10 10 0 0 0 10 10"></path>
+<path d="M40 70h20"></path>
+<g class="terminal">
+<path d="M60 70h51"></path>
+<path d="M139.5 70h51"></path>
+<rect x="111" y="59" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="125.25" y="74">,</text>
+</g>
+<path d="M190.5 70h20"></path>
+<path d="M40 70a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
+<g class="non-terminal">
+<path d="M60 100h0"></path>
+<path d="M190.5 100h0"></path>
+<rect x="60" y="89" width="130.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-stringholeraw"><text x="125.25" y="104">StringHoleRaw</text>
+</a>
+</g>
+<path d="M190.5 100a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
+</g>
+<path d="M 210.5 70 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+</g>
+</svg>

@@ -1,0 +1,11 @@
+# Ignore 'go build' products
+/launcher-*
+/launcher
+/runner-*
+/runner
+/runner.exe
+/temper-*
+/temper
+/temper.exe
+# Also extraneous products such as from ktlintCheck or other
+/build

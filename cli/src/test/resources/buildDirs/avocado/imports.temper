@@ -1,0 +1,6 @@
+// This file is ".temper" instead of ".temper.md" on purpose, to show we can mix
+// and match.
+
+// Meanwhile, imports here should be available throughout the module.
+
+let { doThings, twice } = import("../banana");

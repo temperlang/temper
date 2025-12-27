@@ -1,0 +1,9 @@
+// This subdir is here just to make sure deep nesting is fine on backends.
+
+export let repeated(name: String): String {
+  really(name)
+}
+
+let really(name: String): String {
+  "${name}${name}"
+}

@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "release-notes"
+version = "0.1.0"
+description = "Release note management scripts"
+authors = ["Mike Samuel <mikesamuel@gmail.com>"]
+readme = "README.md"
+
+packages = [
+  { include = "release_notes.py" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.10.0"
+marko = "^2.0.3"
+semver = "^3.0.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

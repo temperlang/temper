@@ -1,0 +1,287 @@
+digraph DesignPhilosophy {
+    label="Temper Design Process";
+    labelloc=t;
+    labeljust=r;
+    graph [fontname = "Handlee"];
+    node  [fontname = "Handlee"];
+    edge  [fontname = "Handlee"];
+
+    N0 [
+        label = "Hello, I have an idea";
+        shape = oval;
+        ];
+    N1 [
+        label =
+"Does it map
+straightforwardly
+to a native
+concept on many
+platforms?";
+        shape = diamond;
+        ];
+    N1Y [
+         label =
+"Yay! Skills will transfer!
+Runtimes will do the work!";
+         shape = rect;
+         ];
+    N1N [
+         label =
+"Let's look at the tools
+we've already got.";
+         shape = rect;
+         ];
+    N2 [
+        label =
+"Do semantics
+vary by platform?";
+        shape = diamond;
+        ];
+    N2N [
+         label =
+"Yay! Backend maintainers
+won't need to be heroes.";
+         shape = rect;
+         ];
+    N2Y [
+         label =
+"Let's try to present
+a consistent facade.";
+         shape = rect;
+         ];
+    N3 [
+        label =
+"Can it be done via
+library code &| macros?";
+        shape = diamond;
+        ];
+    N3Y [
+         label =
+"Let's try that!";
+         shape = rect;
+         ];
+    N3N [
+         label =
+"We can't add
+to runtimes.";
+         shape = rect;
+         ];
+    N4 [
+        label =
+"Can we reduce
+differences with
+dynamism?";
+        shape = diamond;
+        ];
+    N4Y [
+         label =
+"Yay! A little
+testing effort
+goes a long way.";
+         shape = rect;
+         ];
+    N4N [
+         label =
+"Probably not for
+casual users.";
+         shape = rect;
+         ];
+    N5 [
+        label =
+"Do specialist library
+maintainers know
+how to build safe
+abstractions
+around it?";
+        shape = diamond;
+        ];
+    N5Y [
+         label =
+"Assume we limit access.";
+         shape = rect;
+         ];
+    N5N [
+         label =
+"Sounds like it'd
+make testing hard.";
+         shape = rect;
+         ];
+    N6 [
+        label =
+"Can we rein in
+dynamism problems
+with types &|
+simple contracts?";
+        shape = diamond;
+        ];
+    N6Y [
+         label =
+"Yay! Inner loop
+hand-optimizers can
+do their thing.";
+         shape = rect;
+         ];
+    N6N [
+         label =
+"Maybe if it
+fills a niche.";
+         shape = rect;
+         ];
+    N7 [
+        label =
+"Comparative linguistics time.
+Is it available on all platforms?";
+        shape = diamond;
+        ];
+    N7N [
+         label =
+"Not a problem.";
+         shape = rect;
+         ];
+    N7Y [
+         label =
+"Wow! Just, Wow!
+That's never
+happened before.";
+         shape = rect;
+         ];
+    N8 [
+        label =
+"Can we jury-rig it
+where its absent?";
+        shape = diamond;
+        ];
+    N8N [
+         label =
+<That'd lead to<br />
+2<sup>nd</sup> class backends>;
+         shape = rect;
+         ];
+    N8Y [
+         label =
+"Yay! No have-not
+language communities.";
+         shape = rect;
+         ];
+    N9 [
+        label =
+"Can its failures
+be checked for &|
+recovered from?";
+        shape = diamond;
+        ];
+    N9Y [
+         label =
+"Yay! A building block
+for reliable libraries.";
+         shape = rect;
+         ];
+    N9N [
+         label =
+"Libraries
+shouldn't drag
+down programs.";
+         shape = rect;
+         ];
+    N10 [
+        label =
+"Can failure be
+statically bounded
+with types &|
+simple contracts?";
+        shape = diamond;
+        ];
+    N10Y [
+         label =
+"Yay! Code review without
+/* this can't happen */";
+         shape = rect;
+         ];
+    N10N [
+         label =
+"Using it might be
+like jogging with
+nitroglicerine.";
+         shape = rect;
+         ];
+    N11 [
+        label =
+"Can safe
+abstractions
+be built on it?";
+        shape = diamond;
+        ];
+    N11Y [
+         label =
+"Let's limit
+access.";
+         shape = rect;
+         ];
+    N11N [
+         label =
+"It might breed
+anxiety &| apathy.";
+         shape = rect;
+         ];
+
+    No [
+        label =
+"Thanks but let's
+keep looking.";
+        shape = oval;
+        ];
+    Yes [
+        label =
+"Time to
+experiment!";
+        shape = oval;
+        ];
+
+     N0 -> N1 [
+               label = "Awesome!";
+     ];
+     N1 -> N1Y [ label="Yes" ];
+     N1 -> N1N [ label="No" ];
+     N1Y -> N2;
+     N1N -> N3;
+     N2 -> N2N [ label = "No" ];
+     N2 -> N2Y [ label = "Yes" ];
+     N2N -> N7;
+     N2Y -> N4;
+     N3 -> N3N [ label = "No" ];
+     N3 -> N3Y [ label = "Yes" ];
+     N3N -> No;
+     N3Y -> Yes;
+     N4 -> N4N [ label = "No" ];
+     N4 -> N4Y [ label = "Yes" ];
+     N4Y -> N6;
+     N4N -> N5;
+     N5 -> N5Y [ label = "Yes" ];
+     N5 -> N5N [ label = "No" ];
+     N5Y -> N7;
+     N5N -> No;
+     N6 -> N6N [ label = "No" ];
+     N6 -> N6Y [ label = "Yes" ];
+     N6N -> N7;
+     N6Y -> N7;
+     N7 -> N7N [ label = "No" ];
+     N7 -> N7Y [ label = "Yes" ];
+     N7N -> N8;
+     N7Y -> N9;
+     N8 -> N8N [ label = "No" ];
+     N8 -> N8Y [ label = "Yes" ];
+     N8N -> No;
+     N8Y -> N9;
+     N9 -> N9N [ label = "No" ];
+     N9 -> N9Y [ label = "Yes" ];
+     N9N -> No;
+     N9Y -> N10;
+     N10 -> N10N [ label = "No" ];
+     N10 -> N10Y [ label = "Yes" ];
+     N10N -> N11;
+     N10Y -> Yes;
+     N11 -> N11N [ label = "No" ];
+     N11 -> N11Y [ label = "Yes" ];
+     N11N -> No;
+     N11Y -> Yes;
+}

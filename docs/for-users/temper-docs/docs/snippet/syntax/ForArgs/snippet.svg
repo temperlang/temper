@@ -1,0 +1,189 @@
+<svg class="railroad-diagram" width="575.5" height="110" viewBox="0 0 575.5 110" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>ForArgs &#58;&#61; ForInit&#63; &#34;&#59;&#34; ForCond&#63; &#34;&#59;&#34; ForIncr&#63; &#124; ForInit&#63; &#34;&#59;&#59;&#34; ForIncr&#63;</title>
+<style><![CDATA[
+svg.railroad-diagram {
+    background-color: hsl(30,20%,95%);
+}
+svg.railroad-diagram path {
+    stroke-width: 3;
+    stroke: black;
+    fill: rgba(0,0,0,0);
+}
+svg.railroad-diagram text {
+    font: bold 14px monospace;
+    text-anchor: middle;
+    white-space: pre;
+}
+svg.railroad-diagram text.diagram-text {
+    font-size: 12px;
+}
+svg.railroad-diagram text.diagram-arrow {
+    font-size: 16px;
+}
+svg.railroad-diagram text.label {
+    text-anchor: start;
+}
+svg.railroad-diagram text.comment {
+    font: italic 12px monospace;
+}
+svg.railroad-diagram g.non-terminal text {
+    /*font-style: italic;*/
+}
+svg.railroad-diagram rect {
+    stroke-width: 3;
+    stroke: black;
+    fill: hsl(120,100%,90%);
+}
+svg.railroad-diagram rect.group-box {
+    stroke: gray;
+    stroke-dasharray: 10 5;
+    fill: none;
+}
+svg.railroad-diagram path.diagram-text {
+    stroke-width: 3;
+    stroke: black;
+    fill: white;
+    cursor: help;
+}
+svg.railroad-diagram g.diagram-text:hover path.diagram-text {
+    fill: #eee;
+}
+
+]]></style>
+
+<g transform="translate(.5 .5)">
+<g>
+<path d="M20 69v20m10 -20v20m-10 -10h20"></path>
+</g>
+<g>
+<path d="M40 79h0"></path>
+<path d="M535.5 79h0"></path>
+<path d="M40 79a10 10 0 0 0 10 -10v-19a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M60 40h0"></path>
+<path d="M515.5 40h0"></path>
+<g>
+<path d="M60 40h0"></path>
+<path d="M179.5 40h0"></path>
+<path d="M60 40a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M80 20h79.5"></path>
+</g>
+<path d="M159.5 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M60 40h20"></path>
+<g class="non-terminal">
+<path d="M80 40h0"></path>
+<path d="M159.5 40h0"></path>
+<rect x="80" y="29" width="79.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-forinit"><text x="119.75" y="44">ForInit</text>
+</a>
+</g>
+<path d="M159.5 40h20"></path>
+</g>
+<path d="M179.5 40h10"></path>
+<g class="terminal">
+<path d="M189.5 40h0"></path>
+<path d="M218 40h0"></path>
+<rect x="189.5" y="29" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="203.75" y="44">;</text>
+</g>
+<path d="M218 40h10"></path>
+<g>
+<path d="M228 40h0"></path>
+<path d="M347.5 40h0"></path>
+<path d="M228 40a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M248 20h79.5"></path>
+</g>
+<path d="M327.5 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M228 40h20"></path>
+<g class="non-terminal">
+<path d="M248 40h0"></path>
+<path d="M327.5 40h0"></path>
+<rect x="248" y="29" width="79.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-forcond"><text x="287.75" y="44">ForCond</text>
+</a>
+</g>
+<path d="M327.5 40h20"></path>
+</g>
+<path d="M347.5 40h10"></path>
+<g class="terminal">
+<path d="M357.5 40h0"></path>
+<path d="M386 40h0"></path>
+<rect x="357.5" y="29" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="371.75" y="44">;</text>
+</g>
+<path d="M386 40h10"></path>
+<g>
+<path d="M396 40h0"></path>
+<path d="M515.5 40h0"></path>
+<path d="M396 40a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M416 20h79.5"></path>
+</g>
+<path d="M495.5 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M396 40h20"></path>
+<g class="non-terminal">
+<path d="M416 40h0"></path>
+<path d="M495.5 40h0"></path>
+<rect x="416" y="29" width="79.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-forincr"><text x="455.75" y="44">ForIncr</text>
+</a>
+</g>
+<path d="M495.5 40h20"></path>
+</g>
+</g>
+<path d="M515.5 40a10 10 0 0 1 10 10v19a10 10 0 0 0 10 10"></path>
+<path d="M40 79h20"></path>
+<g>
+<path d="M60 79h79.75"></path>
+<path d="M435.75 79h79.75"></path>
+<g>
+<path d="M139.75 79h0"></path>
+<path d="M259.25 79h0"></path>
+<path d="M139.75 79a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M159.75 59h79.5"></path>
+</g>
+<path d="M239.25 59a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M139.75 79h20"></path>
+<g class="non-terminal">
+<path d="M159.75 79h0"></path>
+<path d="M239.25 79h0"></path>
+<rect x="159.75" y="68" width="79.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-forinit"><text x="199.5" y="83">ForInit</text>
+</a>
+</g>
+<path d="M239.25 79h20"></path>
+</g>
+<path d="M259.25 79h10"></path>
+<g class="terminal">
+<path d="M269.25 79h0"></path>
+<path d="M306.25 79h0"></path>
+<rect x="269.25" y="68" width="37" height="22" rx="10" ry="10"></rect>
+<text x="287.75" y="83">;;</text>
+</g>
+<path d="M306.25 79h10"></path>
+<g>
+<path d="M316.25 79h0"></path>
+<path d="M435.75 79h0"></path>
+<path d="M316.25 79a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M336.25 59h79.5"></path>
+</g>
+<path d="M415.75 59a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M316.25 79h20"></path>
+<g class="non-terminal">
+<path d="M336.25 79h0"></path>
+<path d="M415.75 79h0"></path>
+<rect x="336.25" y="68" width="79.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-forincr"><text x="376" y="83">ForIncr</text>
+</a>
+</g>
+<path d="M415.75 79h20"></path>
+</g>
+</g>
+<path d="M515.5 79h20"></path>
+</g>
+<path d="M 535.5 79 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+</g>
+</svg>

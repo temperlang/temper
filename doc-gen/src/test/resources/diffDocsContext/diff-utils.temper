@@ -1,0 +1,12 @@
+export let diff-utils = new Utils();
+
+class Utils {
+  public diffStrings(a: String, b: String): List<DiffResults> {
+    return list();
+  }
+  public diff<T>(a: T, b: T, (T, T)->Boolean): List<DiffResults> {
+    return list();
+  }
+}
+
+class DiffResults {}

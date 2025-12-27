@@ -1,0 +1,163 @@
+import java.nio.file.Files
+import java.nio.file.Path
+
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform'
+}
+ext.temperProject = 'mpp'
+//apply plugin: 'maven-publish'
+
+kotlin {
+    sourceSets {
+        all {
+            languageSettings {
+                languageVersion = gradle.kotlin_language_version
+                apiVersion = gradle.kotlin_api_version
+                //enableLanguageFeature('InlineClasses')
+                progressiveMode = true
+                //verbose = true
+            }
+        }
+    }
+
+    jvm()
+
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation kotlin('stdlib-common')
+                implementation kotlin('reflect')
+                implementation project(':common')
+                implementation project(':log')
+                implementation project(':ast')
+                implementation project(':be')
+                implementation project(':builtin')
+                implementation project(':format')
+                implementation project(':frontend')
+                implementation project(':fs')
+                implementation project(':fundamentals')
+                implementation project(':interp')
+                implementation project(':lexer')
+                implementation project(':library')
+                implementation project(':name')
+                implementation project(':stage')
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test-common')
+                implementation kotlin('test-annotations-common')
+                implementation project(':be-helpers')
+                implementation project(':test-helpers')
+                implementation project(':be-test-helpers')
+                implementation project(':fs-test-helpers')
+                implementation project(':functional-test-suite')
+                implementation project(':cst')
+                implementation project(':lexer')
+            }
+        }
+        jvmMain {
+            dependencies {
+                implementation kotlin('stdlib-jdk8')
+            }
+        }
+        jvmTest {
+            dependencies {
+                implementation kotlin('test')
+                implementation kotlin('test-junit5')
+            }
+        }
+    }
+}
+
+/**
+ * <p>Find a path to an executable as per the Unix tool of the same name.
+ * <p>Discussion: there are some complicated issues with how the environment
+ * is propagated to daemon processes in gradle. Finding the tool by directly
+ * inspecting the PATH variable can sometimes find it when ExecTask doesn't.
+ */
+static String which(String name) {
+    var osName = System.getProperty("os.name").toLowerCase()
+    List<String> exts = osName.contains("win")
+        ? [".exe", ".bat"] : [""];
+    String[] dirs = System.getenv("PATH").split(System.getProperty("path.separator"))
+    for (dir in dirs) {
+        def found = exts.collect { new File(dir, name + it) }
+            .find { Files.isExecutable(it.toPath()) }
+        if (found != null) return found
+    }
+    return null
+}
+
+static int runEatingIo(ProcessBuilder processBuilder) {
+    def process = processBuilder.start()
+    // Eat to help prevent hangs.
+    process.inputStream.bytes
+    process.errorStream.bytes
+    return process.waitFor()
+}
+
+static String choosePython(List<String> extraArgsCheck = []) {
+    for (pythonCmdName in [
+        // Start at the min supported version.
+        "python3.11", "python3.12", "python3.13", "python3.14",
+        "python3", "python"
+    ]) {
+        def pythonCmdPath = which(pythonCmdName)
+        if (pythonCmdPath == null)
+            continue
+        try {
+            if (runEatingIo(new ProcessBuilder(pythonCmdPath, "--version")) == 0) {
+                // Use python3 explicitly when available, in case the system defaults to python2.
+                if (
+                    extraArgsCheck.isEmpty() ||
+                        runEatingIo(new ProcessBuilder([pythonCmdPath] + extraArgsCheck)) == 0
+                ) {
+                    return pythonCmdPath
+                }
+            }
+        } catch (ignored) {}
+    }
+    throw new IllegalStateException("No acceptable version of Python found.")
+}
+
+tasks.register('runPythonUnittests', Exec) {
+    // Only find python during task execution.
+    def python = choosePython()
+    def wd = layout.projectDirectory.dir('src/commonTest/py')
+    def tests = wd.asFileTree.matching {
+        include("test_*.py")
+    }.files.collect { it.toString() }
+    workingDir wd
+    environment(['PYTHONPATH': '../../commonMain/resources/lang/temper/be/py/temper-core/'])
+    commandLine([python, "-m", "unittest", *tests])
+}
+
+tasks.jvmTest.dependsOn(runPythonUnittests)
+
+tasks.register('checkPythonPassesMypy', Exec) {
+    // Defer execution so we don't require mypy for unrelated things.
+    doFirst {
+        // Find a Python that has mypy available.
+        def python = choosePython(["-m", "mypy", "-h"])
+        project.logger.info("chose python $python")
+        def dir = 'src/commonMain/resources/lang/temper/be/py/temper-core'
+        def backToRoot = (['..'] * (dir.split('/').length)).join('/')
+
+        workingDir = dir
+        commandLine([
+            "$python", '-m', 'mypy',
+            '--html-report', "$backToRoot/build/reports/mypy/",
+            '--pretty',
+            '--python-version', '3.11',
+            '.'
+        ])
+    }
+}
+
+tasks.jvmTest.dependsOn(checkPythonPassesMypy)
+
+// TODO Does running this task work?
+tasks.register('pythonUnittests', Test) {
+    dependsOn(runPythonUnittests)
+}

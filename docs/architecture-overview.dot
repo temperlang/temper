@@ -1,0 +1,32 @@
+// Changes to this file should be reflected in files derived from it which
+// have a similar name in the same directory and may be used in package
+// documentation.
+
+digraph G {
+        rankdir=LR;
+        bgcolor=white;
+
+        "Fetcher" -> "Temper Sources" -> "Loader" -> "Lispy ASTs" -> "Frontend" -> LispyASTs2 -> "Decompiler" -> "Layered ASTs" -> "Backend" -> "Target PL ASTs" -> "Formatter";
+        "Formatter":n -> "Source Maps";
+        "Formatter" -> "Target Sources";
+        "Temper Sources":se -> "Bundler";
+        "Source Maps" -> "Bundler";
+        "Target Sources" -> "Bundler";
+        "Bundler" -> "Target Outputs";
+
+        "Fetcher" [shape="cds"];
+        "Temper Sources" [shape="note"];
+        "Lispy ASTs" [shape="box3d"];
+        "Frontend" [shape="cds"];
+        "Formatter" [shape="cds"];
+        "Target Sources" [shape="note"];
+        "Source Maps" [shape="note"];
+        LispyASTs2 [label="Lispy ASTs", shape="box3d"];
+        "Decompiler" [shape="cds"];
+        "Backend" [shape="cds"];
+        "Bundler" [shape="cds"];
+        "Loader" [shape="cds"];
+        "Layered ASTs" [shape="box3d"];
+        "Target PL ASTs" [shape="box3d"];
+        "Target Outputs" [shape="note"];
+}

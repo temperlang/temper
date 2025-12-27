@@ -1,0 +1,187 @@
+<svg class="railroad-diagram" width="880" height="122" viewBox="0 0 880 122" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>BlockLambda &#58;&#61; &#40;Lookbehind&#58; &#33;BagPreceder&#41; &#40;&#34;&#123;&#34; BlockLambdaSignatureAndSupers &#34;&#61;&#92;u003e&#34; BlockLambdaBody &#34;&#125;&#34; &#124; &#34;&#123;&#34; Formals &#34;&#61;&#92;u003e&#34; BlockLambdaBody &#34;&#125;&#34; &#124; RawBlock&#41;</title>
+<style><![CDATA[
+svg.railroad-diagram {
+    background-color: hsl(30,20%,95%);
+}
+svg.railroad-diagram path {
+    stroke-width: 3;
+    stroke: black;
+    fill: rgba(0,0,0,0);
+}
+svg.railroad-diagram text {
+    font: bold 14px monospace;
+    text-anchor: middle;
+    white-space: pre;
+}
+svg.railroad-diagram text.diagram-text {
+    font-size: 12px;
+}
+svg.railroad-diagram text.diagram-arrow {
+    font-size: 16px;
+}
+svg.railroad-diagram text.label {
+    text-anchor: start;
+}
+svg.railroad-diagram text.comment {
+    font: italic 12px monospace;
+}
+svg.railroad-diagram g.non-terminal text {
+    /*font-style: italic;*/
+}
+svg.railroad-diagram rect {
+    stroke-width: 3;
+    stroke: black;
+    fill: hsl(120,100%,90%);
+}
+svg.railroad-diagram rect.group-box {
+    stroke: gray;
+    stroke-dasharray: 10 5;
+    fill: none;
+}
+svg.railroad-diagram path.diagram-text {
+    stroke-width: 3;
+    stroke: black;
+    fill: white;
+    cursor: help;
+}
+svg.railroad-diagram g.diagram-text:hover path.diagram-text {
+    fill: #eee;
+}
+
+]]></style>
+
+<g transform="translate(.5 .5)">
+<g>
+<path d="M20 51v20m10 -20v20m-10 -10h20"></path>
+</g>
+<path d="M40 61h10"></path>
+<g>
+<path d="M50 61h0"></path>
+<path d="M830 61h0"></path>
+<g>
+<path d="M50 61h0"></path>
+<path d="M192 61h0"></path>
+<rect x="50" y="42" width="142" height="38" rx="10" ry="10" class="group-box"></rect>
+<g class="non-terminal">
+<path d="M50 61h10"></path>
+<path d="M182 61h10"></path>
+<rect x="60" y="50" width="122" height="22"></rect>
+<text x="121" y="65">!BagPreceder</text>
+</g>
+<g>
+<path d="M50 34h0"></path>
+<path d="M130 34h0"></path>
+<text x="90" y="39" class="comment">Lookbehind</text>
+</g>
+</g>
+<path d="M192 61h10"></path>
+<g>
+<path d="M202 61h0"></path>
+<path d="M830 61h0"></path>
+<path d="M202 61a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M222 31h0"></path>
+<path d="M810 31h0"></path>
+<g class="terminal">
+<path d="M222 31h0"></path>
+<path d="M250.5 31h0"></path>
+<rect x="222" y="20" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="236.25" y="35">{</text>
+</g>
+<path d="M250.5 31h10"></path>
+<path d="M260.5 31h10"></path>
+<g class="non-terminal">
+<path d="M270.5 31h0"></path>
+<path d="M537 31h0"></path>
+<rect x="270.5" y="20" width="266.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-blocklambdasignatureandsupers"><text x="403.75" y="35">BlockLambdaSignatureAndSupers</text>
+</a>
+</g>
+<path d="M537 31h10"></path>
+<path d="M547 31h10"></path>
+<g class="terminal">
+<path d="M557 31h0"></path>
+<path d="M594 31h0"></path>
+<rect x="557" y="20" width="37" height="22" rx="10" ry="10"></rect>
+<text x="575.5" y="35">=></text>
+</g>
+<path d="M594 31h10"></path>
+<path d="M604 31h10"></path>
+<g class="non-terminal">
+<path d="M614 31h0"></path>
+<path d="M761.5 31h0"></path>
+<rect x="614" y="20" width="147.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-blocklambdabody"><text x="687.75" y="35">BlockLambdaBody</text>
+</a>
+</g>
+<path d="M761.5 31h10"></path>
+<path d="M771.5 31h10"></path>
+<g class="terminal">
+<path d="M781.5 31h0"></path>
+<path d="M810 31h0"></path>
+<rect x="781.5" y="20" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="795.75" y="35">}</text>
+</g>
+</g>
+<path d="M810 31a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
+<path d="M202 61h20"></path>
+<g>
+<path d="M222 61h93.5"></path>
+<path d="M716.5 61h93.5"></path>
+<g class="terminal">
+<path d="M315.5 61h0"></path>
+<path d="M344 61h0"></path>
+<rect x="315.5" y="50" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="329.75" y="65">{</text>
+</g>
+<path d="M344 61h10"></path>
+<path d="M354 61h10"></path>
+<g class="non-terminal">
+<path d="M364 61h0"></path>
+<path d="M443.5 61h0"></path>
+<rect x="364" y="50" width="79.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-formals"><text x="403.75" y="65">Formals</text>
+</a>
+</g>
+<path d="M443.5 61h10"></path>
+<path d="M453.5 61h10"></path>
+<g class="terminal">
+<path d="M463.5 61h0"></path>
+<path d="M500.5 61h0"></path>
+<rect x="463.5" y="50" width="37" height="22" rx="10" ry="10"></rect>
+<text x="482" y="65">=></text>
+</g>
+<path d="M500.5 61h10"></path>
+<path d="M510.5 61h10"></path>
+<g class="non-terminal">
+<path d="M520.5 61h0"></path>
+<path d="M668 61h0"></path>
+<rect x="520.5" y="50" width="147.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-blocklambdabody"><text x="594.25" y="65">BlockLambdaBody</text>
+</a>
+</g>
+<path d="M668 61h10"></path>
+<path d="M678 61h10"></path>
+<g class="terminal">
+<path d="M688 61h0"></path>
+<path d="M716.5 61h0"></path>
+<rect x="688" y="50" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="702.25" y="65">}</text>
+</g>
+</g>
+<path d="M810 61h20"></path>
+<path d="M202 61a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
+<g class="non-terminal">
+<path d="M222 91h250"></path>
+<path d="M560 91h250"></path>
+<rect x="472" y="80" width="88" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-rawblock"><text x="516" y="95">RawBlock</text>
+</a>
+</g>
+<path d="M810 91a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
+</g>
+</g>
+<path d="M830 61h10"></path>
+<path d="M 840 61 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+</g>
+</svg>

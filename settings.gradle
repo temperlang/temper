@@ -1,0 +1,121 @@
+pluginManagement {
+   repositories {
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    // All plugin versions are set here, don't set the version field out in
+    // build.gradle files.
+    plugins {
+        id 'io.gitlab.arturbosch.detekt'        version '1.23.8'
+        id 'org.jetbrains.dokka'                version '2.0.0'
+        id 'org.jetbrains.kotlin.jvm'           version '2.2.0'
+        id 'org.jetbrains.kotlin.multiplatform' version '2.2.0'
+        id 'org.jlleitschuh.gradle.ktlint'      version '13.0.0'
+        id 'com.github.node-gradle.node'        version '3.0.1'
+        id 'org.jetbrains.kotlin.plugin.serialization' version '2.2.0'
+    }
+}
+
+// Kotlin languages
+
+/** Check <a href="https://kotlinlang.org/docs/releases.html#release-details">release details</a> for a kotlin version. */
+gradle.ext.kotlin_version = '2.2.0'
+/** This should be `kotlin_version` without minor */
+gradle.ext.kotlin_language_version = '2.2'
+/** This should be `kotlin_version` without minor */
+gradle.ext.kotlin_api_version = '2.2'
+
+// Library versions
+// If you add versions here, review the `allprojects{ext{...}}` block in ./build.gradle
+
+/** The version of kotlinx.coroutines.* to use. */
+gradle.ext.kotlinx_coro_version = '1.10.2'
+/** The version of kotlinx.datetime to use. */
+gradle.ext.kotlinx_datetime_version = '0.6.2'
+/**
+ * The version of [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization/releases) to use;
+ * formats like json use the same version.
+ *
+ * When adding this library, make sure to add the serialization plugin.
+ */
+gradle.ext.kotlinx_serialization_version = '1.8.1'
+/** Version of [io.github.pdvrieze.xmlutil](https://github.com/pdvrieze/xmlutil) to enable
+ * serializing to XML. */
+gradle.ext.serialization_xml_version = '0.86.3'
+
+// Support utility versions.
+
+/** Set from <a href="https://github.com/pinterest/ktlint/releases">pinterest/ktlint</a> */
+gradle.ext.ktlint_version = '1.6.0'
+/**
+ * <a href="https://detekt.dev/docs/rules/formatting/">Formatting</a> and
+ * <a href="https://detekt.dev/docs/rules/libraries/">libraries</a>.
+ * Same as detekt's version above.
+ */
+gradle.ext.detekt_version = '1.23.8'
+
+gradle.ext.jvm_target = 21
+
+/** Used for npm tasks */
+gradle.ext.node_version = '22.6.0'
+
+
+rootProject.name = 'temper'
+
+include ':ast'
+include ':astbuild'
+include ':be'
+include ':be-helpers'
+include ':be-cpp'
+include ':be-cpp03'
+include ':be-csharp'
+include ':be-java'
+include ':be-js'
+include ':be-lua'
+include ':be-py'
+include ':be-rust'
+include ':be-test-helpers'
+include ':build-user-docs'
+include ':builtin'
+include ':bundled-backends'
+include ':cli'
+include ':common'
+include ':compile'
+include ':cst'
+include ':doc-gen'
+include ':docker'
+include ':format'
+include ':frontend'
+include ':fs'
+include ':fs-test-helpers'
+include ':functional-test-suite'
+include ':fundamentals'
+include ':interp'
+include ':kcodegen'
+include ':langserver'
+include ':lexer'
+include ':library'
+include ':log'
+include ':name'
+include ':parser'
+include ':regex'
+include ':release-notes'
+include ':result-helpers'
+include ':stage'
+include ':supported-backends'
+include ':test-helpers'
+include ':tooling'
+
+// Include dynamic projects under external/*/*
+def externalDir = file("external")
+if (externalDir.exists()) {
+    externalDir.eachDir { extDir ->
+        extDir.eachDir { subDir ->
+            if (new File(subDir, "build.gradle").exists()) {
+                def projectPath = ":${subDir.name}"
+                include(projectPath)
+                project(projectPath).projectDir = subDir
+            }
+        }
+    }
+}

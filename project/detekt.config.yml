@@ -1,0 +1,607 @@
+# Adapted from https://github.com/arturbosch/detekt/blob/master/detekt-cli/src/main/resources/default-detekt-config.yml
+
+build:
+    maxIssues: 0
+    weights:
+    # complexity: 2
+    # LongParameterList: 1
+    # style: 1
+    # comments: 1
+
+config:
+    validation: true
+    # when writing own rules with new properties, exclude the property path e.g.: "my_rule_set,.*>.*>[my_property]"
+    excludes: ""
+
+processors:
+    active: true
+    exclude:
+    # - 'DetektProgressListener'
+    # - 'FunctionCountProcessor'
+    # - 'PropertyCountProcessor'
+    # - 'ClassCountProcessor'
+    # - 'PackageCountProcessor'
+    # - 'KtFileCountProcessor'
+
+console-reports:
+    active: true
+    exclude:
+        #  - 'ProjectStatisticsReport'
+        #  - 'ComplexityReport'
+        #  - 'NotificationReport'
+        #  - 'FindingsReport'
+        - 'FileBasedFindingsReport'
+    #  - 'BuildFailureReport'
+
+comments:
+    active: true
+    excludes: "**/src/*Test/**"
+    CommentOverPrivateFunction:
+        active: false
+    CommentOverPrivateProperty:
+        active: false
+    EndOfSentenceFormat:
+        active: false
+        endOfSentenceFormat: ([.?!][ \t\n\r\f<])|([.?!:]$)
+    UndocumentedPublicClass:
+        active: false
+        searchInNestedClass: true
+        searchInInnerClass: true
+        searchInInnerObject: true
+        searchInInnerInterface: true
+    UndocumentedPublicFunction:
+        active: false
+    UndocumentedPublicProperty:
+        active: false
+
+complexity:
+    active: false
+    ComplexCondition:
+        active: true
+        threshold: 4
+    ComplexInterface:
+        active: false
+        threshold: 10
+        includeStaticDeclarations: false
+    CyclomaticComplexMethod:
+        active: true
+        threshold: 15
+        ignoreSingleWhenExpression: false
+        ignoreSimpleWhenEntries: false
+        ignoreNestingFunctions: false
+        nestingFunctions:
+            - run
+            - let
+            - apply
+            - with
+            - also
+            - use
+            - forEach
+            - isNotNull
+            - ifNull
+    LabeledExpression:
+        active: false
+        ignoredLabels: [ ]
+    LargeClass:
+        active: true
+        threshold: 600
+    LongMethod:
+        active: true
+        threshold: 60
+    LongParameterList:
+        active: true
+        functionThreshold: 6
+        constructorThreshold: 6
+        ignoreDefaultParameters: false
+    MethodOverloading:
+        active: false
+        threshold: 6
+    NestedBlockDepth:
+        active: true
+        threshold: 4
+    StringLiteralDuplication:
+        active: false
+        excludes: "**/src/*Test/**"
+        threshold: 3
+        ignoreAnnotation: true
+        excludeStringsWithLessThan5Characters: true
+        ignoreStringsRegex: '$^'
+    TooManyFunctions:
+        active: true
+        excludes: "**/src/*Test/**"
+        thresholdInFiles: 11
+        thresholdInClasses: 11
+        thresholdInInterfaces: 11
+        thresholdInObjects: 11
+        thresholdInEnums: 11
+        ignoreDeprecated: false
+        ignorePrivate: false
+        ignoreOverridden: false
+
+empty-blocks:
+    active: true
+    EmptyCatchBlock:
+        active: true
+        allowedExceptionNameRegex: "^(_|(ignore|expected).*)"
+    EmptyClassBlock:
+        active: true
+    EmptyDefaultConstructor:
+        active: true
+    EmptyDoWhileBlock:
+        active: true
+    EmptyElseBlock:
+        active: true
+    EmptyFinallyBlock:
+        active: true
+    EmptyForBlock:
+        active: true
+    EmptyFunctionBlock:
+        active: true
+        ignoreOverridden: false
+    EmptyIfBlock:
+        active: true
+    EmptyInitBlock:
+        active: true
+    EmptyKtFile:
+        active: true
+    EmptySecondaryConstructor:
+        active: true
+    EmptyWhenBlock:
+        active: true
+    EmptyWhileBlock:
+        active: true
+
+exceptions:
+    active: true
+    ExceptionRaisedInUnexpectedLocation:
+        active: false
+        methodNames: [ toString, hashCode, equals, finalize ]
+    InstanceOfCheckForException:
+        active: false
+        excludes: "**/src/*Test/**"
+    NotImplementedDeclaration:
+        active: false
+    PrintStackTrace:
+        active: true
+    RethrowCaughtException:
+        active: false
+    ReturnFromFinally:
+        active: false
+        ignoreLabeled: false
+    SwallowedException:
+        active: true
+        ignoredExceptionTypes:
+            - InterruptedException
+            - NumberFormatException
+            - ParseException
+            - MalformedURLException'
+        allowedExceptionNameRegex: "^(_|(ignore|expected).*)"
+    ThrowingExceptionFromFinally:
+        active: false
+    ThrowingExceptionInMain:
+        active: false
+    ThrowingExceptionsWithoutMessageOrCause:
+        active: true
+        exceptions: [ IllegalArgumentException, IllegalStateException, IOException ]
+    ThrowingNewInstanceOfSameException:
+        active: false
+    TooGenericExceptionCaught:
+        active: true
+        excludes: "**/src/*Test/**"
+        exceptionNames:
+            - ArrayIndexOutOfBoundsException
+            - Error
+            - Exception
+            - IllegalMonitorStateException
+            - NullPointerException
+            - IndexOutOfBoundsException
+            - RuntimeException
+            - Throwable
+        allowedExceptionNameRegex: "^(_|(ignore|expected).*)"
+    TooGenericExceptionThrown:
+        active: true
+        excludes: "**/src/*Test/**"
+        exceptionNames:
+            - Error
+            - Exception
+            - Throwable
+            - RuntimeException
+
+formatting:
+    active: true
+    android: false
+    autoCorrect: true
+    AnnotationOnSeparateLine:
+        active: false
+        autoCorrect: true
+    ArgumentListWrapping:
+        # TODO: reenable when ktlint is migrated
+        active: false
+    ChainWrapping:
+        active: true
+        autoCorrect: true
+    CommentSpacing:
+        active: true
+        autoCorrect: true
+    EnumEntryNameCase:
+        active: false
+    Filename:
+        active: true
+    FinalNewline:
+        active: true
+        autoCorrect: true
+    ImportOrdering:
+        active: false
+        autoCorrect: true
+    Indentation:
+        active: false
+        autoCorrect: true
+        indentSize: 4
+        # continuationIndentSize: 4 -- Deprecated and ignored by ktlint
+    MaximumLineLength:
+        # enforced by ktlint
+        active: false
+        maxLineLength: 120
+        excludePackageStatements: true
+        excludeImportStatements: true
+        excludeCommentStatements: false
+    ModifierOrdering:
+        active: true
+        autoCorrect: true
+    MultiLineIfElse:
+        active: true
+        autoCorrect: true
+    NoBlankLineBeforeRbrace:
+        active: true
+        autoCorrect: true
+    NoConsecutiveBlankLines:
+        active: true
+        autoCorrect: true
+    NoEmptyClassBody:
+        active: true
+        autoCorrect: true
+    NoLineBreakAfterElse:
+        active: true
+        autoCorrect: true
+    NoLineBreakBeforeAssignment:
+        active: true
+        autoCorrect: true
+    NoMultipleSpaces:
+        active: true
+        autoCorrect: true
+    NoSemicolons:
+        active: true
+        autoCorrect: true
+    NoTrailingSpaces:
+        active: true
+        autoCorrect: true
+    NoUnitReturn:
+        active: true
+        autoCorrect: true
+    NoUnusedImports:
+        active: true
+        autoCorrect: true
+    NoWildcardImports:
+        active: true
+    PackageName:
+        active: true
+        autoCorrect: true
+    ParameterListWrapping:
+        active: true
+        autoCorrect: true
+        indentSize: 4
+    SpacingAroundColon:
+        active: true
+        autoCorrect: true
+    SpacingAroundComma:
+        active: true
+        autoCorrect: true
+    SpacingAroundCurly:
+        active: true
+        autoCorrect: true
+    SpacingAroundDot:
+        active: true
+        autoCorrect: true
+    SpacingAroundKeyword:
+        active: true
+        autoCorrect: true
+    SpacingAroundOperators:
+        active: true
+        autoCorrect: true
+    SpacingAroundParens:
+        active: true
+        autoCorrect: true
+    SpacingAroundRangeOperator:
+        active: true
+        autoCorrect: true
+    StringTemplate:
+        active: false
+        # TODO seems to be enforced now
+        autoCorrect: true
+
+libraries:
+    ForbiddenPublicDataClass:
+        # This rule is aimed at library maintainers.
+        # If you are developing a final application you can ignore this issue.
+        active: false
+    LibraryCodeMustSpecifyReturnType:
+        active: true
+    LibraryEntitiesShouldNotBePublic:
+        # TODO: look at correcting these.
+        active: false
+
+naming:
+    active: true
+    ClassNaming:
+        active: true
+        excludes: "**/src/*Test/**"
+        classPattern: '[A-Z$][a-zA-Z0-9$]*'
+    ConstructorParameterNaming:
+        active: true
+        excludes: "**/src/*Test/**"
+        parameterPattern: '[a-z][A-Za-z0-9]*'
+        privateParameterPattern: '[a-z][A-Za-z0-9]*'
+        excludeClassPattern: '$^'
+    EnumNaming:
+        active: true
+        excludes: "**/src/*Test/**"
+        enumEntryPattern: '^[A-Z][_a-zA-Z0-9]*'
+    ForbiddenClassName:
+        active: false
+        excludes: "**/src/*Test/**"
+        forbiddenName: [ ]
+    FunctionMaxLength:
+        active: false
+        excludes: "**/src/*Test/**"
+        maximumFunctionNameLength: 30
+    FunctionMinLength:
+        active: false
+        excludes: "**/src/*Test/**"
+        minimumFunctionNameLength: 3
+    FunctionNaming:
+        active: true
+        excludes: "**/src/*Test/**"
+        functionPattern: '^([a-z$][a-zA-Z$0-9]*)$|^(`.*`)$'
+        excludeClassPattern: '$^'
+    FunctionParameterNaming:
+        active: true
+        excludes: "**/src/*Test/**"
+        parameterPattern: '[a-z][A-Za-z0-9]*'
+        excludeClassPattern: '$^'
+    InvalidPackageDeclaration:
+        active: false
+        rootPackage: ''
+    MatchingDeclarationName:
+        active: true
+    MemberNameEqualsClassName:
+        active: true
+        ignoreOverridden: true
+    ObjectPropertyNaming:
+        active: true
+        excludes: "**/src/*Test/**"
+        constantPattern: '[A-Za-z][_A-Za-z0-9]*'
+        propertyPattern: '[A-Za-z][_A-Za-z0-9]*'
+        privatePropertyPattern: '(_)?[A-Za-z][_A-Za-z0-9]*'
+    PackageNaming:
+        active: true
+        excludes: "**/src/*Test/**"
+        packagePattern: '^[a-z]+(\.[a-z][A-Za-z0-9]*)*$'
+    TopLevelPropertyNaming:
+        active: true
+        excludes: "**/src/*Test/**"
+        constantPattern: '[A-Z][_A-Z0-9]*'
+        propertyPattern: '[A-Za-z][_A-Za-z0-9]*'
+        privatePropertyPattern: '_?[A-Za-z][_A-Za-z0-9]*'
+    VariableMaxLength:
+        active: false
+        excludes: "**/src/*Test/**"
+        maximumVariableNameLength: 64
+    VariableMinLength:
+        active: false
+        excludes: "**/src/*Test/**"
+        minimumVariableNameLength: 1
+    VariableNaming:
+        active: true
+        excludes: "**/src/*Test/**"
+        variablePattern: '[a-z][A-Za-z0-9]*'
+        privateVariablePattern: '(_)?[a-z][A-Za-z0-9]*'
+        excludeClassPattern: '$^'
+
+performance:
+    active: true
+    ArrayPrimitive:
+        active: true
+    ForEachOnRange:
+        active: true
+        excludes: "**/src/*Test/**"
+    SpreadOperator:
+        active: true
+        excludes: "**/src/*Test/**"
+    UnnecessaryTemporaryInstantiation:
+        active: true
+
+potential-bugs:
+    active: true
+    Deprecation:
+        active: true
+    EqualsAlwaysReturnsTrueOrFalse:
+        active: true
+    EqualsWithHashCodeExist:
+        active: true
+    ExplicitGarbageCollectionCall:
+        active: true
+    HasPlatformType:
+        active: false
+    ImplicitDefaultLocale:
+        active: true
+    InvalidRange:
+        active: true
+    IteratorHasNextCallsNextMethod:
+        active: true
+    IteratorNotThrowingNoSuchElementException:
+        active: true
+    LateinitUsage:
+        active: false
+    UnconditionalJumpStatementInLoop:
+        active: false
+    UnreachableCode:
+        active: true
+    UnsafeCallOnNullableType:
+        active: true
+    UnsafeCast:
+        active: true
+    UselessPostfixExpression:
+        active: true
+    WrongEqualsTypeParameter:
+        active: true
+
+style:
+    active: true
+    BracesOnIfStatements:
+        active: false
+    BracesOnWhenStatements:
+        active: false
+    CollapsibleIfStatements:
+        active: false
+    DataClassContainsFunctions:
+        active: false
+        conversionFunctionPrefix:
+            - 'to'
+    DataClassShouldBeImmutable:
+        active: false
+    DestructuringDeclarationWithTooManyEntries:
+        maxDestructuringEntries: 6
+    EqualsNullCall:
+        active: true
+    EqualsOnSignatureLine:
+        active: false
+    ExplicitItLambdaParameter:
+        active: false
+    ExpressionBodySyntax:
+        active: false
+        includeLineWrapping: false
+    ForbiddenComment:
+        active: false
+        comments: [ ]
+        allowedPatterns: ""
+    ForbiddenImport:
+        active: false
+        imports: [ ]
+        forbiddenPatterns: ""
+    ForbiddenVoid:
+        active: false
+        ignoreOverridden: false
+        ignoreUsageInGenerics: false
+    FunctionOnlyReturningConstant:
+        active: true
+        ignoreOverridableFunction: true
+        excludedFunctions:
+            - 'describeContents'
+        ignoreAnnotated:
+            - "dagger.Provides"
+    LoopWithTooManyJumpStatements:
+        active: true
+        maxJumpCount: 6
+    MagicNumber:
+        active: true
+        excludes: "**/src/*Test/**"
+        ignoreNumbers: [ '-1', '0', '1', '2' ]
+        ignoreHashCodeFunction: true
+        ignorePropertyDeclaration: false
+        ignoreConstantDeclaration: true
+        ignoreCompanionObjectPropertyDeclaration: true
+        ignoreAnnotation: false
+        ignoreNamedArgument: true
+        ignoreEnums: false
+        ignoreRanges: false
+    MaxLineLength:
+        active: false
+        # Use formatting
+    MayBeConst:
+        active: true
+    ModifierOrder:
+        active: true
+    NestedClassesVisibility:
+        active: false
+    NewLineAtEndOfFile:
+        active: true
+    NoTabs:
+        active: false
+    OptionalAbstractKeyword:
+        active: true
+    OptionalUnit:
+        active: false
+    PreferToOverPairSyntax:
+        active: false
+    ProtectedMemberInFinalClass:
+        active: true
+    RedundantExplicitType:
+        active: false
+    RedundantVisibilityModifierRule:
+        active: false
+    ReturnCount:
+        active: false
+        max: 2
+        excludedFunctions:
+            - "equals"
+        excludeLabeled: false
+        excludeReturnFromLambda: true
+        excludeGuardClauses: false
+    SafeCast:
+        active: true
+    SerialVersionUIDInSerializableClass:
+        active: false
+    SpacingBetweenPackageAndImports:
+        active: false
+    ThrowsCount:
+        active: false
+        max: 2
+    TrailingWhitespace:
+        active: true
+    UnderscoresInNumericLiterals:
+        active: true
+        acceptableLength: 5
+    UnnecessaryAbstractClass:
+        active: true
+        ignoreAnnotated:
+            - "dagger.Module"
+    UnnecessaryApply:
+        active: true
+    UnnecessaryInheritance:
+        active: true
+    UnnecessaryLet:
+        active: false
+    UnnecessaryParentheses:
+        active: false
+    UntilInsteadOfRangeTo:
+        active: false
+    UnusedImports:
+        active: true
+    UnusedPrivateClass:
+        active: true
+    UnusedPrivateMember:
+        active: true
+        allowedNames: "(_|ignored|expected|serialVersionUID)"
+    UseArrayLiteralsInAnnotations:
+        active: false
+    UseCheckOrError:
+        active: false
+    UseDataClass:
+        active: false
+        ignoreAnnotated: [ ]
+        allowVars: false
+    UseIfInsteadOfWhen:
+        active: false
+    UseRequire:
+        active: false
+    UselessCallOnNotNull:
+        active: true
+    UtilityClassWithPublicConstructor:
+        active: true
+    VarCouldBeVal:
+        active: true
+    WildcardImport:
+        active: true
+        excludes: "**/src/*Test/**"
+        excludeImports:
+            - 'java.util.*,kotlinx.android.synthetic.*'

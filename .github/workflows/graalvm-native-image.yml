@@ -1,0 +1,225 @@
+
+name: native-image
+permissions:
+  contents: read
+
+on:
+    workflow_dispatch:
+      inputs: {}
+
+jobs:
+    temper-jar:
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+
+        steps:
+            - uses: actions/checkout@v4
+              timeout-minutes: 3
+              with:
+                fetch-depth: 0
+                persist-credentials: false
+            - name: Upload native-image Config
+              uses: actions/upload-artifact@v4
+              with:
+                name: internal-json-files-for-native-builds
+                path: ./cli/src/main/resources/META-INF/native-image
+                retention-days: 1
+            - name: Set up JDK
+              uses: actions/setup-java@v4
+              timeout-minutes: 3
+              with:
+                distribution: "zulu"
+                java-version: 17
+            - name: Set up Gradle
+              uses: gradle/actions/setup-gradle@v3
+              timeout-minutes: 3
+            - name: Build temper.jar
+              timeout-minutes: 30
+              run: ./gradlew --info --profile --parallel shrinkJars
+            - name: Upload temper.jar
+              uses: actions/upload-artifact@v4
+              with:
+                name: temper.jar
+                path: ./cli/build/distributions/temper.jar
+                retention-days: 1
+
+    native-linux:
+        needs: temper-jar
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+
+        steps:
+            - name: Download temper.jar
+              uses: actions/download-artifact@v4
+              timeout-minutes: 3
+              with:
+                name: temper.jar
+                merge-multiple: true
+
+            - name: Download native-image Config
+              uses: actions/download-artifact@v4
+              timeout-minutes: 3
+              with:
+                name: internal-json-files-for-native-builds
+
+            - name: Set up GraalVM
+              uses: graalvm/setup-graalvm@v1
+              timeout-minutes: 3
+              with:
+                java-version: 21
+                distribution: 'graalvm-community'
+
+            - name: Run GraalVM native-image Manually
+              timeout-minutes: 30
+              run: >
+                native-image -O3 -jar temper.jar -o temper
+                --no-fallback
+                -H:+StaticExecutableWithDynamicLibC
+                -H:ResourceConfigurationFiles=resource-config.json
+                -H:ReflectionConfigurationFiles=reflect-config.json
+                -H:JNIConfigurationFiles=jni-config.json
+                --strict-image-heap
+
+            - name: Upload artifacts
+              uses: actions/upload-artifact@v4
+              timeout-minutes: 3
+              with:
+                name: native-linux-amd64
+                path: temper
+                retention-days: 14
+
+    native-macos-intel:
+        needs: temper-jar
+        runs-on: macos-latest
+        timeout-minutes: 30
+
+        steps:
+            - name: Download temper.jar
+              uses: actions/download-artifact@v4
+              timeout-minutes: 3
+              with:
+                name: temper.jar
+                merge-multiple: true
+
+            - name: Download native-image Config
+              uses: actions/download-artifact@v4
+              timeout-minutes: 3
+              with:
+                name: internal-json-files-for-native-builds
+                merge-multiple: true
+
+            - name: Set up GraalVM
+              uses: graalvm/setup-graalvm@v1
+              timeout-minutes: 3
+              with:
+                java-version: 21
+                distribution: 'graalvm-community'
+
+            - name: Run GraalVM native-image Manually
+              timeout-minutes: 30
+              run: >
+                native-image -O3 -jar temper.jar -o temper
+                --no-fallback
+                -H:ResourceConfigurationFiles=resource-config.json
+                -H:ReflectionConfigurationFiles=reflect-config.json
+                -H:JNIConfigurationFiles=jni-config.json
+                --strict-image-heap
+
+            - name: Upload artifacts
+              uses: actions/upload-artifact@v4
+              timeout-minutes: 3
+              with:
+                name: native-macos-intel
+                path: temper
+                retention-days: 14
+
+    native-macos-apple-silicon:
+        needs: temper-jar
+        runs-on: macos-latest-xlarge
+        timeout-minutes: 30
+
+        steps:
+            - name: Download temper.jar
+              uses: actions/download-artifact@v4
+              timeout-minutes: 3
+              with:
+                name: temper.jar
+                merge-multiple: true
+
+            - name: Download native-image Config
+              uses: actions/download-artifact@v4
+              timeout-minutes: 3
+              with:
+                name: internal-json-files-for-native-builds
+                merge-multiple: true
+
+            - name: Set up GraalVM
+              uses: graalvm/setup-graalvm@v1
+              timeout-minutes: 3
+              with:
+                java-version: 21
+                distribution: 'graalvm-community'
+
+            - name: Run GraalVM native-image Manually
+              timeout-minutes: 30
+              run: >
+                native-image -O3 -jar temper.jar -o temper
+                --no-fallback
+                -H:ResourceConfigurationFiles=resource-config.json
+                -H:ReflectionConfigurationFiles=reflect-config.json
+                -H:JNIConfigurationFiles=jni-config.json
+                --strict-image-heap
+
+            - name: Upload artifacts
+              uses: actions/upload-artifact@v4
+              timeout-minutes: 3
+              with:
+                name: native-macos-apple-silicon
+                path: temper
+                retention-days: 14
+
+    native-windows:
+        needs: temper-jar
+        runs-on: windows-latest
+        timeout-minutes: 30
+
+        steps:
+            - name: Download temper.jar
+              uses: actions/download-artifact@v4
+              timeout-minutes: 3
+              with:
+                name: temper.jar
+                merge-multiple: true
+
+            - name: Download native-image Config
+              uses: actions/download-artifact@v4
+              timeout-minutes: 3
+              with:
+                name: internal-json-files-for-native-builds
+                merge-multiple: true
+
+            - name: Set up GraalVM
+              uses: graalvm/setup-graalvm@v1
+              timeout-minutes: 3
+              with:
+                java-version: 21
+                distribution: 'graalvm-community'
+
+            - name: Run GraalVM native-image Manually
+              timeout-minutes: 30
+              run: >
+                native-image -O3 -jar temper.jar -o temper
+                --no-fallback
+                -H:+StaticExecutableWithDynamicLibC
+                -H:ResourceConfigurationFiles=resource-config.json
+                -H:ReflectionConfigurationFiles=reflect-config.json
+                -H:JNIConfigurationFiles=jni-config.json
+                --strict-image-heap
+
+            - name: Upload artifacts
+              uses: actions/upload-artifact@v4
+              timeout-minutes: 3
+              with:
+                name: native-windows-x64
+                path: temper.exe
+                retention-days: 14

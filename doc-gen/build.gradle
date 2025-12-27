@@ -1,0 +1,36 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.github.node-gradle.node'
+}
+ext.temperProject = 'jvm'
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coro_version"
+    implementation "org.commonmark:commonmark:0.21.0"
+    implementation("it.skrape:skrapeit:1.1.5")
+    implementation project(':common')
+    implementation project(':be')
+    implementation project(':be-helpers')
+    implementation project(':be-js')
+    implementation project(':be-py')
+    implementation project(':compile')
+    implementation project(':format')
+    implementation project(':frontend')
+    implementation project(':fs')
+    implementation project(':fundamentals')
+    implementation project(':interp')
+    implementation project(':lexer')
+    implementation project(':library')
+    implementation project(':log')
+    implementation project(':name')
+    // Do not depend on intellij here.  The intellij plugin adds a dependency
+    // which is inconsistent with any version that I could find in Maven,
+    // and which leads to ClassNotFound errors involving sun.reflect.
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
+    testImplementation project(':test-helpers')
+    testImplementation project(':bundled-backends')
+}

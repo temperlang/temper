@@ -1,0 +1,60 @@
+# Verbose isn't overly verbose, but notes and warnings get long.
+-verbose
+-dontnote
+-dontwarn
+
+# We don't want obfuscation for debug reasons, and optimize is super slow.
+-dontobfuscate
+-dontoptimize
+
+# Keep attrs and keep kotlin are playing it safe.
+# Keep dirs is needed at least for our access to "std/" dir.
+-keepattributes
+-keepdirectories
+-keep class kotlin.Metadata
+
+# Mostly we just need the meta inf for the app as a whole, but we do need
+# service definitions at least for jline on windows.
+# TODO(tjp, dist): Pre-extract licenses for use from `temper licenses`.
+-injars build/install/temper/lib/(*.jar;!META-INF/**)
+-injars build/install/temper/lib/(*.jar;META-INF/services/**)
+-injars build/install/temper/lib/temper-cli.jar(META-INF/**)
+
+# This has to go after all injars we want in it.
+-outjar build/distributions/temper.jar
+
+# Individual modules is faster than trying to dig through all.
+-libraryjars <java.home>/jmods/java.base.jmod(!**.jar;!module-info.class)
+-libraryjars <java.home>/jmods/java.logging.jmod(!**.jar;!module-info.class)
+-libraryjars <java.home>/jmods/java.management.jmod(!**.jar;!module-info.class)
+-libraryjars <java.home>/jmods/jdk.unsupported.jmod(!**.jar;!module-info.class)
+-libraryjars <java.home>/jmods/java.transaction.xa.jmod(!**.jar;!module-info.class)
+-libraryjars <java.home>/jmods/jdk.zipfs.jmod(!**.jar;!module-info.class)
+
+# Main entry point.
+-keep public class lang.temper.cli.Cli {
+    public static void main(java.lang.String[]);
+}
+
+# These are based somewhat on errors seen and somewhat on graal agent findings.
+# Also somewhat on proguard examples or tips.
+# Beyond that, they're sloppy with wildcards because better safe than sorry.
+# Even with these kept, lots gets cut out.
+-keep class lang.temper.be.** { *; }
+-keep class lang.temper.compile.handlers.** { *; }
+-keep class lang.temper.langserver.** { *; }
+-keep class com.sleepycat.je.** { *; }
+-keep class com.sun.jna.** { *; }
+-keep class com.sun.management.** { *; }
+-keep class kotlin.reflect.jvm.internal.** { *; }
+-keep class net.rubygrapefruit.platform.internal.jni.** { *; }
+-keep class org.apache.commons.lang3.** { *; }
+-keep class org.eclipse.lsp4j.** { *; }
+-keep class org.fusesource.jansi.** { *; }
+-keep class org.jline.terminal.** { *; }
+-keep class org.jline.util.** { *; }
+-keep class org.jline.nativ.** { *; }
+-keep class sun.management.** { *; }
+-keep class sun.misc.** { *; }
+-keep class sun.security.** { *; }
+-keep class * implements com.sun.jna.** { *; }

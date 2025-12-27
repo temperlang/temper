@@ -1,0 +1,156 @@
+name: integration-tests
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      args:
+        type: string
+        description: extra command line arguments for scripts/integration_test
+        default: ""
+      runners:
+        type: string
+        # From jre4temper, stored here for example:
+        # https://github.com/temperlang/jre4temper/releases/download/jre_bundle/manifest.json
+        default: '["macos-14", "ubuntu-22.04", "windows-2022"]'
+      build:
+        type: boolean
+        description: false (the default) to use the output of the *release-dev* workflow's tagged build, true to build temper and use that instead.
+        default: false
+  workflow_dispatch:
+    # Sadly, have to duplicate inputs for now.
+    # https://github.com/orgs/community/discussions/39357#discussioncomment-4170645
+    inputs:
+      args:
+        type: string
+        description: extra command line arguments for scripts/integration_test
+        default: ""
+      runners:
+        type: string
+        default: '["macos-14", "ubuntu-22.04", "windows-2022"]'
+      build:
+        type: boolean
+        description: false (the default) to use the output of the *release-dev* workflow's tagged build, true to build temper and use that instead.
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        if: ${{ inputs.build }}
+        uses: actions/checkout@v4
+        timeout-minutes: 3
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK
+        if: ${{ inputs.build }}
+        uses: actions/setup-java@v4
+        timeout-minutes: 3
+        with:
+          distribution: "zulu"
+          java-version: 21
+
+      - name: Set up Gradle
+        if: ${{ inputs.build }}
+        uses: gradle/gradle-build-action@v2
+        timeout-minutes: 3
+        with:
+          cache-disabled: true
+
+      - name: Build Temper
+        if: ${{ inputs.build }}
+        timeout-minutes: 10
+        run: ./gradlew cli:deploy
+
+      - name: Upload built Temper artifact
+        if: ${{ inputs.build }}
+        uses: actions/upload-artifact@v4
+        with:
+            name: temper
+            path: ./cli/build/install/temper
+            retention-days: 1
+
+  test:
+    needs: build
+    strategy:
+      matrix:
+        runner: ${{ fromJSON(inputs.runners) }}
+      # run tests on all runners even if one fails
+      fail-fast: false
+    defaults:
+      run:
+        shell: bash
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        timeout-minutes: 3
+        with:
+          persist-credentials: false
+
+      - name: Set up MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        timeout-minutes: 3
+        with:
+          distribution: "zulu"
+          java-version: ${{ inputs.build && '21' || '17' }}
+
+      - name: Set up Maven
+        uses: stCarolas/setup-maven@v5
+        with:
+          maven-version: '3.8.2'
+
+      - name: Set up Lua
+        uses: leafo/gh-actions-lua@v10
+        timeout-minutes: 5
+
+      - uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: '3.11'
+
+      - name: Install Poetry
+        timeout-minutes: 3
+        uses: snok/install-poetry@v1
+        with:
+          version: 2.1.3
+
+      - name: Install test dependencies
+        timeout-minutes: 3
+        working-directory: ./scripts
+        # Use `python3` and `-m` to be safer across systems.
+        # Only install dependencies needed by integration tests.
+        run: poetry install --only integration
+
+      # Based on the build input we run one of the task groups below
+      - name: Download built Temper artifact
+        if: ${{ inputs.build }}
+        uses: actions/download-artifact@v4
+        with:
+          name: temper
+          path: ./cli/build/install/temper
+      - name: Restore executable bit
+        if: ${{ inputs.build && runner.os != 'Windows' }}
+        run: chmod +x ./cli/build/install/temper/bin/temper
+      - name: Test built release
+        if: ${{ inputs.build }}
+        timeout-minutes: 30
+        working-directory: ./scripts
+        run: poetry run integration-test --temper ../cli/build/install/temper/bin/temper ${{ inputs.args }}
+
+      - name: Test tagged release
+        if: ${{ !inputs.build }}
+        timeout-minutes: 30
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        working-directory: ./scripts
+        # Automatically downloads the correct release for the current runner.
+        run: poetry run integration-test --tag dev ${{ inputs.args }}

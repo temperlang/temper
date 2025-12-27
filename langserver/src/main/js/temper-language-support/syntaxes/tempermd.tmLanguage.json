@@ -1,0 +1,5 @@
+{
+  "name": "Temper Markdown",
+  "scopeName": "source.tempermd",
+  "patterns": [{ "include": "text.html.markdown" }]
+}

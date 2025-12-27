@@ -1,0 +1,39 @@
+// Copied initially from https://github.com/microsoft/vscode-extension-samples
+{
+  "comments": {
+    "lineComment": "//",
+    "blockComment": ["/*", "*/"]
+  },
+  // See also bracketPartners in Temper lexer source.
+  "brackets": [
+    // TODO(tjp, tooling): Prevent semantic tokens from clobbering template brackets.
+    ["${", "}"],
+    ["{", "}"],
+    ["[", "]"],
+    ["(", ")"]
+    // TypeScript doesn't include angles here.
+    // ["<", ">"]
+  ],
+  "autoClosingPairs": [
+    { "open": "{", "close": "}" },
+    { "open": "[", "close": "]" },
+    { "open": "(", "close": ")" },
+    // TypeScript doesn't include angles here.
+    // { "open": "<", "close": ">" },
+    { "open": "'", "close": "'", "notIn": ["string", "comment"] },
+    { "open": "\"", "close": "\"", "notIn": ["string"] },
+    { "open": "`", "close": "`", "notIn": ["string", "comment"] },
+    { "open": "/**", "close": " */", "notIn": ["string"] }
+  ],
+  "autoCloseBefore": ";:.,=}])>` \n\t",
+  "surroundingPairs": [
+    ["{", "}"],
+    ["[", "]"],
+    ["(", ")"],
+    // TypeScript *does* include angles here.
+    ["<", ">"],
+    ["'", "'"],
+    ["\"", "\""],
+    ["`", "`"]
+  ]
+}

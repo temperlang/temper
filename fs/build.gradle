@@ -1,0 +1,87 @@
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform'
+    id 'com.github.node-gradle.node'
+}
+ext.temperProject = 'mpp'
+
+//apply plugin: 'maven-publish'
+
+kotlin {
+    sourceSets {
+        all {
+            languageSettings {
+                languageVersion = gradle.kotlin_language_version
+                apiVersion = gradle.kotlin_api_version
+                //enableLanguageFeature('InlineClasses')
+                progressiveMode = true
+                //verbose = true
+                optIn("kotlin.RequiresOptIn")
+            }
+        }
+    }
+
+    jvm()
+//    js {
+//        nodejs {
+//        }
+//    }
+    // For ARM, should be changed to iosArm32 or iosArm64
+    // For Linux, should be changed to e.g. linuxX64
+    // For MacOS, should be changed to e.g. macosX64
+    // For Windows, should be changed to e.g. mingwX64
+//  linuxX64('linux')
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation kotlin('stdlib-common')
+                implementation kotlin('reflect')
+                implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coro_version"
+                implementation project(':common')
+                implementation project(':log')
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test-common')
+                implementation kotlin('test-annotations-common')
+                implementation project(':test-helpers')
+                implementation project(':fs-test-helpers')
+            }
+        }
+        jvmMain {
+            dependencies {
+                implementation kotlin('stdlib-jdk8')
+                implementation "io.methvin:directory-watcher:0.18.0"
+                // Ignore file parsing and matching
+                implementation(libs.eclipse.jgit)
+                implementation "net.harawata:appdirs:1.2.1"
+                // See also: https://github.com/gradle/gradle/blob/32b7fd1aff202027406dd61b463bd63902248df9/build-logic/dependency-modules/src/main/kotlin/gradlebuild/modules/extension/ExternalModulesExtension.kt#L29
+                // And versions here: https://repo.gradle.org/ui/native/public/net/rubygrapefruit/file-events/
+                implementation "net.rubygrapefruit:file-events:0.22-milestone-25"
+                implementation "net.rubygrapefruit:native-platform:0.22-milestone-25"
+            }
+        }
+        jvmTest {
+            dependencies {
+                implementation kotlin('test-common')
+                implementation kotlin('test')
+                implementation kotlin('test-junit5')
+                implementation project(':fs-test-helpers')
+            }
+        }
+//        jsMain {
+//            dependencies {
+//                implementation kotlin('stdlib-js')
+//            }
+//        }
+//        jsTest {
+//            dependencies {
+//                implementation kotlin('test-js')
+//            }
+//        }
+//      linuxMain {
+//      }
+//      linuxTest {
+//      }
+    }
+}

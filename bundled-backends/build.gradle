@@ -1,0 +1,102 @@
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform'
+    id 'com.github.node-gradle.node'
+}
+ext.temperProject = 'mpp'
+//apply plugin: 'maven-publish'
+
+kotlin {
+    sourceSets {
+        all {
+            languageSettings {
+                optIn("kotlin.RequiresOptIn")
+                languageVersion = gradle.kotlin_language_version
+                apiVersion = gradle.kotlin_api_version
+                //enableLanguageFeature('InlineClasses')
+                progressiveMode = true
+                //verbose = true
+            }
+        }
+    }
+
+    jvm()
+//  js {
+//      nodejs {
+//      }
+//  }
+    // For ARM, should be changed to iosArm32 or iosArm64
+    // For Linux, should be changed to e.g. linuxX64
+    // For MacOS, should be changed to e.g. macosX64
+    // For Windows, should be changed to e.g. mingwX64
+//  linuxX64('linux')
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation kotlin('stdlib-common')
+                implementation kotlin('reflect')
+                implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coro_version"
+                implementation project(':common')
+                implementation project(':log')
+                implementation project(':supported-backends')
+                implementation project(':be')
+                // List of backends that need to be on the classpath for plugin
+                // loading to catch them.
+                implementation project(':be-cpp')
+                implementation project(':be-cpp03')
+                implementation project(':be-csharp')
+                implementation project(':be-java')
+                implementation project(':be-js')
+                implementation project(':be-lua')
+                implementation project(':be-py')
+                implementation project(':be-rust')
+
+                // Dynamically add all subdirectories in external as project dependencies
+                // These are likely experimental or proprietary backends or plugins.
+                // This code mirrors similar code in ../settings.gradle
+                def externalDir = file("../external")
+                if (externalDir.exists()) {
+                    externalDir.eachDir { extDir ->
+                        extDir.eachDir { subDir ->
+                            if (new File(subDir, "build.gradle").exists() && !(subDir.name ==~ /.*\btest\b.*/)) {
+                                def projectPath = ":${subDir.name}"
+                                implementation project(":$projectPath")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test-common')
+                implementation kotlin('test-annotations-common')
+                implementation project(':test-helpers')
+            }
+        }
+        jvmMain {
+            dependencies {
+                implementation kotlin('stdlib-jdk8')
+            }
+        }
+        jvmTest {
+            dependencies {
+                implementation kotlin('test')
+                implementation kotlin('test-junit5')
+            }
+        }
+//      jsMain {
+//          dependencies {
+//              implementation kotlin('stdlib-js')
+//          }
+//      }
+//      jsTest {
+//          dependencies {
+//              implementation kotlin('test-js')
+//          }
+//      }
+//      linuxMain {
+//      }
+//      linuxTest {
+//      }
+    }
+}

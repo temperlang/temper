@@ -1,0 +1,84 @@
+# General reference for this file:
+# https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions
+
+# Also note that github actions are regular Github repos, so actions/checkout is literally
+# https://github.com/actions/checkout
+
+name: CI
+permissions:
+    contents: read
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+              timeout-minutes: 3
+              with:
+                  # Fetch enough history for `git describe` to work; https://github.com/actions/checkout/issues/338
+                  fetch-depth: 0
+                  persist-credentials: false
+            # The set up jdk operation also creates a toolchains.xml file for maven.
+            - name: Set up JDK
+              uses: actions/setup-java@v4
+              timeout-minutes: 3
+              with:
+                  distribution: "zulu"
+                  java-version: |
+                      8
+                      17
+                      21
+            - name: Set up Maven
+              uses: stCarolas/setup-maven@v5
+              with:
+                maven-version: 3.8.2
+            # Use the official Gradle action for better caching
+            - name: Set up Gradle
+              uses: gradle/actions/setup-gradle@v4
+              timeout-minutes: 3
+              with:
+                gradle-version: '9.0.0'
+                cache-disabled: true
+            - name: Set up Lua
+              uses: leafo/gh-actions-lua@v10
+              timeout-minutes: 5
+            - name: Setup Python
+              uses: actions/setup-python@v4
+              with:
+                python-version: 3.11
+              timeout-minutes: 2
+            - name: Set up Mypy
+              run: pip install mypy lxml
+              timeout-minutes: 2
+            - name: Set up .NET
+              uses: actions/setup-dotnet@v4
+              with:
+                dotnet-version: '9.0'
+              timeout-minutes: 2
+            - name: Build and run tests with Gradle
+              id: gradle
+              run: ./gradlew --info --profile --parallel build
+              # docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idtimeout-minutes
+              timeout-minutes: 50
+              env:
+                  # Run a single instance to ensure randomized tests are repeatable
+                  TEST_RANDOM_SEED: 123456
+            - name: Save test reports
+              uses: actions/upload-artifact@v4
+              # check if the workflow failed and the prior step was the cause
+              if: ${{ failure() && steps.gradle.conclusion == 'failure' }}
+              with:
+                  name: test-reports
+                  path: '*/build/reports/tests/**/*.html'
+            - name: Archive gradle profile
+              uses: actions/upload-artifact@v4
+              with:
+                  name: gradle-profile
+                  path: build/reports/profile

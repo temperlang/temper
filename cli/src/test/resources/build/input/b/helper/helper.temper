@@ -1,0 +1,9 @@
+export let twice(n: Int): Int {
+    // Having this console.log call allows us to test import generation in
+    // BuildTest by making the function impure.
+    // TODO: remove once we've got a better handle on when to inline
+    // cross-library imports.
+    if (n < 0) { console.log("twice negative"); }
+
+    2 * n
+}

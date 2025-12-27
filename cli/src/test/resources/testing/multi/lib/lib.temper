@@ -1,0 +1,30 @@
+let { tau } = import("../constants");
+
+// Only exported definitions are visible outside the current file.
+export sealed interface Shape {
+  public area(): Float64;
+  public perimeter(): Float64;
+  public toString(): String;
+}
+
+export class Rectangle(
+  public width: Float64,
+  public height: Float64,
+) extends Shape {
+  public area(): Float64 { width * height }
+  public perimeter(): Float64 { 2.0 * (width + height) }
+  public toString(): String {
+    "Rectangle of size ${width} x ${height}"
+  }
+}
+
+// Exporting is optional.
+let pi = 0.5 * tau;
+
+export class Circle(
+  public radius: Float64,
+) extends Shape {
+  public area(): Float64 { pi * radius * radius }
+  public perimeter(): Float64 { tau * radius }
+  public toString(): String { "Circle of radius ${radius}" }
+}

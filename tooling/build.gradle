@@ -1,0 +1,74 @@
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform'
+}
+ext.temperProject = 'mpp'
+
+kotlin {
+    sourceSets {
+        all {
+            languageSettings {
+                languageVersion = gradle.kotlin_language_version
+                apiVersion = gradle.kotlin_api_version
+                //enableLanguageFeature('InlineClasses')
+                progressiveMode = true
+                //verbose = true
+                optIn("kotlin.RequiresOptIn")
+            }
+        }
+    }
+
+    jvm()
+
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation kotlin('reflect')
+                implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coro_version"
+                implementation "org.jetbrains.kotlinx:kotlinx-datetime:$kotlinx_datetime_version"
+                implementation project(':be')
+                implementation project(':be-helpers')
+                implementation project(':builtin')
+                // Need to ship tools with the default backend set.
+                implementation project(':bundled-backends')
+                implementation project(':common')
+                implementation project(':compile')
+                implementation project(':cst')
+                implementation project(':doc-gen')
+                implementation project(':format')
+                implementation project(':frontend')
+                implementation project(':fs')
+                implementation project(':fundamentals')
+                implementation project(':interp')
+                implementation project(':lexer')
+                implementation project(':library')
+                implementation project(':log')
+                implementation project(':name')
+                implementation project(':result-helpers')
+                implementation project(':stage')
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test-common')
+                implementation kotlin('test-annotations-common')
+                implementation project(':lexer')
+                implementation project(':test-helpers')
+            }
+        }
+        jvmMain {
+            dependencies {
+                implementation kotlin('stdlib-jdk8')
+                implementation project(':supported-backends')
+                // For caching build info for tools.
+                implementation "com.sleepycat:je:18.3.12"
+            }
+        }
+        jvmTest {
+            dependencies {
+                implementation kotlin('test')
+                implementation kotlin('test-junit5')
+                implementation project(':fs-test-helpers')
+            }
+        }
+    }
+}

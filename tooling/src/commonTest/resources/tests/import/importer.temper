@@ -1,0 +1,3 @@
+let { first } = import("./exporter.temper");
+let { second, third } = import("./exporter.temper");
+console.log(/*1@+3*/"${first}${second}${third}"/*3@-2*/);

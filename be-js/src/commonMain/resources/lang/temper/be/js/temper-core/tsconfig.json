@@ -1,0 +1,26 @@
+{
+    "compilerOptions": {
+        "allowJs": true,
+        "noEmit": true,
+        "preserveConstEnums": false,
+        "removeComments": true,
+        "sourceMap": false,
+        "target": "es2020"
+    },
+    "files": [
+        "async.js",
+        "bitvector.js",
+        "check-type.js",
+        "core.js",
+        "date.js",
+        "deque.js",
+        "float.js",
+        "index.js",
+        "interface.js",
+        "listed.js",
+        "mapped.js",
+        "pair.js",
+        "regex.js",
+        "string.js"
+    ]
+}

@@ -1,0 +1,90 @@
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform'
+}
+ext.temperProject = 'mpp'
+//apply plugin: 'maven-publish'
+
+kotlin {
+    sourceSets {
+        all {
+            languageSettings {
+                languageVersion = gradle.kotlin_language_version
+                apiVersion = gradle.kotlin_api_version
+                //enableLanguageFeature('InlineClasses')
+                progressiveMode = true
+                //verbose = true
+            }
+        }
+    }
+
+    jvm()
+//  js {
+//      nodejs {
+//      }
+//  }
+    // For ARM, should be changed to iosArm32 or iosArm64
+    // For Linux, should be changed to e.g. linuxX64
+    // For MacOS, should be changed to e.g. macosX64
+    // For Windows, should be changed to e.g. mingwX64
+//  linuxX64('linux')
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation kotlin('stdlib-common')
+                implementation kotlin('reflect')
+                implementation kotlin('test-common')
+                implementation kotlin('test-annotations-common')
+                implementation project(':common')
+                implementation project(':test-helpers')
+                implementation project(':format')
+                implementation project(':frontend')
+                implementation project(':fundamentals')
+                implementation project(':fs')
+                implementation project(':interp')
+                implementation project(':lexer')
+                implementation project(':library')
+                implementation project(':log')
+                implementation project(':name')
+                implementation project(':result-helpers')
+                implementation project(':stage')
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test-common')
+                implementation kotlin('test-annotations-common')
+                implementation project(':bundled-backends')
+                implementation project(':supported-backends')
+                implementation project(':test-helpers')
+            }
+        }
+        jvmMain {
+            dependencies {
+                implementation kotlin('stdlib-jdk8')
+                implementation kotlin('test')
+                implementation kotlin('test-junit5')
+            }
+        }
+        jvmTest {
+            dependencies {
+                implementation kotlin('test')
+                implementation kotlin('test-junit5')
+                implementation project(':test-helpers')
+            }
+        }
+//      jsMain {
+//          dependencies {
+//              implementation kotlin('stdlib-js')
+//          }
+//      }
+//      jsTest {
+//          dependencies {
+//              implementation kotlin('test-js')
+//          }
+//      }
+//      linuxMain {
+//      }
+//      linuxTest {
+//      }
+    }
+}

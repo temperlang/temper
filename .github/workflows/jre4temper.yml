@@ -1,0 +1,132 @@
+name: jre4temper
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+env:
+  default_release_tag: jre_bundle
+on:
+  workflow_dispatch:
+    inputs:
+      release_name:
+        description: "Name the release; leave blank for current date."
+        default: ""
+        type: string
+      release_tag:
+        description: "Tag for the release; leave blank for default."
+        default: ""
+        type: string
+
+jobs:
+  bundle:
+    strategy:
+      # We can updates these from here:
+      # https://docs.github.com/en/actions/using-jobs/choosing-the-runner-for-a-job#choosing-github-hosted-runners
+      # https://github.com/actions/runner-images#available-images
+      matrix:
+        runner:
+          - macos-14
+          - ubuntu-22.04
+          - windows-2022
+    timeout-minutes: 30
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        timeout-minutes: 3
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        timeout-minutes: 3
+        with:
+          distribution: "zulu"
+          java-version: 21
+      - name: Bundle JRE with Temper
+        # Output: cli/build/jre4temper/jre4temper-*
+        run: ./gradlew bundleJre
+
+      - name: Tar artifact and generate manifest
+        shell: python
+        run: |
+          from pathlib import Path
+          from subprocess import call
+          import sys, json
+
+          build_dir = Path('cli') / 'build' / 'jre4temper'
+          jres = list(build_dir.glob('jre4temper*'))
+          if len(jres) != 1:
+            print(f'::error::Looked for {build_dir}/jre4temper*, got {jres}')
+            sys.exit(1)
+          jre = jres[0]
+
+          art = Path('artifacts')
+          art.mkdir()
+          call(['tar', 'cvzf', str(art / f'{jre.name}.tgz'), '-C', str(build_dir), jre.name])
+
+          r_os = r"""${{ runner.os }}""".lower()
+          r_arch = r"""${{ runner.arch }}""".lower()
+          system = {'macos': 'mac'}.get(r_os, r_os)
+
+          # plaform is the -Pplatform variable gradle jreBuild expects
+          s_job = r"""${{ strategy.job-index }}"""
+          with open(art / f'manifest-{s_job}.json', 'w') as fh:
+            json.dump({
+              "tarball": f'{jre.name}.tgz',
+              "runner": r"""${{matrix.runner}}""",
+              "platform": f'{system}-{r_arch}'
+            }, fh)
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-jre-${{ matrix.runner }}
+          if-no-files-found: error
+          path: artifacts
+          retention-days: 2
+
+  upload-release:
+    needs:
+      - bundle
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: artifacts
+      - name: Release info
+        id: info
+        run: |
+          release_name='${{ inputs.release_name }}'
+          echo "release_name=${release_name:-$(date "+Bundle_JRE_%Y%m%d_%H%M")}" >> "$GITHUB_OUTPUT"
+          release_tag='${{ inputs.release_tag }}'
+          echo "release_tag=${release_tag:-$default_release_tag}" >> "$GITHUB_OUTPUT"
+      - name: Create zips and manifest
+        run: |
+          find artifacts -ls
+          mkdir release
+          cd artifacts
+          for m in manifest*.json; do
+            mv "$(jq -r .tarball < "$m")" ../release/
+          done
+          cat manifest*.json | jq --slurp . > ../release/manifest.json
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.info.outputs.release_tag }}
+          name: ${{ steps.info.outputs.release_name }}
+          repository: temperlang/jre4temper
+          token: ${{ secrets.CROSS_REPO_POST_RELEASE }}
+          body: |
+            Base JREs automatic build. [Source run][run].
+
+            [run]: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          files: 'release/*'
+          fail_on_unmatched_files: true
+          make_latest: true

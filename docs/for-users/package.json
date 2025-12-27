@@ -1,0 +1,20 @@
+{
+  "README": [
+    "JS and CSS needed by our mkdocs site.",
+    "`npm run init-mkdocs` will copy files to where they're needed under temper-docs/docs/ext when run in the context of docs/for-users.",
+    "The npm invocation is done by build-user-docs/build.gradle.",
+    "The scripts below has two entries.",
+    "init-mkdocs makes sure that node_modules are in the right place.",
+    "init-mkdocs then invokes the second separately.",
+    "The second uses bash expansions which fail unless node_modules exists."
+  ],
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "slick-carousel": "^1.8.1",
+    "@prantlf/railroad-diagrams": "^1.0.1"
+  },
+  "scripts": {
+    "init-mkdocs": "npm install && node copy-ext-files.js"
+  }
+}

@@ -1,0 +1,83 @@
+:root {
+  /* squidfunk.github.io/mkdocs-material/setup/changing-the-colors/#customization */
+  --md-primary-fg-color:               #C27B79;
+  --md-primary-fg-color--light:        #C27B79;
+  --md-primary-fg-color--dark:         #FBF4F4;
+  --md-primary-bg-color:               #FBF4F4;
+  --md-primary-bg-color--light:        #FBF4F4;
+  --md-primary-bg-color--dark:         #2E3A53;
+
+  /* Accent color shades */
+  --md-accent-fg-color:                hsla(2, 37%, 62%);
+  --md-accent-fg-color--transparent:   hsla(2, 37%, 62%, 0.25);
+  --md-accent-bg-color:                hsla(46, 58, 83, 1);
+  --md-accent-bg-color--light:         hsla(46, 58, 83, 0.7);
+
+  --md-typeset-color:                  #2E3A53;
+}
+
+.keys > kbd {
+    /* inverted */
+    color: var(--md-default-bg-color) !important;
+    background-color: var(--md-default-fg-color) !important;
+}
+
+blockquote.indent-only {
+    border-left-width: 0
+}
+
+.and-then-arrow-1, .and-then-arrow-2 {
+    font-size: 200%;
+    display: inline-block;
+    text-align: right;
+    color: var(--md-primary-fg-color);
+    height: 1ex;
+}
+.and-then-arrow-1 { width: 2em }
+.and-then-arrow-2 { width: 4em }
+
+.suppress-empty-paras p:empty { display: none }
+
+.transparent-code-root code,
+.transparent-code-root .linenos {
+    background-color: transparent !important
+}
+
+/* Allow a <br> like entity that contributes little vertical space
+   but stops inline blocks before and after from stacking horizontally.
+   <br> in Markdown inevitably gets wrapped in a <p> */
+div.break { margin: 0; padding: 0; max-height: 0px }
+
+.temper-quick-links {
+    display: inline-block;
+    /* border-width: 1px;
+    border-style: dotted;
+    border-color: var(--md-typeset-color); */
+    padding: .25em;
+}
+.temper-quick-links > p { margin: 0 }
+
+/** Rules between sections on landing page. */
+section.landing-page-stripe:first-of-type {
+    border-top-style: none;
+    border-top-width: 0px;
+}
+section.landing-page-stripe {
+    border-top-style: dashed;
+    border-top-width: 4px;
+    border-top-color: var(--md-primary-fg-color);
+}
+
+#use-case-carousel img.carousel-img { max-height: 600px }
+
+.masthead {
+    display: block;
+    width: auto;
+    height: auto;
+}
+
+/*
+ * do not display a dark border for an empty announce block at the top.
+ * Affects `block announce` in overrides/main.html
+ */
+div[data-md-component="announce"] > aside > div:not(:has(*)) { display: none }

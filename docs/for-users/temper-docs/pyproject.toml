@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "temper-docs"
+version = "0.1.0"
+description = "mkdocs project for Temper language documentation"
+authors = ["The Temper Contributors"]
+license = "CC4.0"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.11"
+mkdocs = "^1.4.0"
+mkdocs-material = "^9.1.9"
+mkdocs-inline-select-svg-plugin = "^0.1.0"
+temper-pygments = "0.2.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
