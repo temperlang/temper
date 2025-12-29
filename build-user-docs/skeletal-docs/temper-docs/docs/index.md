@@ -28,7 +28,7 @@ programming languages.
 
 <div style="display:inline-block; max-width: 20em; vertical-align: middle; text-align: left" markdown="1" class="transparent-code-root">
 
-```temper
+```temper {.no-copy}
 // Temper
 export let half(x: Int): Int {
   x / 2
