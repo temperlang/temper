@@ -105,7 +105,7 @@ class JsBackendTest {
             |            ".": "./index.js"
             |          },
             |          "dependencies": {
-            |              "@temperlang/core": "0.5.0"
+            |              "@temperlang/core": "0.6.0"
             |          }
             |        }
             |      },

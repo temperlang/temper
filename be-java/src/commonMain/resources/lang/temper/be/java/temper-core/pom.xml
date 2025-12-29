@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>dev.temperlang</groupId>
   <artifactId>temper-core</artifactId>
-  <version>0.5.0</version>
+  <version>0.6.0</version>
   <!-- See also: https://central.sonatype.org/publish/requirements/ -->
   <name>temper-core</name>
   <description>Core runtime support for Temper-built Java libraries</description>

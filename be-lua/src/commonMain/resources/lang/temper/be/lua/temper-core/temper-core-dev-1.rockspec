@@ -1,6 +1,6 @@
 package = "temper-core"
 -- File renamed on build to match version number.
-version = "0.5.0-1"
+version = "0.6.0-1"
 
 description = {
     summary = "Runtime support for Temper-built Lua",
