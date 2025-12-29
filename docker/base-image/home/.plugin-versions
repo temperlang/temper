@@ -1,0 +1,15 @@
+# Managed with asdf-plugin-manager.
+# To update plugin versions, run:
+#   asdf-plugin-manager update-all
+asdf-plugin-manager  https://github.com/asdf-community/asdf-plugin-manager.git  72b5830
+dotnet               https://github.com/hensou/asdf-dotnet                      ebe399c
+gradle               https://github.com/rfrancis/asdf-gradle.git                6dcf009
+java                 https://github.com/halcyon/asdf-java.git                   bd7911d
+lua                  https://github.com/Stratus3D/asdf-lua.git                  36fae6e
+# luajit               https://github.com/smashedtoatoms/asdf-luaJIT.git          bbfe3cd
+maven                https://github.com/halcyon/asdf-maven.git                  83fb4db
+nodejs               https://github.com/asdf-vm/asdf-nodejs.git                 c5b7c40
+poetry               https://github.com/asdf-community/asdf-poetry.git          e2a3c34
+python               https://github.com/danhper/asdf-python.git                 5e277e2
+rust                 https://github.com/asdf-community/asdf-rust.git            0c05e42
+vim                  https://github.com/tsuyoshicho/asdf-vim.git                f335007

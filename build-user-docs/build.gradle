@@ -1,0 +1,143 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.github.node-gradle.node'
+}
+ext.temperProject = 'jvm'
+
+sourceSets {
+    // The application plugin uses the main java source set.
+    main.kotlin.srcDirs = main.java.srcDirs = ['src/main/kotlin']
+    test.kotlin.srcDirs = test.java.srcDirs = ['src/test/kotlin']
+}
+
+kotlin {
+    sourceSets {
+        configureEach {
+            languageSettings {
+                languageVersion = gradle.kotlin_language_version
+                apiVersion = gradle.kotlin_api_version
+            }
+        }
+    }
+}
+
+
+node { // Required by NpmTask
+    // Version of node to use.
+    version = gradle.node_version
+
+    // Enabled the automatic download.
+    download = true
+}
+
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coro_version"
+    // Parse markdown files so we can find snippets
+    implementation "org.commonmark:commonmark:0.21.0"
+    // Similarly for .kt files
+    // https://kotlinlang.org/docs/reference/grammar.html
+    implementation "org.jetbrains.kotlin:kotlin-compiler:$kotlin_version"
+
+    implementation project(':common')
+    implementation project(':format')
+    implementation project(':log')
+    implementation project(':ast')
+    implementation project(':astbuild')
+    implementation project(':be')
+    implementation project(':be-helpers')
+    implementation project(':be-js')
+    implementation project(':cst')
+    implementation project(':frontend')
+    implementation project(':fs')
+    implementation project(':fundamentals')
+    implementation project(':interp')
+    implementation project(':lexer')
+    implementation project(':library')
+    implementation project(':name')
+    implementation project(':stage')
+    implementation project(':test-helpers')
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
+    testImplementation project(':fs-test-helpers')
+}
+
+task updateGeneratedDocs(type: JavaExec) {
+    group = "ManualFix"
+    description = "Overwrite documentation files that do not match generated code"
+    mainClass.set "lang.temper.docbuild.UpdateGeneratedDocs"
+    // To run tasks dependent on this being tolerant of errors:
+    // ./gradlew -Dtolerant=true build-user-docs:updateGeneratedDocs
+    ignoreExitValue = System.getProperty("tolerant") == "true"
+    classpath = sourceSets.main.runtimeClasspath
+    systemProperties = [
+        // Forward property so Temper's console acts like TTY.
+        "org.gradle.console": findProperty("org.gradle.console") ?: "",
+        // Forward property so Temper's console can be verbose
+        // when gradle is in debug or info mode.
+        // Running gradle with `-i` will dump verbose, but by default
+        // only debugging trace with warnings or errors is dumped.
+        "org.gradle.logging.level": logging.level ?: gradle.startParameter.logLevel ?: "",
+    ]
+}
+
+task backport(type: JavaExec) {
+    // Changes here should also be reflected in task backportAndCommit below
+    group = "ManualFix"
+    description = "Use local changes to documentation files to update documentation templates and doc snippets in source files"
+    mainClass.set "lang.temper.docbuild.BackPortGeneratedDocs"
+    classpath = sourceSets.main.runtimeClasspath
+    systemProperties = [
+        // See comments in UpdateGeneratedDocs task above.
+        "org.gradle.console": findProperty("org.gradle.console") ?: "",
+        "org.gradle.logging.level": logging.level ?: gradle.startParameter.logLevel ?: "",
+    ]
+}
+
+task backportAndCommit(type: JavaExec) {
+    // Changes here should also be reflected in task backport above
+    group = "ManualFix"
+    description = "Use local changes to documentation files to update documentation templates and doc snippets in source files"
+    mainClass.set "lang.temper.docbuild.BackPortGeneratedDocs"
+    classpath = sourceSets.main.runtimeClasspath
+    systemProperties = [
+        // See comments in UpdateGeneratedDocs task above.
+        "org.gradle.console": findProperty("org.gradle.console") ?: "",
+        "org.gradle.logging.level": logging.level ?: gradle.startParameter.logLevel ?: "",
+        "backPort.dryRun": "false", // This differs from the non-committing backPort task
+    ]
+}
+
+task ensureVirtualEnvUpToDate(type: Exec) {
+    group = "Documentation"
+    description = "Install or update virtual environment for docs/for-users/pyproject.toml"
+    workingDir "../docs/for-users/temper-docs/"
+    commandLine "poetry", "install"
+}
+
+task ensureExtFilesUpToDate(type: NpmTask) {
+    group = "Npm"
+    description = "Fetches and places CSS and JS needed by mkdocs generated HTML"
+    args = ["run", "init-mkdocs"]
+    workingDir = new File("../docs/for-users")
+}
+updateGeneratedDocs.finalizedBy ensureExtFilesUpToDate
+
+task makeUserDocs(type: Exec) {
+    group = "Documentation"
+    description = "Build user documentation under docs/for-users/temper-docs/site"
+    workingDir "../docs/for-users/temper-docs/"
+    commandLine "poetry", "run", "mkdocs", "build"
+}
+makeUserDocs.dependsOn(updateGeneratedDocs, ensureVirtualEnvUpToDate, ensureExtFilesUpToDate)
+
+task serveUserDocs(type: Exec) {
+    group = "Documentation"
+    description = "Start up a localhost server to serve docs/for-users/temper-docs/"
+    workingDir "../docs/for-users/temper-docs/"
+    commandLine "poetry", "run", "mkdocs", "serve", "-a", "127.0.0.1:8080"
+}
+serveUserDocs.dependsOn(updateGeneratedDocs, ensureVirtualEnvUpToDate, ensureExtFilesUpToDate)

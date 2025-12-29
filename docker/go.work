@@ -1,0 +1,8 @@
+go 1.23.5
+
+use (
+	./src/cmd/launcher
+	./src/cmd/runner
+	./src
+	./src/stub/gpgme
+)

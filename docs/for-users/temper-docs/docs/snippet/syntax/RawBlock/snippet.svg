@@ -1,0 +1,106 @@
+<svg class="railroad-diagram" width="455.5" height="94" viewBox="0 0 455.5 94" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>RawBlock &#58;&#61; &#40;Lookbehind&#58; &#33;BagPreceder&#41; &#34;&#123;&#34; TopLevels &#34;&#125;&#34;</title>
+<style><![CDATA[
+svg.railroad-diagram {
+    background-color: hsl(30,20%,95%);
+}
+svg.railroad-diagram path {
+    stroke-width: 3;
+    stroke: black;
+    fill: rgba(0,0,0,0);
+}
+svg.railroad-diagram text {
+    font: bold 14px monospace;
+    text-anchor: middle;
+    white-space: pre;
+}
+svg.railroad-diagram text.diagram-text {
+    font-size: 12px;
+}
+svg.railroad-diagram text.diagram-arrow {
+    font-size: 16px;
+}
+svg.railroad-diagram text.label {
+    text-anchor: start;
+}
+svg.railroad-diagram text.comment {
+    font: italic 12px monospace;
+}
+svg.railroad-diagram g.non-terminal text {
+    /*font-style: italic;*/
+}
+svg.railroad-diagram rect {
+    stroke-width: 3;
+    stroke: black;
+    fill: hsl(120,100%,90%);
+}
+svg.railroad-diagram rect.group-box {
+    stroke: gray;
+    stroke-dasharray: 10 5;
+    fill: none;
+}
+svg.railroad-diagram path.diagram-text {
+    stroke-width: 3;
+    stroke: black;
+    fill: white;
+    cursor: help;
+}
+svg.railroad-diagram g.diagram-text:hover path.diagram-text {
+    fill: #eee;
+}
+
+]]></style>
+
+<g transform="translate(.5 .5)">
+<g>
+<path d="M20 45v20m10 -20v20m-10 -10h20"></path>
+</g>
+<path d="M40 55h10"></path>
+<g>
+<path d="M50 55h0"></path>
+<path d="M405.5 55h0"></path>
+<g>
+<path d="M50 55h0"></path>
+<path d="M192 55h0"></path>
+<rect x="50" y="36" width="142" height="38" rx="10" ry="10" class="group-box"></rect>
+<g class="non-terminal">
+<path d="M50 55h10"></path>
+<path d="M182 55h10"></path>
+<rect x="60" y="44" width="122" height="22"></rect>
+<text x="121" y="59">!BagPreceder</text>
+</g>
+<g>
+<path d="M50 28h0"></path>
+<path d="M130 28h0"></path>
+<text x="90" y="33" class="comment">Lookbehind</text>
+</g>
+</g>
+<path d="M192 55h10"></path>
+<path d="M202 55h10"></path>
+<g class="terminal">
+<path d="M212 55h0"></path>
+<path d="M240.5 55h0"></path>
+<rect x="212" y="44" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="226.25" y="59">{</text>
+</g>
+<path d="M240.5 55h10"></path>
+<path d="M250.5 55h10"></path>
+<g class="non-terminal">
+<path d="M260.5 55h0"></path>
+<path d="M357 55h0"></path>
+<rect x="260.5" y="44" width="96.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-toplevels"><text x="308.75" y="59">TopLevels</text>
+</a>
+</g>
+<path d="M357 55h10"></path>
+<path d="M367 55h10"></path>
+<g class="terminal">
+<path d="M377 55h0"></path>
+<path d="M405.5 55h0"></path>
+<rect x="377" y="44" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="391.25" y="59">}</text>
+</g>
+</g>
+<path d="M405.5 55h10"></path>
+<path d="M 415.5 55 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+</g>
+</svg>

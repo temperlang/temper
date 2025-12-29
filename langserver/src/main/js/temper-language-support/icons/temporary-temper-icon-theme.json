@@ -1,0 +1,13 @@
+{
+  "iconDefinitions": {
+    "_main_logo": {
+      "iconPath": "./images/main-logo.svg"
+    }
+  },
+  "languageIds": {
+    "temper": "_main_logo"
+  },
+  "fileExtensions": {
+    ".temper": "_main_logo"
+  }
+}

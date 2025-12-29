@@ -1,0 +1,18 @@
+let { Rectangle } = import("../lib");
+let { badMessage } = import("../a");
+
+// For bonus trouble, use a helper function. This works if no other problems.
+let eq(x: Float64, y: Float64): Boolean { x == y }
+
+// The `test` macro creates a unit test for running.
+test("rectangle construction") {
+  let rectangle = { width: 1.5, height: 0.5 };
+  // Exact comparison on float math is iffy, but we set simple values here.
+  assert(eq(rectangle.width, 1.5)) { "${badMessage} width" }
+  assert(rectangle.height == 0.5) { "${badMessage} height" }
+}
+
+// But down here fails in js only. With `export`, we crash in our js backend.
+// export let eq(x: Float64, y: Float64): Boolean { x == y }
+// Without export, it complains in node about being defined twice.
+// let eq(x: Float64, y: Float64): Boolean { x == y }

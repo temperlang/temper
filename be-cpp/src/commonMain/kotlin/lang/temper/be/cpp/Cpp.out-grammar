@@ -1,0 +1,107 @@
+let namespace = "Cpp";
+
+let imports = """
+  "lang.temper.name.OutName
+  "lang.temper.name.TemperName
+  "lang.temper.format.TokenSerializable
+  "lang.temper.format.TokenSink
+;
+
+Program ::= stmts%Global*"\n" & "\n";
+
+// top-levels
+Global = StructDecl | FuncDecl | VarDecl | StructDef | TypeDef | FuncDef | VarDef | PreProc | Comment | Namespace;
+
+PreProc = Define | Undef | Pragma | IncludeGuard | Include | IfPreProc;
+Include ::= "#" & "include" & "<" & path%Raw & ">" & "\n";
+Define ::= "#" & "define" & name%SingleName & value%Expr? & "\n";
+Undef ::= "#" & "undef" & name%SingleName & "\n";
+Pragma ::= "#" & "pragma" & text%Raw & "\n";
+IncludeGuard ::= "#" & "if" & "!" & "defined" & "(" & name%SingleName & ")" & "\n" & "#" & "define" & name & "\n" & program%Program & "#" & "endif";
+
+// C Spec allows specifically for "constant-expression" on `#if`, but meh.
+// TODO Use these to build IncludeGuard content in code?
+IfPreProc ::= "#" & "if" & cond%Expr & "\n" & ifTrue%Program & "\n" & elifs%ElifPreProc*"" & ("#" & "else" & "\n" & ifFalse%Program || ()) & "#" & "endif";
+ElifPreProc ::= "#" & "elif" & cond%Expr & "\n" & program%Program;
+
+Namespace ::= "namespace" & (name%SingleName || ()) & "{" & body%Global*"" & "}";
+
+StructDecl ::= "struct" & name%Name & ";";
+StructDef ::= "struct" & name%Name & "{" & fields%StructPart*"" & "}" & ";";
+StructPart = StructField | FuncDecl | FuncDef | Comment;
+StructField ::= type%Type & name%SingleName & ";";
+
+enum DefMod = Static;
+
+// Optional return type allows for constructors.
+FuncDecl ::= ret%Type? & convention%SingleName? & name%SingleName & "(" & args%Type*"," & ")" & ";";
+FuncDecl.convention.default = `null`;
+FuncDef ::= mod%DefMod? & ret%Type? & convention%SingleName? & name%Name & "(" & args%FuncParam*"," & ")" & body%BlockStmt;
+FuncDef.mod.default = `null`;
+FuncDef.convention.default = `null`;
+FuncParam ::= type%Type & name%SingleName;
+
+VarDecl ::= "extern" & type%Type & name%SingleName & ";";
+VarDef ::= mod%DefMod? & type%Type & name%Name & ("=" & init%Expr || ()) & ";";
+VarDef.mod.default = `null`;
+
+TypeDef ::= "typedef" & type%Type & name%SingleName & ";";
+
+Comment ::= "//" & data%Raw & "\n";
+PreComment ::= "/*" & text%Raw & "*/" & value%Expr;
+PostComment ::= value%Expr & "/*" & text%Raw & "*/";
+
+// types
+Type = Name | ConstType | PtrType | TemplateType;
+TemplateType ::= base%Type & "<" & args%Type*"," & ">";
+ConstType ::= base%Type & "const";
+PtrType ::= base%Type & "*";
+
+// sStmt
+Stmt = BlockStmt | ExprStmt | LabelStmt | GotoStmt | ReturnStmt | ThrowStmt | Comment | IfStmt | WhileStmt | VarDef;
+BlockStmt ::= "{" & stmts%Stmt*"" & "}";
+ExprStmt ::= expr%Expr & ";";
+LabelStmt ::= label%SingleName & ":" & stmt%Stmt;
+GotoStmt ::= "goto" & label%SingleName & ";";
+ReturnStmt ::= "return" & (value%Expr || ()) & ";";
+ThrowStmt ::= "throw" & value%Expr & ";";
+
+Expr = IndexExpr | CallExpr | MemberExpr | Name | LiteralExpr | BinaryExpr | UnaryExpr | CastExpr | PreComment | PostComment | ThisExpr | TemplateType;
+CastExpr ::= "(" & type%Type & ")" & expr%Expr;
+IndexExpr ::= base%Expr & "[" & index%Expr & "]";
+CallExpr ::= func%Expr & "(" & args%Expr*"," & ")";
+MemberExpr ::= obj%Expr & "." & member%SingleName;
+UnaryExpr ::= op%UnaryOp & right%Expr;
+UnaryExpr.operatorDefinition = `op.opEnum.operatorDefinition`;
+BinaryExpr ::= left%Expr & op%BinaryOp & right%Expr;
+BinaryExpr.operatorDefinition = `op.opEnum.operatorDefinition`;
+LiteralExpr ::= repr%Raw;
+ThisExpr ::= "this";
+
+IfStmt ::= "if" & "(" & cond%Expr & ")" & ifTrue%Stmt & ("else" & ifFalse%Stmt || ());
+WhileStmt ::= "while" & "(" & cond%Expr & ")" & body%Stmt;
+
+Name = SingleName | ScopedName;
+ScopedName ::= base%Type & "::" & member%SingleName;
+
+BinaryOp(opEnum%`BinaryOpEnum`);
+BinaryOp.renderTo = `opEnum.renderTo(tokenSink)`;
+BinaryOp.operatorDefinition = `null`;
+
+UnaryOp(opEnum%`UnaryOpEnum`);
+UnaryOp.renderTo = `opEnum.renderTo(tokenSink)`;
+UnaryOp.operatorDefinition = `null`;
+
+Num(n%`Double`);
+Num.renderTo = `tokenSink.number("$n")`;
+Num.operatorDefinition = `null`;
+
+Raw(s%`String`);
+Raw.renderTo = `tokenSink.quoted(s)`;
+Raw.operatorDefinition = `null`;
+
+SingleName(id%`CppName`, sourceIdentifier%`TemperName?`);
+SingleName.sourceIdentifier.default = `null`;
+SingleName.outName%`OutName` = `OutName(id.text, sourceIdentifier)`;
+SingleName.renderTo = `tokenSink.word(outName.toToken(inOperatorPosition = false).text)`;
+SingleName.operatorDefinition = `null`;

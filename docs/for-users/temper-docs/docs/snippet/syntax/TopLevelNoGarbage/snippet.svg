@@ -1,0 +1,91 @@
+<svg class="railroad-diagram" width="538.5" height="71" viewBox="0 0 538.5 71" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>TopLevelNoGarbage &#58;&#61; EmbeddedComment&#63; TopLevelNoGarbageNoComment</title>
+<style><![CDATA[
+svg.railroad-diagram {
+    background-color: hsl(30,20%,95%);
+}
+svg.railroad-diagram path {
+    stroke-width: 3;
+    stroke: black;
+    fill: rgba(0,0,0,0);
+}
+svg.railroad-diagram text {
+    font: bold 14px monospace;
+    text-anchor: middle;
+    white-space: pre;
+}
+svg.railroad-diagram text.diagram-text {
+    font-size: 12px;
+}
+svg.railroad-diagram text.diagram-arrow {
+    font-size: 16px;
+}
+svg.railroad-diagram text.label {
+    text-anchor: start;
+}
+svg.railroad-diagram text.comment {
+    font: italic 12px monospace;
+}
+svg.railroad-diagram g.non-terminal text {
+    /*font-style: italic;*/
+}
+svg.railroad-diagram rect {
+    stroke-width: 3;
+    stroke: black;
+    fill: hsl(120,100%,90%);
+}
+svg.railroad-diagram rect.group-box {
+    stroke: gray;
+    stroke-dasharray: 10 5;
+    fill: none;
+}
+svg.railroad-diagram path.diagram-text {
+    stroke-width: 3;
+    stroke: black;
+    fill: white;
+    cursor: help;
+}
+svg.railroad-diagram g.diagram-text:hover path.diagram-text {
+    fill: #eee;
+}
+
+]]></style>
+
+<g transform="translate(.5 .5)">
+<g>
+<path d="M20 30v20m10 -20v20m-10 -10h20"></path>
+</g>
+<path d="M40 40h10"></path>
+<g>
+<path d="M50 40h0"></path>
+<path d="M488.5 40h0"></path>
+<g>
+<path d="M50 40h0"></path>
+<path d="M237.5 40h0"></path>
+<path d="M50 40a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M70 20h147.5"></path>
+</g>
+<path d="M217.5 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M50 40h20"></path>
+<g class="non-terminal">
+<path d="M70 40h0"></path>
+<path d="M217.5 40h0"></path>
+<rect x="70" y="29" width="147.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-embeddedcomment"><text x="143.75" y="44">EmbeddedComment</text>
+</a>
+</g>
+<path d="M217.5 40h20"></path>
+</g>
+<path d="M237.5 40h10"></path>
+<g class="non-terminal">
+<path d="M247.5 40h0"></path>
+<path d="M488.5 40h0"></path>
+<rect x="247.5" y="29" width="241" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-toplevelnogarbagenocomment"><text x="368" y="44">TopLevelNoGarbageNoComment</text>
+</a>
+</g>
+</g>
+<path d="M488.5 40h10"></path>
+<path d="M 498.5 40 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+</g>
+</svg>

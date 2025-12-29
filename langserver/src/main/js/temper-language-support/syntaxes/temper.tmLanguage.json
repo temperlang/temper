@@ -1,0 +1,602 @@
+{ "@file:lang.temper.common.Generated": "VscodeGrammarGenerator",
+    "name": "Temper",
+    "scopeName": "source.temper",
+    "patterns": [
+        {
+            "include": "#expression"
+        }
+    ],
+    "repository": {
+        "bracket": {
+            "patterns": [
+                {
+                    "name": "meta.brace.square.temper",
+                    "match": "\\[|\\]"
+                },
+                {
+                    "begin": "(?\u003c=\\S)\u003c",
+                    "end": "\u003e",
+                    "patterns": [
+                        {
+                            "include": "#typeExpression"
+                        }
+                    ]
+                },
+                {
+                    "begin": "\\(",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "meta.brace.round.temper"
+                        }
+                    },
+                    "end": "\\)",
+                    "endCaptures": {
+                        "0": {
+                            "name": "meta.brace.round.temper"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#memberExpression"
+                        }
+                    ]
+                },
+                {
+                    "begin": "\\{",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.define.block.temper"
+                        }
+                    },
+                    "end": "\\}",
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.define.block.temper"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#expression"
+                        }
+                    ]
+                }
+            ]
+        },
+        "classDef": {
+            "begin": "\\b(?:(class)|(enum)|(interface))\\b",
+            "beginCaptures": {
+                "1": {
+                    "name": "storage.type.class.temper"
+                },
+                "2": {
+                    "name": "storage.type.enum.temper"
+                },
+                "3": {
+                    "name": "storage.type.interface.temper"
+                }
+            },
+            "end": "[;\\n]",
+            "patterns": [
+                {
+                    "patterns": [
+                        {
+                            "begin": "\\{",
+                            "beginCaptures": {
+                                "0": {
+                                    "name": "punctuation.define.block.temper"
+                                }
+                            },
+                            "end": "\\}",
+                            "endCaptures": {
+                                "0": {
+                                    "name": "punctuation.define.block.temper"
+                                }
+                            },
+                            "patterns": [
+                                {
+                                    "include": "#memberExpression"
+                                }
+                            ]
+                        },
+                        {
+                            "begin": "\\(",
+                            "beginCaptures": {
+                                "0": {
+                                    "name": "meta.brace.round.temper"
+                                }
+                            },
+                            "end": "\\)",
+                            "endCaptures": {
+                                "0": {
+                                    "name": "meta.brace.round.temper"
+                                }
+                            },
+                            "patterns": [
+                                {
+                                    "include": "#memberExpression"
+                                }
+                            ]
+                        },
+                        {
+                            "include": "#typeExpression"
+                        }
+                    ]
+                }
+            ]
+        },
+        "comment": {
+            "patterns": [
+                {
+                    "name": "comment.block.temper",
+                    "begin": "/\\*",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.comment.temper"
+                        }
+                    },
+                    "end": "\\*/",
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.comment.temper"
+                        }
+                    }
+                },
+                {
+                    "name": "comment.line.double-slash.temper",
+                    "begin": "//",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.comment.temper"
+                        }
+                    },
+                    "end": "\u0024"
+                }
+            ]
+        },
+        "def": {
+            "name": "meta.definition.variable.temper",
+            "begin": "\\b(?:const|let|var)\\b",
+            "beginCaptures": {
+                "0": {
+                    "name": "storage.type.temper"
+                }
+            },
+            "end": "[{=;\\n]",
+            "patterns": [
+                {
+                    "patterns": [
+                        {
+                            "include": "#name"
+                        },
+                        {
+                            "begin": "\u003c",
+                            "end": "\u003e",
+                            "patterns": [
+                                {
+                                    "include": "#typeExpression"
+                                }
+                            ]
+                        },
+                        {
+                            "include": "#memberExpression"
+                        }
+                    ]
+                }
+            ]
+        },
+        "escape": {
+            "name": "constant.character.escape.temper",
+            "match": "\\\\."
+        },
+        "expression": {
+            "patterns": [
+                {
+                    "include": "#bracket"
+                },
+                {
+                    "include": "#classDef"
+                },
+                {
+                    "include": "#comment"
+                },
+                {
+                    "include": "#def"
+                },
+                {
+                    "include": "#number"
+                },
+                {
+                    "include": "#string"
+                },
+                {
+                    "include": "#word"
+                }
+            ]
+        },
+        "interpolation": {
+            "name": "meta.template.expression.temper",
+            "begin": "\\\u0024\\{",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.definition.template-expression.begin.temper"
+                }
+            },
+            "end": "\\}",
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.template-expression.end.temper"
+                }
+            },
+            "contentName": "meta.embedded.line.temper",
+            "patterns": [
+                {
+                    "include": "#expression"
+                }
+            ]
+        },
+        "memberExpression": {
+            "patterns": [
+                {
+                    "begin": "(?\u003c=\\S):",
+                    "end": "(?=[\u003e),;{}\\n=:])",
+                    "patterns": [
+                        {
+                            "include": "#typeExpression"
+                        }
+                    ]
+                },
+                {
+                    "include": "#expression"
+                }
+            ]
+        },
+        "name": {
+            "patterns": [
+                {
+                    "name": "entity.name.function.temper",
+                    "match": "\\b[_[:alpha:]][_[:alnum:]]*\\b(?=[(\u003c])"
+                },
+                {
+                    "name": "variable.other.readwrite.temper",
+                    "match": "\\b[_[:alpha:]][_[:alnum:]]*\\b"
+                }
+            ]
+        },
+        "number": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.decimal.temper",
+                    "match": "[[:digit:]]+\\.?[[:digit:]]*|\\.[[:digit:]]+"
+                }
+            ]
+        },
+        "regexContent": {
+            "patterns": [
+                {
+                    "include": "#regexpEscape"
+                },
+                {
+                    "name": "keyword.operator.quantifier.regexp",
+                    "match": "[+*?]"
+                },
+                {
+                    "name": "keyword.operator.or.regexp",
+                    "match": "[|]"
+                },
+                {
+                    "match": "\\((?:\\?([_[:alpha:]][_[:alnum:]]*)=)?|\\)",
+                    "captures": {
+                        "0": {
+                            "name": "punctuation.definition.group.regexp"
+                        },
+                        "1": {
+                            "name": "variable.other.regexp"
+                        }
+                    }
+                },
+                {
+                    "name": "constant.other.character-class.set.regexp",
+                    "begin": "(\\[)(\\^)?",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "punctuation.definition.character-class.regexp"
+                        },
+                        "2": {
+                            "name": "keyword.operator.negation.regexp"
+                        }
+                    },
+                    "end": "\\]",
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.character-class.regexp"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#regexpEscape"
+                        }
+                    ]
+                }
+            ]
+        },
+        "regexpEscape": {
+            "patterns": [
+                {
+                    "name": "keyword.control.anchor.regexp",
+                    "match": "\\\\b|\\^|\\\u0024"
+                },
+                {
+                    "name": "constant.other.character-class.regexp",
+                    "match": "\\\\."
+                }
+            ]
+        },
+        "string": {
+            "patterns": [
+                {
+                    "name": "string.regexp.temper",
+                    "begin": "\\b(rgx)([\u0022])",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "entity.name.function.temper"
+                        },
+                        "2": {
+                            "name": "punctuation.definition.string.begin.temper"
+                        }
+                    },
+                    "end": "[\u0022]",
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.end.temper"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "match": "\\\\\u0022"
+                        },
+                        {
+                            "include": "#interpolation"
+                        },
+                        {
+                            "include": "#regexContent"
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.double.temper",
+                    "begin": "\\b([_[:alpha:]][_[:alnum:]]*)([\u0022])",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "entity.name.function.temper"
+                        },
+                        "2": {
+                            "name": "punctuation.definition.string.begin.temper"
+                        }
+                    },
+                    "end": "[\u0022]",
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.end.temper"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "match": "\\\\\u0022"
+                        },
+                        {
+                            "include": "#interpolation"
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.double.temper",
+                    "begin": "[\u0022`]",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.begin.temper"
+                        }
+                    },
+                    "end": "\\0",
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.end.temper"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#escape"
+                        },
+                        {
+                            "include": "#interpolation"
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.single.temper",
+                    "begin": "'",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.begin.temper"
+                        }
+                    },
+                    "end": "'",
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.end.temper"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#escape"
+                        }
+                    ]
+                },
+                {
+                    "name": "string.regexp.temper",
+                    "begin": "(?\u003c=^\\s*)/(?!\\s)|(?\u003c=[=:,;{(\\[\\n]\\s*|\\b(?:return|throw|yield)\\b\\s*)/",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.begin.temper"
+                        }
+                    },
+                    "end": "(/)([_[:alpha:]][_[:alnum:]]*)?",
+                    "endCaptures": {
+                        "1": {
+                            "name": "punctuation.definition.string.end.temper"
+                        },
+                        "2": {
+                            "name": "keyword.other.temper"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#regexContent"
+                        }
+                    ]
+                }
+            ]
+        },
+        "typeExpression": {
+            "patterns": [
+                {
+                    "name": "storage.modifier.temper",
+                    "match": "\\s*\\b(?:extends|in|out)\\b"
+                },
+                {
+                    "name": "entity.name.type.temper",
+                    "match": "\\s*\\b[_[:alpha:]][_[:alnum:]]*\\b"
+                },
+                {
+                    "begin": "\\(",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "meta.brace.round.temper"
+                        }
+                    },
+                    "end": "\\)",
+                    "endCaptures": {
+                        "0": {
+                            "name": "meta.brace.round.temper"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#typeExpression"
+                        }
+                    ]
+                },
+                {
+                    "begin": "\u003c",
+                    "end": "\u003e",
+                    "patterns": [
+                        {
+                            "include": "#typeExpression"
+                        }
+                    ]
+                },
+                {
+                    "include": "#expression"
+                }
+            ]
+        },
+        "word": {
+            "patterns": [
+                {
+                    "match": "(nym)(`(?:[^`]|\\\\.)+`)",
+                    "captures": {
+                        "1": {
+                            "name": "storage.type.temper"
+                        },
+                        "2": {
+                            "name": "variable.other.readwrite.temper"
+                        }
+                    }
+                },
+                {
+                    "begin": "(?\u003c=(?:\\):\\s+)|(?:\\bis\\b\\s*))",
+                    "end": "(?=[\u003e),;{}\\n=:])",
+                    "patterns": [
+                        {
+                            "include": "#typeExpression"
+                        }
+                    ]
+                },
+                {
+                    "name": "keyword.control.as.temper",
+                    "match": "\\b(?:as)\\b"
+                },
+                {
+                    "name": "keyword.control.conditional.temper",
+                    "match": "\\b(?:else|if)\\b"
+                },
+                {
+                    "name": "keyword.control.export.temper",
+                    "match": "\\b(?:export)\\b"
+                },
+                {
+                    "name": "keyword.control.flow.temper",
+                    "match": "\\b(?:await|break|continue|return)\\b"
+                },
+                {
+                    "name": "keyword.control.import.temper",
+                    "match": "\\b(?:import)\\b"
+                },
+                {
+                    "name": "keyword.control.is.temper",
+                    "match": "\\b(?:is)\\b"
+                },
+                {
+                    "name": "keyword.control.loop.temper",
+                    "match": "\\b(?:do|for|while)\\b"
+                },
+                {
+                    "name": "keyword.control.switch.temper",
+                    "match": "\\b(?:given|when)\\b"
+                },
+                {
+                    "name": "keyword.control.trycatch.temper",
+                    "match": "\\b(?:orelse)\\b"
+                },
+                {
+                    "name": "constant.language.boolean.false.temper",
+                    "match": "\\b(?:false)\\b"
+                },
+                {
+                    "name": "constant.language.boolean.true.temper",
+                    "match": "\\b(?:true)\\b"
+                },
+                {
+                    "name": "constant.language.null.temper",
+                    "match": "\\b(?:null)\\b"
+                },
+                {
+                    "name": "keyword.operator.expression.void.temper",
+                    "match": "\\b(?:void)\\b"
+                },
+                {
+                    "name": "keyword.operator.new",
+                    "match": "\\b(?:new)\\b"
+                },
+                {
+                    "name": "storage.modifier.temper",
+                    "match": "\\b(?:async|extends|private|public|sealed|static)\\b"
+                },
+                {
+                    "name": "storage.type.function.temper",
+                    "match": "\\b(?:fn)\\b"
+                },
+                {
+                    "name": "storage.type.property.temper",
+                    "match": "\\b(?:get|set)\\b"
+                },
+                {
+                    "name": "variable.language.this.temper",
+                    "match": "\\b(?:this)\\b"
+                },
+                {
+                    "include": "#name"
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,189 @@
+import org.gradle.api.attributes.java.TargetJvmVersion
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jlleitschuh.gradle.ktlint.tasks.BaseKtLintCheckTask
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+// https://docs.gradle.org/current/userguide/multi_project_builds.html
+// https://github.com/webfactorymk/kotlin-multiplatform-currency-converter/blob/master/build.gradle
+
+buildscript {
+    ext.kotlin_version = gradle.ext.kotlin_version
+    ext.ktlint_version = gradle.ext.ktlint_version
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform' apply false // Needed for dokka plugin to find source roots.
+    id 'org.jetbrains.dokka'
+    id 'org.jlleitschuh.gradle.ktlint' apply false
+    id 'io.gitlab.arturbosch.detekt' apply false
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            // See also: https://github.com/gradle/gradle/blob/d5b3db8e1ea14582b01b6a4c7f57269f90c58b63/build-logic/basics/src/main/kotlin/gradlebuild.repositories.gradle.kts#L20
+            name = "Gradle public repository"
+            url = uri("https://repo.gradle.org/gradle/public")
+            content {
+                includeGroup("net.rubygrapefruit")
+            }
+        }
+    }
+
+    ext {
+        kotlinx_coro_version = gradle.kotlinx_coro_version
+        kotlinx_datetime_version = gradle.kotlinx_datetime_version
+        kotlinx_serialization_version = gradle.kotlinx_serialization_version
+        serialization_xml_version = gradle.serialization_xml_version
+    }
+
+    apply plugin: 'org.jlleitschuh.gradle.ktlint'
+
+    ktlint {
+        version.set("$ktlint_version")
+        verbose = true
+        outputToConsole = true
+    }
+
+    tasks.withType(Jar).configureEach {
+        archiveBaseName = "temper-$project.name"
+    }
+
+    // https://github.com/JLLeitschuh/ktlint-gradle#changing-workers-memory-usage
+    tasks.withType(BaseKtLintCheckTask).configureEach {
+        it.workerMaxHeapSize.set("512m")
+    }
+
+    apply plugin: 'io.gitlab.arturbosch.detekt'
+
+    detekt {
+        buildUponDefaultConfig = true
+        config.setFrom(rootProject.file("project/detekt.config.yml"))
+        source.setFrom("src")
+    }
+
+    dependencies {
+        detektPlugins "io.gitlab.arturbosch.detekt:detekt-formatting:$gradle.ext.detekt_version"
+        detektPlugins "io.gitlab.arturbosch.detekt:detekt-rules-libraries:$gradle.ext.detekt_version"
+    }
+
+    pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
+        kotlin.targets.matching { it.platformType.name == "jvm" }.all {
+            compilations.all {
+                // No longer needed, but leave for reference of how to set other options in the future.
+                // kotlinOptions.useIR = true
+            }
+        }
+//        kotlin.targets.matching {
+//            it.platformType.name == "js"
+//        }.all {
+//            compilations.all {
+//                kotlinOptions.sourceMap = false
+                // TODO: Reenable when compatible with js
+                // youtrack.jetbrains.com/issue/KT-39447?_gl=1*2srikn*_ga*MTE0MDg3OTAzMy4xNTcxMTY5MzU2*_ga_J6T75801PF*MTYyMzE4NzAzOS42LjEuMTYyMzE4NzQ4NC4w&_ga=2.65024235.47982890.1623187040-1140879033.1571169356
+//            }
+//        }
+    }
+
+    // So that `gradle dokkaHtmlMultiModule` works
+    // https://github.com/Kotlin/dokka#multi-module-projects
+    apply plugin: 'org.jetbrains.dokka'
+}
+
+//task clean(type: Delete) {
+//    delete rootProject.buildDir
+//}
+
+tasks.register('fast', GradleBuild) {
+    group = 'Verification'
+    description = 'Runs quick quality control checks'
+    // Linux compilation is slow, and some JS tests run slow,
+    // so we just run the JVM tests.
+    // Dokka is slow, so we only run the other linters.
+    tasks = ['jvmTest', 'ktlintCheck', 'detekt']
+}
+
+subprojects {
+    tasks.withType(Test).configureEach {
+        // See https://github.com/temperlang/temper/issues/1550#issuecomment-1483023109 for notes on enabling
+        // parallel test runs.
+
+        // When an IntelliJ test runner configuration sets the environment variable
+        // IS_INTELLIJ_TERMINAL, then dump stdout/stderr to the console so that the
+        // IDE shows test failures and can linkify stack traces.
+        def isIntelliJTerminal = System.getenv('IS_INTELLIJ_TERMINAL') != null
+        testLogging.showStandardStreams = isIntelliJTerminal
+        testLogging.showExceptions = isIntelliJTerminal
+        testLogging.showCauses = isIntelliJTerminal
+        testLogging.showStackTraces = isIntelliJTerminal
+
+        useJUnitPlatform()
+        systemProperties = [
+            // https://junit.org/junit5/docs/current/user-guide/#writing-tests-declarative-timeouts-default-timeouts
+            // Global default for test timeout
+            'junit.jupiter.execution.timeout.default': '30s',
+            // https://junit.org/junit5/docs/current/user-guide/#writing-tests-declarative-timeouts-mode
+            // Disable test timeout when the debugger is running
+            'junit.jupiter.execution.timeout.mode'   : 'disabled_on_debug',
+            // be/src/commonMain/kotlin/lang/temper/be/cli/CliEnv.kt for usage
+            // Used to instruct e.g. pip install and npm install to fail fast
+            'temper.installer-fail-fast'             : 'yes',
+        ]
+    }
+    int jvm_target_int = gradle.ext.jvm_target
+    JvmTarget targetKotlin = JvmTarget.valueOf("JVM_${jvm_target_int}")
+    JavaVersion targetJv = JavaVersion.toVersion(jvm_target_int)
+    // To temporarily suppress this, use the standard --continue option.
+    boolean all_warnings_errors = true
+
+    afterEvaluate {
+        // Going with the least magical approach: projects simply define an ext value to get standard behavior.
+        // If so if something is wrong here, you can just create a new temperProject value.
+        // Please set ext.temperProject right after the plugins.
+        if (ext.temperProject == 'mpp') {
+            // Project requests standard settings for a 'org.jetbrains.kotlin.multiplatform'-based project.
+            tasks.withType(KotlinCompile).configureEach {
+                compilerOptions {
+                    allWarningsAsErrors = all_warnings_errors
+                    freeCompilerArgs.add("-Xexpect-actual-classes")
+                }
+            }
+            kotlin.targets.jvm.compilations.all {
+                // Not writing Java with which we need to be source compatible.
+                // sourceCompatibility = gradle.ext.jvm_target
+                kotlinOptions.jvmTarget = targetJv
+            }
+            // Because ktlint artifacts almost match, we need to be a bit more specific.
+            configurations.named("jvmRuntimeElements") { cfg ->
+                cfg.attributes {
+                    // println("PROJECT ${it} CONFIGURE ${cfg.name}")
+                    attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, jvm_target_int)
+                    attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.class, Bundling.EXTERNAL))
+                }
+            }
+        } else if (ext.temperProject == 'jvm') {
+            // Project requests standard customizations for a 'org.jetbrains.kotlin.jvm'-based project.
+
+            // Not writing Java with which we need to be source compatible.
+            // sourceCompatibility = gradle.ext.jvm_target
+            // We do want to be binary compatible with this version.
+            ext.jvmTarget = targetJv
+            tasks.withType(KotlinCompile).configureEach {
+                compilerOptions {
+                    allWarningsAsErrors = all_warnings_errors
+                    jvmTarget = targetKotlin
+                    freeCompilerArgs.add("-Xexpect-actual-classes")
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,52 @@
+[tool.poetry]
+name = "temper-scripts"
+version = "0.1.0"
+# See https://python-poetry.org/docs/basic-usage/#operating-modes
+# Tells poetry this is a virtual-env with a bunch of scripts and
+# their dependencies, not a real package.
+#package-mode = false
+description = "Various scripts useful in Temper development."
+authors = ["Temper Libraries <library@temper.systems>"]
+readme = "README.md"
+packages = [
+    {include = "integration_test"},
+    {include = "*.py"},
+]
+classifiers = [
+    # https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#classifiers
+    "Private :: Do Not Upload",
+]
+[tool.poetry.dependencies]
+python = "^3.11"
+click = "^8.1.7"
+graphviz = "^0.20.3"
+marko = "^2.0.3"
+toml = "^0.10.2"
+
+# minimal dependencies for integration tests.
+[tool.poetry.group.integration.dependencies]
+click = "^8.1.7"
+requests = "^2.31.0"
+# Used by mypyc integration test
+mypy = "^1.11.1"
+setuptools = "^73.0.1"
+
+[tool.poetry.scripts]
+dictionary-xml-to-dic = 'dictionary_xml_to_dic:main'
+dot-with-highlight = 'dot_with_highlight:main'
+fix-graalvm-files = 'fix_graalvm_files:main'
+generate-maven-toolchains-xml = 'generate_maven_toolchains_xml:main'
+git-patch = 'git_patch:main'
+help = 'help:main'
+init-workspace = 'init_workspace:main'
+integration-test = 'integration_test:run_main'
+list = 'help:main'  # alias
+renumber-operator-precedences = 'renumber_operator_precedences:main'
+roadmap-graph = 'roadmap_graph:main'
+show-dnc = 'show_dnc:main'
+sort-imports = 'sort_imports:main'
+temper-gradle = 'temper_gradle:main'
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

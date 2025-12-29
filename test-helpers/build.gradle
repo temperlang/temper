@@ -1,0 +1,69 @@
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform'
+}
+ext.temperProject = 'mpp'
+//apply plugin: 'maven-publish'
+
+kotlin {
+    sourceSets {
+        all {
+            languageSettings {
+                languageVersion = gradle.kotlin_language_version
+                apiVersion = gradle.kotlin_api_version
+                //enableLanguageFeature('InlineClasses')
+                progressiveMode = true
+                //verbose = true
+            }
+        }
+    }
+
+    jvm()
+    // For ARM, should be changed to iosArm32 or iosArm64
+    // For Linux, should be changed to e.g. linuxX64
+    // For MacOS, should be changed to e.g. macosX64
+    // For Windows, should be changed to e.g. mingwX64
+//  linuxX64('linux')
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation kotlin('stdlib-common')
+                implementation kotlin('test-common')
+                implementation kotlin('test-annotations-common')
+                implementation kotlin('reflect')
+                implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coro_version"
+                implementation project(':common')
+                implementation project(':cst')
+                implementation project(':format')
+                implementation project(':fundamentals')
+                implementation project(':lexer')
+                implementation project(':log')
+                implementation project(':name')
+                implementation project(':parser')
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test-common')
+                implementation kotlin('test-annotations-common')
+            }
+        }
+        jvmMain {
+            dependencies {
+                implementation kotlin('stdlib-jdk8')
+                implementation kotlin('test')
+                implementation kotlin('test-junit5')
+                implementation 'com.ibm.icu:icu4j:71.1'
+            }
+        }
+        jvmTest {
+            dependencies {
+                implementation kotlin('test')
+                implementation kotlin('test-junit5')
+            }
+        }
+//      linuxMain {
+//      }
+//      linuxTest {
+//      }
+    }
+}

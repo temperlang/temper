@@ -1,0 +1,119 @@
+<svg class="railroad-diagram" width="484" height="100" viewBox="0 0 484 100" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>Obj &#58;&#61; &#40;Lookbehind&#58; BagPreceder&#41; &#34;&#123;&#34; &#40;Props &#124; NoPropClass&#41; &#34;&#125;&#34;</title>
+<style><![CDATA[
+svg.railroad-diagram {
+    background-color: hsl(30,20%,95%);
+}
+svg.railroad-diagram path {
+    stroke-width: 3;
+    stroke: black;
+    fill: rgba(0,0,0,0);
+}
+svg.railroad-diagram text {
+    font: bold 14px monospace;
+    text-anchor: middle;
+    white-space: pre;
+}
+svg.railroad-diagram text.diagram-text {
+    font-size: 12px;
+}
+svg.railroad-diagram text.diagram-arrow {
+    font-size: 16px;
+}
+svg.railroad-diagram text.label {
+    text-anchor: start;
+}
+svg.railroad-diagram text.comment {
+    font: italic 12px monospace;
+}
+svg.railroad-diagram g.non-terminal text {
+    /*font-style: italic;*/
+}
+svg.railroad-diagram rect {
+    stroke-width: 3;
+    stroke: black;
+    fill: hsl(120,100%,90%);
+}
+svg.railroad-diagram rect.group-box {
+    stroke: gray;
+    stroke-dasharray: 10 5;
+    fill: none;
+}
+svg.railroad-diagram path.diagram-text {
+    stroke-width: 3;
+    stroke: black;
+    fill: white;
+    cursor: help;
+}
+svg.railroad-diagram g.diagram-text:hover path.diagram-text {
+    fill: #eee;
+}
+
+]]></style>
+
+<g transform="translate(.5 .5)">
+<g>
+<path d="M20 51v20m10 -20v20m-10 -10h20"></path>
+</g>
+<path d="M40 61h10"></path>
+<g>
+<path d="M50 61h0"></path>
+<path d="M434 61h0"></path>
+<g>
+<path d="M50 61h0"></path>
+<path d="M183.5 61h0"></path>
+<rect x="50" y="42" width="133.5" height="38" rx="10" ry="10" class="group-box"></rect>
+<g class="non-terminal">
+<path d="M50 61h10"></path>
+<path d="M173.5 61h10"></path>
+<rect x="60" y="50" width="113.5" height="22"></rect>
+<text x="116.75" y="65">BagPreceder</text>
+</g>
+<g>
+<path d="M50 34h0"></path>
+<path d="M130 34h0"></path>
+<text x="90" y="39" class="comment">Lookbehind</text>
+</g>
+</g>
+<path d="M183.5 61h10"></path>
+<path d="M193.5 61h10"></path>
+<g class="terminal">
+<path d="M203.5 61h0"></path>
+<path d="M232 61h0"></path>
+<rect x="203.5" y="50" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="217.75" y="65">{</text>
+</g>
+<path d="M232 61h10"></path>
+<g>
+<path d="M242 61h0"></path>
+<path d="M395.5 61h0"></path>
+<path d="M242 61a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
+<g class="non-terminal">
+<path d="M262 31h25.5"></path>
+<path d="M350 31h25.5"></path>
+<rect x="287.5" y="20" width="62.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-props"><text x="318.75" y="35">Props</text>
+</a>
+</g>
+<path d="M375.5 31a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
+<path d="M242 61h20"></path>
+<g class="non-terminal">
+<path d="M262 61h0"></path>
+<path d="M375.5 61h0"></path>
+<rect x="262" y="50" width="113.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-nopropclass"><text x="318.75" y="65">NoPropClass</text>
+</a>
+</g>
+<path d="M375.5 61h20"></path>
+</g>
+<path d="M395.5 61h10"></path>
+<g class="terminal">
+<path d="M405.5 61h0"></path>
+<path d="M434 61h0"></path>
+<rect x="405.5" y="50" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="419.75" y="65">}</text>
+</g>
+</g>
+<path d="M434 61h10"></path>
+<path d="M 444 61 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+</g>
+</svg>

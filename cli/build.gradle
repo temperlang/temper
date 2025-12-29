@@ -1,0 +1,695 @@
+import groovy.xml.XmlSlurper
+import org.apache.tools.ant.types.Commandline
+import proguard.ConfigurationParser
+import proguard.ProGuard
+
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.attribute.PosixFilePermissions
+import java.util.stream.Collectors
+
+// The main temper command line tool.
+
+buildscript {
+    dependencies {
+        // TODO Ideally go back to ProGuard later, but this is unused at the moment.
+        // TODO It doesn't currently support Kotlin 2.2.
+        classpath 'com.guardsquare:proguard-gradle:7.5.0'
+    }
+}
+
+plugins {
+    // https://docs.gradle.org/current/userguide/application_plugin.html
+    id 'application'
+    id 'distribution'
+    id 'org.graalvm.buildtools.native' version '0.9.28'
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.gradleup.shadow' version '9.0.0-rc1'
+}
+ext.temperProject = 'jvm'
+
+sourceSets {
+    // The application plugin uses the main java source set.
+    main.kotlin.srcDirs = main.java.srcDirs = ['src/main/kotlin']
+    test.kotlin.srcDirs = test.java.srcDirs = ['src/test/kotlin']
+}
+
+kotlin {
+    sourceSets {
+        all {
+            languageSettings {
+                languageVersion = gradle.kotlin_language_version
+                apiVersion = gradle.kotlin_api_version
+            }
+        }
+    }
+}
+
+ext {
+    mainClassName = 'lang.temper.cli.Cli'
+}
+application {
+    mainClass = mainClassName
+    applicationName = 'temper' // Keep in sync with Cli.kt
+}
+
+jar {
+    manifest {
+        attributes(
+            "Implementation-Title": "Temper",
+            "Implementation-Vendor": "Temper Systems",
+            // This version purposely doesn't go in source control, so we don't chicken-and-egg our tags.
+            "Implementation-Version": getTemperVersion(),
+            "Main-Class": mainClassName,
+            // For now, skip "Specification-..." attributes, since they're not yet independent from implementation.
+        )
+    }
+}
+
+def getTemperVersion() {
+    def output = providers.exec {
+        // This requires git present to build a jar, and that's ok.
+        commandLine(["git", "describe", "--dirty", "--always"])
+    }.standardOutput.asText.get()
+    convertGitDescription(output.toString().trim())
+}
+
+static def convertGitDescription(String text) {
+    // Reinterpret the git description into something semver-compatible where possible.
+    // Allows exact match for tags like "v1.0.0-pre.1" or takes existing pre labels or appends "-dev+" as appropriate.
+    def matcher = (~/^v([\d.]+\.)(\d+)(-\D[\w.]*)?(?:-(\d+-g\w+(?:-dirty)?|dirty))?$/).matcher(text)
+    if (matcher.matches()) {
+        // Fits version tag form.
+        if (matcher.group(4) == null) {
+            // We're exactly on a git tag, so just use it.
+        } else {
+            // We're past a tag, so this is a dev release.
+            if (matcher.group(3) == null) {
+                // Has no pre-release suffix, so increment the patch as any suffix means *before* the version.
+                def patch = Integer.parseInt(matcher.group(2))
+                text = "${matcher.group(1)}${patch + 1}-dev"
+            } else {
+                // Has a pre-release suffix already, so presume that's sufficient for our needs.
+                text = "${matcher.group(1)}${matcher.group(2)}${matcher.group(3)}"
+            }
+            // Finally, add git info as an unordered "+" suffix, since even the commit count means different
+            // things for different branches.
+            text = "$text+${matcher.group(4)}"
+        }
+    } else {
+        // Some non-version tag. Just leave it alone since it won't match semver anyway.
+        // Per stackoverflow.com/a/4916591/20394 in the fallback case,
+        // the HEAD commit hash will be in text.
+    }
+    text
+}
+
+distributions {
+    main {}
+    dev {
+        distributionBaseName = "dev"
+        contents { with distributions.main.contents }
+    }
+}
+
+startScripts {
+    doLast {
+        // The unix script is the base for the windows script, so use it, but check first to be safe.
+        assert "$windowsScript" == "${unixScript}.bat"
+        mungeWindowsCommand(unixScript)
+    }
+}
+
+def makeWindowsCodePageWrapper(String content) {
+    // Replace content after stripping indent to avoid mismatched indent.
+    """
+    @echo off
+    setlocal
+    for /f "tokens=* usebackq" %%a in (`chcp`) do for %%b in (%%a) do set "OLD_CODE_PAGE=%%~nb"
+    chcp 65001 > nul
+    ###CONTENT_GOES_HERE###
+    chcp %OLD_CODE_PAGE% > nul
+    endlocal
+    """.stripIndent().stripLeading().replace("###CONTENT_GOES_HERE###", content)
+}
+
+def mungeWindowsCommand(File command) {
+    def parentPath = command.parentFile.toPath()
+    def commandPath = parentPath.resolve("${command.name}.bat")
+    def origCommandPath = parentPath.resolve("${command.name}-orig.bat")
+    // Move and process file for calling from wrapper.
+    copy {
+        from commandPath
+        into parentPath
+        rename { origCommandPath }
+        // Replace classpath with wildcard because it's too long for cmd.
+        filter { it.replaceFirst(/^(set CLASSPATH=%APP_HOME%\\lib\\).*/, '$1*') }
+    }
+    // Create wrapper to set utf8.
+    Files.writeString(
+        commandPath,
+        makeWindowsCodePageWrapper(
+            """
+            set JAVA_OPTS=-Dfile.encoding=UTF-8
+            call "%~dp0temper-orig.bat" %*
+            """.stripIndent().strip()
+        )
+    )
+}
+
+def distDir = new File(buildDir, "distributions")
+def jrePrefix = "jre4temper"
+def javaLauncher = javaToolchains.launcherFor {
+    // Version number required here. Saying just `launcherFor(java.toolchain)` fails.
+    languageVersion = JavaLanguageVersion.of(gradle.ext.jvm_target)
+}.get()
+// TODO(tjp, dist): Initialize lazily, maybe as a system property???
+def jreBaseName = {
+    def arch = System.getProperty("os.arch")
+    def os = System.getProperty("os.name").toLowerCase().split("\\s+")[0]
+    def vendor = javaLauncher.metadata.vendor.toLowerCase().split("\\s+").join("-")
+    if (vendor == "oracle") {
+        // Sadly, openjdk and official oracle both just say oracle, so go to extra effort here.
+        def output = providers.exec {
+            // This requires git present to build a jar, and that's ok.
+            commandLine([javaLauncher.executablePath, "--version"])
+        }.standardOutput.asText.get()
+        if (output.toString().toLowerCase().contains("openjdk")) {
+            vendor = "oracle-openjdk"
+        }
+    }
+    def version = javaLauncher.metadata.javaRuntimeVersion.split("[^.\\d]")[0]
+    "$jrePrefix-$vendor-$version-$os-$arch"
+}()
+
+task cleanJreDist(type: Delete) {
+    group = "Bundle"
+    description = "Delete all jlinked JRE products."
+    delete new File(buildDir, jrePrefix)
+    delete fileTree(distDir) {
+        // Delete just the current one, in case we've copied in others for convenient access.
+        include jreBaseName
+    }
+}
+
+// The actual bundling of these with our builds happens elsewhere based on cached jre bundles for all platforms.
+task linkJre(type: Exec) {
+    group = "Bundle"
+    description = "Using jlink from the java plugin environment, produce a custom JRE for Temper needs."
+    // Cleaning every time avoids needing to check if it already exists.
+    dependsOn cleanJreDist
+    doFirst {
+        if (!buildDir.exists()) {
+            mkdir buildDir
+        }
+    }
+    commandLine(
+        new File(javaLauncher.executablePath.asFile.parentFile, "jlink"),
+        // IMPORTANT!!! Run bundleJre manually after changing this if you want to see results.
+        "--add-modules", "java.base,java.compiler,java.logging,java.management,java.naming,java.xml,jdk.unsupported,java.transaction.xa,jdk.zipfs",
+        // If this default encoding change helps on Windows, it's worth having. Might also need chcp there.
+        "--add-options", "-Dfile.encoding=UTF-8",
+        // Minimize size and start time. See also https://stackoverflow.com/a/55716907
+        // The compress default also seems to be 0, based on output sizes, but eh.
+        "--compress", "0",
+        // Nest to get interal dir name in archives.
+        "--output", new File(new File(buildDir, jrePrefix), jreBaseName),
+        "--strip-debug",
+    )
+    workingDir buildDir
+}
+
+task tarJre(type: Tar) {
+    description = "Make a compressed tarball of a JRE customized for Temper."
+    dependsOn linkJre
+    archiveBaseName.set(jreBaseName)
+    compression = Compression.GZIP
+    from new File(buildDir, jrePrefix)
+}
+
+task zipJre(type: Zip) {
+    description = "Make a compressed zip archive of a JRE customized for Temper."
+    dependsOn linkJre
+    archiveBaseName.set(jreBaseName)
+    from new File(buildDir, jrePrefix)
+}
+
+task bundleJre {
+    group = "Bundle"
+    description = "Make a default archive of a JRE customized for Temper."
+    // Just make tarball for now, since we mostly use these internally.
+    dependsOn tarJre
+    doLast {
+        println "Bundled archive for: $jreBaseName"
+    }
+}
+
+import org.apache.tools.ant.taskdefs.condition.Os
+
+graalvmNative {
+    toolchainDetection = true
+
+    binaries {
+        main {
+            imageName = "temper"
+            javaLauncher = javaToolchains.launcherFor {
+                languageVersion = JavaLanguageVersion.of(gradle.ext.jvm_target)
+                vendor = JvmVendorSpec.matching("GraalVM Community")
+            }
+            jvmArgs.add("-Dfile.encoding=UTF-8")
+            // Use Our Configuration Files
+            buildArgs.add("-H:ResourceConfigurationFiles=${project.rootDir}/cli/src/main/resources/META-INF/native-image/resource-config.json")
+            buildArgs.add("-H:ReflectionConfigurationFiles=${project.rootDir}/cli/src/main/resources/META-INF/native-image/reflect-config.json")
+            buildArgs.add("-H:JNIConfigurationFiles=${project.rootDir}/cli/src/main/resources/META-INF/native-image/jni-config.json")
+            // We don't want to ship many .so/.dll files
+            if (!Os.isFamily(Os.FAMILY_MAC)) {
+                buildArgs.add("-H:+StaticExecutableWithDynamicLibC")
+            }
+            // And make sure it is fast
+            // buildArgs.add("--gc=G1")
+            buildArgs.add("-O3")
+        }
+    }
+}
+
+task nativeDist {
+    group = "Distribution"
+    description = "Make a compressed native image executable for Temper."
+    dependsOn nativeCompile
+    doFirst {
+        def nativeDir = new File(new File(buildDir, "native"), "nativeCompile")
+        def simpleExe = new File(nativeDir, "temper")
+        def ext = simpleExe.exists() ? "" : ".exe"
+        def arch = System.getProperty("os.arch")
+        def os = System.getProperty("os.name").toLowerCase().split("\\s+")[0]
+        // This perhaps should be a ".zip" file on Windows, but we can work out details later if needed.
+        def dist = new File(distDir, "temper.gz")
+        if (dist.exists()) {
+            dist.delete()
+        }
+        mkdir distDir
+        ant.gzip(src: new File(nativeDir, "temper$ext"), destfile: dist)
+    }
+}
+
+task deploy {
+    description = "Calls 'installDist' and reports the path to the executable."
+    group = "Distribution"
+    dependsOn installDist
+    doLast { reportInstall(distributions.main.distributionBaseName.get() as String) }
+}
+
+task deployDev {
+    description = "Like 'deploy' but just a convenient extra build for less stable dev."
+    group = "Distribution"
+    dependsOn installDevDist
+    doLast { reportInstall(distributions.dev.distributionBaseName.get() as String) }
+}
+
+static def headingFor(Object text) {
+    text = "--- $text ---"
+    def line = text.replaceAll(".", "-")
+    return "$line\n$text\n$line\n"
+}
+
+def reportInstall(String name) {
+    // TODO(tjp, buildTemper): Is there an easy way to void hard coding here?
+    def command = file("build/install").toPath().resolve(name).resolve("bin/temper").normalize()
+    def message = "Temper command installed to: $command"
+    print "\n${headingFor(message)}"
+}
+
+def resourcesPath = projectDir.toPath().resolve(
+    Path.of("src", "main", "resources", "lang", "temper", "cli")
+)
+def licensePath = resourcesPath.resolve("license-do-not-edit.txt")
+def licensesPath = resourcesPath.resolve("licenses-do-not-edit.txt")
+def topLevelLicenseFiles = ["COPYRIGHT", "LICENSE-APACHE", "LICENSE-MIT", "LICENSE-CC-BY-SA-4.0"]
+
+// Update the resource file dumped by `temper license` based on the canonical top level legal files.
+task updateLicense {
+    inputs.files(topLevelLicenseFiles.collect { fileName -> rootDir.toPath().resolve(fileName) })
+    outputs.file(licensePath)
+
+    doFirst {
+        def text = new StringBuilder()
+        for (fileName in topLevelLicenseFiles) {
+            def file = rootDir.toPath().resolve(fileName)
+            if (text.size() != 0) {
+                text.append("\n\n")
+            }
+            // File name inside box of dashes
+            text.append("-" * (fileName.length() + 8))
+            text.append("\n--- ")
+            text.append(fileName)
+            text.append(" ---\n")
+            text.append("-" * (fileName.length() + 8))
+            text.append("\n")
+
+            text.append(file.getText("UTF-8"))
+        }
+        Files.writeString(licensePath, text)
+    }
+}
+tasks.processResources.dependsOn updateLicense
+
+task updateLicenses {
+    dependsOn installDist, updateLicense
+
+    description = "Separate from :kcodegen:updateGeneratedCode because for now this uses installDist\n" +
+        "so that it can scan dependency jars.\n" +
+        "This should be rarely needed, but when it is, you need to do a new build afterward."
+
+    doFirst {
+        def libDir = buildDir.toPath().resolve(Path.of("install", application.applicationName, "lib"))
+        def kids = Files.list(libDir).filter {
+            def name = it.fileName.toString()
+            name.endsWith(".jar") && !name.startsWith("temper-")
+        }.withCloseable { paths ->
+            // Sort on string value because it's otherwise case-insensitive on Windows.
+            paths.collect(Collectors.toList()).toSorted(Comparator.comparing { it.toString() })
+        }
+        def content = new StringBuilder()
+        def licenseTextToLabel = new LinkedHashMap<String, String>()
+        for (kid in kids) {
+            def entries = zipTree(kid)
+            // Dig out license files.
+            List<File> licenses = []
+            entries.each { entry ->
+                def lower = entry.toString().toLowerCase()
+                // So far, this seems to get the key things.
+                if (lower.contains("license") && !lower.endsWith(".class")) {
+                    licenses.add(entry)
+                }
+            }
+            content.append(headingFor(kid.fileName))
+            content.append("\n")
+            def manifest = entries.matching {
+                include "**/MANIFEST.MF"
+            }.getSingleFile()
+            // Add manifest metadata.
+            String metaText = manifest.withInputStream { input ->
+                def reader = new BufferedReader(new InputStreamReader(input, "utf-8"))
+                reader.lines().filter {
+                    it.matches("^\\S+-(?:License|Title|Vendor|Version).*") &&
+                        !it.matches("^(?:Ant|Archiver|Manifest)-.*")
+                }.collect(Collectors.joining("\n"))
+            }
+            content.append(metaText)
+            if (!metaText.isEmpty()) {
+                content.append("\n\n")
+            }
+            // Add pom license info.
+            def pomFiles = entries.matching {
+                include "**/pom.xml"
+            }.files
+            if (pomFiles.size() == 1) {
+                def pom = new XmlSlurper(false, false).parse(pomFiles.first())
+                def pomLicenseText = pom.licenses.license.collect { license ->
+                    license.children().collect { node ->
+                        "${node.name()}: ${node.text()}"
+                    }.join('\n')
+                }.join('\n')
+                if (pomLicenseText) {
+                    content.append("pom.xml licenses:\n")
+                    content.append(pomLicenseText)
+                    content.append("\n\n")
+                }
+            }
+            // Track license text.
+            for (license in licenses) {
+                String licenseText = license.withInputStream { input ->
+                    def reader = new BufferedReader(new InputStreamReader(input, "utf-8"))
+                    reader.lines().collect(Collectors.joining("\n")).replaceFirst(~/^\s*\n/, "")
+                        .stripTrailing().stripIndent()
+                }
+                def licenseLabel = licenseTextToLabel.get(licenseText)
+                if (licenseLabel == null) {
+                    licenseLabel = "License #${licenseTextToLabel.size() + 1}"
+                    licenseTextToLabel.put(licenseText, licenseLabel)
+                }
+                content.append(licenseLabel)
+                content.append("\n")
+            }
+            if (!licenses.isEmpty()) {
+                content.append("\n\n")
+            }
+        }
+        // Actual license texts.
+        for (license in licenseTextToLabel.entrySet()) {
+            content.append(headingFor(license.value))
+            content.append("\n")
+            content.append(license.key)
+            content.append("\n\n\n")
+        }
+        // Write out.
+        Files.writeString(licensesPath, content.toString().trim() + "\n")
+    }
+}
+
+task checkLicensesUpdated {
+    dependsOn installDist, updateLicenses
+    doFirst {
+        def outputText = providers.exec {
+            executable = "git"
+            // We could make this a more general check, but it makes dev hard.
+            args = ["diff", "--name-only", licensePath.toString(), licensesPath.toString()]
+        }.standardOutput.asText.get()
+        if (!outputText.isEmpty()) {
+            logger.error(outputText)
+            throw new GradleException("Unstaged changes found in licenses file(s)")
+        }
+    }
+}
+tasks.check.dependsOn checkLicensesUpdated
+
+shadowJar {
+    dependsOn checkLicensesUpdated
+    archiveFileName = "temper.jar"
+    mergeServiceFiles()
+}
+
+// Having trouble getting this or variations on it to work.
+// task shrinkJars(type: ProGuardTask) {
+//     configuration new File(projectDir, "proguard.txt")
+// }
+
+task shrinkJars {
+    dependsOn installDist, checkLicensesUpdated
+    doFirst {
+        // Having trouble with ProGuardTask, so simulate the command line. And main calls exit, so bypass main.
+        // ProGuard.main(["@proguard.txt"] as String[])
+        proguard.Configuration configuration = new proguard.Configuration()
+        def parser = new ConfigurationParser(
+            // Going through a separate config file also makes it easier to use proguard independently, if wanted.
+            ["@proguard.txt"] as String[],
+            projectDir,
+            System.getProperties()
+        );
+        parser.withCloseable {
+            parser.parse(configuration);
+        }
+        new ProGuard(configuration).execute();
+    }
+}
+
+def jreChosenName = project.properties.getOrDefault("jre", jreBaseName).toString()
+def jrePlatform = project.properties.get("platform")?.toString() ?: jreChosenName.replaceFirst(~/^.*-[\d.]+-/, "")
+def bundleAllDir = {
+    // For platform, keep os-arch after jre version, but allow property override if wanted.
+    // We're potentially also building the jar on this system right now, so trust a fresh version calculation.
+    def bundleName = "temper-${getTemperVersion()}-$jrePlatform"
+    // Nest so we have a top dir in created tarballs.
+    buildDir.toPath().resolve(Path.of("bundle-temper-jre", bundleName, bundleName))
+}()
+// def temperJar = buildDir.toPath().resolve(Path.of("distributions", "temper.jar"))
+def temperJar = buildDir.toPath().resolve(Path.of("libs", "temper.jar"))
+
+task cleanTemperJre(type: Delete) {
+    description = "Delete chosen bundled Temper/JRE directory."
+    delete bundleAllDir
+}
+
+task composeTemperJre {
+    // Doesn't depend on bundleJre, because the jre might come from elsewhere.
+    // dependsOn cleanTemperJre, shrinkJars
+    dependsOn cleanTemperJre, shadowJar
+    doFirst {
+        // Copy into a generic jre dir, which rename is hard under gradle `copy` or after the fact on Windows where the
+        // dir seems to be locked following gradle copy, so manually work it out instead.
+        def bundleJreDir = bundleAllDir.resolve("jre")
+        tarTree(distDir.toPath().resolve("${jreChosenName}.tgz")).visit { entry ->
+            if (!entry.isDirectory()) {
+                def fullPath = Path.of(*entry.relativePath.segments)
+                // Manually strip off the first path element for the rename effect.
+                def destPath = bundleJreDir.resolve(fullPath.subpath(1, fullPath.nameCount))
+                entry.copyTo(destPath.toFile())
+            }
+        }
+        // Copy temper jar.
+        copy {
+            // TODO Go back to ProGuard when they support Kotlin 2.2?
+            from temperJar
+            into bundleAllDir
+        }
+        // The jre is already platform-specific, so might as well be so with the start scripts, too.
+        if (jreChosenName.toLowerCase().contains("windows")) {
+            // Make windows run script.
+            Files.writeString(
+                bundleAllDir.resolve("temper.cmd"),
+                makeWindowsCodePageWrapper(
+                    """
+                    set JAVA_HOME="%~dp0jre"
+                    "%JAVA_HOME%/bin/java" -jar "%~dp0temper.jar" %*
+                    """.stripIndent().strip()
+                )
+            )
+        } else {
+            // Make bash run script.
+            def temperPath = bundleAllDir.resolve("temper")
+            Files.writeString(
+                temperPath,
+                """
+                #!/usr/bin/env sh
+                TEMPER_HOME="\$(dirname "\$0")"
+                JAVA_HOME="\$TEMPER_HOME"/jre
+                "\$JAVA_HOME/bin/java" -jar "\$TEMPER_HOME"/temper.jar "\$@"
+                """.stripIndent().stripLeading()
+            )
+            // Can't set perms on Windows.
+            if (!System.getProperty("os.name").toLowerCase().contains("windows")) {
+                Files.setPosixFilePermissions(temperPath, PosixFilePermissions.fromString("rwxr-xr-x"))
+            }
+        }
+    }
+}
+
+task tarTemperJre(type: Tar) {
+    description = "Make a compressed tarball of a Temper/JRE bundle."
+    dependsOn composeTemperJre
+    archiveBaseName.set(bundleAllDir.fileName.toString())
+    compression = Compression.GZIP
+    // We likely care about tar on Unix, so go up a dir to get a subdir inside the tar.
+    from bundleAllDir.parent
+    // And preserve permissions, especially for executable bits.
+    useFileSystemPermissions()
+}
+
+task zipTemperJre(type: Zip) {
+    description = "Make a compressed zip archive of a Temper/JRE bundle."
+    dependsOn composeTemperJre
+    archiveBaseName.set(bundleAllDir.fileName.toString())
+    // We likely care about zip on Windows, where tools tend to make an extra layer on extract.
+    from bundleAllDir
+}
+
+task packageVsix {
+    dependsOn composeTemperJre
+    doFirst {
+        // Build inside the source dir because we git ignore the extra, and this helps cache node_modules.
+        // This works great for repeated ci bundles across platforms, but don't distribute local builds from dev dirs.
+        def langServerPath = project(":langserver").projectDir.toPath()
+        def extensionSrcPath = langServerPath.resolve(Path.of("src", "main", "js", "temper-language-support"))
+        println(extensionSrcPath)
+        def bundledTemperPath = extensionSrcPath.resolve("temper")
+        delete bundledTemperPath
+        copy { from bundleAllDir; into bundledTemperPath }
+        // Package up.
+        def packageName = "temper-${getTemperVersion()}-$jrePlatform"
+        def outputPath = buildDir.toPath().resolve(Path.of("distributions", "${packageName}.vsix"))
+        println("Building: $outputPath")
+        def npxExt = System.getProperty("os.name").toLowerCase().contains("windows") ? ".cmd" : ""
+        // Translate to vscode platform names for target option.
+        def vscodePlatform = jrePlatform
+            .replaceFirst("^mac-", "darwin-")
+            .replaceFirst("^windows-", "win32-")
+            .replaceFirst("-amd64\$", "-x64")
+            .replaceFirst("-x86_64\$", "-x64")
+            .replaceFirst("-aarch64\$", "-arm64")
+        providers.exec {
+            executable = "npm${npxExt}"
+            args = ["install"]
+            workingDir extensionSrcPath
+        }.result.get()
+        providers.exec {
+            executable = "npx${npxExt}"
+            args = ["vsce", "package", "-o", outputPath.toString(), "-t", vscodePlatform]
+            workingDir extensionSrcPath
+        }.result.get()
+    }
+}
+
+task bundleTemperJre {
+    group = "Bundle"
+    description = "Bundle Temper and a JRE together."
+    // This is for public use, so use the archive format the people likely will want.
+    if (jreChosenName.toLowerCase().contains("windows")) {
+        dependsOn zipTemperJre, packageVsix
+    } else {
+        dependsOn tarTemperJre, packageVsix
+    }
+    doLast {
+        println "Used $jreChosenName to bundle: $bundleAllDir.fileName"
+    }
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coro_version"
+    implementation project(':common')
+    implementation project(':format')
+    implementation project(':log')
+    implementation project(':be')
+    implementation project(':be-helpers')
+    implementation project(':builtin')
+    implementation project(':bundled-backends')
+    implementation project(':compile')
+    implementation project(':ast')
+    implementation project(':cst')
+    implementation project(':doc-gen')
+    implementation project(':frontend')
+    implementation project(':fs')
+    implementation project(':fundamentals')
+    implementation project(':interp')
+    implementation project(':langserver')
+    implementation project(':lexer')
+    implementation project(':library')
+    implementation project(':name')
+    implementation project(':stage')
+    implementation project(':supported-backends')
+    implementation project(':tooling')
+    // github.com/Kotlin/kotlinx-cli/releases
+    implementation "org.jetbrains.kotlinx:kotlinx-cli:0.3.6"
+    // github.com/jline/jline3#artifacts used by REPL
+    implementation "org.jline:jline:3.26.3"
+    // BerkeleyDB used to cache AST representations at important points to help
+    // diagnose compiler errors.
+    // This particular version is Apache2.0 licensed.  Before updating, check
+    // that the new one is too.
+    implementation "com.sleepycat:je:18.3.12"
+    // For picking appropriate directories for user-specific files.
+    implementation "net.harawata:appdirs:1.2.1"
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
+    testImplementation 'org.kohsuke:github-api:1.313'
+    testImplementation 'org.rauschig:jarchivelib:1.2.0'
+    testImplementation project(':test-helpers')
+    testImplementation project(':be-test-helpers')
+    testImplementation project(':fs-test-helpers')
+}
+
+task temper(type: JavaExec) {
+    dependsOn build
+    group = "Execution"
+    description =
+        """Runs temper cli through gradle, building first. \
+        Specify JVM args with env var TEMPER_OPTS and temper args with gradle argument '-PcliArgs=...'. \
+        As a caveat, the repl doesn't work through gradle. \
+        For full features, run gradle task 'deploy' then use the installed temper script."""
+    mainClass = mainClassName
+    jvmArgs = [*Commandline.translateCommandline(System.getenv("TEMPER_OPTS"))]
+    classpath = sourceSets.main.runtimeClasspath
+    argsString = project.properties.get("cliArgs")
+}

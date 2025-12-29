@@ -1,0 +1,40 @@
+Short version for non-lawyers:
+
+The Temper Project code is dual-licensed under Apache 2.0 and MIT terms.
+
+The Temper Project documentation is licensed under a Creative Commons
+license: CC-BY-SA-4.0.
+
+Both are Copyright (c) The Temper Project Contributors.
+
+Longer version:
+
+Copyrights in the Temper project are retained by their contributors.
+No copyright assignment is required to contribute to the Temper
+project.
+
+Some files include explicit copyright notices and/or license notices.
+For full authorship information, see the version control history.
+
+Except as otherwise noted, Temper is licensed under the Apache
+License, Version 2.0 <LICENSE-APACHE> or <https://www.apache.org/licenses/LICENSE-2.0>
+or the MIT license <LICENSE-MIT> or <https://opensource.org/licenses/MIT>,
+at your option.
+
+We track licenses for third-party materials via a `gradle` build tasks
+that compile a licenses file which is included in binary distributions
+and is available via the Temper command line tool: `temper licenses`.
+Please refer to either the file embedded in the binary distribution or
+the command line tools replay of it.
+
+The Temper Language Documentation is licensed under the CC-BY-SA 4.0
+license <LICENSE-CC-BY-SA-4.0> or <https://creativecommons.org/licenses/by-sa/4.0/>.
+That documentation is assembled from a mixture of hand written
+documentation files and comments authored as documentation but
+embedded in programming language source files.
+
+Libraries written using the Temper programming language definition, or
+its toolchain elements (e.g. the Temper command line tool, the Temper
+VSCode plugin, and language server) are the copyright of their
+creators and may or may not be licensed in the same way as the Temper
+project at the discretion of their creators.

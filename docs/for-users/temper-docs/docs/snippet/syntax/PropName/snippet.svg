@@ -1,0 +1,89 @@
+<svg class="railroad-diagram" width="564" height="124" viewBox="0 0 564 124" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>PropName &#58;&#61; &#40;In &#123;&#46;&#46;&#46;&#125; object syntax&#44; any &#96;class&#96; property must appear first&#58; &#34;class&#34;&#41; &#124; UnreservedWord</title>
+<style><![CDATA[
+svg.railroad-diagram {
+    background-color: hsl(30,20%,95%);
+}
+svg.railroad-diagram path {
+    stroke-width: 3;
+    stroke: black;
+    fill: rgba(0,0,0,0);
+}
+svg.railroad-diagram text {
+    font: bold 14px monospace;
+    text-anchor: middle;
+    white-space: pre;
+}
+svg.railroad-diagram text.diagram-text {
+    font-size: 12px;
+}
+svg.railroad-diagram text.diagram-arrow {
+    font-size: 16px;
+}
+svg.railroad-diagram text.label {
+    text-anchor: start;
+}
+svg.railroad-diagram text.comment {
+    font: italic 12px monospace;
+}
+svg.railroad-diagram g.non-terminal text {
+    /*font-style: italic;*/
+}
+svg.railroad-diagram rect {
+    stroke-width: 3;
+    stroke: black;
+    fill: hsl(120,100%,90%);
+}
+svg.railroad-diagram rect.group-box {
+    stroke: gray;
+    stroke-dasharray: 10 5;
+    fill: none;
+}
+svg.railroad-diagram path.diagram-text {
+    stroke-width: 3;
+    stroke: black;
+    fill: white;
+    cursor: help;
+}
+svg.railroad-diagram g.diagram-text:hover path.diagram-text {
+    fill: #eee;
+}
+
+]]></style>
+
+<g transform="translate(.5 .5)">
+<g>
+<path d="M20 83v20m10 -20v20m-10 -10h20"></path>
+</g>
+<g>
+<path d="M40 93h0"></path>
+<path d="M524 93h0"></path>
+<path d="M40 93a10 10 0 0 0 10 -10v-18a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M60 55h0"></path>
+<path d="M504 55h0"></path>
+<rect x="60" y="36" width="444" height="38" rx="10" ry="10" class="group-box"></rect>
+<g class="terminal">
+<path d="M60 55h190.75"></path>
+<path d="M313.25 55h190.75"></path>
+<rect x="250.75" y="44" width="62.5" height="22" rx="10" ry="10"></rect>
+<text x="282" y="59">class</text>
+</g>
+<g>
+<path d="M60 28h0"></path>
+<path d="M504 28h0"></path>
+<text x="282" y="33" class="comment">In {...} object syntax, any &#96;class&#96; property must appear first</text>
+</g>
+</g>
+<path d="M504 55a10 10 0 0 1 10 10v18a10 10 0 0 0 10 10"></path>
+<path d="M40 93h20"></path>
+<g class="non-terminal">
+<path d="M60 93h152.5"></path>
+<path d="M351.5 93h152.5"></path>
+<rect x="212.5" y="82" width="139" height="22"></rect>
+<text x="282" y="97">UnreservedWord</text>
+</g>
+<path d="M504 93h20"></path>
+</g>
+<path d="M 524 93 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+</g>
+</svg>

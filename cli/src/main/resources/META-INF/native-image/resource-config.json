@@ -1,0 +1,184 @@
+{
+  "bundles": [],
+  "resources": {
+    "includes": [
+      {
+        "pattern": "\\QMETA-INF/services/java.nio.file.spi.FileSystemProvider\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/kotlin.reflect.jvm.internal.impl.builtins.BuiltInsLoader\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/kotlin.reflect.jvm.internal.impl.resolve.ExternalOverridabilityCondition\\E"
+      },
+      {
+        "pattern": "\\Qimplicits\\E"
+      },
+      {
+        "pattern": "\\Qkotlin/annotation/annotation.kotlin_builtins\\E"
+      },
+      {
+        "pattern": "\\Qkotlin/collections/collections.kotlin_builtins\\E"
+      },
+      {
+        "pattern": "\\Qkotlin/coroutines/coroutines.kotlin_builtins\\E"
+      },
+      {
+        "pattern": "\\Qkotlin/internal/internal.kotlin_builtins\\E"
+      },
+      {
+        "pattern": "\\Qkotlin/kotlin.kotlin_builtins\\E"
+      },
+      {
+        "pattern": "\\Qkotlin/ranges/ranges.kotlin_builtins\\E"
+      },
+      {
+        "pattern": "\\Qkotlin/reflect/full\\E"
+      },
+      {
+        "pattern": "\\Qkotlin/reflect/reflect.kotlin_builtins\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper\\E"
+      },
+      {
+        "pattern": "\\Qorg/fusesource/jansi/internal/native/Linux/x86_64/libjansi.so\\E"
+      },
+      {
+        "pattern": "\\Qorg/fusesource/jansi/jansi.properties\\E"
+      },
+      {
+        "pattern": "\\Qstd\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/java.lang.System$LoggerFinder\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/java.time.zone.ZoneRulesProvider\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/kotlin.reflect.jvm.internal.impl.util.ModuleVisibilityHelper\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/org.jline.terminal.spi.JansiSupport\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/org.jline.terminal.spi.JnaSupport\\E"
+      },
+      {
+        "pattern": "\\Qcom/sun/jna/darwin-x86-64/libjnidispatch.jnilib\\E"
+      },
+      {
+        "pattern": "\\Qimplicits/Implicits.temper\\E"
+      },
+      {
+          "pattern": "\\Qlang/temper\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/csharp/std/Regex/IntRangeSet.cs\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/csharp/std/Regex/RegexSupport.cs\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/csharp/std/Temporal/TemporalSupport.cs\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/csharp/temper-core/Core.cs\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/csharp/temper-core/Float64.cs\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/csharp/temper-core/Generator.cs\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/csharp/temper-core/Listed.cs\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/csharp/temper-core/Logging.cs\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/csharp/temper-core/OrderedDictionary.cs\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/csharp/temper-core/StringUtil.cs\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/csharp/temper-core/TemperLang.Core.csproj\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/java/temper-core/pom.xml\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/java/temper-core/src/main/java/temper/core/Core.java\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/java/temper-core/src/main/java/temper/core/Generator.java\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/java/temper-core/src/main/java/temper/core/NonNull.java\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/java/temper-core/src/main/java/temper/core/Nullable.java\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/java/temper-core/src/main/java/temper/core/Stub.java\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/java/temper-core/src/main/java/temper/core/Util.java\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/java/temper-std/src/main/java/temper/std/regex/Core.java\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/js/temper-core/index.js\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/js/temper-core/package.json\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/js/temper-core/regex.js\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/lua/temper-core/init.lua\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/lua/temper-core/regex/runtime.lua\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/py/temper-core/pyproject.toml\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/py/temper-core/temper_core/__init__.py\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/py/temper-core/temper_core/py.typed\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/py/temper-core/temper_core/regex.py\\E"
+      },
+      {
+        "pattern": "\\Qlang/temper/be/py/temper-core/temper_core/testing.py\\E"
+      },
+      {
+        "pattern": "\\Qorg/fusesource/jansi/internal/native/Mac/x86_64/libjansi.jnilib\\E"
+      },
+      {
+        "pattern": "\\Qorg/jline/utils/capabilities.txt\\E"
+      },
+      {
+        "pattern": "\\Qorg/jline/utils/xterm-256color.caps\\E"
+      },
+      {
+        "pattern": "java.base:\\Qjdk/internal/icu/impl/data/icudt72b/nfc.nrm\\E"
+      },
+      {
+        "pattern": "jdk.jfr:\\Qjdk/jfr/internal/query/view.ini\\E"
+      },
+      {
+        "pattern": "\\Qorg/fusesource/jansi/internal/native/Mac/arm64/libjansi.jnilib\\E"
+      }
+    ]
+  }
+}

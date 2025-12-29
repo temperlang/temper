@@ -1,0 +1,16 @@
+name: release-test-mypyc
+permissions:
+  contents: read
+
+on:
+  schedule:
+    # Placed 2 hours after release-dev and just 1 day per week.
+    # We can run more often or with other tests if we get the test working.
+    - cron: "0 7 * * 2"
+  workflow_dispatch:
+
+jobs:
+  test:
+    uses: ./.github/workflows/integration-tests.yml
+    with:
+      args: --check mypy_produces_binaries

@@ -1,0 +1,13 @@
+let { Circle, Rectangle, Shape } = import("../lib");
+
+// And we can also export top-level functions.
+export let squaredExtent(shape: Shape): Float64 {
+  when (shape) {
+    is Circle -> shape.radius * shape.radius;
+    is Rectangle -> do {
+      let { width, height } = shape;
+      (width * width + height * height) / 4.0
+    } orelse panic();
+    else -> NaN; // Only needed until we check exhaustiveness.
+  }
+}

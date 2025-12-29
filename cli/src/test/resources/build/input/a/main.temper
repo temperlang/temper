@@ -1,0 +1,17 @@
+let { CodePoints, oneOrMore } = import("std/regex");
+let { twice } = import("../b/helper");
+
+let twiceAgain = twice;
+
+export let report(text: String): Int {
+  let codePoints = new CodePoints(text);
+  // Include `oneOrMore` to see if name style translation works.
+  let bonus = if (oneOrMore(codePoints).found("whatever")) { 1 } else { 0 };
+  let value = codePoints.value;
+  let value = value[String.begin] + bonus;
+  twice(value) + twiceAgain(value) + thrice(value)
+}
+
+let thrice(n: Int): Int { 3 * n }
+
+console.log("Hi: ${report("Hi!")}");

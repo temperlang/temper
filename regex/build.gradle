@@ -1,0 +1,66 @@
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform'
+}
+ext.temperProject = 'mpp'
+
+kotlin {
+    sourceSets {
+        all {
+            languageSettings {
+                languageVersion = gradle.kotlin_language_version
+                apiVersion = gradle.kotlin_api_version
+                //enableLanguageFeature('InlineClasses')
+                progressiveMode = true
+                //verbose = true
+                optIn("kotlin.RequiresOptIn")
+            }
+        }
+    }
+
+    jvm()
+
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation project(':builtin')
+                implementation project(':common')
+                implementation project(':format')
+                implementation project(':fundamentals')
+                implementation project(':interp')
+                implementation project(':lexer')
+                implementation project(':log')
+                implementation project(':name')
+            }
+        }
+        commonTest {
+            dependencies {
+                // Test depends on be-test-helpers which depends on frontend which depends on regex main above,
+                // but this seems to be ok.
+                implementation kotlin('test-common')
+                implementation kotlin('test-annotations-common')
+                implementation project(':be')
+                implementation project(':be-csharp')
+                implementation project(':be-js')
+                implementation project(':be-py')
+                implementation project(':be-test-helpers')
+                implementation project(':fs')
+                implementation project(':fs-test-helpers')
+                implementation project(':fundamentals')
+                implementation project(':interp')
+                implementation project(':library')
+                implementation project(':test-helpers')
+            }
+        }
+        jvmMain {
+            dependencies {
+                implementation kotlin('stdlib-jdk8')
+            }
+        }
+        jvmTest {
+            dependencies {
+                implementation kotlin('test')
+                implementation kotlin('test-junit5')
+            }
+        }
+    }
+}

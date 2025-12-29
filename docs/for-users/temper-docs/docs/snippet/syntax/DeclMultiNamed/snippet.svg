@@ -1,0 +1,164 @@
+<svg class="railroad-diagram" width="597" height="110" viewBox="0 0 597 110" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>DeclMultiNamed &#58;&#61; &#34;&#123;&#34; &#40;LetNested &#40;&#34;&#44;&#34; LetNested&#41;&#42; &#34;&#44;&#34;&#63; &#124; LetNested&#41; &#34;&#125;&#34;</title>
+<style><![CDATA[
+svg.railroad-diagram {
+    background-color: hsl(30,20%,95%);
+}
+svg.railroad-diagram path {
+    stroke-width: 3;
+    stroke: black;
+    fill: rgba(0,0,0,0);
+}
+svg.railroad-diagram text {
+    font: bold 14px monospace;
+    text-anchor: middle;
+    white-space: pre;
+}
+svg.railroad-diagram text.diagram-text {
+    font-size: 12px;
+}
+svg.railroad-diagram text.diagram-arrow {
+    font-size: 16px;
+}
+svg.railroad-diagram text.label {
+    text-anchor: start;
+}
+svg.railroad-diagram text.comment {
+    font: italic 12px monospace;
+}
+svg.railroad-diagram g.non-terminal text {
+    /*font-style: italic;*/
+}
+svg.railroad-diagram rect {
+    stroke-width: 3;
+    stroke: black;
+    fill: hsl(120,100%,90%);
+}
+svg.railroad-diagram rect.group-box {
+    stroke: gray;
+    stroke-dasharray: 10 5;
+    fill: none;
+}
+svg.railroad-diagram path.diagram-text {
+    stroke-width: 3;
+    stroke: black;
+    fill: white;
+    cursor: help;
+}
+svg.railroad-diagram g.diagram-text:hover path.diagram-text {
+    fill: #eee;
+}
+
+]]></style>
+
+<g transform="translate(.5 .5)">
+<g>
+<path d="M20 69v20m10 -20v20m-10 -10h20"></path>
+</g>
+<path d="M40 79h10"></path>
+<g>
+<path d="M50 79h0"></path>
+<path d="M547 79h0"></path>
+<g class="terminal">
+<path d="M50 79h0"></path>
+<path d="M78.5 79h0"></path>
+<rect x="50" y="68" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="64.25" y="83">{</text>
+</g>
+<path d="M78.5 79h10"></path>
+<g>
+<path d="M88.5 79h0"></path>
+<path d="M508.5 79h0"></path>
+<path d="M88.5 79a10 10 0 0 0 10 -10v-19a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M108.5 40h0"></path>
+<path d="M488.5 40h0"></path>
+<g class="non-terminal">
+<path d="M108.5 40h0"></path>
+<path d="M205 40h0"></path>
+<rect x="108.5" y="29" width="96.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-letnested"><text x="156.75" y="44">LetNested</text>
+</a>
+</g>
+<path d="M205 40h10"></path>
+<g>
+<path d="M215 40h0"></path>
+<path d="M420 40h0"></path>
+<path d="M215 40a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M235 20h165"></path>
+</g>
+<path d="M400 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M215 40h20"></path>
+<g>
+<path d="M235 40h0"></path>
+<path d="M400 40h0"></path>
+<path d="M235 40h10"></path>
+<g>
+<path d="M245 40h0"></path>
+<path d="M390 40h0"></path>
+<g class="terminal">
+<path d="M245 40h0"></path>
+<path d="M273.5 40h0"></path>
+<rect x="245" y="29" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="259.25" y="44">,</text>
+</g>
+<path d="M273.5 40h10"></path>
+<path d="M283.5 40h10"></path>
+<g class="non-terminal">
+<path d="M293.5 40h0"></path>
+<path d="M390 40h0"></path>
+<rect x="293.5" y="29" width="96.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-letnested"><text x="341.75" y="44">LetNested</text>
+</a>
+</g>
+</g>
+<path d="M390 40h10"></path>
+<path d="M245 40a10 10 0 0 0 -10 10v0a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M245 60h145"></path>
+</g>
+<path d="M390 60a10 10 0 0 0 10 -10v0a10 10 0 0 0 -10 -10"></path>
+</g>
+<path d="M400 40h20"></path>
+</g>
+<g>
+<path d="M420 40h0"></path>
+<path d="M488.5 40h0"></path>
+<path d="M420 40a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M440 20h28.5"></path>
+</g>
+<path d="M468.5 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M420 40h20"></path>
+<g class="terminal">
+<path d="M440 40h0"></path>
+<path d="M468.5 40h0"></path>
+<rect x="440" y="29" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="454.25" y="44">,</text>
+</g>
+<path d="M468.5 40h20"></path>
+</g>
+</g>
+<path d="M488.5 40a10 10 0 0 1 10 10v19a10 10 0 0 0 10 10"></path>
+<path d="M88.5 79h20"></path>
+<g class="non-terminal">
+<path d="M108.5 79h141.75"></path>
+<path d="M346.75 79h141.75"></path>
+<rect x="250.25" y="68" width="96.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-letnested"><text x="298.5" y="83">LetNested</text>
+</a>
+</g>
+<path d="M488.5 79h20"></path>
+</g>
+<path d="M508.5 79h10"></path>
+<g class="terminal">
+<path d="M518.5 79h0"></path>
+<path d="M547 79h0"></path>
+<rect x="518.5" y="68" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="532.75" y="83">}</text>
+</g>
+</g>
+<path d="M547 79h10"></path>
+<path d="M 557 79 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+</g>
+</svg>

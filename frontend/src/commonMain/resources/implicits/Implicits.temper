@@ -1,0 +1,1613 @@
+/**
+ * The type for any successful value.
+ *
+ * All `class` and `interface` types, including builtin types like [snippet/type/Int32],
+ * are sub-types of this type.
+ *
+ * The special type [snippet/type/Bubble] is not.
+ */
+export interface AnyValue {}
+
+/**
+ * Indicates that values can be tested for equality using `==` and `!=`.
+ * User-defined types can't currently extend Equatable, but we expect to support
+ * this in the future.
+ */
+export sealed interface Equatable {}
+
+/**
+ * *Bubble* is a type that represents failure to compute a value.
+ *
+ * A function declaration may declare it [*throws*][snippet/builtin/throws] *Bubble*
+ * following its return type to indicate that it can fail.
+ * When translating to backends that use exceptions, this indicates the function can throw.
+ * On other backends, the translation function's return type might be a *Result* type or a
+ * Go-lang [extra, error result](https://gobyexample.com/errors).
+ *
+ * See also [snippet/builtin/orelse].
+ */
+export class Bubble {
+}
+
+/**
+ * *Invalid* is an untranslatable type that represents a failure to properly type an
+ * expression.  Some backends, notably dynamic language backends, might be able
+ * to produce a partially working translation and run tests even in the presence of type
+ * errors, allowing developers to narrow down errors, or guide complex refactorings, and
+ * the invalid type enables that.
+ *
+ * It may be used in meta-programming code, but is not meant for general use by user code.
+ */
+export sealed interface Invalid {}
+
+/**
+ * *Never* is a type for expressions that will never complete normally.
+ *
+ * For example, a loop that never exits, perhaps because it is supposed to process jobs
+ * until the end of the embedding program, may use type *Never*.
+ *
+ * *Never* should not be confused with [snippet/type/Empty]; *Empty* admits a valid value which
+ * has no content, but *Never* admits no value.
+ *
+ * Unlike [⊥ types][bottom type] in some programming language, there is not a single
+ * *Never* type in Temper.
+ * *Never&lt;Foo&gt;* is not a sub-type of every type; it is only a sub-type of itself and its
+ * *&lt;Foo&gt;*.
+ *
+ * *Never&lt;String?&gt;?* is a valid type and because of the `?` nullable notation, that type
+ * admits the special value, [snippet/builtin/null].
+ *
+ * Having *Never* types in Temper allows translating control flow constructs that do not
+ * produce "unreachable code" errors.
+ *
+ * Temper *Never* types can translate to bottom types in languages that support that, but
+ * *Never&lt;String&gt;*, for example, can translate to *String* in languages that do not.
+ *
+ * [bottom type]: https://en.wikipedia.org/wiki/Bottom_type
+ */
+export sealed interface Never<out T> {}
+
+/**
+ * The singleton [*null*][snippet/builtin/null] value represents
+ * the absence of a value of another type.
+ *
+ * In Temper, *null* is a valid value of any nullable type,
+ * any regular type followed by `?`.
+ *
+ * *String?* is a valid type for a local variable or function
+ * input that might refer to either *null* or a string value.
+ */
+@mayDowncastTo(true)
+export class Null extends Equatable {
+  private constructor(): Void {}
+}
+
+/**
+ * *Empty* is the type for a stateless singleton value which may be used
+ * judiciously to work around some problems in generic programming.
+ *
+ * When not solving generic programming problems, prefer [snippet/type/Void].
+ * *Void* translates to the idiomatic no-usable-result concept which for many
+ * typed functional languages is the same as *Empty* but for many dynamic
+ * languages is the same as [snippet/type/Null].
+ *
+ * *Empty* differs from [snippet/type/Void] in that it can be used as the type
+ * of a function input and of a local variable.
+ *
+ * Empty is like the "unit" type which is present in functional programming
+ * languages; a function may be effectively *Void* but can instead return
+ * *Empty* allowing its return type to bind to agree with a type parameter.
+ *
+ * As seen below, the empty value may be retrieved by calling the `empty()`
+ * function, and is distinct from [snippet/type/Null].
+ *
+ * ```temper
+ * let e: Empty? = empty();
+ * console.log("Empty is not null: ${e != null}");
+ * //!outputs  "Empty is not null: true"
+ * ```
+ */
+@connected("Empty")
+export class Empty extends Equatable {
+  private constructor(): Void {}
+}
+let emptySingleton: Empty = new Empty();
+@connected("empty")
+export let empty(): Empty { emptySingleton }
+
+export interface Function {}
+
+/**
+ * A marker interface for functions that may yield control to their caller even
+ * if they do not lexically mention the [snippet/builtin/yield]
+ * pseudo-control-flow instruction.
+ */
+export interface GeneratorFn extends Function {}
+
+/**
+ * One of a sequence of results from a [snippet/type/Generator].
+ */
+@connected("GeneratorResult")
+export sealed interface GeneratorResult<out YIELD extends AnyValue> {}
+
+/**
+ * A multi-step computation that may be scheduled for a step by calling the
+ * [snippet/type/Generator/method/next] method.
+ *
+ * Block lambdas that extend [snippet/type/GeneratorFn] specify factories
+ * for *Generator*s, or if they don't [snippet/type/Bubble], for
+ * [snippet/type/Generator]s.
+ *
+ * Terminology note:
+ * Coroutines may be represented as *Generator*s where
+ * [snippet/type/Generator/method/next]
+ * starts or resumes computation and the coroutine pauses itself
+ * when done with the step.
+ * We avoid the term "coroutine" because many programmers associate it
+ * narrowly with a kind of parallelism.
+ */
+@connected("Generator")
+export interface Generator<out YIELD extends AnyValue> {
+  /**
+   * Starts/resumes the computation and runs until it pauses or completes.
+   *
+   * If the computation was [snippet/type/Generator/property/done] prior
+   * to the start of the call or it is done at the end, returns [snippet/type/DoneResult].
+   * This is the case for a [snippet/type/GeneratorFn] that
+   * [returns][snippet/builtin/return].
+   *
+   * If the computation pauses, returns the value associated with the
+   * decision to pause.
+   * For a [snippet/type/GeneratorFn], this is the value passed to
+   * [snippet/builtin/yield].  If a *GeneratorFn* bubbles, the call to
+   * next propagates it.
+   */
+  @connected("Generator::next")
+  public next(): GeneratorResult<YIELD> throws Bubble;
+  /**
+   * True if subsequent calls to [snippet/type/Generator/method/next]
+   * would do no work and return a [snippet/type/DoneResult].
+   *
+   * That "if" is not an "if and only if" because in the case where a
+   * [snippet/type/GeneratorFn] body yielded just before its return,
+   * *done* may be [snippet/builtin/false] but a subsequent call to
+   * *next* would return a *DoneResult* and reading *done* after that
+   * would get [snippet/builtin/true].
+   */
+  @connected("Generator::done")
+  public done: Boolean;
+  /**
+   * Should be called once it is realized that
+   * [snippet/type/Generator/method/next] is not going to be called
+   * again to release resources needed by *next*.
+   *
+   * After *close* exits, [snippet/type/Generator/property/done]
+   * will be [snippet/builtin/true].
+   */
+  @connected("Generator::close")
+  public close(): Void;
+}
+
+/**
+ * A variant of [snippet/type/Generator] that does not bubble
+ * when computing the next result.
+ */
+export interface SafeGenerator<out YIELD extends AnyValue> extends Generator<YIELD> {
+  /**
+   * Starts/resumes the computation and runs until it pauses or completes.
+   *
+   * If the computation was [snippet/type/Generator/property/done] prior
+   * to the start of the call or it is done at the end, returns [snippet/type/DoneResult].
+   * This is the case for a [snippet/type/GeneratorFn] that
+   * [returns][snippet/builtin/return].
+   *
+   * If the computation pauses, returns the value associated with the
+   * decision to pause.
+   * For a [snippet/type/GeneratorFn], this is the value passed to
+   * [snippet/builtin/yield].
+   */
+  @connected("SafeGenerator::next")
+  public next(): GeneratorResult<YIELD>;
+}
+
+/**
+ * A result produced from [snippet/type/Generator/method/next] when there is a value to produce and
+ * [snippet/type/Generator/property/done] is [snippet/builtin/false].
+ */
+@connected("ValueResult")
+export class ValueResult<out YIELD extends AnyValue> extends GeneratorResult<YIELD> {
+  public value: YIELD;
+  @connected("ValueResult::constructor")
+  public constructor(value: YIELD): Void {
+    this.value = value;
+  }
+}
+
+/**
+ * A result produced from [snippet/type/Generator/method/next] when there is no value to produce and
+ * [snippet/type/Generator/property/done] is [snippet/builtin/true].
+ */
+@connected("DoneResult")
+export class DoneResult<out YIELD extends AnyValue> extends GeneratorResult<YIELD> {}
+@connected("doneResult")
+export let doneResult<YIELD extends AnyValue>(): DoneResult<YIELD> { new DoneResult<YIELD>() }
+
+/**
+ * Wraps a [snippet/type/GeneratorFn] as a [snippet/type/Generator].
+ */
+class GeneratorFnWrapper<out YIELD extends AnyValue>
+extends Generator<YIELD> {
+  private let generatorFn: fn (): GeneratorResult<YIELD> throws Bubble;
+  private var _done: Boolean = false;
+
+  public constructor(generatorFn: fn (): GeneratorResult<YIELD> throws Bubble) {
+    this.generatorFn = generatorFn;
+  }
+
+  public next(): GeneratorResult<YIELD> throws Bubble {
+    if (this._done) {
+      return doneResult<YIELD>();
+    }
+    this._done = true; // GeneratorFns are not re-entrant.
+    let result: GeneratorResult<YIELD> = generatorFn();
+    when (result) {
+      is ValueResult<YIELD> -> do { this._done = false }
+      is DoneResult<YIELD> -> void
+    }
+    return result;
+  }
+
+  public get done(): Boolean { this._done }
+
+  public close(): Void {
+    // TODO: trigger bubble at pause point in generatorFn
+  }
+}
+
+/**
+ * Like *GeneratorFnWrapper* but wraps as a [snippet/type/SafeGenerator].
+ */
+class SafeGeneratorFnWrapper<out YIELD extends AnyValue>
+extends SafeGenerator<YIELD> {
+  private let generatorFn: fn (): GeneratorResult<YIELD>;
+  private var _done: Boolean = false;
+
+  public constructor(generatorFn: fn (): GeneratorResult<YIELD>) {
+    this.generatorFn = generatorFn;
+  }
+
+  public next(): GeneratorResult<YIELD> throws Bubble {
+    if (this._done) {
+      return doneResult<YIELD>();
+    }
+    this._done = true; // GeneratorFns are not re-entrant.
+    let result: GeneratorResult<YIELD> = generatorFn();
+    when (result) {
+      is ValueResult<YIELD> -> do { this._done = false }
+      is DoneResult<YIELD> -> void
+    }
+    return result;
+  }
+
+  public get done(): Boolean { this._done }
+
+  public close(): Void {
+    // TODO: trigger bubble at pause point in generatorFn
+  }
+}
+
+/**
+ * A promise is a placeholder for a value that may not be known yet.
+ *
+ * This class provides no methods that introspect over whether that
+ * value is available or what it is.
+ * Use [builtin/await] to get at the value asynchronously.
+ */
+@connected("Promise")
+export class Promise<out R extends AnyValue> {}
+
+/**
+ * A promise builder contains a promise that may be shared, but the
+ * builder itself may be withheld.
+ *
+ * Security note: in some target languages, there is no distinction between
+ * promises and promise builders.  In those languages, native code that
+ * receives a promise builder's promise might be able to preempt completion
+ * meaning that third-parties that await on promise get the preemptively
+ * provided resolution instead of that provided by the owner of the promise
+ * builder.
+ */
+@connected("PromiseBuilder")
+export class PromiseBuilder<R extends AnyValue> {
+  private let _promise: Promise<R>;
+
+  @connected("PromiseBuilder::getPromise")
+  public get promise(): Promise<R> { _promise }
+  @connected("PromiseBuilder::constructor")
+  public constructor(): Void;
+
+  @connected("PromiseBuilder::complete")
+  public complete(completion: R): Void;
+
+  @connected("PromiseBuilder::breakPromise")
+  public breakPromise(): Void;
+}
+
+/**
+ * Limited at present to String and Int keys but expected to be
+ * user-implementable in the future.
+ */
+export /*sealed*/ interface MapKey extends Equatable {}
+
+/**
+ * A *String* is a chunk of textual content.
+ *
+ * ⎀ syntax/StringLiteral -heading
+ *
+ * To encourage code with repeatable behavior, strings do not have lengths; the length of a string
+ * depends on the kind of characters, which differ across programming languages.
+ * See the documentation for [string indices][snippet/type/StringIndex] to see how to compare
+ * character counts and understand more about semantic consistency of string operations.
+ *
+ * String values have a syntax similar to JavaScript, but instead of using backticks `` ` `` for
+ * multi-line strings with interpolation, use triple-quotes: `"""` for multi-line strings.
+ *
+ * ⎀ syntax/multi-quoted-strings -heading
+ *
+ * ⎀ syntax/EscapeSequences
+ *
+ * ⎀ syntax/string/incidental-space-removal
+ *
+ * ⎀ syntax/string/interpolation -heading
+ */
+@mayDowncastTo(false) // Confusable with scalars on many dynlang backends, and dates in older PLs
+export class String extends MapKey {
+  private let content: builtins.String;
+
+  /**
+   * Convert the single code point to a string if it's valid. Specifically, it
+   * must be a Unicode scalar value, which is between 0 and 0x10FFFF, inclusive,
+   * except for the surrogate range 0xD800 through 0xDFFF.
+   */
+  @connected("String::fromCodePoint")
+  public static fromCodePoint(codePoint: Int): String throws Bubble;
+
+  /** Convert the list of code points to a string if they're valid. */
+  @connected("String::fromCodePoints")
+  public static fromCodePoints(codePoints: Listed<Int>): String throws Bubble;
+
+  /** True iff this string has no code-points. */
+  @connected("String::isEmpty")
+  public get isEmpty(): builtins.Boolean { content == "" }
+
+  /**
+   * A string index that works for the start of any string.
+   */
+  @connected("String::begin")
+  public static let begin: StringIndex;
+
+  /**
+   * The index at the end of this string, just past the last character if any.
+   *
+   * ```temper
+   * // An empty string's end is the same as its start.
+   *    "".end.compareTo(String.begin) == 0 &&
+   *
+   * // Any other string's end is after its start.
+   * "foo".end.compareTo(String.begin) >  0
+   * ```
+   */
+  @connected("String::end")
+  public get end(): StringIndex;
+
+  /**
+   * The integer value of the codepoint at the given index or panics if there is no such value.
+   *
+   * This may produce an unexpected result if index was derived from operations involving
+   * a different string.  For example, within a language that uses UTF-16 surrogates to
+   * represent supplementary code points, using a string index from another string might
+   * point into the middle of a code-point in this string causing this method to return
+   * the integer value of the trailing surrogate instead of the whole code point.
+   *
+   * ```temper
+   * "foo"[String.begin] == char'f'
+   * ```
+   */
+  @connected("String::get")
+  public get(index: StringIndex): Int;
+
+  /**
+   * True when index points to a character in this string.  False if it is out of bounds.
+   *
+   * ```temper
+   * !"".hasIndex(String.begin) && "foo".hasIndex(String.begin)
+   * ```
+   */
+  @connected("String::hasIndex")
+  public hasIndex(index: StringIndex): Boolean;
+
+  /**
+   * The first index of *target* if found, starting from *start*.
+   */
+  @connected("String::indexOf")
+  public indexOf(
+    target: String,
+    start: StringIndex = String.begin,
+  ): StringIndexOption {
+    // This implementation is inefficient but correct.
+    let targetLength = target.countBetween(String.begin, target.end);
+    var index = start;
+    var endGuess = step(index, targetLength);
+    let fullEnd = end;
+    starts: while (true) {
+      if (slice(index, endGuess) == target) {
+        return index;
+      }
+      if (endGuess == fullEnd) {
+        // Only break at the end *after* we've checked it.
+        break starts;
+      }
+      index = next(index);
+      endGuess = next(endGuess);
+    }
+    return StringIndex.none;
+  }
+
+  /**
+   * An index for the next code-point after the one pointed to by index in this string.
+   * Returns *end* if there is no such code-point.
+   *
+   * ```temper
+   * let s = "abc";
+   * let i = s.next(String.begin);
+   *
+   * s[i] == char'b'
+   * ```
+   */
+  @connected("String::next")
+  public next(index: StringIndex): StringIndex;
+
+  /**
+   * An index for the code-point that preceded the one pointed to by index in this string.
+   * Returns *begin* if there is no such code-point.
+   *
+   * ```temper
+   * let s = "abc";
+   * let i = s.prev(s.end);
+   *
+   * s[i] == char'c'
+   * ```
+   */
+  @connected("String::prev")
+  public prev(index: StringIndex): StringIndex;
+
+  /**
+   * An index for *by* steps away from the given *index*, either positive/forward or
+   * negative/backward. If forward but there's no such code-point, returns *end*, or
+   * else *begin* for no such code-point when stepping backward.
+   */
+  @connected("String::step")
+  public step(index: StringIndex, by: Int): StringIndex {
+    var newIndex = index;
+    if (by >= 0) {
+      // Forward with next.
+      steps: for (var i = 0; i < by; i += 1) {
+        // TODO Better just to waste cycles for odd cases of excess?
+        let oldIndex = newIndex;
+        newIndex = next(newIndex);
+        if (newIndex == oldIndex) {
+          break steps;
+        }
+      }
+    } else {
+      // Backward with prev.
+      steps: for (var i = 0; i > by; i -= 1) {
+        let oldIndex = newIndex;
+        newIndex = prev(newIndex);
+        if (newIndex == oldIndex) {
+          break steps;
+        }
+      }
+    }
+    newIndex
+  }
+
+  /**
+   * True if there are at least minCount code-points between begin and end (exclusive).
+   * Zero if begin is at or past end.
+   *
+   * `s.hasAtLeast(begin, end, n)` is at least as efficient as
+   * `s.countBetween(begin, end) >= n` and better in many situations.
+   *
+   * When the native string representation is UTF-8, and the number of
+   * octets between begin and end is minCount×4 or greater, *hasAtLeast*
+   * requires no counting.
+   *
+   * When the native string representation is UTF-16, and the number of
+   * code units between begin and end is minCount×2 or greater, *hasAtLeast*
+   * requires no counting.
+   *
+   * At no point is it worse than O(min(n, minCount)) where n is the actual
+   * count between begin and end.
+   *
+   * ```temper
+   * let s = "abcdefghijklmnopqrstuvwxyz";
+   * let i = s.next(String.begin); // Points at 'b'
+   * let j = s.prev(s.end);        // Points at 'y'
+   *
+   * // Between i and j in s are 26-2, 24 letters.
+   *
+   *  s.hasAtLeast(i, j, 4)  && // Fast path for all native string encodings
+   *  s.hasAtLeast(i, j, 24) && // Might require counting
+   * !s.hasAtLeast(i, j, 25) && // Might require counting
+   * !s.hasAtLeast(i, j, 100)   // Fast path too
+   * ```
+   */
+  @connected("String::hasAtLeast")
+  public hasAtLeast(begin: StringIndex, end: StringIndex, minCount: Int): Boolean;
+
+  /**
+   * The count of codepoints between *begin* and *end*.
+   * On most backends, this is O(n) on the output size.
+   * Use [snippet/type/String/method/hasAtLeast] instead when trying to test that
+   * there are at least a number of codepoints as it can more efficient for many
+   * strings.
+   *
+   * ```temper
+   * let s = "abcdefghijklmnopqrstuvwxyz";
+   * let i = s.next(String.begin); // Points at 'b'
+   * let j = s.prev(s.end);        // Points at 'y'
+   *
+   * s.countBetween(i, j) == (26 - 2)
+   * ```
+   */
+  @connected("String::countBetween")
+  public countBetween(begin: StringIndex, end: StringIndex): Int;
+
+  /**
+   * The string containing all and only the code points between the given
+   * indices in this string in order.
+   * If begin > end, returns the empty string.
+   *
+   * ```temper
+   * let s = "tsubo";
+   * let i = s.next(String.begin);
+   * let j = s.prev(s.end);
+   *
+   * "sub" == s.slice(i, j)
+   * ```
+   */
+  @connected("String::slice")
+  public slice(begin: StringIndex, end: StringIndex): String;
+
+  /** Where splitting by "" returns each code point as a separate string. */
+  @connected("String::split")
+  public split(separator: builtins.String): List<builtins.String>;
+
+  /**
+   * Invokes body with each code point value in order.
+   *
+   * ```temper
+   * for (let codePoint: Int of "foo-bar") {
+   *   console.log("U+${codePoint.toString(16)}");
+   * }
+   * //!outputs "U+66"
+   * //!outputs "U+6f"
+   * //!outputs "U+6f"
+   * //!outputs "U+2d"
+   * //!outputs "U+62"
+   * //!outputs "U+61"
+   * //!outputs "U+72"
+   * ```
+   */
+  @connected("String::forEach")
+  public forEach(@inlineUnrealizedGoal let body: fn (Int): Void): Void {
+    for (var index = String.begin; this.hasIndex(index); index = this.next(index)) {
+      let codePoint: Int = this[index];
+      body(codePoint);
+    }
+  }
+
+  /** Supports numeric JSON format plus Infinity and NaN. */
+  @connected("String::toFloat64")
+  public toFloat64(): builtins.Float64 throws Bubble;
+
+  /** Supports integer JSON format, plus any radix 2 through 36. */
+  @connected("String::toInt32")
+  public toInt32(radix: builtins.Int = 10): builtins.Int throws Bubble;
+
+  /** Supports integer JSON format, plus any radix 2 through 36. */
+  @connected("String::toInt64")
+  public toInt64(radix: builtins.Int = 10): builtins.Int64 throws Bubble;
+
+  @connected("String::toString")
+  public toString(): builtins.String { content }
+}
+
+/**
+ * A [string index][snippet/type/StringIndex], or a similar value
+ * that idiomatically represents [no string index][snippet/type/StringIndex/static/none].
+ *
+ * String helpers like *indexOf* in many languages can return an integer
+ * like value which is either a position within the string or an integer
+ * value that represents failure to find a match like -1.
+ *
+ * *StringIndexOption* combines those two options in a type-safe way
+ * that typically translates to an idiomatic integer.
+ */
+@connected("StringIndexOption")
+export sealed interface StringIndexOption extends Equatable {
+  /**
+   * Sorts [snippet/type/StringIndex/static/none] before every valid string index.
+   *
+   * Comparing string indices derived from different strings produces a behaviour
+   * that is stable within the language but which may differ across translation targets
+   * with different internal string representations.
+   */
+  @connected("StringIndexOption::compareTo")
+  public compareTo(other: StringIndexOption): Int;
+}
+
+/**
+ * The absence to find a string index.
+ *
+ * As noted in [snippet/type/StringIndexOption], this is an integer-like type
+ * that represents the failure to find a valid string index.
+ */
+@connected("NoStringIndex")
+export class NoStringIndex extends StringIndexOption {
+  @connected("NoStringIndex::constructor")
+  private constructor() {}
+}
+
+/**
+ * A string index represents a position within a string, at a character or at its end.
+ *
+ * String indices translate to integral types (usually `int` or `size_t`) but the exact integer
+ * value for any notional index may differ from language to language.
+ *
+ * Strings are similar to arrays of "characters" in many languages, but the kind of character
+ * differs from language to language.
+ *
+ * For example a string like "κόσμε𐆊" can be represented in multiple ways.
+ *
+ * <table border=1><tr><th>↓Encoding/<div style="float:right">Glyph→</div></th><th colspan="2">κ<th colspan="2">ό</th><th colspan="3">σ</th><th colspan="2">μ</th><th colspan="2">ε</th><th colspan="4">𐆊</th></tr>
+ * <tr><th>UTF-8</td><td>ce</td><td>ba</td><td>e1</td><td>bd</td><td>b9</td><td>cf</td><td>83</td><td>ce</td><td>bc</td><td>ce</td><td>b5</td><td>f0</td><td>90</td><td>86</td><td>8a</td></tr>
+ * <tr><th>UTF-16</th><td colspan="2">3ba</td><td colspan="3">1f79</td><td colspan="2">3c3</td><td colspan="2">3bc</td><td colspan="2">3b5</td><td colspan="2">d800</td><td colspan="2">dd8a</td></tr>
+ * <tr><th>UTF-32</th><td colspan="2">3ba</td><td colspan="3">1f79</td><td colspan="2">3c3</td><td colspan="2">3bc</td><td colspan="2">3b5</td><td colspan="4">1018a</td></tr>
+ * </table>
+ *
+ * Go, and Rust and many C and C++ codebases use UTF-8 which can have between one to four bytes
+ * for a code-point.  The start of the n-th code-point could be anywhere between the n-th byte
+ * and the 4*n-th byte.  Figuring out exactly where involves examining n bytes, an O(n) operation.
+ *
+ * C# and Java use UTF-16 which represent most code-points using one 2-byte code unit, but
+ * may use a pair of "surrogates."
+ *
+ * Python3 presents strings as code-points but uses tricks internally to use fewer than
+ * 3-bytes per code-point of storage for most strings.
+ *
+ * As can be seen above, O(1) random access won't work across languages.  The *StringIndex* type
+ * allows an efficient representation of a position within a string.  Each *StringIndex*
+ * is either the start of a string or is derived from an operation that takes into account the
+ * string content.  This lets Temper provide consistent, efficient string operations regardless
+ * of the native character size.
+ */
+@connected("StringIndex")
+export class StringIndex extends StringIndexOption {
+  /** The singleton [snippet/type/NoStringIndex] value */
+  @connected("StringIndex::none")
+  public static let none: NoStringIndex;
+
+  private offset: builtins.Int;
+  private constructor(offset: Int) { this.offset = offset; }
+}
+
+/**
+ * A *StringBuilder* allows composing a string by appending substrings at the
+ * end.
+ */
+@connected("StringBuilder")
+export class StringBuilder {
+  private let substrings: ListBuilder<String>;
+
+  @connected("StringBuilder::constructor")
+  public constructor(): Void {
+    this.substrings = new ListBuilder<String>();
+  }
+
+  /** You can append a string at the end. */
+  @connected("StringBuilder::append")
+  public append(substring: String): Void {
+    substrings.add(substring);
+  }
+
+  /**
+   * A single code point can be appended.  If it's not a valid
+   * [Unicode scalar value](https://www.unicode.org/glossary/#unicode_scalar_value),
+   * the call bubbles.  This operation can be more efficient on some backends
+   * than making a temporary string from a code point just for appending.
+   */
+  @connected("StringBuilder::appendCodePoint")
+  public appendCodePoint(cp: Int): Void throws Bubble {
+    append(String.fromCodePoint(cp));
+  }
+
+  /**
+   * *appendBetween* can be connected to a function that appends a substring
+   * without creating a new backing array for the substring.
+   */
+  @connected("StringBuilder::appendBetween")
+  public appendBetween(
+    source: String,
+    begin: StringIndex,
+    end: StringIndex,
+  ): Void {
+    // TODO Do we expect it's faster to loop code points than to slice a string?
+    var limit = end;
+    let sourceEnd = source.end;
+    // Do not loop infinitely if chosen end is past the source end
+    if (limit > sourceEnd) { limit = sourceEnd; }
+
+    for (var index = begin;
+        index < limit;
+        index = source.next(index)) {
+      appendCodePoint(source[index]) orelse panic();
+    }
+  }
+
+  @connected("StringBuilder::toString")
+  public toString(): String {
+    this.substrings.join("") { substring: String => substring }
+  }
+}
+
+/**
+ * A *Console* provides logging and diagnostic capabilities. It might be
+ * configured differently depending on the backend and environment. Don't rely
+ * on it being attached to any standard stream.
+ *
+ * Use the builtin instance `console` for default logging needs.
+ */
+export interface Console {
+  /**
+   * Log a message at default informational level to this console.
+   */
+   @connected("Console::log")
+   public log(message: String): Void;
+
+  // Additional methods are expected in the future.
+}
+
+class GlobalConsole extends Console {
+  public log(message: String): Void {
+    globalLog(message)
+  }
+
+  @connected("GlobalConsole::globalLog")
+  private globalLog(message: String): Void;
+}
+
+/**
+ * The global default `Console` instance. It is designed to integrate with
+ * standard backend logging services. Frontend processing replaces references to
+ * the global console with a call to `getConsole` for the current module.
+ */
+export let console: Console = new GlobalConsole();
+
+/**
+ * Access or make a console for the given name. If name is unspecified, use the
+ * idiomatic backend library or module name for logging purposes. The default of
+ * empty string is merely a placeholder.
+ */
+@connected("::getConsole")
+export let getConsole(name: String = ""): Console { console }
+
+/**
+ * The *Listed* type is an immutable view of a random-access sequence of values.
+ * A `Listed<String>` may contain strings, a `Listed<Boolean>` may contain
+ * booleans, etc.
+ *
+ * The backing object might or might not be mutable. During a function call, an
+ * argument of type `Listed` shouldn't be modified concurrently, although it
+ * might be modified after the end of the call, so receivers *shouldn't* keep
+ * any references to a `Listed` parameter for later use, unless accounting for
+ * possible changes or according to specific contracts defined for particular
+ * use cases.
+ *
+ * If you want to keep a reference to a `Listed` argument, it's often best to
+ * call `toList` on it and retain that value instead.
+ *
+ * Usually, don't return type `Listed`. It's usually best to return type `List`.
+ */
+export sealed interface Listed<T> {
+  /**
+   * The *length* of a listed is the number of items it contains.
+   *
+   * ```temper
+   * let myList: List<String> = ["foo", "bar"];
+   * myList.length == 2
+   * ```
+   */
+  @connected("Listed::length")
+  public get length(): builtins.Int;
+
+  /** True if this contains no elements. */
+  // TODO(tjp): Overrides don't seem to work here.
+  @connected("Listed::isEmpty")
+  public get isEmpty(): builtins.Boolean { length == 0 }
+
+  /**
+   * The i<sup>th</sup> element, or [snippet/builtin/Bubble] if *i* is outside the range \[0, [length]\).
+   *
+   * ```temper
+   * let ls = ["a", "b", "c"]; // List of length 3
+   *
+   * // The list is zero-indexed.
+   * console.log(ls[0]); //!outputs "a"
+   * console.log(ls[1]); //!outputs "b"
+   * ```
+   *
+   * Out of bounds results in panic. Check in advance when handling indices of
+   * uncertain origin. Panics can't be handled by code in Temper, although some
+   * backend languages can handle their particular implementations of panic.
+   *
+   * ```temper inert
+   * // console.log(ls[-1]);
+   * // console.log(ls[ 3]);
+   * ```
+   */
+  @connected("Listed::get")
+  public get(index: builtins.Int): T;
+
+  @connected("Listed::getOr")
+  public getOr(index: builtins.Int, fallback: T): T;
+
+  /**
+   * A new list containing all and only elements from [begin] inclusive
+   * to just before [end] exclusive.
+   */
+  @connected("Listed::slice")
+  public slice(begin: Int, end: Int): List<T>;
+
+  /**
+   * Provides an immutable `List` with the values of this `Listed`. If this is
+   * already a `List`, typically just returns `this` without any copying.
+   */
+  @connected("Listed::toList")
+  public toList(): List<T>;
+
+  /**
+   * Always creates a new object and backing buffer even if this is already a
+   * `ListBuilder`.
+   */
+  @connected("Listed::toListBuilder")
+  public toListBuilder(): ListBuilder<T>;
+
+  /**
+   * Maps elements using [transform] and filtering out elements for which
+   * [transform] fails.
+   */
+  @connected("Listed::mapDropping")
+  public mapDropping<O>(transform: fn (T): O throws Bubble): List<O>;
+
+  /** Maps elements using [transform]. */
+  @connected("Listed::map")
+  public map<O>(transform: fn (T): O): List<O>;
+
+  @connected("Listed::filter")
+  public filter(predicate: fn (T): Boolean): List<T>;
+
+  /**
+   * Reduce to a single value, starting from the first item in this list.
+   * Panic if empty.
+   */
+  @connected("Listed::reduce")
+  public reduce(accumulate: fn (T, T): T): T {
+    reduceFromIndex(this[0], 1, accumulate)
+  }
+
+  /** Reduce to a single value, starting from the given initial value. */
+  @connected("Listed::reduceFrom")
+  public reduceFrom<O>(initial: O, accumulate: fn (O, T): O): O {
+    reduceFromIndex(initial, 0, accumulate)
+  }
+
+  public reduceFromIndex<O>(initial: O, index: Int, accumulate: fn (O, T): O): O {
+    var result = initial;
+    for (var i = index; i < length; i += 1) {
+      result = accumulate(result, this[i]);
+    }
+    result
+  }
+
+  @connected("Listed::join")
+  public join(separator: String, stringify: fn (T): String): String;
+
+  /**
+   * Returns a sorted version of this listed. Uses stable sorting.
+   */
+  @connected("Listed::sorted")
+  public sorted(compare: fn (T, T): Int): List<T>;
+}
+
+/**
+ * The *List* type is a random-access, immutable sequence of values. List
+ * literals using `[...]` syntax represent immutable `List` instances. For
+ * mutable random-access sequences, see `ListBuilder`.
+ *
+ * See also `Listed` for recommendations on `List` vs `Listed` use.
+ */
+@mayDowncastTo(false) // Just use Listed::toList if immutable wanted.
+export class List<out T> extends Listed<T> {
+  // TODO: Until Types.list is the same as List<T>, we need this trick.
+  private let content: builtins.List<T>;
+
+  /** Same as `[...]` syntax but provides an explicit type argument. */
+  public static nym`of`<T>(...content: List<T>): List<T> { content }
+
+  @connected("List::length")
+  public get length(): builtins.Int;
+
+  /** Panic on index out of bounds. */
+  @connected("List::get")
+  public get(index: builtins.Int): T;
+
+  @connected("List::toList")
+  public toList(): List<T> { this }
+
+  @connected("List::toListBuilder")
+  public toListBuilder(): ListBuilder<T> {
+    // TODO(tjp): If in `Listed` gives error: Expected subtype of AnyValue, but got T__40
+    let result: ListBuilder<T> = new ListBuilder<T>();
+    result.addAll(this);
+    result
+  }
+
+  // TODO(mikesamuel): once we know what semantics we want for iterating when body mutates,
+  // move this onto Listed.
+  @connected("List::forEach")
+  public forEach(@inlineUnrealizedGoal let body: fn (T): Void): Void {
+    let n = length;
+    var i = 0;
+    while (i < n) {
+      let el: T = get(i);
+      i += 1;
+      body(el);
+    }
+  }
+}
+
+/**
+ * The *ListBuilder* type is a random-access, mutable, growable sequence of
+ * values.
+ */
+@mayDowncastTo(false) // Provides a bit of protection at least within Temper.
+export class ListBuilder<T> extends Listed<T> {
+  // The content is used only from extension functions.
+  private let content: AnyValue;
+
+  @connected("ListBuilder::constructor")
+  public constructor();
+  // TODO More useful as below once we have default args? Or use rest args?
+  // public constructor(initialContent: Listed<T> = [] as Listed<T>);
+
+  /** Panics for `at` less than 0 or greater than `length`. */
+  @connected("ListBuilder::add")
+  public add(newValue: T, at: builtins.Int = length): Void;
+
+  /** Panics for `at` less than 0 or greater than `length`. */
+  @connected("ListBuilder::addAll")
+  public addAll(newValues: Listed<T>, at: builtins.Int = length): Void;
+
+  /** Removes all values, retaining internal capacity where possible. */
+  @connected("ListBuilder::clear")
+  public clear(): Void;
+
+  /**
+   * Removes the last value if any, and returns it. Expected to be constant
+   * time. Panics if empty.
+   */
+  @connected("ListBuilder::removeLast")
+  public removeLast(): T;
+
+  /**
+   * Reverses this list builder in place.
+   */
+  @connected("ListBuilder::reverse")
+  public reverse(): Void;
+
+  /** Panics on index out of bounds. */
+  @connected("ListBuilder::set")
+  public set(index: builtins.Int, newValue: T): Void;
+
+  /**
+   * Sorts in place. Uses stable sorting.
+   */
+  @connected("ListBuilder::sort")
+  public sort(compare: fn (T, T): Int): Void;
+
+  /**
+   * Removes `removeCount` items starting at `index`, or until the end of the
+   * current items. Returns the removed items, and `newValues` are put in their
+   * place. The `index` is clamped to current bounds.
+   */
+  @connected("ListBuilder::splice")
+  public splice(
+    index: builtins.Int = 0,
+    removeCount: builtins.Int = length,
+    newValues: builtins.Listed<T> = [],
+  ): builtins.List<T>;
+
+  @connected("ListBuilder::length")
+  public get length(): builtins.Int;
+
+  @connected("ListBuilder::toList")
+  public toList(): List<T>;
+
+  @connected("ListBuilder::toListBuilder")
+  public toListBuilder(): ListBuilder<T> {
+    // TODO(tjp): If in `Listed` gives error: Expected subtype of AnyValue, but got T__40
+    let result: ListBuilder<T> = new ListBuilder<T>();
+    result.addAll(this);
+    result
+  }
+}
+
+export class Pair<out K, out V> {
+  public key: K;
+  public value: V;
+
+  @connected("Pair::constructor")
+  public constructor(key: K, value: V) {
+    this.key = key;
+    this.value = value;
+  }
+}
+
+/**
+ * A *Mapped* is a read-only view to key-value mapped data, such as a `Map` or
+ * `MapBuilder`.
+ */
+export sealed interface Mapped<in K extends MapKey, V> {
+  /**
+   * The number of key value pairs in the [snippet/type/Mapped].
+   */
+  @connected("Mapped::length")
+  public get length(): builtins.Int {
+    toListBuilder().length
+  }
+
+  /**
+   * Get the value associated with [key], or [snippet/builtin/bubble]s if no key is found.
+   */
+  @connected("Mapped::get")
+  public get(key: K): V throws Bubble {
+    var values = new ListBuilder<V>();
+    forEach { k, v =>
+      if (key == k) {
+        values.add(v);
+      }
+    }
+    if (values.length != 1) {
+      bubble();
+    }
+    return values[0];
+  }
+
+  /**
+   * Get the value associated with [key], falling back to [fallback] when no such key exists.
+   */
+  @connected("Mapped::getOr")
+  public getOr(key: K, fallback: V): V {
+    // TODO Reimplement this to allow panic on simple get???
+    // TODO Is this method just for better optimization on some backends?
+    return this[key] orelse fallback;
+  }
+
+  /**
+   * Checks whether [key] is present in the [snippet/type/Mapped].
+   */
+  @connected("Mapped::has")
+  public has(key: K): builtins.Boolean {
+    return do { this[key]; true } orelse false;
+  }
+
+  /**
+   * Gets a [snippet/type/Listed] of all of the keys.
+   */
+  @connected("Mapped::keys")
+  public keys(): Listed<K> {
+    var all = new ListBuilder<K>();
+    forEach { key, value =>
+      all.add(key);
+    }
+    return all;
+  }
+
+  /**
+   * Gets a [snippet/type/Listed] of all of the values.
+   */
+  @connected("Mapped::values")
+  public values(): Listed<V> {
+    var all = new ListBuilder<V>();
+    forEach { key, value =>
+      all.add(value);
+    }
+    return all;
+  }
+
+  /**
+   * Converts the [snippet/type/Mapped] to a [snippet/type/Map].
+   *
+   * It does not need to make a copy if the [snippet/type/Mapped] is already a [snippet/type/Map]
+   * because neither can be mutated.
+   */
+  @connected("Mapped::toMap")
+  public toMap(): Map<K, V> {
+    new Map<K, V>(toList())
+  }
+
+  /**
+   * Converts the [snippet/type/Mapped] to a [snippet/type/MapBuilder].
+   *
+   * It must make a copy, even when the [snippet/type/Mapped] is already a [snippet/type/MapBuilder]
+   * so that both can be mutated independently.
+   */
+  @connected("Mapped::toMapBuilder")
+  public toMapBuilder(): MapBuilder<K, V> {
+    var builder = new MapBuilder<K, V>();
+    forEach { key, value =>
+      builder[key] = value;
+    };
+    return builder;
+  }
+
+  /**
+   * Identical to [snippet/type/Mapped/method/toListBuilder] except for the return value being a [snippet/type/List].
+   *
+   * Constructs a [Pair][snippet/type/Pair]<[snippet/type/Mapped/typeFormal/K], [snippet/type/Mapped/typeFormal/V]>
+   * for each key and value in the [snippet/type/Mapped].
+   */
+  @connected("Mapped::toList")
+  public toList(): List<Pair<K, V>> {
+    toListBuilder().toList()
+  }
+
+  /**
+   * Constructs a [Pair][snippet/type/Pair]<[snippet/type/Mapped/typeFormal/K], [snippet/type/Mapped/typeFormal/V]>
+   * for each key and value in the [snippet/type/Mapped].
+   */
+  @connected("Mapped::toListBuilder")
+  public toListBuilder(): ListBuilder<Pair<K, V>> {
+    toListBuilderWith { (key: K, value: V): Pair<K, V> =>
+      new Pair(key, value)
+    }
+  }
+
+  /**
+   * Similar to [snippet/type/Mapped/method/toListBuilderWith].
+   *
+   * Calls [func] on each key and value in the [snippet/type/Mapped].
+   */
+  @connected("Mapped::toListWith")
+  public toListWith<T>(func: fn(K, V): T): List<T> {
+    toListBuilderWith(func).toList()
+  }
+
+  /**
+   * Returns a [snippet/type/ListBuilder]<*T*>.
+   *
+   * Calls [func] on each key and value in the [snippet/type/Mapped].
+   */
+  @connected("Mapped::toListBuilderWith")
+  public toListBuilderWith<T>(func: fn(K, V): T): ListBuilder<T> {
+    var builder = new ListBuilder<T>();
+    forEach { key, value =>
+      builder.add(func(key, value));
+    }
+    return builder;
+  }
+
+  /**
+   * Calls the provided binary function func on each key and value for the side effect
+   *
+   * This method is more likely to change or be removed before Temper 1.0 than most
+   */
+  @connected("Mapped::forEach")
+  public forEach(func: fn(K, V): Void): Void;
+}
+
+/**
+ * A *Map* is a read-only key-value collection.
+ */
+@mayDowncastTo(false) // Just use Mapped::toMap if immutable wanted.
+export class Map<in K extends MapKey, out V> extends Mapped<K, V> {
+  // The content is used only from extension functions.
+  private content: AnyValue;
+
+  // TODO Override toMap for identity.
+  // @connected("Map::toMap")
+  // public toMap(): Map<K, V> { this }
+
+  /**
+   * Preserves entry order when accessed from Temper code.
+   */
+  @connected("Map::constructor")
+  public constructor(entries: List<Pair<K, V>>);
+}
+
+/**
+ * A *MapBuilder* is a read-write key-value collection for building `Map`
+ * objects. Preserves insertion order when accessed from Temper code.
+ */
+@mayDowncastTo(false) // Provides a bit of protection at least within Temper.
+export class MapBuilder<K extends MapKey, V> extends Mapped<K, V> {
+  // The content is used only from connected functions.
+  private content: AnyValue;
+
+  @connected("MapBuilder::constructor")
+  public constructor();
+
+  /** Removes all entries, retaining internal capacity where possible. */
+  @connected("MapBuilder::clear")
+  public clear(): Void;
+
+  /** Removes the given entry if found, and returns its value. */
+  @connected("MapBuilder::remove")
+  public remove(key: K): V throws Bubble;
+
+  @connected("MapBuilder::set")
+  public set(key: K, newValue: V): Void;
+}
+
+/**
+ * Ignore any value.
+ */
+@connected("ignore")
+export let ignore(value: AnyValue): Void {}
+
+/**
+ * A *Deque* or double-ended queue allows for breadth-first processing via
+ * efficient adds at the end and efficient removal from the front.
+ *
+ * ```temper
+ * let deque = new Deque<String>();
+ * deque.add("a");
+ * deque.add("b");
+ *
+ * console.log(deque.removeFirst()); //!outputs "a"
+ *
+ * deque.add("c");
+ * deque.add("d");
+ *
+ * while (!deque.isEmpty) {
+ *   console.log(deque.removeFirst()); //!outputs ["b", "c", "d"]
+ * }
+ * ```
+ */
+export class Deque<T> {
+  private let content: ListBuilder<T>;
+
+  @connected("Deque::constructor")
+  public constructor();
+
+  /**
+   * Add an element at the end.
+   */
+  @connected("Deque::add")
+  public add(element: T): Void;
+
+  /**
+   * True if this contains no elements.
+   */
+  @connected("Deque::isEmpty")
+  public get isEmpty(): builtins.Boolean;
+
+  /**
+   * Removes and returns the first element. Panics if empty.
+   */
+  @connected("Deque::removeFirst")
+  public removeFirst(): T;
+}
+
+/**
+ * A *Boolean* is a truth value that may be used in `if` and loop conditions.
+ *
+ * ⎀ syntax/BooleanLiteral -heading
+ */
+@mayDowncastTo(false) // Confusable with numbers and scalars on many backends
+export class Boolean extends Equatable {
+  private let content: builtins.Boolean;
+
+  /**
+   * For [snippet/builtin/false], the string `"false"`.
+   * For [snippet/builtin/true], the string `"true"`.
+   */
+  @connected("Boolean::toString")
+  public toString(): builtins.String {
+    if (content) { "true" } else { "false" }
+  }
+}
+
+/**
+ * A bit vector where the probability of any bit with index in \[0, capacity\]
+ * is high.  This does not assume that the probability of a bit being set
+ * depends on the probability of an adjacent bit being set.
+ */
+export class DenseBitVector {
+  private let bits: ListBuilder<builtins.Boolean>;
+
+  @connected("DenseBitVector::constructor")
+  public constructor(capacity: builtins.Int) {
+    bits = new ListBuilder<builtins.Boolean>();
+    for (var i = 0; i < capacity; ++i) {
+      bits.add(false);
+    }
+  }
+
+  /**
+   * The bit at the given [index].  If a bit has not previously been set then
+   * it is assumed to be [snippet/builtin/false].
+   */
+  @connected("DenseBitVector::get")
+  public get(index: builtins.Int): builtins.Boolean {
+    if (0 <= index && index < bits.length) {
+      bits[index]
+    } else {
+      false
+    }
+  }
+
+  /**
+   * Sets the bit at [index] to [newValue].
+   * After this, [get],  given [index], will return [newValue].
+   *
+   * ```temper
+   * let bitVector = new DenseBitVector(16);
+   * console.log(bitVector.get(3).toString()); //!outputs "false"
+   * bitVector.set(3, true);
+   * console.log(bitVector.get(3).toString()); //!outputs "true"
+   * bitVector.set(3, false);
+   * console.log(bitVector.get(3).toString()); //!outputs "false"
+   * ```
+   */
+  @connected("DenseBitVector::set")
+  public set(index: builtins.Int, newValue: builtins.Boolean): Void {
+    let bits = this.bits;
+    var limit = bits.length;
+    if (limit <= index) {
+      if (!newValue) {
+        // Outside storage is already considered false.
+        return;
+      }
+      while (limit <= index) {
+        bits.add(false);
+        limit += 1;
+      }
+    }
+    bits.set(index, newValue);
+  }
+}
+
+export let Int = Int32;
+
+/**
+ * *Int32* is the default, general-use signed integer value type in Temper.
+ * Because it is so frequently used, the alias *Int* is encouraged in source
+ * code.
+ *
+ * ⎀ syntax/int/examples
+ */
+@mayDowncastTo(false) // Confusable with scalars on many dynlang backends
+export class Int32 extends MapKey {
+  private let content: builtins.Int;
+
+  @connected("Int32::toFloat64")
+  public toFloat64(): Float64;
+
+  @connected("Int32::toInt64")
+  public toInt64(): Int64;
+
+  /** Supports radix 2 through 36. Doesn't prefix `+` for positive. */
+  @connected("Int32::toString")
+  public toString(radix: builtins.Int = 10): String;
+
+  @connected("Int32::min")
+  public min(other: builtins.Int): builtins.Int {
+    if (content <= other) { content } else { other }
+  }
+
+  @connected("Int32::max")
+  public max(other: builtins.Int): builtins.Int {
+    if (content >= other) { content } else { other }
+  }
+}
+
+@mayDowncastTo(false) // Confusable with scalars on some dynlang backends.
+export class Int64 { // TODO extends MapKey?
+  private let content: builtins.Int64;
+
+  /** Bubbles if the result isn't within the exponent error of the original. */
+  @connected("Int64::toFloat64")
+  public toFloat64(): Float64 throws Bubble;
+
+  /** If outside bounds, returns a backend-dependent value. Use fuzz testing. */
+  @connected("Int64::toFloat64Unsafe")
+  public toFloat64Unsafe(): Float64;
+
+  /**
+   * Bubbles if the result isn't within bounds.
+   * TODO Should this panic instead since this is an easy check?
+   * TODO But many others cost more to check the panic on fail.
+   */
+  @connected("Int64::toInt32")
+  public toInt32(): Int32 throws Bubble;
+
+  /**
+   * If outside bounds, returns a backend-dependent value. Use fuzz testing.
+   * TODO Ensure wrapping here since we do that elsewhere?
+   * TODO For symmetry, define consistent semantics for all lossy conversions?
+   */
+  @connected("Int64::toInt32Unsafe")
+  public toInt32Unsafe(): Int32;
+
+  /** Supports radix 2 through 36. Doesn't prefix `+` for positive. */
+  @connected("Int64::toString")
+  public toString(radix: builtins.Int = 10): String;
+
+  @connected("Int64::min")
+  public min(other: builtins.Int64): builtins.Int64 {
+    if (content <= other) { content } else { other }
+  }
+
+  @connected("Int64::max")
+  public max(other: builtins.Int64): builtins.Int64 {
+    if (content >= other) { content } else { other }
+  }
+}
+
+/**
+ * A *Float64* is an [IEEE-754 64-bit (aka double-precision) floating point
+ * number][FP64].
+ *
+ * ⎀ syntax/Float64Literal
+ *
+ * ⎀ syntax/float64/examples
+ *
+ * [FP64]: https://en.wikipedia.org/wiki/Double-precision_floating-point_format
+ */
+@mayDowncastTo(false) // Confusable with scalars on many dynlang backends
+export class Float64 extends Equatable {
+  private let content: builtins.Float64;
+
+  /**
+   * Truncates toward zero. Bubbles if the value isn't within 1 of Int32 limits.
+   */
+  @connected("Float64::toInt32")
+  public toInt32(): Int throws Bubble;
+
+  /** If outside bounds, returns a backend-dependent value. Use fuzz testing. */
+  @connected("Float64::toInt32Unsafe")
+  public toInt32Unsafe(): Int;
+
+  /**
+   * Truncates toward zero. Bubbles if the value isn't within plus or minus
+   * 0x1f_ffff_ffff_ffff, inclusive.
+   */
+  @connected("Float64::toInt64")
+  public toInt64(): Int64 throws Bubble;
+
+  /** If outside bounds, returns a backend-dependent value. Use fuzz testing. */
+  @connected("Float64::toInt64Unsafe")
+  public toInt64Unsafe(): Int64;
+
+  @connected("Float64::toString")
+  public toString(): String;
+
+  // Constants.
+
+  @connected("Float64::e")
+  public static e = 2.718281828459045;
+
+  @connected("Float64::pi")
+  public static pi = 3.141592653589793;
+
+  // Math ops.
+
+  @connected("Float64::abs")
+  public abs(): Float64;
+
+  @connected("Float64::acos")
+  public acos(): Float64;
+
+  @connected("Float64::asin")
+  public asin(): Float64;
+
+  @connected("Float64::atan")
+  public atan(): Float64;
+
+  /** The y coordinate is this object. */
+  @connected("Float64::atan2")
+  public atan2(x: Float64): Float64;
+
+  @connected("Float64::ceil")
+  public ceil(): Float64;
+
+  @connected("Float64::cos")
+  public cos(): Float64;
+
+  @connected("Float64::cosh")
+  public cosh(): Float64;
+
+  @connected("Float64::exp")
+  public exp(): Float64;
+
+  @connected("Float64::expm1")
+  public expm1(): Float64;
+
+  @connected("Float64::floor")
+  public floor(): Float64;
+
+  @connected("Float64::log")
+  public log(): Float64;
+
+  @connected("Float64::log10")
+  public log10(): Float64;
+
+  @connected("Float64::log1p")
+  public log1p(): Float64;
+
+  /** Result is NaN if either is NaN. */
+  @connected("Float64::max")
+  public max(other: Float64): Float64;
+
+  /** Result is NaN if either is NaN. */
+  @connected("Float64::min")
+  public min(other: Float64): Float64;
+
+  /** Matches semantics of Python's *math.isclose*. */
+  @connected("Float64::near")
+  public near(
+    other: builtins.Float64,
+    relTol: builtins.Float64 = 1e-9,
+    absTol: builtins.Float64 = 0.0,
+  ): builtins.Boolean {
+    let margin = (content.abs().max(other.abs()) * relTol).max(absTol);
+    (content - other).abs() < margin
+  }
+
+  @connected("Float64::round")
+  public round(): Float64;
+
+  @connected("Float64::sign")
+  public sign(): Float64;
+
+  @connected("Float64::sin")
+  public sin(): Float64;
+
+  @connected("Float64::sinh")
+  public sinh(): Float64;
+
+  @connected("Float64::sqrt")
+  public sqrt(): Float64;
+
+  @connected("Float64::tan")
+  public tan(): Float64;
+
+  @connected("Float64::tanh")
+  public tanh(): Float64;
+}
+
+/**
+ * A *Problem* is an internal abstraction that represents code that
+ * cannot be compiled.
+ *
+ * Representing problems in a partially-processed library allows
+ * running some tests, giving developers more flexibility in how
+ * they investigate what they need to do to get their code
+ * production-ready.
+ */
+export interface Problem {
+  private let content: builtins.Problem;
+}

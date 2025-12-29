@@ -1,0 +1,112 @@
+<svg class="railroad-diagram" width="285" height="138" viewBox="0 0 285 138" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>Quasis &#58;&#61; &#40;QuasiHole &#124; QuasiInner &#124; QuasiLeaf&#41;&#42;</title>
+<style><![CDATA[
+svg.railroad-diagram {
+    background-color: hsl(30,20%,95%);
+}
+svg.railroad-diagram path {
+    stroke-width: 3;
+    stroke: black;
+    fill: rgba(0,0,0,0);
+}
+svg.railroad-diagram text {
+    font: bold 14px monospace;
+    text-anchor: middle;
+    white-space: pre;
+}
+svg.railroad-diagram text.diagram-text {
+    font-size: 12px;
+}
+svg.railroad-diagram text.diagram-arrow {
+    font-size: 16px;
+}
+svg.railroad-diagram text.label {
+    text-anchor: start;
+}
+svg.railroad-diagram text.comment {
+    font: italic 12px monospace;
+}
+svg.railroad-diagram g.non-terminal text {
+    /*font-style: italic;*/
+}
+svg.railroad-diagram rect {
+    stroke-width: 3;
+    stroke: black;
+    fill: hsl(120,100%,90%);
+}
+svg.railroad-diagram rect.group-box {
+    stroke: gray;
+    stroke-dasharray: 10 5;
+    fill: none;
+}
+svg.railroad-diagram path.diagram-text {
+    stroke-width: 3;
+    stroke: black;
+    fill: white;
+    cursor: help;
+}
+svg.railroad-diagram g.diagram-text:hover path.diagram-text {
+    fill: #eee;
+}
+
+]]></style>
+
+<g transform="translate(.5 .5)">
+<g>
+<path d="M20 59v20m10 -20v20m-10 -10h20"></path>
+</g>
+<g>
+<path d="M40 69h0"></path>
+<path d="M245 69h0"></path>
+<path d="M40 69a10 10 0 0 0 10 -10v-29a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M60 20h165"></path>
+</g>
+<path d="M225 20a10 10 0 0 1 10 10v29a10 10 0 0 0 10 10"></path>
+<path d="M40 69h20"></path>
+<g>
+<path d="M60 69h0"></path>
+<path d="M225 69h0"></path>
+<path d="M60 69h10"></path>
+<g>
+<path d="M70 69h0"></path>
+<path d="M215 69h0"></path>
+<path d="M70 69a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
+<g class="non-terminal">
+<path d="M90 39h4.25"></path>
+<path d="M190.75 39h4.25"></path>
+<rect x="94.25" y="28" width="96.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-quasihole"><text x="142.5" y="43">QuasiHole</text>
+</a>
+</g>
+<path d="M195 39a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
+<path d="M70 69h20"></path>
+<g class="non-terminal">
+<path d="M90 69h0"></path>
+<path d="M195 69h0"></path>
+<rect x="90" y="58" width="105" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-quasiinner"><text x="142.5" y="73">QuasiInner</text>
+</a>
+</g>
+<path d="M195 69h20"></path>
+<path d="M70 69a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
+<g class="non-terminal">
+<path d="M90 99h4.25"></path>
+<path d="M190.75 99h4.25"></path>
+<rect x="94.25" y="88" width="96.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-quasileaf"><text x="142.5" y="103">QuasiLeaf</text>
+</a>
+</g>
+<path d="M195 99a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
+</g>
+<path d="M215 69h10"></path>
+<path d="M70 69a10 10 0 0 0 -10 10v29a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M70 118h145"></path>
+</g>
+<path d="M215 118a10 10 0 0 0 10 -10v-29a10 10 0 0 0 -10 -10"></path>
+</g>
+<path d="M225 69h20"></path>
+</g>
+<path d="M 245 69 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+</g>
+</svg>

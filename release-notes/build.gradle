@@ -1,0 +1,21 @@
+ext.temperProject = 'just-some-project-tooling'
+
+tasks.register('check-snippets') {
+    group = "Verification"
+    description = "Checks that snippets will work with release note tools"
+    doFirst {
+        println "Before checking files";
+        // Per the README, snippet files should use H3 (`###`) and greater
+        // headers, not `#` or `##`.
+        def headerLessThan3 = java.util.regex.Pattern.compile('(?m)^##?[^#]');
+        def filesContainingBigHeaders = fileTree('snippets').filter { file ->
+            file.name.endsWith('.md') &&
+                headerLessThan3.matcher(file.text).find()
+        }
+        if (!filesContainingBigHeaders.isEmpty()) {
+            throw new GradleException(
+                "snippet files should not use # or ## headers: " + filesContainingBigHeaders
+            );
+        }
+    }
+}

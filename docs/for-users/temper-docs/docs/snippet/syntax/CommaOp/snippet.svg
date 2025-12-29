@@ -1,0 +1,162 @@
+<svg class="railroad-diagram" width="624" height="88" viewBox="0 0 624 88" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>CommaOp &#58;&#61; CommaEl &#34;&#44;&#34; &#40;CommaEl &#40;&#34;&#44;&#34; CommaEl&#41;&#42; &#34;&#44;&#34;&#63;&#41;&#63;</title>
+<style><![CDATA[
+svg.railroad-diagram {
+    background-color: hsl(30,20%,95%);
+}
+svg.railroad-diagram path {
+    stroke-width: 3;
+    stroke: black;
+    fill: rgba(0,0,0,0);
+}
+svg.railroad-diagram text {
+    font: bold 14px monospace;
+    text-anchor: middle;
+    white-space: pre;
+}
+svg.railroad-diagram text.diagram-text {
+    font-size: 12px;
+}
+svg.railroad-diagram text.diagram-arrow {
+    font-size: 16px;
+}
+svg.railroad-diagram text.label {
+    text-anchor: start;
+}
+svg.railroad-diagram text.comment {
+    font: italic 12px monospace;
+}
+svg.railroad-diagram g.non-terminal text {
+    /*font-style: italic;*/
+}
+svg.railroad-diagram rect {
+    stroke-width: 3;
+    stroke: black;
+    fill: hsl(120,100%,90%);
+}
+svg.railroad-diagram rect.group-box {
+    stroke: gray;
+    stroke-dasharray: 10 5;
+    fill: none;
+}
+svg.railroad-diagram path.diagram-text {
+    stroke-width: 3;
+    stroke: black;
+    fill: white;
+    cursor: help;
+}
+svg.railroad-diagram g.diagram-text:hover path.diagram-text {
+    fill: #eee;
+}
+
+]]></style>
+
+<g transform="translate(.5 .5)">
+<g>
+<path d="M20 38v20m10 -20v20m-10 -10h20"></path>
+</g>
+<path d="M40 48h10"></path>
+<g>
+<path d="M50 48h0"></path>
+<path d="M574 48h0"></path>
+<g class="non-terminal">
+<path d="M50 48h0"></path>
+<path d="M129.5 48h0"></path>
+<rect x="50" y="37" width="79.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-commael"><text x="89.75" y="52">CommaEl</text>
+</a>
+</g>
+<path d="M129.5 48h10"></path>
+<path d="M139.5 48h10"></path>
+<g class="terminal">
+<path d="M149.5 48h0"></path>
+<path d="M178 48h0"></path>
+<rect x="149.5" y="37" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="163.75" y="52">,</text>
+</g>
+<path d="M178 48h10"></path>
+<g>
+<path d="M188 48h0"></path>
+<path d="M574 48h0"></path>
+<path d="M188 48a10 10 0 0 0 10 -10v-8a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M208 20h346"></path>
+</g>
+<path d="M554 20a10 10 0 0 1 10 10v8a10 10 0 0 0 10 10"></path>
+<path d="M188 48h20"></path>
+<g>
+<path d="M208 48h0"></path>
+<path d="M554 48h0"></path>
+<g class="non-terminal">
+<path d="M208 48h0"></path>
+<path d="M287.5 48h0"></path>
+<rect x="208" y="37" width="79.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-commael"><text x="247.75" y="52">CommaEl</text>
+</a>
+</g>
+<path d="M287.5 48h10"></path>
+<g>
+<path d="M297.5 48h0"></path>
+<path d="M485.5 48h0"></path>
+<path d="M297.5 48a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M317.5 28h148"></path>
+</g>
+<path d="M465.5 28a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M297.5 48h20"></path>
+<g>
+<path d="M317.5 48h0"></path>
+<path d="M465.5 48h0"></path>
+<path d="M317.5 48h10"></path>
+<g>
+<path d="M327.5 48h0"></path>
+<path d="M455.5 48h0"></path>
+<g class="terminal">
+<path d="M327.5 48h0"></path>
+<path d="M356 48h0"></path>
+<rect x="327.5" y="37" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="341.75" y="52">,</text>
+</g>
+<path d="M356 48h10"></path>
+<path d="M366 48h10"></path>
+<g class="non-terminal">
+<path d="M376 48h0"></path>
+<path d="M455.5 48h0"></path>
+<rect x="376" y="37" width="79.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-commael"><text x="415.75" y="52">CommaEl</text>
+</a>
+</g>
+</g>
+<path d="M455.5 48h10"></path>
+<path d="M327.5 48a10 10 0 0 0 -10 10v0a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M327.5 68h128"></path>
+</g>
+<path d="M455.5 68a10 10 0 0 0 10 -10v0a10 10 0 0 0 -10 -10"></path>
+</g>
+<path d="M465.5 48h20"></path>
+</g>
+<g>
+<path d="M485.5 48h0"></path>
+<path d="M554 48h0"></path>
+<path d="M485.5 48a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M505.5 28h28.5"></path>
+</g>
+<path d="M534 28a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M485.5 48h20"></path>
+<g class="terminal">
+<path d="M505.5 48h0"></path>
+<path d="M534 48h0"></path>
+<rect x="505.5" y="37" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="519.75" y="52">,</text>
+</g>
+<path d="M534 48h20"></path>
+</g>
+</g>
+<path d="M554 48h20"></path>
+</g>
+</g>
+<path d="M574 48h10"></path>
+<path d="M 584 48 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+</g>
+</svg>

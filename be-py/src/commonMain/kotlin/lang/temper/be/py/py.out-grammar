@@ -1,0 +1,532 @@
+// The AST tries to follow the official Python AST as closely as possible:
+// https://github.com/python/cpython/blob/3.7/Parser/Python.asdl
+// And the exact grammar is guided by:
+// https://github.com/python/cpython/blob/3.7/Grammar/Grammar
+// See also:
+// https://docs.python.org/3.7/library/ast.html#abstract-grammar
+// https://github.com/python/cpython/blob/3.7/Python/ast_unparse.c
+
+let namespace = "Py";
+
+let imports = """
+  "lang.temper.format.OutputToken
+  "lang.temper.format.OutputTokenType
+  "lang.temper.format.SpecialTokens
+  "lang.temper.format.TokenSerializable
+  "lang.temper.format.TokenSink
+  "lang.temper.lexer.Genre
+  "lang.temper.log.FilePath
+  "lang.temper.name.OutName
+  "lang.temper.name.TemperName
+  "lang.temper.name.name
+  "lang.temper.value.DependencyCategory
+;
+
+Program ::= body%Stmt*"";
+Program(
+    dependencyCategory%`DependencyCategory`,
+    genre%`Genre`,
+    outputPath%`FilePath`,
+);
+
+Stmt =
+      FunctionDef
+//  | AsyncFunctionDef  (set async=true)
+    | ClassDef
+    | Return
+    | Delete
+    | Assign
+    | AugAssign
+    | AnnAssign
+    | For
+//  | AsyncFor  (set async=true)
+    | While
+    | If
+    | With
+//  | AsyncWith  (set async=true)
+    | Raise
+    | Try
+    | Assert
+    | ImportStmt
+    | Global
+    | Nonlocal
+    | ExprStmt
+    | Pass
+    | Break
+    | Continue
+    | CommentLine;
+
+/**
+ * decorator: `'@' dotted_name [ '(' [args] ')' ] NEWLINE`
+ * PEP-614 / 3.9: '@' named_expr_test NEWLINE
+ */
+Decorator ::= "@" & name%Identifier+"." & ((called == true => "(" & args%CallArg*", " & ")") || ()) & "\n";
+Decorator.operatorDefinition = `null`;
+
+/**
+ * FunctionDef(identifier name, arguments args,
+ *             stmt* body, expr* decorator_list, expr? returns)
+ * funcdef: 'def' NAME parameters ['->' test] ':' suite
+ */
+FunctionDef ::=
+      decoratorList%Decorator*""
+    & ((async == true => "async") || ())
+    & "def" & name%Identifier
+    & "(" & args%Arguments & ")"
+    & ((returns%Expr => "->" & returns) || ())
+    & ":" & "\n" & `SpecialTokens.indent` & body%Stmt+"" & ((bodyNeedsPass => "pass" & "\n") || ()) & `SpecialTokens.dedent`;
+FunctionDef.async.default = `false`;
+FunctionDef.returns.default = `null`;
+FunctionDef.decoratorList.default = `listOf()`;
+FunctionDef.operatorDefinition = `null`;
+FunctionDef.bodyNeedsPass%`Boolean` = `body.needsPass()`;
+
+/**
+ * ClassDef(identifier name,
+ *          expr* bases,
+ *          keyword* keywords,
+ *          stmt* body,
+ *          expr* decorator_list)
+ * `classdef: 'class' NAME ['(' [args] ')'] ':' suite`
+ */
+ClassDef ::=
+      decoratorList%Decorator*""
+    & "class" & name%Identifier
+    & ((args%CallArg => "(" & args*", " & ")") || ())
+    & ":" & "\n" & `SpecialTokens.indent` & body%Stmt+"" & ((bodyNeedsPass => "pass" & "\n") || ()) & `SpecialTokens.dedent`;
+ClassDef.operatorDefinition = `null`;
+ClassDef.decoratorList.default = `listOf()`;
+ClassDef.bodyNeedsPass%`Boolean` = `body.needsPass()`;
+
+// Return(expr? value)
+// return_stmt: 'return' [testlist]
+Return ::= "return" & value%Expr? & "\n";
+Return.value.default = `null`;
+Return.operatorDefinition = `null`;
+// Delete(expr* targets)
+// del_stmt: 'del' exprlist
+Delete ::= "del" & targets%Expr*", " & "\n";
+Delete.operatorDefinition = `null`;
+
+/**
+ * Assign(expr* targets, expr value)
+ * AugAssign(expr target, operator op, expr value)
+ * AnnAssign(expr target, expr annotation, expr? value, int simple)
+ * expr_stmt: testlist_star_expr (annassign | augassign (yield_expr|testlist) |
+ *            ('=' (yield_expr|testlist_star_expr))*)
+ * annassign: ':' test ['=' test]
+ * testlist_star_expr: (test|star_expr) (',' (test|star_expr))* [',']
+ * augassign: ('+=' | '-=' | '*=' | '@=' | '/=' | '%=' | '&=' | '|=' | '^=' |
+ *             '<<=' | '>>=' | '**=' | '//=')
+ */
+Assign ::= targets%Expr+" = " & "=" & value%Expr & "\n";
+Assign.operatorDefinition = `null`;
+AugAssign ::= target%Expr & op%AugAssignOp & value%Expr & "\n";
+AnnAssign ::= target%Expr & ":" & annotation%Expr & ((value%Expr => "=" & value) || ()) & "\n";
+AnnAssign.operatorDefinition = `null`;
+
+// For(expr target, expr iter, stmt* body, stmt* orelse)
+// AsyncFor(expr target, expr iter, stmt* body, stmt* orelse)
+For ::=
+      ((async == true => "async") || ())
+    & "for" & target%Expr
+    & "in" & iter%Expr
+    & ":" & "\n" & `SpecialTokens.indent` & body%Stmt+"" & ((bodyNeedsPass => "pass" & "\n") || ()) & `SpecialTokens.dedent`
+    & ((orElse%Stmt => "else" & ":" & "\n" & `SpecialTokens.indent` & orElse+"" & ((elseNeedsPass => "pass" & "\n") || ()) & `SpecialTokens.dedent`) || ());
+For.async.default = `false`;
+For.orElse.default = `listOf()`;
+For.operatorDefinition = `null`;
+For.bodyNeedsPass%`Boolean` = `body.needsPass()`;
+For.elseNeedsPass%`Boolean` = `orElse.needsPass()`;
+
+// While(expr test, stmt* body, stmt* orelse)
+While ::=
+      "while" & test%Expr
+    & ":" & "\n" & `SpecialTokens.indent` & body%Stmt+"" & ((bodyNeedsPass => "pass" & "\n") || ()) & `SpecialTokens.dedent`
+    & ((orElse%Stmt => "else" & ":" & "\n" & `SpecialTokens.indent` & orElse+"" & ((elseNeedsPass => "pass" & "\n") || ()) & `SpecialTokens.dedent`) || ());
+While.operatorDefinition = `null`;
+While.orElse.default = `listOf()`;
+While.bodyNeedsPass%`Boolean` = `body.needsPass()`;
+While.elseNeedsPass%`Boolean` = `orElse.needsPass()`;
+
+// If(expr test, stmt* body, stmt* orelse)
+If ::=
+      "if" & test%Expr & ":" & "\n"
+    & `SpecialTokens.indent` & body%Stmt+"" & ((bodyNeedsPass => "pass" & "\n") || ()) & `SpecialTokens.dedent`
+    & elifs%Elif*""
+    & ((orElse%Stmt => "else" & ":" & "\n" & `SpecialTokens.indent` & orElse+"" & ((elseNeedsPass => "pass" & "\n") || ()) & `SpecialTokens.dedent`) || ());
+If.operatorDefinition = `null`;
+If.elifs.default = `listOf()`;
+If.orElse.default = `listOf()`;
+If.bodyNeedsPass%`Boolean` = `body.needsPass()`;
+If.elseNeedsPass%`Boolean` = `orElse.needsPass()`;
+
+/** Elif branches must be constructed manually. */
+Elif ::=
+      "elif" & test%Expr & ":" & "\n"
+    & `SpecialTokens.indent` & body%Stmt+"" & ((bodyNeedsPass => "pass" & "\n") || ()) & `SpecialTokens.dedent`;
+Elif.bodyNeedsPass%`Boolean` = `body.needsPass()`;
+
+// With(withitem* items, stmt* body)
+// AsyncWith(withitem* items, stmt* body)
+With ::=
+      ((async == true => "async") || ())
+    & "with" & items%WithItem*", "
+    & ":" & "\n" & `SpecialTokens.indent` & body%Stmt+"" & ((bodyNeedsPass => "pass" & "\n") || ()) & `SpecialTokens.dedent`;
+With.async.default = `false`;
+With.operatorDefinition = `null`;
+With.bodyNeedsPass%`Boolean` = `body.needsPass()`;
+
+// withitem = (expr context_expr, expr? optional_vars)
+WithItem ::= contextExpr%Expr & ((optionalVars%Expr => "as" & optionalVars) || ());
+WithItem.optionalVars.default = `null`;
+WithItem.operatorDefinition = `null`;
+
+// Raise(expr? exc, expr? cause)
+Raise ::= "raise" & ((exc%Expr => exc & ((cause%Expr => "from" & cause) || ())) || ()) & "\n";
+Raise.exc.default = `null`;
+Raise.cause.default = `null`;
+Raise.operatorDefinition = `null`;
+
+/**
+ * Try(stmt* body, excepthandler* handlers, stmt* orelse, stmt* finalbody)
+ * try_stmt: ('try' ':' suite
+ *            ((except_clause ':' suite)+
+ *             ['else' ':' suite]
+ *             ['finally' ':' suite] |
+ *            'finally' ':' suite))
+ */
+Try ::=
+      "try" & ":" & "\n" & `SpecialTokens.indent` & body%Stmt+"" & ((bodyNeedsPass => "pass" & "\n") || ()) & `SpecialTokens.dedent`
+    & handlers%ExceptHandler*""
+    & ((orElse%Stmt? => "else" & ":" & "\n" & `SpecialTokens.indent` & orElse+"" & ((elseNeedsPass => "pass" & "\n") || ()) & `SpecialTokens.dedent`) || ())
+    & ((finalbody%Stmt => "finally" & ":" & "\n" & `SpecialTokens.indent` & finalbody+"" & ((finallyNeedsPass => "pass" & "\n") || ()) & `SpecialTokens.dedent`) || ());
+Try requires `handlers.any() || finalbody.any()`;
+Try requires `orElse.none() || (orElse.any() && handlers.any())`;
+Try.handlers.default = `listOf()`;
+Try.orElse.default = `listOf()`;
+Try.finalbody.default = `listOf()`;
+Try.operatorDefinition = `null`;
+Try.bodyNeedsPass%`Boolean` = `body.needsPass()`;
+Try.elseNeedsPass%`Boolean` = `orElse.needsPass()`;
+Try.finallyNeedsPass%`Boolean` = `finalbody.needsPass()`;
+
+// excepthandler = ExceptHandler(expr? type, identifier? name, stmt* body)
+// except_clause: 'except' [test ['as' NAME]]
+ExceptHandler ::=
+      "except" & ((type%Expr => type & ((name%Identifier => "as" & name) || ())) || ())
+    & ":" & "\n" & `SpecialTokens.indent` & body%Stmt+"" & ((bodyNeedsPass => "pass" & "\n") || ()) & `SpecialTokens.dedent`;
+
+ExceptHandler.name.default = `null`;
+ExceptHandler.type.default = `null`;
+ExceptHandler.operatorDefinition = `null`;
+ExceptHandler.bodyNeedsPass%`Boolean` = `body.needsPass()`;
+
+// Assert(expr test, expr? msg)
+// assert_stmt: 'assert' test [',' test]
+Assert ::= "assert" & ((test%Expr => test & ((msg%Expr => "," & msg) || ())) || ()) & "\n";
+Assert.msg.default = `null`;
+Assert.operatorDefinition = `null`;
+
+// Group all imports together.
+ImportStmt =
+      Import
+    | ImportFrom
+    | ImportWildcardFrom
+    ;
+
+// Import(alias* names)
+Import ::= "import" & names%ImportAlias+", " & "\n";
+Import.operatorDefinition = `null`;
+// ImportFrom(identifier? module, alias* names, int? level)
+ImportFrom ::= "from" & module%ImportDotted & "import" & names%ImportAlias+", " & "\n";
+ImportFrom.operatorDefinition = `null`;
+ImportWildcardFrom ::= "from" & module%ImportDotted & "import" & "*" & "\n";
+ImportWildcardFrom.operatorDefinition = `null`;
+ImportAlias ::= name%ImportDotted & ((asname%Identifier => "as" & asname) || ());
+ImportAlias.operatorDefinition = `null`;
+
+// Global(identifier* names)
+Global ::= "global" & names%Identifier+", " & "\n";
+Global.operatorDefinition = `null`;
+// Nonlocal(identifier* names)
+Nonlocal ::= "nonlocal" & names%Identifier+", " & "\n";
+Nonlocal.operatorDefinition = `null`;
+
+// Expr(expr value)
+ExprStmt ::= value%Expr & "\n";
+ExprStmt.operatorDefinition = `null`;
+ExprStmt {
+  `constructor(expr: Expr) : this(expr.pos, expr)`
+};
+
+// Pass | Break | Continue
+Pass ::= "pass" & "\n";
+Pass.operatorDefinition = `null`;
+Break ::= "break" & "\n";
+Break.operatorDefinition = `null`;
+Continue ::= "continue" & "\n";
+Continue.operatorDefinition = `null`;
+
+/**
+ * `#commentText`
+ */
+CommentLine(
+    /**
+     * May not contain an
+     * [end of line sequence](https://docs.python.org/3/reference/lexical_analysis.html#physical-lines)
+     */
+    commentText%`String`
+) {
+`
+init {
+    // No newlines in line comments.
+    require(!pyLineTerminator.matches(commentText)) { commentText }
+}
+`
+}
+// Convention in this backend is that statements emit a trailing newline; the comment token does this for us.
+CommentLine.renderTo = `
+val tokenText = if (commentText.isEmpty()) {
+    "#"
+} else {
+    "# $commentText"
+}
+tokenSink.emit(OutputToken(tokenText, OutputTokenType.Comment))
+tokenSink.endLine()
+`;
+
+Expr =
+      BinExpr
+    | UnaryExpr
+    | Lambda
+    | IfExpr
+    | Dict
+    | SetExpr
+    | ListComp
+    | SetComp
+    | DictComp
+    | GeneratorComp
+    | Await
+    | Yield
+    | YieldFrom
+    | Call
+    | Num
+    | Str
+    | TypeStr
+//  | FormattedValue  -- Assuming we don't need this.
+//  | JoinedStr       -- Could do this for pretty printing.
+//  | Bytes           -- Only if/when temper supports bytes.
+    | Constant
+    | Attribute
+    | Subscript
+    | Starred
+    | Name
+    | ListExpr
+    | Tuple;
+
+// BoolOp(boolop op, expr* values)  -- handled as regular BinOp
+// BinOp(expr left, operator op, expr right)
+BinExpr ::= left%Expr & op%BinaryOp & right%Expr;
+BinExpr.operatorDefinition = `op.expressionOperatorDefinition`;
+
+// UnaryOp(unaryop op, expr operand)
+UnaryExpr ::= op%UnaryOp & operand%Expr;
+UnaryExpr.operatorDefinition = `op.expressionOperatorDefinition`;
+
+// Lambda(arguments args, expr body)
+// lambdef: 'lambda' [varargslist] ':' test
+Lambda ::= "lambda" & (args%Arguments || ()) & ":" & body%Expr;
+Lambda requires `args == null || !args.hasAnnotations`;
+Lambda.operatorDefinition = `PyOperatorDefinition.Lambda`;
+// IfExp(expr test, expr body, expr orElse)
+IfExpr ::= body%Expr & "if" & test%Expr & "else" & orElse%Expr;
+IfExpr.operatorDefinition = `PyOperatorDefinition.Test`;
+// Dict(expr* keys, expr* values)
+Dict ::= "{" & items%DictPair*", " & "}";
+Dict.operatorDefinition = `null`;
+DictPair ::= key%Expr & ":" & value%Expr;
+// Set(expr* elts)
+SetExpr ::= ((elts%Expr => "{" & elts+", " & "}") || "__builtins__.set()");
+SetExpr.operatorDefinition = `null`;
+// ListComp(expr elt, comprehension* generators)
+ListComp ::= "[" & elt%Expr & generators%Comprehension+"" & "]";
+ListComp.operatorDefinition = `null`;
+// SetComp(expr elt, comprehension* generators)
+SetComp ::= "{" & elt%Expr & generators%Comprehension+"" & "}";
+SetComp.operatorDefinition = `null`;
+// DictComp(expr key, expr value, comprehension* generators)
+DictComp ::= "{" & key%Expr & ":" & value%Expr & generators%Comprehension+"" & "}";
+DictComp.operatorDefinition = `null`;
+// GeneratorExp(expr elt, comprehension* generators)
+GeneratorComp ::= "(" & elt%Expr & generators%Comprehension+"" & ")";
+GeneratorComp.operatorDefinition = `null`;
+// Await(expr value)
+Await ::= "await" & value%Expr;
+Await.operatorDefinition = `PyOperatorDefinition.Await`;
+// Yield(expr? value)
+Yield ::= "yield" & value%Expr?;
+Yield.value.default = `null`;
+Yield.operatorDefinition = `PyOperatorDefinition.Yield`;
+// YieldFrom(expr value)
+YieldFrom ::= "yield" & "from" & value%Expr?;
+YieldFrom.operatorDefinition = `PyOperatorDefinition.YieldFrom`;
+// Compare(expr left, cmpop* ops, expr* comparators) -- handled as regular BinExpr
+// Call(expr func, expr* args, keyword* keywords)
+Call ::= func%Expr & "(" & args%CallArg*", " & ")";
+Call.operatorDefinition = `PyOperatorDefinition.Call`;
+
+// Attribute(expr value, identifier attr, expr_context ctx)
+// Note: expr_context indicates Load() or Store(), and is not relevant to an out grammar.
+Attribute ::= value%Expr & "." & attr%Identifier;
+Attribute.operatorDefinition = `PyOperatorDefinition.Attribute`;
+// Subscript(expr value, slice slice, expr_context ctx)
+Subscript ::= value%Expr & "[" & slice%SubscriptSlice*", " & "]";
+Subscript.operatorDefinition = `PyOperatorDefinition.Subscript`;
+// Starred(expr value, expr_context ctx)
+Starred ::= `starToken` & value%Expr;
+Starred.operatorDefinition = `PyOperatorDefinition.StarExpr`;
+
+// Name(identifier id, expr_context ctx)
+// Name ::= id%`PyIdentifierName`;
+// List(expr* elts, expr_context ctx)
+ListExpr ::= "[" & elts%Expr*", " & "]";
+ListExpr.operatorDefinition = `null`;
+// Tuple(expr* elts, expr_context ctx)
+Tuple ::= "(" & elts%Expr*", " & ((eltsIsOne == true => ",") || ()) & ")";
+Tuple.eltsIsOne = `elts.size == 1`;
+Tuple.operatorDefinition = `null`;
+// TODO: to remove extraneous parens, needs `PyOperatorDefinition.Tuple` and to recognize when within, e.g. CallArg.
+// Possibly set CallArg itself to have a slightly higher precedence?
+// Could also only add trailing comma on single element tuples.
+SubscriptSlice = Slice | Expr;
+// Slice(expr? lower, expr? upper, expr? step)
+Slice ::= lower%Expr? & `sliceColonToken` & upper%Expr? & ((step%Expr => `sliceColonToken` & step) || ());
+Slice.lower.default = `null`;
+Slice.upper.default = `null`;
+Slice.step.default = `null`;
+Slice.operatorDefinition = `null`;
+
+// comprehension = (expr target, expr iter, expr* ifs, int is_async)
+Comprehension ::=
+      ((async == true => "async") || ())
+    & "for" & target%Expr
+    & "in" & iter%Expr
+    & ifs%ComprehensionIf*" ";
+Comprehension.async.default = `false`;
+Comprehension.operatorDefinition = `null`;
+Comprehension.ifs.default = `listOf()`;
+ComprehensionIf ::= "if" & test%Expr;
+ComprehensionIf.operatorDefinition = `null`;
+
+/**
+ * This whole structure is a mess to represent, so we just have a list of Arg objects that can have prefixes.
+ * Correctness is enforced by the constructor.
+ *
+ * ```
+ * parameter_list          ::=  defparameter ("," defparameter)* ["," [parameter_list_starargs]]
+ *                              | parameter_list_starargs
+ * parameter_list_starargs ::=  "*" [parameter] ("," defparameter)* ["," ["**" parameter [","]]]
+ *                              | "**" parameter [","]
+ * parameter               ::=  identifier [":" expression]
+ * defparameter            ::=  parameter ["=" expression]
+ * ```
+ */
+Arguments ::= args%Arg*", ";
+Arguments.hasAnnotations%`Boolean` = `args.any { it.annotation != null }`;  // Lambdas can't have annotations.
+Arguments requires `argumentsValid(args), issue { argumentsIssues(args) }`;
+Arguments.operatorDefinition = `null`;
+
+Arg ::=
+      ((prefix%ArgPrefix == Star => `starToken`)
+       || (prefix == DoubleStar => `starStarToken`)
+       || ())
+    & arg%Identifier
+    & ((annotation%Expr? => ":" & annotation) || ())
+    & ((defaultValue%Expr? => "=" & defaultValue) || ());
+Arg requires `prefix == ArgPrefix.None || defaultValue == null`;
+Arg.annotation.default = `null`;
+Arg.defaultValue.default = `null`;
+Arg.operatorDefinition = `null`;
+Arg.prefix.default = `ArgPrefix.None`;
+
+enum ArgPrefix = None | Star | DoubleStar;
+
+Call requires `callArgsValid(args), issue { callArgsIssues(args) }`;
+Decorator requires `callArgsValid(args), issue { callArgsIssues(args) }`;
+ClassDef requires `callArgsValid(args), issue { callArgsIssues(args) }`;
+
+/**
+ * A Call uses a list of expressions for arguments (including Starred) and a list of keyword arguments.
+ * > keyword = (identifier? arg, expr value)
+ */
+CallArg ::=
+      ((prefix%ArgPrefix == DoubleStar => `starStarToken`)
+       || ())
+    & ((arg%Identifier? => arg & "=") || ())
+    & value%Expr;
+CallArg.arg.default = `null`;
+CallArg.positional%`Boolean` = `prefix == ArgPrefix.None`;
+CallArg.operatorDefinition = `null`;
+CallArg.prefix.default = `ArgPrefix.None`;
+CallArg {
+  `constructor(value: Expr) : this(pos = value.pos, value = value)`
+};
+
+// Prohibit **x=y
+CallArg requires `prefix == ArgPrefix.None || arg == null`;
+// This ArgPrefix is used by Arg.
+CallArg requires `prefix != ArgPrefix.Star`;
+
+/** A Python identifier that does not participate in expressions. */
+Identifier(id%`PyIdentifierName`, sourceIdentifier%`TemperName?`);
+Identifier.sourceIdentifier.default = `null`;
+Identifier.outName%`OutName` = `OutName(id.text, sourceIdentifier)`;
+Identifier.renderTo = `tokenSink.name(outName, inOperatorPosition = false)`;
+Identifier.operatorDefinition = `null`;
+
+/** A Python identifier that serves as an atom in an expression. */
+Name(id%`PyIdentifierName`, sourceIdentifier%`TemperName?`);
+Name.sourceIdentifier.default = `null`;
+Name.outName%`OutName` = `OutName(id.text, sourceIdentifier)`;
+Name.renderTo = `tokenSink.name(outName, inOperatorPosition = false)`;
+Name.operatorDefinition = `PyOperatorDefinition.Atom`;
+
+ImportDotted(module%`PyDottedIdentifier`);
+ImportDotted.renderTo = `module.renderTo(tokenSink)`;
+ImportDotted.operatorDefinition = `null`;
+
+// Num(object n)
+Num(n%`Number`);
+Num.renderTo = `tokenSink.number("$n")`;
+Num.operatorDefinition = `PyOperatorDefinition.Atom`;
+
+// Str(string s)
+Str(s%`String`);
+Str.renderTo = `tokenSink.quoted(stringTokenText(s))`;
+Str.operatorDefinition = `PyOperatorDefinition.Atom`;
+
+// A String containing a valid Python Expr for type annotations.
+// TypeStr(Expr x)
+TypeStr(x%Expr);
+TypeStr.renderTo = `tokenSink.quoted(stringTokenText(x.toString().trimEnd()))`;
+TypeStr.operatorDefinition = `PyOperatorDefinition.Atom`;
+
+Constant(value%`PyConstant`)
+Constant.renderTo = `tokenSink.word(value.text)`;
+Constant.operatorDefinition = `PyOperatorDefinition.Atom`;
+
+/** An augmented assignment operator constructed from [AugAssignOpEnum.atom] */
+AugAssignOp(opEnum%`AugAssignOpEnum`);
+AugAssignOp.renderTo = `opEnum.renderTo(tokenSink)`;
+AugAssignOp.operatorDefinition = `null`;
+
+/** A binary operator constructed from [BinaryOpEnum.atom] */
+BinaryOp(opEnum%`BinaryOpEnum`, expressionOperatorDefinition%`PyOperatorDefinition`);
+BinaryOp.renderTo = `opEnum.renderTo(tokenSink)`;
+BinaryOp.operatorDefinition = `null`;
+
+/** A unary operator constructed from [UnaryOpEnum.atom] */
+UnaryOp(opEnum%`UnaryOpEnum`, expressionOperatorDefinition%`PyOperatorDefinition`);
+UnaryOp.renderTo = `opEnum.renderTo(tokenSink)`;
+UnaryOp.operatorDefinition = `null`;

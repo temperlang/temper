@@ -1,0 +1,1092 @@
+<!doctype html>
+
+<title>Happy String Templates Time</title>
+
+<body>
+
+<h1>Happy String Templates Time</h1>
+
+<style>
+    body { font-size: 125% }
+    div.choice {
+        display: inline-block; width: 25em; border-radius: 30px;
+        border-width: 4px;
+        background-color: #6df; margin: 2px; padding: .5em;
+        vertical-align: top;
+    }
+    div.choice:nth-child(2n) {
+        background-color: #6fd;
+    }
+    div.choice > h2 {
+        text-align: center; font-size: 125%; font-weight: bolder;
+        margin-top: 0
+    }
+
+    textarea, #prettier, #content-received {
+        font-size: 12pt; width: 100%; height: 30em
+    }
+
+    #results-table { width: 100% }
+    #results-table td { vertical-align: top }
+
+    #prettier, #content-received {
+        white-space: pre-wrap;
+        font-family: monospace;
+        border-width: 1px;
+        border-style: dotted;
+        border-color: black;
+        background-color: #ddd;
+        padding: 3px
+    }
+    #content-received.passed { border-color: darkgreen }
+    #content-received.failed { border-color: darkred; background-color: #fdd }
+
+    .token.stringStart, .token.stringChars, .token.stringEnd, .token.string {
+        color: green;
+    }
+    .token.stringStart { border-left: 1px dotted green }
+    .token.stringEnd { border-right: 1px dotted green }
+    .token.other, .token.openBracket, .token.closeBracket,
+    .token.holeExprStart, .token.holeExprEnd,
+    .token.holeStmtStart, .token.holeStmtEnd {
+        color: darkblue;
+    }
+
+    .token.number, .token.keyword { color: darkred }
+    .token.comment { color: darkviolet }
+</style>
+
+This allows playing around with extended string templates in a JS-like syntax.
+
+<p>
+
+<form name="choices" onchange="formChanged()">
+
+    <div class="choice">
+        <h2>Hole brackets for embedded statements</h2>
+
+        Hole brackets affect how we identify where embedded code regions begin and end.
+
+        <ul>
+            <li><input type="radio" name="hole-brackets" value="${	}$" checked><code>${&hellip;}$</code></input>
+            <li><input type="radio" name="hole-brackets" value="{{	}}"><code>{{&hellip;}}</code></input>
+            <li><input type="radio" name="hole-brackets" value="\(	\)"><code>\(&hellip;\)</code></input>
+            <li><input type="radio" name="hole-brackets" value="\{	\}"><code>\{&hellip;\}</code></input>
+            <li><input type="radio" name="hole-brackets" value="<%	%>"><code><%&hellip;%></code></input>
+            <li><input type="radio" name="hole-brackets" value="%{	}%>"><code>%{&hellip;%}</code></input>
+            <li><input type="radio" name="hole-brackets" value="other">Other: </input><input type=text title="space between start and end" name="hole-brackets-other" onfocus="checkOther(name)">
+        </ul>
+    </div>
+
+    <div class="choice">
+        <h2>Hole brackets for simple expressions</h2>
+
+        Is there a different hole syntax when the content is an expression that should be auto-emitted?
+
+        <ul>
+            <li><input type="radio" name="expr-hole-brackets" value="$(	)" checked><code>$(&hellip;)</code></input>
+            <li><input type="radio" name="expr-hole-brackets" value="((	))"><code>((&hellip;))</code></input>
+            <li><input type="radio" name="expr-hole-brackets" value="\(	)"><code>\(&hellip;)</code></input>
+            <li><input type="radio" name="expr-hole-brackets" value="%(	)"><code>%(&hellip;)</code></input>
+            <li><input type="radio" name="expr-hole-brackets" value=""><i>None</i></input>
+            <li><input type="radio" name="expr-hole-brackets" value="other">Other: </input><input type=text title="space between start and end" name="expr-hole-brackets-other" onfocus="checkOther(name)">
+        </ul>
+    </div>
+
+    <div class="choice">
+        <h2>Empty holes break literal chunks?</h2>
+
+        Does an empty hole, one that contains no non-space & non-comment tokens, break a literal chunk?
+
+        <ul>
+            <li><input type="radio" name="empty-holes-break" value="0">No</input>
+            <li><input type="radio" name="empty-holes-break" value="1" checked>Yes</input>
+        </ul>
+    </div>
+
+    <div class="choice">
+        <h2>Back slash escapes all?</h2>
+
+        Does a backslash (<code>\</code>) escape a meta-character that would otherwise start a hole?
+
+        <ul>
+            <li><input type="radio" name="backslash-escapes-all" value="0">No</input>
+            <li><input type="radio" name="backslash-escapes-all" value="1" checked>Yes</input>
+        </ul>
+    </div>
+
+    <div class="choice">
+        <h2>Way to inline hole content</h2>
+
+        Is there a way to express that the content of a hole, which is a literal string or constant expression,
+        should be inlined as part of a literal chunk?
+
+        <p>
+        So if simple expression brackets were <code>\(&hellip;)</code> and the inline operator were a prefix
+        <code>&lt;&lt;</code> then a hole like <code>\(<< "foo\nbar")</code> would contribute those
+        characters to the surrounding literal chunk.
+
+        <p>
+        Alternatively, in place of a hole, we could use a syntax like <code>$"..."</code> where the quotes
+        are stripped and the content decoded by string literal decoding rules.  That might allow embedding
+        encoded strings inside <code>String.raw"""</code><i>lines of text</i><code>"""</code>.
+
+        <ul>
+            <li><input type="radio" name="inline-expr" value="" checked><i>No</i></input>
+            <li><input type="radio" name="inline-expr" value="*">Prefix <code>*</code></input>
+            <li><input type="radio" name="inline-expr" value="<<">Prefix <code>&lt;&lt;</code></input>
+            <li><input type="radio" name="inline-expr" value="$&quot;&quot;"><code>$"&hellip;"</code> in place of hole</input>
+            <li><input type="radio" name="inline-expr" value="other">Other: </input> prefix
+                <input type=text name="inline-expr-other" onfocus="checkOther(name)">
+        </ul>
+    </div>
+
+    <div class="choice">
+        <h2>Bracket extender syntax</h2>
+
+        Is there a mechanism that changes the hole syntax to allow embedding of things that look
+        like holes?
+
+        <p>
+        For example <code>###</code> before the opening quotes might mean you need to triple the
+        brackets around holes.  So if the first choice were <code>${&hellip;}$</code> for holes,
+        with bracket-tripling it&apos;d be <code>${{{&hellip;}}}$</code>.
+
+        <p>
+        If the first line of content in a multi-line string template, starts on its own line
+        then we could put hole modifying syntax after the open quotes and on the same line, without ambiguity.
+        </p>
+
+        <p>
+        <code>&quot;&quot;&quot;</code><small><i>(metadata after quotes)</i></small><code><br><!--
+        -->first line<br><!--
+        -->...more lines...<br><!--
+        -->last line<br><!--
+        -->&quot;&quot;&quot;</code>
+        </p>
+
+        <ul>
+            <li><input type="radio" name="extender" value="" checked><i>No</i></input>
+            <li><input type="radio" name="extender" value="#..."><code>#</code> before</input>
+            <li><input type="radio" name="extender" value="$"><code>$</code> after open quote</input>
+            <li><input type="radio" name="extender" value="other">Other: </input><input type=text name="extender-other" onfocus="checkOther(name)">; After <input type="checkbox" name="extender-other-after" value="1"></input>
+        </ul>
+    </div>
+
+    <div class="choice">
+        <h2>Example</h2>
+
+        <pre id="syntax-example"></pre>
+    </div>
+</form>
+
+<br><br>
+<h2>Goals</h2>
+<ul>
+    <li>Can we get arbitrary text to a tag that does its own <code>\</code> decoding?
+        <ul>
+            <li>Even if that text contains the normal string delimiter?
+            <li>Even if that text ends with an odd number of escape characters (<code>\</code>)?
+        </ul>
+    </li>
+    <li>Can we express white-space before end of line?</li>
+    <li>Can we split long lines?</li>
+    <li>How intuitive does this look to a reader?</li>
+    <li>Is it easy to embed code in other languages whose meta-characters overlap with our hole/string meta-characters?
+        For example, if curly brackets are used in holes, does that make it
+        harder to express JSON objects?
+        <a href="https://formatjs.io/docs/intl-messageformat/#common-usage-example">Intl MessageFormat</a> strings?
+    </li>
+    <li>Strings whose content fits on one line should be expressible on one line.</li>
+    <li>How do we factor a template out into composable functions?</li>
+</ul>
+
+<br><br>
+<table id="results-table">
+    <thead>
+        <tr>
+            <th style="width: 32%">Enter JS code plus extended string templates here</th>
+            <th style="width: 2%"></th>
+            <th style="width: 32%">Prettier</th>
+            <th style="width: 2%"></th>
+            <th style="width: 32%">Content received by <code>tag</code> shows up here</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="width: 32%"><textarea id="js+"></textarea></td>
+            <td style="width: 2%"></td>
+            <td style="width: 32%"><div id="prettier"></div></td>
+            <td style="width: 2%"></td>
+            <td style="width: 32%"><div id="content-received"></div><details><summary>Translated JS</summary><pre id="translated-js" style="white-space: pre-wrap"></pre></td>
+        </tr>
+    </tbody>
+</table>
+
+<script>(() => {
+    // Choices affect how we parse string templates.
+    // These are the default, used for populating the form from nothing,
+    // and so we can focus on the non-default choices when making a URL from the form.
+    let defaultChoices = {
+        holeStmtStart: "${",
+        holeStmtEnd: "}$",
+        holeExprStart: "$(",
+        holeExprEnd: ")",
+        emptyHolesBreak: true,
+        backslashEscapesAll: true,
+        inlineExpr: null,
+        bracketExtender: null,
+    };
+
+    // Choices that affect how we parse string templates
+    let choices = { ...defaultChoices };
+
+    // An OutputChannel collects literal text parts and dynamic values from the
+    // evaluation of a string template.
+    class OutputChannel {
+        #tagParts = [];
+
+        print(...values) {
+            if (!values.length) {
+                values.push(null);
+            }
+            let tagParts = this.#tagParts;
+            for (let value of values) {
+                tagParts.push({ value });
+            }
+        }
+        literal(rawText) {
+            let decodeOk = true;
+            // When we receive a literal part, provide the tag with the
+            // decoded content too, if that is well defined.
+            let cookedText = rawText.replace(
+                /\\(u([A-Fa-f0-9]{4})|x([A-Fa-f0-9]{2})|[^ux])?/g,
+                (_, e, hex4, hex2) => {
+                    let hex = hex4 || hex2;
+                    if (hex) { return String.fromCharCode(parseInt(hex, 16)); }
+                    switch (e || '') {
+                    case '\n': case '\r':
+                    case '': case '\u2028': case '\u2029': case 'x': case 'u':
+                    case '1': case '2': case '3': case '4': case '5': case '6':
+                    case '7': case '8': case '9':
+                        decodeOk = false;
+                        return '';
+                    case 'b': return '\b';
+                    case 'f': return '\f';
+                    case 'n': return '\n';
+                    case 'r': return '\r';
+                    case 't': return '\t';
+                    case 'v': return '\v';
+                    case '0': return '\u0000';
+                    case '\'': return '\'';
+                    case '"': return '"';
+                    case '\\': return '\\';
+                    default: return e;
+                    }
+                }
+            );
+            if (!decodeOk) { cookedText = null; }
+            this.#tagParts.push({ rawText, cookedText });
+        }
+        toTagParts() {
+            return [...this.#tagParts];
+        }
+    }
+    window.OutputChannel = OutputChannel;
+
+    // When a multiline string prefix specifies that we multiply bracket, do
+    // the multiplication
+    function extendHoleDelimiter(holeDelimiter, repetitions) {
+        return repetitions > 0
+            ? holeDelimiter.replace(/[(){}\[\]<>]/g, (x) => x.repeat(repetitions))
+            : holeDelimiter;
+    }
+
+    //// Functions for keeping the form, choices, and URL hash in sync follow
+    let form = document.querySelector("form[name='choices']");
+
+    let changingForm = false
+    function updateForm() {
+        console.log('updating form');
+        console.log(JSON.stringify(choices, null, 2));
+        // Update the form from the choices object
+        changingForm = true; // ignore change events while pushing changes
+        try {
+            {
+                let inputs = Array.from(document.querySelectorAll(
+                    "form[name='choices'] input[name='hole-brackets']"
+                ));
+                let value = `${choices.holeStmtStart}\t${choices.holeStmtEnd}`;
+                let input = inputs.find((x) => x.value == value);
+                if (input) {
+                    input.checked = true;
+                } else {
+                    inputs.find((x) => x.value == 'other').checked = true;
+                    form['hole-brackets-other'].value = value;
+                }
+            }
+
+            {
+                let inputs = Array.from(document.querySelectorAll(
+                    "form[name='choices'] input[name='expr-hole-brackets']"
+                ));
+                let value = choices.holeExprStart
+                    ? `${choices.holeExprStart}\t${choices.holeExprEnd}`
+                    : '';
+                let input = inputs.find((x) => x.value == value);
+                if (input) {
+                    input.checked = true;
+                } else {
+                    inputs.find((x) => x.value == 'other').checked = true;
+                    form['expr-hole-brackets-other'].value = value;
+                }
+            }
+
+            {
+                let inputs = Array.from(document.querySelectorAll(
+                    "form[name='choices'] input[name='empty-holes-break']"
+                ));
+                let value = choices.emptyHolesBreak ? '1' : '0';
+                let input = inputs.find((x) => x.value == value);
+                if (input) {
+                    input.checked = true;
+                }
+            }
+
+            {
+                let inputs = Array.from(document.querySelectorAll(
+                    "form[name='choices'] input[name='backslash-escapes-all']"
+                ));
+                let value = choices.backslashEscapesAll ? '1' : '0';
+                let input = inputs.find((x) => x.value == value);
+                if (input) {
+                    input.checked = true;
+                }
+            }
+
+            {
+                let inputs = Array.from(document.querySelectorAll(
+                    "form[name='choices'] input[name='inline-expr']"
+                ));
+                let value = choices.inlineExpr || '';
+                let input = inputs.find((x) => x.value == value);
+                if (input) {
+                    input.checked = true;
+                } else {
+                    inputs.find((x) => x.value == 'other').checked = true;
+                    form['inline-expr-other'].value = value;
+                }
+            }
+
+            {
+                let inputs = Array.from(document.querySelectorAll(
+                    "form[name='choices'] input[name='extender']"
+                ));
+                let value = choices.bracketExtender?.text || "";
+                let before = choices.bracketExtender?.before || false;
+                let match = value && before ? `${value}...` : value;
+                let input = inputs.find((x) => x.value == match);
+                if (input) {
+                    input.checked = true;
+                } else {
+                    inputs.find((x) => x.value == 'other').checked = true;
+                    form['extender-other'].value = value;
+                    form['extender-other-after'].checked = !before;
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            changingForm = false;
+        }
+    }
+
+    function formChanged() {
+        if (changingForm) { return }
+
+        // Read the form and update choices
+        let holeStmt = form['hole-brackets'].value;
+        if (holeStmt == "other") { holeStmt = form['hole-brackets-other'].value }
+        [ choices.holeStmtStart, choices.holeStmtEnd ] = holeStmt.split(/\s+/, 2);
+
+        let holeExpr = form['expr-hole-brackets'].value;
+        if (holeExpr == "other") { holeExpr = form['expr-hole-brackets-other'].value }
+        [ choices.holeExprStart, choices.holeExprEnd ] = (holeExpr)
+            ? holeExpr.split(/\s+/, 2)
+            : [null, null];
+
+        choices.emptyHolesBreak = !!(
+            +form['empty-holes-break'].value
+        );
+
+        choices.backslashEscapesAll = !!(
+            +form['backslash-escapes-all'].value
+        );
+
+        let inlineExpr = form['inline-expr'].value;
+        if (inlineExpr == "other") {
+            inlineExpr = form['inline-expr-other'].value;
+        }
+        choices.inlineExpr = inlineExpr || null;
+
+        let bracketExtender = form['extender'].value;
+        let bracketExtenderBefore = false;
+        if (bracketExtender == "other") {
+            bracketExtender = form['extender-other'].value;
+            bracketExtenderBefore = !form['extender-other-after'].checked;
+        } else {
+            // ... at end means it appears before the open quotes
+            bracketExtenderBefore = /\.\.\.$/.test(bracketExtender);
+            if (bracketExtenderBefore) {
+                bracketExtender = bracketExtender.substring(0, bracketExtender.length - 3);
+            }
+        }
+        choices.bracketExtender = bracketExtender
+            ? { text: bracketExtender, before: bracketExtenderBefore }
+            : null;
+
+        updateHash();
+        updateExample();
+    }
+    window.formChanged = formChanged;
+
+    function updateExample() {
+        console.log("update example");
+        let example = '';
+        example += '// Apply `tag` to a triple-quoted, multi-line string\n';
+        example += 'tag';
+        let { text: extender, before } =
+            choices.bracketExtender || { text: '', before: false };
+        if (extender && before) {
+            if (/[\w$]/.test(extender)) {
+                example += ' ';
+            }
+            example += extender + extender;
+            if (/"/.test(extender)) { example += ' '; }
+        }
+        example += '"""';
+        if (extender && !before) {
+            if (/"/.test(extender)) { example += ' '; }
+            example += extender + extender;
+        }
+        example += "\n";
+
+        function maybeExtend(holeDelimiter) { // If we have an extender, extend it.
+            return extendHoleDelimiter(holeDelimiter, 2);
+        }
+
+        let indent = "    "; // Indent lines of content text by 4
+        example += `${indent}First line, no holes.\n`;
+
+        let { holeStmtStart, holeStmtEnd,
+              holeExprStart, holeExprEnd,
+              inlineExpr, emptyHolesBreak,
+              backslashEscapesAll
+            } = choices;
+
+        if (holeExprStart && holeExprEnd) {
+            example += `${indent}Line with an embedded ${maybeExtend(holeExprStart)} EXPRESSION ${maybeExtend(holeExprEnd)}\n`;
+        }
+        if (holeStmtStart && holeStmtEnd) {
+            example += `${indent}Line with a hole ${maybeExtend(holeStmtStart)} STATEMENTS ${maybeExtend(holeStmtEnd)}\n`;
+        }
+        let canNoOp = holeExprStart && holeExprEnd && (inlineExpr || !emptyHolesBreak);
+        // Can we find a no-op sequence.
+        let noOp = canNoOp
+            ? (
+                (!emptyHolesBreak)
+                // Use an empty hole
+                    ? `${maybeExtend(holeExprStart)} ${maybeExtend(holeExprEnd)}`
+                // Use an inline empty string
+                    : (inlineExpr == '$""')
+                    ? '$""'
+                // Use an inline prefix on an empty string
+                    : `${maybeExtend(holeExprStart)}${inlineExpr}""${maybeExtend(holeExprEnd)}`
+            )
+            : null;
+
+        if (canNoOp) {
+            example += `${indent}Two spaces before line end  ${noOp}\n`;
+        }
+        if (!extender && (backslashEscapesAll || canNoOp)) {
+            example += `${indent}Escaped hole start: `;
+            let delim = maybeExtend(holeStmtStart || holeExprStart);
+            if (backslashEscapesAll) {
+                example += `\\${delim}`;
+            } else {
+                example += `${delim[0]}${noOp}${delim.substring(1)}`;
+            }
+            example += "\n";
+        }
+        example += `${indent}Last line, no holes.\n`;
+        example += `${indent}""";\n`;
+        document.querySelector('#syntax-example').textContent = example;
+    }
+
+    // Update the # portion of the document URL after choices change so it can be copy-pasted.
+    function updateHash() {
+        let nonDefaultChoices = {};
+        for (let k in choices) {
+            if (JSON.stringify(choices[k]) !== JSON.stringify(defaultChoices[k])) {
+                nonDefaultChoices[k] = choices[k];
+            }
+        }
+        document.location = `#${ encodeURIComponent(JSON.stringify([nonDefaultChoices, lastJsPlusContent])) }`;
+    }
+
+    function checkOther(name) {
+        // When the user clicks in the text box for an "Other" option, check the other checkbox.
+        let input = form.querySelector(`input[name="${name.replace(/-other$/, '')}"][value="other"]`);
+        input.checked = true;
+    }
+    window.checkOther = checkOther;
+
+    let lastJsPlusContent = '';
+    let jsPlusTextarea = document.getElementById('js+');
+
+    if (document.location.hash) {
+        try {
+            let [choicesFromHash, jsContentFromHash] =
+                JSON.parse(decodeURIComponent(document.location.hash.replace(/^#/, '')));
+            choices = {
+                ...defaultChoices,
+                ...choicesFromHash,
+            };
+            jsPlusTextarea.value = jsContentFromHash;
+            updateForm();
+        } catch (ex) {
+            console.error(ex);
+            form.reset();
+        }
+    } else {
+        form.reset();
+    }
+    updateExample();
+
+    let prettierTokensElement = document.getElementById('prettier');
+    let contentReceivedElement = document.getElementById('content-received');
+    let translatedJsElement = document.getElementById('translated-js');
+
+    setInterval(checkJsPlus, 500);
+
+    function regexEsc(s) {
+        return s.replace(/[\^\$\(\)\*\-\+{}\[\]\.\/\?\|\&]/g, (x) => `\\${x}`);
+    }
+
+    let simpleTokenPattern = new RegExp(
+        '^(?:' + [
+            String.raw`[ \t\n\r]+`, // Spaces
+            String.raw`[/][*][\s\S]*?(?:[*][/]?)?`, // Block comment
+            String.raw`[/][/].*`, // Line comment
+            String.raw`"(?!")(?:[^"\\]|\\.)+(?:"|$)`, // Non-empty double-quoted string
+            String.raw`"(?:"(?!")|$)`, // Empty double-quoted string
+            String.raw`'(?:[^'\\]|\\.)*'?`, // Single quoted string
+            String.raw`(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+\-]?\d+)?`, // Number
+            String.raw`\w+`, // Identifier
+            // NOT DONE: Regexen
+            // Punctuation characters are handled as the fallback in the lexer.
+        ].join('|') + ')'
+    );
+
+    let TokenType = {
+        StringStart: 'stringStart',
+        StringEnd: 'stringEnd',
+        StringChars: 'stringChars',
+        HoleStmtStart: 'holeStmtStart',
+        HoleStmtEnd: 'holeStmtEnd',
+        HoleExprStart: 'holeExprStart',
+        HoleExprEnd: 'holeExprEnd',
+        String: 'string',
+        Space: 'space',
+        Number: 'number',
+        Word: 'word',
+        OpenBracket: 'openBracket',
+        CloseBracket: 'closeBracket',
+        Other: 'other',
+        Comment: 'comment',
+
+        of(tokenText) {
+            switch (tokenText[0]) {
+            case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+                return TokenType.Number;
+            case '"': case '\'': return TokenType.String;
+            case ' ': case '\t': case '\n': case '\r': return TokenType.Space;
+            default:
+                if (tokenText.substring(0, 2) == '//' || tokenText.substring(0, 2) == '/*') {
+                    return TokenType.Comment;
+                }
+                if (/^.\d/.test(tokenText)) { return TokenType.Number; }
+                if (/^\w/.test(tokenText)) { return TokenType.Word; }
+                return TokenType.Other;
+            }
+        },
+    };
+    let keywordTexts = new Set([
+        'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger', 'default', 'delete',
+        'do', 'else', 'export', 'extends', 'false', 'finally', 'for', 'function', 'if', 'import',
+        'in', 'instanceof', 'new', 'null', 'return', 'super', 'switch', 'this', 'throw', 'true',
+        'try', 'typeof', 'var', 'void', 'while', 'with', 'yield'
+    ]);
+
+    let brackets = {
+        '(': ')',
+        ')': '(',
+        '[': ']',
+        ']': '[',
+        '{': '}',
+        '}': '{',
+    };
+    let openBrackets = { '(': true, '[': true, '{': true };
+
+    function checkJsPlus() {
+        let jsPlusContent = jsPlusTextarea.value;
+        if (jsPlusContent === lastJsPlusContent) {
+            return;
+        }
+        lastJsPlusContent = jsPlusContent;
+        updateHash();
+
+        // Lex the JS+ content to a nested group of tokens where
+        // every element is one of:
+        // * { tokenText, tokenType }
+        // * [ tokens ] where the first token is the start of a
+        //   triple-quoted string, or open bracket,
+        //   or is the first token in the input.
+
+        let {
+            holeStmtStart,
+            holeStmtEnd,
+            holeExprStart,
+            holeExprEnd,
+            emptyHolesBreak,
+            backslashEscapesAll,
+            inlineExpr,
+            bracketExtender,
+        } = choices;
+
+        // We need a pattern for the start of a multi-line string.
+        // Group 1 is any bracket extender.
+        // Group 2 is any function signature metadata that can specify the name of an output channel
+        //         like `(out);;`.
+        let signaturePatternText = String.raw`(?:[ \t]*\([ \t]*(\w+)[ \t]*\)[ \t]*;;)?[ \t]*(?=[\n\r]|$)`;
+        let startMultiStringPattern = (!bracketExtender || !bracketExtender.text)
+            ? new RegExp(String.raw`^"""()${signaturePatternText}`)
+            : bracketExtender.before
+            ? new RegExp(String.raw`^(?:(${regexEsc(bracketExtender.text)}+)[ \t]*)?"""${signaturePatternText}`)
+            : new RegExp(String.raw`^"""(${regexEsc(bracketExtender.text)}+)?${signaturePatternText}`);
+        let endMultiStringPattern = /^"""/;
+
+        let unlexed = jsPlusContent;
+        let root = []
+        let tokenStack = [ root ];
+        while (unlexed) {
+            let lastStackElement = tokenStack[tokenStack.length - 1];
+            let match = simpleTokenPattern.exec(unlexed);
+            if (match) {
+                let [tok] = match;
+                lastStackElement.push({ tokenText: tok, tokenType: TokenType.of(tok) });
+                unlexed = unlexed.substring(tok.length);
+                continue;
+            }
+
+            // Try special forms in the following order:
+            // I. Start of a triple-quoted string.
+            // II. An exit from the current context into character content, and back into token context.
+            // III. A single character bracket.
+            // IV. Another punctuation character.
+
+            // I. Start of a triple quoted string.
+            match = startMultiStringPattern.exec(unlexed);
+            if (match) {
+                let [text, extenders, nameFromSignature] = match;
+                unlexed = unlexed.substring(text.length);
+
+                let nExtenders = extenders ? extenders.length / bracketExtender.text.length : 0;
+
+                let stmtStart = extendHoleDelimiter(holeStmtStart || '', nExtenders);
+                let stmtEnd = extendHoleDelimiter(holeStmtEnd || '', nExtenders);
+                let exprStart = extendHoleDelimiter(holeExprStart || '', nExtenders);
+                let exprEnd = extendHoleDelimiter(holeExprEnd || '', nExtenders);
+
+                // Figure out what sub-pattern prevents finding a continuing string character.
+                let breakPatternStr = String.raw`(?:${
+                    [ stmtStart, exprStart, '"""' ]
+                    .filter(x => !!x)
+                    .map(regexEsc).join('|')
+                })`;
+                // A run of characters in the string.
+                let continueMultiStringPattern = RegExp(
+                    (backslashEscapesAll)
+                        ? String.raw`^(?:(?!${breakPatternStr})(?:[^\\]|\\[\s\S]))*`
+                        : String.raw`^(?:(?!${breakPatternStr})[\s\S])*`
+                );
+
+                let newStackElement = []; // A nested list of tokens
+                lastStackElement.push(newStackElement);
+                tokenStack.push(newStackElement);
+
+                let stringTokenAndExtras = {
+                    tokenText: text,
+                    tokenType: TokenType.StringStart,
+                    nExtenders: nExtenders,
+                    stmtStart,
+                    stmtEnd,
+                    exprStart,
+                    exprEnd,
+                    nameFromSignature,
+                    addStringChars() {
+                        let [charMatch] = continueMultiStringPattern.exec(unlexed);
+                        newStackElement.push({
+                            tokenText: charMatch,
+                            tokenType: TokenType.StringChars,
+                        });
+                        unlexed = unlexed.substring(charMatch.length);
+
+                        let transition;
+                        if (unlexed.startsWith('"""')) {
+                            transition = {
+                                tokenText: '"""',
+                                tokenType: TokenType.StringEnd
+                            };
+                        } else if (stmtStart && unlexed.startsWith(stmtStart)) {
+                            transition = { tokenText: stmtStart, tokenType: TokenType.HoleStmtStart };
+                        } else if (exprStart && unlexed.startsWith(exprStart)) {
+                            transition = { tokenText: exprStart, tokenType: TokenType.HoleExprStart };
+                        } else {
+                            transition = {
+                                tokenText: '', // Malformed content
+                                tokenType: TokenType.StringEnd
+                            };
+                        }
+                        unlexed = unlexed.substring(transition.tokenText.length);
+                        newStackElement.push(transition);
+                        if (transition.tokenType === TokenType.StringEnd) {
+                            // pop newStackElement from stack.
+                            tokenStack.pop();
+                        }
+                    }
+                };
+
+                newStackElement.push(stringTokenAndExtras);
+                stringTokenAndExtras.addStringChars();
+                continue;
+            }
+
+            // II. A hole end.
+            let deepestStringStackElementIndex = tokenStack.findLastIndex(
+                ([{ tokenType }]) => tokenType == TokenType.StringStart
+            );
+            if (deepestStringStackElementIndex >= 0) {
+                let stackElement = tokenStack[deepestStringStackElementIndex];
+                let [tokenStartAndExtras] = stackElement;
+                let transition = null;
+                let { stmtEnd, exprEnd } = tokenStartAndExtras;
+                if (stmtEnd && unlexed.startsWith(stmtEnd)) {
+                    transition = { tokenText: stmtEnd, tokenType: TokenType.HoleStmtEnd };
+                } else if (exprEnd && stackElement === lastStackElement && unlexed.startsWith(exprEnd)) {
+                    // If we're in an expression hole, end it.
+                    let inExprHole = false;
+                    let stringStackElement = tokenStack[deepestStringStackElementIndex];
+                    exprHoleFindLoop:
+                    for (let tokenIndex = stringStackElement.length; --tokenIndex >= 0;) {
+                        let precedingToken = stringStackElement[tokenIndex];
+                        switch (precedingToken.tokenType) {
+                        case TokenType.StringStart: case TokenType.StringEnd:
+                        case TokenType.HoleStmtStart: case TokenType.HoleStmtEnd:
+                        case TokenType.HoleExprEnd:
+                            break exprHoleFindLoop;
+                        case TokenType.HoleExprStart:
+                            inExprHole = true;
+                            break exprHoleFindLoop;
+                        }
+                    }
+                    if (inExprHole) {
+                        transition = { tokenText: exprEnd, tokenType: TokenType.HoleExprEnd };
+                    }
+                }
+                if (transition) {
+                    stackElement.push(transition);
+                    tokenStack.length = deepestStringStackElementIndex + 1;
+                    unlexed = unlexed.substring(transition.tokenText.length);
+                    tokenStartAndExtras.addStringChars();
+                    continue;
+                }
+            }
+
+            let unlexed0 = unlexed[0];
+            unlexed = unlexed.substring(1);
+
+            // III. a bracket
+            if (unlexed0 in brackets) {
+                let isOpen = unlexed0 in openBrackets;
+                let tok = {
+                    tokenText: unlexed0,
+                    tokenType: isOpen ? TokenType.OpenBracket : TokenType.CloseBracket
+                };
+                if (isOpen) {
+                    let newStackElement = [tok];
+                    lastStackElement.push(newStackElement);
+                    tokenStack.push(newStackElement);
+                } else {
+                    lastStackElement.push(tok);
+                    if (lastStackElement[0]?.tokenText === brackets[unlexed0]) {
+                        tokenStack.pop();
+                    }
+                }
+                continue;
+            }
+
+            // IV. other.
+            lastStackElement.push({ tokenText: unlexed0, tokenType: TokenType.Other });
+        }
+
+        console.log(root);
+
+        // Style the tokens onto the styled token div
+        {
+            while (prettierTokensElement.firstChild) {
+                prettierTokensElement.removeChild(prettierTokensElement.firstChild);
+            }
+            let lastTokenType = null;
+            let accumulatedTokenText = '';
+            function flushToken() {
+                if (accumulatedTokenText) {
+                    let tokenSpan = document.createElement('span');
+                    let className = `token ${lastTokenType}`;
+                    if (lastTokenType === TokenType.Word && keywordTexts.has(accumulatedTokenText)) {
+                        className += ' keyword';
+                    }
+                    tokenSpan.className = className;
+                    tokenSpan.textContent = accumulatedTokenText;
+                    prettierTokensElement.appendChild(tokenSpan);
+
+                    accumulatedTokenText = '';
+                    lastTokenType = null;
+                }
+            }
+            function emitPrettyToken({ tokenText, tokenType }) {
+                if (tokenType === lastTokenType) {
+                    accumulatedTokenText += tokenText;
+                } else {
+                    flushToken();
+                    lastTokenType = tokenType;
+                    accumulatedTokenText = tokenText;
+                }
+            }
+            function prettify(tokens) {
+                for (let token of tokens) {
+                    if (Array.isArray(token)) {
+                        prettify(token);
+                    } else {
+                        emitPrettyToken(token);
+                    }
+                }
+            }
+            prettify(root);
+            flushToken();
+        }
+
+        // Convert the JS+ to real JS and try evaluating it.
+        {
+            // Accumulate JS onto a buffer as we translate.
+            let translatedJs = '';
+            // Keep a stack of multi-line strings so we can identify the name of the output
+            // channel.
+            let stringTemplateStack = [];
+
+            function translate(tokenList) {
+                let channelName = 'out';
+                let firstToken = tokenList[0];
+                let lastToken = tokenList[tokenList.length - 1];
+                let isMultilineString = firstToken && firstToken.tokenType === TokenType.StringStart &&
+                    lastToken.tokenType === TokenType.StringEnd;
+                if (isMultilineString) {
+                    // We need to strip the first line break and the last line break from each
+                    // triple-quoted string, and strip the whitespace from before the close
+                    // delimiter from each remaining line.
+                    let linePrefixToStrip = null;
+                    let lastChars = tokenList[tokenList.length - 2];
+                    if (lastChars.tokenType === TokenType.StringChars) {
+                        let lastLineIndentation = /[\r\n]([ \t]+)$/.exec(lastChars.tokenText);
+                        if (lastLineIndentation) {
+                            linePrefixToStrip = new RegExp(
+                                String.raw`\n${regexEsc(lastLineIndentation[1])}`,
+                                'g'
+                            );
+                        }
+                    }
+                    if (firstToken.nameFromSignature) {
+                        channelName = firstToken.nameFromSignature;
+                    }
+
+                    // Copy the token list so we can adjust it in place.
+                    tokenList = [...tokenList];
+                    for (let i = 0, n = tokenList.length; i < n; ++i) {
+                        let token = tokenList[i];
+                        if (token.tokenType === TokenType.StringChars) {
+                            let chars = token.tokenText;
+                            chars = chars.replace(/\r\n?/g, '\n'); // Normalize CRLF to LF
+                            if (linePrefixToStrip) {
+                                // Strip indentation from the starts of lines.
+                                chars = chars.replace(linePrefixToStrip, '\n');
+                            }
+                            // Strip trailing spaces and tabs.
+                            chars = chars.replace(/[ \t]+\n/g, '\n');
+                            if (i === 1) { // Strip first line break
+                                chars = chars.replace(/^\n/, '');
+                            }
+                            if (i === n - 2 && tokenList[n - 1].tokenType === TokenType.StringEnd) {
+                                // Strip last line break
+                                chars = chars.replace(/\n[ \t]*$/, '');
+                            }
+                            tokenList[i] = { ...token, tokenText: chars };
+                        }
+                    }
+
+                    if (!choices.emptyHolesBreak) {
+                        // Coalesce adjacent text nodes around an empty expression hole.
+                        // Sequences like
+                        //    { tokenType: "stringChars", tokenText: "foo" },
+                        //    { tokenType: "holeExprStart" },
+                        //    // Only space/comment tokens here
+                        //    { tokenType: "holeExprEnd" },
+                        //    { tokenType: "stringChars", tokenText: "bar" },
+                        // become
+                        //    { tokenType: "stringChars", tokenText: "foobar" },
+                        for (let i = 0; i < tokenList.length /* length mutated in body */; ++i) {
+                            let token = tokenList[i];
+                            if (token.tokenType === TokenType.HoleExprStart) {
+                                // Find the hole end and see if it has content tokens.
+                                let j = i + 1;
+                                let isEmpty = null;
+                                for (; j < tokenList.length && isEmpty === null; ++j) {
+                                    switch (tokenList[j].tokenType) {
+                                    case TokenType.HoleExprEnd: isEmpty = true; break;
+                                    case TokenType.Comment: case TokenType.Space: break;
+                                    default: isEmpty = false; break;
+                                    }
+                                }
+                                if (isEmpty) {
+                                    // Splice out the hole.
+                                    tokenList.splice(i, j - i);
+                                    --i; // revisit next time through loop.
+                                    // Coalesce any newly adjacent StringChars tokens
+                                    if (i >= 0 && i + 1 < tokenList.length) {
+                                        let before = tokenList[i];
+                                        let after = tokenList[i + 1];
+                                        if (
+                                            before.tokenType === TokenType.StringChars &&
+                                                after.tokenType === TokenType.StringChars
+                                        ) {
+                                            tokenList.splice(
+                                                i, 2,
+                                                {
+                                                    tokenType: TokenType.StringChars,
+                                                    tokenText: `${before.tokenText}${after.tokenText}`
+                                                }
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+
+                for (let i = 0, n = tokenList.length; i < n; ++i) {
+                    let tokenOrTokens = tokenList[i];
+                    if (Array.isArray(tokenOrTokens)) {
+                        translate(tokenOrTokens);
+                    } else {
+                        let token = tokenOrTokens;
+                        let { tokenText, tokenType } = token;
+                        switch (tokenType) {
+                        case TokenType.String:
+                        case TokenType.Space:
+                        case TokenType.Number:
+                        case TokenType.Word:
+                        case TokenType.OpenBracket:
+                        case TokenType.CloseBracket:
+                        case TokenType.Other:
+                        case TokenType.Comment:
+                            // Emit normal tokens as is.
+                            translatedJs += tokenText;
+                            break;
+                        case TokenType.StringStart:
+                            // Grab the output channel name, and generate a lambda wrapper.
+                            //     """STUFF"""
+                            // becomes
+                            //     (...((out) => {
+                            //         (() => { STUFF_TRANSLATED })();
+                            //         return out.toTagParts();
+                            //     })(new OutputChannel()))
+                            // so that
+                            //     tag""" ... """
+                            // becomes
+                            //     tag(... /* tag parts from output channel */)
+
+                            // Look at the first StringChars parts to find an output channel name.
+                            translatedJs += `(...((${channelName}) => { (() => {`;
+                            // Do Stuff translated.
+                            // Then the tail will be emitted when we hear the StringEnd.
+                            break;
+                        case TokenType.StringEnd:
+                            translatedJs += ` })(); return ${channelName}.toTagParts(); })(new OutputChannel()))`;
+                            break;
+                        case TokenType.StringChars:
+                            translatedJs += ` ${channelName}.literal(${JSON.stringify(tokenText)}); `;
+                            break;
+                        case TokenType.HoleStmtStart:
+                            break;
+                        case TokenType.HoleStmtEnd:
+                            break;
+                        case TokenType.HoleExprStart: {
+                            translatedJs += ` ${channelName}.print( `;
+                            break;
+                        }
+                        case TokenType.HoleExprEnd:
+                            translatedJs += ` ); `;
+                            break;
+                        default: throw new Error(tokenType);
+                        }
+                    }
+                }
+            }
+            translate(root);
+
+            translatedJsElement.textContent = translatedJs;
+
+            setTimeout(
+                () => {
+                    let f = new Function(
+                        'tag',
+                        translatedJs
+                    );
+                    let describedOutput;
+                    try {
+                        f(
+                            // Pass an implementation of tag that produces described output
+                            // Put out JSON with each record on its own line.
+                            (...parts) => {
+                                describedOutput = parts.map(
+                                    (x) => JSON.stringify(x, null, ' ').replace(/\n ?/g, " ")
+                                ).join(',\n')
+                            }
+                        );
+                    } catch (e) {
+                        contentReceivedElement.classList.add('failed');
+                        contentReceivedElement.classList.remove('passed');
+                        console.error(e);
+                        return;
+                    }
+                    contentReceivedElement.classList.remove('failed');
+                    contentReceivedElement.classList.add('passed');
+                    contentReceivedElement.textContent = describedOutput;
+                }
+            );
+
+        }
+    }
+})();
+</script>

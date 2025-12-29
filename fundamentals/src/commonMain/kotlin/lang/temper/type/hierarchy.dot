@@ -1,0 +1,27 @@
+// Relationships between kinds of types in Temper.
+digraph G {
+    Top;
+    AnyValue;
+    Bubble;
+    "A | B";
+    subgraph cluster_NominalTypes {
+        B;
+        A;
+        label="Nominal Types";
+    }
+    "A & B";
+    Never;
+    Invalid;
+
+    { rank = same; AnyValue; Bubble }
+
+    Top      -> AnyValue;
+    Top      -> Bubble;
+    AnyValue -> "A | B";
+    "A | B"  -> A;
+    "A | B"  -> B;
+    A        -> "A & B";
+    B        -> "A & B";
+    Bubble -> Never;
+    "A & B"  -> Never;
+}

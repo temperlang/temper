@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block announce %}
+  {% if config.is_draft_site %}
+  <div class="temper-news">This is a draft. Please do not share widely.</div>
+  {% endif %}
+{% endblock %}
+
+{% block site_meta %}
+  {{ super() }}
+  <meta name="referrer" content="no-referrer">
+  {% if config.is_draft_site %}
+  <!-- Do not index the draft blog site -->
+  <meta name="robots" content="noindex,noarchive,nofollow" />
+  {% endif %}
+
+  <!-- OpenGraph metadata -->
+  <meta property="og:title" content="{{ page.title }}" />
+  {% if page.meta and page.meta.description %}
+  <meta property="og:description" content="{{ page.meta.description }}" />
+  {% elif config.site_description %}
+  <meta property="og:description" content="{{ config.site_description }}" />
+  {% endif %}
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="{{ page.canonical_url }}" />
+  {% if config.site_name %}
+  <meta property="og:site_name" content="{{ config.site_name }}" />
+  {% endif %}
+  <meta property="og:image" content="{{ page.canonical_url }}/images/temper-logo-mode-dependent.svg" />
+{% endblock %}

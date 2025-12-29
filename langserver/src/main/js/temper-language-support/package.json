@@ -1,0 +1,211 @@
+{
+  "name": "temper",
+  "version": "0.0.1",
+  "publisher": "temper",
+  "displayName": "Temper",
+  "description": "Official language support",
+  "author": {
+    "name": "Temper Systems"
+  },
+  "icon": "icons/images/temper-logo-256.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/temperlang/temper.git",
+    "directory": "langserver/src/main/js/temper-language-support"
+  },
+  "engines": {
+    "vscode": "^1.61.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:markdown",
+    "onLanguage:temper",
+    "onLanguage:tempermd",
+    "onCommand:temper.restartLanguageServer"
+  ],
+  "main": "./dist/extension.js",
+  "about:contributes": "https://code.visualstudio.com/api/references/contribution-points#contributes.languages",
+  "contributes": {
+    "commands": [
+      {
+        "category": "Temper",
+        "command": "temper.showDocGenToSide",
+        "title": "Open Generated Document to the Side"
+      },
+      {
+        "category": "Temper",
+        "command": "temper.restartLanguageServer",
+        "title": "Restart Language Server"
+      }
+    ],
+    "configuration": {
+      "title": "Temper",
+      "properties": {
+        "temper.enableServer": {
+          "type": "boolean",
+          "markdownDescription": "Enable Temper language server. (Change requires reload.)"
+        },
+        "temper.executablePath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to `temper` executable binary, shell, or batch script."
+        },
+        "temper.languageServerDebugPort": {
+          "//": "Type is string for default blank instead of numeric.",
+          "type": "string",
+          "default": "",
+          "maxLength": 5,
+          "pattern": "^(\\d*)$",
+          "patternErrorMessage": "Debug port must be an integer.",
+          "description": "Debug port for language server (for internal development only)."
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "temper",
+        "extensions": [
+          ".temper"
+        ],
+        "aliases": [
+          "Temper",
+          "temper",
+          "temper-lang",
+          "temperlang"
+        ],
+        "configuration": "./language-configuration.jsonc",
+        "icon": {
+          "dark": "./icons/images/logo-dark.png",
+          "light": "./icons/images/logo-light.png"
+        }
+      },
+      {
+        "id": "tempermd",
+        "extensions": [
+          ".temper.md",
+          ".tempermd"
+        ],
+        "aliases": [
+          "Temper Markdown",
+          "temper.md",
+          "tempermd"
+        ],
+        "configuration": "./language-configuration.jsonc",
+        "icon": {
+          "dark": "./icons/images/logo-dark.png",
+          "light": "./icons/images/logo-light.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "temper",
+        "scopeName": "source.temper",
+        "path": "./syntaxes/temper.tmLanguage.json"
+      },
+      {
+        "language": "tempermd",
+        "scopeName": "source.tempermd",
+        "path": "./syntaxes/tempermd.tmLanguage.json"
+      },
+      {
+        "scopeName": "markdown.temper.codeblock",
+        "path": "./syntaxes/temper.codeblock.tmLanguage.json",
+        "injectTo": [
+          "text.html.markdown"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.temper": "temper"
+        }
+      },
+      {
+        "scopeName": "markdown.tempermd.codeblock",
+        "path": "./syntaxes/tempermd.codeblock.tmLanguage.json",
+        "injectTo": [
+          "text.html.markdown"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.tempermd": "tempermd"
+        }
+      },
+      {
+        "scopeName": "tempermd.temper.codeblock",
+        "path": "./syntaxes/tempermd.temper.codeblock.tmLanguage.json",
+        "injectTo": [
+          "source.tempermd",
+          "text.html.markdown"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.temper": "temper"
+        }
+      }
+    ],
+    "markdown.markdownItPlugins": true,
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "temper.showDocGenToSide",
+          "when": "editorLangId == markdown",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configurationDefaults": {
+      "[temper]": {
+        "editor.detectIndentation": false,
+        "editor.insertSpaces": true,
+        "editor.semanticHighlighting.enabled": true,
+        "editor.tabSize": 2
+      },
+      "[tempermd]": {
+        "editor.detectIndentation": false,
+        "editor.insertSpaces": true,
+        "editor.semanticHighlighting.enabled": true,
+        "editor.tabSize": 2
+      }
+    }
+  },
+  "scripts": {
+    "vscode-install-dev": "npm run vscode-package-dev && code --install-extension temper-dev.vsix",
+    "vscode-package-dev": "vsce package -o temper-dev.vsix",
+    "vscode:prepublish": "npm run package",
+    "build": "npm run compile",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "npm run fmt && webpack --mode production --devtool hidden-source-map",
+    "test-compile": "tsc -p ./",
+    "test-watch": "tsc -watch -p ./",
+    "pretest": "npm run test-compile && npm run lint",
+    "fmt": "prettier --write .",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/glob": "^7.2.0",
+    "@types/mocha": "^8.2.3",
+    "@types/node": "^12.20.55",
+    "@types/vscode": "^1.61.1",
+    "@typescript-eslint/eslint-plugin": "^5.52.0",
+    "@typescript-eslint/parser": "^5.52.0",
+    "@vscode/test-electron": "^1.6.2",
+    "eslint": "^8.34.0",
+    "glob": "^7.2.3",
+    "mocha": "^9.2.2",
+    "prettier": "2.6.1",
+    "ts-loader": "^8.4.0",
+    "typescript": "^4.9.5",
+    "vsce": "^2.15.0",
+    "vscode-languageclient": "^7.0.0",
+    "webpack": "^5.75.0",
+    "webpack-cli": "^5.0.1"
+  },
+  "dependencies": {
+    "appdirsjs": "^1.2.7",
+    "rotating-file-stream": "^3.1.0",
+    "vscode-oniguruma": "^1.7.0",
+    "vscode-textmate": "^7.0.4"
+  }
+}

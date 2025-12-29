@@ -1,0 +1,145 @@
+site_name: Temper Programming Language
+site_description: Temper Language Documentation
+site_url: https://temperlang.dev/
+site_author: Temper Project Contributors
+
+is_draft_site: &is_draft false
+
+repo_url: https://github.com/temperlang/temper
+repo_name: GitHub
+#edit_uri: edit/main/build-user-docs/skeletal-docs/temper-docs/docs
+
+copyright: |
+  Copyright Temper Project Contributors |
+  <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0; vertical-align: middle" src="https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png" /></a>
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/TY3Be6fzwu
+      name: Discord Server
+    - icon: fontawesome/brands/stack-overflow
+      link: https://stackoverflow.com/questions/tagged/temper
+      name: Stack Overflow
+    - icon: fontawesome/brands/github
+      link: https://github.com/temperlang/temper
+      name: GitHub Repo
+    - icon: fontawesome/brands/bluesky
+      link: https://bsky.app/profile/temper.bsky.social
+
+extra_css:
+  - css/extra.css
+  - ext/slick.css # https://kenwheeler.github.io/slick/
+  - ext/slick-theme.css
+  - ext/railroad-diagrams.css
+
+extra_javascript:
+  - ext/jquery.min.js
+  - ext/slick.min.js
+  - js/extra.js
+
+#hooks:
+#  - tld_support/hooks.py
+
+markdown_extensions:
+  # https://python-markdown.github.io/extensions/admonition/
+  - admonition
+  # https://squidfunk.github.io/mkdocs-material/setup/extensions/python-markdown/#attribute-lists
+  # Allows attributes on links including image links
+  - attr_list
+  # https://squidfunk.github.io/mkdocs-material/reference/footnotes/
+  - footnotes
+  # https://python-markdown.github.io/extensions/md_in_html/
+  - md_in_html
+  # https://squidfunk.github.io/mkdocs-material/setup/extensions/python-markdown-extensions/#inlinehilite
+  - pymdownx.inlinehilite
+  # https://squidfunk.github.io/mkdocs-material/setup/extensions/python-markdown-extensions/#smartsymbols
+  - pymdownx.smartsymbols
+  # https://squidfunk.github.io/mkdocs-material/reference/icons-emojis/
+  - pymdownx.emoji:
+      # emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+      options:
+        # https://squidfunk.github.io/mkdocs-material/setup/changing-the-logo-and-icons/#additional-icons
+        custom_icons:
+          - overrides/.icons
+  # https://squidfunk.github.io/mkdocs-material/reference/code-blocks/
+  - pymdownx.highlight:
+      # Format Temper code blocks using the TypeScript highlighter until
+      # we've got something better.
+      extend_pygments_lang:
+        - name: temper
+          lang: js
+  # https://squidfunk.github.io/mkdocs-material/upgrade/#pymdownxsuperfences
+  - pymdownx.superfences:
+      custom_fences:
+        # https://squidfunk.github.io/mkdocs-material/reference/diagrams/#configuration
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  # https://squidfunk.github.io/mkdocs-material/setup/extensions/python-markdown-extensions/#tabbed
+  # tabbed lets us put code blocks translated from Temper code
+  # together.
+  # squidfunk.github.io/mkdocs-material/reference/content-tabs/#grouping-code-blocks
+  - pymdownx.tabbed:
+      alternate_style: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  # https://squidfunk.github.io/mkdocs-material/setup/extensions/python-markdown/#+toc.permalink
+  - toc:
+      permalink: true
+  - pymdownx.snippets
+  # https://facelessuser.github.io/pymdown-extensions/extensions/keys/
+  - pymdownx.keys
+  # Allow custom meta tags via theme overrides per
+  # https://squidfunk.github.io/mkdocs-material/reference/#using-metadata-in-templates
+  - meta
+
+plugins:
+  - search
+  - inline-select-svg:
+      pattern: "/snippet[.]svg$"
+  - blog:
+      # squidfunk.github.io/mkdocs-material/plugins/blog/#config.draft
+      # Elide posts with `draft: true` in their metadata section
+      draft: *is_draft
+
+nav:
+  - Introduction: index.md
+  - tour.md
+  - 'Tutorial':
+    - tutorial/index.md
+    - tutorial/01-classfun.md
+    - tutorial/02-interface.md
+    - tutorial/03-controlflow.md
+    - tutorial/04-modlib.md
+    - tutorial/05-builtin.md
+    - tutorial/06-memory.md
+    - tutorial/07-regex.md
+  - why.md
+  - 'Reference':
+    - reference/index.md
+    - reference/types.md
+    - reference/builtins.md
+    - reference/syntax.md
+    - reference/modules.md
+    - Target Language List: reference/target-languages.md
+  - Blog:
+    - blog/index.md
+  - 'Legalese':
+    - legal/playground-terms.md
+
+theme:
+  name: material
+  # https://squidfunk.github.io/mkdocs-material/customization/#overriding-blocks
+  # See also markdown_extensions / meta below
+  custom_dir: overrides
+  favicon: images/temper-logo-mode-dependent.svg
+  features:
+    - content.code.copy
+    - navigation.footer
+  logo: images/temper-logo-256.png
+  palette:
+    primary: custom

@@ -1,0 +1,5 @@
+# docs.gradle.org/current/userguide/version_catalogs.html
+
+[libraries]
+
+eclipse-jgit = { group = "org.eclipse.jgit", name = "org.eclipse.jgit", version = "7.1.0.202411261347-r" }

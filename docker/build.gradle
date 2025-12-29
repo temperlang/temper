@@ -1,0 +1,222 @@
+import groovy.transform.TupleConstructor
+
+ext {
+    temperProject = 'none'
+}
+
+/** Lazy initialization of data used by running tasks. */
+enum Config {
+    get;
+
+    String registry = System.getenv("DOCKER_REGISTRY") ?: "ghcr.io"
+    String namespace = System.getenv("DOCKER_NAMESPACE") ?: "temperlang"
+    String cliRepository = System.getenv("DOCKER_CLI_REPOSITORY") ?: "temper"
+    String cliTag = System.getenv("DOCKER_CLI_TAG") ?: "cli-dev"
+    String cliRef = "$registry/$namespace/$cliRepository:$cliTag"
+
+    // We push intermediate images into intermediate
+    String workRepository = System.getenv("DOCKER_WORK_REPOSITORY") ?: "intermediate"
+    String cliRefForArch(String arch) {
+        return "$registry/$namespace/$workRepository:cli-$arch"
+    }
+    String baseRefForArch(String arch) {
+        return "$registry/$namespace/$workRepository:base-$arch"
+    }
+
+    /** Used with -tags for building the runner. */
+    def dockerRunnerBuildTags = [
+        // this tag is used by the go module github.com/containers/images which is
+        // a podman dependency. It enables the openpgp signing mechanism and disables
+        // gpgme, which requires cgo and thus makes cross-platform builds painful.
+        // In case this tag isn't passed, we've stubbed out gpgme to avoid cgo.
+        'containers_image_openpgp',
+        // This prevents podman from building the local bindings, which only
+        // work on Linux and which we don't use.
+        'remote'
+    ]
+    static String exeSuffix(String os) {
+        return os.toLowerCase().contains("windows") ? ".exe" : ""
+    }
+    String runnerBaseName = "temper-docker"
+    def runnerLocalName = "$runnerBaseName${exeSuffix(System.getProperty("os.name").toLowerCase())}"
+    String runnerName(String os, String arch) {
+        return "$runnerBaseName-$os-$arch${exeSuffix(os)}"
+    }
+
+    /** Modules in go are typically named by their containing repository */
+    static String goMod(String path) {
+        return "github.com/temperlang/temper-docker/$path"
+    }
+
+    /** Calls go build and overrides the predefined bundle reference name. */
+    List goBuild(String ... args) {
+        return [
+            'go', 'build',
+            '-ldflags', "-X ${goMod("common.bundleRef")}=${cliRef}",
+            *args
+        ]
+    }
+}
+
+/** Variant data to create tasks. */
+enum TaskConfig {
+    get;
+
+    /** The platform settings for the docker multiplatform image. */
+    def imageVariants = [
+        new ImageVariant('linux/amd64', 'amd64'),
+        new ImageVariant('linux/arm64/v8', 'arm64')
+    ]
+    def dockerRunnerVariants = [
+        new RunnerVariant("linux", "amd64"),
+        new RunnerVariant("darwin", "amd64"),
+        new RunnerVariant("darwin", "arm64"),
+        new RunnerVariant("windows", "amd64"),
+    ]
+}
+
+/**
+ * Contains information about a platform variant of an image.
+ */
+@TupleConstructor
+class ImageVariant {
+    String platform
+    String arch
+
+    String getLauncherBuildTask() { return "launcher${arch.capitalize()}" }
+    String getBaseImageBuildTask() { return "baseImageBuild${arch.capitalize()}" }
+    String getBaseImagePushTask() { return "baseImagePush${arch.capitalize()}" }
+    String getCliImageBuildTask() { return "cliImageBuild${arch.capitalize()}" }
+    String getCliImagePushTask() { return "cliImagePush${arch.capitalize()}" }
+    String refForBaseImageVariant() {
+        // e.g. ghcr.io/temperlang/temper:base-amd64
+        return Config.get.baseRefForArch(arch)
+    }
+    String refForCliImageVariant() {
+        // e.g. ghcr.io/temperlang/temper:cli-amd64
+        return Config.get.cliRefForArch(arch)
+    }
+}
+
+
+/**
+ * The end-user executable is the runner, though it's typically named `temper`
+ * on the user's machine. This identifies a build for a given OS and architecture.
+ */
+@TupleConstructor
+class RunnerVariant {
+    String os
+    String arch
+    String getBuildTaskName() {
+        return "runner${os.capitalize()}${arch.capitalize()}"
+    }
+    String getExecutable() {
+        return Config.get.runnerName(os, arch)
+    }
+}
+
+/**
+ * This kicks off a full build of the CLI in order, and then copies the artifacts into place
+ * to build the docker image.
+ */
+tasks.register('copyTemperCliToImage', Copy) {
+    from '../cli/build/install/temper'
+    into './cli-image/cli'
+    include 'bin/temper'
+    include 'lib/*.jar'
+}.configure { task ->
+    task.dependsOn ':cli:deploy'
+}
+
+TaskConfig.get.imageVariants.forEach {plat ->
+    /** Builds the base image for this variant. */
+    tasks.register(plat.baseImageBuildTask, Exec) {
+        workingDir 'base-image'
+        def imageRef = plat.refForBaseImageVariant()
+        commandLine 'docker', 'build', '--platform', plat.platform, '-t', imageRef , '.'
+    }
+
+    /** Pushes the base image for this variant. */
+    tasks.register(plat.baseImagePushTask, Exec) {
+        workingDir 'base-image'
+        def imageRef = plat.refForBaseImageVariant()
+        commandLine 'docker', 'image', 'push', imageRef
+    }.configure {
+        it.dependsOn plat.baseImageBuildTask
+    }
+
+    /** Builds the launcher command for this variant. */
+    tasks.register(plat.launcherBuildTask, Exec) {
+        doFirst {
+             mkdir "cli-image/${plat.arch}"
+        }
+
+        environment 'GOOS', 'linux'  // The launcher runs in a linux container.
+        environment 'GOARCH', plat.arch
+        commandLine Config.get.goBuild('-o', "cli-image/${plat.arch}", Config.get.goMod("cmd/launcher"))
+    }
+
+    /** Builds the cli image for this variant. */
+    tasks.register(plat.cliImageBuildTask, Exec) {
+        workingDir 'cli-image'
+        def baseRef = plat.refForBaseImageVariant()
+        def imageRef = plat.refForCliImageVariant()
+        commandLine('docker',
+            'build',
+            '--platform', plat.platform,
+            '--build-arg', "BASE_IMAGE_REF=${baseRef}",
+            '-t', imageRef,
+            '.'
+        )
+    }.configure {
+        it.dependsOn plat.launcherBuildTask, 'copyTemperCliToImage'
+    }
+
+    /** Builds the cli image for this variant. */
+    tasks.register(plat.cliImagePushTask, Exec) {
+        workingDir 'cli-image'
+        String imageRef = plat.refForCliImageVariant()
+        commandLine 'docker', 'image', 'push', imageRef
+    }.configure {
+        it.dependsOn plat.cliImageBuildTask
+    }
+}
+
+tasks.register('cliImageMultiplatformCreate', Exec) {
+    def cmd = ['docker', 'buildx', 'imagetools', 'create', '-t', Config.get.cliRef]
+    TaskConfig.get.imageVariants.forEach {plat ->
+        cmd.add(plat.refForCliImageVariant())
+    }
+    commandLine(cmd)
+}.configure {task ->
+    TaskConfig.get.imageVariants.forEach {plat ->
+        task.dependsOn plat.cliImagePushTask
+    }
+}
+
+TaskConfig.get.dockerRunnerVariants.forEach {runner ->
+    String buildTags = Config.get.dockerRunnerBuildTags.join(",")
+    /** Builds the runner command for the given os / architecture variant. */
+    tasks.register(runner.buildTaskName, Exec) {
+        environment 'GOOS', runner.os
+        environment 'GOARCH', runner.arch
+        commandLine Config.get.goBuild(
+            "-tags=$buildTags", '-o', runner.executable,
+            Config.get.goMod("cmd/runner")
+        )
+    }
+}
+
+/** Builds the runner command for all os / architecture variants. */
+tasks.register('runnerAll') {
+}.configure {
+    dependsOn TaskConfig.get.dockerRunnerVariants.collect { it.buildTaskName }
+}
+
+/** Builds the runner command for the local machine; useful for testing. */
+tasks.register('runnerLocal', Exec) {
+    def buildTags = Config.get.dockerRunnerBuildTags.join(",")
+    commandLine Config.get.goBuild(
+        "-tags=$buildTags", '-o', Config.get.runnerLocalName, Config.get.goMod("cmd/runner")
+    )
+}

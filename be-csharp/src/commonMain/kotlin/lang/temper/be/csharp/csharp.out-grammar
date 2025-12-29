@@ -1,0 +1,490 @@
+// Some references:
+// https://github.com/antlr/grammars-v4/blob/master/csharp/CSharpParser.g4
+// https://github.com/dotnet/csharp-tmLanguage/blob/main/grammars/csharp.tmLanguage
+// https://github.com/dotnet/vscode-csharp/blob/main/test/razorTests/Microsoft.AspNetCore.Razor.VSCode.Grammar.Test/embeddedGrammars/csharp.tmLanguage.json
+// https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/grammar
+
+let namespace = "CSharp";
+
+let imports = """
+  "lang.temper.common.isNotEmpty
+  "lang.temper.format.TokenSerializable
+  "lang.temper.format.TokenSink
+  "lang.temper.name.OutName
+  "lang.temper.name.name
+  "lang.temper.type.TypeFormal
+;
+
+Program = CompilationUnit;
+
+// Skip file-scoped namespace support because we want to support backward some.
+CompilationUnit ::=
+      usings%UsingDirective*"\n"
+    & ((attributes%AttributeSection => attributes*"\n" & "\n") || ())
+    & decls%NamespaceMemberDecl*"\n"
+    ;
+CompilationUnit.usings.default = `listOf()`;
+CompilationUnit.attributes.default = `listOf()`;
+
+UsingDirective = UsingNamespaceDirective; // TODO Support using static?
+
+// Combine using alias and using namespace into one to reduce generated code.
+UsingNamespaceDirective ::=
+      "using" & ((alias%Identifier => alias & "=") || ())
+    & ids%Identifier+"." & ";";
+UsingNamespaceDirective.alias.default = `null`;
+
+AttributeSection ::=
+      "["
+    & ((target%Identifier => target & ":") || ())
+    & attributes%Attribute*","
+    & "]";
+AttributeSection.target.default = `null`;
+
+Attribute ::=
+      name%UnboundTypeName
+    & ((args%Arg => "(" & args*"," & ")") || ())
+    ;
+Attribute.args.default = `listOf()`;
+
+NamespaceMemberDecl =
+      NamespaceDecl
+    | TypeDecl
+    ;
+
+// Put curlies here instead of inside body, so we can reuse for top-level.
+NamespaceDecl ::=
+      "namespace" & names%Identifier+"."
+    & "{"
+    & usings%UsingDirective*"\n"
+    & decls%NamespaceMemberDecl*"\n"
+    & "}"
+    ;
+NamespaceDecl.usings.default = `listOf()`;
+
+enum ModAccess = Private | Internal | Protected | ProtectedInternal | Public;
+enum ModNew = Implied | New;
+enum ModStatic = Instance | Static;
+enum ModTypeKind = Class | Interface | Struct;
+enum ModWritable = ReadOnly | ReadWrite;
+
+// Coalesce class, interface, and maybe more here for convenience.
+// Some differences exist but fundamental structure is the same.
+TypeDecl ::=
+      ((attributes%AttributeSection => attributes*"\n" & "\n") || ())
+    & mods%TypeModifiers
+    & id%Identifier
+    & ((typeParameters%TypeParameter => "<" & typeParameters*"," & ">") || ())
+    & ((baseTypes%Type => ":" & baseTypes*",") || ())
+    & whereConstraints%WhereConstraints
+    & "{"
+    & members%ClassMember*"\n"
+    & "}"
+    ;
+TypeDecl.attributes.default = `listOf()`;
+TypeDecl.baseTypes.default = `listOf()`;
+TypeDecl.typeParameters.default = `listOf()`;
+TypeDecl.whereConstraints.default = `WhereConstraints(pos.leftEdge, listOf())`;
+
+TypeModifiers(
+    modAccess%ModAccess,
+    modStatic%ModStatic,
+    modNew%ModNew,
+    modTypeKind%ModTypeKind,
+)
+TypeModifiers.modStatic.default = `ModStatic.Instance`;
+TypeModifiers.modNew.default = `ModNew.Implied`;
+TypeModifiers.renderTo = `
+modAccess.emit(tokenSink, default = ModAccess.Internal)
+modStatic.emit(tokenSink)
+modNew.emit(tokenSink)
+modTypeKind.emit(tokenSink)
+`;
+
+// TODO An option for something with attributes and/or variance annotations.
+TypeParameter = Identifier;
+
+/**
+ * Constraints for zero or more [TypeParameter]s.
+ *
+ * ```
+ * where U : A
+ * where T : B, C
+ * ```
+ */
+WhereConstraints ::= constraints%WhereConstraintList*"";
+
+/**
+ * A group of one or more [WhereConstraint]s applied to a particular [TypeParameter]
+ *
+ * ```
+ * where U : A
+ * ```
+ */
+WhereConstraintList ::= "where" & typeParameterName%Identifier & ":" & constraints%WhereConstraint+",";
+
+/**
+ * A constraint on a [TypeParameter].
+ * learn.microsoft.com/en-us/dotnet/csharp/programming-guide/generics/constraints-on-type-parameters
+ */
+WhereConstraint =
+    StructWhereConstraint
+  | ClassWhereConstraint
+  | NotNullWhereConstraint
+  | UnmanagedWhereConstraint
+  | ZeroArgConstructorWhereConstraint
+  | UpperBoundWhereConstraint
+  | DefaultWhereConstraint
+  | AllowsRefStructWhereConstraint
+  ;
+
+StructWhereConstraint             ::= "struct";
+ClassWhereConstraint              ::= "class" & ((allowNull==true => "?") || ());
+NotNullWhereConstraint            ::= "notnull";
+UnmanagedWhereConstraint          ::= "unmanaged";
+ZeroArgConstructorWhereConstraint ::= "new()";
+UpperBoundWhereConstraint         ::= upperBound%Type;
+DefaultWhereConstraint            ::= "default";
+AllowsRefStructWhereConstraint    ::= "allows" & "ref" & "struct";
+
+ClassMember =
+      FieldDecl
+    | MethodDecl
+    | PropertyDecl
+    | StaticConstructorDecl
+    ;
+
+FieldDecl ::=
+      ((attributes%AttributeSection => attributes*"\n" & "\n") || ())
+    & mods%FieldModifiers
+    & type%Type & variables%VariableDeclarator+", " & ";"
+    ;
+FieldDecl.attributes.default = `listOf()`;
+
+FieldModifiers(
+    modAccess%ModAccess,
+    modNew%ModNew,
+    modStatic%ModStatic,
+    modWritable%ModWritable,
+)
+FieldModifiers.modNew.default = `ModNew.Implied`;
+FieldModifiers.modStatic.default = `ModStatic.Instance`;
+FieldModifiers.modWritable.default = `ModWritable.ReadWrite`;
+FieldModifiers.renderTo = `
+modAccess.emit(tokenSink, default = ModAccess.Private)
+modNew.emit(tokenSink)
+modStatic.emit(tokenSink)
+modWritable.emit(tokenSink)
+`;
+
+VariableDeclarator ::=
+      variable%Identifier
+    & ((initializer%Expression => "=" & initializer) || ())
+    ;
+
+// Return type optional to support constructors.
+// For Temper needs, we don't need constructor init (this/base) calls.
+MethodDecl ::=
+      ((attributes%AttributeSection => attributes*"\n" & "\n") || ())
+    & ((mods%MethodModifiers => mods) || ())
+    & ((result%Type => result) || ())
+    & id%Identifier
+    & ((typeParameters%TypeParameter => "<" & typeParameters*"," & ">") || ())
+    & "(" & parameters%MethodParameter*", " & ")"
+    & whereConstraints%WhereConstraints
+    & ((body%BlockStatement => body) || ";")
+    ;
+MethodDecl.attributes.default = `listOf()`;
+MethodDecl.typeParameters.default = `listOf()`;
+MethodDecl.whereConstraints.default = `WhereConstraints(pos.leftEdge, listOf())`;
+
+MethodModifiers(
+    modAccess%ModAccess,
+    modStatic%ModStatic,
+    modNew%ModNew,
+)
+MethodModifiers.modStatic.default = `ModStatic.Instance`;
+MethodModifiers.modNew.default = `ModNew.Implied`;
+MethodModifiers.renderTo = `
+modAccess.emit(
+    tokenSink,
+    default = when ((parent?.parent as? TypeDecl)?.mods?.modTypeKind) {
+        ModTypeKind.Interface -> ModAccess.Public
+        else -> ModAccess.Private
+    },
+)
+modStatic.emit(tokenSink)
+modNew.emit(tokenSink)
+`;
+
+MethodParameter =
+      FixedParameter
+    | ParameterArray
+    ;
+MethodParameter(type%Type, name%Identifier);
+
+FixedParameter ::=
+      type%Type
+    & name%Identifier
+    & ((defaultValue%Expression => "=" & defaultValue) || ())
+    ;
+FixedParameter.defaultValue.default = `null`;
+
+ParameterArray ::=
+      "params"
+    & type%Type & "[" & "]" // We don't really need array types elsewhere, so eh?
+    & name%Identifier
+    ;
+
+PropertyDecl ::=
+      ((attributes%AttributeSection => attributes*"\n" & "\n") || ())
+    & mods%MethodModifiers
+    & type%Type
+    & id%Identifier
+    // Only 1 get and 1 set at most, but just go list for simplicity.
+    & "{" & accessors%PropertyAccessor*"\n" & "}"
+    ;
+PropertyDecl.attributes.default = `listOf()`;
+
+PropertyAccessor ::=
+      mods%PropertyAccessorModifiers
+    & ((body%BlockStatement => body) || ";")
+    ;
+
+enum ModAccessorKind = Get | Set;
+
+PropertyAccessorModifiers(
+    modAccess%ModAccess?,
+    modAccessorKind%ModAccessorKind,
+)
+PropertyAccessorModifiers.renderTo = `
+modAccess?.emit(tokenSink)
+modAccessorKind.emit(tokenSink)
+`;
+
+StaticConstructorDecl ::=
+      ((attributes%AttributeSection => attributes*"\n" & "\n") || ())
+    & "static" // No access modifiers allowed.
+    & id%Identifier
+    & "(" & ")"
+    & ((body%BlockStatement => body) || ";")
+    ;
+StaticConstructorDecl.attributes.default = `listOf()`;
+
+Type =
+      NonNullableType
+    | NullableType
+    | TypeArgRef;
+
+// Terminology here:
+// https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/types#84-constructed-types
+
+NonNullableType =
+      UnboundType
+    | ConstructedType;
+
+/** The name of a declared type like `C` or `System.D` */
+UnboundTypeName = QualTypeName | Identifier;
+
+/** A named type with zero type parameters */
+UnboundType ::= name%UnboundTypeName;
+UnboundType {
+    `constructor(name: UnboundTypeName) : this(name.pos, name)`
+};
+
+/** A reference to a type with type arguments */
+ConstructedType ::= type%UnboundTypeName & "<" & args%Type+"," & ">";
+
+/** A reference to a type argument like `<T>` */
+TypeArgRef ::= name%Identifier;
+TypeArgRef(definition%`TypeFormal?`) {
+    `constructor(name: Identifier, definition: TypeFormal?) : this(name.pos, name, definition)`
+};
+
+NullableType ::= type%NonNullableType & "?";
+NullableType {
+    `constructor(type: NonNullableType) : this(type.pos, type)`
+};
+
+Statement =
+      BlockStatement
+    | BreakStatement
+    | ContinueStatement
+    | ExpressionStatement
+    | GotoStatement
+    | IfStatement
+    | LabeledStatement
+    | LocalVariableDecl
+    | MethodDecl // Some things not allowed for local functions, but eh.
+    | ReturnStatement
+    | TryStatement
+    | WhileStatement
+    | YieldReturn
+    ;
+
+BlockStatement ::= "{" & "\n" & statements%Statement*"\n" & "\n" & "}";
+
+BreakStatement ::= "break" & ";";
+ContinueStatement ::= "continue" & ";";
+
+ExpressionStatement ::= expr%StatementExpression & ";";
+ExpressionStatement requires
+    `expr !is Operation || expr.operator.operator.makesStatement`;
+ExpressionStatement {
+    `constructor(expr: StatementExpression) : this(expr.pos, expr)`
+};
+
+// Also goto case/default, but we don't need those right now.
+GotoStatement ::= "goto" & label%Identifier & ";";
+
+IfStatement ::=
+      "if" & "(" & test%Expression & ")"
+    & consequent%Statement
+    & ((alternate%Statement => "else" & alternate) || ())
+    ;
+
+LabeledStatement ::= label%Identifier & ":" & statement%Statement;
+
+LocalVariableDecl ::= type%Type & variables%VariableDeclarator+", " & ";";
+
+// There's also a "return ref" option, but skip that for now.
+ReturnStatement ::= "return" & ((expr%Expression => expr) || ()) & ";";
+ReturnStatement.expr.default = `null`;
+
+// Don't worry about multiple catch blocks for now.
+TryStatement ::=
+      "try" & tryBlock%BlockStatement
+    & ((catchBlock%BlockStatement => "catch" & catchBlock) || ())
+    & ((finallyBlock%BlockStatement => "finally" & finallyBlock) || ());
+TryStatement.catchBlock.default = `null`;
+TryStatement.finallyBlock.default = `null`;
+
+// Technically some other kinds of statements are allowed, but meh.
+WhileStatement ::= "while" & "(" & test%Expression & ")" & body%BlockStatement;
+
+YieldReturn ::= "yield" & "return" & expr%Expression & ";";
+
+Expression = PrimaryExpression;
+
+/** Expressions that can appear in statement position. */
+StatementExpression =
+      AwaitExpression
+    | InvocationExpression
+    | ObjectCreationExpression
+    | Operation
+    | ThrowExpression
+    ;
+
+PrimaryExpression =
+    // Every statement expression is also allowed where a primary expression is.
+      StatementExpression
+    // These expression kinds can't appear in statement position, so the translator
+    // needs to adapt them when they're used for their side-effect.  For example,
+    // by wrapping them in an InvocationExpression like `TemperCore.ignore(...)`.
+    | CastExpression
+    | ElementAccess
+    | Identifier
+    | Literal
+    | MemberAccess
+    | NonNullableType // not really expressions but makes static calls simpler
+    | TypeofExpression
+    ;
+
+
+Operation ::=
+      ((left%Expression => left) || ())
+    & operator%Operator
+    & ((right%Expression => right) || ());
+    ;
+Operation.operatorDefinition = `operator.operator.operatorDefinition`;
+
+// learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/await
+AwaitExpression ::= "await" & "(" & promise%Expression & ")";
+
+// These throw on fail, unlike `as` which is null on fail.
+CastExpression ::= "(" & type%Type & ")" & expr%Expression;
+CastExpression.operatorDefinition = `CSharpOperatorDefinition.Cast`;
+
+// Our own convention: If more than one id but no namespace alias, all but the
+// last refer to a globally qualified namespace, although this isn't guaranteed
+// if names are shadowed and we just write out a file in plain form. Ideally, we
+// auto prefix `global::` in such cases, but that hasn't been done yet.
+// If only one id, it's presumed to refer to a type name in the current
+// namespace.
+// Meanwhile, namespace alias qualifier prefixes with "::" are incorporated here
+// primarily for convenience in tree juggling. Easier to adjust them after the
+// fact if contained within this tree type.
+QualTypeName ::=
+      ((namespaceAlias%Identifier => namespaceAlias & "::") || ())
+    & id%Identifier+"." ;
+QualTypeName.namespaceAlias.default = `null`;
+
+ElementAccess ::= expr%PrimaryExpression & "[" & args%Arg*"," & "]";
+
+InvocationExpression ::=
+      expr%PrimaryExpression
+    // Empty type args aren't a thing in C#, so we can check on emptiness here.
+    // The official grammar puts type args on SimpleName, which seems weird.
+    & ((typeArgs%Type => "<" & typeArgs%Type*"," & ">") || ())
+    & "(" & args%Arg*"," & ")"
+    ;
+InvocationExpression.typeArgs.default = `listOf()`;
+
+MemberAccess ::= expr%PrimaryExpression & "." & id%Identifier;
+MemberAccess.operatorDefinition = `CSharpOperatorDefinition.Atom`;
+// Extension only matters if we're in an InvocationExpression and expr is a
+// QualTypeName. In that case, it's possible to rewrite to simplify the call
+// when working out namespacing. But this also requires knowing if there are
+// conflicts so maybe impractical across arbitrary external library versions.
+MemberAccess(extension%`Boolean`);
+MemberAccess.extension.default = `false`;
+
+// Somewhat tempting just to make a common InvocationExpression sufficiently
+// flexible, but there's enough different here that probably best to customize.
+ObjectCreationExpression ::=
+      "new"
+    & ((type%Type => type) || ())
+    // Can omit empty parens for object initializer members, but eh.
+    & "(" & args%Arg*"," & ")"
+    // Technically should be all expressions for list or all named args for
+    // properties, but this gets close enough. And even for lists, nested plain
+    // curlies are allowed, but I'm not sure we'll be using those.
+    & ((members%Arg => "{" & members*"," & "}") || ())
+    ;
+ObjectCreationExpression.members.default = `listOf()`;
+
+// Only allowed in certain contexts but easier just to allow everywhere in this
+// grammar.
+ThrowExpression ::= "throw" & expr%Expression;
+
+// Alternatively, make all types expressions, but this is a bit more accurate.
+TypeofExpression ::= "typeof" & "(" & type%Type & ")";
+
+Arg =
+      Expression
+    | FullArg;
+
+// Could technically also include modifiers like `out` or `ref`.
+FullArg ::= ((name%Identifier => name & ":") || ()) & value%ArgValue;
+FullArg.name.default = `null`;
+
+ArgValue =
+      Expression
+    ;
+
+Identifier(outName%`OutName`);
+Identifier.renderTo = `tokenSink.name(outName, inOperatorPosition = false)`;
+
+Literal =
+      NumberLiteral
+    | StringLiteral
+    ;
+
+NumberLiteral(value%`Number`);
+NumberLiteral.renderTo = `tokenSink.number("$value")`;
+
+StringLiteral(value%`String`);
+StringLiteral.renderTo = `tokenSink.quoted(stringTokenText(value))`;
+
+Operator(operator%`CSharpOperator`);
+Operator.renderTo = `operator.emit(tokenSink)` ;

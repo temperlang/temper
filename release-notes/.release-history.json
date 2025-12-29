@@ -1,0 +1,178 @@
+{
+  "snippets/first.md": {
+    "release_version": "0.0.1",
+    "hash": "4e39f737cfb9e22ebfeddea6606f6675176bcc0f"
+  },
+  "snippets\\dirmod.md": {
+    "release_version": "0.2.0",
+    "hash": "49ef158f464cc1d91405770378e5d7eb06428e85"
+  },
+  "snippets\\first.md": {
+    "release_version": "0.2.0",
+    "hash": "4e39f737cfb9e22ebfeddea6606f6675176bcc0f"
+  },
+  "snippets\\foreach.md": {
+    "release_version": "0.2.0",
+    "hash": "645364dac97e2451d111f6dddb4a4e99f26d534f"
+  },
+  "snippets\\testonly.md": {
+    "release_version": "0.2.0",
+    "hash": "0758073332deaaf124329c9cf4c345ad0b95f5a1"
+  },
+  "snippets\\const-reassign-check.md": {
+    "release_version": "0.3.0",
+    "hash": "615ea0ed759bedbcb4daf94451ba41f7c3136e80"
+  },
+  "snippets\\date-day-of-week.md": {
+    "release_version": "0.3.0",
+    "hash": "bb70b738192cf4cc25a91d299f8d23d060fe7869"
+  },
+  "snippets\\generators.md": {
+    "release_version": "0.3.0",
+    "hash": "2dfd4bacc6e1f1a11ec9dc51b311e7234934d193"
+  },
+  "snippets\\int-min-max.md": {
+    "release_version": "0.3.0",
+    "hash": "f5799efc9f106a52f514da5c6ee12813dd4ebbcd"
+  },
+  "snippets\\listed-reduce.md": {
+    "release_version": "0.3.0",
+    "hash": "9cb78f1e085c5101f7a36bec5ed3a158e646bbee"
+  },
+  "snippets\\mac-arm.md": {
+    "release_version": "0.3.0",
+    "hash": "9d676910d9c338c5daf499813e9409db00361959"
+  },
+  "snippets\\regex-literals.md": {
+    "release_version": "0.3.0",
+    "hash": "0f637a523e60b72edb8e1b028c912de242c1e33c"
+  },
+  "snippets\\stringslice-intersect.md": {
+    "release_version": "0.3.0",
+    "hash": "e673c9ed190e0356a466b8eaafc1cbdb9a562233"
+  },
+  "snippets\\as-is.checkes.md": {
+    "release_version": "0.4.0",
+    "hash": "f41d8c72474533f5a3c839236f81d719f54122eb"
+  },
+  "snippets\\char-syntax.md": {
+    "release_version": "0.4.0",
+    "hash": "1176a6f390ae71b7e1bbbe1285b25928215a291a"
+  },
+  "snippets\\class-ctor-in-parens.md": {
+    "release_version": "0.4.0",
+    "hash": "7ff662eff608bbb8fc04a95baaf1aad0c37f60cc"
+  },
+  "snippets\\control-flow-rewrite.md": {
+    "release_version": "0.4.0",
+    "hash": "a58612409ea0aaf34d27e5572cd0965523776d1e"
+  },
+  "snippets\\extension-methods.md": {
+    "release_version": "0.4.0",
+    "hash": "29934430aa68b1c2a3206e68e1e133493bd2c71d"
+  },
+  "snippets\\for-of-flow-control.md": {
+    "release_version": "0.4.0",
+    "hash": "d877a9cae344bbe254957f53efd24cc1ede53f5a"
+  },
+  "snippets\\indexed-strings.md": {
+    "release_version": "0.4.0",
+    "hash": "be0608fc23f984e990121119e6e625d9ad5b1830"
+  },
+  "snippets\\json-type-decorator.md": {
+    "release_version": "0.4.0",
+    "hash": "021d6af5fe7f35bc69127b8ef2ff864c27bd7d1a"
+  },
+  "snippets\\null-awareness.md": {
+    "release_version": "0.4.0",
+    "hash": "1e4609cd94f24b102e2ae632ee0ec84a88c6fe38"
+  },
+  "snippets\\optional-params-null.md": {
+    "release_version": "0.4.0",
+    "hash": "eac184109ac899b7fb76626e2d5b253d5b79f458"
+  },
+  "snippets\\rust.md": {
+    "release_version": "0.4.0",
+    "hash": "808c01f14aa15254cfe9c18d6d3ec38676d67604"
+  },
+  "snippets\\sort.md": {
+    "release_version": "0.4.0",
+    "hash": "8f2a717a417c2bc0968a2b83183ecdf0a532ab83"
+  },
+  "snippets\\src.md": {
+    "release_version": "0.4.0",
+    "hash": "77a23787666be250e95532e5159222e6b8a0badc"
+  },
+  "snippets\\string-builder.md": {
+    "release_version": "0.4.0",
+    "hash": "6ef47b659f41e5cafbe650ee00cbe3edee38df0f"
+  },
+  "snippets\\temper-keep.md": {
+    "release_version": "0.4.0",
+    "hash": "77c2dc9c867e86255e59202a974b9f04348baa0c"
+  },
+  "snippets\\visibility-default-public.md": {
+    "release_version": "0.4.0",
+    "hash": "8f46cb2d19b4ab8aa2589fed130511468b2205e4"
+  },
+  "snippets\\when.md": {
+    "release_version": "0.4.0",
+    "hash": "754a95add468fb6565c049796113fc1575479ece"
+  },
+  "snippets\\as-is-infix.md": {
+    "release_version": "0.5.0",
+    "hash": "25a66caac625abde052d10924d81e03213ed9014"
+  },
+  "snippets\\csharp-optionals.md": {
+    "release_version": "0.5.0",
+    "hash": "d56e199dc5f0ebc89cab15e597c016fb9a7fc8da"
+  },
+  "snippets\\dirmodonly.md": {
+    "release_version": "0.5.0",
+    "hash": "dd8596daa5a0cb66c7684584031d0777c0daff2b"
+  },
+  "snippets\\empty-type.md": {
+    "release_version": "0.5.0",
+    "hash": "63be4bc2f553d99d17a127731544e08da5f7dd85"
+  },
+  "snippets\\indexing-panics.md": {
+    "release_version": "0.5.0",
+    "hash": "2d6c7a953abd88f2593bcd7f9d06e98de8110831"
+  },
+  "snippets\\java-javadoc-comments.md": {
+    "release_version": "0.5.0",
+    "hash": "5ee5c33684bf43dda697cb60ae5b8c4fdb3c101c"
+  },
+  "snippets\\json-extra-decorator.md": {
+    "release_version": "0.5.0",
+    "hash": "979bb4382b0ed4b698565943ca9133b72cab2b6a"
+  },
+  "snippets\\named-args-removal.md": {
+    "release_version": "0.5.0",
+    "hash": "54d7c780193810ab4adc1a822d394f310f86c8a6"
+  },
+  "snippets\\no-hook.md": {
+    "release_version": "0.5.0",
+    "hash": "4d1a49268d2b3ae06a3df7251546e931dcff4495"
+  },
+  "snippets\\node18-py311.md": {
+    "release_version": "0.5.0",
+    "hash": "d0446d4e62581290d99cee024c4d1b7147e87a03"
+  },
+  "snippets\\postfix-qmark.md": {
+    "release_version": "0.5.0",
+    "hash": "d67332b2a11b3bb2fbae70b9de6e298bfce64d93"
+  },
+  "snippets\\rust-enabled.md": {
+    "release_version": "0.5.0",
+    "hash": "a183b955ed3fe9caec295a6b7c3e117b606e470a"
+  },
+  "snippets\\string-builder-core.md": {
+    "release_version": "0.5.0",
+    "hash": "f05ea4ba98849431b8dee793e31fcca0d0bcafbf"
+  },
+  "snippets\\temper-autodoc-from-markdown.md": {
+    "release_version": "0.5.0",
+    "hash": "c74b0eef2b92a3f446019ac3d29e2c215d8067bb"
+  }
+}

@@ -1,0 +1,200 @@
+<svg class="railroad-diagram" width="1226.5" height="80" viewBox="0 0 1226.5 80" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>EscapeSequence &#58;&#61; &#34;&#92;&#92;0&#34; &#124; &#34;&#92;&#92;&#92;&#92;&#34; &#124; &#34;&#92;&#92;&#47;&#34; &#124; &#34;&#92;&#92;&#92;u0022&#34; &#124; &#34;&#92;&#92;&#92;&#34; &#124; &#34;&#92;&#92;&#96;&#34; &#124; &#34;&#92;&#92;&#123;&#34; &#124; &#34;&#92;&#92;&#125;&#34; &#124; &#34;&#92;&#92;&#92;u0024&#34; &#124; &#34;&#92;&#92;b&#34; &#124; &#34;&#92;&#92;t&#34; &#124; &#34;&#92;&#92;n&#34; &#124; &#34;&#92;&#92;f&#34; &#124; &#34;&#92;&#92;r&#34; &#124; &#34;&#92;&#92;&#34;</title>
+<style><![CDATA[
+svg.railroad-diagram {
+    background-color: hsl(30,20%,95%);
+}
+svg.railroad-diagram path {
+    stroke-width: 3;
+    stroke: black;
+    fill: rgba(0,0,0,0);
+}
+svg.railroad-diagram text {
+    font: bold 14px monospace;
+    text-anchor: middle;
+    white-space: pre;
+}
+svg.railroad-diagram text.diagram-text {
+    font-size: 12px;
+}
+svg.railroad-diagram text.diagram-arrow {
+    font-size: 16px;
+}
+svg.railroad-diagram text.label {
+    text-anchor: start;
+}
+svg.railroad-diagram text.comment {
+    font: italic 12px monospace;
+}
+svg.railroad-diagram g.non-terminal text {
+    /*font-style: italic;*/
+}
+svg.railroad-diagram rect {
+    stroke-width: 3;
+    stroke: black;
+    fill: hsl(120,100%,90%);
+}
+svg.railroad-diagram rect.group-box {
+    stroke: gray;
+    stroke-dasharray: 10 5;
+    fill: none;
+}
+svg.railroad-diagram path.diagram-text {
+    stroke-width: 3;
+    stroke: black;
+    fill: white;
+    cursor: help;
+}
+svg.railroad-diagram g.diagram-text:hover path.diagram-text {
+    fill: #eee;
+}
+
+]]></style>
+
+<g transform="translate(.5 .5)">
+<g>
+<path d="M20 30v20m10 -20v20m-10 -10h20"></path>
+</g>
+<g>
+<path d="M40 40h0"></path>
+<path d="M1186.5 40h0"></path>
+<path d="M40 40a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10h1048"></path>
+<path d="M127 60h1039.5a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<path d="M40 40h10"></path>
+<g class="terminal">
+<path d="M50 40h10"></path>
+<path d="M97 40h10"></path>
+<rect x="60" y="29" width="37" height="22" rx="10" ry="10"></rect>
+<text x="78.5" y="44">\0</text>
+<title>Encodes NUL</title>
+</g>
+<path d="M107 40a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M107 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<g class="terminal">
+<path d="M127 40h10"></path>
+<path d="M174 40h10"></path>
+<rect x="137" y="29" width="37" height="22" rx="10" ry="10"></rect>
+<text x="155.5" y="44">\\</text>
+<title>Encodes a single backslash</title>
+</g>
+<path d="M184 40a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M184 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<g class="terminal">
+<path d="M204 40h10"></path>
+<path d="M251 40h10"></path>
+<rect x="214" y="29" width="37" height="22" rx="10" ry="10"></rect>
+<text x="232.5" y="44">\/</text>
+<title>Encodes a forward-slash</title>
+</g>
+<path d="M261 40a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M261 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<g class="terminal">
+<path d="M281 40h10"></path>
+<path d="M328 40h10"></path>
+<rect x="291" y="29" width="37" height="22" rx="10" ry="10"></rect>
+<text x="309.5" y="44">\"</text>
+<title>Encodes a double-quote</title>
+</g>
+<path d="M338 40a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M338 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<g class="terminal">
+<path d="M358 40h10"></path>
+<path d="M405 40h10"></path>
+<rect x="368" y="29" width="37" height="22" rx="10" ry="10"></rect>
+<text x="386.5" y="44">\'</text>
+<title>Encodes a single-quote</title>
+</g>
+<path d="M415 40a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M415 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<g class="terminal">
+<path d="M435 40h10"></path>
+<path d="M482 40h10"></path>
+<rect x="445" y="29" width="37" height="22" rx="10" ry="10"></rect>
+<text x="463.5" y="44">\&#96;</text>
+<title>Encodes a back-quote</title>
+</g>
+<path d="M492 40a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M492 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<g class="terminal">
+<path d="M512 40h10"></path>
+<path d="M559 40h10"></path>
+<rect x="522" y="29" width="37" height="22" rx="10" ry="10"></rect>
+<text x="540.5" y="44">\{</text>
+<title>Encodes a left curly-bracket</title>
+</g>
+<path d="M569 40a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M569 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<g class="terminal">
+<path d="M589 40h10"></path>
+<path d="M636 40h10"></path>
+<rect x="599" y="29" width="37" height="22" rx="10" ry="10"></rect>
+<text x="617.5" y="44">\}</text>
+<title>Encodes a right curly-bracket</title>
+</g>
+<path d="M646 40a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M646 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<g class="terminal">
+<path d="M666 40h10"></path>
+<path d="M713 40h10"></path>
+<rect x="676" y="29" width="37" height="22" rx="10" ry="10"></rect>
+<text x="694.5" y="44">\$</text>
+<title>Encodes a dollar sign</title>
+</g>
+<path d="M723 40a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M723 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<g class="terminal">
+<path d="M743 40h10"></path>
+<path d="M790 40h10"></path>
+<rect x="753" y="29" width="37" height="22" rx="10" ry="10"></rect>
+<text x="771.5" y="44">\b</text>
+<title>Encodes a backspace</title>
+</g>
+<path d="M800 40a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M800 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<g class="terminal">
+<path d="M820 40h10"></path>
+<path d="M867 40h10"></path>
+<rect x="830" y="29" width="37" height="22" rx="10" ry="10"></rect>
+<text x="848.5" y="44">\t</text>
+<title>Encodes a tab</title>
+</g>
+<path d="M877 40a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M877 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<g class="terminal">
+<path d="M897 40h10"></path>
+<path d="M944 40h10"></path>
+<rect x="907" y="29" width="37" height="22" rx="10" ry="10"></rect>
+<text x="925.5" y="44">\n</text>
+<title>Encodes a line-feed a.k.a. new-line</title>
+</g>
+<path d="M954 40a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M954 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<g class="terminal">
+<path d="M974 40h10"></path>
+<path d="M1021 40h10"></path>
+<rect x="984" y="29" width="37" height="22" rx="10" ry="10"></rect>
+<text x="1002.5" y="44">\f</text>
+<title>Encodes a form-feed</title>
+</g>
+<path d="M1031 40a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M1031 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<g class="terminal">
+<path d="M1051 40h10"></path>
+<path d="M1098 40h10"></path>
+<rect x="1061" y="29" width="37" height="22" rx="10" ry="10"></rect>
+<text x="1079.5" y="44">\r</text>
+<title>Encodes a carriage-return</title>
+</g>
+<path d="M1108 40a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M1108 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<g class="terminal">
+<path d="M1128 40h10"></path>
+<path d="M1166.5 40h10"></path>
+<rect x="1138" y="29" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="1152.25" y="44">\</text>
+<title>Broken escape sequence encodes nothing</title>
+</g>
+<path d="M1176.5 40h10"></path>
+</g>
+<path d="M 1186.5 40 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+</g>
+</svg>

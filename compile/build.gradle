@@ -1,0 +1,99 @@
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform'
+    id 'com.github.node-gradle.node'
+}
+ext.temperProject = 'mpp'
+//apply plugin: 'maven-publish'
+
+kotlin {
+    sourceSets {
+        all {
+            languageSettings {
+                languageVersion = gradle.kotlin_language_version
+                apiVersion = gradle.kotlin_api_version
+                //enableLanguageFeature('InlineClasses')
+                progressiveMode = true
+                //verbose = true
+                optIn("kotlin.RequiresOptIn")
+            }
+        }
+    }
+
+    jvm()
+//  js() {
+//      nodejs {
+//      }
+//  }
+    // For ARM, should be changed to iosArm32 or iosArm64
+    // For Linux, should be changed to e.g. linuxX64
+    // For MacOS, should be changed to e.g. macosX64
+    // For Windows, should be changed to e.g. mingwX64
+//  linuxX64('linux')
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation kotlin('stdlib-common')
+                implementation kotlin('reflect')
+                implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coro_version"
+                implementation project(':common')
+                implementation project(':log')
+                implementation project(':ast')
+                implementation project(':be')
+                implementation project(':builtin')
+                implementation project(':cst')
+                implementation project(':format')
+                implementation project(':frontend')
+                implementation project(':fs')
+                implementation project(':fundamentals')
+                implementation project(':interp')
+                implementation project(':lexer')
+                implementation project(':library')
+                implementation project(':name')
+                implementation project(':parser')
+                implementation project(':stage')
+                implementation project(':supported-backends')
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test-common')
+                implementation kotlin('test-annotations-common')
+                implementation project(':fs-test-helpers')
+                implementation project(':test-helpers')
+                implementation project(':astbuild')
+                implementation project(':be-js')
+                implementation project(':be-py')
+                implementation project(':cst')
+                implementation project(':parser')
+            }
+        }
+        jvmMain {
+            dependencies {
+                implementation kotlin('stdlib-jdk8')
+                implementation "ch.qos.logback:logback-classic:1.5.6"
+                implementation "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:$kotlinx_coro_version"
+                implementation(libs.eclipse.jgit)
+            }
+        }
+        jvmTest {
+            dependencies {
+                implementation kotlin('test')
+                implementation kotlin('test-junit5')
+            }
+        }
+//      jsMain {
+//          dependencies {
+//              implementation kotlin('stdlib-js')
+//          }
+//      }
+//      jsTest {
+//          dependencies {
+//              implementation kotlin('test-js')
+//          }
+//      }
+//      linuxMain {
+//      }
+//      linuxTest {
+//      }
+    }
+}

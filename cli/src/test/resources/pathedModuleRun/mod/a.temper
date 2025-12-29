@@ -1,0 +1,4 @@
+// from the regex functional tests
+let { CodePoints } = import("std/regex");
+// Equivalent to: let regex = /(?:ab)+c/;
+let test = new CodePoints("c");

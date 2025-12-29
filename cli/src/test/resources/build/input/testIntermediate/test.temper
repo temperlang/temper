@@ -1,0 +1,19 @@
+// This should be similar to generated code from DoTestTest.testPassingInterpreter
+let { Test, runTestCases } = import("std/testing");
+
+// @test("a test case") <-- Commented to avoid normal test processing.
+let aTestCase(test: Test): Void throws Bubble {
+  test.assert(false) { (): String =>
+    "Failed as expected"
+  }
+}
+export let testReport = runTestCases([
+  new Pair("a test case", aTestCase),
+]);
+
+// But we actually need to use the test macro to mark this as a test module,
+// which unit tests expect, so do that here, too.
+test("something") {}
+
+// Make sure there's some test output for RunTest
+console.log(testReport);

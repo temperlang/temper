@@ -1,0 +1,12 @@
+export let isPalindrome(s: String): Boolean {
+  var i = String.begin;
+  var j = s.end;
+  while (i < j) {
+    j = s.prev(j);
+    if (s[i] != s[j]) {
+      return false;
+    }
+    i = s.next(i);
+  }
+  true
+}

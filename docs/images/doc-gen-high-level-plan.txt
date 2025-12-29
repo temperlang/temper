@@ -1,0 +1,22 @@
+title Doc-gen high level flow plan
+
+doc gen->file system: enumerate doc files
+loop for each file
+doc gen->parser: parse each file
+doc gen->code transformer: hand off code fragment(s)
+code transformer-> code transformer: batch fragments?
+code transformer -> compiler facade: compile
+activate compiler facade
+note left of compiler: This is built assuming an invocation of the \n compiler returns all know backend outputs.\n this may put a non-trivial burden into the \n facade or code transformer
+compiler facade->compiler: compile
+compiler->CCC: interpret target references
+compiler facade-> code transformer: translated source code
+deactivate compiler facade
+code transformer->code transformer: rewrite code samples
+doc gen->link transformer(s): rewrite links
+link transformer(s)->CCC: lookup links
+doc gen->block transformer(s): rewrite block quotes
+block transformer(s)->CCC: lookup rewrites
+doc gen->file system: write result
+end
+

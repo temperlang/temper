@@ -1,0 +1,791 @@
+// The types herein match
+// https://github.com/babel/babylon/blob/master/ast/spec.md#node-objects
+// except for a few types like InfixExpression which do not match any
+// type in that specification but which serve to provide a common super-type
+// for closely related concepts which can be separate in TypeScript because
+// TypeScript has first-class union types but which are awkward to deal
+// with otherwise in Kotlin.
+
+let namespace = "Js";
+
+let imports = """
+  "lang.temper.be.tmpl.operatorTokenType
+  "lang.temper.format.OutputToken
+  "lang.temper.format.OutputTokenType
+  "lang.temper.format.TokenSerializable
+  "lang.temper.format.TokenSink
+  "lang.temper.name.OutName
+  "lang.temper.name.TemperName
+;
+
+Program ::= topLevel%TopLevel*"\n";
+TopLevel =
+      ModuleDeclaration
+    | Statement;
+ModuleDeclaration =
+      ImportDeclaration
+    | ExportDeclaration;
+
+ExportDeclaration =
+      ExportNamedDeclaration
+    | ExportDefaultDeclaration
+    | ExportAllDeclaration;
+
+ImportDeclaration ::=
+      "import"
+    & ((specifiers%Imported => specifiers*", " & "from") || ())
+    & source%StringLiteral
+    & ";";
+ExportNamedDeclaration ::=
+      doc%MaybeJsDocComment
+    & "export" & (declaration%Declaration || "{" & specifiers%ExportSpecifier+", " & "}")
+    & ("from" & source%StringLiteral || ())
+    & ";";
+ExportNamedDeclaration requires `this.declaration == null || this.specifiers.isEmpty()`;
+ExportDefaultDeclaration ::=
+      "export" & "default" & declaration%Expression & ";";
+ExportAllDeclaration ::=
+      "export" & "*" & "from" & source%StringLiteral & ";";
+
+Imported = ImportSpecifiers | ImportDefaultSpecifier | ImportNamespaceSpecifier;
+ModuleSpecifier = ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier | ExportSpecifier;
+ModuleSpecifier(local%Identifier);
+
+/**
+ * ImportSpecifiers is not defined by Babel.
+ * We use it to group together adjacent specifiers.
+ */
+ImportSpecifiers ::= "{" & specifiers%ImportSpecifier+", " & "}";
+
+ImportSpecifier ::= ((sameName==true => imported%Identifier) || (imported & "as" & local%Identifier));
+ImportSpecifier requires local; // It's not used on every format path, so tell the generator the count.
+ImportSpecifier.sameName = `this.imported.name == this.local.name`; // Whether we can use abbreviated syntax.
+
+ExportSpecifier ::= ((sameName==true => exported%Identifier) || (local & "as" & exported));
+ExportSpecifier requires local;
+ExportSpecifier.sameName = `this.exported.name == this.local.name`;
+
+ImportDefaultSpecifier ::= local%Identifier;
+
+ImportNamespaceSpecifier ::= "*" & "as" & local%Identifier;
+
+DocumentedDeclaration ::= doc%JsDocComment & decl%Declaration;
+Declaration =
+      FunctionDeclaration
+    | ClassDeclaration
+    | ExceptionDeclaration
+    | VariableDeclaration;
+Pattern =
+      Identifier
+    | ArrayPattern
+    | AssignmentPattern
+    | ObjectPattern
+    | RestElement
+    | MemberExpression
+    ;
+ObjectMemberOrMembers = SpreadElement | ObjectMember;
+ObjectPatternMemberOrMembers = RestElement | ObjectPatternMember;
+
+Function =
+      FunctionDeclaration
+    | ClassMethod
+    | ObjectMethod
+    | FunctionExpression
+    | ArrowFunctionExpression;
+Function ::=
+      ((async==true => "async") || ())
+    & "function"
+    & ((generator==true => "*") || ())
+    & (id%Identifier || ())
+    & params%Formals
+    & (body%BlockStatement || ()); // optional just for prototypes
+Function.async.default = `false`;
+Function.generator.default = `false`;
+
+Formals ::=
+      "(" & params%Param*"," & ")"
+    & ((returnType%Type => ":" & returnType) || ());
+Formals.operatorDefinition = `JsOperatorDefinition.Grouping`;
+Formals.returnType.default = `null`;
+
+Param ::= pattern%Pattern & ((type%Type => ":" & type) || ());
+Param.type.default = `null`;
+
+FunctionDeclaration requires id;
+
+Decorators ::= decorators%Decorator*" ";
+Decorator ::= "@" & expression%Expression;
+
+Class = ClassDeclaration | ClassExpression;
+Class ::=
+      decorators%Decorators
+    & "class" & (id%Identifier || ())
+    & ((superClass%Expression => "extends" & superClass) || ())
+    & body%ClassBody;
+ClassDeclaration requires id;
+ClassBody ::= "{" & "\n" & body%ClassBodyMember*"\n" & "\n" & "}";
+
+ClassBodyMember =
+      ClassMethod
+    | ClassProperty
+    ;
+ClassBodyMember(
+    key%MemberKey,
+    computed%`Boolean`,
+    static%`Boolean`,
+);
+
+// private members cannot have computed names
+ClassBodyMember requires `!(this.key is PrivateName && this.computed)`;
+ClassBodyMember.computed.default = `false`;
+ClassBodyMember.static.default = `false`;
+
+enum ClassMethodKind = Constructor | Method | Get | Set;
+
+// constructors are a special form
+ClassMethod ::=
+      doc%MaybeJsDocComment
+    & ((async==true => "async") || ())
+    & ((static==true => "static") || ())
+    & ((generator==true => "*") || ())
+    & ((kind%ClassMethodKind==Get => "get")
+       || (kind==Set => "set")
+       || ())
+    & ((computed==true => "[" & key & "]") || key)
+    & params%Formals
+    & body%BlockStatement;
+ClassMethod.id =
+    `if (!this.computed) { this.key as? Identifier } else { null }`;
+ClassMethod requires `this.kind != ClassMethodKind.Constructor || (!this.computed && !this.async && !this.static && !this.generator && "constructor" == (this.key as? Identifier)?.name?.text)`;
+ClassMethod.async.default = `false`;
+ClassMethod.generator.default = `false`;
+
+ClassProperty ::=
+      doc%MaybeJsDocComment
+    & ((static==true => "static") || ())
+    & ((computed==true => "[" & key & "]") || key)
+    & ((value%Expression => "=" & value) || ())
+    & ";";
+
+enum DeclarationKind = Const | Let | Var;
+VariableDeclaration ::=
+    (
+        (kind%DeclarationKind==Const => "const")
+            || (kind==Let => "let")
+            || "var"
+    )
+    & declarations%VariableDeclarator+", "
+    & ((needsSemicolon==true => ";") || ());
+/**
+ * VariableDeclarations are semicolon terminated when in a statement context or in
+ *
+ *     for (declaration; condition; increment)
+ *
+ * but not in
+ *
+ *     for (declaration of iterable)
+ *     for (declaration in object)
+ */
+VariableDeclaration.needsSemicolon = `
+(this.parent as? ForOfStatement)?.left != this &&
+    (this.parent !is ExportDeclaration)
+`;
+
+VariableDeclarator ::= id%Pattern & ("=" & init%Expression || ());
+VariableDeclarator.operatorDefinition = `JsOperatorDefinition.Eq`;
+
+Expression =
+      Identifier
+    | SimpleRef
+    | GenericRef
+    | CallExpression
+    | NewExpression
+    | ArrayExpression
+    | Literal
+    | InfixExpression
+    | UnaryExpression
+    | UpdateExpression
+    | ConditionalExpression
+    | BooleanLiteral
+    | NullLiteral
+    | VoidType
+    | ObjectExpression
+    | FunctionExpression
+    | ArrowFunctionExpression
+    | ClassExpression
+    | SequenceExpression
+    | TemplateExpression
+    | ThisExpression
+    | YieldExpression
+    // Noting explicitly that Patterns are Expressions allows
+    // AssignmentExpression to have a left operand that is a Pattern while
+    // still narrowing the type from its super-type: InfixExpression.
+    | Pattern;
+
+Identifier(name%`JsIdentifierName`, sourceIdentifier%`TemperName?`) {
+`
+init {
+    require(name.text !in jsReservedWords) { "\$pos: \`\${name.text}\` is a JS reserved word" }
+}
+`
+};
+Identifier.outName%`OutName` = `OutName(name.text, sourceIdentifier)`;
+Identifier.renderTo = `tokenSink.emit(outName.toToken(inOperatorPosition = false))`;
+Identifier.operatorDefinition = `null`;
+
+/**
+ * In addition to normal identifiers, there are private names like `#name`
+ * that may be used in some prescribed contexts in class definitions.
+ */
+PrivateName(name%`JsIdentifierName`, sourceIdentifier%`TemperName?`) {
+`
+init {
+    require(name.text !in jsReservedWords) { "\$pos: \`\${name.text}\` is a JS reserved word" }
+}
+`
+};
+PrivateName.outName%`OutName` = `OutName("#\${name.text}", sourceIdentifier)`;
+PrivateName.renderTo = `tokenSink.emit(outName.toToken(inOperatorPosition = false))`;
+PrivateName.operatorDefinition = `null`;
+// TODO: allow private names in MemberExpressions
+
+AssignmentPattern ::= left%Pattern & "=" & right%Expression;
+AssignmentPattern.operatorDefinition = `JsOperatorDefinition.Eq`;
+
+MemberKey = Expression | PrivateName;
+MemberExpression ::=
+      obj%Callee
+    & (
+        (computed==true =>
+            (
+                (optional==true => "?." & "[" & property%MemberKey & "]")
+                    || ("[" & property & "]")
+            )
+        ) || (
+            (optional==true => "?." & property)
+                || ("." & property)
+        )
+    );
+MemberExpression.operatorDefinition = `
+when {
+    computed ->
+        if (optional) {
+            JsOperatorDefinition.ComputedOptionalChaining
+        } else {
+            JsOperatorDefinition.ComputedMemberAccess
+        }
+    optional -> JsOperatorDefinition.OptionalChaining
+    else -> JsOperatorDefinition.MemberAccess
+}
+`;
+MemberExpression.computed.default = `false`;
+MemberExpression.optional.default = `false`;
+MemberExpression requires `!(this.property is PrivateName && this.computed)`;
+
+Actual = Expression | SpreadElement;
+Callee = Expression | Super | Import;
+ArrayElement = Expression | ArrayHole | SpreadElement;
+ArrayPatternElement = Pattern | ArrayHole;
+
+/**
+ * For use in type expressions, a type name like Name or
+ * a member expression like namespace.Name
+ */
+SimpleRef = Identifier | MemberExpression;
+/** A generic type expression */
+GenericRef ::= id%SimpleRef & "<" & args%Type*"," & ">";
+GenericRef.operatorDefinition = `JsOperatorDefinition.GenericRef`;
+
+Call = CallExpression | NewExpression;
+Call ::=
+      callee%Callee
+    & ((optional==true => "?.") || ())
+    & "(" & arguments%Actual*", " & ")";
+Call.optional.default = `false`;
+CallExpression.operatorDefinition = `JsOperatorDefinition.FunctionCall`;
+NewExpression ::=
+      "new" & callee%Callee
+    & ((optional==true => "?.") || ())
+    & "(" & arguments%Actual*", " & ")";
+NewExpression.operatorDefinition = `JsOperatorDefinition.NewWithArgs`;
+
+ArrayExpression ::= "[" & elements%ArrayElement*", " & "]";
+ArrayPattern ::= "[" & elements%ArrayPatternElement*", " & "]";
+
+ArrayHole ::= ();
+
+SpreadElement ::= "..." & argument%Expression;
+SpreadElement.operatorDefinition = `JsOperatorDefinition.DotDotDot`;
+
+RestElement ::= "..." & argument%Pattern;
+RestElement.operatorDefinition = `JsOperatorDefinition.DotDotDot`;
+
+ObjectMember ::=
+      ((computed==true => "[" & key%Expression & "]") || key)
+    & ":";
+ObjectMember.computed.default = `false`;
+ObjectMember = ObjectProperty | ObjectMethod;
+ObjectProperty ::=
+      ((computed==true => "[" & key%Expression & "]") || key)
+    & ((optional==true => "?") || ()) // for types in jsdoc comments
+    & ":" & value%Expression;
+ObjectProperty.optional.default = `false`;
+
+ObjectPatternMember = ObjectPropertyPattern;
+ObjectPropertyPattern ::=
+      ((computed==true => "[" & key%Expression & "]") || key)
+    & ":" & pattern%Pattern;
+ObjectPropertyPattern.computed.default = `false`;
+
+enum ObjectMethodKind = Get | Set | Method;
+ObjectMethod ::=
+      (
+          (kind%ObjectMethodKind==Get => "get")
+              || (kind==Set => "set")
+              || ()
+      )
+    & ((computed==true => "[" & key%Expression & "]") || key)
+    & params%Formals
+    & (body || ());
+ObjectMethod.id = `key as? Identifier`;
+ObjectMethod.async = `false`;
+ObjectMethod.generator = `false`;
+ObjectMethod.kind.default = `ObjectMethodKind.Method`;
+
+Super ::= "super";
+Import ::= "import";
+
+Literal = StringLiteral | NumericLiteral;
+
+StringLiteral(value%`String`);
+StringLiteral.renderTo =
+`tokenSink.emit(
+    OutputToken(
+        stringTokenText(value),
+        OutputTokenType.QuotedValue,
+    ),
+)
+`;
+
+NumericLiteral(value%`Number`);
+NumericLiteral.renderTo =
+    `tokenSink.emit(OutputToken("$value", OutputTokenType.NumericValue))`;
+
+InfixExpression ::=
+    left%Expression & operator%Operator & right%Expression;
+InfixExpression =
+      BinaryExpression
+    | LogicalExpression
+    | AssignmentExpression;
+InfixExpression.operatorDefinition =
+    `operatorTable.getValue(operator.tokenText)`;
+InfixExpression(operatorTable%`Map<String, JsOperatorDefinition>`) {
+`
+fun checkOperator() {
+    require(operatorTable[operator.tokenText] == operatorDefinition)
+}
+
+companion object {
+    operator fun invoke(
+        pos: Position,
+        left: Expression,
+        operator: Operator,
+        right: Expression,
+    ): Expression = when (operator.tokenText) {
+        in binaryOperator -> BinaryExpression(pos, left, operator, right)
+        in logicalOperator -> LogicalExpression(pos, left, operator, right)
+        in assignmentOperator -> AssignmentExpression(pos, left as Pattern, operator, right)
+        else -> throw IllegalArgumentException(operator.tokenText)
+    }
+
+    val binaryOperator = mapOf(
+        "==" to JsOperatorDefinition.EqEq,
+        "!=" to JsOperatorDefinition.BangEq,
+        "===" to JsOperatorDefinition.EqEqEq,
+        "!==" to JsOperatorDefinition.BangEqEq,
+        "<" to JsOperatorDefinition.Lt,
+        "<=" to JsOperatorDefinition.Lte,
+        ">" to JsOperatorDefinition.Gt,
+        ">=" to JsOperatorDefinition.Gte,
+        "<<" to JsOperatorDefinition.LtLt,
+        ">>" to JsOperatorDefinition.GtGt,
+        ">>>" to JsOperatorDefinition.GtGtGt,
+        "+" to JsOperatorDefinition.Plus,
+        "-" to JsOperatorDefinition.Minus,
+        "*" to JsOperatorDefinition.Star,
+        "**" to JsOperatorDefinition.Exp,
+        "/" to JsOperatorDefinition.Div,
+        "%" to JsOperatorDefinition.Rem,
+        "|" to JsOperatorDefinition.BitwiseOr,
+        "^" to JsOperatorDefinition.BitwiseXor,
+        "&" to JsOperatorDefinition.BitwiseAnd,
+        "in" to JsOperatorDefinition.In,
+        "instanceof" to JsOperatorDefinition.Instanceof,
+        // "|>" to JsOperatorDefinition.Pipeline,
+    )
+
+    val logicalOperator = mapOf(
+        "||" to JsOperatorDefinition.LogicalOr,
+        "&&" to JsOperatorDefinition.LogicalAnd,
+        "??" to JsOperatorDefinition.NullishCoalescing,
+    )
+
+    val assignmentOperator = mapOf(
+        "=" to JsOperatorDefinition.Eq,
+        "+=" to JsOperatorDefinition.PlusEq,
+        "-=" to JsOperatorDefinition.MinusEq,
+        "*=" to JsOperatorDefinition.StarEq,
+        "/=" to JsOperatorDefinition.DivEq,
+        "%=" to JsOperatorDefinition.PctEq,
+        "<<=" to JsOperatorDefinition.LtLtEq,
+        ">>=" to JsOperatorDefinition.GtGtEq,
+        ">>>=" to JsOperatorDefinition.GtGtGtEq,
+        "|=" to JsOperatorDefinition.BarEq,
+        "^=" to JsOperatorDefinition.CaretEq,
+        "&=" to JsOperatorDefinition.AmpEq,
+    )
+}
+`
+};
+
+BinaryExpression.operatorTable = `InfixExpression.binaryOperator`;
+LogicalExpression.operatorTable = `InfixExpression.logicalOperator`;
+AssignmentExpression.operatorTable = `InfixExpression.assignmentOperator`;
+BinaryExpression { // TODO: run these on assignment to .operator too.  Maybe via requires.
+`init { checkOperator() }`
+};
+LogicalExpression {
+`init { checkOperator() }`
+};
+AssignmentExpression(left%Pattern) {
+`init { checkOperator() }`
+};
+
+UnaryExpression ::= operator%Operator & argument%Expression;
+UnaryExpression.operatorDefinition = `unaryOperator[operator.tokenText]`;
+UnaryExpression {
+`
+companion object {
+    val unaryOperator = mapOf(
+        "-" to JsOperatorDefinition.UnaryMinus,
+        "+" to JsOperatorDefinition.UnaryPlus,
+        "!" to JsOperatorDefinition.LogicalNot,
+        "~" to JsOperatorDefinition.BitwiseNot,
+        "typeof" to JsOperatorDefinition.Typeof,
+        "void" to JsOperatorDefinition.Void,
+        "await" to JsOperatorDefinition.Await,
+        "delete" to JsOperatorDefinition.Delete,
+        // "throw" to ...
+    )
+}
+`
+};
+
+UpdateExpression ::=
+    (
+        (prefix==true => operator%Operator & argument%Expression) ||
+            argument & operator
+    );
+UpdateExpression.operatorDefinition = `
+updateOperator.getValue(operator.tokenText)[if (prefix) 0 else 1]
+`;
+UpdateExpression requires `operator.tokenText in updateOperator`;
+UpdateExpression {
+`
+companion object {
+    val updateOperator = mapOf(
+        "++" to listOf(JsOperatorDefinition.PreIncr, JsOperatorDefinition.PostIncr),
+        "--" to listOf(JsOperatorDefinition.PreDecr, JsOperatorDefinition.PostDecr),
+    )
+}
+`
+};
+
+ConditionalExpression ::=
+      test%Expression
+    & "?" & consequent%Expression
+    & ":" & alternate%Expression;
+ConditionalExpression.operatorDefinition =
+    `JsOperatorDefinition.Conditional`;
+
+BooleanLiteral ::= ((value==true => "true") || "false");
+NullLiteral ::= "null";
+VoidType ::= "void"; // only useful for types on its own
+
+ObjectExpression ::= (properties => "{" & properties%ObjectMemberOrMembers*", " & "}") || "{}";
+ObjectPattern ::= (properties => "{" & properties%ObjectPatternMemberOrMembers*", " & "}") || "{}";
+
+FunctionExpression;
+
+ArrowFunctionExpression ::=
+      params
+    & "=>"
+    & (
+        (parenthesizeBody==true => "(" & bodyExpression%Expression & ")")
+            || (bodyExpression)
+            || body%BlockStatement!
+    );
+ArrowFunctionExpression.async = `false`;
+ArrowFunctionExpression.id = `null`;
+ArrowFunctionExpression.generator = `false`;
+ArrowFunctionExpression.operatorDefinition =
+    `JsOperatorDefinition.ArrowFunction`;
+ArrowFunctionExpression.bodyExpression = `
+if (body.childCount == 1) {
+    (body.body[0] as? ReturnStatement)?.expr
+} else {
+    null
+}
+`;
+ArrowFunctionExpression.expression%`Boolean` = `bodyExpression != null`;
+ArrowFunctionExpression.parenthesizeBody =
+    `bodyExpression is ObjectExpression`;
+// If passed an expression as a body, wrap it in a block with a return.
+ArrowFunctionExpression {
+`
+constructor(pos: Position, params: Formals, body: Expression) : this(
+    pos,
+    params,
+    BlockStatement(body.pos, listOf(ReturnStatement(body.pos, body))),
+)
+`
+};
+
+ClassExpression; // Inherits from class
+
+/** Comma expression */
+SequenceExpression ::= expressions%Expression+", ";
+SequenceExpression requires `this.expressions.size >= 2`;
+SequenceExpression.operatorDefinition = `JsOperatorDefinition.Comma`;
+
+/** Back-ticked string expression. */
+TemplateExpression(
+    /** Static textual content */
+    quasis%TemplateElement+"",
+    /** Expressions that fill holes between [quasis] */
+    expressions%Expression*"",
+);
+TemplateExpression requires `this.quasis.size == this.expressions.size + 1`;
+TemplateExpression.renderTo = `
+JsTemplateHelpers.renderTemplateTo(
+    tokenSink,
+    pos,
+    this.quasis,
+    this.expressions,
+)
+`;
+
+/** A chunk of textual content in a template string. */
+TemplateElement(raw%`String`);
+TemplateElement.renderTo = `
+tokenSink.emit(OutputToken("\`" + raw + "\`", OutputTokenType.QuotedValue))
+`;
+// This rendering is not actually used; rendering is controlled
+// by the containing TemplateExpression.
+TemplateElement requires
+    `JsTemplateHelpers.checkAllowedTemplateElementText(raw) == null`;
+
+ThisExpression ::= "this";
+
+Statement =
+      ExpressionStatement
+    | BlockStatement
+    | Declaration
+    | DocumentedDeclaration
+    | IfStatement
+    | WhileStatement
+    | ForOfStatement
+    | SwitchStatement
+    | TryStatement
+    | ThrowStatement
+    | ReturnStatement
+    | LabeledStatement
+    | BreakStatement
+    | ContinueStatement
+    | CommentLine
+    | JsDocComment;
+
+ExpressionStatement ::=
+      ((needsParentheses==true => "(" & expression%Expression & ")")
+       || expression)
+    & ";";
+ExpressionStatement.needsParentheses = `
+run {
+    var needsParentheses = false
+
+    // https://www.ecma-international.org/ecma-262/10.0/index.html#sec-expression-statement
+    fun lookahead(n: Tree) {
+        when (n) {
+            // These two productions are sufficient to avoid the negative lookahead via a
+            // word token.  *async* is part and parcel of Js.Function.
+            is Function, is Class -> needsParentheses = true
+            is Identifier -> when (n.name.text) {
+                // These words are sufficient to avoid the negative lookahead via a name
+                // token.
+                "async", "class", "function", "let" -> needsParentheses = true
+            }
+            is ObjectExpression -> needsParentheses = true
+            else -> lookahead(n.childOrNull(0) ?: return)
+        }
+    }
+    lookahead(expression)
+    return needsParentheses
+}
+`;
+ExpressionStatement {
+`
+constructor(expression: Expression) : this(expression.pos, expression)
+`
+};
+
+BlockStatement ::= "{" & "\n" & body%Statement*"\n" & "\n" & "}";
+BlockStatement {
+`
+/**
+ * The statements of the body, but with a null parent so that they may
+ * be reused as another node's children.
+ *
+ * Destructive, so after being called, <code>this</code> will be an empty block.
+ */
+fun takeBody(): List<Statement> {
+    val statements = body.toList()
+    this.body = emptyList()
+    return statements
+}
+`
+}
+
+IfStatement ::=
+      "if" & "(" & test%Expression & ")"
+    & "{" & "\n" & consequent%Statement & "\n" & "}"
+    & (
+        (isElseIf==true => "else" & alternate%Statement)
+            || (hasElse==true => "else" & "{" & "\n" & alternate & "\n" & "}")
+            || ());
+IfStatement.isElseIf = `alternate is IfStatement`;
+IfStatement.hasElse = `
+alternate != null &&
+    (alternate !is BlockStatement || alternate?.childCount != 0)
+`;
+
+WhileStatement ::=
+      "while" & "(" & test%Expression & ")"
+    & "{" & "\n" & body%Statement & "\n" & "}";
+
+LoopLeft = VariableDeclaration | Expression;
+
+// IfThis: changes to generalize with `for (... in ...)`, then LoopLeft needs to similarly
+// not emit a semicolon when the child of a ForInStatement.
+ForOfStatement ::=
+      "for"
+    & ((awaits==true => "await") || ())
+    & "(" & left%LoopLeft & "of" & right%Expression & ")"
+    & "{" & "\n" & body%Statement & "\n" & "}"
+    ;
+// Multi-declarations not allowed as the left-hand-side.
+ForOfStatement requires `
+(this.left as? VariableDeclaration)?.let { it.declarations.size == 1 } ?: true
+`;
+
+SwitchStatement ::=
+      "switch" & "(" & discriminant%Expression & ")"
+    & "{" & "\n" & cases%SwitchCase*"\n" & "\n" & "}"
+    ;
+SwitchCase ::=
+      ((test => "case" & test%Expression) || "default") & ":" & "\n"
+    & consequent%Statement*"\n"
+    ;
+
+TryStatement ::=
+      "try" & "{" & "\n" & block%BlockStatement & "\n" & "}"
+    & ((handler%CatchClause => handler) || ())
+    & ((finalizer%BlockStatement => "finally" & finalizer) || ())
+    ;
+TryStatement requires `this.handler != null || this.finalizer != null`;
+CatchClause ::=
+      "catch"
+    & ((exceptionDeclaration%ExceptionDeclaration =>
+        "(" & exceptionDeclaration & ")"
+    ) || ())
+    & body%BlockStatement
+    ;
+ExceptionDeclaration ::= id%Pattern;
+
+ThrowStatement ::= "throw" & argument%Expression & ";";
+ReturnStatement ::= "return" & (expr%Expression || ()) & ";";
+YieldExpression ::=
+      "yield" & ((delegate==true => "*") || ())
+    & expr%Expression;
+YieldExpression.delegate.default = `false`;
+
+LabeledStatement ::= label%Identifier & ":" & body%Statement;
+
+BreakStatement ::= "break" & (label%Identifier || ()) & ";";
+ContinueStatement ::= "continue" & (label%Identifier || ()) & ";";
+
+/**
+ * CommentLine is not defined by Babel.
+ * A JS line comment that allows embedding metadata markers in generated JS.
+ */
+CommentLine(commentText%`String`) {
+`
+init {
+    // No newlines in line comments.
+    require(commentText.none { it.isJsLineTerminatorChar }) { commentText }
+}
+`
+}
+CommentLine.renderTo = `
+// Start each comment token on its own line.  Not following a semi or brace.
+tokenSink.endLine()
+val tokenText = if (commentText.isEmpty()) {
+    "//"
+} else {
+    "// $commentText"
+}
+tokenSink.emit(OutputToken(tokenText, OutputTokenType.Comment))
+`;
+
+Operator(tokenText%`String`);
+Operator.renderTo = `tokenSink.emit(OutputToken(tokenText, operatorTokenType(tokenText)))`;
+
+JsDocComment ::= `JsDocTokens.commentStart` & typeInfo%JsDocTypeInfo & `JsDocTokens.commentEnd` & "\n";
+
+// Enables optionality without exploding or wrapping.
+MaybeJsDocComment ::= (doc%JsDocComment || ());
+
+JsDocTypeInfo =
+      JsDocClassType
+    | JsDocFunctionType
+    | JsDocTagType
+    | JsDocTypedef;
+
+JsDocClassType ::= templates%JsDocTagTemplate*"\n";
+
+JsDocFunctionType ::=
+      templates%JsDocTagTemplate*"\n"
+    & "\n"
+    & params%JsDocTagParam*"\n"
+    & ("\n" & returnType%JsDocTagReturn || ());
+
+JsDocTypedef ::=
+      templates%JsDocTagTemplate*"\n"
+    & "\n"
+    & typedef%JsDocTagTypedef;
+
+JsDocTagParam ::=
+      "@" & "param"
+    & " "
+    & type%JsDocTypeWrap
+    & " "
+    & ((optional%`Boolean` == true => "[" & id%Identifier & "]") || (id));
+JsDocTagParam.optional.default = `false`;
+
+JsDocTagReturn ::= "@" & "returns" & " " & type%JsDocTypeWrap;
+JsDocTagTemplate ::= "@" & "template" & " " & (type%JsDocTypeWrap || ()) & " " & id%Identifier;
+JsDocTagType ::= "@" & "type" & " " & type%JsDocTypeWrap;
+JsDocTagTypedef ::= "@" & "typedef" & " " & type%JsDocTypeWrap & id%Identifier;
+
+Type = Expression;
+
+JsDocTypeWrap ::= `JsDocTokens.openCurly` & type%Type & `JsDocTokens.closeCurly`;

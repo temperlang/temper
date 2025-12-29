@@ -1,0 +1,1358 @@
+let namespace = "Java";
+
+/**
+ * This grammar is based on Java SE 17 as it's an LTS release.
+ * https://docs.oracle.com/javase/specs/jls/se17/html/index.html
+ *
+ * We are aiming at compatibility with Java SE 8.
+ * https://docs.oracle.com/javase/specs/jls/se8/html/index.html
+ *
+ * Summarizing the table of language changes at
+ * https://docs.oracle.com/en/java/javase/18/language/java-language-changes.html
+ *
+ * We note when features are final:
+ * - Type annotations - Java 8
+ * - JEP 200 - Modular JDK - Java 9
+ * - Underscore character not legal - Java 9
+ * - concise try-with-resources - Java 9
+ * - JEP 286 var syntax - Java 10
+ * - JEP 323 var syntax for lambda params - Java 11
+ * - JEP 325 switch expressions - Java 14
+ * - JEP 378 text blocks - Java 15
+ * - JEP 395 records - Java 16
+ * - JEP 394 instanceof pattern match - Java 16
+ * - JEP 409 sealed classes - Java 17
+ * - JEP 420 switch pattern matching - preview as of Java 18
+ */
+
+let imports = """
+  "lang.temper.common.isNotEmpty
+  "lang.temper.format.OutputToken
+  "lang.temper.format.OutputTokenType
+  "lang.temper.format.TokenSerializable
+  "lang.temper.format.TokenSink
+  "lang.temper.name.OutName
+  "lang.temper.name.name
+;
+
+/**
+ * Represents one of three .java file types.
+ *
+ * This grammar differs from JLS which treats class and interface separately.
+ * See JLS 7.6
+ */
+Program =
+    PackageDeclaration
+  | ModuleDeclaration
+  | TopLevelClassDeclaration
+  ;
+Program(packageStatement%PackageStatement?, programMeta%ProgramMeta);
+
+enum SourceDirectory = MainJava | TestJava ;
+enum EntryPoint = MainMethod | None ;
+
+/**
+ * The metadata for a program adds some additional context that is represented through comments.
+ * // source-directory: test
+ * // entry-point
+ */
+ProgramMeta ::= "";
+ProgramMeta(
+  sourceDirectory%SourceDirectory,
+  entryPoint%EntryPoint,
+  testClass%`Boolean`,
+  neededNames%`Set<QualifiedName>`,
+);
+ProgramMeta.sourceDirectory.default = `SourceDirectory.MainJava` ;
+ProgramMeta.entryPoint.default = `EntryPoint.None` ;
+ProgramMeta.testClass.default = `false` ;
+ProgramMeta.neededNames.default = `emptySet()` ;
+
+/**
+ * JLS 7.4 represents a package.java file
+ */
+PackageDeclaration ::=
+    programMeta%ProgramMeta
+  & packageStatement%PackageStatement ;
+
+PackageStatement ::= "package" & packageName%QualIdentifier & ";" ;
+
+/** JLS 7.7 An open module does not require explicit [OpensDirective]s to open packages for use. */
+enum ModOpen = Closed | Open ;
+
+/**
+ * JLS 7.7 represents module-info.java.
+ * Since Java 9, per JEP 200: https://openjdk.org/jeps/200
+ */
+ModuleDeclaration ::=
+    ( (modOpen%ModOpen == Open => "open") || () )
+  & "module" & moduleName%QualIdentifier
+  & "{" & "\n" & directives%ModuleDirective*"\n" & "\n" & "}"
+  ;
+ModuleDeclaration.modOpen.default = `ModOpen.Closed`;
+
+/** A module declaration's package is technically the default / root package. */
+ModuleDeclaration(packageStatement%PackageStatement?) ;
+ModuleDeclaration.packageStatement = `null` ;
+
+ModuleDirective =
+    RequiresDirective
+  | ExportsDirective
+  | OpensDirective
+  | UsesDirective
+  | ProvidesDirective
+  ;
+
+/**
+ * Modifier keyword used by the module system to mark dependency that will be passed transitively to modules
+ * that depend on it. JLS 7.7.1 and example 7.1.1-1
+ */
+enum ModTransitive = Terminal | Transitive ;
+/** Heavily overloaded modifier keyword used to mark elements that are global or otherwise not dynamically allocated. */
+enum ModStatic = Dynamic | Static ;
+
+RequiresDirective ::=
+    "requires"
+  & ( (modTransitive%ModTransitive == Transitive => "transitive") || () )
+  & ( (modStatic%ModStatic == Static => "static") || () )
+  & moduleName%QualIdentifier
+  & ";"
+  ;
+RequiresDirective.modTransitive.default = `ModTransitive.Terminal`;
+RequiresDirective.modStatic.default = `ModStatic.Dynamic`;
+ExportsDirective ::=
+    "exports" & packageName%QualIdentifier
+  & ( (targetModules%QualIdentifier => "to" & targetModules*", ") || () )
+  & ";"
+  ;
+OpensDirective ::=
+    "opens" & packageName%QualIdentifier
+  & ( (targetModules%QualIdentifier => "to" & targetModules*", ") || () )
+  & ";"
+  ;
+UsesDirective ::= "uses" & typeName%QualIdentifier & ";" ;
+ProvidesDirective ::=
+    "provides" & typeName%QualIdentifier
+  & ( (withTypes%QualIdentifier => "with" & withTypes+", ") || () )
+  & ";"
+  ;
+
+/**
+ * Regular java file; includes interfaces. JLS 7.6
+ */
+TopLevelClassDeclaration ::=
+    programMeta%ProgramMeta
+  & ( ( packageStatement%PackageStatement => packageStatement & "\n" ) || () )
+  & ( ( imports%ImportStatement => imports*"\n" ) & "\n" || () )
+  & classDef%ClassOrInterfaceDeclaration
+  ;
+TopLevelClassDeclaration.packageStatement.default = `null`;
+TopLevelClassDeclaration.imports.default = `listOf()`;
+
+/** See JLS 7.5 */
+ImportStatement =
+    ImportClassStatement   // import project.foo.Bar;
+  | ImportStaticStatement  // import static project.foo.Bar.staticMethod;
+  | ImportClassOnDemand    // import project.foo.*;
+  | ImportStaticOnDemand   // import static project.foo.Bar.*;
+  | CommentLine            // /* TmpL errors go here */
+  ;
+ImportClassStatement ::= "import" & qualifiedName%QualIdentifier & ";" ;
+ImportStaticStatement ::= "import" & "static" & qualifiedName%QualIdentifier & ";" ;
+ImportClassOnDemand ::= "import" & qualifiedName%QualIdentifier & "." & "*" & ";" ;
+ImportStaticOnDemand ::= "import" & "static" & qualifiedName%QualIdentifier & "." & "*" & ";" ;
+
+/**
+ * Class declarations also include inner classes.
+ */
+ClassOrInterfaceDeclaration =
+    ClassDeclaration
+  | InterfaceDeclaration
+  ;
+ClassOrInterfaceDeclaration(name%Identifier, params%TypeParameters);
+//  EnumDeclaration
+//  RecordDeclaration
+//  AnnotationDeclaration -- need a use case
+
+/**
+ * A normal class declaration. JLS 8.1
+ */
+ClassDeclaration ::=
+    ((javadoc%JavadocComment => javadoc) || ())
+  & anns%Annotation*" "
+  & mods%ClassModifiers
+  & "class" & name%Identifier
+  & params%TypeParameters
+  & ( (classExtends%ClassType => "extends" & classExtends) || () )
+  & ( (classImplements%ClassType => "implements" & classImplements+",") || () )
+  & ( (permits%ClassType => "permits" & permits+",") || () )
+  & "{" & "\n" & body%ClassBodyDeclaration*"\n" & "\n" & "}"
+  ;
+ClassDeclaration.javadoc.default = `null`;
+ClassDeclaration.anns.default = `listOf()`;
+ClassDeclaration.mods.default = `ClassModifiers(pos)`;
+ClassDeclaration.params.default = `TypeParameters(pos)`;
+ClassDeclaration.classExtends.default = `null`;
+ClassDeclaration.classImplements.default = `listOf()`;
+ClassDeclaration.permits.default = `listOf()`;
+
+/**
+ * An interface declaration. JLS 8.1
+ */
+InterfaceDeclaration ::=
+    ((javadoc%JavadocComment => javadoc) || ())
+  & anns%Annotation*" "
+  & mods%InterfaceModifiers
+  & "interface" & name%Identifier
+  & params%TypeParameters
+  & ( (classExtends%ClassType => "extends" & classExtends+",") || () )
+  & ( (permits%ClassType => "permits" & permits+",") || () )
+  & "{" & "\n" & body%InterfaceBodyDeclaration*"\n" & "\n" & "}"
+  ;
+InterfaceDeclaration.javadoc.default = `null`;
+InterfaceDeclaration.anns.default = `listOf()`;
+InterfaceDeclaration.mods.default = `InterfaceModifiers(pos)`;
+InterfaceDeclaration.params.default = `TypeParameters(pos)`;
+InterfaceDeclaration.classExtends.default = `listOf()`;
+InterfaceDeclaration.permits.default = `listOf()`;
+
+/**
+ * A local class declaration. JLS 14.3
+ */
+LocalClassDeclaration ::=
+    ((javadoc%JavadocComment => javadoc) || ())
+  & anns%Annotation*" "
+  & mods%LocalClassModifiers
+  & "class" & name%Identifier
+  & params%TypeParameters
+  & ( (classExtends%ClassType => "extends" & classExtends) || () )
+  & ( (classImplements%ClassType => "implements" & classImplements+",") || () )
+  & "{" & "\n" & body%ClassBodyDeclaration*"\n" & "\n" & "}"
+  ;
+LocalClassDeclaration.javadoc.default = `null`;
+LocalClassDeclaration.anns.default = `listOf()`;
+LocalClassDeclaration.mods.default = `LocalClassModifiers(pos)`;
+LocalClassDeclaration.params.default = `TypeParameters(pos)`;
+LocalClassDeclaration.classExtends.default = `null`;
+LocalClassDeclaration.classImplements.default = `listOf()`;
+
+/**
+ * A local interface declaration, since Java 16. JLS 14.3
+ */
+LocalInterfaceDeclaration ::=
+    ((javadoc%JavadocComment => javadoc) || ())
+  & anns%Annotation*" "
+  & "interface" & name%Identifier
+  & params%TypeParameters
+  & ( (classExtends%ClassType => "extends" & classExtends+",") || () )
+  & "{" & "\n" & body%InterfaceBodyDeclaration*"\n" & "\n" & "}"
+  ;
+LocalInterfaceDeclaration.javadoc.default = `null`;
+LocalInterfaceDeclaration.anns.default = `listOf()`;
+LocalInterfaceDeclaration.params.default = `TypeParameters(pos)`;
+LocalInterfaceDeclaration.classExtends.default = `listOf()`;
+
+/**
+ * Generic type parameters. Parameters introduce new types. JLS 8.1.2
+ * For example, in `class Foo<T>` the parameter T can be used in fields and methods.
+ * TODO add type bounds
+ */
+TypeParameters ::= ( (params%TypeParameter => "<" & params+"," & ">") || () );
+TypeParameters.params.default = `listOf()`;
+
+TypeParameter ::=
+    anns%Annotation*" "
+  & type%Identifier
+  & ((upperBounds%ReferenceType => "extends" & upperBounds*"&") || ());
+TypeParameter.anns.default = `listOf()`;
+
+/**
+ * Generic type arguments. Arguments make a generic type concrete. For instance, in `List<String>`
+ * the generic type `List` accepts a type parameter, thus a list of strings. JLS 4.5.1
+ */
+TypeArguments ::= "<" & args%TypeArgument*"," & ">";
+TypeArguments.args.default = `listOf()`;
+
+
+TypeArgument =
+    ReferenceTypeArgument
+  | WildcardTypeArgument
+  | ExtendsTypeArgument
+  | SuperTypeArgument
+  ;
+
+/**
+ * Generic type argument of the form `@annotation Name<Arg, Arg>`. This is roughly ReferenceType from JLS 4.3
+ */
+ReferenceTypeArgument ::=
+    annType%AnnotatedQualIdentifier
+  & ( args%TypeArguments || () ) ;
+ReferenceTypeArgument.args.default = `null`;
+
+/**
+ * Generic type argument of the form `@annotation ?`. This is roughly ReferenceType from JLS 4.3
+ */
+WildcardTypeArgument ::= anns%Annotation*" " & "?" ;
+WildcardTypeArgument.anns.default = `listOf()`;
+
+/**
+ * Generic upper-bound type argument of the form `@annotation ? extends Name<Arg, Arg>`.
+ */
+ExtendsTypeArgument ::=
+    anns%Annotation*" "
+  & "?" & "extends"
+  & type%QualIdentifier
+  & ( args%TypeArguments || () ) ;
+ExtendsTypeArgument.anns.default = `listOf()`;
+ExtendsTypeArgument.args.default = `null`;
+
+/**
+ * Generic lower-bound type argument of the form `@annotation ? super Name<Arg, Arg>`.
+ */
+SuperTypeArgument ::=
+    anns%Annotation*" "
+  & "?" & "super"
+  & type%QualIdentifier
+  & ( args%TypeArguments || () ) ;
+SuperTypeArgument.anns.default = `listOf()`;
+SuperTypeArgument.args.default = `null`;
+
+/** A type of a local variable or field. */
+Type = ClassType | PrimitiveType | ArrayType ;
+
+/** A type that is implemented by reference. */
+ReferenceType = ClassType | ArrayType ;
+
+/**
+ * Result types are any regular type, but also a void type to mark methods that must be called for side-effects.
+ */
+ResultType = Type | VoidType ;
+
+/**
+ * Identifies a reference type; a class or interface. JLS 8.3
+ */
+ClassType ::=
+    anns%Annotation*" "
+  & type%QualIdentifier
+  & ( args%TypeArguments || () ) ;
+  ;
+ClassType.anns.default = `listOf()`;
+ClassType.args.default = `null`;
+
+VoidType ::= "void" ;
+
+/**
+ * Modifies a type to be an array type.
+ */
+ArrayType ::= type%Type & "[" & "]";
+
+PrimitiveType(type%`Primitive`)
+PrimitiveType.renderTo = `tokenSink.word(type.primitiveName)` ;
+
+/**
+ * Elements that live inside a class body. JLS 8.1.7
+ */
+ClassBodyDeclaration =
+    FieldDeclaration       // Type fieldName = initializerExpression;
+  | MethodDeclaration      // ReturnType methodName(argList) { body }
+  | ConstructorDeclaration // Type(args) { body }
+  | Initializer            // static { statement; statement; }
+  | ClassDeclaration       // class Foo { }
+  | InterfaceDeclaration   // interface Foo { }
+  | CommentLine            // /* TmpL errors go here */
+  ;
+
+/**
+ * Elements that live inside a class body. JLS 8.1.7
+ */
+InterfaceBodyDeclaration =
+    InterfaceFieldDeclaration       // static visible Type fieldName = initializerExpression;
+  | InterfaceMethodDeclaration      // ReturnType methodName(argList);
+  | ClassDeclaration                // class Foo { }
+  | InterfaceDeclaration            // interface Foo { }
+  | CommentLine                     // /* TmpL errors go here */
+  ;
+
+/**
+ * A regular field. JLS 8.3
+ */
+FieldDeclaration ::=
+    ((javadoc%JavadocComment => javadoc) || ())
+  & anns%Annotation*" "
+  & mods%FieldModifiers
+  & type%Type & variables%VariableDeclarator+", " & ";"
+  ;
+FieldDeclaration.javadoc.default = `null`;
+FieldDeclaration.anns.default = `listOf()`;
+FieldDeclaration.mods.default = `FieldModifiers(pos)`;
+FieldDeclaration {
+`
+constructor(
+    pos: Position,
+    javadoc: JavadocComment? = null,
+    anns: Iterable<Annotation> = listOf(),
+    mods: FieldModifiers = FieldModifiers(pos),
+    type: Type,
+    variable: Identifier,
+    initializer: Expression?,
+) : this(
+    pos = pos,
+    javadoc = javadoc,
+    anns = anns,
+    mods = mods,
+    type = type,
+    variables = listOf(
+        VariableDeclarator(
+            pos = pos,
+            variable = variable,
+            initializer = initializer,
+        ),
+    ),
+)
+`
+}
+
+/**
+ * An interface field, which is really a constant. JLS 9.3
+ * Note: fields on an interface don't need any modifiers.
+ */
+InterfaceFieldDeclaration ::=
+    ((javadoc%JavadocComment => javadoc) || ())
+  & anns%Annotation*" "
+  & type%Type & variables%VariableDeclarator+", " & ";"
+  ;
+InterfaceFieldDeclaration.javadoc.default = `null`;
+InterfaceFieldDeclaration.anns.default = `listOf()`;
+
+/**
+ * Declares a field or local variable; Java allows multiple assignments of the same type.
+ * This production is consumed by e.g. FieldDeclaration.
+ * JLS 8.3 TODO: support arrays
+ */
+VariableDeclarator ::= variable%Identifier & ( (initializer%Expression => "=" & initializer) || () ) ;
+
+/**
+ * Includes both instance initializer (a bare { } block) and a static initializer.
+ * See JS 8.6 and 8.7
+ */
+Initializer ::=
+    ( (modStatic%ModStatic == Static => "static") || () )
+  & body%BlockStatement
+  ;
+Initializer.modStatic.default = `ModStatic.Dynamic`;
+Initializer requires `body.regularBlock()`;
+
+/** A javadoc comment broken into separate lines each of which is a comment token */
+JavadocComment ::=
+    (commentLines => `JavadocTokens.open` & commentLines%`OutputToken`*"\n" & `JavadocTokens.close`)
+ || ();
+
+/**
+ * A regular method. See JLS 8.4
+ */
+MethodDeclaration ::=
+    ((javadoc%JavadocComment => javadoc) || ())
+  & anns%Annotation*" "
+  & mods%MethodModifiers
+  & typeParams%TypeParameters
+  & result%ResultType
+  & name%Identifier
+  & "(" & parameters%MethodParameter*", " & ")"
+  & ( ( exceptionTypes%ClassType => "throws" & exceptionTypes*", " ) || () )
+  & ( ( body%BlockStatement => body ) || ( ";" ) )
+  ;
+MethodDeclaration.javadoc.default = `null`;
+MethodDeclaration.anns.default = `listOf()`;
+MethodDeclaration.mods.default = `MethodModifiers(pos)`;
+MethodDeclaration.typeParams.default = `TypeParameters(pos)`;
+MethodDeclaration.exceptionTypes.default = `listOf()`;
+MethodDeclaration requires
+    `(mods.modAbstract == ModAbstract.Abstract || mods.modNative == ModNative.Native) == (body == null)`;
+MethodDeclaration requires `parameters.validArity()`;
+MethodDeclaration requires `body.regularBlock()`;
+
+/**
+ * A regular method. See JLS 8.4
+ */
+InterfaceMethodDeclaration ::=
+    ((javadoc%JavadocComment => javadoc) || ())
+  & anns%Annotation*" "
+  & (
+        ( mods%ModInterfaceMethod == Default => "default" )
+     || ( mods == Private => "private" )
+     || ( mods == Static => "static" )
+     || ( mods == PrivateStatic => "private" & "static" )
+     || ( )
+    )
+  & typeParams%TypeParameters
+  & result%ResultType
+  & name%Identifier
+  & "(" & parameters%MethodParameter*", " & ")"
+  & ( ( exceptionTypes%ClassType => "throws" & exceptionTypes*", " ) || () )
+  & ( ( body%BlockStatement => body ) || ( ";" ) )
+  ;
+InterfaceMethodDeclaration.javadoc.default = `null`;
+InterfaceMethodDeclaration.anns.default = `listOf()`;
+InterfaceMethodDeclaration.mods.default = `ModInterfaceMethod.Abstract`;
+InterfaceMethodDeclaration.typeParams.default = `TypeParameters(pos)`;
+InterfaceMethodDeclaration.exceptionTypes.default = `listOf()`;
+InterfaceMethodDeclaration requires `(mods == ModInterfaceMethod.Abstract) == (body == null)`;
+InterfaceMethodDeclaration requires `parameters.validArity()`;
+InterfaceMethodDeclaration requires `body.regularBlock()`;
+
+/**
+ * A constructor. JLS 8.8
+ * TODO: explicit constructor invocation, e.g. this(...) or super(...)
+ * TODO: type parameters, e.g. <A, B> MyClass(A foo, B bar)
+ */
+ConstructorDeclaration ::=
+    mods%ConstructorModifiers
+  & name%Identifier
+  & "(" & parameters%MethodParameter*", " & ")"
+  & ( ( exceptionTypes%Type => "throws" & exceptionTypes*", " ) || () )
+  & body%BlockStatement
+  ;
+ConstructorDeclaration.mods.default = `ConstructorModifiers(pos)`;
+ConstructorDeclaration.exceptionTypes.default = `listOf()`;
+ConstructorDeclaration requires `parameters.validArity()`;
+ConstructorDeclaration requires `body.constructorBlock()`;
+
+/*
+ * Consolidates reciever parameters, formals, and variable arity parameters into MethodParameter.
+ * Variable arity parameters are required for 'rest' spread and other conveniences.
+ *
+ * We won't implement reciever parameters unless we need to either:
+ * - annotate `this`
+ * - for a nested class to specifically get a reference to its outer class
+ */
+MethodParameter = FormalParameter | VariableArityParameter ;
+MethodParameter(mods%VariableModifiers, type%Type, name%Identifier);
+
+/**
+ * A formal parameter to a method. JLS 8.4.1
+ */
+FormalParameter ::=
+    mods%VariableModifiers
+  & type%Type
+  & name%Identifier
+  ;
+FormalParameter.mods.default = `VariableModifiers(pos)`;
+
+/**
+ * A variable arity formal parameter to a method. The effective type is an array of `type`. JLS 8.4.1
+ */
+VariableArityParameter ::=
+    mods%VariableModifiers
+  & type%Type
+  & "..."
+  & name%Identifier
+  ;
+VariableArityParameter.mods.default = `VariableModifiers(pos)`;
+
+/** Modifier keyword to mark classes or methods as relying on a subclass to provide an implementation. */
+enum ModAbstract = Concrete | Abstract ;
+/** The degree of access a class or member grants to a calling method. */
+enum ModAccess = Private | PackagePrivate | Protected | Public ;
+/** The specific flavor of an interface method. */
+enum ModInterfaceMethod = Abstract | Default | Private | Static | PrivateStatic ;
+/** Modifier keyword to mark whether a member of a class is open to being overridden. See also [ModSealedFinal]. */
+enum ModFinal = Open | Final ;
+enum ModNative = Java | Native ;
+/** Modifier keyword for classes that may identify specific classes that are permitted to override. */
+enum ModSealedFinal = Open | NonSealed | Sealed | Final ;
+/** Modifier keyword for interfaces that may identify specific classes that are permitted to override. */
+enum ModSealed = Open | NonSealed | Sealed ;
+/** Modifier keyword to, effectively, wrap the method in a synchronized block. */
+enum ModSynchronized = Unsynchronized | Synchronized ;
+/** Modifier keyword to indicate a field does not need to be persisted by serialization. */
+enum ModTransient = Persistent | Transient ;
+/** Modifier keyword to mark that a field may be changed by other threads. */
+enum ModVolatile = Stable | Volatile ;
+
+/**
+ * Annotations and various keywords applicable to classes. JLS 8.1.1
+ */
+ClassModifiers(
+    modAccess%ModAccess,
+    modAbstract%ModAbstract,
+    modStatic%ModStatic,
+    modFinal%ModSealedFinal
+)
+ClassModifiers.modAccess.default = `ModAccess.PackagePrivate`;
+ClassModifiers.modAbstract.default = `ModAbstract.Concrete`;
+ClassModifiers.modStatic.default = `ModStatic.Dynamic`;
+ClassModifiers.modFinal.default = `ModSealedFinal.Open`;
+ClassModifiers.renderTo = `
+modAccess.emit(tokenSink)
+modAbstract.emit(tokenSink)
+modStatic.emit(tokenSink)
+modFinal.emit(tokenSink)
+`;
+
+/**
+ * Annotations and various keywords applicable to local classes. JLS 8.1.1
+ */
+LocalClassModifiers(
+    modAbstract%ModAbstract,
+    modFinal%ModFinal
+)
+LocalClassModifiers.modAbstract.default = `ModAbstract.Concrete`;
+LocalClassModifiers.modFinal.default = `ModFinal.Open`;
+LocalClassModifiers.renderTo = `
+modAbstract.emit(tokenSink)
+modFinal.emit(tokenSink)
+`;
+
+/**
+ * Annotations and various keywords applicable to interfaces. JLS 9.1.1
+ */
+InterfaceModifiers(
+    modAccess%ModAccess,
+    modSealed%ModSealed
+)
+InterfaceModifiers.modAccess.default = `ModAccess.PackagePrivate`;
+InterfaceModifiers.modSealed.default = `ModSealed.Open`;
+InterfaceModifiers.renderTo = `
+modAccess.emit(tokenSink)
+modSealed.emit(tokenSink)
+`;
+
+/**
+ * Annotations and various keywords applicable to constructors. JLS 8.8.3
+ */
+ConstructorModifiers ::=
+    anns%Annotation*" "
+  & (
+        (modAccess%ModAccess == Public => "public")
+     || (modAccess == Protected => "protected")
+     || (modAccess == Private => "private")
+     || () // package private has no modifier
+    )
+  ;
+ConstructorModifiers.anns.default = `listOf()`;
+ConstructorModifiers.modAccess.default = `ModAccess.PackagePrivate`;
+
+/**
+ * Annotations and various keywords applicable to methods. JLS 8.4.3
+ */
+MethodModifiers(
+    modAccess%ModAccess,
+    modAbstract%ModAbstract,
+    modStatic%ModStatic,
+    modFinal%ModFinal,
+    modSynchronized%ModSynchronized,
+    modNative%ModNative
+)
+MethodModifiers.modAccess.default = `ModAccess.PackagePrivate`;
+MethodModifiers.modAbstract.default = `ModAbstract.Concrete`;
+MethodModifiers.modStatic.default = `ModStatic.Dynamic`;
+MethodModifiers.modFinal.default = `ModFinal.Open`;
+MethodModifiers.modSynchronized.default = `ModSynchronized.Unsynchronized`;
+MethodModifiers.modNative.default = `ModNative.Java`;
+MethodModifiers.renderTo = `
+modAccess.emit(tokenSink)
+modAbstract.emit(tokenSink)
+modStatic.emit(tokenSink)
+modFinal.emit(tokenSink)
+modSynchronized.emit(tokenSink)
+modNative.emit(tokenSink)
+`;
+
+/**
+ * Annotations and various keywords applicable to fields. JLS 8.3.1
+ */
+FieldModifiers(
+    modAccess%ModAccess,
+    modStatic%ModStatic,
+    modFinal%ModFinal,
+    modTransient%ModTransient,
+    modVolatile%ModVolatile
+)
+FieldModifiers.modAccess.default = `ModAccess.PackagePrivate`;
+FieldModifiers.modStatic.default = `ModStatic.Dynamic`;
+FieldModifiers.modFinal.default = `ModFinal.Open`;
+FieldModifiers.modTransient.default = `ModTransient.Persistent`;
+FieldModifiers.modVolatile.default = `ModVolatile.Stable`;
+FieldModifiers.renderTo = `
+modAccess.emit(tokenSink)
+modStatic.emit(tokenSink)
+modFinal.emit(tokenSink)
+modTransient.emit(tokenSink)
+modVolatile.emit(tokenSink)
+`;
+
+VariableModifiers ::=
+    anns%Annotation*" "
+  & ( (modFinal%ModFinal == Final => "final") || () ) ;
+VariableModifiers.anns.default = `listOf()`;
+VariableModifiers.modFinal.default = `ModFinal.Open`;
+
+/**
+ * Java annotations allow a programmer to annotate structural elements with data that can be read
+ * by third party processors. There are a few potential points of confusion to note.
+ *
+ * When introduced in Java 5, all annotations applied to a declaration. For example, `@Override` or
+ * `@Deprecated` applied to the entire method.
+ *
+ * Java 8 allowed annotations to be applied to types. If writing an annotation like `@NotNull` from scratch,
+ * you'd probably only allow it to target `ElementType.TYPE_USE` but it's defined to target `METHOD`, `FIELD`,
+ * `LOCAL_VARIABLE`, etc. See: https://docs.oracle.com/javase/specs/jls/se17/html/jls-9.html#jls-9.7.4
+ *
+ * The common convention is to import annotations; we're using fully qualified names that can be replaced with imports
+ * by the import pass.
+ *
+ * See JLS 9.7
+ */
+Annotation ::=
+    "@"
+  & name%QualIdentifier
+  & ( (params%AnnotationParam => "(" & params+", " & ")" ) || () )
+  ;
+Annotation.params.default = `listOf()`;
+
+/** An annotation parameter takes a list of named parameters. JLS 9.7 */
+AnnotationParam ::= name%Identifier & "=" & value%AnnotationExpr ;
+
+/**
+ * Annotation values are "constant" expressions. JLS 9.7.1
+ *
+ * This presents a subset of possible annotation expressions, under the assumption that we will not be using complex
+ * annotations that are determined by `javac`.
+ */
+AnnotationExpr = AnnotationArrayExpr | LiteralExpr | NameExpr ;
+/** Arrays in annotations have a shorthand syntax. */
+AnnotationArrayExpr ::= "{" & elems%AnnotationExpr*", " & "}" ;
+
+/**
+ * A curly braces block of statements. "Block" in JLS 14.2
+ */
+BlockStatement ::= "{" & "\n" & body%BlockLevelStatement*"\n" & "\n" & "}" ;
+
+/**
+ * "BlockStatement" in JLS 14.2. This includes statements that can't be placed
+ * after a LabeledStatement.
+ */
+BlockLevelStatement =
+    Statement
+  | CommentLine
+  | LocalVariableDeclaration
+  | LocalClassDeclaration
+  | LocalInterfaceDeclaration
+  ;
+
+/**
+ * Declares local variables and optionally assigns an initial value. JLS 14.4
+ * TODO: group multiple declarations and initializations.
+ */
+LocalVariableDeclaration ::=
+    mods%VariableModifiers
+  & ( (type%Type => type) || ("var") )
+  & name%Identifier
+  & ( (expr%Expression => "=" & expr) || () )
+  & ";"
+  ;
+LocalVariableDeclaration.mods.default = `VariableModifiers(pos)`;
+
+/**
+ * General statements. JLS 14.5
+ *
+ * This grammar omits:
+ * - all the productions related to dropping braces.
+ *
+ * Includes AlternateConstructorInvocation, which deviates from JLS.
+ */
+Statement =
+    BlockStatement
+  | EmptyStatement
+  | LabeledStatement
+  | ExpressionStatement
+  | IfStatement
+  | AssertStatement
+  | SwitchStatement
+  | WhileStatement
+  | DoStatement
+// | ForStatement  TODO Deferred
+  | BreakStatement
+  | ContinueStatement
+  | ReturnStatement
+  | ThrowStatement
+// | SynchronizedStatement  TODO Deferred
+  | TryStatement
+  | YieldStatement
+  | AlternateConstructorInvocation
+  ;
+
+/**
+ * The empty statement. JLS 14.6
+ */
+EmptyStatement ::= ";" ;
+
+/**
+ * Labeled statement. Not reconstructing short if blocks. JLS 14.7
+ */
+LabeledStatement ::= label%Identifier & ":" & stmt%Statement ;
+
+/**
+ * Embed an expression as a statement, usually a void method call for effect. JLS 14.8
+ *
+ * This node prohibits expressions that should be statements.
+ * TODO the JLS restricts this to specific expressions; see if this is an issue
+ */
+ExpressionStatement ::= expr%ExpressionStatementExpr & ";" ;
+ExpressionStatement requires `expr !is Operation || expr.operator.operator.makesStatement`;
+ExpressionStatement {
+  `constructor(expr: ExpressionStatementExpr) : this(expr.pos, expr)`
+};
+
+/**
+ * Rather than add complexity to the IfStatement, enforce clean if-else-if chains by restricting the contents
+ * of the alternate.
+ */
+ElseBlockStatement = BlockStatement | IfStatement ;
+
+/**
+ * This production represents all the variants of if-then-else in JLS 14.9
+ */
+IfStatement ::=
+    "if" & "(" & test%Expression & ")"
+  & consequent%BlockStatement
+  & ( (elsePresent == true => "else" & alternate%ElseBlockStatement) || () )
+  ;
+// Stealing the technique from js.out-grammar to render if-else-if chains.
+IfStatement.alternate.default = `null`;
+IfStatement.elsePresent = `alternate != null`;
+IfStatement requires `consequent.regularBlock()`;
+IfStatement requires `
+when (val a = alternate) {
+    null, is IfStatement -> true
+    is BlockStatement -> a.regularBlock()
+}
+`;
+
+/**
+ * An assertion that is enabled _only_ when the application is invoked with `-ea`.
+ * Generally, tests should prefer e.g. `assertEquals()` methods provided by test frameworks.
+ * To check at runtime: `bool enabled = false; assert (enabled = true);`
+ * JLS 14.10
+ */
+AssertStatement ::= "assert" & test%Expression & ( ( msg%Expression => ":" & msg ) || () ) & ";" ;
+AssertStatement.msg.default = `null`;
+
+/**
+ * Switch statements. JLS 14.11
+ */
+SwitchStatement ::=
+    "switch" & "(" & selector%Expression & ")"
+  & block%SwitchBlock
+  ;
+
+/**
+ * Distinguishes between old and new style switch statements.
+ *
+ * JEP 325 switch statements are represented here because backends are statement oriented, but
+ * also because there are some cosmetic and functional differences. See the SwitchExpr for its
+ * limitations.
+ */
+SwitchBlock =
+    SwitchCaseBlock
+  | SwitchRuleBlock
+  ;
+
+SwitchCaseBlock ::= "{" & "\n" & cases%CaseStatement*"\n" & "\n" & "}" ;
+
+SwitchLabel =
+    SwitchCaseLabel
+  | SwitchDefaultLabel
+  ;
+
+SwitchCaseLabel ::= "case" & cases%Expression+"," ;
+SwitchDefaultLabel ::= "default" ;
+
+SwitchBodyStatement = CaseStatement | RuleStatement;
+SwitchBodyStatement(label%SwitchLabel);
+
+/**
+ * Old-style case syntax allows arbitrarily stacking case and default statements to allow
+ * flexibility in styles; this grammar is more restrictive.
+ * JLS 14.11.1
+ */
+CaseStatement ::= label%SwitchLabel & ":" & "\n" & body%BlockLevelStatement*"\n" ;
+
+/**
+ * JEP 325 case syntax is finalized in Java 14. JLS 14.11.1
+ */
+SwitchRuleBlock ::= "{" & "\n" & rules%RuleStatement*"\n" & "\n" & "}" ;
+
+RuleStatement =
+    ExpressionRuleStatement
+  | BlockRuleStatement
+  | ThrowRuleStatement
+  ;
+
+ExpressionRuleStatement ::= label%SwitchLabel & "->" & expr%Expression & ";" ;
+BlockRuleStatement ::= label%SwitchLabel & "->" & block%BlockStatement ;
+BlockRuleStatement requires `block.regularBlock()` ;
+ThrowRuleStatement ::= label%SwitchLabel & "->" & "throw" & expr%Expression & ";" ;
+
+/**
+ * This production represents all the variants of while; JLS 14.12
+ */
+WhileStatement ::=
+    "while" & "(" & test%Expression & ")"
+  & body%BlockStatement
+  ;
+WhileStatement requires `body.regularBlock()`;
+
+/**
+ * This production represents the do-while; JLS 14.13
+ */
+DoStatement ::=
+    "do" & body%BlockStatement
+  & "while" & "(" & test%Expression & ")"
+  & ";"
+  ;
+DoStatement requires `body.regularBlock()`;
+
+// TODO ForStatement deferring this as it's not actually used in TmpL
+// JLS 14.14
+
+/**
+ * Breaks either break out of an enclosing loop, switch or to a labeled statement. JLS 14.15
+ */
+BreakStatement ::= "break" & ( (target%Identifier => target) || () ) & ";" ;
+BreakStatement.target.default = `null`;
+
+/**
+ * Continues transfer control to the enclosing loop or to a labeled loop. JLS 14.16
+ */
+ContinueStatement ::= "continue" & ( (target%Identifier => target) || () ) & ";" ;
+ContinueStatement.target.default = `null`;
+
+/**
+ * Return transfers control to the invoker of the method. JLS 14.17
+ */
+ReturnStatement ::= "return" & ( (expr%Expression => expr) || () ) & ";" ;
+ReturnStatement.expr.default = `null`;
+
+/**
+ * Cause an exception to be thrown. JLS 14.18
+ */
+ThrowStatement ::= "throw" & expr%Expression & ";" ;
+
+// Synchronized blocks JLS 14.19
+
+/**
+ * Combines all of try with resources, catch and finally blocks. JLS 14.20
+ */
+TryStatement ::=
+    "try"
+  & ( (resources%ResourceSpecification => "(" & resources+";" & ")") || () )
+  & bodyBlock%BlockStatement
+  & catchBlocks%CatchBlock*""
+  & ( (finallyBlock%BlockStatement => "finally" & finallyBlock) || () )
+  ;
+TryStatement.resources.default = `listOf()`;
+TryStatement.finallyBlock.default = `null`;
+TryStatement requires `resources.isNotEmpty() || catchBlocks.isNotEmpty() || finallyBlock != null`;
+TryStatement requires `bodyBlock.regularBlock()`;
+TryStatement requires `finallyBlock.regularBlock()`;
+
+/**
+ * The valid forms of try(resources) {}:
+ * 1. more common `try(FileReader reader = new FileReader("some-file.txt")) {}`
+ * 2. less common `try(reader) {}` that will close an already opened stream.
+ * 3. less common `try(foo.field) {}`
+ */
+ResourceSpecification =
+    LocalVariableDeclaration
+  | NameExpr
+  | FieldAccessExpr ;
+
+CatchBlock ::=
+    "catch" & "("
+  & mods%VariableModifiers
+  & types%ClassType+"|"
+  & name%Identifier
+  & ")" & body%BlockStatement
+  ;
+CatchBlock.mods.default = `VariableModifiers(pos)`;
+CatchBlock requires `body.regularBlock()`;
+
+/**
+ * Transfers control to the enclosing switch expression to return its value. JLS 14.21
+ */
+YieldStatement ::= "yield" & expr%Expression & ";" ;
+
+/**
+ * Deviating from JLS to keep things simple, we specify these as a regular statement.
+ * Basically, a constructor can call `this(...)` once at the beginning to invoke another
+ * constructor. JLS 8.8.7.1
+ */
+AlternateConstructorInvocation ::= "this" & "(" & args%Argument*"," & ")" & ";" ;
+
+/**
+ * The JLS breaks out expression nodes into a precedence tree; this grammar collapses that tree.
+ * See JLS 15 generally. Rules for parentheses are in 15.8.5
+ */
+Expression =
+    LiteralExpr // 15.8.2
+  | ThisExpr // 15.8.3, 15.8.4
+// | ArrayCreationExpr // 15.10.1
+// | ArrayAccessExpr // 15.10.3
+  | FieldAccessExpr // 15.11
+  | StaticFieldAccessExpr // 6.5.6.2
+  | ExpressionStatementExpr // 14.8
+// | SuperMethodInvocationExpr // Won't do: Temper super classes are always interfaces
+  | InstanceMethodReferenceExpr // 15.13
+  | StaticMethodReferenceExpr // 15.13
+  | ConstructorReferenceExpr // 15.13
+  | NameExpr // 15.14.1
+  | CastExpr // 15.16
+  | InstanceofExpr // 15.20
+  | LambdaExpr  // 15.27
+  | SwitchExpr // 15.28
+  ;
+
+/**
+ * Only certain elements can be used as standalone [ExpressionStatement]s. Operations must be further restricted.
+ */
+ExpressionStatementExpr =
+    AssignmentExpr // 15.26
+  | Operation
+  | InstanceMethodInvocationExpr // 15.12
+  | StaticMethodInvocationExpr // 15.12
+  | InstanceCreationExpr // 15.9
+  ;
+
+/**
+ * A token to represent the operator itself.
+ */
+Operator(operator%`JavaOperator`);
+Operator.renderTo = `operator.emit(tokenSink)` ;
+
+/** Identify anything with an operator as individual AST elements require the correct operator. */
+Operation =
+    PostfixExpr // 15.14.2, 15.14.3
+  | PrefixExpr // 15.15
+  | InfixExpr // 15.17 through 15.26
+  ;
+Operation(operator%Operator);
+Operation.operatorDefinition = `operator.operator.operatorDefinition`;
+
+/**
+ * Java literals. JLS 15.8.2
+ */
+LiteralExpr =
+    IntegerLiteral
+  | FloatingPointLiteral
+  | BooleanLiteral
+  | CharacterLiteral
+  | StringLiteral
+  | NullLiteral
+  | ClassLiteral
+  ;
+LiteralExpr.operatorDefinition = `JavaOperatorDefinition.Atom`;
+
+/**
+ * A literal integer expression.
+ * Generally see JLS 15.8.1. There are some corner cases for integers noted in 15.8.3
+ */
+IntegerLiteral(value%`Long`);
+IntegerLiteral.renderTo = `value.emit(tokenSink)`;
+
+/** Indicates whether to mark a literal as single or double precision. */
+enum Precision = Single | Double;
+
+/** JLS 15.8.1 */
+FloatingPointLiteral(value%`Number`, precision%Precision);
+FloatingPointLiteral.renderTo = `value.emit(tokenSink, precision)`;
+
+/** JLS 15.8.1 */
+BooleanLiteral ::= ( (value == true => "true") || ( "false" ) );
+
+/** JLS 15.8.1 */
+CharacterLiteral(value%`Char`);
+CharacterLiteral.renderTo = `value.emit(tokenSink)`;
+
+/** JLS 15.8.1 */
+StringLiteral(value%`String`);
+StringLiteral.renderTo = `value.emit(tokenSink)`;
+
+/** JLS 15.8.1 */
+NullLiteral ::= "null" ;
+
+/**
+ * Literal expression to specify a type. `SomeType.class` JLS 15.8.2
+ *
+ * The restriction that a class literal must be a raw class is enforced by
+ * the requires mechanism.
+ *
+ * Won't do: handle `void.class` and other oddities; we don't seem to need class literals in code gen.
+ */
+ClassLiteral ::= type%Type & "." & "class";
+ClassLiteral requires `type.isRaw()` ;
+
+/**
+ * The `this` keyword. JLS 15.8.3, 15.8.4
+ *
+ * Won't do: qualified this is only required if we need inner classes
+ */
+ThisExpr ::= "this" ;
+ThisExpr.operatorDefinition = `JavaOperatorDefinition.Atom`;
+
+/**
+ * Constructs a new instance of a class type. JLS 15.9
+ */
+InstanceCreationExpr ::=
+    "new"
+  & type%ClassType
+  & ( typeArgs%TypeArguments || () )
+  & "(" & args%Argument*", " & ")"
+  & ( classBody%AnonymousClassBody || () )
+  ;
+InstanceCreationExpr.typeArgs.default = `null` ;
+InstanceCreationExpr.classBody.default = `null` ;
+InstanceCreationExpr.operatorDefinition = `JavaOperatorDefinition.Atom` ;
+
+/**
+ * A class body within an instance creation expression. JLS 15.9
+ */
+AnonymousClassBody ::=
+    "{" & "\n" & body%ClassBodyDeclaration*"\n" & "\n" & "}" ;
+
+/**
+ * A field access expression looks up a field of a reference value. JLS 15.11
+ *
+ * Won't do: super and qualified super expressions; Temper only needs inheritance from interfaces, so the default
+ * super() is sufficient.
+ */
+FieldAccessExpr ::= expr%Expression & "." & field%Identifier ;
+FieldAccessExpr.operatorDefinition = `JavaOperatorDefinition.Atom` ;
+
+/**
+ * Invokes a method on an object. `object.method(arg, arg, ...)` JLS 15.12
+ * If there are no type arguments and the object is `this`, the subject expression can be omitted.
+ */
+InstanceMethodInvocationExpr ::=
+    ( (expr%Expression => expr & ".") || () )
+  & ( typeArgs%TypeArguments || () )
+  & method%Identifier & "("
+  & args%Argument*", "
+  & ")" ;
+InstanceMethodInvocationExpr.typeArgs.default = `null` ;
+InstanceMethodInvocationExpr.operatorDefinition = `JavaOperatorDefinition.Atom` ;
+// The object is needed if it's not `this` or the method invocation has type arguments.
+InstanceMethodInvocationExpr requires `expr != null || typeArgs == null` ;
+
+/**
+ * Invokes a static method. `Type.<args>method(arg, arg, ...)` JLS 15.12
+ */
+StaticMethodInvocationExpr ::=
+    ( (type%QualIdentifier => type & ".") || () )
+  & ( typeArgs%TypeArguments || () )
+  & method%Identifier & "("
+  & args%Argument*", "
+  & ")" ;
+StaticMethodInvocationExpr.typeArgs.default = `null` ;
+StaticMethodInvocationExpr.operatorDefinition = `JavaOperatorDefinition.Atom` ;
+// The type can either be specified or the type args can be raw.
+// Valid: Type.<Foo>method() type specified, type args specified
+// Valid: Type.method()      type specified, type args raw.
+// Valid: method()           type not specified, type args raw.
+StaticMethodInvocationExpr requires `type != null || typeArgs == null`;
+
+/**
+ * A static field access expression looks up a field of an enum, class or interface type.
+ * 6.5.6.2
+ *
+ * 15.11 Allows for static methods by invoking a *Primary* as in
+ *
+ *     String s = null;
+ *     s.join(", ", "Hello", "World!")
+ *
+ * This only allows the `String.join` form.
+ */
+StaticFieldAccessExpr ::= type%QualIdentifier & "." & field%Identifier;
+StaticFieldAccessExpr.operatorDefinition = `JavaOperatorDefinition.Atom`;
+
+/** An argument to a method invocation holds an expression; helps with operator precedence. */
+Argument ::= expr%Expression;
+
+/**
+ * Shorthand for a lambda that invokes a method on an object; `object::method`. JLS 15.13
+ * TODO type arguments
+ */
+InstanceMethodReferenceExpr ::= expr%Expression & "::" & method%Identifier ;
+InstanceMethodReferenceExpr.operatorDefinition = `JavaOperatorDefinition.Atom` ;
+
+/**
+ * Shorthand for a lambda that invokes a static method; `Type::method`. JLS 15.13
+ * TODO type arguments
+ */
+StaticMethodReferenceExpr ::= type%QualIdentifier & "::" & method%Identifier ;
+StaticMethodReferenceExpr.operatorDefinition = `JavaOperatorDefinition.Atom` ;
+
+/**
+ * Shorthand for a lambda that invokes a constructor; `Type::new`. JLS 15.13
+ * TODO type arguments
+ */
+ConstructorReferenceExpr ::= type%QualIdentifier & "::" & "new" ;
+ConstructorReferenceExpr.operatorDefinition = `JavaOperatorDefinition.Atom` ;
+
+/**
+ * An expression name is a dotted identifier.
+ * JLS 15.14.1
+ */
+NameExpr ::= ident%Identifier+"." ;
+NameExpr.operatorDefinition = `JavaOperatorDefinition.Atom` ;
+NameExpr {
+  `constructor(ident: Identifier) : this(ident.pos, listOf(ident))`
+};
+
+
+/**
+ * The postincrement and postdecrement operators. JLS 15.14.2, 15.14.3
+ */
+PostfixExpr ::= expr%Expression & operator%Operator ;
+PostfixExpr requires `operator.isPostfix()` ;
+
+/**
+ * Includes unary operators. JLS 15.15.1, 15.15.2, 15.15.3, 15.15.4, 15.15.5, 15.15.6
+ */
+PrefixExpr ::= operator%Operator & expr%Expression ;
+PrefixExpr requires `operator.isPrefix()` ;
+
+/**
+ * Casts a reference type to a new type.
+ * JLS 15.16. TODO stub
+ */
+CastExpr ::= "(" & type%Type & ")" & expr%Expression ;
+CastExpr.operatorDefinition = `JavaOperatorDefinition.Unary` ;
+
+/**
+ * Most binary expressions, see also [AssignmentExpr].
+ * JLS 15.17 through 15.25.
+ */
+InfixExpr ::= left%Expression & operator%Operator & right%Expression ;
+InfixExpr requires `operator.isInfix()` ;
+
+InstanceofExpr ::= left%Expression & "instanceof" & right%Type ;
+InstanceofExpr.operatorDefinition = `JavaOperatorDefinition.Relational` ;
+
+/**
+ * Assignments have special restrictions on the left-hand side.
+ * JLS 15.26
+ */
+AssignmentExpr ::= left%LeftHandSide & operator%Operator & right%Expression ;
+AssignmentExpr.operatorDefinition = `operator.operatorDefinition` ;
+AssignmentExpr requires `operator.operator.isAssignment()` ;
+
+/**
+ * The target of an assignment may be a name, or an accessor.
+ * JLS 15.26 TODO add array access
+ */
+LeftHandSide = NameExpr | FieldAccessExpr ;
+
+/**
+ * A lambda expression. JLS 15.27
+ */
+LambdaExpr ::= params%LambdaParams & "->" & body%LambdaBody ;
+LambdaExpr.operatorDefinition = `JavaOperatorDefinition.Lambda` ;
+LambdaExpr requires `
+when (val b = body) {
+    is BlockStatement -> b.regularBlock()
+    is Expression -> true
+}
+`;
+
+LambdaParams = LambdaSimpleParams | LambdaComplexParams ;
+LambdaBody = Expression | BlockStatement ;
+
+LambdaSimpleParams ::=
+    (
+        ( oneParam == true => params%Identifier*", " )
+     || ( "(" & params*", " & ")" )
+    ) ;
+LambdaSimpleParams.oneParam = `params.size == 1`;
+LambdaComplexParams ::= "(" & params%LambdaParameter*", " & ")" ;
+LambdaComplexParams requires `params.lambdaValidArity()` ;
+
+LambdaParameter = LambdaParam | LambdaVarParam ;
+
+/**
+ * A typed parameter for a lambda. JLS 15.27.1
+ */
+LambdaParam ::=
+    mods%VariableModifiers
+  & ( ( type%Type ) || ( "var" ) )
+  & name%Identifier
+  ;
+LambdaParam.mods.default = `VariableModifiers(pos)`;
+
+/**
+ * A variable arity parameter for a lambda. JLS 15.27.1
+ */
+LambdaVarParam ::=
+    mods%VariableModifiers
+  & ( ( type%Type ) || ( "var" ) )
+  & "..."
+  & name%Identifier
+  ;
+LambdaVarParam.mods.default = `VariableModifiers(pos)`;
+
+
+/**
+ * Switch expression; structurally identical to a switch statement. JLS 15.28
+ */
+SwitchExpr ::=
+    "switch" & "(" & selector%Expression & ")"
+  & block%SwitchBlock
+  ;
+SwitchExpr.operatorDefinition = `JavaOperatorDefinition.Unary`;
+
+/**
+ * Used for qualified identifiers in non-expression contexts.
+ * See [NameExpr] for a name in an expression.
+ * Corresponds to various names in JLS 6.5.
+ */
+QualIdentifier ::= ident%Identifier+"." ;
+QualIdentifier requires `ident.isNotEmpty()`;
+
+/**
+ * Annotations on a type argument are special. This implements `pkg.pkg.@annotation Name`.
+ */
+AnnotatedQualIdentifier ::=
+    ( ( pkg%Identifier => pkg+"." & "." ) || () )
+  & anns%Annotation*" "
+  & type%Identifier
+  ;
+
+/**
+ * Used for short identifiers in non-expression contexts. See [NameExpr] for a name in an expression.
+ * Corresponds to Identifier, TypeIdentifier and UnqualifiedMethodIdentifier in JLS 3.8.
+ * See also notes at [isIdentifier].
+ */
+Identifier(outName%`OutName`);
+Identifier.renderTo = `tokenSink.name(outName, inOperatorPosition = false)` ;
+Identifier requires `outName.outputNameText.isIdentifier()`;
+
+/**
+ * Uses the standard slash-star comments; preferred to enable single-line code output.
+ */
+CommentLine(commentText%`String`) {
+`
+init {
+    // Prohibit the closing comment sequence
+    checkCommentText(commentText)
+}
+`
+}
+
+CommentLine.renderTo = `
+val tokenText = if (commentText.isEmpty()) {
+    "/* */"
+} else {
+    "/* $commentText */"
+}
+tokenSink.emit(OutputToken(tokenText, OutputTokenType.Comment))
+`;

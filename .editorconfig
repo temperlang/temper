@@ -1,0 +1,47 @@
+# editorconfig.org
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.{js,json,jsonc,md,mjs,ts}]
+indent_size = 2
+
+[*.{temper,temper.md}]
+indent_size = 2
+
+[*.kt]
+max_line_length = 120
+# pinterest.github.io/ktlint/faq/#how-do-i-globally-disable-a-rule
+# string-template makes it hard to format CLI help messages nicely
+# so is a net negative.
+ktlint_standard_string-template = disabled
+# It's useful to be able to put block comments on the same line
+# as other code as in
+#     "Big long string${ "" /* explain what's going on */}"
+ktlint_standard_comment-wrapping = disabled
+# TODO temporary settings to migrate to ktlint 1.0
+ktlint_code_style = intellij_idea
+ktlint_standard_argument-list-wrapping = disabled
+ktlint_standard_backing-property-naming = disabled
+ktlint_standard_class-signature = disabled
+ktlint_standard_condition-wrapping = disabled
+ktlint_standard_enum-wrapping = disabled
+ktlint_standard_function-expression-body = disabled
+ktlint_standard_function-literal = disabled
+ktlint_standard_function-naming = disabled
+ktlint_standard_function-signature = disabled
+ktlint_standard_parameter-list-spacing = disabled
+ktlint_standard_property-naming = disabled
+ktlint_standard_statement-wrapping = disabled
+ktlint_standard_type-parameter-list-spacing = disabled
+ktlint_standard_value-parameter-comment = disabled
+
+[*.go]
+indent_style = tab
+indent_size = 4

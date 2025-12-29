@@ -1,0 +1,162 @@
+# Compiled class file
+*.class
+*.pyc
+
+# Log file
+*.log
+
+# BlueJ files
+*.ctxt
+
+# Output files produced by the Temper command line tool
+**/temper.out/**
+
+# Package Files #
+*.vsix
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+
+# IDE / SDK droppings
+/.idea
+/.kotlin
+/local.properties
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Emacs droppings
+*~
+
+# Mac droppings
+.DS_Store
+
+# perl -i.bak droppings
+*.bak
+
+# Stuff that I'll figure out what to do with later
+*.later
+
+# We check in the gradle wrapper; see README for notes.
+# /gradlew.bat
+# /gradlew
+# /gradle/wrapper
+!/gradle/wrapper/gradle-wrapper.jar
+
+# Gradle droppings
+/build
+/.gradle
+/ast/build
+/ast/.gradle
+/astbuild/build
+/astbuild/.gradle
+/be/build
+/be/.gradle
+/be-cpp/build
+/be-cpp/.gradle
+/be-cpp03/build
+/be-cpp03/.gradle
+/be-csharp/build
+/be-csharp/.gradle
+/be-java/build
+/be-java/.gradle
+/be-js/build
+/be-js/.gradle
+/be-js/src/node_modules
+/be-js/src/commonMain/resources/lang/temper/be/js/temper-core/node_modules
+/be-lua/build
+/be-lua/.gradle
+/be-cpp/build
+/be-cpp/.gradle
+/be-py/build
+/be-py/.gradle
+/be-py/src/node_modules
+/be-helpers/build
+/be-helpers/.gradle
+/be-rust/build
+/be-rust/.gradle
+/be-test-helpers/build
+/be-test-helpers/.gradle
+/build-user-docs/bin
+/build-user-docs/build
+/build-user-docs/.gradle
+/builtin/build
+/builtin/.gradle
+/bundled-backends/build
+/bundled-backends/.gradle
+/cli/build
+/cli/.gradle
+/common/build
+/common/.gradle
+/compile/build
+/compile/.gradle
+/controlflow/build
+/controlflow/.gradle
+/cst/build
+/cst/.gradle
+/demo/diff-impl-js/node_modules/
+/doc-gen/build
+/doc-gen/.gradle
+/docs/for-users/package-lock.json
+/format/build
+/format/.gradle
+/frontend/build
+/frontend/.gradle
+/fs/build
+/fs/.gradle
+/fs-test-helpers/build
+/fs-test-helpers/.gradle
+/functional-test-suite/build
+/functional-test-suite/.gradle
+/fundamentals/build
+/fundamentals/.gradle
+/interp/build
+/interp/.gradle
+/kcodegen/build
+/kcodegen/.gradle
+/langserver/build
+/langserver/.gradle
+/langserver/src/main/js/temper-language-support/node_modules
+/langserver/src/main/js/temper-language-support/dist
+/langserver/src/main/js/temper-language-support/out
+/langserver/src/main/js/temper-language-support/temper
+/lexer/build
+/lexer/.gradle
+/library/build
+/library/.gradle
+/log/build
+/log/.gradle
+/name/build
+/name/.gradle
+/parser/build
+/parser/.gradle
+/release-notes/build
+/release-notes/.gradle
+/result-helpers/build
+/result-helpers/.gradle
+/regex/build
+/scripts/bin
+/scripts/build
+/stage/build
+/stage/.gradle
+/supported-backends/build
+/supported-backends/.gradle
+/test-helpers/build
+/test-helpers/.gradle
+/tooling/build
+/tooling/.gradle
+
+# Directories from assembling binaries
+/cli/bin/
+/doc-gen/bin/
+/langserver/bin/
+
+# mkdocs output directory
+/docs/for-users/temper-docs/site/
+# node_modules/ is installed on demand by build-user-docs and
+# copied into ext/ before mkdocs generates HTML and copies other files.
+/docs/for-users/node_modules/
+# needed when building mkdocs output
+/docs/for-users/temper-docs/docs/ext/
+
+# Directory for unlisted external contributions
+/external/

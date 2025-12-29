@@ -1,0 +1,1921 @@
+// Output grammar for the layered Temper AST which collects together
+// Temper constructs in an easy to translate/manipulate layered syntax
+// where namespaces hold types hold statements hold expressions.
+
+let namespace = "tmpL";
+
+let imports = """
+  "lang.temper.be.Dependencies
+  "lang.temper.be.TargetLanguageName
+  "lang.temper.be.TargetLanguageTypeName
+  "lang.temper.common.Either
+  "lang.temper.common.TriState
+  "lang.temper.common.temperEscaper
+  "lang.temper.format.OutToks
+  "lang.temper.format.OutputToken
+  "lang.temper.format.OutputTokenType
+  "lang.temper.format.TokenSerializable
+  "lang.temper.format.TokenSink
+  "lang.temper.library.LibraryConfiguration
+  "lang.temper.library.LibraryConfigurations
+  "lang.temper.log.FilePath
+  "lang.temper.log.FilePath.Companion.join
+  "lang.temper.log.FilePathSegment
+  "lang.temper.log.FilePathSegmentOrPseudoSegment
+  "lang.temper.log.Position
+  "lang.temper.log.SameDirPseudoFilePathSegment
+  "lang.temper.lexer.Genre
+  "lang.temper.name.DashedIdentifier
+  "lang.temper.name.ModularName
+  "lang.temper.name.ModuleName
+  "lang.temper.name.NamingContext
+  "lang.temper.name.OutName
+  "lang.temper.name.ParsedName
+  "lang.temper.name.QName
+  "lang.temper.name.ResolvedName
+  "lang.temper.name.ResolvedParsedName
+  "lang.temper.name.Symbol
+  "lang.temper.type.MemberOverride2
+  "lang.temper.type.PropertyShape
+  "lang.temper.type.TypeDefinition
+  "lang.temper.type.TypeShape
+  "lang.temper.type.VisibleMemberShape
+  "lang.temper.type.WellKnownTypes
+  "lang.temper.type2.Descriptor
+  "lang.temper.type2.DefinedType
+  "lang.temper.type2.Signature2
+  "lang.temper.type2.Type2
+  "lang.temper.type2.withType
+  "lang.temper.value.DependencyCategory
+  "lang.temper.value.TNull
+  "lang.temper.value.TypeTag
+  "lang.temper.value.Value
+  "lang.temper.value.void
+;
+
+/** The topmost top-level */
+ModuleSet ::= modules%Module*"\n\n";
+ModuleSet(
+    genre%`Genre`,
+    libraryConfigurations%`LibraryConfigurations`,
+    mergedNamingContext%`NamingContext`,
+);
+ModuleSet.libraryConfiguration%`LibraryConfiguration` = `libraryConfigurations.currentLibraryConfiguration`;
+/** A context path that can be used to trim error message locations */
+ModuleSet.context%`FilePath` = `libraryConfiguration.libraryRoot`;
+
+/**
+ * These roughly correspond to [lang.temper.frontend.Module]s but we create
+ * modules to pool values referred to by multiple lispy ASTs.
+ *
+ * Most backends should be able to map these roughly to source files or directories.
+ */
+Module ::=
+      codeLocation%CodeLocationMetadata
+    & moduleMetadata%ModuleMetadata
+    & deps%LibraryDependency*"\n" & ((deps => "\n") || ())
+    & imports%Import*"\n" & ((imports => "\n") || ())
+    & topLevels%TopLevel*"\n" & ((topLevels => "\n") || ())
+    & (("export" & result%Expression & ";") || ())
+    ;
+
+/**
+ * Information about a [Module].
+ */
+ModuleMetadata(
+    dependencyCategory%`DependencyCategory`,
+    // TODO: once we allow file-level decorations, surface them here.
+);
+ModuleMetadata.renderTo = `
+val text = buildString {
+    when (dependencyCategory) {
+        DependencyCategory.Production -> {}
+        DependencyCategory.Test -> append("DependencyCategory.Test")
+    }
+}
+if (text.isNotEmpty()) {
+    tokenSink.emit(
+        OutputToken(
+            "//// " + commentSafe(text) + "\\n",
+            OutputTokenType.Comment,
+        ),
+    )
+}
+`;
+
+/**
+ * Used to generate a header comment when a whole module set is rendered,
+ * which is usually to aid debugging.
+ */
+data CodeLocationMetadata(
+    codeLocation%`ModuleName`,
+    origin%`NamingContext`,
+    /**
+     * The path to the file that will be produced by translating this file.
+     * This is tentative when the module is created but should be filled in by
+     * a backend so that [lang.temper.be.Backend.finishTmpL] can use it to
+     * finalize [Import]s.
+     */
+    outputPath%`FilePath`,
+);
+CodeLocationMetadata.renderTo = `
+tokenSink.emit(
+    OutputToken(
+        "//// " + commentSafe(codeLocation.diagnostic + " => " + outputPath) + "\\n",
+        OutputTokenType.Comment,
+    ),
+)
+`;
+
+LibraryDependency(libraryName%`DashedIdentifier`);
+LibraryDependency.renderTo = `
+
+tokenSink.emit(OutputToken("require", OutputTokenType.Word))
+tokenSink.emit(OutputToken(libraryName.text, OutputTokenType.Name))
+tokenSink.emit(OutToks.semi)
+
+`;
+
+/** A path from a module to another */
+ModulePath = SameLibraryPath | CrossLibraryPath;
+ModulePath(
+    /**
+     * The library being imported from.
+     * This may be different from, and should be preferred to, any
+     * library associated with [to] when the library bundles a
+     * parameterization of a module not available from that module's
+     * source library.
+     */
+    libraryName%`DashedIdentifier`,
+    /** The referent's location */
+    to%`ModuleName`,
+    /** Output path of the translated module. */
+    translatedPath%`FilePath`,
+);
+
+/**
+ * Relative path from this module's outputPath to the targets output path.
+ */
+SameLibraryPath.relativePath%`List<FilePathSegmentOrPseudoSegment>` = `
+run {
+    val destination = translatedPath
+    var source = FilePath.emptyPath
+
+    var anc: Tree = this
+    while (true) {
+        if (anc is Module) {
+            source = anc.codeLocation.outputPath
+            break
+        }
+        anc = (anc.parent as? Tree) ?: break
+    }
+
+    source.relativePathTo(destination)
+}
+`;
+SameLibraryPath.renderTo = `
+// Render with '.' or '..' as first segment CommonJS style.
+var segments = relativePath
+if (segments.firstOrNull() is FilePathSegment?) {
+    segments = listOf(SameDirPseudoFilePathSegment) + segments
+}
+
+tokenSink.emit(
+    OutputToken(
+        temperEscaper.escape(segments.join(isDir = false)),
+        OutputTokenType.QuotedValue,
+    ),
+)
+`;
+
+CrossLibraryPath.renderTo = `
+val segmentsWithLibraryName =
+    listOf(FilePathSegment(libraryName.text)) + translatedPath.segments
+tokenSink.emit(
+    OutputToken(
+        temperEscaper.escape(segmentsWithLibraryName.join(isDir = false)),
+        OutputTokenType.QuotedValue,
+    ),
+)
+`;
+
+/**
+ * Allows backends to recognize, before processing a [Module] body, which names in [Id]s
+ * are defined externally, so that it can:
+ *
+ * - generate its own linking directives,
+ * - compute complete (non-transitive) dependency metadata,
+ */
+Import ::=
+      metadata%DeclarationMetadata*""
+    & "let" & "{" & externalName%Id & ((localName => "as" & localName%Id) || ()) & "}"
+    & ((sig => ":" & sig%ImportSignature) || ())
+    & "=" & "import" & "("
+    & ((path => path%ModulePath) || ())
+    & ")" & ";"
+    ;
+Import.externalModuleName%`ModuleName?` = `
+    (externalName.name as? ModularName)?.origin?.loc as? ModuleName
+`;
+Import.metadata.default = `emptyList()`;
+
+ImportSignature =
+      ImportedType
+    | ImportedFunction
+    | ImportedValue
+    | ImportedConnection
+    ;
+ImportSignature(
+    metadata%DeclarationMetadata*"",
+);
+
+/**
+ * An externally defined name that may be used in a [DefinedType].
+ */
+ImportedType(typeShape%`TypeShape`);
+ImportedType.renderTo = `
+metadata.forEach {
+    it.formatTo(tokenSink)
+}
+tokenSink.emit(OutputToken("type", OutputTokenType.Word))
+`;
+
+ImportedFunction ::= metadata*" " & "fn" & type%`Signature2`;
+ImportedValue ::= metadata*" " & "const" & type%AType;
+ImportedConnection ::= metadata*" " & "connection" & connectedKey%ConnectedKey;
+
+ConnectedKey(key%`String`);
+ConnectedKey.renderTo = `
+tokenSink.emit(
+    OutputToken(
+        temperEscaper.escape(key),
+        OutputTokenType.QuotedValue,
+    ),
+)
+`;
+
+LibraryName(libraryName%`DashedIdentifier`);
+LibraryName.renderTo = `
+tokenSink.emit(
+    OutputToken(
+        temperEscaper.escape(libraryName.text),
+        OutputTokenType.QuotedValue,
+    ),
+)
+`;
+
+enum Visibility = Private | Protected | Public;
+enum TypeDefKind = Class | Interface;
+
+/**
+ * Corresponds to an identifier.
+ *
+ * This type is being migrated from using a ResolvedName to a TargetLanguageName.
+ *
+ * The debugId field is meant to allow source-mapping.  By associating target
+ * language names with Temper names, we can provide a better debugging experience.
+ */
+Id(nameContent%`Either<ResolvedName, TargetLanguageName>`);
+Id.renderTo = `
+when (val nameContent = this.nameContent) {
+  is Either.Left -> {
+    val nameToRender = outName ?: nameContent.item
+    tokenSink.emit(nameToRender.toToken(inOperatorPosition = false))
+  }
+  is Either.Right -> nameContent.item.renderTo(tokenSink)
+}
+`;
+Id.operatorDefinition = `null`;
+Id.name%`ResolvedName` = `(nameContent as Either.Left).item`;
+Id.newName%`TargetLanguageName` = `(nameContent as Either.Right).item`;
+Id {
+    `
+    private var _outName: OutName? = null
+    private var _debugId: ResolvedParsedName? = null
+
+    var outName: OutName?
+        get() = _outName ?: outNameFor(name)
+        set(newOutName) {
+            this._outName = newOutName
+            this._debugId = null
+        }
+
+    var debugId: ResolvedParsedName?
+        get() = _debugId
+        set(newDebugId) {
+            this._debugId = newDebugId
+            this._outName = null
+        }
+
+    constructor(
+        pos: Position,
+        name: ResolvedName,
+        outName: OutName? = null,
+    ) : this(pos, Either.Left(name)) {
+        this._outName = outName
+    }
+
+    constructor(
+        pos: Position,
+        name: TargetLanguageName,
+        debugId: ResolvedParsedName? = null,
+    ) : this(pos, Either.Right(name)) {
+        this._debugId = debugId
+    }
+    `
+}
+
+data IdData from Id;
+IdData {
+    `
+    private var _outName: OutName? = null
+    private var _debugId: ResolvedParsedName? = null
+
+    var outName: OutName?
+        get() = _outName ?: outNameFor(name)
+        set(newOutName) {
+            this._outName = newOutName
+            this._debugId = null
+        }
+
+    var debugId: ResolvedParsedName?
+        get() = _debugId
+        set(newDebugId) {
+            this._debugId = newDebugId
+            this._outName = null
+        }
+
+    constructor(
+        sourceLibrary: DashedIdentifier,
+        name: ResolvedName,
+        outName: OutName? = null,
+    ) : this(sourceLibrary, Either.Left(name)) {
+        this._outName = outName
+    }
+
+    constructor(
+        sourceLibrary: DashedIdentifier,
+        name: TargetLanguageName,
+        debugId: ResolvedParsedName? = null,
+    ) : this(sourceLibrary, Either.Right(name)) {
+        this._debugId = debugId
+    }
+    `
+}
+
+DotName(dotNameText%`String`);
+DotName.renderTo = `tokenSink.emit(dotNameToOutputToken(this.dotNameText))`;
+
+/**
+ * AType is either an old-style [Type] or a new style [NewType].
+ * Once all backends have been adjusted to new style types, we will retire
+ * this wrapper node along with the old style.
+ */
+AType(privOtOrNull%Type?, privNtOrNull%NewType?);
+AType.t%`Either<Type, NewType>` = `
+run {
+    val ot = privOtOrNull
+    val nt = privNtOrNull
+    if (ot != null) {
+        Either.Left(ot)
+    } else {
+        Either.Right(nt!!)
+    }
+}
+`;
+AType.renderTo = `
+    val ot = privOtOrNull
+    val nt = privNtOrNull
+    val t: Tree = ot ?: nt!!
+    t.formatTo(tokenSink)
+    `;
+AType {
+`
+constructor(ot: Type) : this(ot.pos, privOtOrNull = ot, privNtOrNull = null)
+constructor(nt: NewType) : this(nt.pos, privOtOrNull = null, privNtOrNull = nt)
+`
+}
+// Unsafe abbreviations for old-style and new-style types.
+// It's the TmpL translator's to produce only one of these for a particular
+// backend so that each backend can consistently use one of them while in
+// transition.
+AType.ot%Type = `privOtOrNull!!`;
+AType.nt%NewType = `privNtOrNull!!`;
+
+/** Like [AType], splits the difference between old and new style but for formal type parameter lists */
+ATypeParameters(privOtOrNull%TypeParameters?, privNtOrNull%FormalTypeDefs?);
+ATypeParameters.t%`Either<TypeParameters, FormalTypeDefs>` = `
+run {
+    val ot = privOtOrNull
+    val nt = privNtOrNull
+    if (ot != null) {
+        Either.Left(ot)
+    } else {
+        Either.Right(nt!!)
+    }
+}
+`;
+ATypeParameters.renderTo = `
+    val ot = privOtOrNull
+    val nt = privNtOrNull
+    val t: Tree = ot ?: nt!!
+    t.formatTo(tokenSink)
+    `;
+ATypeParameters {
+`
+constructor(ot: TypeParameters) : this(ot.pos, privOtOrNull = ot, privNtOrNull = null)
+constructor(nt: FormalTypeDefs) : this(nt.pos, privOtOrNull = null, privNtOrNull = nt)
+`
+}
+ATypeParameters.ot%TypeParameters = `privOtOrNull!!`;
+ATypeParameters.nt%FormalTypeDefs = `privNtOrNull!!`;
+
+data NewTypeData from NewType;
+
+/**
+ * NewType is a target to which existing backends are migrating.
+ *
+ * After the tricky parts of the migration are done:
+ *
+ * 1. the `ot` variant of [AType] will no longer be needed.
+ *    A PR will remove that variant and the [Type] node type hierarchy.
+ * 2. A PR will rework all uses of [AType].nt to refer to [NewType] directly
+ *    and get rid of [AType]
+ * 3. A PR will rename NewType to Type and NewTypeData to TypeData.
+ */
+NewType = NullableType | NonNullType | RetType;
+NewType(
+  name%Id,
+  canBeNull%`Boolean`,
+  typeActuals%NewType*"",
+) {
+`
+fun typeDefinition(dependencies: Dependencies<*>): TypeDefData =
+    dependencies.getTypeDef(name)
+`
+}
+
+/**
+ * A type that excludes the null value.
+ */
+NonNullType = NonNullExprType | ResultType | VoidType;
+
+/**
+ * A type which admits the null value when *canBeNull* is true.
+ */
+NullableType = NullableExprType;
+NullableType(
+  /** A variant of the type that excludes the null value. Its [canBeNull] field is false. */
+  withoutNull%NullableType,
+  /** A variant of the type that admits the null value. Its [canBeNull] field is true. */
+  withNull%NullableType,
+);
+NonNullType.canBeNull = `false`;
+
+/**
+ * A possible return type for a function call.
+ */
+RetType = ResultType | PassType;
+
+/**
+ * An expression type is a type that describes the values to which the expression
+ * can evaluate.
+ * Expressions that never evaluate to a result can still be described using
+ * the semi-special *Never\<IF_I_DID>* type.
+ * Expressions have *first-class* values meaning they can be stored in variables
+ * and passed as arguments in function calls.
+ */
+ExprType = NonNullExprType | NullableExprType;
+ExprType ::= name
+    & ((typeActuals => "<" & typeActuals*"," & ">") || ())
+    & ((canBeNull == true => "?") || ());
+
+/** An expression type that excludes the null value. */
+NonNullExprType = RegularTypeNotNull | TypeArgNotNull;
+/**
+ * An expression type which admits the null value when *canBeNull* is true.
+ */
+NullableExprType = RegularType | TypeArg;
+/** A reference to a type argument like *\<T>*. */
+TypeArg = TypeArgOrNull | TypeArgNotNull;
+TypeArg.typeActuals = `emptyList()`;
+TypeArgOrNull.canBeNull = `true`;
+
+data TypeArgOrNullData from TypeArgOrNull;
+data TypeArgNotNullData from TypeArgNotNull;
+
+TypeArgOrNull.withNull%TypeArgOrNull =
+  `TypeArgOrNull(pos, name.deepCopy())`;
+TypeArgOrNull.withoutNull%TypeArgNotNull =
+  `TypeArgNotNull(pos, name.deepCopy())`;
+TypeArgNotNull.withNull%TypeArgOrNull =
+  `TypeArgOrNull(pos, name.deepCopy())`;
+TypeArgNotNull.withoutNull%TypeArgNotNull =
+  `TypeArgNotNull(pos, name.deepCopy())`;
+TypeArgOrNullData.withNull%TypeArgOrNullData = `this`;
+TypeArgOrNullData.withoutNull%TypeArgNotNullData =
+  `TypeArgNotNullData(sourceLibrary, name)`;
+TypeArgNotNullData.withNull%TypeArgOrNullData =
+  `TypeArgOrNullData(sourceLibrary, name)`;
+TypeArgNotNullData.withoutNull%TypeArgNotNullData = `this`;
+
+/**
+ * A parameterized class or interface type.
+ * Unlike type arguments which are local to the type definition or function
+ * definition that declares them, regular types definition has a global name.
+ */
+RegularType = RegularTypeOrNull | RegularTypeNotNull;
+RegularType(typeActuals%ExprType*"")
+RegularTypeOrNull(typeActuals%ExprType*"");
+RegularTypeNotNull(typeActuals%ExprType*"");
+RegularTypeOrNull.canBeNull = `true`;
+
+data RegularTypeOrNullData from RegularTypeOrNull;
+data RegularTypeNotNullData from RegularTypeNotNull;
+
+RegularTypeOrNull.withNull%RegularTypeOrNull =
+  `RegularTypeOrNull(pos, name.deepCopy(), typeActuals.deepCopy())`;
+RegularTypeOrNull.withoutNull%RegularTypeNotNull =
+  `RegularTypeNotNull(pos, name.deepCopy(), typeActuals.deepCopy())`;
+RegularTypeNotNull.withNull%RegularTypeOrNull =
+  `RegularTypeOrNull(pos, name.deepCopy(), typeActuals.deepCopy())`;
+RegularTypeNotNull.withoutNull%RegularTypeNotNull =
+  `RegularTypeNotNull(pos, name.deepCopy(), typeActuals.deepCopy())`;
+RegularTypeOrNullData.withNull%RegularTypeOrNullData = `this`;
+RegularTypeOrNullData.withoutNull%RegularTypeNotNullData =
+  `RegularTypeNotNullData(sourceLibrary, name, typeActuals)`;
+RegularTypeNotNullData.withNull%RegularTypeOrNullData =
+  `RegularTypeOrNullData(sourceLibrary, name, typeActuals)`;
+RegularTypeNotNullData.withoutNull%RegularTypeNotNullData = `this`;
+
+/**
+ * A passing [ResultType] result can either be an expression or it can be void.
+ * TmpL should never require that a result type be stored in a variable directly
+ * because results are not first class.
+ * *Result\<Void, E>* is even more special. The TmpL translator must never ask
+ * the on-pass-unwrap operation to assign a pass result to a variable when the
+ * pass type is [VoidType].
+ *
+ * Note that, since [VoidType] is not a valid bound for a type parameter,
+ * *Result\<T, E>* is always allowed to unwrap.
+ */
+PassType = ExprType | VoidType;
+
+/**
+ * Admits specification abstraction values, not first-class, which are either
+ * a passing result or a failing result.
+ *
+ * The error types are nominal types.
+ * There must be one or more of these.
+ * If a backend translates result types to first-class result types in the
+ * target language, then a result type is only valid if the backend also has
+ * a way to convert values in any second and subsequent types to the values in
+ * the first so that backends are not required to represent ad-hoc discriminated
+ * unions.
+ */
+ResultType ::= "result" & "<" & passType%PassType & "," & errTypes%RegularTypeNotNull+"|" & ">";
+ResultType.typeActuals = `
+    buildList {
+        add(passType)
+        addAll(errTypes)
+    }
+    `;
+
+/**
+ * A return type for a call expression that indicates that the call completed
+ * normally but does not produce a first-class value.  Often because it is called
+ * for a sideeffect.
+ */
+VoidType ::= "void" & ((canBeNull == true => "?") || ());
+VoidType.typeActuals = `emptyList()`;
+
+/** Metadata about a declared name */
+data DeclarationMetadata ::=
+      (key%MetadataKey)
+    & ((isVoid==false => "(" & value%MetadataValue & ")") || ())
+    ;
+DeclarationMetadata(value%MetadataValue!); // Not always rendered, but always needed.
+DeclarationMetadata.isVoid =
+    `(value as? ValueData)?.value == void`;
+
+data MetadataKey(symbol%`Symbol`);
+MetadataKey.renderTo = `
+tokenSink.emit(OutputToken("@" + symbol.text, OutputTokenType.Name))
+`;
+
+data MetadataValue =
+      ValueData
+    | NameData;
+
+data ValueData(value%`Value<*>`);
+ValueData.renderTo = `value.renderTo(tokenSink)`;
+data NameData ::= qName%`QName`;
+
+/**
+ * A name for a definition.
+ * A [MemberName] if it's part of a type definition, or an identifier otherwise.
+ */
+DefName = Id | MemberName;
+
+/**
+ * AnyDef represents a definition associated with a name.
+ * It specifies a name and associated declaration metadata and type info like a signature.
+ * It does not include implementation information like an initializer expression or
+ * complete function bodies.
+ */
+AnyDef =
+      AnyTypeDef
+    | FunctionLikeDef
+    | SimpleDef
+    | VariableOrPropertyDef
+    | MemberDef
+    | ModuleLevelDef
+    ;
+
+AnyDef(
+  metadata%DeclarationMetadata,
+  name%DefName,
+  /** The qualified name if it corresponds to a Temper definition. */
+  qName%NameData?,
+  visibility%Visibility?,
+);
+AnyDef.isStatic%`Boolean` = `this is StaticMemberDef`;
+data AnyDefData from AnyDef;
+AnyDefData.isStatic%`Boolean` = `this is StaticMemberDefData`;
+
+/** A definition that defines a calling convention: type parameters, value, parameters, and returns. */
+FunctionLikeDef = AnyMethodDef | FunctionDef;
+/** A definition that uses an identifier as a name, not a type member */
+SimpleDef(name%Id);
+SimpleDef = FunctionDef | VariableDef;
+
+ModuleLevelDef = SimpleDef | TypeDef;
+ModuleLevelDef(name%Id);
+
+VariableOrPropertyDef = VariableDef | AnyPropertyDef;
+
+/**
+ * A signature that describes a method or function without defining it.
+ *
+ * The translators for libraries that may have dependencies between them
+ * agree on signatures first during pre-analysis, then share those
+ * signatures to inform translation of both the implementations and uses.
+ */
+FunctionLikeDef ::=
+      metadata
+    & ((isStatic == true => "static") || ())
+    & ((visibility => visibility) || ())
+    & ((qName => qName) || ())
+    & name
+    & typeParameters%FormalTypeDefs
+    & args%FormalArgTypes
+    & ":" & retType%RetType
+    & ((skeletalBody%SkeletalBody? => skeletalBody) || ";")
+    ;
+
+FunctionDef.visibility = `null`;
+FunctionDef(name%Id);
+
+VariableOrPropertyDef ::=
+      metadata
+    & ((isStatic == true => "static") || ())
+    & ((visibility => visibility) || ())
+    & ((qName => qName) || ())
+    & name
+    & ":" & type%ExprType;
+
+VariableDef.visibility = `null`;
+VariableDef(name%Id);
+
+/**
+ * Associates a name with a type definition.
+ * In the case of a [formal type definition][FormalTypeDef], like `<T>`, the name is local.
+ * In the case of a [class or interface definition][TypeDef], the name is global.
+ */
+AnyTypeDef = FormalTypeDef | TypeDef;
+AnyTypeDef(
+  qName,
+  name%Id,
+  qualifiers%TypeQualifiers,
+);
+
+/** A class or interface definition */
+TypeDef ::=
+      metadata
+    & kind%TypeDefKind
+    & ((qName => qName) || ())
+    & name%Id
+    & formals%FormalTypeDefs
+    & qualifiers
+    & "{" & "\n"
+    & members%MemberDef*";"
+    & "\n" & "}"
+    ;
+
+TypeDef {
+`
+val methods get() = members.mapNotNull { it as? MethodDef }
+val properties get() = members.mapNotNull { it as? PropertyDef }
+val staticMethods get() = members.mapNotNull { it as? StaticMethodDef }
+val staticProperties get() = members.mapNotNull { it as? StaticPropertyDef }
+/** Instance methods and static methods */
+val allMethods get() = members.mapNotNull { it as? AnyMethodDef }
+/** Instance properties and static properties */
+val allProperties get() = members.mapNotNull { it as? AnyPropertyDef }
+`
+}
+
+data TypeDefData from TypeDef;
+TypeDefData {
+`
+val methods get() = members.mapNotNull { it as? MethodDefData }
+val properties get() = members.mapNotNull { it as? PropertyDefData }
+val staticMethods get() = members.mapNotNull { it as? StaticMethodDefData }
+val staticProperties get() = members.mapNotNull { it as? StaticPropertyDefData }
+/** Instance methods and static methods */
+val allMethods get() = members.mapNotNull { it as? AnyMethodDefData }
+/** Instance properties and static properties */
+val allProperties get() = members.mapNotNull { it as? AnyPropertyDefData }
+`
+}
+
+TypeQualifiers ::=
+      ((extendsClauses%NonNullExprType => ("extends" & extendsClauses*",")) || ())
+    & ((supportsClauses%RegularTypeNotNull => ("supports" & supportsClauses)) || ())
+    & ((forbidsClauses%NewType => ("forbids" & forbidsClauses*",")) || ());
+
+FormalTypeDefs ::= (defs%FormalTypeDef => "<" & defs*"," & ">") || ();
+FormalArgTypes ::= "(" & argTypes%ExprType*"," & ")";
+
+FormalTypeDef ::= metadata & ((qName => qName) || ()) & name & qualifiers;
+
+MemberDef =
+    // The concrete member types
+      MethodDef
+    | StaticMethodDef
+    | PropertyDef
+    | StaticPropertyDef
+    // Grouping types for members that let us deal with
+    // all statics, all instance members, all properties, all methods, etc.
+    | AnyMethodDef
+    | AnyPropertyDef
+    | StaticMemberDef
+    | InstanceMemberDef
+    ;
+
+MemberName ::= containingType%Id & "::" & dotName%DotName;
+
+MemberDef(
+    metadata%DeclarationMetadata,
+    qName%NameData?,
+    name%MemberName,
+    declaringTypeName%Id,
+    visibility%Visibility,
+);
+/** Convenience for getting the dot name from the member name. */
+MemberDef.dotName%DotName = `name.dotName`;
+
+AnyMethodDef = MethodDef | StaticMethodDef;
+AnyPropertyDef = PropertyDef | StaticPropertyDef;
+StaticMemberDef = StaticMethodDef | StaticPropertyDef;
+InstanceMemberDef = MethodDef | PropertyDef;
+
+AnyMethodDef(name%MemberName);
+AnyPropertyDef(name%MemberName);
+
+/** An instance method signature */
+MethodDef;
+/** A static method signature */
+StaticMethodDef;
+/** An instance property signature */
+PropertyDef;
+/** A static property signature */
+StaticPropertyDef;
+
+/**
+ * A skeletal body def includes nested definitions but no implementation details.
+ *
+ * This allows reasoning about name masking and overloading and overriding based on
+ * an analysis of definitions.
+ */
+SkeletalBody ::= "{" & "\n" & defs%SimpleDef*";" & "\n" & "}";
+SkeletalModule ::= defs%ModuleLevelDef*";";
+data SkeletalModuleData from SkeletalModule;
+
+/**
+ * If we can't convert something from lispy form, it's garbage.
+ * Backends should make a good effort, for production builds, to turn
+ * these into something that allows some tests to proceed but spike
+ * the ones that depend on garbage.
+ */
+Garbage = // There are a surprising number of kinds of garbage.
+      GarbageTopLevel
+    | GarbageStatement
+    | GarbageExpression
+    | GarbageCallable
+    | GarbageType
+    ;
+Garbage(diagnostic%Diagnostic?);
+Garbage.diagnostic.default = `null`;
+
+GarbageTopLevel   ::= "<" & "GARBAGE" & (" " & diagnostic || ()) & ">" & ";";
+GarbageStatement  ::= "<" & "garbage" & (" " & diagnostic || ()) & ">" & ";";
+GarbageCallable   ::= "<" & "garbage" & (" " & diagnostic || ()) & ">";
+GarbageExpression ::= "<" & "garbage" & (" " & diagnostic || ()) & ">";
+GarbageType       ::= "<" & "Garbage" & (" " & diagnostic || ()) & ">";
+GarbageTopLevel {
+`constructor(diagnostic: Diagnostic) : this(diagnostic.pos, diagnostic)`
+};
+GarbageStatement {
+`constructor(diagnostic: Diagnostic) : this(diagnostic.pos, diagnostic)`
+};
+GarbageCallable {
+`constructor(diagnostic: Diagnostic) : this(diagnostic.pos, diagnostic)`
+};
+GarbageExpression {
+`constructor(diagnostic: Diagnostic) : this(diagnostic.pos, diagnostic)`
+};
+GarbageType {
+`constructor(diagnostic: Diagnostic) : this(diagnostic.pos, diagnostic)`
+};
+GarbageCallable.type = `invalidSig`;
+GarbageExpression.type = `WellKnownTypes.invalidType2`;
+
+Diagnostic(text%`String`);
+Diagnostic.renderTo = `
+tokenSink.emit(OutputToken(temperEscaper.escape(text), OutputTokenType.QuotedValue))
+`;
+
+StatementOrTopLevel = Statement | TopLevel;
+
+/**
+ * A thing that can sit at the top level of a [Module]
+ */
+TopLevel =
+      TopLevelDeclaration
+    | ModuleInitBlock
+    | BoilerplateCodeFoldBoundary
+    | EmbeddedComment
+    | GarbageTopLevel
+    ;
+
+TopLevelDeclarationOrNestedTypeName =
+      TopLevelDeclaration
+    | TypeFormal
+    ;
+TopLevelDeclarationOrNestedTypeName(name%Id);
+
+TopLevelDeclaration =
+      TypeDeclaration
+    | TypeConnection
+    | PooledValueDeclaration
+    | SupportCodeDeclaration
+    | ModuleFunctionDeclaration
+    | ModuleLevelDeclaration
+    | Test
+    ;
+
+Declaration =
+      TopLevelDeclaration
+    | FunctionDeclaration
+    | LocalDeclaration
+    ;
+Declaration(metadata%DeclarationMetadata*"", name%Id);
+Declaration.qName%`QName?` = `qNameFor(this)`;
+
+/** A name declaration is a node that may bind a name. */
+NameDeclaration =
+      Declaration
+    | FunctionLike
+    | Formal
+    | Member
+    | ModuleOrLocalDeclaration
+    | RestFormal
+    | StaticMember
+    | TypeFormal
+    | VarLike
+    ;
+NameDeclaration(name%Id, descriptor%`Descriptor?`);
+
+MaybeAssignable =
+      Property
+    | VarLike;
+MaybeAssignable(name%Id, assignOnce%`Boolean`);
+
+VarLike =
+      Formal
+    | ModuleOrLocalDeclaration
+    | RestFormal
+    ;
+VarLike(metadata%DeclarationMetadata*"", name%Id, assignOnce%`Boolean`, descriptor%`Type2!`);
+
+/** A group of formal type parameters in the declaration of a type polymorphic thing. */
+TypeParameters ::= ((typeParameters%TypeFormal => "<" & typeParameters*", " & ">") || ());
+TypeParameters.operatorDefinition = `TmpLOperatorDefinition.Angle`;
+
+/** A group of formal value parameters in the declaration of a callable thing. */
+Parameters ::=
+      "("
+    & ((thisName%Id => "this" & "=" & thisName)
+        // We need a comma before any additional clauses
+       || ())
+    & ((needCommaAfterThis==true => ",") || ())
+    & parameters%Formal*", "
+    & ((needCommaAfterParameters==true => ",") || ())
+    & ((restParameter%RestFormal => restParameter) || ())
+    & ")"
+    ;
+ // TODO: make these two private
+Parameters.needCommaAfterThis =
+    `thisName != null && (parameters.isNotEmpty() || restParameter != null)`;
+Parameters.needCommaAfterParameters =
+    `restParameter != null && parameters.isNotEmpty()`;
+Parameters.operatorDefinition = `TmpLOperatorDefinition.ParenGroup`;
+
+FunctionLike = FunctionDeclarationOrMethod | Test;
+FunctionLike(
+    metadata%DeclarationMetadata*"",
+    sig%`Signature2`,
+    name%Id,
+    parameters%Parameters,
+    body%BlockStatement?,
+);
+FunctionLike.descriptor%`Signature2` = `sig`;
+
+FunctionDeclarationOrMethod = FunctionDeclaration | Method;
+FunctionDeclarationOrMethod(
+    metadata%DeclarationMetadata*"",
+    name%Id,
+    typeParameters%ATypeParameters,
+    parameters%Parameters,
+    returnType%AType, // TODO: RetType
+    body%BlockStatement?,
+    /**
+     * True for declarations whose body may embed the [YieldingOperator] special forms.
+     * See [CoroutineStrategy]
+     */
+    mayYield%`Boolean`,
+);
+
+FunctionDeclaration = ModuleFunctionDeclaration | LocalFunctionDeclaration;
+
+FunctionDeclaration ::=
+      metadata*""
+    & "let" & ((mayYield==true => "*") || ()) & name
+    & typeParameters
+    & parameters
+    & ":" & returnType
+    & body%BlockStatement
+    ;
+FunctionDeclaration(sig%`Signature2`);
+FunctionDeclaration.descriptor%`Signature2` = `sig`;
+
+/** A top level function declaration.  Might be exported or might not. */
+ModuleFunctionDeclaration;
+ModuleFunctionDeclaration.descriptor%`Signature2!` = `sig`;
+/**
+ * A nested function declaration which might close over names that are not defined at
+ * a module top-level.
+ */
+LocalFunctionDeclaration;
+
+/**
+ * A yielding operator can cause the directly containing function body to pause.
+ *
+ * A [YieldStatement] it pauses until the containing generator is asked for the
+ * next value.
+ *
+ * An [AwaitExpression] it pauses until the awaited promise resolves.
+ */
+YieldingOperator = YieldStatement | AwaitExpression;
+
+enum IdKind = Type | Value;
+enum IdReach = External | Internal;
+
+enum TypeDeclarationKind = Class | Interface | Enum;
+
+/**
+ * Represents the class with a body.
+ */
+TypeDeclaration ::=
+      metadata*""
+    & ((kind == TypeDeclarationKind.Class => "class")
+          || (kind == TypeDeclarationKind.Interface => "interface")
+          || "enum")
+    & name%Id
+    & ((parsedTypeName%OriginalName => "/" & parsedTypeName) || ())
+    & typeParameters%ATypeParameters
+    & ((superTypes => "extends" & superTypes%NominalType*"&") || ())
+    & "{" & "\n" & members%MemberOrGarbage*"\n" & "\n" & "}"
+    ;
+TypeDeclaration(typeShape%`TypeShape`, inherited%SuperTypeMethod*"");
+TypeDeclaration.parsedTypeName = `this.typeShape.word?.let { OriginalName(this.pos.leftEdge, it) }`;
+TypeDeclaration.descriptor%`Nothing?` = `null`;
+
+/**
+ * Records that a type is declared in Temper but instead of
+ * corresponding to a [TypeDeclaration] is connected to a
+ * backend-specific type name by the support network.
+ *
+ * This serves to anchor the type name but most backends
+ * do not need to produce code for them.
+ */
+TypeConnection ::=
+     metadata*""
+    & kind%TypeDeclarationKind
+    & name%Id
+    & typeParameters%ATypeParameters
+    & ((superTypes => "extends" & superTypes%NominalType*"&") || ())
+    & "connects" & to%NominalType
+    & ";"
+    ;
+TypeConnection(typeShape%`TypeShape`, connectedKey%ConnectedKey);
+TypeConnection.descriptor = `null`;
+
+OriginalName(symbol%`Symbol`);
+OriginalName.renderTo = `
+tokenSink.emit(ParsedName(symbol.text).toToken(inOperatorPosition = false))
+`;
+
+PooledValueDeclaration ::= metadata*"" & "let" & name%Id & "=" & init%Expression & ";";
+SupportCodeDeclaration ::= metadata*"" & "let" & name%Id & "=" & init%SupportCodeWrapper & ";";
+
+SupportCodeWrapper = SimpleSupportCodeWrapper | InlineSupportCodeWrapper;
+SupportCodeWrapper(type%`Signature2`);
+SupportCodeWrapper(supportCode%`SupportCode`);
+SimpleSupportCodeWrapper.renderTo = `
+supportCode.renderTo(tokenSink)
+`;
+InlineSupportCodeWrapper(supportCode%`InlineSupportCode<*, *>`);
+InlineSupportCodeWrapper.renderTo = `
+tokenSink.emit(OutToks.leftParen)
+tokenSink.emit(OutputToken("inline", OutputTokenType.Word))
+supportCode.renderTo(tokenSink)
+tokenSink.emit(OutToks.rightParen)
+`;
+
+ModuleOrLocalDeclaration =
+      ModuleLevelDeclaration
+    | LocalDeclaration
+    ;
+ModuleOrLocalDeclaration ::=
+      metadata%DeclarationMetadata*""
+    & ((assignOnce==true => "let") || "var")
+    & name%Id
+    & ":" & type%AType
+    & ((init => "=" & init%Expression) || ())
+    & ";"
+    ;
+ModuleOrLocalDeclaration(descriptor%`Type2!`);
+
+/** A declaration of a variable scoped to the containing [module][Module]. */
+ModuleLevelDeclaration(descriptor%`Type2!`);
+/** A declaration scoped within a [block][BlockStatement]. */
+LocalDeclaration(descriptor%`Type2!`);
+
+ModuleInitBlock ::=
+      metadata%DeclarationMetadata*""
+    & "module" & "init" & body%BlockStatement;
+ModuleInitBlock.metadata.default = `emptyList()`;
+
+Formal ::=
+      metadata*""
+    & ((assignOnce == true => ()) || "var")
+    & name%Id
+    & ":" & type%AType // TODO: ExprType
+    & ((optional == true => "=" & "null") || ())
+    ;
+Formal(optionalState%`TriState`, descriptor%`Type2!`);
+Formal.assignOnce.default = `true`;
+Formal.optionalState.default = `TriState.FALSE`;
+Formal.optional%`Boolean` = `optionalState.elseTrue`;
+
+RestFormal ::= metadata*"" & "..." & name%Id & ":" & type%AType;
+RestFormal(descriptor%`Type2!`);
+RestFormal.assignOnce.default = `true`;
+
+Statement =
+      ExpressionStatement
+    | Assignment
+    | BreakStatement
+    | ContinueStatement
+    | HandlerScope
+    | LocalDeclaration
+    | LocalFunctionDeclaration
+    | ModuleInitFailed
+    | NestingStatement
+    | YieldStatement
+    | ReturnStatement
+    | SetProperty
+    | ThrowStatement
+    | BoilerplateCodeFoldBoundary
+    | EmbeddedComment
+    | GarbageStatement
+    ;
+
+/** Statements like blocks and control flow that exist primarily to nest other statements. */
+NestingStatement =
+      BlockStatement
+    | ComputedJumpStatement
+    | IfStatement
+    | LabeledStatement
+    | TryStatement
+    | WhileStatement
+    ;
+NestingStatement(nestedStatements%Statement*"");
+
+JumpUpStatement = BreakStatement | ContinueStatement;
+JumpUpStatement(label%JumpLabel?);
+
+/** Identifies an operation that may fail. */
+Handled = Expression | SetAbstractProperty;
+/**
+ * [failed] is set to `true` when [handled] fails, or `false` otherwise.
+ * The result is the result of [handled] when it passes,
+ * or [BubbleSentinel] otherwise.
+ */
+HandlerScope ::= "hs" & "(" & failed%Id & "," & handled%Handled & ")";
+
+/** That which may be assigned to a something that can hold a value. */
+RightHandSide = Expression | HandlerScope;
+Assignment ::= left%Id & "=" & right%RightHandSide & ";";
+Assignment.operatorDefinition = `TmpLOperatorDefinition.Eq`;
+Assignment(type%`Type2`);
+
+/**
+ * Wraps an arbitrary [Expression] turning it into a [Statement]
+ */
+ExpressionStatement ::= expression%Expression & ";";
+ExpressionStatement {
+`
+constructor(expression: Expression) : this(expression.pos, expression)
+`
+};
+
+BlockStatement ::= "{" & "\n" & statements%Statement*"\n" & "\n" & "}";
+BlockStatement {
+`
+/** Release and return all contained statements for reuse by other nodes. */
+fun takeBody(): List<Statement> {
+    val statements = this.statements.toList()
+    this.statements = emptyList()
+    return statements
+}
+`
+};
+BlockStatement.nestedStatements = `statements`;
+
+BreakStatement ::= "break" & (label%JumpLabel || ()) & ";";
+
+ContinueStatement ::= "continue" & (label%JumpLabel || ()) & ";";
+
+LabeledStatement ::= label%JumpLabel & ":" & statement%Statement;
+LabeledStatement.nestedStatements = `listOf(statement)`;
+
+/** An identifier used in control-flow. */
+JumpLabel ::= id%Id;
+JumpLabel {
+`
+constructor(id: Id) : this(id.pos, id)
+`
+};
+
+/**
+ * Yield control from the current function to its caller.
+ *
+ * This will only appear in the bodies (possibly in nested control flow)
+ * of local or module function declarations when the support network
+ * requests [CoroutineStrategy.TranslateToGenerator].
+ */
+YieldStatement ::= "yield" & ";";
+
+ReturnStatement ::= "return" & (expression%Expression || ()) & ";";
+
+/**
+ * May appear within a [ModuleInitBlock] to abort module initialization when
+ * un-handled failure occurs during module initialization.
+ */
+ModuleInitFailed ::= "abortLoad" & ";";
+
+IfStatement ::=
+      "if" & "(" & test%Expression & ")"
+    & "{" & "\n" & consequent%Statement & "\n" & "}"
+    & (
+        (isElseIf==true => "else" & alternate%Statement)
+            || (hasElse==true => "else" & "{" & "\n" & alternate & "\n" & "}")
+            || ());
+IfStatement.isElseIf = `alternate is IfStatement`;
+IfStatement.hasElse = `
+alternate != null &&
+    (alternate !is BlockStatement || alternate?.childCount != 0)
+`;
+IfStatement.nestedStatements = `listOfNotNull(consequent, alternate)`;
+
+/**
+ * Used when translating using [lang.temper.be.tmpl.BubbleBranchStrategy.CatchBubble]
+ * to decompile transitions to recovery from bubble via `orelse`.
+ *
+ * See also [ThrowStatement].
+ */
+TryStatement ::=
+      "try"
+    & "{" & "\n" &   tried%Statement & "\n" & "}"
+    & "catch"
+    & "{" & "\n" & recover%Statement & "\n" & "}";
+TryStatement.nestedStatements = `listOf(tried, recover)`;
+
+/**
+ * Used when translating using [lang.temper.be.tmpl.BubbleBranchStrategy.CatchBubble]
+ * instead of using the quasi-value [BubbleSentinel].
+ */
+ThrowStatement ::= "throw" & ";";
+
+WhileStatement ::=
+      "while" & "(" & test%Expression & ")"
+    & "{" & "\n" & body%Statement & "\n" & "}";
+WhileStatement.nestedStatements = `listOf(body)`;
+
+/**
+ * A `when`/`switch`-like construct but the value switched over is an
+ * *Int* so backends do not need to translate complex pattern matching
+ * or decomposition.
+ *
+ * The computed jump statement does not generate a default `break` target.
+ * An unlabelled `break` inside a case jumps to the end of the closest
+ * loop.  There is no `switch` `case` style fall-through.  One case is
+ * executed each time so there is no need to `break` from the end of a case.
+ */
+ComputedJumpStatement ::=
+      "when" & "(" & caseExpr%Expression & ")"
+    & "{" & "\n"
+    & cases%ComputedJumpCase*"\n" & "\n"
+    & elseCase%ComputedJumpElse & "\n"
+    & "}";
+
+ComputedJumpCase ::= values%ConstIndex*"," & "->" & "do" & body%BlockStatement;
+ComputedJumpElse ::= "else" & "->" & "do" & body%BlockStatement;
+ComputedJumpStatement.nestedStatements = `buildList {
+    cases.forEach { add(it.body) }
+    add(elseCase.body)
+}`;
+
+/**
+ * Boilerplate code fold boundaries must occur in pairs.
+ * A start and end surround regions of code that should be
+ * [folded](https://en.wikipedia.org/wiki/Code_folding) away
+ * because, though necessary, they should not draw the focus
+ * of a person reading the code.  Typically, these are
+ * used in documentation snippets.  See also [Genre.Documentation].
+ *
+ * Including the code in these boundaries in the compiled code
+ * allows us to produce [SSCCE](https://sscce.org)
+ * (Short, Self-Contained, Correct examples) in our generated
+ * documentation.
+ *
+ * Backends may, when translating these, assume that each boundary
+ * is part of a valid pair.
+ *
+ * Backends should, when translating documentation code, convert them
+ * into comments that occur on their own lines, using the target
+ * language's comment convention that contain the text
+ * <code>\#region \_\_BOILERPLATE\_\_ \{\{\{</code> and
+ * <code>\#endregion \}\}\}</code> respectively, and must not
+ * produce those sequences in other tokens.
+ * If the `#` in those sequences is preceded by a back-slash, tools
+ * must not treat it as a boundary.
+ * That means that it's sufficient to escape hash characters (`#`)
+ * to prevent boundaries from being found in string literals.
+ *
+ * The <code>\{\{\{...\}\}\}</code> markers help with
+ * [Emacs](https://www.emacswiki.org/emacs/FoldingMode) and
+ * [Vim](https://learnvimscriptthehardway.stevelosh.com/chapters/48.html#marker).
+ *
+ * The end goal is to allow JavaScript to find and perform code
+ * folding in HTML generated from documentation fragments in
+ * a way that is agnostic to the language in the HTML code block.
+ */
+BoilerplateCodeFoldBoundary =
+      BoilerplateCodeFoldStart
+    | BoilerplateCodeFoldEnd;
+
+BoilerplateCodeFoldBoundary(markerText%`String`) {
+`
+companion object {
+    const val START_MARKER_TEXT = "region __BOILERPLATE__ {{{"
+    const val END_MARKER_TEXT = "endregion }}}"
+}
+`
+}
+BoilerplateCodeFoldBoundary.renderTo = `
+tokenSink.emit(
+    OutputToken("// #$markerText\\n", OutputTokenType.Comment),
+)
+`;
+
+BoilerplateCodeFoldStart.markerText =
+    `BoilerplateCodeFoldBoundary.START_MARKER_TEXT`;
+BoilerplateCodeFoldEnd.markerText =
+    `BoilerplateCodeFoldBoundary.END_MARKER_TEXT`;
+
+EmbeddedComment(commentText%`String`) {
+`
+init {
+    // Many backends have only line comments, so TmpLTranslator
+    // should take care to produce sequences of single line
+    // comments instead of relying on each backend to do their
+    // own comment splitting.
+    require(anyLineBreak.find(commentText) == null)
+}
+`
+}
+EmbeddedComment.renderTo = `
+tokenSink.emit(
+    OutputToken("// $commentText\\n", OutputTokenType.Comment),
+)
+`;
+
+/**
+ * Names can refer to expressions (see [Reference]) or to named functions
+ * (see [FnReference]) so it is sometimes convenient to use the same
+ * translation paths to prepare both.
+ *
+ * This is an abstraction that allows conflating the two temporarily
+ * in the TmpL translator but might also be useful in functional language
+ * backends that can conflate the two without compromising translation.
+ */
+ExpressionOrCallable =
+      Expression
+    | Callable
+    | AnyReference
+    | FunInterfaceConversion
+    ;
+
+Expression =
+      ValueReference
+    | BubbleSentinel
+    | Reference
+    | This
+    | CallExpression
+    | Operation
+    | CheckedRttiExpression
+    | UncheckedNotNullExpression
+    | FunInterfaceExpression
+    | GarbageExpression
+    | RestParameterExpression
+    | RestParameterCountExpression
+    | GetProperty
+    | AwaitExpression
+    ;
+Expression(
+    /**
+     * The Temper type produced by the expression.
+     */
+    type%`Type2`
+);
+
+CallExpression ::=
+      fn%Callable
+    & typeActuals%CallTypeActuals
+    & "(" & parameters%Actual*", " & ")"
+    ;
+CallExpression.operatorDefinition = `TmpLOperatorDefinition.Paren`;
+CallExpression.contextualizedSig%`Signature2` = `contextualizeSig(fn.type, typeActuals.bindings)`;
+CallExpression {
+`
+constructor(
+    pos: Position,
+    fn: Callable,
+    parameters: Iterable<Actual>,
+    type: Type2
+) : this(pos, fn, CallTypeActuals.empty(fn.pos.rightEdge), parameters, type)
+`
+};
+
+CallTypeActuals ::= ((types%AType => "<" & types*", " & ">") || ());
+CallTypeActuals(bindings%`Map<lang.temper.type.TypeFormal, Type2>`);
+CallTypeActuals {
+`
+companion object {
+    fun empty(pos: Position) = CallTypeActuals(pos, emptyList(), emptyMap())
+}
+`
+}
+
+/**
+ * An input to a [call][CallExpression].
+ */
+Actual = Expression | RestSpread;
+
+Operation =
+      InfixOperation
+    | PrefixOperation
+    ;
+Operation(op%Operator);
+Operation.operatorDefinition = `op.kind`;
+Operation.type = `op.tmpLOperator.returnType`;
+
+// TODO: Do we need to allow calling on arbitrary expressions?  Is this a translatability hazard?
+Callable = FnReference | MethodReferenceLike | InlineSupportCodeWrapper | FunInterfaceCallable
+         | GarbageCallable;
+Callable(type%`Signature2`);
+
+/** Converts between a [Callable] and an [Expression] where the content specifies a function */
+FunInterfaceConversion = FunInterfaceExpression | FunInterfaceCallable;
+FunInterfaceConversion(
+  /** A functional interface type */
+  type%`Descriptor`,
+);
+/** Allows invoking an expression as a callable as when calling a functional interface instance's `apply` method */
+FunInterfaceCallable   ::= expr%Expression   & "as"               & type%`Signature2`;
+/** Wraps a callable as an expression as when de-referencing a function pointer */
+FunInterfaceExpression ::= callable%Callable & "as" & "@" & "fun" & type%`Type2`;
+FunInterfaceCallable.operatorDefinition = `TmpLOperatorDefinition.As`;
+FunInterfaceExpression.operatorDefinition = `TmpLOperatorDefinition.As`;
+
+/**
+ * A reference to a thing on an object, combines with [CallExpression] to represent a whole method invocation
+ */
+MethodReference(
+    subject%Subject,
+    methodName%DotName,
+    /**
+     * The method being called.
+     * It may be either a [MethodShape] or a [StaticPropertyShape] for a method-like static.
+     */
+    method%`VisibleMemberShape?`,
+    adjustments%`SignatureAdjustments?`,
+);
+MethodReference.adjustments.default = `null`;
+MethodReference ::= subject & "." & methodName;
+MethodReference.operatorDefinition = `TmpLOperatorDefinition.Dot`;
+
+MethodReferenceLike = ConstructorReference | MethodReference;
+MethodReferenceLike(
+    method%`VisibleMemberShape?`,
+);
+
+/**
+ * A subject may have properties and methods.
+ *
+ * This is either an expression, for [InstanceProperty] and [InstanceMethod]s,
+ * or it is a type name, for [StaticProperty] and [StaticMethod]s.
+ */
+Subject =
+      Expression
+    | TypeName;
+
+ValueReference(
+    value%`Value<*>`,
+) {
+// Extra constructors for common cases
+`
+companion object {
+    // Convenient overloads for construction of value reference where the
+    // type is obvious given the value.
+    operator fun invoke(
+        pos: Position,
+        value: Value<Boolean>,
+        // Works around JVM ban on overloads with same erasure
+        @Suppress("UNUSED_PARAMETER") jvmSigWorkaround: Boolean = false,
+    ) = ValueReference(pos, WellKnownTypes.booleanType2, value)
+    operator fun invoke(
+        pos: Position,
+        value: Value<Int>,
+        @Suppress("UNUSED_PARAMETER") jvmSigWorkaround: Int = 0,
+    ) = ValueReference(pos, WellKnownTypes.intType2, value)
+    operator fun invoke(
+        pos: Position,
+        value: Value<String>,
+        @Suppress("UNUSED_PARAMETER") jvmSigWorkaround: String = "",
+    ) = ValueReference(pos, WellKnownTypes.stringType2, value)
+}
+`
+};
+ValueReference.renderTo = `
+value.renderTo(tokenSink)
+`;
+
+/** A sentinel value indicating failure. */
+BubbleSentinel ::= "failure";
+BubbleSentinel.type = `WellKnownTypes.bubbleType2`;
+
+/** A reference may be used as an expression */
+AnyReference = Reference | FnReference;
+AnyReference ::= id%Id;
+AnyReference(type%`Descriptor`);
+
+/** A read of the variable, constant, or other referent with name [id]. */
+Reference(type%`Type2`);
+Reference {
+`
+constructor(id: Id, type: Type2) : this(id.pos, id, type)
+`
+};
+
+/**
+ * A reference to a named function.
+ * This is not usable as an expression, as it has no type,
+ * but is usable as a [Callable].
+ */
+FnReference(type%`Signature2`);
+FnReference {
+`
+constructor(id: Id, type: Signature2) : this(id.pos, id, type)
+`
+}
+
+/** A read of `this` as identified in the containing method by [id]. */
+This ::= `OutputToken("/* this */", OutputTokenType.OtherValue)` & id%Id;
+This(
+    /**
+     * The `this` type.
+     * Significant for backends that nest classes.
+     */
+    type%`DefinedType`
+) {
+`
+constructor(id: Id, type: DefinedType) : this(id.pos, id, type)
+`
+}
+
+Operator = InfixOperator | PrefixOperator;
+Operator(
+    tmpLOperator%`TmpLOperator`,
+    kind%`TmpLOperatorDefinition`,
+);
+Operator.renderTo = `tokenSink.emit(kind.outputToken)`;
+InfixOperator(tmpLOperator%`TmpLOperator.Infix`);
+InfixOperator.kind%`TmpLOperatorDefinition.Infix` = `tmpLOperator.kind`;
+PrefixOperator(tmpLOperator%`TmpLOperator.Prefix`);
+PrefixOperator.kind%`TmpLOperatorDefinition.Prefix` = `tmpLOperator.kind`;
+
+InfixOperation ::= left%Expression & op%InfixOperator & right%Expression;
+PrefixOperation ::= op%PrefixOperator & operand%Expression;
+
+CheckedRttiExpression = InstanceOfExpression | CastExpression;
+CheckedRttiExpression(expr%Expression, checkedType%AType, checkedFrontendType%`Type2`);
+
+InstanceOfExpression ::= expr & "instanceof" & checkedType;
+InstanceOfExpression.operatorDefinition = `TmpLOperatorDefinition.Instanceof`;
+InstanceOfExpression.type = `WellKnownTypes.booleanType2`;
+
+/** A cast based on a type tag check. */
+CastExpression ::= "cast" & "(" & expr & "," & checkedType & ")";
+CastExpression.operatorDefinition = `TmpLOperatorDefinition.Paren`;
+
+/** Wraps an expression to assert, based on static analysis, that the result is not null. */
+UncheckedNotNullExpression ::= "notNull" & "(" & expression%Expression & ")";
+
+/**
+ * A reference to a specific position within a rest argument list
+ * In the body of
+ *
+ *     let f(...rest) {
+ *         return rest[2];
+ *     };
+ *
+ * The `...rest` is the rest formal definition and `rest[2]` is a rest
+ * parameter expression that refers to index 2 of it.
+ */
+RestParameterExpression ::= parameterName%Id & "[" & index%ConstIndex & "]";
+RestParameterExpression.operatorDefinition = `TmpLOperatorDefinition.Square`;
+
+RestParameterCountExpression ::= parameterName%Id & "." & "length";
+RestParameterCountExpression.operatorDefinition = `TmpLOperatorDefinition.Dot`;
+RestParameterCountExpression.type = `WellKnownTypes.intType2`;
+
+RestSpread ::= "..." & parameterName%Id;
+RestSpread.operatorDefinition = `TmpLOperatorDefinition.Ellipsis`;
+
+ConstIndex(index%`Int`);
+ConstIndex.renderTo = `
+tokenSink.emit(OutputToken("$index", OutputTokenType.NumericValue))
+`;
+
+/** A callable reference to a type's constructors. */
+ConstructorReference ::= "/*new*/" & typeName%TypeName;
+ConstructorReference(method%`VisibleMemberShape?`);
+ConstructorReference.typeShape%`TypeShape` = `typeName.sourceDefinition as TypeShape`;
+ConstructorReference.method.default = `null`;
+
+
+/**
+ * A dot name is either a reference to a backing property from within a class which
+ * has a resolved name, or it's a reference to a dot name that specifies a getter/setter
+ * pair to use.
+ */
+PropertyId = InternalPropertyId | ExternalPropertyId;
+InternalPropertyId ::= name%Id;
+ExternalPropertyId ::= name%DotName;
+InternalPropertyId {
+`constructor(name: Id) : this(name.pos, name)`
+};
+ExternalPropertyId {
+`constructor(name: DotName) : this(name.pos, name)`
+};
+
+PropertyReference ::= subject%Subject & "." & property%PropertyId;
+PropertyReference.operatorDefinition = `TmpLOperatorDefinition.Dot`;
+PropertyReference =
+      GetProperty
+    | PropertyLValue;
+GetProperty =
+      GetBackedProperty
+    | GetAbstractProperty;
+/**
+ * Reads a property directly.  These operations can only be performed from within
+ * a `class`'s definition and cannot fail assuming that static checks passed for
+ * `const` property initialization and use before initialization in constructor
+ * and methods.
+ */
+GetBackedProperty;
+/**
+ * An invocation of a type's getter.
+ * Unlike [GetBackedProperty] these operations can be performed either within,
+ * or outside (for `public` setters) a type's definition.
+ * Getter invocations may fail.
+ */
+GetAbstractProperty(subject%Expression);
+/**
+ * Assigns a value to a property of an object either via a setter or directly.
+ */
+SetProperty ::= left%PropertyLValue & "=" & right%Expression & ";";
+SetProperty.operatorDefinition = `TmpLOperatorDefinition.Eq`;
+SetProperty =
+      SetBackedProperty
+    | SetAbstractProperty;
+/**
+ * Sets a property directly.  These operations can only be performed from within
+ * a `class`'s definition and cannot fail assuming that static checks passed for
+ * `const` property initialization in constructor and methods.
+ */
+SetBackedProperty;
+/**
+ * An invocation of a type's setter.
+ * Unlike [SetBackedProperty] these operations can be performed either within,
+ * or outside (for `public` setters) a type's definition.
+ * Setter invocations may fail.
+ */
+SetAbstractProperty;
+/** A property reference used as the left side of an assignment.  *L* stands for left-hand. */
+PropertyLValue;
+
+/**
+ * An await expression pauses control until the promise resolves or,
+ * on some backends, the running thread is interrupted.
+ */
+AwaitExpression ::= "await" & "(" & promise%Expression & ")";
+
+Type =
+      NominalType
+    | CompoundType
+    | SpecialType
+    | GarbageType
+    ;
+
+CompoundType =
+      FunctionType
+    | TypeUnion
+    | TypeIntersection
+    ;
+
+SpecialType =
+      TopType
+    | BubbleType
+    | NeverType
+    ;
+
+/**
+ * A generic type
+ */
+TypeFormal ::=
+    name%Id
+    & ((upperBounds%NominalType => "extends" & upperBounds*", ") || ());
+TypeFormal(definition%`lang.temper.type.TypeFormal`);
+TypeFormal.descriptor = `null`;
+
+/**
+ * A named type corresponding to a Temper `class` or `interface` definition.
+ * These are neither special nor primarily a composition of other types.
+ */
+NominalType ::=
+      typeName%TypeName
+    & ((params%AType => "<" & params*", " & ">") || ());
+NominalType(connectsFrom%`Type2?`);
+NominalType.operatorDefinition = `TmpLOperatorDefinition.Angle`;
+NominalType.connectsFrom.default = `null`;
+
+TypeName = TemperTypeName | ConnectedToTypeName;
+TypeName(sourceDefinition%`TypeDefinition`);
+
+/** A type name that is defined in Temper, not connected to a backend-specific type. */
+TemperTypeName(typeDefinition%`TypeDefinition`);
+TemperTypeName.renderTo = `
+typeDefinition.renderName(tokenSink)
+`;
+TemperTypeName.sourceDefinition = `this.typeDefinition`;
+
+/**
+ * Stores a value created by the backend's [SupportNetwork]
+ * which should be meaningful to the backend's translator.
+ *
+ * For example, different target languages might want to
+ * connect a Temper type like *Date* to types in their language:
+ *
+ * - JavaScript might want to connect to a JS Temporal type
+ *   by representing `globalThis.Temporal.PlainDate` as an
+ *   instance of a class that the *JsTranslator* understands.
+ * - The Java backend might want to connect to
+ *   `java.time.LocalDate` and bundle `java.time` and
+ *   `LocalDate` separately along with any Maven dependencies
+ *   that requires.
+ * - Python might want to pack the Python module name `datetime`
+ *   and the imported name `date` into a bundle object.
+ * - Some older languages might want to connect to their
+ *   *String* type but assuming that the string is formatted
+ *   like "YYYYMMDD".  Notating that latter fact might help
+ *   when generating auto-documentation comments.
+ */
+ConnectedToTypeName(name%`TargetLanguageTypeName`, sourceDefinition%`TypeShape`);
+ConnectedToTypeName.renderTo = `name.renderTo(tokenSink)`;
+
+FunctionType ::=
+      "fn"
+    & typeParameters%ATypeParameters
+    & valueFormals%ValueFormalList
+    & ":" & returnType%AType; // TODO: RetType
+FunctionType.operatorDefinition = `TmpLOperatorDefinition.Colon`;
+
+/** Describes the types and other requirements for inputs to a function type. */
+ValueFormalList ::=
+      "(" & (
+          (formals => formals%ValueFormal+"," & ((rest%AType => "," & "..." & rest) || ()))
+          || ((rest => "..." & rest) || ())
+          )
+    & ")"
+    ;
+ValueFormalList.operatorDefinition = `TmpLOperatorDefinition.ParenGroup`;
+ValueFormal ::=
+    ((isOptional == true => (name%OriginalName || "_") & "?" & ":") || ())
+  & type%AType; // TODO: ExprType
+
+TypeUnion ::= types%Type*"|";
+TypeUnion.operatorDefinition = `TmpLOperatorDefinition.Bar`;
+
+TypeIntersection ::= types%Type*"&";
+TypeIntersection.operatorDefinition = `TmpLOperatorDefinition.Amp`;
+
+TopType ::= "Top";
+BubbleType ::= "Bubble";
+NeverType ::= "Never";
+
+MemberOrGarbage = Member | GarbageStatement;
+Member = Property | Method;
+Member(metadata%DeclarationMetadata*"", name%Id, memberShape%`VisibleMemberShape`, visibility%VisibilityModifier);
+
+InstanceMember = InstanceProperty | InstanceMethod;
+StaticMember   = StaticProperty   | StaticMethod;
+Property       = InstanceProperty | StaticProperty;
+Method         = InstanceMethod   | StaticMethod    | DotAccessibleMethod;
+InstanceMethod =
+    Constructor
+  | NormalMethod
+  | GetterOrSetter
+  ;
+Method.descriptor%`Signature2` = `sig`;
+Property(descriptor%`Type2`);
+InstanceProperty(memberShape%`PropertyShape`);
+InstanceMethod(
+  /** Which methods declared in super types, if any, does this override? */
+  overridden%SuperTypeMethod*"",
+  /**
+   * Any adjustments need to be made to the signature of the method.
+   * This involves calling *SupportNetwork.maybeAdjustMember*.
+   * These adjustments are available across library boundaries so that
+   * calls can be similarly adjusted.
+   *
+   * For example, a C# method might require its return type be represented
+   * as an *Optional* to because the super-type method returns a nullable
+   * type parameter: T | Null.
+   * Any override, even one that specializes T | Null to Temper Int needs
+   * to also return an optional.
+   * Calls to that method, which might occur in another library, need to
+   * unpack a C# int or Nullable<int> from an Optional<int>.
+   */
+  adjustments%`SignatureAdjustments?`,
+);
+InstanceMethod.adjustments.default = `null`;
+Constructor.overridden = `emptyList()`;
+Method.sig = `memberShape.descriptor as? Signature2 ?: invalidSig`;
+
+/** Method signature information about the method declarations in super-types that an instance method overrides */
+SuperTypeMethod ::=
+      "super"
+    & superType%NominalType
+    & "." & name%DotName
+    & visibility%VisibilityModifier
+    & typeParameters%ATypeParameters
+    & parameters%ValueFormalList
+    & ":" & returnType%AType // RetType
+    ;
+SuperTypeMethod(memberOverride%`MemberOverride2`);
+
+/**
+ * This is a subtype of [Method] and [DotAccessible] which is
+ * redundant since its subtypes are too, but it's useful to allow named
+ * methods (not constructors) to be translated by the same code path.
+ */
+DotAccessibleMethod = NormalMethod | GetterOrSetter | StaticMethod;
+
+/**
+ * Something that can be accessed via a dot operator.
+ * Any method except constructors which are accessed, indirectly via `new`.
+ */
+DotAccessible = Property | NormalMethod | GetterOrSetter | StaticMember
+              | DotAccessibleMethod;
+DotAccessible(visibility%VisibilityModifier, dotName%DotName, name%Id);
+DotAccessible.sameDotName%`Boolean` = `dotNameMatchesName(this.dotName, this.name)`;
+DotAccessible requires dotName;
+
+VisibilityModifier(visibility%`Visibility`);
+VisibilityModifier.renderTo = `
+tokenSink.emit(OutputToken(this.visibility.name, OutputTokenType.Word))
+`;
+
+GetterOrSetter = Getter | Setter;
+GetterOrSetter.mayYield = `false`;
+/** The shape for the property that is being set or gotten */
+GetterOrSetter(propertyShape%`PropertyShape`);
+
+Constructor ::= metadata*"" & name & typeParameters & parameters & body;
+// The return type must be `Void` as per the frontend.
+Constructor.mayYield = `false`;
+
+NormalMethod ::=
+      metadata*""
+    & "let"
+    & ((sameDotName==true => ()) || dotName) & name
+    & typeParameters & parameters
+    & ":" & returnType
+    & (body || ";")
+    ;
+
+StaticMethod ::=
+      metadata*""
+    & "static"
+    & "let"
+    & ((sameDotName==true => ()) || dotName) & name
+    & typeParameters & parameters
+    & ":" & returnType
+    & (body || ";")
+    ;
+StaticMethod.descriptor%`Signature2!` = `sig`;
+
+Test(rawName%`String`, returnType%AType); // TODO: RetType
+Test ::=
+      metadata*""
+    & "@test" & "let"
+    & name
+    & parameters
+    & body%BlockStatement
+    ;
+Test.sig = `testSig`;
+Test.descriptor%`Signature2!` = `testSig`;
+
+Getter ::=
+      metadata*""
+    & "get"
+    & ((sameDotName==true => ()) || ("." & dotName & "->")) & name
+    & typeParameters & parameters
+    & ":" & returnType
+    & (body || ";")
+    ;
+
+Setter ::=
+      metadata*""
+    & "set"
+    & ((sameDotName==true => ()) || ("." & dotName & "->")) & name
+    & parameters
+    & ":" & returnType
+    & (body || ";")
+    ;
+
+Property ::=
+      metadata*""
+    & ((assignOnce==true => "let") || "var")
+    & ((sameDotName==true => ()) || dotName) & name
+    & ":" & type%AType // TODO: ExprType
+    & ";"
+    ;
+
+StaticProperty ::=
+      metadata*""
+    & "static"
+    & "let"
+    & ((sameDotName==true => ()) || dotName%DotName) & name
+    & ":" & type%AType // TODO: ExprType
+    & "=" & expression%Expression
+    & ";"
+    ;
+StaticProperty.assignOnce = `true`;
+StaticProperty(descriptor%`Type2`);

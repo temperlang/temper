@@ -1,0 +1,105 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
+
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.github.node-gradle.node'
+}
+ext.temperProject = 'jvm'
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coro_version"
+    implementation "org.eclipse.lsp4j:org.eclipse.lsp4j:0.12.0"
+    implementation project(':common')
+    implementation project(':compile')
+    implementation project(':ast')
+    implementation project(':astbuild')
+    implementation project(':cst')
+    implementation project(':doc-gen')
+    implementation project(':format')
+    implementation project(':frontend')
+    implementation project(':fs')
+    implementation project(':fundamentals')
+    implementation project(':interp')
+    implementation project(':lexer')
+    implementation project(':library')
+    implementation project(':log')
+    implementation project(':name')
+    implementation project(':parser')
+    implementation project(':stage')
+    implementation project(':tooling')
+    // Do not depend on intellij here.  The intellij plugin adds a dependency
+    // which is inconsistent with any version that I could find in Maven,
+    // and which leads to ClassNotFound errors involving sun.reflect.
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
+    testImplementation project(':fs-test-helpers')
+    testImplementation project(':test-helpers')
+}
+
+tasks.withType(KotlinCompilationTask) {
+    compilerOptions {
+        freeCompilerArgs.add('-opt-in=kotlin.RequiresOptIn')
+    }
+}
+/*
+patchPluginXml {
+    changeNotes """
+      Add change notes here.<br>
+      <em>most HTML tags may be used</em>"""
+}
+*/
+
+node {
+    version = gradle.node_version
+    download = true
+
+    nodeProjectDir = file("${project.projectDir}/src/main/js/temper-language-support")
+}
+
+task buildVscodeDevExtension {
+    description = 'Assemble a distributable VSCode extension for dev purposes.'
+    group = "Distribution"
+    dependsOn "npm_run_vscode-package-dev"
+}
+
+task installVscodeDevExtension(type: NpmTask) {
+    description = "Install the VSCode dev extension using 'code --install-extension'."
+    group = "Distribution"
+    // Without explicit PATH, we seem to lose it when in npm.
+    environment["PATH"] = System.getenv("PATH")
+    // This npm script also runs the "vscode-package-dev" script internally.
+    args = ["run", "vscode-install-dev"]
+}
+
+tasks.forEach { t ->
+    /*
+     * A problem was found with the configuration of task
+     * ':langserver:npmInstall' (type 'NpmInstallTask').
+     *   - Gradle detected a problem with the following location:
+     *     '.../langserver/src/main/js/temper-language-support/node_modules'.
+     *
+     * Reason: Task ':langserver:detekt' uses this output of task
+     * ':langserver:npmInstall' without declaring an explicit or
+     * implicit dependency. This can lead to incorrect results being
+     * produced, depending on what order the tasks are executed.
+     */
+
+    // Doing things this way avoids naming conflict between
+    // the task detekt and the extension detekt.
+    if (t.name == 'detekt') {
+        t.dependsOn(npmInstall)
+    }
+}
+
+build.configure {
+    dependsOn buildVscodeDevExtension
+}
+
+check.configure {
+    // Increase chances of noticing formatting problems early.
+    // TODO Actually assert that things are formatted correctly.
+    dependsOn npm_run_fmt
+}

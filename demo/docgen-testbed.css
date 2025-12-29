@@ -1,0 +1,20 @@
+body, textarea#docs-temper, #docs-js {
+    font-family: "Noto Sans", "Lucida Grande", "Lucida Sans", "Segoe UI", "Verdana", sans-serif;
+    font-size: 18pt;
+}
+
+textarea#docs-temper, #docs-js {
+    height: 100%;
+    background: white;
+}
+textarea#docs-temper { width: 100%; margin: 0; padding: 0; caret-shape: block }
+
+#docs-js {
+    border-style: solid; border-color: black; border-width: 1px 1px 1px 0;
+    /* white-space: pre-wrap; */
+}
+
+table.two-cols { width: 100%; margin: 0; padding: 0 }
+table.two-cols td { width: 50%; vertical-align: top; height: 30em; margin: 0; padding: 0 }
+
+pre { border-left: .25em solid #dbb; padding-left: .25em; white-space: pre-wrap }

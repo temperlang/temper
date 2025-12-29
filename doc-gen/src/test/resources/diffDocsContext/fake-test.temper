@@ -1,0 +1,19 @@
+//A simple sample to show the content is exported correctly.
+
+let diffUtils = import("./diff-utils.temper");
+
+let myPatch = diffUtils.diffStrings(
+  "Hello,\nWorld!",
+  "Hello,\nCosmos!"
+);
+
+let dateComparer = { (a: Date, b: Date): Int =>
+  a <=> b
+};
+
+let datesPatch = diffUtils.diff(
+  [ {month: 3, day: 14, year: 1592} ],
+  [ {month: 3, day: 14, year: 1592},
+    {month: 2, day:  7, year: 1828} ],
+  dateComparer
+);

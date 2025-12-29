@@ -1,0 +1,13 @@
+{
+  "name": "@temperlang/core-dev",
+  "version": "1.0.0",
+  "description": "Support code for developing the Temper JS backend",
+  "main": "commonMain/resources/lang/temper/be/js/temper-core",
+  "scripts": {
+    "test": "mocha commonTest/js/runtime-support"
+  },
+  "devDependencies": {
+    "chai": "^4.3.4",
+    "mocha": "^11.1.0"
+  }
+}

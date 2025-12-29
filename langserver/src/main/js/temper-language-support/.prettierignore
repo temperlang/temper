@@ -1,0 +1,4 @@
+dist
+temper.tmLanguage.json
+temper/**
+.vscode
