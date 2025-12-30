@@ -21,11 +21,9 @@ import lang.temper.common.RSuccess
 import lang.temper.common.invoke
 import lang.temper.common.partiallyOrder
 import lang.temper.fs.OutDir
-import lang.temper.library.relativeOutputDirectoryForLibrary
 import lang.temper.log.FilePath
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
-import lang.temper.log.plus
 import lang.temper.log.resolveDir
 import lang.temper.name.DashedIdentifier
 import lang.temper.result.junit.combineSurefireResults
@@ -44,11 +42,14 @@ internal object ExecJShellAsLastCommand : RunJava {
     )
 }
 
-internal class RunByExec(private val mainJavaName: QualifiedName, private val forkVm: Boolean = false) : RunJava {
-    override val mavenCommand get() = listOf(
-        "compile",
-        "exec:${if (forkVm) "exec" else "java"}@${mainJavaName.fullyQualified}",
-    )
+internal class RunByExec(val mainJavaName: QualifiedName, private val bundled: Boolean = false) : RunJava {
+    override val mavenCommand get() = buildList {
+        add("compile")
+        if (bundled) {
+            // For bundled, no parent pom, so simple running from mvn works ok.
+            add("exec:java@${mainJavaName.fullyQualified}")
+        }
+    }
 }
 
 internal fun runJavaBestEffort(
@@ -57,7 +58,6 @@ internal fun runJavaBestEffort(
     runJava: RunJava,
     files: OutDir,
     runLibrary: DashedIdentifier?,
-    runDir: FilePath,
     taskName: String?,
     dependencies: Dependencies<*>,
     bundled: Boolean = false,
@@ -69,11 +69,13 @@ internal fun runJavaBestEffort(
 
     val specifics = factory.specifics
     return cliEnv.composing(specifics) {
-        val groupingPomPath = runDir + filePath(factory.backendId.uniqueId, "pom.xml")
-        this.write(
-            destination = groupingPomPath,
-            source = "${groupingPom(javaLang, dependencies)}".encodeToByteArray(),
-        )
+        val groupingPomPath = filePath(factory.backendId.uniqueId, "pom.xml")
+        if (!bundled) {
+            this.write(
+                destination = groupingPomPath,
+                source = "${groupingPom(javaLang, dependencies)}".encodeToByteArray(),
+            )
+        }
 
         val prep = prepareJavaPackages(
             dependencies = dependencies,
@@ -151,8 +153,22 @@ internal fun runJavaBestEffort(
             false -> when (runJava) {
                 is RunByExec -> {
                     // Currently always for a specific library.
-                    val libDir = relativeOutputDirectoryForLibrary(specifics.backendId, runLibrary!!)
-                    listOf(ToolchainResult(libraryName = runLibrary, doRunJava(libDir.resolve(runDir))))
+                    val workingDir = dirPath(specifics.backendId.uniqueId)
+                    val compileResult = doRunJava(workingDir)
+                    if (compileResult.failure != null) {
+                        return listOf(ToolchainResult(libraryName = runLibrary, compileResult))
+                    }
+                    // TODO Does this ensure a proper java version? If not, do so?
+                    // TODO Minimally, we expect the compile above to be on the right version.
+                    // TODO Functional tests also run entirely on maven.
+                    val java = this[factory.specifics.javaTool]
+                    val classpath = libraryNames.joinToString(cliEnv.pathSeparator) { "$it/target/classes" }
+                    val cmd = Command(
+                        args = listOf(encodingDef, "--class-path", classpath, runJava.mainJavaName.fullyQualified),
+                        cwd = workingDir,
+                    )
+                    val runResult = java.run(cmd)
+                    listOf(ToolchainResult(libraryName = runLibrary, runResult))
                 }
                 is RunAsTest -> {
                     val workingDir = dirPath(specifics.backendId.uniqueId)
