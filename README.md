@@ -32,7 +32,7 @@ Temper currently supports[\*](#not-endorsed-or-affiliated):
       <a href="https://learn.microsoft.com/en-us/dotnet/csharp/"><img src="docs/lang-icons/csharp.png" alt="C#"><br>C#</a>
     </td>
     <td align="center">
-      <a href="https://openjdk.org/"><img src="docs/lang-icons/java.png" alt="Java" style="background:white;border-radius:6px"><br>Java</a>
+      <a href="https://openjdk.org/"><img src="docs/lang-icons/java.png" alt="Java"><br>Java</a>
     </td>
     <td align="center">
       <a href="https://openjsf.org/"><img src="docs/lang-icons/js.png" alt="JavaScript"></a>
@@ -49,7 +49,7 @@ Temper currently supports[\*](#not-endorsed-or-affiliated):
       <a href="https://www.python.org/"><img src="docs/lang-icons/py.png" alt="Python"><br>Python</a>
     </td>
     <td align="center">
-      <a href="https://rust-lang.org/"><img src="docs/lang-icons/rust.png" alt="Rust" style="background:white;border-radius:6px"><br>Rust</a>
+      <a href="https://rust-lang.org/"><img src="docs/lang-icons/rust.png" alt="Rust"><br>Rust</a>
     </td>
   </tr>
 </table>
