@@ -141,7 +141,6 @@ abstract class JavaSpecifics(val majorVersion: Int) : RunnerSpecifics {
         @Suppress("UNCHECKED_CAST") // Assertion that allows backend key lookup below.
         dependencies as Dependencies<JavaBackend>
 
-        val runDir: FilePath
         val runJava: RunJava
         var runLibrary: DashedIdentifier? = null
         var testLibraries: Collection<DashedIdentifier>? = null
@@ -153,22 +152,17 @@ abstract class JavaSpecifics(val majorVersion: Int) : RunnerSpecifics {
                 fun failure(message: String) = listOf(
                     ToolchainResult(libraryName = runLibrary, result = RFailure(CliFailure(message))),
                 )
-                val pomXmlPath = dependencies.metadata[runLibrary, JavaMetadataKey.PomFilePath(javaLang)]
-                    ?: return failure("No pom.xml for $runLibrary")
                 val qualifiedName = dependencies.metadata[runLibrary, JavaMetadataKey.MainClass(javaLang)]
                     ?: return failure("No main class for $runLibrary")
-                runDir = pomXmlPath.dirName()
                 runJava = RunByExec(qualifiedName)
             }
             is RunTestsRequest -> {
                 // TODO Test specific library, group, or function.
-                runDir = FilePath.emptyPath
                 runJava = RunAsTest
                 request.libraries?.let { testLibraries = it }
             }
             is RunBackendSpecificCompilationStepRequest -> error(request)
             is ExecInteractiveRepl -> {
-                runDir = FilePath.emptyPath
                 runJava = ExecJShellAsLastCommand
             }
         }
@@ -178,7 +172,6 @@ abstract class JavaSpecifics(val majorVersion: Int) : RunnerSpecifics {
             runJava = runJava,
             files = code,
             runLibrary = runLibrary,
-            runDir = runDir,
             taskName = request.taskName,
             testLibraries = testLibraries,
             dependencies = dependencies,

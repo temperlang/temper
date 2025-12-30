@@ -174,5 +174,25 @@
   "snippets\\temper-autodoc-from-markdown.md": {
     "release_version": "0.5.0",
     "hash": "c74b0eef2b92a3f446019ac3d29e2c215d8067bb"
+  },
+  "snippets\\arrow.md": {
+    "release_version": "0.6.0",
+    "hash": "c15d6ae3392cdd36410466159210f92015682c86"
+  },
+  "snippets\\infix-throws.md": {
+    "release_version": "0.6.0",
+    "hash": "a358b45c219c1da255c5db003c46ac0f065ce4ea"
+  },
+  "snippets\\int-sizes.md": {
+    "release_version": "0.6.0",
+    "hash": "f5439bc67ca4645b402e44890f819cafde0af167"
+  },
+  "snippets\\multiline-string-syntax.md": {
+    "release_version": "0.6.0",
+    "hash": "779dab55a7a1322005f5e1c5655663141646fa52"
+  },
+  "snippets\\no-eula.md": {
+    "release_version": "0.6.0",
+    "hash": "cd317e3878453484b9a6a4152bd26a53830e74a2"
   }
 }

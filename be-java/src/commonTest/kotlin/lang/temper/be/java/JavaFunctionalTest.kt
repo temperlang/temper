@@ -58,7 +58,7 @@ abstract class JavaFunctionalTest(factory: Backend.Factory<JavaBackend>) : Funct
             packageName = QualifiedName.fromTemperPath(mainModuleName.sourceFile),
             module = mainModuleName,
         )
-        val runJava = if (test.runAsTest) RunAsTest else RunByExec(moduleInfo.entryQualifiedName)
+        val runJava = if (test.runAsTest) RunAsTest else RunByExec(moduleInfo.entryQualifiedName, bundled = true)
         CliEnv.using(factory.specifics, ShellPreferences.functionalTests(console), cancelGroup) {
             val result = runJavaBestEffort(
                 cliEnv = this,
@@ -66,7 +66,6 @@ abstract class JavaFunctionalTest(factory: Backend.Factory<JavaBackend>) : Funct
                 runJava = runJava,
                 runLibrary = test.libraryName,
                 files = outputDir,
-                runDir = dirPath(),
                 taskName = request.taskName,
                 dependencies = backend.getDependencies(),
                 bundled = true,
