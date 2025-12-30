@@ -27,6 +27,11 @@ https://www.oracle.com/a/ocom/docs/java-licensing-logo-guidelines-1908204.pdf
 explains Oracle branding guidelines and bans using the Java coffee cup
 logo without explicit permission.
 
+However, the Duke image is available is available under the BSD license, as also
+indicated in the above document. Duke "is the recommended brand for anyone
+wishing to represent Java in their product or service." SVG available at:
+https://github.com/openjdk/duke/blob/eacfa3a4ee49a5f1810238e8adb15430bf42688a/vector/Hips.svg
+
 ## JavaScript
 
 https://commons.wikimedia.org/wiki/File:JavaScript_unofficial_logo.svg expains that there's an unofficial JavaScript language logo, and sources it to Chris Williams.

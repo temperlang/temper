@@ -24,11 +24,39 @@ It's a programming language designed for one purpose: to translate well to all t
 
 It's for writing libraries, and supporting other programming language communities with idiomatic, semantically equivalent libraries.
 
-Temper currently supports[\*](#not-endorsed-or-affiliated):<br>
-[![C#](docs/lang-icons/csharp.png)][C#] [<font color="#5382a1">Java</font>][Java] [![JavaScript](docs/lang-icons/js.png)][JS]/[![TypeScript](docs/lang-icons/ts.png)][TS] [![Lua](docs/lang-icons/lua.png)][Lua] [![Python](docs/lang-icons/py.png)][Python] [![Rust](docs/lang-icons/rust.png) Rust][Rust]
+Temper currently supports[\*](#not-endorsed-or-affiliated):
 
-Coming soon:<br>
-[![C++](docs/lang-icons/cpp.png)][C++], more.
+<table>
+  <tr valign="bottom">
+    <td align="center">
+      <a href="https://learn.microsoft.com/en-us/dotnet/csharp/"><img src="docs/lang-icons/csharp.png" alt="C#"><br>C#</a>
+    </td>
+    <td align="center">
+      <a href="https://openjdk.org/"><img src="docs/lang-icons/java.png" alt="Java"><br>Java</a>
+    </td>
+    <td align="center">
+      <a href="https://openjsf.org/"><img src="docs/lang-icons/js.png" alt="JavaScript"></a>
+      <a href="https://www.typescriptlang.org/"><img src="docs/lang-icons/ts.png" alt="TypeScript"></a><br>
+      <a href="https://openjsf.org/">JS</a> /
+      <a href="https://www.typescriptlang.org/">TS</a>
+    </td>
+  </tr>
+  <tr valign="bottom">
+    <td align="center">
+      <a href="https://lua.org/"><img src="docs/lang-icons/lua.png" alt="Lua"><br>Lua</a>
+    </td>
+    <td align="center">
+      <a href="https://www.python.org/"><img src="docs/lang-icons/py.png" alt="Python"><br>Python</a>
+    </td>
+    <td align="center">
+      <a href="https://rust-lang.org/"><img src="docs/lang-icons/rust.png" alt="Rust"><br>Rust</a>
+    </td>
+  </tr>
+</table>
+
+Coming soon:
+
+[![C++](docs/lang-icons/cpp.png)][C++] & more.
 
 See also our [target language list] for version numbers and translation notes.
 
