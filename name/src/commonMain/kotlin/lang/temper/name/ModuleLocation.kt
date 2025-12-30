@@ -321,6 +321,13 @@ data class DashedIdentifier(
          */
         val temperCoreLibraryIdentifier = DashedIdentifier("temper-core")
 
+        /**
+         * The current version number for the core library.
+         * TODO Move this and [temperCoreLibraryIdentifier] elsewhere?
+         * TODO Script to update all temper-core backends and also std with this?
+         */
+        val temperCoreLibraryVersion = "0.6.0"
+
         /** Specifically refers to the implicits library used by Temper code. */
         val temperImplicitsLibraryIdentifier = DashedIdentifier("temper-implicits")
 
