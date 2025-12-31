@@ -54,7 +54,7 @@ class RustBackendTest {
             |          rust-version = "1.71.1"
             |
             |          [dependencies]
-            |          temper-core = { path = "../temper-core" }
+            |          temper-core = { path = "../temper-core", version = "=0.6.0" }
             |
             |          ```
             |      },
