@@ -5,6 +5,7 @@ import lang.temper.be.assertGeneratedCode
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.log.FilePath
 import lang.temper.log.filePath
+import lang.temper.name.DashedIdentifier
 import kotlin.test.Test
 
 @SuppressWarnings("MaxLineLength")
@@ -54,7 +55,7 @@ class RustBackendTest {
             |          rust-version = "1.71.1"
             |
             |          [dependencies]
-            |          temper-core = { path = "../temper-core" }
+            |          temper-core = { path = "../temper-core", version = "=${DashedIdentifier.temperCoreLibraryVersion}" }
             |
             |          ```
             |      },

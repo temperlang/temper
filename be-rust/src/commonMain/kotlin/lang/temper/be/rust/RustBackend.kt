@@ -15,7 +15,11 @@ import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
 import lang.temper.interp.importExport.STANDARD_LIBRARY_NAME
 import lang.temper.library.LibraryConfiguration
+import lang.temper.library.authors
+import lang.temper.library.description
+import lang.temper.library.homepage
 import lang.temper.library.license
+import lang.temper.library.repository
 import lang.temper.library.versionOrDefault
 import lang.temper.log.FilePath
 import lang.temper.log.Position
@@ -25,6 +29,7 @@ import lang.temper.log.last
 import lang.temper.log.resolveDir
 import lang.temper.name.BackendId
 import lang.temper.name.BackendMeta
+import lang.temper.name.DashedIdentifier
 import lang.temper.name.FileType
 import lang.temper.name.LanguageLabel
 
@@ -159,20 +164,28 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
                 this["name"] = names.packageNaming.packageName
                 this["version"] = libraryConfiguration.versionOrDefault()
                 libraryConfiguration.license()?.let { this["license"] = it }
-            }.entries.joinToString("\n") { (key, value) ->
-                "$key = ${jsonEscaper.escape(value)}"
+                libraryConfiguration.description()?.let { this["description"] = it }
+                libraryConfiguration.homepage()?.let { this["homepage"] = it }
+                libraryConfiguration.repository()?.let { this["repository"] = it }
+            }.map { (key, value) ->
+                // Top-level string escape all above values.
+                key to jsonEscaper.escape(value)
+            }.toMap() + buildMap {
+                // *Not* top-level string values here.
+                libraryConfiguration.authors()?.let { this["authors"] = "[${jsonEscaper.escape(it)}]" }
             }
+            val temperCoreLibraryVersion = DashedIdentifier.temperCoreLibraryVersion
             MetadataFileSpecification(
                 path = filePath("Cargo.toml"),
                 mimeType = MimeType("application", "toml"),
                 content = """
                     |[package]
-                    |${packageFields}
+                    |${packageFields.entries.joinToString("\n") { (key, value) -> "$key = $value" }}
                     |edition = "2021"
                     |rust-version = "${RustcCommand.minVersion}"
                     |
                     |[dependencies]
-                    |temper-core = { path = "../temper-core" }
+                    |temper-core = { path = "../temper-core", version = "=$temperCoreLibraryVersion" }
                     |$cargoDeps
                 """.trimMargin(),
             ).also { add(it) }

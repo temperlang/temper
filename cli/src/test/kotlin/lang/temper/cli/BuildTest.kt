@@ -386,9 +386,16 @@ class BuildTest {
     @Test
     fun rustBackendDirs() = runBuildTest("RustBackendDirs", path = "/buildDirs") { topDir ->
         runBuild(backends = listOf(RustBackend.Factory.backendId), workRoot = topDir)
-        // TODO Assert lots more once we correctly do more.
         assertTrue(topDir.resolve("temper.out/rust/apple/src/lib.rs").exists())
         assertTrue(topDir.resolve("temper.out/rust/banana/src/lib.rs").exists())
+        topDir.withTextOf("temper.out/rust/std/Cargo.toml") { text ->
+            assertContains(text, "version = ")
+            assertContains(text, "license = \"Apache-2.0 OR MIT\"")
+            assertContains(text, "description = ")
+            assertContains(text, "homepage = \"https://temperlang.dev/\"")
+            assertContains(text, "repository = \"https://github.com/temperlang/temper\"")
+            assertContains(text, "authors = [\"Temper Contributors\"]")
+        }
     }
 
     companion object {
