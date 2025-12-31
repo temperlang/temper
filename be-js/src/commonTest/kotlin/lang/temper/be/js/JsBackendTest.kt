@@ -5,6 +5,7 @@ package lang.temper.be.js
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.log.filePath
+import lang.temper.name.DashedIdentifier
 import kotlin.test.Test
 
 class JsBackendTest {
@@ -105,7 +106,7 @@ class JsBackendTest {
             |            ".": "./index.js"
             |          },
             |          "dependencies": {
-            |              "@temperlang/core": "0.6.0"
+            |              "@temperlang/core": "${DashedIdentifier.temperCoreLibraryVersion}"
             |          }
             |        }
             |      },

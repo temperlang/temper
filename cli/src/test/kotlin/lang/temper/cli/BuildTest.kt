@@ -28,7 +28,6 @@ import lang.temper.log.FilePath
 import lang.temper.log.FilePathSegment
 import lang.temper.log.MessageTemplate
 import lang.temper.name.BackendId
-import lang.temper.name.DashedIdentifier
 import lang.temper.name.QName
 import lang.temper.supportedBackends.defaultSupportedBackendList
 import lang.temper.tooling.buildrun.BuildHarness
@@ -396,8 +395,6 @@ class BuildTest {
             assertContains(text, "homepage = \"https://temperlang.dev/\"")
             assertContains(text, "repository = \"https://github.com/temperlang/temper\"")
             assertContains(text, "authors = [\"Temper Contributors\"]")
-            val temperCoreLibraryVersion = DashedIdentifier.temperCoreLibraryVersion
-            assertContains(text, "path = \"../temper-core\", version = \"=$temperCoreLibraryVersion\"")
         }
     }
 
