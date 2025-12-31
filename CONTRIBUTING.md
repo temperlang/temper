@@ -4,11 +4,15 @@ Thank you for your interest in contributing to Temper! This guide will help you 
 
 ## Prerequisites
 
-You will need:
+Not all contributions are code.  We appreciate any kinds of contributions: documentation, visualizations, ideas, all of it.
+
+That said, if you do want to run the test suite or rebuild the doc site yourself, you will need:
 
 - **JDK 17** — Required by Gradle, the build system
-- **Gradle** — [Installation guide](https://docs.gradle.org/current/userguide/installation.html#installing_with_a_package_manager)
-- **Git** with [commit signing](https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification) set up
+- **Gradle** — [Installation guide][gradle installation]
+- **Git** with [commit signing] set up
+
+If you get stuck, see [*Questions*](#questions) below.
 
 ### For running the full test suite
 
@@ -107,7 +111,21 @@ Add the environment variable `IS_INTELLIJ_TERMINAL=t` to your run configurations
 # Output: build/dokka/htmlMultiModule/index.html
 ```
 
+## Preparing a pull request
+
+The Temper project manages changes via the standard Github pull request process.
+
+We need two things for a commit to *main*:
+
+- [commit signing], cryptographically signing commits, lets us produce builds with supply chain security metadata that is [required by some large organizations](https://engineering.homeoffice.gov.uk/standards/signing-code-commits/).
+- [commit signoff], `git commit`'s `-s` flag, is different and ensures that the people who authored and authorized changes for inclusion in the main branch are identified in the record so all the transfers under [Github's inbound=outbound][inbound=outbound] rules, and other terms of use, are clear.
+
 ## Questions?
 
 - [Discord](https://discord.gg/QQKgZMukVB) — Chat with the community
 - [Issues](https://github.com/temperlang/temper/issues) — Report bugs or request features
+
+[commit signing]: https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification
+[commit signoff]: https://git-scm.com/docs/git-commit#Documentation/git-commit.txt--s
+[gradle installation]: https://docs.gradle.org/current/userguide/installation.html#installing_with_a_package_manager
+[inbound=outbound]: https://docs.github.com/en/site-policy/github-terms/github-terms-of-service#6-contributions-under-repository-license
