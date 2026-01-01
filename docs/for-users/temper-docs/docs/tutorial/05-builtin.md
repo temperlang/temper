@@ -235,11 +235,6 @@ string. If line content starts with something other than `"`, the string ends.
 This syntax allows control over indentation both inside and outside the string
 content.
 
-You can't do single-line multi-quoted strings. For example, `"""abc"""` is an
-error. And there are reasons for that. The current and future feature set of
-Temper string templates goes much deeper than this (see [issue#18](https://github.com/temperlang/temper/issues/18)), but let's
-move on for now.
-
 Temper has character syntax using a string tagged with `char`.
 Character values are simple integer code-point values.
 
