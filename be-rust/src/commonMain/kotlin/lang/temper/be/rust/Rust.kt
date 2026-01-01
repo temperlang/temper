@@ -3835,13 +3835,13 @@ object Rust {
             ),
         )
 
-    /** `#![ {{0}} ]` */
+    /** `#![ {{0}} ]\n` */
     private val sharedCodeFormattingTemplate1 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("#![", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken("]", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken("]\n", OutputTokenType.Punctuation, TokenAssociation.Bracket),
             ),
         )
 

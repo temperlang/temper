@@ -62,16 +62,17 @@ class RustBackendTest {
             |      src: {
             |        lib.rs: {
             |          content: ```
-            |            #![ allow(nonstandard_style, unused_imports, unused_mut, unused_variables)] pub mod bar;
+            |            #![ allow(warnings) ]
+            |             pub mod bar;
             |            mod r#mod;
             |            pub use r#mod::*;
             |            mod support;
             |            pub (crate) use support::*;
             |            pub fn init(config: Option<temper_core::Config>) -> temper_core::Result<temper_core::AsyncRunner> {
-            |            crate::CONFIG.get_or_init(| | config.unwrap_or_else(| | temper_core::Config::default()));
-            |            bar::init() ? ;
-            |            r#mod::init() ? ;
-            |            Ok(crate::config().runner().clone())
+            |                crate::CONFIG.get_or_init(| | config.unwrap_or_else(| | temper_core::Config::default()));
+            |                bar::init() ? ;
+            |                r#mod::init() ? ;
+            |                Ok(crate::config().runner().clone())
             |            }
             |
             |            ```
@@ -80,7 +81,8 @@ class RustBackendTest {
             |        main.rs: "__DO_NOT_CARE__",
             |        mod.rs: {
             |          content: ```
-            |            use temper_core::AnyValueTrait;
+            |            #![ allow(warnings) ]
+            |             use temper_core::AnyValueTrait;
             |            use temper_core::AsAnyValue;
             |            use temper_core::Pair;
             |            pub (crate) fn init() -> temper_core::Result<()> {
@@ -113,7 +115,8 @@ class RustBackendTest {
             |        bar: {
             |          mod.rs: {
             |            content: ```
-            |              use temper_core::AnyValueTrait;
+            |              #![ allow(warnings) ]
+            |               use temper_core::AnyValueTrait;
             |              use temper_core::AsAnyValue;
             |              use temper_core::Pair;
             |              pub (crate) fn init() -> temper_core::Result<()> {
@@ -878,15 +881,16 @@ class RustBackendTest {
             |      src: {
             |        lib.rs: {
             |          content: ```
-            |            #![ allow(nonstandard_style, unused_imports, unused_mut, unused_variables)] pub mod bar;
+            |            #![ allow(warnings) ]
+            |             pub mod bar;
             |            pub mod bob;
             |            mod support;
             |            pub (crate) use support::*;
             |            pub fn init(config: Option<temper_core::Config>) -> temper_core::Result<temper_core::AsyncRunner> {
-            |            crate::CONFIG.get_or_init(| | config.unwrap_or_else(| | temper_core::Config::default()));
-            |            bar::init() ? ;
-            |            bob::bill::beth::init() ? ;
-            |            Ok(crate::config().runner().clone())
+            |                crate::CONFIG.get_or_init(| | config.unwrap_or_else(| | temper_core::Config::default()));
+            |                bar::init() ? ;
+            |                bob::bill::beth::init() ? ;
+            |                Ok(crate::config().runner().clone())
             |            }
             |
             |            ```
@@ -896,7 +900,8 @@ class RustBackendTest {
             |        bar: {
             |          mod.rs: {
             |            content: ```
-            |              use temper_core::AnyValueTrait;
+            |              #![ allow(warnings) ]
+            |               use temper_core::AnyValueTrait;
             |              use temper_core::AsAnyValue;
             |              use temper_core::Pair;
             |              pub (crate) fn init() -> temper_core::Result<()> {
@@ -931,7 +936,8 @@ class RustBackendTest {
             |            "beth": {
             |              "mod.rs": {
             |                content: ```
-            |                  use temper_core::AnyValueTrait;
+            |                  #![ allow(warnings) ]
+            |                   use temper_core::AnyValueTrait;
             |                  use temper_core::AsAnyValue;
             |                  use temper_core::Pair;
             |                  pub (crate) fn init() -> temper_core::Result<()> {
@@ -1832,7 +1838,8 @@ private fun assertGenerateWanted(modules: List<ModuleInfo>) {
             |                    "mod.rs": {
             |                        "content":
             |```
-            |use temper_core::AnyValueTrait;
+            |#![ allow(warnings) ]
+            | use temper_core::AnyValueTrait;
             |use temper_core::AsAnyValue;
             |use temper_core::Pair;
             |${module.rust}

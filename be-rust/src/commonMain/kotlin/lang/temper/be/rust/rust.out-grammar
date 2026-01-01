@@ -21,7 +21,7 @@ SourceFile.attrs.default = `listOf()`;
 
 Array ::= "[" & values%Expr*"," & "]";
 
-AttrInner ::= "#![" & expr%Expr & "]";
+AttrInner ::= "#![" & expr%Expr & "]\n";
 AttrOuter ::= "#[" & expr%Expr & "]";
 
 // Claim is that attributes are only allowed in limited cases but they include

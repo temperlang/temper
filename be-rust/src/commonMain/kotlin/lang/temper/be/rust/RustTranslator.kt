@@ -131,7 +131,7 @@ class RustTranslator(
             path = makeSrcFilePath(relPath.withTemperAwareExtension("")),
             content = Rust.SourceFile(
                 pos,
-                attrs = listOf(),
+                attrs = listOf(allowWarnings(module.pos)),
                 items = buildList {
                     // Declare submodules, except for root that needs to declare in lib file.
                     if (!isRoot) {
