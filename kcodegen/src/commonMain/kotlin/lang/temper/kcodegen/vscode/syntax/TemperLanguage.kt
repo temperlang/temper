@@ -183,6 +183,12 @@ private fun round(nested: Ref) = Nest(
 )
 
 private fun string() = choice(
+    // TODO Multiline rgx string?
+    stringMultiline(),
+    stringMultiline().copy(
+        begin = """\b($MATCH_WORD)(""${'"'})""",
+        beginCaptures = taggedStringBeginCaptures,
+    ),
     taggedString().copy(
         scope = "string.regexp.temper",
         begin = """\b(rgx)(["])""",
@@ -223,21 +229,40 @@ private fun string() = choice(
     ),
 )
 
-private fun taggedString() = Nest(
-    scope = "string.quoted.double.temper",
-    begin = """\b($MATCH_WORD)(["])""",
-    beginCaptures = mapOf(
-        1 to Scoped("entity.name.function.temper"),
-        2 to Scoped("punctuation.definition.string.begin.temper"),
-    ),
-    end = """["]""",
-    endCaptures = stringEndCaptures,
+private fun stringMultiline() = Nest(
+    scope = "string.quoted.multi.temper",
+    begin = "\"\"\"",
+    beginCaptures = stringBeginCaptures,
+    end = """(?!(\s|"|//|/\*|$))""",
     patterns = listOf(
-        // Backslash prevents end string only, but it's still raw.
-        Flat(match = "\\\\\""),
-        ::interpolation.ref,
+        ::comment.ref,
+        Nest(
+            scope = "string.quoted.double.temper",
+            begin = "\"",
+            beginCaptures = stringBeginCaptures,
+            end = "$",
+            patterns = listOf(
+                ::escape.ref,
+                ::interpolation.ref,
+            ),
+        ),
     ),
 )
+
+private fun taggedString(): Nest {
+    return Nest(
+        scope = "string.quoted.double.temper",
+        begin = """\b($MATCH_WORD)(["])""",
+        beginCaptures = taggedStringBeginCaptures,
+        end = """["]""",
+        endCaptures = stringEndCaptures,
+        patterns = listOf(
+            // Backslash prevents end string only, but it's still raw.
+            Flat(match = "\\\\\""),
+            ::interpolation.ref,
+        ),
+    )
+}
 
 private fun typeExpression(): Rule = choice(
     // Give some keywords priority over type names
@@ -298,6 +323,10 @@ private val regexpClassPunctuation = Scoped("punctuation.definition.character-cl
 private val stringBeginCaptures = mapOf(0 to Scoped("punctuation.definition.string.begin.temper"))
 private val stringEndPunctuation = Scoped("punctuation.definition.string.end.temper")
 private val stringEndCaptures = mapOf(0 to stringEndPunctuation)
+private val taggedStringBeginCaptures = mapOf(
+    1 to Scoped("entity.name.function.temper"),
+    2 to Scoped("punctuation.definition.string.begin.temper"),
+)
 private val templateBeginCaptures = mapOf(0 to Scoped("punctuation.definition.template-expression.begin.temper"))
 private val templateEndCaptures = mapOf(0 to Scoped("punctuation.definition.template-expression.end.temper"))
 
