@@ -334,6 +334,75 @@
         "string": {
             "patterns": [
                 {
+                    "name": "string.quoted.multi.temper",
+                    "begin": "\u0022\u0022\u0022",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.begin.temper"
+                        }
+                    },
+                    "end": "(?!(\\s|\u0022|//|/\\*|\u0024))",
+                    "patterns": [
+                        {
+                            "include": "#comment"
+                        },
+                        {
+                            "name": "string.quoted.double.temper",
+                            "begin": "\u0022",
+                            "beginCaptures": {
+                                "0": {
+                                    "name": "punctuation.definition.string.begin.temper"
+                                }
+                            },
+                            "end": "\u0024",
+                            "patterns": [
+                                {
+                                    "include": "#escape"
+                                },
+                                {
+                                    "include": "#interpolation"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.multi.temper",
+                    "begin": "\\b([_[:alpha:]][_[:alnum:]]*)(\u0022\u0022\u0022)",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "entity.name.function.temper"
+                        },
+                        "2": {
+                            "name": "punctuation.definition.string.begin.temper"
+                        }
+                    },
+                    "end": "(?!(\\s|\u0022|//|/\\*|\u0024))",
+                    "patterns": [
+                        {
+                            "include": "#comment"
+                        },
+                        {
+                            "name": "string.quoted.double.temper",
+                            "begin": "\u0022",
+                            "beginCaptures": {
+                                "0": {
+                                    "name": "punctuation.definition.string.begin.temper"
+                                }
+                            },
+                            "end": "\u0024",
+                            "patterns": [
+                                {
+                                    "include": "#escape"
+                                },
+                                {
+                                    "include": "#interpolation"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
                     "name": "string.regexp.temper",
                     "begin": "\\b(rgx)([\u0022])",
                     "beginCaptures": {

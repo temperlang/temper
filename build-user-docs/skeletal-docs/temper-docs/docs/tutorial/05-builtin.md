@@ -211,35 +211,29 @@ backend, but the exact integer differs depending on the "native string encoding.
 - Python3 presents its strings as like an array of code-point, so `myString.next(i)`
   is 1 greater than `i`, unless `i` is already at the end of the string.
 
-Temper also has raw string syntax to treat backslashes as text data via the `raw`
-string tag, as well as multiline string syntax:
+Temper also has raw string syntax to treat backslashes as text data via the
+`raw` string tag, as well as multiline string syntax:
 
 ```
 $ raw"\d+\.\d+"
 interactive#0: "\\d+\\.\\d+"
-$ """
-    - An outline
-      - With indentation
-    - Final point
-    """
+```
+
+```temper
+$ ("""
+    "- An outline
+    // Ignored comment.
+    "  - With indentation
+    "- Final point
+  )
 interactive#1: "- An outline\n  - With indentation\n- Final point"
 ```
 
-Note how the minimum indentation level denotes the beginning of each line of
-text. You can also use more than three quote to control the number of quotes
-needed to finish the string:
-
-```
-$ """"
-    """
-    """"
-interactive#2: "\"\"\""
-```
-
-But you can't do single-line multi-quoted strings. For example, `"""abc"""` is
-an error. And there are reasons for that. The current and future feature set of
-Temper string templates goes much deeper than this (see [issue#18]), but let's
-move on for now.
+Triple-quotes like `"""` start a multiline string, then all whitespace and
+comments are ignored, and every line content beginning with `"` continues the
+string. If line content starts with something other than `"`, the string ends.
+This syntax allows control over indentation both inside and outside the string
+content.
 
 Temper has character syntax using a string tagged with `char`.
 Character values are simple integer code-point values.
