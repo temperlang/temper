@@ -311,20 +311,7 @@ private fun MutableList<Backend.OutputFileSpecification>.addLib(
         path = filePath("src", "lib.rs"),
         content = Rust.SourceFile(
             pos,
-            attrs = listOf(
-                Rust.AttrInner(
-                    pos,
-                    Rust.Call(
-                        pos,
-                        "allow".toId(pos),
-                        // We generate these warnings and more. Some we could try to clean up, but it's awkward.
-                        // Ignoring these warnings means we have to pay manual attention to generated public names.
-                        listOf("nonstandard_style", "unused_imports", "unused_mut", "unused_variables").map { name ->
-                            name.toId(pos)
-                        },
-                    ),
-                ),
-            ),
+            attrs = listOf(allowWarnings(pos)),
             items = buildList {
                 // Separate mods.
                 declareSubmods(pos, allModKids[libraryConfiguration.libraryRoot] ?: setOf())

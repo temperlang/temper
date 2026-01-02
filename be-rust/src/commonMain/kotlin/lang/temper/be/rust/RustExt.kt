@@ -34,6 +34,15 @@ import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
 
+/**
+ * We generate plenty of warnings. Some we could try to clean up, but it's awkward.
+ * Ignoring warnings means we have to pay manual attention to generated public names.
+ */
+internal fun allowWarnings(pos: Position): Rust.AttrInner = Rust.AttrInner(
+    pos,
+    Rust.Call(pos, "allow".toId(pos), listOf("warnings".toId(pos))),
+)
+
 internal fun makeError(pos: Position) = Rust.Call(pos, callee = ERROR_NEW_NAME.toId(pos), args = listOf())
 
 internal fun makePath(pos: Position, vararg segments: String) = Rust.PathSegments(pos, segments.map { it.toId(pos) })
