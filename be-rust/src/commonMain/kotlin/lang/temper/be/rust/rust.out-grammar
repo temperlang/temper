@@ -15,25 +15,25 @@ Program = SourceFile;
 
 // https://doc.rust-lang.org/reference/crates-and-source-files.html
 SourceFile ::=
-      attrs%AttrInner*"\n"
+      attrs%AttrInner*""
     & items%Item*"\n";
 SourceFile.attrs.default = `listOf()`;
 
 Array ::= "[" & values%Expr*"," & "]";
 
-AttrInner ::= "#![" & expr%Expr & "]\n";
-AttrOuter ::= "#[" & expr%Expr & "]";
+AttrInner ::= "#!" & "[" & expr%Expr & "]" & "\n";
+AttrOuter ::= "#" & "[" & expr%Expr & "]" & "\n";
 
 // Claim is that attributes are only allowed in limited cases but they include
 // them generally in main docs like here because that's simpler grammar.
 // Here we go further, allowing needlessly nested attributed exprs. This route
 // simplifies usage of the output tree node types.
-AttrExprWithBlock ::= attrs%AttrOuter*"\n" & expr%ExprWithBlock;
-AttrExprWithoutBlock ::= attrs%AttrOuter*"\n" & expr%ExprWithoutBlock;
+AttrExprWithBlock ::= attrs%AttrOuter*"" & expr%ExprWithBlock;
+AttrExprWithoutBlock ::= attrs%AttrOuter*"" & expr%ExprWithoutBlock;
 
 Block ::=
       "{"
-    & attrs%AttrInner*"\n"
+    & attrs%AttrInner*""
     & statements%Statement*"\n"
     & ((result%Expr => result) || ())
     & "}";
@@ -205,7 +205,7 @@ Impl ::=
     & type%Type
     & ((whereItems%WhereItem => "where" & whereItems%WhereItem*",") || ())
     & "{"
-    & attrs%AttrInner*"\n"
+    & attrs%AttrInner*""
     // Not all Item kinds are legal, just AssociatedItem kinds, but meh.
     & items%Item*"\n"
     & "}"
@@ -222,7 +222,7 @@ ImplTraitType ::=
 IndexExpr ::= expr%Expr & "[" & index%Expr & "]";
 
 Item ::=
-      attrs%AttrOuter*"\n"
+      attrs%AttrOuter*""
     & ((pub%VisibilityPub => pub) || ())
     & item%ItemBase;
 Item.attrs.default = `listOf()`;
@@ -246,7 +246,7 @@ ItemBase =
 LabeledExpr ::= "'" & id%Id & ":" & expr%ExprWithBlock;
 
 LetStatement ::=
-      attrs%AttrOuter*"\n"
+      attrs%AttrOuter*""
     & "let"
     & pattern%Pattern
     & ((type%Type => ":" & type) || ())
@@ -393,7 +393,7 @@ StructExprField ::=
     ;
 
 StructField ::=
-      attrs%AttrOuter*"\n"
+      attrs%AttrOuter*""
     & ((pub%VisibilityPub => pub) || ())
     & id%Id
     & ((type%Type => ":" & type) || ())
@@ -408,7 +408,7 @@ Trait ::=
     & ((bounds%TypeParamBound => ":" & bounds*"+") || ())
     & ((whereItems%WhereItem => "where" & whereItems%WhereItem*",") || ())
     & "{"
-    & attrs%AttrInner*"\n"
+    & attrs%AttrInner*""
     // Not all Item kinds are legal, just AssociatedItem kinds, but meh.
     & items%Item*"\n"
     & "}"
@@ -426,7 +426,7 @@ TraitObjectType ::=
 Tuple ::= "(" & values%Expr*"," & ")";
 
 TupleField ::=
-      attrs%AttrOuter*"\n"
+      attrs%AttrOuter*""
     & ((pub%VisibilityPub => pub) || ())
     // & no id
     & ((type%Type => type) || ())

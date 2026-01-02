@@ -3820,13 +3820,13 @@ object Rust {
         }
     }
 
-    /** `{{0*\n}} {{1*\n}}` */
+    /** `{{0*}} {{1*\n}}` */
     private val sharedCodeFormattingTemplate0 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
                     0,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     1,
@@ -3835,36 +3835,38 @@ object Rust {
             ),
         )
 
-    /** `#![ {{0}} ]\n` */
+    /** `#! [ {{0}} ] \n` */
     private val sharedCodeFormattingTemplate1 =
         CodeFormattingTemplate.Concatenation(
             listOf(
-                CodeFormattingTemplate.LiteralToken("#![", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken("#!", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken("[", OutputTokenType.Punctuation, TokenAssociation.Bracket),
                 CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken("]\n", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken("]", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.NewLine,
             ),
         )
 
-    /** `{{0*\n}} {{1}} {{2}}` */
+    /** `{{0*}} {{1}} {{2}}` */
     private val sharedCodeFormattingTemplate2 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
                     0,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.OneSubstitution(1),
                 CodeFormattingTemplate.OneSubstitution(2),
             ),
         )
 
-    /** `{{0*\n}} {{2}}` */
+    /** `{{0*}} {{2}}` */
     private val sharedCodeFormattingTemplate3 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
                     0,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.OneSubstitution(2),
             ),
@@ -3883,36 +3885,38 @@ object Rust {
             ),
         )
 
-    /** `#[ {{0}} ]` */
+    /** `# [ {{0}} ] \n` */
     private val sharedCodeFormattingTemplate5 =
         CodeFormattingTemplate.Concatenation(
             listOf(
-                CodeFormattingTemplate.LiteralToken("#[", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken("#", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken("[", OutputTokenType.Punctuation, TokenAssociation.Bracket),
                 CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.LiteralToken("]", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.NewLine,
             ),
         )
 
-    /** `{{0*\n}} {{1}}` */
+    /** `{{0*}} {{1}}` */
     private val sharedCodeFormattingTemplate6 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
                     0,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.OneSubstitution(1),
             ),
         )
 
-    /** `\{ {{0*\n}} {{1*\n}} {{2}} \}` */
+    /** `\{ {{0*}} {{1*\n}} {{2}} \}` */
     private val sharedCodeFormattingTemplate7 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     0,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     1,
@@ -3923,14 +3927,14 @@ object Rust {
             ),
         )
 
-    /** `\{ {{0*\n}} {{1*\n}} \}` */
+    /** `\{ {{0*}} {{1*\n}} \}` */
     private val sharedCodeFormattingTemplate8 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     0,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     1,
@@ -4113,13 +4117,13 @@ object Rust {
             ),
         )
 
-    /** `{{0*\n}} {{1}} {{2}} : {{3}}` */
+    /** `{{0*}} {{1}} {{2}} : {{3}}` */
     private val sharedCodeFormattingTemplate24 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
                     0,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.OneSubstitution(1),
                 CodeFormattingTemplate.OneSubstitution(2),
@@ -4128,13 +4132,13 @@ object Rust {
             ),
         )
 
-    /** `{{0*\n}} {{2}} : {{3}}` */
+    /** `{{0*}} {{2}} : {{3}}` */
     private val sharedCodeFormattingTemplate25 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
                     0,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.OneSubstitution(2),
                 CodeFormattingTemplate.LiteralToken(":", OutputTokenType.Punctuation),
@@ -4142,11 +4146,11 @@ object Rust {
             ),
         )
 
-    /** `{{0*\n}}` */
+    /** `{{0*}}` */
     private val sharedCodeFormattingTemplate26 =
         CodeFormattingTemplate.GroupSubstitution(
             0,
-            CodeFormattingTemplate.NewLine,
+            CodeFormattingTemplate.empty,
         )
 
     /** `if {{0}} {{1}} else {{2}}` */
@@ -4781,7 +4785,7 @@ object Rust {
     private val sharedCodeFormattingTemplate68 =
         CodeFormattingTemplate.LiteralToken("mut", OutputTokenType.Word)
 
-    /** `impl < {{0*,}} > {{1}} for {{2}} where {{3*,}} \{ {{4*\n}} {{5*\n}} \}` */
+    /** `impl < {{0*,}} > {{1}} for {{2}} where {{3*,}} \{ {{4*}} {{5*\n}} \}` */
     private val sharedCodeFormattingTemplate69 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -4803,7 +4807,7 @@ object Rust {
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     4,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     5,
@@ -4813,7 +4817,7 @@ object Rust {
             ),
         )
 
-    /** `impl < {{0*,}} > {{1}} for {{2}} \{ {{4*\n}} {{5*\n}} \}` */
+    /** `impl < {{0*,}} > {{1}} for {{2}} \{ {{4*}} {{5*\n}} \}` */
     private val sharedCodeFormattingTemplate70 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -4830,7 +4834,7 @@ object Rust {
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     4,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     5,
@@ -4840,7 +4844,7 @@ object Rust {
             ),
         )
 
-    /** `impl < {{0*,}} > {{2}} where {{3*,}} \{ {{4*\n}} {{5*\n}} \}` */
+    /** `impl < {{0*,}} > {{2}} where {{3*,}} \{ {{4*}} {{5*\n}} \}` */
     private val sharedCodeFormattingTemplate71 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -4860,7 +4864,7 @@ object Rust {
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     4,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     5,
@@ -4870,7 +4874,7 @@ object Rust {
             ),
         )
 
-    /** `impl < {{0*,}} > {{2}} \{ {{4*\n}} {{5*\n}} \}` */
+    /** `impl < {{0*,}} > {{2}} \{ {{4*}} {{5*\n}} \}` */
     private val sharedCodeFormattingTemplate72 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -4885,7 +4889,7 @@ object Rust {
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     4,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     5,
@@ -4895,7 +4899,7 @@ object Rust {
             ),
         )
 
-    /** `impl {{1}} for {{2}} where {{3*,}} \{ {{4*\n}} {{5*\n}} \}` */
+    /** `impl {{1}} for {{2}} where {{3*,}} \{ {{4*}} {{5*\n}} \}` */
     private val sharedCodeFormattingTemplate73 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -4911,7 +4915,7 @@ object Rust {
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     4,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     5,
@@ -4921,7 +4925,7 @@ object Rust {
             ),
         )
 
-    /** `impl {{1}} for {{2}} \{ {{4*\n}} {{5*\n}} \}` */
+    /** `impl {{1}} for {{2}} \{ {{4*}} {{5*\n}} \}` */
     private val sharedCodeFormattingTemplate74 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -4932,7 +4936,7 @@ object Rust {
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     4,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     5,
@@ -4942,7 +4946,7 @@ object Rust {
             ),
         )
 
-    /** `impl {{2}} where {{3*,}} \{ {{4*\n}} {{5*\n}} \}` */
+    /** `impl {{2}} where {{3*,}} \{ {{4*}} {{5*\n}} \}` */
     private val sharedCodeFormattingTemplate75 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -4956,7 +4960,7 @@ object Rust {
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     4,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     5,
@@ -4966,7 +4970,7 @@ object Rust {
             ),
         )
 
-    /** `impl {{2}} \{ {{4*\n}} {{5*\n}} \}` */
+    /** `impl {{2}} \{ {{4*}} {{5*\n}} \}` */
     private val sharedCodeFormattingTemplate76 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -4975,7 +4979,7 @@ object Rust {
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     4,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     5,
@@ -5166,7 +5170,7 @@ object Rust {
             ),
         )
 
-    /** `trait {{0}} < {{1*,}} > : {{2*+}} where {{3*,}} \{ {{4*\n}} {{5*\n}} \}` */
+    /** `trait {{0}} < {{1*,}} > : {{2*+}} where {{3*,}} \{ {{4*}} {{5*\n}} \}` */
     private val sharedCodeFormattingTemplate91 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -5191,7 +5195,7 @@ object Rust {
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     4,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     5,
@@ -5201,7 +5205,7 @@ object Rust {
             ),
         )
 
-    /** `trait {{0}} < {{1*,}} > : {{2*+}} \{ {{4*\n}} {{5*\n}} \}` */
+    /** `trait {{0}} < {{1*,}} > : {{2*+}} \{ {{4*}} {{5*\n}} \}` */
     private val sharedCodeFormattingTemplate92 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -5221,7 +5225,7 @@ object Rust {
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     4,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     5,
@@ -5231,7 +5235,7 @@ object Rust {
             ),
         )
 
-    /** `trait {{0}} < {{1*,}} > where {{3*,}} \{ {{4*\n}} {{5*\n}} \}` */
+    /** `trait {{0}} < {{1*,}} > where {{3*,}} \{ {{4*}} {{5*\n}} \}` */
     private val sharedCodeFormattingTemplate93 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -5251,7 +5255,7 @@ object Rust {
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     4,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     5,
@@ -5261,7 +5265,7 @@ object Rust {
             ),
         )
 
-    /** `trait {{0}} < {{1*,}} > \{ {{4*\n}} {{5*\n}} \}` */
+    /** `trait {{0}} < {{1*,}} > \{ {{4*}} {{5*\n}} \}` */
     private val sharedCodeFormattingTemplate94 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -5276,7 +5280,7 @@ object Rust {
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     4,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     5,
@@ -5286,7 +5290,7 @@ object Rust {
             ),
         )
 
-    /** `trait {{0}} : {{2*+}} where {{3*,}} \{ {{4*\n}} {{5*\n}} \}` */
+    /** `trait {{0}} : {{2*+}} where {{3*,}} \{ {{4*}} {{5*\n}} \}` */
     private val sharedCodeFormattingTemplate95 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -5305,7 +5309,7 @@ object Rust {
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     4,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     5,
@@ -5315,7 +5319,7 @@ object Rust {
             ),
         )
 
-    /** `trait {{0}} : {{2*+}} \{ {{4*\n}} {{5*\n}} \}` */
+    /** `trait {{0}} : {{2*+}} \{ {{4*}} {{5*\n}} \}` */
     private val sharedCodeFormattingTemplate96 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -5329,7 +5333,7 @@ object Rust {
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     4,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     5,
@@ -5339,7 +5343,7 @@ object Rust {
             ),
         )
 
-    /** `trait {{0}} where {{3*,}} \{ {{4*\n}} {{5*\n}} \}` */
+    /** `trait {{0}} where {{3*,}} \{ {{4*}} {{5*\n}} \}` */
     private val sharedCodeFormattingTemplate97 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -5353,7 +5357,7 @@ object Rust {
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     4,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     5,
@@ -5363,7 +5367,7 @@ object Rust {
             ),
         )
 
-    /** `trait {{0}} \{ {{4*\n}} {{5*\n}} \}` */
+    /** `trait {{0}} \{ {{4*}} {{5*\n}} \}` */
     private val sharedCodeFormattingTemplate98 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -5372,7 +5376,7 @@ object Rust {
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     4,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.GroupSubstitution(
                     5,
@@ -5508,13 +5512,13 @@ object Rust {
             ),
         )
 
-    /** `{{0*\n}} let {{1}} : {{2}} = {{3}} ;` */
+    /** `{{0*}} let {{1}} : {{2}} = {{3}} ;` */
     private val sharedCodeFormattingTemplate106 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
                     0,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.LiteralToken("let", OutputTokenType.Word),
                 CodeFormattingTemplate.OneSubstitution(1),
@@ -5526,13 +5530,13 @@ object Rust {
             ),
         )
 
-    /** `{{0*\n}} let {{1}} : {{2}} ;` */
+    /** `{{0*}} let {{1}} : {{2}} ;` */
     private val sharedCodeFormattingTemplate107 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
                     0,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.LiteralToken("let", OutputTokenType.Word),
                 CodeFormattingTemplate.OneSubstitution(1),
@@ -5542,13 +5546,13 @@ object Rust {
             ),
         )
 
-    /** `{{0*\n}} let {{1}} = {{3}} ;` */
+    /** `{{0*}} let {{1}} = {{3}} ;` */
     private val sharedCodeFormattingTemplate108 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
                     0,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.LiteralToken("let", OutputTokenType.Word),
                 CodeFormattingTemplate.OneSubstitution(1),
@@ -5558,13 +5562,13 @@ object Rust {
             ),
         )
 
-    /** `{{0*\n}} let {{1}} ;` */
+    /** `{{0*}} let {{1}} ;` */
     private val sharedCodeFormattingTemplate109 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
                     0,
-                    CodeFormattingTemplate.NewLine,
+                    CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.LiteralToken("let", OutputTokenType.Word),
                 CodeFormattingTemplate.OneSubstitution(1),
