@@ -384,7 +384,7 @@ class CppTranslator(
         block: TmpL.BlockStatement,
     ): Cpp.BlockStmt = cpp.pos(block) {
         cpp.blockStmt(
-            buildList<Cpp.Stmt> {
+            buildList {
                 add(
                     cpp.varDef(cpp.ptr(thisType), thisName, cpp.thisExpr()),
                 )

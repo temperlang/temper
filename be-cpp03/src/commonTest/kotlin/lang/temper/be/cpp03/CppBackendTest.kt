@@ -9,6 +9,50 @@ import kotlin.test.Test
 @SuppressWarnings("MaxLineLength")
 class CppBackendTest {
     @Test
+    fun classy() = assertGeneratedCode(
+        inputs = inputFileMapFromJson(
+            $$"""
+                |{
+                |  hi.temper: ```
+                |    class C {
+                |      public get place(): String { "Hilo, HI" }
+                |    }
+                |    let c = new C();
+                |    console.log("Hello, ${c.place}!");
+                |    ```,
+                |}
+            """.trimMargin(),
+        ),
+        want = """
+            |{
+            |  cpp03: {
+            |    "my-test-library": {
+            |      "my-test-library.cpp": {
+            |        content: ```
+            |          #include <temper-core/core.hpp>
+            |          namespace my_test_library {
+            |            temper::core::Shared<TODO> c = "TODO: /*new*/ C__0"();
+            |            namespace {
+            |              struct _Init0 {
+            |                _Init0() {
+            |                  temper::core::log(temper::core::cat(temper::core::shared<std::string>("Hello, ", 7), "TODO: c__0.place", temper::core::shared<std::string>("!", 1)));
+            |                }
+            |              };
+            |              _Init0 _init0;
+            |            }
+            |          }
+            |
+            |          ```
+            |      },
+            |      "my-test-library.cpp.map": "__DO_NOT_CARE__",
+            |      "main.cpp": "__DO_NOT_CARE__",
+            |    },
+            |  },
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun crashyMath() = assertGeneratedCode(
         inputs = inputFileMapFromJson(
             """

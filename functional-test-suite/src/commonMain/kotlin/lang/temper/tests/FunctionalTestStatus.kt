@@ -32,6 +32,7 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
         cpp03(198),
         Ft.AlgosFibonacci,
         Ft.AlgosHelloWorld,
+        Ft.ClassesDirectGetter,
         Ft.TypesIntBasics,
         Ft.TypesIntLimits,
     )
