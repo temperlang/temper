@@ -1,6 +1,7 @@
 package lang.temper.be.cpp03
 
 import lang.temper.be.Backend
+import lang.temper.be.cpp.BinaryOpEnum
 import lang.temper.be.cpp.Cpp
 import lang.temper.be.cpp.CppBuilder
 import lang.temper.be.cpp.CppName
@@ -12,6 +13,7 @@ import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapParameters
 import lang.temper.common.subListToEnd
 import lang.temper.log.resolveFile
+import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.ResolvedName
 import lang.temper.name.Temporary
 import lang.temper.type.TypeDefinition
@@ -97,7 +99,7 @@ class CppTranslator(
             is TmpL.ModuleInitBlock -> processModuleInitBlock(topLevel)
             is TmpL.ModuleLevelDeclaration -> processModuleLevelDeclaration(topLevel)
 //            is TmpL.Test -> processTest(topLevel)
-//            is TmpL.TypeDeclaration -> processTypeDeclaration(topLevel)
+            is TmpL.TypeDeclaration -> processTypeDeclaration(topLevel)
             else -> {}
         }
     }
@@ -144,6 +146,26 @@ class CppTranslator(
         translateModuleOrLocalDeclaration(decl).also { implGlobals.addAll(it) }
     }
 
+    private fun processTypeDeclaration(type: TmpL.TypeDeclaration) = cpp.pos(type) {
+        val impls = mutableListOf<Cpp.Global>()
+        cpp.struct(
+            name = translateId(type.name) as Cpp.SingleName,
+            fields = buildList {
+                // TODO Separate public from private.
+                for (member in type.members) {
+                    translateMember(impls, type, member)
+                }
+            },
+        ).also { struct ->
+            // TODO If public template, impl needs to be in header.
+            implGlobals.add(struct.def)
+        }
+        for (impl in impls) {
+            // TODO If public template, impl needs to be in header.
+            implGlobals.add(impl)
+        }
+    }
+
     private fun translateActual(actual: TmpL.Actual) = translateExpression(actual as TmpL.Expression)
 
     private fun translateAssignment(stmt: TmpL.Assignment): Cpp.Stmt = cpp.pos(stmt) {
@@ -166,7 +188,7 @@ class CppTranslator(
     private fun translateBreakStatement(stmt: TmpL.BreakStatement): Cpp.Stmt = cpp.pos(stmt) {
         when (val label = stmt.label) {
             // TODO Just invent labels for every loop? Could help avoid switch issues.
-            null -> cpp.exprStmt(cpp.literal("TODO $label"))
+            null -> cpp.exprStmt(cpp.literal("TODO: $label"))
             else -> cpp.gotoStmt(translateId(label.id) as Cpp.SingleName)
         }
     }
@@ -199,6 +221,7 @@ class CppTranslator(
 
     private fun translateCallable(callable: TmpL.Callable): Cpp.Expr = cpp.pos(callable) {
         when (callable) {
+            is TmpL.ConstructorReference -> translateConstructorReference(callable)
             is TmpL.FnReference -> cpp.name(callable.id)
             is TmpL.MethodReference -> when (val subject = callable.subject) {
                 is TmpL.Expression -> cpp.memberExpr(
@@ -211,6 +234,10 @@ class CppTranslator(
         } ?: cpp.literal("TODO: $callable")
     }
 
+    private fun translateConstructorReference(ref: TmpL.ConstructorReference) = cpp.pos(ref) {
+        cpp.makeShared(translateName(ref.typeName.sourceDefinition.name))
+    }
+
     private fun translateDotName(name: TmpL.DotName): Cpp.SingleName = cpp.pos(name) {
         cpp.singleName(name.dotNameText)
     }
@@ -219,10 +246,11 @@ class CppTranslator(
         when (expr) {
             is TmpL.BubbleSentinel -> translateBubbleSentinel(expr)
             is TmpL.CallExpression -> translateCallExpression(expr)
+            is TmpL.PropertyReference -> translatePropertyReference(expr)
             is TmpL.Reference -> translateReference(expr)
             is TmpL.ValueReference -> translateValueReference(expr)
-            else -> cpp.literal("TODO: $expr")
-        }
+            else -> null
+        } ?: cpp.literal("TODO: $expr")
     }
 
     private fun translateExpressionStatement(stmt: TmpL.ExpressionStatement): Cpp.Stmt = cpp.pos(stmt) {
@@ -273,18 +301,7 @@ class CppTranslator(
     }
 
     private fun translateId(id: TmpL.Id): Cpp.Name = cpp.pos(id) {
-        // TODO Always use pretty names where possible?
-        // TODO Namespacing.
-        when (val name = id.name) {
-            is Temporary -> "${name.nameHint}_${name.uid}" // double underscore forbidden
-            else -> {
-                when (val pretty = name.displayName) {
-                    in cppKeywords -> "${pretty}_"
-                    else -> pretty
-                }
-            }
-            // We don't actually allow key below, but we've checked it above.
-        }.let { cpp.singleName(CppName(it, allowKey = true)) }
+        translateName(id.name)
     }
 
     private fun translateLabeledStatement(stmt: TmpL.LabeledStatement): List<Cpp.Stmt> = cpp.pos(stmt) {
@@ -302,6 +319,39 @@ class CppTranslator(
     private fun translateLocalDeclaration(decl: TmpL.LocalDeclaration): List<Cpp.Stmt> =
         translateModuleOrLocalDeclaration(decl)
 
+    private fun MutableList<Cpp.StructPart>.translateMember(
+        impls: MutableList<Cpp.Global>,
+        type: TmpL.TypeDeclaration,
+        member: TmpL.MemberOrGarbage,
+    ) = cpp.pos(member) {
+        when (member) {
+            is TmpL.Getter -> translateMemberGetter(impls, type, member)
+//            is TmpL.Setter -> TODO()
+//            is TmpL.NormalMethod -> TODO()
+//            is TmpL.StaticMethod -> TODO()
+//            is TmpL.Constructor -> TODO()
+//            is TmpL.InstanceProperty -> TODO()
+//            is TmpL.StaticProperty -> TODO()
+            else -> cpp.literal("TODO: $member")
+        }
+    }
+
+    private fun MutableList<Cpp.StructPart>.translateMemberGetter(
+        impls: MutableList<Cpp.Global>,
+        type: TmpL.TypeDeclaration,
+        member: TmpL.Getter,
+    ) = cpp.pos(member) {
+        val func = cpp.func(
+            name = cpp.scopedName(translateId(type.name), translateDotName(member.dotName)),
+            retType = translateType(member.returnType),
+            argTypes = listOf(),
+            // TODO Interfaces might have bodiless methods. Make `func` flexible?
+            block = member.body?.let { translateBlockStatement(it) } ?: cpp.blockStmt(listOf()),
+        )
+        add(func.decl)
+        impls.add(func.def)
+    }
+
     private fun translateModuleInitFailed(stmt: TmpL.ModuleInitFailed): Cpp.Stmt = cpp.pos(stmt) {
         cpp.throwStmt(cpp.callExpr(cpp.name("std", "logic_error"), currentError()))
     }
@@ -317,6 +367,41 @@ class CppTranslator(
             name = translateId(decl.name) as Cpp.SingleName,
             init = decl.init?.let { translateExpression(it) },
         ).let { listOf(it) }
+    }
+
+    private fun translateName(name: ResolvedName): Cpp.SingleName = when (name) {
+        // TODO Use or adjust cpp.name? It uses cppNames already.
+        // TODO Always use pretty names where possible?
+        // TODO Namespacing.
+        is Temporary -> "${name.nameHint}_${name.uid}" // double underscore forbidden
+        else -> {
+            when (val pretty = name.displayName) {
+                in cppKeywords -> "${pretty}_"
+                else -> pretty
+            }
+        }
+        // We don't actually allow key below, but we've checked it above.
+    }.let { cpp.singleName(CppName(it, allowKey = true)) }
+
+    private fun translatePropertyId(property: TmpL.PropertyId) = cpp.pos(property) {
+        when (property) {
+            is TmpL.ExternalPropertyId -> translateDotName(property.name)
+            is TmpL.InternalPropertyId -> translateId(property.name) as Cpp.SingleName
+        }
+    }
+
+    private fun translatePropertyReference(ref: TmpL.PropertyReference): Cpp.Expr = cpp.pos(ref) {
+        val subject = when (val subject = ref.subject) {
+            is TmpL.Expression -> translateExpression(subject)
+            is TmpL.TypeName -> cpp.literal("TODO: $subject")
+        }
+        val propertyId = translatePropertyId(ref.property)
+        cpp.binaryExpr(subject, Cpp.BinaryOp(cpp.pos, BinaryOpEnum.Arrow), propertyId).let { expr ->
+            when (ref.property) {
+                is TmpL.ExternalPropertyId -> cpp.callExpr(expr)
+                is TmpL.InternalPropertyId -> expr
+            }
+        }
     }
 
     private fun translateReference(ref: TmpL.Reference): Cpp.Expr = cpp.pos(ref) {
@@ -338,7 +423,7 @@ class CppTranslator(
             is TmpL.ModuleInitFailed -> translateModuleInitFailed(stmt)
             is TmpL.ReturnStatement -> translateReturnStatement(stmt)
             is TmpL.WhileStatement -> translateWhileStatement(stmt)
-            else -> cpp.exprStmt(cpp.literal("TODO ${stmt.javaClass.simpleName} $stmt"))
+            else -> cpp.exprStmt(cpp.literal("TODO: ${stmt.javaClass.simpleName} $stmt"))
         }.let { listOf(it) }
     }
 
@@ -385,13 +470,17 @@ class CppTranslator(
     }
 
     private fun translateTypeDefinition(def: TypeDefinition): Cpp.Type = run {
-        when (def) {
-            WellKnownTypes.booleanTypeDefinition -> return cpp.singleName(CppName("bool", allowKey = true))
-            WellKnownTypes.intTypeDefinition -> return cpp.singleName("int32_t")
-            WellKnownTypes.int64TypeDefinition -> return cpp.singleName("int64_t")
-            WellKnownTypes.stringTypeDefinition -> cpp.name("std", "string")
-            WellKnownTypes.voidTypeDefinition -> return cpp.singleName(CppName("void", allowKey = true))
-            else -> cpp.singleName("TODO")
+        when (def.sourceLocation) {
+            ImplicitsCodeLocation -> when (def) {
+                WellKnownTypes.booleanTypeDefinition -> return cpp.singleName(CppName("bool", allowKey = true))
+                WellKnownTypes.intTypeDefinition -> return cpp.singleName("int32_t")
+                WellKnownTypes.int64TypeDefinition -> return cpp.singleName("int64_t")
+                WellKnownTypes.stringTypeDefinition -> cpp.name("std", "string")
+                WellKnownTypes.voidTypeDefinition -> return cpp.singleName(CppName("void", allowKey = true))
+                else -> cpp.singleName("TODO")
+            }
+            // TODO Namespacing.
+            else -> translateName(def.name)
         }.let { cpp.template(cpp.name(TEMPER_CORE_NAMESPACE, "Shared"), it) }
     }
 
@@ -415,13 +504,13 @@ class CppTranslator(
             TString -> TString.unpack(value).let { string ->
                 string.codePoints().count()
                 cpp.callExpr(
-                    cpp.template(cpp.name(TEMPER_CORE_NAMESPACE, "shared"), cpp.name("std", "string")),
+                    cpp.makeShared(cpp.name("std", "string")),
                     // TODO Ensure we escape out string literals to utf8.
                     cpp.literal(string),
                     cpp.literal(string.utf8Length()),
                 )
             }
-            else -> cpp.literal("TODO $value")
+            else -> cpp.literal("TODO: $value")
         }
     }
 

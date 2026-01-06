@@ -31,11 +31,17 @@ class CppBackendTest {
             |        content: ```
             |          #include <temper-core/core.hpp>
             |          namespace my_test_library {
-            |            temper::core::Shared<TODO> c = "TODO: /*new*/ C__0"();
+            |            struct C {
+            |              temper::core::Shared<std::string> place();
+            |            };
+            |            temper::core::Shared<std::string> C::place() {
+            |              return temper::core::shared<std::string>("Hilo, HI", 8);
+            |            }
+            |            temper::core::Shared<C> c = temper::core::shared<C>();
             |            namespace {
             |              struct _Init0 {
             |                _Init0() {
-            |                  temper::core::log(temper::core::cat(temper::core::shared<std::string>("Hello, ", 7), "TODO: c__0.place", temper::core::shared<std::string>("!", 1)));
+            |                  temper::core::log(temper::core::cat(temper::core::shared<std::string>("Hello, ", 7), c->place(), temper::core::shared<std::string>("!", 1)));
             |                }
             |              };
             |              _Init0 _init0;
