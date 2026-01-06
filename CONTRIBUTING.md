@@ -33,6 +33,11 @@ This allows Temper to reach as many use cases as possible.
 - **Python 3.11** — For Python backend tests
 - **Rust 1.71.1** — Including cargo, for Rust backend tests
 
+These dependencies are also provided for our [primary testing workflow][workflow]
+and for our helper [Docker image][docker deps]. For the workflow, GitHub base
+images provide some dependencies, so we rely on those rather than manually
+installing specific versions.
+
 Temper-built code typically should also work on newer versions of these
 languages/runtimes.
 
@@ -139,8 +144,10 @@ We need two things for a commit to *main*:
 - [Discord](https://discord.gg/QQKgZMukVB) — Chat with the community
 - [Issues](https://github.com/temperlang/temper/issues) — Report bugs or request features
 
+[docker deps]: docker/base-image/home/.tool-versions
 [commit signing]: https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification
 [commit signoff]: https://git-scm.com/docs/git-commit#Documentation/git-commit.txt--s
 [gradle installation]: https://docs.gradle.org/current/userguide/installation.html#installing_with_a_package_manager
 [inbound=outbound]: https://docs.github.com/en/site-policy/github-terms/github-terms-of-service#6-contributions-under-repository-license
 [toolchains]: https://maven.apache.org/guides/mini/guide-using-toolchains.html
+[workflow]: .github/workflows/build-and-run-tests.yml
