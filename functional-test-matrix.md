@@ -11,7 +11,7 @@
 | [CastsSpecific][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ClassesAngleCall][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ClassesCallOverrideFromSubtype][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [ClassesDirectGetter][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [ClassesDirectGetter][] | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ClassesInheritedGetter][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ClassesObjectLiterals][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ClassesPrivateMethod][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
