@@ -6,21 +6,35 @@ Thank you for your interest in contributing to Temper! This guide will help you 
 
 Not all contributions are code.  We appreciate any kinds of contributions: documentation, visualizations, ideas, all of it.
 
-That said, if you do want to run the test suite or rebuild the doc site yourself, you will need:
+That said, if you do want to build Temper or the docs site or run most core tests:
 
-- **JDK 17** — Required by Gradle, the build system
-- **Gradle** — [Installation guide][gradle installation]
+- **JDK 21** — Required by Gradle, the build system
 - **Git** with [commit signing] set up
+- **Python 3.11** — To install git pre-commit hooks or run helper scripts
+
+We build Temper using Gradle, but that should be installed automatically if
+missing.
 
 If you get stuck, see [*Questions*](#questions) below.
 
 ### For running the full test suite
 
+Temper translates to many languages, and some tests exercise these languages.
+Where possible, we try to support older versions of target languages.
+This allows Temper to reach as many use cases as possible.
+
+- **Maven** (>3.2.5) — For Java tests; run `scripts/generate-maven-toolchains-xml` to configure
+- **Java 8** - For Java 8 backend tests
+- **Java 17** - For (more modern) Java backend tests
+- **toolchains.xml** - To tell Maven where Java 8 and 17 are, [docs here][toolchains]
+- **Lua 5.1 or 5.4** — For Lua backend tests
+- **.NET Core 6.0** — For C# backend tests
 - **Node.js v18** — For JavaScript backend tests; `nvm install lts-hydrogen`
 - **Python 3.11** — For Python backend tests
-- **Maven** (>3.2.5) — For Java tests; run `scripts/generate-maven-toolchains-xml` to configure
-- **.NET Core 6.0** — For C# backend tests
-- **Rust 1.63+** — Including cargo, for Rust backend tests
+- **Rust 1.71.1** — Including cargo, for Rust backend tests
+
+Temper-built code typically should also work on newer versions of these
+languages/runtimes.
 
 ## Getting Started
 
@@ -129,3 +143,4 @@ We need two things for a commit to *main*:
 [commit signoff]: https://git-scm.com/docs/git-commit#Documentation/git-commit.txt--s
 [gradle installation]: https://docs.gradle.org/current/userguide/installation.html#installing_with_a_package_manager
 [inbound=outbound]: https://docs.github.com/en/site-policy/github-terms/github-terms-of-service#6-contributions-under-repository-license
+[toolchains]: https://maven.apache.org/guides/mini/guide-using-toolchains.html
