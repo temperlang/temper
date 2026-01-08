@@ -1,10 +1,15 @@
 package lang.temper.be.cpp03
 
+import lang.temper.be.cpp.Cpp
+import lang.temper.be.cpp.CppBuilder
 import lang.temper.be.tmpl.TmpL
 import lang.temper.common.utf8ByteLength
 import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.ResolvedParsedName
 import lang.temper.name.identifiers.IdentStyle
+
+fun CppBuilder.makeShared(type: Cpp.Type) =
+    template(name(TEMPER_CORE_NAMESPACE, "shared"), type)
 
 fun String.dashToSnake() = IdentStyle.Dash.convertTo(IdentStyle.Snake, this)
 

@@ -9,6 +9,56 @@ import kotlin.test.Test
 @SuppressWarnings("MaxLineLength")
 class CppBackendTest {
     @Test
+    fun classy() = assertGeneratedCode(
+        inputs = inputFileMapFromJson(
+            $$"""
+                |{
+                |  hi.temper: ```
+                |    class C {
+                |      public get place(): String { "Hilo, HI" }
+                |    }
+                |    let c = new C();
+                |    console.log("Hello, ${c.place}!");
+                |    ```,
+                |}
+            """.trimMargin(),
+        ),
+        want = """
+            |{
+            |  cpp03: {
+            |    "my-test-library": {
+            |      "my-test-library.cpp": {
+            |        content: ```
+            |          #include <temper-core/core.hpp>
+            |          namespace my_test_library {
+            |            struct C {
+            |              temper::core::Shared<std::string> place();
+            |            };
+            |            temper::core::Shared<std::string> C::place() {
+            |              return temper::core::shared<std::string>("Hilo, HI", 8);
+            |            }
+            |            temper::core::Shared<C> c = temper::core::shared<C>();
+            |            namespace {
+            |              struct _Init0 {
+            |                _Init0() {
+            |                  temper::core::log(temper::core::cat(temper::core::shared<std::string>("Hello, ", 7), c->place(), temper::core::shared<std::string>("!", 1)));
+            |                }
+            |              };
+            |              _Init0 _init0;
+            |            }
+            |          }
+            |
+            |          ```
+            |      },
+            |      "my-test-library.cpp.map": "__DO_NOT_CARE__",
+            |      "main.cpp": "__DO_NOT_CARE__",
+            |    },
+            |  },
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun crashyMath() = assertGeneratedCode(
         inputs = inputFileMapFromJson(
             """
