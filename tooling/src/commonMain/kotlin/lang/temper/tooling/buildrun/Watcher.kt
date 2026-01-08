@@ -100,7 +100,7 @@ class Watcher(
                     synchronized(this@Watcher) { _allDoneFuture }?.let { allDoneFuture ->
                         when (error) {
                             null -> allDoneFuture.completeOk(Unit)
-                            else -> allDoneFuture.completeError(error!!)
+                            else -> allDoneFuture.completeError(error)
                         }
                     }
                 }

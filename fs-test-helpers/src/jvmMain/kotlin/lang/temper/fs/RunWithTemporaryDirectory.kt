@@ -66,10 +66,15 @@ fun <T> runWithTemporaryDirectory(
     return result
 }
 
-fun <T> runWithTemporaryDirCopyOf(testName: String, source: Path, testAction: (Path) -> T): T {
+fun <T> runWithTemporaryDirCopyOf(
+    testName: String,
+    source: Path,
+    subPath: Path = Path.of(""),
+    testAction: (Path) -> T,
+): T {
     check(source.isDirectory())
     return runWithTemporaryDirectory(testName) { tempDir ->
-        copyRecursive(source, tempDir)
+        copyRecursive(source, tempDir.resolve(subPath))
         testAction(tempDir)
     }
 }

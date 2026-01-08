@@ -7,6 +7,7 @@ import lang.temper.be.lua.LuaBackend
 import lang.temper.be.py.PyBackend
 import lang.temper.common.currents.UnmanagedFuture
 import lang.temper.common.withCapturingConsole
+import lang.temper.fs.mkdir
 import lang.temper.fs.runWithTemporaryDirCopyOf
 import lang.temper.name.BackendId
 import org.junit.jupiter.api.Timeout
@@ -14,6 +15,8 @@ import java.nio.file.Files
 import java.util.Timer
 import java.util.TimerTask
 import java.util.concurrent.ForkJoinPool
+import kotlin.io.path.Path
+import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -64,7 +67,12 @@ private fun runTest(
     val userSignalledDone = UnmanagedFuture.newCompletableFuture<Unit, Nothing>(
         "User signalled done",
     )
-    runWithTemporaryDirCopyOf(testName, resourcePath("/testing/passing")) { dir ->
+    runWithTemporaryDirCopyOf(testName, resourcePath("/testing/passing"), subPath = Path("src")) { dir ->
+        // Add a unrelated extra file that we should ignore.
+        val extraDir = dir.resolve("extra")
+        extraDir.mkdir()
+        extraDir.resolve("bogus.txt").writeText("i should be ignored by temper")
+        // Now to the main test.
         // TODO Make these atomic, or just figure we have big gaps?
         var buildCount = 0
         var timer: Timer? = null
@@ -86,7 +94,7 @@ private fun runTest(
                     object : TimerTask() {
                         override fun run() {
                             timer = null
-                            val file = dir.resolve("test.temper")
+                            val file = dir.resolve("src/test.temper")
                             Files.writeString(file, Files.readString(file) + "\n// Keep on changing!")
                         }
                     },
