@@ -282,7 +282,8 @@ internal open class FunctionCall(
     val functionName: String,
     builtinOperatorId: BuiltinOperatorId? = null,
     cloneEvenIfFirst: Boolean = false,
-    val fnLast: Boolean = false,
+    /** Is some param a special-tailored fn borrow type? */
+    val fnIndex: Int? = null,
     hasGeneric: Boolean = false,
     wrapClosures: Boolean = false,
     // TODO Extras copied from c# but not currently in use.
@@ -299,7 +300,7 @@ internal open class FunctionCall(
         functionName: String,
         builtinOperatorId: BuiltinOperatorId? = null,
         cloneEvenIfFirst: Boolean = false,
-        fnLast: Boolean = false,
+        fnIndex: Int? = null,
         hasGeneric: Boolean = false,
         wrapClosures: Boolean = false,
         extraArgs: (Position) -> List<Rust.Expr> = { emptyList() },
@@ -308,7 +309,7 @@ internal open class FunctionCall(
         functionName = functionName,
         builtinOperatorId = builtinOperatorId,
         cloneEvenIfFirst = cloneEvenIfFirst,
-        fnLast = fnLast,
+        fnIndex = fnIndex,
         hasGeneric = hasGeneric,
         wrapClosures = wrapClosures,
         extraArgs = extraArgs,
@@ -345,8 +346,14 @@ internal open class FunctionCall(
                 add(self)
                 // Other args.
                 val otherArgs = arguments.subListToEnd(1)
+                // TODO If we could see raw param types, we could infer this.
+                val fnPosIndex = when {
+                    fnIndex == null -> otherArgs.size // which matches no args
+                    fnIndex < 0 -> otherArgs.size + fnIndex
+                    else -> fnIndex
+                }
                 for ((argIndex, arg) in otherArgs.withIndex()) {
-                    addArg(arg, translator, specializeFn = fnLast && argIndex == otherArgs.size - 1)
+                    addArg(arg, translator, specializeFn = argIndex == fnPosIndex)
                 }
                 addAll(extraArgs(pos.rightEdge))
             },
@@ -697,7 +704,7 @@ private val leStrStr = Infix("LeStrStr", BuiltinOperatorId.LeStrStr, RustOperato
 private val listedTypes = listOf("Listed", "List", "ListBuilder")
 
 private val listForEach =
-    FunctionCall("List::forEach", "temper_core::listed::list_for_each", hasGeneric = true, fnLast = true)
+    FunctionCall("List::forEach", "temper_core::listed::list_for_each", hasGeneric = true, fnIndex = -1)
 private val listBuilderAdd = FunctionCall("ListBuilder::add", "temper_core::listed::add", hasGeneric = true)
 private val listBuilderAddAll = FunctionCall("ListBuilder::addAll", "temper_core::listed::add_all")
 private val listBuilderClear = FunctionCall("ListBuilder::clear", "temper_core::listed::clear")
@@ -705,25 +712,25 @@ private val listBuilderConstructor = FunctionCall("ListBuilder::constructor", "t
 private val listBuilderRemoveLast = FunctionCall("ListBuilder::removeLast", "temper_core::listed::remove_last")
 private val listBuilderReverse = FunctionCall("ListBuilder::reverse", "temper_core::listed::reverse")
 private val listBuilderSet = FunctionCall("ListBuilder::set", "temper_core::listed::set", hasGeneric = true)
-private val listBuilderSort = FunctionCall("ListBuilder::sort", "temper_core::listed::sort", fnLast = true)
-private val listBuilderSplice = FunctionCall("ListBuilder::splice", "temper_core::listed::splice", fnLast = true)
+private val listBuilderSort = FunctionCall("ListBuilder::sort", "temper_core::listed::sort", fnIndex = -1)
+private val listBuilderSplice = FunctionCall("ListBuilder::splice", "temper_core::listed::splice", fnIndex = -1)
 private val listedFilter =
-    FunctionCall("Listed::filter", "temper_core::listed::filter", hasGeneric = true, fnLast = true)
+    FunctionCall("Listed::filter", "temper_core::listed::filter", hasGeneric = true, fnIndex = -1)
 private val listedGet = FunctionCall(listedTypes.map { "$it::get" }, "$LISTED_TRAIT_NAME::get", hasGeneric = true)
 private val listedGetOr = FunctionCall("Listed::getOr", "$LISTED_TRAIT_NAME::get_or", hasGeneric = true)
 
 private val listedIsEmpty =
     FunctionCall(listedTypes.map { "$it::isEmpty" }, "$LISTED_TRAIT_NAME::is_empty", hasGeneric = true)
-private val listedJoin = FunctionCall("Listed::join", "temper_core::listed::join", hasGeneric = true, fnLast = true)
+private val listedJoin = FunctionCall("Listed::join", "temper_core::listed::join", hasGeneric = true, fnIndex = -1)
 private val listedLength = FunctionCall(listedTypes.map { "$it::length" }, "$LISTED_TRAIT_NAME::len", hasGeneric = true)
-private val listedMap = FunctionCall("Listed::map", "temper_core::listed::map", hasGeneric = true, fnLast = true)
+private val listedMap = FunctionCall("Listed::map", "temper_core::listed::map", hasGeneric = true, fnIndex = -1)
 private val listedReduce =
-    FunctionCall("Listed::reduce", "temper_core::listed::reduce", hasGeneric = true, fnLast = true)
+    FunctionCall("Listed::reduce", "temper_core::listed::reduce", hasGeneric = true, fnIndex = -1)
 private val listedReduceFrom =
-    FunctionCall("Listed::reduceFrom", "temper_core::listed::reduce_from", hasGeneric = true, fnLast = true)
+    FunctionCall("Listed::reduceFrom", "temper_core::listed::reduce_from", hasGeneric = true, fnIndex = -1)
 private val listedSlice = FunctionCall("Listed::slice", "temper_core::listed::slice", hasGeneric = true)
 private val listedSorted =
-    FunctionCall("Listed::sorted", "temper_core::listed::sorted", hasGeneric = true, fnLast = true)
+    FunctionCall("Listed::sorted", "temper_core::listed::sorted", hasGeneric = true, fnIndex = -1)
 private val listedToList =
     FunctionCall(listedTypes.map { "$it::toList" }, "$LISTED_TRAIT_NAME::to_list", hasGeneric = true)
 private val listedToListBuilder = FunctionCall(
@@ -763,7 +770,8 @@ private val mapBuilderConstructor =
 private val mapBuilderRemove =
     FunctionCall("MapBuilder::remove", "temper_core::MapBuilder::remove", hasGeneric = true)
 private val mapBuilderSet = FunctionCall("MapBuilder::set", "temper_core::MapBuilder::set", hasGeneric = true)
-private val mappedForEach = FunctionCall("Mapped::forEach", "temper_core::MappedTrait::for_each", hasGeneric = true, fnLast = true)
+private val mappedForEach =
+    FunctionCall("Mapped::forEach", "temper_core::MappedTrait::for_each", hasGeneric = true, fnIndex = -1)
 private val mappedGet = FunctionCall("Mapped::get", "temper_core::MappedTrait::get", hasGeneric = true)
 private val mappedGetOr = FunctionCall("Mapped::getOr", "temper_core::MappedTrait::get_or", hasGeneric = true)
 private val mappedHas = FunctionCall("Mapped::has", "temper_core::MappedTrait::has", hasGeneric = true)
@@ -775,10 +783,10 @@ private val mappedToListBuilderWith = FunctionCall(
     "Mapped::toListBuilderWith",
     "temper_core::MappedTrait::to_list_builder_with",
     hasGeneric = true,
-    fnLast = true,
+    fnIndex = -1,
 )
 private val mappedToListWith =
-    FunctionCall("Mapped::toListWith", "temper_core::mapped_to_list_with", hasGeneric = true, fnLast = true)
+    FunctionCall("Mapped::toListWith", "temper_core::mapped_to_list_with", hasGeneric = true, fnIndex = -1)
 private val mappedToMap = FunctionCall("Mapped::toMap", "temper_core::MappedTrait::to_map")
 private val mappedToMapBuilder = FunctionCall("Mapped::toMapBuilder", "temper_core::MappedTrait::to_map_builder")
 private val mappedValues = FunctionCall("Mapped::values", "temper_core::MappedTrait::values")
@@ -829,7 +837,7 @@ internal object PureVirtualBuiltin : RustInlineSupportCode(pureVirtualBuiltinNam
 private val regexCompileFormatted = FunctionCall("Regex::compileFormatted", "compile_formatted")
 private val regexCompiledFind = FunctionCall("Regex::compiledFind", "compiled_find")
 private val regexCompiledFound = FunctionCall("Regex::compiledFound", "compiled_found")
-private val regexCompiledReplace = FunctionCall("Regex::compiledReplace", "compiled_replace")
+private val regexCompiledReplace = FunctionCall("Regex::compiledReplace", "compiled_replace", fnIndex = 2)
 private val regexCompiledSplit = FunctionCall("Regex::compiledSplit", "compiled_split")
 private val regexFormatterPushCodeTo = FunctionCall("RegexFormatter::pushCodeTo", "push_code_to")
 
@@ -882,7 +890,7 @@ private object StringBegin : Constant("String::begin") {
 
 private val stringCountBetween = FunctionCall("String::countBetween", "temper_core::string::count_between")
 private val stringEnd = MethodCall("String::end", "len")
-private val stringForEach = FunctionCall("String::forEach", "temper_core::string::for_each", fnLast = true)
+private val stringForEach = FunctionCall("String::forEach", "temper_core::string::for_each", fnIndex = -1)
 private val stringFromCodePoint = FunctionCall("String::fromCodePoint", "temper_core::string::from_code_point")
 private val stringFromCodePoints = FunctionCall("String::fromCodePoints", "temper_core::string::from_code_points")
 private val stringGet = FunctionCall("String::get", "temper_core::string::get")
