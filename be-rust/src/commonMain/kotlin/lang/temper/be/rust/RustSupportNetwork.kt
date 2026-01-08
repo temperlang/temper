@@ -282,7 +282,7 @@ internal open class FunctionCall(
     val functionName: String,
     builtinOperatorId: BuiltinOperatorId? = null,
     cloneEvenIfFirst: Boolean = false,
-    /** Is some param a special-tailored fn borrow type? */
+    /** Non-null means the indicated param has a special-tailored fn borrow type. */
     val fnIndex: Int? = null,
     hasGeneric: Boolean = false,
     wrapClosures: Boolean = false,
