@@ -169,3 +169,57 @@ Mutually recursive local functions need hoisting or forward declaration.
 ```log
 mutualRecursion = [2, 4, 6]
 ```
+
+### Capture scope in a loop
+
+Capture scope can also get tricky across languages. Here we gather up some
+closures with capture from a loop var.
+
+    let hub = new Hub();
+    let items = gatherHandlers(hub);
+    hub.actionPerformed();
+
+    let gatherHandlers(hub: Hub): ListBuilder<Int> {
+      let items = new ListBuilder<Int>();
+      for (var i = 0; i < 3; i++) {
+
+Ideally, we don't need `let i = i;` but our `for` desugaring fails to capture
+the changing value without this.
+
+        let i = i;
+        hub.onAction {
+          items.add(i);
+          // console.log("items: ${items.join(" ") { i => i.toString() }}");
+        }
+      }
+      items
+    }
+
+This could represent any kind of event system.
+
+    @fun interface Handler(): Void;
+
+    class Hub {
+      private handlers: ListBuilder<Handler> = new ListBuilder();
+
+      public onAction(handler: Handler): Void {
+        handlers.add(handler);
+      }
+
+      public actionPerformed(): Void {
+        for (var i = 0; i < handlers.length; ++i) {
+          handlers[i]();
+        }
+      }
+    }
+
+Python without extra attention has all `2` values below. And without
+`int i = i;`, we get `3` for all values everywhere.
+
+Note that this is ignored until we fix Python.
+
+```ignore log
+items: 0
+items: 0 1
+items: 0 1 2
+```

@@ -531,6 +531,47 @@ class RustBackendTest {
     )
 
     @Test
+    fun closureWrong() = assertGenerateWanted(
+        temper = """
+            |@fun interface Handler(): Void;
+            |class Hub {
+            |  private handlers: ListBuilder<Handler> = new ListBuilder();
+            |  public onAction(handler: Handler): Void {
+            |    handlers.add(handler);
+            |  }
+            |}
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            Ok(())
+            |    }).clone()
+            |}
+            |struct HubStruct {
+            |    handlers: temper_core::ListBuilder<std::sync::Arc<dyn Fn () + std::marker::Send + std::marker::Sync>>
+            |}
+            |#[derive(Clone)]
+            |pub (crate) struct Hub(std::sync::Arc<HubStruct>);
+            |impl Hub {
+            |    pub fn on_action(& self, handler__0: std::sync::Arc<dyn Fn () + std::marker::Send + std::marker::Sync>) {
+            |        temper_core::listed::add( & self.0.handlers, handler__0.clone(), None);
+            |    }
+            |    pub fn new() -> Hub {
+            |        let handlers;
+            |        let mut t___0: temper_core::ListBuilder<std::sync::Arc<dyn Fn () + std::marker::Send + std::marker::Sync>> = temper_core::listed::new_builder();
+            |        handlers = t___0.clone();
+            |        let selfish = Hub(std::sync::Arc::new(HubStruct {
+            |                    handlers
+            |        }));
+            |        return selfish;
+            |    }
+            |}
+            |temper_core::impl_any_value_trait!(Hub, []);
+        """.trimMargin(),
+    )
+
+    @Test
     fun bubblyAndUnBubblyFunctionValues() = assertGenerateWanted(
         temper = """
             |let passes(f: fn (): Void throws Bubble): Boolean {
