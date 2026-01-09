@@ -25,7 +25,8 @@ internal fun doWatch(
     userSignalledDone: CompletableSignalRFuture,
     outDir: Path? = null,
     keepDir: Path? = null,
-    onEachBuildDone: (() -> Unit)? = null,
+    includeSnapshot: Boolean = false,
+    onEachBuildDone: ((Watcher) -> Unit)? = null,
 ): Boolean =
     BuildHarness(
         executorService = executorService,
@@ -38,6 +39,7 @@ internal fun doWatch(
     ).use { harness ->
         val watcher = Watcher(
             harness,
+            includeSnapshot = includeSnapshot,
             limit = buildLimit,
             testBackends = testBackends,
             onEachBuildDone = onEachBuildDone,

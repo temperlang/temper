@@ -42,6 +42,7 @@ import lang.temper.frontend.staging.partitionModulesIntoLibraries
 import lang.temper.fs.AsyncSystemAccess
 import lang.temper.fs.AsyncSystemReadAccess
 import lang.temper.fs.FileSnapshot
+import lang.temper.fs.FileSystemSnapshot
 import lang.temper.fs.FilteringFileSystemSnapshot
 import lang.temper.lexer.defaultClassifyTemperSource
 import lang.temper.library.DependencyResolver
@@ -165,6 +166,7 @@ private data class StagingResult(
     val libraryConfigurationsBuilder: LibraryConfigurationsBundle,
     val projectLogSink: LogSink,
     val priorBuildSuffices: Boolean,
+    val sourceSnapshot: FileSystemSnapshot? = null,
 )
 
 /**
@@ -287,6 +289,10 @@ private fun stageLibraries(
         libraryConfigurationsBundle,
         projectLogSink,
         priorBuildSuffices = priorBuildSuffices,
+        sourceSnapshot = when {
+            build.includeSnapshot -> sourceSnapshot
+            else -> null
+        },
     )
 }
 
@@ -305,6 +311,7 @@ fun doOneBuild(build: Build): BuildResult {
         libraryConfigurationsBundle,
         projectLogSink,
         priorBuildSuffices,
+        sourceSnapshot,
     ) = stageLibraries(logLevelTracker, build)
         ?: return BuildInitFailed(ok = false, maxLogLevel = logLevelTracker.maxLogLevel)
 
@@ -596,6 +603,7 @@ fun doOneBuild(build: Build): BuildResult {
         ok = okCheck(runResult),
         maxLogLevel = maxLogLevel,
         taskResults = runResult,
+        sourceSnapshot = sourceSnapshot,
     )
 }
 
@@ -614,6 +622,7 @@ data class Build(
      * available for writing new files.
      */
     val beforeStartTranslation: SignalRFuture? = null,
+    val includeSnapshot: Boolean = false,
 ) : AutoCloseable {
     override fun close() {
         cancelGroup.cancelAll()

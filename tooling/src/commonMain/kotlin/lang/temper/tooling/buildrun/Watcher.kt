@@ -29,7 +29,8 @@ class Watcher(
     private val testBackends: List<BackendId>,
     private val moduleConfig: ModuleConfig = ModuleConfig.default,
     private val timeSource: TimeSource.WithComparableMarks = TimeSource.Monotonic,
-    private val onEachBuildDone: (() -> Unit)? = null,
+    private val onEachBuildDone: ((Watcher) -> Unit)? = null,
+    private val includeSnapshot: Boolean = false,
 ) : AutoCloseable {
     private var _lastBuildResult: BuildDoneResult? = null
     private var _lastBuildIndex = -1
@@ -198,7 +199,7 @@ class Watcher(
         }
 
         buildDone.thenDo("handle end of build #$buildIndex") {
-            onEachBuildDone?.let { it() }
+            onEachBuildDone?.let { it(this) }
             if (limit != null) {
                 if (buildIndex + 1 >= limit) {
                     harness.cliConsole.info("Watcher reached build limit")
@@ -230,6 +231,7 @@ class Watcher(
                     moduleConfig = moduleConfig,
                     cancelGroup = cancelGroup,
                     beforeStartTranslation = outputDirectoriesFree,
+                    includeSnapshot = includeSnapshot,
                 )
                 synchronized(this@Watcher) {
                     if (_lastBuildIndex == buildIndex) { // Still current

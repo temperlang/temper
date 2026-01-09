@@ -7,9 +7,15 @@ import lang.temper.be.lua.LuaBackend
 import lang.temper.be.py.PyBackend
 import lang.temper.common.currents.UnmanagedFuture
 import lang.temper.common.withCapturingConsole
+import lang.temper.fs.FileSnapshot
+import lang.temper.fs.FileSystemSnapshot
 import lang.temper.fs.mkdir
 import lang.temper.fs.runWithTemporaryDirCopyOf
+import lang.temper.log.FilePath
+import lang.temper.log.dirPath
+import lang.temper.log.filePath
 import lang.temper.name.BackendId
+import lang.temper.tooling.buildrun.BuildDoneResult
 import org.junit.jupiter.api.Timeout
 import java.nio.file.Files
 import java.nio.file.Path
@@ -21,7 +27,10 @@ import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertIsNot
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 class WatchTest {
     @Test
@@ -71,6 +80,7 @@ private fun runTest(
     runWithTemporaryDirCopyOf(testName, resourcePath("/testing/passing"), subPath = Path("src")) { dir ->
         // Add a extra files for possible ignoring.
         addExtraFiles(dir)
+        val snapshots = mutableListOf<FileSystemSnapshot>()
         // Now to the main test.
         // TODO Make these atomic, or just figure we have big gaps?
         var buildCount = 0
@@ -85,9 +95,11 @@ private fun runTest(
                 workRoot = dir,
                 ignoreFile = dir.resolve(".gitignore"),
                 userSignalledDone = userSignalledDone,
-            ) {
+                includeSnapshot = true,
+            ) { watcher ->
                 buildCount += 1
                 timer = Timer()
+                (watcher.lastBuildResult as? BuildDoneResult)?.sourceSnapshot?.also { snapshots.add(it) }
                 @Suppress("MagicNumber")
                 timer!!.schedule(
                     object : TimerTask() {
@@ -107,6 +119,8 @@ private fun runTest(
         }
         assertTrue(ok, "expected ok.  output follows:\n\n$output")
         assertEquals(buildLimit, buildCount, "Build count wrong")
+        // Check ignores at the end after primary checks.
+        checkIgnored(snapshots)
     }
 }
 
@@ -127,14 +141,55 @@ private fun addExtraFiles(dir: Path) {
         target.mkdir()
         target.resolve("generated.txt").writeText("Did some other compiler make me?")
     }
-    // Extra file outside of temper module space.
+    // Git ignored dir that would otherwise have temper content.
+    dir.resolve("src/ignore").also { ignore ->
+        ignore.mkdir()
+        ignore.resolve("more.temper").writeText("// And neither should I.")
+    }
+    // Extra files outside of temper module space.
+    dir.resolve("above.txt").writeText("I have nothing to do with temper!")
     dir.resolve("extra").also { extra ->
         extra.mkdir()
-        extra.resolve("unrelated.txt").writeText("I have nothing to do with temper!")
-        // With an explicitly ignored thing inside it but below top level.
-        extra.resolve("ignore").let { ignore ->
-            ignore.mkdir()
-            ignore.resolve("unwanted.txt").writeText("I'm inside a sublevel gitignored dir.")
+        extra.resolve("unrelated.txt").writeText("I'm also irrelevant!")
+    }
+}
+
+fun checkIgnored(snapshots: List<FileSystemSnapshot>) {
+    // Be thorough here.
+    val unwantedPaths = listOf(
+        dirPath("-work", ".git"),
+        // TODO Ignore unrelated files in the future, even if not explicitly ignored?
+        // filePath("-work", "above.txt"),
+        // dirPath("-work", "extra"),
+        dirPath("-work", "src", "ignore"),
+        dirPath("-work", "target"),
+    )
+    // Wanted doesn't need to be exhaustive.
+    // This is mostly just a double-check that nobody changes paths generally on us.
+    val wantedPaths = listOf(
+        filePath("-work", "src", "test.temper"),
+    )
+    // Try each snapshot one at a time. If multiple snapshots, fail at the first fail.
+    for (snapshot in snapshots) {
+        // For each snapshot, report all unwanted founds together.
+        val unwantedFounds = mutableListOf<FilePath>()
+        for (path in unwantedPaths) {
+            if (snapshot[path] !is FileSnapshot.NoSuchFile) {
+                unwantedFounds.add(path)
+            }
+        }
+        if (unwantedFounds.isNotEmpty()) {
+            fail("Should have ignored: ${unwantedFounds}")
+        }
+        // Same for wanted but not found.
+        val wantedUnfounds = mutableListOf<FilePath>()
+        for (path in wantedPaths) {
+            if (snapshot[path] is FileSnapshot.NoSuchFile) {
+                wantedUnfounds.add(path)
+            }
+        }
+        if (wantedUnfounds.isNotEmpty()) {
+            fail("Should have been included: ${wantedUnfounds}")
         }
     }
 }

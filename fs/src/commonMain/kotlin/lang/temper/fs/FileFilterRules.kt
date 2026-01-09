@@ -40,22 +40,21 @@ interface FileFilterRules {
     }
 
     companion object {
-        fun eitherIgnores(
-            a: FileFilterRules,
-            b: FileFilterRules,
-        ): FileFilterRules = when {
-            b is Allow -> a
-            a is Allow -> b
-            else -> ExcludeBoth(a, b)
+        fun anyIgnores(filters: List<FileFilterRules>): FileFilterRules = run {
+            val interestingFilters = filters.filter { it !is Allow }
+            when (interestingFilters.size) {
+                0 -> Allow
+                1 -> interestingFilters.first()
+                else -> ExcludeAll(interestingFilters)
+            }
         }
     }
 
-    private data class ExcludeBoth(
-        val a: FileFilterRules,
-        val b: FileFilterRules,
+    private data class ExcludeAll(
+        val filters: List<FileFilterRules>,
     ) : FileFilterRules {
         override fun isIgnored(path: FilePath): Boolean =
-            a.isIgnored(path) || b.isIgnored(path)
+            filters.any { it.isIgnored(path) }
     }
 }
 
