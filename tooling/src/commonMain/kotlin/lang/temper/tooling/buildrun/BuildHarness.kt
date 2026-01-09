@@ -152,7 +152,7 @@ class BuildHarness(
                             // just allow all files.
                             FileFilterRules.Allow
                         }
-                    }
+                    }.let { FileFilterRules.StripSegments(it, pathToStrip = workDir) }
                 }
 
                 is RFailure -> {

@@ -26,7 +26,7 @@ interface FileFilterRules {
         override fun isIgnored(path: FilePath): Boolean {
             if (!pathToStrip.isAncestorOf(path)) { return false }
             return rules.isIgnored(
-                path.copy(segments = path.segments.subListToEnd(path.segments.size)),
+                path.copy(segments = path.segments.subListToEnd(pathToStrip.segments.size)),
             )
         }
     }
