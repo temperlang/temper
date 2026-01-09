@@ -108,8 +108,11 @@ class BuildHarness(
                     val filter = fromFile.result
                     val relPath = ignoreFileNorm.parent.relativize(workRoot).normalize()
 
-                    val parts = (0 until relPath.nameCount).map { i ->
-                        relPath.getName(i).name
+                    val parts = when {
+                        relPath.toString().isEmpty() -> listOf()
+                        else -> (0 until relPath.nameCount).map { i ->
+                            relPath.getName(i).name
+                        }
                     }
                     when {
                         parts.isEmpty() -> filter

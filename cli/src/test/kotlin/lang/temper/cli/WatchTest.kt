@@ -12,6 +12,7 @@ import lang.temper.fs.runWithTemporaryDirCopyOf
 import lang.temper.name.BackendId
 import org.junit.jupiter.api.Timeout
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.Timer
 import java.util.TimerTask
 import java.util.concurrent.ForkJoinPool
@@ -68,10 +69,8 @@ private fun runTest(
         "User signalled done",
     )
     runWithTemporaryDirCopyOf(testName, resourcePath("/testing/passing"), subPath = Path("src")) { dir ->
-        // Add a unrelated extra file that we should ignore.
-        val extraDir = dir.resolve("extra")
-        extraDir.mkdir()
-        extraDir.resolve("bogus.txt").writeText("i should be ignored by temper")
+        // Add a extra files for possible ignoring.
+        addExtraFiles(dir)
         // Now to the main test.
         // TODO Make these atomic, or just figure we have big gaps?
         var buildCount = 0
@@ -84,7 +83,7 @@ private fun runTest(
                 buildLimit = buildLimit,
                 shellPreferences = shellPreferencesForTest(capturingConsole),
                 workRoot = dir,
-                ignoreFile = null,
+                ignoreFile = dir.resolve(".gitignore"),
                 userSignalledDone = userSignalledDone,
             ) {
                 buildCount += 1
@@ -108,5 +107,34 @@ private fun runTest(
         }
         assertTrue(ok, "expected ok.  output follows:\n\n$output")
         assertEquals(buildLimit, buildCount, "Build count wrong")
+    }
+}
+
+private fun addExtraFiles(dir: Path) {
+    // Fake git content.
+    dir.resolve(".git").also { git ->
+        git.mkdir()
+        git.resolve("whatever.txt").writeText("I'm a git data file maybe!")
+    }
+    // Git ignored content.
+    dir.resolve(".gitignore").writeText(
+        """
+            |/target
+            |ignore/
+        """.trimMargin()
+    )
+    dir.resolve("target").let { target ->
+        target.mkdir()
+        target.resolve("generated.txt").writeText("Did some other compiler make me?")
+    }
+    // Extra file outside of temper module space.
+    dir.resolve("extra").also { extra ->
+        extra.mkdir()
+        extra.resolve("unrelated.txt").writeText("I have nothing to do with temper!")
+        // With an explicitly ignored thing inside it but below top level.
+        extra.resolve("ignore").let { ignore ->
+            ignore.mkdir()
+            ignore.resolve("unwanted.txt").writeText("I'm inside a sublevel gitignored dir.")
+        }
     }
 }
