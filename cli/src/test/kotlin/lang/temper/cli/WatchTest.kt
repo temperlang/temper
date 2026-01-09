@@ -27,8 +27,6 @@ import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertIsNot
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -135,7 +133,7 @@ private fun addExtraFiles(dir: Path) {
         """
             |/target
             |ignore/
-        """.trimMargin()
+        """.trimMargin(),
     )
     dir.resolve("target").let { target ->
         target.mkdir()
