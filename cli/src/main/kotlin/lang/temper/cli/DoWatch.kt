@@ -25,7 +25,17 @@ internal fun doWatch(
     userSignalledDone: CompletableSignalRFuture,
     outDir: Path? = null,
     keepDir: Path? = null,
+
+    /**
+     * Optionally provide source snapshots on build done results for test purposes only.
+     * Snapshots should not be used for other purposes.
+     */
     includeSnapshot: Boolean = false,
+
+    /**
+     * The Watcher instance is provided for test data access only.
+     * It should not be mutated or invoked recursively.
+     */
     onEachBuildDone: ((Watcher) -> Unit)? = null,
 ): Boolean =
     BuildHarness(
