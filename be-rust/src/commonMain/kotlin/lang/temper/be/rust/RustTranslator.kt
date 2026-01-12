@@ -528,7 +528,7 @@ class RustTranslator(
                 captures = mapOf(),
                 decl = test,
                 methodizeds = setOf(),
-                mutableCaptures = setOf(),
+                mutableCaptures = test.mutableCaptures(),
                 returnType = TypeDescription.make(WellKnownTypes.voidType2),
             ),
         )

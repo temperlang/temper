@@ -436,15 +436,8 @@ class RustBackendTest {
     )
 
     @Test
-    fun captureMut() = assertGenerateWanted(
+    fun captureMutInTest() = assertGenerateWanted(
         temper = """
-            |export let addUp(n: Int): Int {
-            |  var sum = 0;
-            |  repeat(n) { i =>
-            |    sum += i;
-            |  }
-            |  sum
-            |}
             |test("main") {
             |  var sum = 0;
             |  repeat(3) { i =>
@@ -473,29 +466,6 @@ class RustBackendTest {
             |        i__0 = i__0.wrapping_add(1);
             |    }
             |}
-            |pub fn add_up(n__0: i32) -> i32 {
-            |    let mut sum__0: std::sync::Arc<std::sync::RwLock<i32>> = std::sync::Arc::new(std::sync::RwLock::new(0));
-            |    #[derive(Clone)]
-            |    struct ClosureGroup___0 {
-            |        sum__0: std::sync::Arc<std::sync::RwLock<i32>>
-            |    }
-            |    impl ClosureGroup___0 {
-            |        fn fn__0(& self, i__1: i32) {
-            |            {
-            |                * self.sum__0.write().unwrap() = temper_core::read_locked( & self.sum__0).wrapping_add(i__1);
-            |            }
-            |        }
-            |    }
-            |    let closure_group = ClosureGroup___0 {
-            |        sum__0: sum__0.clone()
-            |    };
-            |    let fn__0 = {
-            |        let closure_group = closure_group.clone();
-            |        std::sync::Arc::new(move | i__1: i32 | closure_group.fn__0(i__1))
-            |    };
-            |    repeat__0(n__0, fn__0.clone());
-            |    return temper_core::read_locked( & sum__0);
-            |}
             |#[cfg(test)]
             |mod tests {
             |    #[test]
@@ -503,25 +473,27 @@ class RustBackendTest {
             |        crate::init(None);
             |        temper_std::init(None);
             |        let test___0 = temper_std::testing::Test::new();
-            |        let mut sum__1: i32 = 0;
+            |        let mut sum__1: std::sync::Arc<std::sync::RwLock<i32>> = std::sync::Arc::new(std::sync::RwLock::new(0));
             |        #[derive(Clone)]
             |        struct ClosureGroup___1 {
-            |            sum__1: i32
+            |            sum__1: std::sync::Arc<std::sync::RwLock<i32>>
             |        }
             |        impl ClosureGroup___1 {
             |            fn fn__1(& self, i__2: i32) {
-            |                sum__1 = temper_core::read_locked( & self.sum__1).wrapping_add(i__2);
+            |                {
+            |                    * self.sum__1.write().unwrap() = temper_core::read_locked( & self.sum__1).wrapping_add(i__2);
+            |                }
             |            }
             |        }
             |        let closure_group = ClosureGroup___1 {
-            |            sum__1
+            |            sum__1: sum__1.clone()
             |        };
             |        let fn__1 = {
             |            let closure_group = closure_group.clone();
             |            std::sync::Arc::new(move | i__2: i32 | closure_group.fn__1(i__2))
             |        };
             |        repeat__0(3, fn__1.clone());
-            |        let actual___0: i32 = sum__1;
+            |        let actual___0: i32 = temper_core::read_locked( & sum__1);
             |        let mut t___0: bool = Some(actual___0) == Some(3);
             |        #[derive(Clone)]
             |        struct ClosureGroup___2 {
