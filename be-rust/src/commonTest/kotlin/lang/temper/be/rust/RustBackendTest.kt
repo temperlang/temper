@@ -436,6 +436,90 @@ class RustBackendTest {
     )
 
     @Test
+    fun captureMutInTest() = assertGenerateWanted(
+        temper = """
+            |test("main") {
+            |  var sum = 0;
+            |  repeat(3) { i =>
+            |    sum += i;
+            |  }
+            |  assert(sum == 3);
+            |}
+            |@fun interface RepeatActor(i: Int): Void;
+            |let repeat(times: Int, act: RepeatActor): Void {
+            |  for (var i = 0; i < times; ++i) {
+            |    act(i);
+            |  }
+            |}
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            Ok(())
+            |    }).clone()
+            |}
+            |fn repeat__0(times__0: i32, act__0: std::sync::Arc<dyn Fn (i32) + std::marker::Send + std::marker::Sync>) {
+            |    let mut i__0: i32 = 0;
+            |    'loop___0: while Some(i__0) < Some(times__0) {
+            |        act__0(i__0);
+            |        i__0 = i__0.wrapping_add(1);
+            |    }
+            |}
+            |#[cfg(test)]
+            |mod tests {
+            |    #[test]
+            |    fn main__0() -> temper_core::Result<()> {
+            |        crate::init(None);
+            |        temper_std::init(None);
+            |        let test___0 = temper_std::testing::Test::new();
+            |        let mut sum__1: std::sync::Arc<std::sync::RwLock<i32>> = std::sync::Arc::new(std::sync::RwLock::new(0));
+            |        #[derive(Clone)]
+            |        struct ClosureGroup___1 {
+            |            sum__1: std::sync::Arc<std::sync::RwLock<i32>>
+            |        }
+            |        impl ClosureGroup___1 {
+            |            fn fn__1(& self, i__2: i32) {
+            |                {
+            |                    * self.sum__1.write().unwrap() = temper_core::read_locked( & self.sum__1).wrapping_add(i__2);
+            |                }
+            |            }
+            |        }
+            |        let closure_group = ClosureGroup___1 {
+            |            sum__1: sum__1.clone()
+            |        };
+            |        let fn__1 = {
+            |            let closure_group = closure_group.clone();
+            |            std::sync::Arc::new(move | i__2: i32 | closure_group.fn__1(i__2))
+            |        };
+            |        repeat__0(3, fn__1.clone());
+            |        let actual___0: i32 = temper_core::read_locked( & sum__1);
+            |        let mut t___0: bool = Some(actual___0) == Some(3);
+            |        #[derive(Clone)]
+            |        struct ClosureGroup___2 {
+            |            actual___0: i32
+            |        }
+            |        impl ClosureGroup___2 {
+            |            fn fn__2(& self) -> std::sync::Arc<String> {
+            |                return std::sync::Arc::new(format!("expected sum == ({}) not ({})", 3, self.actual___0));
+            |            }
+            |        }
+            |        let closure_group = ClosureGroup___2 {
+            |            actual___0
+            |        };
+            |        let fn__2 = {
+            |            let closure_group = closure_group.clone();
+            |            std::sync::Arc::new(move | | closure_group.fn__2())
+            |        };
+            |        test___0.assert(t___0, fn__2.clone());
+            |        test___0.soft_fail_to_hard()
+            |    }
+            |    use super::*;
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun castGeneric() = assertGenerateWanted(
         temper = """
             |let things(n: Int): List<Int> throws Bubble {
@@ -531,7 +615,7 @@ class RustBackendTest {
     )
 
     @Test
-    fun closureWrong() = assertGenerateWanted(
+    fun funArgWrong() = assertGenerateWanted(
         temper = """
             |@fun interface Handler(): Void;
             |class Hub {
