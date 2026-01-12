@@ -3,6 +3,7 @@ package lang.temper.tooling.buildrun
 import lang.temper.be.Dependencies
 import lang.temper.common.Log
 import lang.temper.frontend.Module
+import lang.temper.fs.FileSystemSnapshot
 import lang.temper.library.LibraryConfiguration
 import lang.temper.library.LibraryConfigurationsBundle
 import lang.temper.name.BackendId
@@ -30,4 +31,5 @@ data class BuildDoneResult(
     val libraryConfigurations: LibraryConfigurationsBundle,
     val dependencies: Map<BackendId, Dependencies<*>>,
     val taskResults: DoRunResult?,
+    val sourceSnapshot: FileSystemSnapshot? = null,
 ) : BuildResult()

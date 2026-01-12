@@ -25,7 +25,18 @@ internal fun doWatch(
     userSignalledDone: CompletableSignalRFuture,
     outDir: Path? = null,
     keepDir: Path? = null,
-    onEachBuildDone: (() -> Unit)? = null,
+
+    /**
+     * Optionally provide source snapshots on build done results for test purposes only.
+     * Snapshots should not be used for other purposes.
+     */
+    includeSnapshot: Boolean = false,
+
+    /**
+     * The Watcher instance is provided for test data access only.
+     * It should not be mutated or invoked recursively.
+     */
+    onEachBuildDone: ((Watcher) -> Unit)? = null,
 ): Boolean =
     BuildHarness(
         executorService = executorService,
@@ -38,6 +49,7 @@ internal fun doWatch(
     ).use { harness ->
         val watcher = Watcher(
             harness,
+            includeSnapshot = includeSnapshot,
             limit = buildLimit,
             testBackends = testBackends,
             onEachBuildDone = onEachBuildDone,

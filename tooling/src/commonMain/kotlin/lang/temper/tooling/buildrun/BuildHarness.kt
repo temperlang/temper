@@ -100,6 +100,7 @@ class BuildHarness(
     val workFileSystem = workFileSystem ?: RealFileSystem(workRoot, workDir)
 
     val filterRules: FileFilterRules = run {
+        // TODO Support multiple ignore files throughout tree.
         val ignoreFileNorm = ignoreFile?.normalize()
         val filterRulesFromFile = if (ignoreFileNorm != null) {
             val fileContent = Files.readString(ignoreFileNorm, Charsets.UTF_8)
@@ -108,8 +109,11 @@ class BuildHarness(
                     val filter = fromFile.result
                     val relPath = ignoreFileNorm.parent.relativize(workRoot).normalize()
 
-                    val parts = (0 until relPath.nameCount).map { i ->
-                        relPath.getName(i).name
+                    val parts = when {
+                        relPath.toString().isEmpty() -> listOf()
+                        else -> (0 until relPath.nameCount).map { i ->
+                            relPath.getName(i).name
+                        }
                     }
                     when {
                         parts.isEmpty() -> filter
@@ -149,7 +153,7 @@ class BuildHarness(
                             // just allow all files.
                             FileFilterRules.Allow
                         }
-                    }
+                    }.let { FileFilterRules.StripSegments(it, pathToStrip = workDir) }
                 }
 
                 is RFailure -> {
@@ -163,7 +167,9 @@ class BuildHarness(
         } else {
             FileFilterRules.Allow
         }
-        FileFilterRules.eitherIgnores(filterRulesFromFile, ExcludeOutputDirectories)
+        FileFilterRules.anyIgnores(
+            listOf(filterRulesFromFile, ExcludeOutputDirectories, ExcludeGitDirectory),
+        )
     }
 
     override fun close() {
@@ -199,4 +205,12 @@ private data object ExcludeOutputDirectories : FileFilterRules {
         }
         return false
     }
+}
+
+/**
+ * Hard exclusion of `.git` from source snapshots.
+ */
+private data object ExcludeGitDirectory : FileFilterRules {
+    override fun isIgnored(path: FilePath): Boolean =
+        path.segments.any { it.fullName == ".git" }
 }
