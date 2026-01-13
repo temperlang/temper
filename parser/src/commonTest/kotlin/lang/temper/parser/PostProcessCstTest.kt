@@ -16,24 +16,14 @@ import lang.temper.log.Position
 import kotlin.test.Test
 
 private const val Q3 = "\"\"\""
-private const val HOLE = $$"${}"
 
 class PostProcessCstTest {
     private fun assertCstAfterPostProcessing(
-        input: ConcreteSyntaxTree,
+        input: CstInner,
         want: ConcreteSyntaxTree,
-        isInputRaw: Boolean = true,
     ) {
         val logSink = ListBackedLogSink()
-        val got = when (input) {
-            is CstInner ->
-                if (isInputRaw) {
-                    postProcessCst(input, logSink)
-                } else {
-                    input
-                }
-            is CstLeaf -> input
-        }
+        val got = postProcessCst(input, logSink)
         assertStringsEqual(
             toStringViaTokenSink(singleLine = false) {
                 want.renderTo(it)
@@ -47,23 +37,22 @@ class PostProcessCstTest {
     /** Allows composing [ConcreteSyntaxTree] via a DSL like syntax. */
     private fun cst(
         makeParts: CstTestHelper.() -> Unit,
-    ): ConcreteSyntaxTree {
+    ): CstInner {
         val b = CstTestHelper()
         b.makeParts()
-        return b.build()
+        return b.build() as CstInner
     }
 
     @Test
     fun stringsJoinedAroundHoles() = assertCstAfterPostProcessing(
         input = cst {
             parse(
-                """
-                    |$Q3
-                    |"foo${HOLE}bar
+                $$"""
+                    |$$Q3
+                    |"foo${}bar
                 """.trimMargin(),
             )
         },
-        isInputRaw = false,
         want = cst {
             inner(Operator.ParenGroup) {
                 token("(", TokenType.Punctuation, mayBracket = true, synthetic = true)
@@ -71,89 +60,6 @@ class PostProcessCstTest {
                     token(Q3, TokenType.LeftDelimiter)
                     inner(Operator.Leaf) {
                         token("foobar", TokenType.QuotedString)
-                    }
-                    token(Q3, TokenType.RightDelimiter, synthetic = true)
-                }
-                token(")", TokenType.Punctuation, mayBracket = true, synthetic = true)
-            }
-        },
-    )
-
-    @Test
-    fun ignorableSpaceAtEndOfLineStripped() = assertCstAfterPostProcessing(
-        input = cst {
-            inner(Operator.ParenGroup) {
-                token("(", TokenType.Punctuation, mayBracket = true, synthetic = true)
-                inner(Operator.QuotedGroup) {
-                    // Strings with four spaces of prefix to strip and incidental
-                    // space at the end of some lines.
-                    token(Q3, TokenType.LeftDelimiter)
-                    inner(Operator.Leaf) {
-                        token("\nLine1\nLine2 \r\n", TokenType.QuotedString)
-                    }
-                    inner(Operator.DollarCurly) {
-                        token($$"${", TokenType.Punctuation, mayBracket = true)
-                        inner(Operator.Leaf) {
-                            token("x", TokenType.Word)
-                        }
-                        token("}", TokenType.Punctuation, mayBracket = true)
-                    }
-                    inner(Operator.Leaf) {
-                        // There are 5 spaces before Line4, of which 4 are stripped.
-                        token(" \n Line4 ", TokenType.QuotedString)
-                    }
-                    inner(Operator.DollarCurly) {
-                        token($$"${", TokenType.Punctuation, mayBracket = true)
-                        inner(Operator.Leaf) {
-                            token("y", TokenType.Word)
-                        }
-                        token("}", TokenType.Punctuation, mayBracket = true)
-                    }
-                    inner(Operator.Leaf) {
-                        token("  \nLine5  ", TokenType.QuotedString)
-                    }
-                    // Space before a hole not stripped.
-                    inner(Operator.DollarCurly) {
-                        token($$"${", TokenType.Punctuation, mayBracket = true)
-                        token("}", TokenType.Punctuation, mayBracket = true)
-                    }
-                    inner(Operator.Leaf) {
-                        token("  \n", TokenType.QuotedString)
-                    }
-                    token(Q3, TokenType.RightDelimiter, synthetic = true)
-                }
-                token(")", TokenType.Punctuation, mayBracket = true, synthetic = true)
-            }
-        },
-        want = cst {
-            inner(Operator.ParenGroup) {
-                token("(", TokenType.Punctuation, mayBracket = true, synthetic = true)
-                inner(Operator.QuotedGroup) {
-                    // Strings with four spaces of prefix to strip and incidental
-                    // space at the end of some lines.
-                    token(Q3, TokenType.LeftDelimiter)
-                    inner(Operator.Leaf) {
-                        token("Line1\nLine2\n", TokenType.QuotedString)
-                    }
-                    inner(Operator.DollarCurly) {
-                        token($$"${", TokenType.Punctuation, mayBracket = true)
-                        inner(Operator.Leaf) {
-                            token("x", TokenType.Word)
-                        }
-                        token("}", TokenType.Punctuation, mayBracket = true)
-                    }
-                    inner(Operator.Leaf) {
-                        token("\n Line4 ", TokenType.QuotedString)
-                    }
-                    inner(Operator.DollarCurly) {
-                        token($$"${", TokenType.Punctuation, mayBracket = true)
-                        inner(Operator.Leaf) {
-                            token("y", TokenType.Word)
-                        }
-                        token("}", TokenType.Punctuation, mayBracket = true)
-                    }
-                    inner(Operator.Leaf) {
-                        token("\nLine5  ", TokenType.QuotedString)
                     }
                     token(Q3, TokenType.RightDelimiter, synthetic = true)
                 }

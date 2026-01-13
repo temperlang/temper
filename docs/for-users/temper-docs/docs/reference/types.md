@@ -1771,6 +1771,12 @@ A line break is any of the following sequences:
 - CR
 - CR LF
 
+Regardless of whether a source file is authored or compiled on a
+Windows machine (prefers CR LF) or another machine (tend to prefer LF)
+the meaning of a string is the same.  This means that all of those sequences,
+where not trimmed, are simplified to LF.  Use `${}` if you really need to
+embed a `\r` in a file.
+
 <!-- /snippet: syntax/string/incidental-space-removal -->
 
 <!-- snippet: syntax/string/interpolation -->

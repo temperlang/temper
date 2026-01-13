@@ -366,6 +366,22 @@ class LexerTest {
     )
 
     @Test
+    fun multiQuotedStringWithStatementEmbed() = assertTokenization(
+        """
+        >$Q3
+        :  LQ
+        >"line of character data
+        :S                      Q
+        >"{: embedded { statement } :}
+        :S BS       WSBS        WSBS BQ
+        >"another line of character data
+        :S                              Q
+        >   $Q3;
+        :  S  rP
+        """.trimIndent(),
+    )
+
+    @Test
     fun multiQuotedStringsMayNestQuoteRuns() = assertTokenization(
         // Triple-quoted content is allowed inside quintuple-quoted strings.
         """

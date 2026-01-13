@@ -1288,17 +1288,17 @@ val grammar = ProductionNames.run {
         )
 
     StringHole `：＝` (
-        Operator.DollarCurly y `(` y "\${" y
+        Operator.DollarCurly y `(` y $$"${" y
             (
                 CommaExpr /
-                    Garbage("Hole", stopBefore = setOf(")"))
+                    Garbage("Hole", stopBefore = setOf(")")) // TODO: should this be `}`
                 ) y
             "}" y `)`
         )
 
     /** For custom usage, insert interpolation markers. */
     StringHoleRaw `：＝` (
-        Operator.DollarCurly y `(` y "\${".asSymbol(interpolateSymbol) y
+        Operator.DollarCurly y `(` y $$"${".asSymbol(interpolateSymbol) y
             (
                 CommaExpr /
                     Garbage("Hole", stopBefore = setOf(")"))

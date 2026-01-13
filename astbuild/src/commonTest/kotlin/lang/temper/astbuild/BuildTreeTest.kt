@@ -8,6 +8,7 @@ import lang.temper.common.TestDocumentContext
 import lang.temper.common.affectedByIssue11
 import lang.temper.common.assertStructure
 import lang.temper.common.console
+import lang.temper.common.defaultErrorDumper
 import lang.temper.common.kotlinBackend
 import lang.temper.common.testCodeLocation
 import lang.temper.common.testModuleName
@@ -38,24 +39,19 @@ class BuildTreeTest {
 
         val storedCommentTokens = StoredCommentTokens(comments.toList())
 
-        var passed = false
-        try {
-            val ast = buildTree(
-                cstParts = cstParts.toList(),
-                storedCommentTokens = storedCommentTokens,
-                logSink = logSink,
-                startProduction = startProduction,
-                documentContext = documentContext,
-            )
-            val toCompare = logSink.wrapErrorsAround(ast)
+        val ast = buildTree(
+            cstParts = cstParts.toList(),
+            storedCommentTokens = storedCommentTokens,
+            logSink = logSink,
+            startProduction = startProduction,
+            documentContext = documentContext,
+        )
+        val toCompare = logSink.wrapErrorsAround(ast)
 
-            assertStructure(
-                expectedJson = wantJson,
-                input = toCompare,
-            )
-            passed = true
-        } finally {
-            if (!passed) {
+        assertStructure(
+            expectedJson = wantJson,
+            input = toCompare,
+            errorDumper = { message, want, got ->
                 console.group("cstParts") {
                     var indent = 0
                     cstParts.forEachIndexed { i, p ->
@@ -68,8 +64,9 @@ class BuildTreeTest {
                         }
                     }
                 }
-            }
-        }
+                defaultErrorDumper(message, want, got)
+            },
+        )
     }
 
     @Test
@@ -4809,6 +4806,7 @@ class BuildTreeTest {
 
     @Test
     fun multilineStringIndentation() = assertAst(
+        // The comment here should not be treated as a string tag.
         input = $$"""
             |/* some stuff */ $${"\"\"\""}
             |    "First line
@@ -4831,30 +4829,21 @@ class BuildTreeTest {
             ],
             [ "Call", [
                 [ "RightName", "cat" ],
-                [ "Value", { stateVector: "First line\n  Second ", typeTag: "String" } ],
+                [ "Value", "\"First line\\n  Second \": String" ],
                 [ "Call", [
                     [ "RightName", "cat" ],
-                    [ "Value", { stateVector: "      single line string", typeTag: "String" } ],
+                    [ "Value", "\"      single line string\": String" ],
                   ]
                 ],
-                [ "Value", { stateVector: "\nThird line ", typeTag: "String" } ],
+                [ "Value", "\"\\nThird line \": String" ],
                 [ "Call", [
                     [ "RightName", "cat" ],
-                    [ "Value", {
-                        stateVector: "This is not part ",
-                        typeTag: "String"
-                    } ],
-                    [ "Value", {
-                        stateVector: "\n",
-                        typeTag: "String"
-                    } ],
-                    [ "Value", {
-                        stateVector: "        of the same string group",
-                        typeTag: "String"
-                    } ],
+                    [ "Value", "\"This is not part \": String" ],
+                    [ "Value", "\"\\n\": String" ],
+                    [ "Value", "\"        of the same string group\": String" ],
                   ]
                 ],
-                [ "Value", { stateVector: "\nFourth line\nFifth line", typeTag: "String" } ],
+                [ "Value", "\"\\nFourth line\\nFifth line\": String" ],
               ]
             ]
           ]

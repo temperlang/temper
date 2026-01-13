@@ -1,6 +1,7 @@
 package lang.temper.parser
 
 import lang.temper.common.C_CR
+import lang.temper.common.KBitSet
 import lang.temper.common.Producer
 import lang.temper.common.charCount
 import lang.temper.common.compatRemoveFirst
@@ -10,17 +11,21 @@ import lang.temper.lexer.CommentType
 import lang.temper.lexer.LexicalDefinitions
 import lang.temper.lexer.MASSAGED_SEMILIT_COMMENT_END
 import lang.temper.lexer.MASSAGED_SEMILIT_COMMENT_START
+import lang.temper.lexer.MQ_DELIMITER
 import lang.temper.lexer.Operator
 import lang.temper.lexer.OperatorType
 import lang.temper.lexer.TemperToken
+import lang.temper.lexer.TokenCluster
 import lang.temper.lexer.TokenSource
 import lang.temper.lexer.TokenType
 import lang.temper.lexer.closeBrackets
 import lang.temper.lexer.openBrackets
+import lang.temper.log.Positioned
 import lang.temper.log.spanningPosition
+import kotlin.math.max
 
 /**
- * Allows customizing the behaviour of the token source adapter.
+ * Allows customizing the behavior of the token source adapter.
  * For example, the out-grammar DSL uses the same parse infrastructure
  * but with some different keywords.
  */
@@ -52,8 +57,8 @@ internal class TokenSourceAdapter(
 ) : Producer<TokenStackElement?> {
     private val producer = WordPairer(
         InsertCallJoins(
-            QuoteTagger(
-                AutomaticSemicolonInserter(
+            AutomaticSemicolonInserter(
+                StringFixer(
                     CommentGrouper(tokenSource, comments),
                 ),
             ),
@@ -65,66 +70,524 @@ internal class TokenSourceAdapter(
 }
 
 /**
- * Wraps string templates in parentheses do so that
+ * We want simple string expressions to inline easily during staging.
+ * But for tagged expressions with embedded statements fragments, we need to invert the
+ * nesting so that the parser can focus on consuming whole statements.
+ *
+ * This pass wraps simple string templates in parentheses do so that
  * string templates form an atomic expression and so that
  * tag expressions can associate with a template to form
  * a tagged template call.
  *
  *     " character-content "
  *
- * becomes
+ * That becomes:
+ *
  *     ( " character-content " )
  *
- * and
+ * And throwing an interpolation in there changes nothing.
  *
- *     tag " character-content "
+ * But if a multi-quoted string contains statement fragments, we take a slightly different tack.
+ * In the below, where the right column establishes the token type, the `{:...:}` are inlined.
  *
- * becomes
+ *     """                TokenType.LeftDelimiter
+ *     foo                TokenType.QuotedString
+ *     {:                 TokenType.Punctuation, mayBracket
+ *       statement        TokenType.Word
+ *     :}                 TokenType.Punctuation, mayBracket
+ *     ${ bar }           TokenType.QuotedString
+ *     """                TokenType.RightDelimiter
  *
- *     tag ( " character-content " )
+ * Because of the presence of the statement phrase, that becomes:
+ *
+ *     {
+ *     """
+ *     +++ foo     ;
+ *     statement   ;
+ *     ${ bar }    ;
+ *     """
+ *     }
+ *
+ * The `+++` is a synthetic operator that indicates an emit of a chunk of
+ * literal character data to the accumulator.
  */
-private class QuoteTagger(
-    val tokens: Producer<TokenStackElement?>,
+private class StringFixer(
+    val tokens: Producer<TemperToken?>,
 ) : Producer<TokenStackElement?> {
     private val pending = mutableListOf<TokenStackElement>()
 
-    override fun get(): TokenStackElement? {
-        if (pending.isNotEmpty()) {
-            return pending.compatRemoveFirst()
-        }
-        val token = tokens.get() ?: return null
-        return when (token.tokenType) {
+    private fun processNonMq(token: TemperToken) {
+        when (token.tokenType) {
             TokenType.LeftDelimiter -> {
                 // Precede token with an open parenthesis
-                pending.add(token)
-                TokenStackElement(
-                    TemperToken(
-                        pos = token.pos.leftEdge,
-                        tokenText = "(",
-                        tokenType = TokenType.Punctuation,
-                        mayBracket = true,
-                        synthetic = true,
-                    ),
-                    mayInfix = true,
-                )
+                pending.add(TokenStackElement(syntheticLeftBracketBefore(token, "(")))
+                pending.add(TokenStackElement(token))
             }
             TokenType.RightDelimiter -> {
                 // Follow it with a close parenthesis
+                pending.add(TokenStackElement(token))
                 pending.add(
                     TokenStackElement(
-                        TemperToken(
-                            pos = token.pos.rightEdge,
-                            tokenText = ")",
-                            tokenType = TokenType.Punctuation,
-                            mayBracket = true,
-                            synthetic = true,
-                        ),
+                        syntheticRightBracketAfter(token, ")"),
                         mayInfix = false,
                     ),
                 )
-                token
             }
-            else -> token
+            else -> pending.add(TokenStackElement(token))
+        }
+    }
+
+    override fun get(): TokenStackElement? {
+        if (pending.isEmpty()) {
+            val token = tokens.get() ?: return null
+            if (token.tokenType == TokenType.LeftDelimiter && token.tokenText == MQ_DELIMITER) {
+                // Collect the tokens between the left """ and the (synthesized) close """
+                // Then scan through them to choose between the `(` ... `)` wrapping and the
+                // one that will require the full block form.
+                var nestDepth = 1
+                var maxNestDepth = nestDepth
+                pending.add(TokenStackElement(token))
+                while (true) {
+                    val followingToken = tokens.get() ?: break
+                    if (followingToken.tokenText == MQ_DELIMITER) {
+                        pending.add(TokenStackElement(followingToken))
+                        when (followingToken.tokenType) {
+                            TokenType.LeftDelimiter -> {
+                                nestDepth += 1
+                                maxNestDepth = max(maxNestDepth, nestDepth)
+                            }
+
+                            TokenType.RightDelimiter -> if (--nestDepth == 0) {
+                                break
+                            }
+
+                            else -> {}
+                        }
+                    } else {
+                        // Add any parentheses around simple string expressions
+                        processNonMq(followingToken)
+                    }
+                }
+
+                // Pick between `{`...`}` and `(`...`)` wrapping explained in the class comment above.
+                // If the maxNestDepth > 1 then we might need to recursively process nested MQ strings.
+                fixupCollectedMq()
+            } else {
+                processNonMq(token)
+            }
+        }
+        return pending.compatRemoveFirst()
+    }
+
+    private fun fixupCollectedMq() {
+        // Let's have consistent before view, and then replay it onto pending.
+        val collected = pending.toList()
+        pending.clear()
+
+        // Scan back over the collected tokens making sure that:
+        // 1. every MQ string expression, including nested ones, either have parentheses or curlies around.
+        // 2. inside each curly-bracketed MQ string expression, every statement fragment is unpacked.
+        // 3. inside each curly-bracketed MQ string expression, every string chunk has `+++` before it.
+
+        // Scan to find close brackets, and classifications for each mq string.
+        val mqStrings = mutableMapOf<Int, MqString>()
+        forEachMqString(
+            collected,
+            onFragment = { mqStart, range ->
+                mqStrings.getOrPut(mqStart) { MqString(mqStart) }
+                    .stmtFragments.add(range)
+            },
+            onInterpolation = { mqStart, range ->
+                mqStrings.getOrPut(mqStart) { MqString(mqStart) }
+                    .interps.add(range)
+            },
+            onTextChunk = { mqStart, index ->
+                mqStrings.getOrPut(mqStart) { MqString(mqStart) }
+                    .charDataChunk.add(index)
+            },
+            onMqString = { range ->
+                val mqStart = range.first
+                val mqEnd = range.last
+                mqStrings.getOrPut(mqStart) { MqString(mqStart) }.endIndex = mqEnd
+            },
+        )
+
+        // Now, we build a list of changes to the token list.  This will allow us to edit it without
+        // colliding edits.  We can sort the edits and replay them in order to compute the changed
+        // list.
+
+        val edits = mutableMapOf<Int, Edit>()
+        fun editFor(i: Int) = edits.getOrPut(i) { Edit(collected[i]) }
+        fun tokFor(i: Int): TemperToken? {
+            val edit = edits[i]
+            if (edit != null) {
+                return edit.substitution?.temperToken
+            }
+            return collected[i].temperToken
+        }
+
+        for (mqString in mqStrings.values) {
+            val start = mqString.startIndex
+            val end = mqString.endIndex
+
+            trimIncidentalWhitespace(mqString, ::tokFor, ::editFor)
+
+            if (mqString.stmtFragments.isEmpty()) {
+                // 1. every MQ string expression, including nested ones,
+                //    either have parentheses or curlies around.
+                editFor(start).before = TokenStackElement(
+                    syntheticLeftBracketBefore(collected[start], "("),
+                )
+                editFor(end).after = TokenStackElement(
+                    syntheticRightBracketAfter(collected[end], ")"),
+                    mayInfix = false,
+                )
+            } else {
+                editFor(start).before = TokenStackElement(
+                    syntheticLeftBracketBefore(collected[start], "{"),
+                )
+                editFor(end).after = TokenStackElement(
+                    syntheticRightBracketAfter(collected[end], "}"),
+                    mayInfix = false,
+                )
+                // 2. inside each curly-bracketed MQ string expression,
+                //    every statement fragment is unpacked.
+                for (stmtFragment in mqString.stmtFragments) {
+                    editFor(stmtFragment.first).drop()
+                    editFor(stmtFragment.last).drop()
+                }
+                // 3. inside each curly-bracketed MQ string expression,
+                //    every string chunk has `+++` before it.
+                for (charDataChunk in mqString.charDataChunk) {
+                    // Some data chunks may have been trimmed down to space tokens.
+                    if (tokFor(charDataChunk)?.tokenType == TokenType.QuotedString) {
+                        editFor(charDataChunk).before = TokenStackElement(
+                            TemperToken(
+                                collected[charDataChunk].pos.leftEdge,
+                                "+++",
+                                TokenType.Punctuation,
+                                synthetic = true,
+                                mayBracket = false,
+                            ),
+                            mayPrefix = true,
+                            mayInfix = false,
+                        )
+                    }
+                }
+            }
+        }
+
+        val editsInOrder = edits.entries.toMutableList()
+        editsInOrder.sortBy { it.key }
+
+        var rebuiltUpTo = 0
+        var editIndex = 0
+        while (true) {
+            val next = editsInOrder.getOrNull(editIndex++)
+            val nextIndex = next?.key ?: collected.size
+            pending.addAll(collected.subList(rebuiltUpTo, nextIndex))
+
+            val edit = (next ?: break).value
+
+            edit.before?.let { pending.add(it) }
+            edit.substitution?.let { pending.add(it) }
+            edit.after?.let { pending.add(it) }
+
+            rebuiltUpTo = nextIndex + 1
+        }
+    }
+
+    companion object {
+        private fun syntheticLeftBracketBefore(p: Positioned, tokenText: String) =
+            TemperToken(
+                pos = p.pos.leftEdge,
+                tokenText = tokenText,
+                tokenType = TokenType.Punctuation,
+                mayBracket = true,
+                synthetic = true,
+            )
+
+        private fun syntheticRightBracketAfter(p: Positioned, tokenText: String) =
+            TemperToken(
+                pos = p.pos.rightEdge,
+                tokenText = tokenText,
+                tokenType = TokenType.Punctuation,
+                mayBracket = true,
+                synthetic = true,
+            )
+
+        private class MqString(val startIndex: Int) {
+            var endIndex: Int = -1
+            val stmtFragments = mutableListOf<IntRange>()
+            val charDataChunk = mutableListOf<Int>()
+            val interps = mutableListOf<IntRange>()
+        }
+
+        private class Edit(
+            var substitution: TokenStackElement?,
+        ) {
+            var before: TokenStackElement? = null
+            var after: TokenStackElement? = null
+
+            /** Replace with a space token */
+            fun drop() {
+                val substitution = this.substitution ?: return
+                this.substitution = substitution.copy(
+                    temperToken = substitution.temperToken.let {
+                        it.copy(
+                            tokenText = buildString {
+                                append(it.tokenText)
+                                for (i in indices) {
+                                    if (!LexicalDefinitions.isLineBreak(this[i])) {
+                                        this[i] = ' '
+                                    }
+                                }
+                            },
+                            tokenType = TokenType.Space,
+                        )
+                    },
+                )
+            }
+        }
+
+        /**
+         * Mutates a part list in place to remove incidental spaces from strings.
+         *
+         * <!-- snippet: syntax/string/incidental-space-removal -->
+         * # Incidental spaces in multi-line strings
+         *
+         * When a string spans multiple lines, some space is *significant*;
+         * it contributes to the content of the resulting string value.
+         * Spaces that do not contribute to the content are called *incidental spaces*.
+         * Incidental spaces include:
+         *
+         * - those used for code indentation, and
+         * - those that appear at the end of a line so are invisible to readers, and
+         *   often automatically stripped by editors, and
+         * - carriage returns which may be inserted or removed depending on
+         *   whether a file is edited on Windows or UNIX.
+         *
+         * Normalizing incidental space steps include:
+         *
+         * 1. Removing leading space on each line that match the indentation of the close quote.
+         * 2. Removing the newline after the open quote, and before the close quote.
+         * 3. Removing space at the end of each line.
+         * 4. Normalizing line break sequences CRLF, CR, and LF to LF.
+         *
+         * For the purposes of identifying incidental space, we imagine that any
+         * interpolation `${...}`, scriptlet `{:...:}`, or hole `${}` contributes
+         * 1 or more non-space, non-line-break characters.
+         *
+         * Indentation matching the close quote is incidental, hence removed.
+         *
+         * ```temper
+         * """
+         *     "Line 1
+         *     "Line 2
+         * == "Line 1\nLine 2"
+         * ```
+         *
+         * Each content line is stripped up to and including the margin character.
+         * It's good style to line up the margin characters, but not necessary.
+         *
+         * ```temper
+         * """
+         *     " Line 1
+         *    "  Line 2
+         *     "   Line 3
+         * == " Line 1\n  Line 2\n   Line 3"
+         * ```
+         *
+         * It's an error if a line is not un-indented from the close quote.
+         *
+         * ```temper FAIL
+         * """
+         *     "Line 1
+         *      Line 2 missing margin character
+         *     "Line 3
+         * ```
+         *
+         * Spaces are removed from the end of a line, but not if there is an
+         * interpolation or hole:
+         *
+         * ```temper
+         * """
+         *     "Line 1  ${"interpolation"}
+         *     "Line 2  ${/*hole*/}
+         *     "Line 3
+         *     == "Line 1  interpolation\nLine 2  \nLine 3"
+         * ```
+         *
+         * For the purpose of this, space includes:
+         *
+         * - Space character: U+20 ' '
+         * - Tab character: U+9 '\t'
+         *
+         * A line consists of any maximal sequence of characters other than
+         * CR (U+A '\n') and LF (U+D '\r').
+         *
+         * A line break is any of the following sequences:
+         *
+         * - LF
+         * - CR
+         * - CR LF
+         *
+         * Regardless of whether a source file is authored or compiled on a
+         * Windows machine (prefers CR LF) or another machine (tend to prefer LF)
+         * the meaning of a string is the same.  This means that all of those sequences,
+         * where not trimmed, are simplified to LF.  Use `${}` if you really need to
+         * embed a `\r` in a file.
+         */
+        private fun trimIncidentalWhitespace(
+            mqString: MqString,
+            token: (Int) -> TemperToken?,
+            edit: (Int) -> Edit,
+        ) {
+            // 1. Identify line ends
+            val lines = buildList {
+                var line = mutableListOf<Int>()
+                for (chunkIndex in mqString.charDataChunk) {
+                    val token = token(chunkIndex)
+                    if (token?.tokenType != TokenType.QuotedString) { continue } // If elided elsewhere
+                    line.add(chunkIndex)
+                    if (LexicalDefinitions.isLineBreak(token.tokenText.last())) {
+                        add(line.toList())
+                        line = mutableListOf()
+                    }
+                }
+                if (line.isNotEmpty()) { add(line.toList()) }
+            }
+            // 2. Identify lines which are just whitespace and one {:...:} region.
+            val isJustStatement = lines.map { line ->
+                // Three cases.
+                // " " {: :} "\n"
+                // {: :} "\n"
+                // " " {: :}
+                when (line.size) {
+                    2 -> {
+                        val first = line.first()
+                        val last = line.last()
+                        val fragmentRange = mqString.stmtFragments.firstOrNull { it.first == first + 1 }
+                        fragmentRange?.last == last - 1 && isSpaceyCharData(token(first)) &&
+                            isSpaceyCharData(token(last))
+                    }
+                    1 -> {
+                        val index = line[0]
+                        mqString.stmtFragments.any { it.first == index + 1 || it.last + 1 == index } &&
+                            isSpaceyCharData(token(index))
+                    }
+                    else -> false
+                }
+            }
+            // 3. Eliminate or normalize line breaks.
+            //    Eliminate from after opening quotes, from last line.
+            // Walk backwards so that we can keep track of whether there is content following.
+            var followedByContent = false
+            for (lineIndex in lines.indices.reversed()) {
+                val line = lines[lineIndex]
+                if (isJustStatement[lineIndex]) {
+                    for (i in line) { edit(i).drop() }
+                    continue
+                }
+
+                val lastIndex = line.last()
+                val last = token(lastIndex)!!
+
+                val needsNewline = followedByContent &&
+                    // Do not keep spacey content following the open quote.
+                    !(line.size == 1 && lastIndex == mqString.startIndex + 1 && isSpaceyCharData(last))
+
+                val lastTextChunk = buildString {
+                    append(last.tokenText)
+                    var beforeLb = this.length
+                    while (beforeLb > 0 && LexicalDefinitions.isLineBreak(this[beforeLb - 1])) {
+                        beforeLb -= 1
+                    }
+                    val hadNewline = beforeLb != length
+
+                    // Has no newline. Trim incidental space from the end.
+                    var afterSpace = beforeLb
+                    while (afterSpace > 0 && LexicalDefinitions.isSpace(this[afterSpace - 1])) {
+                        afterSpace -= 1
+                    }
+                    this.setLength(afterSpace)
+
+                    if (hadNewline && needsNewline) { // Normalize or drop
+                        append('\n')
+                    }
+                }
+                if (lastTextChunk != last.tokenText) {
+                    val edit = edit(lastIndex)
+                    if (lastTextChunk.isEmpty()) {
+                        edit.drop()
+                    } else {
+                        edit.substitution = edit.substitution!!.copy(
+                            temperToken = last.copy(tokenText = lastTextChunk),
+                        )
+                    }
+                }
+                followedByContent = true
+            }
+        }
+
+        private fun isSpaceyCharData(token: TemperToken?): Boolean =
+            token?.tokenType == TokenType.QuotedString &&
+                token.tokenText.all {
+                    LexicalDefinitions.isSpace(it) || LexicalDefinitions.isLineBreak(it)
+                }
+
+        private inline fun forEachMqString(
+            stackElements: List<TokenStackElement>,
+            onFragment: (Int, IntRange) -> Unit,
+            onInterpolation: (Int, IntRange) -> Unit,
+            onTextChunk: (Int, Int) -> Unit,
+            onMqString: (IntRange) -> Unit,
+        ) {
+            val stack = mutableListOf<Int?>()
+            val fragments = mutableListOf<Int>()
+            val curlies = mutableListOf<Int>()
+            for (i in stackElements.indices) {
+                val (tok) = stackElements[i]
+                when (tok.tokenType) {
+                    TokenType.Punctuation -> {
+                        when (tok.tokenText) {
+                            leftCurlyColonTokenText -> fragments.add(i)
+                            colonRightCurlyTokenText -> {
+                                val start = fragments.removeLast()
+                                val top = stack.last()!!
+                                onFragment(top, start..i)
+                            }
+                            $$"${", "{" -> curlies.add(i)
+                            "}" -> curlies.removeLastOrNull()?.let { start ->
+                                val top = stack.lastOrNull()
+                                if (top != null && stackElements[start].tokenText == $$"${") {
+                                    onInterpolation(top, start..i)
+                                }
+                            }
+                        }
+                    }
+                    TokenType.LeftDelimiter -> stack.add(
+                        if (tok.tokenText == MQ_DELIMITER) {
+                            i
+                        } else {
+                            null
+                        },
+                    )
+                    TokenType.RightDelimiter -> {
+                        val start = stack.removeLast()
+                        if (start != null) {
+                            onMqString(start..i)
+                        }
+                    }
+                    TokenType.QuotedString -> {
+                        val top = stack.lastOrNull()
+                        if (top != null) {
+                            onTextChunk(top, i)
+                        }
+                    }
+                    else -> {}
+                }
+            }
         }
     }
 }
@@ -212,6 +675,8 @@ private class CommentGrouper(
  * - After  `}` that end a line except before a close bracket or an operator token that is not prefix.
  * - Before `{` that starts a line except after an open bracket or an operator token that is not postfix.
  *
+ * Except that, semicolons are never inserted after the close curly bracket in a `${` and `}` pair.
+ *
  * This is more conservative than semicolon insertion in JavaScript,
  * but still simplifies several things.
  *
@@ -275,21 +740,28 @@ private class CommentGrouper(
  * See also a `./asi.md` for a summary of the conditions under which semicolons are inserted.
  */
 private class AutomaticSemicolonInserter(
-    val tokens: Producer<TemperToken?>,
+    val tokens: Producer<TokenStackElement?>,
 ) : Producer<TokenStackElement?> {
     private var lastUnignorable: TokenStackElement? = null
     private var newlineSinceLastUnignorable = false
-    private var pushback: TemperToken? = null
+    private var pushback: TokenStackElement? = null
+    private var depth = 0
+
+    /**
+     * Whether an unclosed `${` or `{` is open at a depth corresponding to the index.
+     * Useful for when a `}` is seen and [depth] is incremented.
+     */
+    private val isInterp = KBitSet()
 
     override fun get(): TokenStackElement? {
         while (true) {
-            val token = pushback?.let {
+            val tokenStackElement = pushback?.let {
                 pushback = null
                 it
             }
                 ?: tokens.get()
                 ?: break
-            val (_, text, type) = token
+            val (_, text, type) = tokenStackElement.temperToken
 
             if (type.ignorable) {
                 if (!newlineSinceLastUnignorable) {
@@ -298,7 +770,19 @@ private class AutomaticSemicolonInserter(
                 continue
             }
 
-            pushback = token // Unset if we consume it below.
+            if (type == TokenType.Punctuation) {
+                when (text) {
+                    "{", $$"${" -> {
+                        isInterp[depth] = text != "{"
+                        depth += 1
+                    }
+                    "}" -> if (depth != 0) {
+                        depth -= 1
+                    }
+                }
+            }
+
+            pushback = tokenStackElement // Unset if we consume it below.
 
             val last = lastUnignorable
             var insertSemicolon = false
@@ -334,7 +818,8 @@ private class AutomaticSemicolonInserter(
                         !isCloseBracket && (
                             allowedInPrefixPosition ||
                                 !(allowedInInfixPosition || allowedInPostfixPosition)
-                            )
+                            ) &&
+                        !isInterp[depth]
                     ) {
                         insertSemicolon = true
                     }
@@ -358,9 +843,8 @@ private class AutomaticSemicolonInserter(
             }
 
             pushback = null
-            val result = TokenStackElement(token)
-            lastUnignorable = result
-            return result
+            lastUnignorable = tokenStackElement
+            return tokenStackElement
         }
         return null
     }
@@ -386,21 +870,21 @@ private class InsertCallJoins(val tokens: Producer<TokenStackElement?>) : Produc
     private var pushback: TokenStackElement? = null
 
     override fun get(): TokenStackElement? {
-        val token = pushback ?: tokens.get() ?: return null
+        val tokenStackElement = pushback ?: tokens.get() ?: return null
         pushback = null
         val oldLastWasCloseCurly = lastWasCloseCurly
         lastWasCloseCurly = false
-        val tokenType = token.tokenType
-        val tokenText = token.tokenText
+        val tokenType = tokenStackElement.tokenType
+        val tokenText = tokenStackElement.tokenText
 
         if (
             oldLastWasCloseCurly && tokenType == TokenType.Word &&
             Operator.matching(tokenText, tokenType, OperatorType.Infix).isEmpty()
         ) {
-            pushback = token
+            pushback = tokenStackElement
             return TokenStackElement(
                 TemperToken(
-                    pos = token.pos.leftEdge,
+                    pos = tokenStackElement.pos.leftEdge,
                     tokenText = Operator.CallJoin.text!!,
                     tokenType = TokenType.Word,
                     synthetic = true,
@@ -411,7 +895,7 @@ private class InsertCallJoins(val tokens: Producer<TokenStackElement?>) : Produc
         }
 
         lastWasCloseCurly = tokenType == TokenType.Punctuation && tokenText == "}"
-        return token
+        return tokenStackElement
     }
 }
 
@@ -580,7 +1064,7 @@ private fun countOfLineBreaksUpTo(tokenText: String, upperBound: Int): Int {
     while (i < n) {
         val cp = decodeUtf16(tokenText, i)
         i += charCount(cp)
-        if (LexicalDefinitions.Companion.isLineBreak(cp)) {
+        if (LexicalDefinitions.isLineBreak(cp)) {
             found += 1
             if (found >= upperBound) { break }
             if (cp == C_CR && i < n && tokenText[i] == '\n') {
@@ -662,3 +1146,6 @@ private class LookaheadProducer<T>(val underlying: Producer<T>) : Producer<T> {
         }
     }
 }
+
+private val leftCurlyColonTokenText = TokenCluster.Chunk.LeftCurlyColon.prefixText
+private val colonRightCurlyTokenText = TokenCluster.Chunk.ColonRightCurly.prefixText
