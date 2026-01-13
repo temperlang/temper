@@ -264,8 +264,6 @@ class LuaBackendTest {
                 |  builder__0 = temper.listbuilder_constructor();
                 |  i__0 = 0;
                 |  while (i__0 < 3) do
-                |    local i__1;
-                |    i__1 = i__0;
                 |    temper.listbuilder_add(builder__0, 'hi');
                 |    i__0 = temper.int32_add(i__0, 1);
                 |  end

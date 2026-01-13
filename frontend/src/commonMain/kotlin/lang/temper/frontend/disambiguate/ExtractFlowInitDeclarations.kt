@@ -11,6 +11,7 @@ import lang.temper.log.LogEntry
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.spanningPosition
+import lang.temper.name.TemperName
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.DeclTree
@@ -18,6 +19,7 @@ import lang.temper.value.FunTree
 import lang.temper.value.LeftNameLeaf
 import lang.temper.value.LinearFlow
 import lang.temper.value.Planting
+import lang.temper.value.RightNameLeaf
 import lang.temper.value.TEdge
 import lang.temper.value.Tree
 import lang.temper.value.atBuiltinName
@@ -177,48 +179,61 @@ private fun injectInitVarsForCapture(init: Tree, call: CallTree) {
     // Find lower scopes for injecting into.
     // We never need to inject into the extracted flow init, because we know that runs only once.
     // Anything else, we really only care if it repeats, but we don't know what macros might do.
+    // TODO Instead:
+    // TODO - Explicitly find captured vars inside closures, and return a list of such RightNameLeaf nodes
+    // TODO - Generate local vars instead of lets
+    // TODO - Literally just clone the whole init tree with new Temporary names?
+    // TODO - Change all assignments to assign new also, such as from `i = 3` to `i = (i#1 = 3)`
+    // TODO - Change all captured RightNameLeaf refs to the new temporary
     for (kid in call.children) {
-        when (kid) {
-            is BlockTree -> {
-                // Presume all blocks could possibly capture the var.
-                // TODO Is searching for capture cheaper than always injecting?
-                injectInitVarsForCapture(vars, kid)
-            }
-            is FunTree -> when {
-                // Presume all functions could possibly capture the var.
-                // TODO Is searching for capture cheaper than always injecting?
-                kid.parts?.formals?.isEmpty() == true -> {
-                    when (val body = kid.parts?.body) {
-                        is BlockTree -> injectInitVarsForCapture(vars, body)
-                        null -> {}
-                        else -> wrapInjectVarsForCapture(vars, body)
-                    }
-                }
-                else -> {
-                    // The formals could have defaults with captures, so wrap the whole thing.
-                    wrapInjectVarsForCapture(vars, kid)
-                }
-            }
-            else -> {
-                // For simpler nodes, presume they're small, and only provide new local when nested functions exist.
-                // Even here, we aren't bothering to check for actual capture.
-                // TODO Again, is this cheaper than doing a formal search for captur?
-                var anyFns = false
-                TreeVisit.startingAt(kid).forEach node@{ node ->
-                    when (node) {
-                        is FunTree -> {
-                            // TODO Use fold instead of var?
-                            anyFns = true
-                            VisitCue.AllDone
-                        }
-                        else -> VisitCue.Continue
-                    }
-                }.visitPreOrder()
-                if (anyFns) {
-                    wrapInjectVarsForCapture(vars, kid)
-                }
+        val captures = findVarCaptures(vars, kid)
+        if (captures.isNotEmpty()) {
+            val loc = kid.pos.loc.diagnostic
+            if ("plicits" !in loc && "std" !in loc) {
+                captures.size
             }
         }
+//        when (kid) {
+//            is BlockTree -> {
+//                // Presume all blocks could possibly capture the var.
+//                // TODO Is searching for capture cheaper than always injecting?
+//                injectInitVarsForCapture(vars, kid)
+//            }
+//            is FunTree -> when {
+//                // Presume all functions could possibly capture the var.
+//                // TODO Is searching for capture cheaper than always injecting?
+//                kid.parts?.formals?.isEmpty() == true -> {
+//                    when (val body = kid.parts?.body) {
+//                        is BlockTree -> injectInitVarsForCapture(vars, body)
+//                        null -> {}
+//                        else -> wrapInjectVarsForCapture(vars, body)
+//                    }
+//                }
+//                else -> {
+//                    // The formals could have defaults with captures, so wrap the whole thing.
+//                    wrapInjectVarsForCapture(vars, kid)
+//                }
+//            }
+//            else -> {
+//                // For simpler nodes, presume they're small, and only provide new local when nested functions exist.
+//                // Even here, we aren't bothering to check for actual capture.
+//                // TODO Again, is this cheaper than doing a formal search for captur?
+//                var anyFns = false
+//                TreeVisit.startingAt(kid).forEach node@{ node ->
+//                    when (node) {
+//                        is FunTree -> {
+//                            // TODO Use fold instead of var?
+//                            anyFns = true
+//                            VisitCue.AllDone
+//                        }
+//                        else -> VisitCue.Continue
+//                    }
+//                }.visitPreOrder()
+//                if (anyFns) {
+//                    wrapInjectVarsForCapture(vars, kid)
+//                }
+//            }
+//        }
     }
 }
 
@@ -243,6 +258,45 @@ fun findVars(tree: Tree): List<LeftNameLeaf> = run {
             }
             VisitCue.Continue
         }.visitPreOrder()
+    }
+}
+
+/**
+ * Find references to the given vars underneath nested functions.
+ * Can have false positives due to FunTree nodes that don't actually end up functions,
+ * such as in `if` blocks.
+ */
+fun findVarCaptures(vars: List<LeftNameLeaf>, tree: Tree): List<RightNameLeaf> = buildList {
+    val varNames = vars.mapTo(mutableSetOf()) { it.content }
+    // TODO Find assignments to varNames in this same pass?
+    fun dig(sub: Tree, subVarNames: MutableSet<TemperName>, enclosed: Boolean, top: Boolean) {
+        var subEnclosed = enclosed
+        var subSubVarNames = subVarNames
+        when (sub) {
+            is BlockTree -> if (!top) {
+                subSubVarNames = subVarNames.toMutableSet()
+            }
+            is FunTree -> if (!top) {
+                subEnclosed = true
+                subSubVarNames = subVarNames.toMutableSet()
+            }
+            is LeftNameLeaf -> {
+                subVarNames.add(sub.content)
+            }
+            is RightNameLeaf -> {
+                if (enclosed && sub.content in varNames && sub.content !in subVarNames) {
+                    add(sub)
+                }
+            }
+            else -> {}
+        }
+        for (kid in sub.children) {
+            dig(kid, subSubVarNames, enclosed = subEnclosed, top = false)
+        }
+    }
+    // Special handling of top-level kids so we don't treat main blocks as closures.
+    for (kid in tree.children) {
+        dig(kid, mutableSetOf(), enclosed = false, top = true)
     }
 }
 
