@@ -1,6 +1,8 @@
 # Contributing to Temper
 
-Thank you for your interest in contributing to Temper! This guide will help you get set up for development.
+Thank you for your interest in contributing to Temper! This guide will help you get set up.
+
+As explained on the [community Discord][temper-discord], please follow the [contributor covenant code-of-conduct][CoC] in all interactions with other project contributors and community members.  And the Discord has notes on how to follow up with conduct related problems.
 
 ## Prerequisites
 
@@ -141,13 +143,15 @@ We need two things for a commit to *main*:
 
 ## Questions?
 
-- [Discord](https://discord.gg/QQKgZMukVB) — Chat with the community
+- [Discord][temper-discord] — Chat with the community
 - [Issues](https://github.com/temperlang/temper/issues) — Report bugs or request features
 
 [docker deps]: docker/base-image/home/.tool-versions
+[temper-discord]: https://discord.gg/QQKgZMukVB
 [commit signing]: https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification
 [commit signoff]: https://git-scm.com/docs/git-commit#Documentation/git-commit.txt--s
 [gradle installation]: https://docs.gradle.org/current/userguide/installation.html#installing_with_a_package_manager
 [inbound=outbound]: https://docs.github.com/en/site-policy/github-terms/github-terms-of-service#6-contributions-under-repository-license
 [toolchains]: https://maven.apache.org/guides/mini/guide-using-toolchains.html
 [workflow]: .github/workflows/build-and-run-tests.yml
+[CoC]: https://www.contributor-covenant.org/version/3/0/code_of_conduct/
