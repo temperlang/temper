@@ -817,6 +817,7 @@ class SyntaxMacroStageTest {
                     do {
                       var i__0 = 0;
                       for(\__flowInit, {class: Empty__0}, \cond, i__0 < 3, \incr, i__0 = i__0 + 1, fn {
+                          let i__1 = i__0;
                           body;
                       })
                     }
@@ -867,8 +868,9 @@ class SyntaxMacroStageTest {
                     "body":
                     ```
                     do {
-                      var i__0: Int = 0, x__1 = 3;
+                      var i__0: Int = 0, x__0 = 3;
                       for(\__flowInit, {class: Empty__0}, \cond, i__0 < 3, \incr, i__0 = i__0 + 1, fn {
+                          let i__1 = i__0, x__1 = x__0;
                           body;
                       })
                     }
@@ -892,6 +894,7 @@ class SyntaxMacroStageTest {
                       var i__0 = 0;
                       label__0: do {
                         for(\__flowInit, {class: Empty__0}, \cond, i__0 < 3, \incr, i__0 = i__0 + 1, fn {
+                            let i__1 = i__0;
                             body;
                         })
                       }

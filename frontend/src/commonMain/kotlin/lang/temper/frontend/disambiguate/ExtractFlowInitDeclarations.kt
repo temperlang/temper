@@ -1,6 +1,7 @@
 package lang.temper.frontend.disambiguate
 
 import lang.temper.ast.TreeVisit
+import lang.temper.ast.VisitCue
 import lang.temper.common.Log
 import lang.temper.common.subListToEnd
 import lang.temper.interp.convertToErrorNode
@@ -14,13 +15,19 @@ import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.DeclTree
 import lang.temper.value.FunTree
+import lang.temper.value.LeftNameLeaf
 import lang.temper.value.LinearFlow
+import lang.temper.value.Planting
 import lang.temper.value.TEdge
+import lang.temper.value.Tree
+import lang.temper.value.atBuiltinName
 import lang.temper.value.flowInitSymbol
 import lang.temper.value.freeTree
 import lang.temper.value.initSymbol
 import lang.temper.value.lookThroughDecorations
+import lang.temper.value.nameContained
 import lang.temper.value.symbolContained
+import lang.temper.value.varSymbol
 
 /**
  * Extract declarations from flow-control like calls like
@@ -58,7 +65,7 @@ import lang.temper.value.symbolContained
  *     for (void of xs) { x => ... }
  */
 internal fun extractFlowInitDeclarations(root: BlockTree, logSink: LogSink) {
-    TreeVisit.startingAt(root)
+    TreeVisit.startingAt(root) //
         .forEachContinuing { tree ->
             if (tree !is CallTree) { return@forEachContinuing }
             val flowInitEdge = flowInitParameterOf(tree)
@@ -90,6 +97,8 @@ internal fun extractFlowInitDeclarations(root: BlockTree, logSink: LogSink) {
                     } else {
                         null
                     }
+
+                    injectInitVarsForCapture(toExtract, tree)
 
                     // Just replace the call
                     incoming.replace { pos ->
@@ -156,6 +165,118 @@ internal fun extractFlowInitDeclarations(root: BlockTree, logSink: LogSink) {
             }
         }
         .visitPostOrder()
+}
+
+/** Inject local declarations for better scope of init vars where capture might happen. */
+private fun injectInitVarsForCapture(init: Tree, call: CallTree) {
+    // Find vars that we might need to inject in lower scopes.
+    val vars = findVars(init)
+    if (vars.isEmpty()) {
+        return
+    }
+    // Find lower scopes for injecting into.
+    // We never need to inject into the extracted flow init, because we know that runs only once.
+    // Anything else, we really only care if it repeats, but we don't know what macros might do.
+    for (kid in call.children) {
+        when (kid) {
+            is BlockTree -> {
+                // Presume all blocks could possibly capture the var.
+                // TODO Is searching for capture cheaper than always injecting?
+                injectInitVarsForCapture(vars, kid)
+            }
+            is FunTree -> when {
+                // Presume all functions could possibly capture the var.
+                // TODO Is searching for capture cheaper than always injecting?
+                kid.parts?.formals?.isEmpty() == true -> {
+                    when (val body = kid.parts?.body) {
+                        is BlockTree -> injectInitVarsForCapture(vars, body)
+                        null -> {}
+                        else -> wrapInjectVarsForCapture(vars, body)
+                    }
+                }
+                else -> {
+                    // The formals could have defaults with captures, so wrap the whole thing.
+                    wrapInjectVarsForCapture(vars, kid)
+                }
+            }
+            else -> {
+                // For simpler nodes, presume they're small, and only provide new local when nested functions exist.
+                // Even here, we aren't bothering to check for actual capture.
+                // TODO Again, is this cheaper than doing a formal search for captur?
+                var anyFns = false
+                TreeVisit.startingAt(kid).forEach node@{ node ->
+                    when (node) {
+                        is FunTree -> {
+                            // TODO Use fold instead of var?
+                            anyFns = true
+                            VisitCue.AllDone
+                        }
+                        else -> VisitCue.Continue
+                    }
+                }.visitPreOrder()
+                if (anyFns) {
+                    wrapInjectVarsForCapture(vars, kid)
+                }
+            }
+        }
+    }
+}
+
+fun findVars(tree: Tree): List<LeftNameLeaf> = run {
+    // Check @var call.
+    // TODO Deeper decorations with any as `var`.
+    val call = tree as? CallTree ?: return listOf()
+    call.childOrNull(0)?.nameContained?.builtinKey == atBuiltinName.builtinKey || return listOf()
+    call.childOrNull(1)?.nameContained?.builtinKey == varSymbol.text || return listOf()
+    // Get decl names.
+    val decl = call.childOrNull(2) ?: return listOf()
+    buildList {
+        // To handle commaFn or otherwise, look for any decls that aren't under new scope.
+        TreeVisit.startingAt(decl).forEach subs@{ sub ->
+            when (sub) {
+                is DeclTree -> {
+                    (sub.childOrNull(0) as? LeftNameLeaf)?.also { add(it) }
+                    return@subs VisitCue.SkipOne
+                }
+                is BlockTree, is FunTree -> return@subs VisitCue.SkipOne
+                else -> {}
+            }
+            VisitCue.Continue
+        }.visitPreOrder()
+    }
+}
+
+/** Inject rescoped decls at top of existing block. */
+private fun injectInitVarsForCapture(vars: List<LeftNameLeaf>, tree: BlockTree) {
+    tree.insert(0) {
+        injectInitVarsForCapture(vars)
+    }
+    if ("plicits" !in tree.pos.loc.diagnostic) {
+        tree.pos
+    }
+}
+
+/** Wrap a tree with a block with injected rescoped decls at top. */
+private fun wrapInjectVarsForCapture(vars: List<LeftNameLeaf>, tree: Tree) {
+    tree.incoming!!.replace {
+        Block {
+            injectInitVarsForCapture(vars)
+            Replant(tree)
+        }
+    }
+    if ("plicits" !in tree.pos.loc.diagnostic) {
+        tree.pos
+    }
+}
+
+private fun Planting.injectInitVarsForCapture(vars: List<LeftNameLeaf>) {
+    for (v in vars) {
+        Decl(v.pos) {
+            Replant(v.copy())
+            V(initSymbol)
+            Rn(v.content)
+        }
+    }
 }
 
 // Walk over named parameter style.
