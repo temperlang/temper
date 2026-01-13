@@ -67,7 +67,7 @@ import lang.temper.value.varSymbol
  *     for (void of xs) { x => ... }
  */
 internal fun extractFlowInitDeclarations(root: BlockTree, logSink: LogSink) {
-    TreeVisit.startingAt(root) //
+    TreeVisit.startingAt(root)
         .forEachContinuing { tree ->
             if (tree !is CallTree) { return@forEachContinuing }
             val flowInitEdge = flowInitParameterOf(tree)
