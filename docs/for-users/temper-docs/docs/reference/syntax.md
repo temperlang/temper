@@ -175,6 +175,8 @@ Semicolons are inserted in the following places:
 - After  `}` that end a line except before a close bracket or an operator token that is not prefix.
 - Before `{` that starts a line except after an open bracket or an operator token that is not postfix.
 
+Except that, semicolons are never inserted after the close curly bracket in a `${` and `}` pair.
+
 This is more conservative than semicolon insertion in JavaScript,
 but still simplifies several things.
 

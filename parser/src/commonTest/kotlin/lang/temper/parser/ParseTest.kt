@@ -389,19 +389,19 @@ class ParseTest {
 
     @Test
     fun stringEscapes() = assertParseTree(
-        input = """
+        input = $$"""
             |raw"bonus: \u{,,20,,}";
-            |"split no comma: \u{10${'$'}{}000}";
-            |raw"hi\u{${'$'}{}2${'$'}{/*hi*/}0,${'$'}{"t"}${'$'}{}}here";
-            |"\"hi\u{20,${'$'}{"there"},21,22}";
+            |"split no comma: \u{10${}000}";
+            |raw"hi\u{${}2${/*hi*/}0,${"t"}${}}here";
+            |"\"hi\u{20,${"there"},21,22}";
             |// hi
             |/(^|,)\s*/;
-            |"wan${'$'}{/*hi*/}na\u0020be\x20:\ud800\udc00";
-            |"whatever: ${'$'}{hi}!";
+            |"wan${/*hi*/}na\u0020be\x20:\ud800\udc00";
+            |"whatever: ${hi}!";
             |"bad code: \u{110000}!";
             |"bad code\u{3a,20, 110000 }!";
         """.trimMargin(),
-        want = """
+        want = $$"""
             |[
             |  [["raw"], "(", ["\"",
             |    ["bonus: "],
@@ -426,7 +426,7 @@ class ParseTest {
             |    [
             |      "\\u{", [
             |        ["20"], ",",
-            |        ["${'$'}{", ["(", ["\"",
+            |        ["${", ["(", ["\"",
             |          ["t"],
             |        "\""], ")"], "}"],
             |      ], "}"
@@ -439,7 +439,7 @@ class ParseTest {
             |    [
             |      "\\u{", [
             |        ["20"], ",",
-            |        ["${'$'}{", ["(", ["\"",
+            |        ["${", ["(", ["\"",
             |          ["there"],
             |        "\""], ")"], "}"], ",",
             |        ["21"], ",",
@@ -456,7 +456,7 @@ class ParseTest {
             |  ";",
             |  ["(", ["\"",
             |    ["whatever: "],
-            |    ["${'$'}{", [
+            |    ["${", [
             |      "hi",
             |    ], "}"],
             |    ["!"],
@@ -4182,6 +4182,43 @@ class ParseTest {
             |]
         """.trimMargin(),
     )
+
+    @Test
+    fun emitPrefixOp() = assertParseTree(
+        input = $$"""
+            |{
+            |  +++ "foo";
+            |  ${ bar };
+            |}
+        """.trimMargin(),
+        want = $$"""
+            |[
+            |  "{",
+            |  [
+            |    [
+            |      "+++",
+            |      [
+            |        "(",
+            |        [
+            |          "\"",
+            |          [ "foo" ],
+            |          "\"",
+            |        ],
+            |        ")",
+            |      ],
+            |    ],
+            |    ";",
+            |    [
+            |      "${",
+            |      [ "bar" ],
+            |      "}",
+            |    ],
+            |    ";",
+            |  ],
+            |  "}",
+            |]
+        """.trimMargin(),
+    )
 }
 
-const val INTERP_EMBED = "\${"
+const val INTERP_EMBED = $$"${"

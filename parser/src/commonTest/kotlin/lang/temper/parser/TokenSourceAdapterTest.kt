@@ -15,12 +15,9 @@ class TokenSourceAdapterTest {
     fun assertAdaptedTokens(
         want: String,
         input: String,
-    ) {
+    ) = assertAdaptedTokens(input = input) { tokens ->
         val got = buildString {
-            val lexer = Lexer(testCodeLocation, LogSink.devNull, input)
-            val tsa = TokenSourceAdapter(lexer, null)
-            while (true) {
-                val tok = tsa.get() ?: break
+            for (tok in tokens) {
                 if (isNotEmpty()) {
                     append(' ')
                 }
@@ -39,6 +36,34 @@ class TokenSourceAdapterTest {
         }
 
         assertStringsEqual(want, got, input)
+    }
+
+    internal fun assertAdaptedTokens(
+        want: List<String>,
+        input: String,
+    ) = assertAdaptedTokens(input = input) { tokens ->
+        val got = tokens.map {
+            if (it.tokenType == TokenType.QuotedString) {
+                "`${it.tokenText}`"
+            } else {
+                it.tokenText
+            }
+        }
+        assertEquals(want, got, input)
+    }
+
+    internal fun assertAdaptedTokens(
+        input: String,
+        test: (List<TokenStackElement>) -> Unit,
+    ) {
+        val lexer = Lexer(testCodeLocation, LogSink.devNull, input)
+        val tsa = TokenSourceAdapter(lexer, null)
+        val tokens = buildList {
+            while (true) {
+                add(tsa.get() ?: break)
+            }
+        }
+        test(tokens)
     }
 
     fun assertAdaptedTokens(
@@ -71,14 +96,74 @@ class TokenSourceAdapterTest {
 
     @Test
     fun parensForDoubleQuotedStringTemplate() = assertAdaptedTokens(
-        input = "x=   \" .. \${ y +   \" .. \${ 0 } .. \"   } .. \" ",
-        want = "x = ( \" .. \${ y + ( \" .. \${ 0 } .. \" ) } .. \" )",
+        input = $$"x=   \" .. ${ y +   \" .. ${ 0 } .. \"   } .. \" ",
+        want = $$"x = ( \" .. ${ y + ( \" .. ${ 0 } .. \" ) } .. \" )",
     )
 
     @Test
     fun parensForBackQuotedStringTemplate() = assertAdaptedTokens(
-        input = "x=   ` .. \${ ( y +   ` .. \${ 0 } .. `   ) } .. ` ",
-        want = "x = ( ` .. \${ ( y + ( ` .. \${ 0 } .. ` ) ) } .. ` )",
+        input = $$"x=   ` .. ${ ( y +   ` .. ${ 0 } .. `   ) } .. ` ",
+        want = $$"x = ( ` .. ${ ( y + ( ` .. ${ 0 } .. ` ) ) } .. ` )",
+    )
+
+    @Test
+    fun stringTemplateWithEmbeddedStatementFragments() = assertAdaptedTokens(
+        input = $$"""
+            |$${"\"\"\""}
+            |  "some character data
+            |  "{: statement(here) :}
+            |  "more character${} data ${}
+            |  "last line
+            |
+            |+ 1  // Some trailing content to test interactions with ASI
+        """.trimMargin(),
+        want = listOf(
+            "{",
+            "\"\"\"",
+            "+++", "`some character data\n`",
+            "statement", "(", "here", ")",
+            "+++", "`more character`", $$"${", "}", "+++", "` data `", $$"${", "}", "+++", "`\n`",
+            "+++", "`last line`",
+            "\"\"\"",
+            "}",
+            "+", "1",
+        ),
+    )
+
+    @Test
+    fun stringInAString() = assertAdaptedTokens(
+        input = $$"""
+            |$${"\"\"\""}
+            |  "Hello,
+            |  "${ "World" }
+            |  "!
+            |  ;
+            |"World"
+        """.trimMargin(),
+        want = listOf(
+            "(",
+            "\"\"\"",
+            "`Hello,\n`",
+            $$"${", "(", "\"", "`World`", "\"", ")", "}", "`\n`",
+            "`!`",
+            "\"\"\"",
+            ")",
+            ";",
+            "(", "\"", "`World`", "\"", ")",
+        ),
+    )
+
+    @Test
+    fun mqStringEndsWithInterp() = assertAdaptedTokens(
+        input = $$"""
+            |$${"\"\"\""}
+            |"Line 1
+            |"Line 2 ${}
+            |
+        """.trimMargin(),
+        want = listOf(
+            "(", "\"\"\"", "`Line 1\n`", "`Line 2 `", $$"${", "}", "\"\"\"", ")",
+        ),
     )
 
     @Test
@@ -192,7 +277,7 @@ class TokenSourceAdapterTest {
         """.trimMargin(),
         want = listOf(
             "{", "0", "/", "0", "}", "orelse", "0", ";",
-            "(", "{", "prop", ":", "(", "\"", "value", "\"", ")", "}", "instanceof", "Thing", ")", ";",
+            "(", "{", "prop", ":", "(", "\"", "`value`", "\"", ")", "}", "instanceof", "Thing", ")", ";",
         ),
     )
 
@@ -202,7 +287,7 @@ class TokenSourceAdapterTest {
         want = listOf(
             "(",
             "'",
-            "a",
+            "`a`",
             "'",
             ")",
         ),
