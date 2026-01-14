@@ -21,8 +21,8 @@ License, Version 2.0 <LICENSE-APACHE> or <https://www.apache.org/licenses/LICENS
 or the MIT license <LICENSE-MIT> or <https://opensource.org/licenses/MIT>,
 at your option.
 
-We track licenses for third-party materials via a `gradle` build tasks
-that compile a licenses file which is included in binary distributions
+We track licenses for third-party materials via `gradle` build tasks
+that assembles a licenses file which is included in binary distributions
 and is available via the Temper command line tool: `temper licenses`.
 Please refer to either the file embedded in the binary distribution or
 the command line tools replay of it.
