@@ -100,6 +100,7 @@ class CppBackend(setup: BackendSetup<CppBackend>) : Backend<CppBackend>(Factory.
                 filePath("core.hpp"),
                 filePath("expected.hpp"),
                 filePath("int.hpp"),
+                filePath("listed.hpp"),
                 filePath("shared.hpp"),
             )
 

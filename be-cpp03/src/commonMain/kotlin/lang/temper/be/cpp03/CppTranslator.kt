@@ -18,6 +18,7 @@ import lang.temper.name.ResolvedName
 import lang.temper.name.Temporary
 import lang.temper.type.TypeDefinition
 import lang.temper.type.WellKnownTypes
+import lang.temper.type2.Type2
 import lang.temper.value.TInt
 import lang.temper.value.TInt64
 import lang.temper.value.TString
@@ -467,6 +468,12 @@ class CppTranslator(
             }
             else -> cpp.singleName("TODO")
         }
+    }
+
+    internal fun translateType(type: Type2): Cpp.Type = run {
+        val def = translateTypeDefinition(type.definition)
+        // TODO bindings
+        def
     }
 
     private fun translateTypeDefinition(def: TypeDefinition): Cpp.Type = run {

@@ -35,6 +35,7 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
         Ft.ClassesDirectGetter,
         Ft.TypesIntBasics,
         Ft.TypesIntLimits,
+        Ft.TypesListEmpty,
     )
 }.mapValues { it.value.toList() }
 

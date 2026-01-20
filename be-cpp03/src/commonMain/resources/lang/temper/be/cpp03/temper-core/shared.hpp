@@ -59,6 +59,11 @@ public:
     release();
   }
 
+  void reset() {
+    release();
+    control = 0;
+  }
+
   Shared& operator=(const Shared& other) {
     if (this != &other) {
       release();
