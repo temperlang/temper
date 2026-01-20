@@ -1,4 +1,3 @@
-import os
 import pathlib as p
 import platform
 import re
@@ -19,9 +18,7 @@ class Release(t.TypedDict):
 
 
 def download(*, out_dir: p.Path, tag: str) -> p.Path:
-    github_token = os.environ["GITHUB_TOKEN"]
     session = requests.Session()
-    session.headers.update({"Authorization": f"token {github_token}"})
     org = "temperlang"
     repo = "temper"
     # Get releases for tag.
