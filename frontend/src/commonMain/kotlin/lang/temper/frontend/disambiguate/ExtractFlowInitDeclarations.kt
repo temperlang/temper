@@ -269,19 +269,24 @@ fun findVars(tree: Tree): List<LeftNameLeaf> = run {
 fun findVarCaptures(vars: List<LeftNameLeaf>, tree: Tree): List<RightNameLeaf> = buildList {
     val varNames = vars.mapTo(mutableSetOf()) { it.content }
     // TODO Find assignments to varNames in this same pass?
-    fun dig(sub: Tree, subVarNames: MutableSet<TemperName>, enclosed: Boolean, top: Boolean) {
+    fun dig(sub: Tree, subVarNames: MutableList<TemperName>, enclosed: Boolean, top: Boolean) {
+        val subVarNamesStart = subVarNames.size
+        var newScope = false
+        var newSubVarName: TemperName? = null
         var subEnclosed = enclosed
-        var subSubVarNames = subVarNames
         when (sub) {
             is BlockTree -> if (!top) {
-                subSubVarNames = subVarNames.toMutableSet()
+                newScope = true
             }
             is FunTree -> if (!top) {
+                newScope = true
                 subEnclosed = true
-                subSubVarNames = subVarNames.toMutableSet()
             }
-            is LeftNameLeaf -> {
-                subVarNames.add(sub.content)
+            is DeclTree -> sub.parts?.name?.content?.also { subVarName ->
+                // Track decls that shadow our vars of interest.
+                if (subVarName in varNames) {
+                    newSubVarName = subVarName
+                }
             }
             is RightNameLeaf -> {
                 if (enclosed && sub.content in varNames && sub.content !in subVarNames) {
@@ -291,12 +296,19 @@ fun findVarCaptures(vars: List<LeftNameLeaf>, tree: Tree): List<RightNameLeaf> =
             else -> {}
         }
         for (kid in sub.children) {
-            dig(kid, subSubVarNames, enclosed = subEnclosed, top = false)
+            dig(kid, subVarNames, enclosed = subEnclosed, top = false)
+        }
+        // This should be faster than allocating a new set per scope.
+        if (newScope && subVarNamesStart < subVarNames.size) {
+            subVarNames.subList(subVarNamesStart, subVarNames.size).clear()
+        } else if (newSubVarName != null) {
+            // Add this only after recursing, since the right-hand side of decls doesn't see the decl.
+            subVarNames.add(newSubVarName!!)
         }
     }
     // Special handling of top-level kids so we don't treat main blocks as closures.
     for (kid in tree.children) {
-        dig(kid, mutableSetOf(), enclosed = false, top = true)
+        dig(kid, mutableListOf(), enclosed = false, top = true)
     }
 }
 

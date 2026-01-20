@@ -906,7 +906,15 @@ class SyntaxMacroStageTest {
     @Test
     fun forVarCaptured() = assertModuleAtStage(
         stage = Stage.SyntaxMacro,
-        input = "for (var i = 0; i < 3; i += 1) { things.add { i } }",
+        input = """
+            |for (var i = 0, j = 0; i < 3; ++i) {
+            |  // let j = (fn (i: Int): Void { if (i > 0) { j(i - 1); } });
+            |  let j(i: Int): Void { if (i > 0) { j(i - 1); } };
+            |  let j = j, k = i;
+            |  things.add { ++i; i };
+            |  things.add { j };
+            |}
+        """.trimMargin(),
         want = """
             {
                 "syntaxMacro": {
