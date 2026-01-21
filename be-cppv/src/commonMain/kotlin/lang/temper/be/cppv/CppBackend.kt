@@ -1,4 +1,4 @@
-package lang.temper.be.cpp03
+package lang.temper.be.cppv
 
 import lang.temper.be.Backend
 import lang.temper.be.BackendSetup
@@ -20,11 +20,13 @@ import lang.temper.name.LanguageLabel
  * <!-- snippet: backend/c -->
  * # C++ Backend
  *
- * ⎀ backend/cpp03/id
+ * ⎀ backend/cppv/id
  *
- * Translates Temper to C++ source, with an eye to wide portability.
- * Generated code should work on C++03 but also support modern C++
- * features.
+ * Translates Temper to C++ source, with an eye to wide portability. Generated
+ * code should work on C++11 and later, but it's also designed to support
+ * separate code gen for C++03.
+ *
+ * Currently called "cppv" for "versatile" but this might change later.
  */
 class CppBackend(setup: BackendSetup<CppBackend>) : Backend<CppBackend>(Factory.backendId, setup) {
     private val cppNames = CppNames()
@@ -64,14 +66,14 @@ class CppBackend(setup: BackendSetup<CppBackend>) : Backend<CppBackend>(Factory.
         // val mimeType = MimeType("text", "x-csrc")
         val mimeType = MimeType.cppSource
 
-        private val resourceBase = dirPath("lang", "temper", "be", "cpp03")
+        private val resourceBase = dirPath("lang", "temper", "be", "cppv")
         private val coreResourceBase = resourceBase.resolveDir("temper-core")
 
         /**
          * <!-- snippet: backend/c/id -->
-         * BackendID: `cpp03`
+         * BackendID: `cppv`
          */
-        internal const val BACKEND_ID = "cpp03"
+        internal const val BACKEND_ID = "cppv"
     }
 
     @PluginBackendId(BACKEND_ID)
@@ -100,7 +102,6 @@ class CppBackend(setup: BackendSetup<CppBackend>) : Backend<CppBackend>(Factory.
                 filePath("core.hpp"),
                 filePath("expected.hpp"),
                 filePath("int.hpp"),
-                filePath("listed.hpp"),
                 filePath("shared.hpp"),
             )
 

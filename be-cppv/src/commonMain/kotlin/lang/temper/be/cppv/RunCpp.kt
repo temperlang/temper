@@ -1,4 +1,4 @@
-package lang.temper.be.cpp03
+package lang.temper.be.cppv
 
 import lang.temper.be.Dependencies
 import lang.temper.be.cli.Aux
@@ -15,9 +15,9 @@ import lang.temper.log.filePath
 import lang.temper.log.resolveDir
 import lang.temper.log.resolveFile
 
-internal fun runCpp(
+fun runCpp(
     cliEnv: CliEnv,
-    dependencies: Dependencies<CppBackend>,
+    dependencies: Dependencies<*>,
     request: ToolchainRequest,
     version: CppVersion,
 ): List<ToolchainResult> {
@@ -38,7 +38,7 @@ object GppCommand : ToolSpecifics {
 
 private fun CliEnv.runLibrary(
     request: RunLibraryRequest,
-    dependencies: Dependencies<CppBackend>,
+    dependencies: Dependencies<*>,
     version: CppVersion,
 ): List<ToolchainResult> {
     val libraryName = request.libraryName

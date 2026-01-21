@@ -1,4 +1,4 @@
-package lang.temper.be.cpp03
+package lang.temper.be.cppv
 
 import lang.temper.be.Backend
 import lang.temper.be.assertGeneratedCode
@@ -25,7 +25,7 @@ class CppBackendTest {
         ),
         want = """
             |{
-            |  cpp03: {
+            |  cppv: {
             |    "my-test-library": {
             |      "my-test-library.cpp": {
             |        content: ```
@@ -77,7 +77,7 @@ class CppBackendTest {
         ),
         want = """
             |{
-            |  cpp03: {
+            |  cppv: {
             |    "my-test-library": {
             |      "my-test-library.cpp": {
             |        content: ```
@@ -168,7 +168,7 @@ class CppBackendTest {
         ),
         want = """
             |{
-            |  cpp03: {
+            |  cppv: {
             |    "my-test-library": {
             |      "my-test-library.cpp": {
             |        content: ```
@@ -214,7 +214,7 @@ class CppBackendTest {
         ),
         want = """
             |{
-            |  cpp03: {
+            |  cppv: {
             |    "my-test-library": {
             |      "my-test-library.cpp": {
             |        content: ```
@@ -265,7 +265,7 @@ class CppBackendTest {
         ),
         want = """
             |{
-            |  cpp03: {
+            |  cppv: {
             |    "my-test-library": {
             |      "my-test-library.cpp": {
             |        content: ```

@@ -20,7 +20,7 @@ using Unexpected = std::unexpected<Error>;
 template<typename T>
 using Expected = std::expected<T, Error>;
 
-#else // not __cplusplus >= 202302L
+#else // not __cpp_lib_expected
 
 class Unexpected {
 public:
@@ -95,7 +95,7 @@ private:
   bool has_val;
 };
 
-#endif // __cplusplus >= 202302L else
+#endif // not __cpp_lib_expected
 
 } // namespace core
 } // namespace temper

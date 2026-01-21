@@ -1,7 +1,7 @@
 # Functional Test Matrix
 
-| Test | Cpp | Cpp03 | Csharp | Interp | Java | Java8 | Js | Lua | Mypyc | Py | Rust |
-| ---- | --- | ----- | ------ | ------ | ---- | ----- | --- | --- | ----- | --- | ---- |
+| Test | Cpp | Cppv | Csharp | Interp | Java | Java8 | Js | Lua | Mypyc | Py | Rust |
+| ---- | --- | ---- | ------ | ------ | ---- | ----- | --- | --- | ----- | --- | ---- |
 | [AlgosFibonacci][] | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [AlgosHelloFromClassToTop][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [AlgosHelloWorld][] | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |

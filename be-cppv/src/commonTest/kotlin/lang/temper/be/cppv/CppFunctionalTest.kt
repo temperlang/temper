@@ -1,4 +1,4 @@
-package lang.temper.be.cpp03
+package lang.temper.be.cppv
 
 import lang.temper.be.FunctionalTestRunner
 import lang.temper.be.assertRunOutput
@@ -16,13 +16,6 @@ import lang.temper.log.FilePathSegment
 import lang.temper.name.ModuleName
 import lang.temper.tests.FunctionalTestBase
 import kotlin.test.Test
-
-class Cpp03FunctionalTest : CppFunctionalTest(CppVersion.Cpp03) {
-    @Test
-    override fun algosHelloWorld() {
-        super.algosHelloWorld()
-    }
-}
 
 class Cpp11FunctionalTest : CppFunctionalTest(CppVersion.Cpp11) {
     @Test
