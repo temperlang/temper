@@ -14,15 +14,17 @@ import lang.temper.library.relativeOutputDirectoryForLibrary
 import lang.temper.log.filePath
 import lang.temper.log.resolveDir
 import lang.temper.log.resolveFile
+import lang.temper.name.BackendId
 
 fun runCpp(
     cliEnv: CliEnv,
     dependencies: Dependencies<*>,
     request: ToolchainRequest,
     version: CppVersion,
+    backendId: BackendId = CppBackend.Factory.backendId,
 ): List<ToolchainResult> {
     return when (request) {
-        is RunLibraryRequest -> cliEnv.runLibrary(request, dependencies, version)
+        is RunLibraryRequest -> cliEnv.runLibrary(request, dependencies, version, backendId)
         is RunBackendSpecificCompilationStepRequest -> error(request)
         else -> error(request)
     }.also { results ->
@@ -40,9 +42,10 @@ private fun CliEnv.runLibrary(
     request: RunLibraryRequest,
     dependencies: Dependencies<*>,
     version: CppVersion,
+    backendId: BackendId,
 ): List<ToolchainResult> {
     val libraryName = request.libraryName
-    val runDir = relativeOutputDirectoryForLibrary(CppBackend.Factory.backendId, libraryName)
+    val runDir = relativeOutputDirectoryForLibrary(backendId, libraryName)
     val buildDir = runDir.resolveDir("build")
     // For now, just manually build with g++.
     // TODO Use cmake or something, and ensure we work on msvc as well as gcc and clang.

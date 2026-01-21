@@ -24,7 +24,7 @@ import lang.temper.value.TInt64
 import lang.temper.value.TString
 import lang.temper.value.failSymbol
 
-class CppTranslator(
+open class CppTranslator(
     private val module: TmpL.Module,
     cppNames: CppNames,
 ) {
@@ -482,7 +482,7 @@ class CppTranslator(
         }
     }
 
-    internal fun translateType(type: Type2): Cpp.Type = run {
+    fun translateType(type: Type2): Cpp.Type = run {
         val def = translateTypeDefinition(type.definition)
         // TODO bindings
         def

@@ -48,13 +48,7 @@ class CppBackend(setup: BackendSetup<CppBackend>) : Backend<CppBackend>(Factory.
                 val translator = CppTranslator(module, cppNames)
                 addAll(translator.translate())
             }
-            if (config.makeMetaDataFile && !config.abbreviated) {
-                MetadataFileSpecification(
-                    path = filePath("main.cpp"),
-                    mimeType = mimeType,
-                    content = "int main() {}",
-                ).also { add(it) }
-            }
+            this@buildList.addCppMetadataFiles(this@run)
         }
     }
 
@@ -106,6 +100,16 @@ class CppBackend(setup: BackendSetup<CppBackend>) : Backend<CppBackend>(Factory.
             )
 
         override fun make(setup: BackendSetup<CppBackend>) = CppBackend(setup)
+    }
+}
+
+fun MutableList<Backend.OutputFileSpecification>.addCppMetadataFiles(backend: Backend<*>) {
+    if (backend.config.makeMetaDataFile && !backend.config.abbreviated) {
+        Backend.MetadataFileSpecification(
+            path = filePath("main.cpp"),
+            mimeType = CppBackend.Companion.mimeType,
+            content = "int main() {}",
+        ).also { add(it) }
     }
 }
 

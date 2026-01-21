@@ -26,7 +26,7 @@ import lang.temper.value.BuiltinOperatorId
 import lang.temper.value.NamedBuiltinFun
 
 object CppSupportNetwork : SupportNetwork {
-    override val backendDescription = "C++03 Backend"
+    override val backendDescription = "C++ Backend"
     override val bubbleStrategy = BubbleBranchStrategy.IfHandlerScopeVar
     override val coroutineStrategy = CoroutineStrategy.TranslateToRegularFunction
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionalInterface
