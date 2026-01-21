@@ -24,34 +24,40 @@ Shared<T> shared(Args&&... args) {
 
 template<typename T> // TODO `, typename SyncPolicy = NoSync`
 class Shared {
-  struct Control {
-    T* base;
-    unsigned count;
-    Control(T* base_): base(base_), count(1) {}
-  };
+  template<typename U>
+  friend class Shared;
 
-  Control* control;
+  T* ptr;
+  size_t* count;
 
   void acquire() {
-    if (control) {
-      control->count += 1;
+    if (count) {
+      *count += 1;
     }
   }
 
   void release() {
-    if (control) {
-      control->count -= 1;
-      if (!control->count) {
-        delete control->base;
-        delete control;
+    if (count) {
+      *count -= 1;
+      if (!*count) {
+        delete ptr;
+        delete count;
       }
+      ptr = 0;
+      count = 0;
     }
   }
 
 public:
-  explicit Shared(T* base = 0): control(base ? new Control(base) : 0) {}
+  explicit Shared(T* ptr = 0):
+      ptr(ptr), count(ptr ? new size_t(1) : 0) {}
 
-  Shared(const Shared& other): control(other.control) {
+  Shared(const Shared& other): ptr(other.ptr), count(other.count) {
+    acquire();
+  }
+
+  template<typename U>
+  Shared(const Shared<U>& other): ptr(other.ptr), count(other.count) {
     acquire();
   }
 
@@ -61,21 +67,21 @@ public:
 
   void reset() {
     release();
-    control = 0;
   }
 
   Shared& operator=(const Shared& other) {
     if (this != &other) {
       release();
-      control = other.control;
+      ptr = other.ptr;
+      count = other.count;
       acquire();
     }
     return *this;
   }
 
-  T* get() const { return control ? control->base : 0; }
-  T& operator*() const { assert(control); return *control->base; }
-  T* operator->() const { assert(control); return control->base; }
+  T* get() const { return ptr; }
+  T& operator*() const { assert(ptr); return *ptr; }
+  T* operator->() const { assert(ptr); return ptr; }
 };
 
 template<class T>

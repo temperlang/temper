@@ -23,7 +23,7 @@ public:
 
   Shared<const std::vector<T> > build() {
     Shared<const std::vector<T> > result = items;
-    items->reset();
+    items.reset();
     return result;
   }
 };
