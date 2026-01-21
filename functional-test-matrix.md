@@ -55,7 +55,7 @@
 | [TypesIntBasics][] | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesIntLimits][] | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesJsonSyntaxTree][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [TypesListEmpty][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [TypesListEmpty][] | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesListOperations][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesListReduce][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesListSorting][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |

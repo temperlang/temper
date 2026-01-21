@@ -305,6 +305,14 @@ class CppTranslator(
         translateName(id.name)
     }
 
+    private fun translateIfStatement(stmt: TmpL.IfStatement): Cpp.Stmt = cpp.pos(stmt) {
+        cpp.ifStmt(
+            cond = translateExpression(stmt.test),
+            ifTrue = cpp.blockStmt(translateStatement(stmt.consequent)),
+            ifFalse = stmt.alternate?.let { cpp.blockStmt(translateStatement(it)) },
+        )
+    }
+
     private fun translateLabeledStatement(stmt: TmpL.LabeledStatement): List<Cpp.Stmt> = cpp.pos(stmt) {
         buildList {
             // TODO Also some inner label for loop blocks in case labeled continue is needed.
@@ -419,6 +427,7 @@ class CppTranslator(
             is TmpL.BlockStatement -> translateBlockStatement(stmt)
             is TmpL.BreakStatement -> translateBreakStatement(stmt)
             is TmpL.ExpressionStatement -> translateExpressionStatement(stmt)
+            is TmpL.IfStatement -> translateIfStatement(stmt)
             is TmpL.LabeledStatement -> return translateLabeledStatement(stmt)
             is TmpL.LocalDeclaration -> return translateLocalDeclaration(stmt)
             is TmpL.ModuleInitFailed -> translateModuleInitFailed(stmt)
@@ -461,7 +470,10 @@ class CppTranslator(
 
     private fun translateType(type: TmpL.Type): Cpp.Type = run {
         when (type) {
-            is TmpL.NominalType -> translateTypeDefinition(type.typeName.sourceDefinition)
+            is TmpL.NominalType -> {
+                val args = type.params.map { translateType(it) }
+                translateTypeDefinition(type.typeName.sourceDefinition, args = args)
+            }
             is TmpL.TypeUnion if type.types.size == 2 && type.types.any { it is TmpL.BubbleType } -> {
                 val mainType = type.types.first { it !is TmpL.BubbleType }
                 cpp.template(cpp.name("temper", "core", "Expected"), translateType(mainType))
@@ -476,19 +488,39 @@ class CppTranslator(
         def
     }
 
-    private fun translateTypeDefinition(def: TypeDefinition): Cpp.Type = run {
+    private fun translateTypeDefinition(
+        def: TypeDefinition,
+        args: List<Cpp.Type> = listOf(),
+    ): Cpp.Type = run {
+        var const = false
         when (def.sourceLocation) {
             ImplicitsCodeLocation -> when (def) {
                 WellKnownTypes.booleanTypeDefinition -> return cpp.singleName(CppName("bool", allowKey = true))
                 WellKnownTypes.intTypeDefinition -> return cpp.singleName("int32_t")
                 WellKnownTypes.int64TypeDefinition -> return cpp.singleName("int64_t")
+                WellKnownTypes.listTypeDefinition -> {
+                    const = true
+                    cpp.name("std", "vector")
+                }
                 WellKnownTypes.stringTypeDefinition -> cpp.name("std", "string")
                 WellKnownTypes.voidTypeDefinition -> return cpp.singleName(CppName("void", allowKey = true))
                 else -> cpp.singleName("TODO")
             }
             // TODO Namespacing.
             else -> translateName(def.name)
-        }.let { cpp.template(cpp.name(TEMPER_CORE_NAMESPACE, "Shared"), it) }
+        }.let { base ->
+            when {
+                args.isEmpty() -> base
+                else -> cpp.template(base, args)
+            }
+        }.let { templated ->
+            when {
+                const -> cpp.const(templated)
+                else -> templated
+            }
+        }.let { constified ->
+            cpp.template(cpp.name(TEMPER_CORE_NAMESPACE, "Shared"), constified)
+        }
     }
 
     private fun translateValueReference(expr: TmpL.ValueReference): Cpp.Expr = cpp.pos(expr) {

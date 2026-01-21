@@ -243,6 +243,61 @@ class CppBackendTest {
             |}
         """.trimMargin(),
     )
+
+    @Test
+    fun listEmpty() = assertGeneratedCode(
+        inputs = inputFileMapFromJson(
+            """
+                |{
+                |  hi.temper: ```
+                |    let f(b: List<Int>): Void {
+                |      if (b.isEmpty) {
+                |        console.log("empty")
+                |      } else {
+                |        console.log("not empty")
+                |      }
+                |    };
+                |    f([2, 3]);
+                |    f([]);
+                |    ```,
+                |}
+            """.trimMargin(),
+        ),
+        want = """
+            |{
+            |  cpp03: {
+            |    "my-test-library": {
+            |      "my-test-library.cpp": {
+            |        content: ```
+            |          #include <temper-core/core.hpp>
+            |          namespace my_test_library {
+            |            void f__0(temper::core::Shared<std::vector<int32_t> const> b) {
+            |              if(b->empty()) {
+            |                temper::core::log(temper::core::shared<std::string>("empty", 5));
+            |              }else {
+            |                temper::core::log(temper::core::shared<std::string>("not empty", 9));
+            |              }
+            |            }
+            |            namespace {
+            |              struct _Init0 {
+            |                _Init0() {
+            |                  f__0(temper::core::Listify<int32_t>(2).add(2).add(3).to_list());
+            |                  f__0(temper::core::Listify<int32_t>(0).to_list());
+            |                }
+            |              };
+            |              _Init0 _init0;
+            |            }
+            |          }
+            |
+            |          ```
+            |      },
+            |      "my-test-library.cpp.map": "__DO_NOT_CARE__",
+            |      "main.cpp": "__DO_NOT_CARE__",
+            |    },
+            |  },
+            |}
+        """.trimMargin(),
+    )
 }
 
 private fun assertGeneratedCode(

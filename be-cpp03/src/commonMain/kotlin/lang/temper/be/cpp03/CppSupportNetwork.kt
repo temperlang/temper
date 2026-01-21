@@ -177,6 +177,28 @@ internal class Infix(
     )
 }
 
+internal class MethodCall(
+    val name: String,
+    connectedNames: List<String>,
+    builtinOperatorId: BuiltinOperatorId? = null,
+) : CppInlineSupportCode(connectedNames, builtinOperatorId) {
+    override fun inlineToTree(
+        arguments: List<TypedArg<Cpp.Tree>>,
+        returnType: Type2,
+        translator: CppTranslator,
+        cpp: CppBuilder,
+    ): Cpp.Tree = run {
+        cpp.callExpr(
+            cpp.binaryExpr(
+                arguments.first().expr as Cpp.Expr,
+                Cpp.BinaryOp(cpp.pos, BinaryOpEnum.Arrow),
+                cpp.singleName(name),
+            ),
+            arguments.subListToEnd(1).map { it.expr as Cpp.Expr },
+        )
+    }
+}
+
 internal object ConsoleLog : CppInlineSupportCode("Console::log") {
     override fun inlineToTree(
         arguments: List<TypedArg<Cpp.Tree>>,
@@ -223,7 +245,7 @@ private object Listify : CppInlineSupportCode("Listify") {
                 arg.expr as Cpp.Expr,
             )
         }
-        cpp.callExpr(cpp.memberExpr(listify, cpp.singleName("build")))
+        cpp.callExpr(cpp.memberExpr(listify, cpp.singleName("to_list")))
     }
 }
 
@@ -245,6 +267,8 @@ private val int32ToInt64 = FunctionCall("int64_t", listOf("Int32::toInt64"), nam
 private val int64ToInt32Unsafe = FunctionCall("int32_t", listOf("Int64::toInt32Unsafe"), namespace = null)
 private val leGeneric = Infix("LeGeneric", BinaryOpEnum.Le, BuiltinOperatorId.LeGeneric)
 private val leIntInt = Infix("LeIntInt", BinaryOpEnum.Le, BuiltinOperatorId.LeIntInt)
+private val listedTypes = listOf("Listed", "List", "ListBuilder")
+private val listedIsEmpty = MethodCall("empty", listedTypes.map { "$it::isEmpty" })
 private val ltGeneric = Infix("LtGeneric", BinaryOpEnum.Lt, BuiltinOperatorId.LtGeneric)
 private val ltIntInt = Infix("LtIntInt", BinaryOpEnum.Lt, BuiltinOperatorId.LtIntInt)
 private val minusInt = FunctionCall("neg", listOf("MinusInt"), BuiltinOperatorId.MinusInt)
@@ -266,6 +290,7 @@ private val connectedReferences = listOf(
     intMin,
     int32ToInt64,
     int64ToInt32Unsafe,
+    listedIsEmpty,
     toInt32,
     toInt64,
     toString,
