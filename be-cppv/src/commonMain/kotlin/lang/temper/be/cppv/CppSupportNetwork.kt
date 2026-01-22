@@ -272,7 +272,7 @@ private val neGeneric = Infix("NeGeneric", BinaryOpEnum.Ne, BuiltinOperatorId.Ne
 private val neIntInt = Infix("NeIntInt", BinaryOpEnum.Ne, BuiltinOperatorId.NeIntInt)
 private val plusIntInt = FunctionCall("add", listOf("PlusIntInt"), BuiltinOperatorId.PlusIntInt)
 private val timesIntInt = FunctionCall("mul", listOf("TimesIntInt"), BuiltinOperatorId.TimesIntInt)
-private val toString = FunctionCall("toString", listOf("Int32::toString", "Int64::toString"))
+private val toString = FunctionCall("to_string", listOf("Int32::toString", "Int64::toString"))
 private val toInt32 = FunctionCall("to_int32", listOf("Int64::toInt32", "String::toInt32"))
 private val toInt64 = FunctionCall("to_int64", listOf("String::toInt64"))
 

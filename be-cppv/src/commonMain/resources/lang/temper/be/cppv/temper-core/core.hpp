@@ -34,7 +34,7 @@ void log(const Shared<std::string>& message) {
 }
 
 template<class T>
-String toString(const T& item) {
+String to_string(const T& item) {
   std::ostringstream ss;
   ss << item;
   return shared<std::string>(ss.str());
