@@ -8,9 +8,6 @@ import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.ResolvedParsedName
 import lang.temper.name.identifiers.IdentStyle
 
-fun CppBuilder.makeShared(type: Cpp.Type) =
-    template(name(TEMPER_CORE_NAMESPACE, "shared"), type)
-
 fun String.dashToSnake() = IdentStyle.Dash.convertTo(IdentStyle.Snake, this)
 
 fun String.utf8Length(): Int = run {

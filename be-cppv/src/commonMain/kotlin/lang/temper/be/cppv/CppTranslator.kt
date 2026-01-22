@@ -28,7 +28,7 @@ open class CppTranslator(
     private val module: TmpL.Module,
     cppNames: CppNames,
 ) {
-    internal val cpp = CppBuilder(cppNames)
+    val cpp = CppBuilder(cppNames)
 
 //    private val headerGlobals = mutableListOf<Cpp.Global>()
     private val decls = mutableMapOf<ResolvedName, DeclInfo>()
@@ -235,9 +235,8 @@ open class CppTranslator(
         } ?: cpp.literal("TODO: $callable")
     }
 
-    private fun translateConstructorReference(ref: TmpL.ConstructorReference) = cpp.pos(ref) {
-        cpp.makeShared(translateName(ref.typeName.sourceDefinition.name))
-    }
+    private fun translateConstructorReference(ref: TmpL.ConstructorReference) =
+        sharedValue(translateName(ref.typeName.sourceDefinition.name))
 
     private fun translateDotName(name: TmpL.DotName): Cpp.SingleName = cpp.pos(name) {
         cpp.singleName(name.dotNameText)
@@ -502,7 +501,10 @@ open class CppTranslator(
                     const = true
                     cpp.name("std", "vector")
                 }
-                WellKnownTypes.stringTypeDefinition -> cpp.name("std", "string")
+                WellKnownTypes.stringTypeDefinition -> {
+                    const = true
+                    cpp.name("std", "string")
+                }
                 WellKnownTypes.voidTypeDefinition -> return cpp.singleName(CppName("void", allowKey = true))
                 else -> cpp.singleName("TODO")
             }
@@ -519,7 +521,7 @@ open class CppTranslator(
                 else -> templated
             }
         }.let { constified ->
-            cpp.template(cpp.name(TEMPER_CORE_NAMESPACE, "Shared"), constified)
+            sharedType(constified)
         }
     }
 
@@ -543,7 +545,7 @@ open class CppTranslator(
             TString -> TString.unpack(value).let { string ->
                 string.codePoints().count()
                 cpp.callExpr(
-                    cpp.makeShared(cpp.name("std", "string")),
+                    sharedValue(cpp.const(cpp.name("std", "string"))),
                     // TODO Ensure we escape out string literals to utf8.
                     cpp.literal(string),
                     cpp.literal(string.utf8Length()),
@@ -565,6 +567,15 @@ open class CppTranslator(
             null -> cpp.literal("fail")
             else -> cpp.callExpr(cpp.memberExpr(fail, cpp.singleName("error")))
         }
+    }
+
+    protected open fun sharedType(type: Cpp.Type): Cpp.Type = cpp.pos(type.pos) {
+        cpp.template(cpp.name("std", "shared_ptr"), type)
+    }
+
+    /** TODO Provide an expr version of templating in cpp out grammar. */
+    protected open fun sharedValue(expr: Cpp.Type): Cpp.Expr = cpp.pos(expr.pos) {
+        cpp.template(cpp.name("std", "make_shared"), expr)
     }
 }
 

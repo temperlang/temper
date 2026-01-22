@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <stdint.h>
@@ -12,7 +13,6 @@
 #include <vector>
 #include "expected.hpp"
 #include "int.hpp"
-#include "shared.hpp"
 
 namespace temper {
 namespace core {
@@ -29,7 +29,7 @@ void log(const std::string& message) {
   std::cout << message << std::endl;
 }
 
-void log(const Shared<std::string>& message) {
+void log(const String& message) {
   log(*message);
 }
 
@@ -37,7 +37,7 @@ template<class T>
 String to_string(const T& item) {
   std::ostringstream ss;
   ss << item;
-  return shared<std::string>(ss.str());
+  return std::make_shared<const std::string>(ss.str());
 }
 
 String cat(String strings[], int32_t n) {
@@ -45,7 +45,7 @@ String cat(String strings[], int32_t n) {
   for (int32_t i = 0; i < n; i += 1) {
     ss << *strings[i];
   }
-  return shared<std::string>(ss.str());
+  return std::make_shared<const std::string>(ss.str());
 }
 
 namespace impl {
@@ -64,7 +64,7 @@ template<class... Args>
 String cat(Args... args) {
   std::stringstream ss;
   impl::cat(ss, args...);
-  return shared<std::string>(ss.str());
+  return std::make_shared<const std::string>(ss.str());
 }
 
 } // namespace core

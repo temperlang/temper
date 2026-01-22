@@ -32,16 +32,16 @@ class CppBackendTest {
             |          #include <temper-core/core.hpp>
             |          namespace my_test_library {
             |            struct C {
-            |              temper::core::Shared<std::string> place();
+            |              std::shared_ptr<std::string const> place();
             |            };
-            |            temper::core::Shared<std::string> C::place() {
-            |              return temper::core::shared<std::string>("Hilo, HI", 8);
+            |            std::shared_ptr<std::string const> C::place() {
+            |              return std::make_shared<std::string const>("Hilo, HI", 8);
             |            }
-            |            temper::core::Shared<C> c = temper::core::shared<C>();
+            |            std::shared_ptr<C> c = std::make_shared<C>();
             |            namespace {
             |              struct _Init0 {
             |                _Init0() {
-            |                  temper::core::log(temper::core::cat(temper::core::shared<std::string>("Hello, ", 7), c->place(), temper::core::shared<std::string>("!", 1)));
+            |                  temper::core::log(temper::core::cat(std::make_shared<std::string const>("Hello, ", 7), c->place(), std::make_shared<std::string const>("!", 1)));
             |                }
             |              };
             |              _Init0 _init0;
@@ -220,14 +220,14 @@ class CppBackendTest {
             |        content: ```
             |          #include <temper-core/core.hpp>
             |          namespace my_test_library {
-            |            void greet(temper::core::Shared<std::string> name) {
-            |              temper::core::log(temper::core::shared<std::string>("Hi:", 3));
+            |            void greet(std::shared_ptr<std::string const> name) {
+            |              temper::core::log(std::make_shared<std::string const>("Hi:", 3));
             |              temper::core::log(name);
             |            }
             |            namespace {
             |              struct _Init0 {
             |                _Init0() {
-            |                  greet(temper::core::shared<std::string>("world", 5));
+            |                  greet(std::make_shared<std::string const>("world", 5));
             |                }
             |              };
             |              _Init0 _init0;
@@ -271,11 +271,11 @@ class CppBackendTest {
             |        content: ```
             |          #include <temper-core/core.hpp>
             |          namespace my_test_library {
-            |            void f__0(temper::core::Shared<std::vector<int32_t> const> b) {
+            |            void f__0(std::shared_ptr<std::vector<int32_t> const> b) {
             |              if(b->empty()) {
-            |                temper::core::log(temper::core::shared<std::string>("empty", 5));
+            |                temper::core::log(std::make_shared<std::string const>("empty", 5));
             |              }else {
-            |                temper::core::log(temper::core::shared<std::string>("not empty", 9));
+            |                temper::core::log(std::make_shared<std::string const>("not empty", 9));
             |              }
             |            }
             |            namespace {

@@ -6,10 +6,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "expected.hpp"
-#include "shared.hpp"
 
 namespace temper {
 namespace core {
+
+// Not an ideal place for this but a convenient one.
+using String = std::shared_ptr<const std::string>;
 
 // Explicitly support twos-complement signed wrapping arithmetic in c++03.
 
