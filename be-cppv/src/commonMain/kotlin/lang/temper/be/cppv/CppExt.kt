@@ -1,7 +1,5 @@
 package lang.temper.be.cppv
 
-import lang.temper.be.cpp.Cpp
-import lang.temper.be.cpp.CppBuilder
 import lang.temper.be.tmpl.TmpL
 import lang.temper.common.utf8ByteLength
 import lang.temper.name.ImplicitsCodeLocation
