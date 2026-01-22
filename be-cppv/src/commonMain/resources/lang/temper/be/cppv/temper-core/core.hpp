@@ -8,12 +8,21 @@
 #include <stdexcept>
 #include <stdint.h>
 #include <string>
+#include <utility>
+#include <vector>
 #include "expected.hpp"
 #include "int.hpp"
 #include "shared.hpp"
 
 namespace temper {
 namespace core {
+
+template<typename T, typename... Args>
+std::shared_ptr<const std::vector<T>> listify(Args&&... args) {
+  return std::make_shared<const std::vector<T>>(
+    std::vector<T>{std::forward<Args>(args)...}
+  );
+}
 
 void log(const std::string& message) {
   // Flush on purpose.

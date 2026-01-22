@@ -235,17 +235,10 @@ private object Listify : CppInlineSupportCode("Listify") {
     ): Cpp.Tree = run {
         val itemType = returnType.bindings.firstOrNull() ?: return cpp.literal("TODO $returnType")
         val itemTypeCpp = translator.translateType(itemType)
-        var listify = cpp.callExpr(
-            cpp.template(cpp.name("temper", "core", "Listify"), itemTypeCpp),
-            cpp.literal(arguments.size),
+        cpp.callExpr(
+            cpp.template(cpp.name("temper", "core", "listify"), itemTypeCpp),
+            arguments.map { it.expr as Cpp.Expr },
         )
-        for (arg in arguments) {
-            listify = cpp.callExpr(
-                cpp.memberExpr(listify, cpp.singleName("add")),
-                arg.expr as Cpp.Expr,
-            )
-        }
-        cpp.callExpr(cpp.memberExpr(listify, cpp.singleName("to_list")))
     }
 }
 

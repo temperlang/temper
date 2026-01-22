@@ -281,8 +281,8 @@ class CppBackendTest {
             |            namespace {
             |              struct _Init0 {
             |                _Init0() {
-            |                  f__0(temper::core::Listify<int32_t>(2).add(2).add(3).to_list());
-            |                  f__0(temper::core::Listify<int32_t>(0).to_list());
+            |                  f__0(temper::core::listify<int32_t>(2, 3));
+            |                  f__0(temper::core::listify<int32_t>());
             |                }
             |              };
             |              _Init0 _init0;
