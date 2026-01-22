@@ -17,13 +17,6 @@
 namespace temper {
 namespace core {
 
-template<typename T, typename... Args>
-std::shared_ptr<const std::vector<T>> listify(Args&&... args) {
-  return std::make_shared<const std::vector<T>>(
-    std::vector<T>{std::forward<Args>(args)...}
-  );
-}
-
 void log(const std::string& message) {
   // Flush on purpose.
   std::cout << message << std::endl;
@@ -37,15 +30,16 @@ template<class T>
 String to_string(const T& item) {
   std::ostringstream ss;
   ss << item;
-  return std::make_shared<const std::string>(ss.str());
+  return shared<const std::string>(ss.str());
 }
 
-String cat(String strings[], int32_t n) {
-  std::ostringstream ss;
-  for (int32_t i = 0; i < n; i += 1) {
-    ss << *strings[i];
-  }
-  return std::make_shared<const std::string>(ss.str());
+#if __cplusplus >= 201103L
+
+template<typename T, typename... Args>
+std::shared_ptr<const std::vector<T>> listify(Args&&... args) {
+  return std::make_shared<const std::vector<T>>(
+    std::vector<T>{std::forward<Args>(args)...}
+  );
 }
 
 namespace impl {
@@ -66,6 +60,8 @@ String cat(Args... args) {
   impl::cat(ss, args...);
   return std::make_shared<const std::string>(ss.str());
 }
+
+#endif // __cplusplus >= 201103L
 
 } // namespace core
 } // namespace temper

@@ -3,51 +3,32 @@
 
 #include <cctype>
 #include <cerrno>
+#include <limits>
 #include <stdint.h>
 #include <stdlib.h>
 #include "expected.hpp"
+#include "shared.hpp"
 
 namespace temper {
 namespace core {
 
-// Not an ideal place for this but a convenient one.
-using String = std::shared_ptr<const std::string>;
+// Explicitly support twos-complement signed wrapping arithmetic.
 
-// Explicitly support twos-complement signed wrapping arithmetic in c++03.
-
-const int32_t int32_max = 0x7FFFFFFF;
-const int32_t int32_min = -0x7FFFFFFF - 1;
-const uint32_t uint32_max = 0xFFFFFFFFu;
 const uint32_t uint32_half = 0x80000000u;
-
-const int64_t int64_max = 0x7FFFFFFFFFFFFFFF;
-const int64_t int64_min = -0x7FFFFFFFFFFFFFFF - 1;
-const uint64_t uint64_max = 0xFFFFFFFFFFFFFFFFu;
 const uint64_t uint64_half = 0x8000000000000000u;
-
-template<typename T>
-struct Limits;
-
-template<>
-struct Limits<int32_t> {
-  static const int32_t max = int32_max;
-  static const int32_t min = int32_min;
-};
-
-template<>
-struct Limits<int64_t> {
-  static const int64_t max = int64_max;
-  static const int64_t min = int64_min;
-};
 
 // Unsigned to signed is implementation-defined, if I read correctly.
 
 int32_t to_signed(uint32_t i) {
-  return i < uint32_half ? int32_t(i) : int32_t(i - uint32_half) + int32_min;
+  return i < uint32_half ?
+    int32_t(i) :
+    int32_t(i - uint32_half) + std::numeric_limits<int32_t>::min();
 }
 
 int64_t to_signed(uint64_t i) {
-  return i < uint64_half ? int64_t(i) : int64_t(i - uint64_half) + int64_min;
+  return i < uint64_half ?
+    int64_t(i) :
+    int64_t(i - uint64_half) + std::numeric_limits<int64_t>::min();
 }
 
 // Signed to unsigned respects modulo arithmetic, if I read correctly.
@@ -69,9 +50,9 @@ T add(T i, T j) {
 
 template<typename T>
 T div(T i, T j) {
-  if (j == T(-1) && i == Limits<T>::min) {
+  if (j == T(-1) && i == std::numeric_limits<T>::min()) {
     // The one risk of overflow for signed division.
-    return Limits<T>::min;
+    return std::numeric_limits<T>::min();
   }
   return i / j;
 }
@@ -117,7 +98,10 @@ T neg(T i) {
 }
 
 Expected<int32_t> to_int32(int64_t i) {
-  if (i < int32_min || i > int32_max) {
+  if (
+    i < std::numeric_limits<int32_t>::min() ||
+    i > std::numeric_limits<int32_t>::max()
+  ) {
     return Unexpected("Int64::toInt32");
   }
   return Expected<int32_t>(int32_t(i));
@@ -128,7 +112,7 @@ namespace {
     if ('0' <= c && c <= '9') return c - '0';
     if ('a' <= c && c <= 'z') return c - 'a' + 10;
     if ('A' <= c && c <= 'Z') return c - 'A' + 10;
-    return uint64_max;
+    return std::numeric_limits<uint64_t>::max();
   }
 }
 

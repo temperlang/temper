@@ -96,6 +96,7 @@ class CppBackend(setup: BackendSetup<CppBackend>) : Backend<CppBackend>(Factory.
                 filePath("core.hpp"),
                 filePath("expected.hpp"),
                 filePath("int.hpp"),
+                filePath("shared.hpp"),
             )
 
         override fun make(setup: BackendSetup<CppBackend>) = CppBackend(setup)
