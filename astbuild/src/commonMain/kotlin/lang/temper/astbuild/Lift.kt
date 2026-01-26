@@ -23,6 +23,7 @@ import lang.temper.builtin.BuiltinFuns
 import lang.temper.common.Log
 import lang.temper.log.LogSink
 import lang.temper.log.Position
+import lang.temper.log.spanningPosition
 import lang.temper.name.TemperName
 import lang.temper.name.decodeName
 import lang.temper.value.BlockTree
@@ -90,18 +91,18 @@ private class Lift(
         is NamePart -> error("$content in value")
     }
 
-    private fun makeLeaf(t: LeafTreeType, part: LeafAstPart): Tree = when (t) {
+    private fun makeLeaf(t: LeafTreeType, part: LeafAstPart, pos: Position): Tree = when (t) {
         LeafTreeType.LeftName -> when (val name = makeName(part)) {
             null -> astPartToErrorTree(part)
-            else -> LeftNameLeaf(document, pos = part.pos, content = name)
+            else -> LeftNameLeaf(document, pos = pos, content = name)
         }
         LeafTreeType.RightName -> when (val name = makeName(part)) {
             null -> astPartToErrorTree(part)
-            else -> RightNameLeaf(document, pos = part.pos, content = name)
+            else -> RightNameLeaf(document, pos = pos, content = name)
         }
         LeafTreeType.Stay -> throw IllegalArgumentException("stay's are not a result of parsing")
         LeafTreeType.Value -> when (val result = makeValue(part)) {
-            is Value<*> -> ValueLeaf(document, pos = part.pos, content = result)
+            is Value<*> -> ValueLeaf(document, pos = pos, content = result)
             is Fail -> astPartToErrorTree(part)
         }
     }
@@ -135,10 +136,12 @@ private class Lift(
                 if (i + 1 < n && astParts[i + 1] is LeafAstPart) {
                     i += 1
                     val leaf = astParts[i] as LeafAstPart
-                    make = { t, _ ->
+                    make = { t, right ->
                         val tt = t.treeType
                         if (tt is LeafTreeType) {
-                            makeLeaf(tt, leaf)
+                            // Include the position of quotation marks in string value leaf positions
+                            val leafPos = listOf(part.pos, right).spanningPosition(right)
+                            makeLeaf(tt, leaf, leafPos)
                         } else {
                             null
                         }

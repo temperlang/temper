@@ -1,12 +1,9 @@
-package lang.temper.interp.importExport
+package lang.temper.env
 
+import lang.temper.common.AtomicCounter
 import lang.temper.common.structure.Hints
 import lang.temper.common.structure.StructureSink
 import lang.temper.common.structure.Structured
-import lang.temper.env.Constness
-import lang.temper.env.DeclarationMetadata
-import lang.temper.env.ReferentBitSet
-import lang.temper.env.ReferentSource
 import lang.temper.log.Position
 import lang.temper.name.ExportedName
 import lang.temper.name.ModuleLocation
@@ -16,7 +13,7 @@ import lang.temper.value.StaySink
 import lang.temper.value.TypeInferences
 import lang.temper.value.Value
 
-/** That which may export [ExportedName]s to [Importer]s. */
+/** That which may export [ExportedName]s to importers. */
 interface Exporter {
     val loc: ModuleLocation
     val exports: List<Export>?
@@ -74,4 +71,8 @@ data class Export(
         }
         key("pos", Hints.u) { value(position) }
     }
+}
+
+abstract class ExportingNamingContext(counter: AtomicCounter) : BindingNamingContext(counter) {
+    abstract val exporter: Exporter
 }

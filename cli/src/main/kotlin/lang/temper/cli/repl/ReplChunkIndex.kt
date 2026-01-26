@@ -79,11 +79,7 @@ internal data class ReplChunkIndex(
         private const val LIBRARY_ROOT_SEGMENT_COUNT = 1 // -repl//i0123/
 
         val libraryConfiguration = LibraryConfiguration(
-            libraryName = DashedIdentifier(
-                buildString {
-                    append("interactive")
-                },
-            ),
+            libraryName = DashedIdentifier("interactive"),
             libraryRoot = FilePath(listOf(replFilePathSegment), isDir = true),
             supportedBackendList = emptyList(), // tentative
             classifyTemperSource = { StandaloneLanguageConfig },

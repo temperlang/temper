@@ -22,7 +22,6 @@ import org.commonmark.node.HtmlBlock
 import org.commonmark.node.Node
 import java.io.IOException
 import java.nio.file.Files
-import kotlin.streams.toList
 
 internal const val PROJECT_GITHUB_URL = "https://github.com/temperlang/temper"
 
@@ -50,8 +49,8 @@ internal sealed interface RevMdChunk : Structured, MarkdownConvertible
 
 /**
  * A tree structure that is very close to the generated Markdown
- * but which also reflects the nesting structure of snippets and
- * which includes transforming nodes that fix indentation and
+ * but which also reflects the nesting structure of snippets.
+ * It includes transforming nodes that fix indentation and
  * header levels so that Markdown from snippets fits well into the
  * Markdown into which it's inserted.
  */
@@ -59,7 +58,7 @@ internal sealed class Nested : MarkdownConvertible, MdChunk {
 
     abstract val children: List<Nested>
 
-    /** Records the position of something that couldn't be converted to valid markdown. */
+    /** Records the position of something that couldn't be converted to valid Markdown. */
     data class Invalid(val errorMessage: String) : Nested() {
         override val children: List<Nested> get() = emptyList()
 
@@ -153,7 +152,7 @@ internal sealed class Nested : MarkdownConvertible, MdChunk {
     }
 
     /**
-     * Strip any over-arching heading from a chunk of markdown.
+     * Strip any over-arching heading from a chunk of Markdown.
      *
      * For example, if [content] starts with a header that has a
      * lower level (is more important than) any other header, then
@@ -573,17 +572,17 @@ internal sealed class Reversed : MarkdownConvertible, RevMdChunk {
 }
 
 /**
- * Information about markdown files under [UserDocFilesAndDirectories.userDocRoot] and
+ * Information about Markdown files under [UserDocFilesAndDirectories.userDocRoot] and
  * how they're related to source files including snippets and [SkeletalDocsFiles].
  */
 internal object UserDocsContent : AbstractUserDocsContent() {
 
-    /** Regenerate markdown files from templates. */
+    /** Regenerate Markdown files from templates. */
     fun generate(
         problemTracker: ProblemTracker,
-    ): Unit = UserDocFilesAndDirectories.run {
+    ): List<MarkdownContent> = UserDocFilesAndDirectories.run {
         val console = problemTracker.console
-        // Copy snippets that are neither markdown nor intermediate to a place available to `mkdocs`
+        // Copy snippets that are neither Markdown nor intermediate to a place available to `mkdocs`
         console.groupSoft("Copying snippets to $unInlinedSnippetsRoot") {
             for (snippet in Snippets.snippetList) {
                 if (snippet in snippetsAvailableAsFiles) {
@@ -598,7 +597,8 @@ internal object UserDocsContent : AbstractUserDocsContent() {
         }
 
         // Do insertions and rewrite references.
-        console.groupSoft("Post-processing markdown files") {
+        val generatedMarkdowns = mutableListOf<MarkdownContent>()
+        console.groupSoft("Post-processing Markdown files") {
             for ((relFilePath, markdownContent) in templateFiles) {
                 val nested = extractNestedForward(markdownContent, relFilePath)
                 val targetFilePath = userDocRoot.resolve(relFilePath)
@@ -607,8 +607,11 @@ internal object UserDocsContent : AbstractUserDocsContent() {
                     this.markdownContent
                 }
                 Files.writeString(targetFilePath, generatedMarkdown.fileContent)
+                generatedMarkdowns.add(generatedMarkdown)
             }
         }
+
+        generatedMarkdowns.toList()
     }
 
     /**
@@ -1025,7 +1028,7 @@ internal abstract class AbstractUserDocsContent {
                                         matchingSnippetId
                                     }; it has not been inlined into${
                                         ""
-                                    } markdown nor is it available as a file"
+                                    } Markdown nor is it available as a file"
                             }
                         }
                     }
@@ -1165,7 +1168,7 @@ internal abstract class AbstractUserDocsContent {
  *
  *     <!-- /snippet -->
  *
- * but our boundaries in rendered markdown are more robust if we include the snippet ID
+ * but our boundaries in rendered Markdown are more robust if we include the snippet ID
  * this:
  *
  *     <!-- /snippet: my/snippet -->

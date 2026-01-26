@@ -11,6 +11,7 @@ import lang.temper.common.compatReversed
 import lang.temper.common.console
 import lang.temper.common.partiallyOrder
 import lang.temper.common.putMultiList
+import lang.temper.env.Exporter
 import lang.temper.env.InterpMode
 import lang.temper.format.ConsoleBackedContextualLogSink
 import lang.temper.frontend.Module
@@ -20,7 +21,6 @@ import lang.temper.fs.FileFilterRules
 import lang.temper.fs.FileSnapshot
 import lang.temper.fs.FileSystemSnapshot
 import lang.temper.fs.FilteringFileSystemSnapshot
-import lang.temper.interp.importExport.Exporter
 import lang.temper.interp.importExport.ImportMacro
 import lang.temper.interp.importExport.Importer
 import lang.temper.interp.importExport.LOCAL_FILE_SPECIFIER_PREFIX

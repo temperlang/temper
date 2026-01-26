@@ -7,13 +7,13 @@ import lang.temper.common.forEachFiltering
 import lang.temper.common.putMultiList
 import lang.temper.common.putMultiSet
 import lang.temper.common.soleElementOrNull
+import lang.temper.env.Export
 import lang.temper.frontend.ClassDefinitionMacro
 import lang.temper.frontend.InterfaceDefinitionMacro
 import lang.temper.frontend.Module
 import lang.temper.frontend.StagingFlags
 import lang.temper.frontend.TypeDefinitionMacro
 import lang.temper.frontend.syntax.isExtendsCall
-import lang.temper.interp.importExport.Export
 import lang.temper.interp.importExport.Importer
 import lang.temper.interp.importExport.STANDARD_LIBRARY_FILEPATH
 import lang.temper.lexer.Genre

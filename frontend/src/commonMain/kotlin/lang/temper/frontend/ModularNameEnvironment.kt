@@ -5,7 +5,7 @@ import lang.temper.env.DeclarationBinding
 import lang.temper.env.DeclarationBits
 import lang.temper.env.DeclarationMetadata
 import lang.temper.env.Environment
-import lang.temper.interp.importExport.Export
+import lang.temper.env.Export
 import lang.temper.log.MessageTemplate
 import lang.temper.name.ExportedName
 import lang.temper.name.ModularName

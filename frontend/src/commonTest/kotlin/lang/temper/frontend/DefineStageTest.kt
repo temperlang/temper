@@ -198,6 +198,31 @@ class DefineStageTest {
     )
 
     @Test
+    fun charTag() = assertModuleAtStage(
+        stage = Stage.Define,
+        input = """
+            |char'-'
+        """.trimMargin(),
+        want = """
+            |{
+            |  import: {
+            |    body: ```
+            |     stringExpr(char, true, "-")
+            |
+            |     ```,
+            |  },
+            |  define: {
+            |    body: ```
+            |     45
+            |
+            |     ```,
+            |  },
+            |}
+        """.trimMargin(),
+        moduleResultNeeded = true,
+    )
+
+    @Test
     fun internalVersusExternalBackedPropertyAccess() = assertModuleAtStage(
         stage = Stage.Define,
         input = """
@@ -2119,12 +2144,12 @@ class DefineStageTest {
                 |    body: ```
                 |          @stay @imported(\(`std//testing/`.runTestCases)) @connected("::runTestCases") let runTestCases__0;
                 |          runTestCases__0 = `std//testing/`.runTestCases;
-                |          @stay @imported(\(`std//testing/`.Test)) let Test__0;
+                |          @implicit @imported(\(`std//testing/`.Test)) let Test__0;
                 |          Test__0 = type (Test);
-                |          @implicit let Test__1;
-                |          Test__1 = type (Test);
-                |          @implicit @fn let runTestCases__1;
+                |          @implicit @imported(\(`std//testing/`.runTestCases)) @fn let runTestCases__1;
                 |          runTestCases__1 = (fn runTestCases);
+                |          @stay @imported(\(`std//testing/`.Test)) let Test__1;
+                |          Test__1 = type (Test);
                 |          @fn @test("- a test case -") let aTestCase__0;
                 |          aTestCase__0 = (@stay fn aTestCase(test#0: Test) /* return__0 */: (Void | Bubble) {});
                 |          @stay let `test//`.temper__testReport;
@@ -2459,12 +2484,12 @@ class DefineStageTest {
                 """b = r3""",
                 // And we have a brief interpolation representation from Grammar that's easyish to build.
                 // It gets changed later.
-                """r4 = rgx(interpolate("a.", \interpolate, b, "*"))""",
-                """r5 = rgx(interpolate("a", \interpolate, cat("."), \interpolate, b, "*?"))""",
-                """r6 = rgx(interpolate("a", \interpolate, cat("."), "*"))""",
-                """r7 = new Sequence(list(new CodePoints(cat("a")), Dot, new Repeat(new CodePoints(cat("b")), 0, null))).compiled()""",
-                """s = cat("[a]")""",
-                """r8 = rgx(interpolate(".", \interpolate, s, "."))""",
+                """r4 = stringExpr(rgx, true, "a.", \interpolate, b, "*")""",
+                """r5 = stringExpr(rgx, true, "a", \interpolate, ".", \interpolate, b, "*?")""",
+                """r6 = stringExpr(rgx, true, "a", \interpolate, ".", "*")""",
+                """r7 = new Sequence(list(new CodePoints("a"), Dot, new Repeat(new CodePoints("b"), 0, null))).compiled()""",
+                """s = "[a]"""",
+                """r8 = stringExpr(rgx, true, ".", \interpolate, s, ".")""",
             ).joinToString(", ")
         };
             |
@@ -2472,35 +2497,34 @@ class DefineStageTest {
             |  },
             |  disAmbiguate: {
             |    body: ```
-            |        @stay @imported(\(`std//regex/`.Sequence)) let Sequence__0 = `std//regex/`.Sequence, ${
+            |        @stay @imported(\(`std//regex/`.Sequence)) let Sequence__0 = type (Sequence), ${
             ""
-        }@imported(\(`std//regex/`.CodePoints)) CodePoints__0 = `std//regex/`.CodePoints, ${
+        }@imported(\(`std//regex/`.CodePoints)) CodePoints__0 = type (CodePoints), ${
             ""
         }@imported(\(`std//regex/`.Dot)) Dot__0 = `std//regex/`.Dot, ${
             ""
-        }@imported(\(`std//regex/`.Repeat)) Repeat__0 = `std//regex/`.Repeat, ${
+        }@imported(\(`std//regex/`.Repeat)) Repeat__0 = type (Repeat), ${
             ""
         }@imported(\(`std//regex/`.End)) End__0 = `std//regex/`.End, ${
             listOf(
                 // r1 = rgx(list("a.b*"), list())
-                """r1 = new Sequence__0(list(new CodePoints__0("a"), Dot__0, new Repeat__0(new CodePoints__0("b"), 0, null, false))).compiled()""",
+                """r1 = do_bind_compiled(new Sequence(list(new CodePoints("a"), Dot__0, new Repeat(new CodePoints("b"), 0, null, false))))()""",
                 // r2 = rgx(list("a.\u{24}{b}*"), list())
-                """r2 = new Sequence__0(list(new CodePoints__0("a"), Dot__0, End__0, new CodePoints__0("{b"), new Repeat__0(new CodePoints__0("}"), 0, null, false))).compiled()""",
+                """r2 = do_bind_compiled(new Sequence(list(new CodePoints("a"), Dot__0, End__0, new CodePoints("{b"), new Repeat(new CodePoints("}"), 0, null, false))))()""",
                 """r3 = rgx(list("(?/g)a.b*"), list())""",
                 """b = r3""",
                 // Here, r4 and r5 interpolate regex objects, but we don't support those yet.
                 // These are the other two syntax errors.
-                """r4 = rgx(list("a.", "*"), list(b))""",
-                """r5 = rgx(list("a", "", "*?"), list(".", b))""",
+                """r4 = stringExpr(rgx, true, "a.", \interpolate, b, "*")""",
+                """r5 = stringExpr(rgx, true, "a", \interpolate, ".", \interpolate, b, "*?")""",
                 // But we do support interpolated string values already, so this one is ok.
                 // TODO Wrap stable string values in `new CodePoints` calls if we want to support runtime building.
-                // r6 = rgx(list("a", "*"), list("."))
-                """r6 = new Sequence__0(list(new CodePoints__0("a"), new Repeat__0(new CodePoints__0("."), 0, null, false))).compiled()""",
+                """r6 = stringExpr(rgx, true, "a", \interpolate, ".", "*")""",
                 // This one uses Sequence instead of Sequence__0 since it was hand-coded and
                 // remains unaffected by the auto-import used above.
                 """r7 = new Sequence(list(new CodePoints("a"), Dot, new Repeat(new CodePoints("b"), 0, null))).compiled()""",
                 """s = "[a]"""",
-                """r8 = rgx(list(".", "."), list(s))""",
+                """r8 = stringExpr(rgx, true, ".", \interpolate, s, ".")""",
             ).joinToString(", ")
         };
             |
@@ -2535,13 +2559,13 @@ class DefineStageTest {
             |        let r5__0;
             |        r5__0 = error (UnrecognizedToken);
             |        let r6__0;
-            |        r6__0 = do_bind_compiled(new Sequence(list(new CodePoints("a"), new Repeat(new CodePoints("."), 0, null, false))))();
+            |        r6__0 = do_bind_compiled(new Sequence__0(list(new CodePoints__0("a"), new Repeat__0(new CodePoints__0("."), 0, null, false))))();
             |        let r7__0;
             |        r7__0 = do_bind_compiled(new Sequence(list(new CodePoints("a"), Dot, new Repeat(new CodePoints("b"), 0, null))))();
             |        let s__0;
             |        s__0 = "[a]";
             |        let r8__0;
-            |        r8__0 = do_bind_compiled(new Sequence(list(Dot__0, new CodePoints("[a]"), Dot__0)))();
+            |        r8__0 = do_bind_compiled(new Sequence__0(list(Dot__0, new CodePoints__0("[a]"), Dot__0)))();
             |
             |        ```
             |  },

@@ -14,6 +14,8 @@ import lang.temper.common.structure.Structured
 import lang.temper.cst.CstComment
 import lang.temper.cst.CstInner
 import lang.temper.env.Environment
+import lang.temper.env.Export
+import lang.temper.env.Exporter
 import lang.temper.format.FilteringLogSink
 import lang.temper.format.FormattingLogSink
 import lang.temper.frontend.define.DefineStage
@@ -33,8 +35,6 @@ import lang.temper.frontend.syntax.SyntaxMacroStage
 import lang.temper.frontend.typestage.TypeStage
 import lang.temper.interp.EmptyEnvironment
 import lang.temper.interp.immutableEnvironment
-import lang.temper.interp.importExport.Export
-import lang.temper.interp.importExport.Exporter
 import lang.temper.interp.importExport.Importer
 import lang.temper.interp.importExport.STANDARD_LIBRARY_NAME
 import lang.temper.lexer.Genre

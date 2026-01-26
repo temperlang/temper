@@ -37,7 +37,7 @@ import lang.temper.value.ActualValues
 import lang.temper.value.CallTree
 import lang.temper.value.Fail
 import lang.temper.value.FunctionSpecies
-import lang.temper.value.Helpful
+import lang.temper.value.HelpInfo
 import lang.temper.value.InterpreterCallback
 import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
@@ -416,11 +416,21 @@ internal abstract class AbstractFnTypeFn(name: String) : BuiltinFun(name, null) 
     ): StaticType
 }
 
+private const val FN_TYPE_NAME = "fn"
+private const val FN_TYPE_HELP =
+    """`$FN_TYPE_NAME(ArgType1, ArgType2): ReturnType` is the type for a function of two arguments
+that are of type `ArgType1` and `ArgType2` respectively
+and which returns `ReturnType`."""
+
 /**
  * Constructs a reified function type from syntax like `fn (Int): Int` after the `fn` macro
  * has done its work pre-processing type formals and the like.
  */
-internal object FnTypeFn : AbstractFnTypeFn("fn"), Helpful {
+@HelpInfo(
+    FN_TYPE_HELP,
+    "Constructs a function type",
+)
+internal object FnTypeFn : AbstractFnTypeFn(FN_TYPE_NAME) {
     override fun constructType(
         typeFormals: List<TypeFormal>,
         valueFormals: List<FunctionType.ValueFormal>,
@@ -432,13 +442,6 @@ internal object FnTypeFn : AbstractFnTypeFn("fn"), Helpful {
         restValuesFormal = restValuesFormal,
         returnType = returnType ?: Types.void.type,
     )
-
-    override fun briefHelp(): String = "Constructs a function type"
-    override fun longHelp(): String = """
-        |`$name(ArgType1, ArgType2): ReturnType` is the type for a function of two arguments
-        |that are of type `ArgType1` and `ArgType2` respectively
-        |and which returns `ReturnType`.
-    """.trimMargin()
 }
 
 enum class RuntimeTypeOperation(val asLike: Boolean) {

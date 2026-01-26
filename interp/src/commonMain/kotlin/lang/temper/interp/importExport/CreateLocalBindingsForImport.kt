@@ -2,6 +2,8 @@ package lang.temper.interp.importExport
 
 import lang.temper.common.Log
 import lang.temper.common.ignore
+import lang.temper.env.Export
+import lang.temper.env.Exporter
 import lang.temper.interp.asCurliesCall
 import lang.temper.interp.convertToErrorNode
 import lang.temper.interp.errorNodeFor
@@ -346,9 +348,13 @@ fun createLocalBindingsForImport(
 
 private fun emplaceImportedMeta(declTree: DeclTree, name: ExportedName) {
     declTree.replace(declTree.size until declTree.size) {
-        V(declTree.pos.rightEdge, vImportedSymbol)
-        buildImportedValue(declTree.pos.rightEdge, name)
+        emplaceImportedMeta(declTree.pos.rightEdge, name)
     }
+}
+
+fun Planting.emplaceImportedMeta(pos: Position, name: ExportedName) {
+    V(pos, vImportedSymbol)
+    buildImportedValue(pos, name)
 }
 
 /** Returns a name wrapped in an escape to prevent interpreter evaluation. */

@@ -24,7 +24,7 @@ fun helpfulFromMetadataValue(v: Value<*>?): OccasionallyHelpful? {
         val longHelpText = TString.unpackOrNull(longHelpValue)
         val contextText = TString.unpackOrNull(contextValue)
         if (briefHelpText != null && longHelpText != null && contextText != null) {
-            return HelpfulFromMetadata(
+            return SimpleHelpful(
                 briefHelp = briefHelpText,
                 longHelp = longHelpText,
                 context = contextText,
@@ -34,7 +34,7 @@ fun helpfulFromMetadataValue(v: Value<*>?): OccasionallyHelpful? {
     return null
 }
 
-data class HelpfulFromMetadata(
+data class SimpleHelpful(
     val briefHelp: String,
     val longHelp: String,
     val context: String,

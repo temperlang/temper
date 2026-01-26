@@ -1,4 +1,4 @@
-<svg class="railroad-diagram" width="578" height="887" viewBox="0 0 578 887" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>Expr &#58;&#61; QuasiTree &#124; QuasiAst &#124; QuasiHole &#124; Jump &#124; AwaitReturnThrowYield &#124; Id &#124; TypeArgumentName &#124; SymbolLiteral &#124; List &#124; New &#124; Prefix &#124; SpecialDot &#124; RegularDot &#124; Call &#124; StringLiteral &#124; &#34;&#40;&#34; &#40;&#40;Disallowed&#58; &#40;&#41;&#41; TopLevelNoGarbageNoComment &#124; Garbage&#41; &#34;&#41;&#34; &#124; OfExpr &#124; Throws &#124; Infix &#124; Postfix &#124; Member &#124; Specialize &#124; Literal &#124; RegExp &#124; Obj &#124; RawBlock &#124; &#34;&#40;&#34; Garbage</title>
+<svg class="railroad-diagram" width="578" height="887" viewBox="0 0 578 887" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>Expr &#58;&#61; QuasiTree &#124; QuasiAst &#124; QuasiHole &#124; Jump &#124; AwaitReturnThrowYield &#124; Id &#124; TypeArgumentName &#124; SymbolLiteral &#124; List &#124; New &#124; Prefix &#124; SpecialDot &#124; RegularDot &#124; Call &#124; StringExpr &#124; &#34;&#40;&#34; &#40;&#40;Disallowed&#58; &#40;&#41;&#41; TopLevelNoGarbageNoComment &#124; Garbage&#41; &#34;&#41;&#34; &#124; OfExpr &#124; Throws &#124; Infix &#124; Postfix &#124; Member &#124; Specialize &#124; Literal &#124; RegExp &#124; Obj &#124; RawBlock &#124; &#34;&#40;&#34; Garbage</title>
 <style><![CDATA[
 svg.railroad-diagram {
     background-color: hsl(30,20%,95%);
@@ -152,8 +152,7 @@ svg.railroad-diagram g.diagram-text:hover path.diagram-text {
 <path d="M60 91h180.75"></path>
 <path d="M337.25 91h180.75"></path>
 <rect x="240.75" y="80" width="96.5" height="22"></rect>
-<a xlink:href="/reference/syntax/#syntax-for-quasihole"><text x="289" y="95">QuasiHole</text>
-</a>
+<text x="289" y="95">QuasiHole</text>
 </g>
 <path d="M518 91a10 10 0 0 1 10 10v310a10 10 0 0 0 10 10"></path>
 <path d="M40 421a10 10 0 0 0 10 -10v-340a10 10 0 0 1 10 -10"></path>
@@ -161,8 +160,7 @@ svg.railroad-diagram g.diagram-text:hover path.diagram-text {
 <path d="M60 61h185"></path>
 <path d="M333 61h185"></path>
 <rect x="245" y="50" width="88" height="22"></rect>
-<a xlink:href="/reference/syntax/#syntax-for-quasiast"><text x="289" y="65">QuasiAst</text>
-</a>
+<text x="289" y="65">QuasiAst</text>
 </g>
 <path d="M518 61a10 10 0 0 1 10 10v340a10 10 0 0 0 10 10"></path>
 <path d="M40 421a10 10 0 0 0 10 -10v-370a10 10 0 0 1 10 -10"></path>
@@ -170,8 +168,7 @@ svg.railroad-diagram g.diagram-text:hover path.diagram-text {
 <path d="M60 31h180.75"></path>
 <path d="M337.25 31h180.75"></path>
 <rect x="240.75" y="20" width="96.5" height="22"></rect>
-<a xlink:href="/reference/syntax/#syntax-for-quasitree"><text x="289" y="35">QuasiTree</text>
-</a>
+<text x="289" y="35">QuasiTree</text>
 </g>
 <path d="M518 31a10 10 0 0 1 10 10v370a10 10 0 0 0 10 10"></path>
 <path d="M40 421h20"></path>
@@ -185,10 +182,10 @@ svg.railroad-diagram g.diagram-text:hover path.diagram-text {
 <path d="M518 421h20"></path>
 <path d="M40 421a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
 <g class="non-terminal">
-<path d="M60 451h163.75"></path>
-<path d="M354.25 451h163.75"></path>
-<rect x="223.75" y="440" width="130.5" height="22"></rect>
-<a xlink:href="/reference/syntax/#syntax-for-stringliteral"><text x="289" y="455">StringLiteral</text>
+<path d="M60 451h176.5"></path>
+<path d="M341.5 451h176.5"></path>
+<rect x="236.5" y="440" width="105" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-stringexpr"><text x="289" y="455">StringExpr</text>
 </a>
 </g>
 <path d="M518 451a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>

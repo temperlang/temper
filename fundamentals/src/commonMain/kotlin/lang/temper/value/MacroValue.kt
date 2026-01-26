@@ -2,6 +2,7 @@ package lang.temper.value
 
 import lang.temper.env.InterpMode
 import lang.temper.type2.AnySignature
+import kotlin.reflect.full.findAnnotations
 
 /**
  * A value that may be called with a set of AST node arguments.
@@ -9,7 +10,7 @@ import lang.temper.type2.AnySignature
  * Values that are called with actual values as arguments are a subset of these; functions are
  * a subset of macros that don't need to access trees to do their jobs.
  */
-interface MacroValue : StayReferrer {
+interface MacroValue : StayReferrer, OccasionallyHelpful {
     /**
      * Used to check whether this can be applied to the call arguments in their present form.
      */
@@ -31,6 +32,31 @@ interface MacroValue : StayReferrer {
 
     /** Describes the time at which this should be invoked. */
     val functionSpecies: FunctionSpecies get() = FunctionSpecies.Macro
+
+    /** This default implementation looks for help information in a [HelpInfo] annotation. */
+    override fun prettyPleaseHelp(): Helpful? {
+        val clazz = this::class
+        val context = (this as? NamedBuiltinFun)?.name
+            ?: clazz.simpleName
+            ?: "anonymous"
+
+        val helpDefined = helpDefined(this)
+        if (helpDefined != null) {
+            return helpDefined.toHelpful(context)
+        }
+
+        val helpInfo = clazz.findAnnotations<HelpInfo>()
+        if (helpInfo.isNotEmpty()) {
+            return helpInfo.first().toHelpful(context)
+        }
+
+        val helpSnippet = clazz.findAnnotations<HelpSnippet>()
+        if (helpSnippet.isNotEmpty()) {
+            return helpSnippet.first().toHelpful(context)
+        }
+
+        return null
+    }
 }
 
 interface StaylessMacroValue : MacroValue, Stayless

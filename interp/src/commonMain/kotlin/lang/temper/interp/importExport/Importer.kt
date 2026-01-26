@@ -1,10 +1,11 @@
 package lang.temper.interp.importExport
 
+import lang.temper.env.Exporter
 import lang.temper.name.ExportedName
 import lang.temper.name.ModuleLocation
 
 /**
- * That which may import from an [Exporter].
+ * That which may import from an [lang.temper.env.Exporter].
  */
 interface Importer {
     val loc: ModuleLocation

@@ -8,6 +8,7 @@ import lang.temper.common.console
 import lang.temper.common.ignore
 import lang.temper.common.json.JsonArray
 import lang.temper.common.json.JsonString
+import lang.temper.common.json.JsonValueBuilder
 import lang.temper.common.structure.FormattingStructureSink
 import lang.temper.fs.NativePath
 import lang.temper.fs.resolve
@@ -123,7 +124,9 @@ fun main(argv: Array<String>) = UserDocFilesAndDirectories.inContext {
             Files.createDirectories(snippetPath.parent)
             when (val content = snippet.content) {
                 is ByteDocContent -> Files.write(snippetPath, content.bytes.copyOf())
-                is TextDocContent -> Files.writeString(snippetPath, content.text)
+                is TextDocContent -> {
+                    Files.writeString(snippetPath, content.text)
+                }
                 is ShellCommandDocContent -> {
                     commands.add(DelayedCommand(snippet, snippetPath, content))
                     // Create a stub file.
@@ -180,7 +183,7 @@ fun main(argv: Array<String>) = UserDocFilesAndDirectories.inContext {
                             @Suppress("MagicNumber")
                             argBundles.withIndex().groupBy { it.index / 10 }.map { group ->
                                 // Strip index, flatten each group, and escape quotes, since ProcessBuilder doesn't.
-                                val args = group.value.map { it.value }.flatten().map { it.replace("\"", "\\\"") }
+                                val args = group.value.flatMap { it.value }.map { it.replace("\"", "\\\"") }
                                 args to null
                             }
                         } else {
@@ -221,7 +224,34 @@ fun main(argv: Array<String>) = UserDocFilesAndDirectories.inContext {
         }
     }
 
-    UserDocsContent.generate(problemTracker)
+    val markdowns = UserDocsContent.generate(problemTracker)
+
+    // Regenerate help info store
+    // We have the list of snippets we need from our Kotlin scanning.
+    // Scan over the Markdown outputs looking for content between our snippet insertion markers
+    // and pull it out for use in the REPL.
+    val textSnippetContents = mutableMapOf<SnippetId, String>()
+    extractRequiredInlinedSnippets(
+        markdowns = markdowns,
+        required = Snippets.snippetIdsNeededByRepl,
+        onto = textSnippetContents,
+    )
+    console.groupSoft("Regenerating $helpfulSnippetsJsonFile") {
+        val helpfulSnippets = JsonValueBuilder.build {
+            obj {
+                for ((id, content) in textSnippetContents) {
+                    key(id.shortCanonString(withExtension = false)) {
+                        value(content)
+                    }
+                }
+            }
+        }
+        val helpfulSnippetsJson = FormattingStructureSink.toJsonString(helpfulSnippets, indent = false)
+        Files.writeString(
+            helpfulSnippetsJsonFile,
+            "${helpfulSnippetsJson.trimEnd()}\n",
+        )
+    }
 
     val problemCount = problemTracker.problemCount
     exitProcess(

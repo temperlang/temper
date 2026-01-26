@@ -230,7 +230,6 @@ internal data class Implied(
 }
 
 /** Concatenation. */
-@Suppress("DataClassPrivateConstructor")
 @ConsistentCopyVisibility
 internal data class Cat private constructor(val elements: List<Combinator>) : Combinator {
     override fun apply(context: CombinatorContext<*>, position: Int): Int {
@@ -288,7 +287,6 @@ internal data class Cat private constructor(val elements: List<Combinator>) : Co
 }
 
 /** Alternation. */
-@Suppress("DataClassPrivateConstructor")
 @ConsistentCopyVisibility
 internal data class Or private constructor(val options: List<Combinator>) : Combinator {
     override fun apply(context: CombinatorContext<*>, position: Int): Int {
@@ -354,7 +352,6 @@ internal data class Or private constructor(val options: List<Combinator>) : Comb
  * Matches an input token.
  * If emit is truthy, matched content is copied to the output.
  */
-@Suppress("DataClassPrivateConstructor")
 @ConsistentCopyVisibility
 internal data class Match private constructor(
     val description: GrammarDoc.Component,

@@ -83,7 +83,7 @@ private object Builtins {
 
             "[]" to BuiltinFuns.vSquareBracketFn,
 
-            keyPair(BuiltinFuns.vStrCatMacro), // replaces itself with call to vStrCatFn
+            keyPair(BuiltinFuns.vStrCatFn), // replaces itself with call to vStrCatFn
             keyPair(BuiltinFuns.vCharTagFn),
 
             /**

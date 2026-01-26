@@ -89,8 +89,7 @@ svg.railroad-diagram g.diagram-text:hover path.diagram-text {
 <path d="M60 121h34"></path>
 <path d="M190.5 121h34"></path>
 <rect x="94" y="110" width="96.5" height="22"></rect>
-<a xlink:href="/reference/syntax/#syntax-for-quasihole"><text x="142.25" y="125">QuasiHole</text>
-</a>
+<text x="142.25" y="125">QuasiHole</text>
 </g>
 <path d="M224.5 121a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
 </g>

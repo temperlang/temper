@@ -1600,6 +1600,22 @@ class BuildTreeTest {
     )
 
     @Test
+    fun simpleStrings() = assertAst(
+        input = """
+            |"";
+            |"foo"
+        """.trimMargin(),
+        wantJson = """
+            |[ "Block", [
+            |    // Positions should include the quote marks
+            |    { type: "Value", content: "\"\": String", left: 0, right: 2 },
+            |    { type: "Value", content: "\"foo\": String", left: 4, right: 9 },
+            |  ]
+            |]
+        """.trimMargin(),
+    )
+
+    @Test
     fun functionWithBellsAndWhistles() = assertAst(
         input = "fn f(x: number, y = null): number|string { return y ?? \"\" + x; }",
         wantJson = """
@@ -1637,10 +1653,7 @@ class BuildTreeTest {
                             [ "RightName", "y" ],
                             [ "Call", [
                                 [ "RightName", "+" ],
-                                [ "Call", [
-                                    [ "RightName", "cat" ],
-                                  ]
-                                ],
+                                [ "Value", "\"\": String" ],
                                 [ "RightName", "x" ],
                               ]
                             ]
@@ -1776,7 +1789,9 @@ class BuildTreeTest {
         startProduction = "Expr",
         wantJson = """
         [ "Call", [
-            [ "RightName", "cat" ],
+            [ "Value", [ "stringExpr", "Function" ] ],
+            [ "Value", [ null, "Null" ] ],
+            [ "Value", [ false, "Boolean" ] ],
             [ "Value", [ "a", "String" ] ],
             [ "RightName", "b" ],
             [ "Value", [ "(", "String" ] ],
@@ -1791,13 +1806,7 @@ class BuildTreeTest {
     fun stringLiteral() = assertAst(
         input = "\"....\"",
         startProduction = "Expr",
-        wantJson = """
-        [ "Call", [
-            [ "RightName", "cat" ],
-            [ "Value", [ "....", "String" ] ]
-          ]
-        ]
-        """,
+        wantJson = """[ "Value", [ "....", "String" ] ]""",
     )
 
     @Test
@@ -1806,7 +1815,9 @@ class BuildTreeTest {
         startProduction = "Expr",
         wantJson = """
         [ "Call", [
-            [ "RightName", "cat" ],
+            [ "Value", [ "stringExpr", "Function" ] ],
+            [ "Value", [ null, "Null" ] ],
+            [ "Value", [ false, "Boolean" ] ],
             [ "Value", [ "a", "String" ] ],
             [ "RightName", "b" ],
             [ "RightName", "c" ],
@@ -1830,17 +1841,13 @@ class BuildTreeTest {
         input = $$$""" "$${}{" """,
 
         wantJson = $$"""
-        [ "Call", [
-            [ "RightName", "cat" ],
-            {
-              type: "Value",
-              content: [ "${", "String" ],
-              // Position spans two separate string parts.
-              left: 2,
-              right: 7,
-            }
-          ]
-        ]
+        {
+          type: "Value",
+          content: [ "${", "String" ],
+          // Position spans two separate string parts and includes quotes.
+          left: 1,
+          right: 8,
+        }
         """.trimIndent(),
     )
 
@@ -1872,13 +1879,12 @@ class BuildTreeTest {
         startProduction = "Expr",
         wantJson = """
         [ "Call", [
+            [ "Value", [ "stringExpr", "Function" ] ],
             [ "RightName", "f" ],
-            [ "Call", [
-                [ "Value", [ "interpolate", "Function" ] ],
-                [ "Value", [ "a", "String" ] ],
-                [ "Value", [ "interpolate", "Symbol" ] ],
-                [ "RightName", "b" ],
-            ] ],
+            [ "Value", [ true, "Boolean" ] ],
+            [ "Value", [ "a", "String" ] ],
+            [ "Value", [ "interpolate", "Symbol" ] ],
+            [ "RightName", "b" ],
           ]
         ]
         """,
@@ -1890,17 +1896,16 @@ class BuildTreeTest {
         startProduction = "Expr",
         wantJson = """
         [ "Call", [
+            [ "Value", "stringExpr: Function" ],
             [ "RightName", "f" ],
+            [ "Value", "true: Boolean" ],
+            [ "Value", [ "foo", "String" ] ],
+            [ "Value", [ "interpolate", "Symbol" ] ],
             [ "Call", [
-                [ "Value", [ "interpolate", "Function" ] ],
-                [ "Value", [ "foo", "String" ] ],
-                [ "Value", [ "interpolate", "Symbol" ] ],
-                [ "Call", [
-                    [ "RightName", "x" ],
-                  ]
-                ],
-                [ "Value", [ "bar", "String" ] ],
-            ] ],
+                [ "RightName", "x" ],
+              ]
+            ],
+            [ "Value", [ "bar", "String" ] ],
           ]
         ]
         """,
@@ -1912,13 +1917,12 @@ class BuildTreeTest {
         startProduction = "Expr",
         wantJson = """
         [ "Call", [
+            [ "Value", "stringExpr: Function" ],
             [ "RightName", "f" ],
-            [ "Call", [
-                [ "Value", [ "interpolate", "Function" ] ],
-                [ "Value", [ "foo", "String" ] ],
-                [ "Value", [ "\\b", "String" ] ],
-                [ "Value", [ "ar", "String" ] ],
-            ] ],
+            [ "Value", "true: Boolean" ],
+            [ "Value", [ "foo", "String" ] ],
+            [ "Value", [ "\\b", "String" ] ],
+            [ "Value", [ "ar", "String" ] ],
           ]
         ]
         """,
@@ -3048,11 +3052,7 @@ class BuildTreeTest {
             [ "Decl", [
                 [ "LeftName", "=" ],
                 [ "Value", [ "init", "Symbol" ] ],
-                [ "Call", [
-                    [ "RightName", "cat" ],
-                    [ "Value", [ "=", "String" ] ]
-                  ]
-                ]
+                [ "Value", [ "=", "String" ] ],
               ]
             ]
         """,
@@ -3290,7 +3290,7 @@ class BuildTreeTest {
                     ],
                     [ "Value", "\\init: Symbol" ],
                     // Non-NFKC string content is fine.
-                    [ "Call", [ [ "RightName", "cat" ], [ "Value", [ "\u03d3", "String" ] ] ] ]
+                    [ "Value", [ "\u03d3", "String" ] ],
                   ]
                 ],
                 [ "Value", "void: Void" ],
@@ -3407,11 +3407,7 @@ class BuildTreeTest {
                 [ "Value", "\\init: Symbol" ],
                 [ "Call", [
                     [ "RightName", "import" ],
-                    [ "Call", [
-                        [ "RightName", "cat" ],
-                        [ "Value", "\"thing\": String" ],
-                      ]
-                    ]
+                    [ "Value", "\"thing\": String" ],
                   ]
                 ]
               ]
@@ -4828,16 +4824,16 @@ class BuildTreeTest {
               ]
             ],
             [ "Call", [
-                [ "RightName", "cat" ],
+                [ "Value", "stringExpr: Function" ],
+                [ "Value", "null: Null" ],
+                [ "Value", "false: Boolean" ],
                 [ "Value", "\"First line\\n  Second \": String" ],
-                [ "Call", [
-                    [ "RightName", "cat" ],
-                    [ "Value", "\"      single line string\": String" ],
-                  ]
-                ],
+                [ "Value", "\"      single line string\": String" ],
                 [ "Value", "\"\\nThird line \": String" ],
                 [ "Call", [
-                    [ "RightName", "cat" ],
+                    [ "Value", "stringExpr: Function" ],
+                    [ "Value", "null: Null" ],
+                    [ "Value", "false: Boolean" ],
                     [ "Value", "\"This is not part \": String" ],
                     [ "Value", "\"\\n\": String" ],
                     [ "Value", "\"        of the same string group\": String" ],
@@ -4852,6 +4848,66 @@ class BuildTreeTest {
     )
 
     @Test
+    fun untaggedComplexStringExpression() = assertAst(
+        input = $$"""
+            |$${"\"\"\""}
+            |  "<ul>
+            |  "{:  for (let item of items) {  :}
+            |  "  <li>${item}</li>
+            |  "{:  }  :}
+            |  "</ul>
+        """.trimMargin(),
+        wantJson = """
+            |[ "Call", [
+            |    [ "Value", "stringExpr: Function" ],
+            |    [ "Value", "null: Null" ],
+            |    [ "Value", "false: Boolean" ],
+            |    [ "Value", "\\funString: Symbol" ],
+            |    [ "Fun", [
+            |        [ "Value", "\\funString: Symbol" ],
+            |        [ "Value", "void: Void" ],
+            |        [ "Block", [
+            |            [ "Value", "\\safeStringPart: Symbol" ],
+            |            [ "Value", "\"<ul>\\n\": String" ],
+            |            [ "Call", [
+            |                [ "RightName", "for" ],
+            |                [ "Call", [
+            |                    [ "RightName", "of" ],
+            |                    [ "Decl", [
+            |                        [ "LeftName", "item" ],
+            |                      ],
+            |                    ],
+            |                    [ "RightName", "items" ],
+            |                  ],
+            |                ],
+            |                [ "Fun", [
+            |                    [ "Block", [
+            |                        [ "Value", "\\safeStringPart: Symbol" ],
+            |                        [ "Value", "\"  <li>\": String" ],
+            |                        [ "Value", "\\interpolate: Symbol" ],
+            |                        [ "RightName", "item" ],
+            |                        [ "Value", "\\safeStringPart: Symbol" ],
+            |                        [ "Value", "\"</li>\\n\": String" ],
+            |                        [ "Value", "void: Void" ],
+            |                      ],
+            |                    ],
+            |                  ],
+            |                ],
+            |              ],
+            |            ],
+            |            [ "Value", "\\safeStringPart: Symbol" ],
+            |            [ "Value", "\"</ul>\": String" ],
+            |            [ "Value", "void: Void" ],
+            |          ],
+            |        ],
+            |      ],
+            |    ],
+            |  ],
+            |]
+        """.trimMargin(),
+    )
+
+    @Test
     fun runOfQuotesInQuadrupleQuotedString() {
         val q3 = "\"\"\""
         assertAst(
@@ -4861,14 +4917,7 @@ class BuildTreeTest {
                 |"a run of 3 embedded quotes( $q3 )
             """.trimMargin(),
             wantJson = """
-                |[ "Call", [
-                |    [ "RightName", "cat" ],
-                |    [ "Value", [
-                |        "A multi-quoted string with\na run of 3 embedded quotes( \"\"\" )", "String"
-                |      ]
-                |    ]
-                |  ]
-                |]
+                |[ "Value", [ "A multi-quoted string with\na run of 3 embedded quotes( \"\"\" )", "String" ] ]
             """.trimMargin(),
         )
     }
@@ -5072,11 +5121,7 @@ class BuildTreeTest {
             |        ["Value", "\\join: Symbol"],
             |      ]
             |    ],
-            |    [ "Call", [
-            |        ["RightName", "cat"],
-            |        ["Value", "\", \": String"],
-            |      ]
-            |    ]
+            |    ["Value", "\", \": String"],
             |  ]
             |]
         """.trimMargin(),

@@ -9,6 +9,7 @@ import lang.temper.common.Log
 import lang.temper.common.ignore
 import lang.temper.common.temperEscaper
 import lang.temper.common.toStringViaBuilder
+import lang.temper.env.Export
 import lang.temper.format.OutToks
 import lang.temper.format.OutputToken
 import lang.temper.format.OutputTokenType
@@ -23,13 +24,13 @@ import lang.temper.frontend.implicits.ImplicitsModule
 import lang.temper.fs.Directories
 import lang.temper.interp.MetadataDecorator
 import lang.temper.interp.convertToErrorNode
-import lang.temper.interp.importExport.Export
 import lang.temper.interp.importExport.ImportMacro
 import lang.temper.interp.importExport.createLocalBindingsForImport
 import lang.temper.lexer.Lexer
 import lang.temper.lexer.StandaloneLanguageConfig
 import lang.temper.lexer.TemperToken
 import lang.temper.lexer.TokenType
+import lang.temper.library.LibraryConfigurationLocationKey
 import lang.temper.log.CodeLocation
 import lang.temper.log.CodeLocationKey
 import lang.temper.log.Debug
@@ -40,6 +41,7 @@ import lang.temper.log.MessageTemplate
 import lang.temper.log.SharedLocationContext
 import lang.temper.name.BuiltinName
 import lang.temper.name.ExportedName
+import lang.temper.name.LibraryNameLocationKey
 import lang.temper.name.ParsedName
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
@@ -124,6 +126,17 @@ internal class Repl(
                         FilePositions.fromSource(loc, sourceFromLoc(loc) ?: return@positions null)
                     }
                 } as T?
+                LibraryNameLocationKey -> if (ReplChunkIndex.from(loc) != null) {
+                    v.cast(ReplChunkIndex.libraryConfiguration.libraryName)
+                } else {
+                    null
+                }
+
+                LibraryConfigurationLocationKey -> if (ReplChunkIndex.from(loc) != null) {
+                    v.cast(ReplChunkIndex.libraryConfiguration)
+                } else {
+                    null
+                }
                 else -> null
             }
         }
@@ -176,10 +189,8 @@ internal class Repl(
     }
 
     override fun close() {
-        try {
+        snapshotStore.use {
             flush()
-        } finally {
-            snapshotStore.close()
         }
     }
 

@@ -1,5 +1,6 @@
 package lang.temper.interp
 
+import lang.temper.ast.TreeVisit
 import lang.temper.ast.flatten
 import lang.temper.astbuild.StoredCommentTokens
 import lang.temper.astbuild.buildTree
@@ -35,6 +36,7 @@ import lang.temper.log.MessageTemplateI
 import lang.temper.log.Position
 import lang.temper.log.excerpt
 import lang.temper.log.toReadablePosition
+import lang.temper.name.ExportedName
 import lang.temper.name.ParsedName
 import lang.temper.name.Symbol
 import lang.temper.parser.parse
@@ -80,6 +82,8 @@ import lang.temper.value.ValueLeaf
 import lang.temper.value.and
 import lang.temper.value.elseSymbol
 import lang.temper.value.freeTree
+import lang.temper.value.implicitSymbol
+import lang.temper.value.importedSymbol
 import lang.temper.value.initSymbol
 import lang.temper.value.or
 import lang.temper.value.passedWithType
@@ -93,6 +97,7 @@ import lang.temper.value.varSymbol
 import lang.temper.value.void
 import kotlin.test.Ignore
 import kotlin.test.Test
+import kotlin.test.assertEquals
 
 @Suppress("MagicNumber")
 class InterpreterTest {
@@ -799,6 +804,64 @@ class InterpreterTest {
         preprocess(ast)
     }
 
+    @Test
+    fun declMetadataVisitedDuringPartialInterp() {
+        val logSink = ListBackedLogSink()
+        val failLog = FailLog(logSink = logSink)
+        val context = TestDocumentContext()
+        val loc = context.loc
+        val doc = Document(context)
+        val root = doc.treeFarm.grow(Position(loc, 0, 0)) {
+            Block {
+                Decl {
+                    Ln(ParsedName("x"))
+                    V(importedSymbol)
+                    Esc {
+                        Rn(ExportedName(context.namingContext, ParsedName("x")))
+                    }
+                    V(implicitSymbol)
+                    V(void)
+                }
+            }
+        }
+        val stage = Stage.Import
+        val interpreter = Interpreter(
+            failLog,
+            logSink,
+            stage,
+            root.document.nameMaker,
+            makeContinueCondition(),
+        )
+
+        interpreter.interpret(
+            root,
+            BlockEnvironment(
+                testEnvironment(
+                    builtinOnlyEnvironment(
+                        EmptyEnvironment,
+                        Genre.Library,
+                    ),
+                ),
+            ),
+            InterpMode.Partial,
+        )
+
+        val untagged = buildList {
+            TreeVisit.startingAt(root)
+                .forEachContinuing { t ->
+                    if (t != root) {
+                        val breadcrumb = t.incoming?.breadcrumb
+                        if (breadcrumb == null || breadcrumb < stage) {
+                            add(t)
+                        }
+                    }
+                }
+                .visitPreOrder()
+        }
+
+        assertEquals(emptyList(), untagged)
+    }
+
     private fun assertResult(
         expectedJson: String,
         inputText: String,
@@ -817,17 +880,7 @@ class InterpreterTest {
         val logSink = ListBackedLogSink()
         val failLog = FailLog(logSink = logSink)
 
-        // Take fewer than 10000 steps.
-        var thousandsLeft = 10
-        val continueCondition = {
-            if (thousandsLeft > 0) {
-                thousandsLeft -= 1
-                true
-            } else {
-                false
-            }
-        }
-
+        val continueCondition = makeContinueCondition()
         val context = TestDocumentContext()
 
         val loc = context.loc
@@ -948,6 +1001,19 @@ class InterpreterTest {
                 expectedFailLog.trimIndent(),
                 gotFailLog.joinToString("\n"),
             )
+        }
+    }
+
+    private fun makeContinueCondition(): () -> Boolean {
+        // Take fewer than 10000 steps.
+        var thousandsLeft = 10
+        return {
+            if (thousandsLeft > 0) {
+                thousandsLeft -= 1
+                true
+            } else {
+                false
+            }
         }
     }
 

@@ -876,7 +876,7 @@ class ReplTest {
             """
                 |Describe interactive#2 @ frontend.syntaxMacroStage.before
                 |  do {
-                |    @implicit let x = 1;${
+                |    @implicit @imported(\(`-repl//i0000/`.x)) let x = 1;${
                 "" // we have `x` here but not `y`
             }
                 |    x + 1

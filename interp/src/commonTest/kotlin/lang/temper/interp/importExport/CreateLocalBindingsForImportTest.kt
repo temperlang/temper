@@ -15,6 +15,8 @@ import lang.temper.common.structure.StructureSink
 import lang.temper.common.structure.Structured
 import lang.temper.common.testCodeLocation
 import lang.temper.cst.CstComment
+import lang.temper.env.Export
+import lang.temper.env.Exporter
 import lang.temper.lexer.Lexer
 import lang.temper.log.Position
 import lang.temper.log.filePath

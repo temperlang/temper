@@ -257,18 +257,6 @@ functions are macros that apply at a leter compilation-stage.  For example,
 
 ⎀ syntax/Props
 
-⎀ syntax/QuasiAst
-
-⎀ syntax/QuasiHole
-
-⎀ syntax/QuasiInner
-
-⎀ syntax/QuasiLeaf
-
-⎀ syntax/QuasiTree
-
-⎀ syntax/Quasis
-
 ⎀ syntax/RawBlock
 
 ⎀ syntax/RawCommaOp

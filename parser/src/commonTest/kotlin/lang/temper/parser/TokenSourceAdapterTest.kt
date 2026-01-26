@@ -120,13 +120,42 @@ class TokenSourceAdapterTest {
         want = listOf(
             "{",
             "\"\"\"",
-            "+++", "`some character data\n`",
+            "+++", "`some character data\n`", ";",
             "statement", "(", "here", ")",
-            "+++", "`more character`", $$"${", "}", "+++", "` data `", $$"${", "}", "+++", "`\n`",
-            "+++", "`last line`",
+            "+++", "`more character`", ";",
+            $$"${", "}", ";",
+            "+++", "` data `", ";",
+            $$"${", "}", ";",
+            "+++", "`\n`", ";",
+            "+++", "`last line`", ";",
             "\"\"\"",
             "}",
             "+", "1",
+        ),
+    )
+
+    @Test
+    fun embeddedStatementExample() = assertAdaptedTokens(
+        input = $$"""
+            |$${"\"\"\""}
+            |  "<ul>
+            |  "{: for (let item of items) { :}
+            |  "  <li>${item}</li>\n
+            |  "{: } :}
+            |  "</ul>
+        """.trimMargin(),
+        want = listOf(
+            "{", "\"\"\"",
+            "+++", "`<ul>\n`", ";",
+            "for", "(", "let", "item", "of", "items", ")", "{",
+            "+++", "`  <li>`", ";",
+            $$"${", "item", "}", ";",
+            "+++", "`</li>`", ";",
+            "+++", "`\\n`", ";",
+            "+++", "`\n`", ";",
+            "}", ";",
+            "+++", "`</ul>`", ";",
+            "\"\"\"", "}",
         ),
     )
 

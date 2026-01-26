@@ -161,6 +161,14 @@ data class GrammarDoc(
         override fun toBnf(): String = children.joinToString(" | ") {
             this.precedence.maybeParenthesize(it.precedence, it.toBnf())
         }
+
+        companion object {
+            /**
+             * May nest in another choice to indicate a choice that
+             * should not be included in the grammar diagram.
+             */
+            val doNotShow = Choice(-1, emptyList())
+        }
     }
 
     /**

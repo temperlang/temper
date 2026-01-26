@@ -130,10 +130,10 @@ object ImportMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                         )
                     )
             ) {
-                val filePath = macroEnv.environment.get(
+                val filePath = macroEnv.environment[
                     fileRestrictedBuiltinName,
                     macroEnv,
-                ).toFilePath()
+                ].toFilePath()
 
                 if (filePath == null) {
                     macroEnv.explain(MessageTemplate.BadImportEnvironment)

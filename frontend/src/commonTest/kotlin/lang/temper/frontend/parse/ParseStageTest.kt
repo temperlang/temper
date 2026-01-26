@@ -75,28 +75,27 @@ class ParseStageTest {
             |    body: ```
             |      rgx(list("."), list());
             |      rgx(list(raw "(^|,)\s*"), list());
-            |      cat("wanna be pair", error (list(raw "\:")), " ", error (list(raw "\ud800")), error (list(raw "\udc00")), "\nso does that have more pos needs?");
-            |      cat("fine", " ", "escape", cat(" "), "here", error (list(raw "\u")));
-            |      cat("too big: ", error (list(raw "\u{hi}")), error (list(raw "\u{110000}")), "!", error (list(raw "\u")));
-            |      cat("space bad: ", " ", error (list(raw "\u{ }")), "!");
-            |      cat("empty: ");
-            |      cat("fine: ", " ");
-            |      cat("also: ", " ", "!");
+            |      stringExpr(null, false, "wanna be pair", error (list(raw "\:")), " ", error (list(raw "\ud800")), error (list(raw "\udc00")), "\nso does that have more pos needs?");
+            |      stringExpr(null, false, "fine", " ", "escape", " ", "here", error (list(raw "\u")));
+            |      stringExpr(null, false, "too big: ", error (list(raw "\u{hi}")), error (list(raw "\u{110000}")), "!", error (list(raw "\u")));
+            |      stringExpr(null, false, "space bad: ", " ", error (list(raw "\u{ }")), "!");
+            |      stringExpr(null, false, "empty: ");
+            |      stringExpr(null, false, "fine: ", " ");
+            |      stringExpr(null, false, "also: ", " ", "!");
             |      error (list("`(QuotedGroup`", "\"", "`(Leaf`", "bad order: ", "`Leaf)`", "`(UnicodeRun`", raw "\u{", "`(Comma`", ",", "`(Leaf`", "20", "`Leaf)`", ",", ",", "`(Leaf`", "21", "`Leaf)`", ",", "`(Leaf`", "22", "`Leaf)`", "`Comma)`", "}", "`UnicodeRun)`", "\"", "`QuotedGroup)`"));
-            |      raw(interpolate(raw "\u{", "}", raw "\u{", " ", "}"));
-            |      raw(interpolate("too big: ", raw "\u{", " ", "hi", ",", " ", "110000", " ", "}", "!", raw "\u"));
-            |      raw(interpolate("too big: ", raw "\u{", " ", "hi", \interpolate, cat(" there"), ",", " ", "110000", " ", "}", "!", raw "\u"));
-            |      raw(interpolate("hi", raw "\u{", \interpolate, cat(" t"), "}", "here"));
-            |      cat("wanna be ", pair, " in list:", " ", error (list(raw "\u{d800}")), error (list(raw "\u{dc00}")));
-            |      cat("interpolate after list not in:", " ", cat("hi"));
-            |      cat("hi");
-            |      unhole(fn {
-            |          hi
-            |      });
-            |      cat(cat("hi"));
+            |      stringExpr(raw, true, raw "\u{", "}", raw "\u{", " ", "}");
+            |      stringExpr(raw, true, "too big: ", raw "\u{", " ", "hi", ",", " ", "110000", " ", "}", "!", raw "\u");
+            |      stringExpr(raw, true, "too big: ", raw "\u{", " ", "hi", \interpolate, " there", ",", " ", "110000", " ", "}", "!", raw "\u");
+            |      stringExpr(raw, true, "hi", raw "\u{", \interpolate, " t", "}", "here");
+            |      stringExpr(null, false, "wanna be ", pair, " in list:", " ", error (list(raw "\u{d800}")), error (list(raw "\u{dc00}")));
+            |      stringExpr(null, false, "interpolate after list not in:", " ", "hi");
+            |      "hi";
+            |      \interpolate;
+            |      hi;
+            |      stringExpr(null, false, "hi");
             |      quasiInner(quasiLeaf(\hi));
-            |      cat("surrogate, not scalar: ", error (list(raw "\ud834")), "!");
-            |      cat("wanna be pair: ", error (list(raw "\ud800")), error (list(raw "\udc00")));
+            |      stringExpr(null, false, "surrogate, not scalar: ", error (list(raw "\ud834")), "!");
+            |      stringExpr(null, false, "wanna be pair: ", error (list(raw "\ud800")), error (list(raw "\udc00")));
             |
             |      ```,
             |  },

@@ -84,6 +84,7 @@ import lang.temper.value.JumpLabel
 import lang.temper.value.LeafTree
 import lang.temper.value.LeftNameLeaf
 import lang.temper.value.LinearFlow
+import lang.temper.value.MacroEnvironment
 import lang.temper.value.MacroValue
 import lang.temper.value.NameLeaf
 import lang.temper.value.NamedBuiltinFun
@@ -2442,6 +2443,24 @@ class Interpreter(
 
         val ancestorReplaced: TEdge? get() = callSiteAncestorToReplace
     }
+
+    fun <T> withMacroEnvironment(
+        call: CallTree,
+        env: Environment,
+        im: InterpMode,
+        action: (macroEnv: MacroEnvironment) -> T,
+    ): T = withMacroEnvironment(
+        call = call,
+        callee = call.child(0),
+        actuals = LazyActualsList(
+            call.children.subListToEnd(1),
+            this,
+            env,
+            im,
+        ),
+        cb = callbackFor(call),
+        action = action,
+    )
 
     private fun <T> withMacroEnvironment(
         call: CallTree?,

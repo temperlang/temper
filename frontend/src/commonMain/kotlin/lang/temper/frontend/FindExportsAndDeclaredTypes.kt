@@ -3,8 +3,8 @@ package lang.temper.frontend
 import lang.temper.ast.TreeVisit
 import lang.temper.env.Constness
 import lang.temper.env.Environment
-import lang.temper.interp.importExport.Export
-import lang.temper.interp.importExport.Exporter
+import lang.temper.env.Export
+import lang.temper.env.Exporter
 import lang.temper.name.ExportedName
 import lang.temper.name.Symbol
 import lang.temper.stage.Stage

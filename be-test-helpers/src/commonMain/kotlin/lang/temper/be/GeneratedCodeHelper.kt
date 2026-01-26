@@ -12,6 +12,7 @@ import lang.temper.common.json.JsonObject
 import lang.temper.common.json.JsonString
 import lang.temper.common.json.JsonValue
 import lang.temper.common.orThrow
+import lang.temper.env.Exporter
 import lang.temper.frontend.StagingFlags
 import lang.temper.frontend.staging.ModuleAdvancer
 import lang.temper.frontend.staging.ModuleConfig
@@ -21,7 +22,6 @@ import lang.temper.fs.FilteringFileSystemSnapshot
 import lang.temper.fs.MemoryFileSystem
 import lang.temper.fs.NullSystemAccess
 import lang.temper.fs.OutputRoot
-import lang.temper.interp.importExport.Exporter
 import lang.temper.interp.importExport.LOCAL_FILE_SPECIFIER_PREFIX
 import lang.temper.lexer.Genre
 import lang.temper.lexer.StandaloneLanguageConfig

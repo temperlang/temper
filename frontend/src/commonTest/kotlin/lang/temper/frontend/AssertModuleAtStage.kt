@@ -20,11 +20,11 @@ import lang.temper.common.structure.Structured
 import lang.temper.common.testCodeLocation
 import lang.temper.common.testModuleName
 import lang.temper.common.toStringViaBuilder
+import lang.temper.env.Export
 import lang.temper.format.ValueSimplifyingLogSink
 import lang.temper.frontend.staging.ModuleAdvancer
 import lang.temper.frontend.staging.ModuleConfig
 import lang.temper.frontend.staging.ModuleCustomizeHook
-import lang.temper.interp.importExport.Export
 import lang.temper.lexer.Genre
 import lang.temper.lexer.LanguageConfig
 import lang.temper.lexer.StandaloneLanguageConfig
