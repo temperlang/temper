@@ -616,7 +616,6 @@ class TyperTest {
         wantErrors = listOf(
             "7+4-12: Cannot assign to Int32 from String!",
         ),
-        verbose = true,
     )
 
     @Test

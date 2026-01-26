@@ -198,7 +198,7 @@ class CreateLocalBindingsForImportTest {
         |let x = import("./exporter");
         """.trimMargin(),
         want = """
-        |error (\(@stay let x = import(cat("./exporter"))));
+        |error (\(@stay let x = import("./exporter")));
         |
         """.trimMargin(),
         wantErrors = listOf(

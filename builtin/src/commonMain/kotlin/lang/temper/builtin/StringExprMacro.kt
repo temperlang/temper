@@ -149,7 +149,7 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                 tryReplaceWithString(macroEnv, argRange)?.let { return@invoke it }
                 // Otherwise, we need to coerce parts to string.
                 macroEnv.replaceMacroCallWith {
-                    val oldCallArgs = macroEnv.call!!.children.subListToEnd(3)
+                    val oldCallArgs = macroEnv.call!!.children.subListToEnd(INDEX_NON_FUN_STRING_ARGS)
                     Call(macroEnv.pos) {
                         V(macroEnv.callee.pos, vStringCatMacro)
                         for (arg in oldCallArgs) {
@@ -182,7 +182,7 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                     val call = macroEnv.call!!
                     val literalParts = mutableListOf<Tree>()
                     val interpParts = mutableListOf<Tree>()
-                    val oldCallArgs = macroEnv.call!!.children.subListToEnd(3)
+                    val oldCallArgs = macroEnv.call!!.children.subListToEnd(INDEX_NON_FUN_STRING_ARGS)
                     var sawInterpolateSymbol = false
                     for (arg in oldCallArgs) {
                         if (arg.symbolContained == interpolateSymbol) {
@@ -264,6 +264,8 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
             }
         }
     }
+
+    private const val INDEX_NON_FUN_STRING_ARGS = 3 // callee, tag, isFunString=false, ...args
 }
 
 private enum class TagCategory {

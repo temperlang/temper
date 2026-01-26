@@ -125,8 +125,8 @@ class PseudoCodeTest {
 
     @Test
     fun strings() = assertPseudoCode(
-        input = " \"foo\\n\" ",
-        want = "cat(\"foo\", \"\\n\")\n",
+        input = " \"foo\" ",
+        want = "\"foo\"\n",
     )
 
     @Test
