@@ -11,9 +11,11 @@ Checks the `isEmpty` method.
     };
 
     f([2, 3]);
+    f([]);
 
 Expected output:
 
 ```log
 not empty
+empty
 ```

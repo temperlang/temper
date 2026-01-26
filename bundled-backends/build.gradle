@@ -42,7 +42,7 @@ kotlin {
                 // List of backends that need to be on the classpath for plugin
                 // loading to catch them.
                 implementation project(':be-cpp')
-                implementation project(':be-cpp03')
+                implementation project(':be-cppv')
                 implementation project(':be-csharp')
                 implementation project(':be-java')
                 implementation project(':be-js')

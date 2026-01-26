@@ -53,8 +53,8 @@ hs_err_pid*
 /be/.gradle
 /be-cpp/build
 /be-cpp/.gradle
-/be-cpp03/build
-/be-cpp03/.gradle
+/be-cppv/build
+/be-cppv/.gradle
 /be-csharp/build
 /be-csharp/.gradle
 /be-java/build
@@ -65,8 +65,6 @@ hs_err_pid*
 /be-js/src/commonMain/resources/lang/temper/be/js/temper-core/node_modules
 /be-lua/build
 /be-lua/.gradle
-/be-cpp/build
-/be-cpp/.gradle
 /be-py/build
 /be-py/.gradle
 /be-py/src/node_modules
