@@ -17,7 +17,7 @@ import lang.temper.name.FileType
 import lang.temper.name.LanguageLabel
 
 /**
- * <!-- snippet: backend/c -->
+ * <!-- snippet: backend/cppv -->
  * # C++ Backend
  *
  * ⎀ backend/cppv/id
@@ -64,7 +64,7 @@ class CppBackend(setup: BackendSetup<CppBackend>) : Backend<CppBackend>(Factory.
         private val coreResourceBase = resourceBase.resolveDir("temper-core")
 
         /**
-         * <!-- snippet: backend/c/id -->
+         * <!-- snippet: backend/cppv/id -->
          * BackendID: `cppv`
          */
         internal const val BACKEND_ID = "cppv"
