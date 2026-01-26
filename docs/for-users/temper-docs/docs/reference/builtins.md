@@ -143,6 +143,43 @@ TODO: document me
 
 <!-- /snippet: builtin/await -->
 
+<!-- snippet: builtin/cat -->
+
+<a name="builtin&#45;cat" class="snippet-anchor-name"></a>
+
+### `cat`
+Short for "con**cat**enate", combines multiple strings into one string.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/cat/snippet.md/0 -->
+
+```temper
+""       == cat()             &&
+"foo"    == cat("foo")        &&
+"foobar" == cat("foo", "bar")
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/cat/snippet.md/0 -->
+
+[`+`](#builtin-%2B) does not concatenate strings; it's reserved for math.
+
+`cat` is an implementation detail.  Prefer [String interpolation](types.md#syntax-string-interpolation)
+to compose strings.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/cat/snippet.md/1 -->
+
+```temper
+let a = "foo";
+let b = "bar";
+
+"foo-bar" == "${ a }-${ b }"
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/cat/snippet.md/1 -->
+
+<!-- /snippet: builtin/cat -->
+
 <!-- snippet: builtin/new -->
 
 <a name="builtin&#45;new" class="snippet-anchor-name"></a>
@@ -334,43 +371,6 @@ See also:
 <!-- /snippet: failure -->
 
 <!-- /snippet: builtin/bubble -->
-
-<!-- snippet: builtin/cat -->
-
-<a name="builtin&#45;cat" class="snippet-anchor-name"></a>
-
-### `cat`
-Short for "con**cat**enate", combines multiple strings into one string.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/cat/snippet.md/0 -->
-
-```temper
-""       == cat()             &&
-"foo"    == cat("foo")        &&
-"foobar" == cat("foo", "bar")
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/cat/snippet.md/0 -->
-
-[`+`](#builtin-%2B) does not concatenate strings; it's reserved for math.
-
-`cat` is an implementation detail.  Prefer [String interpolation](types.md#syntax-string-interpolation)
-to compose strings.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/cat/snippet.md/1 -->
-
-```temper
-let a = "foo";
-let b = "bar";
-
-"foo-bar" == "${ a }-${ b }"
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/cat/snippet.md/1 -->
-
-<!-- /snippet: builtin/cat -->
 
 <!-- snippet: builtin/char -->
 

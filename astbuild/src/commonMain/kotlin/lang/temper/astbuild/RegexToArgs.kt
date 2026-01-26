@@ -80,7 +80,7 @@ internal object RegexToArgs : Combinator {
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
+        diagramContext: GrammarDoc.Context,
     ): GrammarDoc.Component = GrammarDoc.NonTerminal("RegExp")
 
     override val children: List<Combinator> get() = emptyList()

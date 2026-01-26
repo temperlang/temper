@@ -198,12 +198,23 @@ object GrammarDiagrams {
         "QuasiTree" to GrammarDoc.Choice.doNotShow,
     )
 
+    private val diagramContext = lazy {
+        val doNotShows = overrides.mapNotNull { (name, component) ->
+            if (component == GrammarDoc.Choice.doNotShow) {
+                name
+            } else {
+                null
+            }
+        }
+        GrammarDoc.Context({ false }, { it in doNotShows })
+    }
+
     fun forProductionNamed(productionName: String): GrammarDoc.Component {
         val lexicalOverride = overrides[productionName]
         if (lexicalOverride != null) { return lexicalOverride }
         val body = grammar.getProduction(productionName)
-            ?: error("No production named $productionName")
-        return body.toGrammarDocDiagram(grammar) { false }
+            ?: throw NoSuchElementException("No production named $productionName")
+        return body.toGrammarDocDiagram(grammar, diagramContext.value)
     }
 
     const val GRAMMAR_DIAGRAM_BASENAME = "snippet"

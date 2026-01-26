@@ -139,7 +139,7 @@ Trailing semicolons are never [inserted](#semicolon-insertion).
 
 ### Syntax for *Stmt*
 
-![Stmt &#58;&#61; LabeledStmt &#124; MatchBranch &#124; StmtBlock &#124; StringGroupSynthetic &#124; CommaExpr](../snippet/syntax/Stmt/snippet.svg)
+![Stmt &#58;&#61; LabeledStmt &#124; MatchBranch &#124; StmtBlock &#124; CommaExpr](../snippet/syntax/Stmt/snippet.svg)
 
 Statements are not a large syntactic category, but include labeled
 statements (like `someName: /* loop or block */`), jumps (`break`,
@@ -265,7 +265,7 @@ statements that end with something block-like would be a burden to developers.
 
 ### Syntax for *LabeledStmt*
 
-![LabeledStmt &#58;&#61; &#40;LeftLabel &#124; QuasiHole&#41; &#34;&#58;&#34; &#40;Call &#124; StmtBlock&#41;](../snippet/syntax/LabeledStmt/snippet.svg)
+![LabeledStmt &#58;&#61; LeftLabel &#34;&#58;&#34; &#40;Call &#124; StmtBlock&#41;](../snippet/syntax/LabeledStmt/snippet.svg)
 
 Declares a label and associates it as markers for the beginning and
 end of a statement, so that `break`s and `continue`s within that
@@ -339,7 +339,7 @@ any necessary variable initializations.
 
 ### Syntax for *LabelOrHole*
 
-![LabelOrHole &#58;&#61; Label &#124; QuasiHole](../snippet/syntax/LabelOrHole/snippet.svg)
+![LabelOrHole &#58;&#61; Label](../snippet/syntax/LabelOrHole/snippet.svg)
 
 <!-- /snippet: syntax/LabelOrHole -->
 
@@ -396,7 +396,7 @@ A `{` ... `}` delimited block of statements.
 
 ### Syntax for *Expr*
 
-![Expr &#58;&#61; QuasiTree &#124; QuasiAst &#124; QuasiHole &#124; Jump &#124; AwaitReturnThrowYield &#124; Id &#124; TypeArgumentName &#124; SymbolLiteral &#124; List &#124; New &#124; Prefix &#124; SpecialDot &#124; RegularDot &#124; Call &#124; StringExpr &#124; &#34;&#40;&#34; &#40;&#40;Disallowed&#58; &#40;&#41;&#41; TopLevelNoGarbageNoComment &#124; Garbage&#41; &#34;&#41;&#34; &#124; OfExpr &#124; Throws &#124; Infix &#124; Postfix &#124; Member &#124; Specialize &#124; Literal &#124; RegExp &#124; Obj &#124; RawBlock &#124; &#34;&#40;&#34; Garbage](../snippet/syntax/Expr/snippet.svg)
+![Expr &#58;&#61; &#40;&#41; &#124; Jump &#124; AwaitReturnThrowYield &#124; Id &#124; TypeArgumentName &#124; SymbolLiteral &#124; List &#124; New &#124; Prefix &#124; SpecialDot &#124; RegularDot &#124; Call &#124; StringExpr &#124; &#34;&#40;&#34; &#40;&#40;Disallowed&#58; &#40;&#41;&#41; TopLevelNoGarbageNoComment &#124; Garbage&#41; &#34;&#41;&#34; &#124; OfExpr &#124; Throws &#124; Infix &#124; Postfix &#124; Member &#124; Specialize &#124; Literal &#124; RegExp &#124; Obj &#124; RawBlock &#124; &#34;&#40;&#34; Garbage](../snippet/syntax/Expr/snippet.svg)
 
 An expression is evaluated to produce a result and/or a side effect.
 
@@ -1613,7 +1613,7 @@ decoded.
 
 #### Syntax for *TopLevelNoGarbageNoComment*
 
-![TopLevelNoGarbageNoComment &#58;&#61; DecoratedTopLevel &#124; Let &#124; Stmt &#124; QuasiHole](../snippet/syntax/TopLevelNoGarbageNoComment/snippet.svg)
+![TopLevelNoGarbageNoComment &#58;&#61; DecoratedTopLevel &#124; Let &#124; Stmt](../snippet/syntax/TopLevelNoGarbageNoComment/snippet.svg)
 
 <!-- /snippet: syntax/TopLevelNoGarbageNoComment -->
 

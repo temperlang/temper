@@ -1815,7 +1815,7 @@ internal abstract class DomainSpecificLanguage {
 
         override fun toGrammarDocDiagram(
             g: Productions<*>,
-            inlinable: (Ref) -> Boolean,
+            diagramContext: GrammarDoc.Context,
         ): GrammarDoc.Component = GrammarDoc.NonTerminal("BuiltinName")
 
         override val children: Iterable<Combinator> get() = emptyList()

@@ -354,7 +354,7 @@ private class GrammarDiagramConverter(
             is GrammarDoc.Choice -> rrNewCall(
                 "Choice",
                 int(c.index),
-                *convert(c.childrenFiltered),
+                *convert(c.children),
             )
             is GrammarDoc.Group -> rrNewCall(
                 "Group",
@@ -363,7 +363,7 @@ private class GrammarDiagramConverter(
             )
             is GrammarDoc.HorizontalChoice -> rrNewCall(
                 "HorizontalChoice",
-                *convert(c.childrenFiltered),
+                *convert(c.children),
             )
             is GrammarDoc.MultipleChoice -> rrNewCall(
                 "MultipleChoice",
@@ -374,7 +374,7 @@ private class GrammarDiagramConverter(
                         GrammarDoc.MultipleChoice.AnyOrAll.All -> "all"
                     },
                 ),
-                *convert(c.childrenFiltered),
+                *convert(c.children),
             )
             is GrammarDoc.OneOrMore -> rrNewCall(
                 "OneOrMore",
@@ -452,7 +452,3 @@ private const val BACKPORT_ERROR_MESSAGE =
     "Cannot back-port changes to the builtin environment.  ${
         ""
     }Maybe edit Grammar.kt, GrammarDiagrams.kt or move changes into nested snippets."
-
-private val GrammarDoc.Container.childrenFiltered get() = children.filter {
-    it != GrammarDoc.Choice.doNotShow
-}

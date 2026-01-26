@@ -7,6 +7,13 @@ data class GrammarDoc(
     val name: String,
     val body: Component,
 ) {
+    data class Context(
+        /** @return true if the named non-terminal should be inlined, false if documented separately */
+        val inlineable: (String) -> Boolean,
+        /** @return true if the named non-terminal is meant to be ignored. */
+        val elide: (String) -> Boolean,
+    )
+
     internal enum class Precedence {
         OrOr,
         AndAnd,
