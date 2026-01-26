@@ -29,12 +29,13 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
         cpp(198),
     )
     onlyPasses(
-        cpp03(198),
+        cppv(198),
         Ft.AlgosFibonacci,
         Ft.AlgosHelloWorld,
         Ft.ClassesDirectGetter,
         Ft.TypesIntBasics,
         Ft.TypesIntLimits,
+        Ft.TypesListEmpty,
     )
 }.mapValues { it.value.toList() }
 
