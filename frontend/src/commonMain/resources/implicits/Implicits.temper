@@ -342,7 +342,7 @@ export /*sealed*/ interface MapKey extends Equatable {}
 /**
  * A *String* is a chunk of textual content.
  *
- * ⎀ syntax/StringLiteral -heading
+ * ⎀ syntax/StringExpr -heading
  *
  * To encourage code with repeatable behavior, strings do not have lengths; the length of a string
  * depends on the kind of characters, which differ across programming languages.

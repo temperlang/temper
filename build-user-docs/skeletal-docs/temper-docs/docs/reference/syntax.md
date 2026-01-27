@@ -101,7 +101,7 @@ functions are macros that apply at a leter compilation-stage.  For example,
 
 ⎀ syntax/New
 
-⎀ syntax/StringLiteral
+⎀ syntax/StringExpr
 
 ## Block Lambdas
 
