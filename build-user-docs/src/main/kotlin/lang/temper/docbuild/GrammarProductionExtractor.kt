@@ -111,15 +111,20 @@ internal object GrammarProductionExtractor : SnippetExtractor() {
 
         val derivation = ExtractedBy(this)
 
-        productions.values.forEach { (name, docString, startOffset) ->
+        val allProductionNames = productions.keys.filter {
+            GrammarDiagrams.forProductionNamed(it) != GrammarDoc.Choice.doNotShow
+        }.toSet()
+        for (name in allProductionNames) {
+            val (_, docString, startOffset) = productions.getValue(name)
+            val info = ProductionGrammarInfo(name, allProductionNames)
+
             val shortTitle = "$name Syntax"
 
-            val info = ProductionGrammarInfo(name, productions.keys.toSet())
             val altTextMarkdown =
                 // `mkdocs` treats alt text as HTML, not MD
                 MarkdownEscape.htmlCompatibleEscape(info.altText)
 
-            // Generate a markdown snippet describing the production
+            // Generate a Markdown snippet describing the production
             onto.add(
                 Snippet(
                     id = SnippetId(listOf("syntax", name), extension = ".md"),
@@ -338,7 +343,9 @@ private class GrammarDiagramConverter(
     @Suppress("SpreadOperator") // Not performance critical
     fun convert(c: GrammarDoc.Component?): Js.Expression {
         return when (c) {
-            null -> undefinedValue()
+            null,
+            GrammarDoc.Choice.doNotShow,
+            -> undefinedValue()
             is GrammarDoc.AlternatingSequence -> rrNewCall(
                 "AlternatingSequence",
                 convert(c.option1),
@@ -374,11 +381,15 @@ private class GrammarDiagramConverter(
                 convert(c.child),
                 convert(c.repeat),
             )
-            is GrammarDoc.Optional -> rrNewCall(
-                "Optional",
-                convert(c.child),
-                convert(c.skip),
-            )
+            is GrammarDoc.Optional -> if (c.child == GrammarDoc.Choice.doNotShow) {
+                undefinedValue()
+            } else {
+                rrNewCall(
+                    "Optional",
+                    convert(c.child),
+                    convert(c.skip),
+                )
+            }
             is GrammarDoc.OptionalSequence -> rrNewCall(
                 "OptionalSequence",
                 *convert(c.children),

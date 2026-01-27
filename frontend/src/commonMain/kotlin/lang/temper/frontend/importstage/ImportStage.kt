@@ -6,6 +6,8 @@ import lang.temper.common.Log
 import lang.temper.common.ignore
 import lang.temper.common.putMultiSet
 import lang.temper.env.Environment
+import lang.temper.env.Export
+import lang.temper.env.Exporter
 import lang.temper.frontend.AstSnapshotKey
 import lang.temper.frontend.Module
 import lang.temper.frontend.StageOutputs
@@ -15,12 +17,11 @@ import lang.temper.frontend.implicits.ImplicitsModule
 import lang.temper.frontend.implicits.ImplicitsUnavailableException
 import lang.temper.frontend.interpretiveDanceStage
 import lang.temper.interp.UserFunction
-import lang.temper.interp.importExport.Export
-import lang.temper.interp.importExport.Exporter
 import lang.temper.interp.importExport.ImportMacro
 import lang.temper.interp.importExport.Importer
 import lang.temper.interp.importExport.STANDARD_LIBRARY_FILEPATH
 import lang.temper.interp.importExport.STANDARD_LIBRARY_SPECIFIER_PREFIX
+import lang.temper.interp.importExport.emplaceImportedMeta
 import lang.temper.interp.importExport.emplaceMetadataFromExportingDeclaration
 import lang.temper.log.CodeLocation
 import lang.temper.log.Debug
@@ -252,6 +253,7 @@ private fun maybeImportImplicits(
                 Rn(export.name)
                 V(implicitSymbol)
                 V(void)
+                emplaceImportedMeta(leftPos, export.name)
                 emplaceMetadataFromExportingDeclaration(leftPos, export)
             }
         }

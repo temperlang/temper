@@ -1,5 +1,7 @@
 package lang.temper.value
 
+import lang.temper.env.Environment
+
 /**
  * A post-processing pass.
  * Macros may do modifications, and schedule a single post pass that
@@ -24,5 +26,10 @@ package lang.temper.value
  * requirements.
  */
 fun interface PostPass {
-    fun rewrite(root: BlockTree)
+    fun rewrite(root: BlockTree, immediateCallHelper: ImmediateCallHelper)
+}
+
+abstract class ImmediateCallHelper {
+    abstract val env: Environment
+    abstract fun <T> withBoundMacroEnvironment(call: CallTree, doIt: (MacroEnvironment) -> T): T
 }

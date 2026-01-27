@@ -5,17 +5,20 @@ package lang.temper.frontend
 import lang.temper.ast.TreeVisit
 import lang.temper.ast.VisitCue
 import lang.temper.env.Environment
+import lang.temper.env.Export
 import lang.temper.env.InterpMode
 import lang.temper.interp.Interpreter
 import lang.temper.interp.ReplacementPolicy
 import lang.temper.interp.checkInterpreterReachedAll
-import lang.temper.interp.importExport.Export
 import lang.temper.lexer.Genre
 import lang.temper.log.FailLog
 import lang.temper.log.LogSink
 import lang.temper.stage.Stage
 import lang.temper.value.BlockTree
+import lang.temper.value.CallTree
+import lang.temper.value.ImmediateCallHelper
 import lang.temper.value.InnerTree
+import lang.temper.value.MacroEnvironment
 import lang.temper.value.NameLeaf
 import lang.temper.value.PartialResult
 import lang.temper.value.PostPass
@@ -111,8 +114,15 @@ internal fun interpretiveDanceStage(
 
     checkInterpreterReachedAll(root, stage, logSink)
 
+    val callHelper = lazy {
+        object : ImmediateCallHelper() {
+            override val env: Environment = env
+            override fun <T> withBoundMacroEnvironment(call: CallTree, doIt: (MacroEnvironment) -> T): T =
+                interpreter.withMacroEnvironment(call, this.env, InterpMode.Partial, doIt)
+        }
+    }
     for (postPass in postPasses) {
-        postPass.rewrite(root)
+        postPass.rewrite(root, callHelper.value)
     }
 
     afterInterpretation(InterpretationContext(root), result)

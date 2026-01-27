@@ -52,7 +52,7 @@ sealed class UserFunction(
     val superTypes: SuperTypeTree,
     val formalNamesByIndex: List<TemperName>,
     val isSelfContained: Boolean,
-) : CallableValue, TokenSerializable, OccasionallyHelpful {
+) : CallableValue, TokenSerializable {
     override val sigs = listOf(signature)
 
     abstract val yieldedAt: InProgressEvaluation?

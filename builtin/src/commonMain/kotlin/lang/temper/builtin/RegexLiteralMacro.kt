@@ -8,6 +8,8 @@ import lang.temper.log.MessageTemplateI
 import lang.temper.log.Position
 import lang.temper.name.Symbol
 import lang.temper.stage.Stage
+import lang.temper.type.DotHelper
+import lang.temper.type.ExternalBind
 import lang.temper.value.CallTree
 import lang.temper.value.Fail
 import lang.temper.value.MacroEnvironment
@@ -23,7 +25,6 @@ import lang.temper.value.TString
 import lang.temper.value.Tree
 import lang.temper.value.UnpositionedTreeTemplate
 import lang.temper.value.Value
-import lang.temper.value.dotBuiltinName
 import lang.temper.value.functionContained
 import lang.temper.value.newBuiltinName
 import lang.temper.value.regexLiteralBuiltinName
@@ -63,7 +64,7 @@ internal object RegexLiteralMacro : BuiltinMacro(regexLiteralBuiltinName.builtin
         if (args.size == 1) { // Call to interpolate()
             val call = macroEnv.call
             if (call != null) {
-                // Force expanding of any interpolate and cat calls
+                // Force expanding of any listify and cat calls
                 evaluateEagerly(macroEnv, args.valueTree(0).incoming!!)
                 if (call.size == 1 + 2) { // callee and two arguments
                     argTrees = listOf(call.child(1), call.child(2))
@@ -135,20 +136,20 @@ internal object RegexLiteralMacro : BuiltinMacro(regexLiteralBuiltinName.builtin
             tryString(templateStrings, index + 1) { it }?.let { return@invoke it }
         }
         // Try parsing it.
-        val text = builder.toString()
+        val text = "$builder"
         val regex = runCatching {
             RegexParserGlobal.parseWith(text, slots)!!
         }.getOrElse {
             return@invoke reportRegexError(macroEnv)
         }
+
         // Replace the macro call with regex constructor calls.
+        val callPos = macroEnv.pos
         macroEnv.replaceMacroCallWith {
             Call {
-                Call {
-                    Rn(dotBuiltinName)
+                Call(callPos) {
+                    V(callPos.leftEdge, Value(DotHelper(ExternalBind, Symbol("compiled"))))
                     buildRegex(regex, macroEnv)
-                    // Also auto compile regex literals to backend regexes.
-                    V(Symbol("compiled"))
                 }
             }
         }

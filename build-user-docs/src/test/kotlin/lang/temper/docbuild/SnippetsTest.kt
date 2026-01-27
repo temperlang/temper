@@ -34,6 +34,18 @@ class SnippetsTest {
     }
 
     @Test
+    fun hasSnippetIdsUsedInAnnotations() {
+        if (Snippets.snippetIdsNeededByRepl.isEmpty()) {
+            fail(
+                buildString {
+                    append("The snippet extractor could not find @HelpSnippet annotations.\n")
+                    append("The REPL's special `help` macro might not have access to information it needs.")
+                },
+            )
+        }
+    }
+
+    @Test
     fun idsAreUnique() {
         val duplicates = Snippets.snippetList
             .groupBy { it.id }

@@ -1,4 +1,4 @@
-<svg class="railroad-diagram" width="581.5" height="80" viewBox="0 0 581.5 80" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>StringGroupTagged &#58;&#61; &#34;&#40;&#34; &#47;&#94;&#34;&#43;&#124;&#91;&#92;&#96;&#93;&#36;&#47; StringPartRaw&#42; &#47;&#94;&#34;&#43;&#124;&#91;&#92;&#96;&#93;&#36;&#47; &#34;&#41;&#34;</title>
+<svg class="railroad-diagram" width="559.5" height="110" viewBox="0 0 559.5 110" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>StringGroupTagged &#58;&#61; &#34;&#40;&#34; &#47;&#94;&#34;&#43;&#124;&#92;&#36;&#47; StringPartRaw&#42; &#47;&#94;&#34;&#43;&#124;&#92;&#36;&#47; &#34;&#41;&#34; &#124; &#34;&#123;&#34; &#47;&#94;&#34;&#43;&#124;&#92;&#36;&#47; BlockLambdaBody &#47;&#94;&#34;&#43;&#124;&#92;&#36;&#47; &#34;&#125;&#34;</title>
 <style><![CDATA[
 svg.railroad-diagram {
     background-color: hsl(30,20%,95%);
@@ -52,71 +52,118 @@ svg.railroad-diagram g.diagram-text:hover path.diagram-text {
 
 <g transform="translate(.5 .5)">
 <g>
-<path d="M20 30v20m10 -20v20m-10 -10h20"></path>
+<path d="M20 69v20m10 -20v20m-10 -10h20"></path>
 </g>
-<path d="M40 40h10"></path>
 <g>
-<path d="M50 40h0"></path>
-<path d="M531.5 40h0"></path>
+<path d="M40 79h0"></path>
+<path d="M519.5 79h0"></path>
+<path d="M40 79a10 10 0 0 0 10 -10v-19a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M60 40h0"></path>
+<path d="M499.5 40h0"></path>
 <g class="terminal">
-<path d="M50 40h0"></path>
-<path d="M78.5 40h0"></path>
-<rect x="50" y="29" width="28.5" height="22" rx="10" ry="10"></rect>
-<text x="64.25" y="44">(</text>
+<path d="M60 40h0"></path>
+<path d="M88.5 40h0"></path>
+<rect x="60" y="29" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="74.25" y="44">(</text>
 </g>
-<path d="M78.5 40h10"></path>
 <path d="M88.5 40h10"></path>
+<path d="M98.5 40h10"></path>
 <g>
-<path d="M98.5 40h0"></path>
-<path d="M185.5 40h0"></path>
-<text x="142" y="45" class="comment">/^"+|&#91;'&#96;&#93;$/</text>
+<path d="M108.5 40h0"></path>
+<path d="M174.5 40h0"></path>
+<text x="141.5" y="45" class="comment">/^"+|'$/</text>
 </g>
-<path d="M185.5 40h10"></path>
+<path d="M174.5 40h10"></path>
 <g>
-<path d="M195.5 40h0"></path>
-<path d="M386 40h0"></path>
-<path d="M195.5 40a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<path d="M184.5 40h0"></path>
+<path d="M375 40h0"></path>
+<path d="M184.5 40a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
 <g>
-<path d="M215.5 20h150.5"></path>
+<path d="M204.5 20h150.5"></path>
 </g>
-<path d="M366 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
-<path d="M195.5 40h20"></path>
+<path d="M355 20a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M184.5 40h20"></path>
 <g>
-<path d="M215.5 40h0"></path>
-<path d="M366 40h0"></path>
-<path d="M215.5 40h10"></path>
+<path d="M204.5 40h0"></path>
+<path d="M355 40h0"></path>
+<path d="M204.5 40h10"></path>
 <g class="non-terminal">
-<path d="M225.5 40h0"></path>
-<path d="M356 40h0"></path>
-<rect x="225.5" y="29" width="130.5" height="22"></rect>
-<a xlink:href="/reference/syntax/#syntax-for-stringpartraw"><text x="290.75" y="44">StringPartRaw</text>
+<path d="M214.5 40h0"></path>
+<path d="M345 40h0"></path>
+<rect x="214.5" y="29" width="130.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-stringpartraw"><text x="279.75" y="44">StringPartRaw</text>
 </a>
 </g>
-<path d="M356 40h10"></path>
-<path d="M225.5 40a10 10 0 0 0 -10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M345 40h10"></path>
+<path d="M214.5 40a10 10 0 0 0 -10 10v0a10 10 0 0 0 10 10"></path>
 <g>
-<path d="M225.5 60h130.5"></path>
+<path d="M214.5 60h130.5"></path>
 </g>
-<path d="M356 60a10 10 0 0 0 10 -10v0a10 10 0 0 0 -10 -10"></path>
+<path d="M345 60a10 10 0 0 0 10 -10v0a10 10 0 0 0 -10 -10"></path>
 </g>
-<path d="M366 40h20"></path>
+<path d="M355 40h20"></path>
 </g>
-<path d="M386 40h10"></path>
+<path d="M375 40h10"></path>
 <g>
-<path d="M396 40h0"></path>
-<path d="M483 40h0"></path>
-<text x="439.5" y="45" class="comment">/^"+|&#91;'&#96;&#93;$/</text>
+<path d="M385 40h0"></path>
+<path d="M451 40h0"></path>
+<text x="418" y="45" class="comment">/^"+|'$/</text>
 </g>
-<path d="M483 40h10"></path>
-<path d="M493 40h10"></path>
+<path d="M451 40h10"></path>
+<path d="M461 40h10"></path>
 <g class="terminal">
-<path d="M503 40h0"></path>
-<path d="M531.5 40h0"></path>
-<rect x="503" y="29" width="28.5" height="22" rx="10" ry="10"></rect>
-<text x="517.25" y="44">)</text>
+<path d="M471 40h0"></path>
+<path d="M499.5 40h0"></path>
+<rect x="471" y="29" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="485.25" y="44">)</text>
 </g>
 </g>
-<path d="M531.5 40h10"></path>
-<path d="M 541.5 40 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+<path d="M499.5 40a10 10 0 0 1 10 10v19a10 10 0 0 0 10 10"></path>
+<path d="M40 79h20"></path>
+<g>
+<path d="M60 79h11.5"></path>
+<path d="M488 79h11.5"></path>
+<g class="terminal">
+<path d="M71.5 79h0"></path>
+<path d="M100 79h0"></path>
+<rect x="71.5" y="68" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="85.75" y="83">{</text>
+</g>
+<path d="M100 79h10"></path>
+<path d="M110 79h10"></path>
+<g>
+<path d="M120 79h0"></path>
+<path d="M186 79h0"></path>
+<text x="153" y="84" class="comment">/^"+|'$/</text>
+</g>
+<path d="M186 79h10"></path>
+<path d="M196 79h10"></path>
+<g class="non-terminal">
+<path d="M206 79h0"></path>
+<path d="M353.5 79h0"></path>
+<rect x="206" y="68" width="147.5" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-blocklambdabody"><text x="279.75" y="83">BlockLambdaBody</text>
+</a>
+</g>
+<path d="M353.5 79h10"></path>
+<path d="M363.5 79h10"></path>
+<g>
+<path d="M373.5 79h0"></path>
+<path d="M439.5 79h0"></path>
+<text x="406.5" y="84" class="comment">/^"+|'$/</text>
+</g>
+<path d="M439.5 79h10"></path>
+<path d="M449.5 79h10"></path>
+<g class="terminal">
+<path d="M459.5 79h0"></path>
+<path d="M488 79h0"></path>
+<rect x="459.5" y="68" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="473.75" y="83">}</text>
+</g>
+</g>
+<path d="M499.5 79h20"></path>
+</g>
+<path d="M 519.5 79 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
 </g>
 </svg>

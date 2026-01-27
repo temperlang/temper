@@ -7,6 +7,13 @@ data class GrammarDoc(
     val name: String,
     val body: Component,
 ) {
+    data class Context(
+        /** @return true if the named non-terminal should be inlined, false if documented separately */
+        val inlineable: (String) -> Boolean,
+        /** @return true if the named non-terminal is meant to be ignored. */
+        val elide: (String) -> Boolean,
+    )
+
     internal enum class Precedence {
         OrOr,
         AndAnd,
@@ -160,6 +167,14 @@ data class GrammarDoc(
 
         override fun toBnf(): String = children.joinToString(" | ") {
             this.precedence.maybeParenthesize(it.precedence, it.toBnf())
+        }
+
+        companion object {
+            /**
+             * May nest in another choice to indicate a choice that
+             * should not be included in the grammar diagram.
+             */
+            val doNotShow = Choice(-1, emptyList())
         }
     }
 

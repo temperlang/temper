@@ -100,8 +100,18 @@ val vInitSymbol = Value(initSymbol)
 val flowInitSymbol = Symbol("__flowInit")
 val vFlowInitSymbol = Value(flowInitSymbol)
 
-/** Indicates that the next argument is interpolated into some kind of text literal. */
+/**
+ * Indicates to the stringExpr macro that the next argument is interpolated into an accumulator as untrusted content.
+ */
 val interpolateSymbol = Symbol("interpolate")
+
+/** Indicates to the stringExpr macro that the following string value should be emitted along the safe part. */
+val safeStringPartSymbol = Symbol("safeStringPart")
+
+/**
+ * Indicates that the annotated function is a function that should be heavily processed by the string expression macro.
+ */
+val funStringSymbol = Symbol("funString")
 
 /**
  * At the beginning of a block with a linear flow, precedes the label for the block to which code in
@@ -576,7 +586,6 @@ val ampBuiltinName = BuiltinName("&")
 val asBuiltinName = BuiltinName("as")
 val assignBuiltinName = BuiltinName("=")
 val atBuiltinName = BuiltinName("@")
-val catBuiltinName = BuiltinName("cat")
 val chainNullBuiltinName = BuiltinName("?.")
 val classBuiltinName = BuiltinName("class")
 val consoleBuiltinName = BuiltinName(consoleParsedName.nameText)

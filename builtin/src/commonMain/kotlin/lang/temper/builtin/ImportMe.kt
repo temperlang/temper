@@ -3,6 +3,8 @@ package lang.temper.builtin
 import lang.temper.ast.TreeVisit
 import lang.temper.common.putMultiList
 import lang.temper.common.soleElementOrNull
+import lang.temper.env.Exporter
+import lang.temper.env.ExportingNamingContext
 import lang.temper.env.InterpMode
 import lang.temper.log.FilePath
 import lang.temper.log.Position
@@ -20,6 +22,8 @@ import lang.temper.value.BuiltinStatelessMacroValue
 import lang.temper.value.CallTree
 import lang.temper.value.DeclTree
 import lang.temper.value.EscTree
+import lang.temper.value.ImmediateCallHelper
+import lang.temper.value.InterpreterCallback
 import lang.temper.value.MacroEnvironment
 import lang.temper.value.NameLeaf
 import lang.temper.value.NamedBuiltinFun
@@ -34,6 +38,7 @@ import lang.temper.value.TreeTemplate
 import lang.temper.value.Value
 import lang.temper.value.asSymbol
 import lang.temper.value.curliesBuiltinName
+import lang.temper.value.freeTree
 import lang.temper.value.functionContained
 import lang.temper.value.importBuiltinName
 import lang.temper.value.importedSymbol
@@ -92,7 +97,7 @@ fun Planting.makeImportMeCall(
 }
 
 data object ImportMePostPass : PostPass {
-    override fun rewrite(root: BlockTree) {
+    override fun rewrite(root: BlockTree, immediateCallHelper: ImmediateCallHelper) {
         // We're going to gather calls to replace.
         data class ImportMeCall(
             val edge: TEdge,
@@ -111,6 +116,7 @@ data object ImportMePostPass : PostPass {
         val sharedLocationContext = root.document.context.sharedLocationContext
 
         val importDecls = mutableMapOf<Pair<Symbol, String>, ImportDecl>()
+        val exporters = mutableMapOf<String, Exporter>()
         val importMeCalls = mutableListOf<ImportMeCall>()
         val nameMaker = root.document.nameMaker
 
@@ -170,6 +176,9 @@ data object ImportMePostPass : PostPass {
                                     localName, remoteName.baseName.toSymbol(), specifier,
                                 )
                                 importDecls[d.nameText to d.importSpecifier] = d
+                                (remoteName.origin as? ExportingNamingContext)?.let {
+                                    exporters[specifier] = it.exporter
+                                }
                             }
                         }
                     }
@@ -202,23 +211,48 @@ data object ImportMePostPass : PostPass {
 
         if (importsNeeded.isNotEmpty()) {
             val start = root.pos.leftEdge
-            root.insert(at = 0) {
-                for ((importSpecifier, needed) in importsNeeded) {
-                    Decl(pos = start) {
-                        Call {
-                            Rn(curliesBuiltinName)
-                            for ((nameText, localName) in needed) {
-                                Ln(BuiltinName(nameText.text))
-                                V(asSymbol)
-                                Ln(localName)
+            val importFn = lazy {
+                val env = immediateCallHelper.env
+                env[importBuiltinName, InterpreterCallback.NullInterpreterCallback] as Value<*>
+            }
+            val importBlocks = importsNeeded.map { (importSpecifier, needed) ->
+                root.document.treeFarm.grow(start) {
+                    Block {
+                        Decl(pos = start) {
+                            Call {
+                                Rn(curliesBuiltinName)
+                                for ((nameText, localName) in needed) {
+                                    Ln(BuiltinName(nameText.text))
+                                    V(asSymbol)
+                                    Ln(localName)
+                                }
+                            }
+                            V(initSymbol)
+                            Call {
+                                V(importFn.value)
+                                V(Value(importSpecifier, TString))
                             }
                         }
-                        V(initSymbol)
-                        Call {
-                            Rn(importBuiltinName)
-                            V(Value(importSpecifier, TString))
-                        }
                     }
+                }
+            }
+
+            val collectedStmts = buildList {
+                for (importBlock in importBlocks) {
+                    // We have a block, so the import macro can make local changes in place.
+                    // This lets us have the needed name ready for the next stage.
+                    val decl = importBlock.child(0) as DeclTree
+                    val importCall = decl.lastChild as CallTree
+                    immediateCallHelper.withBoundMacroEnvironment(importCall) {
+                        it.evaluateTree(importCall, InterpMode.Partial)
+                    }
+                    addAll(importBlock.children)
+                }
+            }
+
+            root.insert(at = 0) {
+                for (stmt in collectedStmts) {
+                    Replant(freeTree(stmt))
                 }
             }
         }

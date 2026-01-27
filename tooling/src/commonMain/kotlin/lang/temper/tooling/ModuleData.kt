@@ -5,13 +5,13 @@ import kotlinx.coroutines.flow.first
 import lang.temper.common.mapFirst
 import lang.temper.common.subListToEnd
 import lang.temper.common.toStringViaTextOutput
+import lang.temper.env.Export
 import lang.temper.format.TextOutputTokenSink
 import lang.temper.format.WrappedTokenSink
 import lang.temper.frontend.ModuleSource
 import lang.temper.frontend.implicits.ImplicitsModule
 import lang.temper.interp.EmptyEnvironment
 import lang.temper.interp.builtinOnlyEnvironment
-import lang.temper.interp.importExport.Export
 import lang.temper.lexer.Genre
 import lang.temper.lexer.IdParts
 import lang.temper.log.FilePath

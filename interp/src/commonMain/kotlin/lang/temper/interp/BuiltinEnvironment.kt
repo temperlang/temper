@@ -3,6 +3,7 @@ package lang.temper.interp
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.DesugarPrefixOperatorMacro
 import lang.temper.builtin.Types
+import lang.temper.builtin.vStringCatMacro
 import lang.temper.common.TriState
 import lang.temper.env.ChildEnvironment
 import lang.temper.env.Constness
@@ -83,7 +84,7 @@ private object Builtins {
 
             "[]" to BuiltinFuns.vSquareBracketFn,
 
-            keyPair(BuiltinFuns.vStrCatMacro), // replaces itself with call to vStrCatFn
+            keyPair(vStringCatMacro), // replaces itself with call to vStrCatFn
             keyPair(BuiltinFuns.vCharTagFn),
 
             /**

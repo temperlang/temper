@@ -105,6 +105,8 @@ internal class ReplHelpFn(
         }
     }
 
+    override fun prettyPleaseHelp(): HelpfullyNamed = this
+
     companion object {
         const val NAME = "help"
     }

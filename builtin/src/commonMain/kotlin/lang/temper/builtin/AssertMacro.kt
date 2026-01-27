@@ -123,7 +123,7 @@ private fun buildValueMessageMaybe(call: Tree): Boolean {
                 Fn {
                     Call {
                         // Requires toString on compared values.
-                        V(BuiltinFuns.vStrCatMacro)
+                        V(vStringCatMacro)
                         V(Value("expected $actualText ${opName.builtinKey} (", TString))
                         Rn(expectedName)
                         V(Value(") not (", TString))

@@ -71,7 +71,7 @@ import lang.temper.value.void
  *       ...
  *     }
  */
-internal class SimplifyDeclarations {
+internal class SimplifyDeclarations(val simplifyFunTrees: Boolean = true) {
 
     fun simplify(root: BlockTree) {
         val fnPartMap = mutableMapOf<FunTree, FnParts?>()
@@ -92,7 +92,7 @@ internal class SimplifyDeclarations {
                             simplifyNonFormalDecl(tree)
                         }
                     }
-                    is FunTree -> {
+                    is FunTree -> if (simplifyFunTrees) {
                         val fnParts = fnPartMap.getOrPut(tree) { tree.parts }
                         if (fnParts != null) {
                             simplifyFormals(tree, fnParts)

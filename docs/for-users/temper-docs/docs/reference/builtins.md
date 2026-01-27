@@ -700,7 +700,7 @@ As explained above, you cannot mix [*Int32*](types.md#type-Int32) and
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/1 -->
 
-`+` does not work on [*String*](types.md#type-String)s.  Use [`cat`](#builtin-cat) instead.
+`+` does not work on [*String*](types.md#type-String)s.  Use [String interpolation](types.md#syntax-string-interpolation) instead.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/2 -->
 

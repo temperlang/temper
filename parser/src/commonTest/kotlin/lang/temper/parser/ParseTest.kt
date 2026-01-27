@@ -549,6 +549,43 @@ class ParseTest {
     }
 
     @Test
+    fun escapesInMultiQuotedString() = assertParseTree(
+        input = $$"""
+            |$${"\"\"\""}
+            |"Line 1: \\ \\
+            |
+            |"Line 2: \u0123
+            |/* Comment */
+            |"Line 3: ${} $ { }
+            |;
+        """.trimMargin(),
+        want = """
+            |[
+            |  [
+            |    "(",
+            |    [
+            |      "\"\"\"",
+            |      [
+            |        "Line 1: ",
+            |        // Escape sequences kept separate until we know whether
+            |        // we need raw or cooked string text.
+            |        "\\\\",
+            |        " ",
+            |        "\\\\",
+            |        "\nLine 2: ",
+            |        "\\u0123",
+            |        "\nLine 3:  $ { }",
+            |      ],
+            |      "\"\"\"",
+            |    ],
+            |  ")",
+            |  ],
+            |  ";",
+            |]
+        """.trimMargin(),
+    )
+
+    @Test
     fun greaterThanInsideTemplateStringDoesNotCompleteAngle() = assertParseTree(
         """
         [
@@ -4214,6 +4251,67 @@ class ParseTest {
             |      "}",
             |    ],
             |    ";",
+            |  ],
+            |  "}",
+            |]
+        """.trimMargin(),
+    )
+
+    @Test
+    fun complexStringExpression() = assertParseTree(
+        input = $$"""
+            |$${"\"\"\""}
+            |  "<ul>
+            |  "{:  for (let item of items) {  :}
+            |  "  <li>${item}</li>
+            |  "{:  }  :}
+            |  "</ul>
+        """.trimMargin(),
+        want = """
+            |[
+            |  "{",
+            |  [
+            |    "\"\"\"",
+            |    [
+            |      [
+            |        "+++",
+            |        [ "<ul>\n" ],
+            |      ],
+            |      ";",
+            |      [
+            |        [
+            |          [ "for" ],
+            |          "(",
+            |          [
+            |            [ "let", "item" ],
+            |            "of",
+            |            [ "items" ],
+            |          ],
+            |          ")",
+            |        ],
+            |        "{",
+            |        [
+            |          [ "+++", [ "  <li>" ] ],
+            |          ";",
+            |          [
+            |            "$\{",
+            |            [ "item" ],
+            |            "}",
+            |          ],
+            |          ";",
+            |          [ "+++", [ "</li>\n" ] ],
+            |          ";",
+            |        ],
+            |        "}",
+            |      ],
+            |      ";",
+            |      [
+            |        "+++",
+            |        [ "</ul>" ],
+            |      ],
+            |      ";",
+            |    ],
+            |    "\"\"\"",
             |  ],
             |  "}",
             |]

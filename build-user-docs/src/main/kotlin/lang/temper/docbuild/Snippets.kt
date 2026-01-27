@@ -28,9 +28,11 @@ import kotlin.io.path.isDirectory
  */
 internal object Snippets : Structured {
     val snippetList: List<Snippet>
+    val snippetIdsNeededByRepl: Set<SnippetId>
     internal val unreadable: List<FilePath>
     init {
         val snippetsMutList = mutableListOf<Snippet>()
+        val snippetIdsNeededByReplMut = mutableSetOf<SnippetId>()
         val unreadableMutList = mutableListOf<FilePath>()
         UserDocFilesAndDirectories.run {
             for (sourceFile in SourceFiles.files) {
@@ -45,7 +47,7 @@ internal object Snippets : Structured {
                     p
                 }
                 if (isPathAncestor(mkdocsRoot, path)) {
-                    // Do not look for snippets in docs/for-users.  That's where we write out
+                    // Do not look for snippets in docs/for-users.  That's where we write
                     // files with snippet insertions.
                     continue
                 }
@@ -85,6 +87,12 @@ internal object Snippets : Structured {
                         onto = snippetsMutList,
                     )
                 }
+                if (content is KotlinContent) {
+                    AnnotationExtractor.extractAnnotations(
+                        content = content,
+                        onto = snippetIdsNeededByReplMut,
+                    )
+                }
             }
             var snippetsExtractedFrom = 0
             while (true) {
@@ -104,6 +112,7 @@ internal object Snippets : Structured {
             }
         }
         snippetList = snippetsMutList.toList()
+        snippetIdsNeededByRepl = snippetIdsNeededByReplMut.toSet()
         unreadable = unreadableMutList.toList()
     }
 
@@ -171,7 +180,7 @@ internal object Snippets : Structured {
 
     /**
      * This destructures to the file content of `docs/.snippet-hashes.json` which lets the
-     * *DocsUpToDateTest* check whether the snippets used to generate markdown files are
+     * *DocsUpToDateTest* check whether the snippets used to generate Markdown files are
      * up-to-date with source code without running any shell commands.
      */
     override fun destructure(structureSink: StructureSink) = structureSink.obj {

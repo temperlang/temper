@@ -475,12 +475,12 @@ class GenerateCodeStageTest {
     @Test
     fun catsAreRadActually() = assertModuleAtStage(
         stage = Stage.GenerateCode,
-        input = """
+        input = $$"""
         |let f(s: String): Void {
-        |  cat(0);
-        |  cat(s, 0);
-        |  cat(s, 0, s);
-        |  cat(s, s, 0, s);
+        |  "${0}";
+        |  "${s}${0}";
+        |  "${s}${0}${s}";
+        |  "${s}${s}${0}${s}";
         |}
         """.trimMargin(),
         want = """
@@ -559,6 +559,20 @@ class GenerateCodeStageTest {
         """.trimMargin(),
         want = """
             |{
+            |  define: {
+            |    body:
+            |      ```
+            |      @fn let f__0;
+            |      f__0 = fn f(s__0 /* aka s */: String) /* return__1 */: Void {
+            |        fn__0: do {
+            |          cat(s__0);
+            |          void;
+            |          cat(what);
+            |        }
+            |      };
+            |
+            |      ```
+            |  },
             |  generateCode: {
             |    body:
             |      ```
@@ -3191,6 +3205,22 @@ class GenerateCodeStageTest {
         want = """
             |{
             |  run: "{i: null}: C__0"
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun rgxMacro() = assertModuleAtStage(
+        stage = Stage.Run,
+        moduleResultNeeded = true,
+        input = """
+            |let { ... } = import("std/regex");
+            |
+            |rgx"."
+        """.trimMargin(),
+        want = """
+            |{
+            |  run: "{data: {}, compiled: ƒ}: `std/regex/`.Regex"
             |}
         """.trimMargin(),
     )

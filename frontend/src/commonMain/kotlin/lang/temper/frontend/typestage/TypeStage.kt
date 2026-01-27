@@ -14,6 +14,7 @@ import lang.temper.frontend.StageOutputs
 import lang.temper.frontend.StagingFlags
 import lang.temper.frontend.UseBeforeInit
 import lang.temper.frontend.Weaver
+import lang.temper.frontend.define.SimplifyDeclarations
 import lang.temper.frontend.flipDeclaredNames
 import lang.temper.frontend.interpretiveDanceStage
 import lang.temper.frontend.simplifyFlow
@@ -79,6 +80,10 @@ internal class TypeStage(
         Debug.Frontend.TypeStage.AfterInterpretation.snapshot(configKey, AstSnapshotKey, root)
 
         flipDeclaredNames(root)
+
+        // Make sure any declarations with initializers really are simplified to separate assignments.
+        // Most of these are simplified out by the define stage, but processing of imports can reintroduce these.
+        SimplifyDeclarations(simplifyFunTrees = false).simplify(root)
 
         AutoCast(root).apply()
 

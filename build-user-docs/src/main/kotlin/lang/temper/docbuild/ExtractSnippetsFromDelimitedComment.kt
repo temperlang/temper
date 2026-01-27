@@ -86,7 +86,7 @@ private fun forEachMatchedSnippet(
             continue
         }
 
-        val idParts = idStr.split("/").map { decodePercentEncodedBytes(it) }
+        val idParts = idStr.toIdParts()
         require(idParts.none { it.isEmpty() }) { "Bad snippet id in $from: $idStr" }
         val id = SnippetId(idParts, extension = ".md")
 
@@ -321,3 +321,9 @@ private val String.offsetInCommentTokenBeforeEnd: Int
         }
         return end
     }
+
+internal fun String.toIdParts() = if (isEmpty()) {
+    listOf()
+} else {
+    split("/").map { decodePercentEncodedBytes(it) }
+}

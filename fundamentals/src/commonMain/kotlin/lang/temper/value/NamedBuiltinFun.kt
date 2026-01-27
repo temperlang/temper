@@ -14,6 +14,10 @@ interface NamedBuiltinFun : StaylessMacroValue, TokenSerializable {
 
     val nameIsKeyword: Boolean get() = false
 
+    override fun prettyPleaseHelp(): HelpfullyNamed? = super.prettyPleaseHelp()?.let {
+        HelpfullyNamed(name, it)
+    }
+
     override fun renderTo(tokenSink: TokenSink) {
         tokenSink.emit(
             if (nameIsKeyword) {

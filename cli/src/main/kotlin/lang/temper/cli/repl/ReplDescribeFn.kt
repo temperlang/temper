@@ -10,7 +10,7 @@ import lang.temper.type2.Signature2
 import lang.temper.value.ActualValues
 import lang.temper.value.CallableValue
 import lang.temper.value.Fail
-import lang.temper.value.Helpful
+import lang.temper.value.HelpfullyNamed
 import lang.temper.value.InterpreterCallback
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.PartialResult
@@ -27,7 +27,7 @@ import lang.temper.type.WellKnownTypes as WKT
  */
 internal class ReplDescribeFn(
     private val repl: Repl,
-) : NamedBuiltinFun, CallableValue, Helpful {
+) : NamedBuiltinFun, CallableValue, HelpfullyNamed {
     override val sigs: List<Signature2> get() = sigsList
     override val name get() = NAME
     override fun invoke(
@@ -67,6 +67,10 @@ internal class ReplDescribeFn(
         }
         return void
     }
+
+    override fun prettyPleaseHelp(): HelpfullyNamed = this
+
+    override fun helpfulTopicName(): String = NAME
 
     override fun briefHelp(): String = "detailed information about an interactive result"
 

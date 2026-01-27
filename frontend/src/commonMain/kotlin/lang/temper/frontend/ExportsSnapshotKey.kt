@@ -3,7 +3,7 @@ package lang.temper.frontend
 import lang.temper.common.SnapshotKey
 import lang.temper.common.structure.StructureSink
 import lang.temper.common.structure.Structured
-import lang.temper.interp.importExport.Export
+import lang.temper.env.Export
 
 object ExportsSnapshotKey : SnapshotKey<ExportList> {
     override val databaseKeyText: String = "exports"

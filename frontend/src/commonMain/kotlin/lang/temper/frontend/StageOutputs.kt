@@ -1,6 +1,6 @@
 package lang.temper.frontend
 
-import lang.temper.interp.importExport.Export
+import lang.temper.env.Export
 import lang.temper.type.TypeShape
 import lang.temper.value.BlockTree
 import lang.temper.value.PartialResult

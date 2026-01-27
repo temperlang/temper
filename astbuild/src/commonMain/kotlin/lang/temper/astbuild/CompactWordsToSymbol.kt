@@ -57,9 +57,9 @@ internal data class CompactWordsToSymbol(val words: Combinator) : Combinator {
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
+        diagramContext: GrammarDoc.Context,
     ): GrammarDoc.Component = GrammarDoc.Group(
-        words.toGrammarDocDiagram(g, inlinable),
+        words.toGrammarDocDiagram(g, diagramContext),
         GrammarDoc.Comment("merged to symbol"),
     )
 

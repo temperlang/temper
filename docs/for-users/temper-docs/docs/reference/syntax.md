@@ -265,7 +265,7 @@ statements that end with something block-like would be a burden to developers.
 
 ### Syntax for *LabeledStmt*
 
-![LabeledStmt &#58;&#61; &#40;LeftLabel &#124; QuasiHole&#41; &#34;&#58;&#34; &#40;Call &#124; StmtBlock&#41;](../snippet/syntax/LabeledStmt/snippet.svg)
+![LabeledStmt &#58;&#61; LeftLabel &#34;&#58;&#34; &#40;Call &#124; StmtBlock&#41;](../snippet/syntax/LabeledStmt/snippet.svg)
 
 Declares a label and associates it as markers for the beginning and
 end of a statement, so that `break`s and `continue`s within that
@@ -339,7 +339,7 @@ any necessary variable initializations.
 
 ### Syntax for *LabelOrHole*
 
-![LabelOrHole &#58;&#61; Label &#124; QuasiHole](../snippet/syntax/LabelOrHole/snippet.svg)
+![LabelOrHole &#58;&#61; Label](../snippet/syntax/LabelOrHole/snippet.svg)
 
 <!-- /snippet: syntax/LabelOrHole -->
 
@@ -396,7 +396,7 @@ A `{` ... `}` delimited block of statements.
 
 ### Syntax for *Expr*
 
-![Expr &#58;&#61; QuasiTree &#124; QuasiAst &#124; QuasiHole &#124; Jump &#124; AwaitReturnThrowYield &#124; Id &#124; TypeArgumentName &#124; SymbolLiteral &#124; List &#124; New &#124; Prefix &#124; SpecialDot &#124; RegularDot &#124; Call &#124; StringLiteral &#124; &#34;&#40;&#34; &#40;&#40;Disallowed&#58; &#40;&#41;&#41; TopLevelNoGarbageNoComment &#124; Garbage&#41; &#34;&#41;&#34; &#124; OfExpr &#124; Throws &#124; Infix &#124; Postfix &#124; Member &#124; Specialize &#124; Literal &#124; RegExp &#124; Obj &#124; RawBlock &#124; &#34;&#40;&#34; Garbage](../snippet/syntax/Expr/snippet.svg)
+![Expr &#58;&#61; &#40;&#41; &#124; Jump &#124; AwaitReturnThrowYield &#124; Id &#124; TypeArgumentName &#124; SymbolLiteral &#124; List &#124; New &#124; Prefix &#124; SpecialDot &#124; RegularDot &#124; Call &#124; StringExpr &#124; &#34;&#40;&#34; &#40;&#40;Disallowed&#58; &#40;&#41;&#41; TopLevelNoGarbageNoComment &#124; Garbage&#41; &#34;&#41;&#34; &#124; OfExpr &#124; Throws &#124; Infix &#124; Postfix &#124; Member &#124; Specialize &#124; Literal &#124; RegExp &#124; Obj &#124; RawBlock &#124; &#34;&#40;&#34; Garbage](../snippet/syntax/Expr/snippet.svg)
 
 An expression is evaluated to produce a result and/or a side effect.
 
@@ -452,7 +452,7 @@ Ruby-style block functions (`f { ... }`) and flow-control like
 
 ### Syntax for *StringLiteral*
 
-![StringLiteral &#58;&#61; &#34;&#92;u0022&#34; &#40;SourceCharacter &#45; &#40;&#92;&#92;n&#92;&#44; &#92;&#92;r&#92;&#44; &#92;&#92;&#92;&#44; &#92;&#34;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#34;&#92;u0022&#34; &#124; &#34;&#92;u0022&#92;u0022&#92;u0022&#34; &#40;Content line starting with &#96;&#34;&#96;&#58; &#34;LineBreak&#34; indentation &#40;Ignored margin quote&#58; &#34;&#92;u0022&#34;&#41; &#40;&#40;SourceCharacter &#45; &#40;&#92;&#92;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#124; &#34;&#123;&#58;&#34; StatementFragment &#34;&#58;&#125;&#34;&#41;&#41;&#42; &#34;LineBreak&#34;](../snippet/syntax/StringLiteral/snippet.svg)
+![StringLiteral &#58;&#61; StringGroup](../snippet/syntax/StringLiteral/snippet.svg)
 
 <!-- /snippet: syntax/StringLiteral -->
 
@@ -1372,66 +1372,6 @@ There are two kinds of match cases: run-time type checks that use keyword `is`, 
 
 <!-- /snippet: syntax/Props -->
 
-<!-- snippet: syntax/QuasiAst -->
-
-<a name="syntax&#45;QuasiAst" class="snippet-anchor-name"></a>
-
-#### Syntax for *QuasiAst*
-
-![QuasiAst &#58;&#61; &#34;&#92;&#92;&#40;&#34; Expr &#34;&#41;&#34;](../snippet/syntax/QuasiAst/snippet.svg)
-
-<!-- /snippet: syntax/QuasiAst -->
-
-<!-- snippet: syntax/QuasiHole -->
-
-<a name="syntax&#45;QuasiHole" class="snippet-anchor-name"></a>
-
-#### Syntax for *QuasiHole*
-
-![QuasiHole &#58;&#61; &#34;&#92;u0024&#123;&#34; CommaExpr &#34;&#125;&#34;](../snippet/syntax/QuasiHole/snippet.svg)
-
-<!-- /snippet: syntax/QuasiHole -->
-
-<!-- snippet: syntax/QuasiInner -->
-
-<a name="syntax&#45;QuasiInner" class="snippet-anchor-name"></a>
-
-#### Syntax for *QuasiInner*
-
-![QuasiInner &#58;&#61; Quasis](../snippet/syntax/QuasiInner/snippet.svg)
-
-<!-- /snippet: syntax/QuasiInner -->
-
-<!-- snippet: syntax/QuasiLeaf -->
-
-<a name="syntax&#45;QuasiLeaf" class="snippet-anchor-name"></a>
-
-#### Syntax for *QuasiLeaf*
-
-![QuasiLeaf &#58;&#61; any token](../snippet/syntax/QuasiLeaf/snippet.svg)
-
-<!-- /snippet: syntax/QuasiLeaf -->
-
-<!-- snippet: syntax/QuasiTree -->
-
-<a name="syntax&#45;QuasiTree" class="snippet-anchor-name"></a>
-
-#### Syntax for *QuasiTree*
-
-![QuasiTree &#58;&#61; &#34;&#92;&#92;&#123;&#34; &#40;QuasiHole &#124; QuasiInner&#41;&#42; &#34;&#125;&#34;](../snippet/syntax/QuasiTree/snippet.svg)
-
-<!-- /snippet: syntax/QuasiTree -->
-
-<!-- snippet: syntax/Quasis -->
-
-<a name="syntax&#45;Quasis" class="snippet-anchor-name"></a>
-
-#### Syntax for *Quasis*
-
-![Quasis &#58;&#61; &#40;QuasiHole &#124; QuasiInner &#124; QuasiLeaf&#41;&#42;](../snippet/syntax/Quasis/snippet.svg)
-
-<!-- /snippet: syntax/Quasis -->
-
 <!-- snippet: syntax/RawBlock -->
 
 <a name="syntax&#45;RawBlock" class="snippet-anchor-name"></a>
@@ -1518,7 +1458,7 @@ There are two kinds of match cases: run-time type checks that use keyword `is`, 
 
 #### Syntax for *StringGroup*
 
-![StringGroup &#58;&#61; &#34;&#40;&#34; &#47;&#94;&#34;&#43;&#124;&#92;&#36;&#47; StringPart&#42; &#47;&#94;&#34;&#43;&#124;&#92;&#36;&#47; &#34;&#41;&#34;](../snippet/syntax/StringGroup/snippet.svg)
+![StringGroup &#58;&#61; &#34;&#92;u0022&#34; &#40;SourceCharacter &#45; &#40;&#92;&#92;n&#92;&#44; &#92;&#92;r&#92;&#44; &#92;&#92;&#92;&#44; &#92;&#34;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#34;&#92;u0022&#34; &#124; &#34;&#92;u0022&#92;u0022&#92;u0022&#34; &#40;Content line starting with &#96;&#34;&#96;&#58; &#34;LineBreak&#34; indentation &#40;Ignored margin quote&#58; &#34;&#92;u0022&#34;&#41; &#40;&#40;SourceCharacter &#45; &#40;&#92;&#92;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#124; &#34;&#123;&#58;&#34; StatementFragment &#34;&#58;&#125;&#34;&#41;&#41;&#42; &#34;LineBreak&#34;](../snippet/syntax/StringGroup/snippet.svg)
 
 <!-- /snippet: syntax/StringGroup -->
 
@@ -1528,7 +1468,7 @@ There are two kinds of match cases: run-time type checks that use keyword `is`, 
 
 #### Syntax for *StringGroupTagged*
 
-![StringGroupTagged &#58;&#61; &#34;&#40;&#34; &#47;&#94;&#34;&#43;&#124;&#91;&#92;&#96;&#93;&#36;&#47; StringPartRaw&#42; &#47;&#94;&#34;&#43;&#124;&#91;&#92;&#96;&#93;&#36;&#47; &#34;&#41;&#34;](../snippet/syntax/StringGroupTagged/snippet.svg)
+![StringGroupTagged &#58;&#61; &#34;&#40;&#34; &#47;&#94;&#34;&#43;&#124;&#92;&#36;&#47; StringPartRaw&#42; &#47;&#94;&#34;&#43;&#124;&#92;&#36;&#47; &#34;&#41;&#34; &#124; &#34;&#123;&#34; &#47;&#94;&#34;&#43;&#124;&#92;&#36;&#47; BlockLambdaBody &#47;&#94;&#34;&#43;&#124;&#92;&#36;&#47; &#34;&#125;&#34;](../snippet/syntax/StringGroupTagged/snippet.svg)
 
 <!-- /snippet: syntax/StringGroupTagged -->
 
@@ -1673,7 +1613,7 @@ decoded.
 
 #### Syntax for *TopLevelNoGarbageNoComment*
 
-![TopLevelNoGarbageNoComment &#58;&#61; DecoratedTopLevel &#124; Let &#124; Stmt &#124; QuasiHole](../snippet/syntax/TopLevelNoGarbageNoComment/snippet.svg)
+![TopLevelNoGarbageNoComment &#58;&#61; DecoratedTopLevel &#124; Let &#124; Stmt](../snippet/syntax/TopLevelNoGarbageNoComment/snippet.svg)
 
 <!-- /snippet: syntax/TopLevelNoGarbageNoComment -->
 

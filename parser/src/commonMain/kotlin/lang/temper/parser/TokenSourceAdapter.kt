@@ -272,6 +272,14 @@ private class StringFixer(
                             mayPrefix = true,
                             mayInfix = false,
                         )
+                        editFor(charDataChunk).after = syntheticSemicolon(collected[charDataChunk])
+                    }
+                }
+                for (interpRange in mqString.interps) {
+                    val edit = editFor(interpRange.last)
+                    val sub = edit.substitution
+                    if (sub != null) {
+                        edit.after = syntheticSemicolon(sub)
                     }
                 }
             }
@@ -315,6 +323,18 @@ private class StringFixer(
                 mayBracket = true,
                 synthetic = true,
             )
+
+        private fun syntheticSemicolon(p: Positioned) = TokenStackElement(
+            TemperToken(
+                p.pos.rightEdge,
+                ";",
+                TokenType.Punctuation,
+                synthetic = true,
+                mayBracket = false,
+            ),
+            mayPrefix = false,
+            mayInfix = true,
+        )
 
         private class MqString(val startIndex: Int) {
             var endIndex: Int = -1

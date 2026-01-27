@@ -34,6 +34,7 @@ import lang.temper.value.ComparableTypeTag
 import lang.temper.value.CoverFunction
 import lang.temper.value.Fail
 import lang.temper.value.HANDLER_SCOPE_FN_NAME
+import lang.temper.value.HelpSnippet
 import lang.temper.value.InstancePropertyRecord
 import lang.temper.value.InternalFeatureKey
 import lang.temper.value.InterpreterCallback
@@ -59,9 +60,7 @@ import lang.temper.value.TList
 import lang.temper.value.TNull
 import lang.temper.value.TString
 import lang.temper.value.Value
-import lang.temper.value.catBuiltinName
-import lang.temper.value.freeTree
-import lang.temper.value.interpolateSymbol
+import lang.temper.value.helpSnippet
 import lang.temper.value.listBuiltinName
 import lang.temper.value.or
 import lang.temper.value.postfixApplyName
@@ -69,7 +68,6 @@ import lang.temper.value.typeSymbol
 import lang.temper.value.unpackOrFail
 import lang.temper.value.unpackPositionedOr
 import lang.temper.value.unpackValue
-import lang.temper.value.valueContained
 import lang.temper.value.void
 import kotlin.math.pow
 import lang.temper.type.WellKnownTypes as WKT
@@ -527,9 +525,10 @@ object StringIndexSupport {
  * "foo-bar" == "${ a }-${ b }"
  * ```
  */
+@HelpSnippet("concatenates strings", "builtin/cat")
 private object StrCatFn :
     BuiltinFun(
-        catBuiltinName.builtinKey,
+        "cat",
         Signature2(
             returnType2 = WKT.stringType2,
             requiredInputTypes = listOf(),
@@ -538,7 +537,6 @@ private object StrCatFn :
         ),
     ),
     PureCallableValue {
-    // TODO: once we have varargs sigs, define a sig.
 
     override val builtinOperatorId get() = BuiltinOperatorId.StrCat
 
@@ -570,6 +568,7 @@ private object StrCatFn :
  * char'a' == 97
  * ```
  */
+@HelpSnippet("Literal syntax for a Unicode code-point number", "builtin/char")
 private object CharTagFn : NamedBuiltinFun, PureCallableValue {
     override val name: String = "char"
 
@@ -626,54 +625,6 @@ private object CharTagFn : NamedBuiltinFun, PureCallableValue {
             ),
         ),
     )
-}
-
-private object InterpolateMacro : BuiltinMacro(interpolateSymbol.text, null) {
-    override fun invoke(macroEnv: MacroEnvironment, interpMode: InterpMode): PartialResult {
-        // Be lenient here because we control all calling of this macro. It's not even in a user environment.
-        macroEnv.call?.incoming?.let incoming@{ incoming ->
-            val edgeIndex = incoming.edgeIndex
-            edgeIndex >= 0 || return@incoming
-            incoming.source!!.replace(edgeIndex..edgeIndex) {
-                // Gather interpolated values list ...
-                val values = buildList {
-                    // ... while already building string template content list.
-                    Call {
-                        V(BuiltinFuns.vListifyFn)
-                        val args = macroEnv.args
-                        // Init expectations ensure we start with string template content.
-                        val stringContent = StringBuilder()
-                        fun addStringArg() {
-                            V(Value(stringContent.toString(), TString))
-                            stringContent.clear()
-                        }
-                        for (index in args.indices) {
-                            val arg = args.valueTree(index)
-                            when (args.key(index)) {
-                                interpolateSymbol -> {
-                                    addStringArg()
-                                    add(arg)
-                                }
-                                else -> {
-                                    // We expect only string literal content except for interpolated values as above.
-                                    stringContent.append(TString.unpack(arg.valueContained!!))
-                                }
-                            }
-                        }
-                        // Technically can be inferred when empty and absent, but include it for consistency.
-                        addStringArg()
-                    }
-                }
-                Call {
-                    V(BuiltinFuns.vListifyFn)
-                    for (value in values) {
-                        Replant(freeTree(value))
-                    }
-                }
-            }
-        }
-        return NotYet
-    }
 }
 
 private object ListifyFn :
@@ -956,7 +907,7 @@ object BuiltinFuns {
      * 1 + 1.0
      * ```
      *
-     * `+` does not work on [snippet/type/String]s.  Use [snippet/builtin/cat] instead.
+     * `+` does not work on [snippet/type/String]s.  Use [snippet/syntax/string/interpolation] instead.
      *
      * ```temper FAIL
      * "foo" + "bar"
@@ -964,7 +915,9 @@ object BuiltinFuns {
      */
     val plusFn = CoverFunction(
         listOf(plusIntIntFn, plusIntFn, plusLongLongFn, plusLongFn, plusFloatFloatFn, plusFloatFn),
-    )
+    ).also {
+        helpSnippet(it, "Numeric addition", "builtin/+")
+    }
 
     /**
      * <!-- snippet: builtin/- -->
@@ -1026,7 +979,9 @@ object BuiltinFuns {
                 BuiltinOperatorId.MinusFlt,
             ) { a -> -a },
         ),
-    )
+    ).also {
+        helpSnippet(it, "Numeric subtraction", "builtin/-")
+    }
 
     /**
      * <!-- snippet: builtin/%2A : operator `*` -->
@@ -1053,7 +1008,9 @@ object BuiltinFuns {
                 a * b
             },
         ),
-    )
+    ).also {
+        helpSnippet(it, "Numeric multiplication", "builtin/%2A")
+    }
 
     /**
      * <!-- snippet: builtin/%2A%2A : operator `**` -->
@@ -1709,9 +1666,7 @@ object BuiltinFuns {
         WKT.intType2,
     ) { d -> Value(d, TInt) }
 
-    val interpolateMacro: NamedBuiltinFun = InterpolateMacro
     val strCatFn: NamedBuiltinFun = StrCatFn
-    val strCatMacro: NamedBuiltinFun = StrCatMacro
     val strRawMacro: NamedBuiltinFun = StrRawMacro
     val charTagFn: NamedBuiltinFun = CharTagFn
 
@@ -1755,7 +1710,6 @@ object BuiltinFuns {
     val embeddedCommentFn: MacroValue = EmbeddedCommentFn
 
     val vStrCatFn = Value(strCatFn)
-    val vStrCatMacro = Value(strCatMacro)
     val vStrRawMacro = Value(strRawMacro)
     val vCharTagFn = Value(charTagFn)
     val vBubble = Value(bubble)
@@ -1788,7 +1742,6 @@ object BuiltinFuns {
 
     val vPostfixApply = Value(DesugarPostfixOperatorMacro(postfixApplyName.builtinKey))
     val vHandlerScope = Value(handlerScope)
-    val vInterpolateMacro = Value(interpolateMacro)
     val vAwait = Value(await)
     val vYield = Value(yield)
     val vAsync = Value(async)

@@ -77,13 +77,19 @@ internal interface Combinator {
      * Build JS that may assume that the name `railroad` is bound to
      * https://github.com/tabatkins/railroad-diagrams/blob/gh-pages/README-js.md
      * to build a railroad diagram describing this combinator.
-     *
-     * @param inlinable true if the reference should be inlined, false if documented separately
      */
-    fun toGrammarDocDiagram(g: Productions<*>, inlinable: (Ref) -> Boolean): GrammarDoc.Component
+    fun toGrammarDocDiagram(g: Productions<*>, diagramContext: GrammarDoc.Context): GrammarDoc.Component
 }
 
 internal val epsilon = Cat.empty
+
+private fun GrammarDoc.Context.disallows(c: GrammarDoc.Component): Boolean {
+    return when (c) {
+        GrammarDoc.Choice.doNotShow -> true
+        is GrammarDoc.NonTerminal -> elide(c.text)
+        else -> false
+    }
+}
 
 /** A reference to a production. */
 internal data class Ref(
@@ -116,13 +122,13 @@ internal data class Ref(
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
+        diagramContext: GrammarDoc.Context,
     ): GrammarDoc.Component {
-        val p = maybeInline(g, inlinable)
+        val p = maybeInline(g, diagramContext)
         return if (p == this) {
             GrammarDoc.NonTerminal(name, href = null) // TODO: Link references
         } else {
-            p.toGrammarDocDiagram(g, inlinable)
+            p.toGrammarDocDiagram(g, diagramContext)
         }
     }
 }
@@ -157,8 +163,8 @@ internal data class EmitBefore(
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
-    ): GrammarDoc.Component = matcher.toGrammarDocDiagram(g, inlinable)
+        diagramContext: GrammarDoc.Context,
+    ): GrammarDoc.Component = matcher.toGrammarDocDiagram(g, diagramContext)
 }
 
 internal data class EmitAfter(
@@ -189,8 +195,8 @@ internal data class EmitAfter(
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
-    ): GrammarDoc.Component = matcher.toGrammarDocDiagram(g, inlinable)
+        diagramContext: GrammarDoc.Context,
+    ): GrammarDoc.Component = matcher.toGrammarDocDiagram(g, diagramContext)
 }
 
 /** Emits an implied ast part, getting position metadata from the next token. */
@@ -225,12 +231,11 @@ internal data class Implied(
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
+        diagramContext: GrammarDoc.Context,
     ): GrammarDoc.Component = GrammarDoc.Skip
 }
 
 /** Concatenation. */
-@Suppress("DataClassPrivateConstructor")
 @ConsistentCopyVisibility
 internal data class Cat private constructor(val elements: List<Combinator>) : Combinator {
     override fun apply(context: CombinatorContext<*>, position: Int): Int {
@@ -248,16 +253,17 @@ internal data class Cat private constructor(val elements: List<Combinator>) : Co
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
+        diagramContext: GrammarDoc.Context,
     ): GrammarDoc.Component {
         val components = mutableListOf<GrammarDoc.Component>()
         for (element in elements) {
-            when (val component = element.toGrammarDocDiagram(g, inlinable)) {
+            when (val component = element.toGrammarDocDiagram(g, diagramContext)) {
                 is GrammarDoc.Sequence -> components.addAll(component.children)
                 is GrammarDoc.Skip -> Unit
                 else -> components.add(component)
             }
         }
+        components.removeAll { diagramContext.disallows(it) }
         return when (components.size) {
             0 -> GrammarDoc.Skip
             1 -> components[0]
@@ -288,7 +294,6 @@ internal data class Cat private constructor(val elements: List<Combinator>) : Co
 }
 
 /** Alternation. */
-@Suppress("DataClassPrivateConstructor")
 @ConsistentCopyVisibility
 internal data class Or private constructor(val options: List<Combinator>) : Combinator {
     override fun apply(context: CombinatorContext<*>, position: Int): Int {
@@ -303,15 +308,16 @@ internal data class Or private constructor(val options: List<Combinator>) : Comb
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
+        diagramContext: GrammarDoc.Context,
     ): GrammarDoc.Component {
         val choices = mutableSetOf<GrammarDoc.Component>()
         for (option in options) {
-            when (val component = option.toGrammarDocDiagram(g, inlinable)) {
+            when (val component = option.toGrammarDocDiagram(g, diagramContext)) {
                 is GrammarDoc.Choice -> choices.addAll(component.children)
                 else -> choices.add(component)
             }
         }
+        choices.removeAll { diagramContext.disallows(it) }
         val components = choices.toList()
         // Specialize to Regex * and ?
         if (components.size == 2 && components[1] is GrammarDoc.Skip) {
@@ -354,7 +360,6 @@ internal data class Or private constructor(val options: List<Combinator>) : Comb
  * Matches an input token.
  * If emit is truthy, matched content is copied to the output.
  */
-@Suppress("DataClassPrivateConstructor")
 @ConsistentCopyVisibility
 internal data class Match private constructor(
     val description: GrammarDoc.Component,
@@ -373,7 +378,7 @@ internal data class Match private constructor(
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
+        diagramContext: GrammarDoc.Context,
     ): GrammarDoc.Component = description
 
     override fun apply(context: CombinatorContext<*>, position: Int): Int {
@@ -407,7 +412,7 @@ internal object TokenToRawString : Combinator {
 
     override val children: Iterable<Combinator> get() = emptyList()
 
-    override fun toGrammarDocDiagram(g: Productions<*>, inlinable: (Ref) -> Boolean): GrammarDoc.Component =
+    override fun toGrammarDocDiagram(g: Productions<*>, diagramContext: GrammarDoc.Context): GrammarDoc.Component =
         GrammarDoc.Terminal("raw string")
 }
 
@@ -434,7 +439,7 @@ internal object TokenToCodePoint : Combinator {
 
     override val children: Iterable<Combinator> get() = emptyList()
 
-    override fun toGrammarDocDiagram(g: Productions<*>, inlinable: (Ref) -> Boolean): GrammarDoc.Component =
+    override fun toGrammarDocDiagram(g: Productions<*>, diagramContext: GrammarDoc.Context): GrammarDoc.Component =
         GrammarDoc.Terminal("code point escape")
 }
 
@@ -474,7 +479,7 @@ internal object JoinStrings : Combinator {
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
+        diagramContext: GrammarDoc.Context,
     ): GrammarDoc.Component = GrammarDoc.NonTerminal("ContentChars")
 }
 
@@ -495,9 +500,9 @@ internal data class Rep(val body: Combinator) : Combinator {
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
+        diagramContext: GrammarDoc.Context,
     ): GrammarDoc.Component =
-        GrammarDoc.OneOrMore(body.toGrammarDocDiagram(g, inlinable), null)
+        GrammarDoc.OneOrMore(body.toGrammarDocDiagram(g, diagramContext), null)
 
     override val children: List<Combinator> get() = listOf(body)
 }
@@ -515,9 +520,9 @@ internal data class NegLA(val body: Combinator) : Combinator {
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
+        diagramContext: GrammarDoc.Context,
     ): GrammarDoc.Component = GrammarDoc.Group(
-        body.toGrammarDocDiagram(g, inlinable),
+        body.toGrammarDocDiagram(g, diagramContext),
         label = GrammarDoc.Comment("Disallowed"),
     )
 
@@ -538,7 +543,7 @@ internal data class Lookahead(
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
+        diagramContext: GrammarDoc.Context,
     ): GrammarDoc.Component =
         if (description is GrammarDoc.Skip) {
             description
@@ -589,7 +594,7 @@ internal data class Lookbehind(
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
+        diagramContext: GrammarDoc.Context,
     ): GrammarDoc.Component = GrammarDoc.Group(
         description,
         label = GrammarDoc.Comment("Lookbehind"),
@@ -617,7 +622,7 @@ internal class Prefix(
 
 /** Substitutes a builtin reference for a token. */
 internal class Where(
-    private val describe: (Productions<*>, (Ref) -> Boolean) -> GrammarDoc.Component,
+    private val describe: (Productions<*>, GrammarDoc.Context) -> GrammarDoc.Component,
     /** Must match one CstToken.  Used to determine success though [makeLeaf]'s output is substituted. */
     private val filter: Combinator,
     private val makeLeaf: (tokenText: String, pos: Position) -> LeafAstPart,
@@ -657,8 +662,8 @@ internal class Where(
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
-    ): GrammarDoc.Component = describe(g, inlinable)
+        diagramContext: GrammarDoc.Context,
+    ): GrammarDoc.Component = describe(g, diagramContext)
 }
 
 internal data class Garbage(
@@ -717,7 +722,7 @@ internal data class Garbage(
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
+        diagramContext: GrammarDoc.Context,
     ): GrammarDoc.Component = GrammarDoc.NonTerminal("Garbage")
 
     override val children: List<Combinator> get() = listOf()
@@ -741,9 +746,9 @@ internal data class Problem(
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
+        diagramContext: GrammarDoc.Context,
     ): GrammarDoc.Component = GrammarDoc.Group(
-        matcher.toGrammarDocDiagram(g, inlinable),
+        matcher.toGrammarDocDiagram(g, diagramContext),
         GrammarDoc.Comment(messageTemplate.formatString),
     )
 
@@ -771,8 +776,8 @@ internal data class Debug(val description: String, val body: Combinator) : Combi
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
-    ): GrammarDoc.Component = body.toGrammarDocDiagram(g, inlinable)
+        diagramContext: GrammarDoc.Context,
+    ): GrammarDoc.Component = body.toGrammarDocDiagram(g, diagramContext)
 
     override val children: List<Combinator> get() = listOf(body)
 }
@@ -784,7 +789,7 @@ internal object Eof : Combinator {
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
+        diagramContext: GrammarDoc.Context,
     ): GrammarDoc.Component = GrammarDoc.Comment("end-of-file")
 
     override val children: List<Combinator> get() = listOf()
@@ -815,8 +820,8 @@ internal class Counter(
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
-    ): GrammarDoc.Component = c.toGrammarDocDiagram(g, inlinable)
+        diagramContext: GrammarDoc.Context,
+    ): GrammarDoc.Component = c.toGrammarDocDiagram(g, diagramContext)
 }
 
 /**
@@ -843,8 +848,8 @@ internal class CountForEach(
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
-    ): GrammarDoc.Component = repeated.toGrammarDocDiagram(g, inlinable)
+        diagramContext: GrammarDoc.Context,
+    ): GrammarDoc.Component = repeated.toGrammarDocDiagram(g, diagramContext)
 }
 
 /** Increments the last counter on the stack owned by [counterOwner]. */
@@ -861,7 +866,7 @@ internal class CountUp(
 
     override fun toGrammarDocDiagram(
         g: Productions<*>,
-        inlinable: (Ref) -> Boolean,
+        diagramContext: GrammarDoc.Context,
     ) = GrammarDoc.Skip
 }
 
@@ -945,8 +950,8 @@ internal class DecorateWithDocCommentCombinator(
 
     override val children: Iterable<Combinator> get() = listOf(decorated)
 
-    override fun toGrammarDocDiagram(g: Productions<*>, inlinable: (Ref) -> Boolean): GrammarDoc.Component =
-        decorated.toGrammarDocDiagram(g, inlinable)
+    override fun toGrammarDocDiagram(g: Productions<*>, diagramContext: GrammarDoc.Context): GrammarDoc.Component =
+        decorated.toGrammarDocDiagram(g, diagramContext)
 }
 
 internal object ExtractCommentsToCalls : ExtractCommentCombinator() {
@@ -988,12 +993,12 @@ internal object ExtractCommentsToCalls : ExtractCommentCombinator() {
 
     override val children: Iterable<Combinator> = emptyList()
 
-    override fun toGrammarDocDiagram(g: Productions<*>, inlinable: (Ref) -> Boolean): GrammarDoc.Component =
+    override fun toGrammarDocDiagram(g: Productions<*>, diagramContext: GrammarDoc.Context): GrammarDoc.Component =
         GrammarDoc.Skip
 }
 
-private fun Combinator.maybeInline(g: Productions<*>, inlinable: (Ref) -> Boolean) =
-    if (this is Ref && inlinable(this)) {
+private fun Combinator.maybeInline(g: Productions<*>, context: GrammarDoc.Context) =
+    if (this is Ref && context.inlineable(this.name)) {
         g.getProduction(this.name) ?: this
     } else {
         this

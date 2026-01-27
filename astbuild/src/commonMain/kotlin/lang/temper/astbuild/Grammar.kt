@@ -17,6 +17,7 @@ import lang.temper.astbuild.ProductionNames.`(`
 import lang.temper.astbuild.ProductionNames.`)`
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.BuiltinFuns.vPostfixApply
+import lang.temper.builtin.vStringExprMacro
 import lang.temper.common.Either
 import lang.temper.common.LeftOrRight
 import lang.temper.common.LeftOrRight.Left
@@ -48,7 +49,6 @@ import lang.temper.value.callJoinSymbol
 import lang.temper.value.caseCaseSymbol
 import lang.temper.value.caseIsSymbol
 import lang.temper.value.caseSymbol
-import lang.temper.value.catBuiltinName
 import lang.temper.value.chainNullBuiltinName
 import lang.temper.value.complexArgSymbol
 import lang.temper.value.condSymbol
@@ -57,6 +57,7 @@ import lang.temper.value.defaultSymbol
 import lang.temper.value.dotBuiltinName
 import lang.temper.value.flowInitSymbol
 import lang.temper.value.forbidsSymbol
+import lang.temper.value.funStringSymbol
 import lang.temper.value.holeBuiltinName
 import lang.temper.value.incrSymbol
 import lang.temper.value.initSymbol
@@ -68,6 +69,7 @@ import lang.temper.value.quasiInnerBuiltinName
 import lang.temper.value.quasiLeafBuiltinName
 import lang.temper.value.regexLiteralBuiltinName
 import lang.temper.value.reifiesSymbol
+import lang.temper.value.safeStringPartSymbol
 import lang.temper.value.squaresBuiltinName
 import lang.temper.value.superSymbol
 import lang.temper.value.supportsSymbol
@@ -186,10 +188,11 @@ private object ProductionNames : DomainSpecificLanguage() {
     val Stmt = Ref("Stmt")
     val StmtBlock = Ref("StmtBlock")
     val StringGroup = Ref("StringGroup")
+    val StringGroupSynthetic = Ref("StringGroupSynthetic")
     val StringGroupTagged = Ref("StringGroupTagged")
     val StringHole = Ref("StringHole")
     val StringHoleRaw = Ref("StringHoleRaw")
-    val StringLiteral = Ref("StringLiteral")
+    val StringExpr = Ref("StringExpr")
     val StringPart = Ref("StringPart")
     val StringPartRaw = Ref("StringPartRaw")
     val SymbolLiteral = Ref("SymbolLiteral")
@@ -317,6 +320,7 @@ val grammar = ProductionNames.run {
     Stmt `：＝` LabeledStmt /
         MatchBranch /
         StmtBlock /
+        StringGroupSynthetic /
         // This means we need to consume an indent pseudo-token, match expression,
         // consume a literal ';' token, consume a dedent pseudo-token.
         CommaExpr
@@ -553,7 +557,10 @@ val grammar = ProductionNames.run {
      * - a string group as in a tagged string template like `callee"foo ${ bar }"`.
      */
     CallArgs `：＝` (
-        (syntheticToken y StringGroupTagged) /
+        (
+            syntheticToken y impliedValue(vStringExprMacro) y shiftLeft y impliedValue(TBoolean.valueTrue) y
+                StringGroupTagged
+            ) /
             ("(" y (ForArgs / opt(Args)) y ")")
         )
 
@@ -1051,7 +1058,7 @@ val grammar = ProductionNames.run {
         SpecialDot /
         RegularDot /
         Call /
-        StringLiteral /
+        StringExpr /
         // Parentheses for grouping
         (
             Operator.ParenGroup y `(` y "(" y
@@ -1263,28 +1270,86 @@ val grammar = ProductionNames.run {
         )
         )
 
-    StringLiteral `：＝` (
-        Operator.ParenGroup y callTree(`(` y catBuiltinName y StringGroup y `)`)
+    StringExpr `：＝` (
+        bracketGroups y `(` y syntheticToken y (
+            // Very simple string literals should just become string values.
+            (
+                "(" y Operator.QuotedGroup y `(` y
+                    TokenType.LeftDelimiter y value(
+                        delimiterMatcher y
+                            (
+                                (`(` y TokenType.QuotedString y stringPartMatcher y `)`) /
+                                    impliedValuePart(Value("", TString))
+                                ) y
+                            TokenType.RightDelimiter y delimiterMatcher,
+                    ) y
+                    `)` y ")"
+                ) /
+                // For more complex, untagged string expressions, use the macro
+                (
+                    callTree(
+                        impliedValue(vStringExprMacro) y
+                            // The string tagger will infer the default tag, simple concatenation.
+                            impliedValue(TNull.value) y
+                            // We pass in false to indicate that the substrings need no extra un-escaping.
+                            impliedValue(TBoolean.valueFalse) y
+                            StringGroup,
+                    )
+                    )
+            ) y
+            `)`
         )
 
     StringGroup `：＝` (
-        syntheticToken y "(" y Operator.QuotedGroup y `(` y (
-            (TokenType.LeftDelimiter y delimiterMatcher) y
-                any(StringPart) y
-                (TokenType.RightDelimiter y delimiterMatcher) y
-                `)` y ")"
+        syntheticToken y (
+            (
+                "(" y Operator.QuotedGroup y `(` y
+                    TokenType.LeftDelimiter y delimiterMatcher y
+                    any(StringPart) y
+                    TokenType.RightDelimiter y delimiterMatcher y
+                    `)` y ")"
+                ) / (
+                "{" y Operator.QuotedGroup y funStringSymbol y funTree(
+                    `(` y
+                        TokenType.LeftDelimiter y delimiterMatcher y
+                        funStringSymbol y impliedValue(void) y
+                        BlockLambdaBody y
+                        TokenType.RightDelimiter y delimiterMatcher y
+                        `)`,
+                ) y "}"
+                )
             )
         )
 
     StringGroupTagged `：＝` (
-        syntheticToken y "(" y Operator.QuotedGroup y callTree(
-            `(` y BuiltinFuns.vInterpolateMacro y (
-                (TokenType.LeftDelimiter y delimiterMatcherBackticks) y
+        syntheticToken y (
+            (
+                "(" y Operator.QuotedGroup y `(` y
+                    TokenType.LeftDelimiter y delimiterMatcher y
                     any(StringPartRaw) y
-                    (TokenType.RightDelimiter y delimiterMatcherBackticks) y
-                    `)`
-                ) y ")",
+                    TokenType.RightDelimiter y delimiterMatcher y
+                    `)` y ")"
+                ) / (
+                "{" y Operator.QuotedGroup y funStringSymbol y funTree(
+                    `(` y
+                        TokenType.LeftDelimiter y delimiterMatcher y
+                        funStringSymbol y impliedValue(void) y
+                        BlockLambdaBody y
+                        TokenType.RightDelimiter y delimiterMatcher y
+                        `)`,
+                ) y "}"
+                )
+            )
         )
+
+    StringGroupSynthetic `：＝` (
+        // See TokenSourceAdapter's StringFixer which produces this
+        (
+            Operator.PreIncr y `(` y syntheticToken y "+++" y `(` y TokenType.QuotedString y
+                safeStringPartSymbol y value(TokenToRawString) y
+                `)` y `)`
+            ) /
+            StringHoleRaw
         )
 
     StringHole `：＝` (
@@ -1296,7 +1361,7 @@ val grammar = ProductionNames.run {
             "}" y `)`
         )
 
-    /** For custom usage, insert interpolation markers. */
+    /** For tagged usage, insert interpolation markers. */
     StringHoleRaw `：＝` (
         Operator.DollarCurly y `(` y $$"${".asSymbol(interpolateSymbol) y
             (
@@ -1390,8 +1455,7 @@ val grammar = ProductionNames.run {
             `(` y
                 // If there are embedded multi-quote sequences, there may be multiple elements in one leaf.
                 many(
-                    TokenType.QuotedString y
-                        value(Match(GrammarDoc.NonTerminal("ContentChars"), emit = true) { true }),
+                    TokenType.QuotedString y value(stringPartMatcher),
                 ) y
                 `)`
             ) / StringHole / UnicodeRun
@@ -1645,6 +1709,7 @@ private infix fun (TokenType).y(c: Combinator): Combinator = toCombinator(this).
 private infix fun (Set<Operator>).y(c: Combinator): Combinator = toCombinator(this).y(c)
 private infix fun (Combinator).y(o: Operator): Combinator = this.y(toCombinator(o))
 private infix fun (Combinator).y(t: TokenType): Combinator = this.y(toCombinator(t))
+private infix fun (String).y(o: Operator): Combinator = toCombinator(this).y(toCombinator(o))
 
 // Adding a name that emits an implicit name that starts where the next token consumed ends.
 private infix fun (Combinator).y(name: TemperName): Combinator = this.y(toCombinator(name))
@@ -1724,7 +1789,6 @@ internal abstract class DomainSpecificLanguage {
         it.tokenType == TokenType.Word
     }
     val delimiterMatcher = patternMatcher("^\"+|'$", emit = false)
-    val delimiterMatcherBackticks = patternMatcher("^\"+|['`]$", emit = false)
     val litMatcher = Match(
         GrammarDoc.NonTerminal("Number"),
         emit = true,
@@ -1734,6 +1798,7 @@ internal abstract class DomainSpecificLanguage {
     val numMatcher = Match(GrammarDoc.NonTerminal("Number"), true) {
         it.tokenType == TokenType.Number
     }
+    val stringPartMatcher = Match(GrammarDoc.NonTerminal("ContentChars"), emit = true) { true }
 
     val builtinNameMatcher = object : Combinator {
         override fun apply(context: CombinatorContext<*>, position: Int): Int {
@@ -1750,7 +1815,7 @@ internal abstract class DomainSpecificLanguage {
 
         override fun toGrammarDocDiagram(
             g: Productions<*>,
-            inlinable: (Ref) -> Boolean,
+            diagramContext: GrammarDoc.Context,
         ): GrammarDoc.Component = GrammarDoc.NonTerminal("BuiltinName")
 
         override val children: Iterable<Combinator> get() = emptyList()
@@ -1791,11 +1856,13 @@ internal abstract class DomainSpecificLanguage {
     fun name(combinator: Combinator) = tree(combinator, LeafTreeType.RightName)
     fun value(combinator: Combinator) = tree(combinator, LeafTreeType.Value)
 
-    fun impliedValue(v: Value<*>, bias: LeftOrRight = Right) = value(
+    fun impliedValue(v: Value<*>, bias: LeftOrRight = Right) =
+        value(impliedValuePart(v, bias = bias))
+
+    fun impliedValuePart(v: Value<*>, bias: LeftOrRight = Right) =
         Implied(bias = bias) { p, out ->
             out.add(ValuePart(v, p))
-        },
-    )
+        }
 
     fun Combinator.rename(values: Map<String, Either<TemperName, Value<*>>>): Combinator = name(
         Where(
@@ -1938,6 +2005,7 @@ internal abstract class DomainSpecificLanguage {
     val blockPreceder = Lookbehind(GrammarDoc.NonTerminal("!BagPreceder")) { !isBagPreceder(it) }
     val infixColons = setOf(Operator.LowColon, Operator.HighColon)
     val supports = setOf(Operator.SupportsNoComma, Operator.SupportsComma)
+    val bracketGroups = setOf(Operator.ParenGroup, Operator.CurlyGroup)
 }
 
 // Some versions of Kotlin fail on `Operator.EnumValue.text!!`

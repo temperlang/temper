@@ -1,7 +1,8 @@
 package lang.temper.frontend
 
 import lang.temper.common.AtomicCounter
-import lang.temper.env.BindingNamingContext
+import lang.temper.env.Exporter
+import lang.temper.env.ExportingNamingContext
 import lang.temper.log.FilePath
 import lang.temper.log.UNIX_FILE_SEGMENT_SEPARATOR
 import lang.temper.name.ImplicitsCodeLocation
@@ -14,11 +15,14 @@ import lang.temper.stage.Stage
 class ModuleNamingContext internal constructor(
     counter: AtomicCounter = AtomicCounter(),
     owner: Module,
-) : BindingNamingContext(counter) {
+) : ExportingNamingContext(counter) {
     constructor(namingContext: NamingContext, owner: Module) : this(namingContext.adoptCounter(), owner)
 
     var owner: Module = owner
         private set
+
+    override val exporter: Exporter
+        get() = owner
 
     override val locationDiagnostic: String
         get() {

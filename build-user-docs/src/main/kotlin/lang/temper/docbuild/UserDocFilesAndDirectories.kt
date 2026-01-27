@@ -6,7 +6,10 @@ import lang.temper.fs.nativeConvention
 import lang.temper.fs.resolve
 import lang.temper.fs.resolveEntry
 import lang.temper.fs.temperRoot
+import lang.temper.log.FilePath
+import lang.temper.log.FilePathSegment
 import lang.temper.log.dirPath
+import lang.temper.value.HELPFUL_SNIPPETS_RESOURCE_PATH
 
 /**
  * You can use this to [run] code or [inContext] to get file and directory paths in scope.
@@ -24,6 +27,15 @@ internal object UserDocFilesAndDirectories {
     val snippetsJsonFile: NativePath = userDocRoot.resolveEntry(".snippet-hashes.json")
     val mkdocsRoot: NativePath = userDocRoot.resolve(dirPath("temper-docs", "docs"))
     val unInlinedSnippetsRoot: NativePath = mkdocsRoot.resolveEntry("snippet")
+    val helpfulSnippetsJsonFile = temperRoot.resolve(
+        FilePath(
+            (
+                listOf("fundamentals", "src", "commonMain", "resources") +
+                    HELPFUL_SNIPPETS_RESOURCE_PATH.split("/")
+                ).map { FilePathSegment(it) },
+            isDir = false,
+        ),
+    )
 
     val isWindows = nativeConvention == NativeConvention.Windows
 }

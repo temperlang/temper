@@ -56,4 +56,15 @@ interface Helpful : OccasionallyHelpful {
 interface HelpfullyNamed : Helpful {
     /** A suggested topic name for the REPL `help` function to retrieve this help topic. */
     fun helpfulTopicName(): String
+
+    companion object {
+        operator fun invoke(topicName: String, helpful: Helpful): HelpfullyNamed = Wrapper(topicName, helpful)
+
+        private data class Wrapper(
+            val topicName: String,
+            val helpful: Helpful,
+        ) : HelpfullyNamed, Helpful by helpful {
+            override fun helpfulTopicName(): String = topicName
+        }
+    }
 }

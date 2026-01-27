@@ -99,9 +99,34 @@ class PseudoCodeTest {
     )
 
     @Test
+    fun unexplodedWildcardDecl() = assertPseudoCode(
+        // Not ideal, but not the worst either.
+        want = """
+            |let[nym`{}`(\nym`...`)] = import("foo");
+            |
+        """.trimMargin(),
+    ) { doc, pos ->
+        doc.treeFarm.grow(pos) {
+            Block {
+                Decl {
+                    Call {
+                        Rn(curliesBuiltinName)
+                        V(surpriseMeSymbol)
+                    }
+                    V(initSymbol)
+                    Call {
+                        Rn(importBuiltinName)
+                        V(Value("foo", TString))
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun strings() = assertPseudoCode(
-        input = " \"foo\\n\" ",
-        want = "cat(\"foo\", \"\\n\")\n",
+        input = " \"foo\" ",
+        want = "\"foo\"\n",
     )
 
     @Test
