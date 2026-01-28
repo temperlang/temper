@@ -1068,6 +1068,6 @@ private val connectedReferences = listOf(
 
 private const val FORMAT_MACRO_NAME = "format!"
 
-private val connectedTypes = mapOf(
+internal val connectedTypes = mapOf(
     "StringBuilder" to ConnectedType.StringBuilder,
 )

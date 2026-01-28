@@ -5,6 +5,7 @@ import lang.temper.ast.deepCopy
 import lang.temper.be.Backend
 import lang.temper.be.Dependencies
 import lang.temper.be.DescriptorsForDeclarations
+import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLOperator
 import lang.temper.be.tmpl.TypedArg
@@ -69,6 +70,7 @@ import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.TVoid
+import lang.temper.value.connectedSymbol
 import lang.temper.value.failSymbol
 import lang.temper.value.sealedTypeSymbol
 
@@ -2811,6 +2813,7 @@ class RustTranslator(
             },
         )
     }
+
     private fun translateType(type: TmpL.AType, inExpr: Boolean = false, isFlex: Boolean = false) =
         translateType(type.ot, inExpr = inExpr, isFlex = isFlex)
 
@@ -2818,7 +2821,7 @@ class RustTranslator(
         val pos = type.pos
         // Check first for connected types.
         ((type as? TmpL.NominalType)?.typeName as? TmpL.ConnectedToTypeName)?.let { typeName ->
-            return@translateType translateTypeConnected(pos, typeName)
+            return@translateType translateTypeConnected(pos, typeName.name)
         }
         // Otherwise handle non-connected types.
         return when (type) {
@@ -2847,8 +2850,8 @@ class RustTranslator(
     private fun translateTypeBindings(type: TmpL.NominalType) =
         type.params.map { binding -> translateType(binding) }
 
-    private fun translateTypeConnected(pos: Position, typeName: TmpL.ConnectedToTypeName): Rust.Type {
-        return when ((typeName.name) as ConnectedType) {
+    private fun translateTypeConnected(pos: Position, typeName: TargetLanguageTypeName): Rust.Type {
+        return when (typeName as ConnectedType) {
             ConnectedType.StringBuilder -> "String".toId(pos).wrapRwLockType().wrapArcType()
         }
     }
@@ -2910,7 +2913,11 @@ class RustTranslator(
                 WellKnownTypes.voidTypeDefinition,
                 -> OutName("()", def.name)
 
-                else -> TODO(def.name.displayName)
+                else -> TString.unpackOrNull(def.metadata[connectedSymbol]?.firstOrNull())?.let { key ->
+                    connectedTypes[key]?.let { typeName ->
+                        return@translateTypeDefinition translateTypeConnected(pos, typeName)
+                    }
+                } ?: TODO(def.name.displayName)
             }
 
             else -> return translateIdFromNameAsPath(pos, def.name, style = NameStyle.Camel)
