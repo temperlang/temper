@@ -1891,6 +1891,44 @@ class BuildTreeTest {
     )
 
     @Test
+    fun taggedTemplateStringWithStatementFragments() = assertAst(
+        input = $$"""
+            |tag$${"\"\"\""}
+            |  "foo{: f(); :}bar${x}baz
+        """.trimMargin(),
+        wantJson = """
+            |[ "Call", [
+            |    [ "Value", "stringExpr: Function" ],
+            |    [ "RightName", "tag" ],
+            |    [ "Value", "true: Boolean" ],
+            |    [ "Value", "\\funString: Symbol" ],
+            |    [ "Fun", [
+            |        [ "Value", "\\funString: Symbol" ],
+            |        [ "Value", "void: Void" ],
+            |        [ "Block", [
+            |            [ "Value", "\\safeStringPart: Symbol" ],
+            |            [ "Value", "\"foo\": String" ],
+            |            [ "Call", [
+            |                [ "RightName", "f" ],
+            |              ]
+            |            ],
+            |            [ "Value", "\\safeStringPart: Symbol" ],
+            |            [ "Value", "\"bar\": String" ],
+            |            [ "Value", "\\interpolate: Symbol" ],
+            |            [ "RightName", "x" ],
+            |            [ "Value", "\\safeStringPart: Symbol" ],
+            |            [ "Value", "\"baz\": String" ],
+            |            [ "Value", "void: Void" ],
+            |          ]
+            |        ]
+            |      ]
+            |    ]
+            |  ]
+            |]
+        """.trimMargin(),
+    )
+
+    @Test
     fun longerTaggedTemplateString() = assertAst(
         input = $$"""f"foo${ x() }bar" """,
         startProduction = "Expr",

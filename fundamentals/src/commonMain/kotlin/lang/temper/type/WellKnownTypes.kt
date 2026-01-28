@@ -99,6 +99,7 @@ object WellKnownTypes {
     val safeGeneratorFnWrapperTypeDefinition: TypeShape
     val stageRangeTypeDefinition: TypeShape
     val stringTypeDefinition: TypeShape
+    val stringBuilderTypeDefinition: TypeShape
     val stringIndexTypeDefinition: TypeShape
     val stringIndexOptionTypeDefinition: TypeShape
     val symbolTypeDefinition: TypeShape
@@ -282,6 +283,7 @@ object WellKnownTypes {
         safeGeneratorFnWrapperTypeDefinition.addTypeParameter("YIELD", variance = Variance.Covariant)
         stageRangeTypeDefinition = wellKnownTypeShape(TStageRange.name, Concrete)
         stringTypeDefinition = wellKnownTypeShape(TString.name, Concrete)
+        stringBuilderTypeDefinition = wellKnownTypeShape(BuiltinName("StringBuilder"), Concrete)
         stringIndexTypeDefinition = wellKnownTypeShape(BuiltinName("StringIndex"), Concrete)
         stringIndexOptionTypeDefinition = wellKnownTypeShape(BuiltinName("StringIndexOption"), Abstract)
         symbolTypeDefinition = wellKnownTypeShape(TSymbol.name, Concrete)

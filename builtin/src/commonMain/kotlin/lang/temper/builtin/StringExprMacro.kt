@@ -1,25 +1,32 @@
 package lang.temper.builtin
 
+import lang.temper.ast.TreeVisit
+import lang.temper.ast.VisitCue
 import lang.temper.common.subListToEnd
 import lang.temper.env.InterpMode
 import lang.temper.format.OutToks
 import lang.temper.log.MessageTemplate
 import lang.temper.log.spanningPosition
 import lang.temper.name.ResolvedName
+import lang.temper.name.Symbol
 import lang.temper.stage.Stage
 import lang.temper.type.DotHelper
 import lang.temper.type.ExternalBind
+import lang.temper.type.ExternalGet
 import lang.temper.type.InvalidType
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.canBeNull
 import lang.temper.type2.AnySignature
 import lang.temper.type2.Signature2
 import lang.temper.value.BasicTypeInferences
+import lang.temper.value.BlockTree
 import lang.temper.value.BuiltinOperatorId
 import lang.temper.value.BuiltinStatelessMacroValue
 import lang.temper.value.CallTree
 import lang.temper.value.Fail
+import lang.temper.value.FunTree
 import lang.temper.value.IfThenElse
+import lang.temper.value.LinearFlow
 import lang.temper.value.MacroEnvironment
 import lang.temper.value.NameLeaf
 import lang.temper.value.NamedBuiltinFun
@@ -32,6 +39,7 @@ import lang.temper.value.TBoolean
 import lang.temper.value.TFunction
 import lang.temper.value.TNull
 import lang.temper.value.TString
+import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.Tree
 import lang.temper.value.Value
@@ -40,11 +48,17 @@ import lang.temper.value.freeTree
 import lang.temper.value.funStringSymbol
 import lang.temper.value.interpolateSymbol
 import lang.temper.value.isErrorCall
+import lang.temper.value.newBuiltinName
+import lang.temper.value.outTypeSymbol
 import lang.temper.value.rawBuiltinName
+import lang.temper.value.safeStringPartSymbol
 import lang.temper.value.symbolContained
 import lang.temper.value.toStringSymbol
 import lang.temper.value.typeForValue
+import lang.temper.value.typeSymbol
+import lang.temper.value.vInitSymbol
 import lang.temper.value.vIsNullFn
+import lang.temper.value.vTypeSymbol
 import lang.temper.value.valueContained
 
 /**
@@ -100,26 +114,23 @@ import lang.temper.value.valueContained
  * Rewrites any statement level constructs that use [lang.temper.value.interpolateSymbol] or
  * [lang.temper.value.safeStringPartSymbol] to emit to the accumulator.
  *
- * In either case, the macro call is turned into a function call.
+ * In either case, the macro call is turned into a block expression.
  *
  *     stringExpr(tagOrNull, isTagged, \funString fn() { BODY_STMTS })
  *
  *     ->
  *
- *     @stringExprDesugared fn {
- *       let accumulator#0 = ...;
+ *     do {
+ *       let accumulator#0 = ...;  // If the tag is a type, e.g. Tag, then it's just `new Tag()`
  *
  *       BODY_STMTS
- *       // \interpolate  x   -> accumulator#0.accumulate(x)
- *       // \safeString "..." -> accumulator#0.accumulateKnownSafe("...")
+ *       // \interpolate  x   -> accumulator#0.append(x)
+ *       // \safeString "..." -> accumulator#0.appendSafe("...")
  *
- *       let produced#0 = accumulator#0.produce();
+ *       accumulator#0.accumulated;
+ *     }
  *
- *       // return statement depending on tag convention
- *
- *     }() // Invoke the accumulation
- *
- * If the tag was an accumulator type or was null, then produced#0 is returned.
+ * If the tag was an accumulator type or was null, then the `.accumulated` content is the result.
  * If the accumulator is a collecting accumulator because the tag is not otherwise
  * known, then the return statement calls the tag with the collected lists and
  * returns the call result.
@@ -136,15 +147,59 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
 
         val isTagged = TBoolean.unpack(args.valueTree(1).valueContained!!)
         val tagExprTree = if (isTagged) { args.valueTree(0) } else { null }
-        val isFunString = args.valueTree(2).symbolContained == funStringSymbol
+        val isFunString = args.keyTree(2)?.symbolContained == funStringSymbol
+        val funTree = if (isFunString) {
+            // The parser turns string expressions with embedded statement fragments into
+            // a function body.
+            args.valueTree(2) as? FunTree ?: return NotYet
+        } else {
+            null
+        }
 
         val argRange = 2..args.lastIndex
+
+        if (funTree != null && funTree.parts?.formals?.isEmpty() == true) {
+            // If it doesn't have an argument, then we haven't processed it yet to
+            // direct interpolations and string literal appends to the buffer.
+            pointAppendsAtAccumulator(funTree, isTagged = isTagged)
+        }
 
         // If we don't have a tag, and it's not a function string, then we can just concatenate
         // the parts.
         if (tagExprTree == null) {
-            if (isFunString) {
-                TODO("${macroEnv.stage} ${macroEnv.pos}: untagged isFunString")
+            if (funTree != null) {
+                // @funString fn (accumulator: StringBuilder): Void { ... }
+                // ->
+                // do {
+                //   let sb = new StringBuilder();
+                //   (@funString fn ...)(sb);
+                //   sb.toString()
+                // }
+                macroEnv.replaceMacroCallWith {
+                    val bufferName = macroEnv.nameMaker.unusedTemporaryName("sb")
+                    val pos = macroEnv.pos
+                    Block(pos) {
+                        Decl(pos.leftEdge, bufferName) {
+                            V(vTypeSymbol)
+                            V(Types.vStringBuilder)
+                            V(vInitSymbol)
+                            Call {
+                                Rn(newBuiltinName)
+                                V(Types.vStringBuilder)
+                            }
+                        }
+                        Call {
+                            Replant(freeTree(funTree))
+                            Rn(bufferName)
+                        }
+                        Call {
+                            Call {
+                                V(Value(DotHelper(ExternalBind, toStringSymbol)))
+                                Rn(bufferName)
+                            }
+                        }
+                    }
+                }
             } else {
                 tryReplaceWithString(macroEnv, argRange)?.let { return@invoke it }
                 // Otherwise, we need to coerce parts to string.
@@ -157,8 +212,8 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                         }
                     }
                 }
-                return NotYet
             }
+            return NotYet
         }
 
         val tagValue = tagExprTree.valueContained
@@ -258,8 +313,49 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                 return NotYet
             }
             TagCategory.AccumulatorStyle -> if (isFunString) {
-                TODO("${macroEnv.stage} ${macroEnv.pos}: $tagExprTree $tagCategory isTagged, isFunString")
+                // tag, fn (acc) { ... }
+                // ->
+                // do {
+                //   let acc = new tag();
+                //   ...
+                //   acc.accumulated
+                // }
+                val fnParts = funTree?.parts ?: return NotYet
+                macroEnv.replaceMacroCallWith {
+                    Block(macroEnv.pos) {
+                        val accumulator = fnParts.formals[0]
+                        val accumulatorParts = accumulator.parts!!
+                        val accumulatorName = accumulatorParts.name.content
+                        val body = fnParts.body
+                        for (formal in fnParts.formals) {
+                            Replant(freeTree(formal))
+                        }
+                        Call(body.pos.leftEdge, BuiltinFuns.setLocalFn) {
+                            Ln(accumulatorName)
+                            Call(body.pos.leftEdge) {
+                                Rn(newBuiltinName)
+                                Replant(freeTree(tagExprTree))
+                            }
+                        }
+                        Replant(freeTree(body))
+                        Call(body.pos.rightEdge) {
+                            V(Value(DotHelper(ExternalGet, accumulatedDotName)))
+                            Rn(accumulatorName)
+                        }
+                    }
+                }
+                return NotYet
             } else {
+                // Implement collecting accumulator as discussed above.
+                // The collecting accumulator builds a list of literal parts, and a list of
+                // non-literal parts.
+                //
+                // We output something like
+                //
+                // new CollectingAccumulator().applyTag(tag) { (accumulator) => FN BODY }
+                //
+                // That call chaining should allow tag to guide type inference of the type variable for
+                // the collecting accumulator's internal list of un-trusted appends.
                 TODO("${macroEnv.stage} ${macroEnv.pos}: $tagExprTree $tagCategory isTagged")
             }
         }
@@ -272,6 +368,108 @@ private enum class TagCategory {
     FnCallStyle,
     AccumulatorStyle,
 }
+
+/**
+ * We need to rewrite interpolations and string appends in the body of a
+ * function created from a string expression with embedded statement fragments.
+ * Those interpolations and appends need to point to a particular buffer or
+ * accumulator.
+ */
+private fun pointAppendsAtAccumulator(funTree: FunTree, isTagged: Boolean) {
+    val accumulatorName = funTree.document.nameMaker.unusedTemporaryName("accumulator")
+    val body = funTree.parts?.body ?: return
+
+    // Inserting the accumulator argument means we will not re-enter this function
+    funTree.insert(at = 0) {
+        Decl(funTree.pos.leftEdge, accumulatorName) {
+            if (!isTagged) {
+                // We know it's a StringBuilder
+                V(typeSymbol)
+                V(Types.vStringBuilder)
+            }
+            // Otherwise, StringExprMacro will insert its type once it has a tag category
+        }
+        V(outTypeSymbol)
+        V(Types.vVoid)
+    }
+
+    val vAppendDotHelper = Value(DotHelper(ExternalBind, appendDotName))
+    val vAppendSafeDotHelper = if (isTagged) {
+        // Accumulators have separate append and appendSafe methods
+        Value(DotHelper(ExternalBind, appendSafeDotName))
+    } else {
+        // StringBuilders can just use the same one.
+        // We also need an implicit `?.toString() ?: "null"`
+        // TODO: Maybe separate out that stuff from StrCatMacro into its own thing that is
+        // applied to every value interpolation.
+        vAppendDotHelper
+    }
+
+    // Accumulate a list of edits then play them in reverse order to avoid
+    // colliding edits.
+    data class Edit(
+        val parent: BlockTree,
+        val range: IntRange,
+        val performEdit: Planting.() -> Unit,
+    )
+    val edits = buildList {
+        TreeVisit.startingAt(body)
+            .forEach { t ->
+                if (t is FunTree && t.parts?.metadataSymbolMap?.containsKey(funStringSymbol) == true) {
+                    // Walk the body but do not descend into other funStrings.
+                    // They'll have their own accumulatorName.
+                    return@forEach VisitCue.SkipOne
+                }
+
+                if (t is BlockTree && t.flow is LinearFlow) {
+                    for (i in 0 until t.size - 1) {
+                        val child = t.child(i)
+                        if (child is ValueLeaf) {
+                            val next = t.child(i + 1)
+                            val edit = when (TSymbol.unpackOrNull(child.content)) {
+                                safeStringPartSymbol -> Edit(t, i..i + 1) {
+                                    // acc.appendSafe("...")
+                                    Call(next.pos) {
+                                        Call(next.pos.leftEdge) {
+                                            V(vAppendSafeDotHelper)
+                                            Rn(accumulatorName)
+                                        }
+                                        Replant(next)
+                                    }
+                                }
+                                interpolateSymbol -> Edit(t, i..i + 1) {
+                                    // acc.append(expr)
+                                    Call(next.pos) {
+                                        Call(next.pos.leftEdge) {
+                                            V(vAppendDotHelper)
+                                            Rn(accumulatorName)
+                                        }
+                                        Replant(next)
+                                    }
+                                }
+                                else -> null
+                            }
+                            if (edit != null) {
+                                add(edit)
+                            }
+                        }
+                    }
+                }
+
+                VisitCue.Continue
+            }
+            .visitPreOrder()
+    }
+
+    for (edit in edits.asReversed()) {
+        val (block, rangeToReplace, performEdit) = edit
+        block.replace(rangeToReplace, performEdit)
+    }
+}
+
+private val appendSafeDotName = Symbol("appendSafe")
+private val appendDotName = Symbol("append")
+private val accumulatedDotName = Symbol("accumulated")
 
 /**
  * Desugars to a simple string concatenation when we have the time.

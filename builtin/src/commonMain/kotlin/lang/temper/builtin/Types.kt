@@ -39,6 +39,7 @@ object Types {
     val problem: ReifiedType
     val stageRange: ReifiedType
     val string: ReifiedType
+    val stringBuilder: ReifiedType
     val symbol: ReifiedType
     val type: ReifiedType
     val void: ReifiedType
@@ -58,6 +59,7 @@ object Types {
     val vProblem: Value<ReifiedType>
     val vStageRange: Value<ReifiedType>
     val vString: Value<ReifiedType>
+    val vStringBuilder: Value<ReifiedType>
     val vSymbol: Value<ReifiedType>
     val vType: Value<ReifiedType>
     val vVoid: Value<ReifiedType>
@@ -91,6 +93,7 @@ object Types {
         problem = referenceToTypeTag(TProblem)
         stageRange = referenceToTypeTag(TStageRange)
         string = referenceToTypeTag(TString)
+        stringBuilder = ReifiedType(MkType2(WellKnownTypes.stringBuilderTypeDefinition).get())
         symbol = referenceToTypeTag(TSymbol)
         type = referenceToTypeTag(TType)
         void = referenceToTypeTag(TVoid)
@@ -112,6 +115,7 @@ object Types {
         vProblem = Value(problem)
         vStageRange = Value(stageRange)
         vString = Value(string)
+        vStringBuilder = Value(stringBuilder)
         vSymbol = Value(symbol)
         vType = Value(type)
         vVoid = Value(void)
