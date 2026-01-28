@@ -2,6 +2,56 @@ package lang.temper.astbuild
 
 import lang.temper.lexer.reservedWords
 
+private val quotedStringGrammarDoc = GrammarDoc.Choice(
+    index = 0,
+    listOf(
+        // "..."
+        GrammarDoc.Sequence(
+            listOf(
+                GrammarDoc.Terminal("\""),
+                stringContentGrammar(sourceCharacterText = "SourceCharacter - ('\\n', '\\r', '\\', '\"')"),
+                GrammarDoc.Terminal("\""),
+            ),
+        ),
+        // """...
+        GrammarDoc.Sequence(
+            listOf(
+                GrammarDoc.Terminal("\"\"\""),
+                GrammarDoc.ZeroOrMore(
+                    GrammarDoc.Group(
+                        GrammarDoc.Sequence(
+                            listOf(
+                                GrammarDoc.Terminal("LineBreak"),
+                                GrammarDoc.Comment("indentation"),
+                                GrammarDoc.Group(
+                                    GrammarDoc.Terminal("\""),
+                                    GrammarDoc.Comment("Ignored margin quote"),
+                                ),
+                                GrammarDoc.Choice(
+                                    0,
+                                    listOf(
+                                        stringContentGrammar(sourceCharacterText = "SourceCharacter - ('\\')"),
+                                        GrammarDoc.Sequence(
+                                            listOf(
+                                                GrammarDoc.Terminal("{:"),
+                                                GrammarDoc.NonTerminal("StatementFragment"),
+                                                GrammarDoc.Terminal(":}"),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                        GrammarDoc.Comment("Content line starting with `\"`"),
+                    ),
+                    null,
+                ),
+                GrammarDoc.Terminal("LineBreak"),
+            ),
+        ),
+    ),
+)
+
 /**
  * Used by our documentation system.  See build-user-docs/.../GrammarProductionExtractor.
  */
@@ -27,55 +77,13 @@ object GrammarDiagrams {
                 GrammarDoc.Terminal("true"),
             ),
         ),
-        "StringLiteral" to GrammarDoc.NonTerminal("StringGroup"),
+        "StringExpr" to quotedStringGrammarDoc,
         "StringGroupSynthetic" to GrammarDoc.Choice.doNotShow,
-        "StringGroup" to GrammarDoc.Choice(
-            index = 0,
-            listOf(
-                // "..."
-                GrammarDoc.Sequence(
-                    listOf(
-                        GrammarDoc.Terminal("\""),
-                        stringContentGrammar(sourceCharacterText = "SourceCharacter - ('\\n', '\\r', '\\', '\"')"),
-                        GrammarDoc.Terminal("\""),
-                    ),
-                ),
-                // """...
-                GrammarDoc.Sequence(
-                    listOf(
-                        GrammarDoc.Terminal("\"\"\""),
-                        GrammarDoc.ZeroOrMore(
-                            GrammarDoc.Group(
-                                GrammarDoc.Sequence(
-                                    listOf(
-                                        GrammarDoc.Terminal("LineBreak"),
-                                        GrammarDoc.Comment("indentation"),
-                                        GrammarDoc.Group(
-                                            GrammarDoc.Terminal("\""),
-                                            GrammarDoc.Comment("Ignored margin quote"),
-                                        ),
-                                        GrammarDoc.Choice(
-                                            0,
-                                            listOf(
-                                                stringContentGrammar(sourceCharacterText = "SourceCharacter - ('\\')"),
-                                                GrammarDoc.Sequence(
-                                                    listOf(
-                                                        GrammarDoc.Terminal("{:"),
-                                                        GrammarDoc.NonTerminal("StatementFragment"),
-                                                        GrammarDoc.Terminal(":}"),
-                                                    ),
-                                                ),
-                                            ),
-                                        ),
-                                    ),
-                                ),
-                                GrammarDoc.Comment("Content line starting with `\"`"),
-                            ),
-                            null,
-                        ),
-                        GrammarDoc.Terminal("LineBreak"),
-                    ),
-                ),
+        "StringGroup" to quotedStringGrammarDoc,
+        "StringGroupTagged" to GrammarDoc.Group(
+            quotedStringGrammarDoc,
+            GrammarDoc.Comment(
+                "Whether escape sequences are expanded is up to the tag",
             ),
         ),
         "EscapeSequence" to GrammarDoc.HorizontalChoice(
@@ -206,7 +214,10 @@ object GrammarDiagrams {
                 null
             }
         }
-        GrammarDoc.Context({ false }, { it in doNotShows })
+        GrammarDoc.Context(
+            inlineable = { false },
+            elide = { it in doNotShows },
+        )
     }
 
     fun forProductionNamed(productionName: String): GrammarDoc.Component {
