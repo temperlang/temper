@@ -3240,16 +3240,17 @@ class GenerateCodeStageTest {
             |    body: ```
             |          let guests = list("Hilo, HI", "you in the back in the hat");
             |          do {
-            |            let sb#0: StringBuilder = new StringBuilder ();
-            |            (@funString fn (accumulator#0: StringBuilder): Void {
-            |                do_bind_append(accumulator#0)("Hello, World");
-            |                for(let guest of guests, fn {
-            |                    do_bind_append(accumulator#0)(", and ");
-            |                    do_bind_append(accumulator#0)(guest);
-            |                });
-            |                do_bind_append(accumulator#0)("!");
-            |            })(sb#0);
-            |            do_bind_toString(sb#0)()
+            |            let accumulator#0: StringBuilder;
+            |            accumulator#0 = new StringBuilder ();
+            |            do {
+            |              do_bind_append(accumulator#0)("Hello, World");
+            |              for(let guest of guests, fn {
+            |                  do_bind_append(accumulator#0)(", and ");
+            |                  do_bind_append(accumulator#0)(guest);
+            |              });
+            |              do_bind_append(accumulator#0)("!");
+            |            };
+            |            do_bind_toString(accumulator#0)()
             |          }
             |
             |          ```

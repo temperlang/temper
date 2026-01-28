@@ -9,6 +9,7 @@ import lang.temper.log.MessageTemplate
 import lang.temper.log.spanningPosition
 import lang.temper.name.ResolvedName
 import lang.temper.name.Symbol
+import lang.temper.name.TemperName
 import lang.temper.stage.Stage
 import lang.temper.type.DotHelper
 import lang.temper.type.ExternalBind
@@ -56,9 +57,7 @@ import lang.temper.value.symbolContained
 import lang.temper.value.toStringSymbol
 import lang.temper.value.typeForValue
 import lang.temper.value.typeSymbol
-import lang.temper.value.vInitSymbol
 import lang.temper.value.vIsNullFn
-import lang.temper.value.vTypeSymbol
 import lang.temper.value.valueContained
 
 /**
@@ -171,35 +170,25 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                 // @funString fn (accumulator: StringBuilder): Void { ... }
                 // ->
                 // do {
-                //   let sb = new StringBuilder();
-                //   (@funString fn ...)(sb);
-                //   sb.toString()
+                //   let accumulator = new StringBuilder();
+                //   ...;
+                //   accumulator.toString()
                 // }
-                macroEnv.replaceMacroCallWith {
-                    val bufferName = macroEnv.nameMaker.unusedTemporaryName("sb")
-                    val pos = macroEnv.pos
-                    Block(pos) {
-                        Decl(pos.leftEdge, bufferName) {
-                            V(vTypeSymbol)
-                            V(Types.vStringBuilder)
-                            V(vInitSymbol)
-                            Call {
-                                Rn(newBuiltinName)
-                                V(Types.vStringBuilder)
-                            }
-                        }
-                        Call {
-                            Replant(freeTree(funTree))
-                            Rn(bufferName)
-                        }
+                inlineFunStringBody(
+                    macroEnv,
+                    funTree,
+                    plantAccumulatorType = {
+                        V(Types.vStringBuilder)
+                    },
+                    plantResult = { bufferName ->
                         Call {
                             Call {
                                 V(Value(DotHelper(ExternalBind, toStringSymbol)))
                                 Rn(bufferName)
                             }
                         }
-                    }
-                }
+                    },
+                )
             } else {
                 tryReplaceWithString(macroEnv, argRange)?.let { return@invoke it }
                 // Otherwise, we need to coerce parts to string.
@@ -312,7 +301,7 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                 }
                 return NotYet
             }
-            TagCategory.AccumulatorStyle -> if (isFunString) {
+            TagCategory.AccumulatorStyle -> if (funTree != null) {
                 // tag, fn (acc) { ... }
                 // ->
                 // do {
@@ -320,30 +309,19 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                 //   ...
                 //   acc.accumulated
                 // }
-                val fnParts = funTree?.parts ?: return NotYet
-                macroEnv.replaceMacroCallWith {
-                    Block(macroEnv.pos) {
-                        val accumulator = fnParts.formals[0]
-                        val accumulatorParts = accumulator.parts!!
-                        val accumulatorName = accumulatorParts.name.content
-                        val body = fnParts.body
-                        for (formal in fnParts.formals) {
-                            Replant(freeTree(formal))
-                        }
-                        Call(body.pos.leftEdge, BuiltinFuns.setLocalFn) {
-                            Ln(accumulatorName)
-                            Call(body.pos.leftEdge) {
-                                Rn(newBuiltinName)
-                                Replant(freeTree(tagExprTree))
-                            }
-                        }
-                        Replant(freeTree(body))
-                        Call(body.pos.rightEdge) {
+                inlineFunStringBody(
+                    macroEnv,
+                    funTree,
+                    plantAccumulatorType = {
+                        Replant(freeTree(tagExprTree))
+                    },
+                    plantResult = { accumulatorName ->
+                        Call(funTree.pos.rightEdge) {
                             V(Value(DotHelper(ExternalGet, accumulatedDotName)))
                             Rn(accumulatorName)
                         }
-                    }
-                }
+                    },
+                )
                 return NotYet
             } else {
                 // Implement collecting accumulator as discussed above.
@@ -357,6 +335,35 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                 // That call chaining should allow tag to guide type inference of the type variable for
                 // the collecting accumulator's internal list of un-trusted appends.
                 TODO("${macroEnv.stage} ${macroEnv.pos}: $tagExprTree $tagCategory isTagged")
+            }
+        }
+    }
+
+    private fun inlineFunStringBody(
+        macroEnv: MacroEnvironment,
+        funTree: FunTree,
+        plantAccumulatorType: Planting.() -> Unit,
+        plantResult: Planting.(TemperName) -> Unit,
+    ) {
+        val fnParts = funTree.parts ?: return
+        macroEnv.replaceMacroCallWith {
+            Block(macroEnv.pos) {
+                val accumulatorDecl = fnParts.formals[0]
+                val accumulatorParts = accumulatorDecl.parts!!
+                val accumulatorName = accumulatorParts.name.content
+                val body = fnParts.body
+                for (formal in fnParts.formals) {
+                    Replant(freeTree(formal))
+                }
+                Call(body.pos.leftEdge, BuiltinFuns.setLocalFn) {
+                    Ln(accumulatorName)
+                    Call(body.pos.leftEdge) {
+                        Rn(newBuiltinName)
+                        plantAccumulatorType()
+                    }
+                }
+                Replant(freeTree(body))
+                plantResult(accumulatorName)
             }
         }
     }
