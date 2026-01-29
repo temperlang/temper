@@ -2857,6 +2857,13 @@ class RustTranslator(
     }
 
     internal fun translateTypeDefinition(def: TypeDefinition, pos: Position, isParam: Boolean = false): Rust.Type {
+        // First see if we have a connected type.
+        TString.unpackOrNull(def.metadata[connectedSymbol]?.firstOrNull())?.let { key ->
+            connectedTypes[key]?.let { typeName ->
+                return@translateTypeDefinition translateTypeConnected(pos, typeName)
+            }
+        }
+        // Otherwise look up well-known types or use the user-defined type.
         return when (def.sourceLocation) {
             ImplicitsCodeLocation -> when (def) {
                 WellKnownTypes.anyValueTypeDefinition -> OutName(ANY_NAME, def.name)
@@ -2913,11 +2920,7 @@ class RustTranslator(
                 WellKnownTypes.voidTypeDefinition,
                 -> OutName("()", def.name)
 
-                else -> TString.unpackOrNull(def.metadata[connectedSymbol]?.firstOrNull())?.let { key ->
-                    connectedTypes[key]?.let { typeName ->
-                        return@translateTypeDefinition translateTypeConnected(pos, typeName)
-                    }
-                } ?: TODO(def.name.displayName)
+                else -> TODO(def.name.displayName)
             }
 
             else -> return translateIdFromNameAsPath(pos, def.name, style = NameStyle.Camel)
