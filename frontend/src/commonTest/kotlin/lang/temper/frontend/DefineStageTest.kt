@@ -3245,4 +3245,70 @@ class DefineStageTest {
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
+
+    @Test
+    fun accumulatorTypeUse() = assertModuleAtStage(
+        stage = Stage.Define,
+        input = $$"""
+            |let { theCount } = import("./the-count");
+            |
+            |theCount$${"\"\"\""}
+            |  "Zero: ${0}
+            |  // ↑ Starting at zero, because the Count is not a monster.
+            |  "One: ${1}
+            |  "{: for (let n of [2, 3, 4]) { :} ${n}{: } :}!
+            |  "Five: ${5}
+            |
+            |$$TEST_INPUT_MODULE_BREAK ./the-count/the-count.temper
+            |class TheCount {
+            |  public append(i: Int): Void {
+            |    console.log("${i}! Ha Ha Ha!");
+            |  }
+            |  public appendSafe(s: String): Void {}
+            |
+            |  public get accumulated(): Void {
+            |    console.log("I am the Count who loves to count!");
+            |  }
+            |}
+            |
+            |export let theCount = TheCount;
+        """.trimMargin(),
+        want = """
+            |{
+            |  define: {
+            |    body: ```
+            |        @stay @imported(\(`test//the-count/`.theCount)) let theCount__0;
+            |        theCount__0 = type (TheCount__0);
+            |        do {
+            |          let accumulator#0;
+            |## The tag is used to create an accumulator
+            |          accumulator#0 = new TheCount__0();
+            |## We inlined the body here.
+            |          do {
+            |            do_bind_appendSafe(accumulator#0)("Zero: ");
+            |## Unsafe interpolations become regular appends.
+            |            do_bind_append(accumulator#0)(0);
+            |            do_bind_appendSafe(accumulator#0)("\n");
+            |            void;
+            |            do_bind_appendSafe(accumulator#0)("One: ");
+            |            do_bind_append(accumulator#0)(1);
+            |            do_bind_appendSafe(accumulator#0)("\n");
+            |## The loop becomes just a regular forEach application and the content are appends.
+            |            do_bind_forEach(list(2, 3, 4))(fn (n__0) {
+            |                do_bind_appendSafe(accumulator#0)(" ");
+            |                do_bind_append(accumulator#0)(n__0);
+            |            });
+            |            do_bind_appendSafe(accumulator#0)("!\n");
+            |            do_bind_appendSafe(accumulator#0)("Five: ");
+            |            do_bind_append(accumulator#0)(5);
+            |          };
+            |## We inject a `.accumulated` fetch for the block result
+            |          do_get_accumulated(accumulator#0)
+            |        }
+            |
+            |        ```
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
 }

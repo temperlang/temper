@@ -4317,6 +4317,68 @@ class ParseTest {
             |]
         """.trimMargin(),
     )
+
+    @Test
+    fun taggedComplexStringExpression() = assertParseTree(
+        input = $$"""
+            |tag$${"\"\"\""}
+            |  "<ul>
+            |  "{:  for (let item of items) {  :}
+            |  "  <li>${item}</li>
+            |  "{:  }  :}
+            |  "</ul>
+        """.trimMargin(),
+        want = """
+            |[
+            |  [ "tag" ],
+            |  "{",
+            |  [
+            |    "\"\"\"",
+            |    [
+            |      [
+            |        "+++",
+            |        [ "<ul>\n" ],
+            |      ],
+            |      ";",
+            |      [
+            |        [
+            |          [ "for" ],
+            |          "(",
+            |          [
+            |            [ "let", "item" ],
+            |            "of",
+            |            [ "items" ],
+            |          ],
+            |          ")",
+            |        ],
+            |        "{",
+            |        [
+            |          [ "+++", [ "  <li>" ] ],
+            |          ";",
+            |          [
+            |            "$\{",
+            |            [ "item" ],
+            |            "}",
+            |          ],
+            |          ";",
+            |          [ "+++", [ "</li>\n" ] ],
+            |          ";",
+            |        ],
+            |        "}",
+            |      ],
+            |      ";",
+            |      [
+            |        "+++",
+            |        [ "</ul>" ],
+            |      ],
+            |      ";",
+            |    ],
+            |    "\"\"\"",
+            |  ],
+            |  "}",
+            |]
+        """.trimMargin(),
+    )
 }
 
 const val INTERP_EMBED = $$"${"

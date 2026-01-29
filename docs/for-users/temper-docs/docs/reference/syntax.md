@@ -396,7 +396,7 @@ A `{` ... `}` delimited block of statements.
 
 ### Syntax for *Expr*
 
-![Expr &#58;&#61; &#40;&#41; &#124; Jump &#124; AwaitReturnThrowYield &#124; Id &#124; TypeArgumentName &#124; SymbolLiteral &#124; List &#124; New &#124; Prefix &#124; SpecialDot &#124; RegularDot &#124; Call &#124; StringExpr &#124; &#34;&#40;&#34; &#40;&#40;Disallowed&#58; &#40;&#41;&#41; TopLevelNoGarbageNoComment &#124; Garbage&#41; &#34;&#41;&#34; &#124; OfExpr &#124; Throws &#124; Infix &#124; Postfix &#124; Member &#124; Specialize &#124; Literal &#124; RegExp &#124; Obj &#124; RawBlock &#124; &#34;&#40;&#34; Garbage](../snippet/syntax/Expr/snippet.svg)
+![Expr &#58;&#61; &#40;&#41; &#124; Jump &#124; AwaitReturnThrowYield &#124; Id &#124; TypeArgumentName &#124; SymbolLiteral &#124; List &#124; New &#124; Prefix &#124; SpecialDot &#124; RegularDot &#124; StringExpr &#124; TaggedString &#124; Call &#124; &#34;&#40;&#34; &#40;&#40;Disallowed&#58; &#40;&#41;&#41; TopLevelNoGarbageNoComment &#124; Garbage&#41; &#34;&#41;&#34; &#124; OfExpr &#124; Throws &#124; Infix &#124; Postfix &#124; Member &#124; Specialize &#124; Literal &#124; RegExp &#124; Obj &#124; RawBlock &#124; &#34;&#40;&#34; Garbage](../snippet/syntax/Expr/snippet.svg)
 
 An expression is evaluated to produce a result and/or a side effect.
 
@@ -630,7 +630,7 @@ These syntactic constructs are interpreted as if preceded by
 
 #### Syntax for *CallArgs*
 
-![CallArgs &#58;&#61; StringGroupTagged &#124; &#34;&#40;&#34; &#40;ForArgs &#124; Args&#63;&#41; &#34;&#41;&#34;](../snippet/syntax/CallArgs/snippet.svg)
+![CallArgs &#58;&#61; &#34;&#40;&#34; &#40;ForArgs &#124; Args&#63;&#41; &#34;&#41;&#34;](../snippet/syntax/CallArgs/snippet.svg)
 
 Arguments to a function call.
 
@@ -640,7 +640,6 @@ A function call's arguments may be one of:
 - a parenthesized, semicolon separated list of 2 or three arguments
   with a specific purpose.  As in `(let x = 1; x < 2; ++x)` which is what the
   `for` loop macro expects.
-- a string group as in a tagged string template like `callee"foo ${ bar }"`.
 
 <!-- /snippet: syntax/CallArgs -->
 

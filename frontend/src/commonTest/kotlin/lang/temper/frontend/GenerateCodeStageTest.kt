@@ -3226,6 +3226,41 @@ class GenerateCodeStageTest {
     )
 
     @Test
+    fun complexStringExpr() = assertModuleAtStage(
+        stage = Stage.Run,
+        moduleResultNeeded = true,
+        input = $$"""
+            |let guests = ["Hilo, HI", "you in the back in the hat"];
+            |$${"\"\"\""}
+            |"Hello, World{: for (let guest of guests) { :}, and ${guest}{: } :}!
+        """.trimMargin(),
+        want = """
+            |{
+            |  import: {
+            |    body: ```
+            |          let guests = list("Hilo, HI", "you in the back in the hat");
+            |          do {
+            |            let accumulator#0: StringBuilder;
+            |            accumulator#0 = new StringBuilder ();
+            |            do {
+            |              do_bind_append(accumulator#0)("Hello, World");
+            |              for(let guest of guests, fn {
+            |                  do_bind_append(accumulator#0)(", and ");
+            |                  do_bind_append(accumulator#0)(guest);
+            |              });
+            |              do_bind_append(accumulator#0)("!");
+            |            };
+            |            do_bind_toString(accumulator#0)()
+            |          }
+            |
+            |          ```
+            |  },
+            |  run: ["Hello, World, and Hilo, HI, and you in the back in the hat!", "String"],
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun explicitBoundedTypeParametersInInterpreter() = assertModuleAtStage(
         stage = Stage.Run,
         input = """

@@ -197,6 +197,7 @@ private object ProductionNames : DomainSpecificLanguage() {
     val StringPartRaw = Ref("StringPartRaw")
     val SymbolLiteral = Ref("SymbolLiteral")
     val SymbolValue = Ref("SymbolValue")
+    val TaggedString = Ref("TaggedString")
     val Throws = Ref("Throws")
     val TopLevel = Ref("TopLevel")
     val TopLevelNoGarbage = Ref("TopLevelNoGarbage")
@@ -554,14 +555,9 @@ val grammar = ProductionNames.run {
      * - a parenthesized, semicolon separated list of 2 or three arguments
      *   with a specific purpose.  As in `(let x = 1; x < 2; ++x)` which is what the
      *   `for` loop macro expects.
-     * - a string group as in a tagged string template like `callee"foo ${ bar }"`.
      */
     CallArgs `：＝` (
-        (
-            syntheticToken y impliedValue(vStringExprMacro) y shiftLeft y impliedValue(TBoolean.valueTrue) y
-                StringGroupTagged
-            ) /
-            ("(" y (ForArgs / opt(Args)) y ")")
+        ("(" y !Operator.QuotedGroup y (ForArgs / opt(Args)) y ")")
         )
 
     /**
@@ -681,6 +677,27 @@ val grammar = ProductionNames.run {
                 (name("break") / name("continue")) y
                 opt(LabelOrHole) y
                 `)`,
+        )
+        )
+
+    /**
+     * A string group is a tag expression and string template.
+     * These are meant to allow secure, structured composition of content from mixed trusted
+     * and untrusted parts.
+     *
+     * For example, `filepath"${dir}/${file}"` can recognize the intent of joining a directory
+     * with a file, but such idioms can avoid corner cases: when dir is empty it doesn't
+     * create an absolute path.  The `filepath` tag in this case embeds knowledge about how
+     * to merge the fixed part `/` with the dynamic expressions `dir` and `file` to preserve
+     * the intent of joining two paths.
+     */
+    TaggedString `：＝` (
+        setOf(Operator.Paren, Operator.Curly) y callTree(
+
+            `(` y impliedValue(vStringExprMacro) y
+                Expr y // the tag expression
+                syntheticToken y impliedValue(TBoolean.valueTrue) y
+                StringGroupTagged y `)`,
         )
         )
 
@@ -823,7 +840,7 @@ val grammar = ProductionNames.run {
             opt(TopLevel),
     )
 
-    RawBlock `：＝` (blockPreceder y blockTree("{" y TopLevels y "}"))
+    RawBlock `：＝` (blockPreceder y blockTree("{" y !Operator.QuotedGroup y TopLevels y "}"))
     // Matches a JS style {propertyName:value} expr.
     Obj `：＝` (
         propertyBagPreceder y
@@ -1057,8 +1074,9 @@ val grammar = ProductionNames.run {
         Prefix /
         SpecialDot /
         RegularDot /
-        Call /
         StringExpr /
+        TaggedString /
+        Call /
         // Parentheses for grouping
         (
             Operator.ParenGroup y `(` y "(" y
@@ -1678,6 +1696,11 @@ private fun toCombinator(value: Value<*>) = Implied { pos, output ->
     output.add(ValuePart(value, pos))
     output.add(FinishTree(pos, LeafTreeType.Value))
 }
+
+private operator fun Operator.not(): Combinator =
+    Lookahead(GrammarDoc.Skip) { (next) ->
+        !(next is LeftParenthesis && next.operator == this)
+    }
 
 // The below define a DSL for declaring a grammar.
 // The `/` operator means "or" in an analytic grammar.
