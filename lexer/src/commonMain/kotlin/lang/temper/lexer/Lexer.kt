@@ -241,15 +241,7 @@ class Lexer(
                     // Else proceed to process a semi-lit content token.
 
                     end = delimiterEnd
-                    if (end == limit || LexicalDefinitions.isLineBreak(text[end])) {
-                        open = OpenTokenType.SEMI_LIT_COMMENT
-                    } else {
-                        // Treat the whole line as an error token.
-                        end = skipToLineEnd(end)
-                        error(start, end, MessageTemplate.MalformedSemilit)
-                        currentTokenType = TokenType.Error
-                        break
-                    }
+                    open = OpenTokenType.SEMI_LIT_COMMENT
                 }
             }
 

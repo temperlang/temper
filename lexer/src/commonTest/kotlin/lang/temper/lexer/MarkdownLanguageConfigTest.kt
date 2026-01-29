@@ -154,4 +154,30 @@ class MarkdownLanguageConfigTest {
             },
         )
     }
+
+    @Test
+    fun trailingIndentation() = withTokensFromMarkdowns(
+        """
+            |Beginning a code block.
+            |
+            |    console.log("block 1");
+            |    ${""}
+            |Ending one code block and beginning another.
+            |
+            |    console.log("block 2");
+            |
+            |Second ending.
+        """.trimMargin(),
+    ) { tokens ->
+        assertEquals(
+            listOf(
+                "Beginning a code block.",
+                "Ending one code block and beginning another.",
+                "Second ending.",
+            ),
+            tokens.mapNotNull {
+                unMassagedSemilitParagraphContent(it)
+            },
+        )
+    }
 }
