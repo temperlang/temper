@@ -286,7 +286,7 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
 
                     // Collect string parts and interpolations in separate lists.
                     Call(callPos) {
-                        Replant(tagExprTree)
+                        Replant(freeTree(tagExprTree))
                         Call(literalPositions, BuiltinFuns.listifyFn) {
                             for (p in literalParts) {
                                 Replant(p)

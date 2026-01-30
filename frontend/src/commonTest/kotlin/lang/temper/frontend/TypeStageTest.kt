@@ -2018,6 +2018,44 @@ class TypeStageTest {
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
+
+    @Test
+    fun taggedString() = assertModuleAtStage(
+        stage = Stage.Type,
+        pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
+        input = $$"""
+            |let f(literals: List<String>, values: List<String>): String {
+            |  literals[0]
+            |}
+            |
+            |export let g(there: String): String {
+            |  f"hi${there}"
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  type: {
+            |    body:
+            |      ```
+            |      @fn let f__0 ⦂(fn (List<String>, List<String>): String), @fn `test//`.g ⦂(fn (String): String);
+            |      f__0 = fn f(literals__0 /* aka literals */: List<String>, values__0 /* aka values */: List<String>) /* return__0 */: String {
+            |        void;
+            |        fn__0: do {
+            |          return__0 = do_bind_get(literals__0)(0);
+            |        }
+            |      };
+            |      `test//`.g = (@stay fn g(there__0 /* aka there */: String) /* return__1 */: String {
+            |          void;
+            |          fn__1: do {
+            |            return__1 = f__0(list ⋖ String ⋗("hi", ""), list ⋖ String ⋗(there__0));
+            |          }
+            |      })
+            |
+            |      ```
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
 }
 
 private object ImpureIgnoreFn : NamedBuiltinFun, CallableValue {
