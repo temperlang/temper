@@ -220,6 +220,32 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
 
         when (tagCategory) {
             TagCategory.FnCallStyle -> if (isFunString) {
+                // Implement collecting accumulator as discussed above.
+                // The collecting accumulator builds a list of literal parts, and a list of
+                // non-literal parts.
+                //
+                // TODO: something like
+                //
+                //     class Collector<INTERPOLATION, OUT>() {
+                //      private stringParts: ListBuilder<String> = new ListBuilder<String>();
+                //      private interpolations: ListBuilder<INTERPOLATION> = new ListBuilder<INTERPOLATION>();
+                //      public append(x: INTERPOLATION): Void { /* insert empties until same length as interpolations */ interpolations.add(x); }
+                //      public appendSafe(x: String): Void { stringParts.add(x); }
+                //
+                //      public applyTo(tagFunction: fn (List<String>, List<INTERPOLATION>): OUT) {
+                //        /* insert empties until stringParts one longer than interpolations */
+                //        tagFunction(stringParts.toList(), interpolations.toList())
+                //      }
+                //    }
+                //
+                //    let adaptTagFunction<INTERPOLATION, OUT>(
+                //      tagFunction: fn(List<String>, List<INTERPOLATION>): OUT,
+                //      stringExprFn: fn(Collector<INTERPOLATION, OUT>): Void,
+                //    ): OUT {
+                //      let collector = new Collector<INTERPOLATION, OUT>();
+                //      stringExprFn(collector);
+                //      collector.applyTo(tagFunction)
+                //    }
                 TODO("${macroEnv.stage} ${macroEnv.pos}: $tagExprTree $tagCategory isTagged, isFunString")
             } else {
                 macroEnv.replaceMacroCallWith {
@@ -301,7 +327,51 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                 }
                 return NotYet
             }
-            TagCategory.AccumulatorStyle -> if (funTree != null) {
+            TagCategory.AccumulatorStyle -> {
+                var funTree = funTree
+                if (funTree == null) {
+                    // Convert to a funTree
+                    val call = macroEnv.call!!
+                    val partIndices = INDEX_NON_FUN_STRING_ARGS until call.size
+                    val trees = macroEnv.call!!.children.subListToEnd(partIndices.first).toList()
+                    val pos = call.pos
+                    funTree = call.document.treeFarm.grow(call.pos) {
+                        val accumulator = macroEnv.nameMaker.unusedTemporaryName("accumulator")
+                        Fn(pos.leftEdge) {
+                            Decl(accumulator)
+                            V(typeSymbol)
+                            V(tagValue as Value<*>)
+                            V(outTypeSymbol)
+                            V(Types.vVoid)
+                            Block {
+                                var lastWasInterpolation = false
+                                for (t in trees) {
+                                    if (!lastWasInterpolation && t.symbolContained == interpolateSymbol) {
+                                        lastWasInterpolation = true
+                                    } else if (lastWasInterpolation) {
+                                        lastWasInterpolation = false
+                                        Call(t.pos) {
+                                            Call(t.pos.leftEdge) {
+                                                V(Value(DotHelper(ExternalBind, appendDotName)))
+                                                Rn(accumulator)
+                                            }
+                                            Replant(freeTree(t))
+                                        }
+                                    } else {
+                                        Call(t.pos) {
+                                            Call(t.pos.leftEdge) {
+                                                V(Value(DotHelper(ExternalBind, appendSafeDotName)))
+                                                Rn(accumulator)
+                                            }
+                                            Replant(freeTree(t))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // tag, fn (acc) { ... }
                 // ->
                 // do {
@@ -323,18 +393,6 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                     },
                 )
                 return NotYet
-            } else {
-                // Implement collecting accumulator as discussed above.
-                // The collecting accumulator builds a list of literal parts, and a list of
-                // non-literal parts.
-                //
-                // We output something like
-                //
-                // new CollectingAccumulator().applyTag(tag) { (accumulator) => FN BODY }
-                //
-                // That call chaining should allow tag to guide type inference of the type variable for
-                // the collecting accumulator's internal list of un-trusted appends.
-                TODO("${macroEnv.stage} ${macroEnv.pos}: $tagExprTree $tagCategory isTagged")
             }
         }
     }
