@@ -3258,6 +3258,9 @@ class DefineStageTest {
             |  "One: ${1}
             |  "{: for (let n of [2, 3, 4]) { :} ${n}{: } :}!
             |  "Five: ${5}
+            |  ;
+            |
+            |theCount"${6}, ${7}"
             |
             |$$TEST_INPUT_MODULE_BREAK ./the-count/the-count.temper
             |class TheCount {
@@ -3304,6 +3307,16 @@ class DefineStageTest {
             |          };
             |## We inject a `.accumulated` fetch for the block result
             |          do_get_accumulated(accumulator#0)
+            |        };
+            |        do {
+            |          let accumulator#1;
+            |          accumulator#1 = new TheCount__0();
+            |          do {
+            |            do_bind_append(accumulator#1)(6);
+            |            do_bind_appendSafe(accumulator#1)(", ");
+            |            do_bind_append(accumulator#1)(7)
+            |          };
+            |          do_get_accumulated(accumulator#1)
             |        }
             |
             |        ```
