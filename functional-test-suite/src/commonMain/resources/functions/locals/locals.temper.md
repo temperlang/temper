@@ -175,11 +175,11 @@ mutualRecursion = [2, 4, 6]
 Capture scope can also get tricky across languages. Here we gather up some
 closures with capture from a loop var.
 
-    let hub = new Hub();
+    let hub = new Hub<Int>();
     let items = gatherHandlers(hub);
-    hub.actionPerformed();
+    hub.actionPerformed(1);
 
-    let gatherHandlers(hub: Hub): ListBuilder<Int> {
+    let gatherHandlers(hub: Hub<Int>): ListBuilder<Int> {
       let items = new ListBuilder<Int>();
       for (var i = 0; i < 3; i++) {
 
@@ -187,8 +187,8 @@ Ideally, we don't need `let i = i;` but our `for` desugaring fails to capture
 the changing value without this.
 
         let i = i;
-        hub.onAction {
-          items.add(i);
+        hub.onAction { item =>
+          items.add(item + i);
           // console.log("items: ${items.join(" ") { i => i.toString() }}");
         }
       }
@@ -197,18 +197,18 @@ the changing value without this.
 
 This could represent any kind of event system.
 
-    @fun interface Handler(): Void;
+    @fun interface Handler<T>(item: T): Void;
 
-    class Hub {
-      private handlers: ListBuilder<Handler> = new ListBuilder();
+    class Hub<T> {
+      private handlers: ListBuilder<Handler<T>> = new ListBuilder();
 
-      public onAction(handler: Handler): Void {
+      public onAction(handler: Handler<T>): Void {
         handlers.add(handler);
       }
 
-      public actionPerformed(): Void {
+      public actionPerformed(item: T): Void {
         for (var i = 0; i < handlers.length; ++i) {
-          handlers[i]();
+          handlers[i](item);
         }
       }
     }
@@ -219,7 +219,7 @@ Python without extra attention has all `2` values below. And without
 Note that this is ignored until we fix Python.
 
 ```ignore log
-items: 0
-items: 0 1
-items: 0 1 2
+items: 1
+items: 1 2
+items: 1 2 3
 ```
