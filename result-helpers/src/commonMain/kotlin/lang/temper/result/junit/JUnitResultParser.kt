@@ -10,7 +10,6 @@ import nl.adaptivity.xmlutil.serialization.DefaultXmlSerializationPolicy
 import nl.adaptivity.xmlutil.serialization.UnknownChildHandler
 import nl.adaptivity.xmlutil.serialization.XML
 import nl.adaptivity.xmlutil.serialization.XmlCData
-import nl.adaptivity.xmlutil.serialization.XmlChildrenName
 import nl.adaptivity.xmlutil.serialization.XmlElement
 import nl.adaptivity.xmlutil.serialization.XmlSerialName
 import nl.adaptivity.xmlutil.serialization.XmlValue
@@ -96,6 +95,7 @@ data class FailureInfo(
 }
 
 @Serializable
+@SerialName("testcase")
 data class TestCase(
     @XmlElement(false)
     val name: String,
@@ -127,13 +127,19 @@ data class TestSuite(
     val failures: Int,
     @XmlElement(false)
     val time: String,
-    @XmlChildrenName("testcase")
     val testCases: List<TestCase>,
 )
 
 @Serializable
 @SerialName("testsuites")
 private data class TestSuites(
-    @XmlChildrenName("testsuite")
     val suites: List<TestSuite>,
+    @XmlElement(false)
+    val name: String = "",
+    @XmlElement(false)
+    val tests: Int = -1,
+    @XmlElement(false)
+    val failures: Int = -1,
+    @XmlElement(false)
+    val time: String = "",
 )
