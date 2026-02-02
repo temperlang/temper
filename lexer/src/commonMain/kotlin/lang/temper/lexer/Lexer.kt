@@ -241,15 +241,7 @@ class Lexer(
                     // Else proceed to process a semi-lit content token.
 
                     end = delimiterEnd
-                    if (end == limit || LexicalDefinitions.isLineBreak(text[end])) {
-                        open = OpenTokenType.SEMI_LIT_COMMENT
-                    } else {
-                        // Treat the whole line as an error token.
-                        end = skipToLineEnd(end)
-                        error(start, end, MessageTemplate.MalformedSemilit)
-                        currentTokenType = TokenType.Error
-                        break
-                    }
+                    open = OpenTokenType.SEMI_LIT_COMMENT
                 }
             }
 
@@ -1368,24 +1360,6 @@ class Lexer(
             return afterMatch
         }
         return -1
-    }
-
-    private inline fun skipChars(from: Int, p: (c: Char) -> Boolean): Int {
-        val text = sourceText
-        val limit = text.length
-        var pos = from
-        while (pos < limit) {
-            val c = text[pos]
-            if (!p(c)) {
-                return pos
-            }
-            pos += 1
-        }
-        return limit
-    }
-
-    private fun skipToLineEnd(from: Int): Int = skipChars(from) {
-        !LexicalDefinitions.isLineBreak(it)
     }
 
     // We need to treat < and > specially when they are used as angle brackets as in
