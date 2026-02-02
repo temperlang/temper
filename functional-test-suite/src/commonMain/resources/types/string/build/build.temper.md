@@ -53,3 +53,24 @@ Surrogate blocked.
 Hi 🌏!!
 Hi 🌏!!
 ```
+
+
+## StringBuilder property
+
+We hit an issue with properties of type StringBuilder on be-rust, so ensure it
+works.
+
+    class StringBuilderOwner(
+      public builder: StringBuilder,
+    ) {}
+
+And even the above technically tests things, but might as well prove it actually
+works.
+
+    let owner = new StringBuilderOwner(new StringBuilder());
+    owner.builder.append("Hi from inside.");
+    console.log(owner.builder.toString());
+
+```log
+Hi from inside.
+```
