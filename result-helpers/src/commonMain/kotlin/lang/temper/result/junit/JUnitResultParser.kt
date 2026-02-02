@@ -10,6 +10,7 @@ import nl.adaptivity.xmlutil.serialization.DefaultXmlSerializationPolicy
 import nl.adaptivity.xmlutil.serialization.UnknownChildHandler
 import nl.adaptivity.xmlutil.serialization.XML
 import nl.adaptivity.xmlutil.serialization.XmlCData
+import nl.adaptivity.xmlutil.serialization.XmlChildrenName
 import nl.adaptivity.xmlutil.serialization.XmlElement
 import nl.adaptivity.xmlutil.serialization.XmlSerialName
 import nl.adaptivity.xmlutil.serialization.XmlValue
@@ -81,7 +82,9 @@ data class FailureReport(val name: String, val cause: String)
 @Serializable
 @SerialName("failure")
 data class FailureInfo(
+    @XmlElement(false)
     val message: String? = null,
+    @XmlElement(false)
     val type: String? = null,
     @XmlCData(true)
     @XmlValue(true)
@@ -94,10 +97,13 @@ data class FailureInfo(
 
 @Serializable
 data class TestCase(
+    @XmlElement(false)
     val name: String,
     // In seconds
+    @XmlElement(false)
     val time: String,
     @XmlSerialName("classname", namespace = "", prefix = "")
+    @XmlElement(false)
     val className: String,
     @XmlElement(true)
     @XmlSerialName(value = "error", namespace = "", prefix = "")
@@ -110,21 +116,24 @@ data class TestCase(
 @Serializable
 @SerialName("testsuite")
 data class TestSuite(
+    @XmlElement(false)
     val name: String,
+    @XmlElement(false)
     @XmlSerialName("timestamp", namespace = "", prefix = "")
     val timeStamp: String = "",
+    @XmlElement(false)
     val tests: Int,
+    @XmlElement(false)
     val failures: Int,
+    @XmlElement(false)
     val time: String,
-    @XmlElement(true)
-    @XmlSerialName(value = "testcase", namespace = "", prefix = "")
+    @XmlChildrenName("testcase")
     val testCases: List<TestCase>,
 )
 
 @Serializable
 @SerialName("testsuites")
 private data class TestSuites(
-    @XmlElement(true)
-    @XmlSerialName(value = "testsuite", namespace = "", prefix = "")
+    @XmlChildrenName("testsuite")
     val suites: List<TestSuite>,
 )
