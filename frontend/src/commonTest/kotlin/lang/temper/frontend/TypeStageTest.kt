@@ -2056,6 +2056,164 @@ class TypeStageTest {
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
+
+    @Test
+    fun overloadedMethods() = assertModuleAtStage(
+        stage = Stage.Type,
+        pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
+        input = """
+            |export class IntMaker(public radix: Int32) {
+            |   @overload("toInt")
+            |   public int64ToInt(int: Int64): Int32 throws Bubble { int.toInt32() }
+            |
+            |   @overload("toInt")
+            |   public stringToInt(string: String): Int32 throws Bubble { string.toInt32(radix) }
+            |}
+            |
+            |export let crazySum(intMaker: IntMaker, int: Int64, string: String): Int throws Bubble {
+            |   let intInt = intMaker.toInt(int);
+            |   let stringInt = intMaker.toInt(string);
+            |   intInt + stringInt
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  type: {
+            |    body:
+            |      ```
+            |      @typeDecl(IntMaker) @stay let `test//`.IntMaker ⦂ Type;
+            |      `test//`.IntMaker = type (IntMaker);
+            |      @fn let `test//`.crazySum ⦂(fn (IntMaker, Int64, String): Int32 | Bubble);
+            |      @constructorProperty @visibility(\public) @stay @fromType(IntMaker) let radix__0: Int32;
+            |      @visibility(\public) @fn @stay let int64ToInt__0 ⦂(fn (IntMaker, Int64): Int32 | Bubble);
+            |      int64ToInt__0 = fn int64ToInt(@impliedThis(IntMaker) this__0: IntMaker, int__0 /* aka int */: Int64) /* return__0 */: (Int32 | Bubble) {
+            |        void;
+            |        fn__0: do {
+            |          var fail#0 ⦂ Boolean;
+            |          return__0 = hs ⋖ Int32 ⋗(fail#0, do_bind_toInt32(int__0)());
+            |          if (fail#0) {
+            |            bubble ⋖ Int32 ⋗()
+            |          };
+            |        }
+            |      };
+            |      nym`@overload`(void, "toInt");
+            |      @visibility(\public) @fn @stay let stringToInt__0 ⦂(fn (IntMaker, String): Int32 | Bubble);
+            |      stringToInt__0 = fn stringToInt(@impliedThis(IntMaker) this__1: IntMaker, string__0 /* aka string */: String) /* return__1 */: (Int32 | Bubble) {
+            |        void;
+            |        fn__1: do {
+            |          var fail#1 ⦂ Boolean;
+            |          return__1 = hs ⋖ Int32 ⋗(fail#1, do_bind_toInt32(string__0)(getp(radix__0, this__1)));
+            |          if (fail#1) {
+            |            bubble ⋖ Int32 ⋗()
+            |          };
+            |        }
+            |      };
+            |      nym`@overload`(void, "toInt");
+            |      @fn @visibility(\public) @stay @fromType(IntMaker) let constructor__0 ⦂(fn (IntMaker, Int32): Void);
+            |      constructor__0 = (@stay fn constructor(@impliedThis(IntMaker) this__2: IntMaker, radix__1 /* aka radix */: Int32) /* return__2 */: Void {
+            |          setp(radix__0, this__2, radix__1);
+            |          return__2 = void
+            |      });
+            |      @fn @visibility(\public) @stay @fromType(IntMaker) let getradix__0 ⦂(fn (IntMaker): Int32);
+            |      getradix__0 = (@stay fn (@impliedThis(IntMaker) this__3: IntMaker) /* return__3 */: Int32 {
+            |          return__3 = getp(radix__0, this__3)
+            |      });
+            |      `test//`.crazySum = fn crazySum(intMaker__0 /* aka intMaker */: IntMaker, int__1 /* aka int */: Int64, string__1 /* aka string */: String) /* return__4 */: (Int32 | Bubble) {
+            |        void;
+            |        fn__2: do {
+            |          let intInt__0 ⦂ Invalid;
+            |          intInt__0 = do_bind_toInt(intMaker__0)(int__1);
+            |          let stringInt__0 ⦂ Invalid;
+            |          stringInt__0 = do_bind_toInt(intMaker__0)(string__1);
+            |          return__4 = intInt__0 + stringInt__0
+            |        }
+            |      }
+            |
+            |      ```
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
+    @Test
+    fun overloadedMethodsWrong() = assertModuleAtStage(
+        stage = Stage.Type,
+        pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
+        input = """
+            |export class IntMaker(public radix: Int32) {
+            |   public toInt(int: Int64): Int32 throws Bubble { int.toInt32() }
+            |   public toInt(string: String): Int32 throws Bubble { string.toInt32(radix) }
+            |}
+            |
+            |export let crazySum(intMaker: IntMaker, int: Int64, string: String): Int throws Bubble {
+            |   let intInt = intMaker.toInt(int);
+            |   let stringInt = intMaker.toInt(string);
+            |   intInt + stringInt
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  type: {
+            |    body:
+            |      ```
+            |      @typeDecl(IntMaker) @stay let `test//`.IntMaker ⦂ Type;
+            |      `test//`.IntMaker = type (IntMaker);
+            |      @fn let `test//`.crazySum ⦂(fn (IntMaker, Int64, String): Int32 | Bubble);
+            |      @constructorProperty @visibility(\public) @stay @fromType(IntMaker) let radix__0: Int32;
+            |      @visibility(\public) @fn @stay @fromType(IntMaker) let toInt__0 ⦂(fn (IntMaker, Int64): Int32 | Bubble);
+            |      toInt__0 = fn toInt(@impliedThis(IntMaker) this__0: IntMaker, int__0 /* aka int */: Int64) /* return__0 */: (Int32 | Bubble) {
+            |        void;
+            |        fn__0: do {
+            |          var fail#0 ⦂ Boolean;
+            |          return__0 = hs ⋖ Int32 ⋗(fail#0, do_bind_toInt32(int__0)());
+            |          if (fail#0) {
+            |            bubble ⋖ Int32 ⋗()
+            |          };
+            |        }
+            |      };
+            |      @visibility(\public) @fn @stay @fromType(IntMaker) let toInt__1 ⦂(fn (IntMaker, String): Int32 | Bubble);
+            |      toInt__1 = fn toInt(@impliedThis(IntMaker) this__1: IntMaker, string__0 /* aka string */: String) /* return__1 */: (Int32 | Bubble) {
+            |        void;
+            |        fn__1: do {
+            |          var fail#1 ⦂ Boolean;
+            |          return__1 = hs ⋖ Int32 ⋗(fail#1, do_bind_toInt32(string__0)(getp(radix__0, this__1)));
+            |          if (fail#1) {
+            |            bubble ⋖ Int32 ⋗()
+            |          };
+            |        }
+            |      };
+            |      @fn @visibility(\public) @stay @fromType(IntMaker) let constructor__0 ⦂(fn (IntMaker, Int32): Void);
+            |      constructor__0 = (@stay fn constructor(@impliedThis(IntMaker) this__2: IntMaker, radix__1 /* aka radix */: Int32) /* return__2 */: Void {
+            |          setp(radix__0, this__2, radix__1);
+            |          return__2 = void
+            |      });
+            |      @fn @visibility(\public) @stay @fromType(IntMaker) let getradix__0 ⦂(fn (IntMaker): Int32);
+            |      getradix__0 = (@stay fn (@impliedThis(IntMaker) this__3: IntMaker) /* return__3 */: Int32 {
+            |          return__3 = getp(radix__0, this__3)
+            |      });
+            |      `test//`.crazySum = fn crazySum(intMaker__0 /* aka intMaker */: IntMaker, int__1 /* aka int */: Int64, string__1 /* aka string */: String) /* return__4 */: (Int32 | Bubble) {
+            |        void;
+            |        fn__2: do {
+            |          var fail#2 ⦂ Boolean, fail#3 ⦂ Boolean;
+            |          let intInt__0 ⦂ Int32;
+            |          intInt__0 = hs ⋖ Int32 ⋗(fail#2, do_bind_toInt(intMaker__0)(int__1));
+            |          if (fail#2) {
+            |            bubble ⋖ Int32 ⋗()
+            |          };
+            |          let stringInt__0 ⦂ Int32;
+            |          stringInt__0 = hs ⋖ Int32 ⋗(fail#3, do_bind_toInt(intMaker__0)(string__1));
+            |          if (fail#3) {
+            |            bubble ⋖ Int32 ⋗()
+            |          };
+            |          return__4 = intInt__0 + stringInt__0
+            |        }
+            |      }
+            |
+            |      ```
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
 }
 
 private object ImpureIgnoreFn : NamedBuiltinFun, CallableValue {
