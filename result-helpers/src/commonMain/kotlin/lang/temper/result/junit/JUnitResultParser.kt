@@ -132,7 +132,7 @@ data class TestSuite(
 
 @Serializable
 @SerialName("testsuites")
-private data class TestSuites(
+data class TestSuites(
     val suites: List<TestSuite>,
     @XmlElement(false)
     val name: String = "",
@@ -142,4 +142,6 @@ private data class TestSuites(
     val failures: Int = -1,
     @XmlElement(false)
     val time: String = "",
-)
+) {
+    fun toXml(): String = xmlTolerant.encodeToString(serializer(), this)
+}
