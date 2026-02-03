@@ -41,6 +41,51 @@ class PyBackendTest {
     )
 
     @Test
+    fun overloadedMethods() = assertGeneratedCode(
+        input = """
+            |export class IntMaker(public radix: Int32) {
+            |   @overload("toInt")
+            |   public int64ToInt(int: Int64): Int32 throws Bubble { int.toInt32() }
+            |
+            |   @overload("toInt")
+            |   public stringToInt(string: String): Int32 throws Bubble { string.toInt32(radix) }
+            |}
+            |
+            |export let crazySum(intMaker: IntMaker, int: Int64, string: String): Int throws Bubble {
+            |   let intInt = intMaker.toInt(int);
+            |   let stringInt = intMaker.toInt(string);
+            |   intInt + stringInt
+            |}
+        """.trimMargin(),
+        want = """
+            |from builtins import int as int3, str as str4
+            |from temper_core import int64_to_int32 as int64_to_int320, string_to_int32 as string_to_int321, int_add as int_add2
+            |int64_to_int32_35 = int64_to_int320
+            |string_to_int32_36 = string_to_int321
+            |int_add_37 = int_add2
+            |class IntMaker:
+            |    radix_7: 'int3'
+            |    __slots__ = ('radix_7',)
+            |    def int64_to_int(this_0, int_9: 'int64_21') -> 'int3':
+            |        return int64_to_int32_35(int_9)
+            |    def string_to_int(this_1, string_12: 'str4') -> 'int3':
+            |        return string_to_int32_36(string_12, this_1.radix_7)
+            |    def __init__(this_2, radix_15: 'int3') -> None:
+            |        this_2.radix_7 = radix_15
+            |    @property
+            |    def radix(this_24) -> 'int3':
+            |        return this_24.radix_7
+            |def crazy_sum(int_maker_16: 'IntMaker', int_17: 'int64_21', string_18: 'str4') -> 'int3':
+            |    int_int_20: 'int3'
+            |    int_int_20 = int_maker_16.int64_to_int(int_17)
+            |    string_int_21: 'int3'
+            |    string_int_21 = int_maker_16.string_to_int(string_18)
+            |    return int_add_37(int_int_20, string_int_21)
+            |
+        """.trimMargin(),
+    )
+
+    @Test
     fun markdownDocComment() = assertGeneratedCode(
         name = "test.temper.md",
         input = """

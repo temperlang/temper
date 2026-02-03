@@ -4,6 +4,7 @@ import lang.temper.builtin.BuiltinFuns
 import lang.temper.common.Either
 import lang.temper.frontend.maybeAdjustDotHelper
 import lang.temper.interp.convertToErrorNode
+import lang.temper.type.AndType
 import lang.temper.type.BindMemberAccessor
 import lang.temper.type.DotHelper
 import lang.temper.type.ExtensionResolution
@@ -36,13 +37,27 @@ internal fun simplifyDotHelper(
 ) {
     val calleeEdge = call.edge(0)
     val callee = calleeEdge.target
-    val variantMatch = call.typeInferences?.variant ?: return
+    val typeInferences = call.typeInferences
+    val variantMatch = typeInferences?.variant ?: return
+    val variantFunctionType = variantMatch as? FunctionType
+    val variantMatchRefined = (variantFunctionType?.returnType as? AndType)?.let { andType ->
+        when {
+            typeInferences.type in andType.members -> MkType.fnDetails(
+                typeFormals = variantFunctionType.typeFormals,
+                valueFormals = variantFunctionType.valueFormals,
+                restValuesFormal = variantFunctionType.restValuesFormal,
+                // Specialize the return type to the actually determined type.
+                returnType = typeInferences.type,
+            )
+            else -> null
+        }
+    }
 
     // Give preference to members over extensions
     var lastNonExtensionResolution: VariantResolution? = null
     var lastResolution: VariantResolution? = null
     for (variant in variants.reversed()) {
-        if (variant.first == variantMatch) {
+        if (variant.first == variantMatch || variant.first == variantMatchRefined) {
             lastResolution = variant.second
             if (variant.second is Either.Left) {
                 lastNonExtensionResolution = variant.second
@@ -54,23 +69,34 @@ internal fun simplifyDotHelper(
     when (chosenVariantResolution) {
         null,
         is Either.Left,
-        -> if (dotHelper.extensions.isNotEmpty()) {
-            val methodVariants = if (chosenVariantResolution != null) {
-                MkType.or(
-                    variants.mapNotNull {
-                        if (it.second is Either.Left) {
-                            it.first
-                        } else {
-                            null
-                        }
-                    },
-                )
-            } else {
-                // TODO: is this required?
-                null
+        -> {
+            val updatedType = when {
+                lastNonExtensionResolution?.let { it.leftOrNull!!.symbol != dotHelper.symbol } == true -> {
+                    // An overload now resolved to an individually named method.
+                    variantMatchRefined ?: variantMatch
+                }
+                else -> when {
+                    dotHelper.extensions.isNotEmpty() -> chosenVariantResolution?.let {
+                        // Retain variants for now-known-as-non-extension call.
+                        MkType.or(
+                            variants.mapNotNull {
+                                if (it.second is Either.Left) {
+                                    it.first
+                                } else {
+                                    null
+                                }
+                            },
+                        )
+                    }
+                    else -> null
+                }
             }
-            calleeEdge.replace {
-                V(callee.pos, Value(DotHelper(dotHelper.memberAccessor, dotHelper.symbol, emptyList())), methodVariants)
+            updatedType?.let {
+                calleeEdge.replace {
+                    val symbol = chosenVariantResolution?.item?.symbol ?: dotHelper.symbol
+                    val updatedDotHelper = DotHelper(dotHelper.memberAccessor, symbol, emptyList())
+                    V(callee.pos, Value(updatedDotHelper), updatedType)
+                }
             }
         }
         is Either.Right -> {
