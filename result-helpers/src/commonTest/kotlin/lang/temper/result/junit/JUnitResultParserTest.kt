@@ -3,7 +3,7 @@ package lang.temper.result.junit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class JunitResultParserTest {
+class JUnitResultParserTest {
 
     @Test
     fun basicParsing() {

@@ -63,6 +63,10 @@ import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.ModuleLocation
 import lang.temper.name.ModuleName
 import lang.temper.name.interpBackendId
+import lang.temper.result.junit.FailureInfo
+import lang.temper.result.junit.TestCase
+import lang.temper.result.junit.TestSuite
+import lang.temper.result.junit.TestSuites
 import lang.temper.result.junit.parseJunitResults
 import lang.temper.stage.Stage
 import lang.temper.supportedBackends.lookupFactory
@@ -778,14 +782,28 @@ private fun runInInterpreter(
                     module.exports?.find { it.name == reportName }?.value,
                 ) ?: interpFailure?.let { throwable ->
                     allOk = false
-                    @Suppress("SpellCheckingInspection")
-                    """
-                    |<testsuites>
-                    |  <testsuite name='suite' tests='1' failures='1' time='0.0'>
-                    |    <testcase name='${throwable::class.simpleName}' time='0.0' />
-                    |  </testsuite>
-                    |</testsuites>
-                    """.trimMargin()
+                    TestSuites(
+                        listOf(
+                            TestSuite(
+                                name = "suite",
+                                tests = 1,
+                                failures = 1,
+                                time = "0.0",
+                                testCases = listOf(
+                                    TestCase(
+                                        name = "suite",
+                                        time = "0.0",
+                                        className = "com.example.MyTestCase",
+                                        failure = FailureInfo(
+                                            message = throwable.message,
+                                            type = throwable::class.qualifiedName ?: "Unknown",
+                                            cdata = throwable.stackTraceToString(),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ).toXml()
                 }
                 if (report != null) {
                     testReports[moduleName] = report

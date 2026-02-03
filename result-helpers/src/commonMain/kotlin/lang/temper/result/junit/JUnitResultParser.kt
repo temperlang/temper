@@ -81,7 +81,9 @@ data class FailureReport(val name: String, val cause: String)
 @Serializable
 @SerialName("failure")
 data class FailureInfo(
+    @XmlElement(false)
     val message: String? = null,
+    @XmlElement(false)
     val type: String? = null,
     @XmlCData(true)
     @XmlValue(true)
@@ -93,11 +95,15 @@ data class FailureInfo(
 }
 
 @Serializable
+@SerialName("testcase")
 data class TestCase(
+    @XmlElement(false)
     val name: String,
     // In seconds
+    @XmlElement(false)
     val time: String,
     @XmlSerialName("classname", namespace = "", prefix = "")
+    @XmlElement(false)
     val className: String,
     @XmlElement(true)
     @XmlSerialName(value = "error", namespace = "", prefix = "")
@@ -110,21 +116,32 @@ data class TestCase(
 @Serializable
 @SerialName("testsuite")
 data class TestSuite(
+    @XmlElement(false)
     val name: String,
+    @XmlElement(false)
     @XmlSerialName("timestamp", namespace = "", prefix = "")
     val timeStamp: String = "",
+    @XmlElement(false)
     val tests: Int,
+    @XmlElement(false)
     val failures: Int,
+    @XmlElement(false)
     val time: String,
-    @XmlElement(true)
-    @XmlSerialName(value = "testcase", namespace = "", prefix = "")
     val testCases: List<TestCase>,
 )
 
 @Serializable
 @SerialName("testsuites")
-private data class TestSuites(
-    @XmlElement(true)
-    @XmlSerialName(value = "testsuite", namespace = "", prefix = "")
+data class TestSuites(
     val suites: List<TestSuite>,
-)
+    @XmlElement(false)
+    val name: String = "",
+    @XmlElement(false)
+    val tests: Int = -1,
+    @XmlElement(false)
+    val failures: Int = -1,
+    @XmlElement(false)
+    val time: String = "",
+) {
+    fun toXml(): String = xmlTolerant.encodeToString(serializer(), this)
+}
