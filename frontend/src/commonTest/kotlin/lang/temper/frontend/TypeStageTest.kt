@@ -2085,7 +2085,7 @@ class TypeStageTest {
             |      `test//`.IntMaker = type (IntMaker);
             |      @fn let `test//`.crazySum ⦂(fn (IntMaker, Int64, String): Int32 | Bubble);
             |      @constructorProperty @visibility(\public) @stay @fromType(IntMaker) let radix__0: Int32;
-            |      @visibility(\public) @fn @stay let int64ToInt__0 ⦂(fn (IntMaker, Int64): Int32 | Bubble);
+            |      @visibility(\public) @overload("toInt") @fn @stay @fromType(IntMaker) let int64ToInt__0 ⦂(fn (IntMaker, Int64): Int32 | Bubble);
             |      int64ToInt__0 = fn int64ToInt(@impliedThis(IntMaker) this__0: IntMaker, int__0 /* aka int */: Int64) /* return__0 */: (Int32 | Bubble) {
             |        void;
             |        fn__0: do {
@@ -2096,8 +2096,7 @@ class TypeStageTest {
             |          };
             |        }
             |      };
-            |      nym`@overload`(void, "toInt");
-            |      @visibility(\public) @fn @stay let stringToInt__0 ⦂(fn (IntMaker, String): Int32 | Bubble);
+            |      @visibility(\public) @overload("toInt") @fn @stay @fromType(IntMaker) let stringToInt__0 ⦂(fn (IntMaker, String): Int32 | Bubble);
             |      stringToInt__0 = fn stringToInt(@impliedThis(IntMaker) this__1: IntMaker, string__0 /* aka string */: String) /* return__1 */: (Int32 | Bubble) {
             |        void;
             |        fn__1: do {
@@ -2108,7 +2107,6 @@ class TypeStageTest {
             |          };
             |        }
             |      };
-            |      nym`@overload`(void, "toInt");
             |      @fn @visibility(\public) @stay @fromType(IntMaker) let constructor__0 ⦂(fn (IntMaker, Int32): Void);
             |      constructor__0 = (@stay fn constructor(@impliedThis(IntMaker) this__2: IntMaker, radix__1 /* aka radix */: Int32) /* return__2 */: Void {
             |          setp(radix__0, this__2, radix__1);

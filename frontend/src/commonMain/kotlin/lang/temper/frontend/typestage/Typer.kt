@@ -141,6 +141,7 @@ import lang.temper.value.StayLeaf
 import lang.temper.value.TBoolean
 import lang.temper.value.TEdge
 import lang.temper.value.TNull
+import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.Tree
@@ -160,6 +161,7 @@ import lang.temper.value.isPureVirtualBody
 import lang.temper.value.lookThroughDecorations
 import lang.temper.value.nameContained
 import lang.temper.value.optionalSymbol
+import lang.temper.value.overloadSymbol
 import lang.temper.value.reifiedTypeContained
 import lang.temper.value.staticExtensionSymbol
 import lang.temper.value.staticTypeContained
@@ -2738,7 +2740,17 @@ internal class Typer(
                     console.log("$thisVariant has members ${typeShape.members}")
                 }
                 typeShape.members.forEach { member ->
-                    if (member is VisibleMemberShape && member.symbol == memberSymbol) {
+                    if (
+                        member is VisibleMemberShape && (
+                            member.symbol == memberSymbol ||
+                            // TODO Cache overloads in a faster-access place?
+                            (member.stay?.incoming?.source as? DeclTree)?.parts?.let { parts ->
+                                parts.metadataSymbolMap[overloadSymbol]?.target?.valueContained?.let { value ->
+                                    TString.unpackOrNull(value)
+                                }
+                            } == member.symbol.text
+                        )
+                    ) {
                         anyMatchedSymbol = true
                         val usage = useMember(member)
                         if (usage == MemberUsage2.Good) {

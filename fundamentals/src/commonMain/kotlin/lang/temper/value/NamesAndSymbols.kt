@@ -531,6 +531,9 @@ val vInlineUnrealizedGoalSymbol = Value(inlineUnrealizedGoalSymbol)
 val extensionSymbol = Symbol("extension")
 val vExtensionSymbol = Value(extensionSymbol)
 
+/** Provides an overload name to a function or class member. */
+val overloadSymbol = Symbol("overload")
+
 /**
  * Key for [ParameterNameSymbols] metadata.
  * A list of required parameter symbols, in declaration order followed by null followed by

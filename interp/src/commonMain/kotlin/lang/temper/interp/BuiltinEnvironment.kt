@@ -43,6 +43,7 @@ import lang.temper.value.jsonSymbol
 import lang.temper.value.mayDowncastToSymbol
 import lang.temper.value.maybeVarSymbol
 import lang.temper.value.noPropertySymbol
+import lang.temper.value.overloadSymbol
 import lang.temper.value.privateSymbol
 import lang.temper.value.protectedSymbol
 import lang.temper.value.publicSymbol
@@ -385,6 +386,20 @@ private object Builtins {
              * - For a decorated parameter to be inlined, it must be a block lambda
              */
             keyPair(MetadataDecorator(inlineUnrealizedGoalSymbol) { void }),
+
+            /**
+             * <!-- snippet: builtin/@overload -->
+             * # `@overload` decorator
+             * Gives an overload name to a function or class member. Temper respects
+             * overloads. Some backends also might.
+             *
+             * TODO Detail precise overload rules.
+             */
+            keyPair(
+                MetadataDecorator(overloadSymbol, argumentTypes = listOf(Types.string)) { args ->
+                    args.valueTree(1).valueContained ?: NotYet
+                },
+            ),
 
             // TODO: enable the inert code blocks below when extension functions have
             // been fully integrated into the interpreter and existing backends.
