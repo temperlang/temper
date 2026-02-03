@@ -178,6 +178,7 @@ internal fun typeDisambiguateMacro(
             val argsAfterWord = buildList {
                 for (i in args.indices) {
                     when (args.key(i)) {
+                        typeArgSymbol -> continue // Because this should stay on type only
                         wordSymbol -> continue // So we can use it as a type name
                         outTypeSymbol -> hasOutType = true
                     }

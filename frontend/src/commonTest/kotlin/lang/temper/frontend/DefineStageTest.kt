@@ -815,6 +815,44 @@ class DefineStageTest {
     )
 
     @Test
+    fun functionalInterfaceGeneric() = assertModuleAtStage(
+        stage = Stage.Define,
+        input = """
+            |export @fun interface MyFunction<T, U>(x: T, y: U): Boolean;
+        """.trimMargin(),
+        want = """
+            |{
+            |  define: {
+            |    body:
+            |      ```
+            |      @typeDecl(MyFunction<T__0, U__0>) @stay @functionalInterface let `test//`.MyFunction;
+            |      `test//`.MyFunction = type (MyFunction);
+            |      do {};
+            |      @typeFormal(\T) @typeDefined(T__0) @fromType(MyFunction<T__0, U__0>) let T__0;
+            |      T__0 = type (T__0);
+            |      @typeFormal(\U) @typeDefined(U__0) @fromType(MyFunction<T__0, U__0>) let U__0;
+            |      U__0 = type (U__0);
+            |      MyFunction<T__0, U__0> extends AnyValue;
+            |      @fn @stay @fromType(MyFunction<T__0, U__0>) let apply__0;
+            |      apply__0 = fn apply(x__0 /* aka x */: T__0, y__0 /* aka y */: U__0) /* return__0 */: Boolean {
+            |        fn__0: do {
+            |          pureVirtual()
+            |        }
+            |      };
+            |      interface(\word, \MyFunction, void, void, void, void, \concrete, false, @typeDefined(MyFunction<T__0, U__0>) fn {
+            |          do {};
+            |          do {};
+            |          do {};
+            |          do {}
+            |      });
+            |
+            |      ```
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
+    @Test
     fun coalesce() = assertModuleAtStage(
         stage = Stage.Define,
         input = """
