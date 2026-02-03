@@ -3267,6 +3267,54 @@ console.log(c.y.toString()); //!outputs "2"
 
 <!-- /snippet: builtin/@noProperty -->
 
+<!-- snippet: builtin/@overload -->
+
+<a name="builtin&#45;&#64;overload" class="snippet-anchor-name"></a>
+
+### `@overload` decorator
+Gives an overload name to a function or class member. Temper respects
+overloads. Some backend languages also might, so backends are permitted
+to generate multiple entities with the same overload. See each backend
+for details.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/@overload/snippet.md/0 -->
+
+```temper
+class ConvertingStringBuilder {
+    public content: StringBuilder = new StringBuilder();
+
+    @overload("append")
+    public appendInt32(int: Int32): Void {
+        content.append(int.toString());
+    }
+
+    @overload("append")
+    public appendString(string: String): Void {
+        content.append(string);
+    }
+}
+
+let builder = new ConvertingStringBuilder();
+builder.append("Hi ");
+builder.append(5);
+builder.appendString("!"); // individualized calls also work
+builder.content.toString() == "Hi 5!"
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/@overload/snippet.md/0 -->
+
+For now, only explicit methods are allowed for overloads.
+Constructors, propertiers, and top-level functions are unsupported.
+
+No actual function or method with the overload name itself must be
+present.
+
+TODO Should extension methods have the same prohibition?
+Also detail interaction between extension methods and overloads.
+
+<!-- /snippet: builtin/@overload -->
+
 <!-- snippet: builtin/@private -->
 
 <a name="builtin&#45;&#64;private" class="snippet-anchor-name"></a>

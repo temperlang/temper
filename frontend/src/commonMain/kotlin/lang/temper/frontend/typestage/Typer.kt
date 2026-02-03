@@ -61,6 +61,7 @@ import lang.temper.type.InstanceExtensionResolution
 import lang.temper.type.InternalMemberAccessor
 import lang.temper.type.InvalidType
 import lang.temper.type.MemberOverride2
+import lang.temper.type.MemberShape
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
 import lang.temper.type.MkType
@@ -2734,23 +2735,13 @@ internal class Typer(
 
             @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE") // Used but Kotlin thinks it isn't. (?!?)
             var anyMatchedUsage = false
-            for (thisVariant in allThisVariants) {
-                val typeShape = thisVariant.definition as TypeShape
-                if (DEBUG) {
-                    console.log("$thisVariant has members ${typeShape.members}")
-                }
+            fun processMembers(
+                thisVariant: NominalType,
+                typeShape: TypeShape,
+                symbolMatches: (member: MemberShape) -> Boolean = { it.symbol == memberSymbol },
+            ) {
                 typeShape.members.forEach { member ->
-                    if (
-                        member is VisibleMemberShape && (
-                            member.symbol == memberSymbol ||
-                            // TODO Cache overloads in a faster-access place?
-                            (member.stay?.incoming?.source as? DeclTree)?.parts?.let { parts ->
-                                parts.metadataSymbolMap[overloadSymbol]?.target?.valueContained?.let { value ->
-                                    TString.unpackOrNull(value)
-                                }
-                            } == memberSymbol.text
-                        )
-                    ) {
+                    if (member is VisibleMemberShape && symbolMatches(member)) {
                         anyMatchedSymbol = true
                         val usage = useMember(member)
                         if (usage == MemberUsage2.Good) {
@@ -2768,6 +2759,20 @@ internal class Typer(
                     } else {
                         rejectedMemberHolders.add(typeShape)
                     }
+                }
+            }
+            for (thisVariant in allThisVariants) {
+                val typeShape = thisVariant.definition as TypeShape
+                if (DEBUG) {
+                    console.log("$thisVariant has members ${typeShape.members}")
+                }
+                processMembers(thisVariant, typeShape)
+                if (!anyMatchedSymbol) {
+                    // No actual member had the right symbol, so check for overloads.
+                    // Checking for overloads only on actual member symbol fails should make the common case faster.
+                    // TODO Permit overloads with an actual matching member also?
+                    // TODO If not, validate against that somewhere else.
+                    processMembers(thisVariant, typeShape) { matchesOverload(memberSymbol, it) }
                 }
             }
             // TODO: filter out masked member variants because overrides may narrow a signature.
@@ -2941,6 +2946,14 @@ internal class Typer(
                 variants.toList(),
             )
         }
+    }
+
+    private fun matchesOverload(symbol: Symbol, member: MemberShape): Boolean = run {
+        (member.stay?.incoming?.source as? DeclTree)?.parts?.let { parts ->
+            parts.metadataSymbolMap[overloadSymbol]?.target?.valueContained?.let { value ->
+                TString.unpackOrNull(value)
+            }
+        } == symbol.text
     }
 
     private fun typeForExtensionResolution(

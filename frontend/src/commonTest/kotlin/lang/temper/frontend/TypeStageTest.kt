@@ -2057,6 +2057,7 @@ class TypeStageTest {
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
+    /** Test overload decorations. */
     @Test
     fun overloadedMethods() = assertModuleAtStage(
         stage = Stage.Type,
@@ -2121,12 +2122,12 @@ class TypeStageTest {
             |        fn__2: do {
             |          var fail#2 ⦂ Boolean, fail#3 ⦂ Boolean;
             |          let intInt__0 ⦂ Int32;
-            |          intInt__0 = hs ⋖ Int32 ⋗(fail#2, do_bind_toInt(intMaker__0)(int__1));
+            |          intInt__0 = hs ⋖ Int32 ⋗(fail#2, do_bind_int64ToInt(intMaker__0)(int__1));
             |          if (fail#2) {
             |            bubble ⋖ Int32 ⋗()
             |          };
             |          let stringInt__0 ⦂ Int32;
-            |          stringInt__0 = hs ⋖ Int32 ⋗(fail#3, do_bind_toInt(intMaker__0)(string__1));
+            |          stringInt__0 = hs ⋖ Int32 ⋗(fail#3, do_bind_stringToInt(intMaker__0)(string__1));
             |          if (fail#3) {
             |            bubble ⋖ Int32 ⋗()
             |          };
@@ -2140,6 +2141,10 @@ class TypeStageTest {
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
+    /**
+     * We currently have some direct overloading support, so this helps fore reviewing that behahior.
+     * TODO Drop support for direct overloading.
+     */
     @Test
     fun overloadedMethodsWrong() = assertModuleAtStage(
         stage = Stage.Type,

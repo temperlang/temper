@@ -391,9 +391,40 @@ private object Builtins {
              * <!-- snippet: builtin/@overload -->
              * # `@overload` decorator
              * Gives an overload name to a function or class member. Temper respects
-             * overloads. Some backends also might.
+             * overloads. Some backend languages also might, so backends are permitted
+             * to generate multiple entities with the same overload. See each backend
+             * for details.
              *
-             * TODO Detail precise overload rules.
+             * ```temper
+             * class ConvertingStringBuilder {
+             *     public content: StringBuilder = new StringBuilder();
+             *
+             *     @overload("append")
+             *     public appendInt32(int: Int32): Void {
+             *         content.append(int.toString());
+             *     }
+             *
+             *     @overload("append")
+             *     public appendString(string: String): Void {
+             *         content.append(string);
+             *     }
+             * }
+             *
+             * let builder = new ConvertingStringBuilder();
+             * builder.append("Hi ");
+             * builder.append(5);
+             * builder.appendString("!"); // individualized calls also work
+             * builder.content.toString() == "Hi 5!"
+             * ```
+             *
+             * For now, only explicit methods are allowed for overloads.
+             * Constructors, propertiers, and top-level functions are unsupported.
+             *
+             * No actual function or method with the overload name itself must be
+             * present.
+             *
+             * TODO Should extension methods have the same prohibition?
+             * Also detail interaction between extension methods and overloads.
              */
             keyPair(
                 MetadataDecorator(overloadSymbol, argumentTypes = listOf(Types.string)) { args ->
@@ -401,8 +432,6 @@ private object Builtins {
                 },
             ),
 
-            // TODO: enable the inert code blocks below when extension functions have
-            // been fully integrated into the interpreter and existing backends.
             /**
              * <!-- snippet: builtin/@extension -->
              * # `@extension` decorator
