@@ -2748,7 +2748,7 @@ internal class Typer(
                                 parts.metadataSymbolMap[overloadSymbol]?.target?.valueContained?.let { value ->
                                     TString.unpackOrNull(value)
                                 }
-                            } == member.symbol.text
+                            } == memberSymbol.text
                         )
                     ) {
                         anyMatchedSymbol = true

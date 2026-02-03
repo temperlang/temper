@@ -2119,10 +2119,17 @@ class TypeStageTest {
             |      `test//`.crazySum = fn crazySum(intMaker__0 /* aka intMaker */: IntMaker, int__1 /* aka int */: Int64, string__1 /* aka string */: String) /* return__4 */: (Int32 | Bubble) {
             |        void;
             |        fn__2: do {
-            |          let intInt__0 ⦂ Invalid;
-            |          intInt__0 = do_bind_toInt(intMaker__0)(int__1);
-            |          let stringInt__0 ⦂ Invalid;
-            |          stringInt__0 = do_bind_toInt(intMaker__0)(string__1);
+            |          var fail#2 ⦂ Boolean, fail#3 ⦂ Boolean;
+            |          let intInt__0 ⦂ Int32;
+            |          intInt__0 = hs ⋖ Int32 ⋗(fail#2, do_bind_toInt(intMaker__0)(int__1));
+            |          if (fail#2) {
+            |            bubble ⋖ Int32 ⋗()
+            |          };
+            |          let stringInt__0 ⦂ Int32;
+            |          stringInt__0 = hs ⋖ Int32 ⋗(fail#3, do_bind_toInt(intMaker__0)(string__1));
+            |          if (fail#3) {
+            |            bubble ⋖ Int32 ⋗()
+            |          };
             |          return__4 = intInt__0 + stringInt__0
             |        }
             |      }
