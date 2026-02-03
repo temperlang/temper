@@ -56,11 +56,8 @@ internal fun simplifyDotHelper(
     // Give preference to members over extensions
     var lastNonExtensionResolution: VariantResolution? = null
     var lastResolution: VariantResolution? = null
-    var lastWasRefined = false
     for (variant in variants.reversed()) {
-        val unrefinedMatch = variant.first == variantMatch
-        if (unrefinedMatch || variant.first == variantMatchRefined) {
-            lastWasRefined = !unrefinedMatch
+        if (variant.first == variantMatch || variant.first == variantMatchRefined) {
             lastResolution = variant.second
             if (variant.second is Either.Left) {
                 lastNonExtensionResolution = variant.second
@@ -74,9 +71,9 @@ internal fun simplifyDotHelper(
         is Either.Left,
         -> {
             val updatedType = when {
-                lastNonExtensionResolution != null && lastWasRefined -> {
-                    // Presumably an overload now resolved to an individually named method.
-                    variantMatchRefined
+                lastNonExtensionResolution?.let { it.leftOrNull!!.symbol != dotHelper.symbol } == true -> {
+                    // An overload now resolved to an individually named method.
+                    variantMatchRefined ?: variantMatch
                 }
                 else -> when {
                     dotHelper.extensions.isNotEmpty() -> chosenVariantResolution?.let {
