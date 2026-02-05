@@ -885,10 +885,10 @@ internal class CleanupTemporaries private constructor(
                         // - do_bind_methodName(subject) where subject can be reordered over
                         // - nym`<>`(callee, TypeActuals) where callee can be reordered over
                         val callee = t.childOrNull(0)?.functionContained
-                        when {
-                            callee == BuiltinFuns.angleFn && t.size >= 2 -> mayReorderOver(t.child(1))
-                            callee is GetStaticOp -> true
-                            callee is DotHelper && callee.memberAccessor is BindMemberAccessor -> {
+                        when (callee) {
+                            BuiltinFuns.angleFn if t.size >= 2 -> mayReorderOver(t.child(1))
+                            is GetStaticOp -> true
+                            is DotHelper if callee.memberAccessor is BindMemberAccessor -> {
                                 val subject = t.childOrNull(
                                     callee.memberAccessor.enclosingTypeIndexOrNegativeOne + 2,
                                 )
@@ -1238,7 +1238,10 @@ internal class CleanupTemporaries private constructor(
                 while (true) {
                     val dataTables = cleaner.clean()
                     val madeProgress = dataTables.edits.isNotEmpty()
-                    allDataTables.add(dataTables)
+                    if (DEBUG) {
+                        // In degenerate cases, this can explode, so require DEBUG configuration.
+                        allDataTables.add(dataTables)
+                    }
                     if (!madeProgress) {
                         break
                     }
