@@ -80,9 +80,9 @@ private fun comment() = choice(
 )
 
 private fun curly(nested: Ref) = Nest(
-    begin = """\{""",
+    begin = """\{(?!:)""",
     beginCaptures = curlyEdgeCaptures,
-    end = """\}""",
+    end = """(?<!:)\}""",
     endCaptures = curlyEdgeCaptures,
     patterns = listOf(nested),
 )
@@ -116,15 +116,19 @@ private fun expression(): Choice = Choice(
     ).map { it.ref },
 )
 
-private fun interpolation() = Nest(
-    // Enable template expressions in this grammar for client speed and smarts.
+private fun interpolatedPart(begin: String, end: String) = Nest(
     scope = "meta.template.expression.temper",
-    begin = """\${'$'}\{""",
+    begin = begin,
     beginCaptures = templateBeginCaptures,
-    end = """\}""",
+    end = end,
     endCaptures = templateEndCaptures,
     contentScope = "meta.embedded.line.temper",
     patterns = listOf(::expression.ref),
+)
+
+private fun interpolation() = choice(
+    interpolatedPart("""\$\{""", """\}"""), // expression
+    interpolatedPart("""\{:""", """:\}"""), // statement(s)
 )
 
 private fun memberExpression(): Rule {
@@ -170,7 +174,7 @@ private fun regexContent() = choice(
 )
 
 private fun regexpEscape() = choice(
-    Flat(scope = "keyword.control.anchor.regexp", match = """\\b|\^|\${'$'}"""),
+    Flat(scope = "keyword.control.anchor.regexp", match = """\\b|\^|\$"""),
     Flat(scope = "constant.other.character-class.regexp", match = """\\."""),
 )
 

@@ -7,6 +7,7 @@
   // See also bracketPartners in Temper lexer source.
   "brackets": [
     // TODO(tjp, tooling): Prevent semantic tokens from clobbering template brackets.
+    ["{:", ":}"],
     ["${", "}"],
     ["{", "}"],
     ["[", "]"],
@@ -15,6 +16,7 @@
     // ["<", ">"]
   ],
   "autoClosingPairs": [
+    { "open": "{:", "close": ":}" },
     { "open": "{", "close": "}" },
     { "open": "[", "close": "]" },
     { "open": "(", "close": ")" },
@@ -27,6 +29,7 @@
   ],
   "autoCloseBefore": ";:.,=}])>` \n\t",
   "surroundingPairs": [
+    ["{:", ":}"],
     ["{", "}"],
     ["[", "]"],
     ["(", ")"],

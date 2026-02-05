@@ -42,13 +42,13 @@
                     ]
                 },
                 {
-                    "begin": "\\{",
+                    "begin": "\\{(?!:)",
                     "beginCaptures": {
                         "0": {
                             "name": "punctuation.define.block.temper"
                         }
                     },
-                    "end": "\\}",
+                    "end": "(?\u003c!:)\\}",
                     "endCaptures": {
                         "0": {
                             "name": "punctuation.define.block.temper"
@@ -80,13 +80,13 @@
                 {
                     "patterns": [
                         {
-                            "begin": "\\{",
+                            "begin": "\\{(?!:)",
                             "beginCaptures": {
                                 "0": {
                                     "name": "punctuation.define.block.temper"
                                 }
                             },
-                            "end": "\\}",
+                            "end": "(?\u003c!:)\\}",
                             "endCaptures": {
                                 "0": {
                                     "name": "punctuation.define.block.temper"
@@ -214,23 +214,48 @@
             ]
         },
         "interpolation": {
-            "name": "meta.template.expression.temper",
-            "begin": "\\\u0024\\{",
-            "beginCaptures": {
-                "0": {
-                    "name": "punctuation.definition.template-expression.begin.temper"
-                }
-            },
-            "end": "\\}",
-            "endCaptures": {
-                "0": {
-                    "name": "punctuation.definition.template-expression.end.temper"
-                }
-            },
-            "contentName": "meta.embedded.line.temper",
             "patterns": [
                 {
-                    "include": "#expression"
+                    "name": "meta.template.expression.temper",
+                    "begin": "\\\u0024\\{",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.template-expression.begin.temper"
+                        }
+                    },
+                    "end": "\\}",
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.template-expression.end.temper"
+                        }
+                    },
+                    "contentName": "meta.embedded.line.temper",
+                    "patterns": [
+                        {
+                            "include": "#expression"
+                        }
+                    ]
+                },
+                {
+                    "name": "meta.template.expression.temper",
+                    "begin": "\\{:",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.template-expression.begin.temper"
+                        }
+                    },
+                    "end": ":\\}",
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.template-expression.end.temper"
+                        }
+                    },
+                    "contentName": "meta.embedded.line.temper",
+                    "patterns": [
+                        {
+                            "include": "#expression"
+                        }
+                    ]
                 }
             ]
         },
