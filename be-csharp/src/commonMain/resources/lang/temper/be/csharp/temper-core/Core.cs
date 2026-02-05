@@ -119,6 +119,7 @@ namespace TemperLang.Core
         }
 
         private static System.Tuple<object?> emptySingleton = new System.Tuple<object?>(null);
+
         public static System.Tuple<object?> Empty()
         {
             return emptySingleton;
@@ -138,7 +139,9 @@ namespace TemperLang.Core
         /// Temper code that doesn't easily translate. Typically won't compile
         /// in C#, which is ok. If it does compile, it throws, which is good.
         /// </summary>
-        public static void Garbage(string message) => throw new Exception(message);
+        public static void Garbage(string message = "") => throw new Exception(message);
+
+        public static void Garbage() => throw new Exception();
 
         public static int Mod(this int a, int b)
         {
