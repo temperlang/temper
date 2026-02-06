@@ -152,17 +152,16 @@ implementation of testing within the interpreter.
       let totals = "tests='${total}' failures='${fails}'";
       // Just lie about time for now since it's required.
       writeLine("  <testsuite name='suite' ${totals} time='0.0'>");
-      let escape(s: String): String { s.split("'").join("&apos;") { x => x } }
       for (var i = 0; i < testResults.length; i += 1) {
         let testResult = testResults[i];
         let failureMessages = testResult.value;
-        let name = escape(testResult.key);
+        let name = escapeXml(testResult.key);
         let basics = "name='${name}' classname='${name}' time='0.0'";
         if (failureMessages.isEmpty) {
           writeLine("    <testcase ${basics} />");
         } else {
           writeLine("    <testcase ${basics}>");
-          let message = escape(failureMessages.join(", ") { it => it });
+          let message = escapeXml(failureMessages.join(", ") { it => it });
           writeLine("      <failure message='${message}' />")
           writeLine("    </testcase>");
         }
@@ -188,4 +187,34 @@ TODO Is this a better idea than inlining each case? We'd need to generate
       let test = new Test();
       testFun(test) orelse test.assert(false) { "bubble during test running" };
       test.softFailToHard();
+    }
+
+To produce JUnit XML, it's convenient to be able to escape XML text.
+
+escapeXml takes a string and escapes it so that it has the same meaning as an
+XML text node or attribute value.
+
+    let escapeXml(s: String): String {
+      let sb = new StringBuilder();
+      let end = s.end;
+      var emitted = String.begin;
+      for (var i = String.begin; i < end; i = s.next(i)) {
+        let esc = when (s[i]) {
+          char'&' -> "&amp;";
+          char'<' -> "&lt;";
+          char'>' -> "&gt;";
+          char"'" -> "&#39;";
+          char'"' -> "&#34;";
+          else -> continue;
+        }
+        sb.appendBetween(s, emitted, i);
+        sb.append(esc);
+        emitted = s.next(i);
+      }
+      if (emitted == String.begin) {
+        s
+      } else {
+        sb.appendBetween(s, emitted, end);
+        sb.toString()
+      }
     }
