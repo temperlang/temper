@@ -815,7 +815,7 @@ internal class CleanupTemporaries private constructor(
         // 1000s of items going into the same list.
         val inlineds = mutableSetOf<MaximalPath.Element>()
 
-        for (name in readsAndWrites.localNames.reversed()) {
+        for (name in readsAndWrites.localNames.asReversed()) {
             if (name in requiredNames || name !is Temporary) { continue }
             val readsOfName = readsAndWrites.reads[name] ?: continue
 
