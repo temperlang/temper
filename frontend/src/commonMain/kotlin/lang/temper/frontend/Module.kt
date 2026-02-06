@@ -182,6 +182,10 @@ class Module(
         return immutableEnvironment(parent, stableEnvironmentBindings, isLongLived = true)
     }
 
+    fun stableEnvironmentValue(name: TemperName): Value<*>? {
+        return stableEnvironmentBindings[name]
+    }
+
     private var stableEnvironmentBindings = emptyMap<TemperName, Value<*>>()
 
     /** Adds bindings to those exposed by [wrapBuiltinEnvironment] */
@@ -378,6 +382,9 @@ class Module(
             // TODO: If a stage fails with Abort or Panic, then notify the module manager that
             // dependencies will never be satisfied.
             (_topLevelBindings ?: StageExclusion.NotExclusive).whileSynchronized {
+                if (stageCompleted?.let { it > Stage.Import } == true && "plicits" !in loc.diagnostic) {
+                    loc.diagnostic
+                }
                 when (stageToPerform) {
                     Stage.Lex -> {
                         val sources = _sources.map { source ->

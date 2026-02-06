@@ -50,6 +50,7 @@ import lang.temper.value.NameLeaf
 import lang.temper.value.Planting
 import lang.temper.value.PseudoCodeDetail
 import lang.temper.value.StayLeaf
+import lang.temper.value.TBoolean
 import lang.temper.value.TEdge
 import lang.temper.value.Tree
 import lang.temper.value.UnpositionedTreeTemplate
@@ -1242,11 +1243,12 @@ internal class CleanupTemporaries private constructor(
                     typeInfo = typeInfo,
                 )
 
+                val keepCleanupTemporariesData =
+                    module.stableEnvironmentValue(StagingFlags.keepCleanupTemporariesData) == TBoolean.valueTrue
                 while (true) {
                     val dataTables = cleaner.clean()
                     val madeProgress = dataTables.edits.isNotEmpty()
-                    if (DEBUG) {
-                        // In degenerate cases, this can explode, so require DEBUG configuration.
+                    if (keepCleanupTemporariesData) {
                         allDataTables.add(dataTables)
                     }
                     if (!madeProgress) {
