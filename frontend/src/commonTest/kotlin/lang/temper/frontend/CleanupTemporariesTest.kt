@@ -2091,8 +2091,10 @@ class CleanupTemporariesTest {
                     moduleCustomizeHook = { module, isNew ->
                         if (isNew) {
                             module.addEnvironmentBindings(
-                                extraEnvironmentBindings +
-                                    (StagingFlags.moduleResultNeeded to TBoolean.value(moduleResultNeeded)),
+                                extraEnvironmentBindings + mapOf(
+                                    StagingFlags.keepCleanupTemporariesData to TBoolean.valueTrue,
+                                    StagingFlags.moduleResultNeeded to TBoolean.value(moduleResultNeeded),
+                                ),
                             )
                         }
                         if (module.stageCompleted == Stage.SyntaxMacro) {
