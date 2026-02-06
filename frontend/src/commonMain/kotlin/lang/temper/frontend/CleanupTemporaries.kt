@@ -809,7 +809,12 @@ internal class CleanupTemporaries private constructor(
         //   For example, the read of `g` is a no-op and `f(x)` cannot change its value,
         //   so we can reorder `f(x)` after it.
 
-        for (name in readsAndWrites.localNames) {
+        // Finally review in reverse order to make it easier to inline a sequence
+        // of assignments all at once. That can help in common degenerate cases like
+        // 1000s of items going into the same list.
+        val inlineds = mutableSetOf<MaximalPath.Element>()
+
+        for (name in readsAndWrites.localNames.reversed()) {
             if (name in requiredNames || name !is Temporary) { continue }
             val readsOfName = readsAndWrites.reads[name] ?: continue
 
@@ -846,7 +851,7 @@ internal class CleanupTemporaries private constructor(
                     var elementIndex = path.elements.indexOf(writeElement)
                     while (0 <= elementIndex && elementIndex < path.elements.lastIndex) {
                         val next = path.elements[elementIndex + 1]
-                        if (!next.isNoop) { break }
+                        if (!(next.isNoop || next in inlineds)) { break }
                         elementIndex += 1
                     }
                     if (elementIndex == -1) {
@@ -931,6 +936,8 @@ internal class CleanupTemporaries private constructor(
                 }
 
                 if (mayReorder) {
+                    // Track so we know they're safe for addition inlines this step.
+                    inlineds.add(writeElement)
                     // Turn the assignment into a no-op
                     editListBuilder.add(
                         Replace(
