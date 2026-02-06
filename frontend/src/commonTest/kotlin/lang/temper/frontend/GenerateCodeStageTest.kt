@@ -3663,6 +3663,23 @@ class GenerateCodeStageTest {
             |}
         """.trimMargin(),
     )
+
+    @Test
+    fun veryBigMapConstructor() = assertModuleAtStage(
+        stage = Stage.Run,
+        input = buildString {
+            append("export let numbers: Map<String, Int> = new Map<String, Int>([")
+            for (i in 0 until 1000) {
+                append("  new Pair<String, Int>(\"$i\", $i),")
+            }
+            append("]);")
+        },
+        want = """
+            |{
+            |  run: "void: Void",
+            |}
+        """.trimMargin(),
+    )
 }
 
 // Provide an extra binding to a function whose call does not inline so does not trigger any
