@@ -813,7 +813,8 @@ internal class CleanupTemporaries private constructor(
         // Finally review in reverse order to make it easier to inline a sequence
         // of assignments all at once. That can help in common degenerate cases like
         // 1000s of items going into the same list.
-        val inlineds = mutableSetOf<MaximalPath.Element>()
+        val inlinedElements = mutableSetOf<MaximalPath.Element>()
+        val inlinedReadTrees = mutableSetOf<Tree>()
 
         for (name in readsAndWrites.localNames.asReversed()) {
             if (name in requiredNames || name !is Temporary) { continue }
@@ -852,7 +853,7 @@ internal class CleanupTemporaries private constructor(
                     var elementIndex = path.elements.indexOf(writeElement)
                     while (0 <= elementIndex && elementIndex < path.elements.lastIndex) {
                         val next = path.elements[elementIndex + 1]
-                        if (!(next.isNoop || next in inlineds)) { break }
+                        if (!(next.isNoop || next in inlinedElements)) { break }
                         elementIndex += 1
                     }
                     if (elementIndex == -1) {
@@ -882,39 +883,6 @@ internal class CleanupTemporaries private constructor(
                 // If the preceding, non-containing trees do not have a
                 // side effect then we can replace READ with the
                 // right-hand-side of the upstream write.
-                fun mayReorderOver(t: Tree): Boolean = when (t) {
-                    is FunTree -> true
-                    is ValueLeaf -> true
-                    is StayLeaf -> true
-                    is CallTree -> {
-                        // conservatively may not, but allow for some patterns:
-                        // - do_bind_methodName(subject) where subject can be reordered over
-                        // - nym`<>`(callee, TypeActuals) where callee can be reordered over
-                        val callee = t.childOrNull(0)?.functionContained
-                        when (callee) {
-                            BuiltinFuns.angleFn if t.size >= 2 -> mayReorderOver(t.child(1))
-                            is GetStaticOp -> true
-                            is DotHelper if callee.memberAccessor is BindMemberAccessor -> {
-                                val subject = t.childOrNull(
-                                    callee.memberAccessor.enclosingTypeIndexOrNegativeOne + 2,
-                                )
-                                subject != null && mayReorderOver(subject)
-                            }
-                            else -> false
-                        }
-                    }
-                    is EscTree -> false // conservatively
-                    is BlockTree -> t.children.all { mayReorderOver(it) }
-                    is NameLeaf -> when (val nameAtLeaf = t.content) {
-                        is StableTemperName -> true
-                        else -> { // If it's effectively const, its value can't be changed by reordering
-                            val decl = readsAndWrites.declarations[nameAtLeaf]?.soleElementOrNull
-                            val metadata = decl?.parts?.metadataSymbolMultimap
-                            metadata?.contains(ssaSymbol) == true
-                        }
-                    }
-                    is DeclTree -> true // Odd seeing you here
-                }
                 // We can skip the reorder check for things like static
                 // reads which are always const and don't invoke getters.
                 var mayReorder = true // Looking for counter-evidence below
@@ -927,7 +895,7 @@ internal class CleanupTemporaries private constructor(
                     val parent = edge.source!! // Safe since we don't go above root
                     for (precedingSiblingIndex in 0 until indexInParent) {
                         val precedingSibling = parent.child(precedingSiblingIndex)
-                        if (!mayReorderOver(precedingSibling)) {
+                        if (precedingSibling in inlinedReadTrees || !mayReorderOver(precedingSibling, readsAndWrites)) {
                             mayReorder = false
                             break
                         }
@@ -937,8 +905,9 @@ internal class CleanupTemporaries private constructor(
                 }
 
                 if (mayReorder) {
-                    // Track so we know they're safe for addition inlines this step.
-                    inlineds.add(writeElement)
+                    // Track so we know when they're safe for additional inlines this step.
+                    inlinedElements.add(writeElement)
+                    inlinedReadTrees.add(read.tree)
                     // Turn the assignment into a no-op
                     editListBuilder.add(
                         Replace(
@@ -1552,3 +1521,37 @@ private fun mustRemainAtStatementLevel(t: Tree): Boolean {
 
 fun isGetStaticCall(t: Tree) = t is CallTree &&
     t.childOrNull(0)?.functionContained is GetStaticOp
+
+private fun mayReorderOver(t: Tree, readsAndWrites: ReadsAndWrites): Boolean = when (t) {
+    is FunTree -> true
+    is ValueLeaf -> true
+    is StayLeaf -> true
+    is CallTree -> {
+        // conservatively may not, but allow for some patterns:
+        // - do_bind_methodName(subject) where subject can be reordered over
+        // - nym`<>`(callee, TypeActuals) where callee can be reordered over
+        val callee = t.childOrNull(0)?.functionContained
+        when (callee) {
+            BuiltinFuns.angleFn if t.size >= 2 -> mayReorderOver(t.child(1), readsAndWrites)
+            is GetStaticOp -> true
+            is DotHelper if callee.memberAccessor is BindMemberAccessor -> {
+                val subject = t.childOrNull(
+                    callee.memberAccessor.enclosingTypeIndexOrNegativeOne + 2,
+                )
+                subject != null && mayReorderOver(subject, readsAndWrites)
+            }
+            else -> false
+        }
+    }
+    is EscTree -> false // conservatively
+    is BlockTree -> t.children.all { mayReorderOver(it, readsAndWrites) }
+    is NameLeaf -> when (val nameAtLeaf = t.content) {
+        is StableTemperName -> true
+        else -> { // If it's effectively const, its value can't be changed by reordering
+            val decl = readsAndWrites.declarations[nameAtLeaf]?.soleElementOrNull
+            val metadata = decl?.parts?.metadataSymbolMultimap
+            metadata?.contains(ssaSymbol) == true
+        }
+    }
+    is DeclTree -> true // Odd seeing you here
+}
