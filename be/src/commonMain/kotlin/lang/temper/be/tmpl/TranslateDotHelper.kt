@@ -58,7 +58,7 @@ internal object TranslateDotHelper {
                             is DefinedType ->
                                 add(t.withNullity(Nullity.NonNull) as DefinedNonNullType)
                             is TypeParamRef -> {
-                                for (ub in definition.upperBounds) {
+                                for (ub in t.definition.upperBounds) {
                                     explodeUpperBounds(hackMapOldStyleToNew(ub))
                                 }
                             }
@@ -91,8 +91,9 @@ internal object TranslateDotHelper {
         }
 
     /** TODO Any way to unify this with [DotHelper] lookup logic? */
-    private fun findMembers(subjectTypes: List<DefinedNonNullType>, fn: DotHelper): Set<MethodShape> = buildSet {
+    private fun findMembers(subjectTypes: List<DefinedNonNullType>, fn: DotHelper): Set<MethodShape> {
         val commonMembers = mutableSetOf<MethodShape>()
+
         subjectTypes.forEachIndexed { index, memberType ->
             val members = findMembers(memberType.definition, fn)
             if (index == 0) {
@@ -101,7 +102,7 @@ internal object TranslateDotHelper {
                 commonMembers.retainAll(members)
             }
         }
-        commonMembers.toSet()
+        return commonMembers
     }
 
     private fun findConnectedMember(members: Set<MethodShape>): Pair<MethodShape, String>? {
@@ -173,6 +174,7 @@ internal object TranslateDotHelper {
         val subjectIndexInCallTree = 1 + dotHelper.memberAccessor.firstArgumentIndex
         val subjectTypeDefinition = callTree.children[subjectIndexInCallTree].typeOrInvalid.definition
         val members: Set<MethodShape> = findMembers(subjectTypeDefinition, dotHelper)
+
         val firstMember: MethodShape? = members.firstOrNull()
         val adjustments = firstMember?.let {
             translator.metadataFetcher().read(it.name, SignatureAdjustments.KeyFactory)
@@ -384,7 +386,7 @@ internal object TranslateDotHelper {
                 )
             }
             is BindMemberAccessor -> if (outerCallTree != null) {
-                val method = members.firstOrNull()
+                val method = firstMember
                     ?: return TranslatedDotHelper(
                         Either.Left(
                             garbageExpr(pos, "No method matching .${dotHelper.symbol.text} in $subjectTypeDefinition"),

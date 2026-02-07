@@ -4115,6 +4115,54 @@ class TmpLBackendTest {
         """.trimMargin(),
     )
 
+    @Test
+    fun methodOnGeneric() = assertGeneratedCode(
+        supportNetwork = TestSupportNetwork(functionTypeStrategy = FunctionTypeStrategy.ToFunctionalInterface),
+        inputs = inputFileMapFromJson(
+            """
+                |{
+                |  foo: {
+                |    foo.temper:
+                |      ```
+                |      export interface Foo {
+                |        foo(): Void;
+                |      }
+                |      export let f<T extends Foo>(x: T): Void {
+                |        x.foo()
+                |      }
+                |      ```
+                |  },
+                |}
+            """.trimMargin(),
+        ),
+        want = """
+            |{
+            |  tmpl: {
+            |    foo.tmpl: {
+            |      content:
+            |        ```
+            |        //// work//foo/ => foo.tmpl
+            |        require temper-core;
+            |        let InterfaceTypeSupport#0 = InterfaceTypeSupport;
+            |        let pureVirtual#0 = builtins.pureVirtual;
+            |        @QName("test-library/foo.type Foo") interface Foo / Foo {
+            |          @QName("test-library/foo.type Foo.foo()") let foo__0(this = this__0, @QName("test-library/foo.type Foo.foo().(this)") @impliedThis(Foo) this__0: Foo): Void {
+            |            pureVirtual#0();
+            |          }
+            |        }
+            |        @QName("test-library/foo.f()") let f<T__0 extends Foo>(@QName("test-library/foo.f().(x)") x__0: T__0): Void {
+            |          x__0.foo();
+            |          return;
+            |        }
+            |
+            |        ```
+            |    },
+            |    foo.tmpl.map: "__DO_NOT_CARE__",
+            |  }
+            |}
+        """.trimMargin(),
+    )
+
     private fun assertGeneratedCode(
         inputJsonPathToContent: String,
         want: String,
