@@ -1771,12 +1771,12 @@ internal class JsTranslator(
 
     private fun translateGarbage(g: TmpL.Garbage): Js.Expression = Js.CallExpression(
         pos = g.pos,
+        // TypeScript can infer return type never on this.
         callee = Js.ArrowFunctionExpression(
             pos = g.pos,
             params = Js.Formals(
                 pos = g.pos.leftEdge,
                 params = listOf(),
-                returnType = Js.Identifier(g.pos.leftEdge, JsIdentifierName("never"), null),
             ),
             body = Js.BlockStatement(
                 g.pos,

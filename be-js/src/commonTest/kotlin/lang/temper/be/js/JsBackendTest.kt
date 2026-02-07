@@ -1307,13 +1307,14 @@ class JsBackendTest {
                 |}
             """.trimMargin(),
         ),
+        // This had an explicit TypeScript-style `never` return type on it, but we should use just JS.
         want = """
             |{
             |  js: {
             |    "my-test-library": {
             |      "foo.js": {
             |        content: ```
-            |          (((): never => {
+            |          ((() => {
             |                throw "howAboutThis not available from implicits";
             |            })());
             |
