@@ -1261,7 +1261,6 @@ class JsBackendTest {
     @Test
     fun never() = assertGeneratedCode(
         inputs = inputFileMapFromJson(
-
             """
                 |{
                 |  foo: {
@@ -1291,6 +1290,43 @@ class JsBackendTest {
             |$OUTPUT_BOILERPLATE
             |    }
             |  }
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun neverSayNever() = assertGeneratedCode(
+        inputs = inputFileMapFromJson(
+            """
+                |{
+                |  foo: {
+                |    foo.temper: ```
+                |      howAboutThis();
+                |      ```
+                |  }
+                |}
+            """.trimMargin(),
+        ),
+        want = """
+            |{
+            |  js: {
+            |    "my-test-library": {
+            |      "foo.js": {
+            |        content: ```
+            |          (((): never => {
+            |                throw "howAboutThis not available from implicits";
+            |            })());
+            |
+            |          ```,
+            |      },
+            |      "foo.js.map": "__DO_NOT_CARE__",
+            |$OUTPUT_BOILERPLATE
+            |    }
+            |  },
+            |  errors: [
+            |    "No declaration for howAboutThis!",
+            |    "Cannot translate howAboutThis not available from implicits!",
+            |  ]
             |}
         """.trimMargin(),
     )
