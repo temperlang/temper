@@ -2064,20 +2064,20 @@ class TypeStageTest {
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
         input = """
             |export class IntMaker(public radix: Int32) {
-            |   @overload("toInt")
-            |   public int64ToInt(int: Int64): Int32 throws Bubble { int.toInt32() }
+            |  @overload("toInt")
+            |  public int64ToInt(int: Int64): Int32 throws Bubble { int.toInt32() }
             |
-            |   @overload("toInt")
-            |   public stringToInt(string: String): Int32 throws Bubble { string.toInt32(radix) }
+            |  @overload("toInt")
+            |  public stringToInt(string: String): Int32 throws Bubble { string.toInt32(radix) }
             |
-            |   @overload("justMe")
-            |   public int32ToInt(int: Int32): Int32 { int }
+            |  @overload("justMe")
+            |  public int32ToInt(int: Int32): Int32 { int }
             |}
             |
             |export let crazySum(intMaker: IntMaker, int: Int64, string: String): Int throws Bubble {
-            |   let intInt = intMaker.toInt(int);
-            |   let stringInt = intMaker.toInt(string);
-            |   intMaker.justMe(intInt + stringInt)
+            |  let intInt = intMaker.toInt(int);
+            |  let stringInt = intMaker.toInt(string);
+            |  intMaker.justMe(intInt + stringInt)
             |}
         """.trimMargin(),
         want = """
@@ -2150,6 +2150,65 @@ class TypeStageTest {
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
+    @Test
+    fun overloadOnGenerics() = assertModuleAtStage(
+        stage = Stage.Type,
+        pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
+        input = $$"""
+            |export interface Stringer {
+            |  @overload("stringify")
+            |  public stringifyInt32(int: Int32): String;
+            |
+            |  @overload("stringify")
+            |  public stringifyInt32s(ints: Listed<Int32>): String;
+            |
+            |  @overload("stringify")
+            |  public stringifyStrings(string: Listed<String>): String;
+            |}
+            |
+            |export let stringifyLists(stringer: Stringer, int: Int, ints: List<Int>, strings: List<String>): String {
+            |  "${stringer.stringify(int)}, ${stringer.stringify(ints)}, ${stringer.stringify(strings)}"
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  type: {
+            |    body:
+            |      ```
+            |      @typeDecl(Stringer) @stay let `test//`.Stringer ⦂ Type;
+            |      `test//`.Stringer = type (Stringer);
+            |      @fn let `test//`.stringifyLists ⦂(fn (Stringer, Int32, List<Int32>, List<String>): String);
+            |      @visibility(\public) @overload("stringify") @fn @stay @fromType(Stringer) let stringifyInt32__0 ⦂(fn (Stringer, Int32): String);
+            |      stringifyInt32__0 = fn stringifyInt32(@impliedThis(Stringer) this__0: Stringer, int__0 /* aka int */: Int32) /* return__0 */: String {
+            |        fn__0: do {
+            |          pureVirtual ⋖ String ⋗()
+            |        }
+            |      };
+            |      @visibility(\public) @overload("stringify") @fn @stay @fromType(Stringer) let stringifyInt32s__0 ⦂(fn (Stringer, Listed<Int32>): String);
+            |      stringifyInt32s__0 = fn stringifyInt32s(@impliedThis(Stringer) this__1: Stringer, ints__0 /* aka ints */: Listed<Int32>) /* return__1 */: String {
+            |        fn__1: do {
+            |          pureVirtual ⋖ String ⋗()
+            |        }
+            |      };
+            |      @visibility(\public) @overload("stringify") @fn @stay @fromType(Stringer) let stringifyStrings__0 ⦂(fn (Stringer, Listed<String>): String);
+            |      stringifyStrings__0 = fn stringifyStrings(@impliedThis(Stringer) this__2: Stringer, string__0 /* aka string */: Listed<String>) /* return__2 */: String {
+            |        fn__2: do {
+            |          pureVirtual ⋖ String ⋗()
+            |        }
+            |      };
+            |      `test//`.stringifyLists = fn stringifyLists(stringer__0 /* aka stringer */: Stringer, int__1 /* aka int */: Int32, ints__1 /* aka ints */: List<Int32>, strings__0 /* aka strings */: List<String>) /* return__3 */: String {
+            |        void;
+            |        fn__3: do {
+            |          return__3 = cat(do_bind_stringifyInt32(stringer__0)(int__1), ", ", do_bind_stringify(stringer__0)(ints__1), ", ", do_bind_stringify(stringer__0)(strings__0))
+            |        }
+            |      }
+            |
+            |      ```
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
     /**
      * We currently have some direct overloading support, so this helps fore reviewing that behahior.
      * TODO Drop support for direct overloading.
@@ -2160,14 +2219,14 @@ class TypeStageTest {
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
         input = """
             |export class IntMaker(public radix: Int32) {
-            |   public toInt(int: Int64): Int32 throws Bubble { int.toInt32() }
-            |   public toInt(string: String): Int32 throws Bubble { string.toInt32(radix) }
+            |  public toInt(int: Int64): Int32 throws Bubble { int.toInt32() }
+            |  public toInt(string: String): Int32 throws Bubble { string.toInt32(radix) }
             |}
             |
             |export let crazySum(intMaker: IntMaker, int: Int64, string: String): Int throws Bubble {
-            |   let intInt = intMaker.toInt(int);
-            |   let stringInt = intMaker.toInt(string);
-            |   intInt + stringInt
+            |  let intInt = intMaker.toInt(int);
+            |  let stringInt = intMaker.toInt(string);
+            |  intInt + stringInt
             |}
         """.trimMargin(),
         want = """
