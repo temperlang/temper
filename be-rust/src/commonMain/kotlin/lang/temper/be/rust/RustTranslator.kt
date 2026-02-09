@@ -1524,7 +1524,10 @@ class RustTranslator(
                     is TmpL.Expression -> {
                         callable.method?.enclosingType?.let traitImport@{ owner ->
                             // TODO Do we need to filter out implicits? So far, no examples of hitting that case.
-                            if (owner.abstractness == Abstractness.Abstract && owner.pos.loc != module.pos.loc) {
+                            if (
+                                owner.abstractness == Abstractness.Abstract &&
+                                owner.sourceLocation != module.codeLocation.codeLocation
+                            ) {
                                 // For actual interface methods, we shouldn't have name collisions.
                                 // TODO Can/should we provide traits for extension methods?
                                 // TODO If so, just translate those as qualified calls anyway?
