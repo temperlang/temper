@@ -182,6 +182,10 @@ class Module(
         return immutableEnvironment(parent, stableEnvironmentBindings, isLongLived = true)
     }
 
+    fun stableEnvironmentValue(name: TemperName): Value<*>? {
+        return stableEnvironmentBindings[name]
+    }
+
     private var stableEnvironmentBindings = emptyMap<TemperName, Value<*>>()
 
     /** Adds bindings to those exposed by [wrapBuiltinEnvironment] */

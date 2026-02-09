@@ -69,8 +69,11 @@ internal data class ReadsAndWrites(
     /**
      * The set of names that are used only in the current function or module body;
      * their liveness does not extend to nested or containing functions.
+     *
+     * While provided as a list for efficient reverse iteration as needed, each
+     * member is expected to be unique.
      */
-    val localNames: Set<ResolvedName>,
+    val localNames: List<ResolvedName>,
     /** Names of any function/module inputs. */
     val inputNames: Set<ResolvedName>,
     /** Names of any function/module output. */
@@ -671,7 +674,7 @@ internal data class ReadsAndWrites(
 
             return ReadsAndWrites(
                 paths = maximalPaths,
-                localNames = localNames.toSet(),
+                localNames = localNames.toList(),
                 inputNames = inputNames,
                 outputName = outputName,
                 declarations = declarations.mapValues { it.value.toList() },
@@ -692,7 +695,7 @@ internal data class ReadsAndWrites(
 
         val zeroValue: ReadsAndWrites = ReadsAndWrites(
             paths = MaximalPaths.zeroValue,
-            localNames = emptySet(),
+            localNames = emptyList(),
             inputNames = emptySet(),
             outputName = null,
             declarations = emptyMap(),

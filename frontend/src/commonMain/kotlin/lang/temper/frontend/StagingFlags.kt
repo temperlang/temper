@@ -56,6 +56,12 @@ object StagingFlags {
      */
     val haltBeforeMixingIn = BuiltinName("halt-before-mixing-in")
 
+    /**
+     * Whether to keep data tables from [CleanupTemporaries] for inspection.
+     * In some cases, these tables can be very expensive.
+     */
+    val keepCleanupTemporariesData = BuiltinName("keep-cleanup-temporaries-data")
+
     private val allFlagsCached = lazy {
         buildSet {
             StagingFlags::class.memberProperties.mapNotNullTo(this) {

@@ -119,6 +119,7 @@ namespace TemperLang.Core
         }
 
         private static System.Tuple<object?> emptySingleton = new System.Tuple<object?>(null);
+
         public static System.Tuple<object?> Empty()
         {
             return emptySingleton;
@@ -139,6 +140,8 @@ namespace TemperLang.Core
         /// in C#, which is ok. If it does compile, it throws, which is good.
         /// </summary>
         public static void Garbage(string message) => throw new Exception(message);
+
+        public static void Garbage() => throw new Exception();
 
         public static int Mod(this int a, int b)
         {
