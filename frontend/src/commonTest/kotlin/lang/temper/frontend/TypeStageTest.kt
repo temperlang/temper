@@ -2160,12 +2160,13 @@ class TypeStageTest {
             |  public stringifyInt32(int: Int32): String;
             |
             |  @overload("stringify")
-            |  public stringifyInt32s(ints: Listed<Int32>): String;
+            |  public stringifyInt32List(ints: Listed<Int32>): String;
             |
             |  @overload("stringify")
-            |  public stringifyStrings(string: Listed<String>): String;
+            |  public stringifyStringList(string: Listed<String>): String;
             |}
             |
+            |// Purposely receive List but use as Listed above.
             |export let stringifyLists(stringer: Stringer, int: Int, ints: List<Int>, strings: List<String>): String {
             |  "${stringer.stringify(int)}, ${stringer.stringify(ints)}, ${stringer.stringify(strings)}"
             |}
@@ -2184,14 +2185,14 @@ class TypeStageTest {
             |          pureVirtual ⋖ String ⋗()
             |        }
             |      };
-            |      @visibility(\public) @overload("stringify") @fn @stay @fromType(Stringer) let stringifyInt32s__0 ⦂(fn (Stringer, Listed<Int32>): String);
-            |      stringifyInt32s__0 = fn stringifyInt32s(@impliedThis(Stringer) this__1: Stringer, ints__0 /* aka ints */: Listed<Int32>) /* return__1 */: String {
+            |      @visibility(\public) @overload("stringify") @fn @stay @fromType(Stringer) let stringifyInt32List__0 ⦂(fn (Stringer, Listed<Int32>): String);
+            |      stringifyInt32List__0 = fn stringifyInt32List(@impliedThis(Stringer) this__1: Stringer, ints__0 /* aka ints */: Listed<Int32>) /* return__1 */: String {
             |        fn__1: do {
             |          pureVirtual ⋖ String ⋗()
             |        }
             |      };
-            |      @visibility(\public) @overload("stringify") @fn @stay @fromType(Stringer) let stringifyStrings__0 ⦂(fn (Stringer, Listed<String>): String);
-            |      stringifyStrings__0 = fn stringifyStrings(@impliedThis(Stringer) this__2: Stringer, string__0 /* aka string */: Listed<String>) /* return__2 */: String {
+            |      @visibility(\public) @overload("stringify") @fn @stay @fromType(Stringer) let stringifyStringList__0 ⦂(fn (Stringer, Listed<String>): String);
+            |      stringifyStringList__0 = fn stringifyStringList(@impliedThis(Stringer) this__2: Stringer, string__0 /* aka string */: Listed<String>) /* return__2 */: String {
             |        fn__2: do {
             |          pureVirtual ⋖ String ⋗()
             |        }

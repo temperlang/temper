@@ -897,6 +897,7 @@ class TypeSolver(
                 // that doesn't have an inheritance chain to shapes required by the formal,
                 // it isn't a fit.
                 // This is equivalent to generic erasure argument analysis.
+                // TODO Don't erase, because our static @overload can cope.
                 //
                 // We look at the argument expression's common and lower bounds
                 // (and choices) but not upper bounds because, as the below shows,
@@ -937,7 +938,7 @@ class TypeSolver(
 
                     fun unpackTypeShapes(defn: TypeDefinition, out: ShapeAndNullityInfo) {
                         when (defn) {
-                            is TypeShape -> out.typeShapes.add(defn)
+                            is TypeShape -> out.typeShapes.add(defn) // we keep only erased
                             is TypeFormal -> if (defn !in out.visited) {
                                 out.visited.add(defn)
                                 defn.superTypes.forEach {
@@ -1000,14 +1001,14 @@ class TypeSolver(
                             val typeShapesInActual = actualInfo.typeShapes
                             val formalInfo = ShapeAndNullityInfo().also { info ->
                                 unpackTypeShapes(formalDeclaredType.definition, info)
-                            }
+                            } // again only erased
                             val typeShapesInFormal = formalInfo.typeShapes
                             // If there is a type shape from an actual bound that has no path up to a
                             // required type shape, deny.
                             // This means that as we get more bounds, we have more possible reasons
                             // to deny, but having fewer bounds available never leads to more denying.
                             val wellMatched = typeShapesInActual.all { actualShape ->
-                                typeShapesInFormal.all { formalShape ->
+                                typeShapesInFormal.all { formalShape -> // and checking only erased here
                                     typeContext.extendsPath(actualShape, formalShape) != null
                                 }
                             }
@@ -1018,7 +1019,7 @@ class TypeSolver(
                             }
                         }
 
-                        if (!possible) {
+                        if (!possible) { // TODO we want more rejection here
                             state.rejectedCallees.set(calleeIndex)
                             if (state.nPossible <= 1) {
                                 break@argLoop
@@ -1027,7 +1028,7 @@ class TypeSolver(
                     }
                 }
             }
-            if (state.nPossible > 1) {
+            if (state.nPossible > 1) { // TODO examples here would be nice
                 // Try to rule out callees based on contextual upper bounds.
                 val passTypeNode = node(cons.callPass)
                 var isPassVoidLike: Boolean? = null
