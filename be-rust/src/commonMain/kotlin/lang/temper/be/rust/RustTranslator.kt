@@ -222,7 +222,7 @@ class RustTranslator(
 
     private fun preprocessImports() {
         imports@ for (import in module.imports) {
-            val externalName = import.externalName.name as ExportedName
+            val externalName = import.externalName.name as? ExportedName ?: continue@imports
             val export = (externalName.origin as? ModuleNamingContext)?.owner?.exportMatching(externalName)
             val name = import.localName?.name ?: continue@imports
             decls[name] = DeclInfo(
