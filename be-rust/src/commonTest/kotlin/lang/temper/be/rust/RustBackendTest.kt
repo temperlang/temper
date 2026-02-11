@@ -25,7 +25,8 @@ class RustBackendTest {
                 |      let d = nums.join("", stringifyValueHere);
                 |      "${a}${b}${c}${d}"
                 |    }
-                |    let { stringify, stringifyValue } = import("./bar");
+                |    export let makeTalkHere(talker: Talker): Void { talker.talk(); }
+                |    let { stringify, stringifyValue, Talker } = import("./bar");
                 |    let stringifyHere(i: Int): String { i.toString() }
                 |    let stringifyValueHere = stringifyHere;
                 |    ```,
@@ -34,9 +35,13 @@ class RustBackendTest {
                 |      export let stringify(i: Int): String { i.toString() }
                 |      export let stringifyValue = stringify;
                 |      console.log("Baz")
+                |      export interface Talker {
+                |        talk(): Void;
+                |      }
                 |      ```,
                 |    boo.temper: ```
                 |      console.log("Boo")
+                |      export let makeTalk(talker: Talker): Void { talker.talk(); }
                 |      ```,
                 |  },
                 |}
@@ -85,6 +90,7 @@ class RustBackendTest {
             |            use temper_core::AnyValueTrait;
             |            use temper_core::AsAnyValue;
             |            use temper_core::Pair;
+            |            use crate::bar::TalkerTrait;
             |            pub (crate) fn init() -> temper_core::Result<()> {
             |                static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |                INIT_ONCE.get_or_init(| |{
@@ -107,6 +113,9 @@ class RustBackendTest {
             |                let c__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & stringifyHere__0.clone());
             |                let d__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & ( * stringify_value_here().clone()));
             |                return std::sync::Arc::new(format!("{}{}{}{}", a__0, b__0.clone(), c__0.clone(), d__0.clone()));
+            |            }
+            |            pub fn make_talk_here(talker__1: crate::bar::Talker) {
+            |                talker__1.talk();
             |            }
             |
             |            ```
@@ -132,8 +141,29 @@ class RustBackendTest {
             |              pub fn stringify_value() -> std::sync::Arc<dyn Fn (i32) -> std::sync::Arc<String> + std::marker::Send + std::marker::Sync> {
             |                  ( * STRINGIFY_VALUE.get().unwrap()).clone()
             |              }
+            |              pub trait TalkerTrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
+            |                  fn clone_boxed(& self) -> Talker;
+            |                  fn talk(& self);
+            |              }
+            |              #[derive(Clone)]
+            |              pub struct Talker(std::sync::Arc<dyn TalkerTrait>);
+            |              impl Talker {
+            |                  pub fn new(selfish: impl TalkerTrait + 'static) -> Talker {
+            |                      Talker(std::sync::Arc::new(selfish))
+            |                  }
+            |              }
+            |              temper_core::impl_any_value_trait_for_interface!(Talker);
+            |              impl std::ops::Deref for Talker {
+            |                  type Target = dyn TalkerTrait;
+            |                  fn deref(& self) -> & Self::Target {
+            |                      & ( * self.0)
+            |                  }
+            |              }
             |              pub fn stringify(i__1: i32) -> std::sync::Arc<String> {
             |                  return temper_core::int_to_string(i__1, None);
+            |              }
+            |              pub fn make_talk(talker__0: Talker) {
+            |                  talker__0.talk();
             |              }
             |
             |              ```
