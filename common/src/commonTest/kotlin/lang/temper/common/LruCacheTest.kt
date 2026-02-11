@@ -34,7 +34,7 @@ class LruCacheTest {
 private fun churnCache(
     prng: Random,
     maxSize: Int,
-    randUntil: Int
+    randUntil: Int,
 ): Pair<MutableMap<Int, String>, MutableList<Int>> {
     val keys = mutableListOf<Int>()
     val lruCache = lruCacheWithSize<Int, String>(maxSize = maxSize)
