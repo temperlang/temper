@@ -398,7 +398,7 @@ fun TmpL.Tree.mutableCaptures(): Set<ResolvedName> {
     // Skip this because it's likely already a function, and we want to handle functions below specially, not this one.
     val vars = buildSet {
         for (kid in children) {
-            addAll(kid.varsDeclared(includeBlocks = true) { !it.assignOnce })
+            addAll(kid.varsDeclared(includeBlocks = true, includeNesting = true) { !it.assignOnce })
         }
     }
     val functions = buildSet {
@@ -430,6 +430,7 @@ fun TmpL.Tree.functionsDeclared(): Sequence<TmpL.FunctionLike> = sequence {
 /** Find var names declared within this scope. */
 fun TmpL.Tree.varsDeclared(
     includeBlocks: Boolean = false,
+    includeNesting: Boolean = false,
     keep: (TmpL.VarLike) -> Boolean = { true },
 ): Sequence<ResolvedName> = sequence {
     when (this@varsDeclared) {
@@ -437,7 +438,11 @@ fun TmpL.Tree.varsDeclared(
             return@sequence
         }
 
-        is TmpL.FunctionLike, is TmpL.NestingStatement -> {
+        is TmpL.FunctionLike -> {
+            return@sequence
+        }
+
+        is TmpL.NestingStatement -> if (!includeNesting) {
             return@sequence
         }
 
@@ -450,7 +455,7 @@ fun TmpL.Tree.varsDeclared(
     }
     for (kid in children) {
         // Exclude nested blocks in any case.
-        yieldAll(kid.varsDeclared(keep = keep))
+        yieldAll(kid.varsDeclared(includeBlocks = includeNesting, includeNesting = includeNesting, keep = keep))
     }
 }
 
