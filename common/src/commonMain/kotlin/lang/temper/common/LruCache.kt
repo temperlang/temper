@@ -28,6 +28,7 @@ private class LruCache<K, V>(private val maxSize: Int) : MutableMap<K, V> {
             e.next = null
             e.prev = oldLast
             last = e
+            oldLast.next = e
             if (first == null) {
                 first = e
             }
