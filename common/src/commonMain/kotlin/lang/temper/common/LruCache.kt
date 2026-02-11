@@ -13,6 +13,7 @@ private class LruCache<K, V>(private val maxSize: Int) : MutableMap<K, V> {
     private fun moveToEnd(e: LruEntry) {
         if (last !== e) {
             val oldLast = last!!
+            // Unplug e.
             val oldPrev = e.prev
             val oldNext = e.next
             if (oldPrev != null) {
@@ -25,10 +26,13 @@ private class LruCache<K, V>(private val maxSize: Int) : MutableMap<K, V> {
             } else {
                 last = oldPrev
             }
+            // Plug in e as new last.
             e.next = null
             e.prev = oldLast
             last = e
             oldLast.next = e
+            // And if it's lonely, also as the first.
+            // (Although it presumably would already have been last in this case.)
             if (first == null) {
                 first = e
             }
