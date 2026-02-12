@@ -410,15 +410,17 @@ class RustBackendTest {
             |    let mut i__0: i32 = 0;
             |    'loop___0: while Some(i__0) < Some(n__0) {
             |        t___0 = temper_core::int_to_string(i__0, None);
-            |        let mut a__0: std::sync::Arc<String> = std::sync::Arc::new(format!("{}", t___0));
+            |        let mut a__0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>> = std::sync::Arc::new(std::sync::RwLock::new(std::sync::Arc::new(format!("{}", t___0))));
             |        #[derive(Clone)]
             |        struct ClosureGroup___0 {
-            |            a__0: std::sync::Arc<String>
+            |            a__0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>>
             |        }
             |        impl ClosureGroup___0 {
             |            fn blah__0(& self, m__0: impl temper_core::ToArcString) {
             |                let m__0 = m__0.to_arc_string();
-            |                a__0 = m__0.clone();
+            |                {
+            |                    * self.a__0.write().unwrap() = m__0.clone();
+            |                }
             |            }
             |        }
             |        let closure_group = ClosureGroup___0 {
@@ -1970,6 +1972,104 @@ class RustBackendTest {
             """.trimMargin(),
         )
     }
+
+    @Test
+    fun mutableVarInWhenBranch() = assertGenerateWanted(
+        temper = """
+            |export interface Foo {}
+            |export class Bar() extends Foo {}
+            |export let process(value: Foo, items: List<Int>): Int {
+            |  var result = 0;
+            |  when (value) {
+            |    is Bar -> do {
+            |      var first = true;
+            |      for (let item of items) {
+            |        if (!first) { result = result + 100; }
+            |        first = false;
+            |        result = result + item;
+            |      }
+            |    };
+            |    else -> void;
+            |  }
+            |  result
+            |}
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            Ok(())
+            |    }).clone()
+            |}
+            |pub trait FooTrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
+            |    fn clone_boxed(& self) -> Foo;
+            |}
+            |#[derive(Clone)]
+            |pub struct Foo(std::sync::Arc<dyn FooTrait>);
+            |impl Foo {
+            |    pub fn new(selfish: impl FooTrait + 'static) -> Foo {
+            |        Foo(std::sync::Arc::new(selfish))
+            |    }
+            |}
+            |temper_core::impl_any_value_trait_for_interface!(Foo);
+            |impl std::ops::Deref for Foo {
+            |    type Target = dyn FooTrait;
+            |    fn deref(& self) -> & Self::Target {
+            |        & ( * self.0)
+            |    }
+            |}
+            |struct BarStruct {}
+            |#[derive(Clone)]
+            |pub struct Bar(std::sync::Arc<BarStruct>);
+            |impl Bar {
+            |    pub fn new() -> Bar {
+            |        let selfish = Bar(std::sync::Arc::new(BarStruct {}));
+            |        return selfish;
+            |    }
+            |}
+            |impl FooTrait for Bar {
+            |    fn clone_boxed(& self) -> Foo {
+            |        Foo::new(self.clone())
+            |    }
+            |}
+            |temper_core::impl_any_value_trait!(Bar, [Foo]);
+            |pub fn process(value__0: Foo, items__0: impl temper_core::ToList<i32>) -> i32 {
+            |    let items__0 = items__0.to_list();
+            |    let mut result__0: std::sync::Arc<std::sync::RwLock<i32>> = std::sync::Arc::new(std::sync::RwLock::new(0));
+            |    if temper_core::is::<Bar>(value__0.clone()) {
+            |        let mut first__0: std::sync::Arc<std::sync::RwLock<bool>> = std::sync::Arc::new(std::sync::RwLock::new(true));
+            |        #[derive(Clone)]
+            |        struct ClosureGroup___0 {
+            |            first__0: std::sync::Arc<std::sync::RwLock<bool>>, result__0: std::sync::Arc<std::sync::RwLock<i32>>
+            |        }
+            |        impl ClosureGroup___0 {
+            |            fn fn__0(& self, item__0: i32) {
+            |                if ! temper_core::read_locked( & self.first__0) {
+            |                    {
+            |                        * self.result__0.write().unwrap() = temper_core::read_locked( & self.result__0).wrapping_add(100);
+            |                    }
+            |                }
+            |                {
+            |                    * self.first__0.write().unwrap() = false;
+            |                }
+            |                {
+            |                    * self.result__0.write().unwrap() = temper_core::read_locked( & self.result__0).wrapping_add(item__0);
+            |                }
+            |            }
+            |        }
+            |        let closure_group = ClosureGroup___0 {
+            |            first__0: first__0.clone(), result__0: result__0.clone()
+            |        };
+            |        let fn__0 = {
+            |            let closure_group = closure_group.clone();
+            |            std::sync::Arc::new(move | item__0: i32 | closure_group.fn__0(item__0))
+            |        };
+            |        temper_core::listed::list_for_each( & items__0, & ( * fn__0.clone()));
+            |    }
+            |    return temper_core::read_locked( & result__0);
+            |}
+        """.trimMargin(),
+    )
 }
 
 private fun assertGenerateWanted(
