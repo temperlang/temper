@@ -416,7 +416,7 @@ class RustBackendTest {
     )
 
     @Test
-    fun captureBad() = assertGenerateWanted(
+    fun captureUnderNesting() = assertGenerateWanted(
         temper = $$"""
             |export let hi(n: Int): Void {
             |  for (var i = 0; i < n; i += 1) {
@@ -440,15 +440,17 @@ class RustBackendTest {
             |    let mut i__0: i32 = 0;
             |    'loop___0: while Some(i__0) < Some(n__0) {
             |        t___0 = temper_core::int_to_string(i__0, None);
-            |        let mut a__0: std::sync::Arc<String> = std::sync::Arc::new(format!("{}", t___0));
+            |        let mut a__0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>> = std::sync::Arc::new(std::sync::RwLock::new(std::sync::Arc::new(format!("{}", t___0))));
             |        #[derive(Clone)]
             |        struct ClosureGroup___0 {
-            |            a__0: std::sync::Arc<String>
+            |            a__0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>>
             |        }
             |        impl ClosureGroup___0 {
             |            fn blah__0(& self, m__0: impl temper_core::ToArcString) {
             |                let m__0 = m__0.to_arc_string();
-            |                a__0 = m__0.clone();
+            |                {
+            |                    * self.a__0.write().unwrap() = m__0.clone();
+            |                }
             |            }
             |        }
             |        let closure_group = ClosureGroup___0 {
