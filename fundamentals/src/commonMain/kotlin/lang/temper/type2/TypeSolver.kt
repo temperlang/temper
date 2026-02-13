@@ -928,6 +928,8 @@ class TypeSolver(
                     // Then we'll check that we can find any declared class/interface
                     // types in the argument declaration and make sure we have a path to them.
                     class ShapeAndNullityInfo {
+                        // Track both types and erased shapes for now.
+                        // TODO Improve checking on the types themselves so we don't need separate shapes.
                         val types = mutableSetOf<TypeOrPartialType>()
                         val typeShapes = mutableSetOf<TypeShape>()
                         var canBeNull = false
@@ -937,7 +939,7 @@ class TypeSolver(
                     fun unpackTypeShapes(type: TypeOrPartialType?, defn: TypeDefinition, out: ShapeAndNullityInfo) {
                         type?.also { out.types.add(it) }
                         when (defn) {
-                            is TypeShape -> out.typeShapes.add(defn) // we keep only erased
+                            is TypeShape -> out.typeShapes.add(defn)
                             is TypeFormal -> if (defn !in out.visited) {
                                 out.visited.add(defn)
                                 defn.superTypes.forEach {
@@ -1007,10 +1009,12 @@ class TypeSolver(
                             // This means that as we get more bounds, we have more possible reasons
                             // to deny, but having fewer bounds available never leads to more denying.
                             val wellMatched = typeShapesInActual.all { actualShape ->
-                                typeShapesInFormal.all { formalShape -> // and checking only erased here
+                                // This part checks only erased generics.
+                                typeShapesInFormal.all { formalShape ->
                                     typeContext.extendsPath(actualShape, formalShape) != null
                                 }
                             } && actualInfo.types.all { actualType ->
+                                // This part cares about generic type args.
                                 formalInfo.types.all { formalType ->
                                     isMaybeCompatibleSubtype(actualType, formalType)
                                 }
@@ -1022,7 +1026,7 @@ class TypeSolver(
                             }
                         }
 
-                        if (!possible) { // TODO we want more rejection here
+                        if (!possible) {
                             state.rejectedCallees.set(calleeIndex)
                             if (state.nPossible <= 1) {
                                 break@argLoop
@@ -1034,7 +1038,7 @@ class TypeSolver(
             if (state.nPossible == 0) {
                 state.nPossible
             }
-            if (state.nPossible > 1) { // TODO examples here would be nice
+            if (state.nPossible > 1) {
                 // Try to rule out callees based on contextual upper bounds.
                 val passTypeNode = node(cons.callPass)
                 var isPassVoidLike: Boolean? = null
