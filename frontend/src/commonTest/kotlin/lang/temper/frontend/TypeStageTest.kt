@@ -2200,7 +2200,7 @@ class TypeStageTest {
             |      `test//`.stringifyLists = fn stringifyLists(stringer__0 /* aka stringer */: Stringer, int__1 /* aka int */: Int32, ints__1 /* aka ints */: List<Int32>, strings__0 /* aka strings */: List<String>) /* return__3 */: String {
             |        void;
             |        fn__3: do {
-            |          return__3 = cat(do_bind_stringifyInt32(stringer__0)(int__1), ", ", do_bind_stringify(stringer__0)(ints__1), ", ", do_bind_stringify(stringer__0)(strings__0))
+            |          return__3 = cat(do_bind_stringifyInt32(stringer__0)(int__1), ", ", do_bind_stringifyInt32List(stringer__0)(ints__1), ", ", do_bind_stringifyStringList(stringer__0)(strings__0))
             |        }
             |      }
             |

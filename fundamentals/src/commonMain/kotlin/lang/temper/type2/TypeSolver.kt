@@ -893,11 +893,8 @@ class TypeSolver(
                 //
                 // If an actual is nullable and a formal isn't, the callee doesn't fit.
                 //
-                // If an actual has a lower or common bound with a type shape
-                // that doesn't have an inheritance chain to shapes required by the formal,
-                // it isn't a fit.
-                // This is equivalent to generic erasure argument analysis.
-                // TODO Don't erase, because our static @overload can cope.
+                // If an actual has a lower or common bound that doesn't have an
+                // inheritance chain to shapes required by the formal, it isn't a fit.
                 //
                 // We look at the argument expression's common and lower bounds
                 // (and choices) but not upper bounds because, as the below shows,
@@ -931,12 +928,14 @@ class TypeSolver(
                     // Then we'll check that we can find any declared class/interface
                     // types in the argument declaration and make sure we have a path to them.
                     class ShapeAndNullityInfo {
+                        val types = mutableSetOf<TypeOrPartialType>()
                         val typeShapes = mutableSetOf<TypeShape>()
                         var canBeNull = false
                         val visited = mutableSetOf<TypeFormal>()
                     }
 
-                    fun unpackTypeShapes(defn: TypeDefinition, out: ShapeAndNullityInfo) {
+                    fun unpackTypeShapes(type: TypeOrPartialType?, defn: TypeDefinition, out: ShapeAndNullityInfo) {
+                        type?.also { out.types.add(it) }
                         when (defn) {
                             is TypeShape -> out.typeShapes.add(defn) // we keep only erased
                             is TypeFormal -> if (defn !in out.visited) {
@@ -945,7 +944,7 @@ class TypeSolver(
                                     // TODO: avoid cycles
                                     // TODO: set out.canBeNull if any super-type is
                                     // nullable.
-                                    unpackTypeShapes(it.definition, out)
+                                    unpackTypeShapes(null, it.definition, out)
                                 }
                             }
                         }
@@ -954,7 +953,7 @@ class TypeSolver(
                     val actualInfo = ShapeAndNullityInfo().also { info ->
                         when (val argChoice = argNode.choice) {
                             is TypeOrPartialType -> {
-                                unpackTypeShapes(argChoice.definition, info)
+                                unpackTypeShapes(argChoice, argChoice.definition, info)
                                 if (argChoice.nullity == OrNull) {
                                     info.canBeNull = true
                                 }
@@ -973,7 +972,7 @@ class TypeSolver(
                                         if (t.nullity == OrNull) {
                                             info.canBeNull = true
                                         }
-                                        unpackTypeShapes(t.definition, info)
+                                        unpackTypeShapes(t, t.definition, info)
                                     }
                                 }
                             }
@@ -1000,8 +999,8 @@ class TypeSolver(
                         if (possible) { // 2
                             val typeShapesInActual = actualInfo.typeShapes
                             val formalInfo = ShapeAndNullityInfo().also { info ->
-                                unpackTypeShapes(formalDeclaredType.definition, info)
-                            } // again only erased
+                                unpackTypeShapes(formalDeclaredType, formalDeclaredType.definition, info)
+                            }
                             val typeShapesInFormal = formalInfo.typeShapes
                             // If there is a type shape from an actual bound that has no path up to a
                             // required type shape, deny.
@@ -1010,6 +1009,10 @@ class TypeSolver(
                             val wellMatched = typeShapesInActual.all { actualShape ->
                                 typeShapesInFormal.all { formalShape -> // and checking only erased here
                                     typeContext.extendsPath(actualShape, formalShape) != null
+                                }
+                            } && actualInfo.types.all { actualType ->
+                                formalInfo.types.all { formalType ->
+                                    isMaybeCompatibleSubtype(actualType, formalType)
                                 }
                             }
                             // TODO: change this to do pair filtering once we have a place to put
@@ -1027,6 +1030,9 @@ class TypeSolver(
                         }
                     }
                 }
+            }
+            if (state.nPossible == 0) {
+                state.nPossible
             }
             if (state.nPossible > 1) { // TODO examples here would be nice
                 // Try to rule out callees based on contextual upper bounds.
@@ -1549,6 +1555,24 @@ class TypeSolver(
             }
         }
     }
+
+    /**
+     * Should return true if we can't prove incompatible.
+     * TODO Improve tightness on the matching.
+     */
+    private fun isMaybeCompatibleSubtype(
+        actualType: TypeOrPartialType,
+        formalType: TypeOrPartialType,
+    ): Boolean = when (actualType) {
+        // Type params are awkward because upper bounds aren't Type2. TODO Is some better helper available?
+        is TypeParamRef -> true // TODO limit by bounds
+        is Type2 -> when (formalType) {
+            is TypeParamRef -> true // TODO limit by bounds
+            is Type2 -> typeContext.isSubType(actualType, formalType)
+            else -> null
+        }
+        else -> null
+    } ?: typeContext.isSubTypeOptimistic(actualType, formalType)
 
     private fun processUsesConstraint(cons: UsesConstraint) {
         val (typeLike, typeVars) = cons
