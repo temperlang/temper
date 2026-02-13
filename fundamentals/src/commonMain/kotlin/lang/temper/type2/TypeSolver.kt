@@ -1035,9 +1035,6 @@ class TypeSolver(
                     }
                 }
             }
-            if (state.nPossible == 0) {
-                state.nPossible
-            }
             if (state.nPossible > 1) {
                 // Try to rule out callees based on contextual upper bounds.
                 val passTypeNode = node(cons.callPass)
