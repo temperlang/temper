@@ -1017,7 +1017,7 @@ private val sharedStdModulesMayNotRun = lazy {
         CustomValueFormatter.Nope,
     )
     val advancer = ModuleAdvancer(logSink)
-    buildStdModules(advancer, console, mayRun = false)
+    buildStdModules(advancer, console, mayRun = true)
 }
 
 /** Allows introspective access to std/ modules.  Shared by unit tests.  Do not mutate. */

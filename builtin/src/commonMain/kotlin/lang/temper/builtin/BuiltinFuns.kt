@@ -1708,6 +1708,7 @@ object BuiltinFuns {
     val preserveFn: MacroValue = PreserveFn
     val identityFn: SpecialFunction = IdentityFn
     val embeddedCommentFn: MacroValue = EmbeddedCommentFn
+    val doPure: SpecialFunction = DoPureFn
 
     val vStrCatFn = Value(strCatFn)
     val vStrRawMacro = Value(strRawMacro)
@@ -1762,6 +1763,7 @@ object BuiltinFuns {
     val vPreserveFn = Value(preserveFn)
     val vIdentityFn = Value(identityFn)
     val vEmbeddedCommentFn = Value(embeddedCommentFn)
+    val vDoPure = Value(doPure)
 }
 
 internal fun makeTypeFormal(
