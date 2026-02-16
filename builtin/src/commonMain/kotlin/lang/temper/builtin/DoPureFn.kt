@@ -9,6 +9,7 @@ import lang.temper.type.MkType
 import lang.temper.type2.Signature2
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.value.Fail
+import lang.temper.value.FunTree
 import lang.temper.value.MacroEnvironment
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.PartialResult
@@ -78,6 +79,20 @@ object DoPureFn : SpecialFunction, NamedBuiltinFun {
             // Erase this call so we don't have to translate it.
             val argTree = args.valueTree(0)
             macroEnv.replaceMacroCallWith {
+                val parts = (argTree as? FunTree)?.parts
+                if (parts != null && parts.formals.isEmpty()) {
+                    val returnDecl = parts.returnDecl
+                    val returnName = returnDecl?.parts?.name?.content
+                    if (returnName != null) {
+                        Block(argTree.pos) {
+                            Replant(freeTree(returnDecl))
+                            Replant(freeTree(parts.body))
+                            Rn(argTree.pos.rightEdge, returnName)
+                        }
+                        return@replaceMacroCallWith
+                    }
+                }
+
                 Call(macroEnv.pos) {
                     Replant(freeTree(argTree))
                 }

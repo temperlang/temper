@@ -3701,11 +3701,9 @@ class GenerateCodeStageTest {
             |    body: ```
             |        let return__0, @stay @imported(\(`test//c/`.C)) C__0;
             |        C__0 = type (C);
-            |        let c__0, fn__0;
-            |        fn__0 = (@stay fn /* return__1 */: C {
-            |            return__1 = new C()
-            |        });
-            |        c__0 = fn__0();
+            |        let c__0, return__1: C;
+            |        return__1 = new C();
+            |        c__0 = return__1;
             |        return__0 = c__0
             |
             |        ```
