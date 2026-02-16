@@ -5,7 +5,6 @@ import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.accumulatedDotName
 import lang.temper.builtin.appendDotName
 import lang.temper.builtin.appendSafeDotName
-import lang.temper.common.Console
 import lang.temper.common.ForwardOrBack
 import lang.temper.common.buildListMultimap
 import lang.temper.common.firstOrNullAs
@@ -13,13 +12,11 @@ import lang.temper.common.putMultiList
 import lang.temper.common.subListToEnd
 import lang.temper.env.InterpMode
 import lang.temper.frontend.InterpretationContext
-import lang.temper.frontend.Module
 import lang.temper.frontend.structureBlock
 import lang.temper.frontend.syntax.isAssignment
 import lang.temper.interp.New
 import lang.temper.log.Position
 import lang.temper.name.ExportedName
-import lang.temper.name.ModuleName
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedName
 import lang.temper.name.ResolvedParsedName
@@ -68,7 +65,6 @@ import lang.temper.value.functionContained
 import lang.temper.value.isImplicits
 import lang.temper.value.overloadSymbol
 import lang.temper.value.ssaSymbol
-import lang.temper.value.toPseudoCode
 import lang.temper.value.typeSymbol
 import lang.temper.value.valueContained
 import lang.temper.value.void
@@ -147,14 +143,6 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext) {
     //    append.
     // 5. If everything went well, erase the accumulator as described above.
 
-    val context = root.document.context
-    val c = // do not commit
-        if (context is Module &&
-            (context.loc as? ModuleName)?.relativePath()?.segments?.any { it.baseName == "examples" } == true
-        ) {
-            lang.temper.common.console
-        } else { null }
-
     var contextualAutoescapingAccumulatorTypeShape: TypeShape? = null
     fun contextualAutoescapingAccumulatorSuper(t: DefinedNonNullType?): DefinedNonNullType? {
         if (t == null) { return null }
@@ -166,8 +154,7 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext) {
         if (contextualAutoescapingAccumulatorTypeShape == null) {
             fun walkSupers(shape: TypeShape) {
                 if (shape.word?.text == "ContextualAutoescapingAccumulator") {
-                    // See secure-composition
-                    c?.log("Found $shape in ${shape.sourceLocation}")
+                    // See secure-composition library
                     contextualAutoescapingAccumulatorTypeShape = shape
                 } else {
                     for (st in shape.superTypes) {
@@ -240,14 +227,9 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext) {
 
     val escaperInfoCache = EscaperInfoCache()
     for ((b, uses) in autoescUses) {
-        c?.group("CABopt: do_get_accumulated") {
-            c.group("b") {
-                b.toPseudoCode(c.textOutput)
-            }
-        }
         structureBlock(b)
         for (use in uses) {
-            optimizeAutoescaperUse(use, iCtx, escaperInfoCache, c)
+            optimizeAutoescaperUse(use, iCtx, escaperInfoCache)
         }
     }
 }
@@ -274,10 +256,8 @@ private fun optimizeAutoescaperUse(
     use: AutoescUseInfo,
     iCtx: InterpretationContext,
     escaperInfoCache: EscaperInfoCache,
-    c: Console?,
 ) {
     val block = use.declaringBlock
-    val context = block.document.context
     val accumulatorName = use.name
     val accumulatorType = use.types.accumulatorType
 
@@ -293,32 +273,8 @@ private fun optimizeAutoescaperUse(
         assumeFailureCanHappen = true,
     )
 
-    c?.group("Autoescape ${context.formatPosition(use.accumulated.pos)}: $use") {
-        c.group("Block") {
-            block.toPseudoCode(c.textOutput)
-        }
-        c.group("Block bits ${block.flow}") {
-            for ((i, child) in block.children.withIndex()) {
-                c.textOutput.emitLineChunk("#$i. ")
-                child.toPseudoCode(c.textOutput, singleLine = true)
-                c.textOutput.endLine()
-            }
-        }
-        for (p in paths.maximalPaths) {
-            c.group("Path ${p.pathIndex}") {
-                p.elements.forEach {
-                    c.log("- ${block.dereference(it.ref)?.target?.toPseudoCode()}")
-                }
-                p.followers.forEach {
-                    c.log("-> ${it.dir} ${it.condition?.let { r -> block.dereference(r.ref) }?.target?.toPseudoCode()} to ${it.pathIndex}")
-                }
-            }
-        }
-    }
-
     // Figure out where we need to start traversal.
     val (startPath: MaximalPath, startOffset: Int) = run findInitializer@{
-        c?.log("Looking for assignment to $accumulatorName")
         var startPath: MaximalPath? = null
         var startOffset = 0
         for (path in paths.maximalPaths) {
@@ -336,7 +292,6 @@ private fun optimizeAutoescaperUse(
     } ?: return
 
     // Figure out where we need to end.
-    c?.log("Looking for endChildIndex")
     val endChildIndex = run {
         var descendant: Tree = use.accumulated // descendent of block
         var index: Int
@@ -351,7 +306,6 @@ private fun optimizeAutoescaperUse(
         }
         index
     }
-    c?.log("Got endChildIndex $endChildIndex")
 
     // Walk the paths from initialization to `.accumulated` use propagating context.
 
@@ -359,7 +313,7 @@ private fun optimizeAutoescaperUse(
     // ContextualAutoescapingAccumulators by convention initialize their state
     // to `MyType.initialState()`.
     val init = startPath.elements[startOffset].ref
-    val initialState = iCtx.interpret(init.pos, c) {
+    val initialState = iCtx.interpret(init.pos) {
         Call {
             Call(BuiltinFuns.vGets) {
                 V(Value(ReifiedType(accumulatorType)))
@@ -367,8 +321,7 @@ private fun optimizeAutoescaperUse(
             }
         }
     } as? Value<*> ?: return
-    c?.log("initialState=$initialState")
-    val contextPropagator = iCtx.interpret(init.pos, c) {
+    val contextPropagator = iCtx.interpret(init.pos) {
         Call {
             Call(BuiltinFuns.vGets) {
                 V(Value(ReifiedType(accumulatorType)))
@@ -376,12 +329,10 @@ private fun optimizeAutoescaperUse(
             }
         }
     } as? Value<*> ?: return
-    c?.log("contextPropagator=$contextPropagator")
-    val propagateOver = iCtx.interpret(init.pos, c) { // do not commit
+    val propagateOver = iCtx.interpret(init.pos) {
         Rn(propagateOverName)
     } as? Value<*> ?: return
-    c?.log("propagateOver=$propagateOver")
-    val escaperPicker = iCtx.interpret(init.pos, c) { // do not commit
+    val escaperPicker = iCtx.interpret(init.pos) {
         Call {
             Call(BuiltinFuns.vGets) {
                 V(Value(ReifiedType(accumulatorType)))
@@ -389,7 +340,6 @@ private fun optimizeAutoescaperUse(
             }
         }
     } as? Value<*> ?: return
-    c?.log("picker=$escaperPicker")
 
     // Now we need to plan out how we're going to visit statements to come up with
     // states at each appendSafe / append call site.
@@ -415,9 +365,9 @@ private fun optimizeAutoescaperUse(
                 for (follower in path.followers) {
                     if (follower.dir == ForwardOrBack.Forward) {
                         follower.pathIndex?.let { next ->
-                            val fkey = next to 0
-                            predecessorCount[fkey] = predecessorCount.getOrDefault(fkey, 0) + 1
-                            q.add(fkey)
+                            val fKey = next to 0
+                            predecessorCount[fKey] = predecessorCount.getOrDefault(fKey, 0) + 1
+                            q.add(fKey)
                         }
                     }
                 }
@@ -426,14 +376,6 @@ private fun optimizeAutoescaperUse(
         while (q.isNotEmpty()) {
             val (pathIndex, offset) = q.removeFirst()
             countUp(pathIndex, offset)
-        }
-    }
-
-    c?.group("Autoescape use init=$init, endChildIndex=$endChildIndex, startPath=${startPath.pathIndex}") {
-        c.group("predecessor counts") {
-            predecessorCount.forEach { (k, v) ->
-                c.log("$k -> $v")
-            }
         }
     }
 
@@ -481,7 +423,7 @@ private fun optimizeAutoescaperUse(
         val previouslyComputedState = autoescStateBeforeRef[ref]
         var state = stateBefore
         if (previouslyComputedState != null) {
-            state = iCtx.interpret(ref.pos, c) {
+            state = iCtx.interpret(ref.pos) {
                 Call {
                     Call(BuiltinFuns.vGets) {
                         V(Value(ReifiedType(accumulatorType)))
@@ -491,9 +433,7 @@ private fun optimizeAutoescaperUse(
                     V(stateBefore)
                 }
             } as? Value<*> ?: return null
-            c?.log("Merged $previouslyComputedState, $stateBefore to $state")
         }
-        c?.log("Considering ${t.toPseudoCode()} with $state")
         // If it's a call to append or appendSafe, update the context,
         // and remember it as something we need to change.
         if (t is CallTree && t.size >= 2) {
@@ -503,7 +443,7 @@ private fun optimizeAutoescaperUse(
                 if (fn is DotHelper && fn.memberAccessor is BindMemberAccessor) {
                     val subject = callee.child(1)
                     if (subject is RightNameLeaf && subject.content == accumulatorName) {
-                        val (method, classification) = methodClassification(fn.symbol)
+                        val (_, classification) = methodClassification(fn.symbol)
                         if (classification != null) {
                             val arg = t.child(1)
                             val argToPropagateOver: Value<*> = when (classification) {
@@ -511,8 +451,8 @@ private fun optimizeAutoescaperUse(
                                     arg.valueContained ?: return null
                                 AppendClassification.AppendUnsafe -> TNull.value
                             }
-                            c?.log(". method $method applying with $classification to `${arg.toPseudoCode()}` @ ${t.pos.loc}")
-                            val after = iCtx.interpret(t.pos, c) {
+
+                            val after = iCtx.interpret(t.pos) {
                                 Call {
                                     V(propagateOver)
                                     V(contextPropagator)
@@ -525,7 +465,7 @@ private fun optimizeAutoescaperUse(
                             state = after.readField(stateAfterDotName) ?: return null
                             val escapers = when (classification) {
                                 AppendClassification.AppendUnsafe -> {
-                                    val escaperValue = iCtx.interpret(ref.pos, c) {
+                                    val escaperValue = iCtx.interpret(ref.pos) {
                                         Call {
                                             Call(escaperForDotHelper) {
                                                 V(escaperPicker)
@@ -538,7 +478,6 @@ private fun optimizeAutoescaperUse(
                                 AppendClassification.AppendSafe -> null
                             }
                             toChange.add(ChangeDetail(edge, adjustedString, escapers, classification))
-                            c?.log(". method $method applied -> $state, got adjustment `$adjustedString`")
                         }
                     }
                 }
@@ -553,7 +492,6 @@ private fun optimizeAutoescaperUse(
         val (pathIndex, startOffset, startState) = q.removeFirst()
 
         val path = paths[pathIndex]
-        c?.log("propagateAcross($startState, $pathIndex, at=$startOffset)")
         val indices = startOffset..path.elements.lastIndex
         var autoescState = startState
         var skipFollowers = false
@@ -580,7 +518,6 @@ private fun optimizeAutoescaperUse(
                         predecessorCount[key] = remaining
                     } else {
                         predecessorCount.remove(key)
-                        c?.log("Scheduling $followerPathIndex")
                         q.add(Triple(followerPathIndex, 0, stateForFollower))
                     }
                 }
@@ -701,15 +638,12 @@ private fun Value<*>.readField(name: Symbol): Value<*>? {
 
 private fun <TREE : Tree> InterpretationContext.interpret(
     pos: Position,
-    c: Console?,
     makeTree: (Planting).() -> UnpositionedTreeTemplate<TREE>,
 ): PartialResult {
     val document = root.document
     val t = document.treeFarm.grow(pos, makeTree)
     return try {
-        interpreter.interpret(t, env, InterpMode.Full/*, debugDoNotCommit = c != null*/).also {
-            c?.log("Interpreted ${t.toPseudoCode()} to $it")
-        }
+        interpreter.interpret(t, env, InterpMode.Full)
     } catch (_: Panic) {
         return NotYet
     } catch (_: Abort) {
