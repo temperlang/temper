@@ -564,8 +564,9 @@ class TypeSolverTest {
                 sig("fn<T>(Listed<T>): List<T>"), // Listed less specific than List
             )
 
-            // h does not resolve because it has ambiguous overloads.  The specificity rule
-            // does not disambiguate.
+            // The specificity rule does not disambiguate, but we now check type args when
+            // the args themselves aren't formals. And we default to the last one left
+            // when a rejection happens.
             //
             // But its output is ambiguous and that informs `f`'s chosen type actual which
             // propagates to `g` to type its list.
@@ -684,7 +685,7 @@ class TypeSolverTest {
                     gPass to "List<Int32>",
                     gFail to "[]",
 
-                    hCallee to "Unsolvable",
+                    hCallee to "1",
                     hActuals to "[String]",
                     h0 to "List<AnyValue>",
                     h1 to "List<AnyValue>",
