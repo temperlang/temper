@@ -763,6 +763,8 @@ private object Builtins {
             "||" to BuiltinFuns.vDesugarLogicalOrFn,
 
             keyPair(Value(CompileLog)),
+
+            keyPair(BuiltinFuns.vDoPure),
         )
         // Builtin types, including one alias for Int.
         Types.typesAsValues.forEach {
@@ -847,7 +849,7 @@ internal class BuiltinEnvironment(
         return if (builtinKey != null && builtinKey in Builtins.nameKeyToValue) {
             rejectSetOfImmutableBinding(name, cb)
         } else {
-            return super.set(name, newValue, cb)
+            super.set(name, newValue, cb)
         }
     }
 

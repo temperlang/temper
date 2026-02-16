@@ -180,6 +180,18 @@ let b = "bar";
 
 <!-- /snippet: builtin/cat -->
 
+<!-- snippet: builtin/doPure -->
+
+<a name="builtin&#45;doPure" class="snippet-anchor-name"></a>
+
+### doPure
+
+`doPure { x }` is the same as `x` except that the result will be available to
+macro code early.  `x` must be pure code: it can't mutate any environment bindings
+or objects it does not create and may not print or cause other side effects.
+
+<!-- /snippet: builtin/doPure -->
+
 <!-- snippet: builtin/new -->
 
 <a name="builtin&#45;new" class="snippet-anchor-name"></a>

@@ -30,6 +30,8 @@ import lang.temper.value.ValueLeaf
 /** Bundles the root with some context for the interpreter. */
 data class InterpretationContext(
     val root: BlockTree,
+    val env: Environment,
+    val interpreter: Interpreter,
 )
 
 /**
@@ -125,7 +127,7 @@ internal fun interpretiveDanceStage(
         postPass.rewrite(root, callHelper.value)
     }
 
-    afterInterpretation(InterpretationContext(root), result)
+    afterInterpretation(InterpretationContext(root, env, interpreter), result)
 
     val (exports, declaredTypeShapes) =
         findExportsAndDeclaredTypes(module, root, env, stage)

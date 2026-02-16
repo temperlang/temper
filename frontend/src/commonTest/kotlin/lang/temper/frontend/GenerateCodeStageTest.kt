@@ -3680,6 +3680,38 @@ class GenerateCodeStageTest {
             |}
         """.trimMargin(),
     )
+
+    @Test
+    fun doPureRuns() = assertModuleAtStage(
+        stage = Stage.Run,
+        input = """
+            |let { C } = import("./c");
+            |
+            |let c = doPure { (): C => new C() };
+            |
+            |c
+            |
+            |$TEST_INPUT_MODULE_BREAK ./c/c.temper
+            |export class C {}
+        """.trimMargin(),
+        moduleResultNeeded = true,
+        want = """
+            |{
+            |  generateCode: {
+            |    body: ```
+            |        let return__0, @stay @imported(\(`test//c/`.C)) C__0;
+            |        C__0 = type (C);
+            |        let c__0, return__1: C;
+            |        return__1 = new C();
+            |        c__0 = return__1;
+            |        return__0 = c__0
+            |
+            |        ```
+            |  },
+            |  run: "{}: `test-code/c/`.C",
+            |}
+        """.trimMargin(),
+    )
 }
 
 // Provide an extra binding to a function whose call does not inline so does not trigger any

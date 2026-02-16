@@ -41,7 +41,10 @@ internal class FunctionMacroStage(
                     debugTreeRepresentation.dump(root)
                 }
             },
-            afterInterpretation = { (root), result ->
+            afterInterpretation = { iCtx, result ->
+                val root = iCtx.root
+                optimizeContextualAutoescapingBlocks(iCtx)
+
                 debug {
                     console.log("After interpretation")
                     debugTreeRepresentation.dump(root)

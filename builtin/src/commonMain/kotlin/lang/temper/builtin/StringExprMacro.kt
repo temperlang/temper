@@ -532,9 +532,9 @@ private fun pointAppendsAtAccumulator(funTree: FunTree, isTagged: Boolean) {
     }
 }
 
-private val appendSafeDotName = Symbol("appendSafe")
-private val appendDotName = Symbol("append")
-private val accumulatedDotName = Symbol("accumulated")
+val appendSafeDotName = Symbol("appendSafe")
+val appendDotName = Symbol("append")
+val accumulatedDotName = Symbol("accumulated")
 
 /**
  * Desugars to a simple string concatenation when we have the time.

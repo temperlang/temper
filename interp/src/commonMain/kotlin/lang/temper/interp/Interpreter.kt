@@ -1169,7 +1169,7 @@ class Interpreter(
                     maybeVisitChildren(ancestorReplaced.target, env, im)
                 }
 
-                return when (functionSpecies) {
+                when (functionSpecies) {
                     // Normally, macros are evaluated for their effect on the tree and not for their
                     // computed result.
                     // I wrote macros that return void to indicate not-failure and haven't yet
