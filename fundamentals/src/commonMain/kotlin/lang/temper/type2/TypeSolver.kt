@@ -893,8 +893,8 @@ class TypeSolver(
                 //
                 // If an actual is nullable and a formal isn't, the callee doesn't fit.
                 //
-                // If an actual has a lower or common bound that doesn't have an
-                // inheritance chain to shapes required by the formal, it isn't a fit.
+                // If an actual has a lower or common bound that isn't compatible with
+                // the formal, it isn't a fit.
                 //
                 // We look at the argument expression's common and lower bounds
                 // (and choices) but not upper bounds because, as the below shows,
