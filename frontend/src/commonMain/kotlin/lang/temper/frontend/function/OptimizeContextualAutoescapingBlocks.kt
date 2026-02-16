@@ -14,7 +14,6 @@ import lang.temper.env.InterpMode
 import lang.temper.frontend.InterpretationContext
 import lang.temper.frontend.structureBlock
 import lang.temper.frontend.syntax.isAssignment
-import lang.temper.interp.New
 import lang.temper.log.Position
 import lang.temper.name.ExportedName
 import lang.temper.name.ParsedName
@@ -30,11 +29,14 @@ import lang.temper.type.ExternalGet
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
 import lang.temper.type.TypeShape
+import lang.temper.type.Visibility
 import lang.temper.type2.DefinedNonNullType
 import lang.temper.type2.MkType2
+import lang.temper.type2.Signature2
 import lang.temper.type2.SuperTypeTree2
 import lang.temper.type2.Type2
 import lang.temper.type2.hackMapOldStyleToNew
+import lang.temper.type2.withType
 import lang.temper.value.Abort
 import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockTree
@@ -92,19 +94,18 @@ import lang.temper.value.void
  * This pass identifies types that have ContextualAutoescapingAccumulator as a super-type.
  *
  * For each of them, we assume (TODO: we can check this) that
- * each accumulator has the following properties (and only these):
- *   1. `context`
- *   2. `automatonStack`
- *   3. `collector`
+ * each accumulator instance has the following properties (and only these):
+ *   1. `state`
+ *   2. `collector`
  *
  * Our goal is to eliminate the first two and just operate directly on the last one.
  *
  *     ...
  *       // let accumulator = new SafeHtmlBuilder();
- *       let collector = new Collector<SafeHtml>();
+ *       let collector = SafeHtml.newCollector();
  *       ...
  *       // accumulator.append(...);
- *       collector.append(escapeHtmlPcdata(...));
+ *       collector.append(HtmlPcdataEscaper.instance.escape(...));
  *       ...
  *       // accumulator.appendSafe("...");
  *       collector.appendSafe("...");
@@ -238,10 +239,22 @@ private data class AutoescTypes(
     val contextualAutoescapingAccumulatorType: DefinedNonNullType,
     val accumulatorType: DefinedNonNullType,
 ) {
-    val collectorType: Type2?
-        get() = accumulatorType.definition.properties
-            .firstOrNull { it.symbol.text == "collector" }
-            ?.descriptor
+    val collectorType by lazy {
+        // The accumulator type's newCollector static method initializes the collector, so
+        // use its output type as the type hint for how we accumulate content
+        var newCollectorDescriptor =
+            accumulatorType.definition.staticProperties.firstOrNull { it.symbol.text == "newCollector" }
+                ?.descriptor
+        if (newCollectorDescriptor is Type2) {
+            newCollectorDescriptor =
+                withType(
+                    newCollectorDescriptor,
+                    fallback = { null },
+                    fn = { _, sig, _ -> sig },
+                )
+        }
+        (newCollectorDescriptor as? Signature2)?.returnType2 as? DefinedNonNullType
+    }
 }
 
 private data class AutoescUseInfo(
@@ -340,6 +353,7 @@ private fun optimizeAutoescaperUse(
             }
         }
     } as? Value<*> ?: return
+    val collectorType = use.types.collectorType ?: return
 
     // Now we need to plan out how we're going to visit statements to come up with
     // states at each appendSafe / append call site.
@@ -527,8 +541,21 @@ private fun optimizeAutoescaperUse(
 
     // Now we have a set of changes.  Let's figure out how to make them.
     val doc = block.document
+    // Allocate a replacement name for the collector since we're erasing the contextual autoescaper.
     val collector = doc.nameMaker.unusedTemporaryName("collector")
-    val collectorType = use.types.collectorType ?: return
+    val collectorAppendDotHelper = run {
+        // Do we send safe parts by a separate append method?
+        val typeShape = collectorType.definition
+        val hasAppendSafeMethod =
+            typeShape.membersMatching(appendSafeDotName, includeOverloads = true).any {
+                it is MethodShape && it.methodKind == MethodKind.Normal && it.visibility == Visibility.Public
+            }
+        if (hasAppendSafeMethod) {
+            appendSafeDotHelper
+        } else {
+            appendDotHelper
+        }
+    }
     val changes: List<Pair<TEdge, Planting.() -> UnpositionedTreeTemplate<*>>> = toChange.map {
         val (edge, safe, escapers, classification) = it
         val ps = it.positions
@@ -536,7 +563,7 @@ private fun optimizeAutoescaperUse(
             fun Planting.plantSafeAdjusted(safePs: AppendStmtPositions): UnpositionedTreeTemplate<*> =
                 Call(safePs.pos) {
                     Call(safePs.callee) {
-                        V(safePs.callee, Value(appendSafeDotHelper))
+                        V(safePs.callee, Value(collectorAppendDotHelper))
                         Rn(safePs.subject, collector)
                     }
                     V(safePs.arg, Value(safe, TString))
@@ -592,27 +619,30 @@ private fun optimizeAutoescaperUse(
     // - change the initializer
     // - change .accumulated read.
     // - apply the statement changes from above
+    val accumulatorReifiedType = Value(ReifiedType(use.types.accumulatorType))
     val oldDecl = use.accumulatorDecl
-    val collectorReifiedType = Value(ReifiedType(collectorType), TType)
     oldDecl.incoming!!.replace { pos ->
         Decl(pos) {
             Ln(collector)
-            V(typeSymbol)
-            V(collectorReifiedType)
+            V(pos.rightEdge, typeSymbol)
+            V(Value(ReifiedType(collectorType)))
         }
     }
     block.dereference(init)!!.replace { pos ->
         Call(pos, BuiltinFuns.vSetLocalFn) {
-            Ln(collector)
-            Call(New) {
-                V(collectorReifiedType)
+            Ln(pos, collector)
+            Call(pos) {
+                Call(pos, BuiltinFuns.vGets) {
+                    V(pos.leftEdge, accumulatorReifiedType)
+                    V(pos.rightEdge, Symbol("newCollector"))
+                }
             }
         }
     }
     use.accumulated.incoming!!.replace { pos ->
         Call(pos) {
             Call(BuiltinFuns.vGets) {
-                V(Value(ReifiedType(use.types.accumulatorType)))
+                V(accumulatorReifiedType)
                 V(Symbol("fromCollector"))
             }
             Rn(pos, collector)

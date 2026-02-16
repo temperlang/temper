@@ -37,10 +37,12 @@ import lang.temper.value.OccasionallyHelpful
 import lang.temper.value.StayLeaf
 import lang.temper.value.StayReferrer
 import lang.temper.value.StaySink
+import lang.temper.value.TString
 import lang.temper.value.constructorPropertySymbol
 import lang.temper.value.docStringSymbol
 import lang.temper.value.fnSymbol
 import lang.temper.value.fromTypeSymbol
+import lang.temper.value.overloadSymbol
 import lang.temper.value.parameterNameSymbolsListSymbol
 import lang.temper.value.qNameSymbol
 import lang.temper.value.reachSymbol
@@ -314,8 +316,11 @@ sealed interface TypeShape : TypeDefinition {
 
     /**
      * All members with the given symbol, including those from the super type, in inheritance order.
+     *
+     * @param includeOverloads if false, the default, then only exact symbol matches are included, but
+     *   if true, then also included are normal methods that have matching `@overload("...")` metadata.
      */
-    fun membersMatching(symbol: Symbol): Iterable<MemberShape>
+    fun membersMatching(symbol: Symbol, includeOverloads: Boolean = false): Iterable<MemberShape>
 
     /**
      * The transitive closure of the type IDs of super types including [name].
@@ -445,11 +450,11 @@ class TypeShapeImpl(
     override val staticProperties = lawfulEvilListOf<StaticPropertyShape>(mutationCount)
     override val formals: List<TypeFormal> = MappingListView(typeParameters) { it.definition }
 
-    override fun membersMatching(symbol: Symbol): Iterable<MemberShape> =
-        getMembersBySymbolMap()[symbol] ?: emptyList()
+    override fun membersMatching(symbol: Symbol, includeOverloads: Boolean): Iterable<MemberShape> =
+        getMembersBySymbolMap()[symbol to includeOverloads] ?: emptyList()
 
-    private var membersBySymbolMapCached: Pair<Map<Symbol, List<MemberShape>>, Long>? = null
-    private fun getMembersBySymbolMap(): Map<Symbol, List<MemberShape>> {
+    private var membersBySymbolMapCached: Pair<Map<Pair<Symbol, Boolean>, List<MemberShape>>, Long>? = null
+    private fun getMembersBySymbolMap(): Map<Pair<Symbol, Boolean>, List<MemberShape>> {
         val cached = membersBySymbolMapCached
         val mutCountValue = mutationCount.get()
         if (cached != null && cached.second == mutCountValue) {
@@ -457,7 +462,7 @@ class TypeShapeImpl(
         }
         membersBySymbolMapCached = null
 
-        val map = mutableMapOf<Symbol, MutableList<MemberShape>>()
+        val map = mutableMapOf<Pair<Symbol, Boolean>, MutableList<MemberShape>>()
         // Use a queue to walk super-types in depth order.
         val seen = mutableSetOf<TypeShapeImpl>()
         val toWalk = ArrayDeque<TypeShapeImpl>()
@@ -469,13 +474,25 @@ class TypeShapeImpl(
             }
             seen.add(typeShape)
             for (p in typeShape.properties) {
-                map.putMultiList(p.symbol, p)
+                map.putMultiList(p.symbol to false, p)
+                map.putMultiList(p.symbol to true, p)
             }
             for (m in typeShape.methods) {
-                map.putMultiList(m.symbol, m)
+                map.putMultiList(m.symbol to false, m)
+                map.putMultiList(m.symbol to true, m)
+                if (m.methodKind == MethodKind.Normal) {
+                    val overloadMetadata = m.metadata[overloadSymbol] ?: emptyList()
+                    for (v in overloadMetadata) {
+                        val str = TString.unpackOrNull(v)
+                        if (str != null && str != "") {
+                            map.putMultiList(Symbol(str) to true, m)
+                        }
+                    }
+                }
             }
             for (p in typeParameters) {
-                map.putMultiList(p.symbol, p)
+                map.putMultiList(p.symbol to false, p)
+                map.putMultiList(p.symbol to true, p)
             }
             // static members are not members of instances so are not in the symbol map, and are not
             // inherited
