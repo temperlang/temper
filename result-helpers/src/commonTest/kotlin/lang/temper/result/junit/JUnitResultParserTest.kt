@@ -42,6 +42,22 @@ class JUnitResultParserTest {
         assertEquals(3, testResults.testsRun)
         assertEquals(0, testResults.failures.size)
     }
+
+    @Test
+    fun controlCharsSanitized() {
+        val testResults = parseJunitResults(controlChars)
+        val failure = testResults.suites[0].testCases[0].failure!!
+        assertEquals("[0x1][0x2][0x3]", failure.message)
+        assertEquals(
+            """
+                |
+                |Character entity escapes don't count in CDATA anyway, but meh?
+                |[0x1][0x2][0x3]
+                |
+            """.trimMargin(),
+            failure.cdata,
+        )
+    }
 }
 
 // Generated from a mocha invocation of the testing functional test
@@ -91,3 +107,15 @@ private const val SAMPLE_SUREFIRE_2 = """<?xml version="1.0" encoding="UTF-8"?>
 </testcase>
 </testsuite>
 """
+
+private val controlChars = """<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="Mocha Tests" time="0.0030" tests="1" failures="1">
+<testsuite name="Root Suite" timestamp="2022-07-19T13:41:13" tests="1" time="0.0020" failures="1">
+<testcase name="a failing test" time="0.0000" classname="a failing test">
+<failure message="${"\u0001"}&#x2;&#3;" type="AssertionError"><![CDATA[
+Character entity escapes don't count in CDATA anyway, but meh?
+${"\u0001"}&#x2;&#3;
+]]></failure>
+</testcase>
+</testsuite>
+</testsuites>"""
