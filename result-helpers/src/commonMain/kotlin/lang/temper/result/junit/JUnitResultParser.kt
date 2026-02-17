@@ -4,6 +4,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.serializer
+import lang.temper.common.DECIMAL_RADIX
+import lang.temper.common.HEX_RADIX
 import nl.adaptivity.xmlutil.ExperimentalXmlUtilApi
 import nl.adaptivity.xmlutil.XmlDeclMode
 import nl.adaptivity.xmlutil.serialization.DefaultXmlSerializationPolicy
@@ -18,9 +20,41 @@ fun parseJunitResults(input: String?): JUnitResults {
     if (input.isNullOrBlank()) {
         return JUnitResults(emptyList())
     }
-    val results = xmlTolerant.decodeFromString<TestSuites>(input)
+    // Sanitize risky chars already escaped in xml source.
+    val inputSansEscapedRisks = input.replace(Regex("&#(x?)([0-9A-Fa-f]+);")) { match ->
+        val isHex = match.groupValues[1] == "x"
+        val code = match.groupValues[2].toInt(if (isHex) HEX_RADIX else DECIMAL_RADIX)
+        when {
+            isRiskyChar(code) -> sanitizeRiskyChar(code)
+            else -> match.value
+        }
+    }
+    // Sanitize raw risky chars that might even just be illegal. We don't control full test framework path.
+    // TODO Also sanitize up front in our generated failure messaging? I'm mixed on that.
+    val inputSansRawRisks = buildString(inputSansEscapedRisks.length) {
+        for (char in inputSansEscapedRisks) {
+            val code = char.code
+            when {
+                isRiskyChar(code) -> append(sanitizeRiskyChar(code))
+                else -> append(char)
+            }
+        }
+    }
+    val results = xmlTolerant.decodeFromString<TestSuites>(inputSansRawRisks)
     return JUnitResults(suites = results.suites)
 }
+
+@Suppress("MagicNumber")
+private fun isRiskyChar(code: Int): Boolean {
+    // Some of these are illegal in at least some versions of XML, and some are just discouraged.
+    // https://www.w3.org/TR/WD-xml-970807#NT-Char
+    // https://en.wikipedia.org/wiki/Valid_characters_in_XML
+    // This list could get longer still.
+    return (code < 0x20 && code != 0x09 && code != 0x0A && code != 0x0D) ||
+        (code in 0x7F..0x84) || (code in 0x86..0x9F) || (code == 0xFFFF) || (code == 0xFFFE)
+}
+
+private fun sanitizeRiskyChar(code: Int) = "[0x${code.toString(HEX_RADIX).uppercase()}]"
 
 fun combineSurefireResults(input: Iterable<String>): String {
     val results = input.map { xmlTolerant.decodeFromString<TestSuite>(it) }

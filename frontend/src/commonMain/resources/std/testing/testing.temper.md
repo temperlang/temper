@@ -199,13 +199,22 @@ XML text node or attribute value.
       let end = s.end;
       var emitted = String.begin;
       for (var i = String.begin; i < end; i = s.next(i)) {
-        let esc = when (s[i]) {
+        let c = s[i];
+        let esc = when (c) {
           char'&' -> "&amp;";
           char'<' -> "&lt;";
           char'>' -> "&gt;";
           char"'" -> "&#39;";
           char'"' -> "&#34;";
-          else -> continue;
+          char'\n', char'\r', char'\t' -> continue;
+          else -> if (c < char' ' || c == 0xFFFE || c == 0xFFFF) {
+            // Illegal chars under XML 1.0, but also possibly trouble, so extra
+            // escape them, in a way people aren't likely to accidentally
+            // unescape.
+            "[0x${c.toString(16)}]"
+          } else {
+            continue;
+          }
         }
         sb.appendBetween(s, emitted, i);
         sb.append(esc);
