@@ -1418,7 +1418,8 @@ internal class CSharpTranslator(
         return when (visibility.visibility) {
             default?.visibility -> null
             TmpL.Visibility.Public -> CSharp.ModAccess.Public
-            else -> CSharp.ModAccess.Private
+            TmpL.Visibility.Protected -> CSharp.ModAccess.Protected
+            TmpL.Visibility.Private -> CSharp.ModAccess.Private
         }
     }
 
