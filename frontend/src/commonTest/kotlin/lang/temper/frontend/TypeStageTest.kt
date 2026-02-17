@@ -2072,6 +2072,8 @@ class TypeStageTest {
             |
             |  @overload("justMe")
             |  public int32ToInt(int: Int32): Int32 { int }
+            |
+            |  public passAlong(int32: Int32, int64: Int64): Int32 { int32ToInt(int32) + toInt(int64) }
             |}
             |
             |export let crazySum(intMaker: IntMaker, int: Int64, string: String): Int throws Bubble {
@@ -2117,18 +2119,25 @@ class TypeStageTest {
             |            return__2 = int__1
             |          }
             |      });
-            |      @fn @visibility(\public) @stay @fromType(IntMaker) let constructor__0 ⦂(fn (IntMaker, Int32): Void);
-            |      constructor__0 = (@stay fn constructor(@impliedThis(IntMaker) this__3: IntMaker, radix__1 /* aka radix */: Int32) /* return__3 */: Void {
-            |          setp(radix__0, this__3, radix__1);
-            |          return__3 = void
-            |      });
-            |      @fn @visibility(\public) @stay @fromType(IntMaker) let getradix__0 ⦂(fn (IntMaker): Int32);
-            |      getradix__0 = (@stay fn (@impliedThis(IntMaker) this__4: IntMaker) /* return__4 */: Int32 {
-            |          return__4 = getp(radix__0, this__4)
-            |      });
-            |      `test//`.crazySum = fn crazySum(intMaker__0 /* aka intMaker */: IntMaker, int__2 /* aka int */: Int64, string__1 /* aka string */: String) /* return__5 */: (Int32 | Bubble) {
+            |      @visibility(\public) @fn @stay @fromType(IntMaker) let passAlong__0 ⦂(fn (IntMaker, Int32, Int64): Int32);
+            |      passAlong__0 = fn passAlong(@impliedThis(IntMaker) this__3: IntMaker, int32__0 /* aka int32 */: Int32, int64__0 /* aka int64 */: Int64) /* return__3 */: Int32 {
             |        void;
             |        fn__3: do {
+            |          return__3 = do_ibind_int32ToInt(type (IntMaker), this__3)(int32__0) + toInt(int64__0)
+            |        }
+            |      };
+            |      @fn @visibility(\public) @stay @fromType(IntMaker) let constructor__0 ⦂(fn (IntMaker, Int32): Void);
+            |      constructor__0 = (@stay fn constructor(@impliedThis(IntMaker) this__4: IntMaker, radix__1 /* aka radix */: Int32) /* return__4 */: Void {
+            |          setp(radix__0, this__4, radix__1);
+            |          return__4 = void
+            |      });
+            |      @fn @visibility(\public) @stay @fromType(IntMaker) let getradix__0 ⦂(fn (IntMaker): Int32);
+            |      getradix__0 = (@stay fn (@impliedThis(IntMaker) this__5: IntMaker) /* return__5 */: Int32 {
+            |          return__5 = getp(radix__0, this__5)
+            |      });
+            |      `test//`.crazySum = fn crazySum(intMaker__0 /* aka intMaker */: IntMaker, int__2 /* aka int */: Int64, string__1 /* aka string */: String) /* return__6 */: (Int32 | Bubble) {
+            |        void;
+            |        fn__4: do {
             |          var fail#2 ⦂ Boolean, fail#3 ⦂ Boolean;
             |          let intInt__0 ⦂ Int32;
             |          intInt__0 = hs ⋖ Int32 ⋗(fail#2, do_bind_int64ToInt(intMaker__0)(int__2));
@@ -2140,7 +2149,7 @@ class TypeStageTest {
             |          if (fail#3) {
             |            bubble ⋖ Int32 ⋗()
             |          };
-            |          return__5 = do_bind_int32ToInt(intMaker__0)(intInt__0 + stringInt__0);
+            |          return__6 = do_bind_int32ToInt(intMaker__0)(intInt__0 + stringInt__0);
             |        }
             |      }
             |
