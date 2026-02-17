@@ -210,6 +210,7 @@ class Watcher(
 
         val cancelGroup = BuildRunCancelGroup(harness.executorService)
         cancelGroup.runLater("Build #$buildIndex") {
+            @Suppress("TooGenericExceptionCaught") // reported and rethrown
             try {
                 val runTask = if (testBackends.isNotEmpty()) {
                     RunTask(
