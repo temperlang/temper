@@ -236,6 +236,7 @@ class Watcher(
                 synchronized(this@Watcher) {
                     if (_lastBuildIndex == buildIndex) { // Still current
                         _currentBuild = build
+                        _lastBuildResult = null
                     } else {
                         return@runLater
                     }
@@ -281,10 +282,13 @@ class Watcher(
                         }
                     }
                 }
-            } finally {
-                // Signal done after the result is stored.
-                buildDone.completeOk(Unit)
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                buildDone.completeError(e)
+                throw e
             }
+            // Signal done after the result is stored.
+            buildDone.completeOk(Unit)
         }
     }
 
