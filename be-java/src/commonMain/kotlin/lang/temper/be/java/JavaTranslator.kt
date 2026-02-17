@@ -2393,9 +2393,26 @@ class JavaTranslator(
 
 private fun access(name: TmpL.Id) = access(name.name is ExportedName)
 
-private fun access(member: TmpL.Member) =
+private fun access(member: TmpL.Member): J.ModAccess {
+    val visibility = member.visibility.visibility
+
+    if (visibility == TmpL.Visibility.Protected) {
+        // Temper allows protected in interfaces, but Java does not.
+        // TODO: a better way to discourage non-internal use.
+        val memberShape = member.memberShape
+        val enclosingType = memberShape.enclosingType
+        if (enclosingType.abstractness == Abstractness.Concrete) {
+            return if (memberShape.overriddenMembers?.isEmpty() == true) {
+                J.ModAccess.Protected
+            } else {
+                J.ModAccess.Public
+            }
+        }
+    }
+
     // TODO: private means not inherited, unlike package private below
-    access(member.memberShape.visibility >= Visibility.Public)
+    return access(pub = visibility >= TmpL.Visibility.Public)
+}
 
 private fun access(pub: Boolean?) = when (pub) {
     true -> J.ModAccess.Public
