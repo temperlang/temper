@@ -457,14 +457,14 @@ class CSharpBackendTest {
     fun protectedInterfaceMember() = assertGeneratedUserClass(
         temper = """
             |export interface I {
-            |  public get x(): Int;
+            |  protected get x(): Int;
             |}
         """.trimMargin(),
         cSharpClassName = "II",
         csharp = """
             |public interface II
             |{
-            |    int X
+            |    protected int X
             |    {
             |        get;
             |    }
