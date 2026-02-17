@@ -2171,4 +2171,63 @@ class JavaBackendTest {
         ),
         langs = listOf(JavaLang.Java17), // listOf
     )
+
+    @Test
+    fun protectedInInterfaces() = assertGeneratedJavaRaw(
+        input = """
+            |export interface I {
+            |  f(): Void { g() }
+            |  protected g(): Void;
+            |}
+            |
+            |export class C extends I {
+            |  protected g(): Void {}
+            |}
+        """.trimMargin(),
+        want = """
+            |src: {
+            |  main: {
+            |    java: {
+            |      my_test_library: {
+            |        test: {
+            |          I.java: {
+            |            content: ```
+            |              package my_test_library.test;
+            |              public interface I {
+            |                  default void f() {
+            |                      this.g();
+            |                  }
+            |                  void g();
+            |              }
+            |
+            |              ```,
+            |          },
+            |          C.java: {
+            |            content: ```
+            |              package my_test_library.test;
+            |              public final class C implements I {
+            |                  public void g() {
+            |                  }
+            |                  public C() {
+            |                  }
+            |              }
+            |
+            |              ```,
+            |          },
+            |          TestMain.java: "__DO_NOT_CARE__",
+            |          TestGlobal.java: "__DO_NOT_CARE__",
+            |          C.java.map: "__DO_NOT_CARE__",
+            |          I.java.map: "__DO_NOT_CARE__",
+            |          TestMain.java.map: "__DO_NOT_CARE__",
+            |          TestGlobal.java.map: "__DO_NOT_CARE__",
+            |        },
+            |        MyTestLibraryMain.java: "__DO_NOT_CARE__",
+            |        MyTestLibraryGlobal.java: "__DO_NOT_CARE__",
+            |      },
+            |    },
+            |  },
+            |},
+            |pom.xml: "__DO_NOT_CARE__",
+        """.trimMargin(),
+    )
 }
