@@ -342,6 +342,14 @@ private fun optimizeAutoescaperUse(
             }
         }
     } as? Value<*> ?: return
+    val sameStateFn = iCtx.interpret(init.pos) {
+        Call {
+            Call(BuiltinFuns.vGets) {
+                V(Value(ReifiedType(accumulatorType)))
+                V(Symbol("sameStatePredicate"))
+            }
+        }
+    } as? Value<*> ?: return
     val propagateOver = iCtx.interpret(init.pos) {
         Rn(propagateOverName)
     } as? Value<*> ?: return
@@ -472,6 +480,7 @@ private fun optimizeAutoescaperUse(
                                     V(contextPropagator)
                                     V(state)
                                     V(argToPropagateOver)
+                                    V(sameStateFn)
                                 }
                             } as? Value<*> ?: return null
                             val adjustedString = TString.unpackOrNull(after.readField(adjustedStringDotName))
