@@ -23,11 +23,6 @@ class RustFunctionalTest : FunctionalTestRunner<RustBackend>(RustBackend.Factory
         super.algosHelloWorld()
     }
 
-    @Test // do not commit
-    override fun regexMatch() {
-        super.regexMatch()
-    }
-
     override fun runGeneratedCode(
         backend: RustBackend,
         modules: List<Module>,
