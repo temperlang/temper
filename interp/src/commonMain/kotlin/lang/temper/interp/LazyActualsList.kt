@@ -134,7 +134,7 @@ class LazyActualsList(
     }
 
     override fun keyTree(index: Int): Tree? {
-        if (keys[index] == null) { return null }
+        if (index !in keys.indices || keys[index] == null) { return null }
         return rawTreeList[treeIndex[index] - 1]
     }
 
