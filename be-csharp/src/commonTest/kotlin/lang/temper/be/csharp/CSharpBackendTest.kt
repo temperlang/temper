@@ -454,6 +454,25 @@ class CSharpBackendTest {
     )
 
     @Test
+    fun protectedInterfaceMember() = assertGeneratedUserClass(
+        temper = """
+            |export interface I {
+            |  protected get x(): Int;
+            |}
+        """.trimMargin(),
+        cSharpClassName = "II",
+        csharp = """
+            |public interface II
+            |{
+            |    protected int X
+            |    {
+            |        get;
+            |    }
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun simplePanicValue() {
         assertGeneratedGlobalClass(
             temper = """
