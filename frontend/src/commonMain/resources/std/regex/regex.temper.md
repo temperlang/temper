@@ -685,7 +685,7 @@ let needsNumericEscape = 1;
 let needsSimpleEscape = 2;
 let buildEscapeNeeds(): List<Int> {
   let escapeNeeds = new ListBuilder<Int>();
-  for (var code = 0; code < 0x7F; code += 1) {
+  for (var code = 0; code <= 0x7F; code += 1) {
     escapeNeeds.add(
       if (
         // Dash needs escaping in code sets, but we'll handle that specially.
@@ -699,6 +699,7 @@ let buildEscapeNeeds(): List<Int> {
         needsNoEscape
       } else if (
         // Ampersand and tilde need escaped only in python for now, but meh.
+        // Escaping ampersand breaks JS though.  Fix that in temper-core/regex.js
         code == Codes.ampersand ||
         code == Codes.backslash ||
         code == Codes.caret ||
