@@ -82,6 +82,7 @@ private fun runTest(
         // Now to the main test.
         // TODO Make these atomic, or just figure we have big gaps?
         var buildCount = 0
+        var failCount = 0
         var timer: Timer? = null
         val (ok, output) = withCapturingConsole { capturingConsole ->
             doWatch(
@@ -97,7 +98,10 @@ private fun runTest(
             ) { watcher ->
                 buildCount += 1
                 timer = Timer()
-                (watcher.lastBuildResult as? BuildDoneResult)?.sourceSnapshot?.also { snapshots.add(it) }
+                when (val result = watcher.lastBuildResult as? BuildDoneResult) {
+                    null -> failCount += 1
+                    else -> result.sourceSnapshot?.also { snapshots.add(it) }
+                }
                 @Suppress("MagicNumber")
                 timer!!.schedule(
                     object : TimerTask() {
@@ -117,6 +121,7 @@ private fun runTest(
         }
         assertTrue(ok, "expected ok.  output follows:\n\n$output")
         assertEquals(buildLimit, buildCount, "Build count wrong")
+        assertEquals(0, failCount, "Build failure")
         // Check ignores at the end after primary checks.
         checkIgnored(snapshots)
     }
