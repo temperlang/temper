@@ -568,7 +568,7 @@ class RegexFormatter {
     when (adjusted) {
       is CodeSet -> do {
         if (adjusted.items.isEmpty) {
-          // Many regex engines don't like empty negations.
+          // Many regex engines don't like empty code sets.
           if (adjusted.negated) {
             // Match anything.
             out.append(raw"[\s\S]");
@@ -577,6 +577,7 @@ class RegexFormatter {
             out.append("(?:$.)");
           }
         } else {
+          // Common non-empty case.
           out.append("[");
           if (adjusted.negated) {
             out.append("^");
