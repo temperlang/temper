@@ -229,6 +229,14 @@ And this should match nothing.
 
     console.log(/[]+/.find(simplerLines).full.value orelse "-");
 
+But this should match a different kind of nothing, the empty string.
+
+```temper inert
+    // Ignore this case, because it fails on Lua.
+    // If enabled, we need a blank line added to the next log block.
+    console.log(/[]*/.find(simplerLines).full.value);
+```
+
 ```log
 It was the best of times.
 It was the worst of times.
