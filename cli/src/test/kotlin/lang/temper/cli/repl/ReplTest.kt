@@ -5,9 +5,12 @@ import lang.temper.common.Console
 import lang.temper.common.assertStringsEqual
 import lang.temper.common.temperEscaper
 import lang.temper.env.InterpMode
+import lang.temper.fs.RealWritableFileSystem
 import lang.temper.fs.getTestDirectories
+import lang.temper.fs.runWithTemporaryDirectory
 import lang.temper.log.Debug
 import lang.temper.log.LogConfigurations
+import lang.temper.log.filePath
 import lang.temper.name.BuiltinName
 import lang.temper.name.TemperName
 import lang.temper.value.ActualValues
@@ -37,10 +40,15 @@ class ReplTest {
 
     @BeforeTest
     fun setupRepl() {
+        initializeRepl()
+    }
+
+    internal fun initializeRepl(workRootInfo: WorkRootInfo? = null) {
         _repl = Repl(
             writeToPendingConsole,
             executorService = executorService,
             directories = testDirectories(),
+            workRootInfo = workRootInfo,
         )
     }
 
@@ -1129,6 +1137,33 @@ class ReplTest {
                 |           ⇧
                 |[interactive#1:1+8-9]@G: Actual arguments do not match signature: <in K__30 extends AnyValue & MapKey, out V__31 extends AnyValue>(List<Pair<K__30, V__31>>) -> Map<K__30, V__31> expected [List<Pair<MapKey, AnyValue>>], but got [Int32]
                 |interactive#1: fail
+                |
+            """.trimMargin(),
+        )
+    }
+
+    @Test
+    fun importOfBuiltModule() = runWithTemporaryDirectory("importOfBultModule") { workRoot ->
+        closeRepl()
+        initializeRepl(workRootInfo = WorkRootInfo(workRoot, null))
+        RealWritableFileSystem(workRoot) { throw it }.use { fs ->
+            fs.write(filePath("config.temper.md"), "# hello".toByteArray())
+            fs.write(
+                filePath("src.temper"),
+                """export let message(): String { "Hello, World!" }""".toByteArray(),
+            )
+        }
+        repl.processLine("""help("${AvailableImports.NAME}")""")
+        assertPendingContains(
+            Regex("""║hello *║/ *║let \{...} = import\("hello//"\); *║"""),
+        )
+        repl.processLine("""let { message } = import("hello")""")
+        repl.processLine("""console.log(message())""")
+        assertPending(
+            """
+                |interactive#1: void
+                |Hello, World!
+                |interactive#2: void
                 |
             """.trimMargin(),
         )
