@@ -25,6 +25,7 @@ import lang.temper.cli.repl.ReplConfig
 import lang.temper.cli.repl.ReplInterop
 import lang.temper.cli.repl.ReplPrompt
 import lang.temper.cli.repl.ReplSeparator
+import lang.temper.cli.repl.WorkRootInfo
 import lang.temper.cli.repl.configExpandHistory
 import lang.temper.cli.repl.configTemperHistory
 import lang.temper.common.Console
@@ -398,6 +399,10 @@ abstract class Main {
                             |$HELP_INDENT For example, `-b js` starts `node` with the work root's libraries'
                             |$HELP_INDENT JS translations pre-loaded.
                             |
+                            |$HELP_INDENT If the backend is `interp`, the default, and a workroot is
+                            |$HELP_INDENT explicitly specified, then those libraries will be available
+                            |$HELP_INDENT for `import` from the interactive shell.
+                            |
                             |$HELP_INDENT See the `help()` function's ".../${
                             BackendHelpTopicKeys.REPL
                         }" help topics for backend
@@ -410,6 +415,7 @@ abstract class Main {
                         """.trimMargin(),
                     ).default(interpBackendId to ConfigFromCli.empty)
                     val wr = workRootOpt(this)
+                    val ignoreFile = ignoreFileOpt(this)
                     val verbose = verboseOpt(this)
                     val separator = option(
                         replSeparatorArgType,
@@ -453,6 +459,15 @@ abstract class Main {
                             if (verbose.value) {
                                 console.setLogLevel(Log.Fine)
                             }
+                            val workRootInfo =
+                                if (wr.valueOrigin == ValueOrigin.SET_BY_USER) {
+                                    // If the user supplied a workroot explicitly,
+                                    // build those and make them available for building.
+                                    WorkRootInfo(wr.value, ignoreFile.value.orNullIfDevNull)
+                                } else {
+                                    null
+                                }
+
                             val repl = Repl(
                                 console = console,
                                 directories = getDirectories(fs),
@@ -462,6 +477,7 @@ abstract class Main {
                                     separator = separator.value,
                                     prompt = prompt.value,
                                 ),
+                                workRootInfo = workRootInfo,
                             )
 
                             val isTtyLike = repl.console.textOutput.isTtyLike

@@ -93,6 +93,7 @@ internal class Repl(
     val executorService: ExecutorService,
     private val config: ReplConfig = defaultConfig,
     private val overrideBindings: Map<TemperName, Value<*>>? = null,
+    workRootInfo: WorkRootInfo? = null,
 ) : AutoCloseable, Flushable {
     private var allExports = mutableMapOf<ParsedName, Export>()
     var commandCount = INITIAL_COMMAND_COUNT
@@ -168,7 +169,7 @@ internal class Repl(
     }
 
     private val replModules = mutableMapOf<ReplChunkIndex, Module>()
-    internal val externalModules = ModulesExternalToRepl(console, logSink, executorService)
+    internal val externalModules = ModulesExternalToRepl(console, logSink, executorService, workRootInfo)
 
     /**
      * When a REPL command `import`s something we add it here so that we can resolve it

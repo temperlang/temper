@@ -10,6 +10,7 @@ import lang.temper.env.InterpMode
 import lang.temper.frontend.Module
 import lang.temper.frontend.ModuleSource
 import lang.temper.fs.loadResource
+import lang.temper.interp.ContinueCondition
 import lang.temper.interp.builtinOnlyEnvironment
 import lang.temper.interp.immutableEnvironment
 import lang.temper.lexer.Genre
@@ -98,14 +99,13 @@ object ImplicitsModule {
 
         singletonPositions = FilePositions.fromSource(ImplicitsCodeLocation, content)
 
-        val neverStop = { true } // Continue condition
         val logSink = FailFastLogSink(content)
         val loc = ImplicitsCodeLocation
         val module = Module(
             projectLogSink = logSink,
             loc = loc,
             console = moduleConsole,
-            continueCondition = neverStop,
+            continueCondition = NeverStop,
             namingContext = WellKnownTypes.anyValueTypeDefinition.name.origin,
             mayRun = true, // TODO Remove this option once `console` is a stable value.
         )
@@ -288,4 +288,8 @@ internal object PromoteSimpleFn : NamedBuiltinFun, PureCallableValue {
         val (arg) = args.unpackPositionedOr(1, cb) { return@invoke it }
         return ImplicitsModule.promoteSimpleValueToClassType(arg) ?: NotYet
     }
+}
+
+private object NeverStop : ContinueCondition {
+    override fun shouldContinue(): Boolean = true // Go off, you
 }

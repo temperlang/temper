@@ -49,6 +49,7 @@ internal class ReplHelpFn(
             },
             supportedBackends,
             repl.promises,
+            repl.externalModules,
         )
     }
     private val topics get() = topicsLazy.value
@@ -116,6 +117,7 @@ private class Topics(
     private val bindings: Map<TemperName, Value<*>>,
     private val backendIds: Iterable<BackendId>,
     private val promises: Promises,
+    private val modules: ModulesExternalToRepl,
 ) {
 
     val stringKeyToHelpful: Lazy<Map<String, Helpful>> = lazy {
@@ -133,6 +135,7 @@ private class Topics(
                 put(topic.helpfulTopicName(), topic)
             }
             put(UnresolvedPromisesHelp.NAME, UnresolvedPromisesHelp(promises))
+            put(AvailableImports.NAME, AvailableImports(modules))
             for (backendId in backendIds) {
                 val backend = lookupFactory(backendId) ?: continue
                 val helpTopics = backend.extraHelpTopics
