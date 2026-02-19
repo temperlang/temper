@@ -441,6 +441,17 @@ abstract class Main {
                             append(HELP_INDENT) // followed by type description
                         },
                     ).default(ReplPrompt.default)
+                    val execBefore = option(
+                        ArgType.String,
+                        shortName = "e",
+                        fullName = "exec-before",
+                        description = buildString {
+                            append("Temper code to execute before the first user prompt.\n")
+                            append(HELP_INDENT)
+                            append("This can help set up frequently used imports.\n")
+                            append(HELP_INDENT) // followed by type description
+                        },
+                    ).multiple()
 
                     override fun execute() {
                         // If we have a backend
@@ -479,6 +490,11 @@ abstract class Main {
                                 ),
                                 workRootInfo = workRootInfo,
                             )
+
+                            // Processing these here avoids any interaction with history.
+                            for (temperCommand in execBefore.value) {
+                                repl.processLine(temperCommand)
+                            }
 
                             val isTtyLike = repl.console.textOutput.isTtyLike
                             val lineReader = LineReaderBuilder.builder()

@@ -866,7 +866,7 @@ internal class Typer(
                             val formal = sig.valueFormalForActual(argIndex)?.type
                             if (formal != null) {
                                 return@findContext formal.mapType(
-                                    decision.bindings?.mapValues { hackMapOldStyleToNew(it as StaticType) }
+                                    decision.bindings?.mapValues { (_, a) -> hackMapOldStyleToNew(a as StaticType) }
                                         ?: mapOf(),
                                 )
                             }

@@ -112,6 +112,10 @@ enum class MessageTemplate(
         "Members of class %s require explicit visibility: %s",
         CompilationPhase.Interpreter,
     ),
+    MissingMethodDefinition(
+        "Type %s must implement %s from %s.  Maybe add `%s`",
+        CompilationPhase.Interpreter,
+    ),
     TypeCheckRejected("Type %s rejected value %s", CompilationPhase.Interpreter),
     BuiltinEnvironmentIsNotMutable(
         "Cannot declare locals (e.g. %s) in the builtin environment",

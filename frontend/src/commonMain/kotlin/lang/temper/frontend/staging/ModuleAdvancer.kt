@@ -461,7 +461,7 @@ class ModuleAdvancer(
     }
 }
 
-private const val STEP_QUOTA = 1_000 // Thousands
+private const val STEP_QUOTA = 10_000 // Thousands
 
 private class MutLibraryConfigurations : Iterable<LibraryConfiguration> {
     private val configurationsPossiblyUnsorted = mutableListOf<LibraryConfiguration>()
