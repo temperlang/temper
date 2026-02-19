@@ -163,25 +163,25 @@ classes.
 
 ```
 export interface Special extends RegexNode {}
-export let Begin: Special = do { class Begin extends Special {}; new Begin() };
-export let Dot: Special = do { class Dot extends Special {}; new Dot() };
-export let End: Special = do { class End extends Special {}; new End() };
+export let Begin: Special = doPure { (): Special => class Begin extends Special {}; new Begin() };
+export let Dot: Special = doPure { (): Special => class Dot extends Special {}; new Dot() };
+export let End: Special = doPure { (): Special => class End extends Special {}; new End() };
 // TODO(tjp, regex): We can't easily support this at present across backends.
-// export let GraphemeCluster = do {
+// export let GraphemeCluster = doPure { (): Special =>
 //   class GraphemeCluster extends Special {}; new GraphemeCluster()
 // };
-export let WordBoundary: Special = do {
+export let WordBoundary: Special = doPure { (): Special =>
   class WordBoundary extends Special {}; new WordBoundary()
 };
 
 export interface SpecialSet extends CodePart & Special {}
-export let Digit: SpecialSet = do {
+export let Digit: SpecialSet = doPure { (): SpecialSet =>
   class Digit extends SpecialSet {}; new Digit()
 };
-export let Space: SpecialSet = do {
+export let Space: SpecialSet = doPure { (): SpecialSet =>
   class Space extends SpecialSet {}; new Space()
 };
-export let Word: SpecialSet = do {
+export let Word: SpecialSet = doPure { (): SpecialSet =>
   class Word extends SpecialSet {}; new Word()
 };
 ```
@@ -232,7 +232,7 @@ export class Or(
 
 ### Repeat
 
-`Repeat` matches from an minimum to a maximum number of repeats of a
+`Repeat` matches from a minimum to a maximum number of repeats of a
 subregex. This can be represented in regex source in a number of ways:
 
 - `?` matches 0 or 1.
@@ -331,7 +331,7 @@ class RegexRefs(
   public let orObject: Or = new Or([]),
 ) {}
 
-let regexRefs = new RegexRefs();
+let regexRefs = doPure { new RegexRefs() };
 ```
 
 </details>
@@ -679,7 +679,7 @@ class RegexFormatter {
 }
 
 // Cache which chars you just but a blackslash in front of for escaping.
-let escapeNeeds = buildEscapeNeeds();
+let escapeNeeds = doPure { buildEscapeNeeds() };
 let needsNoEscape = 0;
 let needsNumericEscape = 1;
 let needsSimpleEscape = 2;
