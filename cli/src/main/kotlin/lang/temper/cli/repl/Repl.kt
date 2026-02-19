@@ -21,6 +21,7 @@ import lang.temper.frontend.Module
 import lang.temper.frontend.ModuleSource
 import lang.temper.frontend.StagingFlags
 import lang.temper.frontend.implicits.ImplicitsModule
+import lang.temper.frontend.staging.makeContinueCondition
 import lang.temper.fs.Directories
 import lang.temper.interp.MetadataDecorator
 import lang.temper.interp.convertToErrorNode
@@ -337,11 +338,7 @@ internal class Repl(
         commandCount += 1 // Next loc will be different
 
         // Execute the command
-        var stepsThousands = MAX_STEPS_THOUSANDS
-        val continueCondition = {
-            stepsThousands -= 1
-            stepsThousands > 0
-        }
+        val continueCondition = makeContinueCondition()
         // Set up the module
         val module = Module(
             logSink,
@@ -389,13 +386,11 @@ internal class Repl(
             try {
                 module.advance()
             } catch (panic: Panic) {
-                ignore(panic)
                 console.error("Interpretation ended due to runtime panic")
                 if (console.logs(Log.Fine)) {
                     console.error(panic)
                 }
             } catch (abort: Abort) {
-                ignore(abort)
                 console.error("Interpretation aborted")
                 if (console.logs(Log.Fine)) {
                     console.error(abort)
@@ -579,8 +574,6 @@ internal class Repl(
 internal const val INITIAL_COMMAND_COUNT = 0
 internal const val REPL_LOC_PREFIX = "interactive#"
 internal val REPL_LOC_SYMBOL = Symbol(REPL_LOC_PREFIX.replace("#", ""))
-
-private const val MAX_STEPS_THOUSANDS = 100
 
 private fun exportTopLevels(module: Module, root: BlockTree): BlockTree {
     fun maybeExport(edge: TEdge) {

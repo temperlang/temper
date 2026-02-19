@@ -3712,6 +3712,23 @@ class GenerateCodeStageTest {
             |}
         """.trimMargin(),
     )
+
+    @Test
+    fun pureVirtualMethodInConcreteClass() = assertModuleAtStage(
+        stage = Stage.Run,
+        input = """
+            |export interface I<T> { f(x: T): Void; }
+            |export class C extends I<String> {
+            |  // but does not override f()
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  run: "void: Void",
+            |  errors: ["Type C must implement f from I.  Maybe add `public f(x: String): Void`!"]
+            |}
+        """.trimMargin(),
+    )
 }
 
 // Provide an extra binding to a function whose call does not inline so does not trigger any

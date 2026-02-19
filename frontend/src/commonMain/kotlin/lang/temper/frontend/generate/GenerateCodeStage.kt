@@ -190,6 +190,7 @@ class GenerateCodeStage(
 
         ReachabilityTracer().markReachability(root)
         ExportChecker(module).checkExports()
+        TypeDeclChecker(module, logSink).checkDeclaredTypeShapes()
 
         Debug.Frontend.GenerateCodeStage.After.snapshot(configKey, AstSnapshotKey, root)
     }
