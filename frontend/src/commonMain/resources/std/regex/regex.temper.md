@@ -567,14 +567,25 @@ class RegexFormatter {
     let adjusted = adjustCodeSet(codeSet, regexRefs);
     when (adjusted) {
       is CodeSet -> do {
-        out.append("[");
-        if (adjusted.negated) {
-          out.append("^");
+        if (adjusted.items.isEmpty) {
+          // Many regex engines don't like empty negations.
+          if (adjusted.negated) {
+            // Match anything.
+            out.append(raw"[\s\S]");
+          } else {
+            // Match nothing.
+            out.append("(?:$.)");
+          }
+        } else {
+          out.append("[");
+          if (adjusted.negated) {
+            out.append("^");
+          }
+          for (var i = 0; i < adjusted.items.length; i += 1) {
+            pushCodeSetItem(adjusted.items[i]);
+          }
+          out.append("]");
         }
-        for (var i = 0; i < adjusted.items.length; i += 1) {
-          pushCodeSetItem(adjusted.items[i]);
-        }
-        out.append("]");
       }
       else -> pushRegex(adjusted);
     }

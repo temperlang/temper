@@ -215,6 +215,26 @@ negated basic true: true
 negated basic false: false
 ```
 
+### Empty sets
+
+This should match everything, including newlines.
+
+    let simplerLines = """
+      "It was the best of times.
+      "It was the worst of times.
+    ;
+    console.log(/[^]+/.find(simplerLines).full.value);
+
+And this should match nothing.
+
+    console.log(/[]+/.find(simplerLines).full.value orelse "-");
+
+```log
+It was the best of times.
+It was the worst of times.
+-
+```
+
 ### Word boundaries
 
 Define a regex for simple identifiers with word boundaries. For this case, be
