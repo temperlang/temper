@@ -21,6 +21,7 @@ import lang.temper.fs.FileFilterRules
 import lang.temper.fs.FileSnapshot
 import lang.temper.fs.FileSystemSnapshot
 import lang.temper.fs.FilteringFileSystemSnapshot
+import lang.temper.interp.ContinueCondition
 import lang.temper.interp.importExport.ImportMacro
 import lang.temper.interp.importExport.Importer
 import lang.temper.interp.importExport.LOCAL_FILE_SPECIFIER_PREFIX
@@ -246,7 +247,7 @@ class ModuleAdvancer(
     fun createModule(
         loc: ModuleName,
         console: Console,
-        continueCondition: () -> Boolean = makeContinueCondition(),
+        continueCondition: ContinueCondition = makeContinueCondition(),
         mayRun: Boolean = moduleConfig.mayRun,
         allowDuplicateLogPositions: Boolean = false,
         genre: Genre = Genre.Library,
@@ -1003,10 +1004,15 @@ private fun String.withoutPrefix(prefix: String) = if (startsWith(prefix)) {
 }
 
 /** Hard stop after 10k interpreter steps */
-fun makeContinueCondition(): () -> Boolean {
-    val count = intArrayOf(0)
+fun makeContinueCondition(): ContinueCondition =
+    ModuleAdvancerContinueConditionImpl()
 
-    return { count[0]++ < STEP_QUOTA }
+private class ModuleAdvancerContinueConditionImpl : ContinueCondition {
+    private val count = intArrayOf(0)
+
+    override fun shouldContinue(): Boolean = count[0]++ < STEP_QUOTA
+
+    override fun toString(): String = "ModuleAdvancerContinueConditionImpl(${count[0]})"
 }
 
 private val sharedStdModulesMayNotRun = lazy {

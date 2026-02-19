@@ -167,7 +167,7 @@ class Interpreter(
     /**
      * Called periodically during long-running stages to decide whether to keep working or [Abort].
      */
-    val continueCondition: () -> Boolean,
+    val continueCondition: ContinueCondition,
     val features: Map<InternalFeatureKey, Value<*>> = emptyMap(),
     val connecteds: Map<String, (Signature2) -> Value<*>> = emptyMap(),
     val postPasses: MutableSet<PostPass>? = null,
@@ -325,7 +325,7 @@ class Interpreter(
             edge.breadcrumb = stage
         }
         stepCount += 1
-        if (stepCount and CONTINUE_CONDITION_STEP_MASK == 0 && !continueCondition()) {
+        if (stepCount and CONTINUE_CONDITION_STEP_MASK == 0 && !continueCondition.shouldContinue()) {
             failLog.explain(MessageTemplate.Aborted, edge.target.pos)
             throw Abort()
         }

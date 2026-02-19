@@ -6,6 +6,7 @@ import lang.temper.frontend.StageOutputs
 import lang.temper.frontend.StagingFlags
 import lang.temper.frontend.TopLevelBindings
 import lang.temper.frontend.findExportsAndDeclaredTypes
+import lang.temper.interp.ContinueCondition
 import lang.temper.interp.Interpreter
 import lang.temper.log.FailLog
 import lang.temper.log.LogSink
@@ -30,7 +31,7 @@ internal class RuntimeEmulationStage(
     private val ast: Tree,
     private val failLog: FailLog,
     private val logSink: LogSink,
-    private val continueCondition: () -> Boolean,
+    private val continueCondition: ContinueCondition,
     private val features: Map<InternalFeatureKey, Value<*>>,
     private val connecteds: Map<String, (Signature2) -> Value<*>>,
     private val promises: Promises?,

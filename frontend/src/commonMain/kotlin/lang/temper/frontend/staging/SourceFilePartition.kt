@@ -10,6 +10,7 @@ import lang.temper.frontend.Module
 import lang.temper.frontend.ModuleSource
 import lang.temper.fs.FileSnapshot
 import lang.temper.fs.FileSystemSnapshot
+import lang.temper.interp.ContinueCondition
 import lang.temper.interp.importExport.Importer
 import lang.temper.lexer.Genre
 import lang.temper.lexer.LanguageConfig
@@ -36,7 +37,7 @@ class SourceFilePartition(
     private val console: Console,
     private val projectLogSink: LogSink = moduleAdvancer.projectLogSink,
     private val moduleConfig: ModuleConfig = moduleAdvancer.moduleConfig,
-    private val makeAContinueCondition: () -> () -> Boolean = ::makeContinueCondition,
+    private val makeAContinueCondition: () -> ContinueCondition = ::makeContinueCondition,
     private val makeTentativeLibraryConfiguration: (DashedIdentifier, FilePath) -> LibraryConfiguration =
         ::defaultTentativeLibraryConfiguration,
 ) {
@@ -427,7 +428,7 @@ fun partitionSourceFilesIntoModules(
     genre: Genre = Genre.Library,
     mayRun: Boolean = false,
     root: FilePath = FilePath.emptyPath,
-    makeAContinueCondition: () -> () -> Boolean = ::makeContinueCondition,
+    makeAContinueCondition: () -> ContinueCondition = ::makeContinueCondition,
     makeTentativeLibraryConfiguration: (DashedIdentifier, FilePath) -> LibraryConfiguration =
         ::defaultTentativeLibraryConfiguration,
 ) {

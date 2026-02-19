@@ -1004,10 +1004,10 @@ class InterpreterTest {
         }
     }
 
-    private fun makeContinueCondition(): () -> Boolean {
+    private fun makeContinueCondition(): ContinueCondition {
         // Take fewer than 10000 steps.
         var thousandsLeft = 10
-        return {
+        return ContinueCondition {
             if (thousandsLeft > 0) {
                 thousandsLeft -= 1
                 true

@@ -44,6 +44,7 @@ import lang.temper.fs.AsyncSystemReadAccess
 import lang.temper.fs.FileSnapshot
 import lang.temper.fs.FileSystemSnapshot
 import lang.temper.fs.FilteringFileSystemSnapshot
+import lang.temper.interp.ContinueCondition
 import lang.temper.lexer.defaultClassifyTemperSource
 import lang.temper.library.DependencyResolver
 import lang.temper.library.LibraryConfiguration
@@ -142,6 +143,7 @@ fun doBuild(
     requiredExt: List<DashedIdentifier> = emptyList(),
     runTask: RunTask? = null,
     moduleConfig: ModuleConfig = ModuleConfig.default,
+    beforeClose: ((BuildResult) -> Unit)? = null,
 ): BuildResult {
     val build =
         prepareBuild(
@@ -160,6 +162,12 @@ fun doBuild(
     return build.harness.use {
         build.use {
             doOneBuild(build)
+                // Once we exit the use block, close flips the switch on the
+                // cancel group, preventing any further interpretation using
+                // those modules continue condition.
+                .also {
+                    beforeClose?.invoke(it)
+                }
         }
     }
 }
@@ -189,12 +197,10 @@ private fun stageLibraries(
         cliConsole, moduleAdvancer.sharedLocationContext, logLevelTracker, CustomValueFormatter.Nope,
     )
     moduleAdvancer.projectLogSink = projectLogSink
-    fun makeCancellableContinueCondition(): () -> Boolean {
-        val continueCondition = makeContinueCondition()
-        return {
-            !build.isCancelled && continueCondition()
-        }
+    fun makeCancellableContinueCondition(): ContinueCondition {
+        return CancellableContinueCondition(build, makeContinueCondition())
     }
+
     fun makeTentativeLibraryConfiguration(
         libraryNameGuess: DashedIdentifier,
         libraryRoot: FilePath,
@@ -919,3 +925,13 @@ private fun mergeResultsFromInterpAndBackends(
 }
 
 class AbortCurrentBuild : Error()
+
+internal class CancellableContinueCondition(
+    private val build: Build,
+    private val cc: ContinueCondition,
+) : ContinueCondition {
+    override fun shouldContinue(): Boolean = !build.isCancelled && cc.shouldContinue()
+
+    override fun toString(): String =
+        "CancellableContinueCondition(${if (build.isCancelled) "cancelled" else "building"}, ${cc})"
+}

@@ -33,6 +33,7 @@ import lang.temper.frontend.parse.ParseStage
 import lang.temper.frontend.runtime.RuntimeEmulationStage
 import lang.temper.frontend.syntax.SyntaxMacroStage
 import lang.temper.frontend.typestage.TypeStage
+import lang.temper.interp.ContinueCondition
 import lang.temper.interp.EmptyEnvironment
 import lang.temper.interp.immutableEnvironment
 import lang.temper.interp.importExport.Importer
@@ -89,7 +90,7 @@ class Module(
      * Called periodically during long-running stages to decide whether to key working or
      * [lang.temper.value.Abort].
      */
-    continueCondition: () -> Boolean,
+    continueCondition: ContinueCondition,
     /**
      * Whether staging ends with the last stage before [Stage.Run] or whether execution may
      * proceed to [Stage.Run].
@@ -137,7 +138,7 @@ class Module(
 
     override fun formatPosition(pos: Position): String = logSink.formatPosition(pos)
 
-    val continueCondition: () -> Boolean
+    val continueCondition: ContinueCondition
     private var continueConditionReturnedFalse = false // Must be a better name for this.
 
     init {
@@ -147,15 +148,17 @@ class Module(
         // functions like continueCondition directly.
         // Instead, we wrap it to flip a bit on its first false return.
         // This has the side effect of also making this.continueCondition monotonic which is nice.
-        fun continueConditionWrapper(): Boolean = when {
-            continueConditionReturnedFalse -> false
-            cc() -> true
-            else -> {
-                continueConditionReturnedFalse = true
-                false
+        data class ContinueConditionWrapper(val cc: ContinueCondition) : ContinueCondition {
+            override fun shouldContinue(): Boolean = when {
+                continueConditionReturnedFalse -> false
+                cc.shouldContinue() -> true
+                else -> {
+                    continueConditionReturnedFalse = true
+                    false
+                }
             }
         }
-        this.continueCondition = ::continueConditionWrapper
+        this.continueCondition = ContinueConditionWrapper(cc)
     }
 
     var features = interpreterFeatureImplementations
@@ -295,7 +298,7 @@ class Module(
      *     ;;;
      *     { "appendix": "stuff" }
      *
-     * we parse the appendix stuff as Json and make it available here.
+     * we parse the appendix stuff as JSON and make it available here.
      *
      * This will eventually be used to:
      * - allow tools like linters to store per-file configuration
