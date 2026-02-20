@@ -81,10 +81,12 @@ ContinueExpr ::=
 Enum ::=
       "enum"
     & id%Id
+    & ((generics%GenericParam => "<" & generics%GenericParam*"," & ">") || ())
     & "{"
     & items%EnumItem*","
     & "}"
     ;
+Enum.generics.default = `listOf()`;
 
 EnumItem =
       EnumItemStruct

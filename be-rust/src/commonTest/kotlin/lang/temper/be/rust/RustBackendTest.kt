@@ -1315,8 +1315,9 @@ class RustBackendTest {
     fun genericEnum() {
         assertGenerateWanted(
             temper = """
-                |export sealed interface Hi<T> {}
-                |export class Lo<T> extends Hi<T> {}
+                |export interface I {}
+                |export sealed interface Hi<T extends I> {}
+                |export class Lo<T extends I> extends Hi<T> {}
             """.trimMargin(),
             rust = """
                 |pub (crate) fn init() -> temper_core::Result<()> {
@@ -1325,33 +1326,50 @@ class RustBackendTest {
                 |            Ok(())
                 |    }).clone()
                 |}
-                |pub enum HiEnum {
-                |    Lo(Lo)
+                |pub trait ITrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
+                |    fn clone_boxed(& self) -> I;
                 |}
-                |pub trait HiTrait<T: Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
-                |    fn as_enum(& self) -> HiEnum;
+                |#[derive(Clone)]
+                |pub struct I(std::sync::Arc<dyn ITrait>);
+                |impl I {
+                |    pub fn new(selfish: impl ITrait + 'static) -> I {
+                |        I(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |temper_core::impl_any_value_trait_for_interface!(I);
+                |impl std::ops::Deref for I {
+                |    type Target = dyn ITrait;
+                |    fn deref(& self) -> & Self::Target {
+                |        & ( * self.0)
+                |    }
+                |}
+                |pub enum HiEnum<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |    Lo(Lo<T>)
+                |}
+                |pub trait HiTrait<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
+                |    fn as_enum(& self) -> HiEnum<T>;
                 |    fn clone_boxed(& self) -> Hi<T>;
                 |}
                 |#[derive(Clone)]
-                |pub struct Hi<T: Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn HiTrait<T>>);
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> Hi<T> {
+                |pub struct Hi<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn HiTrait<T>>);
+                |impl<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> Hi<T> {
                 |    pub fn new(selfish: impl HiTrait<T> + 'static) -> Hi<T> {
                 |        Hi(std::sync::Arc::new(selfish))
                 |    }
                 |}
-                |temper_core::impl_any_value_trait_for_interface!(Hi<T>);
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for Hi<T> {
+                |temper_core::impl_any_value_trait_for_interface!(Hi<T> where T: ITrait);
+                |impl<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for Hi<T> {
                 |    type Target = dyn HiTrait<T>;
                 |    fn deref(& self) -> & Self::Target {
                 |        & ( * self.0)
                 |    }
                 |}
-                |struct LoStruct<T: Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |struct LoStruct<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> {
                 |    phantom_T: std::marker::PhantomData<T>
                 |}
                 |#[derive(Clone)]
-                |pub struct Lo<T: Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<LoStruct<T>>);
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> Lo<T> {
+                |pub struct Lo<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<LoStruct<T>>);
+                |impl<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> Lo<T> {
                 |    pub fn new() -> Lo<T> {
                 |        let selfish = Lo(std::sync::Arc::new(LoStruct {
                 |                    phantom_T: std::marker::PhantomData
@@ -1359,15 +1377,15 @@ class RustBackendTest {
                 |        return selfish;
                 |    }
                 |}
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> HiTrait<T> for Lo<T> {
-                |    fn as_enum(& self) -> HiEnum {
+                |impl<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> HiTrait<T> for Lo<T> {
+                |    fn as_enum(& self) -> HiEnum<T> {
                 |        HiEnum::Lo(self.clone())
                 |    }
                 |    fn clone_boxed(& self) -> Hi<T> {
                 |        Hi::new(self.clone())
                 |    }
                 |}
-                |temper_core::impl_any_value_trait!(Lo<T>, [Hi<T>]);
+                |temper_core::impl_any_value_trait!(Lo<T>, [Hi<T>] where T: ITrait);
             """.trimMargin(),
         )
     }

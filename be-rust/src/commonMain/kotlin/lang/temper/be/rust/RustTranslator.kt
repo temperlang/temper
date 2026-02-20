@@ -708,7 +708,7 @@ class RustTranslator(
                             // TODO Only if all sealed subtypes are public?
                             id = AS_ENUM_NAME.toId(pos),
                             params = selfParams.deepCopy(),
-                            returnType = enumId,
+                            returnType = enumId.makeTypeRef(generics),
                             block = Rust.Block(
                                 pos,
                                 result = Rust.Call(
@@ -817,7 +817,7 @@ class RustTranslator(
                         // TODO Only if all sealed subtypes are public?
                         id = AS_ENUM_NAME.toId(pos),
                         params = selfParams.deepCopy(),
-                        returnType = enumId.deepCopy(),
+                        returnType = enumId.makeTypeRef(generics),
                         block = null,
                     ).also { add(it.toItem()) }
                 }
@@ -1149,13 +1149,16 @@ class RustTranslator(
         val enumId = "$id$ENUM_NAME_SUFFIX".toId(decl.name.pos)
         val pos = decl.pos
         val pub = chooseVisibility(decl)
+        val generics = buildGenerics(decl.typeParameters)
         // Enum type.
         Rust.Enum(
             pos,
             id = enumId,
+            generics = generics,
             items = decl.typeShape.sealedSubTypes!!.map { sub ->
                 val subId = translateTypeOutName(sub.name).toId(pos)
-                Rust.EnumItemTuple(pos, id = subId, fields = listOf(Rust.TupleField(pos, type = subId.deepCopy())))
+                val subType = subId.deepCopy().makeTypeRef(generics)
+                Rust.EnumItemTuple(pos, id = subId, fields = listOf(Rust.TupleField(pos, type = subType)))
             },
         ).let { moduleItems.add(it.toItem(pub = pub)) }
         // Convenient return value.

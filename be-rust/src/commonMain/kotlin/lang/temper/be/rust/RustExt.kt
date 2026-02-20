@@ -378,7 +378,7 @@ internal fun Rust.GenericParam.toArg(): Rust.Id {
     }.deepCopy()
 }
 
-internal fun Rust.Id.makeTypeRef(generics: List<Rust.GenericParam>): Rust.Type = when {
+internal fun Rust.Path.makeTypeRef(generics: List<Rust.GenericParam>): Rust.Type = when {
     generics.isEmpty() -> this
     else -> Rust.GenericType(pos, path = deepCopy(), args = generics.map { it.toArg() })
 }

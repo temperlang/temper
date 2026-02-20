@@ -9,6 +9,10 @@ abstract getters and setters.
       public x: String;
     }
 
+And to complicate things, add an intermediate interface we can use.
+
+    export interface J extends I {}
+
 Interface types can be bounds on generic type parameters.
 Since the below reads `.x`, it needs the type bound.
 
@@ -21,7 +25,7 @@ An interface sub-type can be used as an explicit type parameter.
     class C(
       // And make this `var` to ensure we don't mishandle readonly inheritance.
       public var x: String,
-    ) extends I {}
+    ) extends J {}
 
     let a = { x: "foo" };
     let b = { x: "bar" };
@@ -48,9 +52,29 @@ on type parameters on types elsewhere, so include that here.
 
     class D<T extends I>(public thing: T) {}
 
-    let d = new D(a);
+Use the intermediate interface here to prove we can.
+
+    // let d = new D<J>(a);
+    let d = new D<C>(a);
     console.log("Generically, x is ${d.thing.x}.");
 
 ```log
 Generically, x is foo.
+```
+
+## Detour on generic sealed interfaces
+
+Also because it's in the ballpark, test generic sealed interfaces here.
+
+    sealed interface SI<T extends I> {
+      public get thing(): T;
+    }
+
+    class SSub<T extends I>(public thing: T) extends SI<T> {}
+
+    let si: SI<C> = new SSub(a);
+    console.log("Sealed thing is ${si.thing.x}.");
+
+```log
+Sealed thing is foo.
 ```
