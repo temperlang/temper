@@ -50,11 +50,16 @@ BreakExpr.value.default = `null`;
 
 Call ::=
       ((needsParens%`Boolean` == true => "(" & callee%Expr & ")") || callee)
-    & "(" & args%Expr*"," & ")"
+    & "("
+    & args%Expr*","
+    // Optional `where` here is purely a hack for a specific macro form we have.
+    & where%Where?
+    & ")"
     ;
 Call.needsParens.default = `
     (callee as? Operation)?.operator?.operator == RustOperator.MemberNotMethod
 `;
+Call.where.default = `null`;
 
 Closure ::=
       ((move%Move => move) || ())
@@ -507,6 +512,8 @@ VisibilityScope ::=
     ;
 
 enum VisibilityScopeOption = Crate | Self | Super;
+
+Where ::= "where" & whereItems%WhereItem*",";
 
 // Technically TypeParam isn't quite right, but it's close enough for now.
 WhereItem = TypeParam; // | LifetimeItem

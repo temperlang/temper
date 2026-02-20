@@ -40,3 +40,17 @@ Casting a C up to an I still allows reading x.
 ```log
 As an I, a.x is foo.
 ```
+
+## Detour on bounds for type parameters on types
+
+The test above already includes type parameter bounds, but we don't test bounds
+on type parameters on types elsewhere, so include that here.
+
+    class D<T extends I>(public thing: T) {}
+
+    let d = new D(a);
+    console.log("Generically, x is ${d.thing.x}.");
+
+```log
+Generically, x is foo.
+```

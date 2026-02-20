@@ -1283,7 +1283,7 @@ class RustBackendTest {
                 |        B(std::sync::Arc::new(selfish))
                 |    }
                 |}
-                |temper_core::impl_any_value_trait_for_interface!(B<T>);
+                |temper_core::impl_any_value_trait_for_interface!(B<T> where T: ATrait);
                 |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for B<T> {
                 |    type Target = dyn BTrait<T>;
                 |    fn deref(& self) -> & Self::Target {
@@ -1306,7 +1306,7 @@ class RustBackendTest {
                 |        return selfish;
                 |    }
                 |}
-                |temper_core::impl_any_value_trait!(C<T>, []);
+                |temper_core::impl_any_value_trait!(C<T>, [] where T: ATrait);
             """.trimMargin(),
         )
     }
@@ -1487,7 +1487,7 @@ class RustBackendTest {
                 |        return self.0.i;
                 |    }
                 |}
-                |temper_core::impl_any_value_trait!(Hi<T, U>, []);
+                |temper_core::impl_any_value_trait!(Hi<T, U>, [] where U: std::cmp::Eq + std::hash::Hash);
             """.trimMargin(),
         )
     }

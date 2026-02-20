@@ -766,6 +766,7 @@ class RustTranslator(
             pos,
             callee = "temper_core".toKeyId(pos).extendWith("impl_any_value_trait!"),
             args = listOf(typeRef.deepCopy(), Rust.Array(pos, supTypes.deepCopy())),
+            where = whereForAnyValueImpl(pos, generics),
         ).also { moduleItems.add(Rust.ExprStatement(pos, it).toItem()) }
     }
 
@@ -896,6 +897,7 @@ class RustTranslator(
             pos,
             callee = "temper_core".toKeyId(pos).extendWith("impl_any_value_trait_for_interface!"),
             args = listOf(typeRef.deepCopy()),
+            where = whereForAnyValueImpl(pos, generics),
         ).also { moduleItems.add(Rust.ExprStatement(pos, it).toItem()) }
         // Implement Deref for all our wrapped traits.
         Rust.Impl(
@@ -939,8 +941,9 @@ class RustTranslator(
         return bounds
     }
 
-    private fun buildBoundsCommon(pos: Position): List<Rust.TypeParamBound> =
-        listOf("Clone", SEND_NAME, SYNC_NAME, STATIC_LIFETIME).map { it.toId(pos) }
+    private fun buildBoundsCommon(pos: Position): List<Rust.TypeParamBound> {
+        return commonTypeBounds.map { it.toId(pos) }
+    }
 
     internal fun buildCastCallee(
         pos: Position,
@@ -3364,3 +3367,5 @@ internal const val TO_LISTED_TO_LISTED_NAME = "temper_core::ToListed::to_listed"
 internal const val TRAIT_NAME_SUFFIX = "Trait"
 internal const val TYPE_ID_NAME = "std::any::TypeId"
 internal const val TYPE_ID_OF_NAME = "std::any::TypeId::of"
+
+internal val commonTypeBounds = listOf("Clone", SEND_NAME, SYNC_NAME, STATIC_LIFETIME)

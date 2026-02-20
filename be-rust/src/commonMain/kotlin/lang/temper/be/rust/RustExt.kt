@@ -54,6 +54,24 @@ fun makeSrcFilePath(relDir: List<FilePathSegment>): FilePath {
     return dirPath("src").resolve(modPath)
 }
 
+internal fun whereForAnyValueImpl(pos: Position, translatedGenerics: List<Rust.GenericParam>): Rust.Where? = run {
+    val whereItems = translatedGenerics.mapNotNull generics@{ translatedParam ->
+        val translatedFormal = translatedParam as? Rust.TypeParam ?: return@generics null
+        // We get the common ones automatically in the impl any value macros, but we need custom ones explicit.
+        val ownBoundsCount = translatedFormal.bounds.size - commonTypeBounds.size
+        ownBoundsCount > 0 || return@generics null
+        Rust.TypeParam(
+            translatedFormal.pos,
+            id = translatedFormal.id,
+            bounds = translatedFormal.bounds.slice(0..<ownBoundsCount).map { it.deepCopy() },
+        )
+    }
+    when {
+        whereItems.isEmpty() -> null
+        else -> Rust.Where(pos, whereItems)
+    }
+}
+
 internal fun MutableList<Rust.Item>.declareSubmods(pos: Position, modKids: Collection<FilePath>) {
     for (kid in modKids) {
         val modId = kid.last().temperAwareBaseName().dashToSnake().toId(pos)
