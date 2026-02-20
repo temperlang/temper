@@ -1233,6 +1233,196 @@ class RustBackendTest {
     }
 
     @Test
+    fun genericConstraints() {
+        assertGenerateWanted(
+            temper = """
+                |interface A {
+                |    public greeting(): String { "Hi!" }
+                |}
+                |interface B extends A {
+                |    // No greeting here.
+                |}
+                |class C<T extends A> {
+                |    public spawn(): C<B> { new C<B>() }
+                |}
+            """.trimMargin(),
+            rust = """
+                |pub (crate) fn init() -> temper_core::Result<()> {
+                |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+                |    INIT_ONCE.get_or_init(| |{
+                |            Ok(())
+                |    }).clone()
+                |}
+                |trait ATrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
+                |    fn clone_boxed(& self) -> A;
+                |    fn greeting(& self) -> std::sync::Arc<String> {
+                |        return std::sync::Arc::new("Hi!".to_string());
+                |    }
+                |}
+                |#[derive(Clone)]
+                |struct A(std::sync::Arc<dyn ATrait>);
+                |impl A {
+                |    pub fn new(selfish: impl ATrait + 'static) -> A {
+                |        A(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |temper_core::impl_any_value_trait_for_interface!(A);
+                |impl std::ops::Deref for A {
+                |    type Target = dyn ATrait;
+                |    fn deref(& self) -> & Self::Target {
+                |        & ( * self.0)
+                |    }
+                |}
+                |trait BTrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + ATrait {
+                |    fn clone_boxed(& self) -> B;
+                |}
+                |#[derive(Clone)]
+                |struct B(std::sync::Arc<dyn BTrait>);
+                |impl B {
+                |    pub fn new(selfish: impl BTrait + 'static) -> B {
+                |        B(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |temper_core::impl_any_value_trait_for_interface!(B);
+                |impl std::ops::Deref for B {
+                |    type Target = dyn BTrait;
+                |    fn deref(& self) -> & Self::Target {
+                |        & ( * self.0)
+                |    }
+                |}
+                |struct CStruct<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |    phantom_T: std::marker::PhantomData<T>
+                |}
+                |#[derive(Clone)]
+                |pub (crate) struct C<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<CStruct<T>>);
+                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> C<T> {
+                |    pub fn spawn(& self) -> C<B> {
+                |        return C::new();
+                |    }
+                |    pub fn new() -> C<T> {
+                |        let selfish = C(std::sync::Arc::new(CStruct {
+                |                    phantom_T: std::marker::PhantomData
+                |        }));
+                |        return selfish;
+                |    }
+                |}
+                |temper_core::impl_any_value_trait!(C<T>, []);
+            """.trimMargin(),
+        )
+    }
+
+    @Test
+    fun genericEnum() {
+        assertGenerateWanted(
+            temper = """
+                |export sealed interface Hi<T> {}
+                |export class Lo<T> extends Hi<T> {}
+            """.trimMargin(),
+            rust = """
+                |pub (crate) fn init() -> temper_core::Result<()> {
+                |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+                |    INIT_ONCE.get_or_init(| |{
+                |            Ok(())
+                |    }).clone()
+                |}
+                |pub enum HiEnum {
+                |    Lo(Lo)
+                |}
+                |pub trait HiTrait<T: Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
+                |    fn as_enum(& self) -> HiEnum;
+                |    fn clone_boxed(& self) -> Hi<T>;
+                |}
+                |#[derive(Clone)]
+                |pub struct Hi<T: Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn HiTrait<T>>);
+                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> Hi<T> {
+                |    pub fn new(selfish: impl HiTrait<T> + 'static) -> Hi<T> {
+                |        Hi(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |temper_core::impl_any_value_trait_for_interface!(Hi<T>);
+                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for Hi<T> {
+                |    type Target = dyn HiTrait<T>;
+                |    fn deref(& self) -> & Self::Target {
+                |        & ( * self.0)
+                |    }
+                |}
+                |struct LoStruct<T: Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |    phantom_T: std::marker::PhantomData<T>
+                |}
+                |#[derive(Clone)]
+                |pub struct Lo<T: Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<LoStruct<T>>);
+                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> Lo<T> {
+                |    pub fn new() -> Lo<T> {
+                |        let selfish = Lo(std::sync::Arc::new(LoStruct {
+                |                    phantom_T: std::marker::PhantomData
+                |        }));
+                |        return selfish;
+                |    }
+                |}
+                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> HiTrait<T> for Lo<T> {
+                |    fn as_enum(& self) -> HiEnum {
+                |        HiEnum::Lo(self.clone())
+                |    }
+                |    fn clone_boxed(& self) -> Hi<T> {
+                |        Hi::new(self.clone())
+                |    }
+                |}
+                |temper_core::impl_any_value_trait!(Lo<T>, [Hi<T>]);
+            """.trimMargin(),
+        )
+    }
+
+    @Test
+    fun needlesslyGenericBuilder() {
+        assertGenerateWanted(
+            temper = """
+                |export class Ha<T>(public i: Int, public j: Int) {}
+            """.trimMargin(),
+            rust = """
+                |pub (crate) fn init() -> temper_core::Result<()> {
+                |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+                |    INIT_ONCE.get_or_init(| |{
+                |            Ok(())
+                |    }).clone()
+                |}
+                |struct HaStruct<T: Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |    i: i32, j: i32, phantom_T: std::marker::PhantomData<T>
+                |}
+                |#[derive(Clone)]
+                |pub struct Ha<T: Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<HaStruct<T>>);
+                |#[derive(Clone)]
+                |pub struct HaBuilder {
+                |    pub i: i32, pub j: i32
+                |}
+                |impl HaBuilder {
+                |    pub fn build(self) -> Ha<T> {
+                |        Ha::new(self.i, self.j)
+                |    }
+                |}
+                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> Ha<T> {
+                |    pub fn new(i__0: i32, j__0: i32) -> Ha<T> {
+                |        let i;
+                |        let j;
+                |        i = i__0;
+                |        j = j__0;
+                |        let selfish = Ha(std::sync::Arc::new(HaStruct {
+                |                    i, j, phantom_T: std::marker::PhantomData
+                |        }));
+                |        return selfish;
+                |    }
+                |    pub fn i(& self) -> i32 {
+                |        return self.0.i;
+                |    }
+                |    pub fn j(& self) -> i32 {
+                |        return self.0.j;
+                |    }
+                |}
+                |temper_core::impl_any_value_trait!(Ha<T>, []);
+            """.trimMargin(),
+        )
+    }
+
+    @Test
     fun genericStruct() {
         assertGenerateWanted(
             // Both required and optional constructor params here.

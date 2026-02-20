@@ -32,8 +32,11 @@ pub fn read_locked<T: Clone>(x: &Arc<RwLock<T>>) -> T {
 #[macro_export]
 macro_rules! impl_any_value_trait { // for concrete types
     // Two versions here. One for type args and one without.
-    ($type:ident<$($param:tt),*>, [$($target:ty),*]) => {
-        impl<$($param: Clone + Send + Sync + 'static),*> temper_core::AnyValueTrait for $type<$($param),*> {
+    ($type:ident<$($param:tt),*>, [$($target:ty),*] $(where $($bounds:tt)*)?) => {
+        impl<$($param: Clone + Send + Sync + 'static),*> temper_core::AnyValueTrait for $type<$($param),*>
+        where
+            $($($bounds)*)?
+        {
             fn cast(&self, type_id: std::any::TypeId) -> Option<Box<dyn std::any::Any>> {
                 match () {
                     // Check the concrete type first, expecting it to be most common.
@@ -55,7 +58,10 @@ macro_rules! impl_any_value_trait { // for concrete types
                 std::sync::Arc::as_ptr(&self.0) as usize
             }
         }
-        impl<$($param: Clone + Send + Sync + 'static),*> temper_core::AsAnyValue for $type<$($param),*> {
+        impl<$($param: Clone + Send + Sync + 'static),*> temper_core::AsAnyValue for $type<$($param),*>
+        where
+            $($($bounds)*)?
+        {
             fn as_any_value(&self) -> temper_core::AnyValue {
                 temper_core::AnyValue::new(self.clone())
             }
@@ -94,8 +100,11 @@ macro_rules! impl_any_value_trait { // for concrete types
 #[macro_export]
 macro_rules! impl_any_value_trait_for_interface { // for abstract types
     // Again, one for type args, and one without.
-    ($type:ident<$($param:tt),*>) => {
-        impl<$($param: Clone + Send + Sync + 'static),*> temper_core::AsAnyValue for $type<$($param),*> {
+    ($type:ident<$($param:tt),*> $(where $($bounds:tt)*)?) => { // TODO How to pass in more trait bounds?
+        impl<$($param: Clone + Send + Sync + 'static),*> temper_core::AsAnyValue for $type<$($param),*>
+        where
+            $($($bounds)*)?
+        {
             fn as_any_value(&self) -> temper_core::AnyValue {
                 self.0.as_any_value()
             }
