@@ -1239,11 +1239,11 @@ class RustBackendTest {
                 |interface A {
                 |    public greeting(): String { "Hi!" }
                 |}
-                |interface B extends A {
+                |interface B<T extends A> extends A {
                 |    // No greeting here.
                 |}
                 |class C<T extends A> {
-                |    public spawn(): C<B> { new C<B>() }
+                |    public spawn(): C<B<A>> { new C<B<A>>() }
                 |}
             """.trimMargin(),
             rust = """
@@ -1273,19 +1273,19 @@ class RustBackendTest {
                 |        & ( * self.0)
                 |    }
                 |}
-                |trait BTrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + ATrait {
-                |    fn clone_boxed(& self) -> B;
+                |trait BTrait<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + ATrait {
+                |    fn clone_boxed(& self) -> B<T>;
                 |}
                 |#[derive(Clone)]
-                |struct B(std::sync::Arc<dyn BTrait>);
-                |impl B {
-                |    pub fn new(selfish: impl BTrait + 'static) -> B {
+                |struct B<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn BTrait<T>>);
+                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> B<T> {
+                |    pub fn new(selfish: impl BTrait<T> + 'static) -> B<T> {
                 |        B(std::sync::Arc::new(selfish))
                 |    }
                 |}
-                |temper_core::impl_any_value_trait_for_interface!(B);
-                |impl std::ops::Deref for B {
-                |    type Target = dyn BTrait;
+                |temper_core::impl_any_value_trait_for_interface!(B<T>);
+                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for B<T> {
+                |    type Target = dyn BTrait<T>;
                 |    fn deref(& self) -> & Self::Target {
                 |        & ( * self.0)
                 |    }
@@ -1296,7 +1296,7 @@ class RustBackendTest {
                 |#[derive(Clone)]
                 |pub (crate) struct C<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<CStruct<T>>);
                 |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> C<T> {
-                |    pub fn spawn(& self) -> C<B> {
+                |    pub fn spawn(& self) -> C<B<A>> {
                 |        return C::new();
                 |    }
                 |    pub fn new() -> C<T> {
