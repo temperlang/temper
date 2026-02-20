@@ -3329,9 +3329,7 @@ class DefineStageTest {
             |            do_bind_appendSafe(accumulator#0)("Zero: ");
             |## Unsafe interpolations become regular appends.
             |            do_bind_append(accumulator#0)(0);
-            |            do_bind_appendSafe(accumulator#0)("\n");
-            |            void;
-            |            do_bind_appendSafe(accumulator#0)("One: ");
+            |            do_bind_appendSafe(accumulator#0)("\nOne: ");
             |            do_bind_append(accumulator#0)(1);
             |            do_bind_appendSafe(accumulator#0)("\n");
             |## The loop becomes just a regular forEach application and the content are appends.
@@ -3339,8 +3337,7 @@ class DefineStageTest {
             |                do_bind_appendSafe(accumulator#0)(" ");
             |                do_bind_append(accumulator#0)(n__0);
             |            });
-            |            do_bind_appendSafe(accumulator#0)("!\n");
-            |            do_bind_appendSafe(accumulator#0)("Five: ");
+            |            do_bind_appendSafe(accumulator#0)("!\nFive: ");
             |            do_bind_append(accumulator#0)(5);
             |          };
             |## We inject a `.accumulated` fetch for the block result
@@ -3361,5 +3358,117 @@ class DefineStageTest {
             |  }
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
+    @Test
+    fun accumulatorTypeUseNoStmt() = assertModuleAtStage(
+        stage = Stage.Define,
+        input = $$"""
+            |let { theCount } = import("./the-count");
+            |
+            |theCount$${"\"\"\""}
+            |  "Zero: ${0}
+            |  "One: ${1}
+            |  "Two: ${2}
+            |  "Three: ${3}
+            |  "F\our: ${4}
+            |  "Five: ${5}
+            |  ;
+            |
+            |theCount"${6}, ${7}"
+            |
+            |$$TEST_INPUT_MODULE_BREAK ./the-count/the-count.temper
+            |class TheCount {
+            |  public append(i: Int): Void {
+            |    console.log("${i}! Ha Ha Ha!");
+            |  }
+            |  public appendSafe(s: String): Void {}
+            |
+            |  public get accumulated(): Void {
+            |    console.log("I am the Count who loves to count!");
+            |  }
+            |}
+            |
+            |export let theCount = TheCount;
+        """.trimMargin(),
+        want = """
+            |{
+            |  define: {
+            |    body: ```
+            |        @stay @imported(\(`test//the-count/`.theCount)) let theCount__0;
+            |        theCount__0 = type (TheCount__0);
+            |        do {
+            |          let accumulator#0;
+            |## The tag is used to create an accumulator
+            |          accumulator#0 = new TheCount__0();
+            |## We inlined the body here.
+            |          do {
+            |            do_bind_appendSafe(accumulator#0)("Zero: ");
+            |## Unsafe interpolations become regular appends.
+            |            do_bind_append(accumulator#0)(0);
+            |            do_bind_appendSafe(accumulator#0)("\nOne: ");
+            |            do_bind_append(accumulator#0)(1);
+            |            do_bind_appendSafe(accumulator#0)("\nTwo: ");
+            |            do_bind_append(accumulator#0)(2);
+            |            do_bind_appendSafe(accumulator#0)("\nThree: ");
+            |            do_bind_append(accumulator#0)(3);
+            |            do_bind_appendSafe(accumulator#0)("\nF\\our: ");
+            |            do_bind_append(accumulator#0)(4);
+            |            do_bind_appendSafe(accumulator#0)("\nFive: ");
+            |            do_bind_append(accumulator#0)(5)
+            |          };
+            |## We inject a `.accumulated` fetch for the block result
+            |          do_get_accumulated(accumulator#0)
+            |        };
+            |        do {
+            |          let accumulator#1;
+            |          accumulator#1 = new TheCount__0();
+            |          do {
+            |            do_bind_append(accumulator#1)(6);
+            |            do_bind_appendSafe(accumulator#1)(", ");
+            |            do_bind_append(accumulator#1)(7)
+            |          };
+            |          do_get_accumulated(accumulator#1)
+            |        }
+            |
+            |        ```
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
+
+    @Test
+    fun escapeSequenceGrouping() = assertModuleAtStage(
+        stage = Stage.Define,
+        input = $$"""
+            |let { html } = import ("./html");
+            |html"<style>body { background: '\<${"/style/"}' }</style>"
+            |$$TEST_INPUT_MODULE_BREAK ./html/html.temper
+            |export class HtmlBuilder {}
+            |export let html = HtmlBuilder;
+        """.trimMargin(),
+        want = """
+            |{
+            |  define: {
+            |    body: ```
+            |
+            |      @stay @imported(\(`test//html/`.html)) let html__0;
+            |      html__0 = type (HtmlBuilder);
+            |      do {
+            |        let accumulator#0;
+            |        accumulator#0 = new HtmlBuilder();
+            |        do {
+            |          do_bind_appendSafe(accumulator#0)(raw "<style>body { background: '\<");
+            |          do_bind_append(accumulator#0)("/style/");
+            |          do_bind_appendSafe(accumulator#0)("' }</style>")
+            |        };
+            |        do_get_accumulated(accumulator#0)
+            |      }
+            |
+            |      ```
+            |  }
+            |}
+        """.trimMargin(),
     )
 }
