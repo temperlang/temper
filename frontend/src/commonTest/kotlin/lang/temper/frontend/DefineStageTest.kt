@@ -3451,7 +3451,6 @@ class DefineStageTest {
             |{
             |  define: {
             |    body: ```
-            |
             |      @stay @imported(\(`test//html/`.html)) let html__0;
             |      html__0 = type (HtmlBuilder);
             |      do {
