@@ -3437,7 +3437,6 @@ class DefineStageTest {
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
-
     @Test
     fun escapeSequenceGrouping() = assertModuleAtStage(
         stage = Stage.Define,
