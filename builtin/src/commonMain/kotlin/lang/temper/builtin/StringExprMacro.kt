@@ -344,9 +344,32 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                             V(outTypeSymbol)
                             V(Types.vVoid)
                             Block {
+                                val pending = mutableListOf<Tree>()
+                                fun flush() {
+                                    if (pending.isEmpty()) { return }
+                                    val toFlush = pending.toList()
+                                    pending.clear()
+                                    val pos = toFlush.spanningPosition(toFlush.first().pos)
+                                    Call(pos) {
+                                        Call(pos.leftEdge) {
+                                            V(Value(DotHelper(ExternalBind, appendSafeDotName)))
+                                            Rn(accumulator)
+                                        }
+                                        if (toFlush.size == 1) {
+                                            Replant(freeTree(toFlush.first()))
+                                        } else {
+                                            Call(pos, BuiltinFuns.vStrCatFn) {
+                                                for (t in toFlush) {
+                                                    Replant(freeTree(t))
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                                 var lastWasInterpolation = false
                                 for (t in trees) {
                                     if (!lastWasInterpolation && t.symbolContained == interpolateSymbol) {
+                                        flush()
                                         lastWasInterpolation = true
                                     } else if (lastWasInterpolation) {
                                         lastWasInterpolation = false
@@ -358,15 +381,10 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                                             Replant(freeTree(t))
                                         }
                                     } else {
-                                        Call(t.pos) {
-                                            Call(t.pos.leftEdge) {
-                                                V(Value(DotHelper(ExternalBind, appendSafeDotName)))
-                                                Rn(accumulator)
-                                            }
-                                            Replant(freeTree(t))
-                                        }
+                                        pending.add(t)
                                     }
                                 }
+                                flush()
                             }
                         }
                     }
@@ -487,19 +505,54 @@ private fun pointAppendsAtAccumulator(funTree: FunTree, isTagged: Boolean) {
                 }
 
                 if (t is BlockTree && t.flow is LinearFlow) {
-                    for (i in 0 until t.size - 1) {
+                    var wroteBlock = false
+                    var i = 0
+                    val limit = t.size - 1
+                    while (i < limit) {
                         val child = t.child(i)
+                        var nextI = i + 1
+                        val next = t.child(nextI)
                         if (child is ValueLeaf) {
-                            val next = t.child(i + 1)
                             val edit = when (TSymbol.unpackOrNull(child.content)) {
-                                safeStringPartSymbol -> Edit(t, i..i + 1) {
-                                    // acc.appendSafe("...")
-                                    Call(next.pos) {
-                                        Call(next.pos.leftEdge) {
-                                            V(vAppendSafeDotHelper)
-                                            Rn(accumulatorName)
+                                safeStringPartSymbol -> {
+                                    if (!wroteBlock) {
+                                        wroteBlock = true
+                                    }
+                                    val parts = buildList {
+                                        // Combine adjacent \safeStringPartSymbols
+                                        // which often come from embedded escape sequences
+                                        add(next)
+                                        while (nextI + 2 <= limit) {
+                                            val possibleSymbol = t.child(nextI + 1)
+                                            if (isRemCall(possibleSymbol)) {
+                                                nextI += 1
+                                                continue
+                                            }
+                                            if (possibleSymbol !is ValueLeaf ||
+                                                TSymbol.unpackOrNull(possibleSymbol.content) != safeStringPartSymbol
+                                            ) {
+                                                break
+                                            }
+                                            add(t.child(nextI + 2))
+                                            nextI += 2
                                         }
-                                        Replant(next)
+                                    }
+                                    Edit(t, i..nextI) {
+                                        // acc.appendSafe("...")
+                                        val pos = parts.spanningPosition(next.pos)
+                                        Call(pos) {
+                                            Call(pos.leftEdge) {
+                                                V(vAppendSafeDotHelper)
+                                                Rn(accumulatorName)
+                                            }
+                                            if (parts.size == 1) {
+                                                Replant(parts[0])
+                                            } else {
+                                                Call(pos, BuiltinFuns.vStrCatFn) {
+                                                    parts.forEach { Replant(it) }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                                 interpolateSymbol -> Edit(t, i..i + 1) {
@@ -518,6 +571,7 @@ private fun pointAppendsAtAccumulator(funTree: FunTree, isTagged: Boolean) {
                                 add(edit)
                             }
                         }
+                        i = nextI
                     }
                 }
 
