@@ -425,37 +425,60 @@ private class SingleTreePlanting(
     val didPlant get() = plantedOne
 }
 
+private sealed interface TreeInProgress
+private data class CompletedTree(
+    val tree: Tree,
+) : TreeInProgress
+private data class LeftKnown(
+    val left: Position,
+    val template: UnpositionedTreeTemplate<*>,
+) : TreeInProgress
+
 private fun buildTreeList(
     document: Document,
     pos: Position,
     templates: List<UnpositionedTreeTemplate<*>>,
 ): List<Tree> {
-    val out = mutableListOf<Tree?>()
+    val out = mutableListOf<TreeInProgress>()
 
-    fun walk(i: Int, left: Position, right: Position): Position {
-        if (i == templates.size) {
-            return right
-        }
-        return when (val template = templates[i]) {
+    var left = pos.leftEdge
+    var nIncomplete = 0
+    for (i in 0 until templates.size) {
+        when (val template = templates[i]) {
             is TreeTemplate -> {
                 val t = template.toTree(document)
-                out.add(t)
-                walk(i + 1, t.pos.rightEdge, right)
+                out.add(CompletedTree(t))
+                left = t.pos.rightEdge
                 t.pos.leftEdge
             }
+
             else -> {
-                val index = out.size
-                out.add(null) // Placeholder.  Will be replaced with a non-null value.
-                val fromTail = walk(i + 1, left, right)
-                val tPos = listOf(left, fromTail).spanningPosition(left)
-                out[index] = template.toTree(document, tPos)
-                fromTail
+                out.add(LeftKnown(left, template))
+                nIncomplete += 1
             }
         }
     }
-    walk(0, pos.leftEdge, pos.rightEdge)
 
-    return out.map { it!! }
+    if (nIncomplete != 0) {
+        var right = pos.rightEdge
+        for (i in templates.lastIndex downTo 0) {
+            when (val inProgress = out[i]) {
+                is LeftKnown -> {
+                    val pos = listOf(inProgress.left, right).spanningPosition(inProgress.left)
+                    out[i] = CompletedTree(inProgress.template.toTree(document, pos))
+                    right = inProgress.left
+                    if (--nIncomplete == 0) {
+                        break
+                    }
+                }
+                is CompletedTree -> {
+                    right = inProgress.tree.pos.leftEdge
+                }
+            }
+        }
+    }
+
+    return out.map { (it as CompletedTree).tree }
 }
 
 /**
