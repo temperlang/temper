@@ -3714,7 +3714,7 @@ class GenerateCodeStageTest {
     )
 
     @Test
-    fun pureVirtualMethodInConcreteClass() = assertModuleAtStage(
+    fun errorMessageOnMissingOverride() = assertModuleAtStage(
         stage = Stage.Run,
         input = """
             |export interface I<T> { f(x: T): Void; }
@@ -3726,6 +3726,52 @@ class GenerateCodeStageTest {
             |{
             |  run: "void: Void",
             |  errors: ["Type C must implement f from I.  Maybe add `public f(x: String): Void`!"]
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun errorMessageOnBadOverride() = assertModuleAtStage(
+        stage = Stage.Run,
+        input = """
+            |export interface I<T> { f(x: T): Void; }
+            |export class A extends I<String> {
+            |  public f(x: String): Void {}  // OK
+            |}
+            |export class B extends I<String> {
+            |  public f(x: Int32): Void {}  // Wrong type
+            |}
+            |export class C extends I<String> {
+            |  public f(x: String?): Void {}  // Nullable.  Mismatch on optioning backends
+            |}
+            |export class D extends I<String> {
+            |  public f(x: String): String { x }  // Return type mismatch
+            |}
+            |export class E extends I<String> {
+            |  public f(): Void {}  // Too few params
+            |}
+            |export class F extends I<String> {
+            |  public f(x: String, y: String): Void {}  // Too many params
+            |}
+            |export interface G extends I<String> {
+            |  f(x: Int32): Void;  // Same as D but not a concrete type.
+            |}
+            |export class H extends I<String> {
+            |  private f(x: String): Void {} // Reduced visibility
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  run: "void: Void",
+            |  errors: [
+            |    "Type B has method f with signature f(x: Int32): Void, but it should be f(x: String): Void to correctly override from I!",
+            |    "Type C has method f with signature f(x: String?): Void, but it should be f(x: String): Void to correctly override from I!",
+            |    "Type D has method f with signature f(x: String): String, but it should be f(x: String): Void to correctly override from I!",
+            |    "Type E has method f with signature f(): Void, but it should be f(x: String): Void to correctly override from I!",
+            |    "Type F has method f with signature f(x: String, y: String): Void, but it should be f(x: String): Void to correctly override from I!",
+            |    "Type G has method f with signature f(x: Int32): Void, but it should be f(x: String): Void to correctly override from I!",
+            |    "Type H has method f but it's visibility is private which is narrower than the method it overrides in I!"
+            |  ]
             |}
         """.trimMargin(),
     )
