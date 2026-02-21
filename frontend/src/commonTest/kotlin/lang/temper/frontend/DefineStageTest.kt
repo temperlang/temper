@@ -1750,9 +1750,10 @@ class DefineStageTest {
             |      @typeDecl(What__0<Thing__0>) @stay let What__0 = type (What__0);
             |      class(\word, \What, \concrete, true, @typeDefined(What__0<Thing__0>) fn {
             |          @typeFormal(\Thing) @memberTypeFormal(\Thing) @typeDefined(Thing__0) let Thing__0 = type (Thing__0);
-            |          let typeof_things#0 = List<Thing__0>, typeof_ints#0 = List<Int>;
             |          What__0<Thing__0> extends AnyValue;
+            |          let typeof_ints#0 = List<Int>;
             |          @constructorProperty @property(\ints) @maybeVar @visibility(\public) let ints__0: typeof_ints#0;
+            |          let typeof_things#0 = List<Thing__0>;
             |          @constructorProperty @property(\things) @maybeVar @visibility(\public) let things__0: typeof_things#0;
             |          @method(\work) @visibility(\public) @fn let work__0 = fn work(@impliedThis(What__0<Thing__0>) this__0: What__0<Thing__0>, that__0 /* aka that */: Thing__0) /* return__0 */: (Void) {
             |            fn__0: do {
@@ -1781,12 +1782,12 @@ class DefineStageTest {
             |      ```
             |      @typeFormal(\Thing) @memberTypeFormal(\Thing) @typeDefined(Thing__0) @fromType(What__0<Thing__0>) let Thing__0;
             |      Thing__0 = type (Thing__0);
-            |      let typeof_things#0;
-            |      typeof_things#0 = type (List<Thing__0>);
+            |      What__0<Thing__0> extends AnyValue;
             |      let typeof_ints#0;
             |      typeof_ints#0 = type (List<Int32>);
-            |      What__0<Thing__0> extends AnyValue;
             |      @constructorProperty @property(\ints) @visibility(\public) @stay @fromType(What__0<Thing__0>) let ints__0: List<Int32>;
+            |      let typeof_things#0;
+            |      typeof_things#0 = type (List<Thing__0>);
             |      @constructorProperty @property(\things) @visibility(\public) @stay @fromType(What__0<Thing__0>) let things__0: List<Thing__0>;
             |      @method(\work) @visibility(\public) @fn @stay @fromType(What__0<Thing__0>) let work__0;
             |      work__0 = fn work(@impliedThis(What__0<Thing__0>) this__0: What__0<Thing__0>, that__0 /* aka that */: Thing__0) /* return__0 */: Void {
