@@ -1397,7 +1397,7 @@ export let Int = Int32;
  * Because it is so frequently used, the alias *Int* is encouraged in source
  * code.
  *
- * ⎀ syntax/int/examples
+ * ⎀ syntax/int32/examples
  */
 @mayDowncastTo(false) // Confusable with scalars on many dynlang backends
 export class Int32 extends MapKey {
@@ -1424,6 +1424,11 @@ export class Int32 extends MapKey {
   }
 }
 
+/**
+ * *Int64* is a double wide integer type.
+ *
+ * ⎀ syntax/int64/examples
+ */
 @mayDowncastTo(false) // Confusable with scalars on some dynlang backends.
 export class Int64 { // TODO extends MapKey?
   private let content: builtins.Int64;

@@ -144,35 +144,35 @@ For [*true*](builtins.md#builtin-true), the string `"true"`.
 Because it is so frequently used, the alias *Int* is encouraged in source
 code.
 
-<!-- snippet: syntax/int/examples -->
+<!-- snippet: syntax/int32/examples -->
 
-<a name="syntax&#45;int&#45;examples" class="snippet-anchor-name"></a>
+<a name="syntax&#45;int32&#45;examples" class="snippet-anchor-name"></a>
 
-### Int Syntax Examples
+### Int32 Syntax Examples
 Integers can be runs of decimal digits.
 
-<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/0 -->
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/0 -->
 
 ```temper
 123
 // ✅ 123
 ```
 
-<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/0 -->
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/0 -->
 
 Zero is a valid number, but C-style octal literals (with zero padding) would be a source
 of confusion.
 
-<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/1 -->
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/1 -->
 
 ```temper
 0
 // ✅ 0
 ```
 
-<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/1 -->
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/1 -->
 
-<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/2 -->
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/2 -->
 
 ```temper
 let hundred = 100;
@@ -181,12 +181,12 @@ let one     = 001; // <!-- Still no
 // ❌ Interpreter encountered error()!
 ```
 
-<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/2 -->
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/2 -->
 
 You can't use commas in a number literal to make large numbers readable,
 but you can use an underscore to separate digit groups.
 
-<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/3 -->
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/3 -->
 
 ```temper
 [123,456,789] == [123 , 456 , 789] &&  // Commas separate elements
@@ -194,23 +194,23 @@ but you can use an underscore to separate digit groups.
 // ✅
 ```
 
-<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/3 -->
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/3 -->
 
 Exponential notation is fine for floating point values, but not for integers.
 
-<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/4 -->
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/4 -->
 
 ```temper
 1e2 == 100.0
 // ✅
 ```
 
-<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/4 -->
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/4 -->
 
 And feel free to use a base like hexadecimal or binary when that fits what you're
-modelling.
+modeling.
 
-<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/5 -->
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/5 -->
 
 ```temper
 0x10 == 16 && // Hex
@@ -219,9 +219,9 @@ modelling.
 // ✅
 ```
 
-<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/5 -->
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/5 -->
 
-<!-- /snippet: syntax/int/examples -->
+<!-- /snippet: syntax/int32/examples -->
 
 <!-- /snippet: type/Int32/commentary -->
 
@@ -414,6 +414,27 @@ Supports radix 2 through 36. Doesn't prefix `+` for positive.
 <!-- snippet: type/Int64/commentary -->
 
 <a name="type&#45;Int64&#45;commentary" class="snippet-anchor-name"></a>
+
+*Int64* is a double wide integer type.
+
+<!-- snippet: syntax/int64/examples -->
+
+<a name="syntax&#45;int64&#45;examples" class="snippet-anchor-name"></a>
+
+`I64` after a decimal or hex literal makes it an [*Int64*](#type-Int64).
+Since *I* can look like the numeral `1` good style is to use an underscore to separate.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int64/examples/snippet.md/0 -->
+
+```temper
+let my64: Int64 = 1_I64;
+1_I64 * 0x2_I64 == 2_I64
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int64/examples/snippet.md/0 -->
+
+<!-- /snippet: syntax/int64/examples -->
 
 <!-- /snippet: type/Int64/commentary -->
 
