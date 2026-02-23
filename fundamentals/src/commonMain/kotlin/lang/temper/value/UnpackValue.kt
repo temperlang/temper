@@ -14,8 +14,8 @@ import lang.temper.name.decodeName
 fun unpackValue(tokenText: String, tokenType: TokenType): Result {
     return when (tokenType) {
         /**
-         * <!-- snippet: syntax/int/examples -->
-         * # Int Syntax Examples
+         * <!-- snippet: syntax/int32/examples -->
+         * # Int32 Syntax Examples
          * Integers can be runs of decimal digits.
          *
          * ```temper 123
@@ -50,12 +50,21 @@ fun unpackValue(tokenText: String, tokenType: TokenType): Result {
          * ```
          *
          * And feel free to use a base like hexadecimal or binary when that fits what you're
-         * modelling.
+         * modeling.
          *
          * ```temper
          * 0x10 == 16 && // Hex
          * 0b10 ==  2 && // Binary
          * 0o10 ==  8
+         * ```
+         *
+         * <!-- snippet: syntax/int64/examples -->
+         *
+         * `i64` after a decimal or hex literal makes it an [snippet/type/Int64].
+         *
+         * ```temper
+         * let my64: Int64 = 1i64;
+         * 1i64 * 0x2i64 == 2i64
          * ```
          *
          * <!-- snippet: syntax/float64/examples -->
