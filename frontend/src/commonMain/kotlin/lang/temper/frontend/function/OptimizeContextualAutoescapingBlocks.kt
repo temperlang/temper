@@ -226,11 +226,11 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext) {
     if (autoescUses.isEmpty()) { return }
     check(contextualAutoescapingAccumulatorTypeShape != null)
 
-    val escaperInfoCache = EscaperInfoCache()
+    val escaperUnraveler = EscaperUnraveler()
     for ((b, uses) in autoescUses) {
         structureBlock(b)
         for (use in uses) {
-            optimizeAutoescaperUse(use, iCtx, escaperInfoCache)
+            optimizeAutoescaperUse(use, iCtx, escaperUnraveler)
         }
     }
 }
@@ -268,7 +268,7 @@ private data class AutoescUseInfo(
 private fun optimizeAutoescaperUse(
     use: AutoescUseInfo,
     iCtx: InterpretationContext,
-    escaperInfoCache: EscaperInfoCache,
+    escaperUnraveler: EscaperUnraveler,
 ) {
     val block = use.declaringBlock
     val accumulatorName = use.name
@@ -496,7 +496,7 @@ private fun optimizeAutoescaperUse(
                                             V(state)
                                         }
                                     } as? Value<*> ?: return null
-                                    escaperInfoCache.escapers(escaperValue) ?: return null
+                                    escaperUnraveler.escapers(escaperValue) ?: return null
                                 }
                                 AppendClassification.AppendSafe -> null
                             }
@@ -728,22 +728,18 @@ private val applyDotHelper = DotHelper(ExternalBind, Symbol("apply"))
 
 /**
  * Some escapers are compositions of others.
- * Expand those out, but cache it since a compilation unit will often reuse the same escapers frequently.
+ * Expand those out.
  */
-private class EscaperInfoCache {
-    private val escapersForValue = mutableMapOf<TypeShape, List<Type2>?>()
-
+private class EscaperUnraveler {
     fun escapers(escaper: Value<*>): List<Type2>? {
         val tClass = escaper.typeTag as? TClass ?: return null
         val typeShape = tClass.typeShape
-        return escapersForValue.getOrPut(typeShape) {
-            val first = escaper.readField(firstSymbol)
-            val second = escaper.readField(secondSymbol)
-            if (first != null && second != null) {
-                escapers(second)?.let { a -> escapers(first)?.let { b -> a + b } }
-            } else {
-                listOf(MkType2(typeShape).get())
-            }
+        val first = escaper.readField(firstSymbol)
+        val second = escaper.readField(secondSymbol)
+        return if (first != null && second != null) {
+            escapers(second)?.let { a -> escapers(first)?.let { b -> a + b } }
+        } else {
+            listOf(MkType2(typeShape).get())
         }
     }
 
