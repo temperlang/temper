@@ -46,6 +46,6 @@ object Log {
         override fun toString() = name
     }
 
-    val levels = listOf(Fine, Info, Summary, Warn, Error, Fatal)
+    val levels = listOf(Fine, Info, Warn, Summary, Error, Fatal)
     val levelFilters = listOf(All) + levels + listOf(None)
 }
