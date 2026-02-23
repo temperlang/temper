@@ -60,12 +60,12 @@ fun unpackValue(tokenText: String, tokenType: TokenType): Result {
          *
          * <!-- snippet: syntax/int64/examples -->
          *
-         * `I64` after a decimal or hex literal makes it an [snippet/type/Int64].
+         * `i64` after a decimal or hex literal makes it an [snippet/type/Int64].
          * Since *I* can look like the numeral `1` good style is to use an underscore to separate.
          *
          * ```temper
-         * let my64: Int64 = 1_I64;
-         * 1_I64 * 0x2_I64 == 2_I64
+         * let my64: Int64 = 1i64;
+         * 1i64 * 0x2i64 == 2i64
          * ```
          *
          * <!-- snippet: syntax/float64/examples -->

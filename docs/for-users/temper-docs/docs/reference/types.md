@@ -421,14 +421,14 @@ Supports radix 2 through 36. Doesn't prefix `+` for positive.
 
 <a name="syntax&#45;int64&#45;examples" class="snippet-anchor-name"></a>
 
-`I64` after a decimal or hex literal makes it an [*Int64*](#type-Int64).
+`i64` after a decimal or hex literal makes it an [*Int64*](#type-Int64).
 Since *I* can look like the numeral `1` good style is to use an underscore to separate.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int64/examples/snippet.md/0 -->
 
 ```temper
-let my64: Int64 = 1_I64;
-1_I64 * 0x2_I64 == 2_I64
+let my64: Int64 = 1i64;
+1i64 * 0x2i64 == 2i64
 // ✅
 ```
 
