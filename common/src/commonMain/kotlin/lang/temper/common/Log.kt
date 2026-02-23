@@ -29,8 +29,14 @@ object Log {
     object Fine : Level(1, "fine")
     object Info : Level(2, "info")
     object Warn : Level(3, "warn")
-    object Error : Level(4, "error")
-    object Fatal : Level(5, "fatal")
+    /**
+     * A very-low frequency log level for informative messages
+     * that summarize other lower level messages.
+     * For example, "99 out of 100 tests passed"
+     */
+    object Summary : Level(4, "summary")
+    object Error : Level(5, "error")
+    object Fatal : Level(6, "fatal")
 
     /** May be applied to a logger to show no messages. */
     object None : LevelFilter {
@@ -39,6 +45,6 @@ object Log {
         override fun toString() = name
     }
 
-    val levels = listOf(Fine, Info, Warn, Error, Fatal)
+    val levels = listOf(Fine, Info, Summary, Warn, Error, Fatal)
     val levelFilters = listOf(All) + levels + listOf(None)
 }

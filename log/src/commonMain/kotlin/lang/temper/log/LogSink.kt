@@ -102,7 +102,7 @@ data class LogEntry(
         return when (level) {
             Log.Fatal -> "$formatted!!"
             Log.Error -> "$formatted!"
-            Log.Warn, Log.Fine, Log.Info -> formatted
+            Log.Warn, Log.Summary, Log.Info, Log.Fine -> formatted
         }
     }
 }
