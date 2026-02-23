@@ -52,14 +52,17 @@ on type parameters on types elsewhere, so include that here.
 
     class D<T extends I>(public thing: T) {}
 
-Use the intermediate interface here to prove we can.
+Use both the top and intermediate interfaces here to prove we can. And store
+them in intermediate variables to ensure the types are being handled correctly.
 
-    // let d = new D<J>(a);
-    let d = new D<C>(a);
-    console.log("Generically, x is ${d.thing.x}.");
+    let di = new D<I>(a);
+    let dj = new D<J>(a);
+    console.log("Generically, x is ${di.thing.x}.");
+    console.log("Genericallier, x is still ${dj.thing.x}.");
 
 ```log
 Generically, x is foo.
+Genericallier, x is still foo.
 ```
 
 ## Detour on generic sealed interfaces

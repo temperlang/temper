@@ -1238,11 +1238,14 @@ class RustBackendTest {
             temper = """
                 |interface A {
                 |    public greeting(): String { "Hi!" }
+                |    public whatever(): String;
                 |}
                 |interface B<T extends A> extends A {
                 |    // No greeting here.
+                |    public whatever(): String { "blah" }
                 |}
-                |class C<T extends A> {
+                |class C<T extends A> extends B<T> {
+                |    public greeting(): String { "Ha!" }
                 |    public spawn(): C<B<A>> { new C<B<A>>() }
                 |}
             """.trimMargin(),
@@ -1258,6 +1261,7 @@ class RustBackendTest {
                 |    fn greeting(& self) -> std::sync::Arc<String> {
                 |        return std::sync::Arc::new("Hi!".to_string());
                 |    }
+                |    fn whatever(& self) -> std::sync::Arc<String>;
                 |}
                 |#[derive(Clone)]
                 |struct A(std::sync::Arc<dyn ATrait>);
@@ -1275,12 +1279,23 @@ class RustBackendTest {
                 |}
                 |trait BTrait<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + ATrait {
                 |    fn clone_boxed(& self) -> B<T>;
+                |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        return std::sync::Arc::new("blah".to_string());
+                |    }
                 |}
                 |#[derive(Clone)]
                 |struct B<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn BTrait<T>>);
                 |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> B<T> {
                 |    pub fn new(selfish: impl BTrait<T> + 'static) -> B<T> {
                 |        B(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for B<T> {
+                |    fn clone_boxed(& self) -> A {
+                |        A::new(self.clone())
+                |    }
+                |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        self.whatever()
                 |    }
                 |}
                 |temper_core::impl_any_value_trait_for_interface!(B<T> where T: ATrait);
@@ -1296,6 +1311,9 @@ class RustBackendTest {
                 |#[derive(Clone)]
                 |pub (crate) struct C<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<CStruct<T>>);
                 |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> C<T> {
+                |    pub fn greeting(& self) -> std::sync::Arc<String> {
+                |        return std::sync::Arc::new("Ha!".to_string());
+                |    }
                 |    pub fn spawn(& self) -> C<B<A>> {
                 |        return C::new();
                 |    }
@@ -1306,7 +1324,20 @@ class RustBackendTest {
                 |        return selfish;
                 |    }
                 |}
-                |temper_core::impl_any_value_trait!(C<T>, [] where T: ATrait);
+                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> BTrait<T> for C<T> {
+                |    fn clone_boxed(& self) -> B<T> {
+                |        B::new(self.clone())
+                |    }
+                |}
+                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for C<T> {
+                |    fn clone_boxed(& self) -> A {
+                |        A::new(self.clone())
+                |    }
+                |    fn greeting(& self) -> std::sync::Arc<String> {
+                |        self.greeting()
+                |    }
+                |}
+                |temper_core::impl_any_value_trait!(C<T>, [B<T>, A] where T: ATrait);
             """.trimMargin(),
         )
     }
@@ -2058,6 +2089,7 @@ class RustBackendTest {
             temper = $$"""
                 |let a: A = new B();
                 |let a2 = a;
+                |// TODO Without contextual inference of `new B() as A`, these should be illegal variance.
                 |let things: List<A> = [new B()];
                 |let more = [new B()] as List<A>;
                 |console.log(a2.adjust("hi"));
@@ -2066,9 +2098,15 @@ class RustBackendTest {
                 |}
                 |export class B extends A {
                 |  public adjust(text: String): String { "${text} there" }
+                |  public greet(text: String): String {
+                |    needy(this, text)
+                |  }
+                |}
+                |export let needy(a: A, text: String): String {
+                |  a.adjust(text)
                 |}
             """.trimMargin(),
-            // TODO Fix broken things below.
+            // TODO Fix broken things below. Is that just the list things that might just be variance matters?
             rust = """
                 |pub (crate) fn init() -> temper_core::Result<()> {
                 |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
@@ -2108,6 +2146,10 @@ class RustBackendTest {
                 |        let text__1 = text__1.to_arc_string();
                 |        return std::sync::Arc::new(format!("{} there", text__1));
                 |    }
+                |    pub fn greet(& self, text__2: impl temper_core::ToArcString) -> std::sync::Arc<String> {
+                |        let text__2 = text__2.to_arc_string();
+                |        return needy(A::new(self.clone()), text__2.clone());
+                |    }
                 |    pub fn new() -> B {
                 |        let selfish = B(std::sync::Arc::new(BStruct {}));
                 |        return selfish;
@@ -2122,6 +2164,10 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait!(B, [A]);
+                |pub fn needy(a__1: A, text__3: impl temper_core::ToArcString) -> std::sync::Arc<String> {
+                |    let text__3 = text__3.to_arc_string();
+                |    return a__1.adjust(text__3.clone());
+                |}
             """.trimMargin(),
         )
     }

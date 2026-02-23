@@ -644,20 +644,6 @@ class RustTranslator(
                 ),
             ),
         ).toItem(attrs = listOf(buildDerive(pos, listOf("Clone"))), pub = pub).also { moduleItems.add(it) }
-        // Gather up instance methods by name so we can coordinate with supertypes as needed.
-        val instanceMethods = decl.members.filterIsInstance<TmpL.InstanceMethod>().filter { member ->
-            member is TmpL.NormalMethod || member is TmpL.GetterOrSetter
-        }.associateBy { member ->
-            when (member) {
-                is TmpL.NormalMethod -> member.name.name
-                // We sometimes get names like "getwhatever" rather than "get.whatever", so be explicit.
-                is TmpL.GetterOrSetter -> when (member) {
-                    is TmpL.Getter -> "get"
-                    is TmpL.Setter -> "set"
-                }.let { BuiltinName("$it.${member.dotName}") } // changed to "nym`...`" below
-                else -> error("unexpected")
-            }.displayName
-        }
         // We also need the impl itself for public class members working on the wrapper.
         val typeRef = id.makeTypeRef(generics)
         // And we need to know if we're implementing a shallowly mut type when getting internal property values.
@@ -676,10 +662,28 @@ class RustTranslator(
             // Because type defs are always top level, we don't need a stack of indicators.
             insideMutableType = false
         }
-        // Also all trait impls, remembering for AnyValue macro use.
+        // Implement traits, including AnyValue.
+        val supTypes = implTraits(pos, decl, typeRef, generics)
+        Rust.Call(
+            pos,
+            callee = "temper_core".toKeyId(pos).extendWith("impl_any_value_trait!"),
+            args = listOf(typeRef.deepCopy(), Rust.Array(pos, supTypes.deepCopy())),
+            where = whereForAnyValueImpl(pos, generics),
+        ).also { moduleItems.add(Rust.ExprStatement(pos, it).toItem()) }
+    }
+
+    /** Returns translated supertype refs. */
+    private fun implTraits(
+        pos: Position,
+        decl: TmpL.TypeDeclaration,
+        typeRef: Rust.Type,
+        generics: List<Rust.GenericParam>,
+    ): MutableList<Rust.Type> {
         val supTypes = mutableListOf<Rust.Type>()
         val selfParams = listOf(Rust.RefType(pos, type = "self".toKeyId(pos)))
         val handledSups = mutableSetOf<ModularName>()
+        // Gather up instance methods by name so we can coordinate with supertypes as needed.
+        val instanceMethods = associateInstanceMethods(decl)
         sups@ for ((subShape, sup) in decl.typeShape.allInterfaces()) {
             // Only handle type shapes, and only unique ones.
             val supShape = (sup.definition as? TypeShape) ?: continue@sups
@@ -718,6 +722,7 @@ class RustTranslator(
                                         when {
                                             subShape.isInterface() ->
                                                 clone.box(wanted = subShape, translator = this@RustTranslator)
+
                                             else -> clone
                                         }
                                     }.let { listOf(it) },
@@ -761,13 +766,7 @@ class RustTranslator(
             )
             moduleItems.add(supImpl.toItem())
         }
-        // Implement AnyValue.
-        Rust.Call(
-            pos,
-            callee = "temper_core".toKeyId(pos).extendWith("impl_any_value_trait!"),
-            args = listOf(typeRef.deepCopy(), Rust.Array(pos, supTypes.deepCopy())),
-            where = whereForAnyValueImpl(pos, generics),
-        ).also { moduleItems.add(Rust.ExprStatement(pos, it).toItem()) }
+        return supTypes
     }
 
     private fun processTypeDeclarationInterface(decl: TmpL.TypeDeclaration) {
@@ -891,8 +890,9 @@ class RustTranslator(
                 }
             },
         ).toItem().also { moduleItems.add(it) }
-        // Implement AnyValue.
+        // Implement traits including AnyValue.
         val typeRef = id.makeTypeRef(generics)
+        implTraits(pos, decl, typeRef, generics)
         Rust.Call(
             pos,
             callee = "temper_core".toKeyId(pos).extendWith("impl_any_value_trait_for_interface!"),
@@ -3279,6 +3279,22 @@ class RustTranslator(
                 }
             }
         }
+    }
+}
+
+private fun associateInstanceMethods(decl: TmpL.TypeDeclaration): Map<String, TmpL.InstanceMethod> = run {
+    decl.members.filterIsInstance<TmpL.InstanceMethod>().filter { member ->
+        member is TmpL.NormalMethod || member is TmpL.GetterOrSetter
+    }.associateBy { member ->
+        when (member) {
+            is TmpL.NormalMethod -> member.name.name
+            // We sometimes get names like "getwhatever" rather than "get.whatever", so be explicit.
+            is TmpL.GetterOrSetter -> when (member) {
+                is TmpL.Getter -> "get"
+                is TmpL.Setter -> "set"
+            }.let { BuiltinName("$it.${member.dotName}") } // changed to "nym`...`" below
+            else -> error("unexpected")
+        }.displayName
     }
 }
 
