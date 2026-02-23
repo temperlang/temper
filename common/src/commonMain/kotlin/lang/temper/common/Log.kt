@@ -29,6 +29,7 @@ object Log {
     object Fine : Level(1, "fine")
     object Info : Level(2, "info")
     object Warn : Level(3, "warn")
+
     /**
      * A very-low frequency log level for informative messages
      * that summarize other lower level messages.
