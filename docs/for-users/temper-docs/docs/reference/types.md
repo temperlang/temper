@@ -415,14 +415,15 @@ Supports radix 2 through 36. Doesn't prefix `+` for positive.
 
 <a name="type&#45;Int64&#45;commentary" class="snippet-anchor-name"></a>
 
-*Int64* is a double wide integer type.
+*Int64* is a double wide, signed integer type.
+
+Possible *Int64* values range from -2<sup>63</sup> to (2<sup>63</sup> - 1).
 
 <!-- snippet: syntax/int64/examples -->
 
 <a name="syntax&#45;int64&#45;examples" class="snippet-anchor-name"></a>
 
 `i64` after a decimal or hex literal makes it an [*Int64*](#type-Int64).
-Since *I* can look like the numeral `1` good style is to use an underscore to separate.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int64/examples/snippet.md/0 -->
 

@@ -1425,7 +1425,9 @@ export class Int32 extends MapKey {
 }
 
 /**
- * *Int64* is a double wide integer type.
+ * *Int64* is a double wide, signed integer type.
+ *
+ * Possible *Int64* values range from -2<sup>63</sup> to (2<sup>63</sup> - 1).
  *
  * ⎀ syntax/int64/examples
  */
