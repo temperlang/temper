@@ -299,9 +299,15 @@ internal fun typeSyntaxMacro(macroEnv: MacroEnvironment): PartialResult {
                                     val temporary = nameMaker.unusedTemporaryName(
                                         "typeof_${propertyNameSymbol.text}",
                                     )
-                                    val typeEdgeIndex = typeEdge.edgeIndex
+                                    val typeInsertionPoint = run {
+                                        var e = typeEdge!! // The target is not null
+                                        while (e.source != classBody) {
+                                            e = e.source!!.incoming!!
+                                        }
+                                        e.edgeIndex
+                                    }
                                     val simpleTypeExpr = RightNameLeaf(doc, typeTree.pos, temporary)
-                                    classBody.insert(typeEdgeIndex - 1) {
+                                    classBody.insert(typeInsertionPoint) {
                                         Decl(typeTree.pos) {
                                             Replant(simpleTypeExpr.copyLeft())
                                             V(vInitSymbol)
