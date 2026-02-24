@@ -35,9 +35,13 @@ import lang.temper.name.ResolvedName
 import lang.temper.name.ResolvedNameMaker
 import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
+import lang.temper.type.MethodKind
+import lang.temper.type.MethodShape
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
+import lang.temper.type.Visibility
+import lang.temper.type.VisibleMemberShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.canOnlyBeNull
 import lang.temper.type2.DefinedNonNullType
@@ -746,20 +750,39 @@ class RustTranslator(
                         ),
                     ).also { add(it.toItem()) }
                     // Then call the struct impl for each overridden trait method.
-                    methods@ for (supMethod in supShape.methods) {
-                        val method = instanceMethods[supMethod.name.displayName] ?: continue@methods
-                        // Only one expected there, but meh.
-                        addAll(buildForwarder(method, returnType = supMethod.descriptor.orInvalid.returnType2))
+                    val isInterface = decl.kind == TmpL.TypeDeclarationKind.Interface
+                    for (supMethod in supShape.methods) {
+                        maybeAddTraitForwarder(
+                            pos,
+                            instanceMethods,
+                            isInterface = isInterface,
+                            methodKind = supMethod.methodKind,
+                            methodName = supMethod.name.displayName,
+                            returnType = supMethod.descriptor.orInvalid.returnType2,
+                            superShape = supMethod,
+                        )
                     }
                     // Properties also, because they only sometimes align with methods.
                     for (supProperty in supShape.properties) {
                         if (supProperty.getter == null) {
-                            val getterName = BuiltinName("get.${supProperty.symbol.text}").displayName
-                            instanceMethods[getterName]?.let { addAll(buildForwarder(it)) }
+                            maybeAddTraitForwarder(
+                                pos,
+                                instanceMethods,
+                                isInterface = isInterface,
+                                methodKind = MethodKind.Getter,
+                                methodName = BuiltinName("get.${supProperty.symbol.text}").displayName,
+                                superShape = supProperty,
+                            )
                         }
                         if (supProperty.setter == null && supProperty.hasSetter) {
-                            val setterName = BuiltinName("set.${supProperty.symbol.text}").displayName
-                            instanceMethods[setterName]?.let { addAll(buildForwarder(it)) }
+                            maybeAddTraitForwarder(
+                                pos,
+                                instanceMethods,
+                                isInterface = isInterface,
+                                methodKind = MethodKind.Setter,
+                                methodName = BuiltinName("set.${supProperty.symbol.text}").displayName,
+                                superShape = supProperty,
+                            )
                         }
                     }
                 },
@@ -767,6 +790,22 @@ class RustTranslator(
             moduleItems.add(supImpl.toItem())
         }
         return supTypes
+    }
+
+    private fun MutableList<Rust.Item>.maybeAddTraitForwarder(
+        pos: Position,
+        instanceMethods: Map<String, TmpL.InstanceMethod>,
+        isInterface: Boolean,
+        methodKind: MethodKind,
+        methodName: String,
+        superShape: VisibleMemberShape,
+        returnType: Type2? = null,
+    ) {
+        when (val method = instanceMethods[methodName]) {
+            null if (isInterface) -> buildForwarderForTrait(pos, superShape, methodKind)
+            null -> listOf()
+            else -> buildForwarder(method, returnType = returnType)
+        }.also { addAll(it) } // only one expected here, but meh
     }
 
     private fun processTypeDeclarationInterface(decl: TmpL.TypeDeclaration) {
@@ -1009,6 +1048,52 @@ class RustTranslator(
             },
         )
         return translateMethodLike(method, block = block, forTrait = true, returnType = effectiveReturnType)
+    }
+
+    /**
+     * Build a forwarder from a trait wrapper to a trait method that *isn't*
+     * overridden in the current trait. We need this to handle methods for
+     * which we have only frontend descriptions, not tmpl.
+     */
+    private fun buildForwarderForTrait(
+        pos: Position,
+        shape: VisibleMemberShape,
+        methodKind: MethodKind,
+    ): List<Rust.Item> = run {
+        val pub = when {
+            shape.visibility >= Visibility.Public -> Rust.VisibilityPub(pos)
+            else -> null
+        }
+        when (methodKind) {
+            MethodKind.Normal -> {
+                val method = shape as MethodShape
+                Rust.Function(
+                    pos,
+                    id = translateIdFromName(pos, method.name as ResolvedName, NameStyle.Snake),
+                    params = listOf(),
+                    block = Rust.Block(pos), // TODO
+                )
+            }
+            MethodKind.Getter -> {
+                val type = (shape.descriptor as? Type2)?.let { translateType(it, pos = pos) }
+                Rust.Function(
+                    pos,
+                    id = shape.symbol.text.camelToSnake().toId(pos),
+                    params = listOf(),
+                    returnType = type,
+                    block = Rust.Block(pos), // TODO
+                )
+            }
+            MethodKind.Setter -> {
+                Rust.Function(
+                    pos,
+                    id = "set_${shape.symbol.text.camelToSnake()}".toId(pos),
+                    params = listOf(),
+                    block = Rust.Block(pos), // TODO
+                )
+            }
+            else -> return listOf()
+        }.let { listOf(it.toItem(pub = pub)) }
     }
 
     private fun buildGenerics(typeParameters: TmpL.ATypeParameters) =

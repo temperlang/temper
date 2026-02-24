@@ -71,8 +71,7 @@ macro_rules! impl_any_value_trait { // for concrete types
 macro_rules! impl_any_value_trait_for_interface { // for abstract types
     ($type:ident $(<$($param:tt),*>)? $(where $($bounds:tt)*)?) => {
         impl$(<$($param: Clone + Send + Sync + 'static),*>)? temper_core::AnyValueTrait for $type $(<$($param),*>)?
-        where
-            $($($bounds)*)?
+        $(where $($bounds)*)?
         {
             fn cast(&self, type_id: std::any::TypeId) -> Option<Box<dyn std::any::Any>> {
                 temper_core::AnyValueTrait::cast(&*self.0, type_id)
