@@ -37,6 +37,7 @@ import lang.temper.common.currents.ExecutorService
 import lang.temper.common.currents.UnmanagedFuture
 import lang.temper.common.isatty
 import lang.temper.common.temperEscaper
+import lang.temper.format.withLogAsJson
 import lang.temper.frontend.staging.ModuleConfig
 import lang.temper.fs.TEMPER_OUT_NAME
 import lang.temper.fs.getDirectories
@@ -256,6 +257,25 @@ abstract class Main {
             description = "Enable verbose logging",
         ).default(false)
 
+        fun logFormatOpt(argParser: ArgParser) = argParser.option(
+            type = ArgType.Choice<LogFormat>(
+                toVariant = { flagStr ->
+                    LogFormat.entries.first { it.flagStr == flagStr }
+                },
+                toString = { it.flagStr },
+            ),
+            fullName = "logformat",
+            description = """
+                    |Specifies how log messages are delivered.
+                    |
+                    |$HELP_INDENT text: Human-readable text which includes extra detail
+                    |$HELP_INDENT       like ASCII-art source snippets for context.
+                    |$HELP_INDENT json: One JSON record per line à la jsonlines.org.
+                    |
+                    |$HELP_INDENT
+            """.trimMargin(), //  ^--flag type description inserted here
+        ).default(LogFormat.Text)
+
         fun ignoreFileOpt(argParser: ArgParser) = argParser.option(
             type = PathArgType(fs, wantAbsolute = true),
             fullName = "ignorefile",
@@ -320,17 +340,21 @@ abstract class Main {
                     """.trimMargin(),
                 ) {
                     val wr = workRootOpt(this)
+                    val ignoreFile = ignoreFileOpt(this)
                     val backends = backendsOptDefaulting(this)
                     val verbose = verboseOpt(this)
-                    val ignoreFile = ignoreFileOpt(this)
+                    val logFormat = logFormatOpt(this)
+
                     override fun execute() {
-                        val ok = wrapBuild("Build", verbose = verbose.value) { cliConsole, executorService ->
+                        val verbose = verbose.value
+                        val logFormat = logFormat.value
+                        val ok = wrapBuild("Build", logFormat, verbose = verbose) { cliConsole, executorService ->
                             val result = doBuild(
                                 executorService = executorService,
                                 backends = backends.value,
                                 workRoot = wr.value,
                                 ignoreFile = ignoreFile.value.orNullIfDevNull,
-                                shellPreferences = shellPreferencesFor(verbose.value, cliConsole),
+                                shellPreferences = shellPreferencesFor(verbose, cliConsole),
                             )
                             result.ok
                         }
@@ -463,11 +487,12 @@ abstract class Main {
                     }
 
                     fun executeTemperRepl() {
+                        val verbose = verbose.value
                         val dumpStages =
                             stages.mapNotNull { (s, o) -> if (o.value == true) s else null }
                                 .toSet()
-                        wrapBuild("repl", verbose = verbose.value) { console, executorService ->
-                            if (verbose.value) {
+                        wrapBuild("repl", LogFormat.Text, verbose = verbose) { console, executorService ->
+                            if (verbose) {
                                 console.setLogLevel(Log.Fine)
                             }
                             val workRootInfo =
@@ -542,9 +567,10 @@ abstract class Main {
                             console.error("No backend with ID `$backendId`")
                             exitProcess(ok = false)
                         }
+                        val verbose = verbose.value
                         val workRoot = wr.value
 
-                        val ok = wrapBuild("Repl", verbose = verbose.value) { cliConsole, executorService ->
+                        val ok = wrapBuild("Repl", LogFormat.Text, verbose = verbose) { cliConsole, executorService ->
                             val request = ExecInteractiveRepl(config = backendReplConfig)
                             val backends = setOf(backendId)
 
@@ -554,7 +580,7 @@ abstract class Main {
                                 workRoot = workRoot,
                                 ignoreFile = null,
                                 shellPreferences = shellPreferencesFor(
-                                    verbose = verbose.value,
+                                    verbose = verbose,
                                     console = cliConsole,
                                 ),
                                 moduleConfig = ModuleConfig.default,
@@ -583,9 +609,12 @@ abstract class Main {
                         ).required()
                     val backend = backendOpt(this).required()
                     val verbose = verboseOpt(this)
+                    val logFormat = logFormatOpt(this)
                     val workRoot = workRootOpt(this)
                     override fun execute() {
-                        val ok = wrapBuild("Run", verbose = verbose.value) { cliConsole, executorService ->
+                        val verbose = verbose.value
+                        val logFormat = logFormat.value
+                        val ok = wrapBuild("Run", logFormat, verbose = verbose) { cliConsole, executorService ->
                             val libraryName = library.value
                             val request = RunLibraryRequest(libraryName)
 
@@ -597,7 +626,7 @@ abstract class Main {
                                 workRoot = workRoot.value,
                                 ignoreFile = null,
                                 shellPreferences = shellPreferencesFor(
-                                    verbose = verbose.value,
+                                    verbose = verbose,
                                     console = cliConsole,
                                 ),
                                 moduleConfig = ModuleConfig.default,
@@ -623,7 +652,7 @@ abstract class Main {
 
                     @DelicateCoroutinesApi
                     override fun execute() {
-                        val ok = wrapBuild("docgen", false) { cliConsole, _ ->
+                        val ok = wrapBuild("docgen", LogFormat.Text, verbose = false) { cliConsole, _ ->
                             doDocGen(
                                 workRoot = workRoot.value,
                                 outputDirectory = outputDirectory.value,
@@ -673,6 +702,8 @@ abstract class Main {
                         |Runs the tests with the configured backends.
                     """.trimMargin(),
                 ) {
+                    val workRoot = workRootOpt(this)
+                    val ignoreFile = ignoreFileOpt(this)
                     val library =
                         option(
                             fullName = "library",
@@ -681,9 +712,11 @@ abstract class Main {
                         )
                     val backends = backendsOptRequired(this, allowInterpreter = true)
                     val verbose = verboseOpt(this)
-                    val workRoot = workRootOpt(this)
+                    val logFormat = logFormatOpt(this)
                     override fun execute() {
-                        val ok = wrapBuild("Test", verbose = verbose.value) { cliConsole, executorService ->
+                        val verbose = verbose.value
+                        val logFormat = logFormat.value
+                        val ok = wrapBuild("Test", logFormat, verbose = verbose) { cliConsole, executorService ->
                             val backends = backends.value.toSet()
                             val request = RunTestsRequest(
                                 library.value?.let { setOf(it) },
@@ -692,8 +725,8 @@ abstract class Main {
                                 executorService = executorService,
                                 backends = backends.toList(),
                                 workRoot = workRoot.value,
-                                ignoreFile = null,
-                                shellPreferences = shellPreferencesFor(verbose.value, cliConsole),
+                                ignoreFile = ignoreFile.value.orNullIfDevNull,
+                                shellPreferences = shellPreferencesFor(verbose, cliConsole),
                                 runTask = RunTask(request, backends),
                             )
                             result.ok
@@ -715,6 +748,7 @@ abstract class Main {
                     val limit = limitOpt(this)
                     val testBackends = backendsOptWatchTest(this)
                     val verbose = verboseOpt(this)
+                    val logFormat = logFormatOpt(this)
 
                     override fun execute() {
                         startPeriodicGc()
@@ -722,8 +756,10 @@ abstract class Main {
                             // The userSignalledDoneFuture is marked completed
                             // when the user is done.
                             // `doWhen` uses this to shut down gracefully.
+                            val verbose = verbose.value
+                            val logFormat = logFormat.value
 
-                            wrapBuild("Watch", verbose = verbose.value) { cliConsole, executorService ->
+                            wrapBuild("Watch", logFormat, verbose = verbose) { cliConsole, executorService ->
                                 doWatch(
                                     executorService = executorService,
                                     // Test also implies building.
@@ -734,7 +770,7 @@ abstract class Main {
                                     }.toList(),
                                     testBackends = testBackends.value.toList(),
                                     buildLimit = limit.value,
-                                    shellPreferences = shellPreferencesFor(verbose.value, cliConsole),
+                                    shellPreferences = shellPreferencesFor(verbose, cliConsole),
                                     workRoot = wr.value,
                                     ignoreFile = ignoreFile.value.orNullIfDevNull,
                                     userSignalledDone = userSignalledDoneFuture,
@@ -791,6 +827,7 @@ abstract class Main {
 
     private fun wrapBuild(
         label: String,
+        logFormat: LogFormat,
         verbose: Boolean,
         process: (Console, ExecutorService) -> Boolean,
     ): Boolean {
@@ -799,16 +836,33 @@ abstract class Main {
         }
 
         val executorService = makeExecutorServiceForBuild()
-        return try {
-            process(console, executorService).also { ok ->
-                if (!ok) {
+        return withLogAsJson(logAsJson = logFormat == LogFormat.Json) {
+            try {
+                process(console, executorService).also { ok ->
+                    // Do not fail silently.
+                    // Output a final line summarizing the test run if there
+                    // were problems and/or we're producing structured output.
+                    val finalSummary = when (logFormat) {
+                        LogFormat.Text -> if (!ok) {
+                            "$label failed"
+                        } else {
+                            null
+                        }
+                        LogFormat.Json -> """{ "task": "$label", "ok": $ok }"""
+                    }
                     // Go to main console here, so it gets its own line no matter what.
-                    console.error("$label failed")
+                    if (finalSummary != null) {
+                        if (!ok) {
+                            console.error(finalSummary)
+                        } else {
+                            console.log(finalSummary, level = Log.Summary)
+                        }
+                    }
                 }
+            } finally {
+                console.textOutput.flush()
+                executorService.shutdown()
             }
-        } finally {
-            console.textOutput.flush()
-            executorService.shutdown()
         }
     }
 
@@ -1056,4 +1110,15 @@ private fun tryBuild(build: Build?): Boolean {
         build!!.harness.cliConsole.info(outputThunk())
     }
     return result?.ok == true && taskResult?.errorFree != false
+}
+
+enum class LogFormat(val flagStr: String) {
+    /**
+     * Log entries are human-readable text and include extra details like
+     * ASCII-art snippets showing source positions.
+     */
+    Text("text"),
+
+    /** Log entries are one JSON record per line à la jsonlines.org */
+    Json("json"),
 }

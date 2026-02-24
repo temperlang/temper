@@ -9,6 +9,7 @@ import lang.temper.common.structure.StructureSink
 import lang.temper.common.structure.Structured
 import lang.temper.log.FilePath
 import lang.temper.log.filePath
+import org.junit.jupiter.api.Timeout
 import kotlin.test.Test
 
 @SuppressWarnings("MaxLineLength")
@@ -241,6 +242,7 @@ class PyBackendTest {
         """.trimMargin(),
     )
 
+    @Timeout(LONG_TEST_TIMEOUT_SECONDS)
     @Test
     fun importIncludesNeededTypes() = assertGeneratedCode(
         input = """
@@ -767,3 +769,5 @@ class PyBackendTest {
 }
 
 private val dunderInitFiles = listOf("$DUNDER_INIT.py", "$DUNDER_INIT.py.map")
+
+private const val LONG_TEST_TIMEOUT_SECONDS = 60L

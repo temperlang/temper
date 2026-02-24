@@ -602,10 +602,7 @@ fun doOneBuild(build: Build): BuildResult {
         // Merge the two sets of results and print out a summary
         runResult = mergeResultsFromInterpAndBackends(interpResults, runResult)
         if (testingNeeded) {
-            runResult?.testTally?.let { testTally ->
-                cliConsole.log(testTally.summary())
-                cliConsole.textOutput.flush()
-            }
+            runResult?.testTally?.summary()?.logTo(projectLogSink)
         }
     }
     val maxLogLevel = logLevelTracker.maxLogLevel
