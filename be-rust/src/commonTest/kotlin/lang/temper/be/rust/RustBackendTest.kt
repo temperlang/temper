@@ -1237,19 +1237,22 @@ class RustBackendTest {
         assertGenerateWanted(
             temper = """
                 |interface A {
-                |    public var prop: String;
-                |    public get thing(): String;
-                |    public greeting(): String { "Hi!" }
-                |    public whatever(): String;
+                |  public var prop: String;
+                |  public get thing(): String;
+                |  public set thing(that: String): Void;
+                |  public greeting(): String { "Hi!" }
+                |  public whatever(): String;
                 |}
                 |interface B<T extends A> extends A {
-                |    // No greeting here.
-                |    public whatever(): String { "blah" }
+                |  // No greeting here.
+                |  public whatever(): String { "blah" }
                 |}
-                |class C<T extends A>(public var prop: String = "") extends B<T> {
-                |    public get thing(): String { "thing" }
-                |    public greeting(): String { "Ha!" }
-                |    public spawn(): C<B<A>> { new C<B<A>>() }
+                |class C<T extends A>(
+                |  public var prop: String,
+                |  public var thing: String,
+                |) extends B<T> {
+                |  public greeting(): String { "Ha!" }
+                |  public spawn(): C<B<A>> { new C<B<A>>("", "") }
                 |}
             """.trimMargin(),
             rust = """
@@ -1264,6 +1267,7 @@ class RustBackendTest {
                 |    fn prop(& self) -> std::sync::Arc<String>;
                 |    fn set_prop(& self, newprop___0: std::sync::Arc<String>);
                 |    fn thing(& self) -> std::sync::Arc<String>;
+                |    fn set_thing(& self, that__0: std::sync::Arc<String>);
                 |    fn greeting(& self) -> std::sync::Arc<String> {
                 |        return std::sync::Arc::new("Hi!".to_string());
                 |    }
@@ -1300,13 +1304,24 @@ class RustBackendTest {
                 |    fn clone_boxed(& self) -> A {
                 |        A::new(self.clone())
                 |    }
-                |    pub fn thing() {}
-                |    pub fn greeting() {}
+                |    fn thing(& self) -> std::sync::Arc<String> {
+                |        ATrait::thing( & ( * self))
+                |    }
+                |    fn set_thing(& self, value: std::sync::Arc<String>) {
+                |        ATrait::set_thing( & ( * self), value)
+                |    }
+                |    fn greeting(& self) -> std::sync::Arc<String> {
+                |        ATrait::greeting( & ( * self))
+                |    }
                 |    fn whatever(& self) -> std::sync::Arc<String> {
                 |        self.whatever()
                 |    }
-                |    pub fn prop() -> std::sync::Arc<String> {}
-                |    pub fn set_prop() {}
+                |    fn prop(& self) -> std::sync::Arc<String> {
+                |        ATrait::prop( & ( * self))
+                |    }
+                |    fn set_prop(& self, value: std::sync::Arc<String>) {
+                |        ATrait::set_prop( & ( * self), value)
+                |    }
                 |}
                 |temper_core::impl_any_value_trait_for_interface!(B<T> where T: ATrait);
                 |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for B<T> {
@@ -1316,32 +1331,26 @@ class RustBackendTest {
                 |    }
                 |}
                 |struct CStruct<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> {
-                |    prop: std::sync::Arc<String>, phantom_T: std::marker::PhantomData<T>
+                |    prop: std::sync::Arc<String>, thing: std::sync::Arc<String>, phantom_T: std::marker::PhantomData<T>
                 |}
                 |#[derive(Clone)]
                 |pub (crate) struct C<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<std::sync::RwLock<CStruct<T>>>);
                 |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> C<T> {
-                |    pub fn thing(& self) -> std::sync::Arc<String> {
-                |        return std::sync::Arc::new("thing".to_string());
-                |    }
                 |    pub fn greeting(& self) -> std::sync::Arc<String> {
                 |        return std::sync::Arc::new("Ha!".to_string());
                 |    }
                 |    pub fn spawn(& self) -> C<B<A>> {
-                |        return C::new(None::<std::sync::Arc<String>>);
+                |        return C::new("", "");
                 |    }
-                |    pub fn new(prop__0: Option<impl temper_core::ToArcString>) -> C<T> {
-                |        let prop__0 = prop__0.map(| x | x.to_arc_string());
+                |    pub fn new(prop__0: impl temper_core::ToArcString, thing__0: impl temper_core::ToArcString) -> C<T> {
+                |        let prop__0 = prop__0.to_arc_string();
+                |        let thing__0 = thing__0.to_arc_string();
                 |        let prop;
-                |        let prop__1: std::sync::Arc<String>;
-                |        if prop__0.is_none() {
-                |            prop__1 = std::sync::Arc::new("".to_string());
-                |        } else {
-                |            prop__1 = prop__0.clone().unwrap();
-                |        }
-                |        prop = prop__1.clone();
+                |        let thing;
+                |        prop = prop__0.clone();
+                |        thing = thing__0.clone();
                 |        let selfish = C(std::sync::Arc::new(std::sync::RwLock::new(CStruct {
-                |                        prop, phantom_T: std::marker::PhantomData
+                |                        prop, thing, phantom_T: std::marker::PhantomData
                 |        })));
                 |        return selfish;
                 |    }
@@ -1351,6 +1360,13 @@ class RustBackendTest {
                 |    pub fn set_prop(& self, newProp__0: impl temper_core::ToArcString) {
                 |        let newProp__0 = newProp__0.to_arc_string();
                 |        self.0.write().unwrap().prop = newProp__0.clone();
+                |    }
+                |    pub fn thing(& self) -> std::sync::Arc<String> {
+                |        return self.0.read().unwrap().thing.clone();
+                |    }
+                |    pub fn set_thing(& self, newThing__0: impl temper_core::ToArcString) {
+                |        let newThing__0 = newThing__0.to_arc_string();
+                |        self.0.write().unwrap().thing = newThing__0.clone();
                 |    }
                 |}
                 |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> BTrait<T> for C<T> {
@@ -1364,6 +1380,9 @@ class RustBackendTest {
                 |    }
                 |    fn thing(& self) -> std::sync::Arc<String> {
                 |        self.thing()
+                |    }
+                |    fn set_thing(& self, newThing__0: std::sync::Arc<String>) {
+                |        self.set_thing(newThing__0)
                 |    }
                 |    fn greeting(& self) -> std::sync::Arc<String> {
                 |        self.greeting()

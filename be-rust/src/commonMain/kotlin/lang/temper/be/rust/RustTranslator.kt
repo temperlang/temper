@@ -19,6 +19,7 @@ import lang.temper.be.tmpl.referencedNames
 import lang.temper.be.tmpl.splitConstructorBody
 import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.common.compatRemoveLast
+import lang.temper.common.subListToEnd
 import lang.temper.frontend.ModuleNamingContext
 import lang.temper.interp.importExport.STANDARD_LIBRARY_NAME
 import lang.temper.lexer.withTemperAwareExtension
@@ -40,7 +41,6 @@ import lang.temper.type.MethodShape
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
-import lang.temper.type.Visibility
 import lang.temper.type.VisibleMemberShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.canOnlyBeNull
@@ -1060,40 +1060,91 @@ class RustTranslator(
         shape: VisibleMemberShape,
         methodKind: MethodKind,
     ): List<Rust.Item> = run {
-        val pub = when {
-            shape.visibility >= Visibility.Public -> Rust.VisibilityPub(pos)
-            else -> null
-        }
+        val selfParam = Rust.RefType(pos, "self".toKeyId(pos))
+        val selfArg = "self".toKeyId(pos).deref().ref()
+        val enclosingType =
+            (translateTypeDefinition(shape.enclosingType, pos) as? Rust.Path)?.suffixed(TRAIT_NAME_SUFFIX)
         when (methodKind) {
             MethodKind.Normal -> {
                 val method = shape as MethodShape
+                val methodId = translateIdFromName(pos, method.name as ResolvedName, NameStyle.Snake)
+                val sig = method.descriptor ?: return listOf()
+                val argNames = (1..<(sig.requiredInputTypes.size + sig.optionalInputTypes.size) - 1).map { "arg$it" }
                 Rust.Function(
                     pos,
-                    id = translateIdFromName(pos, method.name as ResolvedName, NameStyle.Snake),
-                    params = listOf(),
-                    block = Rust.Block(pos), // TODO
+                    id = methodId,
+                    params = buildList {
+                        add(selfParam)
+                        var index = 0
+                        for (paramType in sig.requiredInputTypes.subListToEnd(1)) {
+                            val paramName = argNames[index++].toId(pos)
+                            val translatedType = translateType(paramType, pos)
+                            add(Rust.FunctionParam(pos, paramName, translatedType))
+                        }
+                        for (paramType in sig.optionalInputTypes) {
+                            val paramName = argNames[index++].toId(pos)
+                            val translatedType = translateType(paramType, pos).option()
+                            add(Rust.FunctionParam(pos, paramName, translatedType))
+                        }
+                    },
+                    returnType = method.descriptor?.let { translateType(it.returnType2, pos = pos) },
+                    block = Rust.Block(
+                        pos,
+                        result = enclosingType?.let { type ->
+                            Rust.Call(
+                                pos,
+                                callee = type.extendWith(methodId.deepCopy()),
+                                args = buildList {
+                                    add(selfArg)
+                                    for (argName in argNames) {
+                                        add(argName.toId(pos))
+                                    }
+                                },
+                            )
+                        },
+                    ),
                 )
             }
             MethodKind.Getter -> {
-                val type = (shape.descriptor as? Type2)?.let { translateType(it, pos = pos) }
+                val methodId = shape.symbol.text.camelToSnake().toId(pos)
+                val returnType = when (val descriptor = shape.descriptor) {
+                    is Signature2 -> descriptor.returnType2
+                    is Type2 -> descriptor
+                    else -> null
+                }?.let { translateType(it, pos = pos) }
+                val call = enclosingType?.let { type ->
+                    Rust.Call(pos, type.extendWith(methodId.deepCopy()), listOf(selfArg))
+                }
                 Rust.Function(
                     pos,
-                    id = shape.symbol.text.camelToSnake().toId(pos),
-                    params = listOf(),
-                    returnType = type,
-                    block = Rust.Block(pos), // TODO
+                    id = methodId,
+                    params = listOf(selfParam),
+                    returnType = returnType,
+                    block = Rust.Block(pos, result = call),
                 )
             }
             MethodKind.Setter -> {
+                val methodId = "set_${shape.symbol.text.camelToSnake()}".toId(pos)
+                val propertyType = when (val descriptor = shape.descriptor) {
+                    is Signature2 -> descriptor.requiredInputTypes.last()
+                    is Type2 -> descriptor
+                    else -> null
+                }?.let { translateType(it, pos = pos) }
+                // We don't have param names here, so invent one.
+                val value = "value".toId(pos)
+                val call = enclosingType?.let { type ->
+                    val args = listOf(selfArg, value.deepCopy())
+                    Rust.Call(pos, type.extendWith(methodId.deepCopy()), args)
+                }
                 Rust.Function(
                     pos,
-                    id = "set_${shape.symbol.text.camelToSnake()}".toId(pos),
-                    params = listOf(),
-                    block = Rust.Block(pos), // TODO
+                    id = methodId,
+                    params = listOf(selfParam, Rust.FunctionParam(pos, value, propertyType)),
+                    block = Rust.Block(pos, result = call),
                 )
             }
             else -> return listOf()
-        }.let { listOf(it.toItem(pub = pub)) }
+        }.let { listOf(it.toItem()) }
     }
 
     private fun buildGenerics(typeParameters: TmpL.ATypeParameters) =

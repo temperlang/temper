@@ -417,6 +417,8 @@ internal fun Rust.Path.extendWith(nexts: List<String>): Rust.Path {
     return extendWith(nexts.map { it.toId(pos) })
 }
 
+internal fun Rust.Path.extendWith(next: Rust.PathSegment) = extendWith(listOf(next))
+
 internal fun Rust.Path.extendWith(next: String) = extendWith(listOf(next.toId(pos)))
 
 internal fun Rust.Path.suffixed(suffix: String): Rust.Path {
