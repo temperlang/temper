@@ -104,7 +104,7 @@ private class Lift(
         LeafTreeType.Value -> when (val result = makeValue(part)) {
             is Value<*> -> ValueLeaf(document, pos = pos, content = result)
             is Fail -> {
-                result.info?.copy(pos = part.pos)?.logTo(logSink)
+                result.info?.copy(pos = pos)?.logTo(logSink)
                 astPartToErrorTree(part)
             }
         }
