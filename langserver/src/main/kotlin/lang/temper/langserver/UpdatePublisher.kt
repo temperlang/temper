@@ -130,7 +130,7 @@ fun LogEntry.toDiagnostic(filePositions: FilePositions): Diagnostic? {
         range = entry.pos.toRange(filePositions = filePositions)
         severity = when (entry.level) {
             Log.Fine -> DiagnosticSeverity.Hint
-            Log.Info -> DiagnosticSeverity.Information
+            Log.Info, Log.Summary -> DiagnosticSeverity.Information
             Log.Warn -> DiagnosticSeverity.Warning
             Log.Error, Log.Fatal -> DiagnosticSeverity.Error
         }

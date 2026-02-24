@@ -10,11 +10,15 @@ import lang.temper.common.StringBuildingFormatSink
 import lang.temper.common.Style
 import lang.temper.common.TextOutput
 import lang.temper.common.sprintfTo
+import lang.temper.common.structure.FormattingStructureSink
+import lang.temper.common.structure.StructureSink
+import lang.temper.common.structure.Structured
 import lang.temper.common.style
 import lang.temper.log.CodeLocation
 import lang.temper.log.CodeLocationKey
 import lang.temper.log.CompilationPhase
 import lang.temper.log.FilePositions
+import lang.temper.log.FileRelatedCodeLocation
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.MessageTemplateI
@@ -25,6 +29,7 @@ import lang.temper.log.SimplifiesInLogMessage
 import lang.temper.log.UnknownCodeLocation
 import lang.temper.log.appendReadableLineAndColumn
 import lang.temper.log.excerpt
+import lang.temper.log.unknownPos
 
 open class ConsoleBackedContextualLogSink(
     private val localConsole: Console?,
@@ -78,38 +83,83 @@ open class ConsoleBackedContextualLogSink(
             messageFilter(template) &&
             doSynchronized { localConsole?.logs(level) == true }
         dispatchToSuper(level, template, pos, values, fyi = fyi || shouldDisplay)
-        if (shouldDisplay) {
-            check(localConsole != null) // Because the call to ?.logs return a non-null value
+        if (!shouldDisplay) { return }
 
-            val sharedLocationContext = this.sharedLocationContext
+        check(localConsole != null) // Safe because the call to ?.logs above returned non-null
 
-            // Collect positions so we can show snippets.
-            val positions = mutableSetOf<Position>()
+        // Collect positions so we can show snippets.
+        val positions = mutableSetOf<Position>()
+        // We need nice display names for locations
+        val sources = mutableMapOf<CodeLocation, CharSequence?>()
 
-            // Buffer the output so that we can output the message adjacent to the snippet for that
-            // position.
-            val logString = buildString {
-                val textOutput = AppendingTextOutput(
-                    this,
-                    isTtyLike = localConsole.textOutput.isTtyLike,
-                )
+        // Buffer the output so that we can output the message adjacent to the snippet for that
+        // position.
+        val logString = buildString {
+            val sharedLocationContext = this@ConsoleBackedContextualLogSink.sharedLocationContext
+            val textOutput = AppendingTextOutput(
+                this,
+                isTtyLike = localConsole.textOutput.isTtyLike,
+            )
+            val logSinkValueFormatter = LogSinkValueFormatter(
+                simplifying = simplifying,
+                sharedLocationContext = sharedLocationContext,
+                textOutput = textOutput,
+                formattedPositions = positions,
+            )
 
-                val logSinkValueFormatter = LogSinkValueFormatter(
-                    simplifying = simplifying,
-                    sharedLocationContext = sharedLocationContext,
-                    textOutput = textOutput,
-                    formattedPositions = positions,
-                )
+            val formatSink = TextOutputFormatSink(
+                textOutput = textOutput,
+                style = level.style,
+                customValueFormatter = CustomValueFormatter.chain(
+                    customValueFormatter,
+                    logSinkValueFormatter,
+                ),
+            )
 
-                val formatSink = TextOutputFormatSink(
-                    textOutput = textOutput,
-                    style = level.style,
-                    customValueFormatter = CustomValueFormatter.chain(
-                        customValueFormatter,
-                        logSinkValueFormatter,
-                    ),
-                )
+            if (logAsJson) {
+                val valueStrings = mutableListOf<String>()
+                for (value in values) {
+                    formatSink.formatValue(value)
+                    textOutput.flush()
+                    valueStrings.add(this@buildString.toString())
+                    this@buildString.clear()
+                }
 
+                data class JsonLogEntry(
+                    val level: Log.Level,
+                    val template: MessageTemplateI,
+                    val pos: Position,
+                    val values: List<String>,
+                ) : Structured {
+                    override fun destructure(structureSink: StructureSink) = structureSink.obj {
+                        key("level") { value(level.name) }
+                        key("template") { value(template.name) }
+                        if (pos != unknownPos) {
+                            key("pos") {
+                                obj {
+                                    key("loc") {
+                                        val loc = pos.loc
+                                        if (loc is FileRelatedCodeLocation) {
+                                            value("${loc.sourceFile}")
+                                        } else {
+                                            value("$loc")
+                                        }
+                                    }
+                                    key("left") { value(pos.left) }
+                                    key("right") { value(pos.right) }
+                                }
+                            }
+                        }
+                        key("values") {
+                            arr {
+                                for (value in values) { value(value) }
+                            }
+                        }
+                    }
+                }
+                FormattingStructureSink(out = this, indent = false)
+                    .value(JsonLogEntry(level, template, pos, valueStrings))
+            } else {
                 val renderPos = pos.loc !is UnknownCodeLocation || !pos.isPseudoPosition
                 if (renderPos) {
                     formatSink.formatAsTemplateString("[")
@@ -132,39 +182,40 @@ open class ConsoleBackedContextualLogSink(
                 sprintfTo(template.formatString, values, formatSink)
             }
 
-            val sources = mutableMapOf<CodeLocation, CharSequence?>()
             if (sharedLocationContext != null) {
                 for (posFromMessage in positions) {
-                    if (posFromMessage.isPseudoPosition) { continue }
+                    if (posFromMessage.isPseudoPosition) {
+                        continue
+                    }
                     val loc = posFromMessage.loc
                     sources.getOrPut(posFromMessage.loc) {
                         sharedLocationContext[loc, CodeLocationKey.SourceCodeKey]
                     }
                 }
             }
+        }
 
-            doSynchronized {
-                var logged = false
-                if (sources.isNotEmpty()) {
-                    localConsole.textOutput.withLevel(level) {
-                        for (posFromMessage in positions) {
-                            if (posFromMessage.isPseudoPosition) { continue }
-                            val source = sources[posFromMessage.loc] ?: continue
-                            // TODO: if we have positions that are close together,
-                            // can we excerpt them together
-                            excerpt(posFromMessage, source, localConsole.textOutput)
-                            if (!logged && posFromMessage == pos) {
-                                // Output the message below the snippet for it
-                                // and then any other messages
-                                localConsole.log(level = level, str = logString)
-                                logged = true
-                            }
+        doSynchronized {
+            var logged = false
+            if (sources.isNotEmpty()) {
+                localConsole.textOutput.withLevel(level) {
+                    for (posFromMessage in positions) {
+                        if (posFromMessage.isPseudoPosition) { continue }
+                        val source = sources[posFromMessage.loc] ?: continue
+                        // TODO: if we have positions that are close together,
+                        // can we excerpt them together
+                        excerpt(posFromMessage, source, localConsole.textOutput)
+                        if (!logged && posFromMessage == pos) {
+                            // Output the message below the snippet for it
+                            // and then any other messages
+                            localConsole.log(level = level, str = logString)
+                            logged = true
                         }
                     }
                 }
-                if (!logged) {
-                    localConsole.log(level = level, str = logString)
-                }
+            }
+            if (!logged) {
+                localConsole.log(level = level, str = logString)
             }
         }
     }

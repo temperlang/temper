@@ -8,10 +8,15 @@ import lang.temper.be.cli.cleanup
 import lang.temper.be.cli.effort
 import lang.temper.be.cli.print
 import lang.temper.common.Console
+import lang.temper.common.Log
 import lang.temper.common.RFailure
 import lang.temper.common.RSuccess
 import lang.temper.frontend.Module
 import lang.temper.library.LibraryConfigurationLocationKey
+import lang.temper.log.LeveledMessageTemplate
+import lang.temper.log.LogEntry
+import lang.temper.log.LogSink
+import lang.temper.log.unknownPos
 import lang.temper.name.BackendId
 import lang.temper.name.DashedIdentifier
 import lang.temper.result.junit.parseJunitResults
@@ -47,22 +52,52 @@ data class TestTally(
         return TestTally(run = run + other.run, failed = failed + other.failed, defined = sumDefined)
     }
 
-    fun summary(): String {
+    fun summary(): LogEntry {
         val notRun = when (defined) {
-            null -> ""
-            else -> when (val notRun = defined - run) {
-                0 -> ""
-                else -> " ($notRun not run)"
-            }
+            null -> 0
+            else -> defined - run
         }
-        return "Tests passed: ${run - failed} of ${defined ?: run}$notRun"
+        val passed = run - failed
+        val total = defined ?: run
+        return if (notRun == 0) {
+            LogEntry(
+                RunTestsMessageTemplate.TestSummaryAllRun,
+                unknownPos,
+                listOf(passed, total),
+            )
+        } else {
+            LogEntry(
+                RunTestsMessageTemplate.TestSummaryNotAllRun,
+                unknownPos,
+                listOf(passed, total, notRun),
+            )
+        }
     }
+}
+
+enum class RunTestsMessageTemplate(
+    override val suggestedLevel: Log.Level,
+    override val formatString: String,
+) : LeveledMessageTemplate {
+    TestFailed(
+        Log.Error,
+        "Test failed (%s): %s - %s", // backend, test name, cause
+    ),
+    TestSummaryAllRun(
+        Log.Summary,
+        "Tests passed: %d of %d",
+    ),
+    TestSummaryNotAllRun(
+        Log.Summary,
+        "Tests passed: %d of %d (%d not run)",
+    ),
 }
 
 /** Also prints failure causes and errors. */
 fun tallyResults(
     resultsByBackend: Map<BackendId, List<BackendRunResult>>,
     cliConsole: Console,
+    logSink: LogSink,
     resultDetails: MutableList<DoRunResultDetail>? = null,
 ): TestTally {
     var testsDefined: Int? = null
@@ -96,7 +131,7 @@ fun tallyResults(
             val ok = when (val junitOutput = effort?.auxOut?.get(Aux.JunitXml)) {
                 null -> {
                     if (runResult is RFailure) {
-                        // Not explainable by junit xml, whether run or test request, so report fully.
+                        // Not explainable by junit XML, whether run or test request, so report fully.
                         runResult.print(cliConsole)
                         (effort as? Effort)?.auxErr?.get(Aux.JunitXml)?.let { cliConsole.error(it) }
                     }
@@ -118,7 +153,12 @@ fun tallyResults(
                     for (failure in parsedResults.failures) {
                         val testName = testNames.getOrDefault(failure.name, failure.name)
                         testFailures.add(testName to failure.cause)
-                        cliConsole.error("Test failed ($backendId): $testName - ${failure.cause}")
+                        LogEntry(
+                            RunTestsMessageTemplate.TestFailed,
+                            unknownPos,
+                            listOf(backendId, testName, failure.cause),
+                        ).logTo(logSink)
+
                         // TODO Stack traces when and how?
                     }
                     testsFailed == 0
