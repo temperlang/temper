@@ -688,17 +688,24 @@ class RustTranslator(
         val handledSups = mutableSetOf<ModularName>()
         // Gather up instance methods by name so we can coordinate with supertypes as needed.
         val instanceMethods = associateInstanceMethods(decl)
-        sups@ for ((subShape, sup) in decl.typeShape.allInterfaces()) {
+        val isInterface = decl.kind == TmpL.TypeDeclarationKind.Interface
+        sups@ for ((subShape, sup) in decl.typeShape.allInterfaces(allowStart = true)) {
             // Only handle type shapes, and only unique ones.
             val supShape = (sup.definition as? TypeShape) ?: continue@sups
             // For sealed enums, this picks an arbitrary winner. TODO Allow diamonds and/or check against them earlier.
             handledSups.add(supShape.name) || continue@sups
             // Handle this one.
             val supName = translateIdFromNameAsPath(pos, supShape.name, style = NameStyle.Camel)
-            val supType = translateTypeNominalApplyAnyBindings(sup, supName)
-            val supTraitType = translateTypeNominalApplyAnyBindings(sup, supName.suffixed(TRAIT_NAME_SUFFIX))
+            val missedBindings = when {
+                subShape === supShape -> generics.map { it.toArg() }
+                else -> null
+            }
+            val supType = translateTypeNominalApplyAnyBindings(sup, supName, bindings = missedBindings)
+            val supTraitName = supName.suffixed(TRAIT_NAME_SUFFIX)
+            val supTraitType = translateTypeNominalApplyAnyBindings(sup, supTraitName, bindings = missedBindings)
             supTypes.add(translateTypeNominalApplyAnyBindings(sup, supName)) // without trait suffix
             val callClone = "self".toKeyId(pos).wrapClone()
+            val selfArg = "self".toKeyId(pos).member("0", notMethod = true).deref().ref()
             val supImpl = Rust.Impl(
                 pos,
                 generics = generics.deepCopy(),
@@ -719,22 +726,30 @@ class RustTranslator(
                             returnType = enumId.makeTypeRef(generics),
                             block = Rust.Block(
                                 pos,
-                                result = Rust.Call(
-                                    pos,
-                                    callee = "$enumId::$subName".toId(pos),
-                                    args = callClone.deepCopy().let { clone ->
-                                        when {
-                                            subShape.isInterface() ->
-                                                clone.box(wanted = subShape, translator = this@RustTranslator)
+                                result = when {
+                                    isInterface -> Rust.Call(
+                                        pos,
+                                        callee = supTraitName.deepCopy().extendWith(AS_ENUM_NAME),
+                                        args = listOf(selfArg.deepCopy()),
+                                    )
+                                    else -> Rust.Call(
+                                        pos,
+                                        callee = "$enumId::$subName".toId(pos),
+                                        args = callClone.deepCopy().let { clone ->
+                                            when {
+                                                subShape.isInterface() ->
+                                                    clone.box(wanted = subShape, translator = this@RustTranslator)
 
-                                            else -> clone
-                                        }
-                                    }.let { listOf(it) },
-                                ),
+                                                else -> clone
+                                            }
+                                        }.let { listOf(it) },
+                                    )
+                                },
                             ),
                         ).also { add(it.toItem()) }
                     }
                     // All need clone_boxed.
+                    // TODO If for interface, forward to underlying trait.
                     Rust.Function(
                         pos,
                         id = CLONE_BOXED_NAME.toId(pos),
@@ -742,15 +757,21 @@ class RustTranslator(
                         returnType = supType,
                         block = Rust.Block(
                             pos,
-                            result = Rust.Call(
-                                pos,
-                                callee = supName.deepCopy().extendWith("new"),
-                                args = listOf(callClone.deepCopy()),
-                            ),
+                            result = when {
+                                isInterface -> Rust.Call(
+                                    pos,
+                                    callee = supTraitName.deepCopy().extendWith(CLONE_BOXED_NAME),
+                                    args = listOf(selfArg.deepCopy()),
+                                )
+                                else -> Rust.Call(
+                                    pos,
+                                    callee = supName.deepCopy().extendWith("new"),
+                                    args = listOf(callClone.deepCopy()),
+                                )
+                            },
                         ),
                     ).also { add(it.toItem()) }
                     // Then call the struct impl for each overridden trait method.
-                    val isInterface = decl.kind == TmpL.TypeDeclarationKind.Interface
                     for (supMethod in supShape.methods) {
                         maybeAddTraitForwarder(
                             pos,
@@ -801,10 +822,12 @@ class RustTranslator(
         superShape: VisibleMemberShape,
         returnType: Type2? = null,
     ) {
-        when (val method = instanceMethods[methodName]) {
-            null if (isInterface) -> buildForwarderForTrait(pos, superShape, methodKind)
-            null -> listOf()
-            else -> buildForwarder(method, returnType = returnType)
+        when {
+            isInterface -> buildForwarderForTrait(pos, superShape, methodKind)
+            else -> when (val method = instanceMethods[methodName]) {
+                null -> listOf()
+                else -> buildForwarder(method, returnType = returnType)
+            }
         }.also { addAll(it) } // only one expected here, but meh
     }
 
@@ -1061,7 +1084,7 @@ class RustTranslator(
         methodKind: MethodKind,
     ): List<Rust.Item> = run {
         val selfParam = Rust.RefType(pos, "self".toKeyId(pos))
-        val selfArg = "self".toKeyId(pos).deref().ref()
+        val selfArg = "self".toKeyId(pos).member("0", notMethod = true).deref().ref()
         val enclosingType =
             (translateTypeDefinition(shape.enclosingType, pos) as? Rust.Path)?.suffixed(TRAIT_NAME_SUFFIX)
         when (methodKind) {
@@ -1069,7 +1092,7 @@ class RustTranslator(
                 val method = shape as MethodShape
                 val methodId = translateIdFromName(pos, method.name as ResolvedName, NameStyle.Snake)
                 val sig = method.descriptor ?: return listOf()
-                val argNames = (1..<(sig.requiredInputTypes.size + sig.optionalInputTypes.size) - 1).map { "arg$it" }
+                val argNames = (1..<sig.requiredInputTypes.size + sig.optionalInputTypes.size).map { "arg$it" }
                 Rust.Function(
                     pos,
                     id = methodId,
@@ -3114,8 +3137,9 @@ class RustTranslator(
         type: Type2,
         translated: Rust.Type,
         inExpr: Boolean = false,
+        bindings: List<Rust.GenericArg>? = null,
     ) = when {
-        inExpr || type.bindings.isEmpty() -> translated
+        inExpr || (bindings ?: type.bindings).isEmpty() -> translated
         else -> {
             val core = when (translated) {
                 is Rust.ImplTraitType -> {
@@ -3128,7 +3152,7 @@ class RustTranslator(
             val generic = Rust.GenericType(
                 core.pos,
                 path = core,
-                args = translateTypeBindings(type, core.pos),
+                args = bindings?.deepCopy() ?: translateTypeBindings(type, core.pos),
             )
             when (translated) {
                 is Rust.ImplTraitType -> Rust.ImplTraitType(translated.pos, bounds = listOf(generic))

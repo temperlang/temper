@@ -669,8 +669,14 @@ internal fun Rust.Type.isUnit() = this is Rust.Id && this.outName.outputNameText
 private val TypeDefinition.abstractness get() = (this as? TypeShape)?.abstractness
 
 // TODO: can we replace this with uses of SuperTypeTree2
-internal fun TypeDefinition.allInterfaces(): Sequence<Pair<TypeDefinition, Type2>> = sequence {
-    // SuperTypeTree requires a NominalType to start with, and I didn't find that in TmpL.TypeDeclaration.
+internal fun TypeDefinition.allInterfaces(
+    allowStart: Boolean = false,
+): Sequence<Pair<TypeDefinition, Type2>> = sequence {
+    val thisType = this@allInterfaces
+    if (allowStart && thisType is TypeShape && thisType.abstractness == Abstractness.Abstract) {
+        // For interfaces, we need to implement in the trait for its own wrapper, so provide that here.
+        yield(thisType to MkType2(thisType).position(pos).get())
+    }
     types@ for (type in superTypes) {
         type.definition == WellKnownTypes.anyValueTypeDefinition && continue@types
         val superType = hackMapOldStyleToNew(type)

@@ -152,6 +152,14 @@ class RustBackendTest {
             |                      Talker(std::sync::Arc::new(selfish))
             |                  }
             |              }
+            |              impl TalkerTrait for Talker {
+            |                  fn clone_boxed(& self) -> Talker {
+            |                      TalkerTrait::clone_boxed( & ( * self.0))
+            |                  }
+            |                  fn talk(& self) -> () {
+            |                      TalkerTrait::talk( & ( * self.0))
+            |                  }
+            |              }
             |              temper_core::impl_any_value_trait_for_interface!(Talker);
             |              impl std::ops::Deref for Talker {
             |                  type Target = dyn TalkerTrait;
@@ -870,6 +878,14 @@ class RustBackendTest {
                 |        Apple(std::sync::Arc::new(selfish))
                 |    }
                 |}
+                |impl AppleTrait for Apple {
+                |    fn as_enum(& self) -> AppleEnum {
+                |        AppleTrait::as_enum( & ( * self.0))
+                |    }
+                |    fn clone_boxed(& self) -> Apple {
+                |        AppleTrait::clone_boxed( & ( * self.0))
+                |    }
+                |}
                 |temper_core::impl_any_value_trait_for_interface!(Apple);
                 |impl std::ops::Deref for Apple {
                 |    type Target = dyn AppleTrait;
@@ -1280,6 +1296,29 @@ class RustBackendTest {
                 |        A(std::sync::Arc::new(selfish))
                 |    }
                 |}
+                |impl ATrait for A {
+                |    fn clone_boxed(& self) -> A {
+                |        ATrait::clone_boxed( & ( * self.0))
+                |    }
+                |    fn thing(& self) -> std::sync::Arc<String> {
+                |        ATrait::thing( & ( * self.0))
+                |    }
+                |    fn set_thing(& self, value: std::sync::Arc<String>) {
+                |        ATrait::set_thing( & ( * self.0), value)
+                |    }
+                |    fn greeting(& self) -> std::sync::Arc<String> {
+                |        ATrait::greeting( & ( * self.0))
+                |    }
+                |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        ATrait::whatever( & ( * self.0))
+                |    }
+                |    fn prop(& self) -> std::sync::Arc<String> {
+                |        ATrait::prop( & ( * self.0))
+                |    }
+                |    fn set_prop(& self, value: std::sync::Arc<String>) {
+                |        ATrait::set_prop( & ( * self.0), value)
+                |    }
+                |}
                 |temper_core::impl_any_value_trait_for_interface!(A);
                 |impl std::ops::Deref for A {
                 |    type Target = dyn ATrait;
@@ -1300,27 +1339,35 @@ class RustBackendTest {
                 |        B(std::sync::Arc::new(selfish))
                 |    }
                 |}
-                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for B<T> {
-                |    fn clone_boxed(& self) -> A {
-                |        A::new(self.clone())
-                |    }
-                |    fn thing(& self) -> std::sync::Arc<String> {
-                |        ATrait::thing( & ( * self))
-                |    }
-                |    fn set_thing(& self, value: std::sync::Arc<String>) {
-                |        ATrait::set_thing( & ( * self), value)
-                |    }
-                |    fn greeting(& self) -> std::sync::Arc<String> {
-                |        ATrait::greeting( & ( * self))
+                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> BTrait<T> for B<T> {
+                |    fn clone_boxed(& self) -> B<T> {
+                |        BTrait::clone_boxed( & ( * self.0))
                 |    }
                 |    fn whatever(& self) -> std::sync::Arc<String> {
-                |        self.whatever()
+                |        BTrait::whatever( & ( * self.0))
+                |    }
+                |}
+                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for B<T> {
+                |    fn clone_boxed(& self) -> A {
+                |        ATrait::clone_boxed( & ( * self.0))
+                |    }
+                |    fn thing(& self) -> std::sync::Arc<String> {
+                |        ATrait::thing( & ( * self.0))
+                |    }
+                |    fn set_thing(& self, value: std::sync::Arc<String>) {
+                |        ATrait::set_thing( & ( * self.0), value)
+                |    }
+                |    fn greeting(& self) -> std::sync::Arc<String> {
+                |        ATrait::greeting( & ( * self.0))
+                |    }
+                |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        ATrait::whatever( & ( * self.0))
                 |    }
                 |    fn prop(& self) -> std::sync::Arc<String> {
-                |        ATrait::prop( & ( * self))
+                |        ATrait::prop( & ( * self.0))
                 |    }
                 |    fn set_prop(& self, value: std::sync::Arc<String>) {
-                |        ATrait::set_prop( & ( * self), value)
+                |        ATrait::set_prop( & ( * self.0), value)
                 |    }
                 |}
                 |temper_core::impl_any_value_trait_for_interface!(B<T> where T: ATrait);
@@ -1424,6 +1471,11 @@ class RustBackendTest {
                 |        I(std::sync::Arc::new(selfish))
                 |    }
                 |}
+                |impl ITrait for I {
+                |    fn clone_boxed(& self) -> I {
+                |        ITrait::clone_boxed( & ( * self.0))
+                |    }
+                |}
                 |temper_core::impl_any_value_trait_for_interface!(I);
                 |impl std::ops::Deref for I {
                 |    type Target = dyn ITrait;
@@ -1443,6 +1495,14 @@ class RustBackendTest {
                 |impl<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> Hi<T> {
                 |    pub fn new(selfish: impl HiTrait<T> + 'static) -> Hi<T> {
                 |        Hi(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |impl<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> HiTrait<T> for Hi<T> {
+                |    fn as_enum(& self) -> HiEnum<T> {
+                |        HiTrait::as_enum( & ( * self.0))
+                |    }
+                |    fn clone_boxed(& self) -> Hi<T> {
+                |        HiTrait::clone_boxed( & ( * self.0))
                 |    }
                 |}
                 |temper_core::impl_any_value_trait_for_interface!(Hi<T> where T: ITrait);
@@ -2027,6 +2087,14 @@ class RustBackendTest {
             |        Hi(std::sync::Arc::new(selfish))
             |    }
             |}
+            |impl HiTrait for Hi {
+            |    fn clone_boxed(& self) -> Hi {
+            |        HiTrait::clone_boxed( & ( * self.0))
+            |    }
+            |    fn thing(& self) -> i32 {
+            |        HiTrait::thing( & ( * self.0))
+            |    }
+            |}
             |temper_core::impl_any_value_trait_for_interface!(Hi);
             |impl std::ops::Deref for Hi {
             |    type Target = dyn HiTrait;
@@ -2188,6 +2256,14 @@ class RustBackendTest {
                 |        A(std::sync::Arc::new(selfish))
                 |    }
                 |}
+                |impl ATrait for A {
+                |    fn clone_boxed(& self) -> A {
+                |        ATrait::clone_boxed( & ( * self.0))
+                |    }
+                |    fn adjust(& self, arg1: std::sync::Arc<String>) -> std::sync::Arc<String> {
+                |        ATrait::adjust( & ( * self.0), arg1)
+                |    }
+                |}
                 |temper_core::impl_any_value_trait_for_interface!(A);
                 |impl std::ops::Deref for A {
                 |    type Target = dyn ATrait;
@@ -2262,6 +2338,20 @@ class RustBackendTest {
                 |impl A {
                 |    pub fn new(selfish: impl ATrait + 'static) -> A {
                 |        A(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |impl ATrait for A {
+                |    fn clone_boxed(& self) -> A {
+                |        ATrait::clone_boxed( & ( * self.0))
+                |    }
+                |    fn thing(& self) -> i32 {
+                |        ATrait::thing( & ( * self.0))
+                |    }
+                |    fn set_thing(& self, value: i32) {
+                |        ATrait::set_thing( & ( * self.0), value)
+                |    }
+                |    fn other(& self) -> i32 {
+                |        ATrait::other( & ( * self.0))
                 |    }
                 |}
                 |temper_core::impl_any_value_trait_for_interface!(A);
