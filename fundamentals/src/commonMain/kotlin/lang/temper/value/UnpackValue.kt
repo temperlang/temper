@@ -205,7 +205,9 @@ fun unpackValue(tokenText: String, tokenType: TokenType): Result {
         TokenType.QuotedString -> {
             val (decoded, isOk) = unpackQuotedString(tokenText, skipDelimiter = false)
             if (!isOk) {
-                Fail(LogEntry(Log.Error, MessageTemplate.MalformedString, unknownPos, listOf()))
+                // We scan later for string errors and report them in context.
+                // For example, for two surrogates we suggest supplemental codepoint syntax.
+                Fail
             } else {
                 Value(
                     typeTag = TString,

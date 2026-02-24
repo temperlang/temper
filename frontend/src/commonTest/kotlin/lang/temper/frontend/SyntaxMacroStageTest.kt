@@ -2257,7 +2257,7 @@ class SyntaxMacroStageTest {
     )
 
     @Test
-    fun malformedStringLiteralErrors() = assertModuleAtStage(
+    fun malformedNumericLiteralErrors() = assertModuleAtStage(
         stage = Stage.SyntaxMacro,
         input = """
             |export let oneTwoThree = 123i6;

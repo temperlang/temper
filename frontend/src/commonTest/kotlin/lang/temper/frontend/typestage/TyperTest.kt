@@ -1846,9 +1846,6 @@ class TyperTest {
             |///             ┃      ┏━━┓ ┃ : String
             |    console.log("foo\u{dddd}")
         """.trimMargin(),
-        wantErrors = listOf(
-            "3+23-27: Malformed string!",
-        ),
     )
 
     /** Text at a position in a source code snippet in a unit test */
