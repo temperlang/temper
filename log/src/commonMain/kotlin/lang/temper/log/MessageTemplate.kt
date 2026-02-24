@@ -59,6 +59,7 @@ enum class MessageTemplate(
     BadEmoji("Emoji not allowed", CompilationPhase.Lex),
     InvalidIdentifier("Not a valid identifier", CompilationPhase.Lex),
     MalformedNumber("Malformed number", CompilationPhase.Lex),
+    MalformedString("Malformed string", CompilationPhase.Lex),
     MalformedSemilit("Malformed semi-literate boundary", CompilationPhase.Lex),
     UnclosedBlock("Open bracket has no closing bracket", CompilationPhase.Lex),
     UnclosedQuotation("Missing close quote", CompilationPhase.Lex),

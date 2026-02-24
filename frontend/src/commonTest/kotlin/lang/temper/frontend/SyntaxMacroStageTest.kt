@@ -2255,4 +2255,25 @@ class SyntaxMacroStageTest {
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
+
+    @Test
+    fun malformedStringLiteralErrors() = assertModuleAtStage(
+        stage = Stage.SyntaxMacro,
+        input = """
+            |export let oneTwoThree = 123i6;
+        """.trimMargin(),
+        want = """
+            |{
+            |  syntaxMacro: {
+            |    body: ```
+            |      let `test//`.oneTwoThree = error (list("123i6"));
+            |
+            |      ```
+            |  },
+            |  errors: [
+            |    "Malformed number!",
+            |  ]
+            |}
+        """.trimMargin(),
+    )
 }

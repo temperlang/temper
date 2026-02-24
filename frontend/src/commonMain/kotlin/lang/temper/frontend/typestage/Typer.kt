@@ -2767,12 +2767,17 @@ internal class Typer(
                     console.log("$thisVariant has members ${typeShape.members}")
                 }
                 processMembers(thisVariant, typeShape)
-                if (!anyMatchedSymbol) {
-                    // No actual member had the right symbol, so check for overloads.
-                    // Checking for overloads only on actual member symbol fails should make the common case faster.
-                    // TODO Permit overloads with an actual matching member also?
-                    // TODO If not, validate against that somewhere else.
-                    processMembers(thisVariant, typeShape) { matchesOverload(memberSymbol, it) }
+            }
+            if (!anyMatchedSymbol) {
+                // No actual member had the right symbol, so check for overloads.
+                // Checking for overloads only on actual member symbol fails should make the common case faster.
+                // TODO Permit overloads with an actual matching member also?
+                // TODO If not, validate against that somewhere else.
+                for (thisVariant in allThisVariants) {
+                    val typeShape = thisVariant.definition as TypeShape
+                    processMembers(thisVariant, typeShape) {
+                        matchesOverload(memberSymbol, it)
+                    }
                 }
             }
             // TODO: filter out masked member variants because overrides may narrow a signature.
@@ -2948,12 +2953,10 @@ internal class Typer(
         }
     }
 
-    private fun matchesOverload(symbol: Symbol, member: MemberShape): Boolean = run {
-        (member.stay?.incoming?.source as? DeclTree)?.parts?.let { parts ->
-            parts.metadataSymbolMap[overloadSymbol]?.target?.valueContained?.let { value ->
-                TString.unpackOrNull(value)
-            }
-        } == symbol.text
+    private fun matchesOverload(symbol: Symbol, member: MemberShape): Boolean {
+        return (member.metadata[overloadSymbol] ?: listOf()).any { v ->
+            symbol.text == TString.unpackOrNull(v)
+        }
     }
 
     private fun typeForExtensionResolution(
