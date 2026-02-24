@@ -44,9 +44,11 @@ import lang.temper.type.isBubbly
 import lang.temper.type.isVoid
 import lang.temper.type.isVoidAllowing
 import lang.temper.type.mentionsInvalid
+import lang.temper.type2.Nullity
 import lang.temper.type2.Type2
 import lang.temper.type2.TypeContext2
 import lang.temper.type2.hackMapOldStyleToNew
+import lang.temper.type2.withNullity
 import lang.temper.value.BINARY_OP_CALL_ARG_COUNT
 import lang.temper.value.BlockTree
 import lang.temper.value.BubbleFn
@@ -59,6 +61,7 @@ import lang.temper.value.LeftNameLeaf
 import lang.temper.value.RightNameLeaf
 import lang.temper.value.StayLeaf
 import lang.temper.value.StructuredFlow
+import lang.temper.value.TNull
 import lang.temper.value.Tree
 import lang.temper.value.ValueLeaf
 import lang.temper.value.arityRange
@@ -284,7 +287,29 @@ internal class TypeChecker(
     }
 
     private fun checkValue(t: ValueLeaf) {
-        ignore(t)
+        // For most value leaves we do nothing.
+        // The Typer just declares a type.
+        // But for `null` check that it has a nullable type
+        // because the Typer tries a number of strategies.
+        if (t.content == TNull.value) {
+            val type2 = t.typeInferences?.type?.let {
+                hackMapOldStyleToNew(it)
+            }
+            when {
+                type2 == null -> logSink.log(
+                    level = Log.Error,
+                    template = MessageTemplate.MissingType,
+                    pos = t.pos,
+                    values = listOf(),
+                )
+                type2.nullity == Nullity.NonNull -> logSink.log(
+                    level = Log.Error,
+                    template = MessageTemplate.ExpectedSubType,
+                    pos = t.pos,
+                    values = listOf(type2, type2.withNullity(Nullity.OrNull)),
+                )
+            }
+        }
     }
 
     private fun checkAssignment(t: CallTree) {
