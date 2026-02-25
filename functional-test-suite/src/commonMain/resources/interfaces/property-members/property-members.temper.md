@@ -55,8 +55,8 @@ on type parameters on types elsewhere, so include that here.
 Use both the top and intermediate interfaces here to prove we can. And store
 them in intermediate variables to ensure the types are being handled correctly.
 
-    let di = new D<I>(a);
-    let dj = new D<J>(a);
+    let di = new D<I>(a as I orelse panic()); // TODO Remove cast once types delivered.
+    let dj = new D<J>(a as J orelse panic()); // TODO Remove cast once types delivered.
     console.log("Generically, x is ${di.thing.x}.");
     console.log("Genericallier, x is still ${dj.thing.x}.");
 
