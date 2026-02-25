@@ -43,14 +43,12 @@ import lang.temper.type2.withType
  * change in edition. We should investigate this more in the future, though. It would
  * be good to support latest expectations.
  */
-internal fun allowWarnings(pos: Position): Rust.AttrInner = Rust.AttrInner(
-    pos,
-    Rust.Call(
-        pos,
-        "allow".toId(pos),
-        listOf("dependency_on_unit_never_type_fallback", "warnings").map { it.toId(pos) },
-    ),
-)
+internal fun allowWarnings(pos: Position) = run {
+    // Separate them with `warnings` first, to prevent warnings against the other on older rust.
+    listOf("warnings", "dependency_on_unit_never_type_fallback").map { key ->
+        Rust.AttrInner(pos, Rust.Call(pos, "allow".toId(pos), listOf(key.toId(pos))))
+    }
+}
 
 internal fun makeError(pos: Position) = Rust.Call(pos, callee = ERROR_NEW_NAME.toId(pos), args = listOf())
 
