@@ -76,10 +76,9 @@ class UnpackValueTest {
     }
 
     @Test
-    fun booOctal() = assertEquals(
-        Fail,
-        unpackValue("010", TokenType.Number),
-    )
+    fun booOctal() {
+        assertIs<Fail>(unpackValue("010", TokenType.Number))
+    }
 
     @Test
     fun yayOctal() = assertEquals(

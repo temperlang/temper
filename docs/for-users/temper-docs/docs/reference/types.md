@@ -178,7 +178,7 @@ of confusion.
 let hundred = 100;
 let ten     = 010; // <!-- No
 let one     = 001; // <!-- Still no
-// ❌ Interpreter encountered error()!
+// ❌ Malformed number!, Malformed number!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/2 -->
@@ -794,7 +794,7 @@ Temper also does not recognize all C's number suffixes.
 
 ```temper
 1F
-// ❌ Expected subtype of Top, but got Invalid!
+// ❌ Malformed number!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/float64/examples/snippet.md/7 -->

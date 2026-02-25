@@ -3,11 +3,15 @@ package lang.temper.value
 import lang.temper.common.BINARY_RADIX
 import lang.temper.common.DECIMAL_RADIX
 import lang.temper.common.HEX_RADIX
+import lang.temper.common.Log
 import lang.temper.common.OCTAL_RADIX
 import lang.temper.common.ignore
 import lang.temper.common.max
 import lang.temper.lexer.TokenType
 import lang.temper.lexer.unpackQuotedString
+import lang.temper.log.LogEntry
+import lang.temper.log.MessageTemplate
+import lang.temper.log.unknownPos
 import lang.temper.name.Symbol
 import lang.temper.name.decodeName
 
@@ -167,7 +171,7 @@ fun unpackValue(tokenText: String, tokenType: TokenType): Result {
                 //
                 // There are some domain specific use cases, `chmod` masks,
                 // but, as above, we allow 0o010 to the same end.
-                return Fail
+                return Fail(LogEntry(Log.Error, MessageTemplate.MalformedNumber, unknownPos, listOf()))
             }
             try {
                 if (isInt) {
@@ -191,16 +195,18 @@ fun unpackValue(tokenText: String, tokenType: TokenType): Result {
                 }
             } catch (e: NumberFormatException) {
                 ignore(e)
-                return Fail
+                return Fail(LogEntry(Log.Error, MessageTemplate.MalformedNumber, unknownPos, listOf()))
             }
         }
         TokenType.Word -> when (val parsedName = decodeName(tokenText)) {
-            null -> Fail
+            null -> Fail()
             else -> Value(Symbol(parsedName.nameText), TSymbol)
         }
         TokenType.QuotedString -> {
             val (decoded, isOk) = unpackQuotedString(tokenText, skipDelimiter = false)
             if (!isOk) {
+                // We scan later for string errors and report them in context.
+                // For example, for two surrogates we suggest supplemental codepoint syntax.
                 Fail
             } else {
                 Value(

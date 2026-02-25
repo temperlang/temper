@@ -2150,6 +2150,69 @@ class TypeStageTest {
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
+    /** Test overload decorations. */
+    @Test
+    fun overriddenAndUnoverriddenOverloadedMethods() = assertModuleAtStage(
+        stage = Stage.Type,
+        pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
+        input = $$"""
+            |let {C} = import("./c");
+            |
+            |export let useC(c: C): Void {
+            |  c.foo(1);
+            |  c.foo(true);
+            |  c.foo("");
+            |}
+            |
+            |$$TEST_INPUT_MODULE_BREAK ./c/c.temper
+            |
+            |export interface I {
+            |  @overload("foo")
+            |  fooInt32(x: Int32): Void { fooString(x.toString()); }
+            |
+            |  @overload("foo")
+            |  foolean(x: Boolean): Void { fooString(x.toString()); }
+            |
+            |  @overload("foo")
+            |  fooString(x: String): Void;
+            |}
+            |
+            |export class C extends I {
+            |  @overload("foo")
+            |  public fooInt32(x: Int32): Void { fooString("Int32 $x"); }
+            |
+            |  // Does not overload foolean
+            |
+            |  // Implements fooString but does not redeclare metadata
+            |  public fooString(x: String): Void {
+            |    ;
+            |  }
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  type: {
+            |    body:
+            |      ```
+            |      @stay @imported(\(`test//c/`.C)) let C__0 ⦂ Type;
+            |      C__0 = type (C);
+            |      @fn let `test//`.useC ⦂(fn (C): Void);
+            |      `test//`.useC = fn useC(c__0 /* aka c */: C) /* return__0 */: Void {
+            |        void;
+            |        fn__0: do {
+            |          do_bind_fooInt32(c__0)(1);
+            |          do_bind_foolean(c__0)(true);
+            |          do_bind_fooString(c__0)("");
+            |          return__0 = void
+            |        }
+            |      }
+            |
+            |      ```
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
     @Test
     fun overloadOnGenerics() = assertModuleAtStage(
         stage = Stage.Type,

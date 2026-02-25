@@ -103,7 +103,10 @@ private class Lift(
         LeafTreeType.Stay -> throw IllegalArgumentException("stay's are not a result of parsing")
         LeafTreeType.Value -> when (val result = makeValue(part)) {
             is Value<*> -> ValueLeaf(document, pos = pos, content = result)
-            is Fail -> astPartToErrorTree(part)
+            is Fail -> {
+                result.info?.copy(pos = pos)?.logTo(logSink)
+                astPartToErrorTree(part)
+            }
         }
     }
 

@@ -3729,6 +3729,60 @@ class GenerateCodeStageTest {
             |}
         """.trimMargin(),
     )
+
+    @Test
+    fun nullAssignedToNonNullVarDevl() = assertModuleAtStage(
+        stage = Stage.GenerateCode,
+        moduleResultNeeded = true,
+        input = $$"""
+            |let f(i: Int32): String {
+            |  var sbOrNull: StringBuilder = null;
+            |  //                         ^ No `?`
+            |  if (i % 2 == 0) {
+            |    let sbNow = sbOrNull;
+            |    let sb = sbNow ?? new StringBuilder();
+            |    sb.append("${i}");
+            |    sbOrNull = sb;
+            |  }
+            |  let finalSb = sbOrNull;
+            |  if (finalSb == null) {
+            |    ""
+            |  } else {
+            |    finalSb.toString()
+            |  }
+            |}
+            |f(4)
+        """.trimMargin(),
+        want = $$"""
+            |{
+            |  errors: [
+            |    "Expected subtype of StringBuilder, but got StringBuilder?!",
+            |  ],
+            |  generateCode: {
+            |    body: ```
+            |      let return__0, @fn f__0;
+            |      f__0 = (@stay fn f(i__0 /* aka i */: Int32) /* return__1 */: String {
+            |          var sbOrNull__0: StringBuilder;
+            |          sbOrNull__0 = null;
+            |          if (i__0 % 2 == 0) {
+            |            let sbNow__0;
+            |            sbNow__0 = sbOrNull__0;
+            |            let sb__0;
+            |            sb__0 = sbNow__0;
+            |            do_bind_append(sb__0)(cat(do_bind_toString(i__0)()));
+            |            sbOrNull__0 = sb__0
+            |          };
+            |          let finalSb__0;
+            |          finalSb__0 = sbOrNull__0;
+            |          return__1 = do_bind_toString(finalSb__0)()
+            |      });
+            |      return__0 = f__0(4)
+            |
+            |      ```
+            |  },
+            |}
+        """.trimMargin(),
+    )
 }
 
 // Provide an extra binding to a function whose call does not inline so does not trigger any
