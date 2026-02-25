@@ -19,6 +19,7 @@ import lang.temper.be.tmpl.referencedNames
 import lang.temper.be.tmpl.splitConstructorBody
 import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.common.compatRemoveLast
+import lang.temper.common.subListToEnd
 import lang.temper.frontend.ModuleNamingContext
 import lang.temper.interp.importExport.STANDARD_LIBRARY_NAME
 import lang.temper.lexer.withTemperAwareExtension
@@ -35,9 +36,12 @@ import lang.temper.name.ResolvedName
 import lang.temper.name.ResolvedNameMaker
 import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
+import lang.temper.type.MethodKind
+import lang.temper.type.MethodShape
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
+import lang.temper.type.VisibleMemberShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.canOnlyBeNull
 import lang.temper.type2.DefinedNonNullType
@@ -644,20 +648,6 @@ class RustTranslator(
                 ),
             ),
         ).toItem(attrs = listOf(buildDerive(pos, listOf("Clone"))), pub = pub).also { moduleItems.add(it) }
-        // Gather up instance methods by name so we can coordinate with supertypes as needed.
-        val instanceMethods = decl.members.filterIsInstance<TmpL.InstanceMethod>().filter { member ->
-            member is TmpL.NormalMethod || member is TmpL.GetterOrSetter
-        }.associateBy { member ->
-            when (member) {
-                is TmpL.NormalMethod -> member.name.name
-                // We sometimes get names like "getwhatever" rather than "get.whatever", so be explicit.
-                is TmpL.GetterOrSetter -> when (member) {
-                    is TmpL.Getter -> "get"
-                    is TmpL.Setter -> "set"
-                }.let { BuiltinName("$it.${member.dotName}") } // changed to "nym`...`" below
-                else -> error("unexpected")
-            }.displayName
-        }
         // We also need the impl itself for public class members working on the wrapper.
         val typeRef = id.makeTypeRef(generics)
         // And we need to know if we're implementing a shallowly mut type when getting internal property values.
@@ -676,21 +666,46 @@ class RustTranslator(
             // Because type defs are always top level, we don't need a stack of indicators.
             insideMutableType = false
         }
-        // Also all trait impls, remembering for AnyValue macro use.
+        // Implement traits, including AnyValue.
+        val supTypes = implTraits(pos, decl, typeRef, generics)
+        Rust.Call(
+            pos,
+            callee = "temper_core".toKeyId(pos).extendWith("impl_any_value_trait!"),
+            args = listOf(typeRef.deepCopy(), Rust.Array(pos, supTypes.deepCopy())),
+            where = whereForAnyValueImpl(pos, generics),
+        ).also { moduleItems.add(Rust.ExprStatement(pos, it).toItem()) }
+    }
+
+    /** Returns translated supertype refs. */
+    private fun implTraits(
+        pos: Position,
+        decl: TmpL.TypeDeclaration,
+        typeRef: Rust.Type,
+        generics: List<Rust.GenericParam>,
+    ): MutableList<Rust.Type> {
         val supTypes = mutableListOf<Rust.Type>()
         val selfParams = listOf(Rust.RefType(pos, type = "self".toKeyId(pos)))
         val handledSups = mutableSetOf<ModularName>()
-        sups@ for ((subShape, sup) in decl.typeShape.allInterfaces()) {
+        // Gather up instance methods by name so we can coordinate with supertypes as needed.
+        val instanceMethods = associateInstanceMethods(decl)
+        val isInterface = decl.kind == TmpL.TypeDeclarationKind.Interface
+        sups@ for ((subShape, sup) in decl.typeShape.allInterfaces(allowStart = true)) {
             // Only handle type shapes, and only unique ones.
             val supShape = (sup.definition as? TypeShape) ?: continue@sups
             // For sealed enums, this picks an arbitrary winner. TODO Allow diamonds and/or check against them earlier.
             handledSups.add(supShape.name) || continue@sups
             // Handle this one.
             val supName = translateIdFromNameAsPath(pos, supShape.name, style = NameStyle.Camel)
-            val supType = translateTypeNominalApplyAnyBindings(sup, supName)
-            val supTraitType = translateTypeNominalApplyAnyBindings(sup, supName.suffixed(TRAIT_NAME_SUFFIX))
+            val missedBindings = when {
+                subShape === supShape -> generics.map { it.toArg() }
+                else -> null
+            }
+            val supType = translateTypeNominalApplyAnyBindings(sup, supName, bindings = missedBindings)
+            val supTraitName = supName.suffixed(TRAIT_NAME_SUFFIX)
+            val supTraitType = translateTypeNominalApplyAnyBindings(sup, supTraitName, bindings = missedBindings)
             supTypes.add(translateTypeNominalApplyAnyBindings(sup, supName)) // without trait suffix
             val callClone = "self".toKeyId(pos).wrapClone()
+            val selfArg = "self".toKeyId(pos).member("0", notMethod = true).deref().ref()
             val supImpl = Rust.Impl(
                 pos,
                 generics = generics.deepCopy(),
@@ -708,24 +723,33 @@ class RustTranslator(
                             // TODO Only if all sealed subtypes are public?
                             id = AS_ENUM_NAME.toId(pos),
                             params = selfParams.deepCopy(),
-                            returnType = enumId,
+                            returnType = enumId.makeTypeRef(generics),
                             block = Rust.Block(
                                 pos,
-                                result = Rust.Call(
-                                    pos,
-                                    callee = "$enumId::$subName".toId(pos),
-                                    args = callClone.deepCopy().let { clone ->
-                                        when {
-                                            subShape.isInterface() ->
-                                                clone.box(wanted = subShape, translator = this@RustTranslator)
-                                            else -> clone
-                                        }
-                                    }.let { listOf(it) },
-                                ),
+                                result = when {
+                                    isInterface -> Rust.Call(
+                                        pos,
+                                        callee = supTraitName.deepCopy().extendWith(AS_ENUM_NAME),
+                                        args = listOf(selfArg.deepCopy()),
+                                    )
+                                    else -> Rust.Call(
+                                        pos,
+                                        callee = "$enumId::$subName".toId(pos),
+                                        args = callClone.deepCopy().let { clone ->
+                                            when {
+                                                subShape.isInterface() ->
+                                                    clone.box(wanted = subShape, translator = this@RustTranslator)
+
+                                                else -> clone
+                                            }
+                                        }.let { listOf(it) },
+                                    )
+                                },
                             ),
                         ).also { add(it.toItem()) }
                     }
                     // All need clone_boxed.
+                    // TODO If for interface, forward to underlying trait.
                     Rust.Function(
                         pos,
                         id = CLONE_BOXED_NAME.toId(pos),
@@ -733,40 +757,78 @@ class RustTranslator(
                         returnType = supType,
                         block = Rust.Block(
                             pos,
-                            result = Rust.Call(
-                                pos,
-                                callee = supName.deepCopy().extendWith("new"),
-                                args = listOf(callClone.deepCopy()),
-                            ),
+                            result = when {
+                                isInterface -> Rust.Call(
+                                    pos,
+                                    callee = supTraitName.deepCopy().extendWith(CLONE_BOXED_NAME),
+                                    args = listOf(selfArg.deepCopy()),
+                                )
+                                else -> Rust.Call(
+                                    pos,
+                                    callee = supName.deepCopy().extendWith("new"),
+                                    args = listOf(callClone.deepCopy()),
+                                )
+                            },
                         ),
                     ).also { add(it.toItem()) }
                     // Then call the struct impl for each overridden trait method.
-                    methods@ for (supMethod in supShape.methods) {
-                        val method = instanceMethods[supMethod.name.displayName] ?: continue@methods
-                        // Only one expected there, but meh.
-                        addAll(buildForwarder(method, returnType = supMethod.descriptor.orInvalid.returnType2))
+                    for (supMethod in supShape.methods) {
+                        maybeAddTraitForwarder(
+                            pos,
+                            instanceMethods,
+                            isInterface = isInterface,
+                            methodKind = supMethod.methodKind,
+                            methodName = supMethod.name.displayName,
+                            returnType = supMethod.descriptor.orInvalid.returnType2,
+                            superShape = supMethod,
+                        )
                     }
                     // Properties also, because they only sometimes align with methods.
                     for (supProperty in supShape.properties) {
                         if (supProperty.getter == null) {
-                            val getterName = BuiltinName("get.${supProperty.symbol.text}").displayName
-                            instanceMethods[getterName]?.let { addAll(buildForwarder(it)) }
+                            maybeAddTraitForwarder(
+                                pos,
+                                instanceMethods,
+                                isInterface = isInterface,
+                                methodKind = MethodKind.Getter,
+                                methodName = BuiltinName("get.${supProperty.symbol.text}").displayName,
+                                superShape = supProperty,
+                            )
                         }
                         if (supProperty.setter == null && supProperty.hasSetter) {
-                            val setterName = BuiltinName("set.${supProperty.symbol.text}").displayName
-                            instanceMethods[setterName]?.let { addAll(buildForwarder(it)) }
+                            maybeAddTraitForwarder(
+                                pos,
+                                instanceMethods,
+                                isInterface = isInterface,
+                                methodKind = MethodKind.Setter,
+                                methodName = BuiltinName("set.${supProperty.symbol.text}").displayName,
+                                superShape = supProperty,
+                            )
                         }
                     }
                 },
             )
             moduleItems.add(supImpl.toItem())
         }
-        // Implement AnyValue.
-        Rust.Call(
-            pos,
-            callee = "temper_core".toKeyId(pos).extendWith("impl_any_value_trait!"),
-            args = listOf(typeRef.deepCopy(), Rust.Array(pos, supTypes.deepCopy())),
-        ).also { moduleItems.add(Rust.ExprStatement(pos, it).toItem()) }
+        return supTypes
+    }
+
+    private fun MutableList<Rust.Item>.maybeAddTraitForwarder(
+        pos: Position,
+        instanceMethods: Map<String, TmpL.InstanceMethod>,
+        isInterface: Boolean,
+        methodKind: MethodKind,
+        methodName: String,
+        superShape: VisibleMemberShape,
+        returnType: Type2? = null,
+    ) {
+        when {
+            isInterface -> buildForwarderForTrait(pos, superShape, methodKind)
+            else -> when (val method = instanceMethods[methodName]) {
+                null -> listOf()
+                else -> buildForwarder(method, returnType = returnType)
+            }
+        }.also { addAll(it) } // only one expected here, but meh
     }
 
     private fun processTypeDeclarationInterface(decl: TmpL.TypeDeclaration) {
@@ -816,7 +878,7 @@ class RustTranslator(
                         // TODO Only if all sealed subtypes are public?
                         id = AS_ENUM_NAME.toId(pos),
                         params = selfParams.deepCopy(),
-                        returnType = enumId.deepCopy(),
+                        returnType = enumId.makeTypeRef(generics),
                         block = null,
                     ).also { add(it.toItem()) }
                 }
@@ -890,12 +952,14 @@ class RustTranslator(
                 }
             },
         ).toItem().also { moduleItems.add(it) }
-        // Implement AnyValue.
+        // Implement traits including AnyValue.
         val typeRef = id.makeTypeRef(generics)
+        implTraits(pos, decl, typeRef, generics)
         Rust.Call(
             pos,
             callee = "temper_core".toKeyId(pos).extendWith("impl_any_value_trait_for_interface!"),
             args = listOf(typeRef.deepCopy()),
+            where = whereForAnyValueImpl(pos, generics),
         ).also { moduleItems.add(Rust.ExprStatement(pos, it).toItem()) }
         // Implement Deref for all our wrapped traits.
         Rust.Impl(
@@ -939,8 +1003,9 @@ class RustTranslator(
         return bounds
     }
 
-    private fun buildBoundsCommon(pos: Position): List<Rust.TypeParamBound> =
-        listOf("Clone", SEND_NAME, SYNC_NAME, STATIC_LIFETIME).map { it.toId(pos) }
+    private fun buildBoundsCommon(pos: Position): List<Rust.TypeParamBound> {
+        return commonTypeBounds.map { it.toId(pos) }
+    }
 
     internal fun buildCastCallee(
         pos: Position,
@@ -1006,6 +1071,103 @@ class RustTranslator(
             },
         )
         return translateMethodLike(method, block = block, forTrait = true, returnType = effectiveReturnType)
+    }
+
+    /**
+     * Build a forwarder from a trait wrapper to a trait method that *isn't*
+     * overridden in the current trait. We need this to handle methods for
+     * which we have only frontend descriptions, not tmpl.
+     */
+    private fun buildForwarderForTrait(
+        pos: Position,
+        shape: VisibleMemberShape,
+        methodKind: MethodKind,
+    ): List<Rust.Item> = run {
+        val selfParam = Rust.RefType(pos, "self".toKeyId(pos))
+        val selfArg = "self".toKeyId(pos).member("0", notMethod = true).deref().ref()
+        val enclosingType =
+            (translateTypeDefinition(shape.enclosingType, pos) as? Rust.Path)?.suffixed(TRAIT_NAME_SUFFIX)
+        when (methodKind) {
+            MethodKind.Normal -> {
+                val method = shape as MethodShape
+                val methodId = translateIdFromName(pos, method.name as ResolvedName, NameStyle.Snake)
+                val sig = method.descriptor ?: return listOf()
+                val argNames = (1..<sig.requiredInputTypes.size + sig.optionalInputTypes.size).map { "arg$it" }
+                Rust.Function(
+                    pos,
+                    id = methodId,
+                    params = buildList {
+                        add(selfParam)
+                        var index = 0
+                        for (paramType in sig.requiredInputTypes.subListToEnd(1)) {
+                            val paramName = argNames[index++].toId(pos)
+                            val translatedType = translateType(paramType, pos)
+                            add(Rust.FunctionParam(pos, paramName, translatedType))
+                        }
+                        for (paramType in sig.optionalInputTypes) {
+                            val paramName = argNames[index++].toId(pos)
+                            val translatedType = translateType(paramType, pos).option()
+                            add(Rust.FunctionParam(pos, paramName, translatedType))
+                        }
+                    },
+                    returnType = method.descriptor?.let { translateType(it.returnType2, pos = pos) },
+                    block = Rust.Block(
+                        pos,
+                        result = enclosingType?.let { type ->
+                            Rust.Call(
+                                pos,
+                                callee = type.extendWith(methodId.deepCopy()),
+                                args = buildList {
+                                    add(selfArg)
+                                    for (argName in argNames) {
+                                        add(argName.toId(pos))
+                                    }
+                                },
+                            )
+                        },
+                    ),
+                )
+            }
+            MethodKind.Getter -> {
+                val methodId = shape.symbol.text.camelToSnake().toId(pos)
+                val returnType = when (val descriptor = shape.descriptor) {
+                    is Signature2 -> descriptor.returnType2
+                    is Type2 -> descriptor
+                    else -> null
+                }?.let { translateType(it, pos = pos) }
+                val call = enclosingType?.let { type ->
+                    Rust.Call(pos, type.extendWith(methodId.deepCopy()), listOf(selfArg))
+                }
+                Rust.Function(
+                    pos,
+                    id = methodId,
+                    params = listOf(selfParam),
+                    returnType = returnType,
+                    block = Rust.Block(pos, result = call),
+                )
+            }
+            MethodKind.Setter -> {
+                val methodId = "set_${shape.symbol.text.camelToSnake()}".toId(pos)
+                val propertyType = when (val descriptor = shape.descriptor) {
+                    is Signature2 -> descriptor.requiredInputTypes.last()
+                    is Type2 -> descriptor
+                    else -> null
+                }?.let { translateType(it, pos = pos) }
+                // We don't have param names here, so invent one.
+                val value = "value".toId(pos)
+                val call = enclosingType?.let { type ->
+                    val args = listOf(selfArg, value.deepCopy())
+                    Rust.Call(pos, type.extendWith(methodId.deepCopy()), args)
+                }
+                Rust.Function(
+                    pos,
+                    id = methodId,
+                    params = listOf(selfParam, Rust.FunctionParam(pos, value, propertyType)),
+                    block = Rust.Block(pos, result = call),
+                )
+            }
+            else -> return listOf()
+        }.let { listOf(it.toItem()) }
     }
 
     private fun buildGenerics(typeParameters: TmpL.ATypeParameters) =
@@ -1146,13 +1308,16 @@ class RustTranslator(
         val enumId = "$id$ENUM_NAME_SUFFIX".toId(decl.name.pos)
         val pos = decl.pos
         val pub = chooseVisibility(decl)
+        val generics = buildGenerics(decl.typeParameters)
         // Enum type.
         Rust.Enum(
             pos,
             id = enumId,
+            generics = generics,
             items = decl.typeShape.sealedSubTypes!!.map { sub ->
                 val subId = translateTypeOutName(sub.name).toId(pos)
-                Rust.EnumItemTuple(pos, id = subId, fields = listOf(Rust.TupleField(pos, type = subId.deepCopy())))
+                val subType = subId.deepCopy().makeTypeRef(generics)
+                Rust.EnumItemTuple(pos, id = subId, fields = listOf(Rust.TupleField(pos, type = subType)))
             },
         ).let { moduleItems.add(it.toItem(pub = pub)) }
         // Convenient return value.
@@ -2972,8 +3137,9 @@ class RustTranslator(
         type: Type2,
         translated: Rust.Type,
         inExpr: Boolean = false,
+        bindings: List<Rust.GenericArg>? = null,
     ) = when {
-        inExpr || type.bindings.isEmpty() -> translated
+        inExpr || (bindings ?: type.bindings).isEmpty() -> translated
         else -> {
             val core = when (translated) {
                 is Rust.ImplTraitType -> {
@@ -2986,7 +3152,7 @@ class RustTranslator(
             val generic = Rust.GenericType(
                 core.pos,
                 path = core,
-                args = translateTypeBindings(type, core.pos),
+                args = bindings?.deepCopy() ?: translateTypeBindings(type, core.pos),
             )
             when (translated) {
                 is Rust.ImplTraitType -> Rust.ImplTraitType(translated.pos, bounds = listOf(generic))
@@ -3276,6 +3442,22 @@ class RustTranslator(
     }
 }
 
+private fun associateInstanceMethods(decl: TmpL.TypeDeclaration): Map<String, TmpL.InstanceMethod> = run {
+    decl.members.filterIsInstance<TmpL.InstanceMethod>().filter { member ->
+        member is TmpL.NormalMethod || member is TmpL.GetterOrSetter
+    }.associateBy { member ->
+        when (member) {
+            is TmpL.NormalMethod -> member.name.name
+            // We sometimes get names like "getwhatever" rather than "get.whatever", so be explicit.
+            is TmpL.GetterOrSetter -> when (member) {
+                is TmpL.Getter -> "get"
+                is TmpL.Setter -> "set"
+            }.let { BuiltinName("$it.${member.dotName}") } // changed to "nym`...`" below
+            else -> error("unexpected")
+        }.displayName
+    }
+}
+
 private enum class ConstructorMode {
     Init,
     Use,
@@ -3364,3 +3546,5 @@ internal const val TO_LISTED_TO_LISTED_NAME = "temper_core::ToListed::to_listed"
 internal const val TRAIT_NAME_SUFFIX = "Trait"
 internal const val TYPE_ID_NAME = "std::any::TypeId"
 internal const val TYPE_ID_OF_NAME = "std::any::TypeId::of"
+
+internal val commonTypeBounds = listOf("Clone", SEND_NAME, SYNC_NAME, STATIC_LIFETIME)

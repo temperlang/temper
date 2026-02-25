@@ -37,10 +37,19 @@ import lang.temper.type2.withType
 /**
  * We generate plenty of warnings. Some we could try to clean up, but it's awkward.
  * Ignoring warnings means we have to pay manual attention to generated public names.
+ *
+ * Also allow `dependency_on_unit_never_type_fallback` in our generated code for now.
+ * This was a backward incompatible change in newer versions of Rust, even without a
+ * change in edition. We should investigate this more in the future, though. It would
+ * be good to support latest expectations.
  */
 internal fun allowWarnings(pos: Position): Rust.AttrInner = Rust.AttrInner(
     pos,
-    Rust.Call(pos, "allow".toId(pos), listOf("warnings".toId(pos))),
+    Rust.Call(
+        pos,
+        "allow".toId(pos),
+        listOf("dependency_on_unit_never_type_fallback", "warnings").map { it.toId(pos) },
+    ),
 )
 
 internal fun makeError(pos: Position) = Rust.Call(pos, callee = ERROR_NEW_NAME.toId(pos), args = listOf())
@@ -52,6 +61,24 @@ fun makeSrcFilePath(relDir: FilePath): FilePath = makeSrcFilePath(relDir.segment
 fun makeSrcFilePath(relDir: List<FilePathSegment>): FilePath {
     val modPath = dirPath(relDir.map { it.fullName.dashToSnake() }).resolveFile("mod.rs")
     return dirPath("src").resolve(modPath)
+}
+
+internal fun whereForAnyValueImpl(pos: Position, translatedGenerics: List<Rust.GenericParam>): Rust.Where? = run {
+    val whereItems = translatedGenerics.mapNotNull generics@{ translatedParam ->
+        val translatedFormal = translatedParam as? Rust.TypeParam ?: return@generics null
+        // We get the common ones automatically in the impl any value macros, but we need custom ones explicit.
+        val ownBoundsCount = translatedFormal.bounds.size - commonTypeBounds.size
+        ownBoundsCount > 0 || return@generics null
+        Rust.TypeParam(
+            translatedFormal.pos,
+            id = translatedFormal.id,
+            bounds = translatedFormal.bounds.slice(0..<ownBoundsCount).map { it.deepCopy() },
+        )
+    }
+    when {
+        whereItems.isEmpty() -> null
+        else -> Rust.Where(pos, whereItems)
+    }
 }
 
 internal fun MutableList<Rust.Item>.declareSubmods(pos: Position, modKids: Collection<FilePath>) {
@@ -360,7 +387,7 @@ internal fun Rust.GenericParam.toArg(): Rust.Id {
     }.deepCopy()
 }
 
-internal fun Rust.Id.makeTypeRef(generics: List<Rust.GenericParam>): Rust.Type = when {
+internal fun Rust.Path.makeTypeRef(generics: List<Rust.GenericParam>): Rust.Type = when {
     generics.isEmpty() -> this
     else -> Rust.GenericType(pos, path = deepCopy(), args = generics.map { it.toArg() })
 }
@@ -398,6 +425,8 @@ internal fun Rust.Path.extendWith(nexts: Iterable<Rust.PathSegment>): Rust.Path 
 internal fun Rust.Path.extendWith(nexts: List<String>): Rust.Path {
     return extendWith(nexts.map { it.toId(pos) })
 }
+
+internal fun Rust.Path.extendWith(next: Rust.PathSegment) = extendWith(listOf(next))
 
 internal fun Rust.Path.extendWith(next: String) = extendWith(listOf(next.toId(pos)))
 
@@ -649,8 +678,14 @@ internal fun Rust.Type.isUnit() = this is Rust.Id && this.outName.outputNameText
 private val TypeDefinition.abstractness get() = (this as? TypeShape)?.abstractness
 
 // TODO: can we replace this with uses of SuperTypeTree2
-internal fun TypeDefinition.allInterfaces(): Sequence<Pair<TypeDefinition, Type2>> = sequence {
-    // SuperTypeTree requires a NominalType to start with, and I didn't find that in TmpL.TypeDeclaration.
+internal fun TypeDefinition.allInterfaces(
+    allowStart: Boolean = false,
+): Sequence<Pair<TypeDefinition, Type2>> = sequence {
+    val thisType = this@allInterfaces
+    if (allowStart && thisType is TypeShape && thisType.abstractness == Abstractness.Abstract) {
+        // For interfaces, we need to implement in the trait for its own wrapper, so provide that here.
+        yield(thisType to MkType2(thisType).position(pos).get())
+    }
     types@ for (type in superTypes) {
         type.definition == WellKnownTypes.anyValueTypeDefinition && continue@types
         val superType = hackMapOldStyleToNew(type)
