@@ -67,7 +67,7 @@ class RustBackendTest {
             |      src: {
             |        lib.rs: {
             |          content: ```
-            |            #![allow(warnings)]
+            |            #![allow(dependency_on_unit_never_type_fallback, warnings)]
             |            pub mod bar;
             |            mod r#mod;
             |            pub use r#mod::*;
@@ -86,7 +86,7 @@ class RustBackendTest {
             |        main.rs: "__DO_NOT_CARE__",
             |        mod.rs: {
             |          content: ```
-            |            #![allow(warnings)]
+            |            #![allow(dependency_on_unit_never_type_fallback, warnings)]
             |            use temper_core::AnyValueTrait;
             |            use temper_core::AsAnyValue;
             |            use temper_core::Pair;
@@ -124,7 +124,7 @@ class RustBackendTest {
             |        bar: {
             |          mod.rs: {
             |            content: ```
-            |              #![allow(warnings)]
+            |              #![allow(dependency_on_unit_never_type_fallback, warnings)]
             |              use temper_core::AnyValueTrait;
             |              use temper_core::AsAnyValue;
             |              use temper_core::Pair;
@@ -1067,7 +1067,7 @@ class RustBackendTest {
             |      src: {
             |        lib.rs: {
             |          content: ```
-            |            #![allow(warnings)]
+            |            #![allow(dependency_on_unit_never_type_fallback, warnings)]
             |            pub mod bar;
             |            pub mod bob;
             |            mod support;
@@ -1086,7 +1086,7 @@ class RustBackendTest {
             |        bar: {
             |          mod.rs: {
             |            content: ```
-            |              #![allow(warnings)]
+            |              #![allow(dependency_on_unit_never_type_fallback, warnings)]
             |              use temper_core::AnyValueTrait;
             |              use temper_core::AsAnyValue;
             |              use temper_core::Pair;
@@ -1122,7 +1122,7 @@ class RustBackendTest {
             |            "beth": {
             |              "mod.rs": {
             |                content: ```
-            |                  #![allow(warnings)]
+            |                  #![allow(dependency_on_unit_never_type_fallback, warnings)]
             |                  use temper_core::AnyValueTrait;
             |                  use temper_core::AsAnyValue;
             |                  use temper_core::Pair;
@@ -2424,7 +2424,7 @@ private fun assertGenerateWanted(modules: List<ModuleInfo>) {
             |                    "mod.rs": {
             |                        "content":
             |```
-            |#![allow(warnings)]
+            |#![allow(dependency_on_unit_never_type_fallback, warnings)]
             |use temper_core::AnyValueTrait;
             |use temper_core::AsAnyValue;
             |use temper_core::Pair;
