@@ -37,10 +37,19 @@ import lang.temper.type2.withType
 /**
  * We generate plenty of warnings. Some we could try to clean up, but it's awkward.
  * Ignoring warnings means we have to pay manual attention to generated public names.
+ *
+ * Also allow `dependency_on_unit_never_type_fallback` in our generated code for now.
+ * This was a backward incompatible change in newer versions of Rust, even without a
+ * change in edition. We should investigate this more in the future, though. It would
+ * be good to support latest expectations.
  */
 internal fun allowWarnings(pos: Position): Rust.AttrInner = Rust.AttrInner(
     pos,
-    Rust.Call(pos, "allow".toId(pos), listOf("warnings".toId(pos))),
+    Rust.Call(
+        pos,
+        "allow".toId(pos),
+        listOf("dependency_on_unit_never_type_fallback", "warnings").map { it.toId(pos) },
+    ),
 )
 
 internal fun makeError(pos: Position) = Rust.Call(pos, callee = ERROR_NEW_NAME.toId(pos), args = listOf())
