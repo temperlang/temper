@@ -674,7 +674,52 @@ class JsBackendTest {
             |        "list.js": {
             |          "_name": "list.js",
             |          "_type": "txt",
-            |          "content": "/** @type {Array\u003cnumber\u003e} */\nconst return_0 = Object.freeze([3, 4]);\nexport default return_0;\n"
+            |          "content": ```
+            |            /** @type {Array<number>} */
+            |            const return_0 = Object.freeze([3, 4]);
+            |            export default return_0;
+            |
+            |            ```
+            |        },
+            |        "list.js.map": "__DO_NOT_CARE__"
+            |      },
+            |$OUTPUT_BOILERPLATE
+            |    }
+            |  }
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun listOfStrings() = assertGeneratedCode(
+        inputs = inputFileMapFromJson(
+            """
+                |{
+                |  src: {
+                |    list: {
+                |      list.temper: ```
+                |        ["", "foo", "\"", "'", "<b>bold</b>", "foo\n\\bar\r\n.baz", "\u0000"]
+                |        ```
+                |    }
+                |  }
+                |}
+            """.trimMargin(),
+        ),
+        moduleResultNeeded = true,
+        want = """
+            |{
+            |  "js": {
+            |    "my-test-library": {
+            |      "src": {
+            |        "list.js": {
+            |          "_name": "list.js",
+            |          "_type": "txt",
+            |          "content": ```
+            |            /** @type {Array<string>} */
+            |            const return_0 = Object.freeze(["", "foo", '"', "'", "<b>bold<\/b>", "foo\n\\bar\r\n.baz", "\x00"]);
+            |            export default return_0;
+            |
+            |            ```
             |        },
             |        "list.js.map": "__DO_NOT_CARE__"
             |      },
