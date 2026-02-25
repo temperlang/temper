@@ -2359,7 +2359,7 @@ class BuildTreeTest {
 
     @Test
     fun generatedTest4() = assertAst(
-        input = "let DMdS : vZ < hkKNZ9x , dzW , YrMi >",
+        input = "let DMdS : vZ< hkKNZ9x , dzW , YrMi >",
         wantJson = """
             [ "Decl", [
                 [ "LeftName", "DMdS" ],
@@ -5327,7 +5327,7 @@ class BuildTreeTest {
     @Test
     fun angleBracketConfusion() = assertAst(
         // This is a use of an angle bracket, not less-than and greater-than.
-        input = "or(a < 2, a > 0)",
+        input = "or(a< 2, a > 0)",
         wantJson = """
             |[ "Call", [
             |    [ "Value", "error: Function" ],

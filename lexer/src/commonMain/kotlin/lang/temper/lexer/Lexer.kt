@@ -22,7 +22,6 @@ import lang.temper.common.charCount
 import lang.temper.common.compatRemoveFirst
 import lang.temper.common.console
 import lang.temper.common.decodeUtf16
-import lang.temper.common.emptyBooleanArray
 import lang.temper.common.isEmpty
 import lang.temper.common.logIf
 import lang.temper.common.toStringViaBuilder
@@ -96,6 +95,7 @@ class Lexer(
      * like '/' or '/=' and not a regular expression like `/reg(ular )?exp(r(ession)?)?/`
      */
     private var lastPreDiv: Boolean = false
+    private var lastTokenType: TokenType? = null
     private val pendingTokens = mutableListOf<TemperToken>()
 
     override fun hasNext(): Boolean = peek() != null
@@ -144,6 +144,7 @@ class Lexer(
         copy.scriptletStack = scriptletStack
         copy.open = open
         copy.lastPreDiv = lastPreDiv
+        copy.lastTokenType = lastTokenType
         return copy
     }
 
@@ -405,7 +406,7 @@ class Lexer(
                                             next == '<' || next == '=' || next == '/'
                                         }
 
-                                        C_GT -> !isAngleBracketAt(start) // Split >> as needed.
+                                        C_GT -> nOpenLeftAngleBrackets == 0 // Split >> as needed.
                                         else -> true
                                     }
                                     if (continues) {
@@ -589,12 +590,11 @@ class Lexer(
                                 }
                                 // Always keep each escape in its own token.
                                 // TODO Could technically keep in main string token if known non-error.
-                                break
                             } else {
                                 // Start a new token for the escape, as for cluster handling above.
                                 end -= 1
-                                break
                             }
+                            break
                             // Lower branches check for sequences that are valid when not escaped
                         } else if (!context.isMultiQuote && c == context.delimChar && !inCharClass) {
                             // String end.
@@ -759,12 +759,21 @@ class Lexer(
 
         val tokenText = sourceText.substring(start, end)
         val currentMayBracket = when (currentTokenType) {
-            TokenType.Punctuation ->
-                if (isOpenAngleBracketText(tokenText) || tokenText == ">") {
-                    isAngleBracketAt(start)
-                } else {
-                    tokenText in openBrackets || tokenText in closeBrackets
+            TokenType.Punctuation -> when (tokenText) {
+                // A '<' that is preceded by a space or comment token is infix.
+                "<" -> (lastTokenType?.ignorable == false).also { mayBracketLt ->
+                    if (mayBracketLt) {
+                        nOpenLeftAngleBrackets += 1
+                    }
                 }
+                ">" -> (nOpenLeftAngleBrackets != 0).also { mayBracketGt ->
+                    if (mayBracketGt) {
+                        nOpenLeftAngleBrackets -= 1
+                    }
+                }
+                in openBrackets, in closeBrackets -> true
+                else -> false
+            }
             TokenType.LeftDelimiter, TokenType.RightDelimiter -> true
             else -> false
         }
@@ -779,6 +788,7 @@ class Lexer(
         )
 
         pendingTokens.add(newToken)
+        lastTokenType = currentTokenType
         // Explode semilit comment tokens to synthetic tokens for each paragraph.
         // See massageToSemilitSyntheticComment for details.
         if (openWas == OpenTokenType.SEMI_LIT_COMMENT && newToken.tokenType == TokenType.Comment) {
@@ -788,7 +798,7 @@ class Lexer(
                         TemperToken(
                             pos = Position(
                                 codeLocation,
-                                range.first + offset, range.endInclusive + offset + 1,
+                                range.first + offset, range.last + offset + 1,
                             ),
                             tokenText = massagedTokenText,
                             tokenType = TokenType.Comment,
@@ -1099,14 +1109,13 @@ class Lexer(
                         val before = text[end - 1]
                         val after = if (end + 1 < limit) { text[end - 1] } else { '\u0000' }
                         if (
-                            !(before == '=' || before == '<' || after == '=' || after == '<') &&
-                            isAngleBracketAt(end)
+                            !(before == '=' || before == '<' || after == '=' || after == '<')
                         ) {
                             return
                         }
                     }
                     C_GT -> {
-                        val stopBeforeGt = isAngleBracketAt(end) ||
+                        val stopBeforeGt = nOpenLeftAngleBrackets > 0 ||
                             run {
                                 // Do not extend arbitrary punctuation with '>' which would prevent
                                 // it from being recognized as an angle bracket above.
@@ -1362,42 +1371,23 @@ class Lexer(
         return -1
     }
 
-    // We need to treat < and > specially when they are used as angle brackets as in
-    //    : TypeName<TypeParameter>
-    // but not in compound punctuation operators like
-    //    << <<= <= >> >>= >= >>> >>>=
-    // or custom punctuation tokens
-    //    <=> => ->
-    //
-    // To do that, we lazily compute a bitset indicating angle brackets
-    // by trying to find which '<' have a corresponding '>' without an
-    // intervening "angle bracket interrupter".
-    private fun isAngleBracketAt(pos: Int): Boolean {
-        if (findingAngleBrackets) {
-            return false
-        }
-        if (sourceText[pos] == '<' && pos !in angleBracketMaskLeft until angleBracketMaskRight) {
-            // Create a lexer copy that starts lexing at pos using the current state.
-            val finder = copy(logSink = LogSink.devNull, copyPendingTokens = false)
-            finder.findingAngleBrackets = true
-            finder.end = pos
-            val (abmLeft: Int, abm: BooleanArray) = console.groupIf(DEBUG, "Classifying angle brackets") {
-                classifyAngleBrackets(finder)
-            }
-            angleBracketMaskLeft = abmLeft
-            angleBracketMaskRight = abmLeft + abm.size
-            angleBracketMask = abm
-        }
-        if (pos in angleBracketMaskLeft until angleBracketMaskRight) {
-            return angleBracketMask[pos - angleBracketMaskLeft]
-        }
-        return false
-    }
-
-    private var findingAngleBrackets = false
-    private var angleBracketMaskLeft = 0
-    private var angleBracketMaskRight = 0
-    private var angleBracketMask = emptyBooleanArray
+    /**
+     * We need to treat < and > specially when they are used as angle brackets as in
+     *
+     *    : TypeName<TypeParameter>
+     *
+     * but not in compound punctuation operators like
+     *
+     *    << <<= <= >> >>= >= >>> >>>=
+     *
+     * or custom punctuation tokens
+     *
+     *    <=> => ->
+     *
+     * To do that, we .
+     *
+     */
+    private var nOpenLeftAngleBrackets = 0
 }
 
 /**

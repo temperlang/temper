@@ -10,7 +10,7 @@ val bracketPartners = mapOf(
     "</" to ">",
     "\\(" to ")",
     "\\{" to "}",
-    "\${" to "}",
+    $$"${" to "}",
     "\\u{" to "}",
     "{:" to ":}",
 )

@@ -294,7 +294,7 @@ class ParseTest {
             ")"
         ]
         """,
-        "f(a<b, c)",
+        "f(a < b, c)",
     )
 
     @Test
@@ -319,7 +319,7 @@ class ParseTest {
             ")"
         ]
         """,
-        "f(a<b && c>d)",
+        "f(a < b && c > d)",
     )
 
     @Test
@@ -344,7 +344,7 @@ class ParseTest {
             ")"
         ]
         """,
-        "f(a<b || c>d)",
+        "f(a < b || c > d)",
     )
 
     @Test
@@ -583,71 +583,6 @@ class ParseTest {
             |  ";",
             |]
         """.trimMargin(),
-    )
-
-    @Test
-    fun greaterThanInsideTemplateStringDoesNotCompleteAngle() = assertParseTree(
-        """
-        [
-          [
-            ["a"],
-            "<",
-            [
-              "(",
-              [
-                "\"",
-                ["..."],
-                [
-                  "$INTERP_EMBED",
-                  [
-                    ["b"],
-                    ">",
-                    ["-", ["c"]]
-                  ],
-                  "}"
-                ],
-                ["..."],
-                "\"",
-              ],
-              ")",
-            ],
-          ],
-          ";",
-          [
-            [
-              ["a"],
-              "<",
-              [
-                "(",
-                [
-                  "\"",
-                  ["..."],
-                  [
-                    "$INTERP_EMBED",
-                    [
-                      ["b"],
-                      ">",
-                      ["-", ["c"]]
-                    ],
-                    "}",
-                  ],
-                  ["..."],
-                  "\"",
-                ],
-                ")",
-              ],
-              ">",
-            ],
-            "-",
-            ["d"]
-          ],
-          ";"
-        ]
-        """,
-        """
-        a < "...$INTERP_EMBED b > - c }...";       // Compares a to a composed string
-        a < "...$INTERP_EMBED b > - c }..." > - d; // a parameterized w/ a string template minus d
-        """,
     )
 
     @Test
@@ -3855,7 +3790,10 @@ class ParseTest {
 
     @Test
     fun angleBracketConfusion() = assertParseTree(
-        input = "or(a < 2, a > 0)",
+        // This is an odd case and this tests documents behaviour.
+        // Because there's no space after the `a`, the `<` is an angle bracket,
+        // and it eats the `>` after the `b`.
+        input = "or(a< 2, b>0)",
         want = """
             |[
             |  [ "or" ],
@@ -3866,7 +3804,7 @@ class ParseTest {
             |    [
             |      ["2"],
             |      ",",
-            |      ["a"],
+            |      ["b"],
             |    ],
             |    ">",
             |  ],

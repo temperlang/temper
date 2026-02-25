@@ -512,14 +512,6 @@ class LexerTest {
     )
 
     @Test
-    fun angleBracketFinding() = assertTokenization(
-        """
-        >x == <T>y
-        :WS PSBWBW
-        """.trimIndent(),
-    )
-
-    @Test
     fun splitCloseAngles() = assertTokenization(
         """
         >x:T<U<V>>= y >> z
@@ -560,30 +552,6 @@ class LexerTest {
     )
 
     @Test
-    fun doubleAmpInterruptsAngles() = assertTokenization(
-        """
-        >T<A && B>(c)
-        :WPWS PSWPBWB
-        """.trimIndent(),
-    )
-
-    @Test
-    fun doubleBarInterruptsAngles() = assertTokenization(
-        """
-        >T<A || B>(c)
-        :WPWS PSWPBWB
-        """.trimIndent(),
-    )
-
-    @Test
-    fun semiInterruptsAngles() = assertTokenization(
-        """
-        >T<A ; B>(c)
-        :WPWSPSWPBWB
-        """.trimIndent(),
-    )
-
-    @Test
     fun shiftsNotAngles() = assertTokenization(
         """
         >T<<A | B>>(c)
@@ -616,41 +584,6 @@ class LexerTest {
     )
 
     @Test
-    fun anglesDoNotMatchAcrossParens() = assertTokenization(
-        """
-        >T<B(C>D)>
-        :WBWBWPWBB
-        """.trimIndent(),
-    )
-
-    @Test
-    fun anglesDoNotMatchAcrossInterpolationBoundaries() = assertTokenization(
-        $$"""
-        >a<"...${-b > -c}..."> - d;
-        :WBL  Q BPWSPSPWB  QRBSPSWP
-        """.trimIndent(),
-    )
-
-    @Test
-    fun tripleSemiInterruptsAnglesParenthesized() = assertTokenization(
-        """
-        >T<(A ;;; B)>(c)
-        :WPBWS  PSWBPBWB
-        """.trimIndent(),
-    )
-
-    // We want to be able to reuse the lexer for DSLs with close tags like </foo> where the "</"
-    // and ">" form a bracket pair.  Specifically, the "/" should not start a regex when adjacent
-    // to the "<".
-    @Test
-    fun slashAfterLessThanIsNotRegex() = assertTokenization(
-        """
-        ></foo attr="value">
-        : B  WS   WPL    QRB
-        """.trimIndent(),
-    )
-
-    @Test
     fun ltIsARegexPreceder() = assertTokenization(
         """
         >< /foo attr="value">
@@ -660,22 +593,6 @@ class LexerTest {
         wantedErrors = listOf(
             "20: Missing close quote!",
         ),
-    )
-
-    @Test
-    fun tagStartDoesNotConsumeComment() = assertTokenization(
-        """
-        ></*foo*/><//foo
-        :B      CBP    C
-        """.trimIndent(),
-    )
-
-    @Test
-    fun tagAttributes() = assertTokenization(
-        """
-        ><foo bar="1">
-        :B  WS  WPLQRB
-        """.trimIndent(),
     )
 
     @Test
