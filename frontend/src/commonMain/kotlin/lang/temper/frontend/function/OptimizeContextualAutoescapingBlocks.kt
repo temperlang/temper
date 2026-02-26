@@ -11,6 +11,7 @@ import lang.temper.common.buildListMultimap
 import lang.temper.common.console
 import lang.temper.common.firstOrNullAs
 import lang.temper.common.putMultiList
+import lang.temper.common.putMultiSet
 import lang.temper.common.subListToEnd
 import lang.temper.env.InterpMode
 import lang.temper.frontend.InterpretationContext
@@ -502,8 +503,6 @@ private fun optimizeAutoescaperUse(
         }
     }
 
-    val autoescStateBeforeRef = mutableMapOf<BlockChildReference, Value<*>>()
-
     val methodClassifications = mutableMapOf<Symbol, Pair<MethodShape?, AppendClassification?>>()
 
     // Accumulator methods like append(...) might have been overloaded and resolved to
@@ -549,21 +548,7 @@ private fun optimizeAutoescaperUse(
         val edge = block.dereference(ref) ?: return null
         val t = edge.target
         // merge with prior state
-        val previouslyComputedState = autoescStateBeforeRef[ref]
         var state = stateBefore
-        if (previouslyComputedState != null) {
-            state = iCtx.interpret(ref.pos) {
-                Call {
-                    Call(BuiltinFuns.vGets) {
-                        V(Value(ReifiedType(accumulatorType)))
-                        V(Symbol("mergeStates"))
-                    }
-                    V(previouslyComputedState)
-                    V(stateBefore)
-                    V(vCallout)
-                }
-            } as? Value<*> ?: return null
-        }
         withCallouts { problem, severity ->
             problems.add(CalledOutProblem(severity, ref.pos.leftEdge, problem))
         }
@@ -629,13 +614,42 @@ private fun optimizeAutoescaperUse(
         return state
     }
 
-    val q = ArrayDeque<Triple<MaximalPathIndex, Int, Value<*>>>()
-    q.add(Triple(startPath.pathIndex, startOffset, initialState))
+    val startStateMap = mutableMapOf<Pair<MaximalPathIndex, Int>, MutableSet<Value<*>>>()
+    startStateMap[startPath.pathIndex to startOffset] = mutableSetOf(initialState)
+    val q = ArrayDeque<Pair<MaximalPathIndex, Int>>()
+    q.add(startPath.pathIndex to startOffset)
     while (q.isNotEmpty()) {
-        val (pathIndex, startOffset, startState) = q.removeFirst()
-
+        val (pathIndex, startOffset) = q.removeFirst()
+        val startStates = startStateMap.remove(pathIndex to startOffset)!!
         val path = paths[pathIndex]
         val indices = startOffset..path.elements.lastIndex
+
+        val startState = run {
+            val stateIterator = startStates.iterator()
+            check(stateIterator.hasNext())
+            var state = stateIterator.next()
+
+            val pathInitPos = (path.elements.getOrNull(startOffset)?.pos ?: init.pos).leftEdge
+            while (stateIterator.hasNext()) {
+                val stateToMerge = stateIterator.next()
+                state = iCtx.interpret(pathInitPos) {
+                    Call {
+                        Call(BuiltinFuns.vGets) {
+                            V(Value(ReifiedType(accumulatorType)))
+                            V(Symbol("mergeStates"))
+                        }
+                        V(state)
+                        V(stateToMerge)
+                        V(vCallout)
+                    }
+                } as? Value<*> ?: return@optimizeAutoescaperUse
+            }
+            withCallouts { problem, severity ->
+                problems.add(CalledOutProblem(severity, pathInitPos, problem))
+            }
+            state
+        }
+
         var autoescState = startState
         var skipFollowers = false
         for (i in indices) {
@@ -675,12 +689,13 @@ private fun optimizeAutoescaperUse(
                         null -> stateBeforeCondition
                         else -> propagateOverStmt(stateBeforeCondition, cond.ref) ?: return
                     }
+                    startStateMap.putMultiSet(key, stateForFollower)
                     val remaining = predecessorCount.getValue(key) - 1
                     if (remaining != 0) {
                         predecessorCount[key] = remaining
                     } else {
                         predecessorCount.remove(key)
-                        q.add(Triple(followerPathIndex, 0, stateForFollower))
+                        q.add(Pair(followerPathIndex, 0))
                     }
                 }
             }
