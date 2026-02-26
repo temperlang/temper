@@ -167,8 +167,8 @@ class ParseStageTest {
         |let a = 1;
         |// The below has a use of angle-brackets, not a use
         |// of less-than and a use of greater-than.
-        |or(a < 2, a > 0);
-        |//            ^---- Causes a parse failure.
+        |or(a< 2, a > 0);
+        |//  ^---- Missing space causes a parse failure.
         """.trimMargin(),
         want = """
             |{

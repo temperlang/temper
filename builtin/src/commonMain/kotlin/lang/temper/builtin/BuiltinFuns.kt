@@ -14,7 +14,6 @@ import lang.temper.name.BuiltinName
 import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.ModularName
 import lang.temper.name.Symbol
-import lang.temper.stage.Stage
 import lang.temper.type.Abstractness
 import lang.temper.type.MkType
 import lang.temper.type.NominalType
@@ -791,7 +790,7 @@ private object PrintFn : BuiltinFun(
         cb: InterpreterCallback,
         interpMode: InterpMode,
     ): Result {
-        if (cb.stage != Stage.Run) { return Fail }
+        if (interpMode != InterpMode.Full) { return Fail }
         val (message) = args.unpackPositioned(1, cb) ?: return Fail
         val text = TString.unpackOrNull(message) ?: run {
             return@invoke cb.fail(MessageTemplate.ExpectedValueOfType, values = listOf(TString, message))
@@ -1331,6 +1330,73 @@ object BuiltinFuns {
      *
      * See the [snippet/general-comparison/algo] for details of how they are compiled and
      * especially the [snippet/general-comparison/caveats].
+     *
+     * ⎀ syntax/less-than-space-sensitivity
+     *
+     * <!-- snippet: syntax/less-than-space-sensitivity -->
+     * # Syntactic corner case: `<` ambiguity
+     *
+     * Tldr: always put spaces around infix operators like `<`.
+     *
+     * The `<` operator means comparison, but in a type expression, it can also be a bracket.
+     *
+     * ```temper inert
+     * console.log(c < d);  // Compare c to d
+     *
+     * let x:      C<D>;    // x's type is C parameterized with D
+     * ```
+     *
+     * Other languages also have two meanings for `<`.  Temper does not want to enforce a
+     * hard grammatic distinction between types and expressions, and to avoid workarounds
+     * like extra turbofish syntax.
+     *
+     * In Temper the rule is:
+     *
+     * > If a `<` token is not preceded by a space or comment, then it is an angle bracket
+     * > otherwise it is a comparison operator.
+     *
+     * (In Temper, types are upper-case by convention, but we cannot use case as in `C<D>`
+     * above to disambiguate because Temper assigns no semantic significance to identifier
+     * case, to better support non-European identifiers which are mostly in (unicameral)
+     * writing systems.)
+     *
+     * For example:
+     *
+     * ```temper inert
+     * // ┏━━━━ This space makes the difference
+     * f(a < b, c > d);  // pass two booleans to f
+     * f(A<B, C>);       // pass one type with two parameters to f (a macro?)
+     *
+     * class C<T> {}  // A class declaration with a formal type parameter
+     *
+     * // Type argument lists can be spread over multiple lines.
+     * class C< // No space **before**, so this `<` starts C's type argument list.
+     *   T
+     * > {}
+     *
+     * class C <T>    // ERROR: trying to compare `class C` to `T` probably won't work
+     *
+     * class C  // ERROR: space before '<'
+     * <T> {}
+     * ```
+     *
+     * The rule to determine whether a `>` token is an angle bracket or a comparison
+     * operator is purely made based on preceding tokens.
+     *
+     * > If there are zero preceding `<` bracket tokens without a `>` partner then it
+     * > is a bracket, otherwise it is an infix operator.
+     *
+     * This code doesn't mean much, but the parsing rules are clear.
+     *
+     * ```temper inert
+     * // ┏━━━┓ 3 open `<` brackets
+     *   A<B<C<D>>>>
+     * //       ┗┳┛┗━━━━━━━ This fourth one is an infix comparison operator
+     * //        ┃
+     * // Make these 3 close `>` brackets
+     * ```
+     *
+     * To avoid confusion, just put spaces around all your infix operators.
      */
     val lessThanFn = CoverFunction(
         listOf(
@@ -1364,7 +1430,9 @@ object BuiltinFuns {
             BuiltinOperatorId.LtGeneric,
             WKT.booleanType2,
         ) { d -> TBoolean.value(d < 0) },
-    )
+    ).also {
+        helpSnippet(it, "Less than operator", "builtin/<")
+    }
 
     /**
      * <!-- snippet: builtin/<= -->
@@ -1407,7 +1475,9 @@ object BuiltinFuns {
             BuiltinOperatorId.LeGeneric,
             WKT.booleanType2,
         ) { d -> TBoolean.value(d <= 0) },
-    )
+    ).also {
+        helpSnippet(it, "Less than or equals operator", "builtin/<=")
+    }
 
     /**
      * <!-- snippet: builtin/> -->
@@ -1450,7 +1520,9 @@ object BuiltinFuns {
             BuiltinOperatorId.GtGeneric,
             WKT.booleanType2,
         ) { d -> TBoolean.value(d > 0) },
-    )
+    ).also {
+        helpSnippet(it, "Greater than operator", "builtin/>")
+    }
 
     /**
      * <!-- snippet: builtin/>= -->
@@ -1493,7 +1565,9 @@ object BuiltinFuns {
             BuiltinOperatorId.GeGeneric,
             WKT.booleanType2,
         ) { d -> TBoolean.value(d >= 0) },
-    )
+    ).also {
+        helpSnippet(it, "Greater than or equals operator", "builtin/>=")
+    }
 
     /**
      * <!-- snippet: builtin/== -->
@@ -1536,7 +1610,9 @@ object BuiltinFuns {
             BuiltinOperatorId.EqGeneric,
             invert = false,
         ),
-    )
+    ).also {
+        helpSnippet(it, "Equal to operator", "builtin/==")
+    }
 
     /**
      * <!-- snippet: builtin/!= -->
@@ -1575,7 +1651,9 @@ object BuiltinFuns {
             BuiltinOperatorId.NeGeneric,
             invert = true,
         ),
-    )
+    ).also {
+        helpSnippet(it, "Not equal to operator", "builtin/!=")
+    }
 
     /**
      * <!-- snippet: builtin/<=> -->
@@ -1665,6 +1743,9 @@ object BuiltinFuns {
         BuiltinOperatorId.CmpGeneric,
         WKT.intType2,
     ) { d -> Value(d, TInt) }
+        .also {
+            helpSnippet(it, "Comparison operator", "builtin/<=>")
+        }
 
     val strCatFn: NamedBuiltinFun = StrCatFn
     val strRawMacro: NamedBuiltinFun = StrRawMacro

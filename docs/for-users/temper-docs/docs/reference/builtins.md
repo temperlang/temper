@@ -857,6 +857,91 @@ if the two are not mutually comparable.
 See the [General comparison algorithm](#general-comparison-algo) for details of how they are compiled and
 especially the [General Comparison Caveats](#general-comparison-caveats).
 
+<!-- snippet: syntax/less-than-space-sensitivity -->
+
+<a name="syntax&#45;less&#45;than&#45;space&#45;sensitivity" class="snippet-anchor-name"></a>
+
+#### Syntactic corner case: `<` ambiguity
+
+Tldr: always put spaces around infix operators like `<`.
+
+The `<` operator means comparison, but in a type expression, it can also be a bracket.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/0 -->
+
+```temper
+console.log(c < d);  // Compare c to d
+
+let x:      C<D>;    // x's type is C parameterized with D
+// ⏸️
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/0 -->
+
+Other languages also have two meanings for `<`.  Temper does not want to enforce a
+hard grammatic distinction between types and expressions, and to avoid workarounds
+like extra turbofish syntax.
+
+In Temper the rule is:
+
+> If a `<` token is not preceded by a space or comment, then it is an angle bracket
+> otherwise it is a comparison operator.
+
+(In Temper, types are upper-case by convention, but we cannot use case as in `C<D>`
+above to disambiguate because Temper assigns no semantic significance to identifier
+case, to better support non-European identifiers which are mostly in (unicameral)
+writing systems.)
+
+For example:
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/1 -->
+
+```temper
+// ┏━━━━ This space makes the difference
+f(a < b, c > d);  // pass two booleans to f
+f(A<B, C>);       // pass one type with two parameters to f (a macro?)
+
+class C<T> {}  // A class declaration with a formal type parameter
+
+// Type argument lists can be spread over multiple lines.
+class C< // No space **before**, so this `<` starts C's type argument list.
+  T
+> {}
+
+class C <T>    // ERROR: trying to compare `class C` to `T` probably won't work
+
+class C  // ERROR: space before '<'
+<T> {}
+// ⏸️
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/1 -->
+
+The rule to determine whether a `>` token is an angle bracket or a comparison
+operator is purely made based on preceding tokens.
+
+> If there are zero preceding `<` bracket tokens without a `>` partner then it
+> is a bracket, otherwise it is an infix operator.
+
+This code doesn't mean much, but the parsing rules are clear.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/2 -->
+
+```temper
+// ┏━━━┓ 3 open `<` brackets
+  A<B<C<D>>>>
+//       ┗┳┛┗━━━━━━━ This fourth one is an infix comparison operator
+//        ┃
+// Make these 3 close `>` brackets
+// ⏸️
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/2 -->
+
+To avoid confusion, just put spaces around all your infix operators.
+
+<!-- /snippet: syntax/less-than-space-sensitivity -->
+
 <!-- /snippet: builtin/< -->
 
 <!-- snippet: builtin/<= -->
@@ -1445,6 +1530,9 @@ console.log((m is Minimal).toString()); //!outputs "true"
 Source: [*TypeDefinitionMacro.kt*](https://github.com/temperlang/temper/blob/main/frontend/src/commonMain/kotlin/lang/temper/frontend/TypeDefinitionMacro.kt)
 
 Re parenthetical declarations, see also: [`@noProperty` decorator](#builtin-@noProperty)
+
+Be aware that [`<` space sensitivity](#syntax-less-than-space-sensitivity) requires
+leaving no space between the type name and the start of the `<...>` type parameter list.
 
 <!-- /snippet: builtin/class -->
 
