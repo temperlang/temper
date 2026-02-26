@@ -247,7 +247,7 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext, l
                                     // then it's in a test body.
                                     // TODO: Once we have a general @Suppress mechanism for linty errors
                                     // in content tag uses, then we can retire this difference.
-                                    var rootEdge = anc.incoming!!
+                                    var rootEdge = accumulatorDecl.incoming!!
                                     while (rootEdge.source != root) {
                                         rootEdge = rootEdge.source!!.incoming!!
                                     }
@@ -261,6 +261,7 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext, l
                                 }
 
                                 val declaringBlock = accumulatorDecl.incoming!!.source as BlockTree
+
                                 val ai = AutoescUseInfo(
                                     name = accumulatorName,
                                     declaringBlock = declaringBlock,
