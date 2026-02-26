@@ -6,14 +6,19 @@ import lang.temper.builtin.accumulatedDotName
 import lang.temper.builtin.appendDotName
 import lang.temper.builtin.appendSafeDotName
 import lang.temper.common.ForwardOrBack
+import lang.temper.common.Log
 import lang.temper.common.buildListMultimap
+import lang.temper.common.console
 import lang.temper.common.firstOrNullAs
 import lang.temper.common.putMultiList
+import lang.temper.common.putMultiSet
 import lang.temper.common.subListToEnd
 import lang.temper.env.InterpMode
 import lang.temper.frontend.InterpretationContext
 import lang.temper.frontend.structureBlock
 import lang.temper.frontend.syntax.isAssignment
+import lang.temper.log.LogSink
+import lang.temper.log.MessageTemplateI
 import lang.temper.log.Position
 import lang.temper.name.ExportedName
 import lang.temper.name.ParsedName
@@ -38,11 +43,15 @@ import lang.temper.type2.Type2
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.withType
 import lang.temper.value.Abort
+import lang.temper.value.ActualValues
 import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
+import lang.temper.value.CallableValue
 import lang.temper.value.DeclTree
+import lang.temper.value.Fail
 import lang.temper.value.InstancePropertyRecord
+import lang.temper.value.InterpreterCallback
 import lang.temper.value.MaximalPath
 import lang.temper.value.MaximalPathIndex
 import lang.temper.value.NameLeaf
@@ -52,11 +61,26 @@ import lang.temper.value.PartialResult
 import lang.temper.value.Planting
 import lang.temper.value.ReifiedType
 import lang.temper.value.RightNameLeaf
+import lang.temper.value.StaylessMacroValue
+import lang.temper.value.TBoolean
 import lang.temper.value.TClass
+import lang.temper.value.TClosureRecord
 import lang.temper.value.TEdge
+import lang.temper.value.TFloat64
+import lang.temper.value.TFunction
+import lang.temper.value.TInt
+import lang.temper.value.TInt64
+import lang.temper.value.TList
+import lang.temper.value.TListBuilder
+import lang.temper.value.TMap
+import lang.temper.value.TMapBuilder
 import lang.temper.value.TNull
+import lang.temper.value.TProblem
+import lang.temper.value.TStageRange
 import lang.temper.value.TString
+import lang.temper.value.TSymbol
 import lang.temper.value.TType
+import lang.temper.value.TVoid
 import lang.temper.value.Tree
 import lang.temper.value.UnpositionedTreeTemplate
 import lang.temper.value.Value
@@ -67,9 +91,14 @@ import lang.temper.value.functionContained
 import lang.temper.value.isImplicits
 import lang.temper.value.overloadSymbol
 import lang.temper.value.ssaSymbol
+import lang.temper.value.testSymbol
+import lang.temper.value.toPseudoCode
 import lang.temper.value.typeSymbol
 import lang.temper.value.valueContained
 import lang.temper.value.void
+import lang.temper.type.WellKnownTypes as WKT
+
+private const val DEBUG = false
 
 /**
  * Erases contextual auto-escaper uses so that the results are more transparent to static analysis.
@@ -123,7 +152,7 @@ import lang.temper.value.void
  * 2. third-party security tools like Semgrep can inspect the actual escaping
  *    decisions made.
  */
-internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext) {
+internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext, logSink: LogSink) {
     val root = iCtx.root
 
     if (root.document.isImplicits) { return }
@@ -172,6 +201,15 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext) {
         }
     }
 
+    val testFunNames = buildSet {
+        for (t in root.children) {
+            val declParts = (t as? DeclTree)?.parts ?: continue
+            if (testSymbol in declParts.metadataSymbolMultimap.keys) {
+                add(declParts.name.content as ResolvedName)
+            }
+        }
+    }
+
     val autoescUses = buildListMultimap {
         TreeVisit.startingAt(root)
             .forEachContinuing { t ->
@@ -203,16 +241,38 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext) {
                             if (accumulatorDecl != null &&
                                 accumulatorDecl.parts?.metadataSymbolMap?.containsKey(ssaSymbol) == true
                             ) {
+                                val inTestBody = run {
+                                    // If we can walk up to the root and find an assignment like
+                                    //     t#123 = fn { ... };
+                                    // where t#123 is in the set of test function declarations above
+                                    // then it's in a test body.
+                                    // TODO: Once we have a general @Suppress mechanism for linty errors
+                                    // in content tag uses, then we can retire this difference.
+                                    var rootEdge = accumulatorDecl.incoming!!
+                                    while (rootEdge.source != root) {
+                                        rootEdge = rootEdge.source!!.incoming!!
+                                    }
+                                    val rootChild = rootEdge.target
+                                    val assignedName = if (isAssignment(rootChild)) {
+                                        (rootChild.child(1) as NameLeaf?)?.content
+                                    } else {
+                                        null
+                                    }
+                                    assignedName != null && assignedName in testFunNames
+                                }
+
                                 val declaringBlock = accumulatorDecl.incoming!!.source as BlockTree
+
                                 val ai = AutoescUseInfo(
-                                    accumulatorName,
-                                    declaringBlock,
-                                    accumulatorDecl,
-                                    AutoescTypes(
+                                    name = accumulatorName,
+                                    declaringBlock = declaringBlock,
+                                    accumulatorDecl = accumulatorDecl,
+                                    types = AutoescTypes(
                                         autoescaperSuperType,
                                         accumulatorType = accumulatorType,
                                     ),
-                                    parent,
+                                    accumulated = parent,
+                                    inTestBody = inTestBody,
                                 )
                                 putMultiList(declaringBlock, ai)
                             }
@@ -230,7 +290,7 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext) {
     for ((b, uses) in autoescUses) {
         structureBlock(b)
         for (use in uses) {
-            optimizeAutoescaperUse(use, iCtx, escaperUnraveler)
+            optimizeAutoescaperUse(use, iCtx, escaperUnraveler, logSink)
         }
     }
 }
@@ -263,12 +323,14 @@ private data class AutoescUseInfo(
     val accumulatorDecl: DeclTree,
     val types: AutoescTypes,
     val accumulated: CallTree,
+    val inTestBody: Boolean,
 )
 
 private fun optimizeAutoescaperUse(
     use: AutoescUseInfo,
     iCtx: InterpretationContext,
     escaperUnraveler: EscaperUnraveler,
+    logSink: LogSink,
 ) {
     val block = use.declaringBlock
     val accumulatorName = use.name
@@ -363,6 +425,46 @@ private fun optimizeAutoescaperUse(
     } as? Value<*> ?: return
     val collectorType = use.types.collectorType ?: return
 
+    if (DEBUG) {
+        console.log("Optimizing ${block.document.context.formatPosition(init.pos)}")
+    }
+
+    // We define a callout function for use with propagate, merge state and others.
+    val problemsFromCallout = mutableListOf<Pair<String, Boolean>>()
+    class CalloutFn : CallableValue, StaylessMacroValue {
+        override val sigs = listOf(
+            // Takes a problem string and an isError boolean
+            Signature2(WKT.voidType2, false, listOf(WKT.stringType2, WKT.booleanType2)),
+        )
+
+        override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
+            val (a, b) = args.unpackPositioned(2, cb) ?: return Fail
+            val problem = TString.unpackOrNull(a)
+            val isError = TBoolean.unpackOrNull(b)
+            return if (problem != null && isError != null) {
+                problemsFromCallout.add(problem to isError)
+                void
+            } else {
+                Fail
+            }
+        }
+    }
+    val vCallout = Value(CalloutFn())
+    fun withCallouts(receiver: (String, Log.Level) -> Unit) {
+        val callouts = problemsFromCallout.toList()
+        problemsFromCallout.clear()
+        for ((messageText, isError) in callouts) {
+            val level = when {
+                // Downgrade static errors when used inside a test body.
+                use.inTestBody -> Log.Info
+                isError -> Log.Error
+                else -> Log.Warn
+            }
+
+            receiver(messageText, level)
+        }
+    }
+
     // Now we need to plan out how we're going to visit statements to come up with
     // states at each appendSafe / append call site.
     // First, we compute an entry count: how many times is a block entered from
@@ -401,8 +503,6 @@ private fun optimizeAutoescaperUse(
         }
     }
 
-    val autoescStateBeforeRef = mutableMapOf<BlockChildReference, Value<*>>()
-
     val methodClassifications = mutableMapOf<Symbol, Pair<MethodShape?, AppendClassification?>>()
 
     // Accumulator methods like append(...) might have been overloaded and resolved to
@@ -437,24 +537,20 @@ private fun optimizeAutoescaperUse(
 
     // We need a list of statements to rework.
     val toChange = mutableListOf<ChangeDetail>()
+    data class CalledOutProblem(
+        val severity: Log.Level,
+        val pos: Position,
+        val problem: String,
+    )
+    val problems = mutableSetOf<CalledOutProblem>()
 
     fun propagateOverStmt(stateBefore: Value<*>, ref: BlockChildReference): Value<*>? {
         val edge = block.dereference(ref) ?: return null
         val t = edge.target
         // merge with prior state
-        val previouslyComputedState = autoescStateBeforeRef[ref]
         var state = stateBefore
-        if (previouslyComputedState != null) {
-            state = iCtx.interpret(ref.pos) {
-                Call {
-                    Call(BuiltinFuns.vGets) {
-                        V(Value(ReifiedType(accumulatorType)))
-                        V(Symbol("mergeStates"))
-                    }
-                    V(previouslyComputedState)
-                    V(stateBefore)
-                }
-            } as? Value<*> ?: return null
+        withCallouts { problem, severity ->
+            problems.add(CalledOutProblem(severity, ref.pos.leftEdge, problem))
         }
         // If it's a call to append or appendSafe, update the context,
         // and remember it as something we need to change.
@@ -468,24 +564,28 @@ private fun optimizeAutoescaperUse(
                         val (_, classification) = methodClassification(fn.symbol)
                         if (classification != null) {
                             val arg = t.child(1)
-                            val argToPropagateOver: Value<*> = when (classification) {
+                            val (argToPropagateOver: Value<*>, argPos) = when (classification) {
                                 AppendClassification.AppendSafe ->
-                                    arg.valueContained ?: return null
-                                AppendClassification.AppendUnsafe -> TNull.value
+                                    (arg.valueContained ?: return null) to arg.pos
+                                AppendClassification.AppendUnsafe -> TNull.value to arg.pos.leftEdge
                             }
 
-                            val after = iCtx.interpret(t.pos) {
+                            val after = iCtx.interpret(argPos) {
                                 Call {
                                     V(propagateOver)
                                     V(contextPropagator)
                                     V(state)
-                                    V(argToPropagateOver)
+                                    V(argPos, argToPropagateOver)
                                     V(sameStateFn)
+                                    V(vCallout)
                                 }
                             } as? Value<*> ?: return null
+                            withCallouts { problem, severity ->
+                                problems.add(CalledOutProblem(severity, argPos, problem))
+                            }
                             val adjustedString = TString.unpackOrNull(after.readField(adjustedStringDotName))
                                 ?: return null
-                            state = after.readField(stateAfterDotName) ?: return null
+                            state = after.readField(iCtx, stateAfterGetter, argPos) ?: return null
                             val escapers = when (classification) {
                                 AppendClassification.AppendUnsafe -> {
                                     val escaperValue = iCtx.interpret(ref.pos) {
@@ -494,8 +594,13 @@ private fun optimizeAutoescaperUse(
                                                 V(escaperPicker)
                                             }
                                             V(state)
+                                            V(vCallout)
                                         }
                                     } as? Value<*> ?: return null
+                                    withCallouts { problem, severity ->
+                                        problems.add(CalledOutProblem(severity, ref.pos, problem))
+                                    }
+
                                     escaperUnraveler.escapers(escaperValue) ?: return null
                                 }
                                 AppendClassification.AppendSafe -> null
@@ -509,19 +614,64 @@ private fun optimizeAutoescaperUse(
         return state
     }
 
-    val q = ArrayDeque<Triple<MaximalPathIndex, Int, Value<*>>>()
-    q.add(Triple(startPath.pathIndex, startOffset, initialState))
+    val startStateMap = mutableMapOf<Pair<MaximalPathIndex, Int>, MutableSet<Value<*>>>()
+    startStateMap[startPath.pathIndex to startOffset] = mutableSetOf(initialState)
+    val q = ArrayDeque<Pair<MaximalPathIndex, Int>>()
+    q.add(startPath.pathIndex to startOffset)
     while (q.isNotEmpty()) {
-        val (pathIndex, startOffset, startState) = q.removeFirst()
-
+        val (pathIndex, startOffset) = q.removeFirst()
+        val startStates = startStateMap.remove(pathIndex to startOffset)!!
         val path = paths[pathIndex]
         val indices = startOffset..path.elements.lastIndex
+
+        val startState = run {
+            val stateIterator = startStates.iterator()
+            check(stateIterator.hasNext())
+            var state = stateIterator.next()
+
+            val pathInitPos = (path.elements.getOrNull(startOffset)?.pos ?: init.pos).leftEdge
+            while (stateIterator.hasNext()) {
+                val stateToMerge = stateIterator.next()
+                state = iCtx.interpret(pathInitPos) {
+                    Call {
+                        Call(BuiltinFuns.vGets) {
+                            V(Value(ReifiedType(accumulatorType)))
+                            V(Symbol("mergeStates"))
+                        }
+                        V(state)
+                        V(stateToMerge)
+                        V(vCallout)
+                    }
+                } as? Value<*> ?: return@optimizeAutoescaperUse
+            }
+            withCallouts { problem, severity ->
+                problems.add(CalledOutProblem(severity, pathInitPos, problem))
+            }
+            state
+        }
+
         var autoescState = startState
         var skipFollowers = false
         for (i in indices) {
             val ref = path.elements[i].ref
             if (ref.index == endChildIndex) {
                 skipFollowers = true
+                // Check the accumulator's end state which should recursively
+                // end delegates.
+                iCtx.interpret(ref.pos) {
+                    Call {
+                        Call(BuiltinFuns.vGets) {
+                            V(Value(ReifiedType(accumulatorType)))
+                            V(Symbol("checkEndState"))
+                        }
+                        V(autoescState)
+                        V(vCallout)
+                    }
+                }
+                withCallouts { problem, severity ->
+                    problems.add(CalledOutProblem(severity, ref.pos, problem))
+                }
+
                 break
             }
             autoescState = propagateOverStmt(autoescState, ref) ?: return
@@ -532,16 +682,20 @@ private fun optimizeAutoescaperUse(
                 val followerPathIndex = follower.pathIndex ?: continue
                 val key = followerPathIndex to 0
                 if (key in predecessorCount) {
+                    // Copy values, so mutations to a delegate in one branch don't affect
+                    // context propagation in another.
+                    val stateBeforeCondition = deepValueCopy(autoescState)
                     val stateForFollower = when (val cond = follower.condition) {
-                        null -> autoescState
-                        else -> propagateOverStmt(autoescState, cond.ref) ?: return
+                        null -> stateBeforeCondition
+                        else -> propagateOverStmt(stateBeforeCondition, cond.ref) ?: return
                     }
+                    startStateMap.putMultiSet(key, stateForFollower)
                     val remaining = predecessorCount.getValue(key) - 1
                     if (remaining != 0) {
                         predecessorCount[key] = remaining
                     } else {
                         predecessorCount.remove(key)
-                        q.add(Triple(followerPathIndex, 0, stateForFollower))
+                        q.add(Pair(followerPathIndex, 0))
                     }
                 }
             }
@@ -660,6 +814,35 @@ private fun optimizeAutoescaperUse(
     changes.forEach { (edge, makeReplacement) ->
         edge.replace { makeReplacement() }
     }
+
+    if (problems.isNotEmpty()) {
+        val problemsInOrder = problems.sortedWith { a, b ->
+            val ap = a.pos
+            val bp = b.pos
+            var delta = ap.left - bp.left
+            if (delta == 0) {
+                delta = ap.right - bp.right
+            }
+            delta
+        }
+
+        for ((level, pos, text) in problemsInOrder) {
+            logSink.log(
+                level = level,
+                template = ContextAutoescCalloutMessage,
+                pos = pos,
+                values = listOf(text),
+            )
+        }
+    }
+    if (DEBUG) {
+        console.log(". Done optimize autoescaper use")
+    }
+}
+
+object ContextAutoescCalloutMessage : MessageTemplateI {
+    override val name: String = "ContextAutoescCalloutMessage"
+    override val formatString: String get() = "content tag reported:%s"
 }
 
 private fun assigns(t: Tree, name: TemperName): Boolean =
@@ -675,6 +858,13 @@ private fun Value<*>.readField(name: Symbol): Value<*>? {
     }?.value
 }
 
+private fun Value<*>.readField(iCtx: InterpretationContext, getter: DotHelper, pos: Position): Value<*>? =
+    iCtx.interpret(pos) {
+        Call(getter) {
+            V(this@readField)
+        }
+    } as? Value<*>?
+
 private fun <TREE : Tree> InterpretationContext.interpret(
     pos: Position,
     makeTree: (Planting).() -> UnpositionedTreeTemplate<TREE>,
@@ -687,6 +877,14 @@ private fun <TREE : Tree> InterpretationContext.interpret(
         return NotYet
     } catch (_: Abort) {
         return NotYet
+    }.also {
+        if (DEBUG) {
+            if (it !is Value<*>) {
+                console.group("Bad interpret $it") {
+                    t.toPseudoCode(console.textOutput)
+                }
+            }
+        }
     }
 }
 
@@ -719,7 +917,7 @@ private data class ChangeDetail(
     val positions: AppendStmtPositions get() = AppendStmtPositions(edge.target)
 }
 
-private val stateAfterDotName = Symbol("stateAfter")
+private val stateAfterGetter = DotHelper(ExternalGet, Symbol("stateAfter"))
 private val adjustedStringDotName = Symbol("adjustedString")
 private val escaperForDotHelper = DotHelper(ExternalBind, Symbol("escaperFor"))
 private val appendSafeDotHelper = DotHelper(ExternalBind, appendSafeDotName)
@@ -747,4 +945,56 @@ private class EscaperUnraveler {
         val firstSymbol = Symbol("first")
         val secondSymbol = Symbol("second")
     }
+}
+
+private fun deepValueCopy(v: Value<*>): Value<*> = when (val tt = v.typeTag) {
+    TBoolean,
+    TFloat64,
+    TInt,
+    TInt64,
+    TString,
+    TFunction,
+    TNull,
+    TProblem,
+    TStageRange,
+    TSymbol,
+    TType,
+    TVoid,
+    -> v
+
+    TList -> Value(
+        TList.unpack(v).map { deepValueCopy(it) },
+        TList,
+    )
+    TListBuilder -> Value(
+        mutableListOf<Value<*>>().also { ml ->
+            TList.unpack(v).mapTo(ml) { deepValueCopy(it) }
+        },
+        TListBuilder,
+    )
+    TMap -> Value(
+        buildMap {
+            for ((k, ev) in TMap.unpack(v)) {
+                this[deepValueCopy(k)] = deepValueCopy(ev)
+            }
+        },
+        TMap,
+    )
+    TMapBuilder -> Value(
+        LinkedHashMap<Value<*>, Value<*>>().also { mm ->
+            for ((k, ev) in TMap.unpack(v)) {
+                mm[deepValueCopy(k)] = deepValueCopy(ev)
+            }
+        },
+        TMapBuilder,
+    )
+    is TClass -> Value(
+        InstancePropertyRecord(mutableMapOf()).also { pr ->
+            tt.unpack(v).properties.mapValuesTo(pr.properties) {
+                deepValueCopy(it.value)
+            }
+        },
+        tt,
+    )
+    TClosureRecord -> v
 }
