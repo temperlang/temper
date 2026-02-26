@@ -80,6 +80,9 @@ import lang.temper.value.PartialResult
  *
  * Re parenthetical declarations, see also: [snippet/builtin/@noProperty]
  *
+ * Be aware that [`<` space sensitivity][snippet/syntax/less-than-space-sensitivity] requires
+ * leaving no space between the type name and the start of the `<...>` type parameter list.
+ *
  * <!-- snippet: builtin/interface -->
  * # `interface`
  * Defines an abstract `interface` type.
