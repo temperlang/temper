@@ -43,7 +43,7 @@ internal class FunctionMacroStage(
             },
             afterInterpretation = { iCtx, result ->
                 val root = iCtx.root
-                optimizeContextualAutoescapingBlocks(iCtx)
+                optimizeContextualAutoescapingBlocks(iCtx, logSink)
 
                 debug {
                     console.log("After interpretation")
