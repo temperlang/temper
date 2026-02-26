@@ -872,7 +872,7 @@ The `<` operator means comparison, but in a type expression, it can also be a br
 ```temper
 console.log(c < d);  // Compare c to d
 
-let x:      C<D>;    // c's type is C parameterized with D
+let x:      C<D>;    // x's type is C parameterized with D
 // ⏸️
 ```
 
