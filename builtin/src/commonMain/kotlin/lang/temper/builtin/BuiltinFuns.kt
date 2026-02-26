@@ -1343,7 +1343,7 @@ object BuiltinFuns {
      * ```temper inert
      * console.log(c < d);  // Compare c to d
      *
-     * let x:      C<D>;    // c's type is C parameterized with D
+     * let x:      C<D>;    // x's type is C parameterized with D
      * ```
      *
      * Other languages also have two meanings for `<`.  Temper does not want to enforce a
