@@ -114,8 +114,6 @@ internal object TestMacro : BuiltinMacro("test", null) {
         funTree.insert(beforeBlock) {
             V(vWordSymbol)
             V(Value(funName.toSymbol()))
-            V(vTestSymbol)
-            V(Value(name, TString))
         }
         // Declare it.
         macroEnv.call!!.incoming!!.replace {

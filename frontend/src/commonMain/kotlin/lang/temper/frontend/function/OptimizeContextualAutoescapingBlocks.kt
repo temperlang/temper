@@ -49,7 +49,6 @@ import lang.temper.value.CallTree
 import lang.temper.value.CallableValue
 import lang.temper.value.DeclTree
 import lang.temper.value.Fail
-import lang.temper.value.FunTree
 import lang.temper.value.InstancePropertyRecord
 import lang.temper.value.InterpreterCallback
 import lang.temper.value.MaximalPath
@@ -201,6 +200,15 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext, l
         }
     }
 
+    val testFunNames = buildSet {
+        for (t in root.children) {
+            val declParts = (t as? DeclTree)?.parts ?: continue
+            if (testSymbol in declParts.metadataSymbolMultimap.keys) {
+                add(declParts.name.content as ResolvedName)
+            }
+        }
+    }
+
     val autoescUses = buildListMultimap {
         TreeVisit.startingAt(root)
             .forEachContinuing { t ->
@@ -232,16 +240,37 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext, l
                             if (accumulatorDecl != null &&
                                 accumulatorDecl.parts?.metadataSymbolMap?.containsKey(ssaSymbol) == true
                             ) {
+                                val inTestBody = run {
+                                    // If we can walk up to the root and find an assignment like
+                                    //     t#123 = fn { ... };
+                                    // where t#123 is in the set of test function declarations above
+                                    // then it's in a test body.
+                                    // TODO: Once we have a general @Suppress mechanism for linty errors
+                                    // in content tag uses, then we can retire this difference.
+                                    var rootEdge = anc.incoming!!
+                                    while (rootEdge.source != root) {
+                                        rootEdge = rootEdge.source!!.incoming!!
+                                    }
+                                    val rootChild = rootEdge.target
+                                    val assignedName = if (isAssignment(rootChild)) {
+                                        (rootChild.child(1) as NameLeaf?)?.content
+                                    } else {
+                                        null
+                                    }
+                                    assignedName != null && assignedName in testFunNames
+                                }
+
                                 val declaringBlock = accumulatorDecl.incoming!!.source as BlockTree
                                 val ai = AutoescUseInfo(
-                                    accumulatorName,
-                                    declaringBlock,
-                                    accumulatorDecl,
-                                    AutoescTypes(
+                                    name = accumulatorName,
+                                    declaringBlock = declaringBlock,
+                                    accumulatorDecl = accumulatorDecl,
+                                    types = AutoescTypes(
                                         autoescaperSuperType,
                                         accumulatorType = accumulatorType,
                                     ),
-                                    parent,
+                                    accumulated = parent,
+                                    inTestBody = inTestBody,
                                 )
                                 putMultiList(declaringBlock, ai)
                             }
@@ -292,6 +321,7 @@ private data class AutoescUseInfo(
     val accumulatorDecl: DeclTree,
     val types: AutoescTypes,
     val accumulated: CallTree,
+    val inTestBody: Boolean,
 )
 
 private fun optimizeAutoescaperUse(
@@ -393,18 +423,6 @@ private fun optimizeAutoescaperUse(
     } as? Value<*> ?: return
     val collectorType = use.types.collectorType ?: return
 
-    // Downgrade static errors when use inside a test body.
-    val inTestBody = run {
-        var src = block.incoming
-        while (src != null) {
-            val tree = src.target
-            src = src.source?.incoming
-            if (tree is FunTree && tree.parts?.metadataSymbolMap?.containsKey(testSymbol) == true) {
-                return@run true
-            }
-        }
-        false
-    }
     if (DEBUG) {
         console.log("Optimizing ${block.document.context.formatPosition(init.pos)}")
     }
@@ -435,7 +453,8 @@ private fun optimizeAutoescaperUse(
         problemsFromCallout.clear()
         for ((messageText, isError) in callouts) {
             val level = when {
-                inTestBody -> Log.Info
+                // Downgrade static errors when used inside a test body.
+                use.inTestBody -> Log.Info
                 isError -> Log.Error
                 else -> Log.Warn
             }
