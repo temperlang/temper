@@ -1440,9 +1440,6 @@ class RustBackendTest {
                 |    fn clone_boxed(& self) -> B<T> {
                 |        B::new(self.clone())
                 |    }
-                |    fn whatever(& self) -> std::sync::Arc<String> {
-                |        BTrait::whatever(self)
-                |    }
                 |}
                 |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for C<T> {
                 |    fn clone_boxed(& self) -> A {
@@ -1618,9 +1615,6 @@ class RustBackendTest {
                 |    fn clone_boxed(& self) -> B<C<A>> {
                 |        B::new(self.clone())
                 |    }
-                |    fn whatever(& self) -> std::sync::Arc<String> {
-                |        BTrait::whatever(self)
-                |    }
                 |}
                 |impl ATrait for F {
                 |    fn clone_boxed(& self) -> A {
@@ -1631,9 +1625,6 @@ class RustBackendTest {
                 |    }
                 |    fn set_thing(& self, value: std::sync::Arc<String>) {
                 |        DTrait::set_thing(self, value)
-                |    }
-                |    fn greeting(& self) -> std::sync::Arc<String> {
-                |        ATrait::greeting(self)
                 |    }
                 |    fn whatever(& self) -> std::sync::Arc<String> {
                 |        BTrait::whatever(self)
@@ -1653,15 +1644,6 @@ class RustBackendTest {
                 |impl DTrait<T> for F {
                 |    fn clone_boxed(& self) -> D<T> {
                 |        D::new(self.clone())
-                |    }
-                |    fn prop(& self) -> std::sync::Arc<String> {
-                |        DTrait::prop(self)
-                |    }
-                |    fn set_prop(& self, value: std::sync::Arc<String>) {
-                |        DTrait::set_prop(self, value)
-                |    }
-                |    fn set_thing(& self, value: std::sync::Arc<String>) {
-                |        DTrait::set_thing(self, value)
                 |    }
                 |    fn whatever(& self) -> std::sync::Arc<String> {
                 |        BTrait::whatever(self)

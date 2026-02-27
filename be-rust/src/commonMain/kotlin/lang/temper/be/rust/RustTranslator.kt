@@ -1114,6 +1114,10 @@ class RustTranslator(
         }
         // Having selected an override, forward to it with simple self.
         val targetType = override?.superTypeMember?.enclosingType
+        if (targetType == superShape.enclosingType) {
+            // Just let the trait handle this one directly. Self-call here is infinite recursion.
+            return listOf()
+        }
         buildForwarderToTrait(pos, targetType, superShape, methodKind) result@{ traitType, methodId, argIds ->
             Rust.Call(
                 pos,
