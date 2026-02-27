@@ -13,7 +13,6 @@ import lang.temper.frontend.structureBlock
 import lang.temper.name.ExportedName
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedName
-import lang.temper.name.Temporary
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.isVoidLike
 import lang.temper.type2.SuperTypeTree2
@@ -27,7 +26,6 @@ import lang.temper.value.LeftNameLeaf
 import lang.temper.value.NameLeaf
 import lang.temper.value.Planting
 import lang.temper.value.ReifiedType
-import lang.temper.value.RightNameLeaf
 import lang.temper.value.TEdge
 import lang.temper.value.Tree
 import lang.temper.value.UnpositionedTreeTemplate
@@ -37,6 +35,7 @@ import lang.temper.value.freeTarget
 import lang.temper.value.getTerminalExpressions
 import lang.temper.value.isImplicits
 import lang.temper.value.isPureVirtualBody
+import lang.temper.value.outTypeSymbol
 import lang.temper.value.reifiedTypeContained
 import lang.temper.value.returnDeclSymbol
 import lang.temper.value.toPseudoCode
@@ -73,7 +72,18 @@ internal class MakeResultsExplicit private constructor(
         val parent = incoming?.source
         val newDeclarations = mutableListOf<DeclTree>()
         val rootIsFunctionBody = parent is FunTree && root == parent.parts?.body
-        var returnTypeTree: Tree? = null
+        var returnTypeTree: Tree? = if (rootIsFunctionBody) {
+            val fnParts = parent.parts!!
+            fnParts.metadataSymbolMap[outTypeSymbol]?.let { outTypeEdge ->
+                val edgeIndex = outTypeEdge.edgeIndex
+                outTypeEdge.target.also {
+                    // Splice it out
+                    outTypeEdge.source!!.replace(edgeIndex - 1..edgeIndex) {}
+                }
+            }
+        } else {
+            null
+        }
         var needToDeclareOutputName = false
 
         val outputName = console.benchmarkIf(BENCHMARK, "findOutputName") {
@@ -194,16 +204,10 @@ internal class MakeResultsExplicit private constructor(
                 pos,
                 listOf(outputName) +
                     if (returnTypeTree != null) {
-                        val nameForReturnType = shareReferenceTo(
-                            returnTypeTree.incoming!!, // Safe bc returnType must be part of a FunTree
-                            "type",
-                            newDeclarations,
-                        )
-
                         // Mark as an output parameter.
                         listOf(
                             ValueLeaf(doc, pos, vTypeSymbol),
-                            RightNameLeaf(doc, returnTypeTree.pos, nameForReturnType),
+                            returnTypeTree,
                         )
                     } else {
                         emptyList()
@@ -278,34 +282,6 @@ internal class MakeResultsExplicit private constructor(
 }
 
 private val setLocalValue = BuiltinFuns.vSetLocalFn
-
-private fun shareReferenceTo(
-    edge: TEdge,
-    nameHint: String,
-    declarations: MutableList<DeclTree>,
-): Temporary {
-    val tree = edge.target
-    val existingName = (tree as? NameLeaf)?.content
-    if (existingName is Temporary) {
-        return existingName
-    }
-    val doc = tree.document
-    val pos = tree.pos
-    val name = doc.nameMaker.unusedTemporaryName(nameHint = nameHint)
-    // TODO: weave this block into the function body?
-    val assignThenReference = doc.treeFarm.grow {
-        Block(pos) { // { name = ...; name }
-            Call(pos, setLocalValue) {
-                Ln(pos, name)
-                Replant(freeTarget(edge))
-            }
-            Rn(pos, name)
-        }
-    }
-    declarations.add(DeclTree(doc, pos, listOf(LeftNameLeaf(doc, pos, name))))
-    edge.replace(assignThenReference)
-    return name
-}
 
 private fun Planting.makeDoneResult(generatorFnParts: FnParts): UnpositionedTreeTemplate<CallTree> {
     var yielded: Type2? = null

@@ -2,7 +2,6 @@ package lang.temper.frontend
 
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.BuiltinFuns.handlerScope
-import lang.temper.builtin.isHandlerScopeCall
 import lang.temper.builtin.isRttiCall
 import lang.temper.frontend.syntax.isAssignment
 import lang.temper.frontend.syntax.isCommaCall
@@ -26,6 +25,7 @@ import lang.temper.value.ValueLeaf
 import lang.temper.value.freeTarget
 import lang.temper.value.freeTree
 import lang.temper.value.functionContained
+import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.vFailSymbol
 import lang.temper.value.vVarSymbol
 import lang.temper.value.void

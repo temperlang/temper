@@ -11,7 +11,6 @@ import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.GetStaticOp
 import lang.temper.builtin.RttiCheckFunction
 import lang.temper.builtin.RuntimeTypeOperation
-import lang.temper.builtin.isHandlerScopeCall
 import lang.temper.builtin.isRemCall
 import lang.temper.builtin.isSetPropertyCall
 import lang.temper.common.Either
@@ -156,6 +155,7 @@ import lang.temper.value.impliedThisSymbol
 import lang.temper.value.importedSymbol
 import lang.temper.value.initSymbol
 import lang.temper.value.isBubbleCall
+import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.isNewCall
 import lang.temper.value.isYieldCall
 import lang.temper.value.parameterNameSymbolsListSymbol

@@ -1848,6 +1848,54 @@ class TyperTest {
         """.trimMargin(),
     )
 
+    @Test
+    fun doPure() = assertTypes(
+        """
+            |    class C {}
+            |
+            |    let makeC(): C { new C() }
+            |
+            |    export let x = doPure { (): C => makeC() };
+            |
+            |    x
+            |/// ╹     : C
+        """.trimMargin(),
+    )
+
+    @Test
+    fun chainedLambdas() = assertTypes(
+        """
+            |    let ls: List<Int> = panic();
+            |
+            |    let negStrs =
+            |      ls.map { (x): Int => -x }
+            |///             ╹          ┗┛             : Int32
+            |        .join(", ") { x => x.toString() }
+            |///                 ┃ ╹    ╹            ┃ : Int32
+            |///                 ┗━━━━━━━━━━━━━━━━━━━┛ : fn (Int32): String
+            |
+        """.trimMargin(),
+    )
+
+    @Test
+    fun namedArgs() = assertTypes(
+        """
+            |    class OneD(public x: Int) {}
+            |
+            |    let foo<T>(
+            |      n: Int,
+            |      transform: fn (Int): T,
+            |      oneD: OneD = { class: OneD, x: 0 },
+            |    ): T {
+            |      transform(oneD.x)
+            |    }
+            |
+            |    foo(2, { x: 3 }) { (n): String =>
+            |      n.toString()
+            |    };
+        """.trimMargin(),
+    )
+
     /** Text at a position in a source code snippet in a unit test */
     data class Chunk(
         val text: String,

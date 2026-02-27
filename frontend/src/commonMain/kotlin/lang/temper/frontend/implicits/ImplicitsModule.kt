@@ -118,6 +118,7 @@ object ImplicitsModule {
             ),
         )
         val endStage = Stage.Run // TODO Go back to Stage.GenerateCode once `console` is a stable value.
+        // do not commit: can this go away?
         stageLoop@
         while (module.canAdvance()) {
             val nextStage = module.nextStage!!

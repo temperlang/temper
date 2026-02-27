@@ -2,7 +2,6 @@ package lang.temper.frontend.rw
 
 import lang.temper.ast.TreeVisit
 import lang.temper.ast.VisitCue
-import lang.temper.builtin.isHandlerScopeCall
 import lang.temper.common.ForwardOrBack
 import lang.temper.common.ZippedEntry
 import lang.temper.common.buildListMultimap
@@ -45,6 +44,7 @@ import lang.temper.value.Tree
 import lang.temper.value.ValueLeaf
 import lang.temper.value.debug
 import lang.temper.value.forwardMaximalPaths
+import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.isImplicits
 import lang.temper.value.orderedPathIndices
 import lang.temper.value.ssaSymbol

@@ -34,15 +34,15 @@ internal class ReorderArgs(
         }
     }
 
-    private fun reorderCallTreeArgs(tree: CallTree) {
+    fun reorderCallTreeArgs(tree: CallTree) {
         // First see if anything is out of order (which could include outright errors) before doing expensive work.
         val variant = variantForCall(tree)
             ?: tree.typeInferences?.variant as? FunctionType
             ?: return
-        buildReorderedCall(tree, variant)
+        doReorderedCall(tree, variant)
     }
 
-    private fun buildReorderedCall(tree: CallTree, functionType: FunctionType) {
+    internal fun doReorderedCall(tree: CallTree, functionType: FunctionType) {
         // Adapt static type information to DynamicMessage to share reordering logic.
         val args = buildPositionalArgs(tree, functionType) ?: return
         tree.replace(tree.indices) {

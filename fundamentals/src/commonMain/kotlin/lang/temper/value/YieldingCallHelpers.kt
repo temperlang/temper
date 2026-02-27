@@ -104,8 +104,11 @@ fun Tree?.yieldingCallKind(): YieldingFnKind? {
 fun isAwaitCall(t: Tree): Boolean = t.yieldingCallKind() == YieldingFnKind.await
 fun isYieldCall(t: Tree): Boolean = t.yieldingCallKind() == YieldingFnKind.yield
 
+private const val HS_ARITY = 3 // Callee, fail var, operation
+private const val ASSIGN_ARITY = 3 // Callee, left, right
+
 const val HANDLER_SCOPE_FN_NAME = "hs"
-private fun isHandlerScopeCall(t: Tree): Boolean =
+fun isHandlerScopeCall(t: Tree): Boolean = t.size == HS_ARITY &&
     t.calleeBuiltinName() == HANDLER_SCOPE_FN_NAME
-private fun isAssignment(t: Tree): Boolean =
+fun isAssignment(t: Tree): Boolean = t.size == ASSIGN_ARITY &&
     t.calleeBuiltinName() == "="

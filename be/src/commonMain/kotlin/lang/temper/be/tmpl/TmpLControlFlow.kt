@@ -3,7 +3,6 @@ package lang.temper.be.tmpl
 import lang.temper.ast.TreeVisit
 import lang.temper.be.BaseOutTree
 import lang.temper.builtin.BuiltinFuns
-import lang.temper.builtin.isHandlerScopeCall
 import lang.temper.builtin.isSetPropertyCall
 import lang.temper.common.LeftOrRight
 import lang.temper.common.allIndexed
@@ -68,6 +67,7 @@ import lang.temper.value.functionContained
 import lang.temper.value.initSymbol
 import lang.temper.value.isBubbleCall
 import lang.temper.value.isEmptyBlock
+import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.isPanicCall
 import lang.temper.value.jumpKind
 import lang.temper.value.ssaSymbol

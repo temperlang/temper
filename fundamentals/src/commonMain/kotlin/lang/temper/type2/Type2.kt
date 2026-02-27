@@ -992,3 +992,9 @@ data class MacroValueFormal(
      */
     override val defaultExpr: Value<MacroValue>? = null,
 ) : AnyValueFormal
+
+val Type2.sigEquiv: Signature2? get() = withType(
+    this,
+    fn = { _, sig, _ -> sig },
+    fallback = { null },
+)

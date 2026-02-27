@@ -8,7 +8,6 @@ import lang.temper.builtin.RttiCheckFunction
 import lang.temper.builtin.SETP_ARITY
 import lang.temper.builtin.Types
 import lang.temper.builtin.asReifiedType
-import lang.temper.builtin.isHandlerScopeCall
 import lang.temper.builtin.isNotNullCall
 import lang.temper.builtin.isTypeAngleCall
 import lang.temper.common.AtomicCounter
@@ -96,6 +95,7 @@ import lang.temper.type.excludeNullAndBubble
 import lang.temper.type.isBubbly
 import lang.temper.type.isNeverType
 import lang.temper.type.isNullType
+import lang.temper.type.mentions
 import lang.temper.type.mentionsInvalid
 import lang.temper.type2.Callee
 import lang.temper.type2.CalleePriority
@@ -156,6 +156,7 @@ import lang.temper.value.fnSymbol
 import lang.temper.value.freeTree
 import lang.temper.value.functionContained
 import lang.temper.value.functionalInterfaceSymbol
+import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.isNewCall
 import lang.temper.value.isNullaryNeverCall
 import lang.temper.value.isPureVirtualBody
@@ -178,6 +179,7 @@ import lang.temper.value.unpackPairValue
 import lang.temper.value.valueContained
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
+import kotlin.math.min
 
 private const val DEBUG = false
 private const val DEBUG_LATE_TYPE_CHECK = false
@@ -821,7 +823,7 @@ internal class Typer(
 
         val calleeFn = effectiveCallee?.functionContained
         val coverFn = calleeFn as? CoverFunction
-        val inputTrees = tree.children.subListToEnd(tree.firstArgumentIndex)
+        var inputTrees = tree.children.subListToEnd(tree.firstArgumentIndex)
 
         val isDotBind = calleeFn is DotHelper && calleeFn.memberAccessor is BindMemberAccessor
 
@@ -978,7 +980,7 @@ internal class Typer(
                 val constructorSigs = when (effectiveCalleeType) {
                     null -> {
                         // Late-typed constructor reference
-                        return
+                        return@typeRegularCall
                     }
                     WellKnownTypes.typeType -> {
                         @Suppress("SENSELESS_COMPARISON")
@@ -1010,6 +1012,14 @@ internal class Typer(
                 explodeCalleeType(effectiveCalleeType, CalleePriority.Default)
             }
         }.toList()
+
+        calleeVariants.firstOrNull()?.let { callee ->
+            val reordered =
+                reorderArgsHelper.buildPositionalArgs(tree, callee.functionType)
+            if (reordered != null) {
+                inputTrees = reordered
+            }
+        }
 
         typeCallByParts2(
             priorProblems = priorProblems,
@@ -1047,7 +1057,11 @@ internal class Typer(
         val pos = callTree.pos
 
         // Get last second types for functions that are actual arguments.
-        typeFunTreesInContext(callTree, calleeVariants)
+        typeFunTreesInContext(
+            inputTrees,
+            calleeVariants,
+            typeActualsAndPositions?.map { hackMapOldStyleToNew(it.first) },
+        )
 
         var effectiveTypeActualsAndPositions = typeActualsAndPositions
         val lateTypedParameterIndices = mutableSetOf<Int>()
@@ -1114,6 +1128,18 @@ internal class Typer(
                                 childI.content.typeTag.name.displayName.asciiUnTitleCase(),
                             ),
                         )
+                    childI is FunTree && childI.parts != null -> {
+                        val parts = childI.parts!!
+                        InputBound.LambdaBound(
+                            childI.pos,
+                            parts.formals.map {
+                                it.parts?.type?.reifiedTypeContained?.type2
+                            },
+                            parts.returnDecl?.let {
+                                it.parts?.type?.reifiedTypeContained?.type2
+                            },
+                        )
+                    }
                     else -> InputBound.Typeless(childI.pos)
                 },
             )
@@ -1227,6 +1253,7 @@ internal class Typer(
                     contextType = contextType,
                     passVar = null,
                     destination = callTree,
+                    inputTrees = inputTrees,
                 ),
             )
             intertwined.mapTo(calls) {
@@ -1239,6 +1266,7 @@ internal class Typer(
                     contextType = it.contextType,
                     passVar = it.passVar,
                     destination = it.callTree,
+                    inputTrees = it.inputTrees,
                 )
             }
 
@@ -1250,7 +1278,8 @@ internal class Typer(
                 if (callSite === callTree) { // Not an inter-twined call
                     explanations = explanations + problems
                 }
-                val variant = call.chosenCallee?.let { i -> call.calleeVariants[i].functionType }
+                val chosenCallee = call.chosenCallee?.let { i -> call.calleeVariants[i] }
+                val variant = chosenCallee?.functionType
                 val decision = Decision(
                     type = call.resultType ?: InvalidType,
                     variant = variant,
@@ -1258,6 +1287,23 @@ internal class Typer(
                     explanations = explanations,
                 )
                 ti.decide(callSite, decision)
+                // Now that we have an exact variant and bindings, type any remaining function trees.
+
+                if (chosenCallee != null && call.inputTrees.any { it is FunTree && ti.isUndecided(it) }) {
+                    val bindings2 = (call.bindings ?: emptyMap()).mapValues {
+                        hackMapOldStyleToNew(it.value)
+                    }
+                    val sigInContext = chosenCallee.sig.mapType(bindings2)
+                    for ((index, inputTree) in call.inputTrees.withIndex()) {
+                        if (inputTree is FunTree && ti.isUndecided(inputTree)) {
+                            val formal = sigInContext.valueFormalForActual(index)?.type
+                            val wantedSig = formal?.let {
+                                withType(it, fn = { _, sig, _ -> sig }, fallback = { null })
+                            }
+                            preTypeFunTree(inputTree, wantedSig)
+                        }
+                    }
+                }
 
                 // Store solved types with ambiguous value bounds
                 for (inputBound in call.inputBounds) {
@@ -1344,25 +1390,18 @@ internal class Typer(
         }
     }
 
-    private fun typeFunTreesInContext(callTree: CallTree, variants: List<Callee>) {
-        val originalArgs = callTree.children.subListToEnd(callTree.firstArgumentIndex)
-        val callee = variants.firstOrNull()
-
-        val args = callee?.let { callee ->
-            reorderArgsHelper.buildPositionalArgs(callTree, callee.functionType)
-        } ?: originalArgs
+    private fun typeFunTreesInContext(args: List<Tree>, variants: List<Callee>, typeActuals: List<Type2>?) {
         args.forEachActual { _, argIndex, _, argTree ->
             if (argTree is FunTree && ti.isUndecided(argTree)) {
                 // See if we can use callee information for better fun type inference.
-                val formalType = typeContext2.valueFormalTypeAt(variants, argIndex)
-                if (formalType != null) {
-                    withType(
-                        formalType,
-                        fn = { _, sig, _ ->
-                            preTypeFunTree(argTree, wantedSig = sig)
-                        },
-                        fallback = {},
-                    )
+                // We can only do this if the argument does not depend on any unknown type
+                // parameter, because that would lead to typing a function
+                // with a type parameter out its scope.
+                val wantedSig: Signature2? = typeContext2.valueFormalTypeAt(variants, argIndex, typeActuals)?.let {
+                    withType(it, fn = { _, sig, _ -> sig }, fallback = { null })
+                }
+                if (wantedSig != null) {
+                    preTypeFunTree(argTree, wantedSig = wantedSig)
                 }
             }
         }
@@ -1845,7 +1884,7 @@ internal class Typer(
                     val type = if (explicitType != null) {
                         explicitType
                     } else { // No declared type, so infer.
-                        val inferredType = typeContext2.valueFormalTypeAt(variants, declIndex)
+                        val inferredType = typeContext2.valueFormalTypeAt(variants, declIndex, null)
                             ?.let { hackMapNewStyleToOld(it) }
                             ?: previousFunctionType?.valueFormals?.getOrNull(declIndex)?.staticType
                             ?: anyValueType
@@ -3113,9 +3152,40 @@ private enum class LateType2CheckResult {
     Immediate,
 }
 
-private fun TypeContext2.valueFormalTypeAt(variants: Iterable<Callee>, index: Int): Type2? {
-    val ts = variants.mapNotNull {
-        it.sig.valueFormalForActual(index)?.type
+private fun TypeContext2.valueFormalTypeAt(variants: Iterable<Callee>, index: Int, typeActuals: List<Type2>?): Type2? {
+    val ts = buildList {
+        for (variant in variants) {
+            val sig = variant.sig
+            if (typeActuals != null && typeActuals.size > sig.typeFormals.size) {
+                continue
+            }
+
+            var argType = sig.valueFormalForActual(index)?.type
+                ?: continue // arity mismatch so ignore this variant
+
+            // Next, if we can bind arguments, great do that.
+            if (sig.typeFormals.isNotEmpty() && typeActuals != null) {
+                val bindings = buildMap {
+                    for (i in 0 until min(sig.typeFormals.size, typeActuals.size)) {
+                        this@buildMap[sig.typeFormals[i]] = typeActuals[i]
+                    }
+                }
+                argType = argType.mapType(bindings)
+            }
+
+            // Finally, we have to reject if argType uses typeFormals from sig.
+            // Otherwise, we risk leaking type formals out of their scope.
+            if (sig.typeFormals.isNotEmpty()) {
+                val typeFormalSet = sig.typeFormals.toSet()
+                if (argType.mentions { it in typeFormalSet }) {
+                    // We can't meaningfully later compare types in the absence of enough
+                    // binding info.
+                    return@valueFormalTypeAt null
+                }
+            }
+
+            add(argType)
+        }
     }
     return if (ts.isNotEmpty()) {
         var glb: Type2? = null
@@ -3126,7 +3196,7 @@ private fun TypeContext2.valueFormalTypeAt(variants: Iterable<Callee>, index: In
                 this.glb(glb, t) ?: return null
             }
         }
-        return glb
+        glb
     } else {
         null
     }

@@ -105,7 +105,11 @@ class CleanupTemporariesTest {
                 |  pseudoCodeBefore: ```
                 |    var t#0, fail#0, fail#1;
                 |    let console#0;
-                |    t#0 = getConsole();
+                |    t#0 = doPure(@stay fn /* return__0 */: Console {
+                |        var t#1, fail#2;
+                |        t#1 = getConsole();
+                |        return__0 = t#1
+                |    });
                 |    console#0 = t#0;
                 |    let toLogOrNotToLog__0;
                 |    var t1#0;
@@ -148,12 +152,23 @@ class CleanupTemporariesTest {
                 |        "Replace(L5: let t3#0 -> no-op)",
                 |        "Replace(L6: let t4#0 -> no-op)"
                 |      ],
+                |      [],
+                |      [
+                |          "Replace(L1: rename written t#1 to return__0)",
+                |          "Replace(L1: return__0=... -\u003e no-op)"
+                |      ],
+                |      [
+                |          "Replace(L1: let t#1 -\u003e no-op)",
+                |          "Replace(L1: let fail#2 -\u003e no-op)"
+                |      ],
                 |      []
                 |    ],
                 |
                 |  pseudoCodeAfter: ```
                 |    var t#0;
-                |    t#0 = getConsole();
+                |    t#0 = doPure(@stay fn /* return__0 */: Console {
+                |        return__0 = getConsole();
+                |    });
                 |    let toLogOrNotToLog__0;
                 |    toLogOrNotToLog__0 = randomBool();
                 |    if (toLogOrNotToLog__0) {
@@ -203,7 +218,9 @@ class CleanupTemporariesTest {
                 |  pseudoCodeAfter: ```
                 |    let return__0;
                 |    var t#0;
-                |    t#0 = getConsole();
+                |    t#0 = doPure(@stay fn /* return__1 */: Console {
+                |        return__1 = getConsole();
+                |    });
                 |    var t1#0;
                 |    t1#0 = randomBool();
                 |    if (t1#0) {
@@ -463,17 +480,26 @@ class CleanupTemporariesTest {
                 |    ],
                 |    [],
                 |    [
-                |      "SplitAssignment(L3: split void assignment of t#2)"
+                |        "Replace(L1: rename written t#2 to return__1)",
+                |        "Replace(L1: return__1=... -\u003e no-op)"
                 |    ],
                 |    [
-                |      "Replace(L3: read t#2 -> no-op)"
+                |        "Replace(L1: let t#2 -\u003e no-op)",
+                |        "Replace(L1: let fail#2 -\u003e no-op)"
+                |    ],
+                |    [],
+                |    [
+                |        "SplitAssignment(L3: split void assignment of t#3)"
                 |    ],
                 |    [
-                |      "Replace(L3: simplify dead-store of t#2)"
+                |        "Replace(L3: read t#3 -\u003e no-op)"
                 |    ],
                 |    [
-                |      "Replace(L3: let t#2 -> no-op)",
-                |      "Replace(L1: let fail#2 -> no-op)",
+                |        "Replace(L3: simplify dead-store of t#3)"
+                |    ],
+                |    [
+                |        "Replace(L3: let t#3 -\u003e no-op)",
+                |        "Replace(L1: let fail#3 -\u003e no-op)"
                 |    ],
                 |    []
                 |  ],
@@ -481,14 +507,16 @@ class CleanupTemporariesTest {
                 |  pseudoCodeAfter: ```
                 |    let return__0;
                 |    let console#0;
-                |    console#0 = getConsole();
+                |    console#0 = doPure(@stay fn /* return__1 */: Console {
+                |        return__1 = getConsole();
+                |    });
                 |    @fn let f__0;
-                |    f__0 = fn f /* return__1 */: Void {
+                |    f__0 = fn f /* return__2 */: Void {
                 |      fn__0: do {
                 |        if (randomBool()) {
                 |          do_bind_log(console#0)("Random");
                 |        };
-                |        return__1 = void
+                |        return__2 = void
                 |      }
                 |    };
                 |    f__0();
@@ -635,7 +663,9 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeAfter: ```
                 |    var t#0;
-                |    t#0 = getConsole();
+                |    t#0 = doPure(@stay fn /* return__0 */: Console {
+                |        return__0 = getConsole();
+                |    });
                 |    var x__0;
                 |    x__0 = "foo";
                 |    if (randomBool()) {
@@ -673,7 +703,9 @@ class CleanupTemporariesTest {
                 |  pseudoCodeAfter: ```
                 |    let return__0;
                 |    var t#0;
-                |    t#0 = getConsole();
+                |    t#0 = doPure(@stay fn /* return__1 */: Console {
+                |        return__1 = getConsole();
+                |    });
                 |    let `test//`.x;
                 |    var t#1;
                 |    t#1 = "foo";
@@ -711,7 +743,9 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeAfter: ```
-                |    do_bind_log(getConsole())(do_bind_toString(2)())
+                |    do_bind_log(doPure(@stay fn /* return__0 */: Console {
+                |          return__0 = getConsole();
+                |    }))(do_bind_toString(2)())
                 |
                 |    ```,
                 |}
@@ -754,23 +788,25 @@ class CleanupTemporariesTest {
                 |    let return__0;
                 |    var t#0;
                 |    let console#0;
-                |    console#0 = getConsole();
+                |    console#0 = doPure(@stay fn /* return__1 */: Console {
+                |        return__1 = getConsole();
+                |    });
                 |    @fn let f__0;
-                |    f__0 = fn f(a__0 /* aka a */: Int32, b__0 /* aka b */: Int32) /* return__1 */: Void {
+                |    f__0 = fn f(a__0 /* aka a */: Int32, b__0 /* aka b */: Int32) /* return__2 */: Void {
                 |      var t#1;
                 |      fn__0: do {
                 |        t#1 = do_bind_toString(a__0 + b__0)();
                 |        do_bind_log(console#0)(t#1);
-                |        return__1 = void
+                |        return__2 = void
                 |      }
                 |    };
                 |    @fn let incr__0;
                 |    var x__0;
                 |    x__0 = 0;
-                |    incr__0 = fn incr /* return__2 */: Int32 {
+                |    incr__0 = fn incr /* return__3 */: Int32 {
                 |      fn__1: do {
                 |        x__0 = x__0 + 1;
-                |        return__2 = x__0
+                |        return__3 = x__0
                 |      }
                 |    };
                 |    f__0(incr__0(), x__0);${
@@ -812,7 +848,9 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeAfter: ```
                 |    var t#0;
-                |    t#0 = getConsole();
+                |    t#0 = doPure(@stay fn /* return__0 */: Console {
+                |        return__0 = getConsole();
+                |    });
                 |    var y__0, t#1;
                 |    y__0 = 1;
                 |    t#1 = 2;
@@ -852,15 +890,17 @@ class CleanupTemporariesTest {
                 |  pseudoCodeAfter: ```
                 |    let return__0;
                 |    var t#0;
-                |    t#0 = getConsole();
+                |    t#0 = doPure(@stay fn /* return__1 */: Console {
+                |        return__1 = getConsole();
+                |    });
                 |    @fn let `test//`.f;
                 |    var t#1;
                 |    let x__0;
                 |    t#1 = 0;
-                |    `test//`.f = fn f /* return__1 */: Void {
+                |    `test//`.f = fn f /* return__2 */: Void {
                 |      fn__0: do {
                 |        t#1 = t#1 + 1;
-                |        return__1 = void
+                |        return__2 = void
                 |      }
                 |    };
                 |    x__0 = t#1;
@@ -1278,7 +1318,11 @@ class CleanupTemporariesTest {
                 |  pseudoCodeBefore: ```
                 |    var t#0, t#1, t#2, t#3, t#4, fail#0, fail#1, fail#2, fail#3;
                 |    let console#0;
-                |    t#0 = getConsole();
+                |    t#0 = doPure(@stay fn /* return__0 */: Console {
+                |        var t#5, fail#4;
+                |        t#5 = getConsole();
+                |        return__0 = t#5
+                |    });
                 |    console#0 = t#0;
                 |    orelse#1: {
                 |      t#1 = hs(fail#3, 0.0 / 0.0);
@@ -1298,7 +1342,9 @@ class CleanupTemporariesTest {
                 |  pseudoCodeAfter: ```
                 |    var t#0, t#1, t#2, t#3;
                 |    var fail#3;
-                |    t#0 = getConsole();
+                |    t#0 = doPure(@stay fn /* return__0 */: Console {
+                |        return__0 = getConsole();
+                |    });
                 |    orelse#1: {
                 |      t#1 = hs(fail#3, 0.0 / 0.0);
                 |      if (fail#3) {
@@ -1546,7 +1592,9 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeAfter: ```
                 |    label__0: do {
-                |      do_bind_log(getConsole())("foo")
+                |      do_bind_log(doPure(@stay fn /* return__0 */: Console {
+                |            return__0 = getConsole();
+                |      }))("foo")
                 |    }
                 |
                 |    ```
@@ -1574,7 +1622,11 @@ class CleanupTemporariesTest {
                 |  pseudoCodeBefore: ```
                 |    var t#0, t#1, t#2, fail#0, fail#1, fail#2;
                 |    let console#0;
-                |    t#0 = getConsole();
+                |    t#0 = doPure(@stay fn /* return__0 */: Console {
+                |        var t#3, fail#3;
+                |        t#3 = getConsole();
+                |        return__0 = t#3
+                |    });
                 |    console#0 = t#0;
                 |    var i__0;
                 |    i__0 = 0;
@@ -1590,7 +1642,9 @@ class CleanupTemporariesTest {
                 |    ```,
                 |  pseudoCodeAfter: ```
                 |    var t#0;
-                |    t#0 = getConsole();
+                |    t#0 = doPure(@stay fn /* return__0 */: Console {
+                |        return__0 = getConsole();
+                |    });
                 |    var i__0;
                 |    i__0 = 0;
                 |    while (i__0 < 3) {
@@ -1627,7 +1681,11 @@ class CleanupTemporariesTest {
                 |    let return__0;
                 |    var t#0, t#1, t#2, fail#0, fail#1, fail#2;
                 |    let console#0;
-                |    t#0 = getConsole();
+                |    t#0 = doPure(@stay fn /* return__1 */: Console {
+                |        var t#3, fail#3;
+                |        t#3 = getConsole();
+                |        return__1 = t#3
+                |    });
                 |    console#0 = t#0;
                 |    var i__0;
                 |    i__0 = 0;
@@ -1645,7 +1703,9 @@ class CleanupTemporariesTest {
                 |  pseudoCodeAfter: ```
                 |    let return__0;
                 |    var t#0;
-                |    t#0 = getConsole();
+                |    t#0 = doPure(@stay fn /* return__1 */: Console {
+                |        return__1 = getConsole();
+                |    });
                 |    var i__0;
                 |    i__0 = 0;
                 |    while (i__0 < 3) {
@@ -1752,10 +1812,11 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeAfter: ```
                 |    @stay @imported(\(`test//other/`.f)) @fn let localName__0;
-                |    localName__0 = (fn f);${
-                "" // This is not a dead store
-            }
-                |    do_bind_log(getConsole())(do_bind_aString((fn f)())());
+                |    localName__0 = (fn f);
+                |##  This is not a dead store
+                |    do_bind_log(doPure(@stay fn /* return__0 */: Console {
+                |          return__0 = getConsole();
+                |    }))(do_bind_aString((fn f)())());
                 |
                 |    ```,
                 |  "consoleOutput": ```
@@ -1765,7 +1826,7 @@ class CleanupTemporariesTest {
                 |
                 |    ```
                 |}
-            """.trimMargin(),
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
             r,
         )
     }
@@ -1984,16 +2045,18 @@ class CleanupTemporariesTest {
         )
         assertEquals(
             """
-                |var t#16, t#17;
-                |var fail#15;
-                |t#16 = getConsole();
+                |var t#18, t#19;
+                |var fail#16;
+                |t#18 = doPure(@stay fn /* return__23 */: Console {
+                |    return__23 = getConsole();
+                |});
                 |@typeDecl(IntUtil__0) @stay let IntUtil__0;
                 |IntUtil__0 = type (IntUtil__0);
                 |@fn let intOrBubble__4;
                 |@fn @static @visibility(\public) @stay @fromType(IntUtil__0) let plusOne__5;
-                |plusOne__5 = (@stay fn plusOne(n__6 /* aka n */: Int32) /* return__21 */{
+                |plusOne__5 = (@stay fn plusOne(n__6 /* aka n */: Int32) /* return__24 */{
                 |    fn__7: do {
-                |      return__21 = n__6 + 1
+                |      return__24 = n__6 + 1
                 |    }
                 |});
                 |@fn @visibility(\public) @stay @fromType(IntUtil__0) let constructor__8;
@@ -2014,11 +2077,11 @@ class CleanupTemporariesTest {
                 |## BY A STRICT READING OF ORDER OF OPERATIONS, THE READ OF Int.plusOne ##
                 |## OCCURS HERE, BEFORE ARGUMENT EVALUATION.                            ##
                 |#########################################################################
-                |t#17 = hs(fail#15, (fn intOrBubble)());
-                |if (fail#15) {
+                |t#19 = hs(fail#16, (fn intOrBubble)());
+                |if (fail#16) {
                 |  bubble()
                 |};
-                |do_bind_log(t#16)(getStatic(IntUtil__0, \plusOne)(t#17));
+                |do_bind_log(t#18)(getStatic(IntUtil__0, \plusOne)(t#19));
                 |
             """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
             r.pseudoCodeAfter,

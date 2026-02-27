@@ -883,17 +883,17 @@ class JavaBackendTest {
             |                              }
             |                              static Generator<Optional<? super Object>> fn__0() {
             |                                  class Local_1 {
-            |                                      int caseIndex_38 = 0;
+            |                                      int caseIndex_41 = 0;
             |                                  }
             |                                  final Local_1 local$1 = new Local_1();
-            |                                  Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine_42 = generator_37 -> {
-            |                                      int caseIndexLocal_39 = local$1.caseIndex_38;
-            |                                      local$1.caseIndex_38 = -1;
-            |                                      switch (caseIndexLocal_39) {
+            |                                  Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine_45 = generator_40 -> {
+            |                                      int caseIndexLocal_42 = local$1.caseIndex_41;
+            |                                      local$1.caseIndex_41 = -1;
+            |                                      switch (caseIndexLocal_42) {
             |                                          case 0:
             |                                              {
             |                                              console_5.log("foo");
-            |                                              local$1.caseIndex_38 = 1;
+            |                                              local$1.caseIndex_41 = 1;
             |                                              return new ValueResult<>(Optional.empty());
             |                                          }
             |                                          case 1:
@@ -907,7 +907,7 @@ class JavaBackendTest {
             |                                          }
             |                                      }
             |                                  };
-            |                                  return Core.safeAdaptGeneratorFn(convertedCoroutine_42 :: apply);
+            |                                  return Core.safeAdaptGeneratorFn(convertedCoroutine_45 :: apply);
             |                              }
             |                              static {
             |                                  console_5 = Core.getConsole(Logger.getLogger("my_test_library.test"));
@@ -1246,58 +1246,58 @@ class JavaBackendTest {
             |                  static final CompletableFuture<String> p__0;
             |                  static Generator<Optional<? super Object>> fn__0() {
             |                      class Local_1 {
-            |                          int caseIndex_41 = 0;
-            |                          String t_13 = "";
+            |                          int caseIndex_44 = 0;
             |                          String t_14 = "";
-            |                          boolean fail_11 = false;
+            |                          String t_15 = "";
+            |                          boolean fail_12 = false;
             |                      }
             |                      final Local_1 local$1 = new Local_1();
-            |                      Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine_47 = generator_40 -> {
+            |                      Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine_50 = generator_43 -> {
             |                          while (true) {
-            |                              int caseIndexLocal_42 = local$1.caseIndex_41;
-            |                              local$1.caseIndex_41 = -1;
-            |                              switch (caseIndexLocal_42) {
+            |                              int caseIndexLocal_45 = local$1.caseIndex_44;
+            |                              local$1.caseIndex_44 = -1;
+            |                              switch (caseIndexLocal_45) {
             |                                  case 0:
             |                                      {
-            |                                      local$1.caseIndex_41 = 1;
+            |                                      local$1.caseIndex_44 = 1;
             |                                      p__0.handle((ignored$1, ignored$2) -> {
-            |                                              generator_40.get();
+            |                                              generator_43.get();
             |                                              return null;
             |                                      });
             |                                      return new ValueResult<>(Optional.empty());
             |                                  }
             |                                  case 1:
             |                                      {
-            |                                      local$1.fail_11 = false;
+            |                                      local$1.fail_12 = false;
             |                                      try {
-            |                                          local$1.t_13 = p__0.get();
+            |                                          local$1.t_14 = p__0.get();
             |                                      } catch (InterruptedException ignored$3) {
             |                                          break;
             |                                      } catch (ExecutionException ignored$4) {
-            |                                          local$1.fail_11 = true;
+            |                                          local$1.fail_12 = true;
             |                                      }
-            |                                      if (local$1.fail_11) {
-            |                                          local$1.caseIndex_41 = 2;
+            |                                      if (local$1.fail_12) {
+            |                                          local$1.caseIndex_44 = 2;
             |                                      } else {
-            |                                          local$1.caseIndex_41 = 3;
+            |                                          local$1.caseIndex_44 = 3;
             |                                      }
             |                                      break;
             |                                  }
             |                                  case 2:
             |                                      {
-            |                                      local$1.t_14 = "broken";
-            |                                      local$1.caseIndex_41 = 4;
+            |                                      local$1.t_15 = "broken";
+            |                                      local$1.caseIndex_44 = 4;
             |                                      break;
             |                                  }
             |                                  case 3:
             |                                      {
-            |                                      local$1.t_14 = local$1.t_13;
-            |                                      local$1.caseIndex_41 = 4;
+            |                                      local$1.t_15 = local$1.t_14;
+            |                                      local$1.caseIndex_44 = 4;
             |                                      break;
             |                                  }
             |                                  case 4:
             |                                      {
-            |                                      console_3.log(local$1.t_14);
+            |                                      console_3.log(local$1.t_15);
             |                                      return DoneResult.get();
             |                                  }
             |                                  default:
@@ -1307,7 +1307,7 @@ class JavaBackendTest {
             |                              }
             |                          }
             |                      };
-            |                      return Core.safeAdaptGeneratorFn(convertedCoroutine_47 :: apply);
+            |                      return Core.safeAdaptGeneratorFn(convertedCoroutine_50 :: apply);
             |                  }
             |                  static {
             |                      console_3 = Core.getConsole(Logger.getLogger("my_test_library.test"));
@@ -1451,15 +1451,15 @@ class JavaBackendTest {
             |console.log(sb.toString());
         """.trimMargin(),
         """
-            |static Console t_23;
+            |static Console t_26;
             |static final StringBuilder sb__0;
             |static {
-            |    t_23 = Core.getConsole(Logger.getLogger("my_test_library.test"));
+            |    t_26 = Core.getConsole(Logger.getLogger("my_test_library.test"));
             |    sb__0 = new StringBuilder();
             |    sb__0.append("Hello, ");
             |    sb__0.append("World");
             |    sb__0.append("!");
-            |    t_23.log(sb__0.toString());
+            |    t_26.log(sb__0.toString());
             |}
         """.javaMethod(
             "import temper.core.Core;",
@@ -1620,7 +1620,7 @@ class JavaBackendTest {
             |              public final class TestGlobal {
             |                  private TestGlobal() {
             |                  }
-            |                  static Console t_46;
+            |                  static Console t_49;
             |                  public static<I_T__0 extends my_test_library.test.I> I_T__0 least(I_T__0 i__0, I_T__0 j__0) {
             |                      I_T__0 return__0;
             |                      if (i__0.getX().compareTo(j__0.getX()) < 0) {
@@ -1631,8 +1631,8 @@ class JavaBackendTest {
             |                      return return__0;
             |                  }
             |                  static {
-            |                      t_46 = Core.getConsole(Logger.getLogger("my_test_library.test"));
-            |                      t_46.log(TestGlobal.least(new C("foo"), new C("bar")).getX());
+            |                      t_49 = Core.getConsole(Logger.getLogger("my_test_library.test"));
+            |                      t_49.log(TestGlobal.least(new C("foo"), new C("bar")).getX());
             |                  }
             |              }
             |
@@ -2145,13 +2145,13 @@ class JavaBackendTest {
             |    IntBinaryOperator fn__0 = (a__0, b__0) -> a__0 - b__0;
             |    Core.listSortInt(builder__0, fn__0);
             |    IntBinaryOperator fn__1 = (a__1, b__1) -> a__1 - b__1;
-            |    List<Integer> t_54 = Core.listSortedInt(ints__0, fn__1);
+            |    List<Integer> t_57 = Core.listSortedInt(ints__0, fn__1);
             |    IntFunction<String> fn__2 = a__2 -> Integer.toString(a__2);
-            |    String t_56 = Core.listJoinInt(t_54, ", ", fn__2);
-            |    console_10.log(t_56);
-            |    IntFunction<String> fn__3 = a__3 -> Integer.toString(a__3);
-            |    String t_59 = Core.listJoinInt(builder__0, ", ", fn__3);
+            |    String t_59 = Core.listJoinInt(t_57, ", ", fn__2);
             |    console_10.log(t_59);
+            |    IntFunction<String> fn__3 = a__3 -> Integer.toString(a__3);
+            |    String t_62 = Core.listJoinInt(builder__0, ", ", fn__3);
+            |    console_10.log(t_62);
             |}
             |static {
             |    console_10 = Core.getConsole(Logger.getLogger("my_test_library.test"));

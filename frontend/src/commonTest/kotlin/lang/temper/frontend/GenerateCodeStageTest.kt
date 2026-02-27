@@ -2064,9 +2064,11 @@ class GenerateCodeStageTest {
             |  type: {
             |    body: ```
             |    let console#0;
-            |    console#0 = getConsole();
+            |    console#0 = doPure(@stay fn /* return__0 */: Console {
+            |        return__0 = getConsole();
+            |    });
             |    @fn let runItThrice__0;
-            |    runItThrice__0 = fn runItThrice(factory__0 /* aka factory */: (fn (): SafeGenerator<Empty>)) /* return__0 */: Void {
+            |    runItThrice__0 = fn runItThrice(factory__0 /* aka factory */: (fn (): SafeGenerator<Empty>)) /* return__1 */: Void {
             |      void;
             |      fn__0: do {
             |        let generator__0: SafeGenerator<Empty>;
@@ -2079,13 +2081,13 @@ class GenerateCodeStageTest {
             |        do_bind_log(console#0)(",");
             |        do_bind_next(generator__0)();
             |        do_bind_log(console#0)(".");
-            |        return__0 = void
+            |        return__1 = void
             |      }
             |    };
-            |    runItThrice__0(fn /* return__1 */{${
+            |    runItThrice__0(fn /* return__2 */{${
             "" // Adapt call specialized to adaptGeneratorFnSafe
         }
-            |        return__1 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__2 */: (GeneratorResult<Empty>) implements GeneratorFn {
+            |        return__2 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__3 */: (GeneratorResult<Empty>) implements GeneratorFn {
             |            do_bind_log(console#0)("First");
             |            yield();
             |            do_bind_log(console#0)("Second");
@@ -2093,7 +2095,7 @@ class GenerateCodeStageTest {
             |            do_bind_log(console#0)("Third");
             |            yield();
             |            do_bind_log(console#0)("Fourth");
-            |            return__2 = implicits.doneResult<Empty>()
+            |            return__3 = implicits.doneResult<Empty>()
             |        })
             |    });
             |
@@ -2144,9 +2146,11 @@ class GenerateCodeStageTest {
             |  type: {
             |    body: ```
             |    let console#0;
-            |    console#0 = getConsole();
+            |    console#0 = doPure(@stay fn /* return__0 */: Console {
+            |        return__0 = getConsole();
+            |    });
             |    @fn let runItThrice__0;
-            |    runItThrice__0 = fn runItThrice(factory__0 /* aka factory */: (fn (): SafeGenerator<Empty>)) /* return__0 */: Void {
+            |    runItThrice__0 = fn runItThrice(factory__0 /* aka factory */: (fn (): SafeGenerator<Empty>)) /* return__1 */: Void {
             |      void;
             |      fn__0: do {
             |        let generator__0: SafeGenerator<Empty>;
@@ -2159,13 +2163,13 @@ class GenerateCodeStageTest {
             |        do_bind_next(generator__0)();
             |        do_bind_log(console#0)("Ran thrice");
             |        do_bind_close(generator__0)();
-            |        return__0 = void
+            |        return__1 = void
             |      }
             |    };
-            |    runItThrice__0(fn /* return__1 */{
+            |    runItThrice__0(fn /* return__2 */{
             |## Adapt call specialized to adaptGeneratorFnSafe
-            |        return__1 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__2 */: (GeneratorResult<Empty>) implements GeneratorFn {
-            |            return__2 = implicits.doneResult<Empty>();
+            |        return__2 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__3 */: (GeneratorResult<Empty>) implements GeneratorFn {
+            |            return__3 = implicits.doneResult<Empty>();
             |## The interpreter needs to distinguish a legit return result with the result from a yield.
             |            void;
             |            while (true) {
@@ -3591,7 +3595,9 @@ class GenerateCodeStageTest {
             |
             |  syntaxMacro: {
             |    body: ```
-            |      let console#0 = getConsole(), ls__0 = new ListBuilder<Int>();
+            |      let console#0 = doPure(fn: Console {
+            |          getConsole()
+            |      }), ls__0 = new ListBuilder<Int>();
             |      do_bind_add(ls__0)(0);
             |      do_bind_add(ls__0)(3);
             |      do {
@@ -3605,7 +3611,7 @@ class GenerateCodeStageTest {
             |        t#1 = ls__0;
             |        do_bind_set(t#1)(1, do_bind_get(t#1)(1) * 2)
             |      };
-            |      do_bind_log(console#0)(cat("ls = [", do_bind_join(do_bind_toList(ls__0)())(", ", fn (i__0 /* aka i */: Int) /* return__0 */: (String) {
+            |      do_bind_log(console#0)(cat("ls = [", do_bind_join(do_bind_toList(ls__0)())(", ", fn (i__0 /* aka i */: Int) /* return__1 */: (String) {
             |              do_bind_toString(i__0)(10)
             |          }), "]"));
             |
@@ -3701,9 +3707,8 @@ class GenerateCodeStageTest {
             |    body: ```
             |        let return__0, @stay @imported(\(`test//c/`.C)) C__0;
             |        C__0 = type (C);
-            |        let c__0, return__1: C;
-            |        return__1 = new C();
-            |        c__0 = return__1;
+            |        let c__0;
+            |        c__0 = new C();
             |        return__0 = c__0
             |
             |        ```

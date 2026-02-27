@@ -67,7 +67,7 @@ class PyBackendTest {
             |class IntMaker:
             |    radix_7: 'int3'
             |    __slots__ = ('radix_7',)
-            |    def int64_to_int(this_0, int_9: 'int64_21') -> 'int3':
+            |    def int64_to_int(this_0, int_9: 'int64_22') -> 'int3':
             |        return int64_to_int32_35(int_9)
             |    def string_to_int(this_1, string_12: 'str4') -> 'int3':
             |        return string_to_int32_36(string_12, this_1.radix_7)
@@ -76,7 +76,7 @@ class PyBackendTest {
             |    @property
             |    def radix(this_24) -> 'int3':
             |        return this_24.radix_7
-            |def crazy_sum(int_maker_16: 'IntMaker', int_17: 'int64_21', string_18: 'str4') -> 'int3':
+            |def crazy_sum(int_maker_16: 'IntMaker', int_17: 'int64_22', string_18: 'str4') -> 'int3':
             |    int_int_20: 'int3'
             |    int_int_20 = int_maker_16.int64_to_int(int_17)
             |    string_int_21: 'int3'
@@ -144,23 +144,23 @@ class PyBackendTest {
             |from builtins import bool as bool1, str as str4, int as int5, isinstance as isinstance7
             |from temper_core import LoggingConsole as LoggingConsole2, list_for_each as list_for_each0
             |from typing import Dict as Dict3, Union as Union6
-            |list_for_each_33 = list_for_each0
-            |t_29: 'bool1'
-            |t_26: 'LoggingConsole2' = LoggingConsole2(__name__)
+            |list_for_each_36 = list_for_each0
+            |t_32: 'bool1'
+            |t_29: 'LoggingConsole2' = LoggingConsole2(__name__)
             |def f() -> 'Dict3[str4, int5]':
             |    return {}
             |m_1: 'Union6[(Dict3[str4, int5]), None]' = None
-            |def fn_25(e_3: 'int5') -> 'None':
+            |def fn_28(e_3: 'int5') -> 'None':
             |    global m_1
             |    if e_3 == 2:
             |        m_1 = {}
-            |list_for_each_33((1, 2, 3), fn_25)
+            |list_for_each_36((1, 2, 3), fn_28)
             |if not m_1 is None:
-            |    t_29 = isinstance7(m_1, Dict3)
+            |    t_32 = isinstance7(m_1, Dict3)
             |else:
-            |    t_29 = False
-            |if t_29:
-            |    t_26.log('Allocated m')
+            |    t_32 = False
+            |if t_32:
+            |    t_29.log('Allocated m')
             |
         """.trimMargin(),
     )
@@ -653,34 +653,34 @@ class PyBackendTest {
             |            from temper_core import LoggingConsole as LoggingConsole2, adapt_generator_factory as adapt_generator_factory3, str_cat as str_cat0, async_launch as async_launch1
             |            from typing import Union as Union5, Generator as Generator8
             |            from builtins import str as str6, Exception as Exception7
-            |            str_cat_66 = str_cat0
-            |            async_launch_67 = async_launch1
+            |            str_cat_69 = str_cat0
+            |            async_launch_70 = async_launch1
             |            console_5: 'LoggingConsole2' = LoggingConsole2(__name__)
             |            @adapt_generator_factory3
-            |            def fn_58(do_await_4) -> 'Generator8[empty, None, None]':
-            |                t_52: 'Union5[str6, None]'
-            |                t_28: 'Union5[str6, None]'
-            |                t_32: 'str6'
+            |            def fn_61(do_await_4) -> 'Generator8[empty, None, None]':
+            |                t_55: 'Union5[str6, None]'
+            |                t_29: 'Union5[str6, None]'
+            |                t_33: 'str6'
             |                try:
             |                    r_3: 'NetResponse'
             |                    r_3 = yield do_await_4(NetRequest('data:text/plain,Hello World!').send())
             |                    if r_3.status == 200:
             |                        body_4: 'str6'
-            |                        t_28 = yield do_await_4(r_3.text)
-            |                        if not t_28 is None:
-            |                            body_4 = t_28
+            |                        t_29 = yield do_await_4(r_3.text)
+            |                        if not t_29 is None:
+            |                            body_4 = t_29
             |                        else:
             |                            body_4 = 'missing'
-            |                        t_52 = r_3.content_type
-            |                        if not t_52 is None:
-            |                            subject_hash7_11: 'str6' = t_52
-            |                            t_32 = subject_hash7_11
+            |                        t_55 = r_3.content_type
+            |                        if not t_55 is None:
+            |                            subject_hash7_11: 'str6' = t_55
+            |                            t_33 = subject_hash7_11
             |                        else:
-            |                            t_32 = 'unknown'
-            |                        console_5.log(str_cat_66('Got ', body_4, ' / ', t_32))
+            |                            t_33 = 'unknown'
+            |                        console_5.log(str_cat_69('Got ', body_4, ' / ', t_33))
             |                except Exception7:
             |                    console_5.log('failed')
-            |            async_launch_67(fn_58)
+            |            async_launch_70(fn_61)
             |
             |            ```,
             |        },

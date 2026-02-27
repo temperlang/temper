@@ -1924,7 +1924,9 @@ class SyntaxMacroStageTest {
             |{
             |  syntaxMacro: {
             |    body: ```
-            |        let console#0 = getConsole(), console__0 = getConsole("myConsole");
+            |        let console#0 = doPure(fn: Console {
+            |            getConsole()
+            |        }), console__0 = getConsole("myConsole");
             |        do_bind_log(console__0)("Hi!");
             |        do_bind_log(console#0)("Bye!");
             |
@@ -2082,7 +2084,9 @@ class SyntaxMacroStageTest {
             |{
             |  syntaxMacro: {
             |    body: ```
-            |        let console#0 = getConsole();
+            |        let console#0 = doPure(fn: Console {
+            |            getConsole()
+            |        });
             |        do (fn {
             |            let console__0 = getConsole("myConsole");
             |        });

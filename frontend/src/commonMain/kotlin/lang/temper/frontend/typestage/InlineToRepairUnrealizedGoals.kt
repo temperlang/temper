@@ -2,7 +2,6 @@ package lang.temper.frontend.typestage
 
 import lang.temper.ast.TreeVisit
 import lang.temper.builtin.BuiltinFuns
-import lang.temper.builtin.isHandlerScopeCall
 import lang.temper.common.Cons
 import lang.temper.common.ignore
 import lang.temper.common.putMultiList
@@ -64,6 +63,7 @@ import lang.temper.value.ValueLeaf
 import lang.temper.value.freeTree
 import lang.temper.value.functionContained
 import lang.temper.value.inlineUnrealizedGoalSymbol
+import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.matches
 import lang.temper.value.ssaSymbol
 import lang.temper.value.typeSymbol
