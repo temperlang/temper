@@ -29,20 +29,33 @@ import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.mapType
 import kotlin.math.min
 
+/**
+ * Updates [member]'s overridden members with those found from its enclosing type.
+ */
 internal fun linkOverrides(
     member: VisibleMemberShape,
     typeContext: TypeContext2,
     logSink: LogSink,
 ) {
+    member.overriddenMembers = findOverrides(member.enclosingType, member, typeContext, logSink)
+}
+
+/**
+ * Return overrides for the given [member] shape in the [enclosingTypeShape] context.
+ * Doesn't require that the member actually be defined in the given enclosing type.
+ */
+fun findOverrides(
+    enclosingTypeShape: TypeShape,
+    member: VisibleMemberShape,
+    typeContext: TypeContext2,
+    logSink: LogSink,
+): Set<MemberOverride2> {
     if (member.visibility == Visibility.Private || member is StaticPropertyShape) {
         // Private members and statics override nothing nor are overridden.
         // Dispatch to them is non-virtual.
-        member.overriddenMembers = emptySet()
-        return
+        return emptySet()
     }
     val overriddenMembers = mutableSetOf<MemberOverride2>()
-
-    val enclosingTypeShape = member.enclosingType
     val enclosingType = MkType.nominal(
         enclosingTypeShape,
         enclosingTypeShape.typeParameters.map { MkType.nominal(it.definition, emptyList()) },
@@ -61,8 +74,7 @@ internal fun linkOverrides(
             true
         }
     }
-
-    member.overriddenMembers = overriddenMembers.toSet()
+    return overriddenMembers.toSet()
 }
 
 private fun overriddenIn(
