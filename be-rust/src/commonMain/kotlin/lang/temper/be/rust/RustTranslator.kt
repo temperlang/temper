@@ -304,7 +304,14 @@ class RustTranslator(
         }
     }
 
-    private fun processForClassBuilder(
+    /**
+     * Generate helpers for using named fields for making new class instances.
+     * These are called `...Maker` rather than `...Builder` because it's less
+     * likely to interfere with user-named Builder types. Temper has a style of
+     * naming things `...Builder`, so Temper users might reach for that naming
+     * easily in their own types, and we want to reduce collision risk.
+     */
+    private fun processForClassMaker(
         fn: TmpL.FunctionDeclarationOrMethod,
         enclosingType: Rust.Type? = null,
         generics: List<Rust.GenericParam> = listOf(),
@@ -315,8 +322,8 @@ class RustTranslator(
         fn.parameters.parameters.count { it.name != fn.parameters.thisName } <= 1 && return
         // And for now, skip those with rest parameters. TODO Extract to list value?
         fn.parameters.restParameter != null && return
-        // Build the builder.
-        // Here we make `WhateverBuilder` for requireds and/or `WhateverBuilderOptions` structs for optionals.
+        // Build the maker.
+        // Here we make `WhateverMaker` for requireds and/or `WhateverMakerOptions` structs for optionals.
         // Alternatively, could make a Java-style builder, which is common in Rust, but it takes less advantage of
         // standard static checking that we get with pub struct fields.
         val pos = fn.pos
@@ -327,7 +334,7 @@ class RustTranslator(
             else -> enclosingType as Rust.Id
         }
         // TODO Ensure unique names.
-        val builderId = "${targetId.outName.outputNameText}Builder".toId(targetId.pos)
+        val builderId = "${targetId.outName.outputNameText}Maker".toId(targetId.pos)
         val optionsId = "${targetId.outName.outputNameText}Options".toId(targetId.pos)
         // Figure out if we have requireds and/or optionals.
         // We need to separate these in Rust because requireds often can't Default.
@@ -395,7 +402,7 @@ class RustTranslator(
                         items = buildList {
                             Rust.Function(
                                 pos,
-                                id = "build".toId(pos),
+                                id = "make".toId(pos),
                                 // Pass self by move on purpose in these, so we can avoid cloning.
                                 // We make builder types Clone in case anyone badly wants copies on their own.
                                 params = listOf(self),
@@ -422,7 +429,7 @@ class RustTranslator(
                 items = buildList {
                     Rust.Function(
                         pos,
-                        id = "build".toId(pos),
+                        id = "make".toId(pos),
                         params = listOf(self),
                         returnType = rustReturnType,
                         block = Rust.Block(
@@ -432,7 +439,7 @@ class RustTranslator(
                                 optionals.isEmpty() -> callNew(requireds)
                                 // Delegate to the with-optionals builder.
                                 else -> self.deepCopy().methodCall(
-                                    key = "build_with",
+                                    key = "make_with",
                                     args = listOf(makePath(pos, "std", "default", "Default", "default").call()),
                                 )
                             },
@@ -442,7 +449,7 @@ class RustTranslator(
                         val optionsArg = "options".toId(pos)
                         Rust.Function(
                             pos,
-                            id = "build_with".toId(pos),
+                            id = "make_with".toId(pos),
                             generics = optionalGenerics.deepCopy(),
                             params = listOf(
                                 self.deepCopy(),
@@ -1929,7 +1936,7 @@ class RustTranslator(
             enclosingTypePub != null &&
             enclosingTypePub.scope == null
         ) {
-            processForClassBuilder(constructor, enclosingType, generics, returnType = returnType)
+            processForClassMaker(constructor, enclosingType, generics, returnType = returnType)
         }
         // Actually translate the constructor now, with all our adjustments.
         return translateFunctionDeclarationOrMethod(

@@ -1193,11 +1193,11 @@ class RustBackendTest {
                 |#[derive(Clone)]
                 |pub struct C(std::sync::Arc<std::sync::RwLock<CStruct>>);
                 |#[derive(Clone)]
-                |pub struct CBuilder {
+                |pub struct CMaker {
                 |    pub x: std::sync::Arc<String>, pub y: std::sync::Arc<String>
                 |}
-                |impl CBuilder {
-                |    pub fn build(self) -> C {
+                |impl CMaker {
+                |    pub fn make(self) -> C {
                 |        C::new(self.x, self.y)
                 |    }
                 |}
@@ -1768,7 +1768,7 @@ class RustBackendTest {
     }
 
     @Test
-    fun needlesslyGenericBuilder() {
+    fun needlesslyGenericMaker() {
         assertGenerateWanted(
             temper = """
                 |export class Ha<T>(public i: Int, public j: Int) {}
@@ -1786,11 +1786,11 @@ class RustBackendTest {
                 |#[derive(Clone)]
                 |pub struct Ha<T: Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<HaStruct<T>>);
                 |#[derive(Clone)]
-                |pub struct HaBuilder {
+                |pub struct HaMaker {
                 |    pub i: i32, pub j: i32
                 |}
-                |impl HaBuilder {
-                |    pub fn build(self) -> Ha<T> {
+                |impl HaMaker {
+                |    pub fn make(self) -> Ha<T> {
                 |        Ha::new(self.i, self.j)
                 |    }
                 |}
@@ -1845,14 +1845,14 @@ class RustBackendTest {
                 |    pub i: Option<i32>
                 |}
                 |#[derive(Clone)]
-                |pub struct HiBuilder<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |pub struct HiMaker<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> {
                 |    pub t: Option<T>, pub u: U
                 |}
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> HiBuilder<T, U> {
-                |    pub fn build(self) -> Hi<T, U> {
-                |        self.build_with(std::default::Default::default())
+                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> HiMaker<T, U> {
+                |    pub fn make(self) -> Hi<T, U> {
+                |        self.make_with(std::default::Default::default())
                 |    }
-                |    pub fn build_with(self, options: HiOptions) -> Hi<T, U> {
+                |    pub fn make_with(self, options: HiOptions) -> Hi<T, U> {
                 |        Hi::new(self.t, self.u, options.i)
                 |    }
                 |}
@@ -2059,7 +2059,7 @@ class RustBackendTest {
             |    pub x: Option<f64>, pub y: Option<f64>
             |}
             |impl Vec2Options {
-            |    pub fn build(self) -> Vec2 {
+            |    pub fn make(self) -> Vec2 {
             |        Vec2::new(self.x, self.y)
             |    }
             |}
