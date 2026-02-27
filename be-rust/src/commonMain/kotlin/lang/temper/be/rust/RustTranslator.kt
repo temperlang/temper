@@ -19,12 +19,15 @@ import lang.temper.be.tmpl.referencedNames
 import lang.temper.be.tmpl.splitConstructorBody
 import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.common.compatRemoveLast
+import lang.temper.common.mapFirst
 import lang.temper.common.subListToEnd
 import lang.temper.frontend.ModuleNamingContext
+import lang.temper.frontend.typestage.findOverrides
 import lang.temper.interp.importExport.STANDARD_LIBRARY_NAME
 import lang.temper.lexer.withTemperAwareExtension
 import lang.temper.library.LibraryConfigurations
 import lang.temper.log.FilePath
+import lang.temper.log.LogSink
 import lang.temper.log.Position
 import lang.temper.log.last
 import lang.temper.name.BuiltinName
@@ -38,6 +41,7 @@ import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
+import lang.temper.type.PropertyShape
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
@@ -51,6 +55,7 @@ import lang.temper.type2.NonNullType
 import lang.temper.type2.Nullity
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
+import lang.temper.type2.TypeContext2
 import lang.temper.type2.TypeParamRef
 import lang.temper.type2.ValueFormalKind
 import lang.temper.type2.hackMapOldStyleToNew
@@ -94,6 +99,7 @@ class RustTranslator(
     private var insideMutableType = false
     private val failVars = mutableSetOf<ResolvedName>()
     private val functionContextStack = mutableListOf<FunctionContext>()
+    private val logSink = LogSink.devNull // TODO what?
     private val loopLabels = mutableListOf<Rust.Id?>()
     private val moduleInits = mutableListOf<Rust.Statement>()
     private val moduleItems = mutableListOf<Rust.Item>()
@@ -102,6 +108,7 @@ class RustTranslator(
     }
     private val testItems = mutableListOf<Rust.Item>()
     private val traitImports = mutableSetOf<Rust.Path>()
+    private val typeContext = TypeContext2()
 
     fun translateModule(): Backend.TranslatedFileSpecification {
         // Preprocess tops.
@@ -775,8 +782,8 @@ class RustTranslator(
                     for (supMethod in supShape.methods) {
                         maybeAddTraitForwarder(
                             pos,
-                            instanceMethods,
-                            isInterface = isInterface,
+                            decl = decl,
+                            instanceMethods = instanceMethods,
                             methodKind = supMethod.methodKind,
                             methodName = supMethod.name.displayName,
                             returnType = supMethod.descriptor.orInvalid.returnType2,
@@ -788,8 +795,8 @@ class RustTranslator(
                         if (supProperty.getter == null) {
                             maybeAddTraitForwarder(
                                 pos,
-                                instanceMethods,
-                                isInterface = isInterface,
+                                decl = decl,
+                                instanceMethods = instanceMethods,
                                 methodKind = MethodKind.Getter,
                                 methodName = BuiltinName("get.${supProperty.symbol.text}").displayName,
                                 superShape = supProperty,
@@ -798,8 +805,8 @@ class RustTranslator(
                         if (supProperty.setter == null && supProperty.hasSetter) {
                             maybeAddTraitForwarder(
                                 pos,
-                                instanceMethods,
-                                isInterface = isInterface,
+                                decl = decl,
+                                instanceMethods = instanceMethods,
                                 methodKind = MethodKind.Setter,
                                 methodName = BuiltinName("set.${supProperty.symbol.text}").displayName,
                                 superShape = supProperty,
@@ -815,17 +822,18 @@ class RustTranslator(
 
     private fun MutableList<Rust.Item>.maybeAddTraitForwarder(
         pos: Position,
+        decl: TmpL.TypeDeclaration,
         instanceMethods: Map<String, TmpL.InstanceMethod>,
-        isInterface: Boolean,
         methodKind: MethodKind,
         methodName: String,
         superShape: VisibleMemberShape,
         returnType: Type2? = null,
     ) {
+        val isInterface = decl.kind == TmpL.TypeDeclarationKind.Interface
         when {
-            isInterface -> buildForwarderForTrait(pos, superShape, methodKind)
+            isInterface -> buildForwarderFromInterfaceToTrait(pos, superShape, methodKind)
             else -> when (val method = instanceMethods[methodName]) {
-                null -> listOf()
+                null -> buildForwarderFromClassToTrait(pos, decl, superShape, methodKind)
                 else -> buildForwarder(method, returnType = returnType)
             }
         }.also { addAll(it) } // only one expected here, but meh
@@ -1073,12 +1081,44 @@ class RustTranslator(
         return translateMethodLike(method, block = block, forTrait = true, returnType = effectiveReturnType)
     }
 
+    private fun buildForwarderFromClassToTrait(
+        pos: Position,
+        decl: TmpL.TypeDeclaration,
+        superShape: VisibleMemberShape,
+        methodKind: MethodKind,
+    ): List<Rust.Item> = run {
+        // We're here because this class has no matching member, so walk its supertypes to match the super method.
+        // The method we inherit closest might be on a different branch.
+        val overrides = findOverrides(decl.typeShape, superShape, typeContext, logSink)
+        val override = overrides.find { override ->
+            when (val foundMember = override.superTypeMember) {
+                is MethodShape -> !foundMember.isPureVirtual
+                is PropertyShape -> when (methodKind) {
+                    MethodKind.Getter -> foundMember.enclosingType.methods.any { foundMethod ->
+                        !foundMethod.isPureVirtual &&
+                            foundMethod.methodKind == MethodKind.Getter &&
+                            foundMethod.name == foundMember.getter
+                    }
+                    MethodKind.Setter -> foundMember.enclosingType.methods.any { foundMethod ->
+                        !foundMethod.isPureVirtual &&
+                            foundMethod.methodKind == MethodKind.Setter &&
+                            foundMethod.name == foundMember.setter
+                    }
+                    else -> false
+                }
+                else -> false
+            }
+            (override.superTypeMember as? MethodShape)?.isPureVirtual == false
+        }
+        listOf()
+    }
+
     /**
      * Build a forwarder from a trait wrapper to a trait method that *isn't*
      * overridden in the current trait. We need this to handle methods for
      * which we have only frontend descriptions, not tmpl.
      */
-    private fun buildForwarderForTrait(
+    private fun buildForwarderFromInterfaceToTrait(
         pos: Position,
         shape: VisibleMemberShape,
         methodKind: MethodKind,

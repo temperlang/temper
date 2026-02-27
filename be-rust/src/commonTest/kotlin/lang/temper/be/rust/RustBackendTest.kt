@@ -1279,15 +1279,17 @@ class RustBackendTest {
                 |}
                 |// D provides alternate paths for override resolution.
                 |interface D<T> extends A {
-                |  public get thing(): String { "Hello!" }
+                |  public get prop(): String { "Hello!" }
+                |  public set prop(value: String): Void {}
                 |  public set thing(value: String): Void {}
                 |  public whatever(): String { "sure" }
                 |}
                 |// E provides indirection on type bindings to D.
                 |interface E<T> extends D<T> {}
-                |class F(
-                |  public var prop: String,
-                |) extends B<C<A>> & E<Int> {}
+                |// Alternate prop/thing set/get vs D above.
+                |class F extends B<C<A>> & E<Int> {
+                |  public get thing(): String { "Hello!" }
+                |}
             """.trimMargin(),
             rust = """
                 |pub (crate) fn init() -> temper_core::Result<()> {
@@ -1462,10 +1464,12 @@ class RustBackendTest {
                 |temper_core::impl_any_value_trait!(C<T>, [B<T>, A] where T: ATrait);
                 |trait DTrait<T: Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + ATrait {
                 |    fn clone_boxed(& self) -> D<T>;
-                |    fn thing(& self) -> std::sync::Arc<String> {
+                |    fn prop(& self) -> std::sync::Arc<String> {
                 |        return std::sync::Arc::new("Hello!".to_string());
                 |    }
-                |    fn set_thing(& self, value__0: std::sync::Arc<String>) {}
+                |    fn set_prop(& self, value__0: std::sync::Arc<String>) {}
+                |    fn thing(& self) -> std::sync::Arc<String>;
+                |    fn set_thing(& self, value__1: std::sync::Arc<String>) {}
                 |    fn whatever(& self) -> std::sync::Arc<String> {
                 |        return std::sync::Arc::new("sure".to_string());
                 |    }
@@ -1481,14 +1485,20 @@ class RustBackendTest {
                 |    fn clone_boxed(& self) -> D<T> {
                 |        DTrait::clone_boxed( & ( * self.0))
                 |    }
-                |    fn thing(& self) -> std::sync::Arc<String> {
-                |        DTrait::thing( & ( * self.0))
+                |    fn prop(& self) -> std::sync::Arc<String> {
+                |        DTrait::prop( & ( * self.0))
+                |    }
+                |    fn set_prop(& self, value: std::sync::Arc<String>) {
+                |        DTrait::set_prop( & ( * self.0), value)
                 |    }
                 |    fn set_thing(& self, value: std::sync::Arc<String>) {
                 |        DTrait::set_thing( & ( * self.0), value)
                 |    }
                 |    fn whatever(& self) -> std::sync::Arc<String> {
                 |        DTrait::whatever( & ( * self.0))
+                |    }
+                |    fn thing(& self) -> std::sync::Arc<String> {
+                |        DTrait::thing( & ( * self.0))
                 |    }
                 |}
                 |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for D<T> {
@@ -1540,14 +1550,20 @@ class RustBackendTest {
                 |    fn clone_boxed(& self) -> D<T> {
                 |        DTrait::clone_boxed( & ( * self.0))
                 |    }
-                |    fn thing(& self) -> std::sync::Arc<String> {
-                |        DTrait::thing( & ( * self.0))
+                |    fn prop(& self) -> std::sync::Arc<String> {
+                |        DTrait::prop( & ( * self.0))
+                |    }
+                |    fn set_prop(& self, value: std::sync::Arc<String>) {
+                |        DTrait::set_prop( & ( * self.0), value)
                 |    }
                 |    fn set_thing(& self, value: std::sync::Arc<String>) {
                 |        DTrait::set_thing( & ( * self.0), value)
                 |    }
                 |    fn whatever(& self) -> std::sync::Arc<String> {
                 |        DTrait::whatever( & ( * self.0))
+                |    }
+                |    fn thing(& self) -> std::sync::Arc<String> {
+                |        DTrait::thing( & ( * self.0))
                 |    }
                 |}
                 |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for E<T> {
@@ -1580,27 +1596,16 @@ class RustBackendTest {
                 |        & ( * self.0)
                 |    }
                 |}
-                |struct FStruct {
-                |    prop: std::sync::Arc<String>
-                |}
+                |struct FStruct {}
                 |#[derive(Clone)]
-                |pub (crate) struct F(std::sync::Arc<std::sync::RwLock<FStruct>>);
+                |pub (crate) struct F(std::sync::Arc<FStruct>);
                 |impl F {
-                |    pub fn new(prop__1: impl temper_core::ToArcString) -> F {
-                |        let prop__1 = prop__1.to_arc_string();
-                |        let prop;
-                |        prop = prop__1.clone();
-                |        let selfish = F(std::sync::Arc::new(std::sync::RwLock::new(FStruct {
-                |                        prop
-                |        })));
+                |    pub fn thing(& self) -> std::sync::Arc<String> {
+                |        return std::sync::Arc::new("Hello!".to_string());
+                |    }
+                |    pub fn new() -> F {
+                |        let selfish = F(std::sync::Arc::new(FStruct {}));
                 |        return selfish;
-                |    }
-                |    pub fn prop(& self) -> std::sync::Arc<String> {
-                |        return self.0.read().unwrap().prop.clone();
-                |    }
-                |    pub fn set_prop(& self, newProp__1: impl temper_core::ToArcString) {
-                |        let newProp__1 = newProp__1.to_arc_string();
-                |        self.0.write().unwrap().prop = newProp__1.clone();
                 |    }
                 |}
                 |impl BTrait<C<A>> for F {
@@ -1612,11 +1617,8 @@ class RustBackendTest {
                 |    fn clone_boxed(& self) -> A {
                 |        A::new(self.clone())
                 |    }
-                |    fn prop(& self) -> std::sync::Arc<String> {
-                |        self.prop()
-                |    }
-                |    fn set_prop(& self, newProp__1: std::sync::Arc<String>) {
-                |        self.set_prop(newProp__1)
+                |    fn thing(& self) -> std::sync::Arc<String> {
+                |        self.thing()
                 |    }
                 |}
                 |impl ETrait<i32> for F {
@@ -1627,6 +1629,9 @@ class RustBackendTest {
                 |impl DTrait<T> for F {
                 |    fn clone_boxed(& self) -> D<T> {
                 |        D::new(self.clone())
+                |    }
+                |    fn thing(& self) -> std::sync::Arc<String> {
+                |        self.thing()
                 |    }
                 |}
                 |temper_core::impl_any_value_trait!(F, [B<C<A>>, A, E<i32>, D<T>]);
