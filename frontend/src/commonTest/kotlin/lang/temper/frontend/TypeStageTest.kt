@@ -404,10 +404,12 @@ class TypeStageTest {
             body:
             ```
             let console#0;
-            console#0 = getConsole();
-            do_bind_forEach(list("foo"))(fn (x__0) /* return__0 */{
+            console#0 = doPure(@stay fn /* return__0 */: Console {
+                return__0 = getConsole();
+            });
+            do_bind_forEach(list("foo"))(fn (x__0) /* return__1 */{
                 do_bind_log(console#0)(x__0);
-                return__0 = void
+                return__1 = void
             });
 
             ```
@@ -434,7 +436,9 @@ class TypeStageTest {
                 |    body:
                 |    ```
                 |    let console#0 ⦂ Console;
-                |    console#0 = getConsole();
+                |    console#0 = doPure ⋖ Console ⋗(@stay fn /* return__0 */: Console {
+                |        return__0 = getConsole();
+                |    });
                 |    let this__0: List<String>;
                 |    this__0 = list ⋖ String ⋗("a", "b", "c", "d");${
                 "" // Here we start the inlined callee body.
@@ -503,7 +507,9 @@ class TypeStageTest {
             |        outer__0: do {
             |          body#0: do {}
             |        };
-            |        do_bind_log(getConsole())("yes");
+            |        do_bind_log(doPure(@stay fn /* return__0 */: Console {
+            |              return__0 = getConsole();
+            |        }))("yes");
             |
             |        ```
             |  },
@@ -1144,11 +1150,13 @@ class TypeStageTest {
         |      ```
         |      let return__0;
         |      var t#0;
-        |      t#0 = getConsole();
+        |      t#0 = doPure(@stay fn /* return__1 */: Console {
+        |          return__1 = getConsole();
+        |      });
         |      @fn let i__0;
-        |      i__0 = (@stay fn i(x__0 /* aka x */: Int32) /* return__1 */{
+        |      i__0 = (@stay fn i(x__0 /* aka x */: Int32) /* return__2 */{
         |          fn__0: do {
-        |            return__1 = x__0
+        |            return__2 = x__0
         |          }
         |      });
         |      orelse#0: {
@@ -1638,7 +1646,9 @@ class TypeStageTest {
             |    body:
             |    ```
             |    let console#0;
-            |    console#0 = getConsole();
+            |    console#0 = doPure(@stay fn /* return__0 */: Console {
+            |        return__0 = getConsole();
+            |    });
             |    @fn let f__0;
             |    f__0 = fn f(returnEarly__0 /* aka returnEarly */: Boolean) /* return__1 */: Void {
             |      void;
@@ -1842,16 +1852,18 @@ class TypeStageTest {
             |  type: {
             |    body: ```
             |      let console#0;
-            |      console#0 = getConsole();
+            |      console#0 = doPure(@stay fn /* return__0 */: Console {
+            |          return__0 = getConsole();
+            |      });
             |      @fn let f__0;
-            |      f__0 = fn f(hi__0 /* aka hi */: String) /* return__0 */: Void {
+            |      f__0 = fn f(hi__0 /* aka hi */: String) /* return__1 */: Void {
             |        void;
             |        fn__0: do {
             |          let s__0: String;
             |          s__0 = cat("Hello, ", hi__0, "!");
             |          do_bind_log(console#0)(s__0);
             |          do_bind_log(console#0)(s__0);
-            |          return__0 = void
+            |          return__1 = void
             |        }
             |      }
             |
@@ -1870,8 +1882,10 @@ class TypeStageTest {
             |    body: ```
             |        @stay @imported(\(`half//`.intHalf)) @fn @extension("half") let intHalf__0;
             |        intHalf__0 = (fn intHalf);
-            |        do_bind_log(getConsole())(do_bind_toString(intHalf__0(84))());
-            |## extension resolved across module boundaries     ^^^^^^^^^^
+            |        do_bind_log(doPure(@stay fn /* return__0 */: Console {
+            |              return__0 = getConsole();
+            |        }))(do_bind_toString(intHalf__0(84))());
+            |##                           ^^^^^^^^^^ extension resolved across module boundaries
             |
             |        ```
             |  }

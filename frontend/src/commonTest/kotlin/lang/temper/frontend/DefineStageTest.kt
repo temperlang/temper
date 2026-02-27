@@ -85,7 +85,9 @@ class DefineStageTest {
             body:
               ```
               let console#0;
-              console#0 = getConsole();
+              console#0 = doPure(@stay fn: Console {
+                  getConsole()
+              });
               I__0 extends AnyValue;
               @property(\next) @stay @fromType(I__0) let next__7;
               @typeDecl(I__0) @stay let I__0;
@@ -191,6 +193,7 @@ class DefineStageTest {
                 ],
               },
               "Void": { supers: [] },
+              "Console": "__DO_NOT_CARE__",
             }
           }
         }
@@ -911,7 +914,9 @@ class DefineStageTest {
             body:
             ```
             let console#0;
-            console#0 = getConsole();
+            console#0 = doPure(@stay fn: Console {
+                getConsole()
+            });
             @fn let f__0;
             f__0 = (@stay fn f(@optional(true) i__0 /* aka i */: Int32?) /* return__0 */: Int32 {
                 fn__0: do {
@@ -955,7 +960,9 @@ class DefineStageTest {
             body:
             ```
             let console#0;
-            console#0 = getConsole();
+            console#0 = doPure(@stay fn: Console {
+                getConsole()
+            });
             @fn let f__1;
             f__1 = fn f(b__2 /* aka b */: Boolean) /* return__0 */: Int32 {
               fn__3: do {

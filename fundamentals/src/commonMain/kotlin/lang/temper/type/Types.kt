@@ -832,9 +832,9 @@ val StaticType.mentionsInvalid: Boolean get() = when (this) {
 }
 
 /** Determine if any component is invalid. */
-val Type2.mentionsInvalid: Boolean get() =
-    this.definition == WellKnownTypes ||
-        this.bindings.any { it.mentionsInvalid }
+val Type2.mentionsInvalid: Boolean get() = this.mentions { it == WellKnownTypes.invalidTypeDefinition }
+fun Type2.mentions(definitionPredicate: (TypeDefinition) -> Boolean): Boolean =
+    definitionPredicate(this.definition) || this.bindings.any { it.mentions(definitionPredicate) }
 
 val StaticType.isBooleanLike: Boolean get() = isTypeOrNever(WellKnownTypes.booleanTypeDefinition)
 val StaticType.isVoidLike: Boolean get() = isTypeOrNever(WellKnownTypes.voidTypeDefinition)

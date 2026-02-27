@@ -55,8 +55,10 @@ class ExtractFlowInitDeclarationsTest {
             }
         }
 
-        assertStringsEqual(want, got)
+        val gotAdjusted = emptyValuePattern.replace(got, "{class: Empty}")
+        assertStringsEqual(want, gotAdjusted)
     }
+    private val emptyValuePattern = Regex("""[{]class: Empty__\d+[}]""")
 
     @Test
     fun forLoopWithOneDeclaration() = assertExtracted(
@@ -64,7 +66,7 @@ class ExtractFlowInitDeclarationsTest {
             |before_loop;
             |do {
             |  let i;
-            |  for(\__flowInit, {class: Empty__9}, \cond, i < 0, \incr, ++i, fn {
+            |  for(\__flowInit, {class: Empty}, \cond, i < 0, \incr, ++i, fn {
             |      body
             |  })
             |};
@@ -105,7 +107,7 @@ class ExtractFlowInitDeclarationsTest {
             |before_loop;
             |do {
             |  let i, let j;
-            |  for(\__flowInit, {class: Empty__9}, \cond, i < 0, \incr, ++i, fn {
+            |  for(\__flowInit, {class: Empty}, \cond, i < 0, \incr, ++i, fn {
             |      body
             |  })
             |};
@@ -192,7 +194,7 @@ class ExtractFlowInitDeclarationsTest {
             |before_loop;
             |do {
             |  nym`@`(foo, let i);
-            |  for(\__flowInit, {class: Empty__9}, \cond, i < 0, \incr, ++i, fn {
+            |  for(\__flowInit, {class: Empty}, \cond, i < 0, \incr, ++i, fn {
             |      body
             |  })
             |};
@@ -241,7 +243,7 @@ class ExtractFlowInitDeclarationsTest {
             |    do {
             |      \label;
             |      \LABEL;
-            |      for(\__flowInit, {class: Empty__9}, \cond, i < 0, \incr, ++i, fn {
+            |      for(\__flowInit, {class: Empty}, \cond, i < 0, \incr, ++i, fn {
             |          body
             |      })
             |    }
@@ -287,7 +289,7 @@ class ExtractFlowInitDeclarationsTest {
         """
             |\label;
             |\my_loop;
-            |for({class: Empty__9} of xs, fn (x) {
+            |for({class: Empty} of xs, fn (x) {
             |    f(x)
             |})
             |
@@ -354,7 +356,7 @@ class ExtractFlowInitDeclarationsTest {
     @Test
     fun forOfLoopWithDisallowedInit() = assertExtracted(
         """
-            |for({class: Empty__9} of xs, fn (@init(error (OfDeclarationInitializerDisallowed)) x) {
+            |for({class: Empty} of xs, fn (@init(error (OfDeclarationInitializerDisallowed)) x) {
             |    f(x)
             |})
             |

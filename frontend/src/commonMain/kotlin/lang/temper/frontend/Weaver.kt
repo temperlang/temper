@@ -5,7 +5,6 @@ import lang.temper.ast.VisitCue
 import lang.temper.builtin.AwaitFn
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.YieldFn
-import lang.temper.builtin.isHandlerScopeCall
 import lang.temper.common.LeftOrRight
 import lang.temper.common.Log
 import lang.temper.common.allMapToSameElseNull
@@ -65,6 +64,7 @@ import lang.temper.value.getTerminalExpressions
 import lang.temper.value.initSymbol
 import lang.temper.value.invertLogicalExpr
 import lang.temper.value.isBubbleCall
+import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.matches
 import lang.temper.value.returnsVoidClearly
 import lang.temper.value.toLispy

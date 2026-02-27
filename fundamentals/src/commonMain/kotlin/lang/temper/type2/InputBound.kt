@@ -3,10 +3,13 @@ package lang.temper.type2
 import lang.temper.format.OutToks
 import lang.temper.format.TokenSerializable
 import lang.temper.format.TokenSink
+import lang.temper.format.joinParens
 import lang.temper.log.Position
 import lang.temper.log.Positioned
 import lang.temper.name.ParsedName
 import lang.temper.name.name
+import lang.temper.type.InvalidType
+import lang.temper.type.MkType
 import lang.temper.type.WellKnownTypes
 import lang.temper.value.ReifiedType
 import lang.temper.value.TEdge
@@ -92,6 +95,39 @@ sealed interface InputBound : Positioned, TokenSerializable {
                 is Unsolvable? -> WellKnownTypes.invalidType2
             },
         ).position(pos).get() as PositionedType
+    }
+
+    data class LambdaBound(
+        override val pos: Position,
+        val inputTypes: List<Type2?>,
+        val returnType: Type2?,
+    ) : InputBound {
+        var inputBounds: List<TypeBoundary>? = null
+        var returnBound: TypeBoundary? = null
+
+        override fun solvedType(typeSolver: TypeSolver): PositionedType {
+            val fnT = MkType.fn(
+                listOf(),
+                (inputBounds ?: emptyList()).map { b ->
+                    (typeSolver[b] as? Type2)?.let { hackMapNewStyleToOld(it) }
+                        ?: InvalidType
+                },
+                null,
+                returnBound?.let {
+                    (typeSolver[it] as? Type2)?.let { hackMapNewStyleToOld(it) }
+                } ?: InvalidType,
+            )
+            return MkType2.from(hackMapOldStyleToNew(fnT))
+                .position(pos).get() as PositionedType
+        }
+
+        override fun renderTo(tokenSink: TokenSink) {
+            tokenSink.emit(OutToks.leftCurly)
+            inputTypes.map { it ?: OutToks.underScore }.joinParens(tokenSink)
+            tokenSink.emit(OutToks.colon)
+            (returnBound ?: OutToks.underScore).renderTo(tokenSink)
+            tokenSink.emit(OutToks.rightCurly)
+        }
     }
 
     data class Typeless(

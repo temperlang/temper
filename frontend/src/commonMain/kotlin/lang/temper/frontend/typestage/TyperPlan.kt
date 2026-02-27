@@ -1,6 +1,5 @@
 package lang.temper.frontend.typestage
 
-import lang.temper.builtin.isHandlerScopeCall
 import lang.temper.builtin.isSetPropertyCall
 import lang.temper.common.ForwardOrBack
 import lang.temper.common.addTransitiveClosure
@@ -33,6 +32,7 @@ import lang.temper.value.blockPartialEvaluationOrder
 import lang.temper.value.forwardMaximalPaths
 import lang.temper.value.fromTypeSymbol
 import lang.temper.value.functionContained
+import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.isNullaryNeverCall
 import lang.temper.value.orderedPathIndices
 import lang.temper.value.staticTypeContained

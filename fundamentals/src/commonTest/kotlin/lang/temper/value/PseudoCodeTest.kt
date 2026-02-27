@@ -1014,7 +1014,7 @@ class PseudoCodeTest {
         // Some objects like {class: Empty__0} should be rendered on one
         // line.
         want = """
-            |let x = {class: Empty__9};
+            |let x = {class: Empty__10};
             |
         """.trimMargin(),
         makeInput = { doc, pos ->

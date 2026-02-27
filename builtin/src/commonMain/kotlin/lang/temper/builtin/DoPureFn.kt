@@ -8,16 +8,27 @@ import lang.temper.stage.Stage
 import lang.temper.type.MkType
 import lang.temper.type2.Signature2
 import lang.temper.type2.hackMapOldStyleToNew
+import lang.temper.value.BlockChildReference
+import lang.temper.value.BlockTree
+import lang.temper.value.CallTree
+import lang.temper.value.ControlFlow
 import lang.temper.value.Fail
 import lang.temper.value.FunTree
+import lang.temper.value.LeftNameLeaf
+import lang.temper.value.LinearFlow
 import lang.temper.value.MacroEnvironment
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.PartialResult
 import lang.temper.value.SpecialFunction
+import lang.temper.value.StructuredFlow
 import lang.temper.value.TFunction
+import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.freeTree
+import lang.temper.value.isAssignment
 import lang.temper.value.unpackOrFail
+import lang.temper.value.valueContained
+import lang.temper.value.void
 
 /**
  * <!-- snippet: builtin/doPure -->
@@ -84,9 +95,19 @@ object DoPureFn : SpecialFunction, NamedBuiltinFun {
                     val returnDecl = parts.returnDecl
                     val returnName = returnDecl?.parts?.name?.content
                     if (returnName != null) {
+                        val body = parts.body
+                        val singleStmt: Tree? = singleStmtIgnoringVoids(body)
+                        if (singleStmt != null && singleStmt is CallTree && isAssignment(singleStmt) &&
+                            (singleStmt.child(1) as? LeftNameLeaf)?.content == returnName
+                        ) {
+                            val expr = singleStmt.child(2)
+                            Replant(freeTree(expr))
+                            return@replaceMacroCallWith
+                        }
+
                         Block(argTree.pos) {
                             Replant(freeTree(returnDecl))
-                            Replant(freeTree(parts.body))
+                            Replant(freeTree(body))
                             Rn(argTree.pos.rightEdge, returnName)
                         }
                         return@replaceMacroCallWith
@@ -103,4 +124,52 @@ object DoPureFn : SpecialFunction, NamedBuiltinFun {
     }
 
     override val name: String = "doPure"
+}
+
+private fun singleStmtIgnoringVoids(t: Tree): Tree? {
+    return if (t is BlockTree) {
+        when (val flow = t.flow) {
+            LinearFlow -> if (t.size == t.parts.startIndex + 1) {
+                var found: Tree? = null
+                for (i in t.parts.startIndex until t.size) {
+                    val child = t.child(i)
+                    if (child.valueContained == void) { continue }
+                    if (found != null) { return null }
+                    found = child
+                }
+                return found?.let { singleStmtIgnoringVoids(it) }
+            }
+            is StructuredFlow -> {
+                fun walk(cf: ControlFlow): BlockChildReference? {
+                    when (cf) {
+                        is ControlFlow.If,
+                        is ControlFlow.Loop,
+                        is ControlFlow.Jump,
+                        is ControlFlow.OrElse,
+                        -> return null
+                        is ControlFlow.Stmt -> return cf.ref
+                        is ControlFlow.StmtBlock -> {
+                            var found: ControlFlow? = null
+                            for (s in cf.stmts) {
+                                if (s is ControlFlow.Stmt && t.dereference(s.ref)?.target?.valueContained == void) {
+                                    continue
+                                }
+                                if (found != null) { return null }
+                                found = s
+                            }
+                            return found?.let { walk(it) }
+                        }
+                        is ControlFlow.Labeled -> return walk(cf.stmts)
+                    }
+                }
+                val ref = walk(flow.controlFlow)
+                if (ref != null) {
+                    return t.dereference(ref)?.target?.let { singleStmtIgnoringVoids(it) }
+                }
+            }
+        }
+        null
+    } else {
+        t
+    }
 }

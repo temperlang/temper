@@ -18,7 +18,7 @@ import lang.temper.value.ResolutionProblem
 import lang.temper.value.TType
 import lang.temper.value.TypeReasonElement
 import lang.temper.value.Value
-import lang.temper.value.actualsListFromTree
+import lang.temper.value.actualsListFromTrees
 import lang.temper.value.applicationOrderForActuals
 import kotlin.math.min
 import lang.temper.type.WellKnownTypes as WKT
@@ -72,12 +72,80 @@ fun inferBounds(
             val argVars = mutableListOf<TypeVar>()
             val boundaries = mutableListOf<TypeBoundary?>()
 
-            for (inputBound in call.inputBounds) {
+            for ((actualIndex, inputBound) in call.inputBounds.withIndex()) {
                 val (bound, solverVar) = when (inputBound) {
                     is InputBound.Pretyped -> inputBound.type to null
                     is InputBound.Typeless -> null to null
                     is InputBound.UntypedCallInput -> inputBound.passVar to null
                     is InputBound.ValueInput -> ValueBound(inputBound.value) to inputBound.typeVar
+                    is InputBound.LambdaBound -> {
+                        // Create an imaginary call of the lambda.
+                        // We create callees by looking through each callee and looking for a
+                        // functional interface  input and using that as the basis for the
+                        // imaginary call's callees.
+                        val imaginaryCallees = buildList {
+                            for (callee in call.calleeVariants) {
+                                val iSig = callee.sig.valueFormalForActual(actualIndex)?.type?.sigEquiv
+                                if (iSig != null && inputBound.inputTypes.size in iSig.arityRange) {
+                                    add(callee.copy(sig = iSig.copy(typeFormals = callee.sig.typeFormals)))
+                                }
+                            }
+                        }
+                        if (imaginaryCallees.isNotEmpty()) {
+                            val imaginaryCalleeChoice = solverVarNamer.unusedSimpleVar("imaginaryCalleeIndex")
+
+                            val minTypeFormalCount = imaginaryCallees.fold(Int.MAX_VALUE) { count, callee ->
+                                min(count, callee.sig.typeFormals.size)
+                            }
+                            val imaginaryTypeArgVars = (0 until minTypeFormalCount).map { i ->
+                                var v = typeArgVars.getOrNull(i)
+                                if (v == null) {
+                                    v = solverVarNamer.unusedTypeVar("T")
+                                    relateTypeVarToTypeActual(i, v)
+                                }
+                                v
+                            }
+                            val imaginaryArgs = inputBound.inputTypes.map { t ->
+                                solverVarNamer.unusedTypeVar("inp").also {
+                                    if (t != null) {
+                                        solver.assignable(it, t)
+                                    }
+                                }
+                            }
+
+                            val imaginaryCallPass = solverVarNamer.unusedTypeVar("pass")
+                            var imaginaryCallFail: SimpleVar? = null
+                            inputBound.returnType?.let { returnType ->
+                                withType(
+                                    returnType,
+                                    result = { pass, _, _ ->
+                                        imaginaryCallFail = solverVarNamer.unusedSimpleVar("fail")
+                                        solver.assignable(pass, imaginaryCallPass)
+                                    },
+                                    fallback = {
+                                        solver.assignable(it, imaginaryCallPass)
+                                    },
+                                )
+                            }
+                            val imaginaryTypeActuals = solverVarNamer.unusedSimpleVar("typeActuals")
+                            inputBound.inputBounds = imaginaryArgs
+                            inputBound.returnBound = imaginaryCallPass
+
+                            solver.called(
+                                callees = imaginaryCallees,
+                                calleeChoice = imaginaryCalleeChoice,
+                                explicitTypeArgs = null,
+                                typeArgVars = imaginaryTypeArgVars,
+                                args = imaginaryArgs,
+                                hasTrailingBlock = false,
+                                typeActuals = imaginaryTypeActuals,
+                                callPass = imaginaryCallPass,
+                                callFail = imaginaryCallFail,
+                            )
+                        }
+
+                        null to null
+                    }
                     is InputBound.IncompleteReification -> {
                         // When solving `x as Foo`, we need to recognize that `Foo` might be
                         // a partial type.  We need to establish it as a bound for the type
@@ -241,7 +309,7 @@ fun inferBounds(
                     val sigInContext = callee.sig.mapType(bindingMap)
                     val badArgIndices = mutableListOf<Int>()
                     val applicationOrderResult =
-                        applicationOrderForActuals(actualsListFromTree(call.destination), callee.sig)
+                        applicationOrderForActuals(actualsListFromTrees(call.inputTrees), callee.sig)
                     val applicationOrder = when (applicationOrderResult) {
                         is Either.Left -> applicationOrderResult.item
                         is Either.Right -> {
@@ -344,6 +412,8 @@ fun inferBounds(
             when (inputBound) {
                 is InputBound.Pretyped,
                 is InputBound.Typeless,
+                -> {}
+                is InputBound.LambdaBound,
                 -> {}
                 // Handled by other call loop iterations
                 is InputBound.UntypedCallInput -> {}

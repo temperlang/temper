@@ -65,6 +65,7 @@ object WellKnownTypes {
     val booleanTypeDefinition: TypeShape
     val bubbleTypeDefinition: TypeShape
     val closureRecordTypeDefinition: TypeShape
+    val consoleTypeDefinition: TypeShape
     val denseBitVectorTypeDefinition: TypeShape
     val dequeTypeDefinition: TypeShape
     val doneResultTypeDefinition: TypeShape
@@ -112,6 +113,7 @@ object WellKnownTypes {
     val booleanType: NominalType
     val booleanType2: DefinedNonNullType
     val bubbleType2: DefinedNonNullType
+    val consoleType2: DefinedNonNullType
     val emptyType: NominalType
     val emptyType2: DefinedNonNullType
     val equatableType: NominalType
@@ -205,6 +207,7 @@ object WellKnownTypes {
         booleanTypeDefinition = wellKnownTypeShape(TBoolean.name, Concrete)
         bubbleTypeDefinition = wellKnownTypeShape(BuiltinName("Bubble"), Concrete)
         closureRecordTypeDefinition = wellKnownTypeShape(TClosureRecord.name, Abstract)
+        consoleTypeDefinition = wellKnownTypeShape(BuiltinName("Console"), Abstract)
         denseBitVectorTypeDefinition = wellKnownTypeShape(BuiltinName("DenseBitVector"), Concrete)
         dequeTypeDefinition = wellKnownTypeShape(BuiltinName("Deque"), Concrete)
         dequeTypeDefinition.addTypeParameter()
@@ -298,6 +301,7 @@ object WellKnownTypes {
         booleanType = MkType.nominal(booleanTypeDefinition)
         booleanType2 = MkType2(booleanTypeDefinition).get() as DefinedNonNullType
         bubbleType2 = MkType2(bubbleTypeDefinition).get() as DefinedNonNullType
+        consoleType2 = MkType2(consoleTypeDefinition).get() as DefinedNonNullType
         emptyType = MkType.nominal(emptyTypeDefinition)
         emptyType2 = MkType2(emptyTypeDefinition).get() as DefinedNonNullType
         equatableType = MkType.nominal(equatableTypeDefinition)
