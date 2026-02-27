@@ -19,7 +19,6 @@ import lang.temper.be.tmpl.referencedNames
 import lang.temper.be.tmpl.splitConstructorBody
 import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.common.compatRemoveLast
-import lang.temper.common.mapFirst
 import lang.temper.common.subListToEnd
 import lang.temper.frontend.ModuleNamingContext
 import lang.temper.frontend.typestage.findOverrides
@@ -834,7 +833,7 @@ class RustTranslator(
             isInterface -> buildForwarderFromInterfaceToTrait(pos, superShape, methodKind)
             else -> when (val method = instanceMethods[methodName]) {
                 null -> buildForwarderFromClassToTrait(pos, decl, superShape, methodKind)
-                else -> buildForwarder(method, returnType = returnType)
+                else -> buildForwarder(method, returnType)
             }
         }.also { addAll(it) } // only one expected here, but meh
     }
@@ -1090,27 +1089,34 @@ class RustTranslator(
         // We're here because this class has no matching member, so walk its supertypes to match the super method.
         // The method we inherit closest might be on a different branch.
         val overrides = findOverrides(decl.typeShape, superShape, typeContext, logSink)
-        val override = overrides.find { override ->
+        val override = overrides.find overrides@{ override ->
             when (val foundMember = override.superTypeMember) {
                 is MethodShape -> !foundMember.isPureVirtual
                 is PropertyShape -> when (methodKind) {
-                    MethodKind.Getter -> foundMember.enclosingType.methods.any { foundMethod ->
-                        !foundMethod.isPureVirtual &&
-                            foundMethod.methodKind == MethodKind.Getter &&
-                            foundMethod.name == foundMember.getter
+                    MethodKind.Getter -> foundMember.getter
+                    MethodKind.Setter -> foundMember.setter
+                    else -> return@overrides false
+                }.let { foundName ->
+                    // Interfaces can only provide property implementations with methods, so look at those.
+                    foundMember.enclosingType.methods.any { method ->
+                        !method.isPureVirtual && method.methodKind == methodKind && method.name == foundName
                     }
-                    MethodKind.Setter -> foundMember.enclosingType.methods.any { foundMethod ->
-                        !foundMethod.isPureVirtual &&
-                            foundMethod.methodKind == MethodKind.Setter &&
-                            foundMethod.name == foundMember.setter
-                    }
-                    else -> false
                 }
                 else -> false
             }
-            (override.superTypeMember as? MethodShape)?.isPureVirtual == false
         }
-        listOf()
+        // Having selected an override, forward to it with simple self.
+        val targetType = override?.superTypeMember?.enclosingType
+        buildForwarderToTrait(pos, targetType, superShape, methodKind) result@{ traitType, methodId, argIds ->
+            Rust.Call(
+                pos,
+                callee = traitType.extendWith(methodId.deepCopy()),
+                args = buildList {
+                    add("self".toKeyId(pos))
+                    addAll(argIds)
+                },
+            )
+        }
     }
 
     /**
@@ -1123,49 +1129,59 @@ class RustTranslator(
         shape: VisibleMemberShape,
         methodKind: MethodKind,
     ): List<Rust.Item> = run {
+        // From trait wrapper to trait, just forward the call with the unwrapped innards.
+        buildForwarderToTrait(pos, shape.enclosingType, shape, methodKind) result@{ traitType, methodId, argIds ->
+            Rust.Call(
+                pos,
+                callee = traitType.extendWith(methodId.deepCopy()),
+                args = buildList {
+                    add("self".toKeyId(pos).member("0", notMethod = true).deref().ref())
+                    addAll(argIds)
+                },
+            )
+        }
+    }
+
+    private fun buildForwarderToTrait(
+        pos: Position,
+        targetType: TypeShape?,
+        shape: VisibleMemberShape,
+        methodKind: MethodKind,
+        /** Trait type, method id, and arg ids, all ready to be used. */
+        buildResult: (Rust.Path, Rust.Id, List<Rust.Id>) -> Rust.Expr?,
+    ): List<Rust.Item> = run {
         val selfParam = Rust.RefType(pos, "self".toKeyId(pos))
-        val selfArg = "self".toKeyId(pos).member("0", notMethod = true).deref().ref()
-        val enclosingType =
-            (translateTypeDefinition(shape.enclosingType, pos) as? Rust.Path)?.suffixed(TRAIT_NAME_SUFFIX)
+        val traitType = targetType?.let {
+            (translateTypeDefinition(targetType, pos) as? Rust.Path)?.suffixed(TRAIT_NAME_SUFFIX)
+        }
         when (methodKind) {
             MethodKind.Normal -> {
                 val method = shape as MethodShape
                 val methodId = translateIdFromName(pos, method.name as ResolvedName, NameStyle.Snake)
                 val sig = method.descriptor ?: return listOf()
-                val argNames = (1..<sig.requiredInputTypes.size + sig.optionalInputTypes.size).map { "arg$it" }
+                // We don't have param names here, so invent some.
+                val argIds = (1..<sig.requiredInputTypes.size + sig.optionalInputTypes.size).map { arg ->
+                    "arg$arg".toId(pos)
+                }
                 Rust.Function(
                     pos,
-                    id = methodId,
+                    id = methodId.deepCopy(),
                     params = buildList {
                         add(selfParam)
                         var index = 0
                         for (paramType in sig.requiredInputTypes.subListToEnd(1)) {
-                            val paramName = argNames[index++].toId(pos)
+                            val paramName = argIds[index++].deepCopy()
                             val translatedType = translateType(paramType, pos)
                             add(Rust.FunctionParam(pos, paramName, translatedType))
                         }
                         for (paramType in sig.optionalInputTypes) {
-                            val paramName = argNames[index++].toId(pos)
+                            val paramName = argIds[index++].deepCopy()
                             val translatedType = translateType(paramType, pos).option()
                             add(Rust.FunctionParam(pos, paramName, translatedType))
                         }
                     },
                     returnType = method.descriptor?.let { translateType(it.returnType2, pos = pos) },
-                    block = Rust.Block(
-                        pos,
-                        result = enclosingType?.let { type ->
-                            Rust.Call(
-                                pos,
-                                callee = type.extendWith(methodId.deepCopy()),
-                                args = buildList {
-                                    add(selfArg)
-                                    for (argName in argNames) {
-                                        add(argName.toId(pos))
-                                    }
-                                },
-                            )
-                        },
-                    ),
+                    block = Rust.Block(pos, result = traitType?.let { buildResult(it, methodId, argIds) }),
                 )
             }
             MethodKind.Getter -> {
@@ -1175,15 +1191,12 @@ class RustTranslator(
                     is Type2 -> descriptor
                     else -> null
                 }?.let { translateType(it, pos = pos) }
-                val call = enclosingType?.let { type ->
-                    Rust.Call(pos, type.extendWith(methodId.deepCopy()), listOf(selfArg))
-                }
                 Rust.Function(
                     pos,
-                    id = methodId,
+                    id = methodId.deepCopy(),
                     params = listOf(selfParam),
                     returnType = returnType,
-                    block = Rust.Block(pos, result = call),
+                    block = Rust.Block(pos, result = traitType?.let { buildResult(it, methodId, listOf()) }),
                 )
             }
             MethodKind.Setter -> {
@@ -1195,15 +1208,11 @@ class RustTranslator(
                 }?.let { translateType(it, pos = pos) }
                 // We don't have param names here, so invent one.
                 val value = "value".toId(pos)
-                val call = enclosingType?.let { type ->
-                    val args = listOf(selfArg, value.deepCopy())
-                    Rust.Call(pos, type.extendWith(methodId.deepCopy()), args)
-                }
                 Rust.Function(
                     pos,
                     id = methodId,
-                    params = listOf(selfParam, Rust.FunctionParam(pos, value, propertyType)),
-                    block = Rust.Block(pos, result = call),
+                    params = listOf(selfParam, Rust.FunctionParam(pos, value.deepCopy(), propertyType)),
+                    block = Rust.Block(pos, result = traitType?.let { buildResult(it, methodId, listOf(value)) }),
                 )
             }
             else -> return listOf()
