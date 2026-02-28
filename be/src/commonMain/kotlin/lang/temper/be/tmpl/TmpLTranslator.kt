@@ -24,7 +24,6 @@ import lang.temper.format.toStringViaTokenSink
 import lang.temper.frontend.AdaptGeneratorFn
 import lang.temper.frontend.Module
 import lang.temper.frontend.ModuleNamingContext
-import lang.temper.frontend.implicits.ImplicitsModule
 import lang.temper.frontend.implicits.builtinEnvironment
 import lang.temper.frontend.mergedNamingContext
 import lang.temper.interp.EmptyEnvironment
@@ -430,8 +429,6 @@ class TmpLTranslator internal constructor(
         mergedNameMaker.unusedTemporaryName(parsedName.nameText)
     private val thisNames = mutableMapOf<ResolvedName, DefinedNonNullType?>()
     private val topLevelMetadata = mutableMapOf<TemperName, List<TmpL.DeclarationMetadata>>()
-    private val globalConsole =
-        ImplicitsModule.module.exports!!.find { it.name.baseName == consoleParsedName }!!.value!!
     internal val translationAssistant: TranslationAssistant = TranslationAssistantImpl(this)
     internal val typeContext2 = TypeContext2()
 
@@ -3016,7 +3013,7 @@ class TmpLTranslator internal constructor(
             }
             // TODO: pool stable lists, tuples, and class instances
             is TClass -> when {
-                value === globalConsole -> {
+                value.typeTag == globalConsoleClassTag -> {
                     // This value is the global console. Customize handling on it for now.
                     // TODO This code actually isn't used anymore, but keep it for example usage of other things.
                     // TODO When is this better off removed?
@@ -3649,3 +3646,5 @@ private val emptyCallType = CallTypeInferences(
     mapOf(),
     listOf(),
 )
+
+private val globalConsoleClassTag = TClass(WellKnownTypes.globalConsoleTypeDefinition)
