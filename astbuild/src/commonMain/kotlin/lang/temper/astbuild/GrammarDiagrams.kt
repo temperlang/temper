@@ -13,6 +13,22 @@ private val quotedStringGrammarDoc = GrammarDoc.Choice(
                 GrammarDoc.Terminal("\""),
             ),
         ),
+        // `...`
+        GrammarDoc.Sequence(
+            listOf(
+                GrammarDoc.Terminal("`"),
+                stringContentGrammar(sourceCharacterText = "SourceCharacter - ('\\n', '\\r', '\\', '`')"),
+                GrammarDoc.Terminal("`"),
+            ),
+        ),
+        // '...'
+        GrammarDoc.Sequence(
+            listOf(
+                GrammarDoc.Terminal("'"),
+                stringContentGrammar(sourceCharacterText = "SourceCharacter - ('\\n', '\\r', '\\', '\\'')"),
+                GrammarDoc.Terminal("'"),
+            ),
+        ),
         // """...
         GrammarDoc.Sequence(
             listOf(

@@ -1811,7 +1811,7 @@ internal abstract class DomainSpecificLanguage {
     val wordMatcher = Match(GrammarDoc.NonTerminal("Word"), emit = true) {
         it.tokenType == TokenType.Word
     }
-    val delimiterMatcher = patternMatcher("^\"+|'$", emit = false)
+    val delimiterMatcher = patternMatcher("^\"+|['`]$", emit = false)
     val litMatcher = Match(
         GrammarDoc.NonTerminal("Number"),
         emit = true,
