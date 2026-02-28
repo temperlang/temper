@@ -789,12 +789,19 @@ class GlobalConsole extends Console {
 }
 
 /**
+ * The global default `Console` instance. It is designed to integrate with
+ * standard backend logging services. Frontend processing replaces references to
+ * the global console with a call to `getConsole` for the current module.
+ */
+export let console: Console = doPure { (): Console => new GlobalConsole() };
+
+/**
  * Access or make a console for the given name. If name is unspecified, use the
  * idiomatic backend library or module name for logging purposes. The default of
  * empty string is merely a placeholder.
  */
 @connected("::getConsole")
-export let getConsole(name: String = ""): Console { new GlobalConsole() }
+export let getConsole(name: String = ""): Console { console }
 
 /**
  * The *Listed* type is an immutable view of a random-access sequence of values.
