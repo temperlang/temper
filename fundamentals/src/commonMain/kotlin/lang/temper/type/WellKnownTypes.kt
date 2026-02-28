@@ -342,6 +342,7 @@ object WellKnownTypes {
             val tYield = MkType.nominal(it.formals[0])
             it extends MkType.nominal(generatorTypeDefinition, listOf(tYield))
         }
+        globalConsoleTypeDefinition extends MkType.nominal(consoleTypeDefinition)
         intTypeDefinition extends mapKeyType
         listTypeDefinition extends MkType.nominal(
             listedTypeDefinition,
