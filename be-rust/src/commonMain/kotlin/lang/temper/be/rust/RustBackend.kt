@@ -311,7 +311,7 @@ private fun MutableList<Backend.OutputFileSpecification>.addLib(
         path = filePath("src", "lib.rs"),
         content = Rust.SourceFile(
             pos,
-            attrs = listOf(allowWarnings(pos)),
+            attrs = allowWarnings(pos),
             items = buildList {
                 // Separate mods.
                 declareSubmods(pos, allModKids[libraryConfiguration.libraryRoot] ?: setOf())
