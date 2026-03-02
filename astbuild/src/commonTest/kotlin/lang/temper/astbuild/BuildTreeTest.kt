@@ -1891,6 +1891,23 @@ class BuildTreeTest {
     )
 
     @Test
+    fun taggedTemplateStringWithBackquotes() = assertAst(
+        input = $$"f`a${ b }`",
+        startProduction = "Expr",
+        wantJson = """
+        [ "Call", [
+            [ "Value", [ "stringExpr", "Function" ] ],
+            [ "RightName", "f" ],
+            [ "Value", [ true, "Boolean" ] ],
+            [ "Value", [ "a", "String" ] ],
+            [ "Value", [ "interpolate", "Symbol" ] ],
+            [ "RightName", "b" ],
+          ]
+        ]
+        """,
+    )
+
+    @Test
     fun taggedTemplateStringWithStatementFragments() = assertAst(
         input = $$"""
             |tag$${"\"\"\""}
