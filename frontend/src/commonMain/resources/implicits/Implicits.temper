@@ -111,7 +111,7 @@ export class Null extends Equatable {
 export class Empty extends Equatable {
   private constructor(): Void {}
 }
-let emptySingleton: Empty = new Empty();
+let emptySingleton: Empty = doPure { new Empty() };
 @connected("empty")
 export let empty(): Empty { emptySingleton }
 
@@ -793,7 +793,7 @@ class GlobalConsole extends Console {
  * standard backend logging services. Frontend processing replaces references to
  * the global console with a call to `getConsole` for the current module.
  */
-export let console: Console = new GlobalConsole();
+export let console: Console = doPure { (): Console => new GlobalConsole() };
 
 /**
  * Access or make a console for the given name. If name is unspecified, use the

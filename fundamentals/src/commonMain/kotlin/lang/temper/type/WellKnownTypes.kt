@@ -77,6 +77,7 @@ object WellKnownTypes {
     val generatorFnTypeDefinition: TypeShape
     val generatorFnWrapperTypeDefinition: TypeShape
     val generatorResultTypeDefinition: TypeShape
+    val globalConsoleTypeDefinition: TypeShape
     val intTypeDefinition: TypeShape
     val int64TypeDefinition: TypeShape
     val invalidTypeDefinition: TypeShape
@@ -224,6 +225,7 @@ object WellKnownTypes {
         generatorFnWrapperTypeDefinition.addTypeParameter("YIELD", variance = Variance.Covariant)
         generatorResultTypeDefinition = wellKnownTypeShape(BuiltinName("GeneratorResult"), Abstract)
         generatorResultTypeDefinition.addTypeParameter("YIELD", variance = Variance.Covariant)
+        globalConsoleTypeDefinition = wellKnownTypeShape(BuiltinName("GlobalConsole"), Concrete)
         intTypeDefinition = wellKnownTypeShape(TInt.name, Concrete)
         int64TypeDefinition = wellKnownTypeShape(TInt64.name, Concrete)
         invalidTypeDefinition = wellKnownTypeShape(BuiltinName("Invalid"), Abstract, anyValueSuper = false)
@@ -340,6 +342,7 @@ object WellKnownTypes {
             val tYield = MkType.nominal(it.formals[0])
             it extends MkType.nominal(generatorTypeDefinition, listOf(tYield))
         }
+        globalConsoleTypeDefinition extends MkType.nominal(consoleTypeDefinition)
         intTypeDefinition extends mapKeyType
         listTypeDefinition extends MkType.nominal(
             listedTypeDefinition,
