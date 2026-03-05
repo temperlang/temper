@@ -373,9 +373,6 @@ fun doOneBuild(build: Build): BuildResult {
         }
     }
 
-    supplyCoreLibrary(harness.outputFileSystem, harness.backends, cancelGroup, harness.cliConsole)
-
-    build.beforeStartTranslation?.await()
     // Explode the backends x libraries to backends that are each responsible for translating one library
     // for one target language.
     val backendOrganization = organizeBackends(
@@ -392,6 +389,12 @@ fun doOneBuild(build: Build): BuildResult {
             }
         },
     )
+
+    // For supplying core library, buckets don't really matter.
+    val flatBackendIds = backendOrganization.backendBuckets.flatten()
+    supplyCoreLibrary(harness.outputFileSystem, flatBackendIds, cancelGroup, harness.cliConsole)
+
+    build.beforeStartTranslation?.await()
 
     /**
      * Allows collecting all the `<BACKEND>` associated bits in a type-safe way.

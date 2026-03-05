@@ -73,6 +73,7 @@ class BuildTest {
     }
 
     @Test
+    @Timeout(JAVA_TIMEOUT_SECONDS) // Just keep seeing this one specifically time out for some reason.
     fun csharpBackendDirs() = runBuildTest("CSharpBackendDirs", path = "/buildDirs") { topDir ->
         runBuild(backends = listOf(CSharpBackend.Factory.backendId), workRoot = topDir)
         topDir.withTextOf("temper.keep/csharp/apple/name-selection.json") { text ->
