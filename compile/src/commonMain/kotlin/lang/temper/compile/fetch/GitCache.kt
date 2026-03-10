@@ -116,7 +116,7 @@ internal fun makeWritable(root: Path) {
     var exception: Throwable? = null
     repeat(2) {
         runCatching {
-            Files.walk(root).forEach { it.toFile().setWritable(true, true) }
+            Files.walk(root).use { it.forEach { path -> path.toFile().setWritable(true, true) } }
             // It worked, so get out of here.
             return@makeWritable
         }.onFailure { exception = it }

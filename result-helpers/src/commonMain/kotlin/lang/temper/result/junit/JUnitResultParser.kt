@@ -125,7 +125,7 @@ data class FailureInfo(
 ) {
     // Where luaunit uses type instead of message, so use that as a fallback,
     // and we do some conversion there but not full.
-    val cause: String get() = message ?: type!!
+    val cause: String get() = message ?: type ?: "unknown"
 }
 
 @Serializable

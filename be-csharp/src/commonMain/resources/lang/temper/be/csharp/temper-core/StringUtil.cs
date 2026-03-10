@@ -62,7 +62,7 @@ namespace TemperLang.Core
             for (int i = Math.Max(0, left); i < limit; ++i)
             {
                 count += 1;
-                if (i + 1 < right)
+                if (i + 1 < limit)
                 {
                     char c = s[i];
                     if ('\uD800' <= c && c <= '\uDBFF')
@@ -195,7 +195,7 @@ namespace TemperLang.Core
         {
             if (i < 0)
             {
-                return -1;
+                return i;
             }
             throw new ArgumentOutOfRangeException("i");
         }

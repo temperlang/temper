@@ -19,7 +19,7 @@ export const float64Near = (x, y, relTol, absTol) => {
     absTol = 0;
   }
   const margin = Math.max(Math.max(Math.abs(x), Math.abs(y)) * relTol, absTol);
-  return Math.abs(x - y) < margin;
+  return Math.abs(x - y) <= margin;
 }
 
 /**

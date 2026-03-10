@@ -159,7 +159,7 @@ export const stringHasAtLeast = (s, begin, end, minCount) => {
  * @returns {number}
  */
 export const stringNext = (s, i) => {
-    let iNext = Math.min(s.length, i);
+    let iNext = Math.min(s.length, Math.max(0, i));
     let cp = s.codePointAt(i);
     if (cp !== undefined) {
         iNext += 1 + !!(cp >>> 16);
@@ -173,7 +173,7 @@ export const stringNext = (s, i) => {
  * @returns {number}
  */
 export const stringPrev = (s, i) => {
-    let iPrev = Math.min(s.length, i);
+    let iPrev = Math.min(s.length, Math.max(0, i));
     if (iPrev) {
         iPrev -= 1;
         if (iPrev && s.codePointAt(iPrev - 1) >>> 16) {
