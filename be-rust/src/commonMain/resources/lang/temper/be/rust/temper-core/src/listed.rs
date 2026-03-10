@@ -143,6 +143,22 @@ mod listed {
         Arc::new(result)
     }
 
+    pub fn map_dropping<T, O>(
+        listed: &dyn ListedTrait<T>,
+        transform: &dyn Fn(T) -> Option<O>,
+    ) -> List<O>
+    where
+        T: Clone + Sync + Send,
+    {
+        let mut result = vec![];
+        for i in 0..listed.len() {
+            if let Some(value) = transform(listed.get(i)) {
+                result.push(value);
+            }
+        }
+        Arc::new(result)
+    }
+
     pub fn reduce<T>(listed: &dyn ListedTrait<T>, accumulate: &dyn Fn(T, T) -> T) -> T
     where
         T: Clone + Sync + Send,
