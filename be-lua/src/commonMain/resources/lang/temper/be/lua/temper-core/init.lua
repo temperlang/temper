@@ -93,7 +93,7 @@ function temper.codepoint_fallback(s, i)
         b1 = string.byte(s, i + 1)
         -- TODO: these checks should really be (b1 & 192) == 128
         if b1 == nil or b1 >= 192 then return 0xFFFD; end
-        return (b0 - 192)*64 + b1
+        return (b0 - 192)*64 + b1%64
     end
 
     if b0 < 240 then
@@ -1077,6 +1077,36 @@ function temper.generic_ge(a, b)
     return a >= b
 end
 
+function temper.float_cmp(a, b)
+    if temper.float_lt(a, b) then
+        return -1
+    elseif temper.float_gt(a, b) then
+        return 1
+    else
+        return 0
+    end
+end
+
+function temper.int_cmp(a, b)
+    if a < b then
+        return -1
+    elseif a > b then
+        return 1
+    else
+        return 0
+    end
+end
+
+function temper.str_cmp(a, b)
+    if a < b then
+        return -1
+    elseif a > b then
+        return 1
+    else
+        return 0
+    end
+end
+
 function temper.str_eq(a, b)
     return a == b
 end
@@ -1470,7 +1500,7 @@ function temper.string_hasindex(str, i)
 end
 
 function temper.string_indexof(str, target, i)
-    return string.find(str, target, i, true) or 0
+    return string.find(str, target, i, true) or -1
 end
 
 function temper.string_next(str, i)
@@ -1556,8 +1586,12 @@ function temper.require_string_index(i)
 end
 
 function temper.string_foreach(str, f)
-    for _, c in utf8.codes(str) do
-        f(c)
+    local i = 1
+    local len = string_len(str)
+    while i <= len do
+        local cp = temper.codepoint_fallback(str, i)
+        f(cp)
+        i = i + utf8len(str, i)
     end
 end
 
@@ -1635,7 +1669,14 @@ function temper.mapbuilder_remove(builder, key)
     if got == nil then
         temper.bubble("MapBuilder::remove key not found: " .. tostring(key))
     end
-    builder[key] = nil
+    rawset(builder, key, nil)
+    local key_order_list = rawget(builder, map_key_order)
+    for i = #key_order_list, 1, -1 do
+        if key_order_list[i] == key then
+            table_remove(key_order_list, i)
+            break
+        end
+    end
     return got
 end
 
@@ -1748,7 +1789,7 @@ do
         local sign
         if string_byte(str, 1) == 45 then
             sign = "-"
-            str = string_sub(pad, 2, string_len(str))
+            str = string_sub(str, 2)
         else
             sign = ""
         end
@@ -1983,6 +2024,19 @@ do
     function temper.regex_compiledsplit(self, pat, text)
         return pat:split(text)
     end
+end
+
+function temper.listed_mapdropping(list, f)
+    local ret = {}
+    local head = 1
+    for i = 1, #list do
+        local ok, val = pcall(f, list[i])
+        if ok then
+            ret[head] = val
+            head = head + 1
+        end
+    end
+    return ret
 end
 
 return temper

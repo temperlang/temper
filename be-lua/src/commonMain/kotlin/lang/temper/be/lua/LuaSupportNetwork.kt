@@ -35,7 +35,7 @@ internal fun operatorToName(
     BuiltinOperatorId.BitwiseAnd -> "band"
     BuiltinOperatorId.BitwiseOr -> "bor"
     BuiltinOperatorId.IsNull -> "is_null"
-    BuiltinOperatorId.NotNull -> TODO()
+    BuiltinOperatorId.NotNull -> "not_null"
     BuiltinOperatorId.DivFltFlt -> "fdiv"
     BuiltinOperatorId.DivIntInt -> "int32_div"
     BuiltinOperatorId.DivIntInt64 -> "int64_div"
@@ -51,36 +51,36 @@ internal fun operatorToName(
     BuiltinOperatorId.MinusInt -> "int32_unm"
     BuiltinOperatorId.MinusInt64 -> "int64_unm" // TODO Just use `-x` because either standard int64 or metatabled?
     BuiltinOperatorId.MinusIntInt -> "int32_sub"
-    BuiltinOperatorId.MinusIntInt64 -> TODO()
+    BuiltinOperatorId.MinusIntInt64 -> "int64_sub"
     BuiltinOperatorId.PlusFltFlt -> "add"
     BuiltinOperatorId.PlusIntInt -> "int32_add"
-    BuiltinOperatorId.PlusIntInt64 -> TODO()
+    BuiltinOperatorId.PlusIntInt64 -> "int64_add"
     BuiltinOperatorId.PowFltFlt -> "pow"
     BuiltinOperatorId.TimesIntInt -> "int32_mul"
-    BuiltinOperatorId.TimesIntInt64 -> TODO()
+    BuiltinOperatorId.TimesIntInt64 -> "int64_mul"
     BuiltinOperatorId.TimesFltFlt -> "mul"
     BuiltinOperatorId.LtFltFlt -> "float_lt"
-    BuiltinOperatorId.LtIntInt -> TODO()
+    BuiltinOperatorId.LtIntInt -> "generic_lt"
     BuiltinOperatorId.LtStrStr -> "str_lt"
     BuiltinOperatorId.LtGeneric -> "generic_lt"
     BuiltinOperatorId.LeFltFlt -> "float_le"
-    BuiltinOperatorId.LeIntInt -> TODO()
+    BuiltinOperatorId.LeIntInt -> "generic_le"
     BuiltinOperatorId.LeStrStr -> "str_le"
     BuiltinOperatorId.LeGeneric -> "generic_le"
     BuiltinOperatorId.GtFltFlt -> "float_gt"
-    BuiltinOperatorId.GtIntInt -> TODO()
+    BuiltinOperatorId.GtIntInt -> "generic_gt"
     BuiltinOperatorId.GtStrStr -> "str_gt"
     BuiltinOperatorId.GtGeneric -> "generic_gt"
     BuiltinOperatorId.GeFltFlt -> "float_ge"
-    BuiltinOperatorId.GeIntInt -> TODO()
+    BuiltinOperatorId.GeIntInt -> "generic_ge"
     BuiltinOperatorId.GeStrStr -> "str_ge"
     BuiltinOperatorId.GeGeneric -> "generic_ge"
     BuiltinOperatorId.EqFltFlt -> "float_eq"
-    BuiltinOperatorId.EqIntInt -> TODO()
+    BuiltinOperatorId.EqIntInt -> "generic_eq"
     BuiltinOperatorId.EqStrStr -> "str_eq"
     BuiltinOperatorId.EqGeneric -> "generic_eq"
     BuiltinOperatorId.NeFltFlt -> "float_ne"
-    BuiltinOperatorId.NeIntInt -> TODO()
+    BuiltinOperatorId.NeIntInt -> "generic_ne"
     BuiltinOperatorId.NeStrStr -> "str_ne"
     BuiltinOperatorId.NeGeneric -> "generic_ne"
     BuiltinOperatorId.CmpFltFlt -> "float_cmp"
@@ -91,7 +91,7 @@ internal fun operatorToName(
     BuiltinOperatorId.Print -> "print"
     BuiltinOperatorId.StrCat -> "concat"
     BuiltinOperatorId.Listify -> "listof"
-    BuiltinOperatorId.Async -> "TODO" // TODO
+    BuiltinOperatorId.Async -> "async"
     // should not be used with CoroutineStrategy.TranslateToGenerator
     BuiltinOperatorId.AdaptGeneratorFn,
     BuiltinOperatorId.SafeAdaptGeneratorFn,
@@ -287,6 +287,67 @@ internal object LuaSupportNetwork : SupportNetwork {
                             LuaOperatorDefinition.Ge,
                         ),
                         args[1],
+                    )
+                }
+                // Inline float arithmetic as native Lua operators (Lua numbers are doubles).
+                BuiltinOperatorId.PlusFltFlt -> InlineLua(
+                    builtin.builtinOperatorId.toString(),
+                    builtin.builtinOperatorId,
+                ) { pos, args ->
+                    Lua.BinaryExpr(
+                        pos, args[0],
+                        Lua.BinaryOp(pos, BinaryOpEnum.Add, LuaOperatorDefinition.Add),
+                        args[1],
+                    )
+                }
+                BuiltinOperatorId.MinusFltFlt -> InlineLua(
+                    builtin.builtinOperatorId.toString(),
+                    builtin.builtinOperatorId,
+                ) { pos, args ->
+                    Lua.BinaryExpr(
+                        pos, args[0],
+                        Lua.BinaryOp(pos, BinaryOpEnum.Sub, LuaOperatorDefinition.Sub),
+                        args[1],
+                    )
+                }
+                BuiltinOperatorId.TimesFltFlt -> InlineLua(
+                    builtin.builtinOperatorId.toString(),
+                    builtin.builtinOperatorId,
+                ) { pos, args ->
+                    Lua.BinaryExpr(
+                        pos, args[0],
+                        Lua.BinaryOp(pos, BinaryOpEnum.Mul, LuaOperatorDefinition.Mul),
+                        args[1],
+                    )
+                }
+                BuiltinOperatorId.DivFltFlt -> InlineLua(
+                    builtin.builtinOperatorId.toString(),
+                    builtin.builtinOperatorId,
+                ) { pos, args ->
+                    Lua.BinaryExpr(
+                        pos, args[0],
+                        Lua.BinaryOp(pos, BinaryOpEnum.Div, LuaOperatorDefinition.Div),
+                        args[1],
+                    )
+                }
+                BuiltinOperatorId.PowFltFlt -> InlineLua(
+                    builtin.builtinOperatorId.toString(),
+                    builtin.builtinOperatorId,
+                ) { pos, args ->
+                    Lua.BinaryExpr(
+                        pos, args[0],
+                        Lua.BinaryOp(pos, BinaryOpEnum.Pow, LuaOperatorDefinition.Pow),
+                        args[1],
+                    )
+                }
+                BuiltinOperatorId.MinusFlt -> InlineLua(
+                    builtin.builtinOperatorId.toString(),
+                    builtin.builtinOperatorId,
+                ) { pos, args ->
+                    Lua.UnaryExpr(
+                        pos,
+                        Lua.UnaryOp(pos.leftEdge, UnaryOpEnum.UnaryAdd, LuaOperatorDefinition.Unm),
+                        args[0],
                     )
                 }
                 else -> InlineLua(builtin.builtinOperatorId.toString(), builtin.builtinOperatorId) { pos, args ->
