@@ -229,7 +229,7 @@ class Watcher(
                     previouslyCompiled = lastBuild?.partitionedModules?.flatMap { it.second }
                         ?: emptyList(),
                     runTask = runTask,
-                    moduleConfig = moduleConfig,
+                    moduleConfig = plugInBackendConfigs(moduleConfig),
                     cancelGroup = cancelGroup,
                     beforeStartTranslation = outputDirectoriesFree,
                     includeSnapshot = includeSnapshot,
