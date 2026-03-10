@@ -7,6 +7,8 @@ enum class RustOperator(
     val operatorDefinition: RustOperatorDefinition,
 ) {
     Assign("=", RustOperatorDefinition.Assignment),
+    LogicalAnd("&&", RustOperatorDefinition.LogicalAnd),
+    LogicalOr("||", RustOperatorDefinition.LogicalOr),
     And("&", RustOperatorDefinition.And),
     Or("|", RustOperatorDefinition.InclusiveOr),
     As("as", RustOperatorDefinition.As),
