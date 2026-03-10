@@ -3234,7 +3234,7 @@ private fun mergeTypeArgs(from: StaticType?, into: StaticType): StaticType {
                 type.definition === WellKnownTypes.nullTypeDefinition -> null
                 else -> type
             }
-            is OrType -> type.members.firstNotNullOf { findNominal(it) }
+            is OrType -> type.members.firstNotNullOfOrNull { findNominal(it) }
             else -> null
         }
     }

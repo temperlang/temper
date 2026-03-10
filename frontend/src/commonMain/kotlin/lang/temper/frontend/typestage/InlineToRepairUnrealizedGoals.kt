@@ -310,7 +310,6 @@ private class InlineToRepairUnrealizedGoals(
             val calleeTree = callToInline.definition
             val formalNameToArg = callToInline.formalNameToFunArg
             val thisBindings = callToInline.thisTypeBindings
-            callToInline.thisTypeBindings
 
             val combinedCallArgs = callToInline.combinedCallArgs
             val callEdge = call.incoming!!
