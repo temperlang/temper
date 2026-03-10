@@ -146,13 +146,13 @@ private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): Supp
         BuiltinOperatorId.NeIntInt -> neIntInt
         BuiltinOperatorId.NeStrStr -> neStrStr
         BuiltinOperatorId.NeGeneric -> neGeneric
-        BuiltinOperatorId.CmpFltFlt -> TODO()
-        BuiltinOperatorId.CmpIntInt -> TODO()
-        BuiltinOperatorId.CmpStrStr -> TODO()
+        BuiltinOperatorId.CmpFltFlt -> cmpFltFlt
+        BuiltinOperatorId.CmpIntInt -> CmpIntInt
+        BuiltinOperatorId.CmpStrStr -> CmpStrStrOrdering
         BuiltinOperatorId.CmpGeneric -> CmpGeneric
-        BuiltinOperatorId.Bubble -> TODO() // bubble
+        BuiltinOperatorId.Bubble -> bubble
         BuiltinOperatorId.Panic -> panic
-        BuiltinOperatorId.Print -> TODO()
+        BuiltinOperatorId.Print -> print
         BuiltinOperatorId.StrCat -> StrCat
         BuiltinOperatorId.Listify -> Listify
         BuiltinOperatorId.Async -> async
@@ -582,6 +582,53 @@ private object CmpGeneric : MethodCall(
         return super.inlineToTree(pos, effectiveArgs, returnType, translator).infix(RustOperator.As, "i32".toId(pos))
     }
 }
+
+private val cmpFltFlt = FunctionCall("CmpFltFlt", "temper_core::float64::cmp", BuiltinOperatorId.CmpFltFlt)
+
+private object CmpIntInt : RustInlineSupportCode("CmpIntInt", BuiltinOperatorId.CmpIntInt, cloneEvenIfFirst = true) {
+    override fun inlineToTree(
+        pos: Position,
+        arguments: List<TypedArg<Rust.Tree>>,
+        returnType: Type2,
+        translator: RustTranslator,
+    ): Rust.Expr {
+        // (a).cmp(&b) as i32
+        val left = arguments[0].expr as Rust.Expr
+        val right = (arguments[1].expr as Rust.Expr).ref()
+        return left.methodCall("cmp", listOf(right)).infix(RustOperator.As, "i32".toId(pos))
+    }
+}
+
+private object CmpStrStrOrdering :
+    RustInlineSupportCode("CmpStrStr", BuiltinOperatorId.CmpStrStr, cloneEvenIfFirst = true) {
+    override fun inlineToTree(
+        pos: Position,
+        arguments: List<TypedArg<Rust.Tree>>,
+        returnType: Type2,
+        translator: RustTranslator,
+    ): Rust.Expr {
+        val left = (arguments[0].expr as Rust.Expr).methodCall("as_str")
+        val right = (arguments[1].expr as Rust.Expr).methodCall("as_str")
+        return left.methodCall("cmp", listOf(right.ref())).infix(RustOperator.As, "i32".toId(pos))
+    }
+}
+
+private val bubble = FunctionCall("Bubble", "panic!", BuiltinOperatorId.Bubble)
+
+private object PrintCode : RustInlineSupportCode("Print", BuiltinOperatorId.Print) {
+    override fun inlineToTree(
+        pos: Position,
+        arguments: List<TypedArg<Rust.Tree>>,
+        returnType: Type2,
+        translator: RustTranslator,
+    ): Rust.Expr {
+        // Print takes a single string argument and outputs it.
+        val arg = arguments[0].expr as Rust.Expr
+        return "println!".toId(pos).call(listOf(Rust.StringLiteral(pos, "{}"), arg))
+    }
+}
+
+private val print: SupportCode = PrintCode
 
 private val dateToday = FunctionCall("Date::today", "temper_std::temporal::today")
 private val denseBitVectorConstructor =
