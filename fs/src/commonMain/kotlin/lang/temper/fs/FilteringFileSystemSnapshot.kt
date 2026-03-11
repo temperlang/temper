@@ -143,7 +143,7 @@ class FilteringFileSystemSnapshot(
                         result = alreadyThere
                     }
                 }
-                return result
+                result
             }
         }
     }
