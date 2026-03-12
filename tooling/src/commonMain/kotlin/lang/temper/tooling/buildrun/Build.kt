@@ -128,7 +128,7 @@ fun prepareBuild(
 fun plugInBackendConfigs(
     moduleConfig: ModuleConfig,
     backends: List<BackendId> = supportedBackends,
-): ModuleConfig = ModuleConfig(
+): ModuleConfig = moduleConfig.copy(
     moduleCustomizeHook = { module, isNew ->
         moduleConfig.moduleCustomizeHook.customize(module, isNew)
         for (backendId in backends) {

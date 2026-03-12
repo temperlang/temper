@@ -290,7 +290,7 @@ class Interpreter(
     ): PartialResult = interpretTree(ast, env, interpMode, mayWrapEnvironment = mayWrapEnvironment)
 
     /**
-     * All recursive interpret calls MUST happen via this method so that we can keep breadcrumbs
+     * All recursive `interpret` calls MUST happen via this method so that we can keep breadcrumbs
      * and step counters up to date.
      */
     internal fun interpretEdge(
@@ -437,7 +437,7 @@ class Interpreter(
 
         val evaluation: InProgressEvaluation
         if (im == InterpMode.Full && yieldedAt != null) {
-            check(bodyOwner is TransientUserFunction) // yieldedAt is null for other variant
+            check(bodyOwner is TransientUserFunction) // yieldedAt is `null` for the other variant
             evaluation = yieldedAt
             bodyOwner.yieldedAt = null
         } else {
@@ -519,7 +519,7 @@ class Interpreter(
                         //     while (true) {}; 42             USE even though never reached.
                         // We can't determine statically if a function call or loop
                         // always/never/sometimes halts, so if we're ever to optimize anything out of
-                        // blocks we just optimistically assume that all terminal nodes are reached
+                        // blocks, we just optimistically assume that all terminal nodes are reached
                         // and that any code that is optimized using this will not run if the preceding
                         // does not halt.
                         fun lookThrough(cf: ControlFlow): Boolean = when (cf) {

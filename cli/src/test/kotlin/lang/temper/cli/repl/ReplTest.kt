@@ -1150,15 +1150,19 @@ class ReplTest {
             fs.write(filePath("config.temper.md"), "# hello".toByteArray())
             fs.write(
                 filePath("src.temper"),
-                """export let message(): String { "Hello, World!" }""".toByteArray(),
+                """
+                    |export class Message(public text: String) {
+                    |  public static hello: Message = new Message("Hello, World!");
+                    |}
+                """.trimMargin().toByteArray(),
             )
         }
         repl.processLine("""help("${AvailableImports.NAME}")""")
         assertPendingContains(
             Regex("""║hello *║/ *║let \{...} = import\("hello//"\); *║"""),
         )
-        repl.processLine("""let { message } = import("hello")""")
-        repl.processLine("""console.log(message())""")
+        repl.processLine("""let { Message } = import("hello")""")
+        repl.processLine("""console.log(Message.hello.text)""")
         assertPending(
             """
                 |interactive#1: void
