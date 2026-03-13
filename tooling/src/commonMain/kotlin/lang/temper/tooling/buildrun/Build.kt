@@ -115,14 +115,7 @@ fun prepareBuild(
         return null
     }
 
-    val pluggedInConfig = moduleConfig.copy(
-        moduleCustomizeHook = { module, isNew ->
-            moduleConfig.moduleCustomizeHook.customize(module, isNew)
-            for (backendId in supportedBackends) {
-                module.addEnvironmentBindings(lookupFactory(backendId)!!.environmentBindings)
-            }
-        },
-    )
+    val pluggedInConfig = plugInBackendConfigs(moduleConfig)
     return Build(
         harness = h,
         requiredExt = requiredExt,
@@ -130,6 +123,19 @@ fun prepareBuild(
         moduleConfig = pluggedInConfig,
     )
 }
+
+/** Applies environment bindings for [backends]. */
+fun plugInBackendConfigs(
+    moduleConfig: ModuleConfig,
+    backends: List<BackendId> = supportedBackends,
+): ModuleConfig = moduleConfig.copy(
+    moduleCustomizeHook = { module, isNew ->
+        moduleConfig.moduleCustomizeHook.customize(module, isNew)
+        for (backendId in backends) {
+            module.addEnvironmentBindings(lookupFactory(backendId)!!.environmentBindings)
+        }
+    },
+)
 
 /** [Prepare][prepareBuild]s and executes a build, closing the harness afterward. */
 fun doBuild(

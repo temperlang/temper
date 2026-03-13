@@ -49,6 +49,7 @@ import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.log.SharedLocationContext
 import lang.temper.log.UNIX_FILE_SEGMENT_SEPARATOR
+import lang.temper.log.bannedPathSegmentNames
 import lang.temper.log.unknownPos
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ImplicitsCodeLocation
@@ -84,7 +85,7 @@ interface ImportResolver {
         collector: ModuleCollector,
     ): LibraryConfiguration? = null
 
-    object ImportNone : ImportResolver {
+    data object ImportNone : ImportResolver {
         override fun lookup(
             specifier: String,
             collector: ModuleCollector,
@@ -103,8 +104,8 @@ fun interface ModuleCustomizeHook {
 }
 
 /**
- * May be called into by an [ImportResolver] to add modules to the set of needed
- * modules on demand and to register any needed library configurations.
+ * May be called into by an [ImportResolver] to add modules to the set of necessary
+ * modules on demand and to register any necessary library configurations.
  */
 interface ModuleCollector {
     fun addModule(module: Module)
@@ -136,7 +137,7 @@ interface ModuleCollector {
  * Allows creating and advancing modules for unit tests where later modules may import
  * modules that were advanced earlier.
  *
- * Use *ModuleBuilder* for anything production related.
+ * Use *ModuleBuilder* for anything production-related.
  */
 class ModuleAdvancer(
     /**
@@ -146,7 +147,7 @@ class ModuleAdvancer(
     var projectLogSink: LogSink,
     /**
      * Called to resolve imports that are not local path imports.
-     * This is not called for std.  As a convenience and to avoid slowing down
+     * This is not called for std. As a convenience, and to avoid slowing down
      * tests, std modules are compiled once and cached globally.
      */
     private val nonLocalImportResolver: ImportResolver = ImportResolver.ImportNone,
@@ -162,7 +163,7 @@ class ModuleAdvancer(
     /** Allow fetching content for error messages from disk */
     private val contentForSource = mutableMapOf<FilePath, () -> ContentLookupResult?>()
 
-    /** Avoid repeatedly warn that a file has changed on disk so error snippet might be skewed */
+    /** Avoid repeatedly warning that a file has changed on disk because error snippets might be skewed */
     private val skewedContentWarnings = mutableSetOf<FilePath>()
 
     /**
@@ -207,7 +208,7 @@ class ModuleAdvancer(
     /**
      * Stores the source content associated with the given file path exposed by [sharedLocationContext].
      *
-     * If content is [delivered][Module.deliverContent] as source, then this will be auto-extracted.
+     * If content is [delivered][Module.deliverContent] as source code, then this will be auto-extracted.
      */
     fun registerContentForSource(filePath: FilePath, content: CharSequence) {
         contentForSource[filePath] = { ContentLookupResult(content, false) }
@@ -216,7 +217,7 @@ class ModuleAdvancer(
     /**
      * Stores the source content associated with the given file path exposed by [sharedLocationContext].
      *
-     * If content is [delivered][Module.deliverContent] as source, then this will be auto-extracted.
+     * If content is [delivered][Module.deliverContent] as source code, then this will be auto-extracted.
      */
     fun registerContentForSource(filePath: FilePath, source: FileSystemSnapshot) {
         contentForSource[filePath] = {
@@ -362,6 +363,32 @@ class ModuleAdvancer(
 
     fun advanceModules(stopBefore: Stage? = null) = advanceModules { stopBefore }
 
+    private data class NonLocalLookup(
+        val nonLocalImportResolver: ImportResolver,
+        val sharedStdModules: Lazy<StdModules>,
+    ) : ImportResolver {
+        override fun lookup(specifier: String, collector: ModuleCollector): Exporter? {
+            val resolver = if (specifier.startsWith(STANDARD_LIBRARY_SPECIFIER_PREFIX)) {
+                sharedStdModules.value
+            } else {
+                nonLocalImportResolver
+            }
+            return resolver.lookup(specifier, collector)
+        }
+
+        override fun lookupLibrary(
+            libraryName: DashedIdentifier,
+            collector: ModuleCollector,
+        ): LibraryConfiguration? {
+            val resolver = if (libraryName == DashedIdentifier.temperStandardLibraryIdentifier) {
+                sharedStdModules.value
+            } else {
+                nonLocalImportResolver
+            }
+            return resolver.lookupLibrary(libraryName, collector)
+        }
+    }
+
     fun advanceModules(
         /**
          * For each module, the stage to advance it to.
@@ -388,28 +415,7 @@ class ModuleAdvancer(
             sharedStdModulesMayNotRun
         }
 
-        val nonLocalLookup = object : ImportResolver {
-            override fun lookup(specifier: String, collector: ModuleCollector): Exporter? {
-                val resolver = if (specifier.startsWith(STANDARD_LIBRARY_SPECIFIER_PREFIX)) {
-                    sharedStdModules.value
-                } else {
-                    nonLocalImportResolver
-                }
-                return resolver.lookup(specifier, collector)
-            }
-
-            override fun lookupLibrary(
-                libraryName: DashedIdentifier,
-                collector: ModuleCollector,
-            ): LibraryConfiguration? {
-                val resolver = if (libraryName == DashedIdentifier.temperStandardLibraryIdentifier) {
-                    sharedStdModules.value
-                } else {
-                    nonLocalImportResolver
-                }
-                return resolver.lookupLibrary(libraryName, collector)
-            }
-        }
+        val nonLocalLookup = NonLocalLookup(nonLocalImportResolver, sharedStdModules)
 
         for (libraryName in requiredLibraries) {
             nonLocalLookup.lookupLibrary(libraryName, this)?.let { libraryConfiguration ->
@@ -428,8 +434,32 @@ class ModuleAdvancer(
 
         val importHandler = ImportHandler(
             localLookup = object : ImportResolver {
-                override fun lookup(specifier: String, collector: ModuleCollector): Exporter? =
-                    bySpecifier[specifier]
+                override fun lookup(specifier: String, collector: ModuleCollector): Exporter? {
+                    val unqualifiedSuccess = bySpecifier[specifier]
+                    if (unqualifiedSuccess != null) {
+                        return unqualifiedSuccess
+                    }
+                    if (specifier.startsWith(LOCAL_FILE_SPECIFIER_PREFIX)) {
+                        return null
+                    }
+                    // Otherwise, maybe the first segment is a library name.
+                    val slash = specifier.indexOf('/')
+                    val firstSegment = if (slash < 0) { specifier } else { specifier.substring(0, slash) }
+                    if (firstSegment !in bannedPathSegmentNames &&
+                        DashedIdentifier.isDashedIdentifier(firstSegment)
+                    ) {
+                        val namedLibrary = DashedIdentifier(firstSegment)
+                        val config = libraryConfigurations[namedLibrary]
+                        if (config != null) {
+                            val rest = specifier.substring(slash + 1)
+                            val localizedSpecifier = "$LOCAL_FILE_SPECIFIER_PREFIX${config.libraryRoot}$rest"
+                            return bySpecifier[localizedSpecifier]
+                        }
+                    }
+                    return null
+                }
+
+                override fun toString(): String = "BySpecifierImportResolver(${bySpecifier.keys})"
             },
             nonLocalLookup = nonLocalLookup,
             logSink = projectLogSink,
@@ -467,6 +497,7 @@ private class MutLibraryConfigurations : Iterable<LibraryConfiguration> {
     private val configurationsPossiblyUnsorted = mutableListOf<LibraryConfiguration>()
     private val roots = mutableSetOf<FilePath>()
     private var isSorted = true // since it's empty
+    private var byName = mutableMapOf<DashedIdentifier, LibraryConfiguration>()
 
     /** @return true if the configuration list changed. */
     fun add(configuration: LibraryConfiguration, replace: Boolean): Boolean {
@@ -502,8 +533,13 @@ private class MutLibraryConfigurations : Iterable<LibraryConfiguration> {
         return null
     }
 
+    operator fun get(libraryName: DashedIdentifier): LibraryConfiguration? {
+        requireSorted()
+        return byName[libraryName]
+    }
+
     /**
-     * Ensures configuration are ordered with the deepest library root first so
+     * Ensures configurations are ordered with the deepest library root first so
      * that we can find the deepest library root containing by iterating
      * left to right.
      */
@@ -511,6 +547,10 @@ private class MutLibraryConfigurations : Iterable<LibraryConfiguration> {
         if (isSorted) { return }
         configurationsPossiblyUnsorted.sortWith { a, b ->
             b.libraryRoot.segments.size - a.libraryRoot.segments.size
+        }
+        byName.clear()
+        for (configuration in configurationsPossiblyUnsorted) {
+            byName[configuration.libraryName] = configuration
         }
         isSorted = true
     }
@@ -532,7 +572,7 @@ private class GroupOfModulesToAdvanceTogether(
     val snapshotter: Snapshotter? = null,
     val stopBefore: (Module) -> Stage? = { null },
 ) {
-    // Which modules to un-block (by decrementing countNeeded) when the key reaches Stage,Export
+    // Which modules to unblock (by decrementing countNeeded) when the key reaches Stage.Export
     private val awaitingExportStage = mutableMapOf<Exporter, MutableList<PendingImport>>()
 
     // Which imports to rewrite when countNeeded drops to zero.
@@ -804,7 +844,7 @@ private class ImportHandler(
             }
         }
 
-        // For each specifier, try it and if a strategy succeeds, make
+        // For each specifier, try it, and if a strategy succeeds, make
         // sure we know which specifier from the list above actually worked.
         fun applyExportStrategy(
             tryOneSpecifier: (String) -> Exporter?,
@@ -819,7 +859,7 @@ private class ImportHandler(
         }
 
         val (specifierUsed, exporter) =
-            // Try local lookup first
+            // Try localLookup first
             applyExportStrategy { localLookup.lookup(it, advancer) }
                 // If that doesn't work, try non-local
                 ?: applyExportStrategy { nonLocalLookup.lookup(it, advancer) }
