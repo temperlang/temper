@@ -29,7 +29,7 @@ This is text. You can treat it as a document.
 ```temper
 // This is active Temper code.
 fn greet(name: String): Void {
-  console.log("Hello, ${name}!);
+  console.log("Hello, ${name}!");
 }
 ```
 

@@ -1785,7 +1785,7 @@ For the purpose of this, space includes:
 - Tab character: U+9 '\t'
 
 A line consists of any maximal sequence of characters other than
-CR (U+A '\n') and LF (U+D '\r').
+CR (U+D '\r') and LF (U+A '\n').
 
 A line break is any of the following sequences:
 
