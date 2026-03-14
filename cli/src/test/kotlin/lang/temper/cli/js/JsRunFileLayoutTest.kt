@@ -180,6 +180,7 @@ class JsRunFileLayoutTest {
             |    ┣━deque.js
             |    ┣━float.js
             |    ┣━index.js
+            |    ┣━int.js
             |    ┣━interface.js
             |    ┣━listed.js
             |    ┣━mapped.js
