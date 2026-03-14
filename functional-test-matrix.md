@@ -54,6 +54,7 @@
 | [TypesFloatOps][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesIntBasics][] | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesIntLimits][] | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [TypesIntShifty][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesJsonSyntaxTree][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesListEmpty][] | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesListOperations][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -124,6 +125,7 @@
 [TypesFloatOps]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/float/ops/ops.temper.md
 [TypesIntBasics]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/int/basics/basics.temper.md
 [TypesIntLimits]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/int/limits/limits.temper.md
+[TypesIntShifty]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/int/shifty/shifty.temper.md
 [TypesJsonSyntaxTree]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/json-syntax-tree/json-syntax-tree.temper.md
 [TypesListEmpty]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/list/empty/empty.temper.md
 [TypesListOperations]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/list/operations/operations.temper.md

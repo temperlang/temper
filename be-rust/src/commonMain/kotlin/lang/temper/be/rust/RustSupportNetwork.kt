@@ -101,8 +101,14 @@ object RustSupportNetwork : SupportNetwork {
 private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): SupportCode? {
     return when (builtinOperatorId) {
         BuiltinOperatorId.BooleanNegation -> booleanNegation
-        BuiltinOperatorId.BitwiseAnd -> bitwiseAnd
-        BuiltinOperatorId.BitwiseOr -> bitwiseOr
+        BuiltinOperatorId.BitwiseAnd32, BuiltinOperatorId.BitwiseAnd64 -> bitwiseAnd
+        BuiltinOperatorId.BitwiseOr32, BuiltinOperatorId.BitwiseOr64 -> bitwiseOr
+        BuiltinOperatorId.BitwiseXor32, BuiltinOperatorId.BitwiseXor64 -> bitwiseXor
+        BuiltinOperatorId.BitwiseShl32, BuiltinOperatorId.BitwiseShl64 -> bitwiseShl
+        BuiltinOperatorId.BitwiseShr32, BuiltinOperatorId.BitwiseShr64 -> bitwiseShr
+        BuiltinOperatorId.BitwiseShrUnsigned32 -> bitwiseUShr32
+        BuiltinOperatorId.BitwiseShrUnsigned64 -> bitwiseUShr64
+        BuiltinOperatorId.BitwiseNegation32, BuiltinOperatorId.BitwiseNegation64 -> bitwiseNegation
         BuiltinOperatorId.IsNull -> isNull
         BuiltinOperatorId.NotNull -> null
         BuiltinOperatorId.DivFltFlt -> divFltFlt
@@ -549,8 +555,51 @@ private object GetConsole : RustInlineSupportCode("::getConsole") {
     }
 }
 
-private val bitwiseAnd = Infix("BitwiseAnd", BuiltinOperatorId.BitwiseAnd, RustOperator.And)
-private val bitwiseOr = Infix("BitwiseOr", BuiltinOperatorId.BitwiseOr, RustOperator.Or)
+private val bitwiseAnd = Infix("BitwiseAnd", BuiltinOperatorId.BitwiseAnd32, RustOperator.And)
+private val bitwiseOr = Infix("BitwiseOr", BuiltinOperatorId.BitwiseOr32, RustOperator.Or)
+private val bitwiseXor = Infix("BitwiseXor", BuiltinOperatorId.BitwiseXor32, RustOperator.Xor)
+private val bitwiseShl = Infix("BitwiseShl", BuiltinOperatorId.BitwiseShl32, RustOperator.LeftShift)
+private val bitwiseShr = Infix("BitwiseShr", BuiltinOperatorId.BitwiseShr32, RustOperator.RightShift)
+private class BitwiseUShr(private val bitSize: Int, operatorId: BuiltinOperatorId) : RustInlineSupportCode(
+    "BitwiseUShr$bitSize",
+    operatorId,
+) {
+    override fun inlineToTree(
+        pos: Position,
+        arguments: List<TypedArg<Rust.Tree>>,
+        returnType: Type2,
+        translator: RustTranslator,
+    ): Rust.Tree {
+        val (a, b) = arguments
+        val aExpr = a.expr as Rust.Expr
+        val aPos = aExpr.pos
+        val aRPos = aPos.rightEdge
+        return Rust.Operation(
+            pos,
+            Rust.Operation(
+                pos = pos,
+                left = Rust.Operation(
+                    aPos,
+                    aExpr,
+                    Rust.Operator(aRPos, RustOperator.As),
+                    Rust.RefType(
+                        aRPos,
+                        Rust.Id(aRPos, OutName("u$bitSize", null)),
+                    ),
+                ),
+                operator = Rust.Operator(aRPos, RustOperator.RightShift),
+                right = b.expr as Rust.Expr,
+            ),
+            Rust.Operator(pos.rightEdge, RustOperator.As),
+            Rust.Id(pos.rightEdge, OutName("i$bitSize", null)),
+        )
+    }
+}
+const val BIT_SIZE_I32 = 32
+const val BIT_SIZE_I64 = 64
+private val bitwiseUShr32 = BitwiseUShr(BIT_SIZE_I32, BuiltinOperatorId.BitwiseShr32)
+private val bitwiseUShr64 = BitwiseUShr(BIT_SIZE_I64, BuiltinOperatorId.BitwiseShr64)
+private val bitwiseNegation = Prefix("BitwiseNegation", BuiltinOperatorId.BitwiseNegation32, RustOperator.BitComplement)
 private val booleanNegation =
     Prefix("BooleanNegation", BuiltinOperatorId.BooleanNegation, RustOperator.BoolComplement)
 

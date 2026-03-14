@@ -118,6 +118,103 @@ namespace TemperLang.Core
             return a == long.MinValue && b == -1 ? long.MinValue : a / b;
         }
 
+        public static int UShr(this int a, int b)
+        {
+            b = b & 0x1F;
+            return b == 0 ? a : (a >> b) & (0x7FFF_FFFF >> (b - 1));
+        }
+
+        public static long UShr(this long a, int b)
+        {
+            b = b & 0x3F;
+            return b == 0 ? a : (a >> b) & (0x7FFF_FFFF_FFFF_FFFFL >> (b - 1));
+        }
+
+        private const string DIGITS = "0123456789abcdefghijklmnopqrstuvwxyz";
+        /** Like System.Convert.ToString but outputs the signed form. */
+        public static string ConvertToString(int n, int radix)
+        {
+            StringBuilder sb = new StringBuilder();
+            uint un;
+            bool signed = false;
+            if (n < 0)
+            {
+                signed = true;
+                un = ((uint) ~n) + 1;
+            } else {
+                un = (uint) n;
+            }
+            uint uRadix = (uint) radix;
+            // do...while means for 0 we get "0"
+            do
+            {
+                int digitValue = (int) (un % uRadix);
+                un = un / uRadix;
+                sb.Append(DIGITS[digitValue]);
+            }
+            while (un != 0);
+
+            if (signed)
+            {
+                sb.Append("-");
+            }
+            ReverseInPlace(sb);
+            return sb.ToString();
+        }
+        public static string ConvertToString(int n)
+        {
+            return n.ToString();
+        }
+        /** Like System.Convert.ToString but outputs the signed form. */
+        public static string ConvertToString(long n, int radix)
+        {
+            StringBuilder sb = new StringBuilder();
+            ulong un;
+            bool signed = false;
+            if (n < 0)
+            {
+                signed = true;
+                un = ((ulong) ~n) + 1;
+            } else {
+                un = (ulong) n;
+            }
+            uint uRadix = (uint) radix;
+            // do...while means for 0 we get "0"
+            do
+            {
+                int digitValue = (int) (un % uRadix);
+                un = un / uRadix;
+                sb.Append(DIGITS[digitValue]);
+            }
+            while (un != 0);
+
+            if (signed)
+            {
+                sb.Append("-");
+            }
+            ReverseInPlace(sb);
+            return sb.ToString();
+        }
+        public static string ConvertToString(long n)
+        {
+            return n.ToString();
+        }
+
+        private static void ReverseInPlace(StringBuilder sb)
+        {
+            int n = sb.Length;
+            int i = 0;
+            int j = n - 1;
+            while (i < j)
+            {
+                char ci = sb[i];
+                sb[i] = sb[j];
+                sb[j] = ci;
+                ++i;
+                --j;
+            }
+        }
+
         private static System.Tuple<object?> emptySingleton = new System.Tuple<object?>(null);
 
         public static System.Tuple<object?> Empty()

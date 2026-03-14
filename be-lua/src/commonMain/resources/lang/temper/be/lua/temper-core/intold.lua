@@ -27,6 +27,10 @@ if bitops == nil then
     bitops.band = bitwise(AND)
     bitops.bxor = bitwise(XOR)
     bitops.bor = bitwise(OR)
+    function bitops.bnot(a)
+        return bitops.bxor(a, -1)
+    end
+
 end
 
 local temper = {}

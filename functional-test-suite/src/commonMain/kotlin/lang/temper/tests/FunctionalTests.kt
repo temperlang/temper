@@ -115,6 +115,7 @@ enum class FunctionalTests(val test: FunctionalTestBase) {
     TypesFloatOps(markdown("types/float/ops/ops.temper.md", "TypesFloatOps")),
     TypesIntBasics(markdown("types/int/basics/basics.temper.md", "TypesIntBasics")),
     TypesIntLimits(markdown("types/int/limits/limits.temper.md", "TypesIntLimits")),
+    TypesIntShifty(markdown("types/int/shifty/shifty.temper.md", "TypesIntShifty")),
     TypesJsonSyntaxTree(markdown("types/json-syntax-tree/json-syntax-tree.temper.md", "TypesJsonSyntaxTree")),
     TypesListEmpty(markdown("types/list/empty/empty.temper.md", "TypesListEmpty")),
     TypesListOperations(markdown("types/list/operations/operations.temper.md", "TypesListOperations")),

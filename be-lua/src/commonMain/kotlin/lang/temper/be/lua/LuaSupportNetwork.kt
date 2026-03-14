@@ -32,8 +32,13 @@ internal fun operatorToName(
     op: BuiltinOperatorId?,
 ): String = when (op) {
     BuiltinOperatorId.BooleanNegation -> "bool_not"
-    BuiltinOperatorId.BitwiseAnd -> "band"
-    BuiltinOperatorId.BitwiseOr -> "bor"
+    BuiltinOperatorId.BitwiseAnd32, BuiltinOperatorId.BitwiseAnd64 -> "band"
+    BuiltinOperatorId.BitwiseOr32, BuiltinOperatorId.BitwiseOr64 -> "bor"
+    BuiltinOperatorId.BitwiseNegation32, BuiltinOperatorId.BitwiseNegation64 -> "bnot"
+    BuiltinOperatorId.BitwiseXor32, BuiltinOperatorId.BitwiseXor64 -> "bxor"
+    BuiltinOperatorId.BitwiseShl32, BuiltinOperatorId.BitwiseShl64 -> "lshift"
+    BuiltinOperatorId.BitwiseShr32, BuiltinOperatorId.BitwiseShr64 -> "arshift"
+    BuiltinOperatorId.BitwiseShrUnsigned32, BuiltinOperatorId.BitwiseShrUnsigned64 -> "rshift"
     BuiltinOperatorId.IsNull -> "is_null"
     BuiltinOperatorId.NotNull -> TODO()
     BuiltinOperatorId.DivFltFlt -> "fdiv"

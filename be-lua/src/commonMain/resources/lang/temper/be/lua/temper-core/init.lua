@@ -943,6 +943,11 @@ end
 
 temper.bor = temper_bit.bor
 temper.band = temper_bit.band
+temper.bnot = temper_bit.bnot
+temper.bxor = temper_bit.bxor
+temper.lshift = temper_bit.lshift
+temper.rshift = temper_bit.rshift
+temper.arshift = temper_bit.arshift
 
 function temper.concat(...)
     return table_concat({...})
@@ -1138,7 +1143,18 @@ do
 
     local function temper_tostring(num, base)
         if num < 0 then
-            return "-" .. temper_tostring(-num, base)
+            if num == math.mininteger then
+                local mod = (base - (math.maxinteger % base)) + 1
+                local negatable = num / base
+                if mod == base then
+                    negatable = negatable - 1
+                    mod = 0
+                end
+                local last_digit = string_sub(digits, mod, mod)
+                return "-" .. temper_tostring(-negatable, base) .. last_digit
+            else
+                return "-" .. temper_tostring(-num, base)
+            end
         elseif num >= base then
             local mod = num % base + 1
             return temper_tostring(math_floor(num / base), base) .. string_sub(digits, mod, mod)

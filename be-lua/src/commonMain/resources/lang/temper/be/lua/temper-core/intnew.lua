@@ -14,6 +14,23 @@ function bitops.bxor(a, b)
     return a ~ b
 end
 
+function bitops.bnot(a)
+    return a ~ -1
+end
+
+function bitops.lshift(a, b)
+    return a << b
+end
+
+function bitops.rshift(a, b)
+    return a >> b
+end
+
+function bitops.arshift(a, b)
+    return a >> b
+end
+
+
 local temper = {}
 
 -- Helper

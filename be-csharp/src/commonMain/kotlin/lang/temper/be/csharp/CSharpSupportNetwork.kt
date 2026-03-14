@@ -243,8 +243,13 @@ object CSharpSupportNetwork : SupportNetwork {
 private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): SupportCode? {
     return when (builtinOperatorId) {
         BuiltinOperatorId.BooleanNegation -> BooleanNegationInliner
-        BuiltinOperatorId.BitwiseAnd -> bitwiseAnd
-        BuiltinOperatorId.BitwiseOr -> bitwiseOr
+        BuiltinOperatorId.BitwiseAnd32, BuiltinOperatorId.BitwiseAnd64 -> bitwiseAnd
+        BuiltinOperatorId.BitwiseOr32, BuiltinOperatorId.BitwiseOr64 -> bitwiseOr
+        BuiltinOperatorId.BitwiseShl32, BuiltinOperatorId.BitwiseShl64 -> bitwiseShl
+        BuiltinOperatorId.BitwiseShr32, BuiltinOperatorId.BitwiseShr64 -> bitwiseShr
+        BuiltinOperatorId.BitwiseShrUnsigned32, BuiltinOperatorId.BitwiseShrUnsigned64 -> bitwiseUShr
+        BuiltinOperatorId.BitwiseXor32, BuiltinOperatorId.BitwiseXor64 -> bitwiseXor
+        BuiltinOperatorId.BitwiseNegation32, BuiltinOperatorId.BitwiseNegation64 -> bitwiseNegation
         BuiltinOperatorId.IsNull -> IsNull
         BuiltinOperatorId.NotNull -> null
         BuiltinOperatorId.DivFltFlt -> divFltFlt
@@ -789,7 +794,7 @@ private class WrapAsOptional(
 
 private val intToFloat64 = Cast(listOf("Int32::toFloat64"), StandardNames.keyDouble)
 private val intToInt64 = Cast(listOf("Int32::toInt64"), StandardNames.keyLong)
-private val intToString = StaticCall("Int32::toString", StandardNames.systemConvertToString)
+private val intToString = StaticCall("Int32::toString", StandardNames.temperCoreConvertToString)
 private val intMax = StaticCall("Int32::max", StandardNames.systemMathMax)
 private val intMin = StaticCall("Int32::min", StandardNames.systemMathMin)
 private val int64Max = StaticCall("Int64::max", StandardNames.systemMathMax)
@@ -798,7 +803,7 @@ private val int64ToFloat64 = StaticCall(listOf("Int64::toFloat64"), StandardName
 private val int64ToFloat64Unsafe = Cast(listOf("Int64::toFloat64Unsafe"), StandardNames.keyDouble)
 private val int64ToInt32 = StaticCall(listOf("Int64::toInt32"), StandardNames.temperCoreCoreToInt)
 private val int64ToInt32Unsafe = Cast(listOf("Int64::toInt32Unsafe"), StandardNames.keyInt)
-private val int64ToString = StaticCall("Int64::toString", StandardNames.systemConvertToString)
+private val int64ToString = StaticCall("Int64::toString", StandardNames.temperCoreConvertToString)
 
 private val listedTypes = listOf("Listed", "List", "ListBuilder")
 
@@ -1245,8 +1250,21 @@ private object TestBail : CSharpInlineSupportCode("Test::bail") {
     }
 }
 
-private val bitwiseAnd = CSharpInfixInline("BitwiseAnd", BuiltinOperatorId.BitwiseAnd, CSharpOperator.And)
-private val bitwiseOr = CSharpInfixInline("BitwiseOr", BuiltinOperatorId.BitwiseOr, CSharpOperator.InclusiveOr)
+private val bitwiseAnd = CSharpInfixInline("BitwiseAnd", BuiltinOperatorId.BitwiseAnd32, CSharpOperator.And)
+private val bitwiseOr = CSharpInfixInline("BitwiseOr", BuiltinOperatorId.BitwiseOr32, CSharpOperator.InclusiveOr)
+private val bitwiseShl = CSharpInfixInline("BitwiseShl", BuiltinOperatorId.BitwiseShl32, CSharpOperator.LeftShift)
+private val bitwiseShr = CSharpInfixInline("BitwiseShr", BuiltinOperatorId.BitwiseShr32, CSharpOperator.RightShift)
+private val bitwiseUShr = StaticCall(
+    "BitwiseUShr",
+    StandardNames.temperCoreCoreUShr,
+    builtinOperatorId = BuiltinOperatorId.BitwiseShrUnsigned32,
+)
+private val bitwiseXor = CSharpInfixInline("BitwiseXor", BuiltinOperatorId.BitwiseXor32, CSharpOperator.ExclusiveOr)
+private val bitwiseNegation = CSharpPrefixInline(
+    "BitwiseNegation",
+    BuiltinOperatorId.BitwiseNegation32,
+    CSharpOperator.BitwiseComplement,
+)
 private val cmpGeneric = // Does this need to do something similar to EqGeneric?
     StaticCall("CmpGeneric", StandardNames.temperCoreCoreCompare, builtinOperatorId = BuiltinOperatorId.CmpGeneric)
 private val divFltFlt = CSharpInfixInline("DivFltFlt", BuiltinOperatorId.DivFltFlt, CSharpOperator.Division)
