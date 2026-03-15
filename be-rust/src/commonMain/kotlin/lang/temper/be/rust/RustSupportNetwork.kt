@@ -919,12 +919,12 @@ private val stdReadLine = FunctionCall("stdReadLine", "temper_std::io::std_read_
 private val stdNextKeypress = FunctionCall("stdNextKeypress", "temper_std::keyboard::std_next_keypress")
 private val stdTermCols = FunctionCall("stdTermCols", "temper_std::io::std_term_cols")
 private val stdTermRows = FunctionCall("stdTermRows", "temper_std::io::std_term_rows")
-private val wsListen = FunctionCall("wsListen", "temper_std::ws::ws_listen")
-private val wsAccept = FunctionCall("wsAccept", "temper_std::ws::ws_accept", cloneEvenIfFirst = true)
-private val wsConnect = FunctionCall("wsConnect", "temper_std::ws::ws_connect", cloneEvenIfFirst = true)
-private val wsSend = FunctionCall("wsSend", "temper_std::ws::ws_send", cloneEvenIfFirst = true)
-private val wsRecv = FunctionCall("wsRecv", "temper_std::ws::ws_recv", cloneEvenIfFirst = true)
-private val wsClose = FunctionCall("wsClose", "temper_std::ws::ws_close", cloneEvenIfFirst = true)
+private val wsListen = FunctionCall("wsListen", "temper_std::ws::std_ws_listen")
+private val wsAccept = FunctionCall("wsAccept", "temper_std::ws::std_ws_accept")
+private val wsConnect = FunctionCall("wsConnect", "temper_std::ws::std_ws_connect", cloneEvenIfFirst = true)
+private val wsSend = FunctionCall("wsSend", "temper_std::ws::std_ws_send")
+private val wsRecv = FunctionCall("wsRecv", "temper_std::ws::std_ws_recv")
+private val wsClose = FunctionCall("wsClose", "temper_std::ws::std_ws_close")
 
 internal object PairConstructor : RustInlineSupportCode(
     "Pair::constructor",

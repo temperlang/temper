@@ -1,25 +1,52 @@
 use super::*;
 use std::sync::{Arc, Mutex};
-use std::collections::VecDeque;
-use temper_core::{Promise, PromiseBuilder, SafeGenerator};
+use temper_core::{AsAnyValue, Promise, PromiseBuilder, SafeGenerator};
 
 #[cfg(not(feature = "ws"))]
-pub(crate) fn ws_listen(_port: i32) -> Promise<WsServer> { panic!() }
+pub fn std_ws_listen(_port: i32) -> Promise<WsServer> { panic!() }
 #[cfg(not(feature = "ws"))]
-pub(crate) fn ws_accept(_server: &WsServer) -> Promise<WsConnection> { panic!() }
+pub fn std_ws_accept(_server: &dyn WsServerTrait) -> Promise<WsConnection> { panic!() }
 #[cfg(not(feature = "ws"))]
-pub(crate) fn ws_connect(_url: impl temper_core::ToArcString) -> Promise<WsConnection> { panic!() }
+pub fn std_ws_connect(_url: impl temper_core::ToArcString) -> Promise<WsConnection> { panic!() }
 #[cfg(not(feature = "ws"))]
-pub(crate) fn ws_send(_conn: &WsConnection, _msg: impl temper_core::ToArcString) -> Promise<()> { panic!() }
+pub fn std_ws_send(_conn: &dyn WsConnectionTrait, _msg: impl temper_core::ToArcString) -> Promise<()> { panic!() }
 #[cfg(not(feature = "ws"))]
-pub(crate) fn ws_recv(_conn: &WsConnection) -> Promise<Option<Arc<String>>> { panic!() }
+pub fn std_ws_recv(_conn: &dyn WsConnectionTrait) -> Promise<Option<Arc<String>>> { panic!() }
 #[cfg(not(feature = "ws"))]
-pub(crate) fn ws_close(_conn: &WsConnection) -> Promise<()> { panic!() }
+pub fn std_ws_close(_conn: &dyn WsConnectionTrait) -> Promise<()> { panic!() }
 
 #[cfg(feature = "ws")]
 use std::net::{TcpListener, TcpStream};
 #[cfg(feature = "ws")]
-use tungstenite::{accept as ws_accept_tcp, connect as ws_connect_url, Message, WebSocket};
+use tungstenite::{accept as ws_upgrade, connect as ws_connect_url, stream::MaybeTlsStream, Message, WebSocket};
+
+#[cfg(feature = "ws")]
+enum WsStream {
+    Plain(WebSocket<TcpStream>),
+    MaybeTls(WebSocket<MaybeTlsStream<TcpStream>>),
+}
+
+#[cfg(feature = "ws")]
+impl WsStream {
+    fn send(&mut self, msg: Message) -> Result<(), tungstenite::Error> {
+        match self {
+            WsStream::Plain(ws) => ws.send(msg),
+            WsStream::MaybeTls(ws) => ws.send(msg),
+        }
+    }
+    fn read(&mut self) -> Result<Message, tungstenite::Error> {
+        match self {
+            WsStream::Plain(ws) => ws.read(),
+            WsStream::MaybeTls(ws) => ws.read(),
+        }
+    }
+    fn close(&mut self, frame: Option<tungstenite::protocol::CloseFrame>) -> Result<(), tungstenite::Error> {
+        match self {
+            WsStream::Plain(ws) => ws.close(frame),
+            WsStream::MaybeTls(ws) => ws.close(frame),
+        }
+    }
+}
 
 #[cfg(feature = "ws")]
 struct WsServerInner {
@@ -42,7 +69,7 @@ temper_core::impl_any_value_trait!(SimpleWsServer, [WsServer]);
 
 #[cfg(feature = "ws")]
 struct WsConnectionInner {
-    socket: Mutex<WebSocket<TcpStream>>,
+    socket: Mutex<WsStream>,
 }
 
 #[cfg(feature = "ws")]
@@ -60,7 +87,7 @@ impl WsConnectionTrait for SimpleWsConnection {
 temper_core::impl_any_value_trait!(SimpleWsConnection, [WsConnection]);
 
 #[cfg(feature = "ws")]
-pub(crate) fn ws_listen(port: i32) -> Promise<WsServer> {
+pub fn std_ws_listen(port: i32) -> Promise<WsServer> {
     let pb = PromiseBuilder::new();
     let promise = pb.promise();
     crate::run_async(Arc::new(move || {
@@ -84,38 +111,30 @@ pub(crate) fn ws_listen(port: i32) -> Promise<WsServer> {
 }
 
 #[cfg(feature = "ws")]
-pub(crate) fn ws_accept(server: &WsServer) -> Promise<WsConnection> {
-    let server_clone = server.clone_boxed();
+pub fn std_ws_accept(server: &dyn WsServerTrait) -> Promise<WsConnection> {
+    let server: SimpleWsServer = temper_core::cast(server.as_any_value()).expect("WsServer downcast");
     let pb = PromiseBuilder::new();
     let promise = pb.promise();
     crate::run_async(Arc::new(move || {
         let pb = pb.clone();
-        let server = server_clone.clone_boxed();
+        let server = server.clone();
         SafeGenerator::from_fn(Arc::new(move |_generator: SafeGenerator<()>| {
-            // Downcast to get the listener
-            let any = server.as_any_value();
-            let inner = any.as_ref().as_any().downcast_ref::<SimpleWsServer>();
-            match inner {
-                Some(s) => {
-                    let listener = s.0.listener.lock().unwrap();
-                    match listener.accept() {
-                        Ok((stream, _addr)) => {
-                            drop(listener);
-                            match ws_accept_tcp(stream) {
-                                Ok(ws) => {
-                                    pb.complete(WsConnection::new(SimpleWsConnection(Arc::new(
-                                        WsConnectionInner {
-                                            socket: Mutex::new(ws),
-                                        },
-                                    ))));
-                                }
-                                Err(_) => pb.break_promise(),
-                            }
+            let listener = server.0.listener.lock().unwrap();
+            match listener.accept() {
+                Ok((stream, _addr)) => {
+                    drop(listener);
+                    match ws_upgrade(stream) {
+                        Ok(ws) => {
+                            pb.complete(WsConnection::new(SimpleWsConnection(Arc::new(
+                                WsConnectionInner {
+                                    socket: Mutex::new(WsStream::Plain(ws)),
+                                },
+                            ))));
                         }
                         Err(_) => pb.break_promise(),
                     }
                 }
-                None => pb.break_promise(),
+                Err(_) => pb.break_promise(),
             }
             None
         }))
@@ -124,7 +143,7 @@ pub(crate) fn ws_accept(server: &WsServer) -> Promise<WsConnection> {
 }
 
 #[cfg(feature = "ws")]
-pub(crate) fn ws_connect(url: impl temper_core::ToArcString) -> Promise<WsConnection> {
+pub fn std_ws_connect(url: impl temper_core::ToArcString) -> Promise<WsConnection> {
     let url = url.to_arc_string();
     let pb = PromiseBuilder::new();
     let promise = pb.promise();
@@ -136,7 +155,7 @@ pub(crate) fn ws_connect(url: impl temper_core::ToArcString) -> Promise<WsConnec
                 Ok((ws, _response)) => {
                     pb.complete(WsConnection::new(SimpleWsConnection(Arc::new(
                         WsConnectionInner {
-                            socket: Mutex::new(ws),
+                            socket: Mutex::new(WsStream::MaybeTls(ws)),
                         },
                     ))));
                 }
@@ -149,27 +168,20 @@ pub(crate) fn ws_connect(url: impl temper_core::ToArcString) -> Promise<WsConnec
 }
 
 #[cfg(feature = "ws")]
-pub(crate) fn ws_send(conn: &WsConnection, msg: impl temper_core::ToArcString) -> Promise<()> {
-    let conn_clone = conn.clone_boxed();
+pub fn std_ws_send(conn: &dyn WsConnectionTrait, msg: impl temper_core::ToArcString) -> Promise<()> {
+    let conn: SimpleWsConnection = temper_core::cast(conn.as_any_value()).expect("WsConnection downcast");
     let msg = msg.to_arc_string();
     let pb = PromiseBuilder::new();
     let promise = pb.promise();
     crate::run_async(Arc::new(move || {
         let pb = pb.clone();
-        let conn = conn_clone.clone_boxed();
+        let conn = conn.clone();
         let msg = msg.clone();
         SafeGenerator::from_fn(Arc::new(move |_generator: SafeGenerator<()>| {
-            let any = conn.as_any_value();
-            let inner = any.as_ref().as_any().downcast_ref::<SimpleWsConnection>();
-            match inner {
-                Some(c) => {
-                    let mut socket = c.0.socket.lock().unwrap();
-                    match socket.send(Message::Text(msg.to_string())) {
-                        Ok(_) => pb.complete(()),
-                        Err(_) => pb.break_promise(),
-                    }
-                }
-                None => pb.break_promise(),
+            let mut socket = conn.0.socket.lock().unwrap();
+            match socket.send(Message::Text(msg.to_string().into())) {
+                Ok(_) => pb.complete(()),
+                Err(_) => pb.break_promise(),
             }
             None
         }))
@@ -178,33 +190,25 @@ pub(crate) fn ws_send(conn: &WsConnection, msg: impl temper_core::ToArcString) -
 }
 
 #[cfg(feature = "ws")]
-pub(crate) fn ws_recv(conn: &WsConnection) -> Promise<Option<Arc<String>>> {
-    let conn_clone = conn.clone_boxed();
+pub fn std_ws_recv(conn: &dyn WsConnectionTrait) -> Promise<Option<Arc<String>>> {
+    let conn: SimpleWsConnection = temper_core::cast(conn.as_any_value()).expect("WsConnection downcast");
     let pb = PromiseBuilder::new();
     let promise = pb.promise();
     crate::run_async(Arc::new(move || {
         let pb = pb.clone();
-        let conn = conn_clone.clone_boxed();
+        let conn = conn.clone();
         SafeGenerator::from_fn(Arc::new(move |_generator: SafeGenerator<()>| {
-            let any = conn.as_any_value();
-            let inner = any.as_ref().as_any().downcast_ref::<SimpleWsConnection>();
-            match inner {
-                Some(c) => {
-                    let mut socket = c.0.socket.lock().unwrap();
-                    match socket.read() {
-                        Ok(Message::Text(text)) => {
-                            pb.complete(Some(Arc::new(text.to_string())));
-                        }
-                        Ok(Message::Close(_)) | Err(_) => {
-                            pb.complete(None);
-                        }
-                        Ok(_) => {
-                            // Binary or other message types — skip and return null
-                            pb.complete(None);
-                        }
-                    }
+            let mut socket = conn.0.socket.lock().unwrap();
+            match socket.read() {
+                Ok(Message::Text(text)) => {
+                    pb.complete(Some(Arc::new(text.to_string())));
                 }
-                None => pb.complete(None),
+                Ok(Message::Close(_)) | Err(_) => {
+                    pb.complete(None);
+                }
+                Ok(_) => {
+                    pb.complete(None);
+                }
             }
             None
         }))
@@ -213,29 +217,21 @@ pub(crate) fn ws_recv(conn: &WsConnection) -> Promise<Option<Arc<String>>> {
 }
 
 #[cfg(feature = "ws")]
-pub(crate) fn ws_close(conn: &WsConnection) -> Promise<()> {
-    let conn_clone = conn.clone_boxed();
+pub fn std_ws_close(conn: &dyn WsConnectionTrait) -> Promise<()> {
+    let conn: SimpleWsConnection = temper_core::cast(conn.as_any_value()).expect("WsConnection downcast");
     let pb = PromiseBuilder::new();
     let promise = pb.promise();
     crate::run_async(Arc::new(move || {
         let pb = pb.clone();
-        let conn = conn_clone.clone_boxed();
+        let conn = conn.clone();
         SafeGenerator::from_fn(Arc::new(move |_generator: SafeGenerator<()>| {
-            let any = conn.as_any_value();
-            let inner = any.as_ref().as_any().downcast_ref::<SimpleWsConnection>();
-            match inner {
-                Some(c) => {
-                    let mut socket = c.0.socket.lock().unwrap();
-                    let _ = socket.close(None);
-                    // Drain remaining messages until close confirmation
-                    loop {
-                        match socket.read() {
-                            Ok(Message::Close(_)) | Err(_) => break,
-                            _ => continue,
-                        }
-                    }
+            let mut socket = conn.0.socket.lock().unwrap();
+            let _ = socket.close(None);
+            loop {
+                match socket.read() {
+                    Ok(Message::Close(_)) | Err(_) => break,
+                    _ => continue,
                 }
-                None => {}
             }
             pb.complete(());
             None
