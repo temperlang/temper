@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net48;net6.0</TargetFrameworks>
+    <TargetFrameworks>net48;net8.0</TargetFrameworks>
     <RootNamespace>TemperLang.Core</RootNamespace>
     <Version>0.6.0</Version>
     <Authors>Temper Contributors</Authors>
@@ -10,11 +10,11 @@
     <PackageLicenseExpression>Apache-2.0 OR MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/temperlang/temper</PackageProjectUrl>
     <!-- TODO Try the following once we've updated everything. -->
-    <!-- <Nullable Condition="'$(TargetFramework)' == 'net6.0'">enable</Nullable> -->
+    <!-- <Nullable Condition="'$(TargetFramework)' == 'net8.0'">enable</Nullable> -->
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Condition="'$(TargetFramework)' == 'net6.0'" Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Condition="'$(TargetFramework)' == 'net8.0'" Include="Microsoft.Extensions.Logging" Version="8.0.0" />
   </ItemGroup>
 
 </Project>

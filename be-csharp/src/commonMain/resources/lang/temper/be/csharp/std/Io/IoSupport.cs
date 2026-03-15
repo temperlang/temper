@@ -17,7 +17,16 @@ namespace TemperLang.Std.Io
             {
                 try
                 {
-                    return Console.ReadLine();
+                    if (Console.IsInputRedirected)
+                    {
+                        return Console.ReadLine();
+                    }
+                    var key = Console.ReadKey(true);
+                    if (key.Key == ConsoleKey.C && key.Modifiers.HasFlag(ConsoleModifiers.Control))
+                    {
+                        Environment.Exit(1);
+                    }
+                    return key.KeyChar.ToString();
                 }
                 catch (Exception)
                 {

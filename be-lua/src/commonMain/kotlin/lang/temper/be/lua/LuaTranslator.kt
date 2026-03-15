@@ -2444,6 +2444,17 @@ private class ModuleParts(
                 addAll(preDecls)
                 addAll(globalFuncs)
                 addAll(topLevels)
+                // Run the cooperative scheduler if any async blocks were registered.
+                // This is a no-op if no coroutines were launched via temper.async_launch.
+                add(Lua.CallStmt(pos, Lua.FunctionCallExpr(
+                    pos,
+                    Lua.DotIndexExpr(
+                        pos,
+                        Lua.Name(pos, name("temper")),
+                        Lua.Name(pos, name("run_scheduler")),
+                    ),
+                    Lua.Args(pos, Lua.Exprs(pos, listOf())),
+                )))
                 addAll(exports)
             },
             Lua.ReturnStmt(

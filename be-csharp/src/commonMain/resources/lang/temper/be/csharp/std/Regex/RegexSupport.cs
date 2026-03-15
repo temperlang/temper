@@ -151,7 +151,7 @@ namespace TemperLang.Std.Regex
                 );
             }
             var groupsDict = new ReadOnlyDictionaryWrapper<string, Group>(
-                new OrderedDictionary<string, Group>(resultGroups)
+                new TemperLang.Core.OrderedDictionary<string, Group>(resultGroups)
             );
             var full = match.Groups[0].Captures[0];
             var fullGroup = new Group("full", full.Value, full.Index, full.Index + full.Length);
@@ -204,7 +204,7 @@ namespace TemperLang.Std.Regex
             RegexRefs regexRefs
         )
         {
-            return ((R::Regex)compiled).Split(text).AsReadOnly();
+            return TemperLang.Core.Listed.AsReadOnly(((R::Regex)compiled).Split(text));
         }
 
         static IRegexNode IntRangeSetToUtf16CodePattern(List<IntRange> ranges)

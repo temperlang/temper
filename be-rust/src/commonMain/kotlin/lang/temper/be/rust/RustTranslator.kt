@@ -94,6 +94,8 @@ class RustTranslator(
         DescriptorsForDeclarations.Key(RustBackend.Factory),
     )?.nameToDescriptor ?: mapOf()
     private var closureCount = 0
+    /** Tracks function paths referenced via connected support code (e.g. "temper_std::io::std_sleep"). */
+    val usedSupportFunctionPaths = mutableSetOf<String>()
     private val decls = mutableMapOf<ResolvedName, DeclInfo>()
     private var insideMutableType = false
     private val failVars = mutableSetOf<ResolvedName>()
@@ -1673,6 +1675,10 @@ class RustTranslator(
         call: TmpL.CallExpression,
         supportCode: RustInlineSupportCode,
     ): Rust.Expr {
+        // Track external crate references from connected functions.
+        if (supportCode is FunctionCall) {
+            usedSupportFunctionPaths.add(supportCode.functionName)
+        }
         val wantUnstrung = supportCode is ConsoleLog || supportCode is StrCat
         var first = true
         return supportCode.inlineToTree(

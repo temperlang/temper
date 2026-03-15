@@ -1419,13 +1419,29 @@ def std_sleep(ms: int) -> 'Future[None]':
 
 
 def std_read_line() -> 'Future[Optional[str]]':
-    """Read a line from stdin, returning a Future."""
+    """Read a line from stdin, returning a Future. Uses raw mode when available for single keypress input."""
+    import sys as _sys
     f: 'Future[Optional[str]]' = new_unbound_promise()
 
     def _do_read():
         try:
-            line = input()
-            f.set_result(line)
+            if _sys.stdin.isatty():
+                import tty as _tty, termios as _termios
+                fd = _sys.stdin.fileno()
+                old_settings = _termios.tcgetattr(fd)
+                try:
+                    _tty.setraw(fd)
+                    ch = _sys.stdin.read(1)
+                    if ch == '\x03':  # Ctrl+C
+                        _termios.tcsetattr(fd, _termios.TCSADRAIN, old_settings)
+                        import os as _os
+                        _os.kill(_os.getpid(), 2)  # SIGINT
+                    f.set_result(ch)
+                finally:
+                    _termios.tcsetattr(fd, _termios.TCSADRAIN, old_settings)
+            else:
+                line = input()
+                f.set_result(line)
         except EOFError:
             f.set_result(None)
 

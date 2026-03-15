@@ -1924,10 +1924,10 @@ public final class Core {
      */
     public static void waitUntilTasksComplete() {
         ForkJoinPool commonPool = ForkJoinPool.commonPool();
-        // This timeout is sufficient for functional tests.
-        // If a long running main method needs more time, it should
-        // negotiate promises for termination with the tasks it spawns.
-        commonPool.awaitQuiescence(10L, TimeUnit.SECONDS);
+        // Wait until the pool is truly idle (all tasks complete).
+        while (!commonPool.isQuiescent()) {
+            commonPool.awaitQuiescence(60L, TimeUnit.SECONDS);
+        }
     }
 
     // std/io support
@@ -1951,11 +1951,24 @@ public final class Core {
         java.util.concurrent.CompletableFuture<String> future = new java.util.concurrent.CompletableFuture<>();
         ForkJoinPool.commonPool().execute(() -> {
             try {
-                java.io.BufferedReader reader = new java.io.BufferedReader(
-                    new java.io.InputStreamReader(System.in));
-                String line = reader.readLine();
-                future.complete(line);
-            } catch (java.io.IOException e) {
+                if (System.console() != null) {
+                    // TTY: use stty raw mode for single keypress
+                    String[] cmd = {"/bin/sh", "-c", "stty raw -echo </dev/tty"};
+                    Runtime.getRuntime().exec(cmd).waitFor();
+                    int ch = System.in.read();
+                    String[] restore = {"/bin/sh", "-c", "stty sane </dev/tty"};
+                    Runtime.getRuntime().exec(restore).waitFor();
+                    if (ch == 3) { // Ctrl+C
+                        System.exit(1);
+                    }
+                    future.complete(String.valueOf((char) ch));
+                } else {
+                    java.io.BufferedReader reader = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(System.in));
+                    String line = reader.readLine();
+                    future.complete(line);
+                }
+            } catch (Exception e) {
                 future.complete(null);
             }
         });

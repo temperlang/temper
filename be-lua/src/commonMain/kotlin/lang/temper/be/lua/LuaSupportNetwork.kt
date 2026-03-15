@@ -99,7 +99,7 @@ internal fun operatorToName(
     BuiltinOperatorId.Print -> "print"
     BuiltinOperatorId.StrCat -> "concat"
     BuiltinOperatorId.Listify -> "listof"
-    BuiltinOperatorId.Async -> "TODO" // TODO
+    BuiltinOperatorId.Async -> "async_launch"
     // should not be used with CoroutineStrategy.TranslateToGenerator
     BuiltinOperatorId.AdaptGeneratorFn,
     BuiltinOperatorId.SafeAdaptGeneratorFn,
