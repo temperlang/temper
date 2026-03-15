@@ -59,11 +59,11 @@ object Cpp11Specifics : RunnerSpecifics {
         code: OutDir,
         dependencies: Dependencies<*>,
     ): List<ToolchainResult> {
-        TODO("Run best effort C++")
+        return runCpp11(cliEnv, dependencies, request)
     }
 
     override val tools: List<ToolSpecifics>
-        get() = listOf()
+        get() = listOf(GppCommand, ShCommand)
     override val backendId: BackendId
         get() = CppLang.Cpp11.id
 }

@@ -27,14 +27,16 @@ val cppKeywords = setOf(
     "void", "volatile", "wchar_t", "while", "xor", "xor_eq",
 )
 
-class CppName(val text: String, allowKey: Boolean = false) {
+class CppName(val text: String, allowKey: Boolean = false, raw: Boolean = false) {
     init {
-        require(text.matches(asciiNameRegex)) {
-            "not valid c++ name: `$text`"
-        }
-        if (!allowKey) {
-            require(!text.matches(reservedRegex))
-            require(!cppKeywords.contains(text))
+        if (!raw) {
+            require(text.matches(asciiNameRegex)) {
+                "not valid c++ name: `$text`"
+            }
+            if (!allowKey) {
+                require(!text.matches(reservedRegex))
+                require(!cppKeywords.contains(text))
+            }
         }
     }
 

@@ -9,4 +9,7 @@ abstract class CppMetadataKey<VALUE> : MetadataKey<CppBackend, VALUE>() {
         get() = CppBackend.Cpp11.backendId
 
     data object MainFilePath : CppMetadataKey<FilePath>()
+
+    /** Cross-module include paths (e.g., "std/testing.hpp") needed by this library. */
+    data object RequiredIncludes : CppMetadataKey<Set<String>>()
 }

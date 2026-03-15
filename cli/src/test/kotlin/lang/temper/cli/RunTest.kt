@@ -7,6 +7,7 @@ import lang.temper.be.java.JavaBackend
 import lang.temper.be.js.JsBackend
 import lang.temper.be.lua.LuaBackend
 import lang.temper.be.py.PyBackend
+import lang.temper.be.cpp.CppBackend
 import lang.temper.common.Console
 import lang.temper.common.Log
 import lang.temper.frontend.staging.ModuleConfig

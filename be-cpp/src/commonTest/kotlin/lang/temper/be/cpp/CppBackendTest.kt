@@ -23,34 +23,36 @@ class CppBackendTest {
                 |#include <my-test-library/something.hpp>
                 |namespace temper {
                 |  namespace my_test_library {
-                |    temper::core::Object<temper::core::Console> console_0 = temper::core::get_console();
+                |    static temper::core::Object<temper::core::Console> console_0 = temper::core::get_console();
                 |    temper::core::Object<temper::core::Void> greet(temper::core::Object<temper::core::String> name__0) {
                 |      temper::core::log(console_0, "Hi:");
                 |      temper::core::log(console_0, name__0);
                 |      return;
                 |    }
-                |    temper::core::Void tmp_1() {
-                |      greet("world");
-                |    }
-                |    temper::core::Object<temper::core::Int> x__0 = 3;
-                |    temper::core::Void tmp_2() {
-                |      greet(temper::core::cat("world ", temper::core::toString(3)));
-                |    }
+                |    struct Init_1 {
+                |      Init_1() {
+                |        greet("world");
+                |      }
+                |    };
+                |    Init_1 init_instance_2;
+                |    static temper::core::Object<temper::core::Int> x__0 = 3;
+                |    struct Init_3 {
+                |      Init_3() {
+                |        greet(temper::core::cat("world ", temper::core::toString(3)));
+                |      }
+                |    };
+                |    Init_3 init_instance_4;
                 |  }
                 |}
                 |
             """,
             hpp = """
-                |#if ! defined(TEMPER_HEADER_GUARD_3)
-                |#define TEMPER_HEADER_GUARD_3
+                |#if ! defined(TEMPER_HEADER_GUARD_5)
+                |#define TEMPER_HEADER_GUARD_5
                 |#include <temper-core/core.hpp>
                 |namespace temper {
                 |  namespace my_test_library {
                 |    temper::core::Object<temper::core::Void> greet(temper::core::Object<temper::core::String>);
-                |    extern temper::core::Object<temper::core::Console> console_0;
-                |    extern temper::core::Object<temper::core::Int> x__0;
-                |    temper::core::Void tmp_1();
-                |    temper::core::Void tmp_2();
                 |  }
                 |}
                 |#endif
@@ -88,6 +90,8 @@ private fun assertGenerated(
             |            },
             |            "something.cpp.map": "__DO_NOT_CARE__",
             |            "something.hpp.map": "__DO_NOT_CARE__",
+            |            "main.cpp": "__DO_NOT_CARE__",
+            |            "dep-sources.txt": "__DO_NOT_CARE__",
             |        }
             |    }
             |}

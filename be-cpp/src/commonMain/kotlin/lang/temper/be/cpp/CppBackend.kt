@@ -39,13 +39,18 @@ class CppBackend private constructor(
     override fun translate(finished: TmpL.ModuleSet): List<OutputFileSpecification> {
         val cppLibraryName = libraryConfigurations.currentLibraryConfiguration.libraryName.text
 
+        val allTestInfos = mutableListOf<Pair<String, String>>()
+        val allIncludes = mutableSetOf<String>()
         val translations = finished.modules.flatMap { mod ->
             val translator = CppTranslator(
                 cppNames,
                 cppLibraryName = cppLibraryName,
                 dependenciesBuilder = dependenciesBuilder,
             )
-            translator.translateModule(mod)
+            val result = translator.translateModule(mod)
+            allTestInfos.addAll(translator.testInfos)
+            allIncludes.addAll(translator.includes)
+            result
         }
 
         val initPath = filePath(INIT_NAME)
@@ -56,13 +61,124 @@ class CppBackend private constructor(
             FilePath(listOf(FilePathSegment(cppLibraryName)), isDir = true) + initPath,
         )
 
-        return translations
+        dependenciesBuilder.addMetadata(
+            libraryConfigurations.currentLibraryConfiguration.libraryName,
+            CppMetadataKey.RequiredIncludes,
+            allIncludes.toSet(),
+        )
+
+        // Compute the C++ namespace for the std library's Test type
+        val testNs = cppNames.library("std").text.let { base ->
+            val safe = if (base == "std" || base == "chrono" || base == "filesystem") "temper_$base" else base
+            "temper::$safe"
+        }
+
+        val mainContent = if (allTestInfos.isNotEmpty()) {
+            buildString {
+                appendLine("#include <fstream>")
+                appendLine("#include <sstream>")
+                appendLine("#include <string>")
+                appendLine("#include <vector>")
+                appendLine("""#include "$cppLibraryName/init.hpp"""")
+                appendLine("""#include "std/testing.hpp"""")
+                appendLine("int main() {")
+                appendLine("  struct TestResult {")
+                appendLine("    std::string name;")
+                appendLine("    bool passed;")
+                appendLine("    std::string messages;")
+                appendLine("  };")
+                appendLine("  std::vector<TestResult> results;")
+                for ((funcName, rawName) in allTestInfos) {
+                    val escapedName = rawName
+                        .replace("\\", "\\\\")
+                        .replace("\"", "\\\"")
+                    appendLine("  {")
+                    appendLine("    auto t = $testNs::Test::make();")
+                    appendLine("    try { $funcName(t); } catch (...) {}")
+                    appendLine("    auto mc = t->messagesCombined();")
+                    appendLine(
+                        "    results.push_back({\"$escapedName\"," +
+                            " (bool)t->get_passing()," +
+                            " temper::core::is_null(mc)" +
+                            " ? \"\" : (std::string)mc});",
+                    )
+                    appendLine("  }")
+                }
+                appendLine("  int failures = 0;")
+                appendLine(
+                    "  for (auto& r : results)" +
+                        " if (!r.passed) failures++;",
+                )
+                appendLine("  std::ostringstream xml;")
+                appendLine(
+                    "  xml << \"<?xml version=\\\"1.0\\\" encoding=\\\"UTF-8\\\"?>\\n\"" +
+                        " << \"<testsuites>\\n\"" +
+                        " << \"  <testsuite name=\\\"suite\\\"" +
+                        " tests=\\\"\" << results.size()" +
+                        " << \"\\\" failures=\\\"\"" +
+                        " << failures << \"\\\" time=\\\"0\\\">\\n\";",
+                )
+                appendLine("  for (auto& r : results) {")
+                appendLine(
+                    "    xml << \"    <testcase name=\\\"\"" +
+                        " << r.name << \"\\\" classname=\\\"\"" +
+                        " << r.name << \"\\\" time=\\\"0\\\">\\n\";",
+                )
+                appendLine("    if (!r.passed) {")
+                appendLine(
+                    "      xml << \"      <failure message=\\\"\"" +
+                        " << r.messages" +
+                        " << \"\\\"><![CDATA[\" << r.messages" +
+                        " << \"]]></failure>\\n\";",
+                )
+                appendLine("    }")
+                appendLine(
+                    "    xml << \"    </testcase>\\n\";",
+                )
+                appendLine("  }")
+                appendLine(
+                    "  xml << \"  </testsuite>\\n\"" +
+                        " << \"</testsuites>\\n\";",
+                )
+                appendLine("""  std::ofstream out("test-results.xml");""")
+                appendLine("  if (out.is_open()) {")
+                appendLine("    out << xml.str();")
+                appendLine("    out.close();")
+                appendLine("  }")
+                appendLine("  return 0;")
+                append("}")
+            }
+        } else {
+            "int main() {}"
+        }
+
+        // Generate list of dependency .cpp source files needed for compilation.
+        // Exclude same-library modules — they're already compiled as part of this library.
+        val sameLibPrefix = "$cppLibraryName/"
+        val depSourcesContent = allIncludes
+            .filterNot { it.startsWith(sameLibPrefix) }
+            .map { it.replace(HPP_EXT, CPP_EXT) }
+            .sorted()
+            .joinToString("\n")
+
+        return translations + listOf(
+            MetadataFileSpecification(
+                path = filePath("main.cpp"),
+                mimeType = MimeType.cppSource,
+                content = mainContent,
+            ),
+            MetadataFileSpecification(
+                path = filePath("dep-sources.txt"),
+                mimeType = null,
+                content = depSourcesContent,
+            ),
+        )
     }
 
     override val supportNetwork: SupportNetwork = CppSupportNetwork
 
     @PluginBackendId("cpp")
-    @BackendSupportLevel(isTested = true)
+    @BackendSupportLevel(isSupported = true, isDefaultSupported = true, isTested = true)
     data object Cpp11 : CppFactory(CppLang.Cpp11)
 
     sealed class CppFactory(val lang: CppLang) : Factory<CppBackend> {
