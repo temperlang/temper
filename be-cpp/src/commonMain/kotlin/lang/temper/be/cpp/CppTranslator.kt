@@ -68,6 +68,9 @@ class CppTranslator(
     // Test info collected during translation: (C++ function name, raw test display name)
     val testInfos = mutableListOf<Pair<String, String>>()
 
+    // Module init function name (set during translation, used by CppBackend)
+    var moduleInitFuncName: String? = null
+
     // Track names of local variables that have void type (can't be declared in C++)
     private val voidVarNames = mutableSetOf<String>()
 
@@ -1597,6 +1600,24 @@ class CppTranslator(
                     tl.typeParameters.ot.typeParameters.isNotEmpty()
             }
 
+            // Check if module has init blocks — if it does, we must keep
+            // inline variable initializers to preserve interleaving with
+            // init blocks. If not, we can safely defer variable inits to
+            // the init function for cross-TU dependency ordering.
+            val hasInitBlocks = mod.topLevels.any { it is TmpL.ModuleInitBlock }
+
+            // Deferred variable initializations — only used when module
+            // has no init blocks, added to init function body so that
+            // cross-TU dependency ordering is guaranteed.
+            val deferredInitStmts = mutableListOf<Cpp.Stmt>()
+
+            // Compute sanitized module name for the init function.
+            val moduleBaseName = when {
+                path.segments.isNotEmpty() -> path.segments.last().baseName
+                else -> INIT_NAME
+            }
+            val sanitizedModuleName = moduleBaseName.replace(Regex("[^a-zA-Z0-9_]"), "_")
+
             mod.topLevels.forEach { topLevel ->
                 cpp.pos(topLevel) {
                     when (topLevel) {
@@ -1605,6 +1626,8 @@ class CppTranslator(
                             // Use C++ struct-initialization pattern:
                             // A struct with a constructor that runs the init code,
                             // and a global instance that triggers construction.
+                            // Each struct constructor is its own stack frame,
+                            // preventing use-after-free with [&] lambda captures.
                             val initName = cpp.tmp("Init")
                             val instanceName = cpp.tmp("init_instance")
                             val structDef = cpp.structDef(
@@ -1767,11 +1790,32 @@ class CppTranslator(
                                     } else {
                                         translateExpressionOrNull(initExpr)
                                     }
-                                    if (isExported || hasTemplateFunctions) {
+                                    if (!hasInitBlocks && translatedInit != null) {
+                                        // No init blocks: safe to defer variable
+                                        // initialization to the init function for
+                                        // guaranteed cross-TU ordering.
+                                        if (isExported || hasTemplateFunctions) {
+                                            headerDecl.add(cpp.varDecl(type, name))
+                                            impl.add(cpp.varDef(type, name, null))
+                                        } else {
+                                            impl.add(
+                                                cpp.varDef(
+                                                    Cpp.DefMod.Static, type, name, null,
+                                                ),
+                                            )
+                                        }
+                                        deferredInitStmts.add(
+                                            cpp.exprStmt(
+                                                cpp.binaryExpr(
+                                                    cpp.literal(cpp.raw(name.id.text)),
+                                                    cpp.binaryOp("="),
+                                                    translatedInit,
+                                                ),
+                                            ),
+                                        )
+                                    } else if (isExported || hasTemplateFunctions) {
                                         // Exported or module has template functions:
                                         // extern declaration in header, definition in cpp.
-                                        // Template functions in the header need to see
-                                        // module-level variables.
                                         headerDecl.add(cpp.varDecl(type, name))
                                         impl.add(
                                             cpp.varDef(type, name, translatedInit),
@@ -2825,6 +2869,112 @@ class CppTranslator(
                         }
                     }
                 }
+            }
+
+            // Generate module init function with dependency init calls
+            // and deferred variable initializations.
+            val initFuncName = cpp.singleName(CppName("temper_init_$sanitizedModuleName"))
+            moduleInitFuncName = initFuncName.id.text
+
+            val bodyStmts = mutableListOf<Cpp.Stmt>()
+            // static bool guard — prevent double initialization
+            bodyStmts.add(cpp.exprStmt(cpp.literal(cpp.raw(
+                "static bool initialized = false",
+            ))))
+            bodyStmts.add(cpp.ifStmt(
+                cpp.literal(cpp.raw("initialized")),
+                cpp.returnStmt(null),
+            ))
+            bodyStmts.add(cpp.exprStmt(cpp.binaryExpr(
+                cpp.literal(cpp.raw("initialized")),
+                cpp.binaryOp("="),
+                cpp.literal(cpp.raw("true")),
+            )))
+            // Call dependency modules' init functions using fully qualified names.
+            val depInitCalls = mutableSetOf<String>()
+            for ((_, info) in importedNames) {
+                val depModName = info.sourceModule
+                val libNs = cpp.nameTextForModule(depModName)
+                val depRelPath = depModName.relativePath()
+                val depBaseName = when {
+                    depRelPath.segments.isEmpty() -> INIT_NAME
+                    else -> depRelPath.segments.last().baseName
+                }
+                val sanitizedDep = depBaseName.replace(Regex("[^a-zA-Z0-9_]"), "_")
+                depInitCalls.add("temper::${libNs}::temper_init_$sanitizedDep")
+            }
+            for (call in depInitCalls.sorted()) {
+                bodyStmts.add(
+                    cpp.exprStmt(
+                        cpp.callExpr(
+                            cpp.literal(cpp.raw(call)),
+                            listOf(),
+                        ),
+                    ),
+                )
+            }
+            // Add deferred variable initializations (for modules without init blocks)
+            bodyStmts.addAll(deferredInitStmts)
+
+            val voidType = cpp.type("void")
+            // Declaration in header
+            headerInit.add(
+                cpp.funcDecl(
+                    mod = null,
+                    ret = voidType,
+                    name = initFuncName,
+                    args = listOf(),
+                ),
+            )
+            // Definition in cpp — placed at the beginning so the
+            // dependency-trigger struct constructor can call it.
+            val initFuncDef = cpp.funcDef(
+                ret = voidType,
+                name = initFuncName,
+                args = listOf(),
+                body = cpp.blockStmt(bodyStmts),
+            )
+            // Insert init function definition and a struct that calls it at the
+            // very beginning of impl. This ensures dependency modules are
+            // initialized before any of this TU's static initializers run.
+            val depTriggerName = cpp.tmp("DepInit")
+            val depTriggerInstanceName = cpp.tmp("dep_init_instance")
+            val depTriggerStruct = cpp.structDef(
+                depTriggerName,
+                listOf(
+                    cpp.funcDef(
+                        ret = null,
+                        name = depTriggerName,
+                        args = listOf(),
+                        body = cpp.blockStmt(listOf(
+                            cpp.exprStmt(
+                                cpp.callExpr(
+                                    cpp.literal(cpp.raw(initFuncName.id.text)),
+                                    listOf(),
+                                ),
+                            ),
+                        )),
+                    ),
+                ),
+            )
+            val depTriggerVar = cpp.varDef(depTriggerName, depTriggerInstanceName)
+            if (hasInitBlocks) {
+                // Module has init blocks using struct constructors and
+                // inline variable initializers. Put init function + trigger
+                // at the beginning so dependencies are resolved before any
+                // static initializer in this TU.
+                impl.add(0, depTriggerVar)
+                impl.add(0, depTriggerStruct)
+                impl.add(0, initFuncDef)
+            } else {
+                // Module has no init blocks — variable inits are deferred
+                // to the init function. Put init function at the end (after
+                // variable declarations) so it can reference them.
+                // DepInit trigger at the beginning ensures the init function
+                // runs during static init before any code from this TU.
+                impl.add(0, depTriggerVar)
+                impl.add(0, depTriggerStruct)
+                impl.add(initFuncDef)
             }
 
             val modPath = mod.codeLocation.outputPath

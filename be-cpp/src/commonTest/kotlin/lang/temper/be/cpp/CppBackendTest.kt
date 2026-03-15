@@ -23,6 +23,17 @@ class CppBackendTest {
                 |#include <my-test-library/something.hpp>
                 |namespace temper {
                 |  namespace my_test_library {
+                |    void temper_init_something() {
+                |      static bool initialized = false;
+                |      if(initialized)return;
+                |      initialized = true;
+                |    }
+                |    struct DepInit_5 {
+                |      DepInit_5() {
+                |        temper_init_something();
+                |      }
+                |    };
+                |    DepInit_5 dep_init_instance_6;
                 |    static temper::core::Object<temper::core::Console> console_0 = temper::core::get_console();
                 |    temper::core::Object<temper::core::Void> greet(temper::core::Object<temper::core::String> name__0) {
                 |      temper::core::log(console_0, "Hi:");
@@ -47,12 +58,13 @@ class CppBackendTest {
                 |
             """,
             hpp = """
-                |#if ! defined(TEMPER_HEADER_GUARD_5)
-                |#define TEMPER_HEADER_GUARD_5
+                |#if ! defined(TEMPER_HEADER_GUARD_7)
+                |#define TEMPER_HEADER_GUARD_7
                 |#include <temper-core/core.hpp>
                 |namespace temper {
                 |  namespace my_test_library {
                 |    temper::core::Object<temper::core::Void> greet(temper::core::Object<temper::core::String>);
+                |    void temper_init_something();
                 |  }
                 |}
                 |#endif

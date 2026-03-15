@@ -14,6 +14,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <regex>
 #include <vector>
 
 namespace temper {
@@ -477,11 +478,20 @@ namespace temper {
             Boolean ge(T a, T b) { return a >= b; }
             template<class T>
             Boolean eq(T a, T b) { return a == b; }
+            // Overload for mixed shared_ptr comparisons (polymorphic types)
+            template<class A, class B>
+            Boolean eq(std::shared_ptr<A> a, std::shared_ptr<B> b) {
+                return static_cast<void*>(a.get()) == static_cast<void*>(b.get());
+            }
             // Overload for mixed string/const char* comparisons
             inline Boolean eq(String a, const char* b) { return a == b; }
             inline Boolean eq(const char* a, String b) { return a == b; }
             template<class T>
             Boolean ne(T a, T b) { return a != b; }
+            template<class A, class B>
+            Boolean ne(std::shared_ptr<A> a, std::shared_ptr<B> b) {
+                return static_cast<void*>(a.get()) != static_cast<void*>(b.get());
+            }
             inline Boolean ne(String a, const char* b) { return a != b; }
             inline Boolean ne(const char* a, String b) { return a != b; }
             template<class T>
@@ -1482,6 +1492,179 @@ namespace temper {
                 auto now = std::time(nullptr);
                 auto tm = *std::localtime(&now);
                 return make_date<D>(tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+            }
+
+            // ==================== REGEX ====================
+
+            // Holder for a compiled std::regex stored as AnyValue
+            struct CompiledRegex : AnyValueBase {
+                std::regex re;
+                CompiledRegex(std::regex r) : re(std::move(r)) {}
+            };
+
+            // compileFormatted: compile a formatted regex pattern string
+            template<class T>
+            AnyValue compileFormatted(std::shared_ptr<T>, String formatted) {
+                try {
+                    return std::make_shared<CompiledRegex>(
+                        std::regex(formatted, std::regex::ECMAScript)
+                    );
+                } catch (const std::regex_error&) {
+                    return std::make_shared<CompiledRegex>(
+                        std::regex("(?!)", std::regex::ECMAScript)
+                    );
+                }
+            }
+
+            // compiledFound: check if regex matches anywhere in text
+            template<class T>
+            Boolean compiledFound(std::shared_ptr<T>, AnyValue compiled, String text) {
+                auto cr = std::dynamic_pointer_cast<CompiledRegex>(compiled);
+                if (!cr) return false;
+                return std::regex_search(text, cr->re);
+            }
+
+            // Helper: build a Match object from std::smatch
+            template<class T, class RegexRefsT>
+            auto compiledFindImpl(
+                std::shared_ptr<T>,
+                AnyValue compiled,
+                String text,
+                StringIndex beginIdx,
+                std::shared_ptr<RegexRefsT> regexRefs
+            ) -> std::pair<bool, decltype(regexRefs->get_match())> {
+                auto cr = std::dynamic_pointer_cast<CompiledRegex>(compiled);
+                typedef decltype(regexRefs->get_match()) MatchType;
+                if (!cr) return std::make_pair(false, MatchType());
+
+                std::smatch sm;
+                String searchStr = text.substr(beginIdx);
+                if (!std::regex_search(searchStr, sm, cr->re)) {
+                    return std::make_pair(false, MatchType());
+                }
+
+                StringIndex matchBegin = static_cast<StringIndex>(
+                    sm.position(0) + beginIdx);
+                StringIndex matchEnd = static_cast<StringIndex>(
+                    matchBegin + static_cast<StringIndex>(sm.length(0)));
+                String fullValue = sm.str(0);
+
+                typedef typename std::remove_reference<decltype(*regexRefs->get_group())>::type GroupT;
+                auto fullGroup = GroupT::make(
+                    String("full"), fullValue, matchBegin, matchEnd);
+
+                auto groups = MapNs::make<String, decltype(fullGroup)>();
+
+                typedef typename std::remove_reference<decltype(*regexRefs->get_match())>::type MatchT;
+                auto match = MatchT::make(fullGroup, groups);
+                return std::make_pair(true, match);
+            }
+
+            // compiledFind: find first match, bubble if not found
+            template<class T, class RegexRefsT>
+            auto compiledFind(
+                std::shared_ptr<T> self,
+                AnyValue compiled,
+                String text,
+                StringIndex beginIdx,
+                std::shared_ptr<RegexRefsT> regexRefs
+            ) -> decltype(compiledFindImpl(self, compiled, text, beginIdx, regexRefs).second) {
+                auto result = compiledFindImpl(self, compiled, text, beginIdx, regexRefs);
+                if (!result.first) {
+                    throw std::runtime_error("bubble");
+                }
+                return result.second;
+            }
+
+            // compiledReplace: replace all matches using format function
+            template<class T, class FormatFn, class RegexRefsT>
+            String compiledReplace(
+                std::shared_ptr<T> self,
+                AnyValue compiled,
+                String text,
+                FormatFn formatFn,
+                std::shared_ptr<RegexRefsT> regexRefs
+            ) {
+                auto cr = std::dynamic_pointer_cast<CompiledRegex>(compiled);
+                if (!cr) return text;
+
+                String result;
+                StringIndex begin = 0;
+                StringIndex keepBegin = 0;
+                StringIndex textLen = static_cast<StringIndex>(text.size());
+
+                while (begin <= textLen) {
+                    auto found = compiledFindImpl(self, compiled, text, begin, regexRefs);
+                    if (!found.first) {
+                        if (result.empty()) return text;
+                        result += text.substr(keepBegin);
+                        break;
+                    }
+                    auto match = found.second;
+                    auto fullGroup = match->get_full();
+                    StringIndex mBegin = fullGroup->get_begin();
+                    StringIndex mEnd = fullGroup->get_end();
+
+                    result += text.substr(keepBegin, mBegin - keepBegin);
+                    result += formatFn(match);
+                    keepBegin = mEnd;
+                    begin = std::max(mEnd, begin + 1);
+                }
+                return result;
+            }
+
+            // compiledSplit: split text by regex
+            template<class T, class RegexRefsT>
+            Object<List<String>> compiledSplit(
+                std::shared_ptr<T> self,
+                AnyValue compiled,
+                String text,
+                std::shared_ptr<RegexRefsT> regexRefs
+            ) {
+                auto cr = std::dynamic_pointer_cast<CompiledRegex>(compiled);
+                if (!cr) return ListNs::make<String>(text);
+
+                auto parts = std::make_shared<std::vector<String>>();
+                StringIndex begin = 0;
+                StringIndex textLen = static_cast<StringIndex>(text.size());
+
+                while (begin <= textLen) {
+                    auto found = compiledFindImpl(self, compiled, text, begin, regexRefs);
+                    if (!found.first) {
+                        parts->push_back(text.substr(begin));
+                        break;
+                    }
+                    auto match = found.second;
+                    auto fullGroup = match->get_full();
+                    StringIndex mBegin = fullGroup->get_begin();
+                    StringIndex mEnd = fullGroup->get_end();
+
+                    parts->push_back(text.substr(begin, mBegin - begin));
+                    if (mEnd == begin) {
+                        if (begin < textLen) {
+                            parts->push_back(text.substr(begin, 1));
+                        }
+                        begin = begin + 1;
+                    } else {
+                        begin = mEnd;
+                    }
+                }
+                return parts;
+            }
+
+            // pushCaptureName: append named capture group syntax
+            template<class T>
+            void pushCaptureName(std::shared_ptr<T>, std::shared_ptr<StringBuilder> out, String name) {
+                append(out, "?<" + name + ">");
+            }
+
+            // pushCodeTo: append unicode escape for a code point
+            template<class T>
+            void pushCodeTo(std::shared_ptr<T>, std::shared_ptr<StringBuilder> out, Int code, Boolean insideCodeSet) {
+                (void)insideCodeSet;
+                std::ostringstream oss;
+                oss << "\\x{" << std::hex << code << "}";
+                append(out, oss.str());
             }
 
             // ==================== TEMPER_VOID ====================

@@ -350,8 +350,6 @@ internal object CppSupportNetwork : SupportNetwork {
         "RegexFormatter::pushCodeTo" -> Like.core("pushCodeTo")
         "Test::bail" -> Like.core("testBail")
         "Generator::next", "SafeGenerator::next" -> Like.core("next")
-
-        "Regex::format" -> Like.core("format")
         else -> null
     }
 

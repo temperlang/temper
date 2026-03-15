@@ -40,6 +40,7 @@ class CppBackend private constructor(
         val cppLibraryName = libraryConfigurations.currentLibraryConfiguration.libraryName.text
 
         val allTestInfos = mutableListOf<Pair<String, String>>()
+        val allInitFuncs = mutableListOf<String>()
         val translations = finished.modules.flatMap { mod ->
             val translator = CppTranslator(
                 cppNames,
@@ -48,6 +49,12 @@ class CppBackend private constructor(
             )
             val result = translator.translateModule(mod)
             allTestInfos.addAll(translator.testInfos)
+            translator.moduleInitFuncName?.let { name ->
+                val libNs = cppNames.library(cppLibraryName).text.let { base ->
+                    if (base == "std" || base == "chrono" || base == "filesystem") "temper_$base" else base
+                }
+                allInitFuncs.add("temper::${libNs}::$name")
+            }
             result
         }
 
@@ -74,6 +81,11 @@ class CppBackend private constructor(
                 appendLine("""#include "$cppLibraryName/init.hpp"""")
                 appendLine("""#include "std/testing.hpp"""")
                 appendLine("int main() {")
+                // Call module init functions in order (each has a
+                // static guard so dependency order is handled).
+                for (initFunc in allInitFuncs) {
+                    appendLine("  ${initFunc}();")
+                }
                 appendLine("  struct TestResult {")
                 appendLine("    std::string name;")
                 appendLine("    bool passed;")
@@ -141,7 +153,18 @@ class CppBackend private constructor(
                 append("}")
             }
         } else {
-            "int main() {}"
+            if (allInitFuncs.isNotEmpty()) {
+                buildString {
+                    appendLine("""#include "$cppLibraryName/init.hpp"""")
+                    appendLine("int main() {")
+                    for (initFunc in allInitFuncs) {
+                        appendLine("  ${initFunc}();")
+                    }
+                    append("}")
+                }
+            } else {
+                "int main() {}"
+            }
         }
 
         return translations + listOf(
