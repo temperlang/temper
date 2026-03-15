@@ -960,25 +960,39 @@ function temper.shl64(a, b)
 end
 function temper.shr32(a, b)
     b = b % 32
-    local x = temper_bit.arshift(a, b)
+    local x = temper_bit.band(
+        temper_bit.arshift(a, b),
+        0xFFFFFFFF
+    )
+    if x >= 0x80000000 then
+        x = x - 0x100000000
+    end
     return x
 end
 function temper.shr64(a, b)
     b = b % 64
     local x = temper_bit.arshift(a, b)
+    if (a < 0) then
+        local high_bits = temper_bit.bnot(temper_bit.arshift(-1, b))
+        x = temper_bit.bor(x, high_bits)
+    end
     return x
 end
 function temper.ushr32(a, b)
     b = b % 32
     if b == 0 then return a end
-    local x = temper_bit.rshift(a, b)
-    return x
+    return temper_bit.band(
+        temper_bit.rshift(a, b),
+        temper_bit.rshift(0x7FFFFFFF, b - 1)
+    )
 end
 function temper.ushr64(a, b)
     b = b % 64
     if b == 0 then return a end
-    local x = temper_bit.rshift(a, b)
-    return x
+    return temper_bit.band(
+        temper_bit.rshift(a, b),
+        temper_bit.rshift(0x7FFFFFFFFFFFFFFF, b - 1)
+    )
 end
 
 
