@@ -16,8 +16,16 @@ export function stdReadLine() {
     if (typeof process !== 'undefined' && process.stdin) {
       process.stdin.resume();
       process.stdin.setEncoding('utf8');
+      if (process.stdin.isTTY && process.stdin.setRawMode) {
+        process.stdin.setRawMode(true);
+      }
       process.stdin.once('data', data => {
-        resolve(data.toString().trim());
+        const str = data.toString();
+        // Ctrl+C in raw mode
+        if (str === '\x03') {
+          process.exit();
+        }
+        resolve(str.trim());
       });
     } else {
       resolve(null);

@@ -53,6 +53,7 @@ enum class FunctionalTests(val test: FunctionalTestBase) {
     ControlFlowAsync(markdown("control-flow/async/async.temper.md", "ControlFlowAsync")),
     ControlFlowBubble(markdown("control-flow/bubble/bubble.temper.md", "ControlFlowBubble")),
     ControlFlowIfReturn(markdown("control-flow/if-return/if-return.temper.md", "ControlFlowIfReturn")),
+    ControlFlowIoSleep(markdown("control-flow/io-sleep/io-sleep.temper.md", "ControlFlowIoSleep")),
     ControlFlowLoopReenterable(markdown("control-flow/loop-reenterable/loop-reenterable.temper.md", "ControlFlowLoopReenterable")),
     ControlFlowLoops(markdown("control-flow/loops/loops.temper.md", "ControlFlowLoops")),
     FunctionsAsValues(markdown("functions/as-values/as-values.temper.md", "FunctionsAsValues")),

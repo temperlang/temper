@@ -149,6 +149,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.ControlFlowIfReturn)
 
     @Test
+    fun controlFlowIoSleep() =
+        runFunctionalTest(Ft.ControlFlowIoSleep)
+
+    @Test
     fun controlFlowLoopReenterable() =
         runFunctionalTest(Ft.ControlFlowLoopReenterable)
 
