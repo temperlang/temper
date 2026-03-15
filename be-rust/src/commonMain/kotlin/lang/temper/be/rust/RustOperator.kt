@@ -22,8 +22,6 @@ enum class RustOperator(
     Remainder("%", RustOperatorDefinition.Multiplicative),
     Addition("+", RustOperatorDefinition.Additive),
     Subtraction("-", RustOperatorDefinition.Additive),
-    LeftShift("<<", RustOperatorDefinition.Shift),
-    RightShift(">>", RustOperatorDefinition.Shift),
     BoolComplement("!", RustOperatorDefinition.Prefix),
     BitComplement("!", RustOperatorDefinition.Prefix),
     Minus("-", RustOperatorDefinition.Prefix),

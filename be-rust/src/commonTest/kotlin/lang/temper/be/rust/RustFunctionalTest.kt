@@ -23,6 +23,11 @@ class RustFunctionalTest : FunctionalTestRunner<RustBackend>(RustBackend.Factory
         super.algosHelloWorld()
     }
 
+    @Test
+    override fun typesIntShifty() { // do not commit
+        super.typesIntShifty()
+    }
+
     override fun runGeneratedCode(
         backend: RustBackend,
         modules: List<Module>,
