@@ -115,30 +115,25 @@ pub fn std_ws_accept(server: &dyn WsServerTrait) -> Promise<WsConnection> {
     let server: SimpleWsServer = temper_core::cast(server.as_any_value()).expect("WsServer downcast");
     let pb = PromiseBuilder::new();
     let promise = pb.promise();
-    crate::run_async(Arc::new(move || {
-        let pb = pb.clone();
-        let server = server.clone();
-        SafeGenerator::from_fn(Arc::new(move |_generator: SafeGenerator<()>| {
-            let listener = server.0.listener.lock().unwrap();
-            match listener.accept() {
-                Ok((stream, _addr)) => {
-                    drop(listener);
-                    match ws_upgrade(stream) {
-                        Ok(ws) => {
-                            pb.complete(WsConnection::new(SimpleWsConnection(Arc::new(
-                                WsConnectionInner {
-                                    socket: Mutex::new(WsStream::Plain(ws)),
-                                },
-                            ))));
-                        }
-                        Err(_) => pb.break_promise(),
+    std::thread::spawn(move || {
+        let listener = server.0.listener.lock().unwrap();
+        match listener.accept() {
+            Ok((stream, _addr)) => {
+                drop(listener);
+                match ws_upgrade(stream) {
+                    Ok(ws) => {
+                        pb.complete(WsConnection::new(SimpleWsConnection(Arc::new(
+                            WsConnectionInner {
+                                socket: Mutex::new(WsStream::Plain(ws)),
+                            },
+                        ))));
                     }
+                    Err(_) => pb.break_promise(),
                 }
-                Err(_) => pb.break_promise(),
             }
-            None
-        }))
-    }));
+            Err(_) => pb.break_promise(),
+        }
+    });
     promise
 }
 
@@ -173,19 +168,13 @@ pub fn std_ws_send(conn: &dyn WsConnectionTrait, msg: impl temper_core::ToArcStr
     let msg = msg.to_arc_string();
     let pb = PromiseBuilder::new();
     let promise = pb.promise();
-    crate::run_async(Arc::new(move || {
-        let pb = pb.clone();
-        let conn = conn.clone();
-        let msg = msg.clone();
-        SafeGenerator::from_fn(Arc::new(move |_generator: SafeGenerator<()>| {
-            let mut socket = conn.0.socket.lock().unwrap();
-            match socket.send(Message::Text(msg.to_string().into())) {
-                Ok(_) => pb.complete(()),
-                Err(_) => pb.break_promise(),
-            }
-            None
-        }))
-    }));
+    std::thread::spawn(move || {
+        let mut socket = conn.0.socket.lock().unwrap();
+        match socket.send(Message::Text(msg.to_string().into())) {
+            Ok(_) => pb.complete(()),
+            Err(_) => pb.break_promise(),
+        }
+    });
     promise
 }
 
@@ -194,25 +183,29 @@ pub fn std_ws_recv(conn: &dyn WsConnectionTrait) -> Promise<Option<Arc<String>>>
     let conn: SimpleWsConnection = temper_core::cast(conn.as_any_value()).expect("WsConnection downcast");
     let pb = PromiseBuilder::new();
     let promise = pb.promise();
-    crate::run_async(Arc::new(move || {
-        let pb = pb.clone();
-        let conn = conn.clone();
-        SafeGenerator::from_fn(Arc::new(move |_generator: SafeGenerator<()>| {
-            let mut socket = conn.0.socket.lock().unwrap();
-            match socket.read() {
-                Ok(Message::Text(text)) => {
-                    pb.complete(Some(Arc::new(text.to_string())));
-                }
-                Ok(Message::Close(_)) | Err(_) => {
-                    pb.complete(None);
-                }
-                Ok(_) => {
-                    pb.complete(None);
-                }
+    // Spawn a dedicated thread instead of using run_async to avoid
+    // blocking the single-threaded task runner (which would prevent
+    // other async blocks like readLine from processing).
+    std::thread::spawn(move || {
+        let mut socket = conn.0.socket.lock().unwrap();
+        match socket.read() {
+            Ok(Message::Text(text)) => {
+                pb.complete(Some(Arc::new(text.to_string())));
             }
-            None
-        }))
-    }));
+            Ok(Message::Close(frame)) => {
+                eprintln!("[ws_recv] close frame: {:?}", frame);
+                pb.complete(None);
+            }
+            Ok(other) => {
+                eprintln!("[ws_recv] unexpected message type: {:?}", other);
+                pb.complete(None);
+            }
+            Err(e) => {
+                eprintln!("[ws_recv] error: {:?}", e);
+                pb.complete(None);
+            }
+        }
+    });
     promise
 }
 
