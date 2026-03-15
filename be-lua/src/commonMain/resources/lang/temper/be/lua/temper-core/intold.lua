@@ -30,6 +30,13 @@ if bitops == nil then
     function bitops.bnot(a)
         return bitops.bxor(a, -1)
     end
+    function bitops.lshift(a, b)
+        -- math.pow(2, 63) returns the right value, not -1
+        return math.trunc(a * math.pow(2, b))
+    end
+    function bitops.rshift(a, b)
+        return math.trunc(a / math.pow(2, b))
+    end
 
 end
 
