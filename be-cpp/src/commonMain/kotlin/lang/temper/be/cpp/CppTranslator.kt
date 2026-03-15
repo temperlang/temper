@@ -23,10 +23,13 @@ import lang.temper.type.Abstractness
 import lang.temper.type.PropertyShape
 import lang.temper.type.TypeDefinition
 import lang.temper.type.WellKnownTypes
+import lang.temper.type2.NullableType
+import lang.temper.type2.Nullity
 import lang.temper.type2.Type2
 import lang.temper.type2.TypeCategory
 import lang.temper.type2.sigForFunInterfaceType
 import lang.temper.type2.typeCategory
+import lang.temper.type2.withNullity
 import lang.temper.value.TBoolean
 import lang.temper.value.TFloat64
 import lang.temper.value.TInt
@@ -64,6 +67,12 @@ class CppTranslator(
 
     // Test info collected during translation: (C++ function name, raw test display name)
     val testInfos = mutableListOf<Pair<String, String>>()
+
+    // Track names of local variables that have void type (can't be declared in C++)
+    private val voidVarNames = mutableSetOf<String>()
+
+    // Current "this" variable name in member function bodies (for coercion on return)
+    private var currentThisVarName: String? = null
 
     // Maps TypeFormal definitions to their C++ template parameter names.
     // Populated before translating generic function/type bodies so that type
@@ -247,6 +256,12 @@ class CppTranslator(
 
     /** Translate a Type2 to a C++ type. Used by SupportNetwork inline code. */
     fun translateType2(type: Type2): Cpp.Type {
+        // Handle nullable types: wrap inner type with Nullable<>
+        if (type is NullableType && type.definition != WellKnownTypes.nullTypeDefinition) {
+            val nonNullType = type.withNullity(Nullity.NonNull)
+            val inner = translateType2(nonNullType)
+            return cpp.template(cpp.name(TEMPER_CORE_NAMESPACE, "Nullable"), inner)
+        }
         val def = type.definition
         // Handle functional interface types (Fn__NNN etc.)
         if (
@@ -276,6 +291,7 @@ class CppTranslator(
             def == WellKnownTypes.stringTypeDefinition -> cpp.name(TEMPER_CORE_NAMESPACE, "String")
             def == WellKnownTypes.voidTypeDefinition -> return cpp.name(TEMPER_CORE_NAMESPACE, "Void")
             def == WellKnownTypes.neverTypeDefinition -> return cpp.name(TEMPER_CORE_NAMESPACE, "Never")
+            def == WellKnownTypes.invalidTypeDefinition -> return cpp.name(TEMPER_CORE_NAMESPACE, "Invalid")
             def == WellKnownTypes.functionTypeDefinition && typeArgs.isNotEmpty() -> {
                 // Bindings order: [Param1, ..., ParamN, Return]
                 // C++ Function<Ret, Params...> expects return first
@@ -483,7 +499,7 @@ class CppTranslator(
                     base
                 }
             }
-            is TmpL.GarbageType -> TODO()
+            is TmpL.GarbageType -> cpp.name(TEMPER_CORE_NAMESPACE, "Never")
             is TmpL.NominalType -> {
                 // Check if this is a type formal (template parameter)
                 // If so, return without Object<> wrapping to enable
@@ -634,33 +650,12 @@ class CppTranslator(
                                 val isNullLiteral = actualExpr is TmpL.ValueReference &&
                                     actualExpr.value.typeTag == TNull
                                 if (isOptionalParam && optionalIdx < optionalTypes.size) {
+                                    val optType = optionalTypes[optionalIdx]
                                     if (isNullLiteral) {
-                                        cpp.callExpr(
-                                            cpp.template(
-                                                cpp.name(
-                                                    TEMPER_CORE_NAMESPACE,
-                                                    "NullableParam",
-                                                ),
-                                                listOf(
-                                                    translateType2(
-                                                        optionalTypes[optionalIdx],
-                                                    ),
-                                                ),
-                                            ),
-                                        )
+                                        wrapInNullableParamIfNeeded(optType)
                                     } else {
-                                        cpp.callExpr(
-                                            cpp.template(
-                                                cpp.name(
-                                                    TEMPER_CORE_NAMESPACE,
-                                                    "NullableParam",
-                                                ),
-                                                listOf(
-                                                    translateType2(
-                                                        optionalTypes[optionalIdx],
-                                                    ),
-                                                ),
-                                            ),
+                                        wrapInNullableParamIfNeeded(
+                                            optType,
                                             translateExpression(actualExpr),
                                         )
                                     }
@@ -750,43 +745,16 @@ class CppTranslator(
                                 isOptionalParam &&
                                 optionalIdx < optionalTypes.size
                             ) {
+                                val optType = optionalTypes[optionalIdx]
                                 if (isNullLiteral) {
                                     translatedArgs.add(
-                                        cpp.callExpr(
-                                            cpp.template(
-                                                cpp.name(
-                                                    TEMPER_CORE_NAMESPACE,
-                                                    "NullableParam",
-                                                ),
-                                                listOf(
-                                                    translateType2(
-                                                        optionalTypes[
-                                                            optionalIdx,
-                                                        ],
-                                                    ),
-                                                ),
-                                            ),
-                                        ),
+                                        wrapInNullableParamIfNeeded(optType),
                                     )
                                 } else {
                                     translatedArgs.add(
-                                        cpp.callExpr(
-                                            cpp.template(
-                                                cpp.name(
-                                                    TEMPER_CORE_NAMESPACE,
-                                                    "NullableParam",
-                                                ),
-                                                listOf(
-                                                    translateType2(
-                                                        optionalTypes[
-                                                            optionalIdx,
-                                                        ],
-                                                    ),
-                                                ),
-                                            ),
-                                            translateExpression(
-                                                actualExpr,
-                                            ),
+                                        wrapInNullableParamIfNeeded(
+                                            optType,
+                                            translateExpression(actualExpr),
                                         ),
                                     )
                                 }
@@ -857,6 +825,16 @@ class CppTranslator(
                     // Call the getter method: subject->getter()
                     cpp.callExpr(
                         cpp.op("->", translateExpression(expr.subject), getterName),
+                        listOf(),
+                    )
+                } else if (expr.property is TmpL.ExternalPropertyId) {
+                    // External property from another module — getter is not in our map.
+                    // Infer getter name using the same convention: get_<propName>
+                    val inferredGetterName = cpp.singleName(
+                        CppName(fixName("get_$propDotName")),
+                    )
+                    cpp.callExpr(
+                        cpp.op("->", translateExpression(expr.subject), inferredGetterName),
                         listOf(),
                     )
                 } else {
@@ -961,17 +939,10 @@ class CppTranslator(
                     }
                     TString -> cpp.literal(TString.unpack(value))
                     TNull -> {
-                        // Use 0 which converts to nullptr for
-                        // shared_ptr. For value types, 0 converts to
-                        // the default (0/false). For NullableParam,
-                        // special handling at call sites wraps this.
-                        val def = expr.type.definition
-                        when (def) {
-                            WellKnownTypes.stringTypeDefinition ->
-                                cpp.literal(cpp.raw("\"\""))
-                            else ->
-                                cpp.literal(cpp.raw("0"))
-                        }
+                        // nullptr converts to: shared_ptr nullptr,
+                        // NullableParam has_value=false (for value types).
+                        // C++ runtime functions with optional params use NullableParam.
+                        cpp.literal(cpp.raw("nullptr"))
                     }
                     TProblem -> cpp.literal(cpp.raw("/* error value */ 0"))
                     else -> {
@@ -999,7 +970,9 @@ class CppTranslator(
             is TmpL.Assignment -> {
                 // Skip assignments to imported names (they alias the external)
                 val leftKey = cpp.name(stmt.left).id.text
-                if (leftKey in importedNames) {
+                val isRhsVoid = stmt.right is TmpL.Expression &&
+                    (stmt.right as TmpL.Expression).type.definition == WellKnownTypes.voidTypeDefinition
+                if (leftKey in importedNames || leftKey in voidVarNames || isRhsVoid) {
                     emptyList()
                 } else {
                     val right = stmt.right
@@ -1087,41 +1060,53 @@ class CppTranslator(
             is TmpL.LocalDeclaration -> {
                 val initExpr = stmt.init
                 val innerType = stmt.type.privOtOrNull
-                val translatedInit = if (
-                    initExpr != null &&
-                    innerType != null &&
-                    isTypeMismatch(innerType, initExpr)
-                ) {
-                    // Type mismatch at compile time — generate bubble() instead
-                    // to avoid C++ static type errors
-                    val cppType = translateType(innerType)
-                    cpp.callExpr(
-                        cpp.template(
-                            cpp.name(TEMPER_CORE_NAMESPACE, "bubble"),
-                            listOf(cppType),
-                        ),
-                        emptyList(),
-                    )
-                } else if (
-                    initExpr != null &&
-                    isAnyValueTmpLType(innerType) &&
-                    isValueType(initExpr.type)
-                ) {
-                    // Boxing value type into AnyValue
-                    cpp.callExpr(
-                        cpp.name(TEMPER_CORE_NAMESPACE, "any_box"),
-                        listOf(translateExpression(initExpr)),
-                    )
+                // Check if this is a void variable (can't declare void vars in C++)
+                val isVoidVar = innerType is TmpL.NominalType &&
+                    innerType.typeName.sourceDefinition == WellKnownTypes.voidTypeDefinition
+                if (isVoidVar) {
+                    voidVarNames.add(cpp.name(stmt.name).id.text)
+                    if (initExpr != null) {
+                        listOf(cpp.exprStmt(translateExpression(initExpr)))
+                    } else {
+                        emptyList()
+                    }
                 } else {
-                    translateExpressionOrNull(initExpr)
+                    val translatedInit = if (
+                        initExpr != null &&
+                        innerType != null &&
+                        isTypeMismatch(innerType, initExpr)
+                    ) {
+                        // Type mismatch at compile time — generate bubble() instead
+                        // to avoid C++ static type errors
+                        val cppType = translateType(innerType)
+                        cpp.callExpr(
+                            cpp.template(
+                                cpp.name(TEMPER_CORE_NAMESPACE, "bubble"),
+                                listOf(cppType),
+                            ),
+                            emptyList(),
+                        )
+                    } else if (
+                        initExpr != null &&
+                        isAnyValueTmpLType(innerType) &&
+                        isValueType(initExpr.type)
+                    ) {
+                        // Boxing value type into AnyValue
+                        cpp.callExpr(
+                            cpp.name(TEMPER_CORE_NAMESPACE, "any_box"),
+                            listOf(translateExpression(initExpr)),
+                        )
+                    } else {
+                        translateExpressionOrNull(initExpr)
+                    }
+                    listOf(
+                        cpp.varDef(
+                            translateType(stmt.type),
+                            cpp.name(stmt.name),
+                            translatedInit,
+                        ),
+                    )
                 }
-                listOf(
-                    cpp.varDef(
-                        translateType(stmt.type),
-                        cpp.name(stmt.name),
-                        translatedInit,
-                    ),
-                )
             }
 
             is TmpL.LocalFunctionDeclaration -> {
@@ -1216,11 +1201,29 @@ class CppTranslator(
                     ),
                 ),
             )
-            is TmpL.ReturnStatement -> listOf(
-                cpp.returnStmt(
-                    translateExpressionOrNull(stmt.expression),
-                ),
-            )
+            is TmpL.ReturnStatement -> {
+                val retExpr = stmt.expression
+                // If returning a void variable reference, emit bare return
+                val isVoidReturn = retExpr is TmpL.Reference &&
+                    cpp.name(retExpr.id).id.text in voidVarNames
+                // Check if returning 'this' — either via TmpL.This or TmpL.Reference to the this variable
+                val isThisReturn = currentThisVarName != null && (
+                    retExpr is TmpL.This ||
+                    (retExpr is TmpL.Reference && cpp.name(retExpr.id).id.text == currentThisVarName)
+                )
+                val translatedRet = when {
+                    isVoidReturn -> null
+                    isThisReturn -> {
+                        // Use coerce() to handle structural interface casts
+                        cpp.callExpr(
+                            cpp.name(TEMPER_CORE_NAMESPACE, "coerce"),
+                            listOf(translateExpression(retExpr!!)),
+                        )
+                    }
+                    else -> translateExpressionOrNull(retExpr)
+                }
+                listOf(cpp.returnStmt(translatedRet))
+            }
 
             is TmpL.SetAbstractProperty -> translateSetProperty(stmt.left, stmt.right, useSetterMethod = true)
             is TmpL.SetBackedProperty -> translateSetProperty(stmt.left, stmt.right, useSetterMethod = false)
@@ -1342,6 +1345,8 @@ class CppTranslator(
         block: TmpL.BlockStatement,
     ): Cpp.BlockStmt = cpp.pos(block) {
         val fmtHints = CppFormattingHints.getInstance()
+        val savedThisVarName = currentThisVarName
+        currentThisVarName = thisName.id.text
         cpp.blockStmt(
             buildList {
                 // Use borrow_this to create a non-owning shared_ptr from `this`,
@@ -1380,6 +1385,7 @@ class CppTranslator(
                 block.statements.forEach { stmt ->
                     addAll(translateStatement(stmt))
                 }
+                currentThisVarName = savedThisVarName
             },
         )
     }
@@ -1387,9 +1393,47 @@ class CppTranslator(
     /**
      * Wraps optional parameter type in NullableParam<T>.
      */
+    private fun isNullableType(type: TmpL.Type): Boolean = when (type) {
+        is TmpL.TypeUnion -> type.types.any { t ->
+            t is TmpL.NominalType && t.typeName.sourceDefinition == WellKnownTypes.nullTypeDefinition
+        }
+        else -> false
+    }
+
+    private fun isNullableType2(type: Type2): Boolean = type is NullableType
+
+    /** Wraps an expression in NullableParam<type> unless the type is already nullable */
+    private fun wrapInNullableParamIfNeeded(type: Type2, innerExpr: Cpp.Expr? = null): Cpp.Expr {
+        return if (isNullableType2(type)) {
+            // Type is already nullable (Nullable<T> = NullableParam<T> for value types)
+            // Don't double-wrap
+            innerExpr ?: cpp.literal(cpp.raw("nullptr"))
+        } else {
+            val typeExpr = translateType2(type)
+            if (innerExpr != null) {
+                cpp.callExpr(
+                    cpp.template(
+                        cpp.name(TEMPER_CORE_NAMESPACE, "NullableParam"),
+                        listOf(typeExpr),
+                    ),
+                    innerExpr,
+                )
+            } else {
+                cpp.callExpr(
+                    cpp.template(
+                        cpp.name(TEMPER_CORE_NAMESPACE, "NullableParam"),
+                        listOf(typeExpr),
+                    ),
+                )
+            }
+        }
+    }
+
     private fun translateParamType(formal: TmpL.Formal): Cpp.Type {
         val baseType = translateType(formal.type)
-        return if (formal.optional) {
+        return if (formal.optional && !isNullableType(formal.type.ot)) {
+            // Only wrap in NullableParam if the type isn't already nullable
+            // (Nullable<T> for value types is already NullableParam<T>)
             cpp.template(
                 cpp.name(TEMPER_CORE_NAMESPACE, "NullableParam"),
                 listOf(baseType),
@@ -1436,9 +1480,10 @@ class CppTranslator(
                 cpp.funcParam(translateType(it.type), cpp.name(it.name))
             }
             val callArgs = formals.mapIndexed { idx, f ->
+                val alreadyNullable = isNullableType(f.type.ot)
                 if (idx < firstOptionalIdx + numProvided) {
-                    // Wrap optional params in NullableParam
-                    if (f.optional) {
+                    // Wrap optional params in NullableParam (unless already nullable)
+                    if (f.optional && !alreadyNullable) {
                         cpp.callExpr(
                             cpp.template(
                                 cpp.name(
@@ -1453,16 +1498,21 @@ class CppTranslator(
                         cpp.name(f.name)
                     }
                 } else {
-                    // Default-constructed NullableParam (no value)
-                    cpp.callExpr(
-                        cpp.template(
-                            cpp.name(
-                                TEMPER_CORE_NAMESPACE,
-                                "NullableParam",
+                    if (alreadyNullable) {
+                        // Already nullable type — just pass nullptr
+                        cpp.literal(cpp.raw("nullptr"))
+                    } else {
+                        // Default-constructed NullableParam (no value)
+                        cpp.callExpr(
+                            cpp.template(
+                                cpp.name(
+                                    TEMPER_CORE_NAMESPACE,
+                                    "NullableParam",
+                                ),
+                                listOf(translateType(f.type)),
                             ),
-                            listOf(translateType(f.type)),
-                        ),
-                    )
+                        )
+                    }
                 }
             }
             val singleName = when (funcName) {
@@ -2450,7 +2500,7 @@ class CppTranslator(
                                                 val params = constructorFormals.map {
                                                     cpp.pos(it) {
                                                         val baseType = translateType(it.type)
-                                                        val paramType = if (it.optional) {
+                                                        val paramType = if (it.optional && !isNullableType(it.type.ot)) {
                                                             cpp.template(
                                                                 cpp.name(
                                                                     TEMPER_CORE_NAMESPACE,
@@ -2470,7 +2520,7 @@ class CppTranslator(
                                                 val paramTypes = constructorFormals.map {
                                                     cpp.pos(it) {
                                                         val baseType = translateType(it.type)
-                                                        if (it.optional) {
+                                                        if (it.optional && !isNullableType(it.type.ot)) {
                                                             cpp.template(
                                                                 cpp.name(
                                                                     TEMPER_CORE_NAMESPACE,
@@ -2603,15 +2653,15 @@ class CppTranslator(
                                 // For template structs, skip the forward declaration
                                 // and emit the full template struct definition
                                 val structDefToUse = if (superTypes.isNotEmpty()) {
-                                    // Template + inheritance: inject base class into struct name
+                                    // Template + inheritance: inject base class(es) into struct name
                                     val fmtHints = CppFormattingHints.getInstance()
-                                    val baseStr = toStringViaTokenSink(
-                                        formattingHints = fmtHints,
-                                        singleLine = true,
-                                    ) {
-                                        translateSuperType(superTypes.first()).renderTo(it)
+                                    val baseStrs = superTypes.map { st ->
+                                        toStringViaTokenSink(
+                                            formattingHints = fmtHints,
+                                            singleLine = true,
+                                        ) { translateSuperType(st).renderTo(it) }
                                     }
-                                    val rawName = "${structName.id.text} : public $baseStr"
+                                    val rawName = "${structName.id.text} : ${baseStrs.joinToString(", ") { "public $it" }}"
                                     cpp.structDef(
                                         cpp.singleName(CppName(rawName, raw = true)),
                                         structFields,
@@ -2669,22 +2719,41 @@ class CppTranslator(
                                     }
                                 }
                             } else if (superTypes.isNotEmpty()) {
-                                // Class with inheritance
-                                val baseType = translateSuperType(superTypes.first())
-                                val baseName = baseType as? Cpp.Name
-                                if (baseName != null) {
-                                    headerTypeDecl.add(struct.decl)
-                                    headerTypeDefs.add(
-                                        cpp.derivedStructDef(structName, baseName, structFields),
-                                    )
+                                // Class with inheritance (may have multiple super types)
+                                if (superTypes.size == 1) {
+                                    val baseType = translateSuperType(superTypes.first())
+                                    val baseName = baseType as? Cpp.Name
+                                    if (baseName != null) {
+                                        headerTypeDecl.add(struct.decl)
+                                        headerTypeDefs.add(
+                                            cpp.derivedStructDef(structName, baseName, structFields),
+                                        )
+                                    } else {
+                                        // Base type has template params — use raw name hack
+                                        val fmtHints = CppFormattingHints.getInstance()
+                                        val baseStr = toStringViaTokenSink(
+                                            formattingHints = fmtHints,
+                                            singleLine = true,
+                                        ) { baseType.renderTo(it) }
+                                        val rawName = "${structName.id.text} : public $baseStr"
+                                        headerTypeDecl.add(struct.decl)
+                                        headerTypeDefs.add(
+                                            cpp.structDef(
+                                                cpp.singleName(CppName(rawName, raw = true)),
+                                                structFields,
+                                            ),
+                                        )
+                                    }
                                 } else {
-                                    // Base type has template params — use raw name hack
+                                    // Multiple super types — use raw name for multi-inheritance
                                     val fmtHints = CppFormattingHints.getInstance()
-                                    val baseStr = toStringViaTokenSink(
-                                        formattingHints = fmtHints,
-                                        singleLine = true,
-                                    ) { baseType.renderTo(it) }
-                                    val rawName = "${structName.id.text} : public $baseStr"
+                                    val baseStrs = superTypes.map { st ->
+                                        toStringViaTokenSink(
+                                            formattingHints = fmtHints,
+                                            singleLine = true,
+                                        ) { translateSuperType(st).renderTo(it) }
+                                    }
+                                    val rawName = "${structName.id.text} : ${baseStrs.joinToString(", ") { "public $it" }}"
                                     headerTypeDecl.add(struct.decl)
                                     headerTypeDefs.add(
                                         cpp.structDef(

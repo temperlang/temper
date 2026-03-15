@@ -157,14 +157,37 @@ internal object CppSupportNetwork : SupportNetwork {
         "empty" -> Like.core("empty")
         "ignore" -> Like.ignoring(theLastArg)
         "Boolean::toString" -> Like.core("toString")
-        "Date::constructor" -> Like.core("DateNs::make")
-        "Date::fromIsoString" -> Like.core("Date::make")
+        "Date::constructor" -> handle {
+            // Construct a Date using the target type from the return type.
+            // retType may be Bubble<Date>, so unwrap bindings to get the Date type.
+            val innerType = retType.bindings.firstOrNull() ?: retType
+            val rawDateName = translator.resolveTypeName(innerType.definition)
+            cpp.callExpr(
+                cpp.template(cpp.name(TEMPER_CORE_NAMESPACE, "make_date"), listOf(rawDateName)),
+                values,
+            )
+        }
+        "Date::fromIsoString" -> handle {
+            val innerType = retType.bindings.firstOrNull() ?: retType
+            val rawDateName = translator.resolveTypeName(innerType.definition)
+            cpp.callExpr(
+                cpp.template(cpp.name(TEMPER_CORE_NAMESPACE, "date_from_iso"), listOf(rawDateName)),
+                values,
+            )
+        }
         "Date::getDay" -> Like.core("get_day")
         "Date::getMonth" -> Like.core("get_month")
         "Date::getYear" -> Like.core("get_year")
         "Date::getDayOfWeek" -> Like.core("get_day_of_week")
         "Date::toString" -> Like.core("toString")
-        "Date::today" -> Like.core("to_day")
+        "Date::today" -> handle {
+            val innerType = retType.bindings.firstOrNull() ?: retType
+            val rawDateName = translator.resolveTypeName(innerType.definition)
+            cpp.callExpr(
+                cpp.template(cpp.name(TEMPER_CORE_NAMESPACE, "to_day"), listOf(rawDateName)),
+                emptyList(),
+            )
+        }
         "Date::yearsBetween" -> Like.core("years_between")
         "Float64::e" -> Like.core("Float64ns::e")
         "Float64::pi" -> Like.core("Float64ns::pi")

@@ -91,7 +91,6 @@ private fun assertGenerated(
             |            "something.cpp.map": "__DO_NOT_CARE__",
             |            "something.hpp.map": "__DO_NOT_CARE__",
             |            "main.cpp": "__DO_NOT_CARE__",
-            |            "dep-sources.txt": "__DO_NOT_CARE__",
             |        }
             |    }
             |}

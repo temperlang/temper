@@ -40,7 +40,6 @@ class CppBackend private constructor(
         val cppLibraryName = libraryConfigurations.currentLibraryConfiguration.libraryName.text
 
         val allTestInfos = mutableListOf<Pair<String, String>>()
-        val allIncludes = mutableSetOf<String>()
         val translations = finished.modules.flatMap { mod ->
             val translator = CppTranslator(
                 cppNames,
@@ -49,7 +48,6 @@ class CppBackend private constructor(
             )
             val result = translator.translateModule(mod)
             allTestInfos.addAll(translator.testInfos)
-            allIncludes.addAll(translator.includes)
             result
         }
 
@@ -59,12 +57,6 @@ class CppBackend private constructor(
             libraryConfigurations.currentLibraryConfiguration.libraryName,
             CppMetadataKey.MainFilePath,
             FilePath(listOf(FilePathSegment(cppLibraryName)), isDir = true) + initPath,
-        )
-
-        dependenciesBuilder.addMetadata(
-            libraryConfigurations.currentLibraryConfiguration.libraryName,
-            CppMetadataKey.RequiredIncludes,
-            allIncludes.toSet(),
         )
 
         // Compute the C++ namespace for the std library's Test type
@@ -152,25 +144,11 @@ class CppBackend private constructor(
             "int main() {}"
         }
 
-        // Generate list of dependency .cpp source files needed for compilation.
-        // Exclude same-library modules — they're already compiled as part of this library.
-        val sameLibPrefix = "$cppLibraryName/"
-        val depSourcesContent = allIncludes
-            .filterNot { it.startsWith(sameLibPrefix) }
-            .map { it.replace(HPP_EXT, CPP_EXT) }
-            .sorted()
-            .joinToString("\n")
-
         return translations + listOf(
             MetadataFileSpecification(
                 path = filePath("main.cpp"),
                 mimeType = MimeType.cppSource,
                 content = mainContent,
-            ),
-            MetadataFileSpecification(
-                path = filePath("dep-sources.txt"),
-                mimeType = null,
-                content = depSourcesContent,
             ),
         )
     }

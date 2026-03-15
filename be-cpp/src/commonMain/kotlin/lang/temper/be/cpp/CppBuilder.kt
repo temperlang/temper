@@ -322,9 +322,11 @@ class CppBuilder(
         // Encode the whole string as UTF-8 bytes for correct multi-byte character handling
         val utf8Bytes = value.toByteArray(Charsets.UTF_8)
         val sb = StringBuilder()
+        var hasNullByte = false
         for (b in utf8Bytes) {
             @Suppress("MagicNumber")
             val unsigned = b.toInt() and 0xFF
+            if (unsigned == 0) hasNullByte = true
             val ch = unsigned.toChar()
             val escaped = escapeCodes[ch]
             if (escaped != null) {
@@ -335,7 +337,13 @@ class CppBuilder(
                 sb.append("\\x${unsigned.toString(16).padStart(2, '0')}")
             }
         }
-        return literal(raw("\"$sb\""))
+        // Use std::string(data, length) constructor for strings with embedded null bytes
+        // since const char* constructor stops at the first \0
+        return if (hasNullByte) {
+            literal(raw("std::string(\"$sb\", ${utf8Bytes.size})"))
+        } else {
+            literal(raw("\"$sb\""))
+        }
     }
 
     fun name(resolvedName: ResolvedName): Cpp.SingleName = singleName(cppNames.name(resolvedName))
