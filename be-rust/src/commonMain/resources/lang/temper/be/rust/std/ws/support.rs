@@ -120,6 +120,9 @@ pub fn std_ws_accept(server: &dyn WsServerTrait) -> Promise<WsConnection> {
         match listener.accept() {
             Ok((stream, _addr)) => {
                 drop(listener);
+                // Set a read timeout so recv doesn't hold the socket
+                // Mutex indefinitely, allowing send to interleave.
+                let _ = stream.set_read_timeout(Some(std::time::Duration::from_millis(50)));
                 match ws_upgrade(stream) {
                     Ok(ws) => {
                         pb.complete(WsConnection::new(SimpleWsConnection(Arc::new(
@@ -148,6 +151,13 @@ pub fn std_ws_connect(url: impl temper_core::ToArcString) -> Promise<WsConnectio
         SafeGenerator::from_fn(Arc::new(move |_generator: SafeGenerator<()>| {
             match ws_connect_url(url.as_str()) {
                 Ok((ws, _response)) => {
+                    // Set read timeout on client connections too
+                    match ws.get_ref() {
+                        MaybeTlsStream::Plain(s) => {
+                            let _ = s.set_read_timeout(Some(std::time::Duration::from_millis(50)));
+                        }
+                        _ => {}
+                    }
                     pb.complete(WsConnection::new(SimpleWsConnection(Arc::new(
                         WsConnectionInner {
                             socket: Mutex::new(WsStream::MaybeTls(ws)),
@@ -172,7 +182,10 @@ pub fn std_ws_send(conn: &dyn WsConnectionTrait, msg: impl temper_core::ToArcStr
         let mut socket = conn.0.socket.lock().unwrap();
         match socket.send(Message::Text(msg.to_string().into())) {
             Ok(_) => pb.complete(()),
-            Err(_) => pb.break_promise(),
+            Err(e) => {
+                eprintln!("[ws_send] error: {:?}", e);
+                pb.break_promise();
+            }
         }
     });
     promise
@@ -187,22 +200,39 @@ pub fn std_ws_recv(conn: &dyn WsConnectionTrait) -> Promise<Option<Arc<String>>>
     // blocking the single-threaded task runner (which would prevent
     // other async blocks like readLine from processing).
     std::thread::spawn(move || {
-        let mut socket = conn.0.socket.lock().unwrap();
-        match socket.read() {
-            Ok(Message::Text(text)) => {
-                pb.complete(Some(Arc::new(text.to_string())));
-            }
-            Ok(Message::Close(frame)) => {
-                eprintln!("[ws_recv] close frame: {:?}", frame);
-                pb.complete(None);
-            }
-            Ok(other) => {
-                eprintln!("[ws_recv] unexpected message type: {:?}", other);
-                pb.complete(None);
-            }
-            Err(e) => {
-                eprintln!("[ws_recv] error: {:?}", e);
-                pb.complete(None);
+        // Loop retrying on timeout errors so the Mutex is periodically
+        // released, allowing wsSend to interleave on the same connection.
+        loop {
+            let result = {
+                let mut socket = conn.0.socket.lock().unwrap();
+                socket.read()
+            }; // Mutex released here before processing
+            match result {
+                Ok(Message::Text(text)) => {
+                    pb.complete(Some(Arc::new(text.to_string())));
+                    return;
+                }
+                Ok(Message::Close(_)) => {
+                    pb.complete(None);
+                    return;
+                }
+                Ok(_) => {
+                    // Skip non-text messages, keep reading
+                    continue;
+                }
+                Err(tungstenite::Error::Io(ref e))
+                    if e.kind() == std::io::ErrorKind::WouldBlock
+                        || e.kind() == std::io::ErrorKind::TimedOut =>
+                {
+                    // Read timeout — release lock briefly and retry
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                    continue;
+                }
+                Err(e) => {
+                    eprintln!("[ws_recv] error: {:?}", e);
+                    pb.complete(None);
+                    return;
+                }
             }
         }
     });
