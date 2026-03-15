@@ -9,6 +9,7 @@ export * from "./int.js";
 export * from "./interface.js";
 export * from "./listed.js";
 export * from "./mapped.js";
+export * from "./io.js";
 export * from "./net.js";
 export * from "./pair.js";
 export * from "./regex.js";

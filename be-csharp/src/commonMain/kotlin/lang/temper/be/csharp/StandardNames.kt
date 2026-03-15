@@ -172,6 +172,11 @@ object StandardNames {
     val temperStdTemporalTemporalSupportYearsBetween = temperStdTemporalTemporalSupport.member("YearsBetween")
     val temperStdTemporalTemporalSupportIsoWeekdayNum = temperStdTemporalTemporalSupport.member("IsoWeekdayNum")
     val temperStdTemporalTemporalSupportFromIsoString = temperStdTemporalTemporalSupport.member("FromIsoString")
+    private val temperStdIo = temperStd.space("Io")
+    private val temperStdIoIoSupport = temperStdIo.type("IoSupport")
+    val temperStdIoStdSleep = temperStdIoIoSupport.member("StdSleep")
+    val temperStdIoStdReadLine = temperStdIoIoSupport.member("StdReadLine")
+
     private val temperStdNet = temperStd.space("Net")
     val temperCoreNetINetResponse = temperStdNet.type("INetResponse")
     val temperCoreNetSupport = temperStdNet.type("NetSupport")

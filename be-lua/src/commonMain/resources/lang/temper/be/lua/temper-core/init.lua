@@ -253,6 +253,14 @@ function temper.generator_next(f)
     return f()
 end
 
+-- Async launcher: runs a generator factory synchronously.
+-- In Lua, async operations (sleep, readLine) are blocking,
+-- so we just call the generator and step through the coroutine.
+function temper.TODO(generatorFactory)
+    local gen = generatorFactory()
+    local co = gen()
+end
+
 do
     local inst_meta = {
         __index = function(self, k)
@@ -2047,6 +2055,28 @@ do
     function temper.regex_compiledsplit(self, pat, text)
         return pat:split(text)
     end
+end
+
+-- std/io support
+
+local function make_resolved(value)
+    return { await = function(self) return value end }
+end
+
+function temper.stdsleep(ms)
+    local sec = ms / 1000
+    local ok, socket = pcall(require, "socket")
+    if ok then
+        socket.sleep(sec)
+    else
+        os.execute("sleep " .. string.format("%.3f", sec))
+    end
+    return make_resolved(nil)
+end
+
+function temper.stdreadline()
+    local line = io.read("*l")
+    return make_resolved(line)
 end
 
 return temper

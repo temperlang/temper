@@ -238,6 +238,10 @@ val temperRegexCompiledReplace = temperRegexCore.qualifyKnownSafe("regexCompiled
 val temperRegexCompiledSplit = temperRegexCore.qualifyKnownSafe("regexCompiledSplit")
 val temperRegexFormatterPushCodeTo = temperRegexCore.qualifyKnownSafe("regexFormatterPushCodeTo")
 
+// std/io
+val temperStdSleep = temperCore.qualifyKnownSafe("stdSleep")
+val temperStdReadLine = temperCore.qualifyKnownSafe("stdReadLine")
+
 // std/net
 val temperNetPkg = temperPkg.qualifyKnownSafe("net")
 val temperNetCore = temperNetPkg.qualifyKnownSafe("Core")

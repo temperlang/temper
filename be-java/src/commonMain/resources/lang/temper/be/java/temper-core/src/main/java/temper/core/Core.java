@@ -1929,6 +1929,38 @@ public final class Core {
         // negotiate promises for termination with the tasks it spawns.
         commonPool.awaitQuiescence(10L, TimeUnit.SECONDS);
     }
+
+    // std/io support
+
+    @SuppressWarnings("unchecked")
+    public static java.util.concurrent.CompletableFuture<Optional<? super Object>> stdSleep(int ms) {
+        java.util.concurrent.CompletableFuture<Optional<? super Object>> future = new java.util.concurrent.CompletableFuture<>();
+        ForkJoinPool.commonPool().execute(() -> {
+            try {
+                Thread.sleep(ms);
+                future.complete(Optional.empty());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                future.completeExceptionally(e);
+            }
+        });
+        return future;
+    }
+
+    public static java.util.concurrent.CompletableFuture<String> stdReadLine() {
+        java.util.concurrent.CompletableFuture<String> future = new java.util.concurrent.CompletableFuture<>();
+        ForkJoinPool.commonPool().execute(() -> {
+            try {
+                java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(System.in));
+                String line = reader.readLine();
+                future.complete(line);
+            } catch (java.io.IOException e) {
+                future.complete(null);
+            }
+        });
+        return future;
+    }
 }
 
 final class WrapFunctionGenerator<T> extends Generator<T> {

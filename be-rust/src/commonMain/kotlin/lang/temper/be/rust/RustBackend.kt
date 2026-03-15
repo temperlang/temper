@@ -155,6 +155,7 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
                     // Below aren't dependencies section anymore, but eh.
                     append("\n")
                     append("[features]\n")
+                    append("io = []\n")
                     append("net = [\"ureq\"]\n")
                     // Implied: append("regex = [\"regex\"]\n")
                     append("temporal = [\"time\"]\n")
@@ -225,7 +226,7 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
         private val resourceBase = dirPath("lang", "temper", "be", "rust")
         private val coreResourceBase = resourceBase.resolveDir("temper-core")
         private val stdResourceBase = resourceBase.resolveDir("std")
-        val stdSupportNeeders = setOf("net", "regex", "temporal")
+        val stdSupportNeeders = setOf("io", "net", "regex", "temporal")
         val stdFeatures = stdSupportNeeders // same set today but maybe not guaranteed
         private val templateResourceBase = resourceBase.resolveDir("library-template")
 

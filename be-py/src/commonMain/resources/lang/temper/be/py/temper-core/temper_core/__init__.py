@@ -1399,3 +1399,35 @@ def _utf8_byte_of(code_point: int, byte_offset: int, n_bytes: int) -> int:
 
 def _utf16_size(char: str) -> int:
     return 1 + (ord(char) >= 0x10000)
+
+
+# std/io support
+
+import time as _time
+
+
+def std_sleep(ms: int) -> 'Future[None]':
+    """Sleep for ms milliseconds, returning a Future."""
+    f: Future[None] = new_unbound_promise()
+
+    def _do_sleep():
+        _time.sleep(ms / 1000.0)
+        f.set_result(None)
+
+    _executor.submit(_do_sleep)
+    return f
+
+
+def std_read_line() -> 'Future[Optional[str]]':
+    """Read a line from stdin, returning a Future."""
+    f: 'Future[Optional[str]]' = new_unbound_promise()
+
+    def _do_read():
+        try:
+            line = input()
+            f.set_result(line)
+        except EOFError:
+            f.set_result(None)
+
+    _executor.submit(_do_read)
+    return f
