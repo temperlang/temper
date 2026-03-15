@@ -47,7 +47,8 @@ internal object CppSupportNetwork : SupportNetwork {
         BuiltinOperatorId.BitwiseNegation32, BuiltinOperatorId.BitwiseNegation64 -> Like.unary("~")
         BuiltinOperatorId.BitwiseShl32, BuiltinOperatorId.BitwiseShl64 -> Like.binary("<<")
         BuiltinOperatorId.BitwiseShr32, BuiltinOperatorId.BitwiseShr64 -> Like.binary(">>")
-        BuiltinOperatorId.BitwiseShrUnsigned32, BuiltinOperatorId.BitwiseShrUnsigned64 -> null // TODO
+        BuiltinOperatorId.BitwiseShrUnsigned32 -> Like.core("ushr32")
+        BuiltinOperatorId.BitwiseShrUnsigned64 -> Like.core("ushr64")
         BuiltinOperatorId.IsNull -> Like.core("is_null")
         BuiltinOperatorId.NotNull -> Like.core("not_null")
         BuiltinOperatorId.DivFltFlt -> Like.binary("/")
