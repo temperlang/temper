@@ -945,9 +945,43 @@ temper.bor = temper_bit.bor
 temper.band = temper_bit.band
 temper.bnot = temper_bit.bnot
 temper.bxor = temper_bit.bxor
-temper.lshift = temper_bit.lshift
-temper.rshift = temper_bit.rshift
-temper.arshift = temper_bit.arshift
+function temper.shl32(a, b)
+    b = b % 32
+    local x = temper_bit.band(temper_bit.lshift(a, b), 0xFFFFFFFF)
+    if x >= 0x80000000 then x = x - 0x100000000 end
+    return x
+end
+function temper.shl64(a, b)
+    b = b % 64
+    -- TODO: is this safe against floaty precision problems
+    local x = temper_bit.band(temper_bit.lshift(a, b), 0xFFFFFFFFFFFFFFFF)
+    if x >= 0x8000000000000000 then x = x - 0x10000000000000000 end
+    return x
+end
+function temper.shr32(a, b)
+    b = b % 32
+    local x = temper_bit.arshift(a, b)
+    return x
+end
+function temper.shr64(a, b)
+    b = b % 64
+    local x = temper_bit.arshift(a, b)
+    return x
+end
+function temper.ushr32(a, b)
+    b = b % 32
+    if b == 0 then return a end
+    local x = temper_bit.rshift(a, b)
+    return x
+end
+function temper.ushr64(a, b)
+    b = b % 64
+    if b == 0 then return a end
+    local x = temper_bit.rshift(a, b)
+    return x
+end
+
+
 
 function temper.concat(...)
     return table_concat({...})
