@@ -911,6 +911,17 @@ val StdNetSend = PySeparateCode("std_net_send", RUNTIME)
 val StdSleep = PySeparateCode("std_sleep", RUNTIME)
 val StdReadLine = PySeparateCode("std_read_line", RUNTIME)
 val StdNextKeypress = PySeparateCode("std_next_keypress", RUNTIME)
+val StdTermCols = PySeparateCode("std_term_cols", RUNTIME)
+val StdTermRows = PySeparateCode("std_term_rows", RUNTIME)
+
+val WsServer = PyConnectedType("WsServer", RUNTIME)
+val WsConnection = PyConnectedType("WsConnection", RUNTIME)
+val StdWsListen = PySeparateCode("std_ws_listen", RUNTIME)
+val StdWsAccept = PySeparateCode("std_ws_accept", RUNTIME)
+val StdWsConnect = PySeparateCode("std_ws_connect", RUNTIME)
+val StdWsSend = PySeparateCode("std_ws_send", RUNTIME)
+val StdWsRecv = PySeparateCode("std_ws_recv", RUNTIME)
+val StdWsClose = PySeparateCode("std_ws_close", RUNTIME)
 
 val mathInf = PySeparateCode("inf", MATH)
 val mathNan = PySeparateCode("nan", MATH)
@@ -1219,4 +1230,14 @@ private val pyConnections = mapOf(
     "stdSleep" to StdSleep,
     "stdReadLine" to StdReadLine,
     "stdNextKeypress" to StdNextKeypress,
+    "stdTermCols" to StdTermCols,
+    "stdTermRows" to StdTermRows,
+    "wsListen" to StdWsListen,
+    "wsAccept" to StdWsAccept,
+    "wsConnect" to StdWsConnect,
+    "wsSend" to StdWsSend,
+    "wsRecv" to StdWsRecv,
+    "wsClose" to StdWsClose,
+    "WsServer" to WsServer,
+    "WsConnection" to WsConnection,
 )
