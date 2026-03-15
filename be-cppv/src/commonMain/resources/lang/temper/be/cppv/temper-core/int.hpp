@@ -3,6 +3,7 @@
 
 #include <cctype>
 #include <cerrno>
+#include <climits>
 #include <limits>
 #include <stdint.h>
 #include <stdlib.h>
@@ -101,7 +102,7 @@ T neg(T i) {
 template<typename T>
 T ushr(T i, int32_t j) {
   constexpr int shift_size_mask = (sizeof(T) * CHAR_BIT) - 1;
-  return (T) (((std::make_unsigned_t<T>) i) >> (j & shift_size_mask));
+  return (T) (((typename std::make_unsigned<T>::type) i) >> (j & shift_size_mask));
 }
 
 Expected<int32_t> to_int32(int64_t i) {
