@@ -1144,20 +1144,20 @@ do
     local function temper_tostring(num, base)
         if num < 0 then
             if num == math.mininteger then
-                local mod = (base - (math.maxinteger % base)) + 1
-                local negatable = num / base
-                if mod == base then
-                    negatable = negatable - 1
-                    mod = 0
+                local last_digit_value = num % base
+                if last_digit_value ~= 0 then
+                    last_digit_value = base - last_digit_value
                 end
-                local last_digit = string_sub(digits, mod, mod)
+                local negatable = (num + last_digit_value) // base
+                local digit_index = last_digit_value + 1
+                local last_digit = string_sub(digits, digit_index, digit_index)
                 return "-" .. temper_tostring(-negatable, base) .. last_digit
             else
                 return "-" .. temper_tostring(-num, base)
             end
         elseif num >= base then
             local mod = num % base + 1
-            return temper_tostring(math_floor(num / base), base) .. string_sub(digits, mod, mod)
+            return temper_tostring(math_floor(num // base), base) .. string_sub(digits, mod, mod)
         else
             local mod = num % base + 1
             return string_sub(digits, mod, mod)
