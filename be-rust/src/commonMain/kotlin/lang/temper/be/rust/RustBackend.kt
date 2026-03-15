@@ -181,6 +181,7 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
                     append("time = { version = \"=0.3.41\", optional = true }\n")
                     append("ureq = { version = \"=3.1.2\", optional = true }\n")
                     append("crossterm = { version = \"=0.28.1\", optional = true }\n")
+                    append("sha1_smol = { version = \"=1.0.1\", optional = true }\n")
                     // Below aren't dependencies section anymore, but eh.
                     append("\n")
                     append("[features]\n")
@@ -189,7 +190,7 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
                     append("net = [\"ureq\"]\n")
                     // Implied: append("regex = [\"regex\"]\n")
                     append("temporal = [\"time\"]\n")
-                    append("ws = [\"tungstenite\"]\n")
+                    append("ws = [\"sha1_smol\"]\n")
                 }
             }
             val packageFields = buildMap {

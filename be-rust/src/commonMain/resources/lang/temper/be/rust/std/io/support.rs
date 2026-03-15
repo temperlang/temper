@@ -8,6 +8,7 @@ pub fn std_sleep(ms: i32) -> Promise<()> {
     crate::run_async(Arc::new(move || {
         let pb = pb.clone();
         SafeGenerator::from_fn(Arc::new(move |_generator: SafeGenerator<()>| {
+            eprintln!("[sleep] {}ms", ms);
             std::thread::sleep(std::time::Duration::from_millis(ms as u64));
             pb.complete(());
             None
