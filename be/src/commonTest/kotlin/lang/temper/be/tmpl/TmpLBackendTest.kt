@@ -2906,8 +2906,8 @@ class TmpLBackendTest {
             |        }
             |        let fn__0(): SafeGenerator<Empty> {
             |          var caseIndex#0: Int32 = 0;
-            |          @QName("test-library/foo.i=") var i__0: Int32 = 1;
-            |          @QName("test-library/foo.j=") var j__0: Int32 = 2;
+            |          @QName("test-library/foo.i=") var i__0: Int32 = 0;
+            |          @QName("test-library/foo.j=") var j__0: Int32 = 0;
             |          @QName("test-library/foo.helper()") let helper__0(): Void {
             |            var t#0: String = "" + nym`+#67`(i__0, j__0);
             |            ConsoleLog#0(console#0, t#0);
@@ -2918,6 +2918,8 @@ class TmpLBackendTest {
             |            caseIndex#0 = -1;
             |            when (caseIndexLocal#0) {
             |              0 -> do {
+            |                i__0 = 1;
+            |                j__0 = 2;
             |                @QName("test-library/foo.k=") var k__0: Int32 = 3;
             |                j__0 = nym`+#67`(j__0, 1);
             |                k__0 = nym`+#67`(k__0, 1);
