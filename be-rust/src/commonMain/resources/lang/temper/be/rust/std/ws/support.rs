@@ -104,7 +104,6 @@ fn ws_server_handshake(stream: &mut TcpStream) -> std::io::Result<()> {
         }
     }
     let accept = ws_accept_key(&ws_key);
-    eprintln!("[ws_handshake] key='{}' accept='{}'", ws_key, accept);
     let response = format!(
         "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: {}\r\n\r\n",
         accept
@@ -207,21 +206,18 @@ fn make_connection(stream: TcpStream, is_client: bool) -> SimpleWsConnection {
     let is_client_thread = is_client;
     std::thread::spawn(move || {
         let mut reader = stream;
-        eprintln!("[ws_reader] started (client={})", is_client_thread);
+        // Reader thread running
         loop {
             match ws_read_text_frame(&mut reader) {
                 Ok(Some(text)) if text.is_empty() => continue,
                 Ok(Some(text)) => {
-                    eprintln!("[ws_reader] got {} bytes", text.len());
                     if recv_tx.send(Some(text)).is_err() { return; }
                 }
                 Ok(None) => {
-                    eprintln!("[ws_reader] got close frame");
                     let _ = recv_tx.send(None);
                     return;
                 }
                 Err(e) => {
-                    eprintln!("[ws_reader] error: {:?}", e);
                     let _ = recv_tx.send(None);
                     return;
                 }
@@ -318,11 +314,9 @@ pub fn std_ws_send(conn: &dyn WsConnectionTrait, msg: impl temper_core::ToArcStr
     let msg_len = msg.len();
     match ws_write_text_frame(&mut *writer, &msg, conn.0.is_client) {
         Ok(()) => {
-            eprintln!("[ws_send] sent {} bytes OK", msg_len);
             pb.complete(());
         }
         Err(e) => {
-            eprintln!("[ws_send] write error: {:?}", e);
             pb.break_promise();
         }
     }
