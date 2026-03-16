@@ -103,10 +103,15 @@ export async function wsConnect(url) {
  */
 export function wsSend(conn, msg) {
   return new Promise((resolve, reject) => {
-    conn.send(msg, (err) => {
-      if (err) reject(err);
-      else resolve(empty());
-    });
+    try {
+      if (conn.readyState !== 1) { reject(new Error("not open")); return; }
+      conn.send(msg, (err) => {
+        if (err) reject(err);
+        else resolve(empty());
+      });
+    } catch (e) {
+      reject(e);
+    }
   });
 }
 
