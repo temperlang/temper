@@ -166,6 +166,7 @@ private fun splitTemplateCompletionContextBeforeString(
                 adjustedTokenIndex -= 1
             }
             TokenType.Comment,
+            TokenType.Margin,
             TokenType.Number,
             TokenType.Punctuation,
             TokenType.RightDelimiter,

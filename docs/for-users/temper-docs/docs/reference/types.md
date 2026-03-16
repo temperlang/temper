@@ -1624,7 +1624,7 @@ which is not part of the content.
 When a non-blank line doesn't start with a margin-quote, the
 multi-quoted string ends.
 
-Quotes can be embedded inside a multi-quoted strings.
+Quotes can be embedded inside multi-quoted strings.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/multi-quoted-strings/snippet.md/1 -->
 

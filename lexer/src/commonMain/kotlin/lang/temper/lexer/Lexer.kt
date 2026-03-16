@@ -172,7 +172,7 @@ class Lexer(
 
     private fun updateLastPreDiv() {
         when (currentTokenType) {
-            null, TokenType.Comment, TokenType.Space -> {}
+            null, TokenType.Comment, TokenType.Space, TokenType.Margin -> {}
             TokenType.LeftDelimiter, TokenType.QuotedString, TokenType.RightDelimiter,
             TokenType.Number, TokenType.Error,
             -> {
@@ -635,17 +635,17 @@ class Lexer(
                     }
                 }
                 OpenTokenType.STRING_CONTINUATION -> {
-                    // Consume all space and comments until we see a non-space characters.
+                    // Consume all space and comments until we see a non-space character.
                     // Depending on the prefix we transition this way:
                     //     "    -> a margin character. Skip it and transition to the STRING token type.
                     //     //   -> a line comment.  Process it normally.
                     //     /*   -> a block comment.  Process it normally.
                     //     else -> end of string.  Emit a synthetic delimiter.
                     val cp0 = decodeUtf16(text, end)
-                    if (cp0 == C_DQ) {
+                    if (LexicalDefinitions.isMarginChar(cp0)) {
                         open = OpenTokenType.STRING
                         end += 1
-                        currentTokenType = TokenType.Space // Margin char is Ignorable
+                        currentTokenType = TokenType.Margin
                     } else if (LexicalDefinitions.isLineBreak(cp0)) {
                         currentTokenType = TokenType.Space
                         end += charCount(cp0)

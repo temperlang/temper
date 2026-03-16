@@ -96,6 +96,7 @@ private val charToTokenMetadata: Map<Char, TokenMetadata> = buildMap {
             TokenType.Comment -> 'C' to false
             TokenType.Number -> 'N' to false
             TokenType.Punctuation -> 'P' to false
+            TokenType.Margin -> 'M' to false
             TokenType.LeftDelimiter -> 'L' to true
             TokenType.RightDelimiter -> 'R' to true
             TokenType.QuotedString -> 'Q' to false
@@ -277,16 +278,16 @@ class LexerTest {
             |>    let text = $Q3
             |:   S  WS   WSPS  LQ
             |>      "Here is string content.
-            |:     SS                       Q
+            |:     SM                       Q
             |>${
             // blank line in middle of quoted group contributes no chars
             ""
         }
             |:S
             |>      "
-            |:     SSQ
+            |:     SMQ
             |>      "Here is more string content.
-            |:     SS                            Q
+            |:     SM                            Q
             |>      $Q3;
             |:     S  rPS
             |>
@@ -319,7 +320,7 @@ class LexerTest {
         >$Q3
         :  LQ
         >"$C a }
-        :S BSWSBQ
+        :M BSWSBQ
         >$Q3;
         :  rP
         """.trimIndent(),
@@ -331,11 +332,11 @@ class LexerTest {
         >$Q3
         :  LQ
         >  "Line 1
-        : SS      Q
+        : SM      Q
         >  // Between Line 1 and 2 is a comment
         : S                                   CS
         >  "Line 2
-        : SS      Q
+        : SM      Q
         >  /*
         : S
         >   * Block comments are ok too.
@@ -343,7 +344,7 @@ class LexerTest {
         >  */
         :   CS
         >  "Line 3
-        : SS      Q
+        : SM      Q
         >$Q3;
         :  rP
         """.trimIndent(),
@@ -355,11 +356,11 @@ class LexerTest {
         >$Q3
         :  LQ
         >"   not-at-start-of-line$Q3
-        :S                          Q
+        :M                          Q
         >"   $Q3" quotes embedded
-        :S                       Q
+        :M                       Q
         >"" first quote is ignored but second is content
-        :S                                              Q
+        :M                                              Q
         >   $Q3; // Ok
         :  S  rPS    C
         """.trimIndent(),
@@ -371,11 +372,11 @@ class LexerTest {
         >$Q3
         :  LQ
         >"line of character data
-        :S                      Q
+        :M                      Q
         >"{: embedded { statement } :}
-        :S BS       WSBS        WSBS BQ
+        :M BS       WSBS        WSBS BQ
         >"another line of character data
-        :S                              Q
+        :M                              Q
         >   $Q3;
         :  S  rP
         """.trimIndent(),
@@ -388,13 +389,13 @@ class LexerTest {
         >$Q3
         :  LQ
         >"   Python doc-strings start and end with a $Q3 sequence like
-        :S                                                            Q
+        :M                                                            Q
         >"       $Q3
-        :S          Q
+        :M          Q
         >"       some chars
-        :S                 Q
+        :M                 Q
         >"       $Q3
-        :S          Q
+        :M          Q
         >    $Q3; // Ok
         :   S  rPS    C
         """.trimIndent(),
@@ -407,7 +408,7 @@ class LexerTest {
         >$Q3
         :  LQ
         >"   chars $C expr } more chars$Q3
-        :S        Q BS   WSB          Q  r
+        :M        Q BS   WSB          Q  r
         """.trimIndent(),
     )
 
@@ -418,11 +419,11 @@ class LexerTest {
         >$Q3
         :  LQ
         >"   chars $C
-        :S        Q BS
+        :M        Q BS
         >     $Q3
         :    S  LQ
         >    "nested chars
-        :   SS            Q
+        :   SM            Q
         >   $Q3} more chars
         :  S  rB           Q
         >$Q3
@@ -436,13 +437,13 @@ class LexerTest {
         >$Q3
         :  LQ
         >"Table of Contents:
-        :S                  Q
+        :M                  Q
         >"{: for (x in xs) { :}
-        :S BS  WSBWS WS WBSBS BQ
+        :M BS  WSBWS WS WBSBS BQ
         >" - $C x }
-        :S  Q BSWSBQ
+        :M  Q BSWSBQ
         >"{: } :}
-        :S BSBS BQ
+        :M BSBS BQ
         >$Q3
         :  r
         """.trimIndent(),
@@ -649,9 +650,9 @@ class LexerTest {
         >$Q3
         :  LQ
         >"Maybe\u0020here?
-        :S    Q     Q     Q
+        :M    Q     Q     Q
         >"${'$'}{hi}
-        :S${' '}B WBQ
+        :M${' '}B WBQ
         >$Q3;
         :  rPS
         >raw"hi\u{$C" t"}}here"

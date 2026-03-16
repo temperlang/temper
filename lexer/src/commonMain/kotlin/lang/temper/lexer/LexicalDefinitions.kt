@@ -33,6 +33,8 @@ class LexicalDefinitions private constructor() {
         fun isLineBreak(c: Char): Boolean = c == '\n' || c == '\r'
         fun isSpace(cp: Int): Boolean = cp <= UBYTE_MAX && isSpace(cp.toChar())
         fun isSpace(c: Char): Boolean = c == '\t' || c == ' '
+        fun isMarginChar(cp: Int): Boolean = cp <= UBYTE_MAX && isMarginChar(cp.toChar())
+        fun isMarginChar(c: Char): Boolean = c == '"' // TODO: || c == ':' || c == '~'
 
         /** Space characters that can be used to indent a line. */
         fun isIndentingSpace(c: Char): Boolean = c == '\t' || c == ' '

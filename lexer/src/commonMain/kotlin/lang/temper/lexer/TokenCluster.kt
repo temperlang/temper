@@ -54,7 +54,7 @@ internal typealias TokenClusterStackChangeBitsArray = IntArray
  *     {:  }  :}
  *     """
  *
- * We see a tagged, *multi-quoted* template for markdown content.
+ * We see a tagged, *multi-quoted* template for Markdown content.
  * The `{: ... :}` sequence identify sequences of statement-level content called *scriptlets*.
  * Taken together, a multi-quoted template's scriptlets must nest, but individually, may not.
  * For example, the block started at the end of `for (...) {` does not end until the next
@@ -66,7 +66,7 @@ internal typealias TokenClusterStackChangeBitsArray = IntArray
  * The IDE needs to style Temper tokens to make it clear to the user, who may be half-way
  * through inserting a sensible sequence of characters, what the parser receives as token
  * content, and what it receives as character content.
- * The intent of some mis-nested constructs are clear:
+ * Some mis-nested constructs have clear intent:
  *
  *     markdown"""
  *     "{:  for (let el in elements) {  :}
@@ -74,14 +74,14 @@ internal typealias TokenClusterStackChangeBitsArray = IntArray
  *
  * Obviously, there's a missing `}` before the implicit end of string.
  *
- * Since quoted-strings with fewer than three quote characters, may not contain embedded
+ * Since quoted-strings with fewer than three quote characters may not contain embedded
  * newlines in character content, the string below clearly needs a close quote and any
  * next line would not be treated as character content.
  *
  *     s = "foo
  *
  * [The design doc](https://hackmd.io/@temper/H1JiV%55SA9) explains in detail how
- * the token clustering drops synthesizes tokens.
+ * the token clustering drops synthesized tokens.
  *
  * But the main property that this table ensures is that the transitions lead to
  * token clusters that:
@@ -387,7 +387,7 @@ const val MQ_DELIMITER_LENGTH = 3
  * When a non-blank line doesn't start with a margin-quote, the
  * multi-quoted string ends.
  *
- * Quotes can be embedded inside a multi-quoted strings.
+ * Quotes can be embedded inside multi-quoted strings.
  *
  * ```temper
  * (
