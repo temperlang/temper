@@ -68,6 +68,11 @@ local function int64_toint32unsafe(n)
     return result
 end
 
+-- Simple int floor div.
+function temper.int_div(a, b)
+    return a // b
+end
+
 -- Int32
 
 function temper.int32_add(a, b)
