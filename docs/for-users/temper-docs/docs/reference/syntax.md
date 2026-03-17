@@ -1397,7 +1397,7 @@ There are two kinds of match cases: run-time type checks that use keyword `is`, 
 
 #### Syntax for *RegExp*
 
-![RegExp &#58;&#61; RegExp](../snippet/syntax/RegExp/snippet.svg)
+![RegExp &#58;&#61; &#40;Disallowed&#58; &#40;Disallowed&#58; &#34;&#47;&#34;&#41;&#41; RegExp](../snippet/syntax/RegExp/snippet.svg)
 
 <!-- /snippet: syntax/RegExp -->
 
@@ -1540,7 +1540,9 @@ which means it may be used to embed meta-characters.
 give fine-grained control over what the tag receives.)
 
 Empty interpolations can also be used to wrap a long
-string across multiple lines.
+string across multiple lines, but using a multi-quoted
+string with the tilde (`~`) margin character can be
+easier.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/StringPart/snippet.md/3 -->
 
@@ -1562,12 +1564,19 @@ the end of a line in a multi-quoted string.
 ```temper
 """
 "Line 1
-"Line 2 ${}
+~Line 2 ${}
 == "Line 1\nLine 2 "
 // ✅
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/StringPart/snippet.md/4 -->
+
+In that multi-quoted string, the margin characters at the left (`"` and `~`)
+control newlines.  Line feeds (LF U+A) are added at the end of lines that have
+a double-quote character (`"`) in the margin, but not at the end of lines that
+have a tilde character (`~`) in the margin.
+
+See [Multi-quoted strings](types.md#syntax-multi-quoted-strings) for more details on that syntax.
 
 <!-- /snippet: syntax/StringPart -->
 

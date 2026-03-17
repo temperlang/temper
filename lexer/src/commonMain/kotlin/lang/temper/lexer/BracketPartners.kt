@@ -12,7 +12,6 @@ val bracketPartners = mapOf(
     "\\{" to "}",
     $$"${" to "}",
     "\\u{" to "}",
-    "{:" to ":}",
 )
 
 val openBrackets = bracketPartners.map { it.key }.toSet()

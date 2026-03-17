@@ -1911,7 +1911,9 @@ class BuildTreeTest {
     fun taggedTemplateStringWithStatementFragments() = assertAst(
         input = $$"""
             |tag$${"\"\"\""}
-            |  "foo{: f(); :}bar${x}baz
+            |  ~foo
+            |  : f();
+            |  "bar${x}baz
         """.trimMargin(),
         wantJson = """
             |[ "Call", [
@@ -4864,7 +4866,7 @@ class BuildTreeTest {
             |    "  Second ${"      single line string"}
             |    "Third line ${
             |        $${"\"\"\""}
-            |            "This is not part \n        of the same string group
+            |            ~This is not part \n        of the same string group
             |    }
             |    "Fourth line
             |    "Fifth line
@@ -4907,9 +4909,9 @@ class BuildTreeTest {
         input = $$"""
             |$${"\"\"\""}
             |  "<ul>
-            |  "{:  for (let item of items) {  :}
+            |  : for (let item of items) {
             |  "  <li>${item}</li>
-            |  "{:  }  :}
+            |  : }
             |  "</ul>
         """.trimMargin(),
         wantJson = """

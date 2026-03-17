@@ -88,14 +88,12 @@ internal class TokenSourceAdapter(
  * And throwing an interpolation in there changes nothing.
  *
  * But if a multi-quoted string contains statement fragments, we take a slightly different tack.
- * In the below, where the right column establishes the token type, the `{:...:}` are inlined.
+ * In the below, where the right column establishes the token type, the statement fragments are inlined.
  *
  *     """                TokenType.LeftDelimiter
- *     foo                TokenType.QuotedString
- *     {:                 TokenType.Punctuation, mayBracket
- *       statement        TokenType.Word
- *     :}                 TokenType.Punctuation, mayBracket
- *     ${ bar }           TokenType.QuotedString
+ *     "foo               TokenType.Margin, TokenType.QuotedString
+ *     : statement        TokenType.Margin, TokenType.Word
+ *     ${ bar }           TokenType.Bracket, TokenType.Word, TokenType.Bracket
  *     """                TokenType.RightDelimiter
  *
  * Because of the presence of the statement phrase, that becomes:
@@ -201,9 +199,9 @@ private class StringFixer(
                 mqStrings.getOrPut(mqStart) { MqString(mqStart) }
                     .interps.add(range)
             },
-            onTextChunk = { mqStart, index ->
+            onTextChunk = { mqStart, index, marginKind ->
                 mqStrings.getOrPut(mqStart) { MqString(mqStart) }
-                    .charDataChunk.add(index)
+                    .charDataChunk.add(marginKind to index)
             },
             onMqString = { range ->
                 val mqStart = range.first
@@ -258,7 +256,7 @@ private class StringFixer(
                 }
                 // 3. inside each curly-bracketed MQ string expression,
                 //    every string chunk has `+++` before it.
-                for (charDataChunk in mqString.charDataChunk) {
+                for ((_, charDataChunk) in mqString.charDataChunk) {
                     // Some data chunks may have been trimmed down to space tokens.
                     if (tokFor(charDataChunk)?.tokenType == TokenType.QuotedString) {
                         editFor(charDataChunk).before = TokenStackElement(
@@ -339,7 +337,7 @@ private class StringFixer(
         private class MqString(val startIndex: Int) {
             var endIndex: Int = -1
             val stmtFragments = mutableListOf<IntRange>()
-            val charDataChunk = mutableListOf<Int>()
+            val charDataChunk = mutableListOf<Pair<MarginKind, Int>>()
             val interps = mutableListOf<IntRange>()
         }
 
@@ -381,30 +379,31 @@ private class StringFixer(
          * Spaces that do not contribute to the content are called *incidental spaces*.
          * Incidental spaces include:
          *
-         * - those used for code indentation, and
-         * - those that appear at the end of a line so are invisible to readers, and
-         *   often automatically stripped by editors, and
-         * - carriage returns which may be inserted or removed depending on
+         * - Those used for code indentation, and
+         * - Those that appear at the end of a line so are invisible to readers and
+         *   often automatically stripped by code editors, and
+         * - Carriage returns which may be inserted or removed depending on
          *   whether a file is edited on Windows or UNIX.
          *
          * Normalizing incidental space steps include:
          *
-         * 1. Removing leading space on each line that match the indentation of the close quote.
-         * 2. Removing the newline after the open quote, and before the close quote.
-         * 3. Removing space at the end of each line.
-         * 4. Normalizing line break sequences CRLF, CR, and LF to LF.
+         * 1. Removing space before the margin character.
+         * 2. Removing the newline after the open quote.
+         * 3. Removing spaces and tabs at the end of each line.
+         * 4. Removing line break sequences at the end of lines with the
+         *    tilde (`~`) margin character.
+         * 5. Normalizing line break sequences CRLF, CR, and LF to LF.
          *
-         * For the purposes of identifying incidental space, we imagine that any
-         * interpolation `${...}`, scriptlet `{:...:}`, or hole `${}` contributes
+         * To identify incidental space, we imagine that any
+         * interpolation `${...}`, or hole `${}` contributes
          * 1 or more non-space, non-line-break characters.
-         *
-         * Indentation matching the close quote is incidental, hence removed.
          *
          * ```temper
          * """
-         *     "Line 1
-         *     "Line 2
-         * == "Line 1\nLine 2"
+         *   "Line 1
+         *   "Line 2
+         *   ~Line 3 without LF at end
+         * == "Line 1\nLine 2\nLine 3 without LF at end"
          * ```
          *
          * Each content line is stripped up to and including the margin character.
@@ -415,10 +414,12 @@ private class StringFixer(
          *     " Line 1
          *    "  Line 2
          *     "   Line 3
-         * == " Line 1\n  Line 2\n   Line 3"
+         * == " Line 1\n  Line 2\n   Line 3\n"
          * ```
          *
-         * It's an error if a line is not un-indented from the close quote.
+         * It's an error if a line is missing a margin character.
+         * Temper's parser will treat such lines as regular code,
+         * often leading to other syntax errors.
          *
          * ```temper FAIL
          * """
@@ -434,7 +435,7 @@ private class StringFixer(
          * """
          *     "Line 1  ${"interpolation"}
          *     "Line 2  ${/*hole*/}
-         *     "Line 3
+         *     ~Line 3
          *     == "Line 1  interpolation\nLine 2  \nLine 3"
          * ```
          *
@@ -457,6 +458,8 @@ private class StringFixer(
          * the meaning of a string is the same.  This means that all of those sequences,
          * where not trimmed, are simplified to LF.  Use `${}` if you really need to
          * embed a `\r` in a file.
+         *
+         * See [snippet/syntax/multi-quoted-strings] for more details on margin characters.
          */
         private fun trimIncidentalWhitespace(
             mqString: MqString,
@@ -466,54 +469,29 @@ private class StringFixer(
             // 1. Identify line ends
             val lines = buildList {
                 var line = mutableListOf<Int>()
-                for (chunkIndex in mqString.charDataChunk) {
+                var kind = MarginKind.UnTerminatedLine
+                for ((chunkKind, chunkIndex) in mqString.charDataChunk) {
                     val token = token(chunkIndex)
                     if (token?.tokenType != TokenType.QuotedString) { continue } // If elided elsewhere
                     line.add(chunkIndex)
+                    kind = chunkKind
                     if (LexicalDefinitions.isLineBreak(token.tokenText.last())) {
-                        add(line.toList())
+                        add(kind to line.toList())
                         line = mutableListOf()
                     }
                 }
-                if (line.isNotEmpty()) { add(line.toList()) }
+                if (line.isNotEmpty()) { add(kind to line.toList()) }
             }
-            // 2. Identify lines which are just whitespace and one {:...:} region.
-            val isJustStatement = lines.map { line ->
-                // Three cases.
-                // " " {: :} "\n"
-                // {: :} "\n"
-                // " " {: :}
-                when (line.size) {
-                    2 -> {
-                        val first = line.first()
-                        val last = line.last()
-                        val fragmentRange = mqString.stmtFragments.firstOrNull { it.first == first + 1 }
-                        fragmentRange?.last == last - 1 && isSpaceyCharData(token(first)) &&
-                            isSpaceyCharData(token(last))
-                    }
-                    1 -> {
-                        val index = line[0]
-                        mqString.stmtFragments.any { it.first == index + 1 || it.last + 1 == index } &&
-                            isSpaceyCharData(token(index))
-                    }
-                    else -> false
-                }
-            }
-            // 3. Eliminate or normalize line breaks.
-            //    Eliminate from after opening quotes, from last line.
+            // 2. Eliminate or normalize line breaks.
+            //    Eliminate from after opening quotes, from the last line.
             // Walk backwards so that we can keep track of whether there is content following.
-            var followedByContent = false
-            for (lineIndex in lines.indices.reversed()) {
-                val line = lines[lineIndex]
-                if (isJustStatement[lineIndex]) {
-                    for (i in line) { edit(i).drop() }
-                    continue
-                }
+            for (lineIndex in lines.indices) {
+                val (kind, line) = lines[lineIndex]
 
                 val lastIndex = line.last()
                 val last = token(lastIndex)!!
 
-                val needsNewline = followedByContent &&
+                val needsNewline = kind == MarginKind.TerminatedLine &&
                     // Do not keep spacey content following the open quote.
                     !(line.size == 1 && lastIndex == mqString.startIndex + 1 && isSpaceyCharData(last))
 
@@ -546,7 +524,6 @@ private class StringFixer(
                         )
                     }
                 }
-                followedByContent = true
             }
         }
 
@@ -560,20 +537,25 @@ private class StringFixer(
             stackElements: List<TokenStackElement>,
             onFragment: (Int, IntRange) -> Unit,
             onInterpolation: (Int, IntRange) -> Unit,
-            onTextChunk: (Int, Int) -> Unit,
+            onTextChunk: (Int, Int, MarginKind) -> Unit,
             onMqString: (IntRange) -> Unit,
         ) {
             val stack = mutableListOf<Int?>()
             val fragments = mutableListOf<Int>()
             val curlies = mutableListOf<Int>()
+            val margins = mutableMapOf<Int, MarginKind>()
             for (i in stackElements.indices) {
-                val (tok) = stackElements[i]
+                val stackElement = stackElements[i]
+                val tok = stackElement.temperToken
                 when (tok.tokenType) {
                     TokenType.Margin -> {
                         if (fragments.isNotEmpty()) {
                             val start = fragments.removeLast()
                             val top = stack.last()!!
                             onFragment(top, start..<i)
+                        }
+                        stack.lastOrNull()?.let { top ->
+                            margins[top] = MarginKind.of(stackElement)
                         }
                         if (tok.tokenText == marginStmtFragmentText) {
                             fragments.add(i)
@@ -612,7 +594,8 @@ private class StringFixer(
                     TokenType.QuotedString -> {
                         val top = stack.lastOrNull()
                         if (top != null) {
-                            onTextChunk(top, i)
+                            val margin = margins[top] ?: MarginKind.UnTerminatedLine
+                            onTextChunk(top, i, margin)
                         }
                     }
                     else -> {}
@@ -1179,3 +1162,21 @@ private class LookaheadProducer<T>(val underlying: Producer<T>) : Producer<T> {
 }
 
 private val marginStmtFragmentText = TokenCluster.Chunk.MarginStmtFragment.prefixText
+
+private enum class MarginKind {
+    TerminatedLine,
+    UnTerminatedLine,
+    StmtFragmentLine,
+
+    ;
+
+    companion object {
+        fun of(e: TokenStackElement?): MarginKind {
+            return when (e?.tokenText) {
+                "\"" -> TerminatedLine
+                ":" -> StmtFragmentLine
+                else -> UnTerminatedLine // Usually "~"
+            }
+        }
+    }
+}

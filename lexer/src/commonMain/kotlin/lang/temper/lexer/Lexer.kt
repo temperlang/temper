@@ -556,7 +556,7 @@ class Lexer(
                         }
                         end += 1
 
-                        if ( // Check for special 2-or-3-character sequences: `${`, `{:`, `\u{`
+                        if ( // Check for special 2-or-3-character sequences: `${`, `\u{`
                             context.startingHole(c) ||
                             end + 1 < limit && (c == '\\' && text[end] == 'u' && text[end + 1] == '{')
                         ) {

@@ -45,17 +45,18 @@ internal typealias TokenClusterStackChangeBitsArray = IntArray
  * For example, in
  *
  *     markdown"""
- *     # Title
- *
- *     ## Table of contents
- *
- *     {:  for (let el in elements) {  :}
- *     - [${ el.text }](${ el.url })
- *     {:  }  :}
+ *       "# Title
+ *       "
+ *       "## Table of contents
+ *       "
+ *       : for (let el in elements) {
+ *         "- [${ el.text }](${ el.url })
+ *       : }
  *     """
  *
  * We see a tagged, *multi-quoted* template for Markdown content.
- * The `{: ... :}` sequence identify sequences of statement-level content called *scriptlets*.
+ * The content lines that start with `:` identify sequences of statement-level content
+ * called *scriptlets*.
  * Taken together, a multi-quoted template's scriptlets must nest, but individually, may not.
  * For example, the block started at the end of `for (...) {` does not end until the next
  * scriptlet.
@@ -69,7 +70,7 @@ internal typealias TokenClusterStackChangeBitsArray = IntArray
  * Some mis-nested constructs have clear intent:
  *
  *     markdown"""
- *     "{:  for (let el in elements) {  :}
+ *     : for (let el in elements) {
  *     "-
  *
  * Obviously, there's a missing `}` before the implicit end of string.
@@ -389,8 +390,16 @@ const val MQ_DELIMITER_LENGTH = 3
  * # Multi-quoted strings
  *
  * Multi-quoted strings start with 3 `"`'s.
- * Each content line must start with a `"`, called a *margin-quote*,
+ * Each content line must start with a *margin-character*,
  * which is not part of the content.
+ *
+ * The allowed margin characters are:
+ * - A double quote (`"`) which is followed by characters and/or interpolations.
+ *   The content line has an implicit line feed (LF U+A) character at the end.
+ * - A tilde (`~`) which is just like a double quote margin, but there is no
+ *   implied line feed at the end.
+ * - A colon (`:`) which allows embedding a statement fragment (see below)
+ *   instead of literal character data.
  *
  * ```temper
  * "3 quotes" ==
@@ -405,7 +414,7 @@ const val MQ_DELIMITER_LENGTH = 3
  *
  * ```temper
  * (
- *   "Alice said\n\"Hello, World!\"" ==
+ *   "Alice said\n\"Hello, World!\"\n" ==
  *     """
  *     "Alice said
  *     ""Hello, World!"
@@ -415,11 +424,57 @@ const val MQ_DELIMITER_LENGTH = 3
  * Multi-quoted strings may contain interpolations.
  *
  * ```temper
- * let whom = """
- *     "World
+ * let whom = "World";
+ *
+ * "Hello, World!" ==
+ *   """
+ *   ~Hello, ${whom}!
+ * ```
+ *
+ * Multi-quoted string content lines may be split across multiple lines.
+ *
+ * ```temper null
+ * """
+ * "This is one line.
+ * ~This is a longer line that, because it starts with a tilde,
+ * ~does not have a line feed at the end, until finally we get
+ * "to a line with a double-quote character in the margin, Phew!
  * ;
- * "Hello, World!" == """
- *   "Hello, ${whom}!
+ * ```
+ *
+ * Statement fragment lines, which start with colon (`:`) allow
+ * for composing complex strings by iterating and using conditionals.
+ *
+ * These two ways of constructing content are equivalent, but the
+ * structure of the output is easier to understand from the
+ * multi-quoted string.
+ *
+ * ```temper
+ * let numbers = ["Zero", "One", "Two", "Three"];
+ * // Starting at zero because the Count is a vampire, not a monster.
+ * let action = "count";
+ *
+ * let a = """
+ *   ~I am the Count who loves to ${action}!
+ *   : for (let number of numbers) {
+ *       ~ ${number}! Ha HA ha.
+ *   : }
+ *   ;
+ *
+ * let b = do {
+ *   let sb = new StringBuilder();
+ *   sb.append("I am the Count who loves to ");
+ *   sb.append(action);
+ *   sb.append("!");
+ *   for (let number of numbers) {
+ *     sb.append(" ");
+ *     sb.append(number);
+ *     sb.append("! Ha HA ha.");
+ *   }
+ *   sb.toString()
+ * };
+ *
+ * a == b
  * ```
  */
 const val MQ_DELIMITER = "\"\"\""
