@@ -884,15 +884,6 @@ class Lexer(
                     currentTokenType = TokenType.Error
                 }
 
-                if (TokenCluster.Change.ResetCL in changes) {
-                    changes -= TokenCluster.Change.ResetCL
-                    resetContentLineKind(TokenCluster.ContentLineKind.Chars)
-                }
-                if (TokenCluster.Change.UnsetCL in changes) {
-                    changes -= TokenCluster.Change.UnsetCL
-                    contentLineKind = null
-                }
-
                 if (TokenCluster.Change.StoreInScriptlet in changes) {
                     changes -= TokenCluster.Change.StoreInScriptlet
                     // We need to close any non-scriptlet containing strings
@@ -1004,6 +995,15 @@ class Lexer(
                     stored.forEach {
                         delimiterStack = Cons(it, delimiterStack)
                     }
+                }
+
+                if (TokenCluster.Change.ResetCL in changes) {
+                    changes -= TokenCluster.Change.ResetCL
+                    resetContentLineKind(TokenCluster.ContentLineKind.Chars)
+                }
+                if (TokenCluster.Change.UnsetCL in changes) {
+                    changes -= TokenCluster.Change.UnsetCL
+                    contentLineKind = null
                 }
 
                 if (TokenCluster.Change.Reproc in changes) {
@@ -1141,7 +1141,7 @@ class Lexer(
      */
     private fun resetContentLineKind(probableKind: TokenCluster.ContentLineKind) {
         contentLineKind =
-            if (StringContext().isMultiQuote) {
+            if (delimiterStack.headOrNull?.let { TokenCluster.Chunk.from(it) } == TokenCluster.Chunk.MultiQuote) {
                 probableKind
             } else {
                 null
