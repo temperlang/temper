@@ -569,12 +569,17 @@ private class StringFixer(
             for (i in stackElements.indices) {
                 val (tok) = stackElements[i]
                 when (tok.tokenType) {
-                    TokenType.Margin if (tok.tokenText == marginStmtFragmentText) -> fragments.add(i)
-                    TokenType.Space if tok.tokenText.any { LexicalDefinitions.isLineBreak(it) } -> {
-                        val start = fragments.removeLast()
-                        val top = stack.last()!!
-                        onFragment(top, start..i)
+                    TokenType.Margin -> {
+                        if (fragments.isNotEmpty()) {
+                            val start = fragments.removeLast()
+                            val top = stack.last()!!
+                            onFragment(top, start..<i)
+                        }
+                        if (tok.tokenText == marginStmtFragmentText) {
+                            fragments.add(i)
+                        }
                     }
+                    TokenType.Space -> {}
                     TokenType.Punctuation -> {
                         when (tok.tokenText) {
                             $$"${", "{" -> curlies.add(i)
@@ -594,6 +599,11 @@ private class StringFixer(
                         },
                     )
                     TokenType.RightDelimiter -> {
+                        if (fragments.isNotEmpty()) {
+                            val start = fragments.removeLast()
+                            val top = stack.last()!!
+                            onFragment(top, start..<i)
+                        }
                         val start = stack.removeLast()
                         if (start != null) {
                             onMqString(start..i)
@@ -608,13 +618,7 @@ private class StringFixer(
                     else -> {}
                 }
             }
-            while (fragments.isNotEmpty()) {
-                // Finish any fragment that is not followed by an explicit line break token.
-                val end = stackElements.indices.last
-                val start = fragments.removeLast()
-                val top = stack.last()!!
-                onFragment(top, start..end)
-            }
+            check(fragments.isEmpty())
         }
     }
 }

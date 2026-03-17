@@ -48,11 +48,6 @@ class TokenClusterTest {
             var indent = 0
             for (token in lexer) {
                 val (_, tokenText, tokenType) = token
-                val chunk = if (tokenType != TokenType.Error) {
-                    TokenCluster.Chunk.from(token)
-                } else {
-                    null
-                }
 
                 val prefix = when { // `diff` style markers
                     tokenType == TokenType.Error -> '-' // Shouldn't be there
@@ -972,7 +967,7 @@ class TokenClusterTest {
 
     @Test
     fun mQInStmtBlock4E() = assertClusters(
-        // First colon line contains a triple quoted string which contains the second colon line
+        // The first colon line contains a triple quoted string which contains the second colon line
         input = """
             |”””
             |: ”””

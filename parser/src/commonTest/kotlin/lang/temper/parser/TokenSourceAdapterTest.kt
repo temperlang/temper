@@ -111,7 +111,7 @@ class TokenSourceAdapterTest {
         input = $$"""
             |$${"\"\"\""}
             |  "some character data
-            |  "{: statement(here) :}
+            |  : statement(here)
             |  "more character${} data ${}
             |  "last line
             |
@@ -139,9 +139,9 @@ class TokenSourceAdapterTest {
         input = $$"""
             |$${"\"\"\""}
             |  "<ul>
-            |  "{: for (let item of items) { :}
+            |  : for (let item of items) {
             |  "  <li>${item}</li>\n
-            |  "{: } :}
+            |  : }
             |  "</ul>
         """.trimMargin(),
         want = listOf(

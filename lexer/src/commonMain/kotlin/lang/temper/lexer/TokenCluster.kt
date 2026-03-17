@@ -243,7 +243,7 @@ object TokenCluster {
             transitions[Chunk.Backtick, Chunk.UnicodeLeft] = 0 or Change.Push
             transitions[Chunk.Backtick, Chunk.NoElement] = 0 or Change.Syn or Change.Reproc
             errorMsgs[Chunk.Backtick to Chunk.NoElement] = MessageTemplate.UnclosedQuotation
-            transitions[Chunk.MultiQuote, Chunk.MultiQuote] = 0 or Change.Push
+            transitions[Chunk.MultiQuote, Chunk.MultiQuote] = 0 or Change.Push or Change.UnsetCL
             transitions[Chunk.MultiQuote, Chunk.DollarLeft] = 0 or Change.Push or Change.UnsetCL
             transitions[Chunk.MultiQuote, Chunk.LeftCurly] = 0 or Change.Push
             transitions[Chunk.MultiQuote, Chunk.RightCurly] = 0 or Change.BadToken

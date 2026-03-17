@@ -374,7 +374,7 @@ class LexerTest {
         >"line of character data
         :M                      Q
         >: embedded { statement }
-        :MS       WSBS        WSBQ
+        :MS       WSBS        WSBS
         >"another line of character data
         :M                              Q
         >   $Q3;
@@ -443,7 +443,7 @@ class LexerTest {
         >" - $C x }
         :M  Q BSWSBQ
         >: }
-        :MSBQ
+        :MSBS
         >$Q3
         :  r
         """.trimIndent(),
@@ -1323,7 +1323,7 @@ class LexerTest {
             .filter { it.second?.synthetic != true }
             .joinToString("") { it.first }
 
-        /** Convert tokens and metadata back into alternating input-line/metadata-line form. */
+        /** Convert tokens and metadata back into an alternating input-line/metadata-line form. */
         fun condense(ls: List<Pair<String, TokenMetadata?>>) = buildString {
             val inputLine = StringBuilder()
             val metadataLine = StringBuilder()

@@ -235,7 +235,7 @@ class Lexer(
             // Tokens can be interrupted by
             //     ```
             // on a line by itself.
-            // Multi-line token handling code below has to break to here on seeing a line break.
+            // The multi-line token handling code below has to break to here on seeing a line break.
             if (atStartOfLine(end) && open != OpenTokenType.SEMI_LIT_COMMENT) {
                 val delimiterEnd =
                     lookForEmbeddingLanguageDelimiter(lang::matchSemilitCommentEntrance)
@@ -434,7 +434,7 @@ class Lexer(
                             currentTokenType = TokenType.Space
                             findEndOfRun(kind)
                             if (contentLineKind != null) {
-                                // If there's a margin character governing the current line then
+                                // If there's a margin character governing the current line, then
                                 // any line break puts us in a look-the-next-margin state
                                 val hasLineBreak = (start..<end).any { i ->
                                     LexicalDefinitions.isLineBreak(sourceText[i])
@@ -718,7 +718,7 @@ class Lexer(
                     }
                 }
                 OpenTokenType.UNICODE_RUN -> {
-                    // End on right curly or holes. Otherwise, consume either word/number or not as a string.
+                    // End on a right curly or holes. Otherwise, consume either word/number or not as a string.
                     val c = text[end]
                     when (val cp0 = decodeUtf16(text, end)) {
                         C_COMMA -> {
@@ -886,12 +886,7 @@ class Lexer(
 
                 if (TokenCluster.Change.ResetCL in changes) {
                     changes -= TokenCluster.Change.ResetCL
-                    contentLineKind =
-                        if (StringContext().isMultiQuote) {
-                            TokenCluster.ContentLineKind.Chars
-                        } else {
-                            null
-                        }
+                    resetContentLineKind(TokenCluster.ContentLineKind.Chars)
                 }
                 if (TokenCluster.Change.UnsetCL in changes) {
                     changes -= TokenCluster.Change.UnsetCL
@@ -1023,11 +1018,15 @@ class Lexer(
 
             end = before + updateToken.tokenText.length
             open = when (TokenCluster.Chunk.from(delimiterStack.headOrNull)) {
-                TokenCluster.Chunk.MultiQuote,
                 TokenCluster.Chunk.Quote,
                 TokenCluster.Chunk.Backtick,
                 TokenCluster.Chunk.MarginChars,
                 -> OpenTokenType.STRING
+
+                TokenCluster.Chunk.MultiQuote -> when (contentLineKind) {
+                    null, TokenCluster.ContentLineKind.Chars -> OpenTokenType.STRING
+                    TokenCluster.ContentLineKind.StmtFragment -> OpenTokenType.NONE
+                }
 
                 TokenCluster.Chunk.UnicodeLeft,
                 -> OpenTokenType.UNICODE_RUN
@@ -1130,8 +1129,23 @@ class Lexer(
             }
         }
         if (poppingMq) {
-            contentLineKind = null
+            resetContentLineKind(TokenCluster.ContentLineKind.StmtFragment)
         }
+    }
+
+    /**
+     * When we exit a construct that nests inside a multi-quoted string,
+     * we might need to reset the content-line kind.
+     *
+     * For example, `${...}` are in char lines, and `"""` can embed in a statement fragment line.
+     */
+    private fun resetContentLineKind(probableKind: TokenCluster.ContentLineKind) {
+        contentLineKind =
+            if (StringContext().isMultiQuote) {
+                probableKind
+            } else {
+                null
+            }
     }
 
     private fun requireAllowedRegularToken(position: Position) {
@@ -1152,7 +1166,7 @@ class Lexer(
     private inner class StringContext {
         private val leftDelimiter = run {
             var stack = delimiterStack
-            // Look through margin and unicode runs to delimiter
+            // Look through margin and Unicode runs to delimiter
             while (true) {
                 val top = stack.headOrNull ?: break
                 if (top.tokenType == TokenType.LeftDelimiter) { break }
@@ -1166,7 +1180,6 @@ class Lexer(
             '"', '`' -> true
             else -> false
         }
-        private val allowScriptlets = isMultiQuote // alias for readability
         val isRegexLike get() = delimChar == '/'
 
         fun startingHole(c: Char) = end < sourceText.length && (
@@ -1289,7 +1302,7 @@ class Lexer(
                 currentTokenType = TokenType.Error
             }
         }
-        // Allow letter suffixes like 42L used to distinguish long vs float variants in C++.
+        // Allow letter suffixes like 42L used to distinguish long vs. float variants in C++.
         // We use findEndOfWord so that we don't get into a situation where a word suffix
         // character like question mark, prime, or bang is a punctuation character adjacent
         // to a number but not adjacent to a word.
@@ -1367,7 +1380,7 @@ class Lexer(
         atStartOfLine(end) && lang.matchSemilitCommentEntrance(sourceText, end) >= 0
 
     private fun findEndOfWord() {
-        // Assume caller has consumed the start character already.
+        // Assume the caller has consumed the start character already.
 
         val text = sourceText
         val limit = text.length
@@ -1450,20 +1463,24 @@ class Lexer(
     }
 
     /**
-     * We need to treat < and > specially when they are used as angle brackets as in
+     * We need to treat < and > as special when they are used as angle brackets as in
      *
-     *    : TypeName<TypeParameter>
+     *     : TypeName<TypeParameter>
      *
      * but not in compound punctuation operators like
      *
-     *    << <<= <= >> >>= >= >>> >>>=
+     *     << <<= <= >> >>= >= >>> >>>=
      *
      * or custom punctuation tokens
      *
-     *    <=> => ->
+     *     <=> => ->
      *
-     * To do that, we .
+     * To do that, we rely on some conventions:
      *
+     * - A `<` is an angle bracket if it follows another non-ignorable token without
+     *   an ignorable token in between.
+     * - A `>` is an angle bracket if the count of `<` that are angle brackets has
+     *   not been decremented by previous `>` to zero.
      */
     private var nOpenLeftAngleBrackets = 0
 

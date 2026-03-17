@@ -19,7 +19,7 @@ data class TemperToken(
     /** If [tokenType] is [TokenType.Error], the kind of error. */
     val error: MessageTemplateI? = null,
 ) : TokenLike {
-    override fun toString(): String = debugStringForToken(pos, tokenText)
+    override fun toString(): String = debugStringForToken()
 }
 
 /** Like [TemperToken] but without the OPP flags. */
@@ -28,14 +28,18 @@ internal data class MinimalToken(
     override val tokenText: String,
     override val tokenType: TokenType,
 ) : TokenLike {
-    override fun toString(): String = debugStringForToken(pos, tokenText)
+    override fun toString(): String = debugStringForToken()
 }
 
-private fun debugStringForToken(pos: Position, tokenText: String): String =
-    "${
-        if (tokenText.isNotEmpty() && '`' !in tokenText && '\\' !in tokenText) {
-            "`$tokenText`"
-        } else {
-            temperEscaper.escape(tokenText)
-        }
-    }:$pos"
+private fun TokenLike.debugStringForToken(): String = buildString {
+    append(tokenType.name.first())
+    if (tokenText.isNotEmpty() && '`' !in tokenText && '\\' !in tokenText && '\n' !in tokenText) {
+        append('`')
+        append(tokenText)
+        append('`')
+    } else {
+        temperEscaper.escapeTo(tokenText, this)
+    }
+    append(':')
+    append("$pos")
+}
