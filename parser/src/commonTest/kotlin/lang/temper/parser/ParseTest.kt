@@ -564,7 +564,7 @@ class ParseTest {
             |
             |"Line 2: \u0123
             |/* Comment */
-            |"Line 3: ${} $ { }
+            |~Line 3: ${} $ { }
             |;
         """.trimMargin(),
         want = """

@@ -127,7 +127,7 @@ class TokenSourceAdapterTest {
             "+++", "` data `", ";",
             $$"${", "}", ";",
             "+++", "`\n`", ";",
-            "+++", "`last line`", ";",
+            "+++", "`last line\n`", ";",
             "\"\"\"",
             "}",
             "+", "1",
@@ -174,7 +174,7 @@ class TokenSourceAdapterTest {
             "\"\"\"",
             "`Hello,\n`",
             $$"${", "(", "\"", "`World`", "\"", ")", "}", "`\n`",
-            "`!`",
+            "`!\n`",
             "\"\"\"",
             ")",
             ";",
@@ -191,7 +191,7 @@ class TokenSourceAdapterTest {
             |
         """.trimMargin(),
         want = listOf(
-            "(", "\"\"\"", "`Line 1\n`", "`Line 2 `", $$"${", "}", "\"\"\"", ")",
+            "(", "\"\"\"", "`Line 1\n`", "`Line 2 `", $$"${", "}", "`\n`", "\"\"\"", ")",
         ),
     )
 
