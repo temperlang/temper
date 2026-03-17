@@ -448,7 +448,15 @@ class ParseTest {
             |    ],
             |  "\""], ")"],
             |  ";",
-            |  ["/(^|,)", "\\s", "*/"],
+            |  [
+            |    "(",
+            |    [
+            |      "/",
+            |      ["(^|,)", "\\s", "*"],
+            |      "/"
+            |    ],
+            |    ")",
+            |  ],
             |  ";",
             |  ["(", ["\"", [
             |    "wanna", "\\u0020", "be", "\\x20", ":", "\\ud800", "\\udc00",
@@ -4200,9 +4208,9 @@ class ParseTest {
         input = $$"""
             |$${"\"\"\""}
             |  "<ul>
-            |  "{:  for (let item of items) {  :}
+            |  : for (let item of items) {
             |  "  <li>${item}</li>
-            |  "{:  }  :}
+            |  : }
             |  "</ul>
         """.trimMargin(),
         want = """
@@ -4261,9 +4269,9 @@ class ParseTest {
         input = $$"""
             |tag$${"\"\"\""}
             |  "<ul>
-            |  "{:  for (let item of items) {  :}
+            |  : for (let item of items) {
             |  "  <li>${item}</li>
-            |  "{:  }  :}
+            |  : }
             |  "</ul>
         """.trimMargin(),
         want = """
