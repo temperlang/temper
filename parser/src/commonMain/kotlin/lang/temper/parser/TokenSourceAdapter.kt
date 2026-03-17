@@ -569,14 +569,14 @@ private class StringFixer(
             for (i in stackElements.indices) {
                 val (tok) = stackElements[i]
                 when (tok.tokenType) {
+                    TokenType.Margin if (tok.tokenText == marginStmtFragmentText) -> fragments.add(i)
+                    TokenType.Space if tok.tokenText.any { LexicalDefinitions.isLineBreak(it) } -> {
+                        val start = fragments.removeLast()
+                        val top = stack.last()!!
+                        onFragment(top, start..i)
+                    }
                     TokenType.Punctuation -> {
                         when (tok.tokenText) {
-                            leftCurlyColonTokenText -> fragments.add(i)
-                            colonRightCurlyTokenText -> {
-                                val start = fragments.removeLast()
-                                val top = stack.last()!!
-                                onFragment(top, start..i)
-                            }
                             $$"${", "{" -> curlies.add(i)
                             "}" -> curlies.removeLastOrNull()?.let { start ->
                                 val top = stack.lastOrNull()
@@ -607,6 +607,13 @@ private class StringFixer(
                     }
                     else -> {}
                 }
+            }
+            while (fragments.isNotEmpty()) {
+                // Finish any fragment that is not followed by an explicit line break token.
+                val end = stackElements.indices.last
+                val start = fragments.removeLast()
+                val top = stack.last()!!
+                onFragment(top, start..end)
             }
         }
     }
@@ -1167,5 +1174,4 @@ private class LookaheadProducer<T>(val underlying: Producer<T>) : Producer<T> {
     }
 }
 
-private val leftCurlyColonTokenText = TokenCluster.Chunk.LeftCurlyColon.prefixText
-private val colonRightCurlyTokenText = TokenCluster.Chunk.ColonRightCurly.prefixText
+private val marginStmtFragmentText = TokenCluster.Chunk.MarginStmtFragment.prefixText

@@ -112,14 +112,16 @@ object TokenCluster {
         MultiQuote("\"\"\"", TokenType.RightDelimiter),
         DollarLeft($$"${", TokenType.Punctuation),
         UnicodeLeft("\\u{", TokenType.Punctuation),
-        LeftCurlyColon("{:", TokenType.Punctuation),
         LeftCurly("{", TokenType.Punctuation),
 
         // Closers
-        ColonRightCurly(":}", TokenType.Punctuation),
         RightCurly("}", TokenType.Punctuation),
 
-        // Neither
+        // Margin Chars
+        MarginStmtFragment(":", TokenType.Margin),
+        MarginChars("\"", TokenType.Margin), // or "~"
+
+        // Other
         LineBreak("\n", TokenType.Space),
         NoElement("", null),
         Other("?", null),
@@ -130,15 +132,22 @@ object TokenCluster {
 
         companion object {
             fun from(
-                tokenOrSourcePrefix: String?,
-                /** True if no other tokens could follow [tokenOrSourcePrefix]. */
+                tokenLike: TokenLike?,
+                /** True if no other tokens could follow [tokenLike]. */
                 atEndOfInput: Boolean = false,
             ): Chunk {
-                if (tokenOrSourcePrefix == null) {
+                if (tokenLike == null) {
                     return NoElement
                 }
-                if (tokenOrSourcePrefix.length == 1) {
-                    return when (tokenOrSourcePrefix[0]) {
+                val tokenText = tokenLike.tokenText
+                if (tokenLike.tokenType == TokenType.Margin) {
+                    when (tokenText) {
+                        ":" -> return MarginStmtFragment
+                        "\"", "~" -> return MarginChars
+                    }
+                }
+                if (tokenText.length == 1) {
+                    return when (tokenText[0]) {
                         '{' -> LeftCurly
                         '}' -> RightCurly
                         '`' -> Backtick
@@ -147,9 +156,7 @@ object TokenCluster {
                         else -> Other
                     }
                 }
-                return when (tokenOrSourcePrefix) {
-                    "{:" -> LeftCurlyColon
-                    ":}" -> ColonRightCurly
+                return when (tokenText) {
                     $$"${" -> DollarLeft
                     "\\u{" -> UnicodeLeft
                     "\r\n" -> LineBreak
@@ -165,11 +172,11 @@ object TokenCluster {
                         //   """
                         //   $"""
                         //   $$"""
-                        if (tokenOrSourcePrefix.endsWith(MQ_DELIMITER)) {
-                            val nBefore = tokenOrSourcePrefix.length - MQ_DELIMITER_LENGTH
+                        if (tokenText.endsWith(MQ_DELIMITER)) {
+                            val nBefore = tokenText.length - MQ_DELIMITER_LENGTH
                             isMq = true
                             for (i in 0 until nBefore) {
-                                if (tokenOrSourcePrefix[i] != '$') {
+                                if (tokenText[i] != '$') {
                                     isMq = false
                                     break
                                 }
@@ -223,69 +230,67 @@ object TokenCluster {
             transitions[Chunk.Quote, Chunk.MultiQuote] = 0 or Change.BadToken
             transitions[Chunk.Quote, Chunk.DollarLeft] = 0 or Change.Push
             transitions[Chunk.Quote, Chunk.UnicodeLeft] = 0 or Change.Push
-            transitions[Chunk.Quote, Chunk.LeftCurlyColon] = 0 or Change.Cons1
             transitions[Chunk.Quote, Chunk.LineBreak] = 0 or Change.Syn or Change.Reproc
-            errorMsgs[Chunk.Quote to Chunk.LineBreak] = MessageTemplate.UnclosedQuotation
+            transitions[Chunk.Quote, Chunk.MarginChars] = 0 or Change.Syn or Change.Reproc
+            transitions[Chunk.Quote, Chunk.MarginStmtFragment] = 0 or Change.Syn or Change.Reproc
             transitions[Chunk.Quote, Chunk.NoElement] = 0 or Change.Syn or Change.Reproc
+            errorMsgs[Chunk.Quote to Chunk.LineBreak] = MessageTemplate.UnclosedQuotation
+            errorMsgs[Chunk.Quote to Chunk.MarginChars] = MessageTemplate.UnclosedQuotation
+            errorMsgs[Chunk.Quote to Chunk.MarginStmtFragment] = MessageTemplate.UnclosedQuotation
             errorMsgs[Chunk.Quote to Chunk.NoElement] = MessageTemplate.UnclosedQuotation
             transitions[Chunk.Backtick, Chunk.Backtick] = 0 or Change.Pop
             transitions[Chunk.Backtick, Chunk.DollarLeft] = 0 or Change.Push
             transitions[Chunk.Backtick, Chunk.UnicodeLeft] = 0 or Change.Push
-            transitions[Chunk.Backtick, Chunk.LeftCurlyColon] = 0 or Change.Cons1
             transitions[Chunk.Backtick, Chunk.NoElement] = 0 or Change.Syn or Change.Reproc
             errorMsgs[Chunk.Backtick to Chunk.NoElement] = MessageTemplate.UnclosedQuotation
             transitions[Chunk.MultiQuote, Chunk.MultiQuote] = 0 or Change.Push
-            transitions[Chunk.MultiQuote, Chunk.DollarLeft] = 0 or Change.Push
+            transitions[Chunk.MultiQuote, Chunk.DollarLeft] = 0 or Change.Push or Change.UnsetCL
+            transitions[Chunk.MultiQuote, Chunk.LeftCurly] = 0 or Change.Push
+            transitions[Chunk.MultiQuote, Chunk.RightCurly] = 0 or Change.BadToken
+            errorMsgs[Chunk.MultiQuote to Chunk.RightCurly] = MessageTemplate.UnmatchedBracket
             transitions[Chunk.MultiQuote, Chunk.UnicodeLeft] = 0 or Change.Push
-            transitions[Chunk.MultiQuote, Chunk.LeftCurlyColon] = 0 or Change.Push or Change.RestoreFromScriptlet
+            transitions[Chunk.MultiQuote, Chunk.Quote] = 0 or Change.Push
+            transitions[Chunk.MultiQuote, Chunk.MarginStmtFragment] = 0 or Change.RestoreFromScriptlet
+            transitions[Chunk.MultiQuote, Chunk.MarginChars] = 0 or Change.StoreInScriptlet
             transitions[Chunk.MultiQuote, Chunk.NoElement] = 0 or Change.Syn or Change.Reproc // Not an error
             transitions[Chunk.DollarLeft, Chunk.Quote] = 0 or Change.Push
             transitions[Chunk.DollarLeft, Chunk.Backtick] = 0 or Change.Push
             transitions[Chunk.DollarLeft, Chunk.MultiQuote] = 0 or Change.Push
             transitions[Chunk.DollarLeft, Chunk.DollarLeft] = 0 or Change.Cons1 or Change.BadToken
-            transitions[Chunk.DollarLeft, Chunk.LeftCurlyColon] = 0 or Change.Cons1 or Change.Push
+            transitions[Chunk.DollarLeft, Chunk.MarginStmtFragment] = 0 or Change.BadToken
+            transitions[Chunk.DollarLeft, Chunk.MarginChars] = 0 or Change.BadToken
             transitions[Chunk.DollarLeft, Chunk.LeftCurly] = 0 or Change.Push
-            transitions[Chunk.DollarLeft, Chunk.ColonRightCurly] = 0 or Change.StoreInScriptlet or Change.Reproc
-            transitions[Chunk.DollarLeft, Chunk.RightCurly] = 0 or Change.Pop
+            transitions[Chunk.DollarLeft, Chunk.RightCurly] = 0 or Change.Pop or Change.ResetCL
             transitions[Chunk.DollarLeft, Chunk.NoElement] = 0 or Change.Syn or Change.Reproc
             transitions[Chunk.UnicodeLeft, Chunk.DollarLeft] = 0 or Change.Push
-            transitions[Chunk.UnicodeLeft, Chunk.LeftCurlyColon] = 0 or Change.Push or Change.RestoreFromScriptlet
+            transitions[Chunk.UnicodeLeft, Chunk.MarginStmtFragment] = 0 or Change.Pop or Change.Reproc
             transitions[Chunk.UnicodeLeft, Chunk.RightCurly] = 0 or Change.Pop
             transitions[Chunk.UnicodeLeft, Chunk.NoElement] = 0 or Change.Syn or Change.Reproc
-            transitions[Chunk.LeftCurlyColon, Chunk.Quote] = 0 or Change.Push
-            transitions[Chunk.LeftCurlyColon, Chunk.Backtick] = 0 or Change.Push
-            transitions[Chunk.LeftCurlyColon, Chunk.MultiQuote] = 0 or Change.Push
-            transitions[Chunk.LeftCurlyColon, Chunk.DollarLeft] = 0 or Change.Cons1 or Change.BadToken
-            transitions[Chunk.LeftCurlyColon, Chunk.LeftCurlyColon] = 0 or Change.Cons1 or Change.Push
-            transitions[Chunk.LeftCurlyColon, Chunk.LeftCurly] = 0 or Change.Push
-            transitions[Chunk.LeftCurlyColon, Chunk.ColonRightCurly] = 0 or Change.Pop
-            transitions[Chunk.LeftCurlyColon, Chunk.RightCurly] = 0 or Change.BadToken
-            errorMsgs[Chunk.LeftCurlyColon to Chunk.RightCurly] = MessageTemplate.UnmatchedBracket
-            transitions[Chunk.LeftCurlyColon, Chunk.NoElement] = 0 or Change.Syn or Change.Reproc
-            errorMsgs[Chunk.LeftCurlyColon to Chunk.NoElement] = MessageTemplate.UnmatchedBracket
             transitions[Chunk.LeftCurly, Chunk.Quote] = 0 or Change.Push
             transitions[Chunk.LeftCurly, Chunk.MultiQuote] = 0 or Change.Push
             transitions[Chunk.LeftCurly, Chunk.Backtick] = 0 or Change.Push
             transitions[Chunk.LeftCurly, Chunk.DollarLeft] = 0 or Change.Push
-            transitions[Chunk.LeftCurly, Chunk.LeftCurlyColon] = 0 or Change.Cons1 or Change.Push
             transitions[Chunk.LeftCurly, Chunk.LeftCurly] = 0 or Change.Push
-            transitions[Chunk.LeftCurly, Chunk.ColonRightCurly] = 0 or Change.StoreInScriptlet or Change.Reproc
             transitions[Chunk.LeftCurly, Chunk.RightCurly] = 0 or Change.Pop
+            transitions[Chunk.LeftCurly, Chunk.MarginChars] = 0 or Change.StoreInScriptlet
             transitions[Chunk.LeftCurly, Chunk.NoElement] = 0 or Change.Syn or Change.Reproc
             errorMsgs[Chunk.LeftCurly to Chunk.NoElement] = MessageTemplate.UnmatchedBracket
             transitions[noOpener, Chunk.Quote] = 0 or Change.Push
             transitions[noOpener, Chunk.MultiQuote] = 0 or Change.Push
             transitions[noOpener, Chunk.Backtick] = 0 or Change.Push
             transitions[noOpener, Chunk.DollarLeft] = 0 or Change.Push
-            transitions[noOpener, Chunk.LeftCurlyColon] = 0 or Change.Cons1 or Change.Push
             transitions[noOpener, Chunk.LeftCurly] = 0 or Change.Push
-            transitions[noOpener, Chunk.ColonRightCurly] = 0 or Change.Cons1 or Change.BadToken
             transitions[noOpener, Chunk.RightCurly] = 0 or Change.BadToken
             errorMsgs[noOpener to Chunk.RightCurly] = MessageTemplate.UnmatchedBracket
             transitions[noOpener, Chunk.NoElement] = 0 // Done
 
             this.errorMsgs = errorMsgs.toMap()
         }
+    }
+
+    internal enum class ContentLineKind {
+        Chars,
+        StmtFragment,
     }
 
     /** The primitive operations that may be applied to a token cluster stack. */
@@ -317,27 +322,36 @@ object TokenCluster {
          */
         StoreInScriptlet,
 
-        /** Synthesize a closer. */
+        /** Synthesize a closer token. */
         Syn,
 
-        /** Pop to the containing scriptlet boundary. */
-        PopCC,
+        /** Unset the internal [ContentLineKind] */
+        UnsetCL,
+
+        /** Reset the internal [ContentLineKind] */
+        ResetCL,
     }
 
-    fun closerFor(opener: String): String? {
-        if (opener.endsWith('"')) {
+    internal fun closerFor(opener: MinimalToken): MinimalToken? {
+        val (pos, openerText, openerType) = opener
+        if (openerType == TokenType.Margin) {
+            return MinimalToken(pos, "\n", TokenType.Space)
+        }
+        if (openerText.endsWith('"')) {
             // " closes ", """ closes """, """" closes """"
-            return if (opener.length >= MQ_DELIMITER_LENGTH) {
-                MQ_DELIMITER // Close $""" with """
+            return if (openerText.length >= MQ_DELIMITER_LENGTH) {
+                MinimalToken(pos, MQ_DELIMITER, TokenType.RightDelimiter) // Close $""" with """
             } else {
-                "\""
+                MinimalToken(pos, "\"", TokenType.RightDelimiter)
             }
         }
-        return when (opener) {
-            $$"${", "\\u{", "{" -> "}"
-            "{:" -> ":}"
-            "`", "'" -> opener
-            "/" -> null
+        return when (openerText) {
+            $$"${", "\\u{", "{" -> MinimalToken(pos, "}", TokenType.Punctuation)
+            "`", "'", "/" -> if (opener.tokenType == TokenType.LeftDelimiter) {
+                MinimalToken(pos, openerText, TokenType.RightDelimiter)
+            } else {
+                null
+            }
             else -> error(opener)
         }
     }

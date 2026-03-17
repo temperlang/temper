@@ -84,7 +84,7 @@ import kotlin.test.assertEquals
 private data class TokenMetadata(val type: TokenType, val mayBracket: Boolean, val synthetic: Boolean)
 
 private const val C = $$"${" // So $C in a string means ${ and takes the same space
-private const val Q3 = "\"\"\"" // So $Q3 in a string means """ and takes the same space
+internal const val Q3 = "\"\"\"" // So $Q3 in a string means """ and takes the same space
 
 /**
  * Single character abbreviations for [TokenType]s used in test-case metadata lines.
@@ -373,8 +373,8 @@ class LexerTest {
         :  LQ
         >"line of character data
         :M                      Q
-        >"{: embedded { statement } :}
-        :M BS       WSBS        WSBS BQ
+        >: embedded { statement }
+        :MS       WSBS        WSBQ
         >"another line of character data
         :M                              Q
         >   $Q3;
@@ -438,12 +438,12 @@ class LexerTest {
         :  LQ
         >"Table of Contents:
         :M                  Q
-        >"{: for (x in xs) { :}
-        :M BS  WSBWS WS WBSBS BQ
+        >: for (x in xs) {
+        :MS  WSBWS WS WBSBS
         >" - $C x }
         :M  Q BSWSBQ
-        >"{: } :}
-        :M BSBS BQ
+        >: }
+        :MSBQ
         >$Q3
         :  r
         """.trimIndent(),
@@ -587,8 +587,8 @@ class LexerTest {
     @Test
     fun ltIsARegexPreceder() = assertTokenization(
         """
-        >< /foo attr="value">
-        :PS                 Q
+        >< /foo attr="value">/
+        :PSL                Qr
         """.trimIndent(),
 
         wantedErrors = listOf(
@@ -952,7 +952,7 @@ class LexerTest {
     fun returnRegex() = assertTokenization(
         """
         >return / regex/i
-        :     WS        Q
+        :     WSL     Q R
         """.trimIndent(),
     )
 
@@ -960,7 +960,7 @@ class LexerTest {
     fun yieldRegex() = assertTokenization(
         """
         >yield / regex/i
-        :    WS        Q
+        :    WSL     Q R
         """.trimIndent(),
     )
 
@@ -1016,7 +1016,7 @@ class LexerTest {
     fun plusEqRegex() = assertTokenization(
         """
         >x += / regex/i.n
-        :WS PS        QPW
+        :WS PSL     Q RPW
         """.trimIndent(),
     )
 
@@ -1024,7 +1024,7 @@ class LexerTest {
     fun minusRegex() = assertTokenization(
         """
         >x - / regex/i.n
-        :WSPS        QPW
+        :WSPSL     Q RPW
         """.trimIndent(),
     )
 
@@ -1032,7 +1032,7 @@ class LexerTest {
     fun timesRegex() = assertTokenization(
         """
         >x * / regex/i.n
-        :WSPS        QPW
+        :WSPSL     Q RPW
         """.trimIndent(),
     )
 
@@ -1040,7 +1040,7 @@ class LexerTest {
     fun regexNoTail() = assertTokenization(
         """
         >/foo/
-        :    Q
+        :L  QR
         """.trimIndent(),
     )
 
@@ -1048,7 +1048,7 @@ class LexerTest {
     fun regexBigTail() = assertTokenization(
         """
         >/foo/smigu
-        :         Q
+        :L  Q     R
         """.trimIndent(),
     )
 
@@ -1056,7 +1056,7 @@ class LexerTest {
     fun regexBigOddTail() = assertTokenization(
         """
         >/foo/foo
-        :       Q
+        :L  Q   R
         """.trimIndent(),
     )
 
@@ -1064,7 +1064,7 @@ class LexerTest {
     fun bangRegex() = assertTokenization(
         """
         >! /foo/i.something
-        :PS     QP        W
+        :PSL  Q RP        W
         """.trimIndent(),
     )
 
@@ -1072,7 +1072,7 @@ class LexerTest {
     fun tildeRegex() = assertTokenization(
         """
         >x ~ /foo/i.something
-        :WSPS     QP        W
+        :WSPSL  Q RP        W
         """.trimIndent(),
     )
 
@@ -1080,7 +1080,7 @@ class LexerTest {
     fun regexSpace() = assertTokenization(
         """
         >/a a/
-        :    Q
+        :L  QR
         """.trimIndent(),
     )
 
@@ -1088,7 +1088,7 @@ class LexerTest {
     fun regexReplace() = assertTokenization(
         """
         >/foo/->bar/
-        :          Q
+        :L        QR
         """.trimIndent(),
     )
 
@@ -1096,7 +1096,7 @@ class LexerTest {
     fun regexReplaceWithNothing() = assertTokenization(
         """
         >/foo/->/
-        :       Q
+        :L     QR
         """.trimIndent(),
     )
 
@@ -1104,7 +1104,7 @@ class LexerTest {
     fun regexReplaceSpace() = assertTokenization(
         """
         >/foo/-> /
-        :        Q
+        :L      QR
         """.trimIndent(),
     )
 
@@ -1112,7 +1112,7 @@ class LexerTest {
     fun regexThenComment() = assertTokenization(
         """
         >/foo/bar//stuff
-        :       Q      C
+        :L  Q   R      C
         """.trimIndent(),
     )
 
@@ -1120,7 +1120,7 @@ class LexerTest {
     fun regexReplaceNonEnd() = assertTokenization(
         """
         >/foo/->bar/ foo
-        :          QS  W
+        :L        QRS  W
         """.trimIndent(),
     )
 
@@ -1128,7 +1128,7 @@ class LexerTest {
     fun regexReplaceTail() = assertTokenization(
         """
         >/foo/->bar/i
-        :           Q
+        :L        Q R
         """.trimIndent(),
     )
 
@@ -1136,15 +1136,15 @@ class LexerTest {
     fun regexReplaceIncomplete1() = assertTokenization(
         """
         >/foo/-
-        :    QP
+        :L  QRP
         """.trimIndent(),
     )
 
     @Test
     fun regexReplaceIncomplete2() = assertTokenization(
         """
-        >/foo/->
-        :      Q
+        >/foo/->/
+        :L     Qr
         """.trimIndent(),
 
         wantedErrors = listOf(
