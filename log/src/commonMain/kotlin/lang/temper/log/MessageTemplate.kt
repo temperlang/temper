@@ -61,7 +61,7 @@ enum class MessageTemplate(
     Int32OutOfBounds("Int32 value, %s, out of representable bounds", CompilationPhase.Lex),
     Int64OutOfBounds("Int64 value, %s, out of representable bounds", CompilationPhase.Lex),
     MaybePromoteInt32ToInt64(
-        "You can turn an Int32 literal into an Int64 by putting I64 at the end",
+        "You can turn an Int32 literal into an Int64 by putting i64 at the end",
         CompilationPhase.Lex,
     ),
     MalformedNumber("Malformed number", CompilationPhase.Lex),
