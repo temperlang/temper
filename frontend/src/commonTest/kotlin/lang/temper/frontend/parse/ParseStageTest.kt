@@ -47,7 +47,7 @@ class ParseStageTest {
             |/(^|,)\s*/;
             |$${'"'}""
             |"wanna${} be pair\: \ud800\udc00
-            |"so does that have more pos needs?
+            |~so does that have more pos needs?
             |;
             |"fine\u0020escape${" "}here\u";
             |"too big: \u{hi,110000}!\u";

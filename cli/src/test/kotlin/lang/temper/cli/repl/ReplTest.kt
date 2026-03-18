@@ -127,7 +127,7 @@ class ReplTest {
         @Suppress("SpellCheckingInspection")
         assertPending(
             """
-                |interactive#0: "foo\nbar\nbaz"
+                |interactive#0: "foo\nbar\nbaz\n"
                 |
             """.trimMargin(),
         )

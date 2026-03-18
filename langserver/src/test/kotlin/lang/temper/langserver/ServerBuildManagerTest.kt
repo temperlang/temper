@@ -101,19 +101,19 @@ private class TestClient : TemperLanguageClient {
     val requestParamsList = mutableListOf<ShowMessageRequestParams?>()
 
     override fun docGen(message: DocGenUpdate) {
-        TODO("Not yet implemented")
+        // TODO("Not yet implemented")
     }
 
     override fun telemetryEvent(`object`: Any?) {
-        TODO("Not yet implemented")
+        // TODO("Not yet implemented")
     }
 
     override fun publishDiagnostics(diagnostics: PublishDiagnosticsParams?) {
-        TODO("Not yet implemented")
+        // TODO("Not yet implemented")
     }
 
     override fun showMessage(messageParams: MessageParams?) {
-        TODO("Not yet implemented")
+        // TODO("Not yet implemented")
     }
 
     override fun showMessageRequest(requestParams: ShowMessageRequestParams?): CompletableFuture<MessageActionItem?> {

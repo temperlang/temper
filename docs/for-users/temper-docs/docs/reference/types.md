@@ -1590,7 +1590,7 @@ A *String* is a chunk of textual content.
 
 <a name="syntax&#45;StringExpr" class="snippet-anchor-name"></a>
 
-![StringExpr &#58;&#61; &#34;&#92;u0022&#34; &#40;SourceCharacter &#45; &#40;&#92;&#92;n&#92;&#44; &#92;&#92;r&#92;&#44; &#92;&#92;&#92;&#44; &#92;&#34;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#34;&#92;u0022&#34; &#124; &#34;&#96;&#34; &#40;SourceCharacter &#45; &#40;&#92;&#92;n&#92;&#44; &#92;&#92;r&#92;&#44; &#92;&#92;&#92;&#44; &#92;&#96;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#34;&#96;&#34; &#124; &#34;&#92;&#34; &#40;SourceCharacter &#45; &#40;&#92;&#92;n&#92;&#44; &#92;&#92;r&#92;&#44; &#92;&#92;&#92;&#44; &#92;&#92;&#92;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#34;&#92;&#34; &#124; &#34;&#92;u0022&#92;u0022&#92;u0022&#34; &#40;Content line starting with &#96;&#34;&#96;&#58; &#34;LineBreak&#34; indentation &#40;Ignored margin quote&#58; &#34;&#92;u0022&#34;&#41; &#40;&#40;SourceCharacter &#45; &#40;&#92;&#92;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#124; &#34;&#123;&#58;&#34; StatementFragment &#34;&#58;&#125;&#34;&#41;&#41;&#42; &#34;LineBreak&#34;](../snippet/syntax/StringExpr/snippet.svg)
+![StringExpr &#58;&#61; &#34;&#92;u0022&#34; &#40;SourceCharacter &#45; &#40;&#92;&#92;n&#92;&#44; &#92;&#92;r&#92;&#44; &#92;&#92;&#92;&#44; &#92;&#34;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#34;&#92;u0022&#34; &#124; &#34;&#96;&#34; &#40;SourceCharacter &#45; &#40;&#92;&#92;n&#92;&#44; &#92;&#92;r&#92;&#44; &#92;&#92;&#92;&#44; &#92;&#96;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#34;&#96;&#34; &#124; &#34;&#92;&#34; &#40;SourceCharacter &#45; &#40;&#92;&#92;n&#92;&#44; &#92;&#92;r&#92;&#44; &#92;&#92;&#92;&#44; &#92;&#92;&#92;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#34;&#92;&#34; &#124; &#34;&#92;u0022&#92;u0022&#92;u0022&#34; &#40;Content line starting with &#96;&#34;&#96;&#58; &#34;LineBreak&#34; indentation &#40;&#40;Ignored margin character&#58; &#34;&#92;u0022&#34; &#124; &#34;&#126;&#34;&#41; &#40;SourceCharacter &#45; &#40;&#92;&#92;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#124; &#34;&#58;&#34; StatementFragment&#41;&#41;&#42; &#34;LineBreak&#34;](../snippet/syntax/StringExpr/snippet.svg)
 
 <!-- /snippet: syntax/StringExpr -->
 
@@ -1607,8 +1607,16 @@ multi-line strings with interpolation, use triple-quotes: `"""` for multi-line s
 <a name="syntax&#45;multi&#45;quoted&#45;strings" class="snippet-anchor-name"></a>
 
 Multi-quoted strings start with 3 `"`'s.
-Each content line must start with a `"`, called a *margin-quote*,
+Each content line must start with a *margin-character*,
 which is not part of the content.
+
+The allowed margin characters are:
+- A double quote (`"`) which is followed by characters and/or interpolations.
+  The content line has an implicit line feed (LF U+A) character at the end.
+- A tilde (`~`) which is just like a double quote margin, but there is no
+  implied line feed at the end.
+- A colon (`:`) which allows embedding a statement fragment (see below)
+  instead of literal character data.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/multi-quoted-strings/snippet.md/0 -->
 
@@ -1624,13 +1632,13 @@ which is not part of the content.
 When a non-blank line doesn't start with a margin-quote, the
 multi-quoted string ends.
 
-Quotes can be embedded inside a multi-quoted strings.
+Quotes can be embedded inside multi-quoted strings.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/multi-quoted-strings/snippet.md/1 -->
 
 ```temper
 (
-  "Alice said\n\"Hello, World!\"" ==
+  "Alice said\n\"Hello, World!\"\n" ==
     """
     "Alice said
     ""Hello, World!"
@@ -1645,15 +1653,71 @@ Multi-quoted strings may contain interpolations.
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/multi-quoted-strings/snippet.md/2 -->
 
 ```temper
-let whom = """
-    "World
-;
-"Hello, World!" == """
-  "Hello, ${whom}!
+let whom = "World";
+
+"Hello, World!" ==
+  """
+  ~Hello, ${whom}!
 // ✅
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/multi-quoted-strings/snippet.md/2 -->
+
+Multi-quoted string content lines may be split across multiple lines.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/multi-quoted-strings/snippet.md/3 -->
+
+```temper
+"""
+"This is one line.
+~This is a longer line that, because it starts with a tilde,
+~does not have a line feed at the end, until finally we get
+"to a line with a double-quote character in the margin, Phew!
+;
+// ✅ null
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/multi-quoted-strings/snippet.md/3 -->
+
+Statement fragment lines, which start with colon (`:`) allow
+for composing complex strings by iterating and using conditionals.
+
+These two ways of constructing content are equivalent, but the
+structure of the output is easier to understand from the
+multi-quoted string.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/multi-quoted-strings/snippet.md/4 -->
+
+```temper
+let numbers = ["Zero", "One", "Two", "Three"];
+// Starting at zero because the Count is a vampire, not a monster.
+let action = "count";
+
+let a = """
+  ~I am the Count who loves to ${action}!
+  : for (let number of numbers) {
+      ~ ${number}! Ha HA ha.
+  : }
+  ;
+
+let b = do {
+  let sb = new StringBuilder();
+  sb.append("I am the Count who loves to ");
+  sb.append(action);
+  sb.append("!");
+  for (let number of numbers) {
+    sb.append(" ");
+    sb.append(number);
+    sb.append("! Ha HA ha.");
+  }
+  sb.toString()
+};
+
+a == b
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/multi-quoted-strings/snippet.md/4 -->
 
 <!-- /snippet: syntax/multi-quoted-strings -->
 
@@ -1702,32 +1766,33 @@ it contributes to the content of the resulting string value.
 Spaces that do not contribute to the content are called *incidental spaces*.
 Incidental spaces include:
 
-- those used for code indentation, and
-- those that appear at the end of a line so are invisible to readers, and
-  often automatically stripped by editors, and
-- carriage returns which may be inserted or removed depending on
+- Those used for code indentation, and
+- Those that appear at the end of a line so are invisible to readers and
+  often automatically stripped by code editors, and
+- Carriage returns which may be inserted or removed depending on
   whether a file is edited on Windows or UNIX.
 
 Normalizing incidental space steps include:
 
-1. Removing leading space on each line that match the indentation of the close quote.
-2. Removing the newline after the open quote, and before the close quote.
-3. Removing space at the end of each line.
-4. Normalizing line break sequences CRLF, CR, and LF to LF.
+1. Removing space before the margin character.
+2. Removing the newline after the open quote.
+3. Removing spaces and tabs at the end of each line.
+4. Removing line break sequences at the end of lines with the
+   tilde (`~`) margin character.
+5. Normalizing line break sequences CRLF, CR, and LF to LF.
 
-For the purposes of identifying incidental space, we imagine that any
-interpolation `${...}`, scriptlet `{:...:}`, or hole `${}` contributes
+To identify incidental space, we imagine that any
+interpolation `${...}`, or hole `${}` contributes
 1 or more non-space, non-line-break characters.
-
-Indentation matching the close quote is incidental, hence removed.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/string/incidental-space-removal/snippet.md/0 -->
 
 ```temper
 """
-    "Line 1
-    "Line 2
-== "Line 1\nLine 2"
+  "Line 1
+  "Line 2
+  ~Line 3 without LF at end
+== "Line 1\nLine 2\nLine 3 without LF at end"
 // ✅
 ```
 
@@ -1743,13 +1808,15 @@ It's good style to line up the margin characters, but not necessary.
     " Line 1
    "  Line 2
     "   Line 3
-== " Line 1\n  Line 2\n   Line 3"
+== " Line 1\n  Line 2\n   Line 3\n"
 // ✅
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/string/incidental-space-removal/snippet.md/1 -->
 
-It's an error if a line is not un-indented from the close quote.
+It's an error if a line is missing a margin character.
+Temper's parser will treat such lines as regular code,
+often leading to other syntax errors.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/string/incidental-space-removal/snippet.md/2 -->
 
@@ -1772,7 +1839,7 @@ interpolation or hole:
 """
     "Line 1  ${"interpolation"}
     "Line 2  ${/*hole*/}
-    "Line 3
+    ~Line 3
     == "Line 1  interpolation\nLine 2  \nLine 3"
 // ✅
 ```
@@ -1798,6 +1865,8 @@ Windows machine (prefers CR LF) or another machine (tend to prefer LF)
 the meaning of a string is the same.  This means that all of those sequences,
 where not trimmed, are simplified to LF.  Use `${}` if you really need to
 embed a `\r` in a file.
+
+See [Multi-quoted strings](#syntax-multi-quoted-strings) for more details on margin characters.
 
 <!-- /snippet: syntax/string/incidental-space-removal -->
 
@@ -1853,7 +1922,9 @@ which means it may be used to embed meta-characters.
 give fine-grained control over what the tag receives.)
 
 Empty interpolations can also be used to wrap a long
-string across multiple lines.
+string across multiple lines, but using a multi-quoted
+string with the tilde (`~`) margin character can be
+easier.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/string/interpolation/snippet.md/3 -->
 
@@ -1875,12 +1946,19 @@ the end of a line in a multi-quoted string.
 ```temper
 """
 "Line 1
-"Line 2 ${}
+~Line 2 ${}
 == "Line 1\nLine 2 "
 // ✅
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/string/interpolation/snippet.md/4 -->
+
+In that multi-quoted string, the margin characters at the left (`"` and `~`)
+control newlines.  Line feeds (LF U+A) are added at the end of lines that have
+a double-quote character (`"`) in the margin, but not at the end of lines that
+have a tilde character (`~`) in the margin.
+
+See [Multi-quoted strings](#syntax-multi-quoted-strings) for more details on that syntax.
 
 <!-- /snippet: syntax/string/interpolation -->
 
