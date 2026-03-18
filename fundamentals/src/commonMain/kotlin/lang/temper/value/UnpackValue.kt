@@ -14,8 +14,13 @@ import lang.temper.log.MessageTemplate
 import lang.temper.log.unknownPos
 import lang.temper.name.Symbol
 import lang.temper.name.decodeName
+import java.math.BigInteger
 
-fun unpackValue(tokenText: String, tokenType: TokenType): Result {
+fun unpackValue(
+    tokenText: String,
+    tokenType: TokenType,
+    onProblem: ((Log.Level, MessageTemplate, List<Any>) -> Unit)? = null,
+): Result {
     return when (tokenType) {
         /**
          * <!-- snippet: syntax/int32/examples -->
@@ -87,7 +92,7 @@ fun unpackValue(tokenText: String, tokenType: TokenType): Result {
          * ```
          *
          * A number with an exponent is a Float64 even if it does not have a decimal point.
-         * The exponent follows letter 'e', either upper or lower-case.
+         * The exponent follows the letter 'e', either upper or lower-case.
          *
          * ```temper
          * 123e2 == 12_300.0 &&
@@ -169,25 +174,39 @@ fun unpackValue(tokenText: String, tokenType: TokenType): Result {
                 //    const ONE     = 001;
                 // Enough so that JS strict mode banned them.
                 //
-                // There are some domain specific use cases, `chmod` masks,
+                // There are some domain-specific use cases, `chmod` masks,
                 // but, as above, we allow 0o010 to the same end.
                 return Fail(LogEntry(Log.Error, MessageTemplate.MalformedNumber, unknownPos, listOf()))
             }
             try {
                 if (isInt) {
-                    val long = try {
-                        text.toLong(radix)
-                    } catch (_: NumberFormatException) {
-                        // For supporting -0x8000_0000_0000_0000_i64 for now.
-                        // But we expect this to allocate, so only bother with this for unusual cases.
-                        // TODO Actually error on any other cases for now? Gives room for compile-time semi-bigints?
-                        // TODO But we can't identify here if negated outside the literal.
-                        text.toBigInteger(radix).toLong()
-                    }
+                    val big = text.toBigInteger(radix)
                     when (typeTag) {
-                        // TODO Actually error on Int32 beyond -0x8000_0000? Again, external negation is awkward.
-                        TInt -> Value(long.toInt(), TInt)
-                        TInt64 -> Value(long, TInt64)
+                        TInt -> {
+                            if (
+                                onProblem != null &&
+                                big !in bigInt32Min..bigInt32Max &&
+                                // Relax for 0x... unsigned syntax which is idiomatic for bit strings
+                                // regardless of signedness.
+                                !(radix == HEX_RADIX && big in bigUint32Min..bigUint32Max)
+                            ) {
+                                onProblem(Log.Warn, MessageTemplate.Int32OutOfBounds, listOf(big))
+                                if (big in bigInt64Min..bigInt64Max) {
+                                    onProblem(Log.Info, MessageTemplate.MaybePromoteInt32ToInt64, listOf())
+                                }
+                            }
+                            Value(big.toInt(), TInt)
+                        }
+                        TInt64 -> {
+                            if (
+                                onProblem != null &&
+                                big !in bigInt64Min..bigInt64Max &&
+                                !(radix == HEX_RADIX && big in bigUint64Min..bigUint64Max)
+                            ) {
+                                onProblem(Log.Warn, MessageTemplate.Int64OutOfBounds, listOf(big))
+                            }
+                            Value(big.toLong(), TInt64)
+                        }
                         else -> error("inconceivable")
                     }
                 } else {
@@ -258,3 +277,27 @@ fun findNumericTypeSuffix(text: String, radix: Int): Pair<String, TypeTag<*>>? {
 }
 
 private const val MAX_NUMERIC_SUFFIX_LENGTH = 3
+
+@Suppress("MagicNumber")
+private val bigInt32Min = BigInteger("-80000000", 16)
+
+@Suppress("MagicNumber")
+private val bigInt32Max = BigInteger("7fffffff", 16)
+
+@Suppress("MagicNumber")
+private val bigInt64Min = BigInteger("-8000000000000000", 16)
+
+@Suppress("MagicNumber")
+private val bigInt64Max = BigInteger("7fffffffffffffff", 16)
+
+@Suppress("MagicNumber")
+private val bigUint32Min = BigInteger.ZERO
+
+@Suppress("MagicNumber")
+private val bigUint32Max = BigInteger("ffffffff", 16)
+
+@Suppress("MagicNumber")
+private val bigUint64Min = BigInteger.ZERO
+
+@Suppress("MagicNumber")
+private val bigUint64Max = BigInteger("ffffffffffffffff", 16)

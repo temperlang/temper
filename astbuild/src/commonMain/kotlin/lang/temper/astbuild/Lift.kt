@@ -86,7 +86,11 @@ private class Lift(
     }
 
     private fun makeValue(content: LeafAstPart): Result = when (content) {
-        is TokenLeaf -> unpackValue(content.cstToken.tokenText, content.cstToken.tokenType)
+        is TokenLeaf -> content.cstToken.let { tok ->
+            unpackValue(tok.tokenText, tok.tokenType) { lv, t, vs ->
+                logSink.log(lv, t, content.pos, vs)
+            }
+        }
         is ValuePart -> content.value
         is NamePart -> error("$content in value")
     }

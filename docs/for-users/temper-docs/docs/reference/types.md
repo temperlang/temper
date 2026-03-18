@@ -727,7 +727,7 @@ You can make big numbers more readable by separating digits with underscore(`_`)
 <!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/float64/examples/snippet.md/1 -->
 
 A number with an exponent is a Float64 even if it does not have a decimal point.
-The exponent follows letter 'e', either upper or lower-case.
+The exponent follows the letter 'e', either upper or lower-case.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/float64/examples/snippet.md/2 -->
 

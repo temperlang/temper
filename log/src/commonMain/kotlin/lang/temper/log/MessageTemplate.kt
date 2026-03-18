@@ -58,6 +58,12 @@ enum class MessageTemplate(
     // Lexical problems
     BadEmoji("Emoji not allowed", CompilationPhase.Lex),
     InvalidIdentifier("Not a valid identifier", CompilationPhase.Lex),
+    Int32OutOfBounds("Int32 value, %s, out of representable bounds", CompilationPhase.Lex),
+    Int64OutOfBounds("Int64 value, %s, out of representable bounds", CompilationPhase.Lex),
+    MaybePromoteInt32ToInt64(
+        "You can turn an Int32 literal into an Int64 by putting I64 at the end",
+        CompilationPhase.Lex,
+    ),
     MalformedNumber("Malformed number", CompilationPhase.Lex),
     MalformedSemilit("Malformed semi-literate boundary", CompilationPhase.Lex),
     UnclosedBlock("Open bracket has no closing bracket", CompilationPhase.Lex),

@@ -316,7 +316,7 @@ class ReplTest {
             |
             """.trimMargin(),
         )
-        // Then we define a concrete sub-type of that interface that does not
+        // Then we define a concrete subtype of that interface that does not
         // override the method.
         repl.processLine("""class C extends I {}""")
         assertPending(
@@ -453,7 +453,7 @@ class ReplTest {
         )
     }
 
-    @Suppress("SpellCheckingInspection") // Base64 encoding in source-map
+    @Suppress("SpellCheckingInspection") // Base64 encoding in the source-map
     @Test
     fun translateToJs() {
         repl.processLine("1 + 1")
@@ -797,7 +797,7 @@ class ReplTest {
         // This is about error reporting rather than repl, but repl is an easy place to test it.
         // This uses imports, which repl supports.
         repl.processLine("""let { CodePart, Dot } = import("std/regex");""")
-        // Use wrong return type.
+        // Use the wrong return type.
         repl.processLine("""let hi(): CodePart { Dot }""")
         // We want the right error, not the wrong error. Earlier, we got the error on the import.
         assertPending(
@@ -814,7 +814,7 @@ class ReplTest {
 
     @Test
     fun surviveBadImport() {
-        // Use plain "std" instead of expected sub-path.
+        // Use plain "std" instead of the expected sub-path.
         repl.processLine(
             """
                 |import("std");

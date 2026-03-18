@@ -180,4 +180,36 @@ class ParseStageTest {
             |}
         """.trimMargin(),
     )
+
+    @Test
+    fun unrepresentableIntegersWarnedOn() = assertModuleAtStage(
+        stage = Stage.Parse,
+        input = """
+            |let a = 2147483648;
+            |let b = 2147483647; // ok
+            |let c = 2147483648I64; // ok
+            |let d = 0x8000_0000; // ok because idioms
+        """.trimMargin(),
+        want = """
+            |{
+            |  stageCompleted: "Parse",
+            |  parse: {
+            |    body: ```
+            |      let a = -2147483648, b = 2147483647;
+            |      REM("ok", null, false);
+            |      let c = 2147483648;
+            |      REM("ok", null, false);
+            |      let d = -2147483648;
+            |
+            |      ```
+            |  },
+            |  errors: [
+            |    {
+            |      "template": "Int32OutOfBounds",
+            |      "values": [ 2.147483648e+9 ]
+            |    }
+            |  ],
+            |}
+        """.trimMargin(),
+    )
 }
