@@ -1196,7 +1196,7 @@ do
                 if last_digit_value ~= 0 then
                     last_digit_value = base - last_digit_value
                 end
-                local negatable = (num + last_digit_value) // base
+                local negatable = temper_int.int_div(num + last_digit_value, base)
                 local digit_index = last_digit_value + 1
                 local last_digit = string_sub(digits, digit_index, digit_index)
                 return "-" .. temper_tostring(-negatable, base) .. last_digit
@@ -1205,7 +1205,7 @@ do
             end
         elseif num >= base then
             local mod = num % base + 1
-            return temper_tostring(math_floor(num // base), base) .. string_sub(digits, mod, mod)
+            return temper_tostring(temper_int.int_div(num, base), base) .. string_sub(digits, mod, mod)
         else
             local mod = num % base + 1
             return string_sub(digits, mod, mod)
