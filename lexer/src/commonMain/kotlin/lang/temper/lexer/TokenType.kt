@@ -30,6 +30,19 @@ enum class TokenType(
     /** Quoted string content tokens. */
     QuotedString(ignorable = false, grammatical = false),
 
+    /**
+     * A non-space character that indicates how the remainder of a line in a
+     * complex string expression is lexed, but which contributes no content
+     * characters itself.
+     *
+     * ```
+     * let x = """                LeftDelimiter(""")
+     *   "Content                 Margin("), QuotedString("Content")
+     *
+     * ```
+     */
+    Margin(ignorable = true, grammatical = false),
+
     /** Space tokens. */
     Space(ignorable = true, grammatical = false),
 

@@ -3302,8 +3302,11 @@ class DefineStageTest {
             |  "Zero: ${0}
             |  // ↑ Starting at zero, because the Count is not a monster.
             |  "One: ${1}
-            |  "{: for (let n of [2, 3, 4]) { :} ${n}{: } :}!
-            |  "Five: ${5}
+            |  : for (let n of [2, 3, 4]) {
+            |    ~ ${n}
+            |  : }
+            |  "!
+            |  ~Five: ${5}
             |  ;
             |
             |theCount"${6}, ${7}"
@@ -3423,7 +3426,8 @@ class DefineStageTest {
             |            do_bind_appendSafe(accumulator#0)("\nF\\our: ");
             |            do_bind_append(accumulator#0)(4);
             |            do_bind_appendSafe(accumulator#0)("\nFive: ");
-            |            do_bind_append(accumulator#0)(5)
+            |            do_bind_append(accumulator#0)(5);
+            |            do_bind_appendSafe(accumulator#0)("\n")
             |          };
             |## We inject a `.accumulated` fetch for the block result
             |          do_get_accumulated(accumulator#0)

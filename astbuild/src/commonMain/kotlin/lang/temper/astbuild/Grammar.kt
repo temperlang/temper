@@ -1115,7 +1115,12 @@ val grammar = ProductionNames.run {
             )
 
     Literal `：＝` ((`(` y value(litMatcher) y `)`) / value(litMatcher))
-    RegExp `：＝` callTree(`(` y regexLiteralBuiltinName y RegexToArgs y `)`)
+    RegExp `：＝` callTree(
+        `(` y
+            TokenType.LeftDelimiter y NegLA(NegLA(epsilon y "/")) y
+            regexLiteralBuiltinName y RegexToArgs y
+            `)`,
+    )
     Id `：＝` ((`(` y name(unreservedWordMatcher) y `)`) / name(unreservedWordMatcher))
     List `：＝` (
         Operator.SquareGroup y callTree(
@@ -1449,7 +1454,9 @@ val grammar = ProductionNames.run {
      * give fine-grained control over what the tag receives.)
      *
      * Empty interpolations can also be used to wrap a long
-     * string across multiple lines.
+     * string across multiple lines, but using a multi-quoted
+     * string with the tilde (`~`) margin character can be
+     * easier.
      *
      * ```temper
      * "A very long string ${
@@ -1464,9 +1471,16 @@ val grammar = ProductionNames.run {
      * ```temper
      * """
      * "Line 1
-     * "Line 2 ${}
+     * ~Line 2 ${}
      * == "Line 1\nLine 2 "
      * ```
+     *
+     * In that multi-quoted string, the margin characters at the left (`"` and `~`)
+     * control newlines.  Line feeds (LF U+A) are added at the end of lines that have
+     * a double-quote character (`"`) in the margin, but not at the end of lines that
+     * have a tilde character (`~`) in the margin.
+     *
+     * See [snippet/syntax/multi-quoted-strings] for more details on that syntax.
      */
     StringPart `：＝` (
         (

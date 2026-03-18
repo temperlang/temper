@@ -1,11 +1,7 @@
 package lang.temper.lexer
 
-import lang.temper.common.LeftOrRight
 import lang.temper.common.ListBackedLogSink
 import lang.temper.common.assertStringsEqual
-import lang.temper.common.compatRemoveLast
-import lang.temper.common.mutSubListToEnd
-import lang.temper.common.subListToEnd
 import lang.temper.common.testCodeLocation
 import lang.temper.common.toStringViaBuilder
 import kotlin.test.Test
@@ -32,15 +28,11 @@ class TokenClusterTest {
             val logSink = ListBackedLogSink()
             val lexer = Lexer(testCodeLocation, logSink, input.replace('”', '"'))
 
-            // Keep track of scriptlets so we can keep indent up-to-date with them.
-            val openers = mutableListOf<TokenCluster.Chunk>()
-            val stored = mutableListOf<List<TokenCluster.Chunk>>()
-
             // Merge tokens that are not token-cluster-relevant for brevity
-            var pendingText = ""
+            val pending = StringBuilder()
 
-            fun emit(prefix: Char, text: String) {
-                repeat(openers.size) { sb.append("  ") }
+            fun emit(indentLevel: Int, prefix: Char, text: String) {
+                repeat(indentLevel) { sb.append("  ") }
                 sb.append(prefix)
                 sb.append('\'')
                 sb.append(
@@ -53,68 +45,50 @@ class TokenClusterTest {
                 sb.append('\n')
             }
 
+            var indent = 0
             for (token in lexer) {
                 val (_, tokenText, tokenType) = token
-                val chunk = if (tokenType != TokenType.Error) {
-                    TokenCluster.Chunk.from(tokenText)
-                } else {
-                    null
-                }
 
                 val prefix = when { // `diff` style markers
                     tokenType == TokenType.Error -> '-' // Shouldn't be there
-                    token.synthetic -> '+' // Added, not in original text
+                    token.synthetic -> '+' // Added, not in the original source
                     else -> ' '
                 }
-                val bracketKind = when {
+                val clusterKind = when {
+                    tokenType == TokenType.Margin -> ClusterKind.MarginChar
                     !token.mayBracket -> null
-                    tokenType == TokenType.LeftDelimiter -> LeftOrRight.Left
-                    tokenType == TokenType.RightDelimiter -> LeftOrRight.Right
-                    tokenText in openBrackets -> LeftOrRight.Left
-                    tokenText in closeBrackets -> LeftOrRight.Right
+                    tokenType == TokenType.LeftDelimiter -> ClusterKind.LeftBracket
+                    tokenType == TokenType.RightDelimiter -> ClusterKind.RightBracket
+                    tokenText in openBrackets -> ClusterKind.LeftBracket
+                    tokenText in closeBrackets -> ClusterKind.RightBracket
                     else -> null
                 }
 
-                if (prefix == ' ' && bracketKind == null) {
-                    pendingText += tokenText
+                if (prefix == ' ' && clusterKind == null) {
+                    pending.append(tokenText)
                     continue
                 }
 
-                if (pendingText.isNotEmpty()) {
-                    emit(' ', pendingText)
-                    pendingText = ""
+                if (pending.isNotEmpty()) {
+                    emit(indent, ' ', "$pending")
+                    pending.clear()
                 }
+                val indentAfter = lexer.delimiterStackSizeForDebug
 
-                if (bracketKind == LeftOrRight.Right) {
-                    when (chunk) {
-                        TokenCluster.Chunk.MultiQuote -> stored.compatRemoveLast()
-                        TokenCluster.Chunk.ColonRightCurly -> {
-                            // Emulate store
-                            val scriptlet = openers.lastIndexOf(TokenCluster.Chunk.LeftCurlyColon)
-                            stored[stored.lastIndex] = openers.subListToEnd(scriptlet + 1).toList()
-                            openers.mutSubListToEnd(scriptlet + 1).clear()
-                        }
-                        else -> Unit
-                    }
-                    openers.compatRemoveLast()
+                val indentForToken = when (clusterKind) {
+                    null, ClusterKind.LeftBracket -> indent
+                    // For tokens that pop others, get the indent after any dedent
+                    ClusterKind.RightBracket -> indentAfter
+                    // Probably popped
+                    ClusterKind.MarginChar -> indentAfter
                 }
-                emit(prefix, tokenText)
-                if (bracketKind == LeftOrRight.Left) {
-                    openers.add(chunk!!)
-                    when (chunk) {
-                        TokenCluster.Chunk.MultiQuote -> stored.add(emptyList())
-                        TokenCluster.Chunk.LeftCurlyColon -> {
-                            // Emulate restore
-                            openers.addAll(stored[stored.lastIndex])
-                            stored[stored.lastIndex] = emptyList()
-                        }
-                        else -> Unit
-                    }
-                }
+                emit(indentForToken, prefix, tokenText)
+
+                indent = indentAfter
             }
 
-            if (pendingText.isNotEmpty()) {
-                emit(' ', pendingText)
+            if (pending.isNotEmpty()) {
+                emit(indent, ' ', "$pending")
             }
 
             if (sb.endsWith('\n')) { sb.setLength(sb.length - 1) }
@@ -170,7 +144,7 @@ class TokenClusterTest {
         want = """
             | '{'
             |   '{'
-            |  +'}'
+            |+'}'
             |+'}'
         """.trimMargin(),
     )
@@ -212,12 +186,15 @@ class TokenClusterTest {
 
     @Test
     fun mQStringInBracketsNewlineInMQ5E2B2E() = assertClusters(
-        input = "{”””\n}",
+        input = """
+            |{”””
+            |}
+        """.trimMargin(),
         want = """
             | '{'
             |   '”””'
             |     '\n'
-            |  +'”””'
+            |+'”””'
             | '}'
         """.trimMargin(),
     )
@@ -229,7 +206,7 @@ class TokenClusterTest {
             | '{'
             |   '”””'
             |     '\n'
-            |  +'”””'
+            |+'”””'
             |+'}'
         """.trimMargin(),
     )
@@ -250,7 +227,7 @@ class TokenClusterTest {
             | '{'
             |   '”””'
             |     '\n'
-            |  +'”””'
+            |+'”””'
             |+'}'
         """.trimMargin(),
     )
@@ -345,8 +322,8 @@ class TokenClusterTest {
             | '”'
             |   '${'
             |     '”'
-            |    +'”'
-            |  +'}'
+            |+'”'
+            |+'}'
             |+'”'
         """.trimMargin(),
     )
@@ -359,8 +336,8 @@ class TokenClusterTest {
             |   '${'
             |     '”'
             |       '}'
-            |    +'”'
-            |  +'}'
+            |+'”'
+            |+'}'
             |+'”'
         """.trimMargin(),
     )
@@ -381,30 +358,47 @@ class TokenClusterTest {
 
     @Test
     fun quotedStringInMultiQuotedString2D() = assertClusters(
-        input = "”””\n”foo”\n",
+        input = """
+            |”””
+            |”foo”
+            |
+        """.trimMargin(),
         want = """
             | '”””'
-            |   '\n”foo”\n'
+            |   '\n'
+            |   '”'
+            |   'foo”\n'
             |+'”””'
         """.trimMargin(),
     )
 
     @Test
     fun onePairQuotesInMultiQuotedString() = assertClusters(
-        input = "”””\n”foo\n",
+        input = """
+            |”””
+            |”foo
+            |
+        """.trimMargin(),
         want = """
             | '”””'
-            |   '\n”foo\n'
+            |   '\n'
+            |   '”'
+            |   'foo\n'
             |+'”””'
         """.trimMargin(),
     )
 
     @Test
     fun uncloseMQWithQuotesEndsWithEol2K() = assertClusters(
-        input = "”””\n”foo”\n",
+        input = """
+            |”””
+            |”foo”
+        """.trimMargin(),
         want = """
             | '”””'
-            |   '\n”foo”\n'
+            |   '\n'
+            |   '”'
+            |   'foo”'
             |+'”””'
         """.trimMargin(),
     )
@@ -414,17 +408,24 @@ class TokenClusterTest {
         input = "”””\n”foo”",
         want = """
             | '”””'
-            |   '\n”foo”'
+            |   '\n'
+            |   '”'
+            |   'foo”'
             |+'”””'
         """.trimMargin(),
     )
 
     @Test
     fun curliesInMQ2H2J() = assertClusters(
-        input = "”””\n”{}",
+        input = """
+            |”””
+            |”{}
+        """.trimMargin(),
         want = """
             | '”””'
-            |   '\n”{}'
+            |   '\n'
+            |   '”'
+            |   '{}'
             |+'”””'
         """.trimMargin(),
     )
@@ -434,24 +435,33 @@ class TokenClusterTest {
         input = $$"”””\n”${x",
         want = $$"""
             | '”””'
-            |   '\n”'
+            |   '\n'
+            |   '”'
             |   '${'
             |     'x'
-            |  +'}'
+            |+'}'
             |+'”””'
         """.trimMargin(),
     )
 
     @Test
     fun nestedMQOuterUnclosed3E() = assertClusters(
-        input = $$"”””\n”${”””\n”x\n}",
+        input = $$"""
+            |”””
+            |”${”””
+            |”x
+            |}
+        """.trimMargin(),
         want = $$"""
             | '”””'
-            |   '\n”'
+            |   '\n'
+            |   '"'
             |   '${'
             |     '”””'
-            |       '\n”x\n'
-            |    +'”””'
+            |       '\n'
+            |       '”'
+            |       'x\n'
+            |  +'”””'
             |   '}'
             |+'”””'
         """.trimMargin(),
@@ -459,57 +469,84 @@ class TokenClusterTest {
 
     @Test
     fun nestedMQInCurlies() = assertClusters(
-        input = $$"”””\n”${{”””\n",
+        input = $$"""
+            |”””
+            |”${{”””
+            |
+        """.trimMargin(),
         want = $$"""
             | '”””'
-            |   '\n”'
+            |   '\n'
+            |   '”'
             |   '${'
             |     '{'
             |       '”””'
             |         '\n'
-            |      +'”””'
-            |    +'}'
-            |  +'}'
+            |+'”””'
+            |+'}'
+            |+'}'
             |+'”””'
         """.trimMargin(),
     )
 
     @Test
     fun overlongMQ2E() = assertClusters(
-        input = $$"”””\n”${”””\n”foo””””bar\n}\n",
+        input = $$"""
+            |”””
+            |”${”””
+            |”foo””””bar
+            |}
+        """.trimMargin(),
         want = $$"""
             | '”””'
-            |   '\n”'
+            |   '\n'
+            |   '”'
             |   '${'
             |     '”””'
-            |       '\n”foo””””bar\n'
-            |    +'”””'
+            |       '\n'
+            |       '”'
+            |       'foo””””bar\n'
+            |  +'”””'
             |   '}'
-            |   '\n'
             |+'”””'
         """.trimMargin(),
     )
 
     @Test
     fun mqClose2E() = assertClusters(
-        input = "”””\n”””",
+        input = """
+            |”””
+            |”””
+        """.trimMargin(),
+        // The margin character, ("), is separate from the content chars ("").
         want = """
             | '”””'
-            |   '\n”””'
+            |   '\n'
+            |   '”'
+            |   '””'
             |+'”””'
         """.trimMargin(),
     )
 
     @Test
     fun underLong2E() = assertClusters(
-        input = $$"”””\n”${”””\n  ”foo””””bar\n}\n",
+        input = $$"""
+            |”””
+            |”${”””
+            |  ”foo””””bar
+            |}
+            |
+        """.trimMargin(),
         want = $$"""
             | '”””'
-            |   '\n”'
+            |   '\n'
+            |   '"'
             |   '${'
             |     '”””'
-            |       '\n  ”foo””””bar\n'
-            |    +'”””'
+            |       '\n  '
+            |       '”'
+            |       'foo””””bar\n'
+            |  +'”””'
             |   '}'
             |   '\n'
             |+'”””'
@@ -518,70 +555,97 @@ class TokenClusterTest {
 
     @Test
     fun nestedMQ2E2F() = assertClusters(
-        input = $$"”””\n”${”””\n””””\n}\n”",
+        input = $$"""
+            |”””
+            |”${”””
+            |””””
+            |}
+            |”
+        """.trimMargin(),
         want = $$"""
             | '”””'
-            |   '\n”'
+            |   '\n'
+            |   '”'
             |   '${'
             |     '”””'
-            |       '\n””””\n'
-            |    +'”””'
+            |       '\n'
+            |       '”'
+            |       '”””\n'
+            |  +'”””'
             |   '}'
-            |   '\n”'
+            |   '\n'
+            |   '”'
             |+'”””'
         """.trimMargin(),
     )
 
     @Test
-    fun stmtBlockEndInCharContent2I() = assertClusters(
-        input = "”””\n”:}\n",
+    fun someMetaCharsInCharContent2I() = assertClusters(
+        input = """
+            |”””
+            |”:}
+        """.trimMargin(),
         want = """
             | '”””'
-            |   '\n”:}\n'
+            |   '\n'
+            |   '”'
+            |   ':}'
             |+'”””'
         """.trimMargin(),
     )
 
     @Test
     fun curliesInCompletedMQ() = assertClusters(
-        input = "”””\n”{}\n",
+        input = """
+            |”””
+            |”{}
+            |
+        """.trimMargin(),
         want = """
             | '”””'
-            |   '\n”{}\n'
+            |   '\n'
+            |   '”'
+            |   '{}\n'
             |+'”””'
         """.trimMargin(),
     )
 
     @Test
-    fun closeCurlyAfterStmtBlockOpen4J4L() = assertClusters(
-        input = "”””\n”{:}",
+    fun curliesAndColonInTextLine() = assertClusters(
+        input = """
+            |”””
+            |~{:}
+        """.trimMargin(),
         want = """
             | '”””'
-            |   '\n”'
-            |   '{:'
-            |    -'}'
-            |  +':}'
+            |   '\n'
+            |   '~'
+            |   '{:}'
             |+'”””'
         """.trimMargin(),
     )
 
     @Test
     fun stuffInStmtBlocks2G4I4H5J5I() = assertClusters(
-        input = "”””\n”{: do { :}chars{: } :}\n",
+        input = """
+            |”””
+            |: do {
+            |~chars
+            |: }
+            |
+        """.trimMargin(),
         want = """
             | '”””'
-            |   '\n”'
-            |   '{:'
-            |     ' do '
-            |     '{'
-            |       ' '
-            |   ':}'
-            |   'chars'
-            |   '{:'
-            |       ' '
-            |     '}'
+            |   '\n'
+            |   ':'
+            |   ' do '
+            |   '{'
+            |     '\n'
+            |   '~'
+            |   'chars\n'
+            |     ':'
             |     ' '
-            |   ':}'
+            |   '}'
             |   '\n'
             |+'”””'
         """.trimMargin(),
@@ -589,82 +653,86 @@ class TokenClusterTest {
 
     @Test
     fun someClosedInStmtBlockButNotAll4H5J() = assertClusters(
-        input = "”””\n”{: do {{{ :}chars{: } :}\n",
+        input = """
+            |”””
+            |: do {{{
+            |"chars
+            |: }
+        """.trimMargin(),
         want = """
             | '”””'
-            |   '\n”'
-            |   '{:'
-            |     ' do '
+            |   '\n'
+            |   ':'
+            |   ' do '
+            |   '{'
             |     '{'
             |       '{'
-            |         '{'
-            |           ' '
-            |   ':}'
-            |   'chars'
-            |   '{:'
-            |           ' '
-            |         '}'
+            |         '\n'
+            |   '"'
+            |   'chars\n'
+            |         ':'
             |         ' '
-            |   ':}'
-            |   '\n'
-            |  +'{:'
-            |      +'}'
-            |    +'}'
-            |  +':}'
+            |       '}'
+            |+'}'
+            |+'}'
             |+'”””'
         """.trimMargin(),
     )
 
     @Test
     fun tooManyClosersInStmtBlock4J() = assertClusters(
-        input = "”””\n”{: } :}\n",
+        input = """
+            |”””
+            |: }
+        """.trimMargin(),
         want = """
             | '”””'
-            |   '\n”'
-            |   '{:'
-            |     ' '
-            |    -'}'
-            |     ' '
-            |   ':}'
             |   '\n'
+            |   ':'
+            |   ' '
+            |  -'}'
             |+'”””'
         """.trimMargin(),
     )
 
     @Test
     fun stringWithInterpInStmtBlock2G() = assertClusters(
-        input = $$"”””\n  ”{: ”${ {",
+        input = $$"""
+            |”””
+            |  : ”${ {
+        """.trimMargin(),
         want = $$"""
             | '”””'
-            |   '\n  ”'
-            |   '{:'
-            |     ' '
-            |     '”'
-            |       '${'
-            |         ' '
-            |         '{'
-            |        +'}'
-            |      +'}'
-            |    +'”'
-            |  +':}'
+            |   '\n  '
+            |   ':'
+            |   ' '
+            |   '”'
+            |     '${'
+            |       ' '
+            |       '{'
+            |+'}'
+            |+'}'
+            |+'”'
             |+'”””'
         """.trimMargin(),
     )
 
     @Test
     fun unclosedMQ4K() = assertClusters(
-        input = $$"”””\n”{: ”${ :}",
+        input = $$"""
+            |”””
+            |: ”${ $${""}
+        """.trimMargin(),
         want = $$"""
             | '”””'
-            |   '\n”'
-            |   '{:'
-            |     ' '
-            |     '”'
-            |       '${'
-            |         ' '
-            |      +'}'
-            |    +'”'
-            |   ':}'
+            |   '\n'
+            |   ':'
+            |   ' '
+            |   '”'
+            |     '${'
+            |       ' '
+            |+'}'
+            |+'”'
             |+'”””'
         """.trimMargin(),
     )
@@ -675,8 +743,7 @@ class TokenClusterTest {
         want = $$"""
             | '”'
             |   '${'
-            |     ' '
-            |    -':'
+            |     ' :'
             |   '}'
             | '”'
         """.trimMargin(),
@@ -713,10 +780,16 @@ class TokenClusterTest {
 
     @Test
     fun escEolInMQ2A() = assertClusters(
-        input = "”””\n”\\\n",
+        input = """
+            |”””
+            |”\
+            |
+        """.trimMargin(),
         want = """
             | '”””'
-            |   '\n”\\\n'
+            |   '\n'
+            |   '”'
+            |   '\\\n'
             |+'”””'
         """.trimMargin(),
     )
@@ -761,21 +834,20 @@ class TokenClusterTest {
     )
 
     @Test
-    fun closeStmtBlockAtTop6I() = assertClusters(
+    fun colonCurlyAtTop() = assertClusters(
         input = ":}",
         want = """
-            |-':'
+            | ':'
             |-'}'
         """.trimMargin(),
     )
 
     @Test
-    fun stmtCloserInBlock5I() = assertClusters(
+    fun colonCurly() = assertClusters(
         input = "{ :}",
         want = """
             | '{'
-            |   ' '
-            |  -':'
+            |   ' :'
             | '}'
         """.trimMargin(),
     )
@@ -828,76 +900,91 @@ class TokenClusterTest {
 
     @Test
     fun escInMQString2C() = assertClusters(
-        input = "”””\n”\\n\n”””",
+        input = """
+            |”””
+            |”\n
+            |”””
+        """.trimMargin(),
         want = """
             | '”””'
-            |   '\n”\\n\n”””'
+            |   '\n'
+            |   '”'
+            |   '\\n\n'
+            |   '”'
+            |   '””'
             |+'”””'
         """.trimMargin(),
     )
 
     @Test
     fun junkInInterp3A3B3C3F3G3I3L() = assertClusters(
-        input = $$"”${\n\\\n \\x y ${ } {: } :}”",
+        input = $$"""
+            |”${
+            |\
+            |\x y ${ }
+            |: }
+            |”
+        """.trimMargin(),
         want = $$"""
-            | '”'
+            | '"'
             |   '${'
-            |     '\n\\\n \\x y '
+            |     '\n\\\n\\x y '
             |    -'$'
             |     '{'
             |       ' '
             |     '}'
-            |     ' '
-            |     '{'
-            |       ': '
-            |     '}'
-            |     ' '
-            |    -':'
+            |     '\n: '
             |   '}'
-            | '”'
+            |+'"'
+            | '\n'
+            | '"'
+            |+'"'
         """.trimMargin(),
     )
 
     @Test
     fun junkInStmtBlock4A4B4C4D4F4G() = assertClusters(
-        input = $$"”””\n”{: x \\x \n \\\n ”x” ${ } {: } :}\n",
-        want = """
+        input = $$"""
+            |”””
+            |: x \x \n \
+            | ”x” ${ } {: } :}
+            |
+        """.trimMargin(),
+        want = $$"""
             | '”””'
-            |   '\n”'
-            |   '{:'
-            |     ' x \\x \n \\\n '
-            |     '”'
-            |       'x'
-            |     '”'
-            |     ' '
-            |    -'$'
-            |     '{'
-            |       ' '
-            |     '}'
-            |     ' '
-            |     '{'
-            |       ': '
-            |     '}'
-            |     ' '
-            |   ':}'
             |   '\n'
+            |   ':'
+            |   ' x \\x \\n \\\n '
+            |   '”'
+            |   'x” '
+            |   '${'
+            |     ' '
+            |   '}'
+            |   ' {: } :}\n'
             |+'”””'
         """.trimMargin(),
     )
 
     @Test
     fun mQInStmtBlock4E() = assertClusters(
-        input = "”””\n”{: ”””\n”x\n:}\n",
+        // The first colon line contains a triple quoted string which contains the second colon line
+        input = """
+            |”””
+            |: ”””
+            |”x
+            |:
+        """.trimMargin(),
         want = """
             | '”””'
-            |   '\n”'
-            |   '{:'
-            |     ' '
-            |     '”””'
-            |       '\n”x\n'
-            |    +'”””'
-            |   ':}'
             |   '\n'
+            |   ':'
+            |   ' '
+            |   '”””'
+            |     '\n'
+            |     '”'
+            |     'x\n'
+            |     ':'
+            |+'”””'
             |+'”””'
         """.trimMargin(),
     )
@@ -922,8 +1009,14 @@ class TokenClusterTest {
         want = """
             | '\\\n\\x\n'
             | '{'
-            |  -':'
+            |   ':'
             | '}'
         """.trimMargin(),
     )
+}
+
+private enum class ClusterKind {
+    LeftBracket,
+    RightBracket,
+    MarginChar,
 }

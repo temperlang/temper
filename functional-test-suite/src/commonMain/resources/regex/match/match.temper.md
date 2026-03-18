@@ -221,7 +221,7 @@ This should match everything, including newlines.
 
     let simplerLines = """
       "It was the best of times.
-      "It was the worst of times.
+      ~It was the worst of times.
     ;
     console.log(/[^]+/.find(simplerLines).full.value);
 

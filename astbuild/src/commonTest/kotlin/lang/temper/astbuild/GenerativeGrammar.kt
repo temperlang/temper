@@ -207,13 +207,13 @@ internal object GenerativeGrammar {
         "expr-no-rel-ops" matches (ε y "<assign-expr-no-rel-ops>")
 
         "assign-expr" matches or(
-            "<assign-expr>" y or("=", "+=", "-=", "*=", "/=") y
+            "<assign-expr>" y or("=", "+=", "-=", "*=") y
                 or("<hook-expr>" to 10, "<property-bag>" to 1) to 1,
             ε y "<hook-expr>" to 3,
             // multi-assignment
         )
         "assign-expr-no-rel-ops" matches or(
-            "<assign-expr-no-rel-ops>" y or("=", "+=", "-=", "*=", "/=") y
+            "<assign-expr-no-rel-ops>" y or("=", "+=", "-=", "*=") y
                 or("<hook-expr-no-rel-ops>" to 10, "<property-bag>" to 1) to 1,
             ε y "<hook-expr-no-rel-ops>" to 3,
             // multi-assignment

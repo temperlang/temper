@@ -111,7 +111,7 @@ class TokenSourceAdapterTest {
         input = $$"""
             |$${"\"\"\""}
             |  "some character data
-            |  "{: statement(here) :}
+            |  : statement(here)
             |  "more character${} data ${}
             |  "last line
             |
@@ -127,7 +127,7 @@ class TokenSourceAdapterTest {
             "+++", "` data `", ";",
             $$"${", "}", ";",
             "+++", "`\n`", ";",
-            "+++", "`last line`", ";",
+            "+++", "`last line\n`", ";",
             "\"\"\"",
             "}",
             "+", "1",
@@ -139,9 +139,9 @@ class TokenSourceAdapterTest {
         input = $$"""
             |$${"\"\"\""}
             |  "<ul>
-            |  "{: for (let item of items) { :}
+            |  : for (let item of items) {
             |  "  <li>${item}</li>\n
-            |  "{: } :}
+            |  : }
             |  "</ul>
         """.trimMargin(),
         want = listOf(
@@ -174,7 +174,7 @@ class TokenSourceAdapterTest {
             "\"\"\"",
             "`Hello,\n`",
             $$"${", "(", "\"", "`World`", "\"", ")", "}", "`\n`",
-            "`!`",
+            "`!\n`",
             "\"\"\"",
             ")",
             ";",
@@ -191,7 +191,7 @@ class TokenSourceAdapterTest {
             |
         """.trimMargin(),
         want = listOf(
-            "(", "\"\"\"", "`Line 1\n`", "`Line 2 `", $$"${", "}", "\"\"\"", ")",
+            "(", "\"\"\"", "`Line 1\n`", "`Line 2 `", $$"${", "}", "`\n`", "\"\"\"", ")",
         ),
     )
 
