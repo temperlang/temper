@@ -15,6 +15,11 @@ enum class CSharpOperator(
     LogicalAnd("&&", CSharpOperatorDefinition.LogicalAnd),
     InclusiveOr("|", CSharpOperatorDefinition.InclusiveOr),
     And("&", CSharpOperatorDefinition.And),
+    ExclusiveOr("^", CSharpOperatorDefinition.ExclusiveOr),
+    LeftShift("<<", CSharpOperatorDefinition.Shift),
+    RightShift(">>", CSharpOperatorDefinition.Shift),
+
+    // >>> not available in C# version 10.0
     Equals("==", CSharpOperatorDefinition.Equality),
     GreaterEquals(">=", CSharpOperatorDefinition.Relational),
     GreaterThan(">", CSharpOperatorDefinition.Relational),
@@ -30,6 +35,7 @@ enum class CSharpOperator(
     As("as", CSharpOperatorDefinition.Cast),
     Minus("-", CSharpOperatorDefinition.Prefix),
     BoolComplement("!", CSharpOperatorDefinition.Prefix),
+    BitwiseComplement("~", CSharpOperatorDefinition.Prefix),
     NullForgiving("!", CSharpOperatorDefinition.Postfix),
     ;
 

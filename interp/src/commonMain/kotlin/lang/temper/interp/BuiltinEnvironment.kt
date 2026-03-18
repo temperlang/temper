@@ -21,6 +21,7 @@ import lang.temper.name.BuiltinName
 import lang.temper.name.TemperName
 import lang.temper.type.WellKnownTypes
 import lang.temper.value.CallableValue
+import lang.temper.value.CoverFunction
 import lang.temper.value.Fail
 import lang.temper.value.InstancePropertyRecord
 import lang.temper.value.InternalFeatureKeys
@@ -77,11 +78,16 @@ private object Builtins {
 
             "=" to BuiltinFuns.vSetLocalFn,
 
-            "&" to BuiltinFuns.vAmpFn,
-            "|" to BuiltinFuns.vBarFn,
-            "!" to BuiltinFuns.vNotFn,
-            "?" to BuiltinFuns.vOrNullFn,
-            "throws" to BuiltinFuns.vThrowsFn,
+            keyPair(BuiltinFuns.vAmpFn),
+            keyPair(BuiltinFuns.vBarFn),
+            keyPair(BuiltinFuns.vNotFn),
+            keyPair(BuiltinFuns.vOrNullFn),
+            keyPair(BuiltinFuns.vBitInverseFn),
+            keyPair(BuiltinFuns.vBitXorFn),
+            keyPair(BuiltinFuns.vShlFn),
+            keyPair(BuiltinFuns.vShrFn),
+            keyPair(BuiltinFuns.vUShrFn),
+            keyPair(BuiltinFuns.vThrowsFn),
 
             "[]" to BuiltinFuns.vSquareBracketFn,
 
@@ -871,8 +877,16 @@ private fun simpleBuiltinKeyFromCompoundOperator(builtinKey: String?): String? =
         null
     }
 
-private fun <T : MacroValue> keyPair(v: Value<T>): Pair<String, Value<T>> =
-    (TFunction.unpack(v) as NamedBuiltinFun).name to v
+private fun <T : MacroValue> keyPair(v: Value<T>): Pair<String, Value<T>> {
+    fun nameOf(f: MacroValue): String = when (f) {
+        is NamedBuiltinFun -> f.name
+        is CoverFunction -> nameOf(f.covered.first()).also { name ->
+            check(f.covered.all { nameOf(it) == name })
+        }
+        else -> error("$f")
+    }
+    return nameOf(TFunction.unpack(v)) to v
+}
 
 private fun keyPair(md: NamedBuiltinFun): Pair<String, Value<MacroValue>> =
     md.name to Value(md)

@@ -47,8 +47,6 @@ object StandardNames {
     val systemCollectionsGenericKeyValuePair = systemCollectionsGeneric.type("KeyValuePair")
     val systemCollectionsGenericList = systemCollectionsGeneric.type("List")
     val systemCollectionsGenericQueue = systemCollectionsGeneric.type("Queue")
-    private val systemConvert = system.type("Convert")
-    val systemConvertToString = systemConvert.member("ToString")
     val systemDateTime = system.type("DateTime") // TODO System.DateOnly on NET6_0 or our own struct with conversions.
     val systemException = system.type("Exception")
     val systemFunc = system.type("Func")
@@ -95,6 +93,8 @@ object StandardNames {
     val temperCoreCoreStringFromCodePoints = temperCoreCore.member("StringFromCodePoints")
     val temperCoreCoreToInt = temperCoreCore.member("ToInt")
     val temperCoreCoreToInt64 = temperCoreCore.member("ToInt64")
+    val temperCoreConvertToString = temperCoreCore.member("ConvertToString")
+    val temperCoreCoreUShr = temperCoreCore.member("UShr", extension = true)
     private val temperCoreFloat64 = temperCore.type("Float64")
     val temperCoreFloat64Compare = temperCoreFloat64.member("Compare", extension = true)
     val temperCoreFloat64ExpM1 = temperCoreFloat64.member("ExpM1", extension = true)
