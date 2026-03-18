@@ -1194,7 +1194,7 @@ private val dateGetDayOfWeekExpander: Inliner =
             val right = pos.rightEdge
             // d.getUTCDay() || 7.
             // getUTCDay returns 0 for Sunday, which is falsey, so to turn it into an
-            // ISO Weekday we just or it with 7.
+            // ISO Weekday, we just or it with 7.
             Js.LogicalExpression(
                 pos = pos,
                 left = Js.CallExpression(
@@ -1590,17 +1590,57 @@ private val builtinOperatorIdToSupportCode = BuiltinOperatorId.entries.mapNotNul
             }
         }
 
-        BuiltinOperatorId.BitwiseAnd -> runtimeLibraryBackedSupportCode(id) { pos, args ->
+        BuiltinOperatorId.BitwiseNegation32,
+        BuiltinOperatorId.BitwiseNegation64,
+        -> runtimeLibraryBackedSupportCode(id) { pos, args ->
+            arity1(args)?.let { (a) ->
+                Js.UnaryExpression(pos, Js.Operator(pos.leftEdge, "~"), a)
+            }
+        }
+
+        BuiltinOperatorId.BitwiseAnd32,
+        BuiltinOperatorId.BitwiseAnd64,
+        -> runtimeLibraryBackedSupportCode(id) { pos, args ->
             arity2(args)?.let { (a, b) ->
                 Js.InfixExpression(pos, a, Js.Operator(pos.leftEdge, "&"), b)
             }
         }
 
-        BuiltinOperatorId.BitwiseOr -> runtimeLibraryBackedSupportCode(id) { pos, args ->
+        BuiltinOperatorId.BitwiseOr32,
+        BuiltinOperatorId.BitwiseOr64,
+        -> runtimeLibraryBackedSupportCode(id) { pos, args ->
             arity2(args)?.let { (a, b) ->
                 Js.InfixExpression(pos, a, Js.Operator(pos.leftEdge, "|"), b)
             }
         }
+
+        BuiltinOperatorId.BitwiseXor32,
+        BuiltinOperatorId.BitwiseXor64,
+        -> runtimeLibraryBackedSupportCode(id) { pos, args ->
+            arity2(args)?.let { (a, b) ->
+                Js.InfixExpression(pos, a, Js.Operator(pos.leftEdge, "^"), b)
+            }
+        }
+
+        BuiltinOperatorId.BitwiseShl32 -> runtimeLibraryBackedSupportCode(id) { pos, args ->
+            arity2(args)?.let { (a, b) ->
+                Js.InfixExpression(pos, a, Js.Operator(pos.leftEdge, "<<"), b)
+            }
+        }
+        BuiltinOperatorId.BitwiseShl64 -> runtimeLibraryReference(id) // BigInt << needs careful {under,over}flow
+
+        BuiltinOperatorId.BitwiseShr32 -> runtimeLibraryBackedSupportCode(id) { pos, args ->
+            arity2(args)?.let { (a, b) ->
+                Js.InfixExpression(pos, a, Js.Operator(pos.leftEdge, ">>"), b)
+            }
+        }
+        // BigInt >> does not mask shift amount
+        BuiltinOperatorId.BitwiseShr64 -> runtimeLibraryReference(id)
+
+        // number >>> performs ToUint32 internally but Temper says `x >>> 0` is signed identity
+        BuiltinOperatorId.BitwiseShrUnsigned32 -> runtimeLibraryReference(id)
+        // BigInt does not support >>>
+        BuiltinOperatorId.BitwiseShrUnsigned64 -> runtimeLibraryReference(id)
 
         BuiltinOperatorId.IsNull -> runtimeLibraryBackedSupportCode(id) { pos, args ->
             arity1(args)?.let { (a) ->

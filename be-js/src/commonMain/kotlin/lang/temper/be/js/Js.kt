@@ -3613,7 +3613,7 @@ object Js {
         override fun renderTo(
             tokenSink: TokenSink,
         ) {
-            tokenSink.emit(OutputToken("$value", OutputTokenType.NumericValue))
+            tokenSink.emit(kotlinNumberToJsNumberToken(value))
         }
         override val codeFormattingTemplate: CodeFormattingTemplate?
             get() = null

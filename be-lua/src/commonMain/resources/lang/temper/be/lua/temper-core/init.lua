@@ -943,6 +943,59 @@ end
 
 temper.bor = temper_bit.bor
 temper.band = temper_bit.band
+temper.bnot = temper_bit.bnot
+temper.bxor = temper_bit.bxor
+function temper.shl32(a, b)
+    b = b % 32
+    local x = temper_bit.band(temper_bit.lshift(a, b), 0xFFFFFFFF)
+    if x >= 0x80000000 then x = x - 0x100000000 end
+    return x
+end
+function temper.shl64(a, b)
+    b = b % 64
+    -- TODO: is this safe against floaty precision problems
+    local x = temper_bit.band(temper_bit.lshift(a, b), 0xFFFFFFFFFFFFFFFF)
+    if x >= 0x8000000000000000 then x = x - 0x10000000000000000 end
+    return x
+end
+function temper.shr32(a, b)
+    b = b % 32
+    local x = temper_bit.band(
+        temper_bit.arshift(a, b),
+        0xFFFFFFFF
+    )
+    if x >= 0x80000000 then
+        x = x - 0x100000000
+    end
+    return x
+end
+function temper.shr64(a, b)
+    b = b % 64
+    local x = temper_bit.arshift(a, b)
+    if (a < 0) then
+        local high_bits = temper_bit.bnot(temper_bit.arshift(-1, b))
+        x = temper_bit.bor(x, high_bits)
+    end
+    return x
+end
+function temper.ushr32(a, b)
+    b = b % 32
+    if b == 0 then return a end
+    return temper_bit.band(
+        temper_bit.rshift(a, b),
+        temper_bit.rshift(0x7FFFFFFF, b - 1)
+    )
+end
+function temper.ushr64(a, b)
+    b = b % 64
+    if b == 0 then return a end
+    return temper_bit.band(
+        temper_bit.rshift(a, b),
+        temper_bit.rshift(0x7FFFFFFFFFFFFFFF, b - 1)
+    )
+end
+
+
 
 function temper.concat(...)
     return table_concat({...})
@@ -1138,10 +1191,21 @@ do
 
     local function temper_tostring(num, base)
         if num < 0 then
-            return "-" .. temper_tostring(-num, base)
+            if num == math.mininteger then
+                local last_digit_value = num % base
+                if last_digit_value ~= 0 then
+                    last_digit_value = base - last_digit_value
+                end
+                local negatable = temper_int.int_div(num + last_digit_value, base)
+                local digit_index = last_digit_value + 1
+                local last_digit = string_sub(digits, digit_index, digit_index)
+                return "-" .. temper_tostring(-negatable, base) .. last_digit
+            else
+                return "-" .. temper_tostring(-num, base)
+            end
         elseif num >= base then
             local mod = num % base + 1
-            return temper_tostring(math_floor(num / base), base) .. string_sub(digits, mod, mod)
+            return temper_tostring(temper_int.int_div(num, base), base) .. string_sub(digits, mod, mod)
         else
             local mod = num % base + 1
             return string_sub(digits, mod, mod)

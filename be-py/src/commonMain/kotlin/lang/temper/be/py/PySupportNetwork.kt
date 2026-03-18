@@ -123,8 +123,16 @@ internal object PySupportNetwork : SupportNetwork {
             BuiltinOperatorId.BooleanNegation -> BoolNot
             BuiltinOperatorId.Bubble, BuiltinOperatorId.Panic -> BubbleFunc
             BuiltinOperatorId.Listify -> Listify
-            BuiltinOperatorId.BitwiseAnd -> ArithBitAnd
-            BuiltinOperatorId.BitwiseOr -> ArithBitOr
+            BuiltinOperatorId.BitwiseAnd32, BuiltinOperatorId.BitwiseAnd64 -> ArithBitAnd
+            BuiltinOperatorId.BitwiseOr32, BuiltinOperatorId.BitwiseOr64 -> ArithBitOr
+            BuiltinOperatorId.BitwiseXor32, BuiltinOperatorId.BitwiseXor64 -> ArithBitXor
+            BuiltinOperatorId.BitwiseShl32 -> ArithBitShl32
+            BuiltinOperatorId.BitwiseShl64 -> ArithBitShl64
+            BuiltinOperatorId.BitwiseShr32 -> ArithBitShr32
+            BuiltinOperatorId.BitwiseShr64 -> ArithBitShr64
+            BuiltinOperatorId.BitwiseShrUnsigned32 -> ArithBitUShr32
+            BuiltinOperatorId.BitwiseShrUnsigned64 -> ArithBitUShr64
+            BuiltinOperatorId.BitwiseNegation32, BuiltinOperatorId.BitwiseNegation64 -> ArithBitNegation
             // Handled specially because it translates to two statements
             // and needs to be translated in the context of any containing
             // assignment.
@@ -580,11 +588,35 @@ val ArithDubPow = PyInlineSupportCode("arith_dub_pow", 2, BuiltinOperatorId.PowF
     BinaryOpEnum.Pow(arg[0], arg[1], pos = pos)
 }
 
-val ArithBitAnd = PyInlineSupportCode("arith_bit_and", 2, BuiltinOperatorId.BitwiseAnd) { pos, arg ->
+val ArithBitAnd = PyInlineSupportCode("arith_bit_and", 2, BuiltinOperatorId.BitwiseAnd32) { pos, arg ->
     BinaryOpEnum.BitwiseAnd(arg[0], arg[1], pos = pos)
 }
-val ArithBitOr = PyInlineSupportCode("arith_bit_or", 2, BuiltinOperatorId.BitwiseOr) { pos, arg ->
+val ArithBitOr = PyInlineSupportCode("arith_bit_or", 2, BuiltinOperatorId.BitwiseOr32) { pos, arg ->
     BinaryOpEnum.BitwiseOr(arg[0], arg[1], pos = pos)
+}
+val ArithBitXor = PyInlineSupportCode("arith_bit_xor", 2, BuiltinOperatorId.BitwiseXor32) { pos, arg ->
+    BinaryOpEnum.BitwiseXor(arg[0], arg[1], pos = pos)
+}
+val ArithBitShl32 = PySeparateCode("arith_bit_shl32", RUNTIME, BuiltinOperatorId.BitwiseShl32)
+val ArithBitShl64 = PySeparateCode("arith_bit_shl64", RUNTIME, BuiltinOperatorId.BitwiseShl64)
+val ArithBitShr32 = PyInlineSupportCode("arith_bit_shr32", 2, BuiltinOperatorId.BitwiseShr32) { pos, (a, b) ->
+    BinaryOpEnum.ShiftRight(
+        pos = pos,
+        left = a,
+        right = BinaryOpEnum.BitwiseAnd(b, Py.Num(b.pos.rightEdge, 0x1F), pos = b.pos),
+    )
+}
+val ArithBitShr64 = PyInlineSupportCode("arith_bit_shr64", 2, BuiltinOperatorId.BitwiseShr64) { pos, (a, b) ->
+    BinaryOpEnum.ShiftRight(
+        pos = pos,
+        left = a,
+        right = BinaryOpEnum.BitwiseAnd(b, Py.Num(b.pos.rightEdge, 0x3F), pos = b.pos),
+    )
+}
+val ArithBitUShr32 = PySeparateCode("arith_bit_ushr32", RUNTIME, BuiltinOperatorId.BitwiseShrUnsigned32)
+val ArithBitUShr64 = PySeparateCode("arith_bit_ushr64", RUNTIME, BuiltinOperatorId.BitwiseShrUnsigned64)
+val ArithBitNegation = PyInlineSupportCode("arith_bit_neg", 1, BuiltinOperatorId.BitwiseNegation32) { pos, arg ->
+    UnaryOpEnum.UnaryInvert(arg[0], pos = pos)
 }
 val Listify = PyInlineSupportCode("listify", -1, BuiltinOperatorId.Listify) { pos, args ->
     Py.Tuple(pos, elts = args)
@@ -687,7 +719,7 @@ val StringHasIndex = PyInlineSupportCode("string_has_index", 2..2, needsSelf = t
         i,
     )
 }
-val StringIndexOf = PyInlineSupportCode("String::indexOf", arity = 2..3, needsSelf = true) { pos, args, t ->
+val StringIndexOf = PyInlineSupportCode("String::indexOf", arity = 2..3, needsSelf = true) { pos, args, _ ->
     args[0].method("find", args.subListToEnd(1), pos = pos)
 }
 val StringNext = PySeparateCode("string_next", RUNTIME)

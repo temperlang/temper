@@ -368,8 +368,7 @@ StringLiteral.renderTo =
 `;
 
 NumericLiteral(value%`Number`);
-NumericLiteral.renderTo =
-    `tokenSink.emit(OutputToken("$value", OutputTokenType.NumericValue))`;
+NumericLiteral.renderTo = `tokenSink.emit(kotlinNumberToJsNumberToken(value))`;
 
 InfixExpression ::=
     left%Expression & operator%Operator & right%Expression;

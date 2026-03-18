@@ -572,8 +572,8 @@ The `&` operator can be applied in two ways:
 
 #### *Int* `&`
 
-Takes two [*Int32*](types.md#type-Int32)s and returns the *Int* that has any bit set
-that is set in both input.
+Takes two [*Int32*](types.md#type-Int32)s or two [*Int64*](types.md#type-Int64)s and returns the
+integer that has any bit set that is set in both inputs.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/bitwise-and/snippet.md/0 -->
 
@@ -944,6 +944,34 @@ To avoid confusion, just put spaces around all your infix operators.
 
 <!-- /snippet: builtin/< -->
 
+<!-- snippet: builtin/<< : `<<` -->
+
+<a name="builtin&#45;&lt;&lt;" class="snippet-anchor-name"></a>
+
+### Operator `<<`
+The left shift (`<<`) operator takes an [*Int32*](types.md#type-Int32) or a
+[*Int64*](types.md#type-Int64) to shift and an [*Int32*](types.md#type-Int32) which is
+the number of bits to shift by.
+
+All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
+operand are ignored.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3c$3c/snippet.md/0 -->
+
+```temper
+// Using binary number syntax
+(0b0000_0001_0101 << 3) ==
+//        / _/ /
+//       / /  /
+//      / /  /
+ 0b0000_1010_1000
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3c$3c/snippet.md/0 -->
+
+<!-- /snippet: builtin/<< -->
+
 <!-- snippet: builtin/<= -->
 
 <a name="builtin&#45;&lt;&#61;" class="snippet-anchor-name"></a>
@@ -1137,6 +1165,92 @@ especially the [General Comparison Caveats](#general-comparison-caveats).
 
 <!-- /snippet: builtin/>= -->
 
+<!-- snippet: builtin/>> : `>>` -->
+
+<a name="builtin&#45;&gt;&gt;" class="snippet-anchor-name"></a>
+
+### Operator `>>`
+The right shift (`>>`) operator takes an [*Int32*](types.md#type-Int32) or a
+[*Int64*](types.md#type-Int64) to shift and an [*Int32*](types.md#type-Int32) which is
+the number of bits to shift by.
+
+All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
+operand are ignored.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e/snippet.md/0 -->
+
+```temper
+// Using binary number syntax
+(0b0000_1010_1010 >> 3) ==
+//       \ \_ \ \
+//        \  \ \ *
+//         \  \ \
+ 0b0000_0001_0101
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e/snippet.md/0 -->
+
+Unlike the [`>>>`](#builtin->>>) operator, this operator is sign extending.
+When shifting right by *n* bits, the *n* highest bits in the output are copied
+from the most-significant bit in the input.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e/snippet.md/1 -->
+
+```temper
+(0x8000_0000_0000_0000 >> 2) ==
+// |\
+// |/\
+ 0xE000_0000_0000_0000
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e/snippet.md/1 -->
+
+<!-- /snippet: builtin/>> -->
+
+<!-- snippet: builtin/>>> : `>>>` -->
+
+<a name="builtin&#45;&gt;&gt;&gt;" class="snippet-anchor-name"></a>
+
+### Operator `>>>`
+The right shift (`>>>`) operator takes an [*Int32*](types.md#type-Int32) or a
+[*Int64*](types.md#type-Int64) to shift and an [*Int32*](types.md#type-Int32) which is
+the number of bits to shift by.
+
+All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
+operand are ignored.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e$3e/snippet.md/0 -->
+
+```temper
+// Using binary number syntax
+(0b0000_1010_1010 >>> 3) ==
+//       \ \_ \ \
+//        \  \ \ *
+//         \  \ \
+ 0b0000_0001_0101
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e$3e/snippet.md/0 -->
+
+Unlike the [`>>`](#builtin->>) operator, this operator is zero extending.
+When shifting right by *n* bits, the *n* highest bits in the output are copied
+from the most-significant bit in the input.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e$3e/snippet.md/1 -->
+
+```temper
+(0x8000_0000_0000_0000 >>> 2) ==
+ 0x2000_0000_0000_0000
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e$3e/snippet.md/1 -->
+
+<!-- /snippet: builtin/>>> -->
+
 <!-- snippet: builtin/%3F -->
 
 <a name="builtin&#45;&#37;3F" class="snippet-anchor-name"></a>
@@ -1186,6 +1300,30 @@ console.log(firstEven?.toString() ?? "so odd"); //!outputs "2"
 
 <!-- /snippet: builtin/%3F -->
 
+<!-- snippet: builtin/^ : `^` -->
+
+<a name="builtin&#45;&#94;" class="snippet-anchor-name"></a>
+
+### Operator `^`
+The bitwise-xor (`^`) operator takes two [*Int32*](types.md#type-Int32)s or
+two [*Int64*](types.md#type-Int64)s and returns an integer of the same size
+that has each bit set when the corresponding bits in the inputs
+are different.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/^/snippet.md/0 -->
+
+```temper
+// Using binary number syntax
+(0b1111_0000_1111_0000_1111_0000_1111_0000 ^
+ 0b1010_1010_1010_1010_0101_0101_0101_0101) ==
+ 0b0101_1010_0101_1010_1010_0101_1010_0101
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/^/snippet.md/0 -->
+
+<!-- /snippet: builtin/^ -->
+
 <!-- snippet: builtin/| : `|` -->
 
 <a name="builtin&#45;&#124;" class="snippet-anchor-name"></a>
@@ -1193,8 +1331,8 @@ console.log(firstEven?.toString() ?? "so odd"); //!outputs "2"
 ### Operator `|`
 The `|` operator performs bitwise union.
 
-It takes two [*Int32*](types.md#type-Int32)s and returns the *Int32* that has any bit set
-that is set in either input.
+It takes two [*Int32*](types.md#type-Int32)s or two [*Int64*](types.md#type-Int64)s and returns
+the integer of the same size that has any bit set that is set in either input.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$7c/snippet.md/0 -->
 
@@ -1209,6 +1347,29 @@ that is set in either input.
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$7c/snippet.md/0 -->
 
 <!-- /snippet: builtin/| -->
+
+<!-- snippet: builtin/~ : `~` -->
+
+<a name="builtin&#45;&#37;7E" class="snippet-anchor-name"></a>
+
+### Operator `~`
+The `~` operator negates the bits in an integer.
+
+Given an [*Int32*](types.md#type-Int32) or [*Int64*](types.md#type-Int64) it returns the integer
+of the same size with the opposite bits.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%7E/snippet.md/0 -->
+
+```temper
+// Using binary number syntax
+~0b0000_0001_0010_0011_0100_0101_0110_0111 ==
+ 0b1111_1110_1101_1100_1011_1010_1001_1000
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%7E/snippet.md/0 -->
+
+<!-- /snippet: builtin/%7E -->
 
 ## Types
 

@@ -62,6 +62,7 @@ class JavaSupportNetwork private constructor(private val javaLang: JavaLang) : S
 
     private fun JavaLang.byOpId(opId: BuiltinOperatorId?): JavaSupportCode? =
         when (opId) {
+            null -> null
             BuiltinOperatorId.Print -> printFunction
             BuiltinOperatorId.IsNull -> isNull
             BuiltinOperatorId.StrCat -> strCatExpr
@@ -108,16 +109,34 @@ class JavaSupportNetwork private constructor(private val javaLang: JavaLang) : S
             BuiltinOperatorId.ModIntInt, BuiltinOperatorId.ModIntInt64 -> modIntInt
             BuiltinOperatorId.ModIntIntSafe, BuiltinOperatorId.ModIntInt64Safe -> modIntIntSafe
             BuiltinOperatorId.ModFltFlt -> modDubDub
-            BuiltinOperatorId.BitwiseAnd -> bitwiseAnd
-            BuiltinOperatorId.BitwiseOr -> bitwiseOr
+            BuiltinOperatorId.BitwiseAnd32,
+            BuiltinOperatorId.BitwiseAnd64,
+            -> bitwiseAnd
+            BuiltinOperatorId.BitwiseOr32,
+            BuiltinOperatorId.BitwiseOr64,
+            -> bitwiseOr
+            BuiltinOperatorId.BitwiseXor32,
+            BuiltinOperatorId.BitwiseXor64,
+            -> bitwiseXor
+            BuiltinOperatorId.BitwiseShl32,
+            BuiltinOperatorId.BitwiseShl64,
+            -> bitwiseShl
+            BuiltinOperatorId.BitwiseShr32,
+            BuiltinOperatorId.BitwiseShr64,
+            -> bitwiseShr
+            BuiltinOperatorId.BitwiseShrUnsigned32,
+            BuiltinOperatorId.BitwiseShrUnsigned64,
+            -> bitwiseUShr
+            BuiltinOperatorId.BitwiseNegation32,
+            BuiltinOperatorId.BitwiseNegation64,
+            -> bitwiseNegation
             BuiltinOperatorId.BooleanNegation -> booleanNegation
             BuiltinOperatorId.Listify -> listify
             BuiltinOperatorId.Bubble, BuiltinOperatorId.Panic -> throwBubble
             BuiltinOperatorId.AdaptGeneratorFn -> adaptGeneratorFn
             BuiltinOperatorId.SafeAdaptGeneratorFn -> safeAdaptGeneratorFn
             BuiltinOperatorId.Async -> runAsync
-            null -> null
-            else -> TODO("$opId not supported")
+            BuiltinOperatorId.NotNull -> TODO("$opId not supported")
         }
 
     override fun optionalSupportCode(
@@ -645,13 +664,38 @@ val JavaLang.modDubDub by receiver {
     }
 }
 val JavaLang.bitwiseAnd by receiver {
-    inlineSupport(BuiltinOperatorId.BitwiseAnd, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.BitwiseAnd32, 2) { pos, args ->
         JavaOperator.And.infix(args[0], args[1], pos = pos)
     }
 }
 val JavaLang.bitwiseOr by receiver {
-    inlineSupport(BuiltinOperatorId.BitwiseOr, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.BitwiseOr32, 2) { pos, args ->
         JavaOperator.InclusiveOr.infix(args[0], args[1], pos = pos)
+    }
+}
+val JavaLang.bitwiseXor by receiver {
+    inlineSupport(BuiltinOperatorId.BitwiseXor32, 2) { pos, args ->
+        JavaOperator.ExclusiveOr.infix(args[0], args[1], pos = pos)
+    }
+}
+val JavaLang.bitwiseNegation by receiver {
+    inlineSupport(BuiltinOperatorId.BitwiseNegation32, 1) { pos, args ->
+        JavaOperator.BitwiseComplement.prefix(args[0], pos = pos)
+    }
+}
+val JavaLang.bitwiseShl by receiver {
+    inlineSupport(BuiltinOperatorId.BitwiseShl32, 2) { pos, args ->
+        JavaOperator.LeftShift.infix(args[0], args[1], pos = pos)
+    }
+}
+val JavaLang.bitwiseShr by receiver {
+    inlineSupport(BuiltinOperatorId.BitwiseShr32, 2) { pos, args ->
+        JavaOperator.RightShift.infix(args[0], args[1], pos = pos)
+    }
+}
+val JavaLang.bitwiseUShr by receiver {
+    inlineSupport(BuiltinOperatorId.BitwiseShrUnsigned32, 2) { pos, args ->
+        JavaOperator.LogicalRightShift.infix(args[0], args[1], pos = pos)
     }
 }
 val JavaLang.booleanToString by receiver {

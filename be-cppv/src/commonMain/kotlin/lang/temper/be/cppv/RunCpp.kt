@@ -35,7 +35,8 @@ fun runCpp(
 }
 
 object GppCommand : ToolSpecifics {
-    override val cliNames = listOf("g++")
+    override val cliNames = listOf("g++-16", "g++-15", "g++-14", "g++")
+    // On MacOS, g++ is an alias for clang, but the numbered ones are legit
 }
 
 private fun CliEnv.runLibrary(

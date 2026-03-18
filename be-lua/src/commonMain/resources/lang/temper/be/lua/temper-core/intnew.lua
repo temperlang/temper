@@ -14,6 +14,23 @@ function bitops.bxor(a, b)
     return a ~ b
 end
 
+function bitops.bnot(a)
+    return a ~ -1
+end
+
+function bitops.lshift(a, b)
+    return a << b
+end
+
+function bitops.rshift(a, b)
+    return a >> b
+end
+
+function bitops.arshift(a, b)
+    return a >> b
+end
+
+
 local temper = {}
 
 -- Helper
@@ -49,6 +66,11 @@ local function int64_toint32unsafe(n)
         result = result - 0x100000000
     end
     return result
+end
+
+-- Simple int floor div.
+function temper.int_div(a, b)
+    return a // b
 end
 
 -- Int32
