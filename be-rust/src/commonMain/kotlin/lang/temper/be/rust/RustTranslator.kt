@@ -94,6 +94,7 @@ class RustTranslator(
         DescriptorsForDeclarations.Key(RustBackend.Factory),
     )?.nameToDescriptor ?: mapOf()
     private var closureCount = 0
+
     /** Tracks function paths referenced via connected support code (e.g. "temper_std::io::std_sleep"). */
     val usedSupportFunctionPaths = mutableSetOf<String>()
     private val decls = mutableMapOf<ResolvedName, DeclInfo>()
