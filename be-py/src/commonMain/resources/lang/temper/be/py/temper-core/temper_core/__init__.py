@@ -255,6 +255,54 @@ def arith_int_mod(dividend: int, divisor: int) -> int:
     """
     return dividend - divisor * int(dividend / divisor)
 
+def arith_bit_shl32(n: int, shift: int) -> int:
+    """
+    Performs an Int32 left shift.
+    """
+    # ctypes.c_int32 but that does not expose shift operators
+    # so is not helpful here.
+    # In Python, `&` with a non-negative number always yields a non-negative.
+    shifted = (n << (shift & 0x1F)) & 0xFFFF_FFFF
+    if shifted >= 0x8000_0000:
+        # Checking the sign bit handles the case where
+        # the number starts negative and the case where
+        # a bit of a positive number shifts into the sign
+        # bit position.
+        shifted -= 0x1_0000_0000
+    return shifted
+
+def arith_bit_shl64(n: int, shift: int) -> int:
+    """
+    Performs an Int64 left shift
+    """
+    shifted = (n << (shift & 0x3F)) & 0xFFFF_FFFF_FFFF_FFFF
+    if shifted >= 0x8000_0000_0000_0000:
+        shifted -= 0x1_0000_0000_0000_0000
+    return shifted
+
+def arith_bit_ushr32(n: int, shift: int) -> int:
+    """
+    Performs an Int32 logical right shift
+    """
+    shift = shift & 0x1F
+    if shift:
+        return (n & 0xFFFF_FFFF) >> shift
+    else:
+        # UShr by zero is identity.  It's special because given
+        # a negative input you get a negative output.
+        return n
+
+
+def arith_bit_ushr64(n: int, shift: int) -> int:
+    """
+    Performs an Int64 logical right shift
+    """
+    shift = shift & 0x3F
+    if shift:
+        return (n & 0xFFFF_FFFF_FFFF_FFFF) >> shift
+    else:
+        return n
+
 
 def isinstance_int(val: T) -> bool:
     "Python bool is a subclass of int, but Temper treats them as separate types."

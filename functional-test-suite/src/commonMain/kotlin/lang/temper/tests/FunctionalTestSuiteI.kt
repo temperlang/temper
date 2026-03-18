@@ -273,6 +273,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.TypesIntLimits)
 
     @Test
+    fun typesIntShifty() =
+        runFunctionalTest(Ft.TypesIntShifty)
+
+    @Test
     fun typesJsonSyntaxTree() =
         runFunctionalTest(Ft.TypesJsonSyntaxTree)
 
