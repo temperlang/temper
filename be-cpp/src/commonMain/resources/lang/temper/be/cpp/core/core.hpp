@@ -476,9 +476,13 @@ namespace temper {
             Boolean gt(T a, T b) { return a > b; }
             template<class T>
             Boolean ge(T a, T b) { return a >= b; }
-            template<class T>
+            // Trait to detect shared_ptr types
+            template<class T> struct is_shared_ptr : std::false_type {};
+            template<class T> struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {};
+
+            template<class T, class = std::enable_if_t<!is_shared_ptr<T>::value>>
             Boolean eq(T a, T b) { return a == b; }
-            // Overload for mixed shared_ptr comparisons (polymorphic types)
+            // Overload for shared_ptr comparisons (reference equality)
             template<class A, class B>
             Boolean eq(std::shared_ptr<A> a, std::shared_ptr<B> b) {
                 return static_cast<void*>(a.get()) == static_cast<void*>(b.get());
@@ -486,7 +490,7 @@ namespace temper {
             // Overload for mixed string/const char* comparisons
             inline Boolean eq(String a, const char* b) { return a == b; }
             inline Boolean eq(const char* a, String b) { return a == b; }
-            template<class T>
+            template<class T, class = std::enable_if_t<!is_shared_ptr<T>::value>>
             Boolean ne(T a, T b) { return a != b; }
             template<class A, class B>
             Boolean ne(std::shared_ptr<A> a, std::shared_ptr<B> b) {
@@ -829,13 +833,35 @@ namespace temper {
                 return any_box(std::forward<Arg>(arg));
             }
 
+            // A wrapper around List that supports implicit conversion to List<Base>
+            // when Elem is convertible to Base. This enables covariant list creation.
+            template<class Elem>
+            struct CovariantList {
+                List<Elem> list;
+                CovariantList(List<Elem> l) : list(std::move(l)) {}
+                // Implicit conversion to same type
+                operator List<Elem>() const { return list; }
+                // Implicit conversion to base type
+                template<class Base, class = std::enable_if_t<
+                    !std::is_same<Base, Elem>::value &&
+                    std::is_convertible<Elem, Base>::value>>
+                operator List<Base>() const {
+                    auto result = std::make_shared<std::vector<Base>>();
+                    result->reserve(list->size());
+                    for (auto& elem : *list) {
+                        result->push_back(elem);
+                    }
+                    return result;
+                }
+            };
+
             namespace ListNs {
                 template<class Elem, class... Args>
-                List<Elem> make(Args... args) {
+                CovariantList<Elem> make(Args... args) {
                     auto list = std::make_shared<std::vector<Elem>>();
                     int dummy[] = { (list->push_back(to_elem<Elem>(args)), 0)... };
                     (void) dummy;
-                    return list;
+                    return CovariantList<Elem>(list);
                 }
             }
 
@@ -845,6 +871,26 @@ namespace temper {
                 int dummy[] = { (list->push_back(to_elem<Elem>(std::forward<Args>(args))), 0)... };
                 (void) dummy;
                 return list;
+            }
+
+            // Convert List<Derived> to List<Base> (covariant upcast).
+            // Creates a new vector with elements implicitly upcasted.
+            template<class Base, class Derived,
+                     class = std::enable_if_t<!std::is_same<Base, Derived>::value &&
+                             std::is_convertible<Derived, Base>::value>>
+            List<Base> list_upcast(List<Derived> src) {
+                auto result = std::make_shared<std::vector<Base>>();
+                result->reserve(src->size());
+                for (auto& elem : *src) {
+                    result->push_back(elem);
+                }
+                return result;
+            }
+
+            // Identity case for list_upcast (same types)
+            template<class T>
+            List<T> list_upcast(List<T> src) {
+                return src;
             }
 
             template<class Elem>

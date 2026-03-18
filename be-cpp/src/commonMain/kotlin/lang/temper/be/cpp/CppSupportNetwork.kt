@@ -390,13 +390,38 @@ internal object CppSupportNetwork : SupportNetwork {
                     // Value types can't use dynamic_pointer_cast — identity cast
                     values[0]
                 } else {
-                    cpp.callExpr(
-                        cpp.template(
-                            cpp.name(TEMPER_CORE_NAMESPACE, "checked_cast"),
-                            listOf(dest),
-                        ),
-                        listOf(values[0]),
-                    )
+                    // Translate the full target type to get template args resolved
+                    val fullTargetType = translator.translateType(targetType)
+                    // Extract the inner type from Object<T> wrapper if present
+                    val castTarget = if (fullTargetType is Cpp.TemplateType) {
+                        val inner = fullTargetType.args.firstOrNull()
+                        if (inner == null || inner is Cpp.Name || inner is Cpp.ScopedName) {
+                            // Bare name/scoped name — can't be used as checked_cast target
+                            null
+                        } else if (inner is Cpp.TemplateType) {
+                            // Template type — could be a struct<Args> or a template alias
+                            // like Listed<T>, List<T>, etc. which are shared_ptr aliases.
+                            // checked_cast uses dynamic_pointer_cast which only works on
+                            // class types, not shared_ptr aliases. Use identity cast.
+                            null
+                        } else {
+                            inner
+                        }
+                    } else {
+                        null
+                    }
+                    if (castTarget != null) {
+                        cpp.callExpr(
+                            cpp.template(
+                                cpp.name(TEMPER_CORE_NAMESPACE, "checked_cast"),
+                                listOf(castTarget),
+                            ),
+                            listOf(values[0]),
+                        )
+                    } else {
+                        // Can't do a meaningful checked_cast — identity
+                        values[0]
+                    }
                 }
             }
             RuntimeTypeOperation.Is -> {

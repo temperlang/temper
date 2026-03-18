@@ -39,13 +39,22 @@ class CppBackend private constructor(
     override fun translate(finished: TmpL.ModuleSet): List<OutputFileSpecification> {
         val cppLibraryName = libraryConfigurations.currentLibraryConfiguration.libraryName.text
 
+        // Build a mapping from library source roots to output directory names
+        // so that include paths and namespaces use the library name (e.g. "tempercc")
+        // instead of raw source paths (e.g. "-work/src").
+        val libraryRootToOutputDir = libraryConfigurations.byLibraryRoot.entries.associate { (root, config) ->
+            root to config.libraryName.text
+        }
+
         val allTestInfos = mutableListOf<Pair<String, String>>()
         val allInitFuncs = mutableListOf<String>()
+        val allInitIncludes = mutableSetOf<String>()
         val translations = finished.modules.flatMap { mod ->
             val translator = CppTranslator(
                 cppNames,
                 cppLibraryName = cppLibraryName,
                 dependenciesBuilder = dependenciesBuilder,
+                libraryRootToOutputDir = libraryRootToOutputDir,
             )
             val result = translator.translateModule(mod)
             allTestInfos.addAll(translator.testInfos)
@@ -54,6 +63,9 @@ class CppBackend private constructor(
                     if (base == "std" || base == "chrono" || base == "filesystem") "temper_$base" else base
                 }
                 allInitFuncs.add("temper::${libNs}::$name")
+                // Track include path for this module's header so main.cpp can see all init decls
+                val loc = mod.codeLocation.codeLocation
+                allInitIncludes.add(translator.cpp.includePathForModule(loc))
             }
             result
         }
@@ -78,7 +90,9 @@ class CppBackend private constructor(
                 appendLine("#include <sstream>")
                 appendLine("#include <string>")
                 appendLine("#include <vector>")
-                appendLine("""#include "$cppLibraryName/init.hpp"""")
+                for (inc in allInitIncludes.sorted()) {
+                    appendLine("""#include "$inc"""")
+                }
                 appendLine("""#include "std/testing.hpp"""")
                 appendLine("int main() {")
                 // Call module init functions in order (each has a
@@ -155,7 +169,9 @@ class CppBackend private constructor(
         } else {
             if (allInitFuncs.isNotEmpty()) {
                 buildString {
-                    appendLine("""#include "$cppLibraryName/init.hpp"""")
+                    for (inc in allInitIncludes.sorted()) {
+                        appendLine("""#include "$inc"""")
+                    }
                     appendLine("int main() {")
                     for (initFunc in allInitFuncs) {
                         appendLine("  ${initFunc}();")

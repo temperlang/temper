@@ -18,6 +18,7 @@ fun Cpp.Expr.withComment(text: String, prefix: Boolean = true): Cpp.Expr = if (p
 
 class CppBuilder(
     private val cppNames: CppNames,
+    private val libraryRootToOutputDir: Map<FilePath, String> = emptyMap(),
 ) {
     var pos = unknownPos
 
@@ -444,8 +445,13 @@ class CppBuilder(
     private val cppReservedNamespaces = setOf("std", "chrono", "filesystem")
 
     fun nameTextForModule(library: ModuleName): String = byLibraryRoot.getOrPut(library.libraryRoot()) {
-        var exist = libraryNameRegex.replace(
-            library.libraryRoot().segments.joinToString("_"),
+        // Use the library name from configuration if available, otherwise fall back
+        // to sanitizing the raw library root path segments.
+        val libRoot = library.libraryRoot()
+        var exist = libraryRootToOutputDir[libRoot]?.let { name ->
+            libraryNameRegex.replace(name, "_")
+        } ?: libraryNameRegex.replace(
+            libRoot.segments.joinToString("_"),
             "_",
         )
         if (exist.isEmpty()) {
@@ -471,13 +477,21 @@ class CppBuilder(
 
     /** Compute the include path for a module's header file. */
     fun includePathForModule(library: ModuleName): String {
-        val libRoot = library.libraryRoot().segments.joinToString("/") { it.baseName }
+        val libRootPath = library.libraryRoot()
+        // Use the library name from configuration if available, otherwise
+        // fall back to joining the raw source path segments.
+        val libRoot = libraryRootToOutputDir[libRootPath]
+            ?: libRootPath.segments.joinToString("/") { it.baseName }
         val relPath = library.relativePath()
-        val fileName = when {
-            relPath.segments.isEmpty() -> INIT_NAME
-            else -> relPath.segments.last().baseName
+        return when {
+            relPath.segments.isEmpty() -> "$libRoot/$INIT_NAME$HPP_EXT"
+            else -> {
+                // Preserve subdirectory structure: for a module at backend/x86,
+                // produce "tempercc/backend/x86.hpp" not "tempercc/x86.hpp".
+                val relParts = relPath.segments.joinToString("/") { it.baseName }
+                "$libRoot/$relParts$HPP_EXT"
+            }
         }
-        return "$libRoot/$fileName$HPP_EXT"
     }
 
     // mini-parsers

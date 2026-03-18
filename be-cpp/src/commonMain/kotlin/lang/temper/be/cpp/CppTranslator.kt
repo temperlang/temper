@@ -8,6 +8,7 @@ import lang.temper.be.tmpl.mapParameters
 import lang.temper.common.MimeType
 import lang.temper.format.toStringViaTokenSink
 import lang.temper.lexer.withTemperAwareExtension
+import lang.temper.log.FilePath
 import lang.temper.log.filePath
 import lang.temper.log.last
 import lang.temper.log.resolveFile
@@ -43,8 +44,9 @@ class CppTranslator(
     private val cppLibraryName: String? = null,
     @Suppress("unused")
     private val dependenciesBuilder: Dependencies.Builder<CppBackend>? = null,
+    libraryRootToOutputDir: Map<FilePath, String> = emptyMap(),
 ) {
-    val cpp = CppBuilder(cppNames)
+    val cpp = CppBuilder(cppNames, libraryRootToOutputDir)
     val includes = mutableSetOf<String>()
     var currentModuleLocation: ModuleName? = null
 
@@ -73,6 +75,11 @@ class CppTranslator(
 
     // Track names of local variables that have void type (can't be declared in C++)
     private val voidVarNames = mutableSetOf<String>()
+
+    // Narrowing context stack: maps C++ variable names to their narrowed C++ types.
+    // Pushed when entering an IfStatement whose condition is an InstanceOfExpression,
+    // so property accesses and assignments use the narrowed type via static_pointer_cast.
+    private val narrowingContext = mutableMapOf<String, Cpp.Type>()
 
     // Current "this" variable name in member function bodies (for coercion on return)
     private var currentThisVarName: String? = null
@@ -192,6 +199,140 @@ class CppTranslator(
             def == WellKnownTypes.booleanTypeDefinition ||
             def == WellKnownTypes.stringTypeDefinition ||
             def == WellKnownTypes.voidTypeDefinition
+    }
+
+    /**
+     * If [subject] is a TmpL.Reference whose variable is in the narrowing context,
+     * wrap the translated expression with static_pointer_cast to the narrowed type.
+     * Otherwise return the translated expression as-is.
+     */
+    private fun translateWithNarrowing(subject: TmpL.Expression): Cpp.Expr {
+        val translated = translateExpression(subject)
+        if (subject is TmpL.Reference) {
+            val varName = cpp.name(subject.id).id.text
+            val narrowedType = narrowingContext[varName]
+            if (narrowedType != null) {
+                return cpp.callExpr(
+                    cpp.template(
+                        cpp.name("std", "static_pointer_cast"),
+                        listOf(narrowedType),
+                    ),
+                    listOf(translated),
+                )
+            }
+        }
+        return translated
+    }
+
+    /**
+     * If [expr] is an InstanceOfExpression (i.e., `x is Type`), returns a pair
+     * of (C++ variable name, narrowed C++ inner type) so that property accesses
+     * in the consequent block can be cast via static_pointer_cast.
+     */
+    /**
+     * Analyze a translated C++ if-condition to detect `dynamic_pointer_cast<T>(x) != nullptr`
+     * patterns. Returns (variable name, narrowed inner type) if found.
+     */
+    private fun extractNarrowingFromCppExpr(cppExpr: Cpp.Expr): Pair<String, Cpp.Type>? {
+        // Pattern: BinaryExpr(CallExpr(TemplateType(dynamic_pointer_cast, [T]), [x]), !=, nullptr)
+        if (cppExpr !is Cpp.BinaryExpr) return null
+        val castCall = cppExpr.left as? Cpp.CallExpr ?: return null
+        val templateExpr = castCall.func as? Cpp.TemplateType ?: return null
+        // Check if it's std::dynamic_pointer_cast by checking the base name
+        val base = templateExpr.base
+        val fmtHints = CppFormattingHints.getInstance()
+        val nameText = toStringViaTokenSink(fmtHints, singleLine = true) { base.renderTo(it) }
+        if (!nameText.contains("dynamic_pointer_cast")) return null
+        // Extract the template argument (the narrowed type)
+        val narrowedType = templateExpr.args.firstOrNull() ?: return null
+        // Extract the subject variable name from the call argument
+        val subjectArg = castCall.args.firstOrNull() ?: return null
+        val varName = toStringViaTokenSink(fmtHints, singleLine = true) { subjectArg.renderTo(it) }
+        return Pair(varName, narrowedType)
+    }
+
+    /**
+     * Wraps a translated expression with list_upcast if the target type is a list
+     * with a different element type than the source expression's list type.
+     * Handles C++ invariant vectors: List<Derived> -> List<Base> requires explicit conversion.
+     */
+    private fun wrapWithListUpcastIfNeeded(
+        translatedExpr: Cpp.Expr,
+        declaredType: Cpp.Type,
+        initExprType: Type2?,
+        declaredTmpLType: Type2?,
+    ): Cpp.Expr {
+        if (initExprType == null || declaredTmpLType == null) return translatedExpr
+        // Check if both types are list-like (List, Listed, etc.)
+        val declDef = declaredTmpLType.definition
+        val initDef = initExprType.definition
+        val listDefs = setOf(
+            WellKnownTypes.listTypeDefinition,
+            WellKnownTypes.listedTypeDefinition,
+        )
+        if (declDef !in listDefs || initDef !in listDefs) return translatedExpr
+        // Check if element types differ
+        val declElem = declaredTmpLType.bindings.firstOrNull() ?: return translatedExpr
+        val initElem = initExprType.bindings.firstOrNull() ?: return translatedExpr
+        if (declElem.definition == initElem.definition) return translatedExpr
+        // Element types differ — wrap with list_upcast<DeclaredElemType>
+        val declElemCpp = translateType2(declElem)
+        return cpp.callExpr(
+            cpp.template(
+                cpp.name(TEMPER_CORE_NAMESPACE, "list_upcast"),
+                listOf(declElemCpp),
+            ),
+            listOf(translatedExpr),
+        )
+    }
+
+    /**
+     * Wraps a translated expression with static_pointer_cast if the source type
+     * is a base type and the target type is a derived type (type narrowing at assignment).
+     * Only applies to user-defined class/interface types, not collections or functions.
+     */
+    private fun wrapWithNarrowingCastIfNeeded(
+        translatedExpr: Cpp.Expr,
+        sourceType: Type2?,
+        targetType: Type2?,
+    ): Cpp.Expr {
+        if (sourceType == null || targetType == null) return translatedExpr
+        val srcDef = sourceType.definition
+        val tgtDef = targetType.definition
+        if (srcDef == tgtDef) return translatedExpr
+        if (isValueTypeDef(srcDef) || isValueTypeDef(tgtDef)) return translatedExpr
+        // Skip collection types (List, ListBuilder, Map, etc.)
+        val collectionDefs = setOf(
+            WellKnownTypes.listTypeDefinition,
+            WellKnownTypes.listedTypeDefinition,
+            WellKnownTypes.listBuilderTypeDefinition,
+            WellKnownTypes.mappedTypeDefinition,
+            WellKnownTypes.mapTypeDefinition,
+            WellKnownTypes.mapBuilderTypeDefinition,
+        )
+        if (srcDef in collectionDefs || tgtDef in collectionDefs) return translatedExpr
+        // Skip Never/Bubble types and function types
+        if (srcDef == WellKnownTypes.neverTypeDefinition) return translatedExpr
+        if (srcDef == WellKnownTypes.functionTypeDefinition ||
+            tgtDef == WellKnownTypes.functionTypeDefinition
+        ) return translatedExpr
+        // Only narrow when the target type translates to Object<T> (a shared_ptr<T>)
+        val fullTargetType = translateType2(targetType)
+        val innerType = if (fullTargetType is Cpp.TemplateType) {
+            val inner = fullTargetType.args.firstOrNull() ?: return translatedExpr
+            // Don't narrow to template types (e.g. Listed<T>) — only concrete struct types
+            if (inner is Cpp.TemplateType) return translatedExpr
+            inner
+        } else {
+            return translatedExpr
+        }
+        return cpp.callExpr(
+            cpp.template(
+                cpp.name("std", "static_pointer_cast"),
+                listOf(innerType),
+            ),
+            listOf(translatedExpr),
+        )
     }
 
     /** Whether a TypeDefinition is a value type (not shared_ptr-wrapped). */
@@ -436,7 +577,7 @@ class CppTranslator(
     private val inTranslateType = mutableListOf<TmpL.Type>()
     private fun translateType(type: TmpL.AType) = translateType(type.ot)
 
-    private fun translateType(type: TmpL.Type): Cpp.Type = cpp.pos(type) {
+    internal fun translateType(type: TmpL.Type): Cpp.Type = cpp.pos(type) {
         if (inTranslateType.contains(type)) {
             TODO("recursive type: $type")
         }
@@ -804,13 +945,22 @@ class CppTranslator(
                     sourceExpr
                 } else if (targetType is Cpp.TemplateType) {
                     val innerType = targetType.args.firstOrNull() ?: targetType
-                    cpp.callExpr(
-                        cpp.template(
-                            cpp.name(TEMPER_CORE_NAMESPACE, "checked_cast"),
-                            listOf(innerType),
-                        ),
-                        listOf(sourceExpr),
-                    )
+                    // If the inner type is a bare template name (no type args), it can't be
+                    // used as a checked_cast target — identity cast instead.
+                    if (innerType is Cpp.Name || innerType is Cpp.ScopedName) {
+                        sourceExpr
+                    } else {
+                        cpp.callExpr(
+                            cpp.template(
+                                cpp.name(TEMPER_CORE_NAMESPACE, "checked_cast"),
+                                listOf(innerType),
+                            ),
+                            listOf(sourceExpr),
+                        )
+                    }
+                } else if (targetType is Cpp.Name || targetType is Cpp.ScopedName) {
+                    // Bare template alias (e.g. Listed without type args) — identity cast
+                    sourceExpr
                 } else {
                     cpp.cast(targetType, sourceExpr)
                 }
@@ -823,32 +973,30 @@ class CppTranslator(
                     is TmpL.ExternalPropertyId -> prop.name.dotNameText
                     is TmpL.InternalPropertyId -> propertyDotNames[propKey(prop.name.name)] ?: prop.name.name.toString()
                 }
+                // Use narrowing-aware subject translation for type-checked variables
+                val subjectExpr = translateWithNarrowing(expr.subject)
                 val getterName = getterMethodNames[propDotName]
                 if (getterName != null) {
-                    // Call the getter method: subject->getter()
                     cpp.callExpr(
-                        cpp.op("->", translateExpression(expr.subject), getterName),
+                        cpp.op("->", subjectExpr, getterName),
                         listOf(),
                     )
                 } else if (expr.property is TmpL.ExternalPropertyId) {
-                    // External property from another module — getter is not in our map.
-                    // Infer getter name using the same convention: get_<propName>
                     val inferredGetterName = cpp.singleName(
                         CppName(fixName("get_$propDotName")),
                     )
                     cpp.callExpr(
-                        cpp.op("->", translateExpression(expr.subject), inferredGetterName),
+                        cpp.op("->", subjectExpr, inferredGetterName),
                         listOf(),
                     )
                 } else {
-                    // Fallback to field access
-                    cpp.op("->", translateExpression(expr.subject), translatePropertyId(expr.property))
+                    cpp.op("->", subjectExpr, translatePropertyId(expr.property))
                 }
             }
             is TmpL.GetBackedProperty -> {
                 val propName = translatePropertyId(expr.property)
                 when (val subject = expr.subject) {
-                    is TmpL.Expression -> cpp.op("->", translateExpression(subject), propName)
+                    is TmpL.Expression -> cpp.op("->", translateWithNarrowing(subject), propName)
                     is TmpL.ConnectedToTypeName -> cpp.scopedName(translateTypeName(subject), propName)
                     is TmpL.TemperTypeName -> cpp.scopedName(translateTypeName(subject), propName)
                 }
@@ -906,7 +1054,22 @@ class CppTranslator(
             is TmpL.PrefixOperation -> {
                 cpp.unaryExpr(cpp.unaryOp(expr.op.kind.outputToken.text), translateExpression(expr.operand))
             }
-            is TmpL.Reference -> resolveNameCrossModule(expr.id)
+            is TmpL.Reference -> {
+                val resolved = resolveNameCrossModule(expr.id)
+                val varName = cpp.name(expr.id).id.text
+                val narrowedType = narrowingContext[varName]
+                if (narrowedType != null) {
+                    cpp.callExpr(
+                        cpp.template(
+                            cpp.name("std", "static_pointer_cast"),
+                            listOf(narrowedType),
+                        ),
+                        listOf(resolved),
+                    )
+                } else {
+                    resolved
+                }
+            }
             is TmpL.RestParameterCountExpression -> cpp.callExpr(
                 cpp.name(TEMPER_CORE_NAMESPACE, "length"),
                 listOf(cpp.name(expr.parameterName)),
@@ -1016,12 +1179,19 @@ class CppTranslator(
                             is TmpL.HandlerScope -> TODO()
                         }
                     }
+                    // Wrap with list_upcast or narrowing cast if needed
+                    val rhsType = (right as? TmpL.Expression)?.type
+                    val finalRight = wrapWithListUpcastIfNeeded(
+                        rightExpr, translateType2(stmt.type), rhsType, stmt.type,
+                    ).let { upcast ->
+                        wrapWithNarrowingCastIfNeeded(upcast, rhsType, stmt.type)
+                    }
                     listOf(
                         cpp.exprStmt(
                             cpp.op(
                                 "=",
                                 cpp.name(stmt.left),
-                                rightExpr,
+                                finalRight,
                             ),
                         ),
                     )
@@ -1102,11 +1272,22 @@ class CppTranslator(
                     } else {
                         translateExpressionOrNull(initExpr)
                     }
+                    // Wrap with list_upcast if needed for covariant list conversion
+                    val finalInit = if (translatedInit != null && initExpr != null) {
+                        wrapWithListUpcastIfNeeded(
+                            translatedInit,
+                            translateType(stmt.type),
+                            initExpr.type,
+                            stmt.descriptor,
+                        )
+                    } else {
+                        translatedInit
+                    }
                     listOf(
                         cpp.varDef(
                             translateType(stmt.type),
                             cpp.name(stmt.name),
-                            translatedInit,
+                            finalInit,
                         ),
                     )
                 }
@@ -1150,17 +1331,30 @@ class CppTranslator(
             )
 
             is TmpL.ComputedJumpStatement -> todoCommentOf(stmt)
-            is TmpL.IfStatement -> listOf(
-                cpp.ifStmt(
-                    translateExpression(stmt.test),
-                    cpp.blockStmt(
-                        translateStatement(stmt.consequent),
+            is TmpL.IfStatement -> {
+                // Translate condition first
+                val testExpr = translateExpression(stmt.test)
+                // Check if condition is a type check (dynamic_pointer_cast pattern)
+                // to set up narrowing context for the consequent block
+                val narrowKey = extractNarrowingFromCppExpr(testExpr)
+                val consequentStmts = if (narrowKey != null) {
+                    narrowingContext[narrowKey.first] = narrowKey.second
+                    val result = translateStatement(stmt.consequent)
+                    narrowingContext.remove(narrowKey.first)
+                    result
+                } else {
+                    translateStatement(stmt.consequent)
+                }
+                listOf(
+                    cpp.ifStmt(
+                        testExpr,
+                        cpp.blockStmt(consequentStmts),
+                        stmt.alternate?.let {
+                            cpp.blockStmt(translateStatement(it))
+                        },
                     ),
-                    stmt.alternate?.let {
-                        cpp.blockStmt(translateStatement(it))
-                    },
-                ),
-            )
+                )
+            }
 
             is TmpL.LabeledStatement -> {
                 val body = translateStatement(stmt.statement).toList()
@@ -2902,6 +3096,8 @@ class CppTranslator(
                 }
                 val sanitizedDep = depBaseName.replace(Regex("[^a-zA-Z0-9_]"), "_")
                 depInitCalls.add("temper::${libNs}::temper_init_$sanitizedDep")
+                // Add include for the dependency module's header so its init decl is visible
+                includes.add(cpp.includePathForModule(depModName))
             }
             for (call in depInitCalls.sorted()) {
                 bodyStmts.add(
@@ -2934,48 +3130,14 @@ class CppTranslator(
                 args = listOf(),
                 body = cpp.blockStmt(bodyStmts),
             )
-            // Insert init function definition and a struct that calls it at the
-            // very beginning of impl. This ensures dependency modules are
-            // initialized before any of this TU's static initializers run.
-            val depTriggerName = cpp.tmp("DepInit")
-            val depTriggerInstanceName = cpp.tmp("dep_init_instance")
-            val depTriggerStruct = cpp.structDef(
-                depTriggerName,
-                listOf(
-                    cpp.funcDef(
-                        ret = null,
-                        name = depTriggerName,
-                        args = listOf(),
-                        body = cpp.blockStmt(listOf(
-                            cpp.exprStmt(
-                                cpp.callExpr(
-                                    cpp.literal(cpp.raw(initFuncName.id.text)),
-                                    listOf(),
-                                ),
-                            ),
-                        )),
-                    ),
-                ),
-            )
-            val depTriggerVar = cpp.varDef(depTriggerName, depTriggerInstanceName)
-            if (hasInitBlocks) {
-                // Module has init blocks using struct constructors and
-                // inline variable initializers. Put init function + trigger
-                // at the beginning so dependencies are resolved before any
-                // static initializer in this TU.
-                impl.add(0, depTriggerVar)
-                impl.add(0, depTriggerStruct)
-                impl.add(0, initFuncDef)
-            } else {
-                // Module has no init blocks — variable inits are deferred
-                // to the init function. Put init function at the end (after
-                // variable declarations) so it can reference them.
-                // DepInit trigger at the beginning ensures the init function
-                // runs during static init before any code from this TU.
-                impl.add(0, depTriggerVar)
-                impl.add(0, depTriggerStruct)
-                impl.add(initFuncDef)
-            }
+            // Add init function definition at the end of the impl file (after
+            // all static variable declarations so it can reference them).
+            // No auto-trigger struct — init must be called explicitly from
+            // main() or the generated main.cpp. Auto-trigger via static
+            // constructors causes cross-TU init order issues: std::function
+            // variables have non-trivial default constructors that can zero
+            // out values set by an earlier cross-TU init call.
+            impl.add(initFuncDef)
 
             val modPath = mod.codeLocation.outputPath
             val hppName = path.withTemperAwareExtension(HPP_EXT)
