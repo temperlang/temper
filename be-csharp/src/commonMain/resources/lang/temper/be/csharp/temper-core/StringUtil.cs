@@ -195,7 +195,7 @@ namespace TemperLang.Core
         {
             if (i < 0)
             {
-                return i;
+                return -1;
             }
             throw new ArgumentOutOfRangeException("i");
         }
