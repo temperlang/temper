@@ -259,6 +259,7 @@ end
 local PROMISE_RESOLVED = "resolved"
 local PROMISE_SLEEP = "sleep"
 local PROMISE_READLINE = "readline"
+local PROMISE_KEYPRESS = "keypress"
 
 local scheduler_tasks = {}
 
@@ -283,6 +284,11 @@ local function make_readline_promise()
         await = function(self) return coro_yield(self) end }
 end
 
+local function make_keypress_promise()
+    return { state = PROMISE_KEYPRESS, value = nil,
+        await = function(self) return coro_yield(self) end }
+end
+
 -- Register an async block for cooperative scheduling.
 function temper.async_launch(generatorFactory)
     local gen = generatorFactory()
@@ -298,13 +304,27 @@ end
 function temper.run_scheduler()
     if #scheduler_tasks == 0 then return end
 
-    -- Save terminal settings for readline
+    local function read_line()
+        local line = io.read("*l")
+        return line  -- nil on EOF
+    end
+
+    -- Terminal state management for keypress polling
     local old_stty = nil
-    local save_handle = io.popen("stty -g 2>/dev/null", "r")
-    if save_handle then
-        old_stty = save_handle:read("*l")
-        save_handle:close()
-        if old_stty == "" then old_stty = nil end
+    local has_keypress_tasks = false
+    for _, task in ipairs(scheduler_tasks) do
+        if task.waiting_for and task.waiting_for.state == PROMISE_KEYPRESS then
+            has_keypress_tasks = true
+            break
+        end
+    end
+    if has_keypress_tasks then
+        local save_handle = io.popen("stty -g 2>/dev/null", "r")
+        if save_handle then
+            old_stty = save_handle:read("*l")
+            save_handle:close()
+            if old_stty == "" then old_stty = nil end
+        end
     end
 
     local function restore_terminal()
@@ -315,15 +335,31 @@ function temper.run_scheduler()
         os.execute("stty raw -echo -icanon min 0 time 0 2>/dev/null")
         local ch = io.read(1)
         if old_stty then os.execute("stty " .. old_stty .. " 2>/dev/null") end
-        if ch and ch:byte() == 3 then restore_terminal(); os.exit(1) end
         return ch
+    end
+
+    local function parse_keypress(ch)
+        if ch:byte() == 27 then
+            local next = poll_char()
+            if next and next == '[' then
+                local arrow = poll_char()
+                local arrows = {A='ArrowUp', B='ArrowDown', C='ArrowRight', D='ArrowLeft'}
+                return arrows[arrow] or 'Escape'
+            else
+                return 'Escape'
+            end
+        elseif ch == '\r' or ch == '\n' then
+            return 'Enter'
+        else
+            return ch
+        end
     end
 
     -- Main scheduler loop
     while #scheduler_tasks > 0 do
         local now = get_time()
         local any_progressed = false
-        local all_readline = true
+        local all_input = true
 
         local i = 1
         while i <= #scheduler_tasks do
@@ -337,9 +373,9 @@ function temper.run_scheduler()
             elseif promise.state == PROMISE_RESOLVED then
                 should_resume = true
                 resume_value = promise.value
-                all_readline = false
+                all_input = false
             elseif promise.state == PROMISE_SLEEP then
-                all_readline = false
+                all_input = false
                 if now >= promise.deadline then
                     should_resume = true
                     resume_value = nil
@@ -347,10 +383,14 @@ function temper.run_scheduler()
                     i = i + 1
                 end
             elseif promise.state == PROMISE_READLINE then
+                local line = read_line()
+                should_resume = true
+                resume_value = line  -- nil on EOF
+            elseif promise.state == PROMISE_KEYPRESS then
                 local ch = poll_char()
                 if ch ~= nil then
                     should_resume = true
-                    resume_value = ch
+                    resume_value = parse_keypress(ch)
                 else
                     i = i + 1
                 end
@@ -370,8 +410,8 @@ function temper.run_scheduler()
             end
         end
 
-        -- If only readline tasks remain (game ended), exit
-        if all_readline and #scheduler_tasks > 0 then
+        -- If only input tasks remain and nothing is progressing, exit
+        if all_input and #scheduler_tasks > 0 then
             break
         end
 
@@ -2195,6 +2235,12 @@ end
 
 function temper.stdreadline()
     return make_readline_promise()
+end
+
+-- std/keyboard support
+
+function temper.stdnextkeypress()
+    return make_keypress_promise()
 end
 
 return temper

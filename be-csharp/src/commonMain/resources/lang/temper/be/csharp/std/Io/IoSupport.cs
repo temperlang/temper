@@ -13,26 +13,7 @@ namespace TemperLang.Std.Io
 
         public static async Task<string?> StdReadLine()
         {
-            return await Task.Run(() =>
-            {
-                try
-                {
-                    if (Console.IsInputRedirected)
-                    {
-                        return Console.ReadLine();
-                    }
-                    var key = Console.ReadKey(true);
-                    if (key.Key == ConsoleKey.C && key.Modifiers.HasFlag(ConsoleModifiers.Control))
-                    {
-                        Environment.Exit(1);
-                    }
-                    return key.KeyChar.ToString();
-                }
-                catch (Exception)
-                {
-                    return null;
-                }
-            });
+            return await Task.Run(() => Console.ReadLine());
         }
     }
 }

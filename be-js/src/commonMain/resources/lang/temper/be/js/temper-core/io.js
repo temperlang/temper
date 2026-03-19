@@ -1,4 +1,5 @@
 import { empty } from "./core.js";
+import { createInterface } from "readline";
 
 /**
  * @param {number} ms
@@ -14,18 +15,13 @@ export function stdSleep(ms) {
 export function stdReadLine() {
   return new Promise(resolve => {
     if (typeof process !== 'undefined' && process.stdin) {
-      process.stdin.resume();
-      process.stdin.setEncoding('utf8');
-      if (process.stdin.isTTY && process.stdin.setRawMode) {
-        process.stdin.setRawMode(true);
-      }
-      process.stdin.once('data', data => {
-        const str = data.toString();
-        // Ctrl+C in raw mode
-        if (str === '\x03') {
-          process.exit();
-        }
-        resolve(str.trim());
+      const rl = createInterface({ input: process.stdin });
+      rl.once('line', line => {
+        rl.close();
+        resolve(line);
+      });
+      rl.once('close', () => {
+        resolve(null); // EOF
       });
     } else {
       resolve(null);

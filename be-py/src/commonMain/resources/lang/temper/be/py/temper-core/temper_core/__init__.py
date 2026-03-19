@@ -1419,29 +1419,69 @@ def std_sleep(ms: int) -> 'Future[None]':
 
 
 def std_read_line() -> 'Future[Optional[str]]':
-    """Read a line from stdin, returning a Future. Uses raw mode when available for single keypress input."""
+    """Read a line from stdin, returning a Future."""
     import sys as _sys
     f: 'Future[Optional[str]]' = new_unbound_promise()
 
     def _do_read():
         try:
-            if _sys.stdin.isatty():
+            line = _sys.stdin.readline()
+            if line == '':
+                f.set_result(None)  # EOF
+            else:
+                f.set_result(line.rstrip('\n').rstrip('\r'))
+        except EOFError:
+            f.set_result(None)
+
+    _executor.submit(_do_read)
+    return f
+
+
+def std_next_keypress() -> 'Future[Optional[str]]':
+    """Wait for next keypress, returning a Future."""
+    import sys as _sys
+    f: 'Future[Optional[str]]' = new_unbound_promise()
+
+    def _do_read():
+        try:
+            if _sys.platform == 'win32':
+                import msvcrt as _msvcrt
+                ch = _msvcrt.getwch()
+                if ch in ('\x00', '\xe0'):
+                    ch2 = _msvcrt.getwch()
+                    specials = {'H': 'ArrowUp', 'P': 'ArrowDown', 'K': 'ArrowLeft', 'M': 'ArrowRight'}
+                    f.set_result(specials.get(ch2, ch2))
+                elif ch == '\r':
+                    f.set_result('Enter')
+                elif ch == '\x1b':
+                    f.set_result('Escape')
+                else:
+                    f.set_result(ch)
+            elif _sys.stdin.isatty():
                 import tty as _tty, termios as _termios
                 fd = _sys.stdin.fileno()
                 old_settings = _termios.tcgetattr(fd)
                 try:
                     _tty.setraw(fd)
                     ch = _sys.stdin.read(1)
-                    if ch == '\x03':  # Ctrl+C
-                        _termios.tcsetattr(fd, _termios.TCSADRAIN, old_settings)
-                        import os as _os
-                        _os.kill(_os.getpid(), 2)  # SIGINT
-                    f.set_result(ch)
+                    if ch == '\x1b':
+                        next_ch = _sys.stdin.read(1)
+                        if next_ch == '[':
+                            arrow = _sys.stdin.read(1)
+                            arrows = {'A': 'ArrowUp', 'B': 'ArrowDown', 'C': 'ArrowRight', 'D': 'ArrowLeft'}
+                            f.set_result(arrows.get(arrow, 'Escape'))
+                        else:
+                            f.set_result('Escape')
+                    elif ch == '\r' or ch == '\n':
+                        f.set_result('Enter')
+                    elif ch == '':
+                        f.set_result(None)
+                    else:
+                        f.set_result(ch)
                 finally:
                     _termios.tcsetattr(fd, _termios.TCSADRAIN, old_settings)
             else:
-                line = input()
-                f.set_result(line)
+                f.set_result(None)
         except EOFError:
             f.set_result(None)
 

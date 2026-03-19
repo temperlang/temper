@@ -180,11 +180,12 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
                     append("regex = { version = \"=1.12.2\", optional = true }\n")
                     append("time = { version = \"=0.3.41\", optional = true }\n")
                     append("ureq = { version = \"=3.1.2\", optional = true }\n")
-                    append("libc = { version = \"=0.2.169\", optional = true }\n")
+                    append("crossterm = { version = \"=0.28.1\", optional = true }\n")
                     // Below aren't dependencies section anymore, but eh.
                     append("\n")
                     append("[features]\n")
-                    append("io = [\"libc\"]\n")
+                    append("io = []\n")
+                    append("keyboard = [\"crossterm\"]\n")
                     append("net = [\"ureq\"]\n")
                     // Implied: append("regex = [\"regex\"]\n")
                     append("temporal = [\"time\"]\n")
@@ -255,7 +256,7 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
         private val resourceBase = dirPath("lang", "temper", "be", "rust")
         private val coreResourceBase = resourceBase.resolveDir("temper-core")
         private val stdResourceBase = resourceBase.resolveDir("std")
-        val stdSupportNeeders = setOf("io", "net", "regex", "temporal")
+        val stdSupportNeeders = setOf("io", "keyboard", "net", "regex", "temporal")
         val stdFeatures = stdSupportNeeders // same set today but maybe not guaranteed
         private val templateResourceBase = resourceBase.resolveDir("library-template")
 
