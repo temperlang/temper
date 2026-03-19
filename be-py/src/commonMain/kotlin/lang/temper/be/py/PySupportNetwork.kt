@@ -910,6 +910,7 @@ val NetResponseGetBodyContent = inlineAttribute("NetResponse::getBodyContent", P
 val StdNetSend = PySeparateCode("std_net_send", RUNTIME)
 val StdSleep = PySeparateCode("std_sleep", RUNTIME)
 val StdReadLine = PySeparateCode("std_read_line", RUNTIME)
+val StdNextKeypress = PySeparateCode("std_next_keypress", RUNTIME)
 
 val mathInf = PySeparateCode("inf", MATH)
 val mathNan = PySeparateCode("nan", MATH)
@@ -1217,4 +1218,5 @@ private val pyConnections = mapOf(
     "stdNetSend" to StdNetSend,
     "stdSleep" to StdSleep,
     "stdReadLine" to StdReadLine,
+    "stdNextKeypress" to StdNextKeypress,
 )

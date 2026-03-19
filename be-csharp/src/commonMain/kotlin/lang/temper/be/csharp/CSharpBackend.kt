@@ -319,6 +319,7 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
         declareResources(
             base = dirPath("lang", "temper", "be", "csharp", "std"),
             filePath("Io", "IoSupport.cs"),
+            filePath("Keyboard", "KeyboardSupport.cs"),
             filePath("Regex", "IntRangeSet.cs"),
             filePath("Regex", "RegexSupport.cs"),
             filePath("Temporal", "TemporalSupport.cs"),

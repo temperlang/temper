@@ -242,6 +242,9 @@ val temperRegexFormatterPushCodeTo = temperRegexCore.qualifyKnownSafe("regexForm
 val temperStdSleep = temperCore.qualifyKnownSafe("stdSleep")
 val temperStdReadLine = temperCore.qualifyKnownSafe("stdReadLine")
 
+// std/keyboard
+val temperStdNextKeypress = temperCore.qualifyKnownSafe("stdNextKeypress")
+
 // std/net
 val temperNetPkg = temperPkg.qualifyKnownSafe("net")
 val temperNetCore = temperNetPkg.qualifyKnownSafe("Core")

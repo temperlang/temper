@@ -468,6 +468,8 @@ private val supportedAutoConnecteds = setOf(
     // std/io
     "stdSleep",
     "stdReadLine",
+    // std/keyboard
+    "stdNextKeypress",
     // std/net
     "stdNetSend",
     "NetResponse",

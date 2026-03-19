@@ -1115,6 +1115,11 @@ private val stdReadLine = StaticCall(
     StandardNames.temperStdIoStdReadLine,
 )
 
+private val stdNextKeypress = StaticCall(
+    "stdNextKeypress",
+    StandardNames.temperStdKeyboardStdNextKeypress,
+)
+
 private val stdNetSend = StaticCall(
     "stdNetSend",
     StandardNames.temperCoreNetCoreStdNetSend,
@@ -1509,6 +1514,7 @@ private val connectedReferences = listOf(
     stdNetSend,
     stdSleep,
     stdReadLine,
+    stdNextKeypress,
 ).flatMap { ref -> ref.connectedNames.map { it to ref } }.toMap()
 
 private val connectedTypes = mapOf<String, Pair<AbstractTypeName, ((List<Type2>) -> List<Type2>)?>>(

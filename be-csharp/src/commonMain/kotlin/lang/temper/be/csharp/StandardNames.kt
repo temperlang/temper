@@ -176,6 +176,9 @@ object StandardNames {
     private val temperStdIoIoSupport = temperStdIo.type("IoSupport")
     val temperStdIoStdSleep = temperStdIoIoSupport.member("StdSleep")
     val temperStdIoStdReadLine = temperStdIoIoSupport.member("StdReadLine")
+    private val temperStdKeyboard = temperStd.space("Keyboard")
+    private val temperStdKeyboardKeyboardSupport = temperStdKeyboard.type("KeyboardSupport")
+    val temperStdKeyboardStdNextKeypress = temperStdKeyboardKeyboardSupport.member("StdNextKeypress")
 
     private val temperStdNet = temperStd.space("Net")
     val temperCoreNetINetResponse = temperStdNet.type("INetResponse")
