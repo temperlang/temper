@@ -117,6 +117,8 @@ class JsRunFileLayoutTest {
                 |  ┃ ┃ ┃ ┣━index.js
                 |  ┃ ┃ ┃ ┣━int.js
                 |  ┃ ┃ ┃ ┣━interface.js
+                |  ┃ ┃ ┃ ┣━io.js
+                |  ┃ ┃ ┃ ┣━keyboard.js
                 |  ┃ ┃ ┃ ┣━listed.js
                 |  ┃ ┃ ┃ ┣━mapped.js
                 |  ┃ ┃ ┃ ┣━net.js
@@ -127,7 +129,9 @@ class JsRunFileLayoutTest {
                 |  ┃ ┃ ┃ ┗━tsconfig.json
                 |  ┃ ┃ ┗━std/
                 |  ┃ ┃   ┣━index.js
+                |  ┃ ┃   ┣━io.js
                 |  ┃ ┃   ┣━json.js
+                |  ┃ ┃   ┣━keyboard.js
                 |  ┃ ┃   ┣━net.js
                 |  ┃ ┃   ┣━package.json
                 |  ┃ ┃   ┣━regex.js
@@ -165,7 +169,9 @@ class JsRunFileLayoutTest {
             |  ┣━package.json
             |  ┣━std/
             |  ┃ ┣━index.js
+            |  ┃ ┣━io.js
             |  ┃ ┣━json.js
+            |  ┃ ┣━keyboard.js
             |  ┃ ┣━net.js
             |  ┃ ┣━package.json
             |  ┃ ┣━regex.js
@@ -182,6 +188,8 @@ class JsRunFileLayoutTest {
             |    ┣━index.js
             |    ┣━int.js
             |    ┣━interface.js
+            |    ┣━io.js
+            |    ┣━keyboard.js
             |    ┣━listed.js
             |    ┣━mapped.js
             |    ┣━net.js
