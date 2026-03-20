@@ -24,6 +24,7 @@ We might break these out into separate libraries in the future.
     import("./json");
     import("./net");
     import("./io");
+    import("./ws");
 
 ## C#
 

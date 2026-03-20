@@ -20,3 +20,18 @@ Read one line from standard input. Returns null on EOF.
       panic()
     }
 
+## Terminal Size
+
+Get the current terminal dimensions in characters.
+Returns a default of 80x24 if the terminal size cannot be determined.
+
+    @connected("stdTermCols")
+    export let terminalColumns(): Int {
+      panic()
+    }
+
+    @connected("stdTermRows")
+    export let terminalRows(): Int {
+      panic()
+    }
+

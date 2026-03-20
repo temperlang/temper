@@ -226,7 +226,15 @@ to implement:
 - `Test::failedOnAssert`
 - `Test::messages`
 - `Test::passing`
+- `WsConnection`
+- `WsServer`
 - `stdNetSend`
 - `stdReadLine`
 - `stdSleep`
+- `wsAccept`
+- `wsClose`
+- `wsConnect`
+- `wsListen`
+- `wsRecv`
+- `wsSend`
 <!-- end std-connected -->

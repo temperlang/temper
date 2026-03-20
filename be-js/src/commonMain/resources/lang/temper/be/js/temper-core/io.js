@@ -12,6 +12,22 @@ export function stdSleep(ms) {
 /**
  * @returns {Promise<string | null>}
  */
+/** @returns {number} */
+export function stdTermCols() {
+  if (typeof process !== 'undefined' && process.stdout && process.stdout.columns) {
+    return process.stdout.columns;
+  }
+  return 80;
+}
+
+/** @returns {number} */
+export function stdTermRows() {
+  if (typeof process !== 'undefined' && process.stdout && process.stdout.rows) {
+    return process.stdout.rows;
+  }
+  return 24;
+}
+
 export function stdReadLine() {
   return new Promise(resolve => {
     if (typeof process !== 'undefined' && process.stdin) {

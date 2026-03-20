@@ -16,6 +16,20 @@ pub fn std_sleep(ms: i32) -> Promise<()> {
     promise
 }
 
+pub fn std_term_cols() -> i32 {
+    match crossterm::terminal::size() {
+        Ok((cols, _)) => cols as i32,
+        Err(_) => 80,
+    }
+}
+
+pub fn std_term_rows() -> i32 {
+    match crossterm::terminal::size() {
+        Ok((_, rows)) => rows as i32,
+        Err(_) => 24,
+    }
+}
+
 pub fn std_read_line() -> Promise<Option<Arc<String>>> {
     let pb = PromiseBuilder::new();
     let promise = pb.promise();

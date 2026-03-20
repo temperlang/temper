@@ -627,6 +627,7 @@ class JsBackend private constructor(
             filePath("pair.js"),
             filePath("regex.js"),
             filePath("string.js"),
+            filePath("ws.js"),
         )
 
         override val specifics: NodeSpecifics get() = NodeSpecifics
