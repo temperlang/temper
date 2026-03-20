@@ -94,11 +94,11 @@ and32
 ```
 
     console.log("and64");
-    and64(0I64, 0I64);
-    and64(3I64, 1I64);
-    and64(2I64, 3I64);
-    and64(-2I64, 7I64);
-    and64(0x420a7a213c8786dI64, -0x30a4ef949458f4d2I64);
+    and64(0i64, 0i64);
+    and64(3i64, 1i64);
+    and64(2i64, 3i64);
+    and64(-2i64, 7i64);
+    and64(0x420a7a213c8786di64, -0x30a4ef949458f4d2i64);
 
 ```log
 and64
@@ -144,14 +144,14 @@ or32
 ```
 
     console.log("or64");
-    or64(0I64, 0I64);
-    or64(0I64, 1I64);
-    or64(2I64, 1I64);
-    or64(2I64, 2I64);
-    or64(3I64, 1I64);
-    or64(2I64, 3I64);
-    or64(-2I64, 7I64);
-    or64(0x420a7a213c8786dI64, -0x30a4ef949458f4d2I64);
+    or64(0i64, 0i64);
+    or64(0i64, 1i64);
+    or64(2i64, 1i64);
+    or64(2i64, 2i64);
+    or64(3i64, 1i64);
+    or64(2i64, 3i64);
+    or64(-2i64, 7i64);
+    or64(0x420a7a213c8786di64, -0x30a4ef949458f4d2i64);
 
 ```log
 or64
@@ -195,13 +195,13 @@ bComp32
 ```
 
     console.log("bComp64");
-    bComp64(0I64);
-    bComp64(1I64);
-    bComp64(-1I64);
-    bComp64(2I64);
-    bComp64(-2I64);
-    bComp64(0x420a7a213c8786dI64);
-    bComp64(-0x30a4ef949458f4d2I64);
+    bComp64(0i64);
+    bComp64(1i64);
+    bComp64(-1i64);
+    bComp64(2i64);
+    bComp64(-2i64);
+    bComp64(0x420a7a213c8786di64);
+    bComp64(-0x30a4ef949458f4d2i64);
 
 ```log
 bComp64
@@ -275,25 +275,25 @@ Int64 shifts are pretty much the same but the distance operand
 truncating is different.
 
     console.log("shl64");
-    shl64(0x05I64, 0);
-    shl64(0x05I64, 1);
-    shl64(0x05I64, 2);
-    shl64(0x05I64, 3);
-    shl64(0x05I64, 4);
-    shl64(0x05I64, 5);
+    shl64(0x05i64, 0);
+    shl64(0x05i64, 1);
+    shl64(0x05i64, 2);
+    shl64(0x05i64, 3);
+    shl64(0x05i64, 4);
+    shl64(0x05i64, 5);
     // Shift operands are not truncated at 32
-    shl64(0x05I64, 33);
+    shl64(0x05i64, 33);
     // But they are at 64
-    shl64(0x05I64, 62);
-    shl64(0x05I64, 63); // Shift into sign bit
-    shl64(0x05I64, 64);
+    shl64(0x05i64, 62);
+    shl64(0x05i64, 63); // Shift into sign bit
+    shl64(0x05i64, 64);
     // Don't use negative shift operands, but if you do, they're truncated.
-    shl64(0x05I64, -1); // 0x...fff truncates to 0x1f
-    shl64(0x05I64, -60); // -30 & 0x1f == 2
+    shl64(0x05i64, -1); // 0x...fff truncates to 0x1f
+    shl64(0x05i64, -60); // -30 & 0x1f == 2
     // Negative shiftands are fine
-    shl64(-1I64, 0);
-    shl64(-1I64, 1);
-    shl64(-1I64, 2);
+    shl64(-1i64, 0);
+    shl64(-1i64, 1);
+    shl64(-1i64, 2);
 
 ```log
 shl64
@@ -376,30 +376,30 @@ shr32
 ```
 
     console.log("shr64");
-    shr64(0x80I64, 0);
-    shr64(0x80I64, 1);
-    shr64(0x80I64, 2);
-    shr64(0x80I64, 3);
-    shr64(0x80I64, 4);
-    shr64(0x80I64, 5);
-    shr64(0x80I64, 6);
-    shr64(0x80I64, 7);
-    shr64(0x80I64, 8);
-    shr64(0x80I64, 9);
+    shr64(0x80i64, 0);
+    shr64(0x80i64, 1);
+    shr64(0x80i64, 2);
+    shr64(0x80i64, 3);
+    shr64(0x80i64, 4);
+    shr64(0x80i64, 5);
+    shr64(0x80i64, 6);
+    shr64(0x80i64, 7);
+    shr64(0x80i64, 8);
+    shr64(0x80i64, 9);
     // Shift operands are truncated but at 64 not at 32
-    shr64(0x80I64, 32);
-    shr64(0x80I64, 63);
-    shr64(0x80I64, 64);
-    shr64(0x80I64, 65);
+    shr64(0x80i64, 32);
+    shr64(0x80i64, 63);
+    shr64(0x80i64, 64);
+    shr64(0x80i64, 65);
     // Don't use negative shift operands, but if you do, they're truncated.
-    shr64(0x80I64, -1); // 0x...fff truncates to 0x1f
-    shr64(0x80I64, -62); // -62 & 0x3f == 2
+    shr64(0x80i64, -1); // 0x...fff truncates to 0x1f
+    shr64(0x80i64, -62); // -62 & 0x3f == 2
     // Negative shiftands
-    shr64(-0x80I64, 0);
-    shr64(-0x80I64, 1);
-    shr64(-0x80I64, 2);
-    shr64(-0x80I64, 3);
-    shr64(-0x80I64, 4);
+    shr64(-0x80i64, 0);
+    shr64(-0x80i64, 1);
+    shr64(-0x80i64, 2);
+    shr64(-0x80i64, 3);
+    shr64(-0x80i64, 4);
 
 ```log
 shr64
@@ -488,30 +488,30 @@ uShr32
 ```
 
     console.log("uShr64");
-    uShr64(0x80I64, 0);
-    uShr64(0x80I64, 1);
-    uShr64(0x80I64, 2);
-    uShr64(0x80I64, 3);
-    uShr64(0x80I64, 4);
-    uShr64(0x80I64, 5);
-    uShr64(0x80I64, 6);
-    uShr64(0x80I64, 7);
-    uShr64(0x80I64, 8);
-    uShr64(0x80I64, 9);
+    uShr64(0x80i64, 0);
+    uShr64(0x80i64, 1);
+    uShr64(0x80i64, 2);
+    uShr64(0x80i64, 3);
+    uShr64(0x80i64, 4);
+    uShr64(0x80i64, 5);
+    uShr64(0x80i64, 6);
+    uShr64(0x80i64, 7);
+    uShr64(0x80i64, 8);
+    uShr64(0x80i64, 9);
     // Shift operands are truncated but at 64 not at 32
-    uShr64(0x80I64, 32);
-    uShr64(0x80I64, 63);
-    uShr64(0x80I64, 64);
-    uShr64(0x80I64, 65);
+    uShr64(0x80i64, 32);
+    uShr64(0x80i64, 63);
+    uShr64(0x80i64, 64);
+    uShr64(0x80i64, 65);
     // Don't use negative shift operands, but if you do, they're truncated.
-    uShr64(0x80I64, -1); // 0x...fff truncates to 0x1f
-    uShr64(0x80I64, -62); // -62 & 0x3f == 2
+    uShr64(0x80i64, -1); // 0x...fff truncates to 0x1f
+    uShr64(0x80i64, -62); // -62 & 0x3f == 2
     // Negative shiftands
-    uShr64(-0x80I64, 0);
-    uShr64(-0x80I64, 1);
-    uShr64(-0x80I64, 2);
-    uShr64(-0x80I64, 3);
-    uShr64(-0x80I64, 4);
+    uShr64(-0x80i64, 0);
+    uShr64(-0x80i64, 1);
+    uShr64(-0x80i64, 2);
+    uShr64(-0x80i64, 3);
+    uShr64(-0x80i64, 4);
 
 ```log
 uShr64
