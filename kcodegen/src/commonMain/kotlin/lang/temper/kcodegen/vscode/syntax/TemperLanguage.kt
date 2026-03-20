@@ -14,6 +14,7 @@ val language = lazy {
             ::def,
             ::escape,
             ::expression,
+            ::expressionExceptBrackets,
             ::interpolation,
             ::memberExpression,
             ::name,
@@ -105,21 +106,27 @@ private fun def() = Nest(
 private fun escape() = Flat(scope = "constant.character.escape.temper", match = """\\.""")
 
 private fun expression(): Choice = Choice(
-    listOf(
+    expressionExceptBracketsList + listOf(
         ::bracket,
         ::classDef,
-        ::comment,
-        ::def,
-        ::number,
-        ::string,
-        ::word,
     ).map { it.ref },
 )
+
+private val expressionExceptBracketsList = listOf(
+    ::comment,
+    ::def,
+    ::number,
+    ::string,
+    ::word,
+).map { it.ref }
+
+private fun expressionExceptBrackets(): Choice =
+    Choice(expressionExceptBracketsList)
 
 private fun interpolation() = Nest(
     // Enable template expressions in this grammar for client speed and smarts.
     scope = "meta.template.expression.temper",
-    begin = """\${'$'}\{""",
+    begin = """\$\{""",
     beginCaptures = templateBeginCaptures,
     end = """\}""",
     endCaptures = templateEndCaptures,
@@ -170,7 +177,7 @@ private fun regexContent() = choice(
 )
 
 private fun regexpEscape() = choice(
-    Flat(scope = "keyword.control.anchor.regexp", match = """\\b|\^|\${'$'}"""),
+    Flat(scope = "keyword.control.anchor.regexp", match = """\\b|\^|\$"""),
     Flat(scope = "constant.other.character-class.regexp", match = """\\."""),
 )
 
@@ -233,18 +240,24 @@ private fun stringMultiline() = Nest(
     scope = "string.quoted.multi.temper",
     begin = "\"\"\"",
     beginCaptures = stringBeginCaptures,
-    end = """(?!(\s|"|//|/\*|$))""",
+    end = """(?!(\s|"|:|~|//|/\*|$))""",
     patterns = listOf(
         ::comment.ref,
         Nest(
             scope = "string.quoted.double.temper",
-            begin = "\"",
+            begin = "[\"~]",
             beginCaptures = stringBeginCaptures,
             end = "$",
             patterns = listOf(
                 ::escape.ref,
                 ::interpolation.ref,
             ),
+        ),
+        Nest(
+            scope = "meta.embedded.line.temper",
+            begin = ":",
+            end = "$",
+            patterns = listOf(::expressionExceptBrackets.ref),
         ),
     ),
 )

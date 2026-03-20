@@ -191,11 +191,30 @@
         "expression": {
             "patterns": [
                 {
+                    "include": "#comment"
+                },
+                {
+                    "include": "#def"
+                },
+                {
+                    "include": "#number"
+                },
+                {
+                    "include": "#string"
+                },
+                {
+                    "include": "#word"
+                },
+                {
                     "include": "#bracket"
                 },
                 {
                     "include": "#classDef"
-                },
+                }
+            ]
+        },
+        "expressionExceptBrackets": {
+            "patterns": [
                 {
                     "include": "#comment"
                 },
@@ -341,14 +360,14 @@
                             "name": "punctuation.definition.string.begin.temper"
                         }
                     },
-                    "end": "(?!(\\s|\u0022|//|/\\*|\u0024))",
+                    "end": "(?!(\\s|\u0022|:|~|//|/\\*|\u0024))",
                     "patterns": [
                         {
                             "include": "#comment"
                         },
                         {
                             "name": "string.quoted.double.temper",
-                            "begin": "\u0022",
+                            "begin": "[\u0022~]",
                             "beginCaptures": {
                                 "0": {
                                     "name": "punctuation.definition.string.begin.temper"
@@ -361,6 +380,16 @@
                                 },
                                 {
                                     "include": "#interpolation"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "meta.embedded.line.temper",
+                            "begin": ":",
+                            "end": "\u0024",
+                            "patterns": [
+                                {
+                                    "include": "#expressionExceptBrackets"
                                 }
                             ]
                         }
@@ -377,14 +406,14 @@
                             "name": "punctuation.definition.string.begin.temper"
                         }
                     },
-                    "end": "(?!(\\s|\u0022|//|/\\*|\u0024))",
+                    "end": "(?!(\\s|\u0022|:|~|//|/\\*|\u0024))",
                     "patterns": [
                         {
                             "include": "#comment"
                         },
                         {
                             "name": "string.quoted.double.temper",
-                            "begin": "\u0022",
+                            "begin": "[\u0022~]",
                             "beginCaptures": {
                                 "0": {
                                     "name": "punctuation.definition.string.begin.temper"
@@ -397,6 +426,16 @@
                                 },
                                 {
                                     "include": "#interpolation"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "meta.embedded.line.temper",
+                            "begin": ":",
+                            "end": "\u0024",
+                            "patterns": [
+                                {
+                                    "include": "#expressionExceptBrackets"
                                 }
                             ]
                         }
