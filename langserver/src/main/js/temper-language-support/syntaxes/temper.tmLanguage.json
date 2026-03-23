@@ -191,6 +191,12 @@
         "expression": {
             "patterns": [
                 {
+                    "include": "#bracket"
+                },
+                {
+                    "include": "#classDef"
+                },
+                {
                     "include": "#comment"
                 },
                 {
@@ -204,12 +210,6 @@
                 },
                 {
                     "include": "#word"
-                },
-                {
-                    "include": "#bracket"
-                },
-                {
-                    "include": "#classDef"
                 }
             ]
         },

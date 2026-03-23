@@ -106,10 +106,10 @@ private fun def() = Nest(
 private fun escape() = Flat(scope = "constant.character.escape.temper", match = """\\.""")
 
 private fun expression(): Choice = Choice(
-    expressionExceptBracketsList + listOf(
+    listOf(
         ::bracket,
         ::classDef,
-    ).map { it.ref },
+    ).map { it.ref } + expressionExceptBracketsList,
 )
 
 private val expressionExceptBracketsList = listOf(
