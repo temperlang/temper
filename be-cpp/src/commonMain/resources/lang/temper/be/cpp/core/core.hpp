@@ -1,6 +1,7 @@
 #ifndef TEMPER_CORE_HPP
 #define TEMPER_CORE_HPP
 
+#define _USE_MATH_DEFINES
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
