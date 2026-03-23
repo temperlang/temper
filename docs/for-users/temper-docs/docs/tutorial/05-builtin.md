@@ -220,13 +220,25 @@ interactive#0: "\\d+\\.\\d+"
 ```
 
 ```temper
-$ ("""
+$ console.log(
+    """
     "- An outline
     // Ignored comment.
     "  - With indentation
-    "- Final point
+    "- Another point
+    """
+    "^ And above is just `""` after `"`
   )
-interactive#1: "- An outline\n  - With indentation\n- Final point"
+```
+
+```
+- An outline
+  - With indentation
+- Another point
+""
+^ And above is just `""` after `"`
+
+interactive#1: void
 ```
 
 Triple-quotes like `"""` start a multiline string, then all whitespace and
