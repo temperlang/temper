@@ -220,20 +220,51 @@ interactive#0: "\\d+\\.\\d+"
 ```
 
 ```temper
-$ ("""
+$ console.log(
+    """
     "- An outline
     // Ignored comment.
     "  - With indentation
-    "- Final point
+    "- Another point
+    """
+    "^ And above is just `""` after `"`
   )
-interactive#1: "- An outline\n  - With indentation\n- Final point"
+```
+
+```
+- An outline
+  - With indentation
+- Another point
+""
+^ And above is just `""` after `"`
+
+interactive#1: void
 ```
 
 Triple-quotes like `"""` start a multiline string, then all whitespace and
-comments are ignored, and every line content beginning with `"` continues the
-string. If line content starts with something other than `"`, the string ends.
-This syntax allows control over indentation both inside and outside the string
-content.
+comments are ignored, and every line content beginning with any of the following
+continues the string:
+
+- `"` contributes string content automatically followed by a newline
+- `~` contibutes string content without a newline
+- `:` provides full Temper control flow
+- `//` or `/*` starts a comment
+
+If non-whitespace line content starts with any other than above, the string
+ends. This syntax allows control over indentation both inside and outside the
+string content. Here's an example with control flow:
+
+```temper
+$ ("""
+    :for (var i = 1; i < 100; i *= 2) {
+      // Use `~` here to avoid trailing newline.
+      // Use empty interpolation to provide trailing whitespace.
+      ~${i.toString()}, ${""}
+    :}
+    ~and so on
+  )
+interactive#2: "1, 2, 4, 8, 16, 32, 64, and so on"
+```
 
 Temper has character syntax using a string tagged with `char`.
 Character values are simple integer code-point values.
@@ -242,6 +273,9 @@ Character values are simple integer code-point values.
 $ char'👪'
 interactive#3: 128106
 ```
+
+Custom tags can also be defined for builders for domain-specific languages. We
+plan to document this in the future.
 
 ## List types
 
