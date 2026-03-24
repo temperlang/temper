@@ -3237,9 +3237,9 @@ class GenerateCodeStageTest {
             |let guests = ["Hilo, HI", "you in the back in the hat"];
             |$${"\"\"\""}
             |~Hello, World
-            |: for (let guest of guests) {
-            |~, and ${guest}
-            |: }
+            |:for (let guest of guests) {
+            |  ~, and ${guest}
+            |:}
             |~!
         """.trimMargin(),
         want = """
@@ -3264,6 +3264,24 @@ class GenerateCodeStageTest {
             |          ```
             |  },
             |  run: ["Hello, World, and Hilo, HI, and you in the back in the hat!", "String"],
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun complexStringExprWithFormattingHole() = assertModuleAtStage(
+        stage = Stage.Run,
+        moduleResultNeeded = true,
+        input = $$"""
+            |$${"\"\"\""}
+            |:for (var i = 1; i < 100; i *= 2) {
+            | ~${i.toString()}, ${}
+            |:}
+            |~and so on
+        """.trimMargin(),
+        want = """
+            |{
+            |  run: ["1, 2, 4, 8, 16, 32, 64, and so on", "String"],
             |}
         """.trimMargin(),
     )

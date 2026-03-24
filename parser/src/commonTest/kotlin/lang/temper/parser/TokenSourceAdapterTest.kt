@@ -123,9 +123,9 @@ class TokenSourceAdapterTest {
             "+++", "`some character data\n`", ";",
             "statement", "(", "here", ")",
             "+++", "`more character`", ";",
-            $$"${", "}", ";",
+            // ${} elided
             "+++", "` data `", ";",
-            $$"${", "}", ";",
+            // ${} elided but space still on ` data ` line
             "+++", "`\n`", ";",
             "+++", "`last line\n`", ";",
             "\"\"\"",
