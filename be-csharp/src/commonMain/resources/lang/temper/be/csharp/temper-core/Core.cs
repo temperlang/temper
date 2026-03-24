@@ -120,14 +120,12 @@ namespace TemperLang.Core
 
         public static int UShr(this int a, int b)
         {
-            b = b & 0x1F;
-            return b == 0 ? a : (a >> b) & (0x7FFF_FFFF >> (b - 1));
+            return (int) ((uint) a >> (b & 0x1f));
         }
 
         public static long UShr(this long a, int b)
         {
-            b = b & 0x3F;
-            return b == 0 ? a : (a >> b) & (0x7FFF_FFFF_FFFF_FFFFL >> (b - 1));
+            return (long) ((ulong) a >> (b & 0x3f));
         }
 
         private const string DIGITS = "0123456789abcdefghijklmnopqrstuvwxyz";
