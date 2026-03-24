@@ -429,7 +429,7 @@ function temper.float64_near(x, y, rel_tol, abs_tol)
     abs_tol = temper.null_to_nil(abs_tol) or 0.0
     local scale = temper.float64_max(temper.float64_abs(x), temper.float64_abs(y))
     local margin = temper.float64_max(scale * rel_tol, abs_tol)
-    return temper.float64_abs(x - y) < margin
+    return temper.float64_abs(x - y) <= margin
 end
 
 function temper.float64_round(x)

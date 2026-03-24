@@ -1581,7 +1581,7 @@ export class Float64 extends Equatable {
     absTol: builtins.Float64 = 0.0,
   ): builtins.Boolean {
     let margin = (content.abs().max(other.abs()) * relTol).max(absTol);
-    (content - other).abs() < margin
+    (content - other).abs() <= margin
   }
 
   @connected("Float64::round")
