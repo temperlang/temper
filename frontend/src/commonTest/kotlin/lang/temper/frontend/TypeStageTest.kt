@@ -978,7 +978,7 @@ class TypeStageTest {
                       return__1 = implicits.doneResult<Empty>();
                       void;
                       while (true) {
-                        cat(do_bind_toString(123)());
+                        cat(str(123));
                         yield()
                       }
                   })
@@ -1045,11 +1045,8 @@ class TypeStageTest {
                                                       [ "Call", [
                                                           [ "Value", "cat: Function" ],
                                                           [ "Call", [
-                                                              [ "Call", [
-                                                                  [ "Value", "do_bind_toString: Function" ],
-                                                                  [ "Value", "123: Int32" ],
-                                                                ]
-                                                              ],
+                                                              [ "Value", "str: Function" ],
+                                                              [ "Value", "123: Int32" ],
                                                             ]
                                                           ],
                                                         ]
@@ -1860,7 +1857,7 @@ class TypeStageTest {
             |        void;
             |        fn__0: do {
             |          let s__0: String;
-            |          s__0 = cat("Hello, ", hi__0, "!");
+            |          s__0 = cat("Hello, ", str(hi__0), "!");
             |          do_bind_log(console#0)(s__0);
             |          do_bind_log(console#0)(s__0);
             |          return__1 = void
@@ -2277,7 +2274,7 @@ class TypeStageTest {
             |      `test//`.stringifyLists = fn stringifyLists(stringer__0 /* aka stringer */: Stringer, int__1 /* aka int */: Int32, ints__1 /* aka ints */: List<Int32>, strings__0 /* aka strings */: List<String>) /* return__3 */: String {
             |        void;
             |        fn__3: do {
-            |          return__3 = cat(do_bind_stringifyInt32(stringer__0)(int__1), ", ", do_bind_stringifyInt32List(stringer__0)(ints__1), ", ", do_bind_stringifyStringList(stringer__0)(strings__0))
+            |          return__3 = cat(str(do_bind_stringifyInt32(stringer__0)(int__1)), ", ", str(do_bind_stringifyInt32List(stringer__0)(ints__1)), ", ", str(do_bind_stringifyStringList(stringer__0)(strings__0)))
             |        }
             |      }
             |

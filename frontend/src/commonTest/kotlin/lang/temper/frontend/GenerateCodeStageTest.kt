@@ -523,18 +523,18 @@ class GenerateCodeStageTest {
         |      @fn @reach(\none) let f__0;
         |      f__0 = (@stay fn f(s__0 /* aka s */: String, a__0 /* aka a */: Int32?) /* return__1 */: String {
         |          var t#0, t#1, t#2, t#3;
+        |          if (isNull(a__0)) {
+        |            t#1 = "null"
+        |          } else {
+        |            t#0 = do_bind_toString(notNull(a__0))();
+        |            t#1 = t#0
+        |          };
         |          if (!isNull(a__0)) {
         |            let a#0;
         |            a#0 = notNull(a__0);
         |            t#3 = a#0
         |          } else {
         |            t#3 = -1
-        |          };
-        |          if (isNull(a__0)) {
-        |            t#1 = "null"
-        |          } else {
-        |            t#0 = do_bind_toString(notNull(a__0))();
-        |            t#1 = t#0
         |          };
         |          t#2 = do_bind_toString(t#3)();
         |          return__1 = cat(s__0, t#1, t#2)
@@ -3254,7 +3254,7 @@ class GenerateCodeStageTest {
             |              do_bind_append(accumulator#0)("Hello, World");
             |              for(let guest of guests, fn {
             |                  do_bind_append(accumulator#0)(", and ");
-            |                  do_bind_append(accumulator#0)(guest);
+            |                  do_bind_append(accumulator#0)(str(guest));
             |              });
             |              do_bind_append(accumulator#0)("!");
             |            };
@@ -3275,7 +3275,7 @@ class GenerateCodeStageTest {
         input = $$"""
             |$${"\"\"\""}
             |:for (var i = 1; i < 100; i *= 2) {
-            | ~${i.toString()}, ${}
+            |  ~${i}, ${}
             |:}
             |~and so on
         """.trimMargin(),
@@ -3633,9 +3633,9 @@ class GenerateCodeStageTest {
             |        t#1 = ls__0;
             |        do_bind_set(t#1)(1, do_bind_get(t#1)(1) * 2)
             |      };
-            |      do_bind_log(console#0)(cat("ls = [", do_bind_join(do_bind_toList(ls__0)())(", ", fn (i__0 /* aka i */: Int) /* return__1 */: (String) {
-            |              do_bind_toString(i__0)(10)
-            |          }), "]"));
+            |      do_bind_log(console#0)(cat("ls = [", str(do_bind_join(do_bind_toList(ls__0)())(", ", fn (i__0 /* aka i */: Int) /* return__1 */: (String) {
+            |                do_bind_toString(i__0)(10)
+            |          })), "]"));
             |
             |      ```
             |  },

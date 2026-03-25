@@ -932,8 +932,8 @@ class DefineStageTest {
                   i__1
                 }
             });
-            do_bind_log(console#0)(cat("f( )=", do_bind_toString(42)()));
-            do_bind_log(console#0)(cat("f(1)=", do_bind_toString(1)()));
+            do_bind_log(console#0)(cat("f( )=", str(do_bind_toString(42)())));
+            do_bind_log(console#0)(cat("f(1)=", str(do_bind_toString(1)())));
 
             ```
           },
@@ -977,8 +977,8 @@ class DefineStageTest {
                 i__4
               }
             };
-            do_bind_log(console#0)(cat("f(true )=", f__1(true)));
-            do_bind_log(console#0)(cat("f(false)=", f__1(false)));
+            do_bind_log(console#0)(cat("f(true )=", str(f__1(true))));
+            do_bind_log(console#0)(cat("f(false)=", str(f__1(false))));
 
             ```
           },
@@ -3126,7 +3126,7 @@ class DefineStageTest {
             |      @visibility(\public) @fn @stay @fromType(Point__0) let toString__0;
             |      toString__0 = fn toString(@impliedThis(Point__0) this__3: Point__0) /* return__3 */: String {
             |        fn__0: do {
-            |          cat("(", getp(x__0, this__3), ", ", getp(y__0, this__3), ")")
+            |          cat("(", str(getp(x__0, this__3)), ", ", str(getp(y__0, this__3)), ")")
             |        }
             |      };
             |      @fn @visibility(\public) @stay @fromType(Point__0) let constructor__1;
