@@ -2090,9 +2090,12 @@ class RustTranslator(
         ).wrapArcType()
     }
 
-    private fun translateGarbage(garbage: TmpL.Garbage): Rust.Call {
-        val pos = garbage.pos
-        return "panic!".toId(pos).call(listOf(Rust.StringLiteral(pos, "Garbage")))
+    private fun translateGarbage(garbage: TmpL.Garbage): Rust.Expr = run {
+        translateUnsupported(garbage.pos, garbage.toString())
+    }
+
+    private fun translateGarbageStatement(garbage: TmpL.GarbageStatement): Rust.ExprStatement = run {
+        translateUnsupportedStatement(garbage)
     }
 
     private fun translateGetProperty(expression: TmpL.GetProperty, avoidClone: Boolean): Rust.Expr {
@@ -2615,7 +2618,7 @@ class RustTranslator(
         typePub: Rust.VisibilityPub? = null,
     ): List<Rust.Item> {
         return when (member) {
-            is TmpL.GarbageStatement -> return listOf()
+            is TmpL.GarbageStatement -> translateGarbageStatement(member).toItem() // won't compile but that's ok
             // So far only bother with returnType forwarding for instance methods. Will we need more later?
             is TmpL.Getter -> translateGetter(member, block = block, forTrait = forTrait, returnType = returnType)
             is TmpL.Setter -> translateSetter(member, block = block, forTrait = forTrait) // don't expect return type
@@ -2906,7 +2909,7 @@ class RustTranslator(
                 val ref = statement.left
                 val subject = when (val subj = ref.subject) {
                     is TmpL.Expression -> translateExpression(subj, avoidClone = true)
-                    is TmpL.TypeName -> translateTypeName(subj)
+                    is TmpL.TypeName -> translateTypeName(subj) // wrong but also shouldn't happen
                 }
                 val setter = "set_${translatePropertyId(ref.property)}"
                 subject.methodCall(setter, listOf(value))
@@ -2934,13 +2937,13 @@ class RustTranslator(
         try {
             return when (statement) {
                 is TmpL.Assignment -> return translateAssignment(statement)
-                is TmpL.BoilerplateCodeFoldEnd -> return listOf()
-                is TmpL.BoilerplateCodeFoldStart -> return listOf()
+                is TmpL.BoilerplateCodeFoldEnd -> translateUnsupportedStatement(statement)
+                is TmpL.BoilerplateCodeFoldStart -> translateUnsupportedStatement(statement)
                 is TmpL.BreakStatement -> translateBreakStatement(statement)
                 is TmpL.ContinueStatement -> translateContinueStatement(statement)
-                is TmpL.EmbeddedComment -> return listOf()
+                is TmpL.EmbeddedComment -> translateUnsupportedStatement(statement)
                 is TmpL.ExpressionStatement -> translateExpressionStatement(statement)
-                is TmpL.GarbageStatement -> Rust.ExprStatement(statement.pos, translateGarbage(statement))
+                is TmpL.GarbageStatement -> translateGarbageStatement(statement)
                 is TmpL.HandlerScope -> error("handled elsewhere")
                 is TmpL.LocalDeclaration -> return translateModuleOrLocalDeclaration(statement)
                 is TmpL.LocalFunctionDeclaration -> error("handled elsewhere")
@@ -3069,6 +3072,7 @@ class RustTranslator(
         return when (type) {
             is TmpL.FunctionType -> translateFunctionType(type)
             is TmpL.TypeIntersection -> when {
+                // This branch is never expected, so some this translation is untested.
                 type.types.isEmpty() -> ANY_NAME.toId(pos)
                 type.types.size == 1 -> translateType(type.types.first(), inExpr = inExpr, isFlex = isFlex)
                 else -> Rust.ImplTraitType(
@@ -3335,6 +3339,18 @@ class RustTranslator(
             ),
             args = listOf(),
         )
+    }
+
+    private fun translateUnsupported(pos: Position, diagnostic: String): Rust.Expr = run {
+        "panic!".toId(pos).call(listOf(Rust.StringLiteral(pos, "Unsupported: $diagnostic")))
+    }
+
+    private fun translateUnsupported(tree: TmpL.Tree): Rust.Expr = run {
+        translateUnsupported(tree.pos, tree.toString())
+    }
+
+    private fun translateUnsupportedStatement(statement: TmpL.Statement): Rust.ExprStatement = run {
+        Rust.ExprStatement(statement.pos, translateUnsupported(statement))
     }
 
     private fun translateValueReference(expression: TmpL.ValueReference): Rust.Expr {
