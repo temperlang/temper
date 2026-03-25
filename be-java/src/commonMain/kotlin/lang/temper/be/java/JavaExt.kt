@@ -425,7 +425,12 @@ operator fun J.Identifier.Companion.invoke(pos: Position, text: String, source: 
 fun J.Identifier.asNameExpr(pos: Position = this.pos) = J.NameExpr(pos, listOf(this.deepCopy()))
 
 /** Find the path to a top-level AST. */
-fun J.Program.filePathTo(): FilePath = programMeta.sourceDirectory.filePath + when (this) {
+fun J.Program.filePathTo(
+    excludeSourceDirectory: Boolean = false,
+): FilePath = when {
+    excludeSourceDirectory -> dirPath()
+    else -> programMeta.sourceDirectory.filePath
+} + when (this) {
     is J.ModuleDeclaration -> filePath(moduleFileName)
     is J.PackageDeclaration -> this.packageStatement.asDirPath().resolveFile(packageFileName)
     is J.TopLevelClassDeclaration -> (this.packageStatement?.asDirPath() ?: FilePath.emptyPath)
