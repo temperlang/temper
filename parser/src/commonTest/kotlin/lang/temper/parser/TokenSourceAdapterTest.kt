@@ -182,6 +182,25 @@ class TokenSourceAdapterTest {
         ),
     )
 
+    @Test // Issue#387
+    fun stringsOnStringTemplateLine() = assertAdaptedTokens(
+        input = $$"""
+            |$${"\"\"\""}
+            |  :for (let c of ["a", "b", "c"]) {
+            |    ~${c},
+            |  :}
+        """.trimMargin(),
+        want = listOf(
+            "{", "\"\"\"",
+            "for", "(", "let", "c", "of", "[",
+            "(", "\"", "`a`", "\"", ")", ",",
+            "(", "\"", "`b`", "\"", ")", ",",
+            "(", "\"", "`c`", "\"", ")", "]", ")", "{",
+            $$"${", "c", "}", ";", "+++", "`,`", ";",
+            "\"\"\"", "}",
+        ),
+    )
+
     @Test
     fun mqStringEndsWithInterp() = assertAdaptedTokens(
         input = $$"""

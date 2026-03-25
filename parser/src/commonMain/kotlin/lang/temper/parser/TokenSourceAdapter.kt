@@ -581,14 +581,13 @@ private class StringFixer(
                         },
                     )
                     TokenType.RightDelimiter -> {
-                        if (fragments.isNotEmpty()) {
-                            val start = fragments.removeLast()
-                            val top = stack.last()!!
-                            onFragment(top, start..<i)
-                        }
-                        val start = stack.removeLast()
-                        if (start != null) {
-                            onMqString(start..i)
+                        val top = stack.removeLast()
+                        if (top != null) { // An Mq delimiter
+                            if (fragments.isNotEmpty()) {
+                                val start = fragments.removeLast()
+                                onFragment(top, start..<i)
+                            }
+                            onMqString(top..i)
                         }
                     }
                     TokenType.QuotedString -> {
