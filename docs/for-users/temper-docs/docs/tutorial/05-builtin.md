@@ -219,6 +219,19 @@ $ raw"\d+\.\d+"
 interactive#0: "\\d+\\.\\d+"
 ```
 
+Triple-quotes like `"""` start a multiline string, then all whitespace and
+comments are ignored, and every line content beginning with any of the following
+continues the string:
+
+- `"` contributes string content automatically followed by a newline
+- `~` contibutes string content without a newline
+- `:` provides full Temper control flow
+- `//` or `/*` starts a comment
+
+If non-whitespace line content starts with any other than above, the string
+ends. This syntax allows control over indentation both inside and outside the
+string content:
+
 ```temper
 $ console.log(
     """
@@ -241,18 +254,7 @@ $ console.log(
 interactive#1: void
 ```
 
-Triple-quotes like `"""` start a multiline string, then all whitespace and
-comments are ignored, and every line content beginning with any of the following
-continues the string:
-
-- `"` contributes string content automatically followed by a newline
-- `~` contibutes string content without a newline
-- `:` provides full Temper control flow
-- `//` or `/*` starts a comment
-
-If non-whitespace line content starts with any other than above, the string
-ends. This syntax allows control over indentation both inside and outside the
-string content. Here's an example with control flow:
+Here's an example with control flow:
 
 ```temper
 $ ("""
