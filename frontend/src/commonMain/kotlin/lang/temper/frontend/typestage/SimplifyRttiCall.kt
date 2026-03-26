@@ -198,33 +198,31 @@ internal fun simplifyRttiCall(rttiCall: CallTree, typeContext: TypeContext2) {
             // ->
             //   if (t == null) { null     } else { t as SameOrSubType }
             document.treeFarm.grow(pos) {
-                Block(pos) {
-                    IfThenElse(
-                        cond = {
+                IfThenElse(
+                    cond = {
+                        Call {
+                            V(expr.pos.leftEdge, vIsNullFn)
+                            Replant(simpleExpr.copy())
+                        }
+                    },
+                    thenClause = {
+                        if (!targetCanBeNull) { // 2, 10
                             Call {
-                                V(expr.pos.leftEdge, vIsNullFn)
-                                Replant(simpleExpr.copy())
-                            }
-                        },
-                        thenClause = {
-                            if (!targetCanBeNull) { // 2, 10
-                                Call {
-                                    val bubbler = when (rto) {
-                                        RuntimeTypeOperation.As -> BuiltinFuns.vBubble
-                                        RuntimeTypeOperation.AssertAs -> BuiltinFuns.vPanic
-                                        else -> error("unexpected")
-                                    }
-                                    V(expr.pos.rightEdge, bubbler)
+                                val bubbler = when (rto) {
+                                    RuntimeTypeOperation.As -> BuiltinFuns.vBubble
+                                    RuntimeTypeOperation.AssertAs -> BuiltinFuns.vPanic
+                                    else -> error("unexpected")
                                 }
-                            } else {
-                                V(expr.pos.rightEdge, TNull.value)
+                                V(expr.pos.rightEdge, bubbler)
                             }
-                        },
-                        elseClause = {
-                            Replant(replacementAssumingNotNull)
-                        },
-                    )
-                }
+                        } else {
+                            V(expr.pos.rightEdge, TNull.value)
+                        }
+                    },
+                    elseClause = {
+                        Replant(replacementAssumingNotNull)
+                    },
+                ).at(pos)
             }
         }
         RuntimeTypeOperation.Is -> {
