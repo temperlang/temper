@@ -259,7 +259,7 @@ $ ("""
     :for (var i = 1; i < 100; i *= 2) {
       // Use `~` here to avoid trailing newline.
       // Use empty interpolation to provide trailing whitespace.
-      ~${i.toString()}, ${""}
+      ~${i}, ${}
     :}
     ~and so on
   )
