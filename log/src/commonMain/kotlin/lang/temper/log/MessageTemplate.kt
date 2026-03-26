@@ -203,6 +203,7 @@ enum class MessageTemplate(
     CannotInvokeMacroAsFunction("Cannot invoke macro as function", CompilationPhase.Interpreter),
     NotApplicable("Cannot apply %s to %s:%s", CompilationPhase.Interpreter),
     InternalInterpreterError("Internal error: %s", CompilationPhase.Interpreter),
+    InternalErrorMacroNotErased("Internal error: %s did not erase", CompilationPhase.Interpreter),
     CouldNotStoreFailureBit(
         "Internal error: failed to set failure bit",
         CompilationPhase.Interpreter,

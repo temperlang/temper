@@ -743,6 +743,15 @@ internal object CoerceToString : SpecialFunction, BuiltinMacro("str", null) {
                     macroEnv.replaceMacroCallWith {
                         buildStringifyCall(freeTree(arg), type)
                     }
+                } else if (macroEnv.stage == Stage.GenerateCode) {
+                    val problem = LogEntry(
+                        Log.Error,
+                        MessageTemplate.InternalErrorMacroNotErased,
+                        macroEnv.pos,
+                        listOf(this.name),
+                    )
+                    problem.logTo(macroEnv.logSink)
+                    macroEnv.replaceMacroCallWithErrorNode(problem)
                 }
                 arg.valueContained?.let {
                     try {

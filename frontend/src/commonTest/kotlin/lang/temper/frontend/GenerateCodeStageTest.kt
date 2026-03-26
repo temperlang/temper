@@ -2798,18 +2798,18 @@ class GenerateCodeStageTest {
             |            if (isNull(t#3)) {
             |              j__0 = null
             |            } else {
-            |              t#2 = hs(fail#0, as(t#3, StringIndex));
+            |              t#1 = hs(fail#0, as(t#3, StringIndex));
             |              if (fail#0) {
             |                bubble()
             |              };
-            |              j__0 = t#2
+            |              j__0 = t#1
             |            };
             |            if (!isNull(j__0)) {
-            |              t#1 = is(j__0, StringIndex)
+            |              t#2 = is(j__0, StringIndex)
             |            } else {
-            |              t#1 = false
+            |              t#2 = false
             |            };
-            |            if (t#1) {
+            |            if (t#2) {
             |              return__0 = 1
             |            } else {
             |              return__0 = 2
@@ -2851,7 +2851,9 @@ class GenerateCodeStageTest {
             |          return__0 = do_get_end(s__0)
             |      });
             |      f__0 = (@stay fn f(s__1 /* aka s */: String) /* return__1 */: Boolean {
-            |          return__1 = is((fn g)(s__1), NoStringIndex)
+            |          let t#0;
+            |          t#0 = (fn g)(s__1);
+            |          return__1 = is(t#0, NoStringIndex)
             |      })
             |
             |      ```
@@ -3809,6 +3811,41 @@ class GenerateCodeStageTest {
             |  },
             |}
         """.trimMargin(),
+    )
+
+    @Test
+    fun stringCoercionOfRttiCheck() = assertModuleAtStage(
+        stage = Stage.Run,
+        input = $$"""
+            |let f(i: StringIndexOption): Void {
+            |  console.log("Yes ${i is StringIndex}, no ${i is NoStringIndex }");
+            |}
+            |
+            |f(String.begin)
+        """.trimMargin(),
+        want = """
+            |{
+            |  generateCode: {
+            |    body: ```
+            |      let console#0;
+            |      console#0 = getConsole();
+            |      @fn let f__0;
+            |      f__0 = (@stay fn f(i__0 /* aka i */: StringIndexOption) /* return__0 */: Void {
+            |          var t#0, t#1;
+            |## str has erased to a .toString() call here
+            |          t#0 = do_bind_toString(is(i__0, StringIndex))();
+            |          t#1 = do_bind_toString(is(i__0, NoStringIndex))();
+            |          do_bind_log(console#0)(cat("Yes ", t#0, ", no ", t#1));
+            |          return__0 = void
+            |      });
+            |      f__0(getStatic(String, \begin))
+            |
+            |      ```
+            |  },
+            |  run: "void: Void",
+            |  stdout: "Yes true, no false\n",
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 }
 

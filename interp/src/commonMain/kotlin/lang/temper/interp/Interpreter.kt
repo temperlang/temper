@@ -62,9 +62,11 @@ import lang.temper.value.ActualValues
 import lang.temper.value.Actuals
 import lang.temper.value.AwaitMacroEnvironment
 import lang.temper.value.BINARY_OP_CALL_ARG_COUNT
+import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
+import lang.temper.value.CallTypeInferences
 import lang.temper.value.CallableValue
 import lang.temper.value.ControlFlow
 import lang.temper.value.CoverFunction
@@ -94,6 +96,7 @@ import lang.temper.value.Panic
 import lang.temper.value.PartialResult
 import lang.temper.value.Planting
 import lang.temper.value.PostPass
+import lang.temper.value.PreserveFn
 import lang.temper.value.Promises
 import lang.temper.value.ReifiedType
 import lang.temper.value.Resolutions
@@ -138,6 +141,7 @@ import lang.temper.value.superSymbol
 import lang.temper.value.symbolContained
 import lang.temper.value.toLispy
 import lang.temper.value.typeFormalSymbol
+import lang.temper.value.typeFromSignature
 import lang.temper.value.typeSymbol
 import lang.temper.value.unholeBuiltinName
 import lang.temper.value.unify
@@ -1052,6 +1056,7 @@ class Interpreter(
                 }
 
                 // Try to constant fold
+                val typeToInline = ast?.typeInferences?.type
                 val valueToInline = if (shouldAttemptToInline) {
                     result as? Value<*>
                 } else {
@@ -1061,6 +1066,10 @@ class Interpreter(
                     check(edge != null) // Otherwise shouldInline is false
                     // Inline the result of a pure function.
                     val replacementsAndBreadcrumbs = mutableListOf<Pair<Tree, Stage?>>()
+                    val replacementValue = ValueLeaf(ast.document, ast.pos, valueToInline)
+                    if (typeToInline != null) {
+                        replacementValue.typeInferences = BasicTypeInferences(typeToInline, listOf())
+                    }
                     when (replacementPolicy) {
                         ReplacementPolicy.Discard -> {
                             ast.edges.forEachIndexed { index, kidEdge ->
@@ -1071,9 +1080,7 @@ class Interpreter(
                                     replacementsAndBreadcrumbs.add(freeTarget(kidEdge) to kidEdge.breadcrumb)
                                 }
                             }
-                            replacementsAndBreadcrumbs.add(
-                                ValueLeaf(ast.document, ast.pos, valueToInline) to null,
-                            )
+                            replacementsAndBreadcrumbs.add(replacementValue to null)
                         }
                         ReplacementPolicy.Preserve -> {
                             val preserveCall = ast.document.treeFarm.grow {
@@ -1083,6 +1090,15 @@ class Interpreter(
                                 }
                             }
                             preserveCall.edge(1).breadcrumb = stage
+                            if (typeToInline != null) {
+                                val sig = PreserveFn.sig
+                                preserveCall.typeInferences = CallTypeInferences(
+                                    typeToInline,
+                                    typeFromSignature(sig),
+                                    mapOf(sig.typeFormals[0] to typeToInline),
+                                    listOf(),
+                                )
+                            }
                             replacementsAndBreadcrumbs.add(preserveCall to stage)
                         }
                     }
