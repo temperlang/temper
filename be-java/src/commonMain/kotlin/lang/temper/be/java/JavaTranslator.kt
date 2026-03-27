@@ -2434,7 +2434,7 @@ private fun abstract(body: TmpL.BlockStatement?): J.ModAbstract {
     }
 }
 
-internal fun resultType(names: JavaNames, type: TmpL.AType?, pos: Position) =
+fun resultType(names: JavaNames, type: TmpL.AType?, pos: Position) =
     resultType(names, type?.ot, pos)
 
 internal fun resultType(names: JavaNames, type: TmpL.Type?, pos: Position): J.ResultType = when (type) {

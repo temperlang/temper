@@ -41,8 +41,14 @@ internal object CppSupportNetwork : SupportNetwork {
         genre: Genre,
     ): SupportCode? = when (builtin.builtinOperatorId) {
         BuiltinOperatorId.BooleanNegation -> Like.unary("!")
-        BuiltinOperatorId.BitwiseAnd -> Like.binary("&")
-        BuiltinOperatorId.BitwiseOr -> Like.binary("|")
+        BuiltinOperatorId.BitwiseAnd32, BuiltinOperatorId.BitwiseAnd64 -> Like.binary("&")
+        BuiltinOperatorId.BitwiseOr32, BuiltinOperatorId.BitwiseOr64 -> Like.binary("|")
+        BuiltinOperatorId.BitwiseXor32, BuiltinOperatorId.BitwiseXor64 -> Like.binary("^")
+        BuiltinOperatorId.BitwiseNegation32, BuiltinOperatorId.BitwiseNegation64 -> Like.unary("~")
+        BuiltinOperatorId.BitwiseShl32, BuiltinOperatorId.BitwiseShl64 -> Like.binary("<<")
+        BuiltinOperatorId.BitwiseShr32, BuiltinOperatorId.BitwiseShr64 -> Like.binary(">>")
+        BuiltinOperatorId.BitwiseShrUnsigned32 -> Like.core("ushr32")
+        BuiltinOperatorId.BitwiseShrUnsigned64 -> Like.core("ushr64")
         BuiltinOperatorId.IsNull -> Like.core("is_null")
         BuiltinOperatorId.NotNull -> Like.core("not_null")
         BuiltinOperatorId.DivFltFlt -> Like.binary("/")

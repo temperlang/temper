@@ -3236,7 +3236,11 @@ class GenerateCodeStageTest {
         input = $$"""
             |let guests = ["Hilo, HI", "you in the back in the hat"];
             |$${"\"\"\""}
-            |"Hello, World{: for (let guest of guests) { :}, and ${guest}{: } :}!
+            |~Hello, World
+            |: for (let guest of guests) {
+            |~, and ${guest}
+            |: }
+            |~!
         """.trimMargin(),
         want = """
             |{

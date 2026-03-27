@@ -123,7 +123,17 @@ private val fLongLongToLong = Signature2(
     hasThisFormal = false,
 )
 
+private val fLongIntToLong = Signature2(
+    returnType2 = WKT.int64Type2,
+    requiredInputTypes = listOf(WKT.int64Type2, WKT.intType2),
+    hasThisFormal = false,
+)
+
 private val fLongLongToLongOrBubble = fLongLongToLong.copy(
+    returnType2 = MkType2.result(WKT.int64Type2, WKT.bubbleType2).get(),
+)
+
+private val fLongIntToLongOrBubble = fLongIntToLong.copy(
     returnType2 = MkType2.result(WKT.int64Type2, WKT.bubbleType2).get(),
 )
 
@@ -142,6 +152,7 @@ private val fBoolToBool = Signature2(
 // These need to be lambdas so that we can compare for reference equality below
 private val twoIntsToNull = { _: Int, _: Int, _: InterpreterCallback -> null }
 private val twoLongsToNull = { _: Long, _: Long, _: InterpreterCallback -> null }
+private val longIntToNull = { _: Long, _: Int, _: InterpreterCallback -> null }
 
 private class IntCompareFun(
     name: String,
@@ -260,6 +271,36 @@ private class LongLongToLongFun(
         val (left, right) = args.unpackPositioned(2, cb) ?: return Fail
         val a = TInt64.unpack(left)
         val b = TInt64.unpack(right)
+        return fail(a, b, cb) ?: Value(
+            f(a, b),
+            TInt64,
+        )
+    }
+}
+
+private class LongIntToLongFun(
+    name: String,
+    override val builtinOperatorId: BuiltinOperatorId? = null,
+    /**
+     * [Fail] iff the inputs are invalid for [f], else null.
+     */
+    val fail: (a: Long, b: Int, cb: InterpreterCallback) -> Fail? = longIntToNull,
+    val f: (a: Long, b: Int) -> Long,
+) : BuiltinFun(
+    name,
+    signature = if (fail === longIntToNull) { fLongIntToLong } else { fLongIntToLongOrBubble },
+),
+    PureCallableValue {
+    override val callMayFailPerSe get() = fail !== twoLongsToNull
+
+    override fun invoke(
+        args: ActualValues,
+        cb: InterpreterCallback,
+        interpMode: InterpMode,
+    ): Result {
+        val (left, right) = args.unpackPositioned(2, cb) ?: return Fail
+        val a = TInt64.unpack(left)
+        val b = TInt.unpack(right)
         return fail(a, b, cb) ?: Value(
             f(a, b),
             TInt64,
@@ -1049,8 +1090,8 @@ object BuiltinFuns {
      * <!-- snippet: bitwise-and -->
      * # *Int* `&`
      *
-     * Takes two [snippet/type/Int32]s and returns the *Int* that has any bit set
-     * that is set in both input.
+     * Takes two [snippet/type/Int32]s or two [snippet/type/Int64]s and returns the
+     * integer that has any bit set that is set in both inputs.
      *
      * ```temper
      * // Using binary number syntax
@@ -1063,23 +1104,25 @@ object BuiltinFuns {
         listOf(
             IntIntToIntFun(
                 "&",
-                BuiltinOperatorId.BitwiseAnd,
+                BuiltinOperatorId.BitwiseAnd32,
             ) { a, b -> a and b },
             LongLongToLongFun(
                 "&",
-                BuiltinOperatorId.BitwiseAnd,
+                BuiltinOperatorId.BitwiseAnd64,
             ) { a, b -> a and b },
             TypeIntersectionFun,
         ),
-    )
+    ).also {
+        helpSnippet(it, "Bitwise and operator", "builtin/&")
+    }
 
     /**
      * <!-- snippet: builtin/| : `|` -->
      * # Operator `|`
      * The `|` operator performs bitwise union.
      *
-     * It takes two [snippet/type/Int32]s and returns the *Int32* that has any bit set
-     * that is set in either input.
+     * It takes two [snippet/type/Int32]s or two [snippet/type/Int64]s and returns
+     * the integer of the same size that has any bit set that is set in either input.
      *
      * ```temper
      * // Using binary number syntax
@@ -1092,14 +1135,197 @@ object BuiltinFuns {
         listOf(
             IntIntToIntFun(
                 "|",
-                BuiltinOperatorId.BitwiseOr,
+                BuiltinOperatorId.BitwiseOr32,
             ) { a, b -> a or b },
             LongLongToLongFun(
                 "|",
-                BuiltinOperatorId.BitwiseOr,
+                BuiltinOperatorId.BitwiseOr64,
             ) { a, b -> a or b },
         ),
-    )
+    ).also {
+        helpSnippet(it, "Bitwise or operator", "builtin/|")
+    }
+
+    /**
+     * <!-- snippet: builtin/~ : `~` -->
+     * # Operator `~`
+     * The `~` operator negates the bits in an integer.
+     *
+     * Given an [snippet/type/Int32] or [snippet/type/Int64] it returns the integer
+     * of the same size with the opposite bits.
+     *
+     * ```temper
+     * // Using binary number syntax
+     * ~0b0000_0001_0010_0011_0100_0101_0110_0111 ==
+     *  0b1111_1110_1101_1100_1011_1010_1001_1000
+     * ```
+     */
+    val bitInverseFn = CoverFunction(
+        listOf(
+            IntToIntFun(
+                "~",
+                BuiltinOperatorId.BitwiseNegation32,
+            ) { a -> a.inv() },
+            LongToLongFun(
+                "~",
+                BuiltinOperatorId.BitwiseNegation64,
+            ) { a -> a.inv() },
+        ),
+    ).also {
+        helpSnippet(it, "Bitwise inverse operator", "builtin/~")
+    }
+
+    /**
+     * <!-- snippet: builtin/^ : `^` -->
+     * # Operator `^`
+     * The bitwise-xor (`^`) operator takes two [snippet/type/Int32]s or
+     * two [snippet/type/Int64]s and returns an integer of the same size
+     * that has each bit set when the corresponding bits in the inputs
+     * are different.
+     *
+     * ```temper
+     * // Using binary number syntax
+     * (0b1111_0000_1111_0000_1111_0000_1111_0000 ^
+     *  0b1010_1010_1010_1010_0101_0101_0101_0101) ==
+     *  0b0101_1010_0101_1010_1010_0101_1010_0101
+     * ```
+     */
+    val bitXorFn = CoverFunction(
+        listOf(
+            IntIntToIntFun(
+                "^",
+                BuiltinOperatorId.BitwiseXor32,
+            ) { a, b -> a.xor(b) },
+            LongLongToLongFun(
+                "^",
+                BuiltinOperatorId.BitwiseXor64,
+            ) { a, b -> a.xor(b) },
+        ),
+    ).also {
+        helpSnippet(it, "Bitwise xor operator", "builtin/^")
+    }
+
+    /**
+     * <!-- snippet: builtin/<< : `<<` -->
+     * # Operator `<<`
+     * The left shift (`<<`) operator takes an [snippet/type/Int32] or a
+     * [snippet/type/Int64] to shift and an [snippet/type/Int32] which is
+     * the number of bits to shift by.
+     *
+     * All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
+     * operand are ignored.
+     *
+     * ```temper
+     * // Using binary number syntax
+     * (0b0000_0001_0101 << 3) ==
+     * //        / _/ /
+     * //       / /  /
+     * //      / /  /
+     *  0b0000_1010_1000
+     * ```
+     */
+    val shlFn = CoverFunction(
+        listOf(
+            IntIntToIntFun(
+                "<<",
+                BuiltinOperatorId.BitwiseShl32,
+            ) { a, b -> a.shl(b.and(I32_SHIFT_AMOUNT_MASK)) },
+            LongIntToLongFun(
+                "<<",
+                BuiltinOperatorId.BitwiseShl64,
+            ) { a, b -> a.shl(b.and(I64_SHIFT_AMOUNT_MASK)) },
+        ),
+    ).also {
+        helpSnippet(it, "Shift left operator", "builtin/<<")
+    }
+
+    /**
+     * <!-- snippet: builtin/>> : `>>` -->
+     * # Operator `>>`
+     * The right shift (`>>`) operator takes an [snippet/type/Int32] or a
+     * [snippet/type/Int64] to shift and an [snippet/type/Int32] which is
+     * the number of bits to shift by.
+     *
+     * All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
+     * operand are ignored.
+     *
+     * ```temper
+     * // Using binary number syntax
+     * (0b0000_1010_1010 >> 3) ==
+     * //       \ \_ \ \
+     * //        \  \ \ *
+     * //         \  \ \
+     *  0b0000_0001_0101
+     * ```
+     *
+     * Unlike the [snippet/builtin/>>>] operator, this operator is sign extending.
+     * When shifting right by *n* bits, the *n* highest bits in the output are copied
+     * from the most-significant bit in the input.
+     *
+     * ```temper
+     * (0x8000_0000_0000_0000 >> 2) ==
+     * // |\
+     * // |/\
+     *  0xE000_0000_0000_0000
+     * ```
+     */
+    val shrFn = CoverFunction(
+        listOf(
+            IntIntToIntFun(
+                ">>",
+                BuiltinOperatorId.BitwiseShr32,
+            ) { a, b -> a.shr(b.and(I32_SHIFT_AMOUNT_MASK)) },
+            LongIntToLongFun(
+                ">>",
+                BuiltinOperatorId.BitwiseShr64,
+            ) { a, b -> a.shr(b.and(I64_SHIFT_AMOUNT_MASK)) },
+        ),
+    ).also {
+        helpSnippet(it, "Shift right (sign extending) operator", "builtin/>>")
+    }
+
+    /**
+     * <!-- snippet: builtin/>>> : `>>>` -->
+     * # Operator `>>>`
+     * The right shift (`>>>`) operator takes an [snippet/type/Int32] or a
+     * [snippet/type/Int64] to shift and an [snippet/type/Int32] which is
+     * the number of bits to shift by.
+     *
+     * All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
+     * operand are ignored.
+     *
+     * ```temper
+     * // Using binary number syntax
+     * (0b0000_1010_1010 >>> 3) ==
+     * //       \ \_ \ \
+     * //        \  \ \ *
+     * //         \  \ \
+     *  0b0000_0001_0101
+     * ```
+     *
+     * Unlike the [snippet/builtin/>>] operator, this operator is zero extending.
+     * When shifting right by *n* bits, the *n* highest bits in the output are copied
+     * from the most-significant bit in the input.
+     *
+     * ```temper
+     * (0x8000_0000_0000_0000 >>> 2) ==
+     *  0x2000_0000_0000_0000
+     * ```
+     */
+    val uShrFn = CoverFunction(
+        listOf(
+            IntIntToIntFun(
+                ">>>",
+                BuiltinOperatorId.BitwiseShrUnsigned32,
+            ) { a, b -> a.ushr(b.and(I32_SHIFT_AMOUNT_MASK)) },
+            LongIntToLongFun(
+                ">>>",
+                BuiltinOperatorId.BitwiseShrUnsigned64,
+            ) { a, b -> a.ushr(b.and(I64_SHIFT_AMOUNT_MASK)) },
+        ),
+    ).also {
+        helpSnippet(it, "Shift right (zero extending) operator", "builtin/>>>")
+    }
 
     /**
      * <!-- snippet: builtin/! -->
@@ -1805,6 +2031,11 @@ object BuiltinFuns {
     val vPlusFn = Value(plusFn)
     val vAmpFn = Value(ampFn)
     val vBarFn = Value(barFn)
+    val vBitInverseFn = Value(bitInverseFn)
+    val vBitXorFn = Value(bitXorFn)
+    val vShlFn = Value(shlFn)
+    val vShrFn = Value(shrFn)
+    val vUShrFn = Value(uShrFn)
     val vNotFn = Value(notFn)
     val vDesugarLogicalAndFn = Value(desugarLogicalAndFn)
     val vDesugarLogicalOrFn = Value(desugarLogicalOrFn)
@@ -1871,3 +2102,6 @@ internal fun makeTypeFormal(
     )
     return typeFormal to MkType2(typeFormal).get()
 }
+
+internal const val I32_SHIFT_AMOUNT_MASK = 0x1F
+internal const val I64_SHIFT_AMOUNT_MASK = 0x3F

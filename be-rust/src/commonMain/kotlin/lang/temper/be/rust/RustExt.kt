@@ -316,7 +316,7 @@ internal fun Rust.Expr.member(key: Rust.Expr, notMethod: Boolean = false) = when
     else -> RustOperator.Member
 }.let { infix(it, right = key) }
 
-internal fun Rust.Expr.methodCall(key: String, args: List<Rust.Expr> = listOf()) =
+internal fun Rust.Expr.methodCall(key: String, args: List<Rust.Expr> = listOf(), pos: Position = this.pos) =
     Rust.Call(pos, callee = member(key), args = args)
 
 internal fun Rust.Expr.methodCall(key: Rust.Expr, args: List<Rust.Expr> = listOf()) =

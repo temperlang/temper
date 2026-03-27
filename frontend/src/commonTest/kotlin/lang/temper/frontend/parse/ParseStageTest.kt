@@ -47,7 +47,7 @@ class ParseStageTest {
             |/(^|,)\s*/;
             |$${'"'}""
             |"wanna${} be pair\: \ud800\udc00
-            |"so does that have more pos needs?
+            |~so does that have more pos needs?
             |;
             |"fine\u0020escape${" "}here\u";
             |"too big: \u{hi,110000}!\u";
@@ -176,6 +176,38 @@ class ParseStageTest {
             |  errors: [
             |    "Expected a TopLevel here!",
             |    "Interpreter encountered error()!",
+            |  ],
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun unrepresentableIntegersWarnedOn() = assertModuleAtStage(
+        stage = Stage.Parse,
+        input = """
+            |let a = 2147483648;
+            |let b = 2147483647; // ok
+            |let c = 2147483648i64; // ok
+            |let d = 0x8000_0000; // ok because idioms
+        """.trimMargin(),
+        want = """
+            |{
+            |  stageCompleted: "Parse",
+            |  parse: {
+            |    body: ```
+            |      let a = -2147483648, b = 2147483647;
+            |      REM("ok", null, false);
+            |      let c = 2147483648;
+            |      REM("ok", null, false);
+            |      let d = -2147483648;
+            |
+            |      ```
+            |  },
+            |  errors: [
+            |    {
+            |      "template": "Int32OutOfBounds",
+            |      "values": [ 2.147483648e+9 ]
+            |    }
             |  ],
             |}
         """.trimMargin(),

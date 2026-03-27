@@ -564,8 +564,14 @@ internal fun convertCoroutineToControlFlow(
                 if (declName != null && declName in namesToExtract) {
                     val extractWhole = when (initial) {
                         null -> true
-                        // If it's a simple function or value, pull the whole thing out.
-                        is FunTree, is ValueLeaf -> true
+                        // If it's a named function, pull the whole thing out.
+                        is FunTree -> true
+                        // For simple values, extract just the declaration and leave
+                        // the initializer in the case body.  If the declaration site
+                        // is inside a loop, the assignment needs to re-execute on
+                        // each iteration.  Leaving it in the case is safe even
+                        // outside loops—it just runs once when the case is entered.
+                        is ValueLeaf -> false
                         else -> false
                     }
 

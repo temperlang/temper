@@ -27,6 +27,17 @@ if bitops == nil then
     bitops.band = bitwise(AND)
     bitops.bxor = bitwise(XOR)
     bitops.bor = bitwise(OR)
+    function bitops.bnot(a)
+        return bitops.bxor(a, -1)
+    end
+    function bitops.lshift(a, b)
+        -- math.pow(2, 63) returns the right value, not -1
+        return math.trunc(a * math.pow(2, b))
+    end
+    function bitops.rshift(a, b)
+        return math.trunc(a / math.pow(2, b))
+    end
+
 end
 
 local temper = {}
@@ -156,6 +167,11 @@ local function trunc(x)
     -- Avoid second result value from math.modf.
     local result = math.modf(x)
     return result
+end
+
+-- Simple int floor div.
+function temper.int_div(a, b)
+    return math.floor(a / b)
 end
 
 -- Int32

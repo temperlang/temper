@@ -42,7 +42,7 @@ Let's look at the fields programmatically:
       "year    = ${ d.year.toString() }
       "month   = ${ d.month.toString() }
       "day     = ${ d.day.toString() }
-      "weekday = ${ d.dayOfWeek.toString() }
+      ~weekday = ${ d.dayOfWeek.toString() }
     );
 
 ```log
@@ -109,10 +109,11 @@ A static method parses dates from an ISO 8601 string.
 
     let rdc = Date.fromIsoString("1596-03-31");
     console.log(
-        "Happy birthday, René: day=${ rdc.day.toString()
-        }, month=${ rdc.month.toString()
-        }, year=${ rdc.year.toString()
-        }")
+        """
+        ~Happy birthday, René: day=${ rdc.day.toString() },
+        ~ month=${ rdc.month.toString() },
+        ~ year=${ rdc.year.toString() }
+        )
 
 ```log
 Happy birthday, René: day=31, month=3, year=1596

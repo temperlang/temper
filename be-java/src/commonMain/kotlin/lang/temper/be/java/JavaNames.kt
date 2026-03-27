@@ -295,8 +295,12 @@ class JavaNames private constructor(
     }
 
     fun lookupRegularLocalNameObj(name: TmpL.Id): RegularVarName {
-        val realName = resolveImportedName(name.name)
-        return (lookupLocalNameObj(name) as? RegularVarName)
+        return lookupRegularLocalNameObj(name.name)
+    }
+
+    fun lookupRegularLocalNameObj(resolvedName: ResolvedName): RegularVarName {
+        val realName = resolveImportedName(resolvedName)
+        return (lookupLocalNameObj(resolvedName) as? RegularVarName)
             ?: RegularVarName(distinctOutName(realName), isMutablyCaptured = false)
     }
 
@@ -359,7 +363,11 @@ class JavaNames private constructor(
 
     /** For e.g. [TmpL.Formal] to [J.FormalParameter] */
     fun formal(name: TmpL.Id): J.Identifier =
-        lookupRegularLocalNameObj(name).asIdentifier(name.pos)
+        formal(name.pos, name.name)
+
+    /** For e.g. [TmpL.Formal] to [J.FormalParameter] */
+    fun formal(pos: Position, name: ResolvedName): J.Identifier =
+        lookupRegularLocalNameObj(name).asIdentifier(pos)
 
     /** Temporary formal name for rest arguments */
     fun restFormal(name: TmpL.Id): J.Identifier =

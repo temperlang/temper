@@ -363,8 +363,7 @@ class CSharpBackendTest {
                 |}
             """.trimMargin(),
             usings = """
-                |using S0 = MyTestLibrary.Support;
-                |using S1 = System;
+                |using S = MyTestLibrary.Support;
                 |using C = TemperLang.Core;
             """.trimMargin(),
             csharp = """
@@ -377,10 +376,10 @@ class CSharpBackendTest {
                 |internal static int value__0;
                 |static TestGlobal()
                 |{
-                |    console___0 = S0::Logging.LoggingConsoleFactory.CreateConsole("MyTestLibrary.Test");
+                |    console___0 = S::Logging.LoggingConsoleFactory.CreateConsole("MyTestLibrary.Test");
                 |    console___0.Log("Hi!");
                 |    value__0 = calc__0();
-                |    console___0.Log(S1::Convert.ToString(value__0, 16));
+                |    console___0.Log(C::Core.ConvertToString(value__0, 16));
                 |}
             """.trimMargin(),
         )
@@ -1396,6 +1395,7 @@ class CSharpBackendTest {
             |            content: ```
             |              using U = Microsoft.VisualStudio.TestTools.UnitTesting;
             |              using S = System;
+            |              using C = TemperLang.Core;
             |              using T = TemperLang.Std.Testing;
             |              namespace MyTestLibrary.Test
             |              {
@@ -1414,7 +1414,7 @@ class CSharpBackendTest {
             |                          {
             |                              string fn__0()
             |                              {
-            |                                  return "expected 1 == (" + S::Convert.ToString(1) + ") not (" + S::Convert.ToString(1) + ")";
+            |                                  return "expected 1 == (" + C::Core.ConvertToString(1) + ") not (" + C::Core.ConvertToString(1) + ")";
             |                              }
             |                              test___0.Assert(true, (S::Func<string>) fn__0);
             |                          }

@@ -3,9 +3,11 @@
 
 #include <cctype>
 #include <cerrno>
+#include <climits>
 #include <limits>
 #include <stdint.h>
 #include <stdlib.h>
+#include <type_traits>
 #include "expected.hpp"
 #include "shared.hpp"
 
@@ -95,6 +97,12 @@ T sub(T i, T j) {
 template<typename T>
 T neg(T i) {
   return sub(T(0), i);
+}
+
+template<typename T>
+T ushr(T i, int32_t j) {
+  constexpr int shift_size_mask = (sizeof(T) * CHAR_BIT) - 1;
+  return (T) (((typename std::make_unsigned<T>::type) i) >> (j & shift_size_mask));
 }
 
 Expected<int32_t> to_int32(int64_t i) {

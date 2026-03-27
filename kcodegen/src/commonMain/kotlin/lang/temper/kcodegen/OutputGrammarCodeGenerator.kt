@@ -157,6 +157,7 @@ private fun readDocComments(lexer: Lexer): Map<Position, String> {
                 lastComment = null
             }
             TokenType.LeftDelimiter,
+            TokenType.Margin,
             TokenType.Number,
             TokenType.Punctuation,
             TokenType.RightDelimiter,
