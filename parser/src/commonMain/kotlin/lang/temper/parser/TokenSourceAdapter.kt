@@ -274,10 +274,18 @@ private class StringFixer(
                     }
                 }
                 for (interpRange in mqString.interps) {
-                    val edit = editFor(interpRange.last)
-                    val sub = edit.substitution
-                    if (sub != null) {
-                        edit.after = syntheticSemicolon(sub)
+                    val isEmpty = (interpRange.first + 1..<interpRange.last).all {
+                        tokFor(it)?.tokenType?.ignorable == true
+                    }
+                    if (isEmpty) {
+                        editFor(interpRange.first).drop()
+                        editFor(interpRange.last).drop()
+                    } else {
+                        val edit = editFor(interpRange.last)
+                        val sub = edit.substitution
+                        if (sub != null) {
+                            edit.after = syntheticSemicolon(sub)
+                        }
                     }
                 }
             }

@@ -517,7 +517,8 @@ class CSharpBackendTest {
                 |    }
                 |    public string Thing()
                 |    {
-                |        return this.Punctuate("Hi, " + this.name__0);
+                |        string t___0 = this.name__0;
+                |        return this.Punctuate("Hi, " + t___0);
                 |    }
                 |    string Punctuate(string message__0)
                 |    {

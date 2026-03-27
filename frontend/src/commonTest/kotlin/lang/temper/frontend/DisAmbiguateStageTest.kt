@@ -289,7 +289,7 @@ class DisAmbiguateStageTest {
               42;
               let x = 1;
               REM("What is going on here?", null, false);
-              console.log(cat("foo ", cat("bar ", cat("qux ", xyzzy)), " baz"));
+              console.log(cat("foo ", str(cat("bar ", str(cat("qux ", str(xyzzy))))), " baz"));
 
               ```
           }

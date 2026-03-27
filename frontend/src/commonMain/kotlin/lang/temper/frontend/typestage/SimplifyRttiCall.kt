@@ -16,19 +16,17 @@ import lang.temper.type2.TypeContext2
 import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
-import lang.temper.value.BlockChildReference
-import lang.temper.value.BlockTree
 import lang.temper.value.BubbleFn
 import lang.temper.value.CallTree
 import lang.temper.value.CallTypeInferences
-import lang.temper.value.ControlFlow
+import lang.temper.value.IfThenElse
 import lang.temper.value.IsNullFn
 import lang.temper.value.LeafTree
 import lang.temper.value.MacroValue
 import lang.temper.value.Planting
 import lang.temper.value.ReifiedType
 import lang.temper.value.RightNameLeaf
-import lang.temper.value.StructuredFlow
+import lang.temper.value.TBoolean
 import lang.temper.value.TNull
 import lang.temper.value.TType
 import lang.temper.value.Tree
@@ -199,51 +197,33 @@ internal fun simplifyRttiCall(rttiCall: CallTree, typeContext: TypeContext2) {
             //   sameOrSuperTypeOrNullExpr as SameOrSubType?
             // ->
             //   if (t == null) { null     } else { t as SameOrSubType }
-            val block = document.treeFarm.grow(pos) {
-                Block(pos) {
-                    Call {
-                        V(expr.pos.leftEdge, vIsNullFn)
-                        Replant(simpleExpr.copy())
-                    }
-                    if (!targetCanBeNull) { // 2, 10
+            document.treeFarm.grow(pos) {
+                IfThenElse(
+                    cond = {
                         Call {
-                            val bubbler = when (rto) {
-                                RuntimeTypeOperation.As -> BuiltinFuns.vBubble
-                                RuntimeTypeOperation.AssertAs -> BuiltinFuns.vPanic
-                                else -> error("unexpected")
-                            }
-                            V(expr.pos.rightEdge, bubbler)
+                            V(expr.pos.leftEdge, vIsNullFn)
+                            Replant(simpleExpr.copy())
                         }
-                    } else { // 6, 14
-                        V(expr.pos.rightEdge, TNull.value)
-                    }
-                    Replant(replacementAssumingNotNull)
-                }
+                    },
+                    thenClause = {
+                        if (!targetCanBeNull) { // 2, 10
+                            Call {
+                                val bubbler = when (rto) {
+                                    RuntimeTypeOperation.As -> BuiltinFuns.vBubble
+                                    RuntimeTypeOperation.AssertAs -> BuiltinFuns.vPanic
+                                    else -> error("unexpected")
+                                }
+                                V(expr.pos.rightEdge, bubbler)
+                            }
+                        } else {
+                            V(expr.pos.rightEdge, TNull.value)
+                        }
+                    },
+                    elseClause = {
+                        Replant(replacementAssumingNotNull)
+                    },
+                ).at(pos)
             }
-            val lastIndex = block.size - 1
-            val pre = (0 until lastIndex - 2).map {
-                ControlFlow.Stmt(refTo(block, it))
-            }
-            val condition = refTo(block, lastIndex - 2)
-            val thenClause = refTo(block, lastIndex - 1)
-            val asCall = refTo(block, lastIndex)
-            // Build flow control
-            block.replaceFlow(
-                StructuredFlow(
-                    ControlFlow.StmtBlock(
-                        block.pos,
-                        pre + listOf(
-                            ControlFlow.If(
-                                thenClause.pos,
-                                condition,
-                                ControlFlow.StmtBlock.wrap(ControlFlow.Stmt(thenClause)),
-                                ControlFlow.StmtBlock.wrap(ControlFlow.Stmt(asCall)),
-                            ),
-                        ),
-                    ),
-                ),
-            )
-            block
         }
         RuntimeTypeOperation.Is -> {
             // 1: (IS, N, N)
@@ -260,31 +240,42 @@ internal fun simplifyRttiCall(rttiCall: CallTree, typeContext: TypeContext2) {
             //   sameOrSuperTypeOrNull is SameOrSubType?
             // ->
             //   t == null || t is SameOrSubType
-
             document.treeFarm.grow(pos) {
-                Call(pos) {
-                    V(
-                        pos.leftEdge,
-                        if (targetCanBeNull) {
-                            BuiltinFuns.vDesugarLogicalOrFn // 3, 7
-                        } else {
-                            BuiltinFuns.vDesugarLogicalAndFn // 1, 5
-                        },
-                    )
-                    val exprLeft = expr.pos.leftEdge
-                    if (targetCanBeNull) {
-                        Call(exprLeft, IsNullFn) {
-                            Replant(simpleExpr.copy())
-                        }
-                    } else {
-                        Call(exprLeft, BuiltinFuns.notFn) {
+                // `left && right` (cases 3, 7) is equivalent to if (left) { right } else { false }
+                // `left || right` (cases 1, 5) is equivalent to if (left) { true } else { right }
+                // We output an `if` here because this micro-stage flows right into weaving, so
+                // it's nice to avoid an extra stage of `&&`/`||` expansion.
+                val exprLeft = expr.pos.leftEdge
+                val exprRight = expr.pos.rightEdge
+                IfThenElse(
+                    cond = {
+                        if (targetCanBeNull) { // `||` case above
                             Call(exprLeft, IsNullFn) {
                                 Replant(simpleExpr.copy())
                             }
+                        } else {
+                            Call(exprLeft, BuiltinFuns.notFn) {
+                                Call(exprLeft, IsNullFn) {
+                                    Replant(simpleExpr.copy())
+                                }
+                            }
                         }
-                    }
-                    Replant(replacementAssumingNotNull)
-                }
+                    },
+                    thenClause = {
+                        if (targetCanBeNull) {
+                            V(exprLeft, TBoolean.valueTrue)
+                        } else {
+                            Replant(replacementAssumingNotNull)
+                        }
+                    },
+                    elseClause = {
+                        if (targetCanBeNull) {
+                            Replant(replacementAssumingNotNull)
+                        } else {
+                            V(exprRight, TBoolean.valueFalse)
+                        }
+                    },
+                ).at(pos)
             }
         }
     }
@@ -386,11 +377,6 @@ private fun callTypeForCheck(targetType: Type2, expr: Tree): CallTypeInferences?
     )
     return CallTypeInferences(targetTypeOrBubble, variant, mapOf(), listOf())
 }
-
-private fun refTo(b: BlockTree, childIndex: Int) = BlockChildReference(
-    childIndex,
-    b.child(childIndex).pos,
-)
 
 private fun bubbleFnCallTypeInferences(neverType: Type2): CallTypeInferences {
     val neverTypeOld = hackMapNewStyleToOld(neverType)

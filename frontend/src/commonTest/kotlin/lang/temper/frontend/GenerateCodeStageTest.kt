@@ -523,18 +523,18 @@ class GenerateCodeStageTest {
         |      @fn @reach(\none) let f__0;
         |      f__0 = (@stay fn f(s__0 /* aka s */: String, a__0 /* aka a */: Int32?) /* return__1 */: String {
         |          var t#0, t#1, t#2, t#3;
+        |          if (isNull(a__0)) {
+        |            t#1 = "null"
+        |          } else {
+        |            t#0 = do_bind_toString(notNull(a__0))();
+        |            t#1 = t#0
+        |          };
         |          if (!isNull(a__0)) {
         |            let a#0;
         |            a#0 = notNull(a__0);
         |            t#3 = a#0
         |          } else {
         |            t#3 = -1
-        |          };
-        |          if (isNull(a__0)) {
-        |            t#1 = "null"
-        |          } else {
-        |            t#0 = do_bind_toString(notNull(a__0))();
-        |            t#1 = t#0
         |          };
         |          t#2 = do_bind_toString(t#3)();
         |          return__1 = cat(s__0, t#1, t#2)
@@ -2798,18 +2798,18 @@ class GenerateCodeStageTest {
             |            if (isNull(t#3)) {
             |              j__0 = null
             |            } else {
-            |              t#2 = hs(fail#0, as(t#3, StringIndex));
+            |              t#1 = hs(fail#0, as(t#3, StringIndex));
             |              if (fail#0) {
             |                bubble()
             |              };
-            |              j__0 = t#2
+            |              j__0 = t#1
             |            };
             |            if (!isNull(j__0)) {
-            |              t#1 = is(j__0, StringIndex)
+            |              t#2 = is(j__0, StringIndex)
             |            } else {
-            |              t#1 = false
+            |              t#2 = false
             |            };
-            |            if (t#1) {
+            |            if (t#2) {
             |              return__0 = 1
             |            } else {
             |              return__0 = 2
@@ -2851,7 +2851,9 @@ class GenerateCodeStageTest {
             |          return__0 = do_get_end(s__0)
             |      });
             |      f__0 = (@stay fn f(s__1 /* aka s */: String) /* return__1 */: Boolean {
-            |          return__1 = is((fn g)(s__1), NoStringIndex)
+            |          let t#0;
+            |          t#0 = (fn g)(s__1);
+            |          return__1 = is(t#0, NoStringIndex)
             |      })
             |
             |      ```
@@ -3237,9 +3239,9 @@ class GenerateCodeStageTest {
             |let guests = ["Hilo, HI", "you in the back in the hat"];
             |$${"\"\"\""}
             |~Hello, World
-            |: for (let guest of guests) {
-            |~, and ${guest}
-            |: }
+            |:for (let guest of guests) {
+            |  ~, and ${guest}
+            |:}
             |~!
         """.trimMargin(),
         want = """
@@ -3254,7 +3256,7 @@ class GenerateCodeStageTest {
             |              do_bind_append(accumulator#0)("Hello, World");
             |              for(let guest of guests, fn {
             |                  do_bind_append(accumulator#0)(", and ");
-            |                  do_bind_append(accumulator#0)(guest);
+            |                  do_bind_append(accumulator#0)(str(guest));
             |              });
             |              do_bind_append(accumulator#0)("!");
             |            };
@@ -3264,6 +3266,24 @@ class GenerateCodeStageTest {
             |          ```
             |  },
             |  run: ["Hello, World, and Hilo, HI, and you in the back in the hat!", "String"],
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun complexStringExprWithFormattingHole() = assertModuleAtStage(
+        stage = Stage.Run,
+        moduleResultNeeded = true,
+        input = $$"""
+            |$${"\"\"\""}
+            |:for (var i = 1; i < 100; i *= 2) {
+            |  ~${i}, ${}
+            |:}
+            |~and so on
+        """.trimMargin(),
+        want = """
+            |{
+            |  run: ["1, 2, 4, 8, 16, 32, 64, and so on", "String"],
             |}
         """.trimMargin(),
     )
@@ -3615,9 +3635,9 @@ class GenerateCodeStageTest {
             |        t#1 = ls__0;
             |        do_bind_set(t#1)(1, do_bind_get(t#1)(1) * 2)
             |      };
-            |      do_bind_log(console#0)(cat("ls = [", do_bind_join(do_bind_toList(ls__0)())(", ", fn (i__0 /* aka i */: Int) /* return__1 */: (String) {
-            |              do_bind_toString(i__0)(10)
-            |          }), "]"));
+            |      do_bind_log(console#0)(cat("ls = [", str(do_bind_join(do_bind_toList(ls__0)())(", ", fn (i__0 /* aka i */: Int) /* return__1 */: (String) {
+            |                do_bind_toString(i__0)(10)
+            |          })), "]"));
             |
             |      ```
             |  },
@@ -3791,6 +3811,41 @@ class GenerateCodeStageTest {
             |  },
             |}
         """.trimMargin(),
+    )
+
+    @Test
+    fun stringCoercionOfRttiCheck() = assertModuleAtStage(
+        stage = Stage.Run,
+        input = $$"""
+            |let f(i: StringIndexOption): Void {
+            |  console.log("Yes ${i is StringIndex}, no ${i is NoStringIndex }");
+            |}
+            |
+            |f(String.begin)
+        """.trimMargin(),
+        want = """
+            |{
+            |  generateCode: {
+            |    body: ```
+            |      let console#0;
+            |      console#0 = getConsole();
+            |      @fn let f__0;
+            |      f__0 = (@stay fn f(i__0 /* aka i */: StringIndexOption) /* return__0 */: Void {
+            |          var t#0, t#1;
+            |## str has erased to a .toString() call here
+            |          t#0 = do_bind_toString(is(i__0, StringIndex))();
+            |          t#1 = do_bind_toString(is(i__0, NoStringIndex))();
+            |          do_bind_log(console#0)(cat("Yes ", t#0, ", no ", t#1));
+            |          return__0 = void
+            |      });
+            |      f__0(getStatic(String, \begin))
+            |
+            |      ```
+            |  },
+            |  run: "void: Void",
+            |  stdout: "Yes true, no false\n",
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 }
 
