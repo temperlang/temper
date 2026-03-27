@@ -108,7 +108,7 @@ Add the environment variable `IS_INTELLIJ_TERMINAL=t` to your run configurations
 | `common/` | Utilities not specific to Temper |
 | `lexer/` | Tokenization |
 | `parser/` | Token stream → CST |
-| `ast/` | CST and AST node definitions |
+| `cst/`, `ast/` | CST and AST node definitions |
 | `frontend/` | Module processing |
 | `be/` | Backend machinery |
 | `be-js/`, `be-py/`, etc. | Language-specific backends |
