@@ -11,7 +11,7 @@ are operators: they are used like mathematical symbols:
 
 - Infix `+` appears between arguments: `:::js a + b`
 - Prefix `-` appears before its sole argument: `:::js -b`
-- Postfix `++` appears afters its argument: `:::js i++`
+- Postfix `++` appears after its argument: `:::js i++`
 
 Other functions are called with parentheses: `:::js f(x)`.
 See also [snippet/syntax/Call].

@@ -95,7 +95,7 @@ to have installed locally on a dev machine.)
 
 Prerequisites:
 
-- JDK 17 or later
+- JDK 21 or later
 - [Gradle](https://docs.gradle.org/current/userguide/installation.html)
 
 ```sh

@@ -927,9 +927,11 @@ object BuiltinFuns {
     /**
      * <!-- snippet: builtin/+ -->
      * # `+`
-     * The builtin `+` operator has four variants:
+     * The builtin `+` operator has six variants:
      * - *Infix* with two [snippet/type/Int32]s: signed addition
      * - *Prefix* with one [snippet/type/Int32]: numeric identity
+     * - *Infix* with two [snippet/type/Int64]s: signed addition
+     * - *Prefix* with one [snippet/type/Int64]: numeric identity
      * - *Infix* with two [snippet/type/Float64]s: signed addition
      * - *Prefix* with one [snippet/type/Float64]: numeric identity
      *
@@ -962,7 +964,7 @@ object BuiltinFuns {
     /**
      * <!-- snippet: builtin/- -->
      * # `-`
-     * The builtin `-` operator has four variants like [snippet/builtin/+].
+     * The builtin `-` operator has six variants like [snippet/builtin/+].
      *
      * ```temper
      * 3   - 1   == 2   &&
@@ -1028,8 +1030,8 @@ object BuiltinFuns {
      * # Multiplication `*`
      * Infix `*` allows multiplying numbers.
      *
-     * Given two [snippet/type/Int32]s it produces an *Int* and given two [snippet/type/Float64]s it
-     * produces a *Float64*.
+     * Given two [snippet/type/Int32]s it produces an *Int*, given two [snippet/type/Int64]s it
+     * produces an *Int64*, and given two [snippet/type/Float64]s it produces a *Float64*.
      *
      * ```temper
      * 3   * 4   == 12   &&
@@ -1381,8 +1383,8 @@ object BuiltinFuns {
      * # Division `/`
      * Infix `/` allows dividing numbers.
      *
-     * Given two [snippet/type/Int32]s it produces an *Int* and given two [snippet/type/Float64]s it
-     * produces a *Float64*.
+     * Given two [snippet/type/Int32]s it produces an *Int*, given two [snippet/type/Int64]s it
+     * produces an *Int64*, and given two [snippet/type/Float64]s it produces a *Float64*.
      *
      * ```temper
      * 12   / 3   == 4    &&
@@ -1482,7 +1484,8 @@ object BuiltinFuns {
     /**
      * <!-- snippet: builtin/%25 : operator `%` -->
      * # Remainder `%`
-     * Given two [snippet/type/Int32]s it produces an *Int*
+     * Given two [snippet/type/Int32]s it produces an *Int*,
+     * given two [snippet/type/Int64]s it produces an *Int64*,
      * and given two [snippet/type/Float64]s it produces a *Float64*.
      *
      * ```temper

@@ -11,7 +11,7 @@ are operators: they are used like mathematical symbols:
 
 - Infix `+` appears between arguments: `:::js a + b`
 - Prefix `-` appears before its sole argument: `:::js -b`
-- Postfix `++` appears afters its argument: `:::js i++`
+- Postfix `++` appears after its argument: `:::js i++`
 
 Other functions are called with parentheses: `:::js f(x)`.
 See also [Call Syntax](syntax.md#syntax-Call).
@@ -113,9 +113,8 @@ The value `true` of type [*Boolean*](types.md#type-Boolean).
 ### *void*
 The value `void` is the sole value in type [*Void*](types.md#type-Void).
 
-**WARNING**: To interface better across idiomatic void behavior in backends,
-current plans are to make `Void` disjoint from `AnyValue` such that no
-`void` value is usable. See also [issue#38](https://github.com/temperlang/temper/issues/38).
+`Void` is disjoint from `AnyValue` so no `void` value is directly usable.
+See also [issue#38](https://github.com/temperlang/temper/issues/38).
 
 <!-- /snippet: builtin/void -->
 
@@ -519,7 +518,8 @@ The prefix `!` operator performs [*Boolean*](types.md#type-Boolean) inverse.
 <a name="builtin&#45;&#37;25" class="snippet-anchor-name"></a>
 
 ### Remainder `%`
-Given two [*Int32*](types.md#type-Int32)s it produces an *Int*
+Given two [*Int32*](types.md#type-Int32)s it produces an *Int*,
+given two [*Int64*](types.md#type-Int64)s it produces an *Int64*,
 and given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/0 -->
@@ -641,8 +641,8 @@ f<C>(c);
 ### Multiplication `*`
 Infix `*` allows multiplying numbers.
 
-Given two [*Int32*](types.md#type-Int32)s it produces an *Int* and given two [*Float64*](types.md#type-Float64)s it
-produces a *Float64*.
+Given two [*Int32*](types.md#type-Int32)s it produces an *Int*, given two [*Int64*](types.md#type-Int64)s it
+produces an *Int64*, and given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2a/snippet.md/0 -->
 
@@ -682,9 +682,11 @@ Given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
 <a name="builtin&#45;&#37;2B" class="snippet-anchor-name"></a>
 
 ### `+`
-The builtin `+` operator has four variants:
+The builtin `+` operator has six variants:
 - *Infix* with two [*Int32*](types.md#type-Int32)s: signed addition
 - *Prefix* with one [*Int32*](types.md#type-Int32): numeric identity
+- *Infix* with two [*Int64*](types.md#type-Int64)s: signed addition
+- *Prefix* with one [*Int64*](types.md#type-Int64): numeric identity
 - *Infix* with two [*Float64*](types.md#type-Float64)s: signed addition
 - *Prefix* with one [*Float64*](types.md#type-Float64): numeric identity
 
@@ -730,7 +732,7 @@ As explained above, you cannot mix [*Int32*](types.md#type-Int32) and
 <a name="builtin&#45;&#45;" class="snippet-anchor-name"></a>
 
 ### `-`
-The builtin `-` operator has four variants like [`+`](#builtin-%2B).
+The builtin `-` operator has six variants like [`+`](#builtin-%2B).
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/0 -->
 
@@ -789,8 +791,8 @@ var x = 1;
 ### Division `/`
 Infix `/` allows dividing numbers.
 
-Given two [*Int32*](types.md#type-Int32)s it produces an *Int* and given two [*Float64*](types.md#type-Float64)s it
-produces a *Float64*.
+Given two [*Int32*](types.md#type-Int32)s it produces an *Int*, given two [*Int64*](types.md#type-Int64)s it
+produces an *Int64*, and given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/0 -->
 
@@ -2914,15 +2916,15 @@ only happens once.
 
 ### `--` operator
 `--x` is equivalent to `x -= 1`.
-`x--` has the same effect as `--x`, but produces the value of x before incrementing.
+`x--` has the same effect as `--x`, but produces the value of x before decrementing.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/builtin/--/snippet.md/0 -->
 
 ```temper
 var x: Int = 0;
-// when `x` comes after  `--`, produces value after  increment
+// when `x` comes after  `--`, produces value after  decrement
 console.log((--x).toString()); //!outputs "-1"
-// when `x` comes before `--`, produces value before increment
+// when `x` comes before `--`, produces value before decrement
 console.log((x--).toString()); //!outputs "-1"
 x == -2
 // ✅

@@ -46,13 +46,13 @@ import lang.temper.value.Value
  * <!-- snippet: builtin/-- -->
  * # `--` operator
  * `--x` is equivalent to `x -= 1`.
- * `x--` has the same effect as `--x`, but produces the value of x before incrementing.
+ * `x--` has the same effect as `--x`, but produces the value of x before decrementing.
  *
  * ```temper true
  * var x: Int = 0;
- * // when `x` comes after  `--`, produces value after  increment
+ * // when `x` comes after  `--`, produces value after  decrement
  * console.log((--x).toString()); //!outputs "-1"
- * // when `x` comes before `--`, produces value before increment
+ * // when `x` comes before `--`, produces value before decrement
  * console.log((x--).toString()); //!outputs "-1"
  * x == -2
  * ```
