@@ -6,6 +6,7 @@ import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.mapParameters
 import lang.temper.common.MimeType
+import lang.temper.common.ignore
 import lang.temper.format.toStringViaTokenSink
 import lang.temper.lexer.withTemperAwareExtension
 import lang.temper.log.FilePath
@@ -90,13 +91,13 @@ class CppTranslator(
     // Keyed by TypeDefinition identity AND by name text for fallback matching,
     // since TmpL may use different TypeFormal instances for the same logical
     // type parameter (e.g., in localized imports).
-    private val typeFormalNames = java.util.IdentityHashMap<lang.temper.type.TypeDefinition, Cpp.SingleName>()
+    private val typeFormalNames = java.util.IdentityHashMap<TypeDefinition, Cpp.SingleName>()
     private val typeFormalNamesByText = mutableMapOf<String, Cpp.SingleName>()
 
     /** Generate a key for matching type formals by base name text.
      *  Different SourceName instances for the same type parameter have the same
      *  baseName.nameText but different uids, so we match on the base name only. */
-    private fun typeFormalKey(def: lang.temper.type.TypeDefinition): String {
+    private fun typeFormalKey(def: TypeDefinition): String {
         val name = def.name
         return when (name) {
             is SourceName -> "tf:${name.baseName.nameText}"
@@ -164,7 +165,7 @@ class CppTranslator(
      * qualification and includes for cross-module types.
      * Used by SupportNetwork for runtime type operations.
      */
-    fun resolveTypeName(def: lang.temper.type.TypeDefinition): Cpp.Name {
+    fun resolveTypeName(def: TypeDefinition): Cpp.Name {
         // Check if this is a type formal with a known template parameter name
         (typeFormalNames[def] ?: typeFormalNamesByText[typeFormalKey(def)])?.let { return it }
         val loc = def.sourceLocation
@@ -225,11 +226,6 @@ class CppTranslator(
     }
 
     /**
-     * If [expr] is an InstanceOfExpression (i.e., `x is Type`), returns a pair
-     * of (C++ variable name, narrowed C++ inner type) so that property accesses
-     * in the consequent block can be cast via static_pointer_cast.
-     */
-    /**
      * Analyze a translated C++ if-condition to detect `dynamic_pointer_cast<T>(x) != nullptr`
      * patterns. Returns (variable name, narrowed inner type) if found.
      */
@@ -262,6 +258,7 @@ class CppTranslator(
         initExprType: Type2?,
         declaredTmpLType: Type2?,
     ): Cpp.Expr {
+        ignore(declaredType) // TODO Needed later?
         if (initExprType == null || declaredTmpLType == null) return translatedExpr
         // Check if both types are list-like (List, Listed, etc.)
         val declDef = declaredTmpLType.definition
@@ -315,7 +312,9 @@ class CppTranslator(
         if (srcDef == WellKnownTypes.neverTypeDefinition) return translatedExpr
         if (srcDef == WellKnownTypes.functionTypeDefinition ||
             tgtDef == WellKnownTypes.functionTypeDefinition
-        ) return translatedExpr
+        ) {
+            return translatedExpr
+        }
         // Only narrow when the target type translates to Object<T> (a shared_ptr<T>)
         val fullTargetType = translateType2(targetType)
         val innerType = if (fullTargetType is Cpp.TemplateType) {
@@ -947,7 +946,7 @@ class CppTranslator(
                     val innerType = targetType.args.firstOrNull() ?: targetType
                     // If the inner type is a bare template name (no type args), it can't be
                     // used as a checked_cast target — identity cast instead.
-                    if (innerType is Cpp.Name || innerType is Cpp.ScopedName) {
+                    if (innerType is Cpp.Name) {
                         sourceExpr
                     } else {
                         cpp.callExpr(
@@ -958,7 +957,7 @@ class CppTranslator(
                             listOf(sourceExpr),
                         )
                     }
-                } else if (targetType is Cpp.Name || targetType is Cpp.ScopedName) {
+                } else if (targetType is Cpp.Name) {
                     // Bare template alias (e.g. Listed without type args) — identity cast
                     sourceExpr
                 } else {
@@ -1180,7 +1179,7 @@ class CppTranslator(
                         }
                     }
                     // Wrap with list_upcast or narrowing cast if needed
-                    val rhsType = (right as? TmpL.Expression)?.type
+                    val rhsType = right.type
                     val finalRight = wrapWithListUpcastIfNeeded(
                         rightExpr, translateType2(stmt.type), rhsType, stmt.type,
                     ).let { upcast ->
@@ -1406,15 +1405,15 @@ class CppTranslator(
                 // Check if returning 'this' — either via TmpL.This or TmpL.Reference to the this variable
                 val isThisReturn = currentThisVarName != null && (
                     retExpr is TmpL.This ||
-                    (retExpr is TmpL.Reference && cpp.name(retExpr.id).id.text == currentThisVarName)
-                )
+                        (retExpr is TmpL.Reference && cpp.name(retExpr.id).id.text == currentThisVarName)
+                    )
                 val translatedRet = when {
                     isVoidReturn -> null
                     isThisReturn -> {
                         // Use coerce() to handle structural interface casts
                         cpp.callExpr(
                             cpp.name(TEMPER_CORE_NAMESPACE, "coerce"),
-                            listOf(translateExpression(retExpr!!)),
+                            listOf(translateExpression(retExpr)),
                         )
                     }
                     else -> translateExpressionOrNull(retExpr)
@@ -1541,6 +1540,7 @@ class CppTranslator(
         thisName: Cpp.SingleName,
         block: TmpL.BlockStatement,
     ): Cpp.BlockStmt = cpp.pos(block) {
+        ignore(thisType) // TODO Needed later?
         val fmtHints = CppFormattingHints.getInstance()
         val savedThisVarName = currentThisVarName
         currentThisVarName = thisName.id.text
@@ -1846,7 +1846,7 @@ class CppTranslator(
                                 topLevel.typeParameters.ot.typeParameters
                             // Populate type formal map BEFORE translating
                             // return type, param types, and body
-                            val savedTypeFormalNames = mutableMapOf<lang.temper.type.TypeDefinition, Cpp.SingleName>()
+                            val savedTypeFormalNames = mutableMapOf<TypeDefinition, Cpp.SingleName>()
                             val savedTypeFormalKeys = mutableListOf<String>()
                             for (formal in typeFormals) {
                                 val cppName = cpp.name(formal.name)
@@ -2113,7 +2113,7 @@ class CppTranslator(
                                                             cpp.name(topLevel.name),
                                                             cpp.singleName(propCppName),
                                                         ),
-                                                        init = member.expression?.let { translateExpression(it) },
+                                                        init = translateExpression(member.expression),
                                                     ),
                                                 )
                                             }
@@ -2738,7 +2738,9 @@ class CppTranslator(
                                                 val params = constructorFormals.map {
                                                     cpp.pos(it) {
                                                         val baseType = translateType(it.type)
-                                                        val paramType = if (it.optional && !isNullableType(it.type.ot)) {
+                                                        val paramType = if (it.optional &&
+                                                            !isNullableType(it.type.ot)
+                                                        ) {
                                                             cpp.template(
                                                                 cpp.name(
                                                                     TEMPER_CORE_NAMESPACE,
@@ -2899,7 +2901,8 @@ class CppTranslator(
                                             singleLine = true,
                                         ) { translateSuperType(st).renderTo(it) }
                                     }
-                                    val rawName = "${structName.id.text} : ${baseStrs.joinToString(", ") { "public $it" }}"
+                                    val rawName =
+                                        "${structName.id.text} : ${baseStrs.joinToString(", ") { "public $it" }}"
                                     cpp.structDef(
                                         cpp.singleName(CppName(rawName, raw = true)),
                                         structFields,
@@ -2991,7 +2994,8 @@ class CppTranslator(
                                             singleLine = true,
                                         ) { translateSuperType(st).renderTo(it) }
                                     }
-                                    val rawName = "${structName.id.text} : ${baseStrs.joinToString(", ") { "public $it" }}"
+                                    val rawName =
+                                        "${structName.id.text} : ${baseStrs.joinToString(", ") { "public $it" }}"
                                     headerTypeDecl.add(struct.decl)
                                     headerTypeDefs.add(
                                         cpp.structDef(
@@ -3072,18 +3076,30 @@ class CppTranslator(
 
             val bodyStmts = mutableListOf<Cpp.Stmt>()
             // static bool guard — prevent double initialization
-            bodyStmts.add(cpp.exprStmt(cpp.literal(cpp.raw(
-                "static bool initialized = false",
-            ))))
-            bodyStmts.add(cpp.ifStmt(
-                cpp.literal(cpp.raw("initialized")),
-                cpp.returnStmt(null),
-            ))
-            bodyStmts.add(cpp.exprStmt(cpp.binaryExpr(
-                cpp.literal(cpp.raw("initialized")),
-                cpp.binaryOp("="),
-                cpp.literal(cpp.raw("true")),
-            )))
+            bodyStmts.add(
+                cpp.exprStmt(
+                    cpp.literal(
+                        cpp.raw(
+                            "static bool initialized = false",
+                        ),
+                    ),
+                ),
+            )
+            bodyStmts.add(
+                cpp.ifStmt(
+                    cpp.literal(cpp.raw("initialized")),
+                    cpp.returnStmt(null),
+                ),
+            )
+            bodyStmts.add(
+                cpp.exprStmt(
+                    cpp.binaryExpr(
+                        cpp.literal(cpp.raw("initialized")),
+                        cpp.binaryOp("="),
+                        cpp.literal(cpp.raw("true")),
+                    ),
+                ),
+            )
             // Call dependency modules' init functions using fully qualified names.
             val depInitCalls = mutableSetOf<String>()
             for ((_, info) in importedNames) {

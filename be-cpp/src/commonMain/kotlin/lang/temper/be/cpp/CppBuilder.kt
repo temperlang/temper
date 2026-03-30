@@ -2,6 +2,7 @@ package lang.temper.be.cpp
 
 import lang.temper.ast.deepCopy
 import lang.temper.be.tmpl.TmpL
+import lang.temper.common.HEX_RADIX
 import lang.temper.log.FilePath
 import lang.temper.log.Position
 import lang.temper.log.unknownPos
@@ -335,7 +336,7 @@ class CppBuilder(
             } else if (ch in ' '..'~') {
                 sb.append(ch)
             } else {
-                sb.append("\\x${unsigned.toString(16).padStart(2, '0')}")
+                sb.append("\\x${unsigned.toString(HEX_RADIX).padStart(2, '0')}")
             }
         }
         // Use std::string(data, length) constructor for strings with embedded null bytes

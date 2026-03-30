@@ -67,7 +67,7 @@ private fun CliEnv.runLibrary(
 
     val gppArgs = buildList {
         add("-I..")
-        add("-std=c++11")
+        add("-std=c++14")
         add("-fwrapv") // Signed integer overflow wraps (Temper semantics)
         // Compile .cpp files from current library
         files@ for (file in dependencies.filesPerLibrary[libraryName]!!) {

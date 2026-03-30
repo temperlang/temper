@@ -195,7 +195,7 @@ class CppBackend private constructor(
     override val supportNetwork: SupportNetwork = CppSupportNetwork
 
     @PluginBackendId("cpp")
-    @BackendSupportLevel(isSupported = true, isDefaultSupported = true, isTested = true)
+    @BackendSupportLevel(isSupported = true, isDefaultSupported = false, isTested = true)
     data object Cpp11 : CppFactory(CppLang.Cpp11)
 
     sealed class CppFactory(val lang: CppLang) : Factory<CppBackend> {
