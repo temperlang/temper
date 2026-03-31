@@ -23,6 +23,7 @@ We might break these out into separate libraries in the future.
     import("./temporal");
     import("./json");
     import("./net");
+    import("./io");
 
 ## C#
 

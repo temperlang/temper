@@ -253,6 +253,181 @@ function temper.generator_next(f)
     return f()
 end
 
+-- Cooperative coroutine scheduler for async blocks.
+-- Lua is single-threaded, so we use non-blocking IO and round-robin scheduling.
+
+local PROMISE_RESOLVED = "resolved"
+local PROMISE_SLEEP = "sleep"
+local PROMISE_READLINE = "readline"
+local PROMISE_KEYPRESS = "keypress"
+
+local scheduler_tasks = {}
+
+local function get_time()
+    local ok, socket = pcall(require, "socket")
+    if ok then return socket.gettime() end
+    return os.time()
+end
+
+local function make_resolved(value)
+    return { state = PROMISE_RESOLVED, value = value,
+        await = function(self) return self.value end }
+end
+
+local function make_sleep_promise(deadline)
+    return { state = PROMISE_SLEEP, deadline = deadline, value = nil,
+        await = function(self) return coro_yield(self) end }
+end
+
+local function make_readline_promise()
+    return { state = PROMISE_READLINE, value = nil,
+        await = function(self) return coro_yield(self) end }
+end
+
+local function make_keypress_promise()
+    return { state = PROMISE_KEYPRESS, value = nil,
+        await = function(self) return coro_yield(self) end }
+end
+
+-- Register an async block for cooperative scheduling.
+function temper.async_launch(generatorFactory)
+    local gen = generatorFactory()
+    -- Step once to start the coroutine
+    local ok, result = pcall(gen)
+    if ok and result ~= nil and type(result) == "table" and result.state ~= nil then
+        table.insert(scheduler_tasks, { step = gen, waiting_for = result })
+    end
+    -- If coroutine finished immediately or errored, don't register
+end
+
+-- Run the cooperative scheduler. No-op if no coroutines were registered.
+function temper.run_scheduler()
+    if #scheduler_tasks == 0 then return end
+
+    local function read_line()
+        local line = io.read("*l")
+        return line  -- nil on EOF
+    end
+
+    -- Terminal state management for keypress polling
+    local old_stty = nil
+    local has_keypress_tasks = false
+    for _, task in ipairs(scheduler_tasks) do
+        if task.waiting_for and task.waiting_for.state == PROMISE_KEYPRESS then
+            has_keypress_tasks = true
+            break
+        end
+    end
+    if has_keypress_tasks then
+        local save_handle = io.popen("stty -g 2>/dev/null", "r")
+        if save_handle then
+            old_stty = save_handle:read("*l")
+            save_handle:close()
+            if old_stty == "" then old_stty = nil end
+        end
+    end
+
+    local function restore_terminal()
+        if old_stty then os.execute("stty " .. old_stty .. " 2>/dev/null") end
+    end
+
+    local function poll_char()
+        os.execute("stty raw -echo -icanon min 0 time 0 2>/dev/null")
+        local ch = io.read(1)
+        if old_stty then os.execute("stty " .. old_stty .. " 2>/dev/null") end
+        return ch
+    end
+
+    local function parse_keypress(ch)
+        if ch:byte() == 27 then
+            local next = poll_char()
+            if next and next == '[' then
+                local arrow = poll_char()
+                local arrows = {A='ArrowUp', B='ArrowDown', C='ArrowRight', D='ArrowLeft'}
+                return arrows[arrow] or 'Escape'
+            else
+                return 'Escape'
+            end
+        elseif ch == '\r' or ch == '\n' then
+            return 'Enter'
+        else
+            return ch
+        end
+    end
+
+    -- Main scheduler loop
+    while #scheduler_tasks > 0 do
+        local now = get_time()
+        local any_progressed = false
+        local all_input = true
+
+        local i = 1
+        while i <= #scheduler_tasks do
+            local task = scheduler_tasks[i]
+            local promise = task.waiting_for
+            local should_resume = false
+            local resume_value = nil
+
+            if promise == nil then
+                table.remove(scheduler_tasks, i)
+            elseif promise.state == PROMISE_RESOLVED then
+                should_resume = true
+                resume_value = promise.value
+                all_input = false
+            elseif promise.state == PROMISE_SLEEP then
+                all_input = false
+                if now >= promise.deadline then
+                    should_resume = true
+                    resume_value = nil
+                else
+                    i = i + 1
+                end
+            elseif promise.state == PROMISE_READLINE then
+                local line = read_line()
+                should_resume = true
+                resume_value = line  -- nil on EOF
+            elseif promise.state == PROMISE_KEYPRESS then
+                local ch = poll_char()
+                if ch ~= nil then
+                    should_resume = true
+                    resume_value = parse_keypress(ch)
+                else
+                    i = i + 1
+                end
+            else
+                i = i + 1
+            end
+
+            if should_resume then
+                any_progressed = true
+                local ok, result = pcall(task.step, resume_value)
+                if ok and result ~= nil and type(result) == "table" and result.state ~= nil then
+                    task.waiting_for = result
+                    i = i + 1
+                else
+                    table.remove(scheduler_tasks, i)
+                end
+            end
+        end
+
+        -- If only input tasks remain and nothing is progressing, exit
+        if all_input and #scheduler_tasks > 0 then
+            break
+        end
+
+        -- Avoid busy-spinning when nothing progressed
+        if not any_progressed and #scheduler_tasks > 0 then
+            local ok, socket = pcall(require, "socket")
+            if ok then socket.sleep(0.01) else os.execute("sleep 0.01") end
+        end
+    end
+
+    restore_terminal()
+end
+
+-- Keep legacy temper.TODO as alias for backward compatibility
+temper.TODO = temper.async_launch
+
 do
     local inst_meta = {
         __index = function(self, k)
@@ -2047,6 +2222,25 @@ do
     function temper.regex_compiledsplit(self, pat, text)
         return pat:split(text)
     end
+end
+
+-- std/io support
+-- Uses the scheduler's promise types when inside coroutines,
+-- falls back to blocking when called outside coroutines.
+
+function temper.stdsleep(ms)
+    local deadline = get_time() + (ms / 1000)
+    return make_sleep_promise(deadline)
+end
+
+function temper.stdreadline()
+    return make_readline_promise()
+end
+
+-- std/keyboard support
+
+function temper.stdnextkeypress()
+    return make_keypress_promise()
 end
 
 return temper

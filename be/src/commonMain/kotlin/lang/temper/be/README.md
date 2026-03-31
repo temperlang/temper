@@ -227,4 +227,6 @@ to implement:
 - `Test::messages`
 - `Test::passing`
 - `stdNetSend`
+- `stdReadLine`
+- `stdSleep`
 <!-- end std-connected -->

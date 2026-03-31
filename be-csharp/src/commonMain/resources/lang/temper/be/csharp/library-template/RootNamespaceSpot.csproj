@@ -1,12 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net48;net6.0</TargetFrameworks>
+    <TargetFrameworks>net48;net8.0</TargetFrameworks>
     <RootNamespace>RootNamespaceSpot</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Condition="'$(TargetFramework)' == 'net6.0'" Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Condition="'$(TargetFramework)' == 'net8.0'" Include="Microsoft.Extensions.Logging" Version="8.0.0" />
     <ProjectReference Include="../temper-core/TemperLang.Core.csproj"/>
   </ItemGroup>
 

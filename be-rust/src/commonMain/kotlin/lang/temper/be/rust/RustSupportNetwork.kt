@@ -914,6 +914,9 @@ private val neGeneric = EqNeGeneric("NeGeneric", BuiltinOperatorId.NeGeneric, Ru
 private val neIntInt = Infix("NeIntInt", BuiltinOperatorId.NeIntInt, RustOperator.NotEquals)
 private val neStrStr = CmpStrStr("NeStrStr", BuiltinOperatorId.NeStrStr, RustOperator.NotEquals)
 private val netSend = FunctionCall("stdNetSend", "send_request", cloneEvenIfFirst = true)
+private val stdSleep = FunctionCall("stdSleep", "temper_std::io::std_sleep")
+private val stdReadLine = FunctionCall("stdReadLine", "temper_std::io::std_read_line")
+private val stdNextKeypress = FunctionCall("stdNextKeypress", "temper_std::keyboard::std_next_keypress")
 
 internal object PairConstructor : RustInlineSupportCode(
     "Pair::constructor",
@@ -1139,6 +1142,9 @@ private val connectedReferences = listOf(
     mappedToMapBuilder,
     mappedValues,
     netSend,
+    stdSleep,
+    stdReadLine,
+    stdNextKeypress,
     promiseBuilderComplete,
     PairConstructor,
     regexCompileFormatted,

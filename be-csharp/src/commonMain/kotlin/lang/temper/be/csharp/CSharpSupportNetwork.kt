@@ -1105,6 +1105,21 @@ private val promiseBuilderGetPromise = PropertyAccess(
     "Task",
 )
 
+private val stdSleep = StaticCall(
+    "stdSleep",
+    StandardNames.temperStdIoStdSleep,
+)
+
+private val stdReadLine = StaticCall(
+    "stdReadLine",
+    StandardNames.temperStdIoStdReadLine,
+)
+
+private val stdNextKeypress = StaticCall(
+    "stdNextKeypress",
+    StandardNames.temperStdKeyboardStdNextKeypress,
+)
+
 private val stdNetSend = StaticCall(
     "stdNetSend",
     StandardNames.temperCoreNetCoreStdNetSend,
@@ -1497,6 +1512,9 @@ private val connectedReferences = listOf(
     stringToInt,
     stringToInt64,
     stdNetSend,
+    stdSleep,
+    stdReadLine,
+    stdNextKeypress,
 ).flatMap { ref -> ref.connectedNames.map { it to ref } }.toMap()
 
 private val connectedTypes = mapOf<String, Pair<AbstractTypeName, ((List<Type2>) -> List<Type2>)?>>(

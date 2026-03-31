@@ -619,6 +619,8 @@ class JsBackend private constructor(
             filePath("float.js"),
             filePath("int.js"),
             filePath("interface.js"),
+            filePath("io.js"),
+            filePath("keyboard.js"),
             filePath("listed.js"),
             filePath("mapped.js"),
             filePath("net.js"),

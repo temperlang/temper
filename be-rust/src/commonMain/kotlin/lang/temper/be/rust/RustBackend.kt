@@ -85,12 +85,14 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
             val deps = mutableSetOf<Dep>()
             val featuresByDep = mutableMapOf<String, MutableSet<String>>()
             val modNames = mutableListOf<String>()
+            val allUsedSupportPaths = mutableSetOf<String>()
             for (module in modules) {
                 // Actually translate.
                 val modKids = allModKids[module.codeLocation.codeLocation.sourceFile] ?: listOf()
                 val translator = RustTranslator(dependenciesBuilder, module, names, modKids)
                 val mod = translator.translateModule()
                 add(mod)
+                allUsedSupportPaths.addAll(translator.usedSupportFunctionPaths)
                 // We slap mod.rs on the end of each, so exclude that.
                 val segments = mod.path.dirName().segments
                 val pathed = segments.subListToEnd(1).joinToString("::") { it.fullName.escapeIfNeeded() }
@@ -120,6 +122,32 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
                         path = "../$depName",
                         version = depConfig.versionOrDefault(),
                     ).let { deps.add(it) }
+                }
+            }
+            // Detect temper-std dependency from connected function paths (e.g. "temper_std::io::std_sleep").
+            // Connected functions bypass the import system, so they aren't caught by the import scan above.
+            val stdCrateName = STD_ROOT_PACKAGE_NAME.replace("-", "_")
+            val usedStdModules = allUsedSupportPaths
+                .filter { it.startsWith("$stdCrateName::") }
+                .mapNotNull { it.split("::").getOrNull(1) }
+                .filter { it in stdFeatures }
+                .toSet()
+            if (usedStdModules.isNotEmpty()) {
+                val stdConfig = libraryConfigurations.byLibraryName.entries
+                    .firstOrNull { it.key.text == STANDARD_LIBRARY_NAME }
+                if (stdConfig != null) {
+                    val stdNaming = names.packageNamingsByRoot[stdConfig.value.libraryRoot]
+                    if (stdNaming != null) {
+                        Dep(
+                            libraryName = STANDARD_LIBRARY_NAME,
+                            naming = stdNaming,
+                            path = "../$STANDARD_LIBRARY_NAME",
+                            version = stdConfig.value.versionOrDefault(),
+                        ).let { deps.add(it) }
+                        for (mod in usedStdModules) {
+                            featuresByDep.computeIfAbsent(STANDARD_LIBRARY_NAME) { mutableSetOf() }.add(mod)
+                        }
+                    }
                 }
             }
             // Merge lib. TODO Can we sort init in dependency order? Do we need to? Dep order maybe not hierarchical?
@@ -152,9 +180,12 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
                     append("regex = { version = \"=1.12.2\", optional = true }\n")
                     append("time = { version = \"=0.3.41\", optional = true }\n")
                     append("ureq = { version = \"=3.1.2\", optional = true }\n")
+                    append("crossterm = { version = \"=0.28.1\", optional = true }\n")
                     // Below aren't dependencies section anymore, but eh.
                     append("\n")
                     append("[features]\n")
+                    append("io = []\n")
+                    append("keyboard = [\"crossterm\"]\n")
                     append("net = [\"ureq\"]\n")
                     // Implied: append("regex = [\"regex\"]\n")
                     append("temporal = [\"time\"]\n")
@@ -225,7 +256,7 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
         private val resourceBase = dirPath("lang", "temper", "be", "rust")
         private val coreResourceBase = resourceBase.resolveDir("temper-core")
         private val stdResourceBase = resourceBase.resolveDir("std")
-        val stdSupportNeeders = setOf("net", "regex", "temporal")
+        val stdSupportNeeders = setOf("io", "keyboard", "net", "regex", "temporal")
         val stdFeatures = stdSupportNeeders // same set today but maybe not guaranteed
         private val templateResourceBase = resourceBase.resolveDir("library-template")
 

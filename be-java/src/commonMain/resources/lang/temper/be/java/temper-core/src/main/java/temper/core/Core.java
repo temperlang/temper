@@ -1924,10 +1924,141 @@ public final class Core {
      */
     public static void waitUntilTasksComplete() {
         ForkJoinPool commonPool = ForkJoinPool.commonPool();
-        // This timeout is sufficient for functional tests.
-        // If a long running main method needs more time, it should
-        // negotiate promises for termination with the tasks it spawns.
-        commonPool.awaitQuiescence(10L, TimeUnit.SECONDS);
+        // Wait until the pool is truly idle (all tasks complete).
+        while (!commonPool.isQuiescent()) {
+            commonPool.awaitQuiescence(60L, TimeUnit.SECONDS);
+        }
+    }
+
+    // std/io support
+
+    @SuppressWarnings("unchecked")
+    public static java.util.concurrent.CompletableFuture<Optional<? super Object>> stdSleep(int ms) {
+        java.util.concurrent.CompletableFuture<Optional<? super Object>> future = new java.util.concurrent.CompletableFuture<>();
+        ForkJoinPool.commonPool().execute(() -> {
+            try {
+                Thread.sleep(ms);
+                future.complete(Optional.empty());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                future.completeExceptionally(e);
+            }
+        });
+        return future;
+    }
+
+    public static java.util.concurrent.CompletableFuture<String> stdReadLine() {
+        java.util.concurrent.CompletableFuture<String> future = new java.util.concurrent.CompletableFuture<>();
+        ForkJoinPool.commonPool().execute(() -> {
+            try {
+                java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(System.in, java.nio.charset.StandardCharsets.UTF_8));
+                String line = reader.readLine();
+                future.complete(line); // null on EOF
+            } catch (Exception e) {
+                future.completeExceptionally(e);
+            }
+        });
+        return future;
+    }
+
+    private static final boolean IS_WINDOWS = System.getProperty("os.name", "").toLowerCase().startsWith("win");
+
+    public static java.util.concurrent.CompletableFuture<String> stdNextKeypress() {
+        java.util.concurrent.CompletableFuture<String> future = new java.util.concurrent.CompletableFuture<>();
+        ForkJoinPool.commonPool().execute(() -> {
+            try {
+                if (IS_WINDOWS) {
+                    stdNextKeypressWindows(future);
+                } else {
+                    stdNextKeypressUnix(future);
+                }
+            } catch (Exception e) {
+                future.completeExceptionally(e);
+            }
+        });
+        return future;
+    }
+
+    private static void stdNextKeypressUnix(java.util.concurrent.CompletableFuture<String> future) throws Exception {
+        if (System.console() == null) {
+            future.complete(null);
+            return;
+        }
+        String[] cmd = {"/bin/sh", "-c", "stty raw -echo </dev/tty"};
+        Runtime.getRuntime().exec(cmd).waitFor();
+        try {
+            int ch = System.in.read();
+            if (ch == -1) {
+                future.complete(null);
+            } else if (ch == 27) {
+                int next = System.in.read();
+                if (next == '[') {
+                    int arrow = System.in.read();
+                    switch (arrow) {
+                        case 'A': future.complete("ArrowUp"); break;
+                        case 'B': future.complete("ArrowDown"); break;
+                        case 'C': future.complete("ArrowRight"); break;
+                        case 'D': future.complete("ArrowLeft"); break;
+                        default: future.complete("Escape"); break;
+                    }
+                } else {
+                    future.complete("Escape");
+                }
+            } else if (ch == '\r' || ch == '\n') {
+                future.complete("Enter");
+            } else {
+                future.complete(String.valueOf((char) ch));
+            }
+        } finally {
+            String[] restore = {"/bin/sh", "-c", "stty sane </dev/tty"};
+            Runtime.getRuntime().exec(restore).waitFor();
+        }
+    }
+
+    private static void stdNextKeypressWindows(java.util.concurrent.CompletableFuture<String> future) throws Exception {
+        // Use PowerShell to read a single key without echo.
+        // Returns "VirtualKeyCode,KeyChar" e.g. "38,0" for ArrowUp or "65,a" for 'a'.
+        ProcessBuilder pb = new ProcessBuilder(
+            "powershell", "-NoProfile", "-Command",
+            "$k=[Console]::ReadKey($true); Write-Host \"$($k.Key),$($k.KeyChar)\""
+        );
+        pb.redirectErrorStream(true);
+        Process proc = pb.start();
+        java.io.BufferedReader reader = new java.io.BufferedReader(
+            new java.io.InputStreamReader(proc.getInputStream(), java.nio.charset.StandardCharsets.UTF_8));
+        String line = reader.readLine();
+        proc.waitFor();
+        if (line == null || line.isEmpty()) {
+            future.complete(null);
+            return;
+        }
+        int comma = line.indexOf(',');
+        if (comma < 0) {
+            future.complete(line);
+            return;
+        }
+        String vk = line.substring(0, comma).trim();
+        String ch = line.substring(comma + 1).trim();
+        switch (vk) {
+            case "UpArrow": future.complete("ArrowUp"); break;
+            case "DownArrow": future.complete("ArrowDown"); break;
+            case "LeftArrow": future.complete("ArrowLeft"); break;
+            case "RightArrow": future.complete("ArrowRight"); break;
+            case "Enter": future.complete("Enter"); break;
+            case "Escape": future.complete("Escape"); break;
+            case "Backspace": future.complete("Backspace"); break;
+            case "Tab": future.complete("Tab"); break;
+            case "Spacebar": future.complete(" "); break;
+            default:
+                // For regular characters, use the KeyChar value
+                if (ch.length() == 1 && ch.charAt(0) != 0) {
+                    future.complete(ch);
+                } else {
+                    future.complete(vk);
+                }
+                break;
+        }
     }
 }
 

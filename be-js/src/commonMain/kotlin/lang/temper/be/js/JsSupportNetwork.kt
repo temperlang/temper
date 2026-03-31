@@ -465,6 +465,11 @@ private val supportedAutoConnecteds = setOf(
     "String::toInt32",
     "String::toInt64",
     "StringBuilder::appendCodePoint",
+    // std/io
+    "stdSleep",
+    "stdReadLine",
+    // std/keyboard
+    "stdNextKeypress",
     // std/net
     "stdNetSend",
     "NetResponse",

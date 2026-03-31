@@ -28,7 +28,7 @@ data class CsProj(
             attribute("Sdk", "Microsoft.NET.Sdk")
             "PropertyGroup" {
                 // Currently, dotnet warns if you request net5.0 or earlier.
-                "TargetFramework" { -"net6.0" }
+                "TargetFramework" { -"net8.0" }
                 // Core project info.
                 outputType?.let { "OutputType" { -it } }
                 rootNamespace?.let { "RootNamespace" { -it } }
