@@ -3276,8 +3276,30 @@ class GenerateCodeStageTest {
         moduleResultNeeded = true,
         input = $$"""
             |$${"\"\"\""}
+            |~Things: ${}
             |:for (var i = 1; i < 100; i *= 2) {
             |  ~${i}, ${}
+            |  // Comment inside loop after content.
+            |:}
+            |~and so on
+        """.trimMargin(),
+        want = """
+            |{
+            |  run: ["Things: 1, 2, 4, 8, 16, 32, 64, and so on", "String"],
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun complexStringExprWithFormattingHoleAndComment() = assertModuleAtStage(
+        stage = Stage.Run,
+        moduleResultNeeded = true,
+        input = $$"""
+            |$${"\"\"\""}
+            |:for (var i = 1; i < 100; i *= 2) {
+            |  // Comment inside loop before split content.
+            |  ~${i}
+            |  ~, ${}
             |:}
             |~and so on
         """.trimMargin(),

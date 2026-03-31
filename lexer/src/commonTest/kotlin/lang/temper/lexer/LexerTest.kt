@@ -670,6 +670,68 @@ class LexerTest {
     )
 
     @Test
+    fun templatesEasier() = assertTokenization(
+        $$"""
+            |>$$Q3
+            |:  LQ
+            |>~Things: ${}
+            |:M       Q BBQ
+            |>:for (var i = 1; i < 100; i *= 2) {
+            |:M  WSB  WSWSPSNPSWSPS  NPSWS PSNBSBS
+            |>  ~${i}, ${}
+            |: SM BWB Q BBQ
+            |>  // Comment inside loop after content.
+            |: S                                    CS
+            |>:}
+            |:MBS
+            |>~and so on$$Q3
+            |:M        Q  r
+        """.trimMargin(),
+    )
+
+    @Test
+    fun templatesHarder() = assertTokenization(
+        $$"""
+            |>$$Q3
+            |:  LQ
+            |>~and so on
+            |:M         Q
+            |>:for (var i = 1; i < 100; i *= 2) {
+            |:M  WSB  WSWSPSNPSWSPS  NPSWS PSNBSBS
+            |>  ~${i}
+            |: SM BWBQ
+            |>  ~, ${}
+            |: SM Q BBQ
+            |>  ~, ${}
+            |: SM Q BBQ
+            |>:}
+            |:MBS
+            |>~and so on$$Q3
+            |:M        Q  r
+        """.trimMargin(),
+    )
+
+    @Test
+    fun templatesHarderMore() = assertTokenization(
+        $$"""
+            |>$$Q3
+            |:  LQ
+            |>:for (var i = 1; i < 100; i *= 2) {
+            |:M  WSB  WSWSPSNPSWSPS  NPSWS PSNBSBS
+            |>  :// hi
+            |:
+            |>  ~${i}
+            |: SM BWBQ
+            |>  ~, ${}
+            |: SM Q BBQ
+            |>:}
+            |:MBS
+            |>~and so on$$Q3
+            |:M        Q  r
+        """.trimMargin(),
+    )
+
+    @Test
     fun lineCommentEnds() = assertTokenization(
         """
         >// line comment
