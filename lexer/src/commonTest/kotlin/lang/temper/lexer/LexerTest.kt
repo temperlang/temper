@@ -644,21 +644,21 @@ class LexerTest {
 
     @Test
     fun stringEscapes() = assertTokenization(
-        """
-        >"\x20Escaped at start with more later\u{20,$C/*hi*/}b1,,  {21 }."
+        $$"""
+        >"\x20Escaped at start with more later\u{20,$$C/*hi*/}b1,,  {21 }."
         :L   Q                               Q  B QP B     CB QPP QQ QQBQRS
-        >$Q3
+        >$$Q3
         :  LQ
         >"Maybe\u0020here?
         :M    Q     Q     Q
-        >"${'$'}{hi}
-        :M${' '}B WBQ
-        >$Q3;
+        >"${hi}
+        :M$${' '}B WBQ
+        >$$Q3;
         :  rPS
-        >raw"hi\u{$C" t"}}here"
+        >raw"hi\u{$$C" t"}}here"
         :  WL Q  B BL QRBB   QRS
         >"\u{20"
-        :L  B Q ${""}
+        :L  B Q $${""}
         >
         :Q
         >}"
@@ -676,8 +676,8 @@ class LexerTest {
             |:  LQ
             |>~Things: ${}
             |:M       Q BBQ
-            |>:for (var i = 1; i < 100; i *= 2) {
-            |:M  WSB  WSWSPSNPSWSPS  NPSWS PSNBSBS
+            |>:do {
+            |:M WSBS
             |>  ~${i}, ${}
             |: SM BWB Q BBQ
             |>  // Comment inside loop after content.
@@ -694,10 +694,8 @@ class LexerTest {
         $$"""
             |>$$Q3
             |:  LQ
-            |>~and so on
-            |:M         Q
-            |>:for (var i = 1; i < 100; i *= 2) {
-            |:M  WSB  WSWSPSNPSWSPS  NPSWS PSNBSBS
+            |>:do {
+            |:M WSBS
             |>  ~${i}
             |: SM BWBQ
             |>  ~, ${}
@@ -716,14 +714,18 @@ class LexerTest {
         $$"""
             |>$$Q3
             |:  LQ
-            |>:for (var i = 1; i < 100; i *= 2) {
-            |:M  WSB  WSWSPSNPSWSPS  NPSWS PSNBSBS
-            |>  :// hi
-            |:
+            |>:do {
+            |:M WSBS
+            |>  // Comment inside loop before content.
+            |: S                                     CS
             |>  ~${i}
             |: SM BWBQ
-            |>  ~, ${}
-            |: SM Q BBQ
+            |>  :do { // Nested block.
+            |: SM WSBS               CS
+            |>    ~, ${}
+            |:   SM Q BBQ
+            |>  :}
+            |: SMBS
             |>:}
             |:MBS
             |>~and so on$$Q3

@@ -3298,8 +3298,16 @@ class GenerateCodeStageTest {
             |$${"\"\"\""}
             |:for (var i = 1; i < 100; i *= 2) {
             |  // Comment inside loop before split content.
+            |  // Second comment.
             |  ~${i}
-            |  ~, ${}
+            |  ~,
+            |  :do {
+            |    // And a trailing space inside a nested block.
+            |    ~ ${}
+            |  :}
+            |  // Just some nothings for funzies.
+            |  ~
+            |  ~
             |:}
             |~and so on
         """.trimMargin(),
@@ -3804,7 +3812,7 @@ class GenerateCodeStageTest {
             |}
             |f(4)
         """.trimMargin(),
-        want = $$"""
+        want = """
             |{
             |  errors: [
             |    "Expected subtype of StringBuilder, but got StringBuilder?!",

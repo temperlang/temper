@@ -221,7 +221,7 @@ class Lexer(
         }
 
         debug {
-            "B start=$start, limit=$limit, open=$open, DS=$delimiterStack, text=${
+            "B start=$start, limit=$limit, open=$open, DS=$delimiterStack, SS=$scriptletStack, text=${
                 escapeWithCaretAt(text, end)
             }"
         }
@@ -688,6 +688,7 @@ class Lexer(
                         }
                         if (isComment) {
                             open = OpenTokenType.NONE
+                            contentLineKind = TokenCluster.ContentLineKind.StmtFragment
                             reenter = true
                         } else {
                             popDelimiterStack(start, synthesize = true)
@@ -774,7 +775,7 @@ class Lexer(
         debug {
             ". got ${backtickTemperEscaper.escape(text.substring(start, end))} : tokenType=$currentTokenType${
                 "\n"
-            }. start=$start, limit=$limit, open=$open, DS=$delimiterStack, end=$end"
+            }. start=$start, limit=$limit, open=$open, DS=$delimiterStack, SS=$scriptletStack, end=$end"
         }
 
         val tokenText = sourceText.substring(start, end)
@@ -946,7 +947,9 @@ class Lexer(
                     }
 
                     if (toStore != null) {
-                        scriptletStack = Cons(toStore, scriptletStack.tail)
+                        if (toStore.isNotEmpty()) {
+                            scriptletStack = Cons(toStore, scriptletStack)
+                        }
                     } else {
                         currentTokenType = TokenType.Error
                         changes += TokenCluster.Change.Cons1
@@ -991,7 +994,10 @@ class Lexer(
                 if (TokenCluster.Change.RestoreFromScriptlet in changes) {
                     changes -= TokenCluster.Change.RestoreFromScriptlet
                     val stored = scriptletStack.head
-                    scriptletStack = Cons(emptyList(), scriptletStack.tail)
+                    scriptletStack = when (scriptletStack.tail) {
+                        is Cons.Empty -> Cons(emptyList(), scriptletStack.tail)
+                        else -> scriptletStack.tail
+                    }
                     stored.forEach {
                         delimiterStack = Cons(it, delimiterStack)
                     }
