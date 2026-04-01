@@ -3291,25 +3291,28 @@ class GenerateCodeStageTest {
     )
 
     @Test
-    fun complexStringExprWithFormattingHoleAndComment() = assertModuleAtStage(
+    fun complexStringExprWithFormattingHoleAndMore() = assertModuleAtStage(
         stage = Stage.Run,
         moduleResultNeeded = true,
         input = $$"""
             |$${"\"\"\""}
+            |:var after = "and such";
             |:for (var i = 1; i < 100; i *= 2) {
             |  // Comment inside loop before split content.
             |  // Second comment.
-            |  ~${i}
+            |  :let j = i - 1;
+            |  ~${j + 1}
+            |  :after = "and so on";
             |  ~,
             |  :do {
             |    // And a trailing space inside a nested block.
             |    ~ ${}
             |  :}
-            |  // Just some nothings for funzies.
+            |  // Just some nothings for funsies.
             |  ~
             |  ~
             |:}
-            |~and so on
+            |~${after}
         """.trimMargin(),
         want = """
             |{
