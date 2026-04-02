@@ -324,8 +324,8 @@ class RustBackendTest {
     fun bubblyOption() {
         assertGenerateWanted(
             temper = """
-                |public let blah(i: Int): Int throws Bubble { something(i) orelse 0 }
-                |public let something(var i: Int?): Int throws Bubble {
+                |export let blah(i: Int): Int throws Bubble { something(i) orelse 0 }
+                |export let something(var i: Int?): Int throws Bubble {
                 |  when (i) {
                 |    is Int -> 5 % (i as Int); // cast needed because var
                 |    else -> 1;
@@ -339,7 +339,7 @@ class RustBackendTest {
                 |            Ok(())
                 |    }).clone()
                 |}
-                |fn something__0(mut i__0: Option<i32>) -> temper_core::Result<i32> {
+                |pub fn something(mut i__0: Option<i32>) -> temper_core::Result<i32> {
                 |    let return__0: i32;
                 |    let mut t___0: bool;
                 |    let mut t___1: i32;
@@ -360,12 +360,12 @@ class RustBackendTest {
                 |    }
                 |    return Ok(return__0);
                 |}
-                |fn blah__0(i__1: i32) -> temper_core::Result<i32> {
+                |pub fn blah(i__1: i32) -> temper_core::Result<i32> {
                 |    let return__1: i32;
                 |    let mut t___3: i32;
                 |    'ok___0: {
                 |        'orelse___0: {
-                |            t___3 = match something__0(Some(i__1)) {
+                |            t___3 = match something(Some(i__1)) {
                 |                Ok(x) => x,
                 |                _ => break 'orelse___0
                 |            };
@@ -1995,6 +1995,79 @@ class RustBackendTest {
             |}
         """.trimMargin(),
     )
+
+    @Test
+    fun mutualRecursion() {
+        assertGenerateWanted(
+            temper = """
+                |// Purposely use camelCase names here, because we had a problem with that.
+                |export let partOne(i: Int): Int {
+                |  if (i < 0) {
+                |    partTwo(i)
+                |  } else {
+                |    i
+                |  }
+                |}
+                |export let partTwo(i: Int): Int {
+                |  partOne(i + 1)
+                |}
+                |// Now do static method versions, and yes these would recurse infinitely, but meh.
+                |// This also checks type name references, which are lower risk right now, but might as well.
+                |class PartThree {
+                |  public static partFour(i: Int): Int { PartFive.partSix(i) }
+                |}
+                |class PartFive {
+                |  public static partSix(i: Int): Int { PartThree.partFour(i) }
+                |}
+            """.trimMargin(),
+            rust = """
+                |pub (crate) fn init() -> temper_core::Result<()> {
+                |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+                |    INIT_ONCE.get_or_init(| |{
+                |            Ok(())
+                |    }).clone()
+                |}
+                |pub fn part_one(i__0: i32) -> i32 {
+                |    let return__0: i32;
+                |    if Some(i__0) < Some(0) {
+                |        return__0 = part_two(i__0);
+                |    } else {
+                |        return__0 = i__0;
+                |    }
+                |    return return__0;
+                |}
+                |struct PartThreeStruct {}
+                |#[derive(Clone)]
+                |pub (crate) struct PartThree(std::sync::Arc<PartThreeStruct>);
+                |impl PartThree {
+                |    pub fn part_four(i__1: i32) -> i32 {
+                |        return PartFive::part_six(i__1);
+                |    }
+                |    pub fn new() -> PartThree {
+                |        let selfish = PartThree(std::sync::Arc::new(PartThreeStruct {}));
+                |        return selfish;
+                |    }
+                |}
+                |temper_core::impl_any_value_trait!(PartThree, []);
+                |struct PartFiveStruct {}
+                |#[derive(Clone)]
+                |pub (crate) struct PartFive(std::sync::Arc<PartFiveStruct>);
+                |impl PartFive {
+                |    pub fn part_six(i__2: i32) -> i32 {
+                |        return PartThree::part_four(i__2);
+                |    }
+                |    pub fn new() -> PartFive {
+                |        let selfish = PartFive(std::sync::Arc::new(PartFiveStruct {}));
+                |        return selfish;
+                |    }
+                |}
+                |temper_core::impl_any_value_trait!(PartFive, []);
+                |pub fn part_two(i__3: i32) -> i32 {
+                |    return part_one(i__3.wrapping_add(1));
+                |}
+            """.trimMargin(),
+        )
+    }
 
     @Test
     fun nullFun() {

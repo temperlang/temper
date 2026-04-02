@@ -257,7 +257,7 @@ class RustTranslator(
     }
 
     private fun preprocessTopLevels() {
-        // First gather decls.
+        // First gather value decls, but not functions, etc.
         decls@ for (topLevel in module.topLevels) {
             val decl = (topLevel as? TmpL.ModuleLevelDeclaration) ?: continue@decls
             decl.isConsole() && continue@decls
@@ -290,6 +290,17 @@ class RustTranslator(
         decls@ for (decl in decls.values) {
             decl.topper || continue@decls
             buildTopperGetter(decl).also { moduleItems.add(it) }
+        }
+        // Now also pre-track other top-level decls like functions.
+        // If we use a separate pre-naming stage for be-rust, this might matter less.
+        decls@ for (topLevel in module.topLevels) {
+            when (topLevel) {
+                is TmpL.ModuleFunctionDeclaration -> {
+                    decls[topLevel.name.name] = DeclInfo(topLevel, typeFrom = topLevel.sig)
+                }
+                // So far, we don't need other pre-decls, but this could expand as needed.
+                else -> {}
+            }
         }
     }
 
@@ -473,7 +484,6 @@ class RustTranslator(
     }
 
     private fun processModuleFunctionDeclaration(decl: TmpL.ModuleFunctionDeclaration) {
-        decls.computeIfAbsent(decl.name.name) { DeclInfo(decl, typeFrom = decl.sig) }
         moduleItems.add(translateFunctionDeclarationOrMethod(decl))
     }
 
@@ -3138,6 +3148,7 @@ class RustTranslator(
                 WellKnownTypes.noStringIndexTypeDefinition,
                 WellKnownTypes.nullTypeDefinition,
                 WellKnownTypes.emptyTypeDefinition,
+                WellKnownTypes.invalidTypeDefinition,
                 WellKnownTypes.voidTypeDefinition,
                 -> OutName("()", def.name)
 
