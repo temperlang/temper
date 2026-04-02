@@ -3322,6 +3322,95 @@ class GenerateCodeStageTest {
     )
 
     @Test
+    fun templatesNested() = assertModuleAtStage(
+        stage = Stage.Run,
+        moduleResultNeeded = true,
+        input = $$"""
+            |""$${'"'}
+            |:let inner = ""$${'"'}
+            |  ::do {
+            |    :~hi
+            |  ::}
+            |:;
+            |~${inner}
+        """.trimMargin(),
+        want = """
+            |{
+            |  run: ["hi", "String"],
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun templatesNested2() = assertModuleAtStage(
+        stage = Stage.Run,
+        moduleResultNeeded = true,
+        input = $$"""
+            |""$${'"'}
+            |:let inner = ""$${'"'}
+            |  :do {
+            |    ~hi
+            |  :}
+            |:;
+            |~${inner}
+        """.trimMargin(),
+        want = """
+            |{
+            |  run: ["hi", "String"],
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun templatesNestedMore() = assertModuleAtStage(
+        stage = Stage.Run,
+        moduleResultNeeded = true,
+        input = $$"""
+            |""$${'"'}
+            |"Outer
+            |:do {
+            |  :let inner = ""$${'"'}
+            |    :"Inner
+            |    ::do { }
+            |    // Comment
+            |    ::do {
+            |      :"foo
+            |    ::}
+            |  :;
+            |  "${inner}
+            |:}
+            |"End
+        """.trimMargin(),
+        want = """
+            |{
+            |  run: ["1, 2, 4, 8, 16, 32, 64, and so on", "String"],
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun templateBlockSequence() = assertModuleAtStage(
+        stage = Stage.Run,
+        moduleResultNeeded = true,
+        input = $$"""
+            |""$${'"'}
+            |:do {
+            |  :do {
+            |    "first
+            |  :}
+            |  :do {
+            |    "second
+            |  :}
+            |:}
+        """.trimMargin(),
+        want = """
+            |{
+            |  run: ["first\nsecond\n", "String"],
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun explicitBoundedTypeParametersInInterpreter() = assertModuleAtStage(
         stage = Stage.Run,
         input = """

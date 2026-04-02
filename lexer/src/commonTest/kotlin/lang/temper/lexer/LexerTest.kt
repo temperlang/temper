@@ -734,6 +734,56 @@ class LexerTest {
     )
 
     @Test
+    fun templatesNested() = assertTokenization(
+        $$"""
+            |>$$Q3
+            |:  LQ
+            |>:let a = $$Q3
+            |:M  WSWSPS  LQ
+            |>  ~hi
+            |: SM  Q
+            |>:;
+            |:MPS
+            |>~${a}$$Q3$$Q3
+            |:M BWB  r  r
+        """.trimMargin(),
+    )
+
+    @Test
+    fun templatesMultipleSubBlocks() = assertTokenization(
+        $$"""
+            |>$$Q3
+            |:  LQ
+            |>~Outer
+            |:M     Q
+            |>:do {
+            |:M WSBS
+            |>  :let a = $$Q3
+            |: SM  WSWSPS  ES
+            |>    :~Inner
+            |:   SMP    WS
+            |>    ::do { }
+            |:   SMP WSBSBS
+            |>    // Comment
+            |:   S         CS
+            |>    ::do {
+            |:   SMP WSBS
+            |>      :~foo
+            |:     SMP  WS
+            |>    ::}
+            |:   SMPBS
+            |>  :;
+            |: SMPS
+            |>  ~${a}
+            |: SM BWBQ
+            |>:}
+            |:MES
+            |>~End
+            |:M  Q
+        """.trimMargin(),
+    )
+
+    @Test
     fun lineCommentEnds() = assertTokenization(
         """
         >// line comment
