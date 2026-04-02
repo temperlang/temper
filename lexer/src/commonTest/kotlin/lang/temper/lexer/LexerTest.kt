@@ -740,6 +740,8 @@ class LexerTest {
             |:  LQ
             |>:let a = $$Q3
             |:M  WSWSPS  LQ
+            |>  :let b = 1;
+            |: SM  WSWSPSNPS
             |>  ~hi
             |: SM  Q
             |>:;
