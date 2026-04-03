@@ -734,6 +734,50 @@ class LexerTest {
     )
 
     @Test
+    fun templatesNested() = assertTokenization(
+        $$"""
+            |>$$Q3
+            |:  LQ
+            |>:let a = $$Q3
+            |:M  WSWSPS  EQ
+            |>  ~hi
+            |: SM  Q
+            |>:;
+            |:MPS
+            |>~${a}$$Q3$$Q3
+            |:M BWB  r  r
+        """.trimMargin(),
+        wantedErrors = listOf(
+            "13-16: `\"\"\"`: Multi-quoted string nesting not yet supported!",
+        ),
+    )
+
+    @Test
+    fun templatesNestedInsideBlock() = assertTokenization(
+        $$"""
+            |>$$Q3
+            |:  LQ
+            |>:do {
+            |:M WSBS
+            |>  :let a = $$Q3
+            |: SM  WSWSPS  EQ
+            |>    ~hi
+            |:   SM  Q
+            |>  :;
+            |: SMPS
+            |>:}
+            |:MES
+            |>~${a}$$Q3}$$Q3
+            |:M BWB  rb  r
+        """.trimMargin(),
+        wantedErrors = listOf(
+            "21-24: `$Q3`: Multi-quoted string nesting not yet supported!",
+            "39-40: `}`: Close bracket matches no open bracket!",
+            "46: Close bracket matches no open bracket!",
+        ),
+    )
+
+    @Test
     fun lineCommentEnds() = assertTokenization(
         """
         >// line comment

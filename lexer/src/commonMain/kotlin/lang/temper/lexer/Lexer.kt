@@ -458,6 +458,8 @@ class Lexer(
                             findEndOfRun(kind)
                         }
                         LexicalDefinitions.CharKind.Quote -> {
+                            var isMultiQuote = false
+                            val oldContentLineKind = contentLineKind
                             when (cp0) {
                                 C_SQ, C_BQ -> {
                                     updateTokenClusters(end, end + 1, TokenType.LeftDelimiter)
@@ -471,6 +473,7 @@ class Lexer(
                                         }
                                     }
                                     val delimLength = if (nQuoteChars == MQ_DELIMITER_LENGTH) {
+                                        isMultiQuote = true
                                         MQ_DELIMITER_LENGTH
                                     } else { // Process "" as two separate single-char clusters
                                         1
@@ -479,7 +482,19 @@ class Lexer(
                                 }
                                 else -> error("$cp0")
                             }
-                            currentTokenType = if (open == OpenTokenType.STRING) {
+                            currentTokenType = if (
+                                isMultiQuote && oldContentLineKind == TokenCluster.ContentLineKind.StmtFragment
+                            ) {
+                                // Explicitly prohibit nested multiquote for now.
+                                // We don't handle this in token cluster because it depends on other than than `top`
+                                // context.
+                                error(
+                                    start,
+                                    end,
+                                    messageTemplate = MessageTemplate.UnsupportedNestedMultiQuote,
+                                )
+                                TokenType.Error
+                            } else if (open == OpenTokenType.STRING) {
                                 TokenType.LeftDelimiter
                             } else {
                                 TokenType.Error
@@ -1049,7 +1064,7 @@ class Lexer(
                 TokenCluster.Chunk.Other,
                 -> error("$delimiterStack")
             }
-            debug { ". . after updating token clusters, open=$open, end=$end, DS=$delimiterStack" }
+            debug { ". . after updating token clusters, open=$open, end=$end, DS=$delimiterStack, SS=$scriptletStack" }
         }
     }
 

@@ -268,7 +268,7 @@ object TokenCluster {
             transitions[Chunk.UnicodeLeft, Chunk.RightCurly] = 0 or Change.Pop
             transitions[Chunk.UnicodeLeft, Chunk.NoElement] = 0 or Change.Syn or Change.Reproc
             transitions[Chunk.LeftCurly, Chunk.Quote] = 0 or Change.Push
-            transitions[Chunk.LeftCurly, Chunk.MultiQuote] = 0 or Change.Push
+            transitions[Chunk.LeftCurly, Chunk.MultiQuote] = 0 or Change.Push or Change.UnsetCL
             transitions[Chunk.LeftCurly, Chunk.Backtick] = 0 or Change.Push
             transitions[Chunk.LeftCurly, Chunk.DollarLeft] = 0 or Change.Push
             transitions[Chunk.LeftCurly, Chunk.LeftCurly] = 0 or Change.Push
