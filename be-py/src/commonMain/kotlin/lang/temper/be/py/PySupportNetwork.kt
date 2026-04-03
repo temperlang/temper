@@ -498,6 +498,13 @@ val StringBuilderAppendCodePoint = PyInlineSupportCode(
         )
     },
 )
+val StringBuilderClear = PyInlineSupportCode(
+    "StringBuilder::clear",
+    arity = 1,
+    needsSelf = true,
+) { pos, args ->
+    args[0].method("clear", pos = pos)
+}
 val StringBuilderToString = PyInlineSupportCode(
     "StringBuilder::toString",
     arity = 1,
@@ -1199,6 +1206,7 @@ private val pyConnections = mapOf(
     "StringBuilder::append" to StringBuilderAppend,
     "StringBuilder::appendBetween" to StringBuilderAppendBetween,
     "StringBuilder::appendCodePoint" to StringBuilderAppendCodePoint,
+    "StringBuilder::clear" to StringBuilderClear,
     "StringBuilder::constructor" to StringBuilderConstructor,
     "StringBuilder::toString" to StringBuilderToString,
     "StringIndex::none" to StringIndexNone,

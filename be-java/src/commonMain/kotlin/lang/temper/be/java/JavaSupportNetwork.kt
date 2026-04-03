@@ -904,6 +904,11 @@ val JavaLang.stringBuilderAppendBetween by receiver {
 val JavaLang.stringBuilderAppendCodePoint by receiver {
     separateCode(temperStringBuilderAppendCodePoint)
 }
+val JavaLang.stringBuilderClear by receiver {
+    inlineSupport("StringBuilder::clear", arity = 1, needsSelf = true) { pos, args ->
+        args[0].method("setLength", J.IntegerLiteral(pos.rightEdge, 0), pos = pos)
+    }
+}
 val JavaLang.stringBuilderToString by receiver {
     inlineSupport("StringBuilder::toString", arity = 1, needsSelf = true) { pos, args ->
         args[0].method("toString", pos = pos)
@@ -1575,6 +1580,7 @@ private val connections: Map<String, ((JavaLang) -> SupportCode)> = mapOf(
     "StringBuilder::append" to { it.stringBuilderAppend },
     "StringBuilder::appendBetween" to { it.stringBuilderAppendBetween },
     "StringBuilder::appendCodePoint" to { it.stringBuilderAppendCodePoint },
+    "StringBuilder::clear" to { it.stringBuilderClear },
     "StringBuilder::constructor" to { it.stringBuilderConstructor },
     "StringBuilder::toString" to { it.stringBuilderToString },
     "StringIndex::none" to { it.stringIndexNone },

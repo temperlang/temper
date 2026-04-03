@@ -2809,6 +2809,28 @@ without creating a new backing array for the substring.
 
 <!-- /snippet: type/StringBuilder/method/appendBetween -->
 
+<!-- snippet: type/StringBuilder/method/clear -->
+
+<a name="type&#45;StringBuilder&#45;method&#45;clear" class="snippet-anchor-name"></a>
+
+#### `StringBuilder.clear`
+
+<!-- snippet: type/StringBuilder/method/clear/sig -->
+
+<a name="type&#45;StringBuilder&#45;method&#45;clear&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*StringBuilder*](#type-StringBuilder)`):` [*Void*](#type-Void)
+
+<!-- /snippet: type/StringBuilder/method/clear/sig -->
+
+<!-- snippet: type/StringBuilder/method/clear/commentary -->
+
+<a name="type&#45;StringBuilder&#45;method&#45;clear&#45;commentary" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/StringBuilder/method/clear/commentary -->
+
+<!-- /snippet: type/StringBuilder/method/clear -->
+
 <!-- snippet: type/StringBuilder/method/toString -->
 
 <a name="type&#45;StringBuilder&#45;method&#45;toString" class="snippet-anchor-name"></a>

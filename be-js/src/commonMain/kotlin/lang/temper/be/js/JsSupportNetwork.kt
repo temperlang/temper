@@ -310,6 +310,7 @@ internal object JsSupportNetwork : SupportNetwork {
             "StringBuilder::constructor" -> stringBuilderConstructorExpander
             "StringBuilder::append" -> stringBuilderAppendExpander
             "StringBuilder::appendBetween" -> stringBuilderAppendBetweenExpander
+            "StringBuilder::clear" -> stringBuilderClearExpander
             "StringBuilder::toString" -> stringBuilderToStringExpander
             // Ignore others
             else -> null
@@ -1045,16 +1046,18 @@ private val stringBuilderAppendExpander: Inliner =
         } else {
             val sbPos = stringBuilder?.pos ?: pos.leftEdge
             val ssPos = substring?.pos ?: pos.rightEdge
-            Js.InfixExpression(
-                pos,
-                Js.MemberExpression(
-                    sbPos,
-                    stringBuilder ?: Js.Identifier(sbPos, JsIdentifierName("stringBuilder"), null),
-                    Js.NumericLiteral(sbPos.rightEdge, 0),
-                    computed = true,
+            voidExpr(
+                Js.InfixExpression(
+                    pos,
+                    Js.MemberExpression(
+                        sbPos,
+                        stringBuilder ?: Js.Identifier(sbPos, JsIdentifierName("stringBuilder"), null),
+                        Js.NumericLiteral(sbPos.rightEdge, 0),
+                        computed = true,
+                    ),
+                    Js.Operator(ssPos.leftEdge, "+="),
+                    substring ?: Js.Identifier(ssPos, JsIdentifierName("substring"), null),
                 ),
-                Js.Operator(ssPos.leftEdge, "+="),
-                substring ?: Js.Identifier(ssPos, JsIdentifierName("substring"), null),
             )
         }
     }
@@ -1097,6 +1100,37 @@ private val stringBuilderAppendBetweenExpander: Inliner =
             )
         }
     }
+
+/** this.clear() -> void (this[0] = "") */
+private val stringBuilderClearExpander: Inliner =
+    { pos: Position, args: List<Js.Tree>, strict: Boolean, _ ->
+        val stringBuilder = args.getOrNull(0) as? Js.Expression
+        if (strict && (args.size != 1 || stringBuilder == null)) {
+            garbageExpression(pos, "need 1 argument for StringBuilder::clear")
+        } else {
+            val sbPos = stringBuilder?.pos ?: pos.leftEdge
+            val rPos = pos.rightEdge
+            voidExpr(
+                Js.InfixExpression(
+                    pos,
+                    Js.MemberExpression(
+                        sbPos,
+                        stringBuilder ?: Js.Identifier(sbPos, JsIdentifierName("stringBuilder"), null),
+                        Js.NumericLiteral(sbPos.rightEdge, 0),
+                        computed = true,
+                    ),
+                    Js.Operator(rPos, "="),
+                    Js.StringLiteral(rPos, ""),
+                ),
+            )
+        }
+    }
+
+internal fun voidExpr(e: Js.Expression) = Js.UnaryExpression(
+    e.pos,
+    Js.Operator(e.pos.leftEdge, "void"),
+    e,
+)
 
 /** this.toString() -> this[0] */
 private val stringBuilderToStringExpander: Inliner =

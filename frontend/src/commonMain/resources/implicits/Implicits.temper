@@ -756,6 +756,11 @@ export class StringBuilder {
     }
   }
 
+  @connected("StringBuilder::clear")
+  public clear(): Void {
+    this.substrings.clear();
+  }
+
   @connected("StringBuilder::toString")
   public toString(): String {
     this.substrings.join("") { substring: String => substring }

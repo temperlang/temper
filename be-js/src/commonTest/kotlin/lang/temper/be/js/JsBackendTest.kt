@@ -1664,6 +1664,7 @@ class JsBackendTest {
             |      ```
             |      let sb = new StringBuilder();
             |      sb.append("Hello, ");
+            |      sb.clear();
             |      sb.append("World");
             |      sb.append("!");
             |      console.log(sb.toString());
@@ -1686,9 +1687,10 @@ class JsBackendTest {
             |          let t_0 = globalConsole_0;
             |          /** @type {globalThis.Array<string>} */
             |          const sb_0 = [""];
-            |          sb_0[0] += "Hello, ";
-            |          sb_0[0] += "World";
-            |          sb_0[0] += "!";
+            |          void (sb_0[0] += "Hello, ");
+            |          void (sb_0[0] = "");
+            |          void (sb_0[0] += "World");
+            |          void (sb_0[0] += "!");
             |          t_0.log(sb_0[0]);
             |
             |          ```

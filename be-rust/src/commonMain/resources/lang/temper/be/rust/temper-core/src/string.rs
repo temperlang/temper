@@ -61,6 +61,11 @@ pub mod builder {
         Ok(())
     }
 
+    pub fn clear(builder: &Arc<RwLock<String>>) {
+        let mut builder = builder.write().unwrap();
+        builder.clear();
+    }
+
     pub fn to_string(builder: &Arc<RwLock<String>>) -> Arc<String> {
         let builder = builder.read().unwrap();
         Arc::new(builder.clone())
