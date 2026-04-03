@@ -180,7 +180,7 @@ def float_gt_eq(left: float, right: float) -> bool:
 
 
 def float_gt(left: float, right: float) -> bool:
-    "Checks if left <= right, caring about sign of zeros."
+    "Checks if left > right, caring about sign of zeros."
     return float_cmp(left, right) > 0
 
 
@@ -216,7 +216,7 @@ def generic_lt_eq(left: C, right: C) -> bool:
 
 
 def generic_lt(left: C, right: C) -> bool:
-    "Checks if two left <=right, caring about the sign of zeros of floats."
+    "Checks if left < right, caring about the sign of zeros of floats."
     if isinstance(left, float) and isinstance(right, float):
         return float_lt(left, right)
     return left < right
@@ -251,9 +251,12 @@ def arith_int_mod(dividend: int, divisor: int) -> int:
     arith_int_mod(5, 3) == 2
     arith_int_mod(-5, -3) == -2
     arith_int_mod(5, -3) == 2
-    arith_int_mod(-5, -3) == -2
+    arith_int_mod(-5, 3) == -2
     """
-    return dividend - divisor * int(dividend / divisor)
+    q = dividend // divisor
+    if (dividend ^ divisor) < 0 and q * divisor != dividend:
+        q += 1
+    return dividend - divisor * q
 
 def arith_bit_shl32(n: int, shift: int) -> int:
     """
@@ -435,7 +438,7 @@ class DenseBitVector(object):
 
     def __bool__(self) -> bool:
         "Test if any bit is set."
-        return bool(rb"\0" in self._bytearray)
+        return any(b != 0 for b in self._bytearray)
 
     def __bytes__(self) -> bytes:
         "Convert the bit vector into a read-only bytes value."
@@ -544,7 +547,10 @@ def int64_div(a: int, b: int) -> int:
     # Mostly concerned with b == -1, but maybe evil `a` snuck in from outside?
     if a <= -0x8000_0000_0000_0000 and b < 0:
         return int64_clamp(int(a / b))
-    return int(a / b)
+    r = a // b
+    if (a ^ b) < 0 and r * b != a:
+        r += 1
+    return r
 
 
 def int64_mul(a: int, b: int) -> int:
@@ -568,14 +574,14 @@ def int64_to_float64(value: int) -> float:
     raise OverflowError()
 
 
-def int64_to_int32(value: int) -> float:
+def int64_to_int32(value: int) -> int:
     "Implements connected method Int64::toInt32."
     if -0x8000_0000 <= value <= 0x7FFF_FFFF:
         return int(value)
     raise OverflowError()
 
 
-def int64_to_int32_unsafe(value: int) -> float:
+def int64_to_int32_unsafe(value: int) -> int:
     "Implements connected method Int64::toInt32Unsafe."
     return int_clamp(int(value))
 
@@ -597,7 +603,7 @@ def float64_near(
     y: float,
     rel_tol: Optional[float] = Unset,
     abs_tol: Optional[float] = Unset,
-) -> float:
+) -> bool:
     "Implements connected method Float64::near."
     # This exactly matches isclose behavior, but matching our forwarding our
     # optionals to python named args is awkward, so duplicate the logic.
@@ -679,7 +685,7 @@ def float64_to_string(value: float) -> str:
 
 
 def boolean_to_string(value: bool) -> str:
-    "Turns a stirng into a boolean (lowercase like temper)."
+    "Turns a boolean into a string (lowercase like temper)."
     return "true" if value else "false"
 
 
@@ -770,7 +776,7 @@ def require_string_index(i: int) -> int:
 def require_no_string_index(i: int) -> int:
     "Checked cast from i to NoStringIndex, a negative int"
     if i < 0:
-        return -1
+        return i
     raise AssertionError(f"require_string_index; {i!r} not < 0 ")
 
 
@@ -807,7 +813,7 @@ def string_to_float64(string: str) -> float:
     return result
 
 
-def string_to_int32(string: str, radix: Optional[int] = None) -> float:
+def string_to_int32(string: str, radix: Optional[int] = None) -> int:
     if radix == 0:
         # Other values we reject are checked already.
         raise ValueError()
@@ -817,7 +823,7 @@ def string_to_int32(string: str, radix: Optional[int] = None) -> float:
     raise OverflowError()
 
 
-def string_to_int64(string: str, radix: Optional[int] = None) -> float:
+def string_to_int64(string: str, radix: Optional[int] = None) -> int:
     if radix == 0:
         # Other values we reject are checked already.
         raise ValueError()

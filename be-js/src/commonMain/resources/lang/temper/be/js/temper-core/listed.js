@@ -238,7 +238,7 @@ export const listBuilderReverse = (ls) => {
  * @param {T} newValue
  */
 export const listBuilderSet = (ls, i, newValue) => {
-  if (0 <= i && i <= ls.length) {
+  if (0 <= i && i < ls.length) {
     ls[i] = newValue;
   }
 }

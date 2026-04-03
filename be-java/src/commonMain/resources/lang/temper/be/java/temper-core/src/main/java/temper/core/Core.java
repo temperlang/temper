@@ -318,7 +318,7 @@ public final class Core {
         double rel = relTol == null ? 1e-9 : relTol;
         double abs = absTol == null ? 0.0 : absTol;
         double margin = Math.max(Math.max(Math.abs(x), Math.abs(y)) * rel, abs);
-        return Math.abs(x - y) < margin;
+        return Math.abs(x - y) <= margin;
     }
 
     /**

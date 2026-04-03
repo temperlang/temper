@@ -381,7 +381,7 @@ internal fun Rust.GenericParam.toArg(): Rust.Id {
     return when (this) {
         is Rust.Id -> this
         is Rust.TypeParam -> id
-        is Rust.PathSegments -> TODO() // needed?
+        is Rust.PathSegments -> segments.last() as Rust.Id
     }.deepCopy()
 }
 

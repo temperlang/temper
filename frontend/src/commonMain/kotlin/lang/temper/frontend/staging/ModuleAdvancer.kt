@@ -1121,12 +1121,16 @@ private fun checkForImportCycles(
     if (pendingByImporter.isEmpty()) { return null }
     for (importer in pendingByImporter.keys) {
         val loc = importer.loc
+        val visited = mutableSetOf<Any>()
         fun lookForCycle(possibleCycle: Cons.NotEmpty<PendingImport>): Cons.NotEmpty<PendingImport>? {
             val import = possibleCycle.head
             val exporter = import.exporter
             val exporterLoc = exporter.loc
             if (exporterLoc == loc) {
                 return possibleCycle
+            }
+            if (!visited.add(exporterLoc)) {
+                return null
             }
             // For Modules, importers are also exporters
             val importsForExporter = pendingByImporter[

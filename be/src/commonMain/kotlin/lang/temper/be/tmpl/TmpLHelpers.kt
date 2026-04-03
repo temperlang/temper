@@ -529,7 +529,31 @@ val TmpL.Type.withoutBubbleOrNull: TmpL.Type get() = this.withoutAtom {
 }
 
 fun TmpL.Type.withoutAtom(predicate: (TmpL.Type) -> Boolean): TmpL.Type = when (this) {
-    is TmpL.TypeIntersection -> this
+    is TmpL.TypeIntersection -> {
+        var hasDifferences = false
+        val typesWithout: List<TmpL.Type> = buildList {
+            types.mapNotNullTo(this@buildList) {
+                val t = it.withoutAtom(predicate)
+                if (t is TmpL.NeverType) {
+                    hasDifferences = true
+                    null
+                } else {
+                    if (t !== it) { hasDifferences = true }
+                    t
+                }
+            }
+        }
+
+        if (hasDifferences) {
+            when (typesWithout.size) {
+                0 -> TmpL.NeverType(pos)
+                1 -> typesWithout.first().deepCopy()
+                else -> TmpL.TypeIntersection(pos, typesWithout.map { it.deepCopy() })
+            }
+        } else {
+            this
+        }
+    }
     is TmpL.TypeUnion -> {
         var hasDifferences = false
         val typesWithout: List<TmpL.Type> = buildList {

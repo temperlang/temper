@@ -1198,7 +1198,7 @@ class Lexer(
                         // If a '<' is adjacent to a '<' or '=', treat it as part of a
                         // larger shift or comparison operator, or close tag start marker.
                         val before = text[end - 1]
-                        val after = if (end + 1 < limit) { text[end - 1] } else { '\u0000' }
+                        val after = if (end + 1 < limit) { text[end + 1] } else { '\u0000' }
                         if (
                             !(before == '=' || before == '<' || after == '=' || after == '<')
                         ) {

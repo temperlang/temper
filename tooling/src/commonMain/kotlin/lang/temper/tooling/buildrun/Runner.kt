@@ -157,5 +157,6 @@ internal class SynchronizedPrintBuffer {
     @Synchronized
     fun append(str: String) { buffer.append(str) }
 
+    @Synchronized
     override fun toString(): String = "$buffer"
 }

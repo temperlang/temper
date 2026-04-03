@@ -1985,7 +1985,7 @@ class RustTranslator(
             is TmpL.GetProperty -> translateGetProperty(expression, avoidClone = avoidClone)
             is TmpL.InstanceOfExpression -> translateInstanceOfExpression(expression)
             is TmpL.InfixOperation -> translateInfixOperation(expression)
-            is TmpL.PrefixOperation -> TODO()
+            is TmpL.PrefixOperation -> translatePrefixOperation(expression)
             is TmpL.Reference -> translateReference(expression, avoidClone = avoidClone)
             is TmpL.RestParameterCountExpression -> TODO()
             is TmpL.RestParameterExpression -> TODO()
@@ -2090,9 +2090,12 @@ class RustTranslator(
         ).wrapArcType()
     }
 
-    private fun translateGarbage(garbage: TmpL.Garbage): Rust.Call {
-        val pos = garbage.pos
-        return "panic!".toId(pos).call(listOf(Rust.StringLiteral(pos, "Garbage")))
+    private fun translateGarbage(garbage: TmpL.Garbage): Rust.Expr = run {
+        translateUnsupported(garbage.pos, garbage.toString())
+    }
+
+    private fun translateGarbageStatement(garbage: TmpL.GarbageStatement): Rust.ExprStatement = run {
+        translateUnsupportedStatement(garbage)
     }
 
     private fun translateGetProperty(expression: TmpL.GetProperty, avoidClone: Boolean): Rust.Expr {
@@ -2339,8 +2342,8 @@ class RustTranslator(
         return Rust.Operator(
             op.pos,
             operator = when (op.tmpLOperator) {
-                TmpLOperator.AmpAmp -> TODO() // RustOperator.LogicalAnd
-                TmpLOperator.BarBar -> TODO() // RustOperator.LogicalOr
+                TmpLOperator.AmpAmp -> RustOperator.LogicalAnd
+                TmpLOperator.BarBar -> RustOperator.LogicalOr
                 TmpLOperator.EqEqInt -> RustOperator.Equals
                 TmpLOperator.GeInt -> RustOperator.GreaterEquals
                 TmpLOperator.GtInt -> RustOperator.GreaterThan
@@ -2348,6 +2351,18 @@ class RustTranslator(
                 TmpLOperator.LtInt -> RustOperator.LessThan
                 TmpLOperator.PlusInt -> RustOperator.Addition
             },
+        )
+    }
+
+    private fun translatePrefixOperation(expr: TmpL.PrefixOperation): Rust.Expr {
+        val operator = when (expr.op.tmpLOperator) {
+            TmpLOperator.Bang -> RustOperator.BoolComplement
+        }
+        return Rust.Operation(
+            expr.pos,
+            left = null,
+            operator = Rust.Operator(expr.op.pos, operator),
+            right = translateExpression(expr.operand),
         )
     }
 
@@ -2588,8 +2603,8 @@ class RustTranslator(
         return when (member) {
             is TmpL.Getter -> translateGetterId(member)
             is TmpL.Setter -> translateSetterId(member)
-            is TmpL.NormalMethod -> translateNormalishMethodId(member)
-            else -> TODO()
+            is TmpL.Method -> translateNormalishMethodId(member)
+            else -> error("unexpected member type for translateMethodId: $member")
         }
     }
 
@@ -2603,7 +2618,7 @@ class RustTranslator(
         typePub: Rust.VisibilityPub? = null,
     ): List<Rust.Item> {
         return when (member) {
-            is TmpL.GarbageStatement -> TODO()
+            is TmpL.GarbageStatement -> translateGarbageStatement(member).toItem() // won't compile but that's ok
             // So far only bother with returnType forwarding for instance methods. Will we need more later?
             is TmpL.Getter -> translateGetter(member, block = block, forTrait = forTrait, returnType = returnType)
             is TmpL.Setter -> translateSetter(member, block = block, forTrait = forTrait) // don't expect return type
@@ -2892,7 +2907,10 @@ class RustTranslator(
         return when (statement.left.property) {
             is TmpL.ExternalPropertyId -> {
                 val ref = statement.left
-                val subject = translateExpression((ref.subject as? TmpL.Expression) ?: TODO(), avoidClone = true)
+                val subject = when (val subj = ref.subject) {
+                    is TmpL.Expression -> translateExpression(subj, avoidClone = true)
+                    is TmpL.TypeName -> translateTypeName(subj) // wrong but also shouldn't happen
+                }
                 val setter = "set_${translatePropertyId(ref.property)}"
                 subject.methodCall(setter, listOf(value))
             }
@@ -2919,27 +2937,33 @@ class RustTranslator(
         try {
             return when (statement) {
                 is TmpL.Assignment -> return translateAssignment(statement)
-                is TmpL.BoilerplateCodeFoldEnd -> TODO()
-                is TmpL.BoilerplateCodeFoldStart -> TODO()
+                is TmpL.BoilerplateCodeFoldEnd -> translateUnsupportedStatement(statement)
+                is TmpL.BoilerplateCodeFoldStart -> translateUnsupportedStatement(statement)
                 is TmpL.BreakStatement -> translateBreakStatement(statement)
                 is TmpL.ContinueStatement -> translateContinueStatement(statement)
-                is TmpL.EmbeddedComment -> TODO()
+                is TmpL.EmbeddedComment -> translateUnsupportedStatement(statement)
                 is TmpL.ExpressionStatement -> translateExpressionStatement(statement)
-                is TmpL.GarbageStatement -> TODO()
+                is TmpL.GarbageStatement -> translateGarbageStatement(statement)
                 is TmpL.HandlerScope -> error("handled elsewhere")
                 is TmpL.LocalDeclaration -> return translateModuleOrLocalDeclaration(statement)
-                is TmpL.LocalFunctionDeclaration -> TODO() // handled elsewhere
+                is TmpL.LocalFunctionDeclaration -> error("handled elsewhere")
                 is TmpL.ModuleInitFailed -> translateModuleInitFailed(statement)
                 is TmpL.BlockStatement -> translateBlock(statement)
                 is TmpL.ComputedJumpStatement -> translateComputedJumpStatement(statement)
                 is TmpL.IfStatement -> return translateIfStatement(statement)
                 is TmpL.LabeledStatement -> return translateLabeledStatement(statement)
-                is TmpL.TryStatement -> TODO()
+                // TryStatement and ThrowStatement are only generated by CatchBubble strategy;
+                // Rust uses IfHandlerScopeVar, so these should never appear.
+                is TmpL.TryStatement -> error("unexpected TryStatement: Rust uses IfHandlerScopeVar, not CatchBubble")
                 is TmpL.WhileStatement -> translateWhileStatement(statement)
                 is TmpL.ReturnStatement -> return translateReturnStatement(statement)
                 is TmpL.SetProperty -> translateSetProperty(statement)
-                is TmpL.ThrowStatement -> TODO()
-                is TmpL.YieldStatement -> TODO()
+                is TmpL.ThrowStatement ->
+                    error("unexpected ThrowStatement: Rust uses IfHandlerScopeVar, not CatchBubble")
+                // YieldStatement is only generated by TranslateToGenerator strategy;
+                // Rust uses TranslateToRegularFunction, which deletes yields during conversion.
+                is TmpL.YieldStatement ->
+                    error("unexpected YieldStatement: Rust uses TranslateToRegularFunction, not TranslateToGenerator")
             }.let { listOf(it) }
         } catch (_: NeverRefException) {
             // No statements referencing things that are typed never.
@@ -3047,11 +3071,19 @@ class RustTranslator(
         // Otherwise handle non-connected types.
         return when (type) {
             is TmpL.FunctionType -> translateFunctionType(type)
-            is TmpL.TypeIntersection -> TODO()
+            is TmpL.TypeIntersection -> when {
+                // This branch is never expected, so some this translation is untested.
+                type.types.isEmpty() -> ANY_NAME.toId(pos)
+                type.types.size == 1 -> translateType(type.types.first(), inExpr = inExpr, isFlex = isFlex)
+                else -> Rust.ImplTraitType(
+                    pos,
+                    bounds = type.types.map { translateType(it, inExpr = inExpr, isFlex = isFlex) as Rust.Path },
+                )
+            }
             is TmpL.TypeUnion -> translateTypeUnion(type, isFlex = isFlex)
             is TmpL.GarbageType -> "()".toId(pos)
             is TmpL.NominalType -> translateTypeNominal(type, inExpr = inExpr, isFlex = isFlex)
-            is TmpL.BubbleType -> TODO()
+            is TmpL.BubbleType -> "()".toId(pos)
             is TmpL.NeverType -> "!".toId(pos) // except not actually supported in stable rust
             is TmpL.TopType -> ANY_NAME.toId(pos)
         }
@@ -3307,6 +3339,18 @@ class RustTranslator(
             ),
             args = listOf(),
         )
+    }
+
+    private fun translateUnsupported(pos: Position, diagnostic: String): Rust.Expr = run {
+        "panic!".toId(pos).call(listOf(Rust.StringLiteral(pos, "Unsupported: $diagnostic")))
+    }
+
+    private fun translateUnsupported(tree: TmpL.Tree): Rust.Expr = run {
+        translateUnsupported(tree.pos, tree.toString())
+    }
+
+    private fun translateUnsupportedStatement(statement: TmpL.Statement): Rust.ExprStatement = run {
+        Rust.ExprStatement(statement.pos, translateUnsupported(statement))
     }
 
     private fun translateValueReference(expression: TmpL.ValueReference): Rust.Expr {
