@@ -565,21 +565,22 @@ internal data class ReadsAndWrites(
                     val namesReadInOrAfterPath = namesUsedInOrAfter[pathIndex] ?: emptySet()
                     for (preceder in preceders) {
                         val atEndOfP = atEnd[preceder.pathIndex] ?: emptyMap()
-                        forTwoMapsMutatingLeft(atEndInProgress, atEndOfP) { e ->
-                            if (e.key !in namesReadInOrAfterPath) { return@forTwoMapsMutatingLeft }
-                            atEndInProgress[e.key] = when (e) {
-                                is ZippedEntry.Both -> {
-                                    // Reuse left set if right is a subset (common case)
-                                    if (e.left.containsAll(e.right)) {
-                                        e.left
-                                    } else if (e.right.containsAll(e.left)) {
-                                        e.right
-                                    } else {
-                                        e.left + e.right
-                                    }
+                        // Merge atEndOfP into atEndInProgress directly, avoiding
+                        // forTwoMapsMutatingLeft which allocates a tracking set and
+                        // ZippedEntry objects per entry (~53M allocations for large functions).
+                        for ((name, rightWrites) in atEndOfP) {
+                            if (name !in namesReadInOrAfterPath) continue
+                            val leftWrites = atEndInProgress[name]
+                            if (leftWrites == null) {
+                                atEndInProgress[name] = rightWrites
+                            } else if (leftWrites !== rightWrites) {
+                                if (leftWrites.containsAll(rightWrites)) {
+                                    // left already contains everything
+                                } else if (rightWrites.containsAll(leftWrites)) {
+                                    atEndInProgress[name] = rightWrites
+                                } else {
+                                    atEndInProgress[name] = leftWrites + rightWrites
                                 }
-                                is ZippedEntry.LeftOnly -> e.left
-                                is ZippedEntry.RightOnly -> e.right
                             }
                         }
                     }
