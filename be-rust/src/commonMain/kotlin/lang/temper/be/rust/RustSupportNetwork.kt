@@ -683,29 +683,12 @@ private class EqNeGeneric(
 private val eqGeneric = EqNeGeneric("EqGeneric", BuiltinOperatorId.EqGeneric, RustOperator.Equals)
 private val eqIntInt = Infix("EqIntInt", BuiltinOperatorId.EqIntInt, RustOperator.Equals)
 private val eqStrStr = CmpStrStr("EqStrStr", BuiltinOperatorId.EqStrStr, RustOperator.Equals)
-private val float64Abs = MethodCall("Float64::abs", "abs")
-private val float64Acos = MethodCall("Float64::acos", "acos")
-private val float64Asin = MethodCall("Float64::asin", "asin")
-private val float64Atan = MethodCall("Float64::atan", "atan")
-private val float64Atan2 = MethodCall("Float64::atan2", "atan2")
-private val float64Ceil = MethodCall("Float64::ceil", "ceil")
-private val float64Cos = MethodCall("Float64::cos", "cos")
-private val float64Cosh = MethodCall("Float64::cosh", "cosh")
-private val float64Exp = MethodCall("Float64::exp", "exp")
 private val float64Expm1 = MethodCall("Float64::expm1", "exp_m1")
-private val float64Floor = MethodCall("Float64::floor", "floor")
 private val float64Log = MethodCall("Float64::log", "ln")
-private val float64Log10 = MethodCall("Float64::log10", "log10")
 private val float64Log1p = MethodCall("Float64::log1p", "ln_1p")
 private val float64Max = FunctionCall("Float64::max", "temper_core::float64::max")
 private val float64Min = FunctionCall("Float64::min", "temper_core::float64::min")
 private val float64Near = FunctionCall("Float64::near", "temper_core::float64::near")
-private val float64Round = MethodCall("Float64::round", "round")
-private val float64Sin = MethodCall("Float64::sin", "sin")
-private val float64Sinh = MethodCall("Float64::sinh", "sinh")
-private val float64Sqrt = MethodCall("Float64::sqrt", "sqrt")
-private val float64Tan = MethodCall("Float64::tan", "tan")
-private val float64Tanh = MethodCall("Float64::tanh", "tanh")
 
 private object Float64E : Constant("Float64::e") {
     override fun value(pos: Position) = makePath(pos, "std", "f64", "consts", "E")
@@ -754,10 +737,6 @@ private object Int64ToInt32Unsafe : Cast("Int64::toInt32Unsafe") {
     override fun buildType(pos: Position) = "i32".toId(pos)
 }
 
-private val int32Max = MethodCall("Int32::max", "max")
-private val int32Min = MethodCall("Int32::min", "min")
-private val int64Max = MethodCall("Int64::max", "max")
-private val int64Min = MethodCall("Int64::min", "min")
 internal val intToString = FunctionCall("Int32::toString", "temper_core::int_to_string")
 private val int64ToFloat64 = FunctionCall("Int64::toFloat64", "temper_core::int64_to_float64")
 private val int64ToInt32 = FunctionCall("Int64::toInt32", "temper_core::int64_to_int32")
@@ -792,8 +771,6 @@ private val listedIsEmpty =
 private val listedJoin = FunctionCall("Listed::join", "temper_core::listed::join", hasGeneric = true, fnIndex = -1)
 private val listedLength = FunctionCall(listedTypes.map { "$it::length" }, "$LISTED_TRAIT_NAME::len", hasGeneric = true)
 private val listedMap = FunctionCall("Listed::map", "temper_core::listed::map", hasGeneric = true, fnIndex = -1)
-private val listedMapDropping =
-    FunctionCall("Listed::mapDropping", "temper_core::listed::map_dropping", hasGeneric = true, fnIndex = -1)
 private val listedReduce =
     FunctionCall("Listed::reduce", "temper_core::listed::reduce", hasGeneric = true, fnIndex = -1)
 private val listedReduceFrom =
@@ -996,8 +973,6 @@ private val stringBuilderAppendCodePoint =
 private val stringBuilderToString =
     FunctionCall("StringBuilder::toString", "temper_core::string::builder::to_string")
 
-private val stringIsEmpty = MethodCall("String::isEmpty", "is_empty")
-
 private object StringIndexNone : Constant("StringIndex::none") {
     override fun value(pos: Position) = "()".toId(pos)
 }
@@ -1034,30 +1009,13 @@ private val connectedReferences = listOf(
     dequeRemoveFirst,
     DoneResult,
     Empty,
-    float64Abs,
-    float64Acos,
-    float64Asin,
-    float64Atan,
-    float64Atan2,
-    float64Ceil,
-    float64Cos,
-    float64Cosh,
-    float64Exp,
     float64Expm1,
-    float64Floor,
     float64Log,
-    float64Log10,
     float64Log1p,
     float64Min,
     float64Max,
     float64Near,
-    float64Round,
     float64Sign,
-    float64Sin,
-    float64Sinh,
-    float64Sqrt,
-    float64Tan,
-    float64Tanh,
     Float64E,
     Float64Pi,
     float64ToInt,
@@ -1067,10 +1025,6 @@ private val connectedReferences = listOf(
     float64ToString,
     GetConsole,
     ignore,
-    int32Max,
-    int32Min,
-    int64Max,
-    int64Min,
     IntToFloat64,
     IntToInt64,
     intToString,
@@ -1096,7 +1050,6 @@ private val connectedReferences = listOf(
     listedJoin,
     listedLength,
     listedMap,
-    listedMapDropping,
     listedReduce,
     listedReduceFrom,
     listedSlice,
@@ -1150,7 +1103,6 @@ private val connectedReferences = listOf(
     stringToInt,
     stringToInt64,
     stringToString,
-    stringIsEmpty,
     StringBuilderConstructor,
     stringBuilderAppend,
     stringBuilderAppendBetween,
