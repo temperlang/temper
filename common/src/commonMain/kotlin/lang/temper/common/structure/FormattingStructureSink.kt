@@ -129,6 +129,14 @@ class FormattingStructureSink(
         valueRaw(jsonEscaper.escape(s))
     }
 
+    /**
+     * Emit a string value that has already been JSON-escaped (including quotes).
+     * This bypasses the jsonEscaper to avoid redundant escaping of cached content.
+     */
+    fun valuePreEscaped(alreadyEscaped: String) {
+        valueRaw(alreadyEscaped)
+    }
+
     override fun value(n: Int) = valueRaw("$n")
 
     override fun value(n: Long) = valueRaw("$n")

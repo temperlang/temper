@@ -84,7 +84,9 @@ internal fun interpretiveDanceStage(
     val env = module.topLevelBindings!!
     env.clearBeforeStaging()
 
+    var tIds = System.nanoTime()
     beforeInterpretation(root, env)
+    val tBefore = System.nanoTime()
 
     adjustDeclarationMetadataWithSinglyAssignedHints(root)
 
@@ -107,12 +109,14 @@ internal fun interpretiveDanceStage(
         replacementPolicy = replacementPolicy,
     )
 
+    val tInterp = System.nanoTime()
     val result = interpreter.interpretReuseEnvironment(
         root,
         env,
         InterpMode.Partial,
         mayWrapEnvironment = false,
     )
+    val tInterpDone = System.nanoTime()
 
     checkInterpreterReachedAll(root, stage, logSink)
 
@@ -127,10 +131,17 @@ internal fun interpretiveDanceStage(
         postPass.rewrite(root, callHelper.value)
     }
 
+    val tAfter = System.nanoTime()
     afterInterpretation(InterpretationContext(root, env, interpreter), result)
+    val tAfterDone = System.nanoTime()
 
     val (exports, declaredTypeShapes) =
         findExportsAndDeclaredTypes(module, root, env, stage)
+
+    val totalMs = (tAfterDone - tIds) / 1_000_000
+    if (totalMs > 100) {
+        System.err.println("[perf]     IDS $stage ${module.loc}: before=${(tBefore - tIds) / 1_000_000}ms interp=${(tInterpDone - tInterp) / 1_000_000}ms after=${(tAfterDone - tAfter) / 1_000_000}ms total=${totalMs}ms")
+    }
 
     // Fail loudly on violations of the "every StayLeaf stays" invariant.
     // TODO: We should probably pass all exports exported at any stage.  checkStayLeaves only

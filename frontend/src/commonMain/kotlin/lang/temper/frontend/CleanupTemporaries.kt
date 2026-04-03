@@ -98,6 +98,14 @@ internal class CleanupTemporaries private constructor(
     private var readsAndWrites: ReadsAndWrites = ReadsAndWrites.zeroValue
 
     /**
+     * Cached MaximalPaths from the previous iteration. Only invalidated when
+     * edits modify the control flow graph (SplitAssignment). Most edits
+     * (Replace, AddMetadata) only change tree node content, not control flow
+     * structure, so the MaximalPaths remain valid.
+     */
+    internal var cachedMaximalPaths: lang.temper.value.MaximalPaths? = null
+
+    /**
      * A required name is one that we must not eliminate.
      * Specifically, a name is required if it:
      * - is not an InternalModularName, or
@@ -117,7 +125,7 @@ internal class CleanupTemporaries private constructor(
             }
         }
         readsAndWrites =
-            ReadsAndWrites.forRoot(module, root, inputParameters, returnDecl)
+            ReadsAndWrites.forRoot(module, root, inputParameters, returnDecl, cachedMaximalPaths)
         requiredNames = computeRequiredNames(readsAndWrites)
 
         // Now, we try a sequence of strategies to find edits to perform.
@@ -155,6 +163,14 @@ internal class CleanupTemporaries private constructor(
         }
         if (edits.isEmpty()) {
             edits = flagProblems()
+        }
+
+        // Cache the MaximalPaths for reuse in subsequent iterations.
+        // Only SplitAssignment edits modify the control flow graph;
+        // Replace and AddMetadata only change tree node content.
+        cachedMaximalPaths = readsAndWrites.paths
+        if (edits.any { it is SplitAssignment }) {
+            cachedMaximalPaths = null
         }
 
         performEdits(edits)
@@ -1214,7 +1230,10 @@ internal class CleanupTemporaries private constructor(
 
                 val keepCleanupTemporariesData =
                     module.stableEnvironmentValue(StagingFlags.keepCleanupTemporariesData) == TBoolean.valueTrue
+                var iterations = 0
+                val tClean = System.nanoTime()
                 while (true) {
+                    iterations++
                     val dataTables = cleaner.clean()
                     val madeProgress = dataTables.edits.isNotEmpty()
                     if (keepCleanupTemporariesData) {
@@ -1223,6 +1242,10 @@ internal class CleanupTemporaries private constructor(
                     if (!madeProgress) {
                         break
                     }
+                }
+                val dtClean = (System.nanoTime() - tClean) / 1_000_000
+                if (dtClean > 200) {
+                    System.err.println("[perf]           CT root: ${iterations}i ${dtClean}ms cached=${cleaner.cachedMaximalPaths != null}")
                 }
             }
             snapshotId?.let { id ->

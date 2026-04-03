@@ -255,7 +255,9 @@ private fun stageLibraries(
         modulesPreBuild.all { module ->
             (module.stageCompleted ?: Stage.Lex) >= Stage.GenerateCode
         }
+    val tAdvance = System.nanoTime()
     moduleAdvancer.advanceModules(stopBefore = Stage.Run)
+    System.err.println("[perf] advanceModules: ${(System.nanoTime() - tAdvance) / 1_000_000}ms")
 
     val libraryConfigurationsByRoot = mutableMapOf<FilePath, LibraryConfiguration>()
     moduleAdvancer.getAllLibraryConfigurations().forEach {
@@ -321,6 +323,7 @@ fun doOneBuild(build: Build): BuildResult {
     val logLevelTracker = MaxLogLevelTracker()
     val cancelGroup = build.cancelGroup
 
+    val t0 = System.nanoTime()
     val (
         modulesInOrder,
         libraries,
@@ -330,6 +333,8 @@ fun doOneBuild(build: Build): BuildResult {
         sourceSnapshot,
     ) = stageLibraries(logLevelTracker, build)
         ?: return BuildInitFailed(ok = false, maxLogLevel = logLevelTracker.maxLogLevel)
+    val tStaged = System.nanoTime()
+    System.err.println("[perf] stageLibraries: ${(tStaged - t0) / 1_000_000}ms")
 
     if (priorBuildSuffices) {
         val maxLogLevel = logLevelTracker.maxLogLevel
@@ -501,11 +506,16 @@ fun doOneBuild(build: Build): BuildResult {
             ::cancelCheck,
         )
     }
+    val tBackendStart = System.nanoTime()
+    System.err.println("[perf] pre-backend setup: ${(tBackendStart - tStaged) / 1_000_000}ms")
     for (backendBucket in backendOrganization.backendBuckets) {
         for (backendId in backendBucket) {
+            val tBe = System.nanoTime()
             applyOneGroup(byBackendId[backendId] ?: continue)
+            System.err.println("[perf] backend $backendId: ${(System.nanoTime() - tBe) / 1_000_000}ms")
         }
     }
+    System.err.println("[perf] all backends: ${(System.nanoTime() - tBackendStart) / 1_000_000}ms")
 
     val dependencies: Map<BackendId, Dependencies<out Backend<*>>> = buildMap {
         for ((backendId, boundFactory) in byBackendId) {

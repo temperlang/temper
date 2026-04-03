@@ -33,15 +33,19 @@ fun <BACKEND : Backend<out BACKEND>> applyBackendsSynchronously(
             it.libraryRoot to Unit
         },
     )
+    var t = System.nanoTime()
     for (info in infos) {
         cancelCheck(null)
         info.backend.preAnalysis(preAnalysisData)
     }
+    System.err.println("[perf]   preAnalysis: ${(System.nanoTime() - t) / 1_000_000}ms")
 
+    t = System.nanoTime()
     for (info in infos) {
         cancelCheck(null)
         info.tmpL = info.backend.tentativeTmpL()
     }
+    System.err.println("[perf]   tentativeTmpL: ${(System.nanoTime() - t) / 1_000_000}ms")
 
     val finishData = SiblingData(
         backendsByRoot,
@@ -49,11 +53,14 @@ fun <BACKEND : Backend<out BACKEND>> applyBackendsSynchronously(
             it.libraryRoot to it.tmpL
         },
     )
+    t = System.nanoTime()
     for (info in infos) {
         cancelCheck(null)
         info.tmpL = info.backend.finishTmpL(info.tmpL, finishData)
     }
+    System.err.println("[perf]   finishTmpL: ${(System.nanoTime() - t) / 1_000_000}ms")
 
+    t = System.nanoTime()
     val keepFileAcceptFutures = infos.map { info ->
         val backend = info.backend
         backend.loadKeepFiles().then("Accept keep file data") { keepFileResult ->
@@ -64,12 +71,15 @@ fun <BACKEND : Backend<out BACKEND>> applyBackendsSynchronously(
     val joinedKeepFileAcceptFutures = cancelGroup.join(keepFileAcceptFutures)
     cancelCheck(joinedKeepFileAcceptFutures)
     joinedKeepFileAcceptFutures.await()
+    System.err.println("[perf]   loadKeepFiles: ${(System.nanoTime() - t) / 1_000_000}ms")
 
+    t = System.nanoTime()
     for (info in infos) {
         cancelCheck(null)
         // TODO How to handle one backend crashing/throwing here among several?
         info.outputFiles = info.backend.translate(info.tmpL)
     }
+    System.err.println("[perf]   translate: ${(System.nanoTime() - t) / 1_000_000}ms")
 
     for (info in infos) {
         cancelCheck(null)
@@ -92,12 +102,14 @@ fun <BACKEND : Backend<out BACKEND>> applyBackendsSynchronously(
         info.outputFiles = info.backend.preWrite(info.outputFiles)
     }
 
+    t = System.nanoTime()
     val outputFileFutures = infos.map { info ->
         info.backend.writeOutputFiles(info.outputFiles)
     }
     val joinedOutputFileFutures = cancelGroup.join(outputFileFutures)
     cancelCheck(joinedOutputFileFutures)
     joinedOutputFileFutures.await()
+    System.err.println("[perf]   writeOutputFiles: ${(System.nanoTime() - t) / 1_000_000}ms")
 
     val keepFileFutures = infos.map { info ->
         info.backend.writeKeepFiles(info.keepFiles)

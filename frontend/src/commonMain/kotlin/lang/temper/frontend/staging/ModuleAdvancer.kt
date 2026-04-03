@@ -404,14 +404,19 @@ class ModuleAdvancer(
         // If any of the input modules are mayRun, then assume the caller is going
         // to want to run the std modules and don't reuse the non-may-run modules.
         val sharedStdModules = if (moduleConfig.mayRun || modules.any { it.mayRun }) {
+            System.err.println("[perf] Using mayRun=true std modules (NEW lazy)")
             lazy {
-                buildStdModules(
+                val tStd = System.nanoTime()
+                val result = buildStdModules(
                     this,
                     console,
                     mayRun = true,
                 )
+                System.err.println("[perf] buildStdModules(mayRun=true): ${(System.nanoTime() - tStd) / 1_000_000}ms")
+                result
             }
         } else {
+            System.err.println("[perf] Using sharedStdModulesMayNotRun (global lazy, isInitialized=${sharedStdModulesMayNotRun.isInitialized()})")
             sharedStdModulesMayNotRun
         }
 
@@ -626,6 +631,9 @@ private class GroupOfModulesToAdvanceTogether(
     }
 
     fun advanceModules() {
+        val stageTimings = mutableMapOf<String, Long>()
+        var totalAdvances = 0
+
         // Prepare modules for import tracking
         for (module in modules) {
             if (module.stageCompleted == null) {
@@ -679,8 +687,16 @@ private class GroupOfModulesToAdvanceTogether(
                     )
                 }
 
+                val nextStageForTiming = Stage.after(m.stageCompleted)?.toString() ?: "?"
+                val tAdv = System.nanoTime()
                 withSnapshotter(m, m.console, snapshotter) {
                     m.advance()
+                }
+                val dt = System.nanoTime() - tAdv
+                stageTimings[nextStageForTiming] = (stageTimings[nextStageForTiming] ?: 0L) + dt
+                totalAdvances++
+                if (dt > 50_000_000) { // > 50ms
+                    System.err.println("[perf]   slow advance: ${m.loc} $nextStageForTiming ${dt / 1_000_000}ms")
                 }
 
                 val importsReadyNow = importHandler.consumeNewImports()
@@ -746,6 +762,11 @@ private class GroupOfModulesToAdvanceTogether(
                     readyToAdvance.add(at, m)
                 }
             }
+        }
+        // Print stage timing summary
+        System.err.println("[perf] advanceModules: $totalAdvances advances")
+        for ((stage, ns) in stageTimings.entries.sortedByDescending { it.value }) {
+            System.err.println("[perf]   stage $stage: ${ns / 1_000_000}ms")
         }
     }
 

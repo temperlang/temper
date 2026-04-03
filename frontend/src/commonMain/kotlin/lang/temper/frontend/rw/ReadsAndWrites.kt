@@ -133,7 +133,9 @@ internal data class ReadsAndWrites(
             root: BlockTree,
             inputParameters: List<DeclTree>,
             returnDecl: DeclTree?,
+            cachedMaximalPaths: MaximalPaths? = null,
         ): ReadsAndWrites {
+            val tForRoot = System.nanoTime()
             val inputNames = buildSet {
                 inputParameters.mapNotNullTo(this) { it.parts?.name?.content as ResolvedName? }
             }
@@ -206,7 +208,11 @@ internal data class ReadsAndWrites(
                 }
             }
 
-            val maximalPaths = forwardMaximalPaths(root, assumeFailureCanHappen = true)
+            val tPrePaths = System.nanoTime()
+            val usedCache = cachedMaximalPaths != null
+            val maximalPaths = cachedMaximalPaths
+                ?: forwardMaximalPaths(root, assumeFailureCanHappen = true)
+            val tPostPaths = System.nanoTime()
             root.document.debug {
                 maximalPaths.debug(console, root)
             }
@@ -257,6 +263,7 @@ internal data class ReadsAndWrites(
                 }
             }
 
+            val tScanPaths = System.nanoTime()
             val blockChildrenToPathElements =
                 mutableMapOf<BlockChildReference, MaximalPath.Element>()
             for (path in maximalPaths.maximalPaths) {
@@ -430,7 +437,7 @@ internal data class ReadsAndWrites(
                 }
             }
 
-            // To propagate liveness info, we need to know how it changes for each path.
+            val tLiveness = System.nanoTime()
             // We can use that to figure out what is live at the start of each path by
             val livenessDeltas = maximalPaths.pathIndices.map { pathIndex ->
                 val path = maximalPaths[pathIndex]
@@ -527,6 +534,7 @@ internal data class ReadsAndWrites(
             // This might require visiting paths multiple times, so this iterates to convergence.
             // Then walk each path once more with the live writes and build upstream/downstream
             // relationships.
+            var queueIters = 0
             val writesLiveAtStart = mutableMapOf<MaximalPathIndex, Map<ResolvedName, Set<Write>>>()
             run {
                 val atEnd = mutableMapOf<MaximalPathIndex, Map<ResolvedName, Set<Write>>>()
@@ -542,6 +550,7 @@ internal data class ReadsAndWrites(
                 onQueue.addAll(queue)
                 while (true) {
                     val pathIndex = queue.removeFirstOrNull() ?: break
+                    queueIters++
                     onQueue.remove(pathIndex)
 
                     val path = maximalPaths[pathIndex]
@@ -559,13 +568,22 @@ internal data class ReadsAndWrites(
                         forTwoMapsMutatingLeft(atEndInProgress, atEndOfP) { e ->
                             if (e.key !in namesReadInOrAfterPath) { return@forTwoMapsMutatingLeft }
                             atEndInProgress[e.key] = when (e) {
-                                is ZippedEntry.Both -> e.left + e.right
+                                is ZippedEntry.Both -> {
+                                    // Reuse left set if right is a subset (common case)
+                                    if (e.left.containsAll(e.right)) {
+                                        e.left
+                                    } else if (e.right.containsAll(e.left)) {
+                                        e.right
+                                    } else {
+                                        e.left + e.right
+                                    }
+                                }
                                 is ZippedEntry.LeftOnly -> e.left
                                 is ZippedEntry.RightOnly -> e.right
                             }
                         }
                     }
-                    writesLiveAtStart[pathIndex] = atEndInProgress.toMap()
+                    writesLiveAtStart[pathIndex] = atEndInProgress
 
                     for ((name, delta) in livenessDeltas[pathIndex.index]) {
                         when (delta) {
@@ -574,11 +592,22 @@ internal data class ReadsAndWrites(
                         }
                     }
 
-                    val newAtEnd = atEndInProgress.toMap()
+                    // Use size-based change detection instead of full map equality.
+                    // This is cheaper than deep comparison of Map<Name, Set<Write>>.
                     val prevAtEnd = atEnd[pathIndex]
-                    val changed = (prevAtEnd ?: emptyMap()) != newAtEnd
+                    val changed = if (prevAtEnd == null) {
+                        true
+                    } else if (prevAtEnd.size != atEndInProgress.size) {
+                        true
+                    } else {
+                        // Quick check: if any name has a different write-set size, it changed
+                        prevAtEnd.any { (name, prevWrites) ->
+                            val newWrites = atEndInProgress[name]
+                            newWrites == null || newWrites.size != prevWrites.size
+                        } || atEndInProgress.any { (name, _) -> name !in prevAtEnd }
+                    }
                     if (changed || prevAtEnd == null) {
-                        atEnd[pathIndex] = newAtEnd
+                        atEnd[pathIndex] = atEndInProgress.toMap()
                     }
                     if (changed) {
                         path.followers.forEach { (_, followerPathIndex) ->
@@ -672,6 +701,18 @@ internal data class ReadsAndWrites(
                 }
             }
 
+            val tEnd = System.nanoTime()
+            val totalMs = (tEnd - tForRoot) / 1_000_000
+            if (totalMs > 200) {
+                val pathMs = (tPostPaths - tPrePaths) / 1_000_000
+                val scanMs = (tPrePaths - tForRoot) / 1_000_000
+                val walkMs = (tLiveness - tScanPaths) / 1_000_000
+                val livenessMs = (tEnd - tLiveness) / 1_000_000
+                val nPaths = maximalPaths.maximalPaths.size
+                val nNames = localNames.size + inputNames.size
+                val avgNamesPerPath = if (namesUsedInOrAfter.isEmpty()) 0 else namesUsedInOrAfter.values.sumOf { it.size } / namesUsedInOrAfter.size
+                System.err.println("[perf]             forRoot: ${totalMs}ms (liveness=${livenessMs}) P=${nPaths} N=${nNames} qi=${queueIters} avgN/P=${avgNamesPerPath}")
+            }
             return ReadsAndWrites(
                 paths = maximalPaths,
                 localNames = localNames.toList(),
@@ -791,12 +832,8 @@ internal class Write(
         structureSink.value("$this")
     }
 
-    override fun hashCode(): Int = tree.hashCode() + 31 * name.hashCode()
-    override fun equals(other: Any?) =
-        this === other || (
-            other is Write && this.tree == other.tree && this.name == other.name &&
-                this.writeKind == other.writeKind && this.assigned == other.assigned
-            )
+    override fun hashCode(): Int = System.identityHashCode(this)
+    override fun equals(other: Any?) = this === other
 
     override fun toString(): String = buildString {
         append("W(")

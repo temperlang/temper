@@ -145,18 +145,21 @@ class Weaver private constructor(
     }
 
     private fun weave() {
+        val tWeave = System.nanoTime()
         debug {
             console.group("Weave") {
                 console.log(root.toLispy(multiline = true))
             }
         }
         checkFailureConditions(root)
+        val tAfterCheck = System.nanoTime()
         debug {
             console.group("Failure conditions checked") {
                 console.log(root.toLispy(multiline = true))
             }
         }
         simplifyBlocks(root)
+        val tAfterSimplify = System.nanoTime()
         debug {
             console.group("Blocks simplified") {
                 console.log(root.toLispy(multiline = true))
@@ -168,7 +171,9 @@ class Weaver private constructor(
                 console.log(root.toLispy(multiline = true))
             }
         }
+        val tBeforePull = System.nanoTime()
         pullRootwards(root)
+        val tAfterPull = System.nanoTime()
         debug {
             console.group("After pull") {
                 console.log(root.toLispy(multiline = true))
@@ -181,6 +186,11 @@ class Weaver private constructor(
             }
         }
         evaporateBubbles()
+        val tEnd = System.nanoTime()
+        val totalMs = (tEnd - tWeave) / 1_000_000
+        if (totalMs > 100) {
+            System.err.println("[perf]           Weaver: check=${(tAfterCheck - tWeave) / 1_000_000}ms simplify=${(tAfterSimplify - tAfterCheck) / 1_000_000}ms pull=${(tAfterPull - tBeforePull) / 1_000_000}ms rest=${(tEnd - tAfterPull) / 1_000_000}ms total=${totalMs}ms")
+        }
     }
 
     private fun declareTemporariesAllocated() {

@@ -67,7 +67,12 @@ fun BlockTree.getTerminalExpressions(
     assumeFailureCanHappen: Boolean = false,
 ): Pair<List<ControlFlow.Stmt>, Freq3> {
     val terminalExpressions = mutableSetOf<ControlFlow.Stmt>()
+    val tGte = System.nanoTime()
     val maximalPaths = forwardMaximalPaths(this, assumeFailureCanHappen = assumeFailureCanHappen)
+    val dtGte = (System.nanoTime() - tGte) / 1_000_000
+    if (dtGte > 5) {
+        System.err.println("[perf]               getTerminalExpressions: forwardMaximalPaths took ${dtGte}ms (${maximalPaths.maximalPaths.size} paths)")
+    }
     // optimistic about finding terminal expressions until shown otherwise
     var foundOnAllBranches = maximalPaths.failExitPathIndices.isEmpty() &&
         maximalPaths.exitPathIndices.isNotEmpty()

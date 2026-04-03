@@ -76,16 +76,31 @@ internal class TypeStage(
         val genre = root.document.context.genre
 
         val builtinEnvironment = module.freeNameEnvironment!!
+        val tAfterStart = System.nanoTime()
+        fun lap(label: String): Long {
+            val now = System.nanoTime()
+            return now - tAfterStart
+        }
+        val substeps = mutableListOf<Pair<String, Long>>()
+        var lastLap = tAfterStart
+
+        fun mark(label: String) {
+            val now = System.nanoTime()
+            substeps.add(label to (now - lastLap))
+            lastLap = now
+        }
 
         Debug.Frontend.TypeStage.AfterInterpretation.snapshot(configKey, AstSnapshotKey, root)
 
         flipDeclaredNames(root)
+        mark("flipDeclaredNames")
 
         // Make sure any declarations with initializers really are simplified to separate assignments.
         // Most of these are simplified out by the define stage, but processing of imports can reintroduce these.
         SimplifyDeclarations(simplifyFunTrees = false).simplify(root)
 
         AutoCast(root).apply()
+        mark("AutoCast")
 
         // Genre.Documentation requires statements start in statement position, and assumes some
         // block level idiom for failure gathering.
@@ -95,6 +110,7 @@ internal class TypeStage(
                 .benchmarkIf(BENCHMARK, "MagicSecurityDust") {
                     MagicSecurityDust().sprinkle(root) calledFor effect
                 }
+            mark("MagicSecurityDust")
 
             Debug.Frontend.TypeStage.AfterSprinkle.snapshot(configKey, AstSnapshotKey, root)
 
@@ -108,12 +124,14 @@ internal class TypeStage(
                     nameAllFunctions = false,
                 ) calledFor effect
             }
+            mark("Weaver")
 
             Debug.Frontend.TypeStage.AfterWeave.snapshot(configKey, AstSnapshotKey, root)
 
             Debug.Frontend.TypeStage.SimplifyFlow(configKey).benchmarkIf(BENCHMARK, "SimplifyFlow") {
                 simplifyFlow(root, assumeAllJumpsResolved = false) calledFor effect
             }
+            mark("SimplifyFlow")
 
             Debug.Frontend.TypeStage.AfterSimplifyFlow.snapshot(configKey, AstSnapshotKey, root)
         }
@@ -142,10 +160,13 @@ internal class TypeStage(
 
         Debug.Frontend.TypeStage.AfterExplicitResults.snapshot(configKey, AstSnapshotKey, root)
 
+        mark("MakeResultsExplicit")
+
         val nameToType =
             Debug.Frontend.TypeStage.Type(configKey).benchmarkIf(BENCHMARK, "Type") {
                 Typer(module, builtinEnvironment).type(root)
             }
+        mark("Typer")
 
         Debug.Frontend.TypeStage.AfterTyper.snapshot(configKey, AstSnapshotKey, root)
         Debug.Frontend.TypeStage.AfterTyper(configKey).doIfLogs { console ->
@@ -157,6 +178,7 @@ internal class TypeStage(
                 .benchmarkIf(BENCHMARK, "UseBeforeInit") {
                     UseBeforeInit(module, root, outputName).check() calledFor effect
                 }
+            mark("UseBeforeInit")
             Debug.Frontend.TypeStage.AfterUseBeforeInit.snapshot(configKey, AstSnapshotKey, root)
         }
 
@@ -165,6 +187,7 @@ internal class TypeStage(
             Debug.Frontend.TypeStage.ReorderArgs(configKey).benchmarkIf(BENCHMARK, "ReorderArgs") {
                 ReorderArgs(root).process()
             }
+            mark("ReorderArgs")
             Debug.Frontend.TypeStage.AfterReorderArgs.snapshot(configKey, AstSnapshotKey, root)
         }
 
@@ -178,6 +201,7 @@ internal class TypeStage(
                     assumeResultsCaptured = true,
                 ) calledFor effect
             }
+        mark("SimplifyFlow2")
 
         Debug.Frontend.TypeStage.AfterSimplifyFlow2.snapshot(configKey, AstSnapshotKey, root)
         Debug.Frontend.TypeStage.AfterSimplifyFlow2(configKey).doIfLogs { console ->
@@ -196,6 +220,7 @@ internal class TypeStage(
                         snapshotId = Debug.Frontend.TypeStage.CleanupTemporaries,
                     ) calledFor effect
                 }
+            mark("CleanupTemporaries")
         }
 
         Debug.Frontend.TypeStage.AfterCleanupTemporaries.snapshot(configKey, AstSnapshotKey, root)
@@ -206,6 +231,7 @@ internal class TypeStage(
         Debug.Frontend.TypeStage.SimplifyFlow3(configKey).benchmarkIf(BENCHMARK, "SimplifyFlow3") {
             simplifyFlow(root, assumeAllJumpsResolved = false) calledFor effect
         }
+        mark("SimplifyFlow3")
         Debug.Frontend.TypeStage.AfterSimplifyFlow3.snapshot(configKey, AstSnapshotKey, root)
 
         if (genre != Genre.Documentation) {
@@ -217,12 +243,23 @@ internal class TypeStage(
                         simplifyFlow(root, assumeAllJumpsResolved = false) calledFor effect
                     }
                 }
+            mark("RepairUnrealizedGoals")
         }
         Debug.Frontend.TypeStage.AfterRepairUnrealizedGoals.snapshot(configKey, AstSnapshotKey, root)
 
         Debug.Frontend.TypeStage.After.snapshot(configKey, AstSnapshotKey, root)
         Debug.Frontend.TypeStage.After(configKey).doIfLogs { console ->
             dumpMissingTypeInfo(root, "After trimming loose threads", console)
+        }
+
+        val totalAfter = System.nanoTime() - tAfterStart
+        if (totalAfter > 200_000_000) { // > 200ms
+            System.err.println("[perf]       @T after ${module.loc}: ${totalAfter / 1_000_000}ms")
+            for ((label, ns) in substeps) {
+                if (ns > 10_000_000) { // > 10ms
+                    System.err.println("[perf]         $label: ${ns / 1_000_000}ms")
+                }
+            }
         }
 
         return outputName?.let { it to (nameToType[it] ?: InvalidType) }
