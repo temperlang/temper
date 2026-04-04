@@ -2827,6 +2827,27 @@ without creating a new backing array for the substring.
 
 <a name="type&#45;StringBuilder&#45;method&#45;clear&#45;commentary" class="snippet-anchor-name"></a>
 
+*clear()* removes any previously appended content, returning this
+*StringBuilder* to its newly created state.
+
+This *StringBuilder* may be reused.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/type/StringBuilder/method/clear/commentary/snippet.md/0 -->
+
+```temper
+let stringBuilder = new StringBuilder();
+stringBuilder.append("Hello");
+console.log(stringBuilder.toString()); //!outputs "Hello"
+stringBuilder.append(", World!");
+console.log(stringBuilder.toString()); //!outputs "Hello, World!"
+stringBuilder.clear();
+stringBuilder.append("Goodbye.");
+console.log(stringBuilder.toString()); //!outputs "Goodbye."
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/type/StringBuilder/method/clear/commentary/snippet.md/0 -->
+
 <!-- /snippet: type/StringBuilder/method/clear/commentary -->
 
 <!-- /snippet: type/StringBuilder/method/clear -->

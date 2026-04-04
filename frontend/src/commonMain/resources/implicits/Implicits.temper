@@ -756,6 +756,23 @@ export class StringBuilder {
     }
   }
 
+  /**
+   * *clear()* removes any previously appended content, returning this
+   * *StringBuilder* to its newly created state.
+   *
+   * This *StringBuilder* may be reused.
+   *
+   * ```temper
+   * let stringBuilder = new StringBuilder();
+   * stringBuilder.append("Hello");
+   * console.log(stringBuilder.toString()); //!outputs "Hello"
+   * stringBuilder.append(", World!");
+   * console.log(stringBuilder.toString()); //!outputs "Hello, World!"
+   * stringBuilder.clear();
+   * stringBuilder.append("Goodbye.");
+   * console.log(stringBuilder.toString()); //!outputs "Goodbye."
+   * ```
+   */
   @connected("StringBuilder::clear")
   public clear(): Void {
     this.substrings.clear();
