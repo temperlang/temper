@@ -2677,6 +2677,22 @@ A string index that works for the start of any string.
 A *StringBuilder* allows composing a string by appending substrings at the
 end.
 
+<!-- snippet: temper-code/build-user-docs/build/snippet/type/StringBuilder/commentary/snippet.md/0 -->
+
+```temper
+let stringBuilder = new StringBuilder();
+stringBuilder.append("Hello");
+console.log(stringBuilder.toString()); //!outputs "Hello"
+stringBuilder.append(", World!");
+console.log(stringBuilder.toString()); //!outputs "Hello, World!"
+stringBuilder.clear();
+stringBuilder.append("Goodbye.");
+console.log(stringBuilder.toString()); //!outputs "Goodbye."
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/type/StringBuilder/commentary/snippet.md/0 -->
+
 <!-- /snippet: type/StringBuilder/commentary -->
 
 <!-- snippet: type/StringBuilder/sig -->
@@ -2830,23 +2846,7 @@ without creating a new backing array for the substring.
 *clear()* removes any previously appended content, returning this
 *StringBuilder* to its newly created state.
 
-This *StringBuilder* may be reused.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/type/StringBuilder/method/clear/commentary/snippet.md/0 -->
-
-```temper
-let stringBuilder = new StringBuilder();
-stringBuilder.append("Hello");
-console.log(stringBuilder.toString()); //!outputs "Hello"
-stringBuilder.append(", World!");
-console.log(stringBuilder.toString()); //!outputs "Hello, World!"
-stringBuilder.clear();
-stringBuilder.append("Goodbye.");
-console.log(stringBuilder.toString()); //!outputs "Goodbye."
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/type/StringBuilder/method/clear/commentary/snippet.md/0 -->
+This *StringBuilder* may be reused after clearing.
 
 <!-- /snippet: type/StringBuilder/method/clear/commentary -->
 
