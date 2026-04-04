@@ -610,8 +610,12 @@ private fun eliminateEmptyTransitions(
     yieldingCallsEndPaths: Boolean,
 ) {
     check(mutPaths.allIndexed { i, mutPath -> i == mutPath.index.index })
+    val tStart = System.nanoTime()
+    val startSize = mutPaths.size
+    var iterations = 0
 
     while (true) {
+        iterations++
         // The way we allocate a MutPath for each branch in ControlFlow.If above
         // means that sometimes we have a case where one branch leads to one other
         // and is the only one that leads to it.
@@ -647,16 +651,24 @@ private fun eliminateEmptyTransitions(
             //         ... ───────┘
             // After:  ... ───────┬─> A ─> ...
             //         ... ───────┘
+            // Empty path bypass with fan-in resolution.
+            // When the target follower is already being eliminated by another
+            // empty path, follow the includeInto chain to find the current
+            // survivor and absorb that instead. This resolves fan-in in one
+            // iteration rather than one-path-at-a-time.
             if (path.followers.size == 1 && path.elements.isEmpty()) {
                 val follower = path.followers.first()
                 if (follower.condition == null && follower.dir == ForwardOrBack.Forward) {
-                    val followerPathIndex = follower.toIndex
                     if (path.index !in includeInto) { // Avoid the above clobbering this
-                        // Not handled above so not a simple continuation
-                        val kept = path.index
-                        val eliminated = followerPathIndex
-                        if (eliminated !in includeInto) {
-                            includeInto[eliminated] = kept
+                        var targetIndex = follower.toIndex
+                        // If target is already being eliminated, follow chain to survivor
+                        var depth = 0
+                        while (targetIndex in includeInto && depth < mutPaths.size) {
+                            targetIndex = includeInto.getValue(targetIndex)
+                            depth++
+                        }
+                        if (depth < mutPaths.size && targetIndex != path.index) {
+                            includeInto[targetIndex] = path.index
                             path.positionHints.clear()
                             continue
                         }
@@ -729,20 +741,26 @@ private fun eliminateEmptyTransitions(
                 }
                 val remappedPath = MutPath(remap(index), isExit = isExit, isFailExit = isFailExit)
 
+                // Use set-based filtering to handle multi-level chains from
+                // fan-in resolution (where parts may span more than 2 levels).
+                val partIndexSet = if (parts.size <= 2) null else parts.mapTo(mutableSetOf()) { it.index }
+
                 for (i in parts.indices) {
                     val part = parts[i]
                     val prevPathIndex = parts.getOrNull(i - 1)?.index
                     val nextPathIndex = parts.getOrNull(i + 1)?.index
 
                     part.preceders.forEach { p ->
-                        if (p.pathIndex != prevPathIndex) {
+                        val isInternal = if (partIndexSet != null) p.pathIndex in partIndexSet else p.pathIndex == prevPathIndex
+                        if (!isInternal) {
                             remappedPath.preceders.add(
                                 Preceder(remap(p.pathIndex), p.dir),
                             )
                         }
                     }
                     part.followers.forEach { f ->
-                        if (f.toIndex != nextPathIndex) {
+                        val isInternal = if (partIndexSet != null) f.toIndex in partIndexSet else f.toIndex == nextPathIndex
+                        if (!isInternal) {
                             remappedPath.followers.add(
                                 MutFollower(f.condition, remap(f.toIndex), f.dir),
                             )
@@ -765,6 +783,10 @@ private fun eliminateEmptyTransitions(
         check(mutPaths.size > rebuilt.size) // Monotonic so the `while (true)` terminates
         mutPaths.clear()
         mutPaths.addAll(rebuilt)
+    }
+    val dtMs = (System.nanoTime() - tStart) / 1_000_000
+    if (dtMs > 50) {
+        System.err.println("[perf]     eliminateEmptyTransitions: ${dtMs}ms ${startSize}->${mutPaths.size} paths, ${iterations} iters, ${(startSize - mutPaths.size).toFloat() / iterations.coerceAtLeast(1)} elim/iter")
     }
 }
 

@@ -115,6 +115,21 @@ internal class CleanupTemporaries private constructor(
      */
     private var requiredNames: Set<ResolvedName> = emptySet()
 
+    // The main strategies in priority order. eliminateUnusedDeclarations is
+    // handled separately: it's piggybacked on every iteration to progressively
+    // clean up dead names, reducing the work for subsequent liveness analyses.
+    private val mainStrategies: List<(ReadsAndWrites) -> List<Edit>> = buildList {
+        add(::simplifyVoidAssignments)
+        if (!beforeResultsExplicit) {
+            add(::eliminateNoopReads)
+        }
+        add(::collapseWritesToSingleName)
+        add(::eliminateWritesUpstreamOfNothing)
+        add(::collapseWritesLiveOnlyForAnAssignment)
+        add(::inlineAdjacentSingleReadWritePairs)
+        add(::inlineStaticReads)
+    }
+
     fun clean(): DataTables {
         root.document.debug {
             console.group("Before") {
@@ -128,34 +143,31 @@ internal class CleanupTemporaries private constructor(
             ReadsAndWrites.forRoot(module, root, inputParameters, returnDecl, cachedMaximalPaths)
         requiredNames = computeRequiredNames(readsAndWrites)
 
-        // Now, we try a sequence of strategies to find edits to perform.
-        // If one possible edit list is nonempty, we don't try to find
-        // additional edits because readsAndWrites might be invalidated
-        // by the first group.
-        var edits: List<Edit>
+        // Try strategies in priority order. When one returns non-empty,
+        // also run eliminateUnusedDeclarations to piggyback cleanup.
+        var edits: List<Edit> = emptyList()
+        for (strategy in mainStrategies) {
+            edits = strategy(readsAndWrites)
+            if (edits.isNotEmpty()) break
+        }
 
-        edits = simplifyVoidAssignments(readsAndWrites)
-        if (edits.isEmpty() && !beforeResultsExplicit) {
-            edits = eliminateNoopReads(readsAndWrites)
+        if (edits.isNotEmpty()) {
+            // Piggyback: also eliminate any declarations that are now unused.
+            // This is safe because eliminateUnusedDeclarations only targets
+            // declarations of names with zero reads AND zero writes, while all
+            // other strategies only edit names that have reads or writes.
+            // The targeted TEdge objects are guaranteed disjoint.
+            val declEdits = eliminateUnusedDeclarations(readsAndWrites)
+            if (declEdits.isNotEmpty()) {
+                edits = edits + declEdits
+            }
         }
-        if (edits.isEmpty()) {
-            edits = collapseWritesToSingleName(readsAndWrites)
-        }
-        if (edits.isEmpty()) {
-            edits = eliminateWritesUpstreamOfNothing(readsAndWrites)
-        }
-        if (edits.isEmpty()) {
-            edits = collapseWritesLiveOnlyForAnAssignment(readsAndWrites)
-        }
-        if (edits.isEmpty()) {
-            edits = inlineAdjacentSingleReadWritePairs(readsAndWrites)
-        }
-        if (edits.isEmpty()) {
-            edits = inlineStaticReads(readsAndWrites)
-        }
+
+        // If no main strategy found edits, try eliminateUnusedDeclarations alone
         if (edits.isEmpty()) {
             edits = eliminateUnusedDeclarations(readsAndWrites)
         }
+        // Endgame strategies
         if (edits.isEmpty()) {
             val namesThatNeedVar = mayNeedVar.toSet()
             mayNeedVar.clear()

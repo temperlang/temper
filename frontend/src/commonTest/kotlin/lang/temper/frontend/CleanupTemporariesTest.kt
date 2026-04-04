@@ -133,33 +133,33 @@ class CleanupTemporariesTest {
                 |        "Replace(L6: rename written t4#0 to toLogOrNotToLog__0)",
                 |        "Replace(L7: toLogOrNotToLog__0=... -> no-op)",
                 |        "Replace(L5: rename read t2#0 to t1#0)",
-                |        "Replace(L4: t2#0=... -> no-op)"
+                |        "Replace(L4: t2#0=... -> no-op)",
+                |        "Replace(L1: let fail#0 -> no-op)",
+                |        "Replace(L1: let fail#1 -> no-op)"
                 |      ],
                 |      [
                 |        "Replace(L5: rename written t3#0 to toLogOrNotToLog__0)",
-                |        "Replace(L6: toLogOrNotToLog__0=... -> no-op)"
+                |        "Replace(L6: toLogOrNotToLog__0=... -> no-op)",
+                |        "Replace(L1: let console#0 -> no-op)",
+                |        "Replace(L4: let t2#0 -> no-op)",
+                |        "Replace(L6: let t4#0 -> no-op)"
                 |      ],
                 |      [
                 |        "Replace(L3: rename written t1#0 to toLogOrNotToLog__0)",
-                |        "Replace(L5: toLogOrNotToLog__0=... -> no-op)"
+                |        "Replace(L5: toLogOrNotToLog__0=... -> no-op)",
+                |        "Replace(L5: let t3#0 -> no-op)"
                 |      ],
                 |      [
-                |        "Replace(L1: let fail#0 -> no-op)",
-                |        "Replace(L1: let fail#1 -> no-op)",
-                |        "Replace(L1: let console#0 -> no-op)",
-                |        "Replace(L3: let t1#0 -> no-op)",
-                |        "Replace(L4: let t2#0 -> no-op)",
-                |        "Replace(L5: let t3#0 -> no-op)",
-                |        "Replace(L6: let t4#0 -> no-op)"
+                |        "Replace(L3: let t1#0 -> no-op)"
                 |      ],
                 |      [],
                 |      [
                 |          "Replace(L1: rename written t#1 to return__0)",
-                |          "Replace(L1: return__0=... -\u003e no-op)"
+                |          "Replace(L1: return__0=... -\u003e no-op)",
+                |          "Replace(L1: let fail#2 -\u003e no-op)"
                 |      ],
                 |      [
-                |          "Replace(L1: let t#1 -\u003e no-op)",
-                |          "Replace(L1: let fail#2 -\u003e no-op)"
+                |          "Replace(L1: let t#1 -\u003e no-op)"
                 |      ],
                 |      []
                 |    ],
@@ -263,98 +263,91 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeBefore: ```
-                |    let return__9;
-                |    var t#6, t#7, t#8, fail#5, t#3;
-                |    let x__2;
+                |    let return__0;
+                |    var t#0, t#1, t#2, fail#0, t#3;
+                |    let x__0;
                 |    if (randomBool()) {
                 |      t#3 = 1
                 |    } else {
                 |      t#3 = 2
                 |    };
-                |    x__2 = t#3;
-                |    t#6 = do_bind_toString(x__2)();
-                |    t#7 = t#6;
-                |    t#8 = t#7;
-                |    return__9 = t#8
+                |    x__0 = t#3;
+                |    t#0 = do_bind_toString(x__0)();
+                |    t#1 = t#0;
+                |    t#2 = t#1;
+                |    return__0 = t#2
                 |
                 |    ```,
                 |
                 |  readsAndWrites0: {
                 |    "reads": {
-                |      "return__9":                ["R(return__9 @ L12)"],  // implied read by caller
+                |      "return__0":                ["R(return__0 @ L12)"],
                 |      "t#3":                      ["R(t#3 @ L10)"],
-                |      "x__2":                     ["R(x__2 @ L11)"],
-                |      "t#6":                      ["R(t#6 @ L11)"],
-                |      "t#7":                      ["R(t#7 @ L1)"],
-                |      "t#8":                      ["R(t#8 @ L1)"],
+                |      "x__0":                     ["R(x__0 @ L11)"],
+                |      "t#0":                      ["R(t#0 @ L11)"],
+                |      "t#1":                      ["R(t#1 @ L1)"],
+                |      "t#2":                      ["R(t#2 @ L1)"],
                 |    },
                 |    "writes": {
                 |      "t#3":                      ["W(t#3 A @ L6)", "W(t#3 A @ L8)"],
-                |      "x__2":                     ["W(x__2 A @ L10)"],
-                |      "t#6":                      ["W(t#6 A @ L11)"],
-                |      "t#7":                      ["W(t#7 A @ L11)"],
-                |      "t#8":                      ["W(t#8 A @ L1)"],
-                |      "return__9":                ["W(return__9 A @ L1)"]
+                |      "x__0":                     ["W(x__0 A @ L10)"],
+                |      "t#0":                      ["W(t#0 A @ L11)"],
+                |      "t#1":                      ["W(t#1 A @ L11)"],
+                |      "t#2":                      ["W(t#2 A @ L1)"],
+                |      "return__0":                ["W(return__0 A @ L1)"]
                 |    },
                 |    "upstream": {
                 |      "R(t#3 @ L10)":             ["W(t#3 A @ L6)", "W(t#3 A @ L8)"],
-                |      "R(x__2 @ L11)":            ["W(x__2 A @ L10)"],
-                |      "R(t#6 @ L11)":             ["W(t#6 A @ L11)"],
-                |      "R(t#7 @ L1)":              ["W(t#7 A @ L11)"],
-                |      "R(t#8 @ L1)":              ["W(t#8 A @ L1)"],
-                |      "R(return__9 @ L12)":       ["W(return__9 A @ L1)"]
+                |      "R(x__0 @ L11)":            ["W(x__0 A @ L10)"],
+                |      "R(t#0 @ L11)":             ["W(t#0 A @ L11)"],
+                |      "R(t#1 @ L1)":              ["W(t#1 A @ L11)"],
+                |      "R(t#2 @ L1)":              ["W(t#2 A @ L1)"],
+                |      "R(return__0 @ L12)":       ["W(return__0 A @ L1)"]
                 |    },
                 |    "downstream": {
                 |      "W(t#3 A @ L6)":            ["R(t#3 @ L10)"],
                 |      "W(t#3 A @ L8)":            ["R(t#3 @ L10)"],
-                |      "W(x__2 A @ L10)":          ["R(x__2 @ L11)"],
-                |      "W(t#6 A @ L11)":           ["R(t#6 @ L11)"],
-                |      "W(t#7 A @ L11)":           ["R(t#7 @ L1)"],
-                |      "W(t#8 A @ L1)":            ["R(t#8 @ L1)"],
-                |      "W(return__9 A @ L1)":      ["R(return__9 @ L12)"]
+                |      "W(x__0 A @ L10)":          ["R(x__0 @ L11)"],
+                |      "W(t#0 A @ L11)":           ["R(t#0 @ L11)"],
+                |      "W(t#1 A @ L11)":           ["R(t#1 @ L1)"],
+                |      "W(t#2 A @ L1)":            ["R(t#2 @ L1)"],
+                |      "W(return__0 A @ L1)":      ["R(return__0 @ L12)"]
                 |    },
                 |  },
                 |
                 |  allEdits: [
-                |    // First round through, we reduce the number of names by
-                |    // eliminating some temporaries.
                 |    [
-                |      "Replace(L1: rename written t#8 to return__9)",
-                |      "Replace(L1: return__9=... -> no-op)",
-                |      // Eliminating t#6..t#8 in favour of return__7 over two steps here and next.
-                |      "Replace(L1: rename read t#7 to t#6)",
-                |      "Replace(L11: t#7=... -> no-op)",
-                |      // We prefer eliminating temporaries
-                |      "Replace(L6: rename written t#3 to x__2)",
-                |      "Replace(L8: rename written t#3 to x__2)",
-                |      // We don't need `x__2 = t#3` since t#3 has gone away.
-                |      "Replace(L10: x__2=... -> no-op)",
+                |      "Replace(L1: rename written t#2 to return__0)",
+                |      "Replace(L1: return__0=... -> no-op)",
+                |      "Replace(L1: rename read t#1 to t#0)",
+                |      "Replace(L11: t#1=... -> no-op)",
+                |      "Replace(L6: rename written t#3 to x__0)",
+                |      "Replace(L8: rename written t#3 to x__0)",
+                |      "Replace(L10: x__0=... -> no-op)",
+                |      "Replace(L1: let fail#0 -> no-op)",
                 |    ],
                 |    [
-                |      "Replace(L11: rename written t#6 to return__9)",
-                |      "Replace(L1: return__9=... -> no-op)",
-                |    ],
-                |    // And finally we sweep up some declarations.
-                |    [
-                |      "Replace(L11: let t#6 -> no-op)",
-                |      "Replace(L11: let t#7 -> no-op)",
-                |      "Replace(L1: let t#8 -> no-op)",
-                |      "Replace(L1: let fail#5 -> no-op)",
+                |      "Replace(L11: rename written t#0 to return__0)",
+                |      "Replace(L1: return__0=... -> no-op)",
+                |      "Replace(L11: let t#1 -> no-op)",
+                |      "Replace(L1: let t#2 -> no-op)",
                 |      "Replace(L3: let t#3 -> no-op)",
                 |    ],
-                |    // And when we find no edits, we know to stop.
+                |    [
+                |      "Replace(L11: let t#0 -> no-op)",
+                |    ],
                 |    []
                 |  ],
                 |
                 |  pseudoCodeAfter: ```
-                |    let return__9;
-                |    let x__2;
+                |    let return__0;
+                |    let x__0;
                 |    if (randomBool()) {
-                |      x__2 = 1
+                |      x__0 = 1
                 |    } else {
-                |      x__2 = 2
+                |      x__0 = 2
                 |    };
-                |    return__9 = do_bind_toString(x__2)();
+                |    return__0 = do_bind_toString(x__0)();
                 |
                 |    ```,
                 |}
@@ -385,45 +378,45 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeBefore: ```
-                |    let return__5;
-                |    var t#3, t#4;
+                |    let return__0;
+                |    var t#0, t#1;
                 |    let t_a#0;
-                |    var t_b#2;
-                |    t_b#2 = randomBool();
+                |    var t_b#0;
+                |    t_b#0 = randomBool();
                 |    if (randomBool()) {
-                |      t_a#0 = t_b#2
+                |      t_a#0 = t_b#0
                 |    };
-                |    t#3 = error (UseBeforeInitialization);
-                |    t#4 = t#3;
-                |    return__5 = t#4
+                |    t#0 = error (UseBeforeInitialization);
+                |    t#1 = t#0;
+                |    return__0 = t#1
                 |
                 |    ```,
                 |  allEdits: [
                 |    [
-                |      "Replace(L1: rename written t#4 to return__5)",
-                |      "Replace(L1: return__5=... -> no-op)",
+                |      "Replace(L1: rename written t#1 to return__0)",
+                |      "Replace(L1: return__0=... -> no-op)",
                 |      "Replace(L6: t_a#0=... -> no-op)",
                 |    ],
                 |    [
-                |      "Replace(L8: rename written t#3 to return__5)",
-                |      "Replace(L1: return__5=... -> no-op)",
-                |    ],
-                |    [
-                |      "Replace(L4: simplify dead-store of t_b#2)",
-                |    ],
-                |    [
-                |      "Replace(L8: let t#3 -> no-op)",
-                |      "Replace(L1: let t#4 -> no-op)",
+                |      "Replace(L8: rename written t#0 to return__0)",
+                |      "Replace(L1: return__0=... -> no-op)",
+                |      "Replace(L1: let t#1 -> no-op)",
                 |      "Replace(L2: let t_a#0 -> no-op)",
-                |      "Replace(L3: let t_b#2 -> no-op)",
+                |    ],
+                |    [
+                |      "Replace(L4: simplify dead-store of t_b#0)",
+                |      "Replace(L8: let t#0 -> no-op)",
+                |    ],
+                |    [
+                |      "Replace(L3: let t_b#0 -> no-op)",
                 |    ],
                 |    []
                 |  ],
                 |  pseudoCodeAfter: ```
-                |    let return__5;
+                |    let return__0;
                 |    randomBool();
                 |    if (randomBool()) {};
-                |    return__5 = error (UseBeforeInitialization);
+                |    return__0 = error (UseBeforeInitialization);
                 |
                 |    ```,
                 |  consoleOutput: ```
@@ -460,7 +453,9 @@ class CleanupTemporariesTest {
                 |  allEdits: [
                 |    [
                 |      "SplitAssignment(L6: split void assignment of t#0)",
-                |      "SplitAssignment(L6: split void assignment of return__0)"
+                |      "SplitAssignment(L6: split void assignment of return__0)",
+                |      "Replace(L1: let fail#0 -> no-op)",
+                |      "Replace(L1: let fail#1 -> no-op)"
                 |    ],
                 |    [
                 |      "Replace(L6: read t#0 -> no-op)"
@@ -470,26 +465,25 @@ class CleanupTemporariesTest {
                 |    ],
                 |    [
                 |      "Replace(L1: inlined assignment of t#1 -> no-op)",
-                |      "Replace(L1: inline value assigned to t#1 at sole read)"
+                |      "Replace(L1: inline value assigned to t#1 at sole read)",
+                |      "Replace(L6: let t#0 -> no-op)"
                 |    ],
                 |    [
                 |      "Replace(L1: let t#1 -> no-op)",
-                |      "Replace(L6: let t#0 -> no-op)",
-                |      "Replace(L1: let fail#0 -> no-op)",
-                |      "Replace(L1: let fail#1 -> no-op)",
                 |    ],
                 |    [],
                 |    [
                 |        "Replace(L1: rename written t#2 to return__1)",
-                |        "Replace(L1: return__1=... -\u003e no-op)"
+                |        "Replace(L1: return__1=... -\u003e no-op)",
+                |        "Replace(L1: let fail#2 -\u003e no-op)"
                 |    ],
                 |    [
-                |        "Replace(L1: let t#2 -\u003e no-op)",
-                |        "Replace(L1: let fail#2 -\u003e no-op)"
+                |        "Replace(L1: let t#2 -\u003e no-op)"
                 |    ],
                 |    [],
                 |    [
-                |        "SplitAssignment(L3: split void assignment of t#3)"
+                |        "SplitAssignment(L3: split void assignment of t#3)",
+                |        "Replace(L1: let fail#3 -\u003e no-op)"
                 |    ],
                 |    [
                 |        "Replace(L3: read t#3 -\u003e no-op)"
@@ -498,8 +492,7 @@ class CleanupTemporariesTest {
                 |        "Replace(L3: simplify dead-store of t#3)"
                 |    ],
                 |    [
-                |        "Replace(L3: let t#3 -\u003e no-op)",
-                |        "Replace(L1: let fail#3 -\u003e no-op)"
+                |        "Replace(L3: let t#3 -\u003e no-op)"
                 |    ],
                 |    []
                 |  ],
