@@ -1026,10 +1026,6 @@ private val stringBuilderAppend = MethodCall(
     "StringBuilder::append",
     "Append",
 )
-private val stringBuilderToString = MethodCall(
-    "StringBuilder::toString",
-    "ToString",
-)
 private val stringBuilderAppendBetween = StaticCall(
     "StringBuilder::appendBetween",
     StandardNames.temperCoreStringUtilAppendBetween,
@@ -1037,6 +1033,14 @@ private val stringBuilderAppendBetween = StaticCall(
 private val stringBuilderAppendCodePoint = StaticCall(
     "StringBuilder::appendCodePoint",
     StandardNames.temperCoreStringUtilAppendCodePoint,
+)
+private val stringBuilderClear = MethodCall(
+    "StringBuilder::clear",
+    "Clear",
+)
+private val stringBuilderToString = MethodCall(
+    "StringBuilder::toString",
+    "ToString",
 )
 private val stringGet = StaticCall("String::get", StandardNames.temperCoreStringUtilGet)
 private val stringCountBetween = StaticCall(
@@ -1477,6 +1481,7 @@ private val connectedReferences = listOf(
     stringBuilderAppend,
     stringBuilderAppendBetween,
     stringBuilderAppendCodePoint,
+    stringBuilderClear,
     stringBuilderToString,
     stringCountBetween,
     stringEnd,

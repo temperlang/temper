@@ -89,6 +89,7 @@ const skipped = new Set([
     "stringBuilder",
     "stringBuilderAppend",
     "stringBuilderAppendBetween",
+    "stringBuilderClear",
     "stringBuilderConstructor",
     "stringBuilderToString",
     "stringEnd",

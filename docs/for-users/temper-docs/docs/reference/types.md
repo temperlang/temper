@@ -2677,6 +2677,22 @@ A string index that works for the start of any string.
 A *StringBuilder* allows composing a string by appending substrings at the
 end.
 
+<!-- snippet: temper-code/build-user-docs/build/snippet/type/StringBuilder/commentary/snippet.md/0 -->
+
+```temper
+let stringBuilder = new StringBuilder();
+stringBuilder.append("Hello");
+console.log(stringBuilder.toString()); //!outputs "Hello"
+stringBuilder.append(", World!");
+console.log(stringBuilder.toString()); //!outputs "Hello, World!"
+stringBuilder.clear();
+stringBuilder.append("Goodbye.");
+console.log(stringBuilder.toString()); //!outputs "Goodbye."
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/type/StringBuilder/commentary/snippet.md/0 -->
+
 <!-- /snippet: type/StringBuilder/commentary -->
 
 <!-- snippet: type/StringBuilder/sig -->
@@ -2808,6 +2824,33 @@ without creating a new backing array for the substring.
 <!-- /snippet: type/StringBuilder/method/appendBetween/commentary -->
 
 <!-- /snippet: type/StringBuilder/method/appendBetween -->
+
+<!-- snippet: type/StringBuilder/method/clear -->
+
+<a name="type&#45;StringBuilder&#45;method&#45;clear" class="snippet-anchor-name"></a>
+
+#### `StringBuilder.clear`
+
+<!-- snippet: type/StringBuilder/method/clear/sig -->
+
+<a name="type&#45;StringBuilder&#45;method&#45;clear&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*StringBuilder*](#type-StringBuilder)`):` [*Void*](#type-Void)
+
+<!-- /snippet: type/StringBuilder/method/clear/sig -->
+
+<!-- snippet: type/StringBuilder/method/clear/commentary -->
+
+<a name="type&#45;StringBuilder&#45;method&#45;clear&#45;commentary" class="snippet-anchor-name"></a>
+
+*clear()* removes any previously appended content, returning this
+*StringBuilder* to its newly created state.
+
+This *StringBuilder* may be reused after clearing.
+
+<!-- /snippet: type/StringBuilder/method/clear/commentary -->
+
+<!-- /snippet: type/StringBuilder/method/clear -->
 
 <!-- snippet: type/StringBuilder/method/toString -->
 

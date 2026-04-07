@@ -1367,6 +1367,12 @@ function temper.stringbuilder_appendbetween(builder, source, begin, end_)
     builder[#builder + 1] = temper.string_slice(source, begin, end_)
 end
 
+function temper.stringbuilder_clear(builder)
+    while #builder ~= 0 do
+        builder[#builder] = nil
+    end
+end
+
 function temper.stringbuilder_tostring(builder)
     return table_concat(builder)
 end
