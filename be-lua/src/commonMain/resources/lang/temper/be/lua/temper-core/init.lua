@@ -1373,6 +1373,20 @@ function temper.stringbuilder_clear(builder)
     end
 end
 
+function temper.stringbuilder_end(builder)
+    if #builder == 0 then
+        return 1
+    end
+
+    local compacted = table.concat(builder, "")
+
+    -- Compacting the stringbuilder amortizes the cost of this operation
+    temper.stringbuilder_clear(builder)
+    builder[1] = compacted
+
+    return temper.string_end(compacted)
+end
+
 function temper.stringbuilder_tostring(builder)
     return table_concat(builder)
 end

@@ -505,6 +505,7 @@ val StringBuilderClear = PyInlineSupportCode(
 ) { pos, args ->
     args[0].method("clear", pos = pos)
 }
+val StringBuilderEnd = PySeparateCode("string_builder_end", RUNTIME)
 val StringBuilderToString = PyInlineSupportCode(
     "StringBuilder::toString",
     arity = 1,
@@ -1207,6 +1208,7 @@ private val pyConnections = mapOf(
     "StringBuilder::appendBetween" to StringBuilderAppendBetween,
     "StringBuilder::appendCodePoint" to StringBuilderAppendCodePoint,
     "StringBuilder::clear" to StringBuilderClear,
+    "StringBuilder::end" to StringBuilderEnd,
     "StringBuilder::constructor" to StringBuilderConstructor,
     "StringBuilder::toString" to StringBuilderToString,
     "StringIndex::none" to StringIndexNone,

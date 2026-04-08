@@ -778,6 +778,38 @@ export class StringBuilder {
     this.substrings.clear();
   }
 
+  /**
+   * The index at the end of the string built by this string.
+   * This is invalidated by a call to [clear].
+   *
+   * ```temper
+   * let stringBuilder = new StringBuilder();
+   * stringBuilder.append("Hello");
+   * let afterHello = stringBuilder.end;
+   * stringBuilder.append(", World!");
+   * let str = stringBuilder.toString();
+   * // Now I can use afterHello with str.
+   * console.log(str.slice(String.begin, afterHello)); //!outputs "Hello"
+   * console.log(str.slice(afterHello, str.end)); //!outputs ", World!"
+   * ```
+   */
+  @connected("StringBuilder::end")
+  public get end(): StringIndex {
+    let substrings = this.substrings;
+    when (substrings.length) {
+      0 -> String.begin;
+      1 -> substrings[0].end;
+      else -> do {
+        // Compact and test
+        // Ideal if these things happen atomically.
+        let s = toString();
+        substrings.clear();
+        substrings.add(s);
+        s.end
+      }
+    }
+  }
+
   @connected("StringBuilder::toString")
   public toString(): String {
     this.substrings.join("") { substring: String => substring }

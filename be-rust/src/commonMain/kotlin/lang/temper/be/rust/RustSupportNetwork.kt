@@ -1083,6 +1083,8 @@ private val stringBuilderAppendCodePoint =
     FunctionCall("StringBuilder::appendCodePoint", "temper_core::string::builder::append_code_point")
 private val stringBuilderClear =
     FunctionCall(baseName = "StringBuilder::clear", functionName = "temper_core::string::builder::clear")
+private val stringBuilderEnd =
+    FunctionCall(baseName = "StringBuilder::end", functionName = "temper_core::string::builder::end")
 private val stringBuilderToString =
     FunctionCall("StringBuilder::toString", "temper_core::string::builder::to_string")
 
@@ -1221,6 +1223,7 @@ private val connectedReferences = listOf(
     stringBuilderAppendBetween,
     stringBuilderAppendCodePoint,
     stringBuilderClear,
+    stringBuilderEnd,
     stringBuilderToString,
     StringIndexNone,
     TestBail,

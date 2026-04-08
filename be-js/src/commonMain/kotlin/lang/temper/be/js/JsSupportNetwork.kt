@@ -245,7 +245,6 @@ internal object JsSupportNetwork : SupportNetwork {
             "ListBuilder::toListBuilder" -> listToListBuilderIdiomExpander
             "String::isEmpty" -> stringIsEmptyIdiomExpander
             "String::toString" -> identityIdiomExpander
-            "Utf16StringSlice::length" -> lengthIdiomExpander
             "Date::constructor" -> { p, args, strict, translator ->
                 newDateIdiomExpander(p, args, strict = strict, genre = genre, translator = translator)
             }
@@ -311,6 +310,7 @@ internal object JsSupportNetwork : SupportNetwork {
             "StringBuilder::append" -> stringBuilderAppendExpander
             "StringBuilder::appendBetween" -> stringBuilderAppendBetweenExpander
             "StringBuilder::clear" -> stringBuilderClearExpander
+            "StringBuilder::end" -> stringBuilderEndExpander
             "StringBuilder::toString" -> stringBuilderToStringExpander
             // Ignore others
             else -> null
@@ -731,9 +731,32 @@ private val lengthIdiomExpander = { pos: Position, arguments: List<Js.Tree>, str
         Js.MemberExpression(
             pos = pos,
             obj = obj ?: Js.Identifier(pos, JsIdentifierName("x"), null),
-            property = Js.Identifier(pos, JsIdentifierName("length"), null),
+            property = Js.Identifier(pos.rightEdge, JsIdentifierName("length"), null),
             computed = false,
             optional = false,
+        )
+    }
+}
+
+/** Given `x` constructs `x.length`. */
+private val stringBuilderEndExpander = { pos: Position, arguments: List<Js.Tree>, strict: Boolean, t: JsTranslator? ->
+    val obj = arguments.getOrNull(0) as? Js.Expression
+    if (strict && (arguments.size != 1 || obj == null)) {
+        garbageExpression(pos, "Wrong arguments for length idiom expander")
+    } else {
+        lengthIdiomExpander(
+            pos,
+            listOf(
+                Js.MemberExpression(
+                    pos = pos,
+                    obj = obj ?: Js.Identifier(pos, JsIdentifierName("x"), null),
+                    property = Js.NumericLiteral(pos.rightEdge, 0),
+                    computed = true,
+                    optional = false,
+                ),
+            ),
+            strict,
+            t,
         )
     }
 }

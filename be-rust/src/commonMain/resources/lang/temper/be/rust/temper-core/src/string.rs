@@ -66,6 +66,11 @@ pub mod builder {
         builder.clear();
     }
 
+    pub fn end(builder: &Arc<RwLock<String>>) -> usize {
+        let builder = builder.read().unwrap();
+        builder.len()
+    }
+
     pub fn to_string(builder: &Arc<RwLock<String>>) -> Arc<String> {
         let builder = builder.read().unwrap();
         Arc::new(builder.clone())

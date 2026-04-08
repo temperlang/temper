@@ -118,3 +118,22 @@ try it.
     // // let end = String.fromCodePoint(message[message.end]) orelse "nope";
     // let end = message[message.end];
     // console.log("Char at end? ${end}");
+
+StringBuilder uses string indices too.
+
+    do {
+      let stringBuilder = new StringBuilder();
+      stringBuilder.append("Hello");
+      stringBuilder.append(",");
+      let afterComma = stringBuilder.end;
+      stringBuilder.append(" World!");
+      let str = stringBuilder.toString();
+      // Now I can use the string index with str.
+      console.log(str.slice(String.begin, afterComma));
+      console.log(str.slice(afterComma, str.end));
+    }
+
+```log
+Hello,
+ World!
+```

@@ -2329,6 +2329,43 @@ class JsBackendTest {
             |}
         """.trimMargin(),
     )
+
+    @Test
+    fun stringBuilderEnd() = assertGeneratedCode(
+        inputs = inputFileMapFromJson(
+            """
+                |{
+                |  src: {
+                |    foo: {
+                |      foo.temper: ```
+                |        (new StringBuilder()).end
+                |        ```
+                |    }
+                |  }
+                |}
+            """.trimMargin(),
+        ),
+        want = """
+            |{
+            |  "js": {
+            |    "my-test-library": {
+            |      "src": {
+            |        "foo.js": {
+            |          "content":
+            |          ```
+            |          [""][0].length;
+            |
+            |          ```
+            |        },
+            |        "foo.js.map": "__DO_NOT_CARE__"
+            |      },
+            |      "package.json": "__DO_NOT_CARE__",
+            |      "index.js": "__DO_NOT_CARE__",
+            |    }
+            |  }
+            |}
+        """.trimMargin(),
+    )
 }
 
 private const val OUTPUT_BOILERPLATE = """
