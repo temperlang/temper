@@ -2719,6 +2719,55 @@ console.log(stringBuilder.toString()); //!outputs "Goodbye."
 
 <a name="type&#45;StringBuilder&#45;properties" class="snippet-anchor-name"></a>
 
+### properties
+
+<!-- snippet: type/StringBuilder/property/end -->
+
+<a name="type&#45;StringBuilder&#45;property&#45;end" class="snippet-anchor-name"></a>
+
+#### `StringBuilder.end`
+
+<!-- snippet: type/StringBuilder/property/end/sig -->
+
+<a name="type&#45;StringBuilder&#45;property&#45;end&#45;sig" class="snippet-anchor-name"></a>
+
+`:` [*StringIndex*](#type-StringIndex)
+
+<!-- /snippet: type/StringBuilder/property/end/sig -->
+
+<!-- snippet: type/StringBuilder/property/end/commentary -->
+
+<a name="type&#45;StringBuilder&#45;property&#45;end&#45;commentary" class="snippet-anchor-name"></a>
+
+The index at the end of the string built by this string
+as it stands right now.  It will still be the index after
+the previously appended content even if more content is appended.
+The end index is invalidated by any subsequent calls to [clear].
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/type/StringBuilder/property/end/commentary/snippet.md/0 -->
+
+```temper
+let stringBuilder = new StringBuilder();
+stringBuilder.append("Hello");
+let afterHello = stringBuilder.end;
+stringBuilder.append(", World!");
+let str = stringBuilder.toString();
+// Now I can use afterHello with str.
+console.log(str.slice(String.begin, afterHello)); //!outputs "Hello"
+console.log(str.slice(afterHello, str.end)); //!outputs ", World!"
+
+// ⚠️ Do not use afterHello after calling clear.
+stringBuilder.clear();
+// stringBuilder.toString()[afterHello] would panic!
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/type/StringBuilder/property/end/commentary/snippet.md/0 -->
+
+<!-- /snippet: type/StringBuilder/property/end/commentary -->
+
+<!-- /snippet: type/StringBuilder/property/end -->
+
 <!-- /snippet: type/StringBuilder/properties -->
 
 <!-- snippet: type/StringBuilder/methods -->

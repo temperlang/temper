@@ -175,6 +175,7 @@ The set of *\@connected* methods from Temper's *ImplicitsModule* are:
 - `StringBuilder::appendCodePoint`
 - `StringBuilder::clear`
 - `StringBuilder::constructor`
+- `StringBuilder::end`
 - `StringBuilder::toString`
 - `StringIndex`
 - `StringIndex::none`

@@ -91,6 +91,7 @@ const skipped = new Set([
     "stringBuilderAppendBetween",
     "stringBuilderClear",
     "stringBuilderConstructor",
+    "stringBuilderEnd",
     "stringBuilderToString",
     "stringEnd",
     "stringHasIndex",

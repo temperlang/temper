@@ -129,6 +129,12 @@ def str_cat(*parts: str) -> str:
     return "".join(map(str, parts))
 
 
+def string_builder_end(string_builder: list[str]) -> int:
+    compacted = "".join(string_builder)
+    string_builder[:] = (compacted,)
+    return len(compacted)
+
+
 def make_bubble_exception() -> Exception:
     return RuntimeError()
 

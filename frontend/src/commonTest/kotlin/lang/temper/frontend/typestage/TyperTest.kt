@@ -782,7 +782,7 @@ class TyperTest {
         |    (new B() as A).hi;
         """.trimMargin(),
         wantErrors = listOf(
-            "1+4-9: No member hi in MissingType!",
+            "1+4-6: No type for subject of .hi!",
             "4+4-21: No member hi in A | AnyValue!",
             "1+4-9: Type Invalid mentions Invalid",
             "1+7-9: Type Invalid mentions Invalid",

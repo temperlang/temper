@@ -2945,7 +2945,19 @@ internal class Typer(
                                 it.definition as TypeShape
                             }.toSet()
                         }
-                        BecauseNoSuchMember(t.pos, memberSymbol, typeShapes)
+                        if (typeShapes.isEmpty() && thisType is InvalidType?) {
+                            // We don't know where to find the member so no need to mention it.
+                            TypeReason(
+                                LogEntry(
+                                    Log.Error,
+                                    MessageTemplate.MissingType,
+                                    thisArg.pos,
+                                    listOf("subject of .${memberSymbol.text}"),
+                                ),
+                            )
+                        } else {
+                            BecauseNoSuchMember(t.pos, memberSymbol, typeShapes)
+                        }
                     },
                 )
                 includeInvalid = true

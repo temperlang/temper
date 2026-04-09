@@ -909,6 +909,11 @@ val JavaLang.stringBuilderClear by receiver {
         args[0].method("setLength", J.IntegerLiteral(pos.rightEdge, 0), pos = pos)
     }
 }
+val JavaLang.stringBuilderEnd by receiver {
+    inlineSupport("StringBuilder::end", arity = 1, needsSelf = true) { pos, args ->
+        args[0].method("length", pos = pos)
+    }
+}
 val JavaLang.stringBuilderToString by receiver {
     inlineSupport("StringBuilder::toString", arity = 1, needsSelf = true) { pos, args ->
         args[0].method("toString", pos = pos)
@@ -1582,6 +1587,7 @@ private val connections: Map<String, ((JavaLang) -> SupportCode)> = mapOf(
     "StringBuilder::appendCodePoint" to { it.stringBuilderAppendCodePoint },
     "StringBuilder::clear" to { it.stringBuilderClear },
     "StringBuilder::constructor" to { it.stringBuilderConstructor },
+    "StringBuilder::end" to { it.stringBuilderEnd },
     "StringBuilder::toString" to { it.stringBuilderToString },
     "StringIndex::none" to { it.stringIndexNone },
     "StringIndexOption::compareTo" to { it.stringIndexOptionCompareTo },

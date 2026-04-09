@@ -1038,6 +1038,10 @@ private val stringBuilderClear = MethodCall(
     "StringBuilder::clear",
     "Clear",
 )
+private val stringBuilderEnd = PropertyAccess(
+    "StringBuilder::end",
+    "Length",
+)
 private val stringBuilderToString = MethodCall(
     "StringBuilder::toString",
     "ToString",
@@ -1482,6 +1486,7 @@ private val connectedReferences = listOf(
     stringBuilderAppendBetween,
     stringBuilderAppendCodePoint,
     stringBuilderClear,
+    stringBuilderEnd,
     stringBuilderToString,
     stringCountBetween,
     stringEnd,
