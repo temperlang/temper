@@ -296,7 +296,6 @@ class RustTranslator(
         // If we use a separate pre-naming stage for be-rust, this might matter less.
         decls@ for (topLevel in module.topLevels) {
             when (topLevel) {
-                is TmpL.TypeDeclaration -> {} // TODO
                 is TmpL.ModuleFunctionDeclaration -> {
                     decls[topLevel.name.name] = DeclInfo(topLevel, typeFrom = topLevel.sig)
                 }
@@ -974,7 +973,7 @@ class RustTranslator(
         ).toItem().also { moduleItems.add(it) }
         // Implement traits including AnyValue.
         val typeRef = id.makeTypeRef(generics)
-        implTraits(pos, decl, typeRef, generics) // , enumId)
+        implTraits(pos, decl, typeRef, generics)
         Rust.Call(
             pos,
             callee = "temper_core".toKeyId(pos).extendWith("impl_any_value_trait_for_interface!"),
