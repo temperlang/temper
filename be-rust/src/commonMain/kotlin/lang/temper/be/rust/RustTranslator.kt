@@ -698,6 +698,7 @@ class RustTranslator(
         decl: TmpL.TypeDeclaration,
         typeRef: Rust.Type,
         generics: List<Rust.GenericParam>,
+        enumId: Rust.Id? = null,
     ): MutableList<Rust.Type> {
         val supTypes = mutableListOf<Rust.Type>()
         val selfParams = listOf(Rust.RefType(pos, type = "self".toKeyId(pos)))
@@ -729,7 +730,7 @@ class RustTranslator(
                 type = typeRef.deepCopy(),
                 items = buildList {
                     // Some need as_enum.
-                    if (supShape.sealedSubTypes != null) {
+                    if (supShape.sealedSubTypes != null || enumId != null) {
                         // The sub shape must be a member of the sealed sub types if the Temper was legal.
                         // TODO Qualified path, not just name.
                         val enumId = supName.suffixed(ENUM_NAME_SUFFIX)
@@ -971,7 +972,7 @@ class RustTranslator(
         ).toItem().also { moduleItems.add(it) }
         // Implement traits including AnyValue.
         val typeRef = id.makeTypeRef(generics)
-        implTraits(pos, decl, typeRef, generics)
+        implTraits(pos, decl, typeRef, generics, enumId)
         Rust.Call(
             pos,
             callee = "temper_core".toKeyId(pos).extendWith("impl_any_value_trait_for_interface!"),
@@ -1377,7 +1378,7 @@ class RustTranslator(
             pos,
             id = enumId,
             generics = generics,
-            items = decl.typeShape.sealedSubTypes!!.map { sub ->
+            items = (decl.typeShape.sealedSubTypes ?: listOf()).map { sub ->
                 val subId = translateTypeOutName(sub.name).toId(pos)
                 val subType = subId.deepCopy().makeTypeRef(generics)
                 Rust.EnumItemTuple(pos, id = subId, fields = listOf(Rust.TupleField(pos, type = subType)))

@@ -849,6 +849,7 @@ class RustBackendTest {
                 |let maybe: Apple? = thing;
                 |let nope = thing as Carrot;
                 |let alsoNope = maybe as Carrot;
+                |export sealed interface AllAlone {}
             """.trimMargin(),
             rust = """
                 |pub (crate) fn init() -> temper_core::Result<()> {
@@ -932,6 +933,33 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait!(Carrot, [Apple]);
+                |pub enum AllAloneEnum {}
+                |pub trait AllAloneTrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
+                |    fn as_enum(& self) -> AllAloneEnum;
+                |    fn clone_boxed(& self) -> AllAlone;
+                |}
+                |#[derive(Clone)]
+                |pub struct AllAlone(std::sync::Arc<dyn AllAloneTrait>);
+                |impl AllAlone {
+                |    pub fn new(selfish: impl AllAloneTrait + 'static) -> AllAlone {
+                |        AllAlone(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |impl AllAloneTrait for AllAlone {
+                |    fn as_enum(& self) -> AllAloneEnum {
+                |        AllAloneTrait::as_enum( & ( * self.0))
+                |    }
+                |    fn clone_boxed(& self) -> AllAlone {
+                |        AllAloneTrait::clone_boxed( & ( * self.0))
+                |    }
+                |}
+                |temper_core::impl_any_value_trait_for_interface!(AllAlone);
+                |impl std::ops::Deref for AllAlone {
+                |    type Target = dyn AllAloneTrait;
+                |    fn deref(& self) -> & Self::Target {
+                |        & ( * self.0)
+                |    }
+                |}
             """.trimMargin(),
         )
     }
