@@ -3276,10 +3276,43 @@ class GenerateCodeStageTest {
         moduleResultNeeded = true,
         input = $$"""
             |$${"\"\"\""}
+            |~Things: ${}
             |:for (var i = 1; i < 100; i *= 2) {
             |  ~${i}, ${}
+            |  // Comment inside loop after content.
             |:}
             |~and so on
+        """.trimMargin(),
+        want = """
+            |{
+            |  run: ["Things: 1, 2, 4, 8, 16, 32, 64, and so on", "String"],
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun complexStringExprWithFormattingHoleAndMore() = assertModuleAtStage(
+        stage = Stage.Run,
+        moduleResultNeeded = true,
+        input = $$"""
+            |$${"\"\"\""}
+            |:var after = "and such";
+            |:for (var i = 1; i < 100; i *= 2) {
+            |  // Comment inside loop before split content.
+            |  // Second comment.
+            |  :let j = i - 1;
+            |  ~${j + 1}
+            |  :after = "and so on";
+            |  ~,
+            |  :do {
+            |    // And a trailing space inside a nested block.
+            |    ~ ${}
+            |  :}
+            |  // Just some nothings for funsies.
+            |  ~
+            |  ~
+            |:}
+            |~${after}
         """.trimMargin(),
         want = """
             |{
@@ -3782,7 +3815,7 @@ class GenerateCodeStageTest {
             |}
             |f(4)
         """.trimMargin(),
-        want = $$"""
+        want = """
             |{
             |  errors: [
             |    "Expected subtype of StringBuilder, but got StringBuilder?!",

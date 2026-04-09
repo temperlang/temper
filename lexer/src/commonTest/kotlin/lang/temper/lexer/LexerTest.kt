@@ -644,21 +644,21 @@ class LexerTest {
 
     @Test
     fun stringEscapes() = assertTokenization(
-        """
-        >"\x20Escaped at start with more later\u{20,$C/*hi*/}b1,,  {21 }."
+        $$"""
+        >"\x20Escaped at start with more later\u{20,$$C/*hi*/}b1,,  {21 }."
         :L   Q                               Q  B QP B     CB QPP QQ QQBQRS
-        >$Q3
+        >$$Q3
         :  LQ
         >"Maybe\u0020here?
         :M    Q     Q     Q
-        >"${'$'}{hi}
-        :M${' '}B WBQ
-        >$Q3;
+        >"${hi}
+        :M$${' '}B WBQ
+        >$$Q3;
         :  rPS
-        >raw"hi\u{$C" t"}}here"
+        >raw"hi\u{$$C" t"}}here"
         :  WL Q  B BL QRBB   QRS
         >"\u{20"
-        :L  B Q ${""}
+        :L  B Q $${""}
         >
         :Q
         >}"
@@ -666,6 +666,114 @@ class LexerTest {
         """.trimIndent(),
         wantedErrors = listOf(
             "129: Missing close quote!",
+        ),
+    )
+
+    @Test
+    fun templatesEasier() = assertTokenization(
+        $$"""
+            |>$$Q3
+            |:  LQ
+            |>~Things: ${}
+            |:M       Q BBQ
+            |>:do {
+            |:M WSBS
+            |>  ~${i}, ${}
+            |: SM BWB Q BBQ
+            |>  // Comment inside loop after content.
+            |: S                                    CS
+            |>:}
+            |:MBS
+            |>~and so on$$Q3
+            |:M        Q  r
+        """.trimMargin(),
+    )
+
+    @Test
+    fun templatesHarder() = assertTokenization(
+        $$"""
+            |>$$Q3
+            |:  LQ
+            |>:do {
+            |:M WSBS
+            |>  ~${i}
+            |: SM BWBQ
+            |>  ~, ${}
+            |: SM Q BBQ
+            |>  ~, ${}
+            |: SM Q BBQ
+            |>:}
+            |:MBS
+            |>~and so on$$Q3
+            |:M        Q  r
+        """.trimMargin(),
+    )
+
+    @Test
+    fun templatesHarderMore() = assertTokenization(
+        $$"""
+            |>$$Q3
+            |:  LQ
+            |>:do {
+            |:M WSBS
+            |>  // Comment inside loop before content.
+            |: S                                     CS
+            |>  ~${i}
+            |: SM BWBQ
+            |>  :do { // Nested block.
+            |: SM WSBS               CS
+            |>    ~, ${}
+            |:   SM Q BBQ
+            |>  :}
+            |: SMBS
+            |>:}
+            |:MBS
+            |>~and so on$$Q3
+            |:M        Q  r
+        """.trimMargin(),
+    )
+
+    @Test
+    fun templatesNested() = assertTokenization(
+        $$"""
+            |>$$Q3
+            |:  LQ
+            |>:let a = $$Q3
+            |:M  WSWSPS  EQ
+            |>  ~hi
+            |: SM  Q
+            |>:;
+            |:MPS
+            |>~${a}$$Q3$$Q3
+            |:M BWB  r  r
+        """.trimMargin(),
+        wantedErrors = listOf(
+            "13-16: `\"\"\"`: Multi-quoted string nesting not yet supported!",
+        ),
+    )
+
+    @Test
+    fun templatesNestedInsideBlock() = assertTokenization(
+        $$"""
+            |>$$Q3
+            |:  LQ
+            |>:do {
+            |:M WSBS
+            |>  :let a = $$Q3
+            |: SM  WSWSPS  EQ
+            |>    ~hi
+            |:   SM  Q
+            |>  :;
+            |: SMPS
+            |>:}
+            |:MES
+            |>~${a}$$Q3}$$Q3
+            |:M BWB  rb  r
+        """.trimMargin(),
+        wantedErrors = listOf(
+            "21-24: `$Q3`: Multi-quoted string nesting not yet supported!",
+            "39-40: `}`: Close bracket matches no open bracket!",
+            "46: Close bracket matches no open bracket!",
         ),
     )
 

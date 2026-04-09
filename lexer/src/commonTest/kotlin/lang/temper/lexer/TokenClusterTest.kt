@@ -979,7 +979,7 @@ class TokenClusterTest {
             |   '\n'
             |   ':'
             |   ' '
-            |   '”””'
+            |  -'”””'
             |     '\n'
             |     '”'
             |     'x\n'
