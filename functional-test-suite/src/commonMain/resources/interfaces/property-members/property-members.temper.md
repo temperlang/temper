@@ -85,4 +85,6 @@ Sealed thing is foo.
 Also a sealed interface with no subtypes. This is just here to see if backends
 break. There's no way to instantiate one.
 
-    sealed interface AllAlone {}
+But do extend another non-sealed interface to ensure we also handle that.
+
+    sealed interface AllAlone extends I {}

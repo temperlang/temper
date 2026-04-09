@@ -60,6 +60,7 @@ import lang.temper.type2.ValueFormalKind
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
+import lang.temper.value.DeclTree
 import lang.temper.value.TBoolean
 import lang.temper.value.TClass
 import lang.temper.value.TClosureRecord
@@ -295,6 +296,7 @@ class RustTranslator(
         // If we use a separate pre-naming stage for be-rust, this might matter less.
         decls@ for (topLevel in module.topLevels) {
             when (topLevel) {
+                is TmpL.TypeDeclaration -> {} // TODO
                 is TmpL.ModuleFunctionDeclaration -> {
                     decls[topLevel.name.name] = DeclInfo(topLevel, typeFrom = topLevel.sig)
                 }
@@ -698,7 +700,6 @@ class RustTranslator(
         decl: TmpL.TypeDeclaration,
         typeRef: Rust.Type,
         generics: List<Rust.GenericParam>,
-        enumId: Rust.Id? = null,
     ): MutableList<Rust.Type> {
         val supTypes = mutableListOf<Rust.Type>()
         val selfParams = listOf(Rust.RefType(pos, type = "self".toKeyId(pos)))
@@ -709,6 +710,7 @@ class RustTranslator(
         sups@ for ((subShape, sup) in decl.typeShape.allInterfaces(allowStart = true)) {
             // Only handle type shapes, and only unique ones.
             val supShape = (sup.definition as? TypeShape) ?: continue@sups
+            val supDecl = supShape.stayLeaf?.incoming?.source as? DeclTree
             // For sealed enums, this picks an arbitrary winner. TODO Allow diamonds and/or check against them earlier.
             handledSups.add(supShape.name) || continue@sups
             // Handle this one.
@@ -730,7 +732,7 @@ class RustTranslator(
                 type = typeRef.deepCopy(),
                 items = buildList {
                     // Some need as_enum.
-                    if (supShape.sealedSubTypes != null || enumId != null) {
+                    if (supDecl?.parts?.metadataSymbolMap?.contains(sealedTypeSymbol) == true) {
                         // The sub shape must be a member of the sealed sub types if the Temper was legal.
                         // TODO Qualified path, not just name.
                         val enumId = supName.suffixed(ENUM_NAME_SUFFIX)
@@ -972,7 +974,7 @@ class RustTranslator(
         ).toItem().also { moduleItems.add(it) }
         // Implement traits including AnyValue.
         val typeRef = id.makeTypeRef(generics)
-        implTraits(pos, decl, typeRef, generics, enumId)
+        implTraits(pos, decl, typeRef, generics) // , enumId)
         Rust.Call(
             pos,
             callee = "temper_core".toKeyId(pos).extendWith("impl_any_value_trait_for_interface!"),
