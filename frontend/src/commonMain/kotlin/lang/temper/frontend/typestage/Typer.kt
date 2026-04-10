@@ -1121,11 +1121,7 @@ internal class Typer(
                     inferredType is AndType && inferredType.members.all { it is FunctionType } ->
                         InputBound.Pretyped(hackMapOldStyleToNew(functionType, childI.pos) as PositionedType)
                     inferredType != null -> InputBound.Pretyped(
-                        try {
-                            hackMapOldStyleToNew(inferredType, childI.pos) as PositionedType
-                        } catch (e: IllegalStateException) {
-                            throw IllegalStateException("$inferredType", e)
-                        },
+                        hackMapOldStyleToNew(inferredType, childI.pos) as PositionedType,
                     )
                     childI is ValueLeaf ->
                         InputBound.ValueInput(
