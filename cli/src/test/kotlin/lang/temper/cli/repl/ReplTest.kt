@@ -738,6 +738,28 @@ class ReplTest {
     }
 
     @Test
+    fun helpOfOperators() {
+        // `+` outside infix position
+        repl.processLine("help(+)")
+        assertPendingContains(
+            Regex(
+                """
+                    |signed addition
+                """.trimMargin(),
+            ),
+        )
+        // `is` is an infix operator, so it can't normally appear there.
+        repl.processLine("help(is);")
+        assertPendingContains(
+            Regex(
+                """
+                    |The "is" operator allows runtime type-checking.
+                """.trimMargin(),
+            ),
+        )
+    }
+
+    @Test
     fun canImport() {
         // We can import something from std
         repl.processLine(

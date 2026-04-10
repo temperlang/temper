@@ -116,7 +116,24 @@ data class Value<T : Any>(
 sealed class Fail(val info: LogEntry? = null) : Result() {
     override fun destructure(structureSink: StructureSink) = structureSink.nil()
 
-    override fun toString() = OutToks.failWord.text
+    override fun toString(): String {
+        val info = info
+        if (info != null) {
+            var messageText: String? = null
+            run {
+                try {
+                    messageText = info.messageText
+                } finally {
+                    @Suppress("ReturnInsideFinallyBlock")
+                    return@run
+                }
+            }
+            if (messageText != null) {
+                return "${OutToks.failWord.text}($messageText)"
+            }
+        }
+        return OutToks.failWord.text
+    }
 
     override fun renderTo(tokenSink: TokenSink) = tokenSink.emit(OutToks.failWord)
 

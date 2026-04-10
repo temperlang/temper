@@ -958,7 +958,7 @@ object BuiltinFuns {
     val plusFn = CoverFunction(
         listOf(plusIntIntFn, plusIntFn, plusLongLongFn, plusLongFn, plusFloatFloatFn, plusFloatFn),
     ).also {
-        helpSnippet(it, "Numeric addition", "builtin/+")
+        helpSnippet(it, "Numeric addition", "builtin/%2B")
     }
 
     /**

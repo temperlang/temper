@@ -427,7 +427,7 @@ Ignore any value.
 <a name="builtin&#45;is" class="snippet-anchor-name"></a>
 
 ### `is`
-The `is` operator allows type-checking.
+The `is` operator allows runtime type-checking.
 
 `x is Type` evaluates to true when `x`'s [type tag](types.md#type-tag)
 is [compatible](types.md#type-compatibility) with `Type`.
