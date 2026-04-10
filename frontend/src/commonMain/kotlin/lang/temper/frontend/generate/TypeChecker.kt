@@ -442,7 +442,8 @@ internal class TypeChecker(
                             }
                         }
                     }
-                    if (!reported && calleeType != InvalidType) { // Invalid callee types already reported
+                    // Most invalid callee types already reported in more specific ways, but not all.
+                    if (!reported && (calleeType != InvalidType || callee.functionContained == null)) {
                         logSink.log(
                             level = Log.Error,
                             template = MessageTemplate.ExpectedFunctionType,
