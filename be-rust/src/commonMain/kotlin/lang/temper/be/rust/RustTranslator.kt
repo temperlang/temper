@@ -60,6 +60,7 @@ import lang.temper.type2.ValueFormalKind
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
+import lang.temper.value.DeclTree
 import lang.temper.value.TBoolean
 import lang.temper.value.TClass
 import lang.temper.value.TClosureRecord
@@ -708,6 +709,7 @@ class RustTranslator(
         sups@ for ((subShape, sup) in decl.typeShape.allInterfaces(allowStart = true)) {
             // Only handle type shapes, and only unique ones.
             val supShape = (sup.definition as? TypeShape) ?: continue@sups
+            val supDecl = supShape.stayLeaf?.incoming?.source as? DeclTree
             // For sealed enums, this picks an arbitrary winner. TODO Allow diamonds and/or check against them earlier.
             handledSups.add(supShape.name) || continue@sups
             // Handle this one.
@@ -729,7 +731,7 @@ class RustTranslator(
                 type = typeRef.deepCopy(),
                 items = buildList {
                     // Some need as_enum.
-                    if (supShape.sealedSubTypes != null) {
+                    if (supDecl?.parts?.metadataSymbolMap?.contains(sealedTypeSymbol) == true) {
                         // The sub shape must be a member of the sealed sub types if the Temper was legal.
                         // TODO Qualified path, not just name.
                         val enumId = supName.suffixed(ENUM_NAME_SUFFIX)
@@ -1377,7 +1379,7 @@ class RustTranslator(
             pos,
             id = enumId,
             generics = generics,
-            items = decl.typeShape.sealedSubTypes!!.map { sub ->
+            items = (decl.typeShape.sealedSubTypes ?: listOf()).map { sub ->
                 val subId = translateTypeOutName(sub.name).toId(pos)
                 val subType = subId.deepCopy().makeTypeRef(generics)
                 Rust.EnumItemTuple(pos, id = subId, fields = listOf(Rust.TupleField(pos, type = subType)))

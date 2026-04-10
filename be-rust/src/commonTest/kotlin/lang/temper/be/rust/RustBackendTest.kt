@@ -1664,6 +1664,8 @@ class RustBackendTest {
                 |export interface I {}
                 |export sealed interface Hi<T extends I> {}
                 |export class Lo<T extends I> extends Hi<T> {}
+                |// Piggyback a subtypeless sealed interface with a non-sealed supertype.
+                |export sealed interface AllAlone extends I {}
             """.trimMargin(),
             rust = """
                 |pub (crate) fn init() -> temper_core::Result<()> {
@@ -1745,6 +1747,38 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait!(Lo<T>, [Hi<T>] where T: ITrait);
+                |pub enum AllAloneEnum {}
+                |pub trait AllAloneTrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + ITrait {
+                |    fn as_enum(& self) -> AllAloneEnum;
+                |    fn clone_boxed(& self) -> AllAlone;
+                |}
+                |#[derive(Clone)]
+                |pub struct AllAlone(std::sync::Arc<dyn AllAloneTrait>);
+                |impl AllAlone {
+                |    pub fn new(selfish: impl AllAloneTrait + 'static) -> AllAlone {
+                |        AllAlone(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |impl AllAloneTrait for AllAlone {
+                |    fn as_enum(& self) -> AllAloneEnum {
+                |        AllAloneTrait::as_enum( & ( * self.0))
+                |    }
+                |    fn clone_boxed(& self) -> AllAlone {
+                |        AllAloneTrait::clone_boxed( & ( * self.0))
+                |    }
+                |}
+                |impl ITrait for AllAlone {
+                |    fn clone_boxed(& self) -> I {
+                |        ITrait::clone_boxed( & ( * self.0))
+                |    }
+                |}
+                |temper_core::impl_any_value_trait_for_interface!(AllAlone);
+                |impl std::ops::Deref for AllAlone {
+                |    type Target = dyn AllAloneTrait;
+                |    fn deref(& self) -> & Self::Target {
+                |        & ( * self.0)
+                |    }
+                |}
             """.trimMargin(),
         )
     }
