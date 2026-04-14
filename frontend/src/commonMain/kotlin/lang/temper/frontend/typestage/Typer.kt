@@ -1118,6 +1118,8 @@ internal class Typer(
                             )
                         }
                     }
+                    inferredType is AndType && inferredType.members.all { it is FunctionType } ->
+                        InputBound.Pretyped(hackMapOldStyleToNew(functionType, childI.pos) as PositionedType)
                     inferredType != null -> InputBound.Pretyped(
                         hackMapOldStyleToNew(inferredType, childI.pos) as PositionedType,
                     )

@@ -38,6 +38,7 @@ import lang.temper.value.CallTree
 import lang.temper.value.Fail
 import lang.temper.value.FunctionSpecies
 import lang.temper.value.HelpInfo
+import lang.temper.value.HelpSnippet
 import lang.temper.value.InterpreterCallback
 import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
@@ -569,7 +570,7 @@ internal sealed class AsLikeFunction(
 /**
  * <!-- snippet: builtin/is -->
  * # `is`
- * The `is` operator allows type-checking.
+ * The `is` operator allows runtime type-checking.
  *
  * `x is Type` evaluates to true when `x`'s [type tag][snippet/type-tag]
  * is [compatible][snippet/type-compatibility] with `Type`.
@@ -586,6 +587,10 @@ internal sealed class AsLikeFunction(
  * console.log(isAFoo(new Bar()).toString());  //!outputs "false"
  * ```
  */
+@HelpSnippet(
+    "The `is` operator allows runtime type-checking.",
+    "builtin/is",
+)
 internal object IsFunction : RttiCheckFunction(
     builtinName = isBuiltinName,
     signature = Signature2( // fn (x: AnyValue, t: Type): Boolean
@@ -787,13 +792,15 @@ fun RttiCheckFunction.problems(
                     }
 
                     // If it's a known subtype then all matching type args are actually woven through.
-                    val exprActuals = exprTypeNominal?.bindings?.toSet() ?: setOf()
-                    // We expect only invariants in the future, so for easier transition, check only invariants.
-                    for ((formal, actual) in nt.definition.formals.zip(nt.bindings)) {
-                        if (formal.variance == Variance.Invariant) {
-                            if (actual !in exprActuals) {
-                                // At least one target actual isn't in the expr type, and we can't conjure those.
-                                introducedActualsTypes.add(nt)
+                    if (exprTypeNominal != null) {
+                        val exprActuals = exprTypeNominal.bindings.toSet()
+                        // We expect only invariants in the future, so for easier transition, check only invariants.
+                        for ((formal, actual) in nt.definition.formals.zip(nt.bindings)) {
+                            if (formal.variance == Variance.Invariant) {
+                                if (actual !in exprActuals) {
+                                    // At least one target actual isn't in the expr type, and we can't conjure those.
+                                    introducedActualsTypes.add(nt)
+                                }
                             }
                         }
                     }

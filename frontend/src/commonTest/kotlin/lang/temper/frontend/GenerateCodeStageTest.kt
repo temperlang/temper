@@ -3880,6 +3880,28 @@ class GenerateCodeStageTest {
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
+
+    @Test
+    fun isAppliedToParameterizedType() = assertModuleAtStage(
+        stage = Stage.Run,
+        moduleResultNeeded = true,
+        input = """
+            |sealed interface I<T> {}
+            |class A<T> extends I<T> {}
+            |class B<T> extends I<T> {}
+            |
+            |let f<T>(x: I<T>): Boolean {
+            |  x is A<T>
+            |}
+            |
+            |[f(new A<String>()), f(new B<String>())]
+        """.trimMargin(),
+        want = """
+            |{
+            |  "run": "[true, false]: List"
+            |}
+        """.trimMargin(),
+    )
 }
 
 // Provide an extra binding to a function whose call does not inline so does not trigger any

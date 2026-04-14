@@ -340,6 +340,8 @@ private fun optimizeAutoescaperUse(
         (use.types.contextualAutoescapingAccumulatorType.definition.name as? ExportedName ?: return)
             .origin
     val propagateOverName = ExportedName(basicDefinitions, ParsedName("propagateOver"))
+    val appendParseEffectName = ExportedName(basicDefinitions, ParsedName("AppendParseEffect"))
+    val eventParseEffectName = ExportedName(basicDefinitions, ParsedName("EventParseEffect"))
 
     val paths = forwardMaximalPaths(
         block,
@@ -583,8 +585,26 @@ private fun optimizeAutoescaperUse(
                             withCallouts { problem, severity ->
                                 problems.add(CalledOutProblem(severity, argPos, problem))
                             }
-                            val adjustedString = TString.unpackOrNull(after.readField(adjustedStringDotName))
+                            val effectValueList = TList.unpackOrNull(after.readField(effectsDotName))
                                 ?: return null
+                            val effects = buildList {
+                                for (effectValue in effectValueList) {
+                                    val shape = (effectValue.typeTag as? TClass)?.typeShape
+                                    when (shape?.name) {
+                                        appendParseEffectName -> {
+                                            val text = TString.unpackOrNull(
+                                                effectValue.readField(textDotName),
+                                            ) ?: return null
+                                            add(AppendEffectDetail(text))
+                                        }
+                                        eventParseEffectName -> {
+                                            @Suppress("UNREACHABLE_CODE")
+                                            add(EventEffectDetail(TODO("$effectValue")))
+                                        }
+                                        else -> return null
+                                    }
+                                }
+                            }
                             state = after.readField(iCtx, stateAfterGetter, argPos) ?: return null
                             val escapers = when (classification) {
                                 AppendClassification.AppendUnsafe -> {
@@ -605,7 +625,7 @@ private fun optimizeAutoescaperUse(
                                 }
                                 AppendClassification.AppendSafe -> null
                             }
-                            toChange.add(ChangeDetail(edge, adjustedString, escapers, classification))
+                            toChange.add(ChangeDetail(edge, effects, escapers, classification))
                         }
                     }
                 }
@@ -719,11 +739,11 @@ private fun optimizeAutoescaperUse(
             appendDotHelper
         }
     }
-    val changes: List<Pair<TEdge, Planting.() -> UnpositionedTreeTemplate<*>>> = toChange.map {
-        val (edge, safe, escapers, classification) = it
-        val ps = it.positions
+    val changes: List<Pair<TEdge, Planting.() -> UnpositionedTreeTemplate<*>>> = toChange.map { change ->
+        val (edge, effects, escapers, classification) = change
+        val ps = change.positions
         edge to {
-            fun Planting.plantSafeAdjusted(safePs: AppendStmtPositions): UnpositionedTreeTemplate<*> =
+            fun Planting.plantSafeAdjusted(safePs: AppendStmtPositions, safe: String): UnpositionedTreeTemplate<*> =
                 Call(safePs.pos) {
                     Call(safePs.callee) {
                         V(safePs.callee, Value(collectorAppendDotHelper))
@@ -731,11 +751,17 @@ private fun optimizeAutoescaperUse(
                     }
                     V(safePs.arg, Value(safe, TString))
                 }
+            fun Planting.plantEffects(ps: AppendStmtPositions) {
+                for (effect in effects) {
+                    when (effect) {
+                        is AppendEffectDetail -> plantSafeAdjusted(ps, effect.text)
+                        is EventEffectDetail -> TODO("$effect")
+                    }
+                }
+            }
             when (classification) {
-                AppendClassification.AppendSafe -> if (safe.isNotEmpty()) {
-                    plantSafeAdjusted(ps)
-                } else {
-                    V(ps.pos, void)
+                AppendClassification.AppendSafe -> Block(ps.pos) {
+                    plantEffects(ps)
                 }
                 AppendClassification.AppendUnsafe -> {
                     check(escapers != null)
@@ -765,9 +791,9 @@ private fun optimizeAutoescaperUse(
                         escapeArg(escapers)
                     }
 
-                    if (safe.isNotEmpty()) {
+                    if (effects.isNotEmpty()) {
                         Block {
-                            plantSafeAdjusted(AppendStmtPositions(ps.pos.leftEdge))
+                            plantEffects(AppendStmtPositions(ps.pos.leftEdge))
                             plantUnsafeAppend()
                         }
                     } else {
@@ -908,9 +934,14 @@ private data class AppendStmtPositions(
     constructor(p: Position) : this(p, p, p, p)
 }
 
+private sealed class EffectDetail
+
+private data class AppendEffectDetail(val text: String) : EffectDetail()
+private data class EventEffectDetail(val value: Value<*>) : EffectDetail()
+
 private data class ChangeDetail(
     val edge: TEdge,
-    val adjustedString: String,
+    val effects: List<EffectDetail>,
     val escapers: List<Type2>?,
     val classification: AppendClassification,
 ) {
@@ -918,11 +949,12 @@ private data class ChangeDetail(
 }
 
 private val stateAfterGetter = DotHelper(ExternalGet, Symbol("stateAfter"))
-private val adjustedStringDotName = Symbol("adjustedString")
+private val effectsDotName = Symbol("effects")
 private val escaperForDotHelper = DotHelper(ExternalBind, Symbol("escaperFor"))
 private val appendSafeDotHelper = DotHelper(ExternalBind, appendSafeDotName)
 private val appendDotHelper = DotHelper(ExternalBind, appendDotName)
 private val applyDotHelper = DotHelper(ExternalBind, Symbol("apply"))
+private val textDotName = Symbol("text")
 
 /**
  * Some escapers are compositions of others.
