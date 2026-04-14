@@ -227,6 +227,15 @@ fun forwardMaximalPaths(
      */
     assumeFailureCanHappen: Boolean = false,
 ): MaximalPaths {
+    return forwardMaximalPathsImpl(root, yieldingCallsEndPaths, ignoreConstantConditions, assumeFailureCanHappen)
+}
+
+private fun forwardMaximalPathsImpl(
+    root: BlockTree,
+    yieldingCallsEndPaths: Boolean,
+    ignoreConstantConditions: Boolean,
+    assumeFailureCanHappen: Boolean,
+): MaximalPaths {
     val topControlFLow = when (val flow = root.flow) {
         LinearFlow -> ControlFlow.StmtBlock(
             root.pos,

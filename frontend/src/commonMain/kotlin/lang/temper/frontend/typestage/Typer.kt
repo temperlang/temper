@@ -212,6 +212,7 @@ private const val DEBUG_LATE_TYPE_CHECK = false
  * Any time it infers an [InvalidType][lang.temper.type.InvalidType] it also logs an error message
  * to [module]'s log sink. TODO: make this true
  */
+
 internal class Typer(
     private val module: Module,
     /** An environment used to type builtins. */
@@ -415,6 +416,7 @@ internal class Typer(
     }
 
     fun type(root: BlockTree): Map<ResolvedName, StaticType> {
+        val tType = System.nanoTime()
         if (DEBUG) {
             console.group("Before Typing") {
                 root.toPseudoCode(console.textOutput)
@@ -426,6 +428,7 @@ internal class Typer(
         adjustDeclarationMetadataWithSinglyAssignedHints(root)
 
         val typerPlan = TyperPlan(root, module.outputName)
+        val typerPlanEndTime = System.nanoTime()
         // Clean up any type inferences from previous typer runs.
         // This allows us to skip re-typing in typeSubTrees while keeping initializer counts in
         // sync with the count of initializers that have no inferences yet.
@@ -434,6 +437,7 @@ internal class Typer(
                 tree.clearTypeInferences()
             }
         }
+        val tClearEnd = System.nanoTime()
 
         ti = TypingInfo(typerPlan)
         if (DEBUG) {
@@ -648,6 +652,7 @@ internal class Typer(
                 ti.bind(name, TopType)
             }
         }
+        val tMainLoopEnd = System.nanoTime()
 
         if (DEBUG) {
             console.group("Before fill in blanks") {
@@ -670,19 +675,32 @@ internal class Typer(
             }
         }
 
+        val tPreType = System.nanoTime()
         fillInBlanksAndRecheckAssignments(root)
 
-        if (DEBUG) {
-            console.group("Before rewrite fail vars of ${root.pos.loc.diagnostic}") {
-                root.toPseudoCode(console.textOutput, detail = PseudoCodeDetail(true))
-            }
-        }
+        val tFillIn = System.nanoTime()
 
         // Store decisions with nodes
         storeDecisionsInTree(root, skipStored = false)
 
+        val tStore = System.nanoTime()
+
         // Replace failure branch condition variables with `false` where type info shows it is safe.
         rewriteUsingTypeInformation(root, singlyAssigned = typerPlan.singlyAssigned)
+
+        val tRewrite = System.nanoTime()
+
+        val totalMs = (tRewrite - tType) / 1_000_000
+        if (totalMs > 200) {
+            val planMs = (typerPlanEndTime - tType) / 1_000_000
+            val clearMs = (tClearEnd - typerPlanEndTime) / 1_000_000
+            val preTypeMs = (tPreType - tClearEnd) / 1_000_000
+            val mainLoopMs = (tMainLoopEnd - tPreType) / 1_000_000
+            val fillInMs = (tFillIn - tMainLoopEnd) / 1_000_000
+            val storeMs = (tStore - tFillIn) / 1_000_000
+            val rewriteMs = (tRewrite - tStore) / 1_000_000
+            System.err.println("[perf]         Typer breakdown: ${totalMs}ms plan=$planMs clear=$clearMs preType=$preTypeMs mainLoop=$mainLoopMs fillIn=$fillInMs store=$storeMs rewrite=$rewriteMs")
+        }
 
         if (DEBUG) {
             console.group("After type check of ${root.pos.loc.diagnostic}") {

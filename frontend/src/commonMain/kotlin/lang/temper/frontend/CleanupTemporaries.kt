@@ -104,6 +104,7 @@ internal class CleanupTemporaries private constructor(
      * structure, so the MaximalPaths remain valid.
      */
     internal var cachedMaximalPaths: lang.temper.value.MaximalPaths? = null
+    internal var lastStrategyIndex: Int = -1
 
     /**
      * A required name is one that we must not eliminate.
@@ -146,11 +147,16 @@ internal class CleanupTemporaries private constructor(
         // Try strategies in priority order. When one returns non-empty,
         // also run eliminateUnusedDeclarations to piggyback cleanup.
         var edits: List<Edit> = emptyList()
-        for (strategy in mainStrategies) {
+        var strategyIdx = -1
+        for ((idx, strategy) in mainStrategies.withIndex()) {
             edits = strategy(readsAndWrites)
-            if (edits.isNotEmpty()) break
+            if (edits.isNotEmpty()) {
+                strategyIdx = idx
+                break
+            }
         }
 
+        lastStrategyIndex = strategyIdx
         if (edits.isNotEmpty()) {
             // Piggyback: also eliminate any declarations that are now unused.
             // This is safe because eliminateUnusedDeclarations only targets
@@ -513,7 +519,26 @@ internal class CleanupTemporaries private constructor(
             }
             touched.add(x)
             touched.add(y)
-            // Let separate passes sweep up obviated declarations to x or y
+
+            // Immediately remove declarations for the eliminated name instead
+            // of deferring to a separate eliminateUnusedDeclarations iteration.
+            val eliminated = when (strategy) {
+                RStrategy.RenameYToX -> y
+                RStrategy.RenameXToY -> x
+            }
+            if (eliminated !in requiredNames) {
+                readsAndWrites.declarations[eliminated]?.forEach { declTree ->
+                    editListBuilder.add(
+                        Replace(
+                            lineNo = lineFor(declTree),
+                            description = "let $eliminated -> no-op",
+                            edgeToReplace = declTree.incoming!!,
+                        ) {
+                            V(void, WellKnownTypes.voidType)
+                        },
+                    )
+                }
+            }
         }
     }
 
@@ -1243,10 +1268,12 @@ internal class CleanupTemporaries private constructor(
                 val keepCleanupTemporariesData =
                     module.stableEnvironmentValue(StagingFlags.keepCleanupTemporariesData) == TBoolean.valueTrue
                 var iterations = 0
+                val strategyLog = mutableListOf<Int>()
                 val tClean = System.nanoTime()
                 while (true) {
                     iterations++
                     val dataTables = cleaner.clean()
+                    strategyLog.add(cleaner.lastStrategyIndex)
                     val madeProgress = dataTables.edits.isNotEmpty()
                     if (keepCleanupTemporariesData) {
                         allDataTables.add(dataTables)
@@ -1257,7 +1284,7 @@ internal class CleanupTemporaries private constructor(
                 }
                 val dtClean = (System.nanoTime() - tClean) / 1_000_000
                 if (dtClean > 200) {
-                    System.err.println("[perf]           CT root: ${iterations}i ${dtClean}ms cached=${cleaner.cachedMaximalPaths != null}")
+                    System.err.println("[perf]           CT root: ${iterations}i ${dtClean}ms strategies=${strategyLog.dropLast(1)}")
                 }
             }
             snapshotId?.let { id ->

@@ -130,36 +130,32 @@ class CleanupTemporariesTest {
                 |      [
                 |        "Replace(L9: rename read console#0 to t#0)",
                 |        "Replace(L1: console#0=... -> no-op)",
+                |        "Replace(L1: let console#0 -> no-op)",
                 |        "Replace(L6: rename written t4#0 to toLogOrNotToLog__0)",
                 |        "Replace(L7: toLogOrNotToLog__0=... -> no-op)",
+                |        "Replace(L6: let t4#0 -> no-op)",
                 |        "Replace(L5: rename read t2#0 to t1#0)",
                 |        "Replace(L4: t2#0=... -> no-op)",
+                |        "Replace(L4: let t2#0 -> no-op)",
                 |        "Replace(L1: let fail#0 -> no-op)",
                 |        "Replace(L1: let fail#1 -> no-op)"
                 |      ],
                 |      [
                 |        "Replace(L5: rename written t3#0 to toLogOrNotToLog__0)",
                 |        "Replace(L6: toLogOrNotToLog__0=... -> no-op)",
-                |        "Replace(L1: let console#0 -> no-op)",
-                |        "Replace(L4: let t2#0 -> no-op)",
-                |        "Replace(L6: let t4#0 -> no-op)"
+                |        "Replace(L5: let t3#0 -> no-op)"
                 |      ],
                 |      [
                 |        "Replace(L3: rename written t1#0 to toLogOrNotToLog__0)",
                 |        "Replace(L5: toLogOrNotToLog__0=... -> no-op)",
-                |        "Replace(L5: let t3#0 -> no-op)"
-                |      ],
-                |      [
                 |        "Replace(L3: let t1#0 -> no-op)"
                 |      ],
                 |      [],
                 |      [
                 |          "Replace(L1: rename written t#1 to return__0)",
-                |          "Replace(L1: return__0=... -\u003e no-op)",
-                |          "Replace(L1: let fail#2 -\u003e no-op)"
-                |      ],
-                |      [
-                |          "Replace(L1: let t#1 -\u003e no-op)"
+                |          "Replace(L1: return__0=... -> no-op)",
+                |          "Replace(L1: let t#1 -> no-op)",
+                |          "Replace(L1: let fail#2 -> no-op)"
                 |      ],
                 |      []
                 |    ],
@@ -319,21 +315,19 @@ class CleanupTemporariesTest {
                 |    [
                 |      "Replace(L1: rename written t#2 to return__0)",
                 |      "Replace(L1: return__0=... -> no-op)",
+                |      "Replace(L1: let t#2 -> no-op)",
                 |      "Replace(L1: rename read t#1 to t#0)",
                 |      "Replace(L11: t#1=... -> no-op)",
+                |      "Replace(L11: let t#1 -> no-op)",
                 |      "Replace(L6: rename written t#3 to x__0)",
                 |      "Replace(L8: rename written t#3 to x__0)",
                 |      "Replace(L10: x__0=... -> no-op)",
+                |      "Replace(L3: let t#3 -> no-op)",
                 |      "Replace(L1: let fail#0 -> no-op)",
                 |    ],
                 |    [
                 |      "Replace(L11: rename written t#0 to return__0)",
                 |      "Replace(L1: return__0=... -> no-op)",
-                |      "Replace(L11: let t#1 -> no-op)",
-                |      "Replace(L1: let t#2 -> no-op)",
-                |      "Replace(L3: let t#3 -> no-op)",
-                |    ],
-                |    [
                 |      "Replace(L11: let t#0 -> no-op)",
                 |    ],
                 |    []
@@ -395,17 +389,17 @@ class CleanupTemporariesTest {
                 |    [
                 |      "Replace(L1: rename written t#1 to return__0)",
                 |      "Replace(L1: return__0=... -> no-op)",
+                |      "Replace(L1: let t#1 -> no-op)",
                 |      "Replace(L6: t_a#0=... -> no-op)",
+                |      "Replace(L2: let t_a#0 -> no-op)",
                 |    ],
                 |    [
                 |      "Replace(L8: rename written t#0 to return__0)",
                 |      "Replace(L1: return__0=... -> no-op)",
-                |      "Replace(L1: let t#1 -> no-op)",
-                |      "Replace(L2: let t_a#0 -> no-op)",
+                |      "Replace(L8: let t#0 -> no-op)",
                 |    ],
                 |    [
                 |      "Replace(L4: simplify dead-store of t_b#0)",
-                |      "Replace(L8: let t#0 -> no-op)",
                 |    ],
                 |    [
                 |      "Replace(L3: let t_b#0 -> no-op)",
@@ -474,11 +468,9 @@ class CleanupTemporariesTest {
                 |    [],
                 |    [
                 |        "Replace(L1: rename written t#2 to return__1)",
-                |        "Replace(L1: return__1=... -\u003e no-op)",
-                |        "Replace(L1: let fail#2 -\u003e no-op)"
-                |    ],
-                |    [
-                |        "Replace(L1: let t#2 -\u003e no-op)"
+                |        "Replace(L1: return__1=... -> no-op)",
+                |        "Replace(L1: let t#2 -> no-op)",
+                |        "Replace(L1: let fail#2 -> no-op)"
                 |    ],
                 |    [],
                 |    [

@@ -535,90 +535,167 @@ internal data class ReadsAndWrites(
             // Then walk each path once more with the live writes and build upstream/downstream
             // relationships.
             var queueIters = 0
+            // BitSet-based liveness fixpoint: assigns integer IDs to Write objects
+            // so merge becomes O(bits/64) bitwise OR instead of O(N) HashMap operations.
+            //
+            // Write IDs are assigned contiguously per name so that declaration/write
+            // deltas can efficiently clear a name's bit range.
+            val allWritesList = mutableListOf<Write>()
+            val writeToId = HashMap<Write, Int>(writes.values.sumOf { it.size } * 2)
+            val nameRange = mutableMapOf<ResolvedName, IntRange>()
+            for ((name, writesForName) in writes) {
+                val start = allWritesList.size
+                for (write in writesForName) {
+                    writeToId[write] = allWritesList.size
+                    allWritesList.add(write)
+                }
+                nameRange[name] = start until allWritesList.size
+            }
+            val totalBits = allWritesList.size
+            val numWords = (totalBits + 63) / 64
+
+            // Helper to set a bit in a LongArray
+            fun LongArray.setBit(bit: Int) { this[bit ushr 6] = this[bit ushr 6] or (1L shl (bit and 63)) }
+            fun LongArray.testBit(bit: Int): Boolean = (this[bit ushr 6] and (1L shl (bit and 63))) != 0L
+
+            val numPaths = maximalPaths.maximalPaths.size
+
+            // Initialize beforeEntry state
+            val beforeEntryEnd = LongArray(numWords)
+            for (write in writesToInputParameters) {
+                val id = writeToId[write] ?: continue
+                beforeEntryEnd.setBit(id)
+            }
+
+            // Pre-compute used-names bitmask per path (for filtering unused names)
+            val usedMask = Array(numPaths) {
+                val usedNames = namesUsedInOrAfter[MaximalPathIndex(it)]
+                if (usedNames == null) {
+                    LongArray(numWords) // all zeros — no names used
+                } else {
+                    val mask = LongArray(numWords).also { arr -> java.util.Arrays.fill(arr, 0L) }
+                    for (name in usedNames) {
+                        val range = nameRange[name] ?: continue
+                        for (bit in range) { mask.setBit(bit) }
+                    }
+                    mask
+                }
+            }
+
+            // Pre-compute liveness deltas as bitmasks
+            // deltaClearMask: AND with this to clear declared/written names (all 1s except cleared bits)
+            // deltaSetBits: bits to set after clearing (for Local writes)
+            val deltaClearMask = Array(numPaths) { LongArray(numWords).also { arr -> java.util.Arrays.fill(arr, -1L) } }
+            val deltaSetBits = Array(numPaths) { IntArray(0) }
+            for (pathIdx in 0 until numPaths) {
+                val setBits = mutableListOf<Int>()
+                for ((name, delta) in livenessDeltas[pathIdx]) {
+                    val range = nameRange[name] ?: continue
+                    when (delta) {
+                        CoverageDelta.Declared -> {
+                            for (bit in range) {
+                                deltaClearMask[pathIdx][bit ushr 6] = deltaClearMask[pathIdx][bit ushr 6] and (1L shl (bit and 63)).inv()
+                            }
+                        }
+                        is CoverageDelta.Local -> {
+                            for (bit in range) {
+                                deltaClearMask[pathIdx][bit ushr 6] = deltaClearMask[pathIdx][bit ushr 6] and (1L shl (bit and 63)).inv()
+                            }
+                            val writeId = writeToId[delta.write]
+                            if (writeId != null) { setBits.add(writeId) }
+                        }
+                    }
+                }
+                if (setBits.isNotEmpty()) { deltaSetBits[pathIdx] = setBits.toIntArray() }
+            }
+
+            // Fixpoint state: atEnd[0] = beforeEntry, atEnd[1..N] = paths 0..N-1
+            val atEnd = Array(numPaths + 1) { LongArray(numWords) }
+            System.arraycopy(beforeEntryEnd, 0, atEnd[0], 0, numWords)
+
+            // writesLiveAtStart stored as bitsets during fixpoint, converted to maps after
+            val liveAtStartBits = Array(numPaths) { LongArray(numWords) }
+
+            val entryPathIndex = maximalPaths.entryPathIndex
+            val queue = ArrayDeque<MaximalPathIndex>()
+            queue.addAll(orderedPathIndices(maximalPaths, ForwardOrBack.Back))
+            val onQueue = BooleanArray(numPaths)
+            for (pi in queue) { onQueue[pi.index] = true }
+
+            val merged = LongArray(numWords) // scratch buffer reused each iteration
+            while (true) {
+                val pathIndex = queue.removeFirstOrNull() ?: break
+                queueIters++
+                val idx = pathIndex.index
+                onQueue[idx] = false
+
+                val path = maximalPaths[pathIndex]
+
+                // Merge from predecessors: OR all preceder atEnd states
+                java.util.Arrays.fill(merged, 0L)
+                for (preceder in path.preceders) {
+                    val pEnd = atEnd[preceder.pathIndex.index + 1]
+                    for (w in 0 until numWords) { merged[w] = merged[w] or pEnd[w] }
+                }
+                if (pathIndex == entryPathIndex) {
+                    for (w in 0 until numWords) { merged[w] = merged[w] or atEnd[0][w] }
+                }
+
+                // Apply used-names mask (filter out names not used in or after this path)
+                val mask = usedMask[idx]
+                for (w in 0 until numWords) { merged[w] = merged[w] and mask[w] }
+
+                // Save writesLiveAtStart (before applying deltas)
+                System.arraycopy(merged, 0, liveAtStartBits[idx], 0, numWords)
+
+                // Apply deltas: clear declared/written name bits, set new write bits
+                val clearMask = deltaClearMask[idx]
+                for (w in 0 until numWords) { merged[w] = merged[w] and clearMask[w] }
+                for (bit in deltaSetBits[idx]) { merged.setBit(bit) }
+
+                // Change detection: compare with previous atEnd
+                val prevEnd = atEnd[idx + 1]
+                var changed = false
+                for (w in 0 until numWords) {
+                    if (merged[w] != prevEnd[w]) { changed = true; break }
+                }
+
+                if (changed) {
+                    System.arraycopy(merged, 0, atEnd[idx + 1], 0, numWords)
+                    path.followers.forEach { (_, followerPathIndex) ->
+                        if (followerPathIndex != null && !onQueue[followerPathIndex.index]) {
+                            queue.add(followerPathIndex)
+                            onQueue[followerPathIndex.index] = true
+                        }
+                    }
+                }
+            }
+
+            // Convert bitset-based liveAtStart to Map<ResolvedName, Set<Write>> for downstream use
             val writesLiveAtStart = mutableMapOf<MaximalPathIndex, Map<ResolvedName, Set<Write>>>()
-            run {
-                val atEnd = mutableMapOf<MaximalPathIndex, Map<ResolvedName, Set<Write>>>()
-
-                atEnd[MaximalPathIndex.beforeEntry] = writesToInputParameters.associate {
-                    it.name to setOf(it)
+            for (pathIdx in 0 until numPaths) {
+                val bits = liveAtStartBits[pathIdx]
+                // Quick check: any bits set?
+                var anySet = false
+                for (w in 0 until numWords) { if (bits[w] != 0L) { anySet = true; break } }
+                if (!anySet) {
+                    writesLiveAtStart[MaximalPathIndex(pathIdx)] = emptyMap()
+                    continue
                 }
-
-                val queue = ArrayDeque<MaximalPathIndex>()
-                // Process in an order where preceders come first so that they're available.
-                queue.addAll(orderedPathIndices(maximalPaths, ForwardOrBack.Back))
-                val onQueue = mutableSetOf<MaximalPathIndex>()
-                onQueue.addAll(queue)
-                while (true) {
-                    val pathIndex = queue.removeFirstOrNull() ?: break
-                    queueIters++
-                    onQueue.remove(pathIndex)
-
-                    val path = maximalPaths[pathIndex]
-
-                    var preceders = path.preceders
-                    if (pathIndex == maximalPaths.entryPathIndex) {
-                        preceders = preceders +
-                            listOf(Preceder(MaximalPathIndex.beforeEntry, dir = ForwardOrBack.Forward))
-                    }
-
-                    val atEndInProgress = mutableMapOf<ResolvedName, Set<Write>>()
-                    val namesReadInOrAfterPath = namesUsedInOrAfter[pathIndex] ?: emptySet()
-                    for (preceder in preceders) {
-                        val atEndOfP = atEnd[preceder.pathIndex] ?: emptyMap()
-                        // Merge atEndOfP into atEndInProgress directly, avoiding
-                        // forTwoMapsMutatingLeft which allocates a tracking set and
-                        // ZippedEntry objects per entry (~53M allocations for large functions).
-                        for ((name, rightWrites) in atEndOfP) {
-                            if (name !in namesReadInOrAfterPath) continue
-                            val leftWrites = atEndInProgress[name]
-                            if (leftWrites == null) {
-                                atEndInProgress[name] = rightWrites
-                            } else if (leftWrites !== rightWrites) {
-                                if (leftWrites.containsAll(rightWrites)) {
-                                    // left already contains everything
-                                } else if (rightWrites.containsAll(leftWrites)) {
-                                    atEndInProgress[name] = rightWrites
-                                } else {
-                                    atEndInProgress[name] = leftWrites + rightWrites
-                                }
-                            }
+                val map = mutableMapOf<ResolvedName, Set<Write>>()
+                val usedNames = namesUsedInOrAfter[MaximalPathIndex(pathIdx)] ?: emptySet()
+                for (name in usedNames) {
+                    val range = nameRange[name] ?: continue
+                    var writeSet: MutableSet<Write>? = null
+                    for (bit in range) {
+                        if (bits.testBit(bit)) {
+                            if (writeSet == null) writeSet = mutableSetOf()
+                            writeSet.add(allWritesList[bit])
                         }
                     }
-                    writesLiveAtStart[pathIndex] = atEndInProgress
-
-                    for ((name, delta) in livenessDeltas[pathIndex.index]) {
-                        when (delta) {
-                            CoverageDelta.Declared -> atEndInProgress.remove(name)
-                            is CoverageDelta.Local -> atEndInProgress[name] = setOf(delta.write)
-                        }
-                    }
-
-                    // Use size-based change detection instead of full map equality.
-                    // This is cheaper than deep comparison of Map<Name, Set<Write>>.
-                    val prevAtEnd = atEnd[pathIndex]
-                    val changed = if (prevAtEnd == null) {
-                        true
-                    } else if (prevAtEnd.size != atEndInProgress.size) {
-                        true
-                    } else {
-                        // Quick check: if any name has a different write-set size, it changed
-                        prevAtEnd.any { (name, prevWrites) ->
-                            val newWrites = atEndInProgress[name]
-                            newWrites == null || newWrites.size != prevWrites.size
-                        } || atEndInProgress.any { (name, _) -> name !in prevAtEnd }
-                    }
-                    if (changed || prevAtEnd == null) {
-                        atEnd[pathIndex] = atEndInProgress.toMap()
-                    }
-                    if (changed) {
-                        path.followers.forEach { (_, followerPathIndex) ->
-                            if (followerPathIndex != null && followerPathIndex !in onQueue) {
-                                queue.add(followerPathIndex)
-                                onQueue.add(followerPathIndex)
-                            }
-                        }
-                    }
+                    if (writeSet != null) { map[name] = writeSet }
                 }
+                writesLiveAtStart[MaximalPathIndex(pathIdx)] = map
             }
 
             root.document.debug {
