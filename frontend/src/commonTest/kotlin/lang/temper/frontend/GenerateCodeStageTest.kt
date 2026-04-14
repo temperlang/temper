@@ -3353,6 +3353,25 @@ class GenerateCodeStageTest {
     )
 
     @Test
+    fun invalidNonNullCheck() = assertModuleAtStage(
+        stage = Stage.Run,
+        input = """
+            |export let Act = fn (i: Int): Void;
+            |export let hi(i: Int, act: Act?): Void {
+            |  if (i != 0 && act != null) {
+            |    act(i);
+            |  }
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  run: "void: Void",
+            |  errors: ["Expected function type, but got Invalid!"],
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun multiImport() = assertModuleAtStage(
         input = """
             |let { ... } = import("./nums");

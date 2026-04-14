@@ -96,27 +96,11 @@ internal class TypeChecker(
     private val voidReturnDeclNames = mutableSetOf<TemperName>()
 
     fun check(root: BlockTree) {
-        // First make sure we track which things actually can be void. Could store all return values, but only bother
-        // with those that can be void, since that's all that needs the extra checks.
-        if (module.outputType?.isVoidAllowing == true) {
-            voidReturnDeclNames.add(module.outputName!!)
-        }
+        // First make sure we track which things actually can be void.
+        trackVoidReturnDeclNames(root)
         // Now visit everywhere to check compliance.
         fun dig(t: Tree) {
-            t.typeInferences?.explanations?.forEach { explanation ->
-                explanation.logTo(logSink)
-            }
-            when (t) {
-                is BlockTree -> checkBlock(t)
-                is CallTree -> checkCall(t)
-                is DeclTree -> checkDecl(t)
-                is EscTree -> checkEsc(t)
-                is FunTree -> checkFun(t)
-                is StayLeaf -> checkStay(t)
-                is LeftNameLeaf -> checkLeftName(t)
-                is RightNameLeaf -> checkRightName(t)
-                is ValueLeaf -> checkValue(t)
-            }
+            // Recurse first on the expectation that deeper nodes have more fundamental errors.
             // Custom recursion to support constructor tracking.
             val isConstructor = t is FunTree && t.isConstructor()
             if (isConstructor) {
@@ -132,8 +116,41 @@ internal class TypeChecker(
                     inConstructor = false
                 }
             }
+            // Check after going deeper.
+            t.typeInferences?.explanations?.forEach { explanation ->
+                explanation.logTo(logSink)
+            }
+            when (t) {
+                is BlockTree -> checkBlock(t)
+                is CallTree -> checkCall(t)
+                is DeclTree -> checkDecl(t)
+                is EscTree -> checkEsc(t)
+                is FunTree -> checkFun(t)
+                is StayLeaf -> checkStay(t)
+                is LeftNameLeaf -> checkLeftName(t)
+                is RightNameLeaf -> checkRightName(t)
+                is ValueLeaf -> checkValue(t)
+            }
         }
         dig(root)
+    }
+
+    /**
+     * Track which things actually can be void. Could store all return values, but only bother
+     * with those that can be void, since that's all that needs the extra checks.
+     */
+    private fun trackVoidReturnDeclNames(root: Tree) {
+        if (module.outputType?.isVoidAllowing == true) {
+            voidReturnDeclNames.add(module.outputName!!)
+        }
+        TreeVisit.startingAt(root).forEachContinuing tree@{ tree ->
+            tree is FunTree || return@tree
+            val returnType = (tree.typeInferences?.type as? FunctionType)?.returnType ?: return@tree
+            if (returnType.isVoidAllowing) {
+                val returnDeclName = tree.parts?.returnDecl?.parts?.name ?: return@tree
+                voidReturnDeclNames.add(returnDeclName.content)
+            }
+        }.visitPreOrder()
     }
 
     private fun checkBlock(t: BlockTree) {
@@ -244,12 +261,8 @@ internal class TypeChecker(
         // for now as well as anything else that might slip through in the future.
         val returnType = (t.typeInferences?.type as? FunctionType)?.returnType
         val returnDecl = t.parts?.returnDecl
-        val returnDeclName = returnDecl?.parts?.name
-        val returnDeclType = returnDeclName?.typeInferences?.type
+        val returnDeclType = returnDecl?.parts?.name?.typeInferences?.type
         checkSubType(returnDecl?.pos, returnType, returnDeclType)
-        if (returnType?.isVoidAllowing == true && returnDeclName != null) {
-            voidReturnDeclNames.add(returnDeclName.content)
-        }
         if (returnType?.isBubbly == false) {
             checkAgainstBubbles(t)
         }
@@ -442,7 +455,8 @@ internal class TypeChecker(
                             }
                         }
                     }
-                    if (!reported && calleeType != InvalidType) { // Invalid callee types already reported
+                    // Most invalid callee types already reported in more specific ways, but not all.
+                    if (!reported && (calleeType != InvalidType || callee.functionContained == null)) {
                         logSink.log(
                             level = Log.Error,
                             template = MessageTemplate.ExpectedFunctionType,
