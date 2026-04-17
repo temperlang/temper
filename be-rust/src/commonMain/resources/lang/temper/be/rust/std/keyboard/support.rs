@@ -1,6 +1,12 @@
 use std::sync::Arc;
 use temper_core::{Promise, PromiseBuilder, SafeGenerator};
 
+#[cfg(not(feature = "keyboard"))]
+pub fn std_next_keypress() -> Promise<Option<Arc<String>>> {
+    panic!()
+}
+
+#[cfg(feature = "keyboard")]
 pub fn std_next_keypress() -> Promise<Option<Arc<String>>> {
     let pb = PromiseBuilder::new();
     let promise = pb.promise();

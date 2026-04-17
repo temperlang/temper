@@ -15,19 +15,12 @@ import lang.temper.log.FilePath
 import lang.temper.log.FilePathSegment
 import lang.temper.name.ModuleName
 import lang.temper.tests.FunctionalTestBase
-import kotlin.test.Ignore
 import kotlin.test.Test
 
 class RustFunctionalTest : FunctionalTestRunner<RustBackend>(RustBackend.Factory) {
     @Test
     override fun algosHelloWorld() {
         super.algosHelloWorld()
-    }
-
-    @Test
-    @Ignore // Rust functional tests don't link the std library
-    override fun controlFlowIoSleep() {
-        super.controlFlowIoSleep()
     }
 
     override fun runGeneratedCode(
