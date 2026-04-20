@@ -1487,3 +1487,253 @@ def std_next_keypress() -> 'Future[Optional[str]]':
 
     _executor.submit(_do_read)
     return f
+
+
+# --- Terminal Size ---
+
+def std_term_cols() -> int:
+    import shutil as _shutil
+    return _shutil.get_terminal_size((80, 24)).columns
+
+def std_term_rows() -> int:
+    import shutil as _shutil
+    return _shutil.get_terminal_size((80, 24)).lines
+
+
+# --- WebSocket (hand-rolled RFC 6455 text frames over raw TCP) ---
+
+import socket as _socket
+import struct as _struct
+import hashlib as _hashlib
+import base64 as _base64
+import threading as _threading
+
+class WsServer:
+    def __init__(self, sock):
+        self._sock = sock
+
+class WsConnection:
+    def __init__(self, rsock, wsock):
+        self._rsock = rsock  # read half
+        self._wsock = wsock  # write half
+        self._wlock = _threading.Lock()
+
+def _ws_write_frame(sock, text, mask=False):
+    payload = text.encode('utf-8')
+    header = bytearray()
+    header.append(0x81)  # fin + text opcode
+    mask_bit = 0x80 if mask else 0x00
+    ln = len(payload)
+    if ln < 126:
+        header.append(ln | mask_bit)
+    elif ln < 65536:
+        header.append(126 | mask_bit)
+        header.extend(_struct.pack('>H', ln))
+    else:
+        header.append(127 | mask_bit)
+        header.extend(_struct.pack('>Q', ln))
+    if mask:
+        mask_key = b'\x12\x34\x56\x78'
+        header.extend(mask_key)
+        payload = bytes(b ^ mask_key[i % 4] for i, b in enumerate(payload))
+    sock.sendall(bytes(header) + payload)
+
+def _ws_read_frame(sock):
+    def _recv_exact(n):
+        buf = b''
+        while len(buf) < n:
+            chunk = sock.recv(n - len(buf))
+            if not chunk:
+                return None
+            buf += chunk
+        return buf
+    hdr = _recv_exact(2)
+    if hdr is None:
+        return None
+    opcode = hdr[0] & 0x0F
+    masked = (hdr[1] & 0x80) != 0
+    ln = hdr[1] & 0x7F
+    if ln == 126:
+        ext = _recv_exact(2)
+        if ext is None:
+            return None
+        ln = _struct.unpack('>H', ext)[0]
+    elif ln == 127:
+        ext = _recv_exact(8)
+        if ext is None:
+            return None
+        ln = _struct.unpack('>Q', ext)[0]
+    mask_key = None
+    if masked:
+        mask_key = _recv_exact(4)
+        if mask_key is None:
+            return None
+    data = _recv_exact(ln)
+    if data is None:
+        return None
+    if mask_key:
+        data = bytes(b ^ mask_key[i % 4] for i, b in enumerate(data))
+    if opcode == 0x01:  # text
+        return data.decode('utf-8', errors='replace')
+    if opcode == 0x08:  # close
+        return None
+    return ''  # ping/pong/binary — skip
+
+def _ws_server_handshake(conn):
+    data = b''
+    while b'\r\n\r\n' not in data:
+        chunk = conn.recv(1)
+        if not chunk:
+            raise ConnectionError("handshake failed")
+        data += chunk
+    headers = data.decode('utf-8', errors='replace')
+    key = ''
+    for line in headers.split('\r\n'):
+        if line.lower().startswith('sec-websocket-key:'):
+            key = line.split(':', 1)[1].strip()
+    accept = _base64.b64encode(
+        _hashlib.sha1((key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').encode()).digest()
+    ).decode()
+    response = (
+        'HTTP/1.1 101 Switching Protocols\r\n'
+        'Upgrade: websocket\r\n'
+        'Connection: Upgrade\r\n'
+        f'Sec-WebSocket-Accept: {accept}\r\n'
+        '\r\n'
+    )
+    conn.sendall(response.encode())
+
+def _ws_client_handshake(sock, host, path):
+    key = 'dGhlIHNhbXBsZSBub25jZQ=='
+    request = (
+        f'GET {path} HTTP/1.1\r\n'
+        f'Host: {host}\r\n'
+        'Upgrade: websocket\r\n'
+        'Connection: Upgrade\r\n'
+        f'Sec-WebSocket-Key: {key}\r\n'
+        'Sec-WebSocket-Version: 13\r\n'
+        '\r\n'
+    )
+    sock.sendall(request.encode())
+    data = b''
+    while b'\r\n\r\n' not in data:
+        chunk = sock.recv(1)
+        if not chunk:
+            raise ConnectionError("handshake failed")
+        data += chunk
+
+def _make_ws_connection(sock):
+    wsock = sock.dup()
+    reader_rx_send = []
+    reader_rx_lock = _threading.Lock()
+    reader_rx_event = _threading.Event()
+
+    def _reader():
+        try:
+            while True:
+                msg = _ws_read_frame(sock)
+                with reader_rx_lock:
+                    reader_rx_send.append(msg)
+                reader_rx_event.set()
+                if msg is None:
+                    return
+        except Exception:
+            with reader_rx_lock:
+                reader_rx_send.append(None)
+            reader_rx_event.set()
+
+    t = _threading.Thread(target=_reader, daemon=True)
+    t.start()
+    conn = WsConnection(sock, wsock)
+    conn._rx_queue = reader_rx_send
+    conn._rx_lock = reader_rx_lock
+    conn._rx_event = reader_rx_event
+    return conn
+
+def std_ws_listen(port: int) -> 'Future[WsServer]':
+    f = new_unbound_promise()
+    def _do():
+        try:
+            s = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+            s.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, 1)
+            s.bind(('0.0.0.0', port))
+            s.listen(16)
+            f.set_result(WsServer(s))
+        except Exception:
+            f.cancel()
+    _executor.submit(_do)
+    return f
+
+def std_ws_accept(server) -> 'Future[WsConnection]':
+    f = new_unbound_promise()
+    def _do():
+        try:
+            conn, _ = server._sock.accept()
+            _ws_server_handshake(conn)
+            f.set_result(_make_ws_connection(conn))
+        except Exception:
+            f.cancel()
+    _threading.Thread(target=_do, daemon=True).start()
+    return f
+
+def std_ws_connect(url: str) -> 'Future[WsConnection]':
+    f = new_unbound_promise()
+    def _do():
+        try:
+            stripped = url.replace('ws://', '')
+            if '/' in stripped:
+                host_port, path = stripped.split('/', 1)
+                path = '/' + path
+            else:
+                host_port = stripped
+                path = '/'
+            if ':' in host_port:
+                host, port_str = host_port.split(':')
+                port = int(port_str)
+            else:
+                host = host_port
+                port = 80
+            s = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+            s.connect((host, port))
+            _ws_client_handshake(s, host_port, path)
+            f.set_result(_make_ws_connection(s))
+        except Exception:
+            f.cancel()
+    _executor.submit(_do)
+    return f
+
+def std_ws_send(conn, msg: str) -> 'Future[None]':
+    f = new_unbound_promise()
+    try:
+        with conn._wlock:
+            _ws_write_frame(conn._wsock, msg, mask=False)
+        f.set_result(None)
+    except Exception:
+        f.cancel()
+    return f
+
+def std_ws_recv(conn) -> 'Future[Optional[str]]':
+    f: 'Future[Optional[str]]' = new_unbound_promise()
+    def _do():
+        while True:
+            conn._rx_event.wait()
+            with conn._rx_lock:
+                if conn._rx_queue:
+                    msg = conn._rx_queue.pop(0)
+                    if msg == '':
+                        continue  # skip ping/pong
+                    f.set_result(msg)
+                    return
+                conn._rx_event.clear()
+    _threading.Thread(target=_do, daemon=True).start()
+    return f
+
+def std_ws_close(conn) -> 'Future[None]':
+    f = new_unbound_promise()
+    try:
+        conn._wsock.sendall(b'\x88\x00')
+        conn._wsock.close()
+    except Exception:
+        pass
+    f.set_result(None)
+    return f

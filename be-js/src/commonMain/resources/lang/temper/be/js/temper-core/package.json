@@ -5,5 +5,8 @@
   "main": "index.js",
   "type": "module",
   "author": "https://github.com/mikesamuel",
-  "license": "Apache-2.0 OR MIT"
+  "license": "Apache-2.0 OR MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
 }

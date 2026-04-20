@@ -14,3 +14,4 @@ export * from "./net.js";
 export * from "./pair.js";
 export * from "./regex.js";
 export * from "./string.js";
+export * from "./ws.js";

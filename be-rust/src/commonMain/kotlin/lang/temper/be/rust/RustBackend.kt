@@ -181,14 +181,16 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
                     append("time = { version = \"=0.3.41\", optional = true }\n")
                     append("ureq = { version = \"=3.1.2\", optional = true }\n")
                     append("crossterm = { version = \"=0.28.1\", optional = true }\n")
+                    append("sha1_smol = { version = \"=1.0.1\", optional = true }\n")
                     // Below aren't dependencies section anymore, but eh.
                     append("\n")
                     append("[features]\n")
-                    append("io = []\n")
+                    append("io = [\"crossterm\"]\n")
                     append("keyboard = [\"crossterm\"]\n")
                     append("net = [\"ureq\"]\n")
                     // Implied: append("regex = [\"regex\"]\n")
                     append("temporal = [\"time\"]\n")
+                    append("ws = [\"sha1_smol\"]\n")
                 }
             }
             val packageFields = buildMap {
@@ -256,7 +258,7 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
         private val resourceBase = dirPath("lang", "temper", "be", "rust")
         private val coreResourceBase = resourceBase.resolveDir("temper-core")
         private val stdResourceBase = resourceBase.resolveDir("std")
-        val stdSupportNeeders = setOf("io", "keyboard", "net", "regex", "temporal")
+        val stdSupportNeeders = setOf("io", "keyboard", "net", "regex", "temporal", "ws")
         val stdFeatures = stdSupportNeeders // same set today but maybe not guaranteed
         private val templateResourceBase = resourceBase.resolveDir("library-template")
 

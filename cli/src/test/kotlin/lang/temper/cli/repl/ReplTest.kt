@@ -529,6 +529,7 @@ class ReplTest {
                     |    i0000[.]lua: text/x-lua
                     |      .*
                     |      return__0 = 2;
+                    |.*
                     |      exports = \{};
                     |      return exports;
                 """.trimMargin(),

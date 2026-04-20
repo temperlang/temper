@@ -917,6 +917,14 @@ private val netSend = FunctionCall("stdNetSend", "send_request", cloneEvenIfFirs
 private val stdSleep = FunctionCall("stdSleep", "temper_std::io::std_sleep")
 private val stdReadLine = FunctionCall("stdReadLine", "temper_std::io::std_read_line")
 private val stdNextKeypress = FunctionCall("stdNextKeypress", "temper_std::keyboard::std_next_keypress")
+private val stdTermCols = FunctionCall("stdTermCols", "temper_std::io::std_term_cols")
+private val stdTermRows = FunctionCall("stdTermRows", "temper_std::io::std_term_rows")
+private val wsListen = FunctionCall("wsListen", "temper_std::ws::std_ws_listen")
+private val wsAccept = FunctionCall("wsAccept", "temper_std::ws::std_ws_accept")
+private val wsConnect = FunctionCall("wsConnect", "temper_std::ws::std_ws_connect", cloneEvenIfFirst = true)
+private val wsSend = FunctionCall("wsSend", "temper_std::ws::std_ws_send")
+private val wsRecv = FunctionCall("wsRecv", "temper_std::ws::std_ws_recv")
+private val wsClose = FunctionCall("wsClose", "temper_std::ws::std_ws_close")
 
 internal object PairConstructor : RustInlineSupportCode(
     "Pair::constructor",
@@ -1145,6 +1153,14 @@ private val connectedReferences = listOf(
     stdSleep,
     stdReadLine,
     stdNextKeypress,
+    stdTermCols,
+    stdTermRows,
+    wsListen,
+    wsAccept,
+    wsConnect,
+    wsSend,
+    wsRecv,
+    wsClose,
     promiseBuilderComplete,
     PairConstructor,
     regexCompileFormatted,
