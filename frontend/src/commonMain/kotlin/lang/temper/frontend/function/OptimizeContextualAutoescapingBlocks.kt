@@ -17,15 +17,18 @@ import lang.temper.env.InterpMode
 import lang.temper.frontend.InterpretationContext
 import lang.temper.frontend.structureBlock
 import lang.temper.frontend.syntax.isAssignment
+import lang.temper.interp.New
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplateI
 import lang.temper.log.Position
 import lang.temper.name.ExportedName
+import lang.temper.name.ModularName
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedName
 import lang.temper.name.ResolvedParsedName
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
+import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
 import lang.temper.type.BindMemberAccessor
 import lang.temper.type.DotHelper
@@ -52,6 +55,7 @@ import lang.temper.value.DeclTree
 import lang.temper.value.Fail
 import lang.temper.value.InstancePropertyRecord
 import lang.temper.value.InterpreterCallback
+import lang.temper.value.MacroValue
 import lang.temper.value.MaximalPath
 import lang.temper.value.MaximalPathIndex
 import lang.temper.value.NameLeaf
@@ -88,8 +92,11 @@ import lang.temper.value.ValueLeaf
 import lang.temper.value.forwardMaximalPaths
 import lang.temper.value.freeTree
 import lang.temper.value.functionContained
+import lang.temper.value.insertBeforeAll
 import lang.temper.value.isImplicits
+import lang.temper.value.makePairValue
 import lang.temper.value.overloadSymbol
+import lang.temper.value.parameterNameSymbols
 import lang.temper.value.ssaSymbol
 import lang.temper.value.testSymbol
 import lang.temper.value.toPseudoCode
@@ -154,8 +161,8 @@ private const val DEBUG = false
  */
 internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext, logSink: LogSink) {
     val root = iCtx.root
+    if (root.document.isImplicits) { return } // Can't use libraries like secure-composition.
 
-    if (root.document.isImplicits) { return }
     // The high-level flow here is:
     // 1. Identify uses of `.accumulated`
     // 2. Filter those to find ones that extend from a type named
@@ -209,6 +216,8 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext, l
             }
         }
     }
+
+    val common = AutoescCommon(root)
 
     val autoescUses = buildListMultimap {
         TreeVisit.startingAt(root)
@@ -273,6 +282,7 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext, l
                                     ),
                                     accumulated = parent,
                                     inTestBody = inTestBody,
+                                    common = common.also { it.workingFor(accumulatorDecl) },
                                 )
                                 putMultiList(declaringBlock, ai)
                             }
@@ -293,6 +303,8 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext, l
             optimizeAutoescaperUse(use, iCtx, escaperUnraveler, logSink)
         }
     }
+
+    common.commit()
 }
 
 private data class AutoescTypes(
@@ -324,7 +336,224 @@ private data class AutoescUseInfo(
     val types: AutoescTypes,
     val accumulated: CallTree,
     val inTestBody: Boolean,
+    val common: AutoescCommon,
 )
+
+/** State that is common across optimization steps. */
+private class AutoescCommon(val root: BlockTree) {
+    private val eventInstanceNames = mutableMapOf<ValueConstruction, Temporary>()
+    private var eventInstanceInsertionPoints = mutableSetOf<Int>()
+
+    fun workingFor(first: Tree) {
+        // store the offset into the top level block so we know where
+        // to insert temporaries on commit
+        if (first == root) {
+            eventInstanceInsertionPoints.add(0)
+        } else {
+            var anc: Tree = first
+            while (true) {
+                val e = anc.incoming!!
+                if (e.source == root) {
+                    eventInstanceInsertionPoints.add(e.edgeIndex)
+                    break
+                } else {
+                    anc = e.source!!
+                }
+            }
+        }
+    }
+
+    fun commit() {
+        if (eventInstanceNames.isNotEmpty()) {
+            insertBeforeAll(root, eventInstanceInsertionPoints) {
+                for ((construction, temporary) in eventInstanceNames) {
+                    Decl {
+                        Ln(temporary)
+                    }
+                    Call(BuiltinFuns.vSetLocalFn) {
+                        Ln(temporary)
+                        construction.plant(this)
+                    }
+                }
+            }
+        }
+    }
+
+    fun nameFor(eventValue: Value<*>) = digestFor(eventValue)?.let {
+        eventInstanceNames.getOrPut(it) {
+            val typeTag = eventValue.typeTag
+            val eventName = (typeTag as? TClass)?.typeShape?.word?.text
+                ?: ""
+            root.document.nameMaker.unusedTemporaryName("parseEffect$eventName")
+        }
+    }
+
+    private val propertyNameCache = mutableMapOf<Pair<TypeShape, Symbol>, ModularName?>()
+
+    /** Avoid repeatedly linear scanning property lists for symbols. */
+    private fun propertyName(
+        typeShape: TypeShape,
+        propertySymbol: Symbol,
+    ): ModularName? = propertyNameCache.getOrPut(typeShape to propertySymbol) {
+        typeShape.properties.firstOrNull {
+            it.abstractness == Abstractness.Concrete && it.symbol == propertySymbol
+        }?.name as ModularName?
+    }
+
+    private fun digestFor(value: Value<*>): ValueConstruction? {
+        return when (val tag = value.typeTag) {
+            TBoolean,
+            TFloat64,
+            TInt,
+            TInt64,
+            TString,
+            TNull,
+            -> ValueConstruction.SimpleConstruction(value)
+
+            is TClass -> {
+                // Optimistically assume we can reverse construction by replaying args.
+                val typeShape = tag.typeShape
+                val record = tag.unpack(value)
+
+                if (typeShape == WKT.stringIndexTypeDefinition && record.properties.size == 1) {
+                    val offset = record.properties.values.first()
+                    if (TInt.unpackOrNull(offset) == 0) {
+                        return ValueConstruction.StaticPropertyConstruction(
+                            WKT.stringType2,
+                            Symbol("begin"),
+                        )
+                    }
+                }
+
+                val constructor = typeShape.methods.first {
+                    it.methodKind == MethodKind.Constructor
+                }
+                var gotAll = true
+                val parameterNames = constructor.parameterNameSymbols
+                    ?: return null
+                val args = buildList {
+                    parameterNames.forEach { parameterSymbol, isOptional ->
+                        val propertyName = propertyName(typeShape, parameterSymbol)
+                        val parameterValue = record.properties[propertyName]
+                        if (parameterValue != null) {
+                            val parameterConstruction = digestFor(parameterValue)
+                            if (parameterConstruction != null) {
+                                add(parameterConstruction)
+                            } else {
+                                gotAll = false
+                            }
+                        } else if (isOptional) {
+                            add(ValueConstruction.SimpleConstruction(TNull.value))
+                        } else {
+                            gotAll = false
+                        }
+                    }
+                }
+
+                if (gotAll) {
+                    ValueConstruction.NewConstruction(typeShape, args)
+                } else {
+                    null
+                }
+            }
+            TList -> {
+                val ls: List<Value<*>> = TList.unpack(value)
+                val items = ls.map {
+                    digestFor(it) ?: return@digestFor null
+                }
+                ValueConstruction.CallConstruction(BuiltinFuns.listifyFn, items)
+            }
+
+            TListBuilder -> digestFor(Value(TListBuilder.unpack(value), TList))?.let {
+                ValueConstruction.MethodConstruction(it, Symbol("toListBuilder"))
+            }
+
+            TMap -> {
+                val ls: Map<Value<*>, Value<*>> = TMap.unpack(value)
+                val pairs = ls.map { (k, v) ->
+                    digestFor(makePairValue(k, v)) ?: return@digestFor null
+                }
+                val pairsList = ValueConstruction.CallConstruction(BuiltinFuns.listifyFn, pairs)
+                ValueConstruction.NewConstruction(WKT.mapTypeDefinition, listOf(pairsList))
+            }
+            TMapBuilder -> digestFor(Value(TMapBuilder.unpack(value), TMap))?.let {
+                ValueConstruction.MethodConstruction(it, Symbol("toMapBuilder"))
+            }
+            TClosureRecord,
+            TFunction,
+            TProblem,
+            TStageRange,
+            TSymbol,
+            TType,
+            TVoid,
+            -> null
+        }
+    }
+
+    sealed interface ValueConstruction {
+        fun plant(p: Planting)
+
+        data class SimpleConstruction(val value: Value<*>) : ValueConstruction {
+            override fun plant(p: Planting) {
+                p.V(value)
+            }
+        }
+
+        data class NewConstruction(
+            val typeShape: TypeShape,
+            val args: List<ValueConstruction>,
+        ) : ValueConstruction {
+            override fun plant(p: Planting) {
+                p.Call(New) {
+                    V(Value(ReifiedType(MkType2(typeShape).get()), TType))
+                    for (arg in args) {
+                        arg.plant(this@Call)
+                    }
+                }
+            }
+        }
+
+        data class CallConstruction(
+            val fn: MacroValue,
+            val args: List<ValueConstruction>,
+        ) : ValueConstruction {
+            override fun plant(p: Planting) {
+                p.Call(fn) {
+                    for (arg in args) {
+                        arg.plant(this@Call)
+                    }
+                }
+            }
+        }
+
+        data class StaticPropertyConstruction(
+            val subjectType: Type2,
+            val memberName: Symbol,
+        ) : ValueConstruction {
+            override fun plant(p: Planting) {
+                p.Call {
+                    V(BuiltinFuns.vGets)
+                    V(Value(ReifiedType(subjectType), TType))
+                    V(Value(memberName))
+                }
+            }
+        }
+
+        data class MethodConstruction(
+            val subject: ValueConstruction,
+            val methodName: Symbol,
+        ) : ValueConstruction {
+            override fun plant(p: Planting) {
+                p.Call {
+                    Call {
+                        V(Value(DotHelper(ExternalBind, methodName)))
+                        subject.plant(this)
+                    }
+                }
+            }
+        }
+    }
+}
 
 private fun optimizeAutoescaperUse(
     use: AutoescUseInfo,
@@ -594,14 +823,17 @@ private fun optimizeAutoescaperUse(
                                         appendParseEffectName -> {
                                             val text = TString.unpackOrNull(
                                                 effectValue.readField(textDotName),
-                                            ) ?: return null
+                                            ) ?: return@propagateOverStmt null
                                             add(AppendEffectDetail(text))
                                         }
                                         eventParseEffectName -> {
-                                            @Suppress("UNREACHABLE_CODE")
-                                            add(EventEffectDetail(TODO("$effectValue")))
+                                            val eventValue = effectValue.readField(eventDotName)
+                                                ?: return@propagateOverStmt null
+                                            val eventName = use.common.nameFor(eventValue)
+                                                ?: return@propagateOverStmt null
+                                            add(EventEffectDetail(eventName))
                                         }
-                                        else -> return null
+                                        else -> return@propagateOverStmt null
                                     }
                                 }
                             }
@@ -739,6 +971,7 @@ private fun optimizeAutoescaperUse(
             appendDotHelper
         }
     }
+    val accumulatorReifiedType = Value(ReifiedType(use.types.accumulatorType))
     val changes: List<Pair<TEdge, Planting.() -> UnpositionedTreeTemplate<*>>> = toChange.map { change ->
         val (edge, effects, escapers, classification) = change
         val ps = change.positions
@@ -751,11 +984,20 @@ private fun optimizeAutoescaperUse(
                     }
                     V(safePs.arg, Value(safe, TString))
                 }
+            fun Planting.plantEvent(name: TemperName): UnpositionedTreeTemplate<*> =
+                Call(ps.pos) {
+                    Call(ps.callee, BuiltinFuns.vGets) {
+                        V(ps.callee, accumulatorReifiedType)
+                        V(ps.callee.rightEdge, Value(enactDotName))
+                    }
+                    Rn(ps.arg, name)
+                    Rn(ps.subject, collector)
+                }
             fun Planting.plantEffects(ps: AppendStmtPositions) {
                 for (effect in effects) {
                     when (effect) {
                         is AppendEffectDetail -> plantSafeAdjusted(ps, effect.text)
-                        is EventEffectDetail -> TODO("$effect")
+                        is EventEffectDetail -> plantEvent(effect.eventName)
                     }
                 }
             }
@@ -808,7 +1050,6 @@ private fun optimizeAutoescaperUse(
     // - change the initializer
     // - change .accumulated read.
     // - apply the statement changes from above
-    val accumulatorReifiedType = Value(ReifiedType(use.types.accumulatorType))
     val oldDecl = use.accumulatorDecl
     oldDecl.incoming!!.replace { pos ->
         Decl(pos) {
@@ -937,7 +1178,7 @@ private data class AppendStmtPositions(
 private sealed class EffectDetail
 
 private data class AppendEffectDetail(val text: String) : EffectDetail()
-private data class EventEffectDetail(val value: Value<*>) : EffectDetail()
+private data class EventEffectDetail(val eventName: Temporary) : EffectDetail()
 
 private data class ChangeDetail(
     val edge: TEdge,
@@ -954,6 +1195,8 @@ private val escaperForDotHelper = DotHelper(ExternalBind, Symbol("escaperFor"))
 private val appendSafeDotHelper = DotHelper(ExternalBind, appendSafeDotName)
 private val appendDotHelper = DotHelper(ExternalBind, appendDotName)
 private val applyDotHelper = DotHelper(ExternalBind, Symbol("apply"))
+private val enactDotName = Symbol("enact")
+private val eventDotName = Symbol("event")
 private val textDotName = Symbol("text")
 
 /**
