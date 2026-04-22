@@ -25,4 +25,13 @@ val MethodShape.parameterNameSymbols: ParameterNameSymbols? get() {
 data class ParameterNameSymbols(
     val requiredSymbols: List<Symbol>,
     val optionalSymbols: List<Symbol>,
-)
+) {
+    fun forEach(f: (parameterName: Symbol, isOptional: Boolean) -> Unit) {
+        for (sym in requiredSymbols) {
+            f(sym, true)
+        }
+        for (sym in optionalSymbols) {
+            f(sym, false)
+        }
+    }
+}

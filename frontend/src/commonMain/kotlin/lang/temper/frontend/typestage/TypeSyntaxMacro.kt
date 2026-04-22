@@ -387,7 +387,7 @@ internal fun typeSyntaxMacro(macroEnv: MacroEnvironment): PartialResult {
             val constructorName = nameMaker.parsedName(constructorSymbol.text)!!
             val constructorPos = classBody.pos.leftEdge
             val constructorReturnName = nameMaker.unusedSourceName(returnParsedName)
-            classBody.replace(classBody.size until classBody.size) {
+            classBody.insert(classBody.size) {
                 Decl(constructorPos, constructorName) {
                     V(vInitSymbol)
                     Fn {
