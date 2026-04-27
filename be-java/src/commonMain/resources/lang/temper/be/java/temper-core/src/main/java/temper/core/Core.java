@@ -7,6 +7,7 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
+import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -423,6 +424,7 @@ public final class Core {
     /**
      * Encode a string into a section of a ByteBuffer.
      * The caller is responsible for knowing that the slice exists.
+     * Default to UTF8 for null decoder.
      */
     public static String decodeFromSlice(
         ByteBuffer source,
@@ -430,6 +432,9 @@ public final class Core {
         int sourceLength,
         CharsetDecoder decoder
     ) throws CharacterCodingException {
+        if (decoder == null) {
+            decoder = StandardCharsets.UTF_8.newDecoder();
+        }
         // Limit slice.
         int oldLimit = source.limit();
         int oldPosition = source.position();
@@ -449,6 +454,7 @@ public final class Core {
     /**
      * Encode a string into a section of a ByteBuffer, returning the number of bytes written.
      * The caller is responsible for knowing that the slice exists.
+     * Default to UTF8 for null encoder.
      */
     public static int encodeIntoSlice(
         String s,
@@ -458,6 +464,9 @@ public final class Core {
         CharsetEncoder encoder,
         byte padByte
     ) {
+        if (encoder == null) {
+            encoder = StandardCharsets.UTF_8.newEncoder();
+        }
         // Limit slice.
         int oldLimit = target.limit();
         int oldPosition = target.position();
