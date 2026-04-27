@@ -74,6 +74,6 @@ tasks.register("testJavaTemperCore", Exec) {
     }
 }
 
-tasks.named("test") {
+tasks.named("check") {
     dependsOn tasks.named("testJavaTemperCore")
 }
