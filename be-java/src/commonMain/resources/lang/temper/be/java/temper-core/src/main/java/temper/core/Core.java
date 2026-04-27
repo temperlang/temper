@@ -1,6 +1,12 @@
 package temper.core;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.CoderResult;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -411,6 +417,67 @@ public final class Core {
             // Use error message similar to code point bounds message, which is checked elsewhere.
             // Focus on Unicode scalar value wording, because it might explain motive better than avoiding surrogates.
             throw new IllegalArgumentException(String.format("Not a valid Unicode scalar value: 0x%X", codePoint));
+        }
+    }
+
+    /**
+     * Encode a string into a section of a ByteBuffer.
+     * The caller is responsible for knowing that the slice exists.
+     */
+    public static String decodeFromSlice(
+        ByteBuffer source,
+        int sourceStart,
+        int sourceLength,
+        CharsetDecoder decoder
+    ) throws CharacterCodingException {
+        // Limit slice.
+        int oldLimit = source.limit();
+        int oldPosition = source.position();
+        source.position(sourceStart);
+        source.limit(sourceStart + sourceLength);
+        try {
+            // Decode.
+            decoder.reset();
+            return decoder.decode(source).toString();
+        } finally {
+            // Restore.
+            source.limit(oldLimit);
+            source.position(oldPosition);
+        }
+    }
+
+    /**
+     * Encode a string into a section of a ByteBuffer, returning the number of bytes written.
+     * The caller is responsible for knowing that the slice exists.
+     */
+    public static int encodeIntoSlice(
+        String s,
+        ByteBuffer target,
+        int targetStart,
+        int targetLength,
+        CharsetEncoder encoder,
+        byte padByte
+    ) {
+        // Limit slice.
+        int oldLimit = target.limit();
+        int oldPosition = target.position();
+        target.position(targetStart);
+        target.limit(targetStart + targetLength);
+        try {
+            // Encode.
+            encoder.reset();
+            CoderResult result = encoder.encode(CharBuffer.wrap(s), target, true);
+            encoder.flush(target);
+            // Pad.
+            int written = target.position() - targetStart;
+            while (target.hasRemaining()) {
+                target.put(padByte);
+            }
+            return written;
+        } finally {
+            // Restore.
+            target.limit(oldLimit);
+            target.position(oldPosition);
         }
     }
 
