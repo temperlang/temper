@@ -68,9 +68,9 @@ tasks.register("testJavaTemperCore", Exec) {
     workingDir = file("src/commonMain/resources/lang/temper/be/java/temper-core")
     if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
         // Effort needed for finding mvn on windows.
-        commandLine "cmd", "/c", "mvn", "test"
+        commandLine "cmd", "/c", "mvn", "-B", "test"
     } else {
-        commandLine "mvn", "test"
+        commandLine "mvn", "test", "-B"
     }
 }
 
