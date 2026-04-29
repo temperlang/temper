@@ -422,7 +422,7 @@ public final class Core {
     }
 
     /**
-     * Encode a string into a section of a ByteBuffer.
+     * Decode a string from a section of a ByteBuffer.
      * The caller is responsible for knowing that the slice exists.
      * Default to UTF8 for null decoder.
      */
@@ -438,9 +438,9 @@ public final class Core {
         // Limit slice.
         int oldLimit = source.limit();
         int oldPosition = source.position();
-        source.position(sourceStart);
-        source.limit(sourceStart + sourceLength);
         try {
+            source.position(sourceStart);
+            source.limit(sourceStart + sourceLength);
             // Decode.
             decoder.reset();
             return decoder.decode(source).toString();
@@ -470,9 +470,9 @@ public final class Core {
         // Limit slice.
         int oldLimit = target.limit();
         int oldPosition = target.position();
-        target.position(targetStart);
-        target.limit(targetStart + targetLength);
         try {
+            target.position(targetStart);
+            target.limit(targetStart + targetLength);
             // Encode.
             encoder.reset();
             CoderResult result = encoder.encode(CharBuffer.wrap(s), target, true);

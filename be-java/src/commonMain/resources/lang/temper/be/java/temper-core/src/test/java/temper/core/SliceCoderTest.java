@@ -67,6 +67,8 @@ public class SliceCoderTest {
         int written = Core.encodeIntoSlice(text, buffer, 0, 2, null, (byte)0);
         assertEquals(2, written);
         assertEquals(0, buffer.position());
+        assertEquals('T', (char)buffer.get(0));
+        assertEquals('o', (char)buffer.get(1));
     }
 
     @Test
@@ -82,12 +84,13 @@ public class SliceCoderTest {
         // Validate buffer contents
         byte[] data = buffer.array();
         // First 3 bytes should be the Sparkles emoji
-        assertEquals((byte) 0xE2, data[0]);
-        assertEquals((byte) 0x9C, data[1]);
-        assertEquals((byte) 0xA8, data[2]);
+        assertEquals((byte)0xE2, data[0]);
+        assertEquals((byte)0x9C, data[1]);
+        assertEquals((byte)0xA8, data[2]);
         // Last 2 bytes should be padding because 😀 didn't fit
-        assertEquals((byte) '_', data[3]);
-        assertEquals((byte) '_', data[4]);
+        assertEquals((byte)'_', data[3]);
+        assertEquals((byte)'_', data[4]);
+        assertEquals((byte)'_', data[4]);
         assertEquals(0, buffer.position(), "State should be restored");
     }
 
