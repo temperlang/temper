@@ -20,5 +20,17 @@ data class MimeType(val major: String, val minor: String) {
         val javascriptApp = MimeType("application", "javascript")
         val cppSource = MimeType("text", "x-c")
         val makefileSource = MimeType("text", "x-makefile")
+
+        fun parse(s: String): RResult<MimeType, String> {
+            val parts = s.split('/')
+            if (parts.size != 2) {
+                return RFailure("Invalid mime type `$s`, expected major/minor")
+            }
+            val (major, minor) = parts
+            if (major.isEmpty() || minor.isEmpty()) {
+                return RFailure("Empty part in mime type `$s`")
+            }
+            return RSuccess(MimeType(major, minor))
+        }
     }
 }

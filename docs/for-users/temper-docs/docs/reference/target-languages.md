@@ -364,4 +364,24 @@ Targets the [Rust Programming Language].
 
 <!-- /snippet: backend/rust -->
 
+### Pseudo backends
+
+<!-- snippet: backend/data -->
+
+<a name="backend&#45;data" class="snippet-anchor-name"></a>
+
+#### Data Backend
+
+Outputs data files defined via [Macro `datafile`](builtins.md#builtin-dataFile).
+
+<!-- snippet: backend/data/id -->
+
+<a name="backend&#45;data&#45;id" class="snippet-anchor-name"></a>
+
+BackendID: `data`
+
+<!-- /snippet: backend/data/id -->
+
+<!-- /snippet: backend/data -->
+
 <!-- /snippet: backends/supported -->
