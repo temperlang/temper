@@ -4165,6 +4165,40 @@ class TmpLBackendTest {
         """.trimMargin(),
     )
 
+    @Test
+    fun moduleLevelMetadata() = assertGeneratedCode(
+        // We shouldn't generate a declaration for any module metadata.
+        // But we should store the metadata with the Module node.
+        // Backends like be-data do additional stuff with that, so we
+        // can test there that this works end-to-end.
+        inputJsonPathToContent = """
+            |{
+            |  foo: {
+            |    "foo.temper": ```
+            |      dataFile("foo.json", "application/json", '{ "my-favorite-number": 123 }');
+            |
+            |      export let x = 123;
+            |      ```,
+            |  },
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  tmpl: {
+            |    foo.tmpl: {
+            |      content:
+            |        ```
+            |        //// work//foo/ => foo.tmpl
+            |        @QName("test-library/foo.x") let x: Int32 = 123;
+            |
+            |        ```
+            |    },
+            |    foo.tmpl.map: "__DO_NOT_CARE__",
+            |  }
+            |}
+        """.trimMargin(),
+    )
+
     private fun assertGeneratedCode(
         inputJsonPathToContent: String,
         want: String,

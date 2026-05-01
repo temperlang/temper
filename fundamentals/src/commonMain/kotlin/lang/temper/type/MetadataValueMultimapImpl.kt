@@ -1,9 +1,10 @@
 package lang.temper.type
 
+import lang.temper.common.MappingListView
 import lang.temper.log.Position
 import lang.temper.name.Symbol
-import lang.temper.value.DeclParts
 import lang.temper.value.DeclTree
+import lang.temper.value.MetadataMultimap
 import lang.temper.value.MetadataValueMultimap
 import lang.temper.value.StayLeaf
 import lang.temper.value.TEdge
@@ -20,30 +21,25 @@ val notTypeMetadataKeys =
     setOf(hoistLeftSymbol, initSymbol, ssaSymbol, typeDeclSymbol, visibilitySymbol)
 
 /**
- * Adapts [Symbol]->[TEdge] maps from [DeclParts.metadataSymbolMap] to [Symbol]->[Value]?.
+ * Adapts [Symbol]->[TEdge] maps from [DeclParts.metadataSymbolMultimap] to [Symbol]->[Value]?.
  *
  * The former is used in the front-end's AST.
  * The latter is more suitable for use in [MemberShape] metadata.
  */
-internal class MetadataValueMultimapImpl(
-    val stay: StayLeaf,
-) : AbstractMap<Symbol, List<Value<*>?>>(), MetadataValueMultimap {
+abstract class AbstractMetadataValueMultimap : AbstractMap<Symbol, List<Value<*>?>>(), MetadataValueMultimap {
     override val entries: Set<Map.Entry<Symbol, List<Value<*>?>>> = MetadataValueMapEntriesImpl()
 
-    private val parts: DeclParts? get() {
-        val decl = stay.incoming?.source as? DeclTree
-        return decl?.parts
-    }
+    protected abstract val underlying: MetadataMultimap?
 
     private fun edgesFor(key: Symbol): List<TEdge>? {
         if (key in notTypeMetadataKeys) { return null }
-        return parts?.metadataSymbolMultimap?.get(key)
+        return underlying?.get(key)
     }
 
     override fun getEdges(symbol: Symbol): List<TEdge> = edgesFor(symbol) ?: emptyList()
 
     override fun get(key: Symbol): List<Value<*>?>? =
-        edgesFor(key)?.let { MappingList(it, ::valueAtEdge) }
+        edgesFor(key)?.let { MappingListView(it, ::valueAtEdge) }
 
     override fun containsKey(key: Symbol): Boolean =
         !edgesFor(key).isNullOrEmpty()
@@ -51,36 +47,40 @@ internal class MetadataValueMultimapImpl(
     private inner class MetadataValueMapEntriesImpl : AbstractSet<Map.Entry<Symbol, List<Value<*>?>>>() {
         override val size: Int
             get() =
-                when (val m = parts?.metadataSymbolMap) {
+                when (val m = underlying) {
                     null -> 0
                     else -> m.keys.count { it !in notTypeMetadataKeys }
                 }
 
-        override fun iterator() = object : Iterator<Map.Entry<Symbol, List<Value<*>?>>> {
-            private val underlying =
-                (parts?.metadataSymbolMultimap ?: emptyMap()).entries.iterator()
-            private var lookahead: Map.Entry<Symbol, List<TEdge>>? = null
+        override fun iterator() = MetadataValueMultimapEntrySetIteratorImpl(
+            (underlying ?: emptyMap()).entries.iterator(),
+        )
+    }
 
-            private fun skipExcluded() {
-                while (lookahead == null && underlying.hasNext()) {
-                    val next = underlying.next()
-                    if (next.key !in notTypeMetadataKeys) {
-                        lookahead = next
-                    }
+    private class MetadataValueMultimapEntrySetIteratorImpl(
+        private val underlying: Iterator<Map.Entry<Symbol, List<TEdge>>>,
+    ) : Iterator<Map.Entry<Symbol, List<Value<*>?>>> {
+        private var lookahead: Map.Entry<Symbol, List<TEdge>>? = null
+
+        private fun skipExcluded() {
+            while (lookahead == null && underlying.hasNext()) {
+                val next = underlying.next()
+                if (next.key !in notTypeMetadataKeys) {
+                    lookahead = next
                 }
             }
+        }
 
-            override fun hasNext(): Boolean {
-                skipExcluded()
-                return lookahead != null
-            }
+        override fun hasNext(): Boolean {
+            skipExcluded()
+            return lookahead != null
+        }
 
-            override fun next(): Map.Entry<Symbol, List<Value<*>?>> {
-                skipExcluded()
-                val next = lookahead ?: throw NoSuchElementException()
-                lookahead = null
-                return MetadataValueMapEntryImpl(next)
-            }
+        override fun next(): Map.Entry<Symbol, List<Value<*>?>> {
+            skipExcluded()
+            val next = lookahead ?: throw NoSuchElementException()
+            lookahead = null
+            return MetadataValueMapEntryImpl(next)
         }
     }
 
@@ -88,21 +88,20 @@ internal class MetadataValueMultimapImpl(
         val underlying: Map.Entry<Symbol, List<TEdge>>,
     ) : Map.Entry<Symbol, List<Value<*>?>> {
         override val key: Symbol get() = underlying.key
-        override val value: List<Value<*>?> get() = MappingList(
+        override val value: List<Value<*>?> get() = MappingListView(
             underlying.value,
             ::valueAtEdge,
         )
     }
 }
 
-private class MappingList<I, O>(
-    private val underlying: List<I>,
-    private val f: (I) -> O,
-) : AbstractList<O>() {
-    override val size: Int
-        get() = underlying.size
-
-    override fun get(index: Int): O = f(underlying[index])
+internal class MetadataValueMultimapImpl(
+    private val stay: StayLeaf,
+) : AbstractMetadataValueMultimap() {
+    override val underlying: MetadataMultimap? get() {
+        val decl = stay.incoming?.source as? DeclTree
+        return decl?.parts?.metadataSymbolMultimap
+    }
 }
 
 private fun valueAtEdge(edge: TEdge): Value<*>? = edge.target.valueContained
@@ -118,3 +117,9 @@ fun MetadataValueMultimap.keyPosition(valueEdge: TEdge): Position {
     }
     return valueEdge.target.pos.leftEdge
 }
+
+val MetadataMultimap.valueMap: MetadataValueMultimap get() = MetadataValueMultimapWrapper(this)
+
+private class MetadataValueMultimapWrapper(
+    override val underlying: MetadataMultimap,
+) : AbstractMetadataValueMultimap()

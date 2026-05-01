@@ -243,7 +243,7 @@ class ModuleGenerator(
 
     fun generate(): TmpL.Module = TmpL.Module(
         p0,
-        moduleMetadata = TmpL.ModuleMetadata(p0, dependencyCategory),
+        moduleMetadata = TmpL.ModuleMetadata(p0, listOf(), dependencyCategory),
         codeLocation = TmpL.CodeLocationMetadata(
             sourceLibrary = tmplGen.libraryName,
             codeLocation = tmplGen.origin.loc as ModuleName,

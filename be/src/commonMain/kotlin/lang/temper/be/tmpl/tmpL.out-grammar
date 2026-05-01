@@ -84,7 +84,7 @@ Module ::=
  */
 ModuleMetadata(
     dependencyCategory%`DependencyCategory`,
-    // TODO: once we allow file-level decorations, surface them here.
+    metadata%DeclarationMetadata*"",
 );
 ModuleMetadata.renderTo = `
 val text = buildString {

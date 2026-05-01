@@ -6,6 +6,7 @@ import lang.temper.common.LeftOrRight
 import lang.temper.common.NoneShortOrLong
 import lang.temper.common.TextOutput
 import lang.temper.common.TriState
+import lang.temper.common.abbreviate
 import lang.temper.common.allMapToSameElseNull
 import lang.temper.common.mapInterleaving
 import lang.temper.common.temperEscaper
@@ -132,7 +133,7 @@ private fun renderOpTree(t: OpTree, sink: TokenSink) {
     sink.position(t.pos, LeftOrRight.Right)
 }
 
-/** The kind of declaration which indicates how to turn metadata into syntactic elements. */
+/** The kind of declaration that indicates how to turn metadata into syntactic elements. */
 private enum class DeclKind(val afterEqualsSymbol: Symbol?) {
     Normal(initSymbol),
     Formal(defaultSymbol),
@@ -515,6 +516,28 @@ internal class PseudoTreeBuilder(
 
                     docStringSymbol -> buildDocStringAnnotation(detail, valueEdge)
 
+                    declareDataFileSymbol -> {
+                        var dataFileValueEdge: TEdge = valueEdge
+                        val detail = detail.metadataValueDetail
+                        if (detail != NoneShortOrLong.Long) {
+                            val ls = valueEdge.valueContained(TList)
+                            if (ls?.size == 3) { // [path, mime-type, data]
+                                val data = TString.unpackOrNull(ls[2])
+                                if (data != null) {
+                                    val valueTree = valueEdge.target
+                                    val abbreviated = ls.subList(0, 2) +
+                                        Value(abbreviate(data), TString)
+                                    dataFileValueEdge = valueTree.treeFarm.grow(valueTree.pos) {
+                                        Block {
+                                            V(Value(abbreviated, TList))
+                                        }
+                                    }.edge(0)
+                                }
+                            }
+                        }
+                        buildAnnotation(symbol, dataFileValueEdge)
+                    }
+
                     else -> buildAnnotation(symbol, valueEdge)
                 }
             },
@@ -529,7 +552,7 @@ internal class PseudoTreeBuilder(
             }
         }
 
-        // if it is pseudo decl de-list the type
+        // if it is a rest pseudo declaration, unwrap the list type.
         if (restFormal) {
             val proposedNewType = type?.let {
                 if (it is PseudoType) {
@@ -563,7 +586,7 @@ internal class PseudoTreeBuilder(
     }
 
     private fun buildDocStringAnnotation(detail: PseudoCodeDetail, valueEdge: TEdge) =
-        when (detail.docStringDetail) {
+        when (detail.metadataValueDetail) {
             NoneShortOrLong.Long -> buildAnnotation(docStringSymbol, valueEdge)
             NoneShortOrLong.Short -> buildAnnotation(docStringSymbol, valueEdge, elideValue = true)
             NoneShortOrLong.None -> null
@@ -1075,7 +1098,7 @@ internal class PseudoValueLeaf(
             )
         }
         TType ->
-            // Do no route complex type expressions to the "parenthesize if more than 1 token"
+            // Do not route complex type expressions to the "parenthesize if more than 1 token"
             // branch below.
             PseudoType(pos, TType.unpack(value).type).reduce()
         else -> reduceViaTokenList()
@@ -1150,7 +1173,7 @@ internal class PseudoClassValue(
         )
 
         // Add up the length of tokens and probably spaces between them, but
-        // if the probably sum goes over the threshold, stops adding.
+        // if the sum probably goes over the threshold, stops adding.
         fun totalLengthOrThreshold(before: Int, ot: OpTree, stopAt: Int): Int {
             var n = before
             when (ot) {
@@ -1185,7 +1208,7 @@ internal class PseudoCall(
     val typeArgsInferred: Boolean = false,
 ) : PseudoTree() {
     override fun reduce(): OpTree {
-        // See if we can represent as an infix or binary operator.  If not, use normal parenthetical
+        // See if we can represent as an infix or binary operator.  If not, use a normal parenthetical
         // call operator.
         val possibleOperatorName = when (callee) {
             is PseudoNameLeaf -> callee.name
@@ -1856,9 +1879,9 @@ internal class PseudoBlock(
         while (statementIndex < n) {
             // Group `let` statements together.
             // This reduces the visual clutter of pseudocode with lots of temporary declarations.
-            // Instead of
+            // The following is verbose because with semicolons it spans multiple lines:
             //     let t#0; let t#1; let t#3; let t#4;
-            // spanning multiple lines we get one line:
+            // We can comma separate declarations and put them on one line:
             //     let t#0, t#1, t#2, t#3;
             var groupedDeclEnd = statementIndex
             var leadingConstness: Constness? = null
@@ -1877,7 +1900,7 @@ internal class PseudoBlock(
             val nGroupedDecls = groupedDeclEnd - statementIndex
             if (nGroupedDecls < 2) {
                 // Not a group of declarations.
-                // Just output as a statement maybe with a semicolon at the end.
+                // Just output as a statement, maybe with a semicolon at the end.
                 val oneElement = elements[statementIndex]
                 // Skip void when last.
                 val isLastInSection = statementIndex + 1 == n ||

@@ -5,6 +5,7 @@ import lang.temper.env.Constness
 import lang.temper.env.Environment
 import lang.temper.env.Export
 import lang.temper.env.Exporter
+import lang.temper.frontend.typestage.stayFor
 import lang.temper.name.ExportedName
 import lang.temper.name.Symbol
 import lang.temper.stage.Stage
@@ -13,32 +14,44 @@ import lang.temper.value.BlockTree
 import lang.temper.value.DeclTree
 import lang.temper.value.InterpreterCallback
 import lang.temper.value.MetadataValueMultimap
+import lang.temper.value.StayLeaf
 import lang.temper.value.TypeInferences
 import lang.temper.value.Value
 import lang.temper.value.ValueStability
 import lang.temper.value.stability
+import lang.temper.value.topLevelMetadataSymbol
 import lang.temper.value.typeDeclSymbol
 import lang.temper.value.typePlaceholderSymbol
 import lang.temper.value.typeShapeAtLeafOrNull
 import lang.temper.value.unpackPairValue
 import lang.temper.value.valueContained
 
+internal data class FoundAfterModuleStaging(
+    val exports: List<Export>,
+    val declaredTypes: List<TypeShape>,
+    val topLevelMetadataStay: StayLeaf?,
+)
+
+/**
+ * Expects declarations to find metadata about a module.
+ */
 internal fun findExportsAndDeclaredTypes(
     exporter: Exporter,
     root: BlockTree,
     env: Environment,
     stage: Stage,
-): Pair<List<Export>, List<TypeShape>> {
+): FoundAfterModuleStaging {
     val exportedNames = env.locallyDeclared.mapNotNull { name ->
         (name as? ExportedName)
     }
     val declaredTypes = mutableSetOf<TypeShape>()
+    var topLevelMetadataDecl: DeclTree? = null
 
     // If we have exports, try to relate them to type inferences.
     val declInfoForExports = mutableMapOf<ExportedName, DeclInfo>()
     if (exportedNames.isNotEmpty() && stage >= Stage.Type) {
-        TreeVisit.startingAt(root).forEachContinuing {
-            val declParts = (it as? DeclTree)?.parts
+        TreeVisit.startingAt(root).forEachContinuing { t ->
+            val declParts = (t as? DeclTree)?.parts
             if (declParts != null) {
                 val nameLeaf = declParts.name
                 val name = nameLeaf.content
@@ -46,7 +59,7 @@ internal fun findExportsAndDeclaredTypes(
                     val newTypeInferences = if (name in declInfoForExports) {
                         DeclInfo.empty // If there are two or more exports, don't be ambiguous
                     } else {
-                        val metadata = (it.parts?.metadataSymbolMultimap ?: emptyMap())
+                        val metadata = (t.parts?.metadataSymbolMultimap ?: emptyMap())
                             .mapValues { (_, edges) ->
                                 edges.map { edge ->
                                     edge.target.valueContained?.let { value ->
@@ -62,28 +75,37 @@ internal fun findExportsAndDeclaredTypes(
                     }
                     declInfoForExports[name] = newTypeInferences
                 }
+                val metadataSymbolMap = declParts.metadataSymbolMap
                 for (declSymbol in listOf(typeDeclSymbol, typePlaceholderSymbol)) {
-                    val typeShape = declParts.metadataSymbolMap[declSymbol]
+                    val typeShape = metadataSymbolMap[declSymbol]
                         ?.target
                         ?.typeShapeAtLeafOrNull
                     if (typeShape != null) {
                         declaredTypes.add(typeShape)
                     }
                 }
+                if (topLevelMetadataDecl != null && topLevelMetadataSymbol in metadataSymbolMap) {
+                    topLevelMetadataDecl = t
+                }
             }
         }.visitPreOrder()
     }
 
-    return exportedNames.map { exportedName ->
-        val value = if (env.constness(exportedName) == Constness.Const) {
-            env[exportedName, InterpreterCallback.NullInterpreterCallback] as? Value<*>
-        } else {
-            null
-        }
-        val pos = env.declarationSite(exportedName) ?: root.pos.leftEdge
-        val (typeInferences, declarationMetadata) = declInfoForExports[exportedName] ?: DeclInfo.empty
-        Export(exporter, exportedName, value, typeInferences, declarationMetadata, pos)
-    } to declaredTypes.toList()
+    return FoundAfterModuleStaging(
+        exportedNames.map { exportedName ->
+            val value = if (env.constness(exportedName) == Constness.Const) {
+                env[exportedName, InterpreterCallback.NullInterpreterCallback] as? Value<*>
+            } else {
+                null
+            }
+            val pos = env.declarationSite(exportedName) ?: root.pos.leftEdge
+            val (typeInferences, declarationMetadata) =
+                declInfoForExports[exportedName] ?: DeclInfo.empty
+            Export(exporter, exportedName, value, typeInferences, declarationMetadata, pos)
+        },
+        declaredTypes.toList(),
+        topLevelMetadataDecl?.let { stayFor(it) },
+    )
 }
 
 private data class DeclInfo(
@@ -91,7 +113,7 @@ private data class DeclInfo(
     val metadata: Map<Symbol, List<Value<*>?>>,
 ) {
     companion object {
-        val empty = DeclInfo(null, MetadataValueMultimap.Companion.empty)
+        val empty = DeclInfo(null, MetadataValueMultimap.empty)
     }
 }
 

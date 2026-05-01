@@ -4,6 +4,7 @@ package lang.temper.frontend
 
 import lang.temper.common.Log
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
+import lang.temper.common.temperEscaper
 import lang.temper.common.testCodeLocation
 import lang.temper.env.InterpMode
 import lang.temper.interp.MetadataDecorator
@@ -3918,6 +3919,32 @@ class GenerateCodeStageTest {
         want = """
             |{
             |  "run": "[true, false]: List"
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun declaringADataFile() = assertModuleAtStage(
+        stage = Stage.GenerateCode,
+        input = """
+            |dataFile("hello.txt", "text/plain", ${temperEscaper.escape(
+            buildString {
+                // This string is long to demonstrate that the data doesn't
+                // show up in its entirety in the debug form.
+                append("He")
+                repeat(1000) { append("ll") }
+                append("o, World!")
+            },
+        )});
+        """.trimMargin(),
+        want = """
+            |{
+            |  generateCode: {
+            |    body: ```
+            |      @topLevelMetadata @stay @declareDataFile((["hello.txt", "text/plain", "Hellllllllllllllllll⋯llllllllllllo, World!"])) @reach(\none) let moduleMetadata#0: Empty;
+            |
+            |      ```
+            |  }
             |}
         """.trimMargin(),
     )

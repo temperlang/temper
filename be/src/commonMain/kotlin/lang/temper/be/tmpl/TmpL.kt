@@ -320,6 +320,7 @@ object TmpL {
      */
     class ModuleMetadata(
         pos: Position,
+        metadata: Iterable<DeclarationMetadata>,
         var dependencyCategory: DependencyCategory,
     ) : BaseTree(pos) {
         override val operatorDefinition: TmpLOperatorDefinition?
@@ -344,18 +345,27 @@ object TmpL {
         }
         override val codeFormattingTemplate: CodeFormattingTemplate?
             get() = null
+        private val _metadata: MutableList<DeclarationMetadata> = mutableListOf()
+        var metadata: List<DeclarationMetadata>
+            get() = _metadata
+            set(newValue) { _metadata.replaceSubList(0, _metadata.size, newValue) }
         override fun deepCopy(): ModuleMetadata {
-            return ModuleMetadata(pos, dependencyCategory = this.dependencyCategory)
+            return ModuleMetadata(pos, metadata = this.metadata, dependencyCategory = this.dependencyCategory)
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is ModuleMetadata && this.dependencyCategory == other.dependencyCategory
+            return other is ModuleMetadata && this.metadata == other.metadata && this.dependencyCategory == other.dependencyCategory
         }
         override fun hashCode(): Int {
-            return dependencyCategory.hashCode()
+            var hc = metadata.hashCode()
+            hc = 31 * hc + dependencyCategory.hashCode()
+            return hc
+        }
+        init {
+            this._metadata.addAll(metadata)
         }
         companion object {
             private val cmr = ChildMemberRelationships()
@@ -558,6 +568,43 @@ object TmpL {
         override fun deepCopy(): Expression
     }
 
+    data class DeclarationMetadata(
+        override val sourceLibrary: DashedIdentifier,
+        val key: MetadataKey,
+        val value: MetadataValue,
+    ) : BaseData() {
+        override val operatorDefinition: TmpLOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() =
+                if (!isVoid) {
+                    sharedCodeFormattingTemplate25
+                } else {
+                    sharedCodeFormattingTemplate26
+                }
+        override val formatElementCount
+            get() = 2
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.key
+                1 -> this.value
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        val isVoid: Boolean
+            get() = (value as? ValueData)?.value == void
+        override val childMemberRelationships
+            get() = cmr
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as DeclarationMetadata).key },
+                { n -> (n as DeclarationMetadata).value },
+            )
+        }
+    }
+
     /** A path from a module to another */
     sealed interface ModulePath : Tree {
         val libraryName: DashedIdentifier
@@ -674,43 +721,6 @@ object TmpL {
         }
         companion object {
             private val cmr = ChildMemberRelationships()
-        }
-    }
-
-    data class DeclarationMetadata(
-        override val sourceLibrary: DashedIdentifier,
-        val key: MetadataKey,
-        val value: MetadataValue,
-    ) : BaseData() {
-        override val operatorDefinition: TmpLOperatorDefinition?
-            get() = null
-        override val codeFormattingTemplate: CodeFormattingTemplate
-            get() =
-                if (!isVoid) {
-                    sharedCodeFormattingTemplate25
-                } else {
-                    sharedCodeFormattingTemplate26
-                }
-        override val formatElementCount
-            get() = 2
-        override fun formatElement(
-            index: Int,
-        ): IndexableFormattableTreeElement {
-            return when (index) {
-                0 -> this.key
-                1 -> this.value
-                else -> throw IndexOutOfBoundsException("$index")
-            }
-        }
-        val isVoid: Boolean
-            get() = (value as? ValueData)?.value == void
-        override val childMemberRelationships
-            get() = cmr
-        companion object {
-            private val cmr = ChildMemberRelationships(
-                { n -> (n as DeclarationMetadata).key },
-                { n -> (n as DeclarationMetadata).value },
-            )
         }
     }
 

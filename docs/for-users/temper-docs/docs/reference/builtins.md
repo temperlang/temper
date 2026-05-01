@@ -1763,6 +1763,36 @@ console.log("done"); //!outputs "done"
 
 <!-- /snippet: builtin/continue -->
 
+<!-- snippet: builtin/dataFile -->
+
+<a name="builtin&#45;dataFile" class="snippet-anchor-name"></a>
+
+### Macro `datafile`
+The `datafile` macro declares a data file that can be bundled with the library translation.
+It takes three inputs:
+
+- The path to the data file relative to the module directory.
+  For example, if the current module is `my-library//foo` and the path is `bar.json`
+  then in `my-library`, the resource path `foo/bar.json` would allow retrieving the data
+  file in some target-language specific way.
+- The mime-type of the data.
+- The data itself.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/dataFile/snippet.md/0 -->
+
+```temper
+dataFile(
+  "./my-data.json",
+  "application/json",
+  '["My", "data", "goes", "here"]',
+)
+// ✅ null
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/dataFile/snippet.md/0 -->
+
+<!-- /snippet: builtin/dataFile -->
+
 <!-- snippet: builtin/do : `do` -->
 
 <a name="builtin&#45;do" class="snippet-anchor-name"></a>
