@@ -372,7 +372,7 @@ Targets the [Rust Programming Language].
 
 #### Data Backend
 
-Outputs data files defined via [Macro `datafile`](builtins.md#builtin-dataFile).
+Outputs data files defined via [macro `dataFile`](builtins.md#builtin-dataFile).
 
 <!-- snippet: backend/data/id -->
 
