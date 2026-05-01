@@ -1,5 +1,6 @@
 package lang.temper.tests
 
+import lang.temper.be.data.DataBackend
 import lang.temper.common.asciiTitleCase
 import lang.temper.fs.NativePath
 import lang.temper.fs.temperRoot
@@ -87,7 +88,7 @@ class AllTestsTest {
 
     @Test
     fun updateFunctionalTestMatrix() {
-        val backendIds = testedBackends.sorted()
+        val backendIds = testedBackends.filter { it != DataBackend.Factory.backendId }.sorted()
 
         // Not a test, more of a comment.
         functionalTestMatrixPath.writer(Charsets.UTF_8).use { out ->

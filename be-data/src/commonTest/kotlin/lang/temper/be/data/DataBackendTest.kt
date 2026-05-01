@@ -11,11 +11,12 @@ class DataBackendTest {
     fun doingNormalThingsThatHaveNothingToDoWithDataFiles() {
         assertGenerated(
             inputs = inputFileMapFromJson(
-                """
+                $$"""
                     |{
                     |  foo: {
                     |    bar.temper: ```
                     |      export let pi = 3; // ish
+                    |      console.log("${pi}");
                     |      ```
                     |  }
                     |}

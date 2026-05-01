@@ -17,17 +17,20 @@ import lang.temper.be.data.DataBackend.Factory.BACKEND_ID
 import lang.temper.be.tmpl.BubbleBranchStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
+import lang.temper.be.tmpl.InlineSupportCode
 import lang.temper.be.tmpl.OptionalSupportCodeKind
 import lang.temper.be.tmpl.RepresentationOfVoid
 import lang.temper.be.tmpl.SupportCode
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
+import lang.temper.be.tmpl.TypedArg
 import lang.temper.common.Log
 import lang.temper.common.MimeType
 import lang.temper.common.RFailure
 import lang.temper.common.RResult
 import lang.temper.common.RSuccess
+import lang.temper.format.TokenSink
 import lang.temper.fs.OutDir
 import lang.temper.fs.ResourceDescriptor
 import lang.temper.lexer.Genre
@@ -245,7 +248,7 @@ internal object DataSupportNetwork : SupportNetwork {
         pos: Position,
         builtin: NamedBuiltinFun,
         genre: Genre,
-    ): SupportCode? = null
+    ): SupportCode = DoNotCareSupportCode
 
     override fun optionalSupportCode(
         optionalSupportCodeKind: OptionalSupportCodeKind,
@@ -255,14 +258,38 @@ internal object DataSupportNetwork : SupportNetwork {
         pos: Position,
         connectedKey: String,
         genre: Genre,
-    ): SupportCode? = null
+    ): SupportCode = DoNotCareSupportCode
 
     override fun translatedConnectedType(
         pos: Position,
         connectedKey: String,
         genre: Genre,
         temperType: Type2,
-    ): Pair<TargetLanguageTypeName, List<Type2>>? = null
+    ): Pair<TargetLanguageTypeName, List<Type2>> = DoNotCareTypeName to temperType.bindings
 }
 
 private const val NUM_DATA_FILE_DECORATION_PARTS = 3 // path, mime type, data
+
+private data object DoNotCareSupportCode : InlineSupportCode<Nothing, Nothing> {
+    override fun renderTo(tokenSink: TokenSink) {
+        tokenSink.word("doNotCare")
+    }
+
+    override val needsThisEquivalent: Boolean
+        get() = false
+
+    override fun inlineToTree(
+        pos: Position,
+        arguments: List<TypedArg<Nothing>>,
+        returnType: Type2,
+        translator: Nothing,
+    ): Nothing {
+        error("Should not be called")
+    }
+}
+
+private data object DoNotCareTypeName : TargetLanguageTypeName {
+    override fun renderTo(tokenSink: TokenSink) {
+        tokenSink.word("doNotCare")
+    }
+}
