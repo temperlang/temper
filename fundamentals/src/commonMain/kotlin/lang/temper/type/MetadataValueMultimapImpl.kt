@@ -26,7 +26,7 @@ val notTypeMetadataKeys =
  * The former is used in the front-end's AST.
  * The latter is more suitable for use in [MemberShape] metadata.
  */
-abstract class AbstractMetadataValueMultimap() : AbstractMap<Symbol, List<Value<*>?>>(), MetadataValueMultimap {
+abstract class AbstractMetadataValueMultimap : AbstractMap<Symbol, List<Value<*>?>>(), MetadataValueMultimap {
     override val entries: Set<Map.Entry<Symbol, List<Value<*>?>>> = MetadataValueMapEntriesImpl()
 
     protected abstract val underlying: MetadataMultimap?

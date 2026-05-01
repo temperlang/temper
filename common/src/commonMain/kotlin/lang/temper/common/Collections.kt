@@ -920,11 +920,3 @@ class MappingListView<I, O>(
     override fun subList(fromIndex: Int, toIndex: Int): List<O> =
         MappingListView(underlying.subList(fromIndex, toIndex), mapFn)
 }
-
-class MappingIterator<I, O>(
-    private val underlying: Iterator<I>,
-    private val mapFn: (I) -> O,
-) : Iterator<O> {
-    override fun hasNext(): Boolean = underlying.hasNext()
-    override fun next(): O = mapFn(underlying.next())
-}
