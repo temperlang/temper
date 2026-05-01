@@ -4,6 +4,7 @@ import lang.temper.env.Export
 import lang.temper.type.TypeShape
 import lang.temper.value.BlockTree
 import lang.temper.value.PartialResult
+import lang.temper.value.StayLeaf
 
 /** Outputs from a stage. */
 data class StageOutputs(
@@ -11,4 +12,5 @@ data class StageOutputs(
     val result: PartialResult,
     val exports: List<Export>,
     val declaredTypeShapes: List<TypeShape>,
+    val topLevelMetadataStay: StayLeaf?,
 )

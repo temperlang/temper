@@ -23,4 +23,5 @@ enum class InternalFeatureKeys(
     SafeAdaptGeneratorFn("safeAdaptGeneratorFn", FunctionSpecies.Pure, isBuiltin = false),
     GeneratorStepperFn("generatorStepperFn", FunctionSpecies.Normal, isBuiltin = false),
     PromoteSimpleValueToClassInstance("promoteSimpleValueToClassInstance", FunctionSpecies.Normal, isBuiltin = false),
+    AddTopLevelMetadata("addTopLevelMetadata", FunctionSpecies.Normal, isBuiltin = false),
 }

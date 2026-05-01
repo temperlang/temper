@@ -18,6 +18,7 @@ import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.ImmediateCallHelper
 import lang.temper.value.InnerTree
+import lang.temper.value.InternalFeatureKeys
 import lang.temper.value.MacroEnvironment
 import lang.temper.value.NameLeaf
 import lang.temper.value.PartialResult
@@ -25,6 +26,7 @@ import lang.temper.value.PostPass
 import lang.temper.value.StayLeaf
 import lang.temper.value.StaySink
 import lang.temper.value.Tree
+import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 
 /** Bundles the root with some context for the interpreter. */
@@ -75,7 +77,11 @@ internal fun interpretiveDanceStage(
     afterInterpretation:
     (iCtx: InterpretationContext, result: PartialResult) -> Unit,
 ): StageOutputs {
-    val features = module.features
+    val features = buildMap {
+        putAll(module.features)
+        this[InternalFeatureKeys.AddTopLevelMetadata.featureKey] =
+            Value(AddTopLevelMetadataImpl(module, root))
+    }
     val connecteds = module.connecteds
     val continueCondition = module.continueCondition
 
@@ -129,14 +135,15 @@ internal fun interpretiveDanceStage(
 
     afterInterpretation(InterpretationContext(root, env, interpreter), result)
 
-    val (exports, declaredTypeShapes) =
+    val (exports, declaredTypeShapes, topLevelMetadataStay) =
         findExportsAndDeclaredTypes(module, root, env, stage)
 
     // Fail loudly on violations of the "every StayLeaf stays" invariant.
     // TODO: We should probably pass all exports exported at any stage.  checkStayLeaves only
     // collects same-document stays so each Module must commit to preserving all stays that ever
     // escape it.
-    val (stayLeavesPresent, stayLeavesReferenced) = checkStayLeaves(root, exports)
+    val (stayLeavesPresent, stayLeavesReferenced) =
+        checkStayLeaves(root, exports, listOfNotNull(topLevelMetadataStay))
     check(stayLeavesPresent.containsAll(stayLeavesReferenced)) {
         val missing = stayLeavesReferenced.toMutableSet()
         missing.removeAll(stayLeavesPresent)
@@ -148,15 +155,18 @@ internal fun interpretiveDanceStage(
         result = result,
         exports = exports,
         declaredTypeShapes = declaredTypeShapes,
+        topLevelMetadataStay = topLevelMetadataStay,
     )
 }
 
 private fun checkStayLeaves(
     root: Tree,
     exports: List<Export>,
+    extra: List<StayLeaf>,
 ): Pair<Set<StayLeaf>, Set<StayLeaf>> {
     val referenced = StaySink(root.document)
     exports.forEach { it.addStays(referenced) }
+    extra.forEach { referenced.add(it) }
     val present = mutableListOf<StayLeaf>()
     TreeVisit.startingAt(root)
         .forEach {

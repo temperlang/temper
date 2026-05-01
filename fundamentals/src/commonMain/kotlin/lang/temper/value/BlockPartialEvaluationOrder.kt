@@ -34,3 +34,24 @@ fun blockPartialEvaluationOrder(
         addFrom(flow.controlFlow)
     }
 }
+
+fun firstInOrder(block: BlockTree) = when (val flow = block.flow) {
+    LinearFlow -> block.parts.startIndex
+    is StructuredFlow -> {
+        fun first(controlFlow: ControlFlow): Int? {
+            val index = controlFlow.ref?.index
+            if (index != null) {
+                return index
+            }
+
+            for (clause in controlFlow.clauses) {
+                val index = first(clause)
+                if (index != null) {
+                    return index
+                }
+            }
+            return null
+        }
+        first(flow.controlFlow) ?: 0
+    }
+}

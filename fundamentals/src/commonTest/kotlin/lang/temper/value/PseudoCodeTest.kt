@@ -806,7 +806,7 @@ class PseudoCodeTest {
             |@docString(...) let x = 1
             |
         """.trimMargin(),
-        detail = PseudoCodeDetail.default.copy(docStringDetail = NoneShortOrLong.Short),
+        detail = PseudoCodeDetail.default.copy(metadataValueDetail = NoneShortOrLong.Short),
     )
 
     private fun qNameExampleTest(
@@ -893,7 +893,7 @@ class PseudoCodeTest {
             |@docString(...) fn (x) {}
             |
         """.trimMargin(),
-        detail = PseudoCodeDetail.default.copy(docStringDetail = NoneShortOrLong.Short),
+        detail = PseudoCodeDetail.default.copy(metadataValueDetail = NoneShortOrLong.Short),
     )
 
     @Test
@@ -902,7 +902,7 @@ class PseudoCodeTest {
             |@docString((["Some docs", "Some docs\n\netc.", "path/to/a/file.temper"])) fn (x) {}
             |
         """.trimMargin(),
-        detail = PseudoCodeDetail.default.copy(docStringDetail = NoneShortOrLong.Long),
+        detail = PseudoCodeDetail.default.copy(metadataValueDetail = NoneShortOrLong.Long),
     )
 
     private fun growLetXEq123WithSsaMetadata(d: Document, p: Position): DeclTree =

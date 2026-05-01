@@ -74,7 +74,7 @@ internal class RuntimeEmulationStage(
             // result.
             void
         }
-        val (exports, declaredTypeShapes) =
+        val (exports, declaredTypeShapes, topLevelMetadataStay) =
             findExportsAndDeclaredTypes(module, root, topLevelBindings, Stage.Run)
 
         // If interpretation failed, use that.  Otherwise, use the value
@@ -89,6 +89,7 @@ internal class RuntimeEmulationStage(
             result = result,
             exports = exports,
             declaredTypeShapes = declaredTypeShapes,
+            topLevelMetadataStay = topLevelMetadataStay,
         )
     }
 }

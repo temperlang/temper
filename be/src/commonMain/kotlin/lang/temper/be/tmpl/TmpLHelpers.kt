@@ -95,6 +95,7 @@ fun garbageModule(
         pos = pos,
         moduleMetadata = TmpL.ModuleMetadata(
             pos = pos,
+            metadata = emptyList(),
             dependencyCategory = (origin as? ModuleNamingContext)?.owner?.dependencyCategory
                 ?: DependencyCategory.Production,
         ),

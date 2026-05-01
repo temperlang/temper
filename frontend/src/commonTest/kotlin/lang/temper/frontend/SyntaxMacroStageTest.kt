@@ -1676,7 +1676,7 @@ class SyntaxMacroStageTest {
     @Test
     fun storingDocStringWithFn() = assertModuleAtStage(
         stage = Stage.Define,
-        pseudoCodeDetail = PseudoCodeDetail.default.copy(docStringDetail = NoneShortOrLong.Short),
+        pseudoCodeDetail = PseudoCodeDetail.default.copy(metadataValueDetail = NoneShortOrLong.Short),
         input = """
             |/**
             | * tldr, f(x) = x.
@@ -1730,7 +1730,7 @@ class SyntaxMacroStageTest {
     @Test
     fun docStringsFromMarkdown() = assertModuleAtStage(
         stage = Stage.SyntaxMacro,
-        pseudoCodeDetail = PseudoCodeDetail.default.copy(docStringDetail = NoneShortOrLong.Long),
+        pseudoCodeDetail = PseudoCodeDetail.default.copy(metadataValueDetail = NoneShortOrLong.Long),
         languageConfig = MarkdownLanguageConfig(),
         input = """
             |# Geometry
@@ -1802,7 +1802,7 @@ class SyntaxMacroStageTest {
     @Test
     fun storingDocStringWithType() = assertModuleAtStage(
         stage = Stage.SyntaxMacro,
-        pseudoCodeDetail = PseudoCodeDetail.default.copy(docStringDetail = NoneShortOrLong.Long),
+        pseudoCodeDetail = PseudoCodeDetail.default.copy(metadataValueDetail = NoneShortOrLong.Long),
         input = """
             |/** Foo is a pretty cool type */
             |class Foo {}
@@ -1828,7 +1828,7 @@ class SyntaxMacroStageTest {
     @Test
     fun storingDocStringWithExportedType() = assertModuleAtStage(
         stage = Stage.SyntaxMacro,
-        pseudoCodeDetail = PseudoCodeDetail.default.copy(docStringDetail = NoneShortOrLong.Short),
+        pseudoCodeDetail = PseudoCodeDetail.default.copy(metadataValueDetail = NoneShortOrLong.Short),
         input = """
             |/** I am a pretty cool type */
             |export interface I {}
@@ -1907,7 +1907,7 @@ class SyntaxMacroStageTest {
             |}
         """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(
-            docStringDetail = NoneShortOrLong.Short,
+            metadataValueDetail = NoneShortOrLong.Short,
             showTypeMemberMetadata = true,
         ),
     )

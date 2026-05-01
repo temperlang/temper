@@ -76,7 +76,7 @@ const val TEST_INPUT_MODULE_BREAK = "////!module:"
 fun assertModuleAtStage(
     want: String = "",
     /**
-     * The temper text which is parsed using [languageConfig].
+     * The temper text that is parsed using [languageConfig].
      *
      * If the string [TEST_INPUT_MODULE_BREAK] occurs in the text, then this input
      * will be split up into multiple different modules which may import one another.
@@ -92,12 +92,14 @@ fun assertModuleAtStage(
      *
      * For example:
      *
-     *     let { foo } = import("./foo");
-     *     console.log("Main module code goes here");
-     *     console.log(foo);
+     * ```temper inert
+     * let { foo } = import("./foo");
+     * console.log("Main module code goes here");
+     * console.log(foo);
      *
-     *     ////!module: ./foo/foo.temper
-     *     export let foo = "FOO";
+     * ////!module: ./foo/foo.temper
+     * export let foo = "FOO";
+     * ```
      *
      */
     input: String,
@@ -128,7 +130,7 @@ fun assertModuleAtStage(
         val contentBuilder = StringBuilder()
         for (line in input.lines()) {
             if (line.startsWith(TEST_INPUT_MODULE_BREAK)) {
-                add(path to contentBuilder.toString())
+                add(path to "$contentBuilder")
                 contentBuilder.clear()
                 var pathStr = line.substring(TEST_INPUT_MODULE_BREAK.length)
                 var isDir = false
@@ -148,7 +150,7 @@ fun assertModuleAtStage(
                 contentBuilder.append(line).append('\n')
             }
         }
-        add(path to contentBuilder.toString())
+        add(path to "$contentBuilder")
     }
 
     val inputsByDir = buildListMultimap {
@@ -250,7 +252,6 @@ fun assertModuleAtStage(
         genre = genre,
         allowDuplicateLogPositions = true,
     )
-    @Suppress("AssignedValueIsNeverRead") // Used from module hook which runs after.
     isTestModule = { it === module }
     val allStagingFlags = buildSet {
         addAll(stagingFlags)
@@ -269,7 +270,7 @@ fun assertModuleAtStage(
             stopBeforeForMainModule == null -> null
             m === module -> stopBeforeForMainModule
             // Any other modules that the main module might import
-            // need to be advance to at least Export to unblock the
+            // need to advance to at least Export to unblock the
             // main module and each other
             stopBeforeForMainModule <= Stage.Export -> Stage.after(Stage.Export)
             else -> stopBeforeForMainModule
@@ -278,10 +279,8 @@ fun assertModuleAtStage(
     try {
         moduleAdvancer.advanceModules(stopBefore = stopBefore)
     } catch (_: Panic) {
-        @Suppress("AssignedValueIsNeverRead") // Referenced by hook to snapshot
         exitKind = ExitKind.Panic
     } catch (_: Abort) {
-        @Suppress("AssignedValueIsNeverRead") // Referenced by hook to snapshot
         exitKind = ExitKind.Abort
     }
     // Run the module hook manually to generate a final snapshot
@@ -493,10 +492,7 @@ private data class TreeStageSnapshot(
             }
         }
         val exports = exports ?: emptyList()
-        key(
-            "exports",
-            isDefault = exports.isEmpty(),
-        ) {
+        key("exports", Hints.u) {
             obj {
                 for ((_, name, exportedValue) in exports) {
                     key(name.baseName.nameText) {

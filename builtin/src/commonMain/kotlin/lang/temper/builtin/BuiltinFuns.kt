@@ -2002,6 +2002,7 @@ object BuiltinFuns {
     val regexLiteralMacro: NamedBuiltinFun = RegexLiteralMacro
     val assertMacro: NamedBuiltinFun = AssertMacro
     val testMacro: NamedBuiltinFun = TestMacro
+    val dataFileMacro: NamedBuiltinFun = DataFileMacro
 
     val handlerScope: MacroValue = HandlerScopeFn
     val bubble: NamedBuiltinFun = BubbleFn
@@ -2055,6 +2056,7 @@ object BuiltinFuns {
     val vRegexLiteralMacro = Value(regexLiteralMacro)
     val vAssertMacro = Value(assertMacro)
     val vTestMacro = Value(testMacro)
+    val vDataFileMacro = Value(dataFileMacro)
 
     val vPostfixApply = Value(DesugarPostfixOperatorMacro(postfixApplyName.builtinKey))
     val vHandlerScope = Value(handlerScope)

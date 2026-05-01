@@ -11,6 +11,7 @@ import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.log.Positioned
 import lang.temper.name.NameMaker
+import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.type2.AnySignature
 import lang.temper.type2.Signature2
@@ -89,6 +90,8 @@ interface MacroEnvironment : InterpreterCallback, Positioned, ConfigurationKey.H
     fun replaceMacroCallWithErrorNode()
 
     fun replaceMacroCallWithErrorNode(cause: LogEntry)
+
+    fun addTopLevelMetadata(key: Symbol, value: Value<*>)
 
     /**
      * Schedules a pass that receives the body after [replacements][replaceMacroCallWith] are done.

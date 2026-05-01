@@ -2423,6 +2423,18 @@ class Interpreter(
             postPasses!!.add(postPass)
         }
 
+        override fun addTopLevelMetadata(key: Symbol, value: Value<*>) {
+            val feature = TFunction.unpackOrNull(
+                getFeatureImplementation(InternalFeatureKeys.AddTopLevelMetadata.featureKey)
+                    as? Value<*>,
+            ) as? CallableValue
+            feature?.invoke(
+                ActualValues.from(Value(key), value),
+                this,
+                InterpMode.Full,
+            )
+        }
+
         private fun requireName(tree: Tree): TemperName? {
             return if (tree is NameLeaf) {
                 tree.content

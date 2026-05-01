@@ -76,6 +76,7 @@ import lang.temper.value.InternalFeatureKey
 import lang.temper.value.PartialResult
 import lang.temper.value.Promises
 import lang.temper.value.PseudoCodeDetail
+import lang.temper.value.StayLeaf
 import lang.temper.value.TBoolean
 import lang.temper.value.Tree
 import lang.temper.value.Value
@@ -255,11 +256,17 @@ class Module(
     val runResult get() = _runResult
 
     /**
-     * The name of the variable that will hold the module result if any.
+     * The name of the variable that will hold the module's result if any.
      * `null` unless [StagingFlags.moduleResultNeeded] and we have reached [Stage.Type] and
      * run the MakeResultsExplicit pass.
      */
     val outputName get() = _outputName
+
+    /**
+     * The stay for a placeholder declaration that holds metadata related to the module as a whole.
+     */
+    var topLevelMetadataStay: StayLeaf? = null
+        internal set
 
     /** The type of [outputName] if any, and if types have been inferred and stored. */
     val outputType get() = _outputType
@@ -365,6 +372,15 @@ class Module(
                 stageCallback,
             )
 
+            fun store(outputs: StageOutputs, stable: Boolean) {
+                this._tree = outputs.root
+                if (stable) {
+                    this._exports = outputs.exports
+                    this._declaredTypeShapes = outputs.declaredTypeShapes
+                    this.topLevelMetadataStay = outputs.topLevelMetadataStay
+                }
+            }
+
             // Allocate a top-level environment after setup code has had a
             // chance to call addEnvironmentBindings
             if (_topLevelBindings == null && stageToPerform > Stage.Parse) {
@@ -463,7 +479,7 @@ class Module(
                                     // Release individual trees for GC unless we might want to debug them further.
                                     _sources = _sources.map { it.copy(cst = null, tree = null) }
                                 }
-                                this._tree = outputs.root
+                                store(outputs, false)
                                 this.additionalImplicitImports.clear()
                             }
                         }
@@ -474,7 +490,7 @@ class Module(
                             .process { outputs: StageOutputs ->
                                 val result = outputs.result
                                 done(result !is Fail) {
-                                    this._tree = outputs.root
+                                    store(outputs, false)
                                 }
                             }
                     }
@@ -483,7 +499,7 @@ class Module(
                         SyntaxMacroStage(this, _tree!!, failLog, stageSpecificLogSink)
                             .process { outputs: StageOutputs ->
                                 done(outputs.result !is Fail) {
-                                    this._tree = outputs.root
+                                    store(outputs, false)
                                 }
                             }
                     }
@@ -493,7 +509,7 @@ class Module(
                             .process { outputs: StageOutputs ->
                                 val result = outputs.result
                                 done(result !is Fail) {
-                                    this._tree = outputs.root
+                                    store(outputs, true)
                                 }
                             }
                     }
@@ -503,7 +519,7 @@ class Module(
                             .process { outputs: StageOutputs, outputName: ResolvedName?, outputType: StaticType? ->
                                 val result = outputs.result
                                 done(result !is Fail) {
-                                    this._tree = outputs.root
+                                    store(outputs, true)
                                     this._outputName = outputName
                                     this._outputType = outputType
                                 }
@@ -525,9 +541,7 @@ class Module(
                             .process { outputs: StageOutputs ->
                                 val result = outputs.result
                                 done(result !is Fail) {
-                                    this._tree = outputs.root
-                                    this._exports = outputs.exports
-                                    this._declaredTypeShapes = outputs.declaredTypeShapes
+                                    store(outputs, true)
                                 }
                             }
                     }
@@ -542,9 +556,7 @@ class Module(
                             .process { outputs: StageOutputs ->
                                 val result = outputs.result
                                 done(result !is Fail) {
-                                    this._tree = outputs.root
-                                    this._exports = outputs.exports
-                                    this._declaredTypeShapes = outputs.declaredTypeShapes
+                                    store(outputs, true)
                                 }
                             }
                     }

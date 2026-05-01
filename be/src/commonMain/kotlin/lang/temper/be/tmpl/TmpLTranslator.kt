@@ -72,6 +72,7 @@ import lang.temper.type.WellKnownTypes
 import lang.temper.type.WellKnownTypes.booleanType2
 import lang.temper.type.WellKnownTypes.bubbleType2
 import lang.temper.type.WellKnownTypes.resultTypeDefinition
+import lang.temper.type.valueMap
 import lang.temper.type2.DefinedNonNullType
 import lang.temper.type2.Descriptor
 import lang.temper.type2.MkType2
@@ -111,6 +112,7 @@ import lang.temper.value.JumpSpecifier
 import lang.temper.value.LeftNameLeaf
 import lang.temper.value.MacroValue
 import lang.temper.value.MetadataMap
+import lang.temper.value.MetadataMultimap
 import lang.temper.value.MetadataValueMapHelpers.get
 import lang.temper.value.MetadataValueMultimap
 import lang.temper.value.NameLeaf
@@ -170,6 +172,7 @@ import lang.temper.value.symbolContained
 import lang.temper.value.testSymbol
 import lang.temper.value.toLispy
 import lang.temper.value.toPseudoCode
+import lang.temper.value.topLevelMetadataSymbol
 import lang.temper.value.typeDeclSymbol
 import lang.temper.value.typeFormalSymbol
 import lang.temper.value.typeFromSignature
@@ -200,6 +203,7 @@ class TmpLTranslator internal constructor(
     internal val document: Document,
     internal val pool: ConstantPool,
     internal val topLevels: MutableList<TmpL.TopLevel>,
+    internal val metadata: MutableList<TmpL.DeclarationMetadata>,
     internal val libraryConfigurations: LibraryConfigurations,
     internal val sharedLocationContext: SharedLocationContext?,
     internal val moduleIndex: Int,
@@ -237,7 +241,7 @@ class TmpLTranslator internal constructor(
                                 when (t) {
                                     is CallTree -> {
                                         // When functions are out-of-order and seen as Value leaves, they need preknown.
-                                        // In a call tree, left name means assignment.
+                                        // In a call tree, a left name means assignment.
                                         val name = (t.childOrNull(1) as? LeftNameLeaf)?.content ?: return@node
                                         val fn = (t.childOrNull(2) as? FunTree) ?: return@node
                                         val metadata = fn.parts?.metadataSymbolMap ?: return@node
@@ -300,12 +304,14 @@ class TmpLTranslator internal constructor(
                     continue
                 }
                 val topLevels = mutableListOf<TmpL.TopLevel>()
+                val metadata = mutableListOf<TmpL.DeclarationMetadata>()
                 val constantPool = ConstantPool(module.loc, sharedNameTables, topLevels)
                 val translator = TmpLTranslator(
                     logSink,
                     root.document,
                     constantPool,
                     topLevels,
+                    metadata,
                     libraryConfigurations,
                     module.sharedLocationContext,
                     moduleIndex,
@@ -532,7 +538,7 @@ class TmpLTranslator internal constructor(
                 DefaultGoalTranslator(translator).translateJump(p, kind, target)
         }
 
-        var translation = translateTopLevels(rootBlock, outputName, TranslateModuleExit())
+        var (translation, md) = translateTopLevels(rootBlock, outputName, TranslateModuleExit())
         when (val rl = returnLabel) {
             null -> {}
             else -> {
@@ -544,6 +550,7 @@ class TmpLTranslator internal constructor(
             }
         }
         topLevels.addAll(translation)
+        metadata.addAll(md)
         if (outputName != null) {
             if (
                 cfOptions.representationOfVoid == RepresentationOfVoid.ReifyVoid ||
@@ -593,7 +600,7 @@ class TmpLTranslator internal constructor(
         return NascentModule(
             pos = rootBlock.pos,
             codeLocation = TmpL.CodeLocationMetadata(sourceLibrary, loc, namingContext, tentativeOutputPath),
-            moduleMetadata = TmpL.ModuleMetadata(moduleStart, dependencyCategory),
+            moduleMetadata = TmpL.ModuleMetadata(moduleStart, metadata.toList(), dependencyCategory),
             topLevels = topLevels,
             result = result,
             translator = this,
@@ -604,7 +611,7 @@ class TmpLTranslator internal constructor(
         tree: BlockTree,
         outputName: ResolvedName?,
         goalTranslator: GoalTranslator,
-    ): List<TmpL.TopLevel> {
+    ): Pair<List<TmpL.TopLevel>, List<TmpL.DeclarationMetadata>> {
         val preTranslated = translateFlow(
             tree = tree,
             goalTranslator = goalTranslator,
@@ -616,10 +623,11 @@ class TmpLTranslator internal constructor(
     }
 
     /** Called back from [PreTranslated] to convert statements to analogous top levels. */
-    private fun toTopLevels(preTranslated: PreTranslated): List<TmpL.TopLevel> {
+    private fun toTopLevels(preTranslated: PreTranslated): Pair<List<TmpL.TopLevel>, List<TmpL.DeclarationMetadata>> {
         val converter = object {
             val initStmts = mutableListOf<TmpL.Statement>()
             val topLevels = mutableListOf<TmpL.TopLevel>()
+            val metadata = mutableListOf<TmpL.DeclarationMetadata>()
 
             fun flushInitStmts(metadata: List<TmpL.DeclarationMetadata> = emptyList()) {
                 if (initStmts.isNotEmpty()) {
@@ -731,6 +739,14 @@ class TmpLTranslator internal constructor(
 
             fun processTopLevel(pt: PreTranslated) {
                 when (pt) {
+                    is PreTranslated.TreeWrapper if pt.tree.isModuleMetadataDecl -> {
+                        val decl = pt.tree as DeclTree
+                        metadata.addAll(
+                            translateDeclarationMetadataMultimap(
+                                decl.parts!!.metadataSymbolMultimap,
+                            ),
+                        )
+                    }
                     is PreTranslated.Break,
                     is PreTranslated.CombinedDeclaration,
                     is PreTranslated.Continue,
@@ -846,7 +862,8 @@ class TmpLTranslator internal constructor(
         converter.processTopLevel(preTranslated)
         converter.flushInitStmts()
         val topLevels = converter.topLevels.map { postProcess(it) }
-        return sortedTopLevels(topLevels)
+        val metadata = converter.metadata.toList()
+        return sortedTopLevels(topLevels) to metadata
     }
 
     private fun postProcess(topLevel: TmpL.TopLevel): TmpL.TopLevel {
@@ -964,6 +981,14 @@ class TmpLTranslator internal constructor(
     ) = translateDeclarationMetadata(
         libraryConfigurations.currentLibraryConfiguration.libraryName,
         metadata,
+        getQNameMap(),
+    )
+
+    internal fun translateDeclarationMetadataMultimap(
+        metadata: MetadataMultimap,
+    ) = translateDeclarationMetadataValueMultimap(
+        libraryConfigurations.currentLibraryConfiguration.libraryName,
+        metadata.valueMap,
         getQNameMap(),
     )
 
@@ -3437,7 +3462,7 @@ private fun exportedNameForStay(
     if (canonName is ExportedName) {
         val loc = canonName.origin.loc
         if (loc != selfLoc) {
-            // If it's not part of the current module
+            // If it's not part of the current module,
             // then we could import and link to it.
             return canonName
         }
@@ -3648,3 +3673,6 @@ private val emptyCallType = CallTypeInferences(
 )
 
 private val globalConsoleClassTag = TClass(WellKnownTypes.globalConsoleTypeDefinition)
+
+private val Tree.isModuleMetadataDecl get() =
+    this is DeclTree && true == this.parts?.metadataSymbolMultimap?.containsKey(topLevelMetadataSymbol)

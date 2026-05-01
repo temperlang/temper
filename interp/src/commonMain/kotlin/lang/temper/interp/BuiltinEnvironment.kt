@@ -140,6 +140,7 @@ private object Builtins {
             keyPair(BuiltinFuns.vIsFn),
             keyPair(BuiltinFuns.vAsync),
             keyPair(BuiltinFuns.vAwait),
+            keyPair(BuiltinFuns.vDataFileMacro),
             keyPair(BuiltinFuns.vEnumMacro),
             keyPair(BuiltinFuns.vCoalesceMacro),
             keyPair(BuiltinFuns.vWhenMacro),
