@@ -21,8 +21,8 @@ import lang.temper.value.void
 
 /**
  * <!-- snippet: builtin/dataFile -->
- * # Macro `datafile`
- * The `datafile` macro declares a data file that can be bundled with the library translation.
+ * # macro `dataFile`
+ * The `dataFile` macro declares a data file that can be bundled with the library translation.
  * It takes three inputs:
  *
  * - The path to the data file relative to the module directory.
@@ -39,6 +39,11 @@ import lang.temper.value.void
  *   '["My", "data", "goes", "here"]',
  * )
  * ```
+ *
+ * If the path starts with a `/` then the rest of the path will be resolved
+ * relative to the library's root directory.
+ *
+ * The [snippet/backend/data] writes the data files to the temper output directory.
  */
 @HelpSnippet("The `datafile` macro", "builtin/dataFile")
 object DataFileMacro : NamedBuiltinFun {

@@ -2,6 +2,7 @@ package lang.temper.bundledBackends
 
 import lang.temper.be.cpp.CppBackend
 import lang.temper.be.csharp.CSharpBackend
+import lang.temper.be.data.DataBackend
 import lang.temper.be.java.JavaBackend
 import lang.temper.be.js.JsBackend
 import lang.temper.be.lua.LuaBackend
@@ -20,6 +21,7 @@ class BundledBackendsTest {
         val wanted = setOf(
             CppBackend.Cpp11,
             CSharpBackend.Factory,
+            DataBackend.Factory,
             JavaBackend.Java8,
             JavaBackend.Java17,
             JsBackend.Factory,
@@ -53,11 +55,16 @@ class BundledBackendsTest {
      * ⎀ backend/py
      *
      * ⎀ backend/rust
+     *
+     * ## Pseudo backends
+     *
+     * ⎀ backend/data
      */
     @Test
     fun supported() {
         val wanted = setOf(
             CSharpBackend.Factory.backendId,
+            DataBackend.Factory.backendId,
             JavaBackend.Java8.backendId,
             JavaBackend.Java17.backendId,
             JsBackend.Factory.backendId,
@@ -81,6 +88,7 @@ class BundledBackendsTest {
     fun defaultSupported() {
         val wanted = setOf(
             CSharpBackend.Factory.backendId,
+            DataBackend.Factory.backendId,
             // Leave Java 8 out by default. That's only for people who care enough.
             JavaBackend.Java17.backendId,
             JsBackend.Factory.backendId,

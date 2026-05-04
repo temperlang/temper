@@ -1767,8 +1767,8 @@ console.log("done"); //!outputs "done"
 
 <a name="builtin&#45;dataFile" class="snippet-anchor-name"></a>
 
-### Macro `datafile`
-The `datafile` macro declares a data file that can be bundled with the library translation.
+### macro `dataFile`
+The `dataFile` macro declares a data file that can be bundled with the library translation.
 It takes three inputs:
 
 - The path to the data file relative to the module directory.
@@ -1790,6 +1790,11 @@ dataFile(
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/dataFile/snippet.md/0 -->
+
+If the path starts with a `/` then the rest of the path will be resolved
+relative to the library's root directory.
+
+The [Data Backend](target-languages.md#backend-data) writes the data files to the temper output directory.
 
 <!-- /snippet: builtin/dataFile -->
 
