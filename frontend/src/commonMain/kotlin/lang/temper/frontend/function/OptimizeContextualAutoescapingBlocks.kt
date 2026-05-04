@@ -169,7 +169,7 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext, l
     //    ContextualAutoescapingAccumulator.
     //    This is not part of std or Implicits so we don't have a trusted path to it,
     //    but we use a heuristic to find it
-    //    (see TODO above about doing this in a library specific user-space macro).
+    //    (see TODO above about doing this in a library-specific user-space macro).
     //    Return early if none found which is the case for most modules.
     // 3. Identify blocks that create accumulators and check some properties:
     //
@@ -343,6 +343,11 @@ private data class AutoescUseInfo(
 private class AutoescCommon(val root: BlockTree) {
     private val eventInstanceNames = mutableMapOf<ValueConstruction, Temporary>()
     private var eventInstanceInsertionPoints = mutableSetOf<Int>()
+    private val dataExports = mutableListOf<DataExport>()
+
+    fun addDataExports(newDataExports: Iterable<DataExport>) {
+        dataExports.addAll(newDataExports)
+    }
 
     fun workingFor(first: Tree) {
         // store the offset into the top level block so we know where
@@ -364,8 +369,15 @@ private class AutoescCommon(val root: BlockTree) {
     }
 
     fun commit() {
-        if (eventInstanceNames.isNotEmpty()) {
+        if (eventInstanceNames.isNotEmpty() || dataExports.isNotEmpty()) {
             insertBeforeAll(root, eventInstanceInsertionPoints) {
+                for (dataExport in dataExports) {
+                    Call(BuiltinFuns.vDataFileMacro) {
+                        V(dataExport.path)
+                        V(dataExport.mimeType)
+                        V(dataExport.data)
+                    }
+                }
                 for ((construction, temporary) in eventInstanceNames) {
                     Decl {
                         Ln(temporary)
@@ -390,7 +402,7 @@ private class AutoescCommon(val root: BlockTree) {
 
     private val propertyNameCache = mutableMapOf<Pair<TypeShape, Symbol>, ModularName?>()
 
-    /** Avoid repeatedly linear scanning property lists for symbols. */
+    /** Avoid repeated linear scanning of property lists for symbols. */
     private fun propertyName(
         typeShape: TypeShape,
         propertySymbol: Symbol,
@@ -564,6 +576,7 @@ private fun optimizeAutoescaperUse(
     val block = use.declaringBlock
     val accumulatorName = use.name
     val accumulatorType = use.types.accumulatorType
+    val accumulatorReifiedType = Value(ReifiedType(accumulatorType))
 
     val basicDefinitions =
         (use.types.contextualAutoescapingAccumulatorType.definition.name as? ExportedName ?: return)
@@ -622,7 +635,7 @@ private fun optimizeAutoescaperUse(
     val initialState = iCtx.interpret(init.pos) {
         Call {
             Call(BuiltinFuns.vGets) {
-                V(Value(ReifiedType(accumulatorType)))
+                V(accumulatorReifiedType)
                 V(Symbol("initialState"))
             }
         }
@@ -630,7 +643,7 @@ private fun optimizeAutoescaperUse(
     val contextPropagator = iCtx.interpret(init.pos) {
         Call {
             Call(BuiltinFuns.vGets) {
-                V(Value(ReifiedType(accumulatorType)))
+                V(accumulatorReifiedType)
                 V(Symbol("propagator"))
             }
         }
@@ -638,7 +651,7 @@ private fun optimizeAutoescaperUse(
     val sameStateFn = iCtx.interpret(init.pos) {
         Call {
             Call(BuiltinFuns.vGets) {
-                V(Value(ReifiedType(accumulatorType)))
+                V(accumulatorReifiedType)
                 V(Symbol("sameStatePredicate"))
             }
         }
@@ -649,7 +662,7 @@ private fun optimizeAutoescaperUse(
     val escaperPicker = iCtx.interpret(init.pos) {
         Call {
             Call(BuiltinFuns.vGets) {
-                V(Value(ReifiedType(accumulatorType)))
+                V(accumulatorReifiedType)
                 V(Symbol("picker"))
             }
         }
@@ -660,7 +673,7 @@ private fun optimizeAutoescaperUse(
         console.log("Optimizing ${block.document.context.formatPosition(init.pos)}")
     }
 
-    // We define a callout function for use with propagate, merge state and others.
+    // We define a callout function for use with `propagate`, `mergeState` and others.
     val problemsFromCallout = mutableListOf<Pair<String, Boolean>>()
     class CalloutFn : CallableValue, StaylessMacroValue {
         override val sigs = listOf(
@@ -695,6 +708,26 @@ private fun optimizeAutoescaperUse(
             receiver(messageText, level)
         }
     }
+
+    // We need to track ANALYSES so that we can do dataExports when we're all done.
+    var analyses: Value<*> = TNull.value
+    var analysesOk = true
+    // This starts off null, but if there is a foldAnalyses function, it might return
+    // non-null.
+    val (foldAnalyses, exportAnalyses) = TList.unpackOrNull(
+        iCtx.interpret(startPath.diagnosticPosition.leftEdge) {
+            Call(BuiltinFuns.vListifyFn) {
+                Call(BuiltinFuns.vGets) {
+                    V(accumulatorReifiedType)
+                    V(Symbol("foldAnalyses"))
+                }
+                Call(BuiltinFuns.vGets) {
+                    V(accumulatorReifiedType)
+                    V(Symbol("exportAnalyses"))
+                }
+            }
+        } as? Value<*>,
+    ) ?: listOf(null, null)
 
     // Now we need to plan out how we're going to visit statements to come up with
     // states at each appendSafe / append call site.
@@ -775,7 +808,7 @@ private fun optimizeAutoescaperUse(
     )
     val problems = mutableSetOf<CalledOutProblem>()
 
-    fun propagateOverStmt(stateBefore: Value<*>, ref: BlockChildReference): Value<*>? {
+    fun propagateOverStmt(stateBefore: Value<*>, ref: BlockChildReference): Pair<Value<*>, List<Value<*>>?>? {
         val edge = block.dereference(ref) ?: return null
         val t = edge.target
         // merge with prior state
@@ -783,6 +816,7 @@ private fun optimizeAutoescaperUse(
         withCallouts { problem, severity ->
             problems.add(CalledOutProblem(severity, ref.pos.leftEdge, problem))
         }
+        var effectValues: List<Value<*>>? = null
         // If it's a call to append or appendSafe, update the context,
         // and remember it as something we need to change.
         if (t is CallTree && t.size >= 2) {
@@ -837,6 +871,7 @@ private fun optimizeAutoescaperUse(
                                     }
                                 }
                             }
+                            effectValues = effectValueList
                             state = after.readField(iCtx, stateAfterGetter, argPos) ?: return null
                             val escapers = when (classification) {
                                 AppendClassification.AppendUnsafe -> {
@@ -863,7 +898,7 @@ private fun optimizeAutoescaperUse(
                 }
             }
         }
-        return state
+        return state to effectValues
     }
 
     val startStateMap = mutableMapOf<Pair<MaximalPathIndex, Int>, MutableSet<Value<*>>>()
@@ -887,7 +922,7 @@ private fun optimizeAutoescaperUse(
                 state = iCtx.interpret(pathInitPos) {
                     Call {
                         Call(BuiltinFuns.vGets) {
-                            V(Value(ReifiedType(accumulatorType)))
+                            V(accumulatorReifiedType)
                             V(Symbol("mergeStates"))
                         }
                         V(state)
@@ -904,16 +939,17 @@ private fun optimizeAutoescaperUse(
 
         var autoescState = startState
         var skipFollowers = false
+        val allEffectValues = mutableListOf<Value<*>>()
         for (i in indices) {
             val ref = path.elements[i].ref
             if (ref.index == endChildIndex) {
                 skipFollowers = true
-                // Check the accumulator's end state which should recursively
+                // Check the accumulator's end state, which should recursively
                 // end delegates.
                 iCtx.interpret(ref.pos) {
                     Call {
                         Call(BuiltinFuns.vGets) {
-                            V(Value(ReifiedType(accumulatorType)))
+                            V(accumulatorReifiedType)
                             V(Symbol("checkEndState"))
                         }
                         V(autoescState)
@@ -926,7 +962,24 @@ private fun optimizeAutoescaperUse(
 
                 break
             }
-            autoescState = propagateOverStmt(autoescState, ref) ?: return
+            val (stateAfter, effectValues) = propagateOverStmt(autoescState, ref) ?: return
+            autoescState = stateAfter
+            if (effectValues != null) { allEffectValues.addAll(effectValues) }
+        }
+        if (foldAnalyses != null && exportAnalyses != null) {
+            val analysesAfter = iCtx.interpret(path.diagnosticPosition) {
+                Call {
+                    V(foldAnalyses)
+                    V(analyses)
+                    V(Value(allEffectValues.toList(), TList))
+                    V(vCallout)
+                }
+            } as? Value<*>
+            if (analysesAfter != null) {
+                analyses = analysesAfter
+            } else {
+                analysesOk = false
+            }
         }
 
         if (!skipFollowers) {
@@ -939,7 +992,7 @@ private fun optimizeAutoescaperUse(
                     val stateBeforeCondition = deepValueCopy(autoescState)
                     val stateForFollower = when (val cond = follower.condition) {
                         null -> stateBeforeCondition
-                        else -> propagateOverStmt(stateBeforeCondition, cond.ref) ?: return
+                        else -> (propagateOverStmt(stateBeforeCondition, cond.ref) ?: return).first
                     }
                     startStateMap.putMultiSet(key, stateForFollower)
                     val remaining = predecessorCount.getValue(key) - 1
@@ -971,7 +1024,6 @@ private fun optimizeAutoescaperUse(
             appendDotHelper
         }
     }
-    val accumulatorReifiedType = Value(ReifiedType(use.types.accumulatorType))
     val changes: List<Pair<TEdge, Planting.() -> UnpositionedTreeTemplate<*>>> = toChange.map { change ->
         val (edge, effects, escapers, classification) = change
         val ps = change.positions
@@ -1046,6 +1098,43 @@ private fun optimizeAutoescaperUse(
         }
     }
 
+    val dataExports = mutableListOf<DataExport>()
+    if (exportAnalyses != null) {
+        var analysesProblem: String? = null
+        if (analysesOk) {
+            if (analyses != TNull.value) {
+                val exportsResult = iCtx.interpret(use.accumulated.pos) {
+                    Call {
+                        V(exportAnalyses)
+                        V(analyses)
+                    }
+                }
+                val exports = TList.unpackOrNull(exportsResult as? Value<*>)
+                if (exports != null) {
+                    exports.mapNotNullTo(dataExports) {
+                        val path = it.readField(pathDotName)
+                        val mimeType = it.readField(mimeTypeDotName)
+                        val data = it.readField(dataDotName)
+                        if (path?.typeTag == TString && mimeType?.typeTag == TString && data != null) {
+                            @Suppress("UNCHECKED_CAST") // tags checked above
+                            DataExport(path as Value<String>, mimeType as Value<String>, data)
+                        } else {
+                            analysesProblem = "Invalid data export $it"
+                            null
+                        }
+                    }
+                } else {
+                    analysesProblem = "$accumulatorType.exportAnalyses failed"
+                }
+            }
+        } else {
+            analysesProblem = "$accumulatorType.foldAnalyses failed"
+        }
+        if (analysesProblem != null) {
+            problems.add(CalledOutProblem(Log.Error, use.accumulated.pos.leftEdge, analysesProblem))
+        }
+    }
+
     // Now, make the changes:
     // - change the initializer
     // - change .accumulated read.
@@ -1081,6 +1170,8 @@ private fun optimizeAutoescaperUse(
     changes.forEach { (edge, makeReplacement) ->
         edge.replace { makeReplacement() }
     }
+
+    use.common.addDataExports(dataExports)
 
     if (problems.isNotEmpty()) {
         val problemsInOrder = problems.sortedWith { a, b ->
@@ -1198,6 +1289,9 @@ private val applyDotHelper = DotHelper(ExternalBind, Symbol("apply"))
 private val enactDotName = Symbol("enact")
 private val eventDotName = Symbol("event")
 private val textDotName = Symbol("text")
+private val pathDotName = Symbol("path")
+private val mimeTypeDotName = Symbol("mimeType")
+private val dataDotName = Symbol("data")
 
 /**
  * Some escapers are compositions of others.
@@ -1273,3 +1367,9 @@ private fun deepValueCopy(v: Value<*>): Value<*> = when (val tt = v.typeTag) {
     )
     TClosureRecord -> v
 }
+
+private data class DataExport(
+    val path: Value<String>,
+    val mimeType: Value<String>,
+    val data: Value<*>,
+)
