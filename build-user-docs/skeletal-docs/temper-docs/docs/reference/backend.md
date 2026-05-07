@@ -384,11 +384,14 @@ Kotlin has a [TODO(\"\$tree\")](https://kotlinlang.org/api/core/kotlin-stdlib/ko
 
 ## Lifecycle of a Backend
 
-TODO: talk about PreAnalysis and metadata, getting your ducks in a row before translation, and cross-library dependencies
+TODO: Talk about PreAnalysis and metadata, getting your ducks in a row before translation, and cross-library dependencies. There are comments for each of the lifecycle methods. Maybe turn those into snippets and have a grouping snippet that embeds them each.
 
 ## Support Networks connect Temper builtins to support code
 
-TODO: mike, write me
+TODO: Flesh out SupportNetwork comments and embed them strategically to produce docs on SupportNetwork and what each piece does.
+
+Note that using code from or referencing an existing backend might simplify the
+effort here and in other aspects of writing a backend.
 
 ## Iterating on functional tests
 
