@@ -12,3 +12,5 @@ Temper reference material here:
 - [Syntax Reference](syntax.md)
 - [Modules & Files](modules.md)
 - [Target Language List](target-languages.md)
+- [Writing a New Backend](backend.md)
+- [Output Grammars](out-grammar.md)
