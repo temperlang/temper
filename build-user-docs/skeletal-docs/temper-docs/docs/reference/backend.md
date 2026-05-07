@@ -1,5 +1,15 @@
 # So you want to write a Temper backend
 
+## Notice
+
+Backends in the official Temper repository use the same licensing as Temper
+itself. If you want to make a backend with different licensing, you'll need to
+store the code separately from official Temper. We provide information later on
+how to support backends dynamically with the `temper` cli, without maintaining a
+full fork of Temper.
+
+## Overview
+
 Each language that Temper translates to requires a backend.
 
 It's the Temper compiler's job to process Temper source files and turn them into a form that can be easily translated into code artifacts in many target languages.
@@ -17,12 +27,6 @@ There is a partial glossary at the end.
 This document assumes a working knowledge of [*Kotlin*](https://kotlinlang.org), the language that Temper's compiler is written in, and of *Temper* the language that is translated.
 
 A working knowedge of tree representations, ASTs & CSTs, of programs helps.
-
-## Make sure you have git access
-
-Most of the links to source code below will not work if you don't have access to the Temper compiler source code repository.
-
-Ask Mike.
 
 ## Pick a backend ID
 
@@ -77,6 +81,33 @@ If one of the existing languages is closely related to your target language, you
 If your language is a dynamic language, like JavaScript or Python, one of those might serve as a template.
 
 If your language is a statically typed, object oriented language that allows at most one public class per source file, leaning on the existing Java backend might simplify tasks.
+
+### External modules
+
+Additional repositories can be placed using Git submodules under an "external/"
+directory under the top "temper/" project dir. And then additional Gradle
+modules can be under these directories. For example:
+
+- ...
+- be-csharp/
+- be-data/
+- ...
+- external/
+  - my-other-project/
+    - be-mylang/
+      - build.gradle
+      - ...
+    - be-myotherlang/
+  - my-yet-other-project/
+- ...
+- settings.gradle
+
+The top-level settings.gradle files automatically includes subprojects fitting
+this convention to the multi-project build. Then
+`supported-backends/build.gradle` generates a "plugin-list.json" build artifact
+that the `temper` application loads at runtime. Alternatively, if environment
+variable `$TEMPER_PLUGINS` is defined, it has priority and is expected to
+contain a JSON-formatted list of strings given class names of backend factories.
 
 ## Stub out a subclass of `class Backend` for your backend
 
@@ -141,7 +172,7 @@ That comment ends up in the [reference documentation](https://temperlang.github.
 
 ## Write an out-grammar
 
-An \*.out-grammar file defines Kotlin classes: one for each kind of output tree node, and details on how to "un parse" them back into source code.
+An \*.out-grammar file defines Kotlin classes: one for each kind of output tree node, and details on how to "un parse" them back into source code. See [out-grammar reference](out-grammar.md) for more details.
 
 This lets translators focus on turning one kind of language tree into another by simplifying a number of translation problems:
 
@@ -365,7 +396,9 @@ Fleshing out your *NewLangTranslator* takes time.  Make use of Kotlin `when` cla
 
 If you leave everything as *TODO()* above, you can pick a functional test and see what breaks and fill out translation paths as needed.
 
-Here's an order of functional tests that worked for a recent backend effort.
+Here's an order of functional tests based on an ordre that worked for a recent
+backend effort. However, new functional tests were added since effort, so the
+new tests have been inserted into this list based on estimated fit.
 
 1. AlgosHelloWorld
 1. AlgosFibonacci, TypesIntBasics
@@ -376,22 +409,37 @@ Here's an order of functional tests that worked for a recent backend effort.
 1. ControlFlowBubble
 1. CastsAsExpr
 1. FunctionsSimpleLocals, SemanticsMutuallyReferencingTypes
+1. SemanticsTypeCheckedLocals (typically unsupported for static typing)
+1. SemanticsConstness
 1. ClassesAngleCall
 1. TypesListEmpty, TypesListOperations
 1. CastsSpecific, ClassesObjectLiterals, ClassesPrivateMethod,
    ClassesPropertyOrder, ClassesSetters, ImportsTypes,
    InterfacesEmpty, RegressionMinimalRepro, TypesListReduce,
    TypesListSorting
+1. InterfacesPropertyMembers
 1. FunctionsDefaulting, FunctionsLocals, FunctionsNamedArgs,
    FunctionsRestFormal, TypesStringIsEmpty
+1. FunctionsAsValues
 1. TypesStringIndices, TypesStringRead
+1. TypesStringBuild
+1. TypesIntLimits, TypesIntShifty
 1. TypesFloatBasics, TypesFloatOps
 1. ImportsFunctions, ImportsValues
+1. NamesNonascii
 1. FunctionsConstructorCallbacks
 1. AlgosMyersDiff, SemanticsBroken, TypesDenseBitVector, TypesDeque
 1. TypesMap
 1. ClassesStaticProperties, ClassesStaticPropertiesScope
 1. ControlFlowActorRun, ControlFlowAsync
+1. TestingAsserts (here down requiring `std`)
+1. TypesDate
+1. TypesJsonSyntaxTree
+1. TypesNetresponse
+1. RegexMatch, RegexZeroAdvance
+
+Anyone following this list might recommend updates based on their experience.
+Best order might also depend on backend language.
 
 ## Glossary
 

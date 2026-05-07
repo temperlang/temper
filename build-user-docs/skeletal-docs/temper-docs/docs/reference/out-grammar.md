@@ -617,7 +617,7 @@ corresponding super-type.
 Sometimes one needs to specify extra Kotlin code, for example to define a static
 table that relates operator strings to definitions in an operator precedence table:
 
-```kt
+```temper
 UpdateExpression {
 `
 companion object {
