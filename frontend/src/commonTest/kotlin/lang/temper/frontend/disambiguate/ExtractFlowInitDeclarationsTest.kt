@@ -289,7 +289,7 @@ class ExtractFlowInitDeclarationsTest {
         """
             |\label;
             |\my_loop;
-            |for({class: Empty} of xs, fn (x) {
+            |for(({class: Empty} of xs), fn (x) {
             |    f(x)
             |})
             |
@@ -322,7 +322,7 @@ class ExtractFlowInitDeclarationsTest {
         // for (x of xs)
         """
             |var x;
-            |for(error (ExpectedDeclarationForOf) of xs, fn {
+            |for((error (ExpectedDeclarationForOf) of xs), fn {
             |    f(x)
             |})
             |
@@ -356,7 +356,7 @@ class ExtractFlowInitDeclarationsTest {
     @Test
     fun forOfLoopWithDisallowedInit() = assertExtracted(
         """
-            |for({class: Empty} of xs, fn (@init(error (OfDeclarationInitializerDisallowed)) x) {
+            |for(({class: Empty} of xs), fn (@init(error (OfDeclarationInitializerDisallowed)) x) {
             |    f(x)
             |})
             |

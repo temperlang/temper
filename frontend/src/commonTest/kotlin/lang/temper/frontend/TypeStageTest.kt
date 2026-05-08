@@ -399,23 +399,50 @@ class TypeStageTest {
         input = """for (let x of ["foo"]) { console.log(x) }""",
         stage = Stage.Type,
         want = """
-        {
-          type: {
-            body:
-            ```
-            let console#0;
-            console#0 = doPure(@stay fn /* return__0 */: Console {
-                return__0 = getConsole();
-            });
-            do_bind_forEach(list("foo"))(fn (x__0) /* return__1 */{
-                do_bind_log(console#0)(x__0);
-                return__1 = void
-            });
-
-            ```
-          }
-        }
-        """,
+            |{
+            |  define: {
+            |    body:
+            |    ```
+            |    let console#0;
+            |    console#0 = doPure(@stay fn: Console {
+            |        getConsole()
+            |    });
+            |    do_bind_forEach(list("foo"))(fn (x__0) {
+            |        do_bind_log(console#0)(x__0)
+            |    })
+            |
+            |    ```
+            |  },
+            |  type: {
+            |    body:
+            |    ```
+            |    let console#0;
+            |    console#0 = doPure(@stay fn /* return__0 */: Console {
+            |        return__0 = getConsole();
+            |    });
+            |## Start inlined forEach
+            |    let this__0: List<String>;
+            |    this__0 = list("foo");
+            |    let n__0;
+            |    n__0 = do_get_length(this__0);
+            |    var i__0;
+            |    i__0 = 0;
+            |    while (i__0 < n__0) {
+            |      let el__0: String;
+            |      el__0 = do_bind_get(this__0)(i__0);
+            |      i__0 = i__0 + 1;
+            |## Inlined block lambda
+            |      let x__0;
+            |      x__0 = el__0;
+            |      do_bind_log(console#0)(x__0);
+            |## End of inlined block lambda
+            |    };
+            |
+            |    ```
+            |  }
+            |}
+        """.trimMargin()
+            .stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
     @Test

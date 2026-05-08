@@ -356,15 +356,21 @@ private object Builtins {
              * `@inlineUnrealizedGoal` may decorate a function parameter declaration.
              *
              * An *unrealized goal* is a jump like a [snippet/builtin/break], [snippet/builtin/continue],
-             * or [snippet/builtin/return] that crosses from a [block lambda][snippet/syntax/BlockLambda.svg]
-             * into the containing function.
+             * [snippet/builtin/return], or [snippet/builtin/bubble] that crosses from a
+             * [block lambda][snippet/syntax/BlockLambda.svg] into the containing function.
+             *
+             * Inlining a call is the act of taking the called function's body and ensuring that names
+             * and parameters have the same meaning as if it was called.
+             *
+             * Inlining the call to `.forEach` below while also inlining uses of the block lambda into
+             * `f`'s body allows connecting the `return` goals to `f`'s body.
              *
              * ```temper
              * let f(ls: List<Int>): Boolean {
              *   ls.forEach { x => // Here's a block lambda
              *     if (x == 2) {
              *       console.log("Found 2!");
-             *       // This `return` wants to exit `f`
+             *       // This `return` should exit `f`
              *       // but is in a different function.
              *       return true; // UNREALIZED
              *     }
@@ -374,23 +380,47 @@ private object Builtins {
              * f([2]) //!outputs "Found 2!"
              * ```
              *
-             * Inlining a call is the act of taking the called function's body and ensuring that names
-             * and parameters have the same meaning as if it was called.
+             * After inlining, that code is equivalent to this where the `.forEach` call has been
+             * turned into a `while` loop (as specified by `List.forEach`) and the block lambda is now in
+             * the loop body.
              *
-             * Inlining the call to `.forEach` above while also inlining uses of the block lambda into
-             * `f`'s body allows connecting unrealized goals to `f`'s body.
+             * ```temper
+             * let f(ls: List<Int>): Boolean {
+             *   let n = ls.length;
+             *   var i = 0;
+             *   while (i < n) {
+             *     let x = ls[i]; // parameter from block lambda
+             *     i += 1;
+             *     // Here's where the block lambda is situated.
+             *     do {
+             *       if (x == 2) {
+             *         console.log("Found 2!");
+             *         // This `return` wants to exit `f`
+             *         // but is in a different function.
+             *         return true; // UNREALIZED
+             *       }
+             *     }
+             *   }
+             *   false
+             * }
+             * f([2]) //!outputs "Found 2!"
+             * ```
              *
              * It does come with limitations:
              *
-             * - `@inlineUnrealizedGoal` applies to parameters with function type.
+             * - `@inlineUnrealizedGoal` applies to parameters with a function type.
              * - The containing method or function, hereafter the "callee", must not use any
              *   [snippet/builtin/@private] APIs so that uses of them can be moved.
              * - The callee must not be an overridable method.
              * - The callee must call any decorated parameter at one lexical call site.
-             *   Inlining a function multiple time can lead to explosions in code size.
+             *   Inlining a function multiple times can lead to explosions in code size.
              * - The callee must not use any decorated parameter as an r-value;
              *   it may not delegate calling the block lambda.
              * - For a decorated parameter to be inlined, it must be a block lambda
+             *
+             * Since inlining involves copying code, it is only appropriate when the method
+             * is a fairly thin wrapper around a single call to the function or functions
+             * with this decoration.
              */
             keyPair(MetadataDecorator(inlineUnrealizedGoalSymbol) { void }),
 

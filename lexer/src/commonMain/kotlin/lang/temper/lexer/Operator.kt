@@ -13,7 +13,7 @@ import lang.temper.lexer.OperatorType.Prefix
 import lang.temper.lexer.OperatorType.Separator
 
 /*
- If you need to adjust precedence values, you can change one to a fractional value, and then run
+ If you need to adjust precedence values, you can change one to a fractional value and then run
  `poetry run renumber-operator-precedences` from project root/scripts.
  */
 
@@ -78,24 +78,37 @@ enum class Operator(
     Throw(-1, "throw", Prefix),
     Yield(-1, "yield", Prefix, minArity = 0, maxArity = 1),
 
+    /**
+     * `of` expects a declaration on the left so binds looser than
+     * [HighColon] and [Eq] in `@decoration let name: Type = expr`
+     * and the [At] used to decorate.
+     *
+     * To support multi-declarations on its left, it binds looser than [Comma].
+     */
+    Of(-1, "of", Infix, Right),
+
     Comma(0, ",", Separator, Right),
 
     /**
-     * Colon disambiguation is necessary for proper handling of C-like:
-     * - labeled statements,                   label: statement
-     * - switch body members,                  case 123:
-     * - JSON like object expression           key: value
-     * - Pascal/TypeScript type specifiers,    name: Type
+     * Colon disambiguation is necessary for proper handling of C-like syntactic constructs.
      *
-     * A comma operator that is slightly higher precedence than comma allows us to handle both
+     * | Construct                           | Example Code       |
+     * | ----------------------------------- | ------------------ |
+     * | labeled statements                  | `label: statement` |
+     * | switch body members                 | `case 123:`        |
+     * | JSON like object expression         | `key: value`       |
+     * | Pascal/TypeScript type specifiers   | `name: Type`       |
      *
-     *     { a: b         // eventually }
+     * A colon operator that is slightly higher precedence than comma allows us
+     * to handle both of the below:
      *
-     * which possibly starts a block containing a labeled statement
+     *     { a: b }
      *
-     *     { a: b, c: d   // eventually }
+     * That possibly starts a block containing a labeled statement.
      *
-     * which is probably part of a JSON like object expression.
+     *     { a: b, c: d }
+     *
+     * That is probably part of a JSON like object expression.
      */
     LowColon(1, ":", Infix, Left, customizable = false),
 
@@ -106,35 +119,29 @@ enum class Operator(
      */
     PreCase(1, "case", Prefix),
 
-    /**
-     * `of` expects a declaration on the left so binds looser than
-     * [HighColon] and [Eq] in `@decoration let name: Type = expr`
-     * and the [At] used to decorate.
-     */
-    Of(2, "of", Infix, Right),
-    At(3, "@", Prefix, maxArity = 2),
+    At(2, "@", Prefix, maxArity = 2),
 
-    Eq(5, "=", Infix, Right),
-    PlusEq(5, "+=", Infix, Right),
-    DashEq(5, "-=", Infix, Right),
-    StarEq(5, "*=", Infix, Right),
-    SlashEq(5, "/=", Infix, Right),
-    PctEq(5, "%=", Infix, Right),
-    AmpEq(5, "&=", Infix, Right),
-    CaretEq(5, "^=", Infix, Right),
-    BarEq(5, "|=", Infix, Right),
-    AmpAmpEq(5, "&&=", Infix, Right),
-    BarBarEq(5, "||=", Infix, Right),
-    LtLtEq(5, "<<=", Infix, Right),
-    GtGtEq(5, ">>=", Infix, Right),
-    GtGtGtEq(5, ">>>=", Infix, Right),
+    Eq(3, "=", Infix, Right),
+    PlusEq(3, "+=", Infix, Right),
+    DashEq(3, "-=", Infix, Right),
+    StarEq(3, "*=", Infix, Right),
+    SlashEq(3, "/=", Infix, Right),
+    PctEq(3, "%=", Infix, Right),
+    AmpEq(3, "&=", Infix, Right),
+    CaretEq(3, "^=", Infix, Right),
+    BarEq(3, "|=", Infix, Right),
+    AmpAmpEq(3, "&&=", Infix, Right),
+    BarBarEq(3, "||=", Infix, Right),
+    LtLtEq(3, "<<=", Infix, Right),
+    GtGtEq(3, ">>=", Infix, Right),
+    GtGtGtEq(3, ">>>=", Infix, Right),
 
-    OrElse(6, "orelse", Infix, Right),
+    OrElse(4, "orelse", Infix, Right),
 
     // A placeholder for words between a call with a terminal block and a call that follows it.
-    CallJoin(7, "callJoin:", Infix, associativity = Right, continuesStatement = true),
+    CallJoin(5, "callJoin:", Infix, associativity = Right, continuesStatement = true),
 
-    // `extends` can capture a comma separated list of type expressions but must be captured by the
+    // `extends` can capture a comma-separated list of type expressions but must be captured by the
     // {...} containing the class body.
     // But only when it doesn't appear inside angle brackets.
     //
@@ -142,7 +149,7 @@ enum class Operator(
     // than operators that appear in type expressions including colon (`:`) which separates
     // function types' output types, and ampersand (`&`) and bar (`|`) which compose types into
     // intersection and union types.
-    ExtendsComma(8, "extends", Infix, followers = Commas, maxArity = Int.MAX_VALUE),
+    ExtendsComma(6, "extends", Infix, followers = Commas, maxArity = Int.MAX_VALUE),
     ImplementsComma(
         7,
         "implements",
@@ -150,116 +157,116 @@ enum class Operator(
         followers = Commas,
         maxArity = Int.MAX_VALUE,
     ),
-    ForbidsComma(8, "forbids", Infix, followers = Commas, maxArity = Int.MAX_VALUE),
-    SupportsComma(8, "supports", Infix, followers = Commas, maxArity = Int.MAX_VALUE),
-    ExtendsNoComma(8, "extends", Infix),
-    ImplementsNoComma(8, "implements", Infix),
-    ForbidsNoComma(8, "forbids", Infix),
-    SupportsNoComma(8, "supports", Infix),
+    ForbidsComma(6, "forbids", Infix, followers = Commas, maxArity = Int.MAX_VALUE),
+    SupportsComma(6, "supports", Infix, followers = Commas, maxArity = Int.MAX_VALUE),
+    ExtendsNoComma(6, "extends", Infix),
+    ImplementsNoComma(6, "implements", Infix),
+    ForbidsNoComma(6, "forbids", Infix),
+    SupportsNoComma(6, "supports", Infix),
 
     /**
      * A colon operator for associating types with things as in `function f(thing: Type)`.
      * See [LowColon] for notes on how colon is complicated.
      */
-    HighColon(9, ":", Infix, Right),
+    HighColon(7, ":", Infix, Right),
 
     /**
      * Higher precedence than [HighColon] to allow for
      * `: PassType throws Fail0 | Fail1`
      */
-    Throws(10, "throws", Infix, followers = Bars, maxArity = Int.MAX_VALUE),
+    Throws(8, "throws", Infix, followers = Bars, maxArity = Int.MAX_VALUE),
 
-    Coalesce(11, "??", Infix),
+    Coalesce(9, "??", Infix),
 
-    BarBar(12, "||", Infix, Right),
-    AmpAmp(13, "&&", Infix, Right),
+    BarBar(10, "||", Infix, Right),
+    AmpAmp(11, "&&", Infix, Right),
 
-    EqEq(14, "==", Infix),
-    NotEq(14, "!=", Infix),
-    EqEqEq(14, "===", Infix),
-    NotEqEq(14, "!==", Infix),
-    EqTilde(14, "=~", Infix, Right),
-    BangTilde(14, "!~", Infix, Right),
+    EqEq(12, "==", Infix),
+    NotEq(12, "!=", Infix),
+    EqEqEq(12, "===", Infix),
+    NotEqEq(12, "!==", Infix),
+    EqTilde(12, "=~", Infix, Right),
+    BangTilde(12, "!~", Infix, Right),
 
-    // Angle is infix-ambiguous with Lt.  It sorts earlier when we're finding matches even though it
+    // Angle is infix-ambiguous with Lt. It sorts earlier when we're finding matches even though it
     // has a higher precedence.  The relationship between the two is governed by the mayBracket
     // bit inferred by the lexer.
-    Angle(26, "<", Infix, closer = true, minArity = 1, maxArity = Int.MAX_VALUE),
+    Angle(24, "<", Infix, closer = true, minArity = 1, maxArity = Int.MAX_VALUE),
 
-    Lt(15, "<", Infix),
-    Le(15, "<=", Infix),
-    Gt(15, ">", Infix),
-    Ge(15, ">=", Infix),
-    In(15, "in", Infix, minArity = 1),
-    Instanceof(15, "instanceof", Infix),
+    Lt(13, "<", Infix),
+    Le(13, "<=", Infix),
+    Gt(13, ">", Infix),
+    Ge(13, ">=", Infix),
+    In(13, "in", Infix, minArity = 1),
+    Instanceof(13, "instanceof", Infix),
 
-    Is(15, "is", Infix),
-    PreIs(15, "is", Prefix),
-    As(15, "as", Infix),
+    Is(13, "is", Infix),
+    PreIs(13, "is", Prefix),
+    As(13, "as", Infix),
 
     // Following Rust's lead for bitwise operator precedence: https://doc.rust-lang.org/reference/expressions.html
     // Go also places them higher than relational operators, but different: https://go.dev/ref/spec#Operator_precedence
-    Bar(16, "|", Infix, Right),
-    Caret(17, "^", Infix, Right),
-    Amp(18, "&", Infix, Right),
+    Bar(14, "|", Infix, Right),
+    Caret(15, "^", Infix, Right),
+    Amp(16, "&", Infix, Right),
 
-    LtLt(19, "<<", Infix),
-    GtGt(19, ">>", Infix),
-    GtGtGt(19, ">>>", Infix),
+    LtLt(17, "<<", Infix),
+    GtGt(17, ">>", Infix),
+    GtGtGt(17, ">>>", Infix),
 
     // I have no plans to use a CONS operator, but a medium precedence right-associative operator
     // will probably come in handy for someone.
     // Positioned here because as in Ocaml: ocaml.org/api/Ocaml_operators.html
-    ColonColon(20, "::", Infix, Right),
-    Plus(21, "+", Infix),
-    Dash(21, "-", Infix),
-    Star(22, "*", Infix),
-    Slash(22, "/", Infix),
-    Pct(22, "%", Infix),
-    Tilde(22, "~", Infix),
-    StarStar(23, "**", Infix),
-    PreIncr(24, "++", Prefix),
-    PreDecr(24, "--", Prefix),
-    PrePlus(24, "+", Prefix),
-    PreDash(24, "-", Prefix),
-    Bang(24, "!", Prefix),
-    PreTilde(24, "~", Prefix),
-    PreAmp(24, "&", Prefix),
-    PreStar(24, "*", Prefix, minArity = 0),
-    Ellipsis(24, "...", Prefix, minArity = 0),
-    Await(24, "await", Prefix),
-    PostIncr(25, "++", Postfix),
-    PostDecr(25, "--", Postfix),
-    PostBang(25, "!", Postfix),
-    PostQuest(25, "?", Postfix),
+    ColonColon(18, "::", Infix, Right),
+    Plus(19, "+", Infix),
+    Dash(19, "-", Infix),
+    Star(20, "*", Infix),
+    Slash(20, "/", Infix),
+    Pct(20, "%", Infix),
+    Tilde(20, "~", Infix),
+    StarStar(21, "**", Infix),
+    PreIncr(22, "++", Prefix),
+    PreDecr(22, "--", Prefix),
+    PrePlus(22, "+", Prefix),
+    PreDash(22, "-", Prefix),
+    Bang(22, "!", Prefix),
+    PreTilde(22, "~", Prefix),
+    PreAmp(22, "&", Prefix),
+    PreStar(22, "*", Prefix, minArity = 0),
+    Ellipsis(22, "...", Prefix, minArity = 0),
+    Await(22, "await", Prefix),
+    PostIncr(23, "++", Postfix),
+    PostDecr(23, "--", Postfix),
+    PostBang(23, "!", Postfix),
+    PostQuest(23, "?", Postfix),
 
-    Dot(26, ".", Infix),
-    ChainNull(26, "?.", Infix),
+    Dot(24, ".", Infix),
+    ChainNull(24, "?.", Infix),
 
     // Angle is here in precedence order so that it combines left associatively in
     // `foo.bar<C, D>()` with dot and parens, but above Lt for ambiguity resolution purposes.
-    DotDot(26, "..", Infix, associativity = Right),
-    CurlyGroup(26, "{", Prefix, closer = true, minArity = 0, maxArity = Int.MAX_VALUE),
-    ParenGroup(26, "(", Prefix, closer = true, minArity = 0, maxArity = Int.MAX_VALUE),
-    SquareGroup(26, "[", Prefix, closer = true, minArity = 0),
-    Curly(26, "{", Infix, closer = true, minArity = 1, maxArity = Int.MAX_VALUE),
-    Paren(26, "(", Infix, closer = true, minArity = 1, maxArity = Int.MAX_VALUE),
-    Square(26, "[", Infix, closer = true),
-    Esc(26, "\\", Prefix),
-    EscParen(26, "\\(", Prefix, closer = true),
-    EscCurly(26, "\\{", Prefix, closer = true),
-    DollarCurly(26, $$"${", Prefix, closer = true, minArity = 0, maxArity = 1),
-    UnicodeRun(26, "\\u{", Prefix, closer = true, minArity = 0, maxArity = Int.MAX_VALUE),
+    DotDot(24, "..", Infix, associativity = Right),
+    CurlyGroup(24, "{", Prefix, closer = true, minArity = 0, maxArity = Int.MAX_VALUE),
+    ParenGroup(24, "(", Prefix, closer = true, minArity = 0, maxArity = Int.MAX_VALUE),
+    SquareGroup(24, "[", Prefix, closer = true, minArity = 0),
+    Curly(24, "{", Infix, closer = true, minArity = 1, maxArity = Int.MAX_VALUE),
+    Paren(24, "(", Infix, closer = true, minArity = 1, maxArity = Int.MAX_VALUE),
+    Square(24, "[", Infix, closer = true),
+    Esc(24, "\\", Prefix),
+    EscParen(24, "\\(", Prefix, closer = true),
+    EscCurly(24, "\\{", Prefix, closer = true),
+    DollarCurly(24, $$"${", Prefix, closer = true, minArity = 0, maxArity = 1),
+    UnicodeRun(24, "\\u{", Prefix, closer = true, minArity = 0, maxArity = Int.MAX_VALUE),
 
     /**
      * Tag is a prefix operator, so that use of brackets outside of infix position gets us
      * something vaguely like JSX tag expressions.
      */
-    Tag(26, "<", Prefix, closer = true, minArity = 1, maxArity = Int.MAX_VALUE),
-    New(26, "new", Prefix, minArity = 0),
+    Tag(24, "<", Prefix, closer = true, minArity = 1, maxArity = Int.MAX_VALUE),
+    New(24, "new", Prefix, minArity = 0),
 
     /** Groups together parts of a quoted string including character data leaves and embedded expressions. */
-    QuotedGroup(27, null, Prefix, closer = true, minArity = 0, maxArity = Int.MAX_VALUE),
+    QuotedGroup(25, null, Prefix, closer = true, minArity = 0, maxArity = Int.MAX_VALUE),
 
     Leaf(Int.MAX_VALUE, null, Nullary),
     ;
