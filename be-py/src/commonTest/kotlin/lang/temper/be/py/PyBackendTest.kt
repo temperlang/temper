@@ -141,26 +141,34 @@ class PyBackendTest {
             |}
         """.trimMargin(),
         want = """
-            |from builtins import bool as bool1, str as str4, int as int5, isinstance as isinstance7
-            |from temper_core import LoggingConsole as LoggingConsole2, list_for_each as list_for_each0
-            |from typing import Dict as Dict3, Union as Union6
-            |list_for_each_33 = list_for_each0
-            |t_16: 'bool1'
-            |t_27: 'LoggingConsole2' = LoggingConsole2(__name__)
-            |def f() -> 'Dict3[str4, int5]':
+            |from typing import Union as Union3, Dict as Dict4, Sequence as Sequence9
+            |from builtins import str as str5, int as int6, bool as bool7, isinstance as isinstance10, len as len0
+            |from temper_core import LoggingConsole as LoggingConsole8, list_get as list_get1, int_add as int_add2
+            |len_38 = len0
+            |list_get_39 = list_get1
+            |int_add_40 = int_add2
+            |t_34: 'Union3[(Dict4[str5, int6]), None]'
+            |t_16: 'bool7'
+            |t_31: 'LoggingConsole8' = LoggingConsole8(__name__)
+            |def f() -> 'Dict4[str5, int6]':
             |    return {}
-            |m_1: 'Union6[(Dict3[str4, int5]), None]' = None
-            |def fn_26(e_3: 'int5') -> 'None':
-            |    global m_1
+            |m_1: 'Union3[(Dict4[str5, int6]), None]' = None
+            |this_19: 'Sequence9[int6]' = (1, 2, 3)
+            |n_20: 'int6' = len_38(this_19)
+            |i_21: 'int6' = 0
+            |while i_21 < n_20:
+            |    el_22: 'int6' = list_get_39(this_19, i_21)
+            |    i_21 = int_add_40(i_21, 1)
+            |    e_3: 'int6' = el_22
             |    if e_3 == 2:
-            |        m_1 = {}
-            |list_for_each_33((1, 2, 3), fn_26)
+            |        t_34 = {}
+            |        m_1 = t_34
             |if not m_1 is None:
-            |    t_16 = isinstance7(m_1, Dict3)
+            |    t_16 = isinstance10(m_1, Dict4)
             |else:
             |    t_16 = False
             |if t_16:
-            |    t_27.log('Allocated m')
+            |    t_31.log('Allocated m')
             |
         """.trimMargin(),
     )

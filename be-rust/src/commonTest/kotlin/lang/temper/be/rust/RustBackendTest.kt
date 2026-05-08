@@ -763,38 +763,30 @@ class RustBackendTest {
             |        crate::init(None);
             |        temper_std::init(None);
             |        let test___0 = temper_std::testing::Test::new();
+            |        let mut t___0: bool;
             |        let nums__0: temper_core::List<i32> = std::sync::Arc::new(vec![0, 1]);
-            |        #[derive(Clone)]
-            |        struct ClosureGroup___0 {
-            |            nums__0: temper_core::List<i32>, test___0: temper_std::testing::Test
-            |        }
-            |        impl ClosureGroup___0 {
-            |            fn fn__0(& self, i__0: i32) {
-            |                let mut t___0: i32 = temper_core::ListedTrait::len( & self.nums__0);
-            |                let mut t___1: bool = Some(i__0) < Some(t___0);
-            |                #[derive(Clone)]
-            |                struct ClosureGroup___1 {}
-            |                impl ClosureGroup___1 {
-            |                    fn fn__1(& self) -> std::sync::Arc<String> {
-            |                        return std::sync::Arc::new("expected i < nums.length".to_string());
-            |                    }
+            |        let this__0: temper_core::List<i32> = nums__0.clone();
+            |        let n__0: i32 = temper_core::ListedTrait::len( & this__0);
+            |        let mut i__0: i32 = 0;
+            |        'loop___0: while Some(i__0) < Some(n__0) {
+            |            let el__0: i32 = temper_core::ListedTrait::get( & this__0, i__0);
+            |            i__0 = i__0.wrapping_add(1);
+            |            let i__1: i32 = el__0;
+            |            t___0 = Some(i__1) < Some(temper_core::ListedTrait::len( & nums__0));
+            |            #[derive(Clone)]
+            |            struct ClosureGroup___0 {}
+            |            impl ClosureGroup___0 {
+            |                fn fn__0(& self) -> std::sync::Arc<String> {
+            |                    return std::sync::Arc::new("expected i < nums.length".to_string());
             |                }
-            |                let closure_group = ClosureGroup___1 {};
-            |                let fn__1 = {
-            |                    let closure_group = closure_group.clone();
-            |                    std::sync::Arc::new(move | | closure_group.fn__1())
-            |                };
-            |                self.test___0.assert(t___1, fn__1.clone());
             |            }
+            |            let closure_group = ClosureGroup___0 {};
+            |            let fn__0 = {
+            |                let closure_group = closure_group.clone();
+            |                std::sync::Arc::new(move | | closure_group.fn__0())
+            |            };
+            |            test___0.assert(t___0, fn__0.clone());
             |        }
-            |        let closure_group = ClosureGroup___0 {
-            |            nums__0: nums__0.clone(), test___0: test___0.clone()
-            |        };
-            |        let fn__0 = {
-            |            let closure_group = closure_group.clone();
-            |            std::sync::Arc::new(move | i__0: i32 | closure_group.fn__0(i__0))
-            |        };
-            |        temper_core::listed::list_for_each( & nums__0, & ( * fn__0.clone()));
             |        test___0.soft_fail_to_hard()
             |    }
             |    use super::*;

@@ -3255,7 +3255,7 @@ class GenerateCodeStageTest {
             |            accumulator#0 = new StringBuilder ();
             |            do {
             |              do_bind_append(accumulator#0)("Hello, World");
-            |              for(let guest of guests, fn {
+            |              for((let guest of guests), fn {
             |                  do_bind_append(accumulator#0)(", and ");
             |                  do_bind_append(accumulator#0)(str(guest));
             |              });
