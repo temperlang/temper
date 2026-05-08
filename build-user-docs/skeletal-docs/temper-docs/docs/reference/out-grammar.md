@@ -101,7 +101,7 @@ nodes, collected in a property named *topLevels*.
 
 After processing this, the generated Kotlin code will have something like
 
-```kt
+```kotlin
 object Foo { // From namespaceName
     // Super-type for all node types
     sealed interface Tree ...
@@ -223,7 +223,9 @@ and no path that uses it with `*`, the Kotlin type will be nullable:
 Finally, sometimes a property is required for formatting and always has one
 node.
 
-    LetDeclaration ::= "let" & name%Identifier & ";";
+```temper inert
+LetDeclaration ::= "let" & name%Identifier & ";";
+```
 
 Here, every path through the syntax declaration uses `name` once, so its
 corresponding Kotlin type is just *Identifier*.
@@ -273,7 +275,7 @@ enum DeclarationKind = Let | Const;
 which declares an enum type *DeclarationKind* with two members: *Let* and
 *Const*. This corresponds to Kotlin code like:
 
-```kt
+```kotlin
 enum class DeclarationKind { Let, Const; }
 ```
 
@@ -328,7 +330,7 @@ mentioned.
 
 So the generated Kotlin code will contain something like
 
-```kt
+```kotlin
 sealed interface Statement : Tree
 
 class ExpressionStatement(...) : BaseTree(pos), Statement
@@ -356,7 +358,7 @@ which is read from, and one of which is written to.
 
 The corresponding Kotlin code looks like
 
-```kt
+```kotlin
 sealed interface Expression : Tree
 sealed interface Pattern : Tree
 
@@ -520,7 +522,7 @@ IfStatement.isElseIf%`Boolean` = `alternate is IfStatement`;
 
 These correspond to Kotlin code like
 
-```kt
+```kotlin
 class IfStatement(...) : BaseTree, Statement, ... {
     ...
 

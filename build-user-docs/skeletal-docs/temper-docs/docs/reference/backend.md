@@ -222,7 +222,7 @@ simplifying a number of translation problems:
 For example, the [JavaScript out-grammar file](https://github.com/temperlang/temper-prepublic/blob/e39be5d6268a9727b528d89d7094431739632170/be-js/src/commonMain/kotlin/lang/temper/be/js/js.out-grammar#L4)
 defines *ConditionalExpression* thus:
 
-```
+```temper inert
 ConditionalExpression ::=
       test%Expression
     & "?" & consequent%Expression
@@ -246,7 +246,7 @@ below comes from a [formatting test](https://github.com/temperlang/temper-prepub
 that builds a conditional expression using code generated from that out-grammar
 declaration and others.
 
-```kt
+```kotlin
 expectedJson = """
     {
       js: // The left of the bracket is parenthesized, but the right is not.
@@ -281,7 +281,7 @@ Js.MemberExpression(
 To update Kotlin classes when you change an out-grammar file, just run:
 
 ```sh
-gradle kcodegen:u
+gradle kcodegen:updateGeneratedCode
 ```
 
 When writing an out-grammar, start small.
@@ -305,7 +305,7 @@ int myTwoDimensionalArray[][];
 You can probably start with just enough to call your language's *print* function
 with a string literal; see *getting to Hello World* below.
 
-```
+```temper inert
 // Starting small.  A program is just one expression.
 Program ::= expr%Expr;
 
