@@ -7,6 +7,7 @@ import lang.temper.type.Abstractness
 import lang.temper.type.AccessibleFilter
 import lang.temper.type.BindMemberAccessor
 import lang.temper.type.DotHelper
+import lang.temper.type.DotMember
 import lang.temper.type.ExternalGet
 import lang.temper.type.GetMemberAccessor
 import lang.temper.type.InstanceExtensionResolution
@@ -16,6 +17,7 @@ import lang.temper.type.InternalMemberAccessor
 import lang.temper.type.InternalSet
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
+import lang.temper.type.OperatorMember
 import lang.temper.type.PropertyShape
 import lang.temper.type.StaticPropertyShape
 import lang.temper.type.TypeParameterShape
@@ -51,7 +53,7 @@ internal fun maybeAdjustDotHelper(
     subjectTypeShapes: Iterable<TypeShape>? = null,
     preserveExtensions: Boolean,
 ): Boolean {
-    val symbol = dotHelper.symbol
+    val member = dotHelper.member
     val calleePos = t.child(0).pos
     val accessor = dotHelper.memberAccessor
     val hasEnclosingType = accessor.enclosingTypeIndexOrNegativeOne >= 0
@@ -73,7 +75,7 @@ internal fun maybeAdjustDotHelper(
                 it !is InstanceExtensionResolution
             }
             if (newExtensions.size != dotHelper.extensions.size) {
-                val newDotHelper = DotHelper(dotHelper.memberAccessor, dotHelper.symbol, newExtensions)
+                val newDotHelper = DotHelper(dotHelper.memberAccessor, member, newExtensions)
                 val calleeEdge = t.edge(0)
                 val callee = calleeEdge.target
                 calleeEdge.replace { pos ->
@@ -88,7 +90,10 @@ internal fun maybeAdjustDotHelper(
     val extensionsToPreserve = preserveExtensions && adjDotHelper.extensions.isNotEmpty()
 
     // do_iget_p(t, this) -> getp(p__0, this) when `p` is a backed property of t
-    val property = thisType?.properties?.soleMatchingOrNull { it.symbol == symbol }
+    val property = when (member) {
+        is DotMember -> thisType?.properties?.soleMatchingOrNull { it.symbol == member.dotName }
+        is OperatorMember -> null
+    }
     if (
         !extensionsToPreserve &&
         property?.abstractness == Abstractness.Concrete &&
@@ -121,27 +126,29 @@ internal fun maybeAdjustDotHelper(
         return true
     }
 
-    // do_iget_p( t, type (T)) -> getstatic(T, \p)
-    // do_ibind_p(t, type (T)) -> getStatic(T, \p)
-    // do_get_p(     type (T)) -> getstatic(T, \p)
+    // do_iget_p( t, type (T)) -> igetStatic(T, \p)
+    // do_ibind_p(t, type (T)) -> igetStatic(T, \p)
+    // do_get_p(     type (T)) -> getStatic(T, \p)
     // do_bind_p(    type (T)) -> getStatic(T, \p)
     if (
+        member is DotMember &&
         !extensionsToPreserve &&
         (accessor is GetMemberAccessor || accessor is BindMemberAccessor) &&
         typeReceiver != null &&
         t.size == firstArgIndex + 1
     ) {
+        val dotName = member.dotName
         edge.replace gets@{ pos ->
             val gets = when (accessor) {
                 InternalGet, InternalBind -> BuiltinFuns.vIGets
-                else -> GetStaticOp.externalStaticGot(typeReceiver, symbol)?.let { got ->
+                else -> GetStaticOp.externalStaticGot(typeReceiver, dotName)?.let { got ->
                     return@gets V(got)
                 } ?: BuiltinFuns.vGets
             }
             Call(pos) {
                 V(calleePos, gets)
                 Replant(freeTree(firstArg))
-                V(pos.rightEdge, symbol)
+                V(pos.rightEdge, dotName)
             }
         }
         return true
@@ -150,7 +157,7 @@ internal fun maybeAdjustDotHelper(
     // When `p` is a property name, not a method name:
     // do_ibind_p(t, subject) -> do_iget(t, subject)
     // do_bind_p(    subject) -> do_get(    subject)
-    if (accessor is BindMemberAccessor) {
+    if (accessor is BindMemberAccessor && member is DotMember) {
         val typeShapes = thisType?.let { listOf(it) }
             ?: subjectTypeShapes
         if (typeShapes != null && (!hasEnclosingType || thisType != null)) {
@@ -160,7 +167,7 @@ internal fun maybeAdjustDotHelper(
             topMemberLoop@
             for (typeShape in typeShapes) {
                 val filter =
-                    AccessibleFilter(typeShape.membersMatching(symbol), thisType)
+                    AccessibleFilter(typeShape.membersMatching(member), thisType)
                 for (member in filter) {
                     when (member) {
                         is MethodShape -> if (member.methodKind == MethodKind.Normal) {
@@ -180,7 +187,7 @@ internal fun maybeAdjustDotHelper(
                 val dotParts = t.children.subList(1, endOfDotParts)
                 val newDotHelper = DotHelper(
                     if (accessor is InternalMemberAccessor) { InternalGet } else { ExternalGet },
-                    symbol,
+                    member,
                     adjDotHelper.extensions,
                 )
                 edge.replace {

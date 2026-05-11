@@ -11,6 +11,7 @@ import lang.temper.name.ModularName
 import lang.temper.name.Symbol
 import lang.temper.type.Abstractness
 import lang.temper.type.DotHelper
+import lang.temper.type.DotMember
 import lang.temper.type.ExternalBind
 import lang.temper.type.MkType
 import lang.temper.type.NominalType
@@ -202,7 +203,7 @@ object GeneratorStepperFn : CallableValue, StaylessMacroValue {
                     if (interpMode == InterpMode.Full) {
                         val nextCallHelper = DotHelper(
                             ExternalBind,
-                            Symbol("next"),
+                            DotMember(Symbol("next")),
                             emptyList(),
                         )
 

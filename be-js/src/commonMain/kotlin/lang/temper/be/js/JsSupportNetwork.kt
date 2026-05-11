@@ -75,11 +75,11 @@ internal object JsSupportNetwork : SupportNetwork {
     ): List<TmpL.MemberOrGarbage> {
         var adjustedMembers = members
 
-        // If there's a zero argument jsonAdapter then we can auto-generate a toJSON method.
+        // If there's a zero-argument jsonAdapter, then we can auto-generate a toJSON method.
         val jsonAdapterMethod = members.firstOrNull {
-            it is TmpL.StaticMethod && it.dotName.dotNameText == jsonAdapterDotName.text && !it.mayYield &&
-                it.typeParameters.ot.typeParameters.isEmpty() && it.parameters.parameters.isEmpty() &&
-                it.parameters.restParameter == null
+            it is TmpL.StaticMethod && it.dotName.dotNameText == jsonAdapterDotName.dotName.text &&
+                !it.mayYield && it.typeParameters.ot.typeParameters.isEmpty() &&
+                it.parameters.parameters.isEmpty() && it.parameters.restParameter == null
         }
         val hasToJson = members.any {
             it is TmpL.InstanceMember &&
@@ -351,7 +351,7 @@ internal object JsSupportNetwork : SupportNetwork {
                 stableName = JsIdentifierName("PromiseBuilder"),
             ) to bindings
             // It might be better if the type were `[string]`, a length:1 array.
-            // For StringBuilder, we construct a [""], and then add to element 0.
+            // For StringBuilder, we construct a [""] and then add to element 0.
             // This is the fastest per jsperf.app/join-concat/2
             "StringBuilder" -> JsGlobalReference(ParsedName("Array")) to
                 listOf(WellKnownTypes.stringType2)
@@ -891,7 +891,7 @@ private fun mathAccess(
 
 /**
  * `type` function from interface.js
- * Handles interface types & multiple inheritance using multiple arguments
+ * Handles interface types and multiple inheritance using multiple arguments
  */
 internal val typeSupportCode = JsUnInlinedExternalFunctionReference(
     source = DashedIdentifier.temperCoreLibraryIdentifier,
@@ -1431,7 +1431,7 @@ private val listForEachIdiomExpander: Inliner =
 private val assertStrict = JsUnInlinedExternalFunctionReference(
     source = DashedIdentifier("assert"),
     // Among other things, conveniently doesn't need default import.
-    // Also, this existed since before node supported `import` imports, so should be fine to use.
+    // Also, this existed since before `node` supported `import` imports, so should be fine to use.
     // See for example: https://nodejs.org/docs/latest-v15.x/api/assert.html#assert_strict_assertion_mode
     stableName = JsIdentifierName("strict"),
 )
@@ -1694,7 +1694,7 @@ private val builtinOperatorIdToSupportCode = BuiltinOperatorId.entries.mapNotNul
         // BigInt >> does not mask shift amount
         BuiltinOperatorId.BitwiseShr64 -> runtimeLibraryReference(id)
 
-        // number >>> performs ToUint32 internally but Temper says `x >>> 0` is signed identity
+        // number >>> performs ToUint32 internally, but Temper says `x >>> 0` is signed identity
         BuiltinOperatorId.BitwiseShrUnsigned32 -> runtimeLibraryReference(id)
         // BigInt does not support >>>
         BuiltinOperatorId.BitwiseShrUnsigned64 -> runtimeLibraryReference(id)

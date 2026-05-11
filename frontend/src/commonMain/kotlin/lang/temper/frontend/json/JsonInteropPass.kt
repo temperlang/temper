@@ -25,6 +25,7 @@ import lang.temper.name.Temporary
 import lang.temper.name.identifiers.IdentStyle
 import lang.temper.type.Abstractness
 import lang.temper.type.DotHelper
+import lang.temper.type.DotMember
 import lang.temper.type.ExternalBind
 import lang.temper.type.ExternalGet
 import lang.temper.type.MkType
@@ -263,7 +264,7 @@ private class Subsidiaries(
                 Call {
                     Rn(dotBuiltinName)
                     V(Value(ReifiedType(MkType2(shape).get(), hasExplicitActuals = false)))
-                    V(jsonAdapterDotName)
+                    V(jsonAdapterDotName.dotName)
                 }
                 t.bindings.forEach {
                     // TODO: should we at least detect recursive types
@@ -393,7 +394,7 @@ internal class JsonInteropPass(
                             Call {
                                 Rn(dotBuiltinName)
                                 Rn(x)
-                                V(encodeToJsonDotName)
+                                V(encodeToJsonDotName.dotName)
                             }
                             // TODO: pass type parameters
                             Rn(p)
@@ -428,7 +429,7 @@ internal class JsonInteropPass(
                             Call {
                                 Rn(dotBuiltinName)
                                 V(Value(ReifiedType(MkType2(typeDecl.definition).get())))
-                                V(decodeFromJsonDotName)
+                                V(decodeFromJsonDotName.dotName)
                             }
                             Rn(t)
                             Rn(ic)
@@ -473,7 +474,7 @@ internal class JsonInteropPass(
             JsonInteropChanges.AddedMethod(
                 isStatic = false,
                 visibility = Visibility.Public,
-                name = encodeToJsonDotName,
+                name = encodeToJsonDotName.dotName,
                 body = {
                     val p = nameMaker.unusedSourceName(ParsedName("p"))
                     val subs = Subsidiaries(this@JsonInteropPass, typeDecl.typeFormals)
@@ -775,7 +776,7 @@ internal class JsonInteropPass(
             JsonInteropChanges.AddedMethod(
                 isStatic = false,
                 visibility = Visibility.Public,
-                name = encodeToJsonDotName,
+                name = encodeToJsonDotName.dotName,
                 body = {
                     val p = nameMaker.unusedSourceName(ParsedName("p"))
                     val x = ParsedName("x")
@@ -808,7 +809,7 @@ internal class JsonInteropPass(
                                                         Call {
                                                             Rn(dotBuiltinName)
                                                             Rn(t.subTypeName)
-                                                            V(jsonAdapterDotName)
+                                                            V(jsonAdapterDotName.dotName)
                                                         }
                                                     }
                                                 }
@@ -924,7 +925,7 @@ internal class JsonInteropPass(
                                             Call {
                                                 Rn(dotBuiltinName)
                                                 Rn(case.subTypeName)
-                                                V(jsonAdapterDotName)
+                                                V(jsonAdapterDotName.dotName)
                                             }
                                         }
                                     }
@@ -1087,7 +1088,7 @@ internal class JsonInteropPass(
             JsonInteropChanges.AddedMethod(
                 isStatic = true,
                 visibility = Visibility.Public,
-                name = decodeFromJsonDotName,
+                name = decodeFromJsonDotName.dotName,
                 body = {
                     // Map type parameters on the class to inputs for that type's adapters
                     Fn(extraMethodPos) {
@@ -1184,7 +1185,7 @@ internal class JsonInteropPass(
                     JsonInteropChanges.AddedMethod(
                         isStatic = false,
                         visibility = Visibility.Public,
-                        name = encodeToJsonDotName,
+                        name = encodeToJsonDotName.dotName,
                         body = {
                             val subsidiaries = Subsidiaries(this@JsonInteropPass, typeDecl.typeFormals)
                             enc(extraMethodPos, classAdaptedFormals, subsidiaries)
@@ -1193,7 +1194,7 @@ internal class JsonInteropPass(
                     JsonInteropChanges.AddedMethod(
                         isStatic = false,
                         visibility = Visibility.Public,
-                        name = decodeFromJsonDotName,
+                        name = decodeFromJsonDotName.dotName,
                         body = {
                             val subsidiaries = Subsidiaries(this@JsonInteropPass, typeDecl.typeFormals)
                             dec(extraMethodPos, classAdaptedFormals, subsidiaries)
@@ -1206,7 +1207,7 @@ internal class JsonInteropPass(
         val jsonAdapterMethod = JsonInteropChanges.AddedMethod(
             isStatic = true,
             visibility = Visibility.Public,
-            name = jsonAdapterDotName,
+            name = jsonAdapterDotName.dotName,
             body = {
                 // We need a type formal for this static method.
                 // We need an argument for each subsidiary type adapter.
@@ -1273,24 +1274,24 @@ internal class JsonInteropPass(
     }
 }
 
-val jsonAdapterDotName = Symbol("jsonAdapter")
-val encodeToJsonDotName = Symbol(ENCODE_METHOD_NAME)
-val decodeFromJsonDotName = Symbol(DECODE_METHOD_NAME)
-val startObjectDotName = Symbol("startObject")
-val objectKeyDotName = Symbol("objectKey")
-val endObjectDotName = Symbol("endObject")
-val booleanValueDotName = Symbol("booleanValue")
-val int32ValueDotName = Symbol("int32Value")
-val int64ValueDotName = Symbol("int64Value")
-val float64ValueDotName = Symbol("float64Value")
-val nullValueDotName = Symbol("nullValue")
-val stringValueDotName = Symbol("stringValue")
-val contentDotName = Symbol("content")
-val propertyValueOrBubbleDotName = Symbol("propertyValueOrBubble")
-val propertyValueOrNullDotName = Symbol("propertyValueOrNull")
-val asFloat64DotName = Symbol("asFloat64")
-val asInt32DotName = Symbol("asInt32")
-val asInt64DotName = Symbol("asInt64")
+val jsonAdapterDotName = DotMember(Symbol("jsonAdapter"))
+val encodeToJsonDotName = DotMember(Symbol(ENCODE_METHOD_NAME))
+val decodeFromJsonDotName = DotMember(Symbol(DECODE_METHOD_NAME))
+val startObjectDotName = DotMember(Symbol("startObject"))
+val objectKeyDotName = DotMember(Symbol("objectKey"))
+val endObjectDotName = DotMember(Symbol("endObject"))
+val booleanValueDotName = DotMember(Symbol("booleanValue"))
+val int32ValueDotName = DotMember(Symbol("int32Value"))
+val int64ValueDotName = DotMember(Symbol("int64Value"))
+val float64ValueDotName = DotMember(Symbol("float64Value"))
+val nullValueDotName = DotMember(Symbol("nullValue"))
+val stringValueDotName = DotMember(Symbol("stringValue"))
+val contentDotName = DotMember(Symbol("content"))
+val propertyValueOrBubbleDotName = DotMember(Symbol("propertyValueOrBubble"))
+val propertyValueOrNullDotName = DotMember(Symbol("propertyValueOrNull"))
+val asFloat64DotName = DotMember(Symbol("asFloat64"))
+val asInt32DotName = DotMember(Symbol("asInt32"))
+val asInt64DotName = DotMember(Symbol("asInt64"))
 
 // TODO: Allow a decorator to opt a formal out from adapting
 @Suppress("UnusedReceiverParameter") // We will base this on metadata

@@ -4,6 +4,7 @@ import lang.temper.lexer.Operator
 import lang.temper.name.BuiltinName
 import lang.temper.name.ParsedName
 import lang.temper.name.Symbol
+import lang.temper.type.DotMember
 
 // Names and symbols for builtins
 
@@ -538,6 +539,13 @@ val vInlineUnrealizedGoalSymbol = Value(inlineUnrealizedGoalSymbol)
 val extensionSymbol = Symbol("extension")
 val vExtensionSymbol = Value(extensionSymbol)
 
+/**
+ * Metadata key for operator specifications that indicates that
+ * a method or function implements an operator.
+ */
+val operatorSymbol = Symbol("operator")
+val vOperatorSymbol = Value(operatorSymbol)
+
 /** Provides an overload name to a function or class member. */
 val overloadSymbol = Symbol("overload")
 
@@ -582,8 +590,8 @@ val jsonExtraSymbol = Symbol("jsonExtra")
 val jsonNameSymbol = Symbol("jsonName")
 
 /** Provides a convenient default string representation. */
-val toStringSymbol = Symbol("toString")
-val vToStringSymbol = Value(toStringSymbol)
+val toStringDotName = DotMember(Symbol("toString"))
+val constructorDotName = DotMember(constructorSymbol)
 
 /**
  * Allows embedding data files constructed by macros in module-level metadata

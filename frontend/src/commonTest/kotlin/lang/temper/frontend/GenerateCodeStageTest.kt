@@ -3101,7 +3101,7 @@ class GenerateCodeStageTest {
     )
 
     @Test
-    fun jsonAdaptorWorks() = assertModuleAtStage(
+    fun jsonAdapterWorks() = assertModuleAtStage(
         stage = Stage.Run,
         moduleResultNeeded = true,
         input = """

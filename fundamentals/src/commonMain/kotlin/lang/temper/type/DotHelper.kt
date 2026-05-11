@@ -11,7 +11,6 @@ import lang.temper.format.TokenSink
 import lang.temper.log.MessageTemplate
 import lang.temper.name.BuiltinName
 import lang.temper.name.ResolvedName
-import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.type2.Signature2
 import lang.temper.value.ActualValues
@@ -66,16 +65,18 @@ data class StaticExtensionResolution(
  * - `subject.verb` : read of a bound method via [ExternalGet] and [InternalGet]
  * - `subject.adjective(args)` : call to a function stored in a property via [ExternalBind] and
  *   [InternalBind]
+ *
+ * It also allows
  */
 class DotHelper(
     val memberAccessor: MemberAccessor,
-    val symbol: Symbol,
+    val member: Member,
     /** Resolutions of relevant extension function in scope with the same symbol. */
     val extensions: List<ExtensionResolution> = emptyList(),
 ) : SpecialFunction, NamedBuiltinFun, BuiltinStatelessMacroValue, TokenSerializable {
     override val name: String get() = buildString {
         append("do_")
-        append(memberAccessor.prefix(symbol).text)
+        append(memberAccessor.prefix(member))
     }
 
     // May be filled in by the typer.
@@ -187,7 +188,7 @@ class DotHelper(
 
         val accessibleMembers = accessibleMembers(typeShape)
         debug {
-            console.log("memberAccessor=$memberAccessor symbol=$symbol")
+            console.log("memberAccessor=$memberAccessor member=$member")
             console.log(". subject=$subject")
             console.log(". objProperties=$objProperties")
             console.log(". typeShape=$typeShape")
@@ -201,7 +202,7 @@ class DotHelper(
         fun inaccessible(): Fail {
             macroEnv.explain(
                 MessageTemplate.NoAccessibleMember,
-                values = listOf(symbol.text, typeShape.name),
+                values = listOf(member, typeShape.name),
             )
             return Fail
         }
@@ -253,7 +254,7 @@ class DotHelper(
                         } else {
                             MessageTemplate.NoAccessibleSetter
                         },
-                        values = listOf(symbol.text, typeShape.name),
+                        values = listOf(member, typeShape.name),
                     )
                     return Fail
                 }
@@ -295,10 +296,10 @@ class DotHelper(
     }
 
     fun accessibleMembers(accessingTypeShape: TypeShape): Iterable<MemberShape> =
-        AccessibleFilter(accessingTypeShape.membersMatching(symbol), accessingTypeShape)
+        AccessibleFilter(accessingTypeShape.membersMatching(member, member is OperatorMember), accessingTypeShape)
 
     fun publicMembers(accessingTypeShape: TypeShape): Iterable<MemberShape> =
-        AccessibleFilter(accessingTypeShape.membersMatching(symbol), null)
+        AccessibleFilter(accessingTypeShape.membersMatching(member, member is OperatorMember), null)
 
     override val callMayFailPerSe: Boolean
         get() = when (memberAccessor) {
@@ -308,7 +309,7 @@ class DotHelper(
             is SetMemberAccessor -> true
         }
 
-    override fun toString() = "DotHelper(${this.memberAccessor.prefix}, ${this.symbol})"
+    override fun toString() = "DotHelper(${this.memberAccessor.prefix}, ${this.member})"
 }
 
 class AccessibleFilter<MEMBER_T : MemberShape>(

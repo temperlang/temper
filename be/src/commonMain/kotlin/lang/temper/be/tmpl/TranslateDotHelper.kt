@@ -8,6 +8,7 @@ import lang.temper.log.Position
 import lang.temper.name.ResolvedName
 import lang.temper.type.BindMemberAccessor
 import lang.temper.type.DotHelper
+import lang.temper.type.DotMember
 import lang.temper.type.ExternalBind
 import lang.temper.type.ExternalGet
 import lang.temper.type.ExternalSet
@@ -19,6 +20,7 @@ import lang.temper.type.InternalSet
 import lang.temper.type.MemberShape
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
+import lang.temper.type.OperatorMember
 import lang.temper.type.PropertyShape
 import lang.temper.type.SetMemberAccessor
 import lang.temper.type.TypeDefinition
@@ -167,6 +169,14 @@ internal object TranslateDotHelper {
         val pos = (outerCallTree ?: callTree).pos
         val calleePos = callee.pos
         val dotHelper = callee.functionContained as DotHelper
+        val dotMember = dotHelper.member
+        when (dotMember) {
+            is DotMember -> {} // OK
+            is OperatorMember -> return garbageTranslatedHelper(
+                pos,
+                "Operator member $dotMember should have been converted to dot-name form",
+            )
+        }
 
         val callType = (outerCallTree ?: callTree).typeOrInvalid
         val pool = translator.pool
@@ -342,7 +352,7 @@ internal object TranslateDotHelper {
         }
 
         fun propertyId(): TmpL.PropertyId {
-            val propShape = firstMember?.let { propertyShapeFor(firstMember) }
+            val propShape = firstMember?.let { propertyShapeFor(it) }
             val visibility = when {
                 // If a setter, for example, is private, refer to it internally.
                 firstMember?.visibility == Visibility.Private -> Visibility.Private
@@ -356,7 +366,7 @@ internal object TranslateDotHelper {
                 TmpL.InternalPropertyId(TmpL.Id(pos.rightEdge, propShape.name as ResolvedName))
             } else {
                 TmpL.ExternalPropertyId(
-                    TmpL.DotName(pos.rightEdge, dotHelper.symbol.text),
+                    TmpL.DotName(pos.rightEdge, dotMember.dotName.text),
                 )
             }
         }
@@ -387,13 +397,9 @@ internal object TranslateDotHelper {
             }
             is BindMemberAccessor -> if (outerCallTree != null) {
                 val method = firstMember
-                    ?: return TranslatedDotHelper(
-                        Either.Left(
-                            garbageExpr(pos, "No method matching .${dotHelper.symbol.text} in $subjectTypeDefinition"),
-                        ),
-                        null,
-                        null,
-                        null,
+                    ?: return garbageTranslatedHelper(
+                        pos,
+                        "No method matching ${dotHelper.member} in $subjectTypeDefinition",
                     )
                 translation = translateCall(
                     pos = pos,
@@ -427,10 +433,18 @@ internal object TranslateDotHelper {
         type: Type2,
         translator: TmpLTranslator,
     ): TmpL.Expression {
-        val dotName = TmpL.DotName(
-            calleePos,
-            dotHelper.symbol.text,
-        )
+        val dotMember = dotHelper.member
+        when (dotMember) {
+            is DotMember -> {} // OK
+            is OperatorMember -> return TmpL.GarbageExpression(
+                pos,
+                TmpL.Diagnostic(
+                    pos,
+                    "Operator member $dotMember should have been converted to dot-name form",
+                ),
+            )
+        }
+        val dotName = TmpL.DotName(calleePos, dotMember.dotName.text)
         val sig = method.descriptor.orInvalid
         val translation: TmpL.Expression = translator.maybeInline(
             TmpL.CallExpression(
@@ -506,3 +520,13 @@ private fun propertyShapeFor(methodShape: MethodShape): PropertyShape? =
 
 private const val GETTER_AFFIX = "::get"
 private const val SETTER_AFFIX = "::set"
+
+private fun garbageTranslatedHelper(pos: Position, message: String) =
+    TranslateDotHelper.TranslatedDotHelper(
+        Either.Left(
+            garbageExpr(pos, message),
+        ),
+        null,
+        null,
+        null,
+    )

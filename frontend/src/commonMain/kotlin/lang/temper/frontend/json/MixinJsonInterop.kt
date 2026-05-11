@@ -31,6 +31,7 @@ import lang.temper.name.TemperName
 import lang.temper.stage.Stage
 import lang.temper.type.Abstractness
 import lang.temper.type.DotHelper
+import lang.temper.type.DotMember
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
 import lang.temper.type.NominalType
@@ -226,7 +227,7 @@ private fun findJsonDecoratedTypeDecls(
     return buildList {
         for (typeShape in nameToTypeShape.values) {
             val jsonDecoration = typeShape.metadata.getEdges(jsonSymbol).firstOrNull()
-            fun methodPresenceOf(dotName: Symbol): JsonInteropDetails.MethodPresence {
+            fun methodPresenceOf(dotName: DotMember): JsonInteropDetails.MethodPresence {
                 val method = typeShape.membersMatching(dotName).firstOrNull {
                     // TODO: look for extension methods in scope
                     it is MethodShape && it.methodKind == MethodKind.Normal &&
@@ -347,7 +348,7 @@ private fun findJsonDecoratedTypeDecls(
             }
             val fromJsonPresence = if (
                 typeShape.staticProperties.any {
-                    it.symbol == decodeFromJsonDotName && it.visibility == Visibility.Public
+                    it.symbol == decodeFromJsonDotName.dotName && it.visibility == Visibility.Public
                 }
             ) {
                 JsonInteropDetails.MethodPresence.Present

@@ -3600,6 +3600,65 @@ console.log(c.y.toString()); //!outputs "2"
 
 <!-- /snippet: builtin/@noProperty -->
 
+<!-- snippet: builtin/@operator -->
+
+<a name="builtin&#45;&#64;operator" class="snippet-anchor-name"></a>
+
+### `@operator` decorator
+The *\@operator* decorator applies to a function or method declaration
+that implements an operator.
+
+For example, maybe you're defining an arbitrary precision integer type,
+*BigInteger*, and its class includes methods that implement arithmetic.
+You could add `@operator` decorators to the methods and then adding two
+*BigIntegers* (and a *BigInteger* and a [*Int32*](types.md#type-Int32)) would
+delegate semantics to that method.
+
+The string argument must be a valid operator text or an [Operator specifier](#operator-specifier).
+If an operator text, then the operator kind is inferred from the decorated function
+or methods arity (2 means infix, 1 means prefix).
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/@operator/snippet.md/0 -->
+
+```temper
+/**
+ * I just need an example of an operator definition.
+ * This mirrors electrical-engineering notation.
+ */
+@operator("+") // Infix plus operator because arity is 2
+let addingTwoBooleans(a: Boolean, b: Boolean): Boolean {
+  a || b
+}
+
+true + false
+// ⏸️
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/@operator/snippet.md/0 -->
+
+This decorator may be applied multiple times.
+
+<!-- snippet: operator-specifier -->
+
+<a name="operator&#45;specifier" class="snippet-anchor-name"></a>
+
+#### Operator specifier
+
+An operator specifier specifies a kind of operator.
+
+The text of the operator surrounded by underscores where operands are allowed.
+This allows for describing these different kinds of operators, as shown below
+where `+` is the sample operator.
+
+- Infix: `_+_`, the operator punctuation (or word) appears between two operands.
+- Prefix: `+_`, the operator appears before its operand, like `-` for negation.
+- Postfix: `_+`, the operator appears after its operand, like `++` for post-increment
+  or superscript `T` for matrix transpose.
+
+<!-- /snippet: operator-specifier -->
+
+<!-- /snippet: builtin/@operator -->
+
 <!-- snippet: builtin/@overload -->
 
 <a name="builtin&#45;&#64;overload" class="snippet-anchor-name"></a>

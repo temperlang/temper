@@ -7,6 +7,7 @@ import lang.temper.interp.convertToErrorNode
 import lang.temper.type.AndType
 import lang.temper.type.BindMemberAccessor
 import lang.temper.type.DotHelper
+import lang.temper.type.DotMember
 import lang.temper.type.ExtensionResolution
 import lang.temper.type.FunctionType
 import lang.temper.type.MkType
@@ -71,7 +72,8 @@ internal fun simplifyDotHelper(
         is Either.Left,
         -> {
             val updatedType = when {
-                lastNonExtensionResolution?.let { it.leftOrNull!!.symbol != dotHelper.symbol } == true -> {
+                // If the resolution is to a method, not an extension, but to a different method, refine it.
+                lastNonExtensionResolution?.let { DotMember(it.leftOrNull!!.symbol) != dotHelper.member } == true -> {
                     // An overload now resolved to an individually named method.
                     variantMatchRefined ?: variantMatch
                 }
@@ -93,8 +95,9 @@ internal fun simplifyDotHelper(
             }
             updatedType?.let {
                 calleeEdge.replace {
-                    val symbol = chosenVariantResolution?.item?.symbol ?: dotHelper.symbol
-                    val updatedDotHelper = DotHelper(dotHelper.memberAccessor, symbol, emptyList())
+                    val newMember = chosenVariantResolution?.item?.symbol?.let { DotMember(it) }
+                        ?: dotHelper.member
+                    val updatedDotHelper = DotHelper(dotHelper.memberAccessor, newMember, emptyList())
                     V(callee.pos, Value(updatedDotHelper), updatedType)
                 }
             }

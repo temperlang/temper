@@ -52,6 +52,7 @@ import lang.temper.type.AndType
 import lang.temper.type.BindMemberAccessor
 import lang.temper.type.BubbleType
 import lang.temper.type.DotHelper
+import lang.temper.type.DotMember
 import lang.temper.type.ExtensionResolution
 import lang.temper.type.ExtraNonNormativeParameterInfo
 import lang.temper.type.FunctionType
@@ -95,6 +96,7 @@ import lang.temper.type.excludeNullAndBubble
 import lang.temper.type.isBubbly
 import lang.temper.type.isNeverType
 import lang.temper.type.isNullType
+import lang.temper.type.matches
 import lang.temper.type.mentions
 import lang.temper.type.mentionsInvalid
 import lang.temper.type2.Callee
@@ -567,7 +569,7 @@ internal class Typer(
                 if (member is PropertyShape) {
                     if (parts.type == null && ti.isUnbound(name)) {
                         // Try to infer from a (possibly inherited) getter
-                        val getter = enclosingType.membersMatching(member.symbol).firstOrNull {
+                        val getter = enclosingType.membersMatching(DotMember(member.symbol)).firstOrNull {
                             it is MethodShape && it.methodKind == MethodKind.Getter && run {
                                 val sig = it.descriptor
                                 sig != null && sig.typeFormals.isEmpty()
@@ -2514,9 +2516,9 @@ internal class Typer(
                         // Errors should be rare, so just spend a second pass to check
                         // if we had any name matches at all.
                         if (typeShape.staticProperties.any { it.symbol == memberName }) {
-                            BecauseCannotAccessMembers(pos, memberName, setOf(typeShape))
+                            BecauseCannotAccessMembers(pos, DotMember(memberName), setOf(typeShape))
                         } else {
-                            BecauseNoSuchMember(pos, memberName, setOf(typeShape))
+                            BecauseNoSuchMember(pos, DotMember(memberName), setOf(typeShape))
                         }
                     },
                 ),
@@ -2647,7 +2649,7 @@ internal class Typer(
             }
 
             val thisArg = t.child(1 + memberAccessor.firstArgumentIndex)
-            val memberSymbol = dotHelper.symbol
+            val member = dotHelper.member
 
             // A DotHelper with a static type receiver should turn into either a
             // call to getStatic, or a call of a @staticExtension function.
@@ -2656,7 +2658,7 @@ internal class Typer(
             // @staticExtension declaration.
             // Delegate to the handler for getStatic special calls.
             val possibleStaticTypeReceiver = thisArg.staticTypeContained
-            if (possibleStaticTypeReceiver != null) {
+            if (possibleStaticTypeReceiver != null && member is DotMember) {
                 if (DEBUG) {
                     console.log("Typing ${toStringViaTokenSink { dotHelper.renderTo(it) }} as if gets")
                 }
@@ -2664,8 +2666,8 @@ internal class Typer(
                     t.pos,
                     thisArg.pos,
                     possibleStaticTypeReceiver,
-                    dotHelper.symbol,
-                    dotHelper.extensions.mapNotNull { it as? StaticExtensionResolution },
+                    member.dotName,
+                    dotHelper.extensions.filterIsInstance<StaticExtensionResolution>(),
                     // No information on whether this is an internal call, so presume it isn't.
                     // This means we need to ensure internal calls get resolved better before this point.
                     BuiltinFuns.getsFn,
@@ -2779,10 +2781,12 @@ internal class Typer(
             fun processMembers(
                 thisVariant: NominalType,
                 typeShape: TypeShape,
-                symbolMatches: (member: MemberShape) -> Boolean = { it.symbol == memberSymbol },
+                memberMatches: (memberShape: MemberShape) -> Boolean = {
+                    it is VisibleMemberShape && member.matches(it, false)
+                },
             ) {
                 typeShape.members.forEach { member ->
-                    if (member is VisibleMemberShape && symbolMatches(member)) {
+                    if (member is VisibleMemberShape && memberMatches(member)) {
                         anyMatchedSymbol = true
                         val usage = useMember(member)
                         if (usage == MemberUsage2.Good) {
@@ -2809,7 +2813,7 @@ internal class Typer(
                 }
                 processMembers(thisVariant, typeShape)
             }
-            if (!anyMatchedSymbol) {
+            if (!anyMatchedSymbol && member is DotMember) {
                 // No actual member had the right symbol, so check for overloads.
                 // Checking for overloads only on actual member symbol fails should make the common case faster.
                 // TODO Permit overloads with an actual matching member also?
@@ -2817,7 +2821,7 @@ internal class Typer(
                 for (thisVariant in allThisVariants) {
                     val typeShape = thisVariant.definition as TypeShape
                     processMembers(thisVariant, typeShape) {
-                        matchesOverload(memberSymbol, it)
+                        matchesOverload(member.dotName, it)
                     }
                 }
             }
@@ -2934,9 +2938,9 @@ internal class Typer(
                         if (anyMatchedUsage) {
                             // Use privacy message only for cases where we have a full match otherwise.
                             // No need to inundate.
-                            BecauseCannotAccessMembers(t.pos, memberSymbol, filteredOut)
+                            BecauseCannotAccessMembers(t.pos, member, filteredOut)
                         } else {
-                            BecauseNoMemberCompatible(t.pos, memberSymbol, filteredOut)
+                            BecauseNoMemberCompatible(t.pos, member, filteredOut)
                         }
                     } else {
                         // When we have no reference types, show the core types we started with.
@@ -2954,11 +2958,11 @@ internal class Typer(
                                     Log.Error,
                                     MessageTemplate.MissingType,
                                     thisArg.pos,
-                                    listOf("subject of .${memberSymbol.text}"),
+                                    listOf("subject of $member"),
                                 ),
                             )
                         } else {
-                            BecauseNoSuchMember(t.pos, memberSymbol, typeShapes)
+                            BecauseNoSuchMember(t.pos, member, typeShapes)
                         }
                     },
                 )
