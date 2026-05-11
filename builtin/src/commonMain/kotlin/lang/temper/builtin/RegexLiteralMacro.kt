@@ -9,6 +9,7 @@ import lang.temper.log.Position
 import lang.temper.name.Symbol
 import lang.temper.stage.Stage
 import lang.temper.type.DotHelper
+import lang.temper.type.DotMember
 import lang.temper.type.ExternalBind
 import lang.temper.value.CallTree
 import lang.temper.value.Fail
@@ -148,7 +149,7 @@ internal object RegexLiteralMacro : BuiltinMacro(regexLiteralBuiltinName.builtin
         macroEnv.replaceMacroCallWith {
             Call {
                 Call(callPos) {
-                    V(callPos.leftEdge, Value(DotHelper(ExternalBind, Symbol("compiled"))))
+                    V(callPos.leftEdge, Value(DotHelper(ExternalBind, DotMember(Symbol("compiled")))))
                     buildRegex(regex, macroEnv)
                 }
             }

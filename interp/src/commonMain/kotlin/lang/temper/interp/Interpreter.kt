@@ -140,6 +140,7 @@ import lang.temper.value.stability
 import lang.temper.value.superSymbol
 import lang.temper.value.symbolContained
 import lang.temper.value.toLispy
+import lang.temper.value.toPseudoCode
 import lang.temper.value.typeFormalSymbol
 import lang.temper.value.typeFromSignature
 import lang.temper.value.typeSymbol
@@ -2306,15 +2307,16 @@ class Interpreter(
             try {
                 val replacementMaker = callSiteReplacementMaker
                 if (replacementMaker != null) {
-                    require(call != null)
-                    val macroCallEdge = call.incoming!!
-                    val edgeToReplace: TEdge = callSiteAncestorToReplace ?: macroCallEdge
+                    val edgeToReplace: TEdge? = callSiteAncestorToReplace ?: call?.incoming
+                    require(edgeToReplace != null) {
+                        "Cannot determine edge to replace after call to ${callee.toPseudoCode()} in ${call?.toPseudoCode()}"
+                    }
                     val replacedEdgeIndex = edgeToReplace.edgeIndex
                     edgeToReplace.source!!.replace(replacedEdgeIndex..replacedEdgeIndex) {
                         this.replacementMaker()
                     }
                     // Mark the macro call as complete, for this stage, even if it's relocated.
-                    val postReplacementMacroCallEdge = call.incoming
+                    val postReplacementMacroCallEdge = call?.incoming
                     if (postReplacementMacroCallEdge != null) {
                         val bc = postReplacementMacroCallEdge.breadcrumb
                         if (bc == null || bc < stage) {

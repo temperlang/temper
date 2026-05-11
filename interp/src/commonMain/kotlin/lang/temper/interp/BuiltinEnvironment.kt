@@ -469,6 +469,8 @@ private object Builtins {
                 },
             ),
 
+            keyPair(operatorImplementationDecorator),
+
             /**
              * <!-- snippet: builtin/@extension -->
              * # `@extension` decorator

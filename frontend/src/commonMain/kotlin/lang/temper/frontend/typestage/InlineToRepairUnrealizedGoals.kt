@@ -790,7 +790,7 @@ private fun convertMemberUseToExternal(
         InternalGet -> ExternalGet
         InternalSet -> ExternalSet
     }
-    val convertedDotHelper = DotHelper(externalAccessor, dotHelper.symbol, dotHelper.extensions)
+    val convertedDotHelper = DotHelper(externalAccessor, dotHelper.member, dotHelper.extensions)
     val callee = callChildren[0]
     val adjustedCallee = ValueLeaf(callee.document, callee.pos, Value(convertedDotHelper))
     adjustedCallee.typeInferences = callee.typeInferences?.let { ti ->

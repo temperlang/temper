@@ -24,7 +24,6 @@ import lang.temper.value.Tree
 import lang.temper.value.TreeTypeStructureExpectation
 import lang.temper.value.Value
 import lang.temper.value.freeTarget
-import lang.temper.value.freeTree
 import lang.temper.value.void
 import kotlin.math.max
 
@@ -40,7 +39,7 @@ class MetadataDecorator(
     argumentTypes: List<BaseReifiedType> = emptyList(),
     private val findDecoratorInsertions: (MacroActuals, Symbol) -> List<Pair<Tree, Int>> =
         ::findDefaultDecoratorInsertions,
-    private val valuer: (MacroActuals) -> PartialResult,
+    private val valuer: MacroEnvironment.(MacroActuals) -> PartialResult,
 ) : NamedBuiltinFun, MacroValue {
     override val sigs: List<MacroSignature> = listOf(
         MacroSignature(
@@ -85,7 +84,7 @@ class MetadataDecorator(
             val (decorated, insertionPoint) = insertion
             if (insertionPoint in 0..decorated.size) {
                 val calleePos = macroEnv.callee.pos
-                when (val valuerResult = valuer(args)) {
+                when (val valuerResult = macroEnv.valuer(args)) {
                     NotYet -> return NotYet
                     is Fail -> {
                         val logEntry = valuerResult.info
@@ -106,13 +105,10 @@ class MetadataDecorator(
                                     // Store an error node in the metadata
                                     Replant(
                                         errorNodeFor(
-                                            if (call != null) {
-                                                freeTree(call)
-                                            } else {
-                                                macroEnv.document.treeFarm.grow {
+                                            call
+                                                ?: macroEnv.document.treeFarm.grow {
                                                     V(macroEnv.pos, void)
-                                                }
-                                            },
+                                                },
                                             error,
                                         ),
                                     )

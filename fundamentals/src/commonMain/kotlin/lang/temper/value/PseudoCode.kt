@@ -49,11 +49,13 @@ import lang.temper.type.AndType
 import lang.temper.type.BindMemberAccessor
 import lang.temper.type.BubbleType
 import lang.temper.type.DotHelper
+import lang.temper.type.DotMember
 import lang.temper.type.FunctionType
 import lang.temper.type.GetMemberAccessor
 import lang.temper.type.InfiniBinding
 import lang.temper.type.InvalidType
 import lang.temper.type.NominalType
+import lang.temper.type.OperatorMember
 import lang.temper.type.OrType
 import lang.temper.type.SetMemberAccessor
 import lang.temper.type.StaticType
@@ -208,16 +210,18 @@ internal class PseudoTreeBuilder(
                     val memberAccessor = dotHelper.memberAccessor
                     val firstArgumentChildIndex = memberAccessor.firstArgumentIndex + 1 // skip over callee
                     val subject = tree.childOrNull(firstArgumentChildIndex) ?: return PseudoError(pos)
-                    val symbol = dotHelper.symbol
-                    val operation = PseudoCall(
-                        pos = tree.pos,
-                        callee = PseudoNameLeaf(calleePos, dotBuiltinName),
-                        typeArgs = emptyList(),
-                        args = listOf(
-                            buildPseudoTree(subject),
-                            PseudoNameLeaf(calleePos.rightEdge, ParsedName(symbol.text)),
-                        ),
-                    )
+                    val operation = when (val member = dotHelper.member) {
+                        is DotMember -> PseudoCall(
+                            pos = tree.pos,
+                            callee = PseudoNameLeaf(calleePos, dotBuiltinName),
+                            typeArgs = emptyList(),
+                            args = listOf(
+                                buildPseudoTree(subject),
+                                PseudoNameLeaf(calleePos.rightEdge, ParsedName(member.dotName.text)),
+                            ),
+                        )
+                        is OperatorMember -> PseudoNameLeaf(calleePos, BuiltinName(member.operator))
+                    }
                     when (memberAccessor) {
                         is GetMemberAccessor -> operation
                         is SetMemberAccessor -> PseudoCall(
@@ -687,7 +691,7 @@ internal class PseudoTreeBuilder(
             val continueLabel = controlFlow.continueLabel
             if (continueLabel != null) {
                 // Show for debugging.
-                // Note: `continue`s will eventually be rewritten to `break`s.
+                // Note: `continue`s will eventually be rewritten to `break` statements.
                 body = PseudoBlock(
                     pos = body.pos,
                     blockCaller = body.blockCaller,

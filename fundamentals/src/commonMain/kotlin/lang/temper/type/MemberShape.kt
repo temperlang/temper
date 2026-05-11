@@ -332,8 +332,14 @@ sealed class MemberAccessor(
      */
     val firstArgumentIndex = enclosingTypeIndexOrNegativeOne + 1
 
-    fun prefix(symbol: Symbol) = Symbol("${prefix}_${symbol.text}")
-    abstract fun prefix(member: VisibleMemberShape): Symbol?
+    internal fun prefix(member: Member): String {
+        val memberText = when (member) {
+            is DotMember -> member.dotName.text
+            is OperatorMember -> member.operatorSpecifier
+        }
+        return "${prefix}_$memberText"
+    }
+    internal abstract fun prefix(member: VisibleMemberShape): String?
 
     override fun toString(): String = prefix
 }
@@ -341,7 +347,7 @@ sealed class MemberAccessor(
 sealed class InternalMemberAccessor(
     prefix: String,
 ) : MemberAccessor(prefix, enclosingTypeIndexOrNegativeOne = 0) {
-    override fun prefix(member: VisibleMemberShape) = prefix(member.symbol)
+    override fun prefix(member: VisibleMemberShape) = prefix(DotMember(member.symbol))
 }
 
 sealed class ExternalMemberAccessor(
@@ -349,7 +355,7 @@ sealed class ExternalMemberAccessor(
 ) : MemberAccessor(prefix, enclosingTypeIndexOrNegativeOne = -1) {
     override fun prefix(member: VisibleMemberShape) = when (member.visibility) {
         Visibility.Private, Visibility.Protected -> null
-        Visibility.Public -> prefix(member.symbol)
+        Visibility.Public -> prefix(DotMember(member.symbol))
     }
 }
 

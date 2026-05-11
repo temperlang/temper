@@ -32,8 +32,10 @@ import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
 import lang.temper.type.BindMemberAccessor
 import lang.temper.type.DotHelper
+import lang.temper.type.DotMember
 import lang.temper.type.ExternalBind
 import lang.temper.type.ExternalGet
+import lang.temper.type.Member
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
 import lang.temper.type.TypeShape
@@ -224,7 +226,7 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext, l
             .forEachContinuing { t ->
                 if (t is ValueLeaf) {
                     val fn = t.functionContained
-                    if (fn is DotHelper && fn.memberAccessor == ExternalGet && fn.symbol == accumulatedDotName) {
+                    if (fn is DotHelper && fn.memberAccessor == ExternalGet && fn.member == accumulatedDotName) {
                         val parent = t.incoming?.source as? CallTree
                         if (parent != null && parent.children.size == 2) {
                             val accumulator = parent.child(1) as? RightNameLeaf
@@ -558,7 +560,7 @@ private class AutoescCommon(val root: BlockTree) {
             override fun plant(p: Planting) {
                 p.Call {
                     Call {
-                        V(Value(DotHelper(ExternalBind, methodName)))
+                        V(Value(DotHelper(ExternalBind, DotMember(methodName))))
                         subject.plant(this)
                     }
                 }
@@ -767,20 +769,20 @@ private fun optimizeAutoescaperUse(
         }
     }
 
-    val methodClassifications = mutableMapOf<Symbol, Pair<MethodShape?, AppendClassification?>>()
+    val methodClassifications = mutableMapOf<Member, Pair<MethodShape?, AppendClassification?>>()
 
     // Accumulator methods like append(...) might have been overloaded and resolved to
     // other methods, so we back-compute that by looking at @overload(...) metadata
     // to come up with a classification.
-    fun methodClassification(symbol: Symbol): Pair<MethodShape?, AppendClassification?> =
-        methodClassifications.getOrPut(symbol) {
-            val method = accumulatorType.definition.membersMatching(symbol).firstOrNull()
+    fun methodClassification(member: Member): Pair<MethodShape?, AppendClassification?> =
+        methodClassifications.getOrPut(member) {
+            val method = accumulatorType.definition.membersMatching(member).firstOrNull()
                 as? MethodShape
 
             val classification = if (method?.methodKind == MethodKind.Normal) {
-                if (symbol == appendDotName) {
+                if (member == appendDotName) {
                     AppendClassification.AppendUnsafe
-                } else if (symbol == appendSafeDotName) {
+                } else if (member == appendSafeDotName) {
                     AppendClassification.AppendSafe
                 } else {
                     val isAppendOverload = method.metadata[overloadSymbol]?.any {
@@ -826,7 +828,7 @@ private fun optimizeAutoescaperUse(
                 if (fn is DotHelper && fn.memberAccessor is BindMemberAccessor) {
                     val subject = callee.child(1)
                     if (subject is RightNameLeaf && subject.content == accumulatorName) {
-                        val (_, classification) = methodClassification(fn.symbol)
+                        val (_, classification) = methodClassification(fn.member)
                         if (classification != null) {
                             val arg = t.child(1)
                             val (argToPropagateOver: Value<*>, argPos) = when (classification) {
@@ -1015,7 +1017,7 @@ private fun optimizeAutoescaperUse(
         // Do we send safe parts by a separate append method?
         val typeShape = collectorType.definition
         val hasAppendSafeMethod =
-            typeShape.membersMatching(appendSafeDotName, includeOverloads = true).any {
+            typeShape.membersMatching(appendSafeDotName, includeMetadata = true).any {
                 it is MethodShape && it.methodKind == MethodKind.Normal && it.visibility == Visibility.Public
             }
         if (hasAppendSafeMethod) {
@@ -1280,12 +1282,12 @@ private data class ChangeDetail(
     val positions: AppendStmtPositions get() = AppendStmtPositions(edge.target)
 }
 
-private val stateAfterGetter = DotHelper(ExternalGet, Symbol("stateAfter"))
+private val stateAfterGetter = DotHelper(ExternalGet, DotMember(Symbol("stateAfter")))
 private val effectsDotName = Symbol("effects")
-private val escaperForDotHelper = DotHelper(ExternalBind, Symbol("escaperFor"))
+private val escaperForDotHelper = DotHelper(ExternalBind, DotMember(Symbol("escaperFor")))
 private val appendSafeDotHelper = DotHelper(ExternalBind, appendSafeDotName)
 private val appendDotHelper = DotHelper(ExternalBind, appendDotName)
-private val applyDotHelper = DotHelper(ExternalBind, Symbol("apply"))
+private val applyDotHelper = DotHelper(ExternalBind, DotMember(Symbol("apply")))
 private val enactDotName = Symbol("enact")
 private val eventDotName = Symbol("event")
 private val textDotName = Symbol("text")

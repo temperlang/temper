@@ -10,9 +10,8 @@ import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.log.Positioned
-import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedName
-import lang.temper.name.Symbol
+import lang.temper.type.Member
 import lang.temper.type.StaticType
 import lang.temper.type.TypeShape
 import lang.temper.type2.TypeReason
@@ -126,14 +125,14 @@ internal class BecauseTypeInfoMissingForName(
 
 internal abstract class BecauseNoMemberAccessible(
     override val pos: Position,
-    private val memberSymbol: Symbol,
+    private val member: Member,
     private val definingTypes: Set<TypeShape>,
 ) : AbstractTypeReasonElement() {
     override val name get() = "BecauseCannotAccessMembers"
     override val level: Log.Level get() = Log.Error
     override val templateFillers: List<TokenSerializable>
         get() = listOf(
-            ParsedName(memberSymbol.text).toToken(inOperatorPosition = false),
+            member,
             if (definingTypes.isNotEmpty()) {
                 definingTypes.joinToTokenSerializable(OutToks.bar) {
                     it.name.toToken(inOperatorPosition = false)
@@ -146,25 +145,25 @@ internal abstract class BecauseNoMemberAccessible(
 
 internal class BecauseCannotAccessMembers(
     pos: Position,
-    memberSymbol: Symbol,
+    member: Member,
     definingTypes: Set<TypeShape>,
-) : BecauseNoMemberAccessible(pos, memberSymbol, definingTypes) {
+) : BecauseNoMemberAccessible(pos, member, definingTypes) {
     override val formatString get() = "Member %s defined in %s not publicly accessible"
 }
 
 internal class BecauseNoMemberCompatible(
     pos: Position,
-    memberSymbol: Symbol,
+    member: Member,
     definingTypes: Set<TypeShape>,
-) : BecauseNoMemberAccessible(pos, memberSymbol, definingTypes) {
+) : BecauseNoMemberAccessible(pos, member, definingTypes) {
     override val formatString get() = MessageTemplate.IncompatibleUsage.formatString
 }
 
 internal class BecauseNoSuchMember(
     pos: Position,
-    memberSymbol: Symbol,
+    member: Member,
     definingTypes: Set<TypeShape>,
-) : BecauseNoMemberAccessible(pos, memberSymbol, definingTypes) {
+) : BecauseNoMemberAccessible(pos, member, definingTypes) {
     override val formatString get() = "No member %s in %s"
 }
 

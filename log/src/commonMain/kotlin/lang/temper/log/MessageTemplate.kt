@@ -49,6 +49,11 @@ enum class MessageTemplate(
         CompilationPhase.Staging,
     ),
     MalformedAssignment("Malformed assignment", CompilationPhase.Staging),
+    MalformedOperatorSpec(
+        "Malformed operator spec, got %s but expected a string" +
+            " with an underscore at the beginning and/or at the end, and an operator text",
+        CompilationPhase.Staging,
+    ),
     DuplicateLibraryName(
         "Library name %s is used by multiple libraries at %s",
         CompilationPhase.CodeGeneration,

@@ -15,6 +15,7 @@ import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.stage.Stage
 import lang.temper.type.DotHelper
+import lang.temper.type.DotMember
 import lang.temper.type.ExternalBind
 import lang.temper.type.ExternalGet
 import lang.temper.type.InvalidType
@@ -61,7 +62,7 @@ import lang.temper.value.outTypeSymbol
 import lang.temper.value.rawBuiltinName
 import lang.temper.value.safeStringPartSymbol
 import lang.temper.value.symbolContained
-import lang.temper.value.toStringSymbol
+import lang.temper.value.toStringDotName
 import lang.temper.value.typeForValue
 import lang.temper.value.typeSymbol
 import lang.temper.value.vIsNullFn
@@ -190,7 +191,7 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                     plantResult = { bufferName ->
                         Call {
                             Call {
-                                V(Value(DotHelper(ExternalBind, toStringSymbol)))
+                                V(Value(DotHelper(ExternalBind, toStringDotName)))
                                 Rn(bufferName)
                             }
                         }
@@ -606,9 +607,9 @@ private fun pointAppendsAtAccumulator(funTree: FunTree, isTagged: Boolean) {
     }
 }
 
-val appendSafeDotName = Symbol("appendSafe")
-val appendDotName = Symbol("append")
-val accumulatedDotName = Symbol("accumulated")
+val appendSafeDotName = DotMember(Symbol("appendSafe"))
+val appendDotName = DotMember(Symbol("append"))
+val accumulatedDotName = DotMember(Symbol("accumulated"))
 
 /**
  * Desugars to a simple string concatenation when we have the time.
@@ -778,7 +779,7 @@ internal object CoerceToString : SpecialFunction, BuiltinMacro("str", null) {
 private fun Planting.buildToStringCall(subject: Value<*>) =
     Call {
         Call {
-            V(Value(DotHelper(memberAccessor = ExternalBind, symbol = toStringSymbol)))
+            V(Value(DotHelper(memberAccessor = ExternalBind, member = toStringDotName)))
             V(subject)
         }
     }
@@ -786,7 +787,7 @@ private fun Planting.buildToStringCall(subject: Value<*>) =
 private fun Planting.buildToStringCall(subject: Tree) =
     Call {
         Call {
-            V(Value(DotHelper(memberAccessor = ExternalBind, symbol = toStringSymbol)))
+            V(Value(DotHelper(memberAccessor = ExternalBind, member = toStringDotName)))
             Replant(subject)
         }
     }

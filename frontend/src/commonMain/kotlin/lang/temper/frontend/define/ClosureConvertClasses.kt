@@ -57,7 +57,7 @@ import lang.temper.value.TNull
 import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
-import lang.temper.value.constructorSymbol
+import lang.temper.value.constructorDotName
 import lang.temper.value.crParsedName
 import lang.temper.value.defaultSymbol
 import lang.temper.value.freeTree
@@ -845,7 +845,7 @@ private class ClosureConvertClasses(
             return
         }
         val doc = root.document
-        for (constructor in typeShape.membersMatching(constructorSymbol)) {
+        for (constructor in typeShape.membersMatching(constructorDotName)) {
             val constructorDecl =
                 constructor.stay?.incoming?.source as? DeclTree ?: continue
             val constructorFun =

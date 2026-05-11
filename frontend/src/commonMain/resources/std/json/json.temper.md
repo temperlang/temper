@@ -29,7 +29,8 @@ And for convenience, here's a blank interchange context.
     export class NullInterchangeContext extends InterchangeContext {
       public getHeader(headerName: String): String? { null }
 
-      public static instance = new NullInterchangeContext();
+      public static instance: NullInterchangeContext =
+        doPure { new NullInterchangeContext() };
     }
 
 ## Marshalling support

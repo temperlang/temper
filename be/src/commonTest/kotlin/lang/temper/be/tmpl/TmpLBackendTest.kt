@@ -61,8 +61,8 @@ import lang.temper.value.TBoolean
 import lang.temper.value.TFloat64
 import lang.temper.value.Value
 import lang.temper.value.initSymbol
+import lang.temper.value.toStringDotName
 import lang.temper.value.typeSymbol
-import lang.temper.value.vToStringSymbol
 import kotlin.test.Ignore
 import kotlin.test.Test
 
@@ -1985,7 +1985,7 @@ class TmpLBackendTest {
                                             Rn(xName)
                                             Rn(BuiltinName("Float64"))
                                         }
-                                        V(vToStringSymbol)
+                                        V(toStringDotName.dotName)
                                     }
                                 }
                             }
