@@ -27,6 +27,7 @@ import lang.temper.name.QName
 import lang.temper.name.Symbol
 import lang.temper.parser.parse
 import lang.temper.type.DotHelper
+import lang.temper.type.DotMember
 import lang.temper.type.ExternalBind
 import lang.temper.type.ExternalGet
 import lang.temper.type.ExternalSet
@@ -956,14 +957,14 @@ class PseudoCodeTest {
         detail = PseudoCodeDetail(resugarDotHelpers = true),
         makeInput = { doc, pos ->
             doc.treeFarm.grow(pos) {
-                Call(DotHelper(ExternalSet, Symbol("j"), emptyList())) {
+                Call(DotHelper(ExternalSet, DotMember(Symbol("j")), emptyList())) {
                     Rn(ParsedName("x"))
                     Call(BuiltinFuns.plusFn) {
-                        Call(DotHelper(ExternalGet, Symbol("i"), emptyList())) {
+                        Call(DotHelper(ExternalGet, DotMember(Symbol("i")), emptyList())) {
                             Rn(ParsedName("x"))
                         }
                         Call {
-                            Call(DotHelper(ExternalBind, Symbol("f"), emptyList())) {
+                            Call(DotHelper(ExternalBind, DotMember(Symbol("f")), emptyList())) {
                                 Rn(ParsedName("x"))
                             }
                             V(Value(1, TInt))
