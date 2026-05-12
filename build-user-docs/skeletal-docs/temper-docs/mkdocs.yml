@@ -126,6 +126,8 @@ nav:
     - reference/syntax.md
     - reference/modules.md
     - Target Language List: reference/target-languages.md
+    - reference/backend.md
+    - reference/out-grammar.md
   - Blog:
     - blog/index.md
   - 'Legalese':
