@@ -8,11 +8,11 @@ pluginManagement {
     plugins {
         id 'io.gitlab.arturbosch.detekt'        version '1.23.8'
         id 'org.jetbrains.dokka'                version '2.0.0'
-        id 'org.jetbrains.kotlin.jvm'           version '2.2.0'
-        id 'org.jetbrains.kotlin.multiplatform' version '2.2.0'
+        id 'org.jetbrains.kotlin.jvm'           version '2.3.0'
+        id 'org.jetbrains.kotlin.multiplatform' version '2.3.0'
         id 'org.jlleitschuh.gradle.ktlint'      version '13.0.0'
         id 'com.github.node-gradle.node'        version '3.0.1'
-        id 'org.jetbrains.kotlin.plugin.serialization' version '2.2.0'
+        id 'org.jetbrains.kotlin.plugin.serialization' version '2.3.0'
     }
 }
 
@@ -54,7 +54,7 @@ gradle.ext.ktlint_version = '1.6.0'
  */
 gradle.ext.detekt_version = '1.23.8'
 
-gradle.ext.jvm_target = 21
+gradle.ext.jvm_target = 25
 
 /** Used for npm tasks */
 gradle.ext.node_version = '22.6.0'

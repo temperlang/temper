@@ -13,7 +13,8 @@ import java.util.stream.Collectors
 buildscript {
     dependencies {
         // TODO Ideally go back to ProGuard later, but this is unused at the moment.
-        // TODO It doesn't currently support Kotlin 2.2.
+        // TODO Supposedly ProGuard 7.9 supports Kotlin 2.3 amd Java 26.
+        // TODO ProGuard can go smaller than Shadow, but it's also riskier.
         classpath 'com.guardsquare:proguard-gradle:7.5.0'
     }
 }
@@ -528,7 +529,7 @@ task composeTemperJre {
         }
         // Copy temper jar.
         copy {
-            // TODO Go back to ProGuard when they support Kotlin 2.2?
+            // TODO Try ProGuard again? Supposedly ProGuard 7.9 supports Kotlin 2.3 amd Java 26.
             from temperJar
             into bundleAllDir
         }
