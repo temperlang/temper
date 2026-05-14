@@ -375,7 +375,6 @@ fun simplifiedComplement(value: J.Expression, pos: Position = value.pos): J.Expr
                         JavaOperator.LessThan -> JavaOperator.GreaterEquals
                         JavaOperator.NotEquals -> JavaOperator.Equals
                         JavaOperator.Equals -> JavaOperator.NotEquals
-                        else -> error("Unexpected: $oper")
                     }
                     operComplement.infix(infix.left, infix.right, pos)
                 }

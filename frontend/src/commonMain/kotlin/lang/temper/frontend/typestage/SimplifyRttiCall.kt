@@ -211,7 +211,6 @@ internal fun simplifyRttiCall(rttiCall: CallTree, typeContext: TypeContext2) {
                                 val bubbler = when (rto) {
                                     RuntimeTypeOperation.As -> BuiltinFuns.vBubble
                                     RuntimeTypeOperation.AssertAs -> BuiltinFuns.vPanic
-                                    else -> error("unexpected")
                                 }
                                 V(expr.pos.rightEdge, bubbler)
                             }

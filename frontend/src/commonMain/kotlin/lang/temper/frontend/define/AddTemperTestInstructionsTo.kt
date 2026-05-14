@@ -76,7 +76,7 @@ internal fun addTemperTestInstructionsTo(
             Decl {
                 Ln { nameMaker ->
                     localRunTestCasesName = nameMaker.unusedSourceName(runTestCasesParsedName)
-                    localRunTestCasesName!!
+                    localRunTestCasesName
                 }
                 V(vInitSymbol)
                 Rn(runTestCasesExportedName)

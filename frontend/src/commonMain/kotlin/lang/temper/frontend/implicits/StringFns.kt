@@ -161,7 +161,7 @@ internal object StringFns {
             args: ActualValues,
             cb: InterpreterCallback,
             interpMode: InterpMode,
-        ) = withStringAndTwoBounds(ARITY, args, cb, interpMode) { str, left, right ->
+        ): PartialResult = withStringAndTwoBounds(ARITY, args, cb, interpMode) { str, left, right ->
             val minCount = TInt.unpackOrFail(args, COUNT_ARG_INDEX, cb, interpMode) {
                 return@invoke it
             }

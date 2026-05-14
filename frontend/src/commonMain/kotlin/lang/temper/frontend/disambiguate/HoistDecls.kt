@@ -36,7 +36,7 @@ internal fun hoistDecls(root: BlockTree) {
                     val hoistCount = hoistCountEdge.target
                     val hoistCountValue = hoistCount.valueContained
                     val blockIndex = when (hoistCountValue?.typeTag) {
-                        TInt -> blockStack.size - TInt.unpack(hoistCountValue).toInt()
+                        TInt -> blockStack.size - TInt.unpack(hoistCountValue)
                         TVoid -> 0 // to root
                         else -> null
                     }

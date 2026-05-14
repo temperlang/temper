@@ -155,7 +155,7 @@ fun createLocalBindingsForImport(
                 for (export in parsedNameToExport.values) {
                     if (export !in explicitlyImported) {
                         addExport(
-                            LeftNameLeaf(wildcard!!.document, wildcard!!.pos, export.name.baseName),
+                            LeftNameLeaf(wildcard.document, wildcard.pos, export.name.baseName),
                             export,
                         )
                     }

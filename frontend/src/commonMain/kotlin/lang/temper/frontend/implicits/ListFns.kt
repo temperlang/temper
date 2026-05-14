@@ -35,10 +35,10 @@ internal object ListFns {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val ls = TList.unpackContent(args[0])
             val i = TInt.unpackOrFail(args, 1, cb, interpMode) { return@invoke it }
-            if (i < 0 || i > Int.MAX_VALUE) {
+            if (i < 0) {
                 throw Panic()
             }
-            return ls.getOrNull(i.toInt()) ?: Fail
+            return ls.getOrNull(i) ?: Fail
         }
     }
 
@@ -47,10 +47,10 @@ internal object ListFns {
             val ls = TList.unpackContent(args[0])
             val i = TInt.unpackOrFail(args, 1, cb, interpMode) { return@invoke it }
             val fallback = args[2]
-            return if (i < 0 || i > Int.MAX_VALUE.toLong()) {
+            return if (i < 0) {
                 fallback
             } else {
-                ls.getOrNull(i.toInt()) ?: fallback
+                ls.getOrNull(i) ?: fallback
             }
         }
     }
@@ -61,8 +61,8 @@ internal object ListFns {
             val startInclusive = TInt.unpackOrFail(args, 1, cb, interpMode) { return@invoke it }
             val endExclusive = TInt.unpackOrFail(args, 2, cb, interpMode) { return@invoke it }
             val size = ls.size
-            val startInclusiveAdjusted = min(max(0, startInclusive.toInt()), size)
-            val endExclusiveAdjusted = min(max(endExclusive.toInt(), startInclusiveAdjusted), size)
+            val startInclusiveAdjusted = min(max(0, startInclusive), size)
+            val endExclusiveAdjusted = min(max(endExclusive, startInclusiveAdjusted), size)
             val slice = (startInclusiveAdjusted until endExclusiveAdjusted).map { ls[it] }
             return Value(slice, TList)
         }
@@ -191,8 +191,7 @@ internal object ListBuilderFns {
     object Set : SigFnBuilder("ListBuilder::set", impure = true) {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val ls = TListBuilder.unpackContent(args[0])
-            val i = TInt.unpackOrFail(args, 1, cb, interpMode) { return@invoke it }
-            val index = i.toInt()
+            val index = TInt.unpackOrFail(args, 1, cb, interpMode) { return@invoke it }
             val newValue = args[2]
             if (index in ls.indices) {
                 ls[index] = newValue
@@ -213,10 +212,10 @@ internal object ListBuilderFns {
             val ls = TListBuilder.unpackContent(args[0])
             val index = TInt.unpackWithNullDefault(args, 1, 0, cb, interpMode) {
                 return@invoke it
-            }.toInt().coerceIn(0, ls.size)
+            }.coerceIn(0, ls.size)
             val removeEnd = TInt.unpackWithNullDefault(args, 2, ls.size, cb, interpMode) {
                 return@invoke it
-            }.toInt().coerceIn(0, ls.size - index) + index
+            }.coerceIn(0, ls.size - index) + index
 
             @Suppress("MagicNumber")
             val newValues = when (val arg = args[3]) {
@@ -275,7 +274,7 @@ private fun sort(
                     failure = result
                     error("failure")
                 }
-                is Value<*> -> TInt.unpackOrNull(result)?.toInt() ?: run {
+                is Value<*> -> TInt.unpackOrNull(result) ?: run {
                     failure = cb.fail(
                         MessageTemplate.ExpectedValueOfType,
                         pos = args.pos(0) ?: cb.pos,
@@ -297,7 +296,7 @@ private inline fun unpackSizeBounded(
     interpMode: InterpMode,
     onWrongResult: (PartialResult) -> Nothing,
 ): Int {
-    val value = TInt.unpackWithNullDefault(args, index, ls.size, cb, interpMode, onWrongResult).toInt()
+    val value = TInt.unpackWithNullDefault(args, index, ls.size, cb, interpMode, onWrongResult)
     return when (value >= 0 && value <= ls.size) {
         true -> value
         false -> onWrongResult(Fail)

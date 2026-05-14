@@ -989,7 +989,7 @@ private class ControlFlowTranslator(
             var toAdd: PreTranslated? = pt
             if (options.nrbStrategy == BubbleBranchStrategy.CatchBubble) {
                 // hs(..., expr) -> expr
-                toAdd = toAdd?.let { unpackHandlerScopeCall(it) } ?: toAdd
+                toAdd = unpackHandlerScopeCall(toAdd) ?: toAdd
                 if (toAdd is PreTranslated.TreeWrapper) {
                     val t = toAdd.tree
                     val declParts = (t as? DeclTree)?.parts

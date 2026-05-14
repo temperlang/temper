@@ -1,8 +1,5 @@
 package lang.temper.be.names
 
-import lang.temper.be.tmpl.FunctionSupportCode
-import lang.temper.be.tmpl.NamedSupportCode
-import lang.temper.be.tmpl.SeparatelyCompiledSupportCode
 import lang.temper.be.tmpl.TmpL
 import lang.temper.common.Either
 import lang.temper.common.firstOrNullAs
@@ -330,14 +327,6 @@ private fun NameVisitor.visitExpr(e: TmpL.Expression): Unit = when (e) {
 }
 
 fun TmpL.SupportCodeWrapper.bestCodeName(): ResolvedName? {
-    val codeName = when (val code = this.supportCode) {
-        is FunctionSupportCode -> null
-        is NamedSupportCode -> code.baseName
-        is SeparatelyCompiledSupportCode -> code.stableKey
-    } as? ResolvedName
-    if (codeName != null) {
-        return codeName
-    }
     return this.supportCode.builtinOperatorId?.let { BuiltinName(it.name) }
 }
 

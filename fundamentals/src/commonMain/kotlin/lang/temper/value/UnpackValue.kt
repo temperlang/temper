@@ -207,7 +207,6 @@ fun unpackValue(
                             }
                             Value(big.toLong(), TInt64)
                         }
-                        else -> error("inconceivable")
                     }
                 } else {
                     Value(text.toDouble(), TFloat64)

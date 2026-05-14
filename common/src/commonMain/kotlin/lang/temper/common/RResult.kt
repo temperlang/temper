@@ -209,7 +209,7 @@ fun <COMMON_S : Any, S : COMMON_S, T : COMMON_S, F : Any>
  * Allow invoking a result with a block that handles success and failure paths
  * in a type-safe manner.
  */
-inline operator fun <S, F, R : RResult3<S, F>, O : Any?> R.invoke(
+inline operator fun <S : Any, F : Any, R : RResult3<S, F>, O : Any?> R.invoke(
     body: (R) -> O,
 ): O {
     // TODO: Maybe Use kotlin.contracts to establish that

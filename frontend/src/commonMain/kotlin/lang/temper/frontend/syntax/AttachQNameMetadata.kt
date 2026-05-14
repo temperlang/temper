@@ -121,7 +121,7 @@ internal fun attachQNameMetadata(module: Module, root: BlockTree) {
             if (parts != null) {
                 val metadata = parts.metadataSymbolMultimap
                 val typeDefined = metadata[typeDefinedSymbol, TType]
-                val definition = ((typeDefined as? ReifiedType)?.type as? NominalType)?.definition
+                val definition = (typeDefined?.type as? NominalType)?.definition
                 if (definition is TypeShape) {
                     val name = parsedNameFor(definition.name)
                     if (name != null) {

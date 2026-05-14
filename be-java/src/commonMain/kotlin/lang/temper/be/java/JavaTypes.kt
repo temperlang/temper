@@ -442,8 +442,8 @@ sealed interface JavaTypeParam {
         fun fromFormal(
             formal: TypeFormal,
             names: JavaNames,
-        ): JavaTypeParam = when (formal) {
-            is TypeFormal -> JavaTypeFormal(
+        ): JavaTypeParam = run {
+            JavaTypeFormal(
                 names.typeFormal(formal.name),
                 formal.upperBounds
                     .sortedWith { a, b ->

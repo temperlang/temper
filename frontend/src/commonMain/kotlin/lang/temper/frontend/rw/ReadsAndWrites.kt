@@ -272,7 +272,7 @@ internal data class ReadsAndWrites(
                             val value = t.valueContained
                             val reifiedType = TType.unpackOrNull(value)
                             if (reifiedType != null) {
-                                val type = (reifiedType as? ReifiedType)?.type
+                                val type = reifiedType.type
                                 if (type is NominalType) {
                                     val name = type.definition.name
                                     return ReifiedRead(name, t, element, lineNo = module.lineFor(t))

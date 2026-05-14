@@ -147,7 +147,7 @@ internal fun functionMacro(macroEnv: MacroEnvironment): PartialResult {
             )
         }
     } else {
-        (fail ?: Fail).infoOr {
+        fail.infoOr {
             macroEnv.fail(
                 MessageTemplate.MalformedDeclaration,
                 if (i == n) { macroEnv.pos } else { args.pos(i) },

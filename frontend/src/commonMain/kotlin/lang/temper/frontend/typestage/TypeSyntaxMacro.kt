@@ -300,7 +300,7 @@ internal fun typeSyntaxMacro(macroEnv: MacroEnvironment): PartialResult {
                                         "typeof_${propertyNameSymbol.text}",
                                     )
                                     val typeInsertionPoint = run {
-                                        var e = typeEdge!! // The target is not null
+                                        var e: TEdge = typeEdge // The target is not null
                                         while (e.source != classBody) {
                                             e = e.source!!.incoming!!
                                         }

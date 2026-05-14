@@ -19,11 +19,11 @@ pluginManagement {
 // Kotlin languages
 
 /** Check <a href="https://kotlinlang.org/docs/releases.html#release-details">release details</a> for a kotlin version. */
-gradle.ext.kotlin_version = '2.2.0'
+gradle.ext.kotlin_version = '2.3.21'
 /** This should be `kotlin_version` without minor */
-gradle.ext.kotlin_language_version = '2.2'
+gradle.ext.kotlin_language_version = '2.3'
 /** This should be `kotlin_version` without minor */
-gradle.ext.kotlin_api_version = '2.2'
+gradle.ext.kotlin_api_version = '2.3'
 
 // Library versions
 // If you add versions here, review the `allprojects{ext{...}}` block in ./build.gradle
