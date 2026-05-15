@@ -35,6 +35,7 @@ jobs:
                       8
                       17
                       21
+                      25
             - name: Set up Maven
               uses: stCarolas/setup-maven@v5
               with:
