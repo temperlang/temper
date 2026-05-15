@@ -6,7 +6,7 @@ pluginManagement {
     // All plugin versions are set here, don't set the version field out in
     // build.gradle files.
     plugins {
-        id 'io.gitlab.arturbosch.detekt'        version '1.23.8'
+        id 'dev.detekt'                         version '2.0.0-alpha.3'
         id 'org.jetbrains.dokka'                version '2.0.0'
         id 'org.jetbrains.kotlin.jvm'           version '2.3.0'
         id 'org.jetbrains.kotlin.multiplatform' version '2.3.0'
@@ -46,13 +46,13 @@ gradle.ext.serialization_xml_version = '0.86.3'
 // Support utility versions.
 
 /** Set from <a href="https://github.com/pinterest/ktlint/releases">pinterest/ktlint</a> */
-gradle.ext.ktlint_version = '1.6.0'
+gradle.ext.ktlint_version = '1.8.0'
 /**
  * <a href="https://detekt.dev/docs/rules/formatting/">Formatting</a> and
  * <a href="https://detekt.dev/docs/rules/libraries/">libraries</a>.
  * Same as detekt's version above.
  */
-gradle.ext.detekt_version = '1.23.8'
+gradle.ext.detekt_version = '2.0.0-alpha.3'
 
 gradle.ext.jvm_target = 25
 
