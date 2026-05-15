@@ -151,7 +151,7 @@ def mungeWindowsCommand(File command) {
         commandPath,
         makeWindowsCodePageWrapper(
             """
-            set JAVA_OPTS=-Dfile.encoding=UTF-8
+            set "JAVA_OPTS=-Dfile.encoding=UTF-8 --enable-native-access=ALL-UNNAMED"
             call "%~dp0temper-orig.bat" %*
             """.stripIndent().strip()
         )

@@ -27,7 +27,6 @@ import lang.temper.type.TypeShape
 import lang.temper.type.TypeTestHarness
 import lang.temper.value.Document
 import lang.temper.value.DocumentContext
-import lang.temper.value.ReifiedType
 import lang.temper.value.TInt
 import lang.temper.value.TString
 import lang.temper.value.TType
@@ -755,7 +754,7 @@ private val stdJsonForTest = lazy {
     val exports = stdJsonModule.exports!!
     fun typeShapeNamed(exportName: String): TypeShape {
         val export = exports.first { it.name.baseName.nameText == exportName }
-        val exportedType = (TType.unpack(export.value!!) as ReifiedType).type
+        val exportedType = TType.unpack(export.value!!).type
         return (exportedType as NominalType).definition as TypeShape
     }
     JsonInteropDetails.StdJson(
