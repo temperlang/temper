@@ -21,7 +21,6 @@ import lang.temper.value.DeclTree
 import lang.temper.value.FunTree
 import lang.temper.value.LinearFlow
 import lang.temper.value.MetadataMultimapHelpers.get
-import lang.temper.value.ReifiedType
 import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType

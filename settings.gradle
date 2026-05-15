@@ -46,7 +46,7 @@ gradle.ext.serialization_xml_version = '0.86.3'
 // Support utility versions.
 
 /** Set from <a href="https://github.com/pinterest/ktlint/releases">pinterest/ktlint</a> */
-gradle.ext.ktlint_version = '1.8.0'
+gradle.ext.ktlint_version = '1.6.0'
 /**
  * <a href="https://detekt.dev/docs/rules/formatting/">Formatting</a> and
  * <a href="https://detekt.dev/docs/rules/libraries/">libraries</a>.

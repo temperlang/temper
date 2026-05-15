@@ -36,7 +36,6 @@ import lang.temper.value.MaximalPathIndex
 import lang.temper.value.MaximalPaths
 import lang.temper.value.NameLeaf
 import lang.temper.value.Preceder
-import lang.temper.value.ReifiedType
 import lang.temper.value.RightNameLeaf
 import lang.temper.value.TFunction
 import lang.temper.value.TType
