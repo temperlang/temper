@@ -1049,6 +1049,7 @@ internal class JsTranslator(
                                 kind = when (member) {
                                     is TmpL.Getter -> Js.ClassMethodKind.Get
                                     is TmpL.Setter -> Js.ClassMethodKind.Set
+                                    is TmpL.NormalMethod, is TmpL.StaticMethod -> Js.ClassMethodKind.Method
                                 },
                             ),
                         ),
