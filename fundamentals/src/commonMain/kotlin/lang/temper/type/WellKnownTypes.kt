@@ -78,6 +78,7 @@ object WellKnownTypes {
     val generatorFnWrapperTypeDefinition: TypeShape
     val generatorResultTypeDefinition: TypeShape
     val globalConsoleTypeDefinition: TypeShape
+    val imuTypeDefinition: TypeShape
     val intTypeDefinition: TypeShape
     val int64TypeDefinition: TypeShape
     val invalidTypeDefinition: TypeShape
@@ -92,6 +93,7 @@ object WellKnownTypes {
     val neverTypeDefinition: TypeShape
     val noStringIndexTypeDefinition: TypeShape
     val nullTypeDefinition: TypeShape
+    val partialImuTypeDefinition: TypeShape
     val problemTypeDefinition: TypeShape
     val promiseTypeDefinition: TypeShape
     val promiseBuilderTypeDefinition: TypeShape
@@ -226,6 +228,7 @@ object WellKnownTypes {
         generatorResultTypeDefinition = wellKnownTypeShape(BuiltinName("GeneratorResult"), Abstract)
         generatorResultTypeDefinition.addTypeParameter("YIELD", variance = Variance.Covariant)
         globalConsoleTypeDefinition = wellKnownTypeShape(BuiltinName("GlobalConsole"), Concrete)
+        imuTypeDefinition = wellKnownTypeShape(BuiltinName("Imu"), Abstract)
         intTypeDefinition = wellKnownTypeShape(TInt.name, Concrete)
         int64TypeDefinition = wellKnownTypeShape(TInt64.name, Concrete)
         invalidTypeDefinition = wellKnownTypeShape(BuiltinName("Invalid"), Abstract, anyValueSuper = false)
@@ -271,6 +274,7 @@ object WellKnownTypes {
         pairTypeDefinition.addTypeParameter(text = "K", variance = Variance.Covariant)
         pairTypeDefinition.addTypeParameter(text = "V", variance = Variance.Covariant)
         mapKeyTypeDefinition = wellKnownTypeShape(BuiltinName("MapKey"), Abstract)
+        partialImuTypeDefinition = wellKnownTypeShape(BuiltinName("PartialImu"), Abstract)
         promiseTypeDefinition = wellKnownTypeShape(BuiltinName("Promise"), Concrete)
         promiseTypeDefinition.addTypeParameter(text = "R", variance = Variance.Covariant)
         promiseBuilderTypeDefinition = wellKnownTypeShape(BuiltinName("PromiseBuilder"), Concrete)
