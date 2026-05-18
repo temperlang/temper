@@ -288,7 +288,7 @@ expect val userMavenToolchains: NativePath
 /** Given the numbered major version, lists pairs of version-numbers and JDK home values that match */
 expect fun toolchainsForVersion(major: Int): List<Pair<String, NativePath>>
 
-fun Path.isJdk() = listOf("jmods", "jre").any { resolve(it).exists() }
+fun Path.isJdk() = listOf("jmods", "jre", "lib/classlist").any { resolve(it).exists() }
 
 fun Path.readSymbolicLinks(): Sequence<Path> = sequence {
     var path = this@readSymbolicLinks
