@@ -159,9 +159,11 @@ def mungeWindowsCommand(File command) {
 
 def distDir = new File(buildDir, "distributions")
 def jrePrefix = "jre4temper"
+//def javaLauncherVersion = JavaLanguageVersion.of(gradle.ext.jvm_target)
+def javaLauncherVersion = JavaLanguageVersion.of(25)
 def javaLauncher = javaToolchains.launcherFor {
     // Version number required here. Saying just `launcherFor(java.toolchain)` fails.
-    languageVersion = JavaLanguageVersion.of(gradle.ext.jvm_target)
+    languageVersion = javaLauncherVersion
 }.get()
 // TODO(tjp, dist): Initialize lazily, maybe as a system property???
 def jreBaseName = {
@@ -253,7 +255,7 @@ graalvmNative {
         main {
             imageName = "temper"
             javaLauncher = javaToolchains.launcherFor {
-                languageVersion = JavaLanguageVersion.of(gradle.ext.jvm_target)
+                languageVersion = javaLauncherVersion
                 vendor = JvmVendorSpec.matching("GraalVM Community")
             }
             jvmArgs.add("-Dfile.encoding=UTF-8")
