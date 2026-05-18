@@ -8,30 +8,19 @@ import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedParsedName
 import lang.temper.name.TemperName
 import lang.temper.type.Abstractness
-import lang.temper.type.AndType
-import lang.temper.type.BubbleType
-import lang.temper.type.FunctionType
-import lang.temper.type.InfiniBinding
-import lang.temper.type.InvalidType
 import lang.temper.type.MemberShape
-import lang.temper.type.NeverType
-import lang.temper.type.NominalType
-import lang.temper.type.OrType
 import lang.temper.type.PropertyShape
 import lang.temper.type.StaticType
-import lang.temper.type.SuperTypeTree
-import lang.temper.type.TopType
-import lang.temper.type.TypeActual
-import lang.temper.type.TypeContext
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeShape
-import lang.temper.type.TypeTypeFormal
-import lang.temper.type.ValueActual
-import lang.temper.type.ValueTypeFormal
+import lang.temper.type.TypeFormal
 import lang.temper.type.Variance
 import lang.temper.type.WellKnownTypes.imuTypeDefinition
 import lang.temper.type.WellKnownTypes.partialImuTypeDefinition
-import lang.temper.type.Wildcard
+import lang.temper.type2.MkType2
+import lang.temper.type2.SuperTypeTree2
+import lang.temper.type2.Type2
+import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.value.typeSymbol
 import lang.temper.value.varSymbol
 
@@ -69,8 +58,7 @@ internal class ImuChecker(
     private val typeShapesToCheck: Iterable<TypeShape>,
     private val logSink: LogSink,
 ) {
-    private val typeContext = TypeContext()
-    private val superTypesCache = mutableMapOf<NominalType, SuperTypeTree>()
+    private val superTypesCache = mutableMapOf<Type2, SuperTypeTree2<Type2>>()
 
     fun check(): Pair<Set<TypeShape>, Set<TypeShape>> {
         val passing = mutableSetOf<TypeShape>()
@@ -87,7 +75,7 @@ internal class ImuChecker(
     }
 
     private fun check(typeShape: TypeShape): Boolean {
-        val type = typeContext.nominal(typeShape, typeShape.formals.map { typeContext.nominal(it) })
+        val type = MkType2(typeShape).actuals(typeShape.formals.map { MkType2(it).get() }).get()
         val supers = getSuperTypeTree(type)
         return when {
             supers[imuTypeDefinition].isNotEmpty() ->
@@ -105,7 +93,7 @@ internal class ImuChecker(
     private fun checkPartialImu(typeShape: TypeShape, typeName: TemperName): Boolean {
         val presumedImu = buildSet {
             typeShape.formals.mapTo(this) {
-                typeContext.nominal(it)
+                MkType2(it).get()
             }
         }
         var passes = true
@@ -138,8 +126,11 @@ internal class ImuChecker(
 
                 // Find the shallowest super-types that are partial imu.
                 val partialImuSupers = typeShape.superTypes.filter { superType ->
-                    superType.definition != partialImuTypeDefinition &&
-                        getSuperTypeTree(superType)[partialImuTypeDefinition].isNotEmpty()
+                    superType.definition != partialImuTypeDefinition
+                }.map { superType ->
+                    hackMapOldStyleToNew(superType)
+                }.filter { superType ->
+                    getSuperTypeTree(superType)[partialImuTypeDefinition].isNotEmpty()
                 }
 
                 // For each of them, the type projection has to imply consistency when up-cast.
@@ -162,7 +153,7 @@ internal class ImuChecker(
                     val superTypeProblem = findNonImuPart(
                         partialImuSuper,
                         buildSet {
-                            typeShape.formals.mapTo(this) { typeContext.nominal(it) }
+                            typeShape.formals.mapTo(this) { MkType2(it).get() }
                         },
                     )
                     if (superTypeProblem != null) {
@@ -190,7 +181,7 @@ internal class ImuChecker(
                     // If that type passes the type checker then, assuming X and String are Imu,
                     // it's safe to do:
                     //
-                    //     class SubImpl<T> extends Sub<T> { .. }             // Imu type
+                    //     class SubImpl<T> extends Sub<T> { .. }             // PartialImu type
                     //     let sub: Sub<String> = new SubImpl<String>(...);   // Imu type
                     //     let sup: SuperPartialImu<List<String>, X> = sub;   // Imu type
                     //
@@ -206,56 +197,28 @@ internal class ImuChecker(
                     //
                     // Then we look through our list of sub formals and find that <T> is
                     // Imu by presumption.
-                    val presumedImuForDeepCheck = mutableSetOf<StaticType>()
+                    val presumedImuForDeepCheck = mutableSetOf<Type2>()
                     for (superTypeArg in superTypeArgs) {
-                        fun implied(t: TypeActual): Set<StaticType> = when (t) {
-                            !is StaticType -> emptySet()
-                            is NominalType -> {
-                                val tSuperTree = getSuperTypeTree(t)
-                                val tDefinition = t.definition
-                                if (tDefinition is TypeTypeFormal) {
-                                    setOf(t)
-                                } else if (tSuperTree[imuTypeDefinition].isNotEmpty()) {
-                                    // We don't consider an Imu sub-type as implying anything about type args
-                                    emptySet()
-                                } else if (tSuperTree[partialImuTypeDefinition].isNotEmpty()) {
-                                    check(tDefinition is TypeShape) // Not formal above
-                                    buildSet {
-                                        for ((i, binding) in t.bindings.withIndex()) {
-                                            val f = tDefinition.formals.getOrNull(i)
-                                            if (f is TypeTypeFormal && f.variance != Variance.Contravariant) {
-                                                addAll(implied(binding))
-                                            }
+                        fun implied(t: Type2): Set<Type2> = run {
+                            val tSuperTree = getSuperTypeTree(t)
+                            val tDefinition = t.definition
+                            if (tDefinition is TypeFormal) {
+                                setOf(t)
+                            } else if (tSuperTree[imuTypeDefinition].isNotEmpty()) {
+                                // We don't consider an Imu sub-type as implying anything about type args
+                                emptySet()
+                            } else if (tSuperTree[partialImuTypeDefinition].isNotEmpty()) {
+                                check(tDefinition is TypeShape) // Not formal above
+                                buildSet {
+                                    for ((i, binding) in t.bindings.withIndex()) {
+                                        val f = tDefinition.formals.getOrNull(i)
+                                        if (f is TypeFormal && f.variance != Variance.Contravariant) {
+                                            addAll(implied(binding))
                                         }
                                     }
-                                } else {
-                                    emptySet()
                                 }
-                            }
-
-                            is AndType -> buildSet {
-                                for (m in t.members) {
-                                    addAll(implied(m))
-                                }
-                            }
-                            is FunctionType,
-                            InvalidType,
-                            NeverType,
-                            BubbleType,
-                            TopType,
-                                -> emptySet()
-                            is OrType -> {
-                                val union = mutableSetOf<StaticType>()
-                                for ((i, m) in t.members.withIndex()) {
-                                    val imps = implied(m)
-                                    if (i == 0) {
-                                        union.addAll(imps)
-                                    } else {
-                                        union.retainAll(imps)
-                                    }
-                                    if (union.isEmpty()) { break }
-                                }
-                                union.toSet()
+                            } else {
+                                emptySet()
                             }
                         }
                         if (superTypeArg is StaticType) {
@@ -264,7 +227,7 @@ internal class ImuChecker(
                     }
 
                     for (typeFormal in typeShape.typeParameters) {
-                        val type = typeContext.nominal(typeFormal.definition)
+                        val type = MkType2(typeFormal.definition).get()
                         val nonImuPart = findNonImuPart(type, presumedImuForDeepCheck)
                         if (nonImuPart != null) {
                             passes = false
@@ -290,7 +253,7 @@ internal class ImuChecker(
         typeShape: TypeShape,
         typeName: TemperName,
         extended: TemperName,
-        presumedImu: Set<StaticType> = emptySet(),
+        presumedImu: Set<Type2> = emptySet(),
     ): Boolean {
         var passes = true
         val contravariantTypeParameters = contravariantTypeParametersFor(typeShape)
@@ -320,11 +283,11 @@ internal class ImuChecker(
         typeName: TemperName,
         contravariantTypeParameters: Set<TypeDefinition>,
         extended: TemperName,
-        presumedImu: Set<StaticType> = emptySet(),
+        presumedImu: Set<Type2> = emptySet(),
     ): Boolean {
         var passes = true
         val propertyName = ParsedName(property.symbol.text)
-        val staticType = property.staticType
+        val staticType = property.descriptor
         if (property.metadata.containsKey(varSymbol)) {
             passes = false
             logSink.log(
@@ -373,128 +336,66 @@ internal class ImuChecker(
     private fun contravariantTypeParametersFor(typeShape: TypeShape): Set<TypeDefinition> =
         buildSet {
             typeShape.typeParameters.mapNotNullTo(this) {
-                when (val def = it.definition) {
-                    is TypeTypeFormal ->
-                        if (def.variance == Variance.Contravariant) { def } else { null }
-                    is ValueTypeFormal -> null
-                }
+                val def = it.definition
+                if (def.variance == Variance.Contravariant) { def } else { null }
             }
         }
 
-    private fun findNonImuPart(type: StaticType, presumedImu: Set<StaticType>): StaticType? {
-        when (type) {
-            is AndType -> {
-                for (member in type.members) {
-                    if (findNonImuPart(member, presumedImu) == null) {
-                        return null
-                    }
-                }
-                return type
-            }
-            InvalidType,
-            BubbleType,
-            NeverType,
-                -> return null
-            is OrType -> {
-                for (member in type.members) {
-                    val part = findNonImuPart(member, presumedImu)
-                    if (part != null) { return part }
-                }
-                return null
-            }
-            TopType,
-            is FunctionType,
-                -> return type
-            is NominalType -> {
-                if (type in presumedImu) { return null }
-                val superTypeTree = getSuperTypeTree(type)
-                if (superTypeTree[imuTypeDefinition].isNotEmpty()) {
-                    return null
-                }
-
-                if (
-                    superTypeTree[partialImuTypeDefinition].isNotEmpty() &&
-                    type.definition != partialImuTypeDefinition &&
-                    // Type formals do not have parameters so PartialImu makes little sense there.
-                    type.definition is TypeShape
-                ) {
-                    if (type.bindings.size != type.definition.formals.size) {
-                        return type
-                    }
-                    for (actual in type.bindings) {
-                        if (actual !is StaticType) {
-                            return type
-                        }
-                        val problem = findNonImuPart(actual, presumedImu)
-                        if (problem != null) {
-                            return problem
-                        }
-                    }
-                    return null
-                }
-                return type
-            }
+    private fun findNonImuPart(type: Type2, presumedImu: Set<Type2>): Type2? {
+        if (type in presumedImu) { return null }
+        val superTypeTree = getSuperTypeTree(type)
+        if (superTypeTree[imuTypeDefinition].isNotEmpty()) {
+            return null
         }
+
+        if (
+            superTypeTree[partialImuTypeDefinition].isNotEmpty() &&
+            type.definition != partialImuTypeDefinition &&
+            // Type formals do not have parameters so PartialImu makes little sense there.
+            type.definition is TypeShape
+        ) {
+            if (type.bindings.size != type.definition.formals.size) {
+                return type
+            }
+            for (actual in type.bindings) {
+                if (actual !is StaticType) {
+                    return type
+                }
+                val problem = findNonImuPart(actual, presumedImu)
+                if (problem != null) {
+                    return problem
+                }
+            }
+            return null
+        }
+        return type
     }
 
-    private fun getSuperTypeTree(nominalType: NominalType) =
+    private fun getSuperTypeTree(nominalType: Type2) =
         superTypesCache.getOrPut(nominalType) {
-            SuperTypeTree.of(nominalType, typeContext)
+            SuperTypeTree2.of(nominalType)
         }
 }
 
 private val MemberShape.declarationPos get() =
     this.stay?.pos ?: this.enclosingType.pos.leftEdge
 
-private fun mentionedInType(type: StaticType, typeDefs: Set<TypeDefinition>): TypeDefinition? =
+private fun mentionedInType(type: Type2, typeDefs: Set<TypeDefinition>): TypeDefinition? =
     if (typeDefs.isEmpty()) {
         null
     } else {
-        fun helper(t: StaticType?): TypeDefinition? = when (t) {
+        fun helper(t: Type2?): TypeDefinition? = when (t) {
             null -> null
-            is AndType -> {
-                var def: TypeDefinition? = null
-                for (member in t.members) {
-                    def = helper(member)
-                    if (def != null) { break }
-                }
-                def
-            }
-            is OrType -> {
-                var def: TypeDefinition? = null
-                for (member in t.members) {
-                    def = helper(member)
-                    if (def != null) { break }
-                }
-                def
-            }
-            InvalidType,
-            NeverType,
-            BubbleType,
-            TopType,
-                -> null
-            is FunctionType -> {
-                var def: TypeDefinition? = null
-                for (vf in t.valueFormals) {
-                    def = helper(vf.type)
-                    if (def != null) { break }
-                }
-                def ?: helper(t.returnType)
-                ?: helper(t.restValuesFormal)
-            }
-            is NominalType -> {
+            else -> {
                 if (t.definition in typeDefs) {
                     t.definition
                 } else {
                     var def: TypeDefinition? = null
                     for (actual in t.bindings) {
-                        when (actual) {
-                            is InfiniBinding -> {}
-                            is StaticType -> def = helper(actual)
-                            is ValueActual -> {}
-                            Wildcard -> {}
+                        def = helper(actual)
+                        if (def != null) {
+                            break
                         }
-                        if (def != null) { break }
                     }
                     def
                 }
