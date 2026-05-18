@@ -44,7 +44,7 @@ jobs:
         timeout-minutes: 3
         with:
           distribution: "zulu"
-          java-version: 21
+          java-version: 25
       - name: Bundle JRE with Temper
         # Output: cli/build/jre4temper/jre4temper-*
         run: ./gradlew bundleJre

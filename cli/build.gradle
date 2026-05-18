@@ -532,6 +532,7 @@ task composeTemperJre {
             from temperJar
             into bundleAllDir
         }
+        def opts = "--enable-native-access=ALL-UNNAMED"
         // The jre is already platform-specific, so might as well be so with the start scripts, too.
         if (jreChosenName.toLowerCase().contains("windows")) {
             // Make windows run script.
@@ -540,7 +541,7 @@ task composeTemperJre {
                 makeWindowsCodePageWrapper(
                     """
                     set "JAVA_HOME=%~dp0jre"
-                    "%JAVA_HOME%/bin/java" -jar "%~dp0temper.jar" %*
+                    "%JAVA_HOME%/bin/java" $opts -jar "%~dp0temper.jar" %*
                     """.stripIndent().strip()
                 )
             )
@@ -553,7 +554,7 @@ task composeTemperJre {
                 #!/usr/bin/env sh
                 TEMPER_HOME="\$(dirname "\$0")"
                 JAVA_HOME="\$TEMPER_HOME"/jre
-                "\$JAVA_HOME/bin/java" -jar "\$TEMPER_HOME"/temper.jar "\$@"
+                "\$JAVA_HOME/bin/java" $opts -jar "\$TEMPER_HOME"/temper.jar "\$@"
                 """.stripIndent().stripLeading()
             )
             // Can't set perms on Windows.
