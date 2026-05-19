@@ -11,8 +11,8 @@ import lang.temper.type.Abstractness
 import lang.temper.type.MemberShape
 import lang.temper.type.PropertyShape
 import lang.temper.type.TypeDefinition
-import lang.temper.type.TypeShape
 import lang.temper.type.TypeFormal
+import lang.temper.type.TypeShape
 import lang.temper.type.Variance
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.WellKnownTypes.imuTypeDefinition
@@ -96,7 +96,8 @@ class ImuChecker(
             imuTypeDefinition,
             partialImuTypeDefinition,
             WellKnownTypes.listTypeDefinition,
-            WellKnownTypes.mapTypeDefinition -> true
+            WellKnownTypes.mapTypeDefinition,
+            -> true
 
             // Check others that claim something.
             else if supers[imuTypeDefinition].isNotEmpty() ->
