@@ -10,7 +10,6 @@ import lang.temper.name.TemperName
 import lang.temper.type.Abstractness
 import lang.temper.type.MemberShape
 import lang.temper.type.PropertyShape
-import lang.temper.type.StaticType
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeShape
 import lang.temper.type.TypeFormal
@@ -237,9 +236,7 @@ class ImuChecker(
                                 emptySet()
                             }
                         }
-                        if (superTypeArg is StaticType) {
-                            presumedImuForDeepCheck.addAll(implied(superTypeArg))
-                        }
+                        presumedImuForDeepCheck.addAll(implied(superTypeArg))
                     }
 
                     for (typeFormal in typeShape.typeParameters) {
@@ -374,9 +371,6 @@ class ImuChecker(
                 return type
             }
             for (actual in type.bindings) {
-                if (actual !is StaticType) {
-                    return type
-                }
                 val problem = findNonImuPart(actual, presumedImu)
                 if (problem != null) {
                     return problem
