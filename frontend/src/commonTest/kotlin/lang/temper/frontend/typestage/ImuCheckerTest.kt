@@ -169,7 +169,7 @@ class ImuCheckerTest {
             |  public p: ImuNoProperties;
             |}
             |class ImuRecursive extends Imu {
-            |  public p: ImuRecursive | Null;
+            |  public p: ImuRecursive?;
             |}
             |class ImuGeneric<T extends Imu> {
             |  public p: T;
