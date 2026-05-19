@@ -140,7 +140,7 @@ class GenerateCodeStage(
         Debug.Frontend.GenerateCodeStage.AfterTypeCheck.snapshot(configKey, AstSnapshotKey, root)
 
         UnicodeScalarChecker(module).check(root)
-//        ImuChecker(logSink).check(root)
+        ImuChecker(logSink).check(root)
 
         if (genre != Genre.Documentation) {
             Debug.Frontend.GenerateCodeStage.CleanupTemporaries(configKey)

@@ -14,6 +14,7 @@ import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeShape
 import lang.temper.type.TypeFormal
 import lang.temper.type.Variance
+import lang.temper.type.WellKnownTypes
 import lang.temper.type.WellKnownTypes.imuTypeDefinition
 import lang.temper.type.WellKnownTypes.partialImuTypeDefinition
 import lang.temper.type2.MkType2
@@ -90,13 +91,20 @@ class ImuChecker(
     fun check(typeShape: TypeShape): Boolean {
         val type = MkType2(typeShape).actuals(typeShape.formals.map { MkType2(it).get() }).get()
         val supers = getSuperTypeTree(type)
-        return when {
-            typeShape == imuTypeDefinition || typeShape == partialImuTypeDefinition ->
-                true
-            supers[imuTypeDefinition].isNotEmpty() ->
+        return when (typeShape) {
+            // Special-case some core types.
+            imuTypeDefinition,
+            partialImuTypeDefinition,
+            WellKnownTypes.listTypeDefinition,
+            WellKnownTypes.mapTypeDefinition -> true
+
+            // Check others that claim something.
+            else if supers[imuTypeDefinition].isNotEmpty() ->
                 checkImu(typeShape, typeShape.diagnosticTypeName)
-            supers[partialImuTypeDefinition].isNotEmpty() ->
+            else if supers[partialImuTypeDefinition].isNotEmpty() ->
                 checkPartialImu(typeShape, typeShape.diagnosticTypeName)
+
+            // No claim to check.
             else -> true
         }
     }
