@@ -34,8 +34,8 @@ class ImuCheckerTest {
         val (wantPassing, wantFailing) = typesByName.keys.toList().sorted().partition {
             "Bad" !in it
         }
-        val checker = ImuChecker(typesByName.values, logSink)
-        val (passing, failing) = checker.check()
+        val checker = ImuChecker(logSink)
+        val (passing, failing) = checker.check(typesByName.values)
         val gotPassing = passing.map { it.simpleName.nameText }.sorted()
         val gotFailing = failing.map { it.simpleName.nameText }.sorted()
         assertEquals(
@@ -52,8 +52,8 @@ class ImuCheckerTest {
         val logSink = ListBackedLogSink()
         val got = buildString {
             for ((typeName, type) in typesByName) {
-                val checker = ImuChecker(listOf(type), logSink)
-                val (passing, failing) = checker.check()
+                val checker = ImuChecker(logSink)
+                val (passing, failing) = checker.check(listOf(type))
                 assertEquals(1, passing.size + failing.size)
 
                 val logEntries = logSink.allEntries

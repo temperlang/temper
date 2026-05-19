@@ -14,6 +14,7 @@ import lang.temper.frontend.Weaver
 import lang.temper.frontend.flipDeclaredNames
 import lang.temper.frontend.interpretiveDanceStage
 import lang.temper.frontend.simplifyFlow
+import lang.temper.frontend.typestage.ImuChecker
 import lang.temper.frontend.typestage.Typer
 import lang.temper.interp.ReplacementPolicy
 import lang.temper.interp.docgenalts.DocGenAltFn
@@ -139,6 +140,7 @@ class GenerateCodeStage(
         Debug.Frontend.GenerateCodeStage.AfterTypeCheck.snapshot(configKey, AstSnapshotKey, root)
 
         UnicodeScalarChecker(module).check(root)
+//        ImuChecker(logSink).check(root)
 
         if (genre != Genre.Documentation) {
             Debug.Frontend.GenerateCodeStage.CleanupTemporaries(configKey)

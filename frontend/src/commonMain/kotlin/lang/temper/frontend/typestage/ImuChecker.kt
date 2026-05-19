@@ -21,6 +21,10 @@ import lang.temper.type2.MkType2
 import lang.temper.type2.SuperTypeTree2
 import lang.temper.type2.Type2
 import lang.temper.type2.hackMapOldStyleToNew
+import lang.temper.value.DeclTree
+import lang.temper.value.Tree
+import lang.temper.value.typeDeclSymbol
+import lang.temper.value.typeShapeAtLeafOrNull
 import lang.temper.value.typeSymbol
 import lang.temper.value.varSymbol
 
@@ -54,13 +58,23 @@ enum class ImuMessage(
 private val imuTypeName = imuTypeDefinition.diagnosticTypeName
 private val partialImuTypeName = partialImuTypeDefinition.diagnosticTypeName
 
-internal class ImuChecker(
-    private val typeShapesToCheck: Iterable<TypeShape>,
+class ImuChecker(
     private val logSink: LogSink,
 ) {
     private val superTypesCache = mutableMapOf<Type2, SuperTypeTree2<Type2>>()
 
-    fun check(): Pair<Set<TypeShape>, Set<TypeShape>> {
+    fun check(tree: Tree) {
+        for (child in tree.children) {
+            if (child is DeclTree) {
+                child.parts!!.metadataSymbolMap[typeDeclSymbol]?.target
+                    ?.typeShapeAtLeafOrNull?.let { typeShape ->
+                        check(typeShape)
+                    }
+            }
+        }
+    }
+
+    fun check(typeShapesToCheck: Iterable<TypeShape>): Pair<Set<TypeShape>, Set<TypeShape>> {
         val passing = mutableSetOf<TypeShape>()
         val failing = mutableSetOf<TypeShape>()
         for (typeShape in typeShapesToCheck) {
@@ -74,10 +88,12 @@ internal class ImuChecker(
         return passing.toSet() to failing.toSet()
     }
 
-    private fun check(typeShape: TypeShape): Boolean {
+    fun check(typeShape: TypeShape): Boolean {
         val type = MkType2(typeShape).actuals(typeShape.formals.map { MkType2(it).get() }).get()
         val supers = getSuperTypeTree(type)
         return when {
+            typeShape == imuTypeDefinition || typeShape == partialImuTypeDefinition ->
+                true
             supers[imuTypeDefinition].isNotEmpty() ->
                 checkImu(typeShape, typeShape.diagnosticTypeName)
             supers[partialImuTypeDefinition].isNotEmpty() ->
