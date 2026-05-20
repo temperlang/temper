@@ -432,10 +432,15 @@ ComprehensionIf.operatorDefinition = `null`;
  * defparameter            ::=  parameter ["=" expression]
  * ```
  */
-Arguments ::= args%Arg*", ";
-Arguments.hasAnnotations%`Boolean` = `args.any { it.annotation != null }`;  // Lambdas can't have annotations.
+Arguments ::= args%ArgLike*", ";
+Arguments.hasAnnotations%`Boolean` = `args.any { it is Py.Arg && it.annotation != null }`;  // Lambdas can't have annotations.
 Arguments requires `argumentsValid(args), issue { argumentsIssues(args) }`;
 Arguments.operatorDefinition = `null`;
+
+ArgLike = Arg | ArgEndPosOnly | ArgStartNameOnly;
+
+ArgEndPosOnly ::= "/";
+ArgStartNameOnly ::= "*";
 
 Arg ::=
       ((prefix%ArgPrefix == Star => `starToken`)

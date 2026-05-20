@@ -18,13 +18,14 @@ fun callArgsIssues(args: Iterable<Py.CallArg>): String? {
     return null
 }
 
-fun argumentsValid(args: Iterable<Py.Arg>): Boolean = argumentsIssues(args) == null
+fun argumentsValid(args: Iterable<Py.ArgLike>): Boolean = argumentsIssues(args) == null
 
-fun argumentsIssues(args: Iterable<Py.Arg>): String? {
+fun argumentsIssues(args: Iterable<Py.ArgLike>): String? {
     var star = false // Only ** can follow *
     var doubleStar = false // Nothing can follow **
     var defaults = false // Can't have required arguments after optional
-    for (arg in args) {
+    args@ for (arg in args) {
+        arg is Py.Arg || continue@args
         // Manually support this case in our transforms elsewhere.
         // if (defaults && arg.defaultValue == null && arg.prefix == Py.ArgPrefix.None) {
         //     return "$arg: required argument following optional"

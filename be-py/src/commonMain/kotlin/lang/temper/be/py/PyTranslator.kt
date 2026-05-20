@@ -371,7 +371,7 @@ class PyTranslator(
         ): List<Py.Stmt> = buildList {
             // TODO: substitute python parameter names for TmpL names
             // See be-java's javadoc(...) helpers.
-            val fnDocumentation = s.documentation?.prettyPleaseHelp()
+            val fnDocumentation = s.documentation.prettyPleaseHelp()
             if (fnDocumentation != null) {
                 add(translateDocString(fnDocumentation, s.pos))
             }
@@ -972,10 +972,11 @@ class PyTranslator(
         func: TmpL.FunctionDeclarationOrMethod,
         renames: MutableList<Py.Stmt>? = null,
     ): Py.Arguments {
-        val args = mutableListOf<Py.Arg>()
+        val args = mutableListOf<Py.ArgLike>()
         val params = func.parameters
         // Temper semantics allow required after optional, at least for lambda blocks, so track that.
         var anyOptional = false
+        var justHadPositional = false
         params.forEachFormal { pos, id, type, kind ->
             val name = id.name
             val isOptional = anyOptional || kind == ArgKind.Optional
@@ -1011,6 +1012,10 @@ class PyTranslator(
             } else {
                 pyNames.name(name)
             }.asPyId(id.pos)
+            if (isOptional && justHadPositional) {
+                args.add(Py.ArgEndPosOnly(pos))
+                justHadPositional = false
+            }
             args.add(
                 Py.Arg(
                     pos,
@@ -1025,6 +1030,7 @@ class PyTranslator(
                         anyOptional = true
                         PyConstant.Unset.at(pos)
                     } else {
+                        justHadPositional = true
                         null
                     },
                     prefix = when (kind) {
@@ -1116,7 +1122,7 @@ class PyTranslator(
         // TODO We also need to have renamed globals for rare cases of conflict with named args.
         // TODO Is the above still a valid concern?
         // TODO Why don't method bodies currently include declareReferences?
-        val documentation = func.documentation?.prettyPleaseHelp()
+        val documentation = func.documentation.prettyPleaseHelp()
         if (documentation != null) {
             add(translateDocString(documentation, func.pos))
         }

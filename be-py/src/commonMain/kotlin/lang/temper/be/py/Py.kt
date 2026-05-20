@@ -1645,7 +1645,7 @@ object Py {
      */
     class Arguments(
         pos: Position,
-        args: Iterable<Arg>,
+        args: Iterable<ArgLike>,
     ) : BaseTree(pos) {
         override val operatorDefinition: PyOperatorDefinition?
             get() = null
@@ -1661,12 +1661,12 @@ object Py {
                 else -> throw IndexOutOfBoundsException("$index")
             }
         }
-        private val _args: MutableList<Arg> = mutableListOf()
-        var args: List<Arg>
+        private val _args: MutableList<ArgLike> = mutableListOf()
+        var args: List<ArgLike>
             get() = _args
             set(newValue) { updateTreeConnections(_args, newValue) }
         val hasAnnotations: Boolean
-            get() = args.any { it.annotation != null }
+            get() = args.any { it is Py.Arg && it.annotation != null }
         override fun deepCopy(): Arguments {
             return Arguments(pos, args = this.args.deepCopy())
         }
@@ -3660,13 +3660,17 @@ object Py {
         }
     }
 
+    sealed interface ArgLike : Tree {
+        override fun deepCopy(): ArgLike
+    }
+
     class Arg(
         pos: Position,
         arg: Identifier,
         annotation: Expr? = null,
         defaultValue: Expr? = null,
         var prefix: ArgPrefix = ArgPrefix.None,
-    ) : BaseTree(pos) {
+    ) : BaseTree(pos), ArgLike {
         override val operatorDefinition: PyOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
@@ -3749,6 +3753,60 @@ object Py {
                 { n -> (n as Arg).annotation },
                 { n -> (n as Arg).defaultValue },
             )
+        }
+    }
+
+    class ArgEndPosOnly(
+        pos: Position,
+    ) : BaseTree(pos), ArgLike {
+        override val operatorDefinition: PyOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate133
+        override val formatElementCount
+            get() = 0
+        override fun deepCopy(): ArgEndPosOnly {
+            return ArgEndPosOnly(pos)
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is ArgEndPosOnly
+        }
+        override fun hashCode(): Int {
+            return 0
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships()
+        }
+    }
+
+    class ArgStartNameOnly(
+        pos: Position,
+    ) : BaseTree(pos), ArgLike {
+        override val operatorDefinition: PyOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate134
+        override val formatElementCount
+            get() = 0
+        override fun deepCopy(): ArgStartNameOnly {
+            return ArgStartNameOnly(pos)
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is ArgStartNameOnly
+        }
+        override fun hashCode(): Int {
+            return 0
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships()
         }
     }
 
@@ -6304,4 +6362,12 @@ object Py {
                 CodeFormattingTemplate.OneSubstitution(2),
             ),
         )
+
+    /** `/` */
+    private val sharedCodeFormattingTemplate133 =
+        CodeFormattingTemplate.LiteralToken("/", OutputTokenType.Punctuation)
+
+    /** `*` */
+    private val sharedCodeFormattingTemplate134 =
+        CodeFormattingTemplate.LiteralToken("*", OutputTokenType.Punctuation)
 }

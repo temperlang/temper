@@ -83,8 +83,10 @@ private fun Py.Stmt.forEachChildStmt(act: (Py.Stmt) -> Unit) {
 private fun Py.Expr?.forEachChildExpr(act: (Py.Expr) -> Unit) {
     fun doArgs(args: Py.Arguments?) {
         args?.args?.forEach {
-            it.annotation?.let(act)
-            it.defaultValue?.let(act)
+            if (it is Py.Arg) {
+                it.annotation?.let(act)
+                it.defaultValue?.let(act)
+            }
         }
     }
     fun doComprehensions(gens: List<Py.Comprehension>, vararg exprs: Py.Expr) {
@@ -384,13 +386,21 @@ private fun Py.Arguments.gatherImports(sink: ImportSink, exclude: Set<OutName>) 
     args.forEach { it.gatherImports(sink, exclude) }
 }
 
+private fun Py.ArgLike.gatherImports(sink: ImportSink, exclude: Set<OutName>) {
+    if (this is Py.Arg) {
+        gatherImports(sink, exclude)
+    }
+}
+
 private fun Py.Arg.gatherImports(sink: ImportSink, exclude: Set<OutName>) {
     defaultValue.gatherImports(sink, exclude)
 }
 
 private fun Py.Arguments.gatherNames(names: MutableSet<OutName>) {
     args.forEach { arg ->
-        names.add(arg.arg.outName)
+        if (arg is Py.Arg) {
+            names.add(arg.arg.outName)
+        }
     }
 }
 
