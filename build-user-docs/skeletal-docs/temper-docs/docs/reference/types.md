@@ -63,6 +63,10 @@ start with a lower-case letter: `false`&check; ; not `False`&cross;.
 
 ⎀ type/Equatable
 
+⎀ type/Imu
+
+⎀ type/PartialImu
+
 ⎀ type/Null
 
 ⎀ type/Empty
