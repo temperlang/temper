@@ -1146,7 +1146,7 @@ class ReplTest {
             """
                 |1: new Map([5])
                 |           ┗━┛
-                |[interactive#0:1+8-11]@G: Actual arguments do not match signature: <in K__32 extends AnyValue & MapKey, out V__33 extends AnyValue>(List<Pair<K__32, V__33>>) -> Map<K__32, V__33> expected [List<Pair<MapKey, AnyValue>>], but got [List<Int32>]
+                |[interactive#0:1+8-11]@G: Actual arguments do not match signature: <in K__33 extends AnyValue & MapKey, out V__34 extends AnyValue>(List<Pair<K__33, V__34>>) -> Map<K__33, V__34> expected [List<Pair<MapKey, AnyValue>>], but got [List<Int32>]
                 |interactive#0: fail
                 |
             """.trimMargin(),
@@ -1157,7 +1157,7 @@ class ReplTest {
             """
                 |1: new Map(5)
                 |           ⇧
-                |[interactive#1:1+8-9]@G: Actual arguments do not match signature: <in K__32 extends AnyValue & MapKey, out V__33 extends AnyValue>(List<Pair<K__32, V__33>>) -> Map<K__32, V__33> expected [List<Pair<MapKey, AnyValue>>], but got [Int32]
+                |[interactive#1:1+8-9]@G: Actual arguments do not match signature: <in K__33 extends AnyValue & MapKey, out V__34 extends AnyValue>(List<Pair<K__33, V__34>>) -> Map<K__33, V__34> expected [List<Pair<MapKey, AnyValue>>], but got [Int32]
                 |interactive#1: fail
                 |
             """.trimMargin(),
