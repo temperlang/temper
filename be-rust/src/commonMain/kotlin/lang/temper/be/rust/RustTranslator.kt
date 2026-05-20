@@ -706,9 +706,10 @@ class RustTranslator(
         // Gather up instance methods by name so we can coordinate with supertypes as needed.
         val instanceMethods = associateInstanceMethods(decl)
         val isInterface = decl.kind == TmpL.TypeDeclarationKind.Interface
-        sups@ for ((subShape, sup) in decl.typeShape.allInterfaces(allowStart = true)) {
+        sups@ for ((subShape, sup) in decl.typeShape.allInterfaces(allowStart = true)) { //
             // Only handle type shapes, and only unique ones.
             val supShape = (sup.definition as? TypeShape) ?: continue@sups
+            supShape.isFiction() && continue@sups
             val supDecl = supShape.stayLeaf?.incoming?.source as? DeclTree
             // For sealed enums, this picks an arbitrary winner. TODO Allow diamonds and/or check against them earlier.
             handledSups.add(supShape.name) || continue@sups
@@ -1008,7 +1009,10 @@ class RustTranslator(
             bounds@ for (bound in typeParam.upperBounds) {
                 when (bound.typeName.sourceDefinition) {
                     // Special cases. TODO Others?
-                    WellKnownTypes.anyValueTypeDefinition -> {}
+                    WellKnownTypes.anyValueTypeDefinition,
+                    WellKnownTypes.imuTypeDefinition,
+                    WellKnownTypes.partialImuTypeDefinition,
+                    -> {}
                     WellKnownTypes.equatableTypeDefinition -> add(PARTIAL_EQ_NAME.toId(bound.pos))
                     WellKnownTypes.mapKeyTypeDefinition -> {
                         add(EQ_NAME.toId(bound.pos))
