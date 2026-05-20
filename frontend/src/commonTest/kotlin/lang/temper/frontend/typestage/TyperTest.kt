@@ -1446,7 +1446,7 @@ class TyperTest {
         |    }
         """.trimMargin(),
         wantErrors = listOf(
-            "2+23-33: No member toString in Equatable | AnyValue!",
+            "2+23-33: No member toString in Equatable | AnyValue | Imu!",
             "2+23-33: Type Invalid mentions Invalid",
             "2+23-35: Type Invalid mentions Invalid",
             "2+25-33: Type Invalid mentions Invalid",

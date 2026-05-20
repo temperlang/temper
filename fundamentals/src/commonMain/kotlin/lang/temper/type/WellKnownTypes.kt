@@ -123,6 +123,7 @@ object WellKnownTypes {
     val float64Type: NominalType
     val float64Type2: DefinedNonNullType
     val functionType: NominalType
+    val imuType: NominalType
     val intType: NominalType
     val intType2: DefinedNonNullType
     val int64Type: NominalType
@@ -130,6 +131,7 @@ object WellKnownTypes {
     val invalidType2: DefinedNonNullType
     val mapKeyType: NominalType
     val mapKeyType2: DefinedNonNullType
+    val partialImuType: NominalType
     val promiseBuilderType: NominalType
     val stringType: NominalType
     val stringType2: DefinedNonNullType
@@ -314,6 +316,7 @@ object WellKnownTypes {
         float64Type = MkType.nominal(float64TypeDefinition)
         float64Type2 = MkType2(float64TypeDefinition).get() as DefinedNonNullType
         functionType = MkType.nominal(functionTypeDefinition)
+        imuType = MkType.nominal(imuTypeDefinition)
         intType = MkType.nominal(intTypeDefinition)
         intType2 = MkType2(intTypeDefinition).get() as DefinedNonNullType
         int64Type = MkType.nominal(int64TypeDefinition)
@@ -321,6 +324,7 @@ object WellKnownTypes {
         invalidType2 = MkType2(invalidTypeDefinition).get() as DefinedNonNullType
         mapKeyType = MkType.nominal(mapKeyTypeDefinition)
         mapKeyType2 = MkType2(mapKeyTypeDefinition).get() as DefinedNonNullType
+        partialImuType = MkType.nominal(partialImuTypeDefinition)
         promiseBuilderType = MkType.nominal(
             promiseBuilderTypeDefinition,
             listOf(MkType.nominal(promiseBuilderTypeDefinition.typeParameters.first().definition)),
@@ -335,23 +339,32 @@ object WellKnownTypes {
         voidType2 = MkType2(voidTypeDefinition).get() as DefinedNonNullType
 
         booleanTypeDefinition extends equatableType
+        booleanTypeDefinition extends imuType
         doneResultTypeDefinition extends MkType.nominal(
             generatorResultTypeDefinition,
             listOf(MkType.nominal(doneResultTypeDefinition.formals.first())),
         )
+        doneResultTypeDefinition extends imuType
         emptyTypeDefinition extends equatableType
+        emptyTypeDefinition extends imuType
         float64TypeDefinition extends equatableType
+        float64TypeDefinition extends imuType
         generatorFnTypeDefinition extends functionType
         generatorFnWrapperTypeDefinition.let {
             val tYield = MkType.nominal(it.formals[0])
             it extends MkType.nominal(generatorTypeDefinition, listOf(tYield))
         }
+        generatorResultTypeDefinition extends partialImuType
         globalConsoleTypeDefinition extends MkType.nominal(consoleTypeDefinition)
         intTypeDefinition extends mapKeyType
+        intTypeDefinition extends imuType
+        int64TypeDefinition extends equatableType
+        int64TypeDefinition extends imuType
         listTypeDefinition extends MkType.nominal(
             listedTypeDefinition,
             listOf(MkType.nominal(listTypeDefinition.formals[0])),
         )
+        listTypeDefinition extends partialImuType
         listBuilderTypeDefinition extends MkType.nominal(
             listedTypeDefinition,
             listOf(MkType.nominal(listBuilderTypeDefinition.formals[0])),
@@ -362,6 +375,7 @@ object WellKnownTypes {
                 MkType.nominal(it.definition)
             },
         )
+        mapTypeDefinition extends partialImuType
         mapTypeDefinition.formals[0] extends mapKeyType
         mappedTypeDefinition.formals[0] extends mapKeyType
         mapBuilderTypeDefinition extends MkType.nominal(
@@ -373,7 +387,9 @@ object WellKnownTypes {
         mapBuilderTypeDefinition.formals[0] extends mapKeyType
         mapKeyTypeDefinition extends equatableType
         noStringIndexTypeDefinition extends stringIndexOptionType
+        noStringIndexTypeDefinition extends imuType
         nullTypeDefinition extends equatableType
+        nullTypeDefinition extends imuType
         safeGeneratorTypeDefinition extends MkType.nominal(
             generatorTypeDefinition,
             listOf(MkType.nominal(safeGeneratorTypeDefinition.formals.first())),
@@ -383,12 +399,16 @@ object WellKnownTypes {
             it extends MkType.nominal(safeGeneratorTypeDefinition, listOf(tYield))
         }
         stringTypeDefinition extends mapKeyType
+        stringTypeDefinition extends imuType
         stringIndexTypeDefinition extends stringIndexOptionType
+        stringIndexTypeDefinition extends imuType
         stringIndexOptionTypeDefinition extends equatableType
+        stringIndexOptionTypeDefinition extends imuType
         valueResultTypeDefinition extends MkType.nominal(
             generatorResultTypeDefinition,
             listOf(MkType.nominal(valueResultTypeDefinition.formals.first())),
         )
+        valueResultTypeDefinition extends partialImuType
     }
 
     val allNames: Set<ResolvedName> get() = this.byName.keys
