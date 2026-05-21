@@ -694,6 +694,14 @@ internal fun TypeDefinition.allInterfaces(
     }
 }
 
+/** Track types that we shouldn't try to implement in Rust. */
+internal fun TypeDefinition.isFiction() = when (this) {
+    WellKnownTypes.imuTypeDefinition,
+    WellKnownTypes.partialImuTypeDefinition,
+    -> true
+    else -> false
+}
+
 private fun TypeDefinition?.isClass() = this?.abstractness == Abstractness.Concrete
 internal fun TypeDefinition?.isInterface() = this?.abstractness == Abstractness.Abstract
 

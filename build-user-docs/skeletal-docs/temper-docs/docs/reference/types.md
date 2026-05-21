@@ -89,6 +89,16 @@ start with a lower-case letter: `false`&check; ; not `False`&cross;.
 
 </section>
 
+## Verified Immutability
+
+<section markdown="1">
+
+⎀ type/Imu
+
+⎀ type/PartialImu
+
+</section>
+
 ## Special Types
 
 <section markdown="1">
