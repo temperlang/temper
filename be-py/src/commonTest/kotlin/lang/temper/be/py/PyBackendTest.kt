@@ -665,7 +665,7 @@ class PyBackendTest {
             |            async_launch_74 = async_launch1
             |            console_5: 'LoggingConsole2' = LoggingConsole2(__name__)
             |            @adapt_generator_factory3
-            |            def fn_65(do_await_4) -> 'Generator8[empty, None, None]':
+            |            def fn_65(do_await_4, /,) -> 'Generator8[empty, None, None]':
             |                t_59: 'Union5[str6, None]'
             |                t_31: 'Union5[str6, None]'
             |                t_36: 'str6'

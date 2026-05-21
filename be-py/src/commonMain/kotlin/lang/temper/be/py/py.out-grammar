@@ -431,11 +431,23 @@ ComprehensionIf.operatorDefinition = `null`;
  * parameter               ::=  identifier [":" expression]
  * defparameter            ::=  parameter ["=" expression]
  * ```
+ *
+ * With positional-only "/" added in https://github.com/python/cpython/blob/3.8/Grammar/Grammar
  */
-Arguments ::= args%Arg*", ";
+Arguments ::=
+      posOnlyArgs%PosOnlyArguments?
+    & namedArgs%Arg*", ";
+Arguments.args%`List<Arg>` = `(posOnlyArgs?.args ?: listOf()) + namedArgs`;
 Arguments.hasAnnotations%`Boolean` = `args.any { it.annotation != null }`;  // Lambdas can't have annotations.
 Arguments requires `argumentsValid(args), issue { argumentsIssues(args) }`;
 Arguments.operatorDefinition = `null`;
+Arguments.posOnlyArgs.default = `null`;
+
+/** Validated when used in [Arguments]. */
+PosOnlyArguments ::=
+      args%Arg*", "
+    // Trailing comma only needed when namedArgs also present, but it doesn't hurt.
+    & "," & "/" & ",";
 
 Arg ::=
       ((prefix%ArgPrefix == Star => `starToken`)

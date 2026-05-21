@@ -371,7 +371,7 @@ class PyTranslator(
         ): List<Py.Stmt> = buildList {
             // TODO: substitute python parameter names for TmpL names
             // See be-java's javadoc(...) helpers.
-            val fnDocumentation = s.documentation?.prettyPleaseHelp()
+            val fnDocumentation = s.documentation.prettyPleaseHelp()
             if (fnDocumentation != null) {
                 add(translateDocString(fnDocumentation, s.pos))
             }
@@ -459,7 +459,7 @@ class PyTranslator(
                             name = pyIdent(member.pos, temperToPython(member.dotName.dotNameText)),
                             args = Py.Arguments(
                                 member.pos,
-                                listOf(
+                                namedArgs = listOf(
                                     Py.Arg(member.pos, arg = pyIdent(member.pos, "self")),
                                 ),
                             ),
@@ -956,7 +956,11 @@ class PyTranslator(
                 Py.Decorator(decPos, listOf(request(AdaptGeneratorFactory).asPyId(decPos)), emptyList(), false),
             )
             val doAwait = PyIdentifierName(pyNames.unusedName("do_await_%d"))
-            args.args = listOf(Py.Arg(decPos, doAwait)) + args.args
+            val prefixArg = listOf(Py.Arg(decPos, doAwait))
+            when (val posOnlyArgs = args.posOnlyArgs) {
+                null -> args.posOnlyArgs = Py.PosOnlyArguments(args.pos, prefixArg)
+                else -> posOnlyArgs.args = prefixArg + posOnlyArgs.args
+            }
             doAwait
         } else {
             null
@@ -1034,7 +1038,7 @@ class PyTranslator(
                 ),
             )
         }
-        return Py.Arguments(params.pos, args = args)
+        return Py.Arguments(params.pos, namedArgs = args)
     }
 
     private fun translateFunction(func: TmpL.FunctionDeclaration): List<Py.Stmt> = buildList {
@@ -1063,7 +1067,10 @@ class PyTranslator(
                     func.pos,
                     name = testName(func.name),
                     // Tests shouldn't have parameters nor need renames.
-                    args = Py.Arguments(func.pos, listOf(Py.Arg(func.pos, arg = pyIdent(func.pos, "self")))),
+                    args = Py.Arguments(
+                        func.pos,
+                        namedArgs = listOf(Py.Arg(func.pos, arg = pyIdent(func.pos, "self"))),
+                    ),
                     // But mypy says it can't type the inside if not typed at function sig, so include return type.
                     returns = PyConstant.None.at(func.pos),
                     body = buildList {
@@ -1116,7 +1123,7 @@ class PyTranslator(
         // TODO We also need to have renamed globals for rare cases of conflict with named args.
         // TODO Is the above still a valid concern?
         // TODO Why don't method bodies currently include declareReferences?
-        val documentation = func.documentation?.prettyPleaseHelp()
+        val documentation = func.documentation.prettyPleaseHelp()
         if (documentation != null) {
             add(translateDocString(documentation, func.pos))
         }
