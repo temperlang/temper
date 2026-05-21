@@ -434,35 +434,33 @@ ComprehensionIf.operatorDefinition = `null`;
  *
  * With positional-only "/" added in https://github.com/python/cpython/blob/3.8/Grammar/Grammar
  */
-Arguments ::=
-      posOnlyArgs%PosOnlyArguments?
-    & namedArgs%Arg*", ";
-Arguments.args%`List<Arg>` = `(posOnlyArgs?.args ?: listOf()) + namedArgs`;
+Arguments ::= args%Arg*", ";
 Arguments.hasAnnotations%`Boolean` = `args.any { it.annotation != null }`;  // Lambdas can't have annotations.
 Arguments requires `argumentsValid(args), issue { argumentsIssues(args) }`;
 Arguments.operatorDefinition = `null`;
-Arguments.posOnlyArgs.default = `null`;
 
-/** Validated when used in [Arguments]. */
-PosOnlyArguments ::=
-      args%Arg+", "
-    // Trailing comma only needed when namedArgs also present, but it doesn't hurt.
-    & "," & "/" & ",";
+// ArgLike = Arg | ArgEndPosOnly | ArgStartNameOnly;
+
+// ArgEndPosOnly ::= "/";
+// ArgStartNameOnly ::= "*";
 
 Arg ::=
-      ((prefix%ArgPrefix == Star => `starToken`)
+      ((prefix%ArgPrefix == Slash => `slashToken`)
+       || (prefix%ArgPrefix == Star => `starToken`)
        || (prefix == DoubleStar => `starStarToken`)
        || ())
-    & arg%Identifier
+    & arg%Identifier?
     & ((annotation%Expr? => ":" & annotation) || ())
     & ((defaultValue%Expr? => "=" & defaultValue) || ());
 Arg requires `prefix == ArgPrefix.None || defaultValue == null`;
+Arg requires `arg != null || prefix == ArgPrefix.Slash || prefix == ArgPrefix.Star`;
+Arg requires `arg != null || (annotation == null && defaultValue == null)`;
 Arg.annotation.default = `null`;
 Arg.defaultValue.default = `null`;
 Arg.operatorDefinition = `null`;
 Arg.prefix.default = `ArgPrefix.None`;
 
-enum ArgPrefix = None | Star | DoubleStar;
+enum ArgPrefix = None | Slash | Star | DoubleStar;
 
 Call requires `callArgsValid(args), issue { callArgsIssues(args) }`;
 Decorator requires `callArgsValid(args), issue { callArgsIssues(args) }`;
@@ -488,7 +486,7 @@ CallArg {
 // Prohibit **x=y
 CallArg requires `prefix == ArgPrefix.None || arg == null`;
 // This ArgPrefix is used by Arg.
-CallArg requires `prefix != ArgPrefix.Star`;
+CallArg requires `prefix != ArgPrefix.Slash`;
 
 /** A Python identifier that does not participate in expressions. */
 Identifier(id%`PyIdentifierName`, sourceIdentifier%`TemperName?`);

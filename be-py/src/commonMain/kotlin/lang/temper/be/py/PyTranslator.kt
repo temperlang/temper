@@ -459,7 +459,7 @@ class PyTranslator(
                             name = pyIdent(member.pos, temperToPython(member.dotName.dotNameText)),
                             args = Py.Arguments(
                                 member.pos,
-                                namedArgs = listOf(
+                                args = listOf(
                                     Py.Arg(member.pos, arg = pyIdent(member.pos, "self")),
                                 ),
                             ),
@@ -956,11 +956,7 @@ class PyTranslator(
                 Py.Decorator(decPos, listOf(request(AdaptGeneratorFactory).asPyId(decPos)), emptyList(), false),
             )
             val doAwait = PyIdentifierName(pyNames.unusedName("do_await_%d"))
-            val prefixArg = listOf(Py.Arg(decPos, doAwait))
-            when (val posOnlyArgs = args.posOnlyArgs) {
-                null -> args.posOnlyArgs = Py.PosOnlyArguments(args.pos, prefixArg)
-                else -> posOnlyArgs.args = prefixArg + posOnlyArgs.args
-            }
+            args.args = listOf(Py.Arg(decPos, doAwait)) + args.args
             doAwait
         } else {
             null
@@ -976,12 +972,20 @@ class PyTranslator(
         func: TmpL.FunctionDeclarationOrMethod,
         renames: MutableList<Py.Stmt>? = null,
     ): Py.Arguments {
-        val posOnlyArgs = mutableListOf<Py.Arg>()
-        val namedArgs = mutableListOf<Py.Arg>()
+        val args = mutableListOf<Py.Arg>()
         val params = func.parameters
         // Temper semantics allow required after optional, at least for lambda blocks, so track that.
         var anyOptional = false
         val isConstructor = func is TmpL.Constructor
+        // Manage slash of positional args.
+        var slashAdded = false
+        fun addSlashIfNeeded() {
+            if (!slashAdded && args.isNotEmpty()) {
+                args.add(Py.Arg(params.pos, arg = null, prefix = Py.ArgPrefix.Slash))
+                slashAdded = true
+            }
+        }
+        // Loop params.
         params.forEachFormal { pos, id, type, kind ->
             val name = id.name
             val isOptional = anyOptional || kind == ArgKind.Optional
@@ -1019,12 +1023,11 @@ class PyTranslator(
             }.asPyId(id.pos)
             val prefix = when (kind) {
                 ArgKind.This, ArgKind.Required, ArgKind.Optional -> Py.ArgPrefix.None
-                ArgKind.Rest -> Py.ArgPrefix.Star
-            }
-            val args = when {
-                isConstructor && id != params.thisName -> namedArgs
-                prefix == Py.ArgPrefix.Star -> namedArgs
-                else -> posOnlyArgs
+                ArgKind.Rest -> {
+                    // Slash has to go before rest arg.
+                    addSlashIfNeeded()
+                    Py.ArgPrefix.Star
+                }
             }
             args.add(
                 Py.Arg(
@@ -1045,15 +1048,14 @@ class PyTranslator(
                     prefix = prefix,
                 ),
             )
+            // For constructors, add slash after the first/self param.
+            if (isConstructor) {
+                addSlashIfNeeded()
+            }
         }
-        return Py.Arguments(
-            params.pos,
-            posOnlyArgs = when {
-                posOnlyArgs.isEmpty() -> null
-                else -> Py.PosOnlyArguments(params.pos, posOnlyArgs)
-            },
-            namedArgs = namedArgs,
-        )
+        // For constructors, we'll have added the slash already, and others have positionals if any.
+        addSlashIfNeeded()
+        return Py.Arguments(params.pos, args = args)
     }
 
     private fun translateFunction(func: TmpL.FunctionDeclaration): List<Py.Stmt> = buildList {
@@ -1084,7 +1086,7 @@ class PyTranslator(
                     // Tests shouldn't have parameters nor need renames.
                     args = Py.Arguments(
                         func.pos,
-                        namedArgs = listOf(Py.Arg(func.pos, arg = pyIdent(func.pos, "self"))),
+                        args = listOf(Py.Arg(func.pos, arg = pyIdent(func.pos, "self"))),
                     ),
                     // But mypy says it can't type the inside if not typed at function sig, so include return type.
                     returns = PyConstant.None.at(func.pos),

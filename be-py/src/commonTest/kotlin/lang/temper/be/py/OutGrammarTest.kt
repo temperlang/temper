@@ -1621,7 +1621,7 @@ class OutGrammarTest {
                     l1c0c11,
                     value = Py.Lambda(
                         l1c0c11,
-                        args = Py.Arguments(p0, namedArgs = listOf()),
+                        args = Py.Arguments(p0, args = listOf()),
                         body = Py.Constant(l1c8c11, value = PyConstant.Ellipsis),
                     ),
                 ),
@@ -1655,7 +1655,7 @@ class OutGrammarTest {
                         l1c0c13,
                         args = Py.Arguments(
                             p0,
-                            namedArgs = listOf(
+                            args = listOf(
                                 Py.Arg(
                                     l1c7,
                                     arg = Py.Identifier(p0, id = PyIdentifierName("x")),
@@ -1696,7 +1696,7 @@ class OutGrammarTest {
                         l1c0c11,
                         args = Py.Arguments(
                             p0,
-                            namedArgs = listOf(
+                            args = listOf(
                                 Py.Arg(
                                     l1c7,
                                     arg = Py.Identifier(p0, id = PyIdentifierName("x")),
@@ -1737,7 +1737,7 @@ class OutGrammarTest {
                         l1c0c11,
                         args = Py.Arguments(
                             p0,
-                            namedArgs = listOf(
+                            args = listOf(
                                 Py.Arg(
                                     l1c7,
                                     arg = Py.Identifier(p0, id = PyIdentifierName("x")),
@@ -1778,7 +1778,7 @@ class OutGrammarTest {
                         l1c0c16,
                         args = Py.Arguments(
                             p0,
-                            namedArgs = listOf(
+                            args = listOf(
                                 Py.Arg(
                                     l1c7,
                                     arg = Py.Identifier(p0, id = PyIdentifierName("x")),
@@ -1824,7 +1824,7 @@ class OutGrammarTest {
                         l1c0c17,
                         args = Py.Arguments(
                             p0,
-                            namedArgs = listOf(
+                            args = listOf(
                                 Py.Arg(
                                     l1c7,
                                     arg = Py.Identifier(p0, id = PyIdentifierName("x")),
@@ -1870,7 +1870,7 @@ class OutGrammarTest {
                         l1c0c19,
                         args = Py.Arguments(
                             p0,
-                            namedArgs = listOf(
+                            args = listOf(
                                 Py.Arg(
                                     l1c8,
                                     arg = Py.Identifier(p0, id = PyIdentifierName("y")),
@@ -1916,7 +1916,7 @@ class OutGrammarTest {
                         l1c0c20,
                         args = Py.Arguments(
                             p0,
-                            namedArgs = listOf(
+                            args = listOf(
                                 Py.Arg(
                                     l1c7,
                                     arg = Py.Identifier(p0, id = PyIdentifierName("x")),
@@ -1963,7 +1963,7 @@ class OutGrammarTest {
                         l1c0c24,
                         args = Py.Arguments(
                             p0,
-                            namedArgs = listOf(
+                            args = listOf(
                                 Py.Arg(
                                     l1c7,
                                     arg = Py.Identifier(p0, id = PyIdentifierName("x")),
@@ -2015,7 +2015,7 @@ class OutGrammarTest {
                         l1c0c25,
                         args = Py.Arguments(
                             p0,
-                            namedArgs = listOf(
+                            args = listOf(
                                 Py.Arg(
                                     l1c7,
                                     arg = Py.Identifier(p0, id = PyIdentifierName("x")),
@@ -2080,7 +2080,7 @@ class OutGrammarTest {
                                     l1c5c24,
                                     args = Py.Arguments(
                                         p0,
-                                        namedArgs = listOf(
+                                        args = listOf(
                                             Py.Arg(
                                                 l1c12,
                                                 arg = Py.Identifier(p0, id = PyIdentifierName("x")),
@@ -2155,7 +2155,7 @@ class OutGrammarTest {
                                     l1c5c19,
                                     args = Py.Arguments(
                                         p0,
-                                        namedArgs = listOf(
+                                        args = listOf(
                                             Py.Arg(
                                                 l1c12,
                                                 arg = Py.Identifier(p0, id = PyIdentifierName("x")),
@@ -3804,7 +3804,7 @@ class OutGrammarTest {
                 Py.FunctionDef(
                     l1c0l2c6,
                     name = Py.Identifier(p0, id = PyIdentifierName("foo")),
-                    args = Py.Arguments(p0, namedArgs = listOf()),
+                    args = Py.Arguments(p0, args = listOf()),
                     body = listOf(Py.Pass(l2c2c6)),
                     decoratorList = listOf(),
                 ),
@@ -3836,7 +3836,7 @@ class OutGrammarTest {
                     l1c0l2c6,
                     async = true,
                     name = Py.Identifier(p0, id = PyIdentifierName("foo")),
-                    args = Py.Arguments(p0, namedArgs = listOf()),
+                    args = Py.Arguments(p0, args = listOf()),
                     body = listOf(Py.Pass(l2c2c6)),
                     decoratorList = listOf(),
                 ),
@@ -3867,7 +3867,7 @@ class OutGrammarTest {
                 Py.FunctionDef(
                     l2c0l3c6,
                     name = Py.Identifier(p0, id = PyIdentifierName("foo")),
-                    args = Py.Arguments(p0, namedArgs = listOf()),
+                    args = Py.Arguments(p0, args = listOf()),
                     body = listOf(Py.Pass(l3c2c6)),
                     decoratorList = listOf(
                         Py.Decorator(
@@ -3905,7 +3905,7 @@ class OutGrammarTest {
                 Py.FunctionDef(
                     l3c0l4c6,
                     name = Py.Identifier(p0, id = PyIdentifierName("foo")),
-                    args = Py.Arguments(p0, namedArgs = listOf()),
+                    args = Py.Arguments(p0, args = listOf()),
                     body = listOf(Py.Pass(l4c2c6)),
                     decoratorList = listOf(
                         Py.Decorator(
@@ -3949,7 +3949,7 @@ class OutGrammarTest {
                 Py.FunctionDef(
                     l2c0l3c6,
                     name = Py.Identifier(p0, id = PyIdentifierName("foo")),
-                    args = Py.Arguments(p0, namedArgs = listOf()),
+                    args = Py.Arguments(p0, args = listOf()),
                     body = listOf(Py.Pass(l3c2c6)),
                     decoratorList = listOf(
                         Py.Decorator(
@@ -3990,7 +3990,7 @@ class OutGrammarTest {
                 Py.FunctionDef(
                     l2c0l3c6,
                     name = Py.Identifier(p0, id = PyIdentifierName("foo")),
-                    args = Py.Arguments(p0, namedArgs = listOf()),
+                    args = Py.Arguments(p0, args = listOf()),
                     body = listOf(Py.Pass(l3c2c6)),
                     decoratorList = listOf(
                         Py.Decorator(
@@ -4038,7 +4038,7 @@ class OutGrammarTest {
                 Py.FunctionDef(
                     l1c0l2c6,
                     name = Py.Identifier(p0, id = PyIdentifierName("foo")),
-                    args = Py.Arguments(p0, namedArgs = listOf()),
+                    args = Py.Arguments(p0, args = listOf()),
                     body = listOf(Py.Pass(l2c2c6)),
                     decoratorList = listOf(),
                     returns = Py.Name(l1c13, id = PyIdentifierName("x")),
@@ -4072,7 +4072,7 @@ class OutGrammarTest {
                     name = Py.Identifier(p0, id = PyIdentifierName("foo")),
                     args = Py.Arguments(
                         p0,
-                        namedArgs = listOf(
+                        args = listOf(
                             Py.Arg(
                                 l1c8,
                                 arg = Py.Identifier(p0, id = PyIdentifierName("x")),
@@ -4112,7 +4112,7 @@ class OutGrammarTest {
                     name = Py.Identifier(p0, id = PyIdentifierName("foo")),
                     args = Py.Arguments(
                         p0,
-                        namedArgs = listOf(
+                        args = listOf(
                             Py.Arg(
                                 l1c8c12,
                                 arg = Py.Identifier(p0, id = PyIdentifierName("x")),
@@ -4153,7 +4153,7 @@ class OutGrammarTest {
                     name = Py.Identifier(p0, id = PyIdentifierName("foo")),
                     args = Py.Arguments(
                         p0,
-                        namedArgs = listOf(
+                        args = listOf(
                             Py.Arg(
                                 l1c8,
                                 arg = Py.Identifier(p0, id = PyIdentifierName("x")),
@@ -4198,7 +4198,7 @@ class OutGrammarTest {
                     name = Py.Identifier(p0, id = PyIdentifierName("foo")),
                     args = Py.Arguments(
                         p0,
-                        namedArgs = listOf(
+                        args = listOf(
                             Py.Arg(
                                 l1c8,
                                 arg = Py.Identifier(p0, id = PyIdentifierName("x")),
@@ -4243,7 +4243,7 @@ class OutGrammarTest {
                     name = Py.Identifier(p0, id = PyIdentifierName("foo")),
                     args = Py.Arguments(
                         p0,
-                        namedArgs = listOf(
+                        args = listOf(
                             Py.Arg(
                                 l1c9,
                                 arg = Py.Identifier(p0, id = PyIdentifierName("y")),
@@ -4288,7 +4288,7 @@ class OutGrammarTest {
                     name = Py.Identifier(p0, id = PyIdentifierName("foo")),
                     args = Py.Arguments(
                         p0,
-                        namedArgs = listOf(
+                        args = listOf(
                             Py.Arg(
                                 l1c9c13,
                                 arg = Py.Identifier(p0, id = PyIdentifierName("y")),
@@ -4335,7 +4335,7 @@ class OutGrammarTest {
                     name = Py.Identifier(p0, id = PyIdentifierName("foo")),
                     args = Py.Arguments(
                         p0,
-                        namedArgs = listOf(
+                        args = listOf(
                             Py.Arg(
                                 l1c8,
                                 arg = Py.Identifier(p0, id = PyIdentifierName("x")),
@@ -4381,7 +4381,7 @@ class OutGrammarTest {
                     name = Py.Identifier(p0, id = PyIdentifierName("foo")),
                     args = Py.Arguments(
                         p0,
-                        namedArgs = listOf(
+                        args = listOf(
                             Py.Arg(
                                 l1c8,
                                 arg = Py.Identifier(p0, id = PyIdentifierName("x")),
@@ -4427,7 +4427,7 @@ class OutGrammarTest {
                     name = Py.Identifier(p0, id = PyIdentifierName("foo")),
                     args = Py.Arguments(
                         p0,
-                        namedArgs = listOf(
+                        args = listOf(
                             Py.Arg(
                                 l1c8,
                                 arg = Py.Identifier(p0, id = PyIdentifierName("x")),
@@ -4478,7 +4478,7 @@ class OutGrammarTest {
                     name = Py.Identifier(p0, id = PyIdentifierName("foo")),
                     args = Py.Arguments(
                         p0,
-                        namedArgs = listOf(
+                        args = listOf(
                             Py.Arg(
                                 l1c8,
                                 arg = Py.Identifier(p0, id = PyIdentifierName("x")),
@@ -4830,7 +4830,7 @@ class OutGrammarTest {
                             name = Py.Identifier(p0, id = PyIdentifierName("__enter__")),
                             args = Py.Arguments(
                                 p0,
-                                namedArgs = listOf(
+                                args = listOf(
                                     Py.Arg(
                                         l3c16c20,
                                         arg = Py.Identifier(p0, id = PyIdentifierName("self")),
@@ -4848,7 +4848,7 @@ class OutGrammarTest {
                             name = Py.Identifier(p0, id = PyIdentifierName("brk")),
                             args = Py.Arguments(
                                 p0,
-                                namedArgs = listOf(
+                                args = listOf(
                                     Py.Arg(
                                         l5c10c14,
                                         arg = Py.Identifier(p0, id = PyIdentifierName("self")),
@@ -4866,7 +4866,7 @@ class OutGrammarTest {
                             name = Py.Identifier(p0, id = PyIdentifierName("__exit__")),
                             args = Py.Arguments(
                                 p0,
-                                namedArgs = listOf(
+                                args = listOf(
                                     Py.Arg(
                                         l7c15c19,
                                         arg = Py.Identifier(p0, id = PyIdentifierName("self")),
@@ -4995,7 +4995,7 @@ class OutGrammarTest {
                             name = Py.Identifier(p0, id = PyIdentifierName("__init__")),
                             args = Py.Arguments(
                                 p0,
-                                namedArgs = listOf(
+                                args = listOf(
                                     Py.Arg(
                                         l3c15c19,
                                         arg = Py.Identifier(p0, id = PyIdentifierName("self")),
@@ -5044,7 +5044,7 @@ class OutGrammarTest {
                             name = Py.Identifier(p0, id = PyIdentifierName("__getitem__")),
                             args = Py.Arguments(
                                 p0,
-                                namedArgs = listOf(
+                                args = listOf(
                                     Py.Arg(
                                         l6c18c22,
                                         arg = Py.Identifier(p0, id = PyIdentifierName("self")),
@@ -5097,7 +5097,7 @@ class OutGrammarTest {
                             name = Py.Identifier(p0, id = PyIdentifierName("__bool__")),
                             args = Py.Arguments(
                                 p0,
-                                namedArgs = listOf(
+                                args = listOf(
                                     Py.Arg(
                                         l8c15c19,
                                         arg = Py.Identifier(p0, id = PyIdentifierName("self")),
@@ -5127,7 +5127,7 @@ class OutGrammarTest {
                             name = Py.Identifier(p0, id = PyIdentifierName("__repr__")),
                             args = Py.Arguments(
                                 p0,
-                                namedArgs = listOf(
+                                args = listOf(
                                     Py.Arg(
                                         l10c15c19,
                                         arg = Py.Identifier(p0, id = PyIdentifierName("self")),

@@ -410,7 +410,7 @@ class ExtraGrammarTests {
         )
     }
 
-    private val noArgs get() = Py.Arguments(p0, namedArgs = listOf())
+    private val noArgs get() = Py.Arguments(p0, args = listOf())
 
     @Test
     fun funDef1() {
