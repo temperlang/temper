@@ -229,7 +229,7 @@ modeling.
 
 <a name="type&#45;Int32&#45;sig" class="snippet-anchor-name"></a>
 
-*Int32* `extends` [*AnyValue*](#type-AnyValue), [*MapKey*](#type-MapKey), [*Imu*](#type-Imu)
+*Int32* `extends` [*AnyValue*](#type-AnyValue), [*MapKey*](#type-MapKey)
 
 <!-- /snippet: type/Int32/sig -->
 
@@ -1968,7 +1968,7 @@ See [Multi-quoted strings](#syntax-multi-quoted-strings) for more details on tha
 
 <a name="type&#45;String&#45;sig" class="snippet-anchor-name"></a>
 
-*String* `extends` [*AnyValue*](#type-AnyValue), [*MapKey*](#type-MapKey), [*Imu*](#type-Imu)
+*String* `extends` [*AnyValue*](#type-AnyValue), [*MapKey*](#type-MapKey)
 
 <!-- /snippet: type/String/sig -->
 
@@ -3081,7 +3081,7 @@ of the native character size.
 
 <a name="type&#45;StringIndex&#45;sig" class="snippet-anchor-name"></a>
 
-*StringIndex* `extends` [*AnyValue*](#type-AnyValue), [*StringIndexOption*](#type-StringIndexOption), [*Imu*](#type-Imu)
+*StringIndex* `extends` [*AnyValue*](#type-AnyValue), [*StringIndexOption*](#type-StringIndexOption)
 
 <!-- /snippet: type/StringIndex/sig -->
 
@@ -3168,7 +3168,7 @@ that represents the failure to find a valid string index.
 
 <a name="type&#45;NoStringIndex&#45;sig" class="snippet-anchor-name"></a>
 
-*NoStringIndex* `extends` [*AnyValue*](#type-AnyValue), [*StringIndexOption*](#type-StringIndexOption), [*Imu*](#type-Imu)
+*NoStringIndex* `extends` [*AnyValue*](#type-AnyValue), [*StringIndexOption*](#type-StringIndexOption)
 
 <!-- /snippet: type/NoStringIndex/sig -->
 
@@ -5301,7 +5301,7 @@ user-implementable in the future.
 
 <a name="type&#45;MapKey&#45;sig" class="snippet-anchor-name"></a>
 
-*MapKey* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)
+*MapKey* `extends` [*AnyValue*](#type-AnyValue), [*Imu*](#type-Imu), [*Equatable*](#type-Equatable)
 
 <!-- /snippet: type/MapKey/sig -->
 
