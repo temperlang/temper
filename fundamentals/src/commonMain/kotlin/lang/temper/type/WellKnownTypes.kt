@@ -357,7 +357,6 @@ object WellKnownTypes {
         generatorResultTypeDefinition extends partialImuType
         globalConsoleTypeDefinition extends MkType.nominal(consoleTypeDefinition)
         intTypeDefinition extends mapKeyType
-        intTypeDefinition extends imuType
         int64TypeDefinition extends equatableType
         int64TypeDefinition extends imuType
         listTypeDefinition extends MkType.nominal(
@@ -369,6 +368,7 @@ object WellKnownTypes {
             listedTypeDefinition,
             listOf(MkType.nominal(listBuilderTypeDefinition.formals[0])),
         )
+        mapKeyTypeDefinition extends imuType
         mapTypeDefinition extends MkType.nominal(
             mappedTypeDefinition,
             mapTypeDefinition.typeParameters.map {
@@ -387,7 +387,6 @@ object WellKnownTypes {
         mapBuilderTypeDefinition.formals[0] extends mapKeyType
         mapKeyTypeDefinition extends equatableType
         noStringIndexTypeDefinition extends stringIndexOptionType
-        noStringIndexTypeDefinition extends imuType
         nullTypeDefinition extends equatableType
         nullTypeDefinition extends imuType
         safeGeneratorTypeDefinition extends MkType.nominal(
@@ -399,9 +398,7 @@ object WellKnownTypes {
             it extends MkType.nominal(safeGeneratorTypeDefinition, listOf(tYield))
         }
         stringTypeDefinition extends mapKeyType
-        stringTypeDefinition extends imuType
         stringIndexTypeDefinition extends stringIndexOptionType
-        stringIndexTypeDefinition extends imuType
         stringIndexOptionTypeDefinition extends equatableType
         stringIndexOptionTypeDefinition extends imuType
         valueResultTypeDefinition extends MkType.nominal(
