@@ -445,7 +445,7 @@ Arguments.posOnlyArgs.default = `null`;
 
 /** Validated when used in [Arguments]. */
 PosOnlyArguments ::=
-      args%Arg*", "
+      args%Arg+", "
     // Trailing comma only needed when namedArgs also present, but it doesn't hurt.
     & "," & "/" & ",";
 

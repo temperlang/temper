@@ -29,14 +29,35 @@ class PyBackendTest {
             |U_3 = TypeVar1('U_3', bound = Any0)
             |class Thing(Generic2[T_1]):
             |    __slots__ = ()
-            |    def identity(this_2, u_11: 'U_3', f_12: 'Callable3[[U_3], T_1]') -> 'T_1':
+            |    def identity(this_2, u_11: 'U_3', f_12: 'Callable3[[U_3], T_1]', /,) -> 'T_1':
             |        return f_12(u_11)
-            |    def __init__(this_5) -> None:
+            |    def __init__(this, /,) -> None:
             |        pass
             |T_0 = TypeVar1('T_0', bound = Any0)
-            |def identity(t_8: 'T_0') -> 'T_0':
+            |def identity(t_8: 'T_0', /,) -> 'T_0':
             |    "They're the same thing!\n\nt__0: T__0\n  The thing to return\n"
             |    return t_8
+            |
+        """.trimMargin(),
+    )
+
+    @Test
+    fun simpleConstructor() = assertGeneratedCode(
+        input = """
+            |export class Hi(public there: String, private yall: String) {}
+        """.trimMargin(),
+        want = """
+            |from builtins import str as str0
+            |class Hi:
+            |    there_2: 'str0'
+            |    yall_3: 'str0'
+            |    __slots__ = ('there_2', 'yall_3')
+            |    def __init__(this, /, there: 'str0', yall: 'str0') -> None:
+            |        this.there_2 = there
+            |        this.yall_3 = yall
+            |    @property
+            |    def there(this_10, /,) -> 'str0':
+            |        return this_10.there_2
             |
         """.trimMargin(),
     )
@@ -67,16 +88,16 @@ class PyBackendTest {
             |class IntMaker:
             |    radix_7: 'int3'
             |    __slots__ = ('radix_7',)
-            |    def int64_to_int(this_0, int_9: 'int64_23') -> 'int3':
+            |    def int64_to_int(this_0, int_9: 'int64_23', /,) -> 'int3':
             |        return int64_to_int32_35(int_9)
-            |    def string_to_int(this_1, string_12: 'str4') -> 'int3':
+            |    def string_to_int(this_1, string_12: 'str4', /,) -> 'int3':
             |        return string_to_int32_36(string_12, this_1.radix_7)
-            |    def __init__(this_2, radix_15: 'int3') -> None:
-            |        this_2.radix_7 = radix_15
+            |    def __init__(this, /, radix: 'int3') -> None:
+            |        this.radix_7 = radix
             |    @property
-            |    def radix(this_24) -> 'int3':
+            |    def radix(this_24, /,) -> 'int3':
             |        return this_24.radix_7
-            |def crazy_sum(int_maker_16: 'IntMaker', int_17: 'int64_23', string_18: 'str4') -> 'int3':
+            |def crazy_sum(int_maker_16: 'IntMaker', int_17: 'int64_23', string_18: 'str4', /,) -> 'int3':
             |    int_int_20: 'int3'
             |    int_int_20 = int_maker_16.int64_to_int(int_17)
             |    string_int_21: 'int3'
@@ -192,10 +213,10 @@ class PyBackendTest {
             |class J(I):
             |    x_3: 'int2'
             |    __slots__ = ('x_3',)
-            |    def __init__(this_0, x_5: 'int2') -> None:
-            |        this_0.x_3 = x_5
+            |    def __init__(this, /, x: 'int2') -> None:
+            |        this.x_3 = x
             |    @property
-            |    def x(this_8) -> 'int2':
+            |    def x(this_8, /,) -> 'int2':
             |        return this_8.x_3
             |
         """.trimMargin(),
@@ -232,7 +253,7 @@ class PyBackendTest {
             |from typing import Union as Union2
             |from temper_core import int_add as int_add0
             |int_add_13 = int_add0
-            |def something(i_1: 'int1', j_5: 'Union2[int1, None]' = None, k_7: 'Union2[int1, None]' = None) -> 'int1':
+            |def something(i_1: 'int1', j_5: 'Union2[int1, None]' = None, k_7: 'Union2[int1, None]' = None, /,) -> 'int1':
             |    _j_5: 'Union2[int1, None]' = j_5
             |    _k_7: 'Union2[int1, None]' = k_7
             |    j_2: 'int1'
@@ -264,21 +285,21 @@ class PyBackendTest {
             |from temper_core import cast_by_type as cast_by_type0
             |class CJsonAdapter_8(JsonAdapter['C']):
             |    __slots__ = ()
-            |    def encode_to_json(this_21, x_16: 'C', p_17: 'JsonProducer') -> 'None':
+            |    def encode_to_json(this_21, x_16: 'C', p_17: 'JsonProducer', /,) -> 'None':
             |        x_16.encode_to_json(p_17)
-            |    def decode_from_json(this_22, t_18: 'JsonSyntaxTree', ic_19: 'InterchangeContext') -> 'C':
+            |    def decode_from_json(this_22, t_18: 'JsonSyntaxTree', ic_19: 'InterchangeContext', /,) -> 'C':
             |        return C.decode_from_json(t_18, ic_19)
-            |    def __init__(this_23) -> None:
+            |    def __init__(this, /,) -> None:
             |        pass
             |class C:
             |    __slots__ = ()
-            |    def __init__(this_0) -> None:
+            |    def __init__(this, /,) -> None:
             |        pass
-            |    def encode_to_json(this_20, p_15: 'JsonProducer') -> 'None':
+            |    def encode_to_json(this_20, p_15: 'JsonProducer', /,) -> 'None':
             |        p_15.start_object()
             |        p_15.end_object()
             |    @staticmethod
-            |    def decode_from_json(t_5: 'JsonSyntaxTree', ic_6: 'InterchangeContext') -> 'C':
+            |    def decode_from_json(t_5: 'JsonSyntaxTree', ic_6: 'InterchangeContext', /,) -> 'C':
             |        obj_7: 'JsonObject'
             |        obj_7 = cast_by_type0(t_5, JsonObject)
             |        return C()
@@ -328,10 +349,10 @@ class PyBackendTest {
             |            class A:
             |                x_2: 'int0'
             |                __slots__ = ('x_2',)
-            |                def __init__(this_0, x_4: 'int0') -> None:
-            |                    this_0.x_2 = x_4
+            |                def __init__(this, /, x: 'int0') -> None:
+            |                    this.x_2 = x
             |                @property
-            |                def x(this_7) -> 'int0':
+            |                def x(this_7, /,) -> 'int0':
             |                    return this_7.x_2
             |
             |            ```
@@ -391,56 +412,56 @@ class PyBackendTest {
             |    z_27: 'int2'
             |    __slots__ = ('y_26', 'z_27')
             |    @property
-            |    def p(this_0) -> 'int2':
+            |    def p(this_0, /,) -> 'int2':
             |        return int_sub_110(this_0.y_26, 1)
-            |    def _set_p(this_1, new_p_31: 'int2') -> 'None':
+            |    def _set_p(this_1, new_p_31: 'int2', /,) -> 'None':
             |        t_90: 'int2' = int_add_111(new_p_31, 1)
             |        this_1.y_26 = t_90
             |    @property
-            |    def q(this_113) -> 'Any3':
+            |    def q(this_113, /,) -> 'Any3':
             |        raise AttributeError4('q getter unavailable')
             |    @q.setter
-            |    def q(this_2, new_q_34: 'int2') -> 'None':
+            |    def q(this_2, new_q_34: 'int2', /,) -> 'None':
             |        this_2._set_p(new_q_34)
             |    @property
-            |    def r(this_3) -> 'int2':
+            |    def r(this_3, /,) -> 'int2':
             |        raise AttributeError4('r getter unavailable')
-            |    def _get_r(this_3) -> 'int2':
+            |    def _get_r(this_3, /,) -> 'int2':
             |        return this_3.p
             |    @r.setter
-            |    def r(this_4, new_r_39: 'int2') -> 'None':
+            |    def r(this_4, new_r_39: 'int2', /,) -> 'None':
             |        this_4._set_p(new_r_39)
-            |    def _get_s(this_5) -> 'int2':
+            |    def _get_s(this_5, /,) -> 'int2':
             |        return this_5.p
-            |    def incr(this_6) -> 'int2':
+            |    def incr(this_6, /,) -> 'int2':
             |        return_20: 'int2'
             |        return_20 = int_add_111(this_6._get_r(), 1)
             |        this_6._set_p(return_20)
             |        return return_20
-            |    def decr_45(this_7) -> 'int2':
+            |    def decr_45(this_7, /,) -> 'int2':
             |        return_21: 'int2'
             |        return_21 = int_sub_110(this_7._get_r(), 1)
             |        this_7._set_p(return_21)
             |        return return_21
-            |    def __init__(this_12) -> None:
-            |        this_12.y_26 = 1
-            |        this_12.z_27 = 2
+            |    def __init__(this, /,) -> None:
+            |        this.y_26 = 1
+            |        this.z_27 = 2
             |    @property
-            |    def z(this_62) -> 'int2':
+            |    def z(this_62, /,) -> 'int2':
             |        return this_62.z_27
             |    @z.setter
-            |    def z(this_66, new_z_65: 'int2') -> 'None':
+            |    def z(this_66, new_z_65: 'int2', /,) -> 'None':
             |        this_66.z_27 = new_z_65
             |class D:
             |    _i: ClassVar5['int2']
             |    __slots__ = ()
             |    @staticmethod
-            |    def f_49(j_50: 'int2') -> 'int2':
+            |    def f_49(j_50: 'int2', /,) -> 'int2':
             |        return int_add_111(D._i, j_50)
             |    @staticmethod
-            |    def g(n_53: 'int2') -> 'int2':
+            |    def g(n_53: 'int2', /,) -> 'int2':
             |        return int_add_111(D.f_49(n_53), n_53)
-            |    def __init__(this_22) -> None:
+            |    def __init__(this, /,) -> None:
             |        pass
             |D._i = 1
             |
@@ -463,7 +484,7 @@ class PyBackendTest {
             |from builtins import bool as bool2, RuntimeError as RuntimeError4, isinstance as isinstance6
             |from temper_core import cast_by_type as cast_by_type5, list_get as list_get0
             |list_get_14 = list_get0
-            |def probe(thing_1: 'Any1') -> 'bool2':
+            |def probe(thing_1: 'Any1', /,) -> 'bool2':
             |    return_0: 'bool2'
             |    things_3: 'Sequence3[Any1]'
             |    if thing_1 is None:
@@ -604,13 +625,13 @@ class PyBackendTest {
             |          content:
             |            ```
             |            from builtins import int as int0, bool as bool1
-            |            def f1(a_4: 'int0', b_5: 'int0') -> 'bool1':
+            |            def f1(a_4: 'int0', b_5: 'int0', /,) -> 'bool1':
             |                return a_4 < b_5
-            |            def f2(a_7: 'int0', b_8: 'int0') -> 'bool1':
+            |            def f2(a_7: 'int0', b_8: 'int0', /,) -> 'bool1':
             |                return a_7 >= b_8
-            |            def f3(a_10: 'int0', b_11: 'int0') -> 'bool1':
+            |            def f3(a_10: 'int0', b_11: 'int0', /,) -> 'bool1':
             |                return a_10 <= b_11
-            |            def f4(a_13: 'int0') -> 'bool1':
+            |            def f4(a_13: 'int0', /,) -> 'bool1':
             |                return a_13 > -1
             |
             |            ```

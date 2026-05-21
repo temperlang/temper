@@ -976,10 +976,12 @@ class PyTranslator(
         func: TmpL.FunctionDeclarationOrMethod,
         renames: MutableList<Py.Stmt>? = null,
     ): Py.Arguments {
-        val args = mutableListOf<Py.Arg>()
+        val posOnlyArgs = mutableListOf<Py.Arg>()
+        val namedArgs = mutableListOf<Py.Arg>()
         val params = func.parameters
         // Temper semantics allow required after optional, at least for lambda blocks, so track that.
         var anyOptional = false
+        val isConstructor = func is TmpL.Constructor
         params.forEachFormal { pos, id, type, kind ->
             val name = id.name
             val isOptional = anyOptional || kind == ArgKind.Optional
@@ -1015,6 +1017,15 @@ class PyTranslator(
             } else {
                 pyNames.name(name)
             }.asPyId(id.pos)
+            val prefix = when (kind) {
+                ArgKind.This, ArgKind.Required, ArgKind.Optional -> Py.ArgPrefix.None
+                ArgKind.Rest -> Py.ArgPrefix.Star
+            }
+            val args = when {
+                isConstructor && id != params.thisName -> namedArgs
+                prefix == Py.ArgPrefix.Star -> namedArgs
+                else -> posOnlyArgs
+            }
             args.add(
                 Py.Arg(
                     pos,
@@ -1031,14 +1042,18 @@ class PyTranslator(
                     } else {
                         null
                     },
-                    prefix = when (kind) {
-                        ArgKind.This, ArgKind.Required, ArgKind.Optional -> Py.ArgPrefix.None
-                        ArgKind.Rest -> Py.ArgPrefix.Star
-                    },
+                    prefix = prefix,
                 ),
             )
         }
-        return Py.Arguments(params.pos, namedArgs = args)
+        return Py.Arguments(
+            params.pos,
+            posOnlyArgs = when {
+                posOnlyArgs.isEmpty() -> null
+                else -> Py.PosOnlyArguments(params.pos, posOnlyArgs)
+            },
+            namedArgs = namedArgs,
+        )
     }
 
     private fun translateFunction(func: TmpL.FunctionDeclaration): List<Py.Stmt> = buildList {
