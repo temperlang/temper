@@ -5882,123 +5882,6 @@ this in the future.
 
 <!-- /snippet: type/Equatable -->
 
-<!-- snippet: type/Imu -->
-
-<a name="type&#45;Imu" class="snippet-anchor-name"></a>
-
-## *interface Imu*
-
-<!-- snippet: type/Imu/commentary -->
-
-<a name="type&#45;Imu&#45;commentary" class="snippet-anchor-name"></a>
-
-Marker interface for types that must be deeply immutable.
-
-<!-- /snippet: type/Imu/commentary -->
-
-<!-- snippet: type/Imu/sig -->
-
-<a name="type&#45;Imu&#45;sig" class="snippet-anchor-name"></a>
-
-*Imu* `extends` [*AnyValue*](#type-AnyValue)
-
-<!-- /snippet: type/Imu/sig -->
-
-<blockquote markdown="1" class="indent-only">
-
-<!-- snippet: type/Imu/members -->
-
-<a name="type&#45;Imu&#45;members" class="snippet-anchor-name"></a>
-
-<!-- snippet: type/Imu/typeFormals -->
-
-<a name="type&#45;Imu&#45;typeFormals" class="snippet-anchor-name"></a>
-
-<!-- /snippet: type/Imu/typeFormals -->
-
-<!-- snippet: type/Imu/properties -->
-
-<a name="type&#45;Imu&#45;properties" class="snippet-anchor-name"></a>
-
-<!-- /snippet: type/Imu/properties -->
-
-<!-- snippet: type/Imu/methods -->
-
-<a name="type&#45;Imu&#45;methods" class="snippet-anchor-name"></a>
-
-<!-- /snippet: type/Imu/methods -->
-
-<!-- snippet: type/Imu/statics -->
-
-<a name="type&#45;Imu&#45;statics" class="snippet-anchor-name"></a>
-
-<!-- /snippet: type/Imu/statics -->
-
-<!-- /snippet: type/Imu/members -->
-
-</blockquote>
-
-<!-- /snippet: type/Imu -->
-
-<!-- snippet: type/PartialImu -->
-
-<a name="type&#45;PartialImu" class="snippet-anchor-name"></a>
-
-## *interface PartialImu*
-
-<!-- snippet: type/PartialImu/commentary -->
-
-<a name="type&#45;PartialImu&#45;commentary" class="snippet-anchor-name"></a>
-
-Marker interface for types that must be deeply immutable when
-their actual type parameters are deeply immutable.
-
-<!-- /snippet: type/PartialImu/commentary -->
-
-<!-- snippet: type/PartialImu/sig -->
-
-<a name="type&#45;PartialImu&#45;sig" class="snippet-anchor-name"></a>
-
-*PartialImu* `extends` [*AnyValue*](#type-AnyValue)
-
-<!-- /snippet: type/PartialImu/sig -->
-
-<blockquote markdown="1" class="indent-only">
-
-<!-- snippet: type/PartialImu/members -->
-
-<a name="type&#45;PartialImu&#45;members" class="snippet-anchor-name"></a>
-
-<!-- snippet: type/PartialImu/typeFormals -->
-
-<a name="type&#45;PartialImu&#45;typeFormals" class="snippet-anchor-name"></a>
-
-<!-- /snippet: type/PartialImu/typeFormals -->
-
-<!-- snippet: type/PartialImu/properties -->
-
-<a name="type&#45;PartialImu&#45;properties" class="snippet-anchor-name"></a>
-
-<!-- /snippet: type/PartialImu/properties -->
-
-<!-- snippet: type/PartialImu/methods -->
-
-<a name="type&#45;PartialImu&#45;methods" class="snippet-anchor-name"></a>
-
-<!-- /snippet: type/PartialImu/methods -->
-
-<!-- snippet: type/PartialImu/statics -->
-
-<a name="type&#45;PartialImu&#45;statics" class="snippet-anchor-name"></a>
-
-<!-- /snippet: type/PartialImu/statics -->
-
-<!-- /snippet: type/PartialImu/members -->
-
-</blockquote>
-
-<!-- /snippet: type/PartialImu -->
-
 <!-- snippet: type/Null -->
 
 <a name="type&#45;Null" class="snippet-anchor-name"></a>
@@ -6950,6 +6833,129 @@ A result produced from [`Generator.next`](#type-Generator-method-next) when ther
 </blockquote>
 
 <!-- /snippet: type/DoneResult -->
+
+</section>
+
+## Verified Immutability
+
+<section markdown="1">
+
+<!-- snippet: type/Imu -->
+
+<a name="type&#45;Imu" class="snippet-anchor-name"></a>
+
+### *interface Imu*
+
+<!-- snippet: type/Imu/commentary -->
+
+<a name="type&#45;Imu&#45;commentary" class="snippet-anchor-name"></a>
+
+Marker interface for types that must be deeply immutable.
+
+<!-- /snippet: type/Imu/commentary -->
+
+<!-- snippet: type/Imu/sig -->
+
+<a name="type&#45;Imu&#45;sig" class="snippet-anchor-name"></a>
+
+*Imu* `extends` [*AnyValue*](#type-AnyValue)
+
+<!-- /snippet: type/Imu/sig -->
+
+<blockquote markdown="1" class="indent-only">
+
+<!-- snippet: type/Imu/members -->
+
+<a name="type&#45;Imu&#45;members" class="snippet-anchor-name"></a>
+
+<!-- snippet: type/Imu/typeFormals -->
+
+<a name="type&#45;Imu&#45;typeFormals" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/Imu/typeFormals -->
+
+<!-- snippet: type/Imu/properties -->
+
+<a name="type&#45;Imu&#45;properties" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/Imu/properties -->
+
+<!-- snippet: type/Imu/methods -->
+
+<a name="type&#45;Imu&#45;methods" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/Imu/methods -->
+
+<!-- snippet: type/Imu/statics -->
+
+<a name="type&#45;Imu&#45;statics" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/Imu/statics -->
+
+<!-- /snippet: type/Imu/members -->
+
+</blockquote>
+
+<!-- /snippet: type/Imu -->
+
+<!-- snippet: type/PartialImu -->
+
+<a name="type&#45;PartialImu" class="snippet-anchor-name"></a>
+
+### *interface PartialImu*
+
+<!-- snippet: type/PartialImu/commentary -->
+
+<a name="type&#45;PartialImu&#45;commentary" class="snippet-anchor-name"></a>
+
+Marker interface for types that must be deeply immutable when
+their actual type parameters are deeply immutable.
+
+<!-- /snippet: type/PartialImu/commentary -->
+
+<!-- snippet: type/PartialImu/sig -->
+
+<a name="type&#45;PartialImu&#45;sig" class="snippet-anchor-name"></a>
+
+*PartialImu* `extends` [*AnyValue*](#type-AnyValue)
+
+<!-- /snippet: type/PartialImu/sig -->
+
+<blockquote markdown="1" class="indent-only">
+
+<!-- snippet: type/PartialImu/members -->
+
+<a name="type&#45;PartialImu&#45;members" class="snippet-anchor-name"></a>
+
+<!-- snippet: type/PartialImu/typeFormals -->
+
+<a name="type&#45;PartialImu&#45;typeFormals" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/PartialImu/typeFormals -->
+
+<!-- snippet: type/PartialImu/properties -->
+
+<a name="type&#45;PartialImu&#45;properties" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/PartialImu/properties -->
+
+<!-- snippet: type/PartialImu/methods -->
+
+<a name="type&#45;PartialImu&#45;methods" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/PartialImu/methods -->
+
+<!-- snippet: type/PartialImu/statics -->
+
+<a name="type&#45;PartialImu&#45;statics" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/PartialImu/statics -->
+
+<!-- /snippet: type/PartialImu/members -->
+
+</blockquote>
+
+<!-- /snippet: type/PartialImu -->
 
 </section>
 

@@ -63,10 +63,6 @@ start with a lower-case letter: `false`&check; ; not `False`&cross;.
 
 ⎀ type/Equatable
 
-⎀ type/Imu
-
-⎀ type/PartialImu
-
 ⎀ type/Null
 
 ⎀ type/Empty
@@ -90,6 +86,16 @@ start with a lower-case letter: `false`&check; ; not `False`&cross;.
 ⎀ type/ValueResult
 
 ⎀ type/DoneResult
+
+</section>
+
+## Verified Immutability
+
+<section markdown="1">
+
+⎀ type/Imu
+
+⎀ type/PartialImu
 
 </section>
 

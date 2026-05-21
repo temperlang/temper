@@ -706,7 +706,7 @@ class RustTranslator(
         // Gather up instance methods by name so we can coordinate with supertypes as needed.
         val instanceMethods = associateInstanceMethods(decl)
         val isInterface = decl.kind == TmpL.TypeDeclarationKind.Interface
-        sups@ for ((subShape, sup) in decl.typeShape.allInterfaces(allowStart = true)) { //
+        sups@ for ((subShape, sup) in decl.typeShape.allInterfaces(allowStart = true)) {
             // Only handle type shapes, and only unique ones.
             val supShape = (sup.definition as? TypeShape) ?: continue@sups
             supShape.isFiction() && continue@sups
@@ -1007,17 +1007,15 @@ class RustTranslator(
     private fun buildBounds(typeParam: TmpL.TypeFormal): List<Rust.TypeParamBound> {
         val bounds = buildList {
             bounds@ for (bound in typeParam.upperBounds) {
-                when (bound.typeName.sourceDefinition) {
+                when (val boundDef = bound.typeName.sourceDefinition) {
                     // Special cases. TODO Others?
-                    WellKnownTypes.anyValueTypeDefinition,
-                    WellKnownTypes.imuTypeDefinition,
-                    WellKnownTypes.partialImuTypeDefinition,
-                    -> {}
+                    WellKnownTypes.anyValueTypeDefinition -> {}
                     WellKnownTypes.equatableTypeDefinition -> add(PARTIAL_EQ_NAME.toId(bound.pos))
                     WellKnownTypes.mapKeyTypeDefinition -> {
                         add(EQ_NAME.toId(bound.pos))
                         add(HASH_NAME.toId(bound.pos))
                     }
+                    else if boundDef.isFiction() -> {}
                     // Translate general cases to trait names.
                     else -> translateTypeAsTraitName(bound).also { add(it) }
                 }

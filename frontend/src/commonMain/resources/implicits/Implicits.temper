@@ -348,7 +348,7 @@ export class PromiseBuilder<R extends AnyValue> {
  * Limited at present to String and Int keys but expected to be
  * user-implementable in the future.
  */
-export /*sealed*/ interface MapKey extends Equatable {}
+export /*sealed*/ interface MapKey extends Equatable, Imu {}
 
 /**
  * A *String* is a chunk of textual content.
@@ -372,7 +372,7 @@ export /*sealed*/ interface MapKey extends Equatable {}
  * ⎀ syntax/string/interpolation -heading
  */
 @mayDowncastTo(false) // Confusable with scalars on many dynlang backends, and dates in older PLs
-export class String extends MapKey, Imu {
+export class String extends MapKey {
   private let content: builtins.String;
 
   /**
@@ -666,7 +666,7 @@ export sealed interface StringIndexOption extends Equatable, Imu {
  * that represents the failure to find a valid string index.
  */
 @connected("NoStringIndex")
-export class NoStringIndex extends StringIndexOption, Imu {
+export class NoStringIndex extends StringIndexOption {
   @connected("NoStringIndex::constructor")
   private constructor() {}
 }
@@ -705,7 +705,7 @@ export class NoStringIndex extends StringIndexOption, Imu {
  * of the native character size.
  */
 @connected("StringIndex")
-export class StringIndex extends StringIndexOption, Imu {
+export class StringIndex extends StringIndexOption {
   /** The singleton [snippet/type/NoStringIndex] value */
   @connected("StringIndex::none")
   public static let none: NoStringIndex;
@@ -1471,7 +1471,7 @@ export let Int = Int32;
  * ⎀ syntax/int32/examples
  */
 @mayDowncastTo(false) // Confusable with scalars on many dynlang backends
-export class Int32 extends MapKey, Imu {
+export class Int32 extends MapKey {
   private let content: builtins.Int;
 
   @connected("Int32::toFloat64")
