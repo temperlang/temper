@@ -439,11 +439,6 @@ Arguments.hasAnnotations%`Boolean` = `args.any { it.annotation != null }`;  // L
 Arguments requires `argumentsValid(args), issue { argumentsIssues(args) }`;
 Arguments.operatorDefinition = `null`;
 
-// ArgLike = Arg | ArgEndPosOnly | ArgStartNameOnly;
-
-// ArgEndPosOnly ::= "/";
-// ArgStartNameOnly ::= "*";
-
 Arg ::=
       ((prefix%ArgPrefix == Slash => `slashToken`)
        || (prefix%ArgPrefix == Star => `starToken`)
