@@ -92,7 +92,7 @@ Here's just enough of a Date type to get us started.
      */
     @json
     @connected("Date")
-    export class Date {
+    export class Date extends Imu {
       /** The year.  1900 means 1900. */
       @connected("Date::getYear")
       public year: Int;

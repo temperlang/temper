@@ -757,7 +757,7 @@ class DisAmbiguateStageTest {
                 ]
               },
               Empty: {
-                supers: ["AnyValue__0", "Equatable__0"],
+                supers: ["AnyValue__0", "Equatable__0", "Imu__0"],
                 methods: [
                   {
                     name: "constructor__0",
