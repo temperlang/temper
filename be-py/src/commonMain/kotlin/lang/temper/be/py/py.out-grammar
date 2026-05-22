@@ -460,6 +460,10 @@ Arg.defaultValue.default = `null`;
 Arg.operatorDefinition = `null`;
 Arg.prefix.default = `ArgPrefix.None`;
 
+/**
+ * [Slash] is standalone rather than a prefix, and [Star] can go either way, but
+ * keeping them all together still helps with organization.
+ */
 enum ArgPrefix = None | Slash | Star | DoubleStar;
 
 Call requires `callArgsValid(args), issue { callArgsIssues(args) }`;

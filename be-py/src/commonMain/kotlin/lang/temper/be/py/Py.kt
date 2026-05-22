@@ -41,6 +41,10 @@ object Py {
     }
     sealed class BaseData : BaseOutData<Data>(), Data
 
+    /**
+     * [Slash] is standalone rather than a prefix, and [Star] can go either way, but
+     * keeping them all together still helps with organization.
+     */
     enum class ArgPrefix : FormattableEnum {
         None,
         Slash,
