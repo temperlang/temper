@@ -978,12 +978,13 @@ class PyTranslator(
         var anyOptional = false
         val isConstructor = func is TmpL.Constructor
         // Manage slash of positional args.
-        var slashAdded = false
+        var slashAddedIfNeeded = false
         fun addSlashIfNeeded() {
-            if (!slashAdded && args.isNotEmpty()) {
+            if (!slashAddedIfNeeded && args.isNotEmpty()) {
                 args.add(Py.Arg(params.pos, arg = null, prefix = Py.ArgPrefix.Slash))
-                slashAdded = true
             }
+            // Track either way since we might just skip it if wanted early, such as for rest param at front.
+            slashAddedIfNeeded = true
         }
         // Loop params.
         params.forEachFormal { pos, id, type, kind ->
