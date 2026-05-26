@@ -3133,7 +3133,10 @@ class RustTranslator(
         // Otherwise look up well-known types or use the user-defined type.
         return when (def.sourceLocation) {
             ImplicitsCodeLocation -> when (def) {
-                WellKnownTypes.anyValueTypeDefinition -> OutName(ANY_NAME, def.name)
+                WellKnownTypes.anyValueTypeDefinition,
+                WellKnownTypes.imuTypeDefinition,
+                WellKnownTypes.partialImuTypeDefinition,
+                -> OutName(ANY_NAME, def.name)
                 WellKnownTypes.booleanTypeDefinition -> OutName("bool", def.name)
                 WellKnownTypes.denseBitVectorTypeDefinition -> OutName(DENSE_BIT_VECTOR_NAME, def.name)
                 WellKnownTypes.dequeTypeDefinition -> OutName(DEQUE_NAME, def.name)
