@@ -2234,6 +2234,178 @@ class SyntaxMacroStageTest {
     }
 
     @Test
+    fun constructorTime() = assertModuleAtStage(
+        stage = Stage.GenerateCode,
+        input = """
+            |export class FrontConstructor(
+            |  public got: Int,
+            |) {
+            |  public calculated: Int = otherInc(got);
+            |  public usingThis: Int = inc(calculated);
+            |  public usingProp: Int = incWorse(usingThis);
+            |  public inc(i: Int): Int { i + got }
+            |  public incWorse(i: Int): Int { i + usingProp }
+            |}
+            |export class InnerConstructor {
+            |  private constructor(got: Int): Void {
+            |    this.got = got;
+            |  }
+            |  public got: Int;
+            |  public calculated: Int = otherInc(got);
+            |}
+            |export let otherInc(i: Int): Int { i + 1 }
+        """.trimMargin(),
+        want = """
+            |{
+            |  syntaxMacro: {
+            |    body: ```
+            |      @typeDecl(FrontConstructor) @stay let `test//`.FrontConstructor = type (FrontConstructor);
+            |      @typeDecl(InnerConstructor) @stay let `test//`.InnerConstructor = type (InnerConstructor);
+            |      @fn let `test//`.otherInc;
+            |      do {};
+            |      `test//`.otherInc = fn otherInc(i__0 /* aka i */: Int) /* return__0 */: (Int) {
+            |        fn__0: do {
+            |          i__0 + 1
+            |        }
+            |      };
+            |      class(\word, \FrontConstructor, \concrete, true, @typeDefined(FrontConstructor) fn {
+            |          FrontConstructor extends AnyValue;
+            |          @constructorProperty @maybeVar @visibility(\public) let got__0: Int;
+            |          @maybeVar @visibility(\public) let calculated__0: Int;
+            |          @maybeVar @visibility(\public) let usingThis__0: Int;
+            |          @maybeVar @visibility(\public) let usingProp__0: Int;
+            |          @visibility(\public) @fn let inc__0 = fn inc(@impliedThis(FrontConstructor) this__0: FrontConstructor, i__1 /* aka i */: Int) /* return__1 */: (Int) {
+            |            fn__1: do {
+            |              i__1 + do_iget_got(type (FrontConstructor), this(FrontConstructor))
+            |            }
+            |          };
+            |          @visibility(\public) @fn let incWorse__0 = fn incWorse(@impliedThis(FrontConstructor) this__1: FrontConstructor, i__2 /* aka i */: Int) /* return__2 */: (Int) {
+            |            fn__2: do {
+            |              i__2 + do_iget_usingProp(type (FrontConstructor), this(FrontConstructor))
+            |            }
+            |          };
+            |          @visibility(\public) let constructor__0 = fn constructor(@impliedThis(FrontConstructor) this__2: FrontConstructor, got__1 /* aka got */: Int) /* return__3 */: Void {
+            |            do {
+            |              let t#0;
+            |              do_iset_got(type (FrontConstructor), this(FrontConstructor), t#0 = got__1);
+            |              t#0
+            |            };
+            |            do {
+            |              let t#1;
+            |              do_iset_calculated(type (FrontConstructor), this(FrontConstructor), t#1 = `test//`.otherInc(got__1));
+            |              t#1
+            |            };
+            |            do {
+            |              let t#2;
+            |              do_iset_usingThis(type (FrontConstructor), this(FrontConstructor), t#2 = do_ibind_inc(type (FrontConstructor), this(FrontConstructor))(do_iget_calculated(type (FrontConstructor), this(FrontConstructor))));
+            |              t#2
+            |            };
+            |            do {
+            |              let t#3;
+            |              do_iset_usingProp(type (FrontConstructor), this(FrontConstructor), t#3 = do_ibind_incWorse(type (FrontConstructor), this(FrontConstructor))(do_iget_usingThis(type (FrontConstructor), this(FrontConstructor))));
+            |              t#3
+            |            };
+            |          };
+            |      });
+            |      do {};
+            |      class(\word, \InnerConstructor, \concrete, true, @typeDefined(InnerConstructor) fn {
+            |          InnerConstructor extends AnyValue;
+            |          @visibility(\private) @fn let constructor__1 = fn constructor(@impliedThis(InnerConstructor) this__3: InnerConstructor, got__2 /* aka got */: Int) /* return__4 */: (Void) {
+            |            fn__3: do {
+            |              do {
+            |                let t#4;
+            |                do_iset_got(type (InnerConstructor), this(InnerConstructor), t#4 = got__2);
+            |                t#4
+            |              };
+            |            }
+            |          };
+            |          @maybeVar @visibility(\public) let got__3: Int;
+            |          @maybeVar @visibility(\public) let calculated__1: Int = `test//`.otherInc(do_iget_got(type (InnerConstructor), this(InnerConstructor)));
+            |      });
+            |
+            |      ```
+            |  },
+            |  "generateCode": {
+            |      "body":
+            |      ```
+            |      @typeDecl(FrontConstructor) @stay let `test//`.FrontConstructor;
+            |      `test//`.FrontConstructor = type (FrontConstructor);
+            |      @typeDecl(InnerConstructor) @stay let `test//`.InnerConstructor;
+            |      `test//`.InnerConstructor = type (InnerConstructor);
+            |      @fn let `test//`.otherInc;
+            |      `test//`.otherInc = (@stay fn otherInc(i__0 /* aka i */: Int32) /* return__0 */: Int32 {
+            |          return__0 = i__0 + 1
+            |      });
+            |      @constructorProperty @visibility(\public) @stay @fromType(FrontConstructor) let got__0: Int32;
+            |      @visibility(\public) @stay @fromType(FrontConstructor) let calculated__0: Int32;
+            |      @visibility(\public) @stay @fromType(FrontConstructor) let usingThis__0: Int32;
+            |      @visibility(\public) @stay @fromType(FrontConstructor) let usingProp__0: Int32;
+            |      @visibility(\public) @fn @stay @fromType(FrontConstructor) let inc__0;
+            |      inc__0 = (@stay fn inc(@impliedThis(FrontConstructor) this__0: FrontConstructor, i__1 /* aka i */: Int32) /* return__1 */: Int32 {
+            |          return__1 = i__1 + getp(got__0, this__0)
+            |      });
+            |      @visibility(\public) @fn @stay @fromType(FrontConstructor) let incWorse__0;
+            |      incWorse__0 = (@stay fn incWorse(@impliedThis(FrontConstructor) this__1: FrontConstructor, i__2 /* aka i */: Int32) /* return__2 */: Int32 {
+            |          return__2 = i__2 + getp(usingProp__0, this__1)
+            |      });
+            |      @fn @visibility(\public) @stay @fromType(FrontConstructor) let constructor__0;
+            |      constructor__0 = (@stay fn constructor(@impliedThis(FrontConstructor) this__2: FrontConstructor, got__1 /* aka got */: Int32) /* return__3 */: Void {
+            |          var t#5, t#6, t#7;
+            |          let t#0;
+            |          t#0 = got__1;
+            |          setp(got__0, this__2, t#0);
+            |          t#7 = (fn otherInc)(got__1);
+            |          setp(calculated__0, this__2, t#7);
+            |          t#5 = do_ibind_inc(type (FrontConstructor), this__2)(getp(calculated__0, this__2));
+            |          setp(usingThis__0, this__2, t#5);
+            |          t#6 = do_ibind_incWorse(type (FrontConstructor), this__2)(getp(usingThis__0, this__2));
+            |          setp(usingProp__0, this__2, t#6);
+            |          return__3 = void
+            |      });
+            |      @fn @visibility(\public) @stay @fromType(FrontConstructor) let getgot__0;
+            |      getgot__0 = (@stay fn (@impliedThis(FrontConstructor) this__4: FrontConstructor) /* return__5 */: Int32 {
+            |          return__5 = getp(got__0, this__4)
+            |      });
+            |      @fn @visibility(\public) @stay @fromType(FrontConstructor) let getcalculated__0;
+            |      getcalculated__0 = (@stay fn (@impliedThis(FrontConstructor) this__5: FrontConstructor) /* return__6 */: Int32 {
+            |          return__6 = getp(calculated__0, this__5)
+            |      });
+            |      @fn @visibility(\public) @stay @fromType(FrontConstructor) let getusingThis__0;
+            |      getusingThis__0 = (@stay fn (@impliedThis(FrontConstructor) this__6: FrontConstructor) /* return__7 */: Int32 {
+            |          return__7 = getp(usingThis__0, this__6)
+            |      });
+            |      @fn @visibility(\public) @stay @fromType(FrontConstructor) let getusingProp__0;
+            |      getusingProp__0 = (@stay fn (@impliedThis(FrontConstructor) this__7: FrontConstructor) /* return__8 */: Int32 {
+            |          return__8 = getp(usingProp__0, this__7)
+            |      });
+            |      @visibility(\private) @fn @stay @fromType(InnerConstructor) let constructor__1;
+            |      constructor__1 = (@stay fn constructor(@impliedThis(InnerConstructor) this__3: InnerConstructor, got__2 /* aka got */: Int32) /* return__4 */: Void {
+            |          setp(got__3, this__3, got__2);
+            |          return__4 = void
+            |      });
+            |      @visibility(\public) @stay @fromType(InnerConstructor) let got__3: Int32;
+            |      @visibility(\public) @stay @fromType(InnerConstructor) let calculated__1: Int32;
+            |      calculated__1 = (fn otherInc)(getp(got__3, error ()));
+            |      @fn @visibility(\public) @stay @fromType(InnerConstructor) let getgot__1;
+            |      getgot__1 = (@stay fn (@impliedThis(InnerConstructor) this__8: InnerConstructor) /* return__9 */: Int32 {
+            |          return__9 = getp(got__3, this__8)
+            |      });
+            |      @fn @visibility(\public) @stay @fromType(InnerConstructor) let getcalculated__1;
+            |      getcalculated__1 = (@stay fn (@impliedThis(InnerConstructor) this__9: InnerConstructor) /* return__10 */: Int32 {
+            |          return__10 = getp(calculated__1, this__9)
+            |      })
+            |
+            |      ```
+            |  },
+            |  errors: [
+            |    "`this` may only appear inside a type definition!",
+            |    "No callee matches inputs [] among [(...AnyValue?) -\u003e Never\u003cVoid\u003e, \u003cerrorT extends AnyValue\u003e(...AnyValue?) -\u003e Never\u003cerrorT\u003e]!",
+            |  ],
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
+    @Test
     fun setterInvocationUsedInExpressionContext() = assertModuleAtStage(
         stage = Stage.SyntaxMacro,
         input = """
