@@ -2248,10 +2248,11 @@ class SyntaxMacroStageTest {
             |}
             |export class InnerConstructor {
             |  private constructor(got: Int): Void {
-            |    this.got = got;
+            |    this.got = inc(got);
             |  }
             |  public got: Int;
             |  public calculated: Int = otherInc(got);
+            |  public inc(i: Int): Int { i + got }
             |}
             |export let otherInc(i: Int): Int { i + 1 }
         """.trimMargin(),
@@ -2314,13 +2315,18 @@ class SyntaxMacroStageTest {
             |            fn__3: do {
             |              do {
             |                let t#4;
-            |                do_iset_got(type (InnerConstructor), this(InnerConstructor), t#4 = got__2);
+            |                do_iset_got(type (InnerConstructor), this(InnerConstructor), t#4 = do_ibind_inc(type (InnerConstructor), this(InnerConstructor))(got__2));
             |                t#4
             |              };
             |            }
             |          };
             |          @maybeVar @visibility(\public) let got__3: Int;
             |          @maybeVar @visibility(\public) let calculated__1: Int = `test//`.otherInc(do_iget_got(type (InnerConstructor), this(InnerConstructor)));
+            |          @visibility(\public) @fn let inc__1 = fn inc(@impliedThis(InnerConstructor) this__4: InnerConstructor, i__3 /* aka i */: Int) /* return__5 */: (Int) {
+            |            fn__4: do {
+            |              i__3 + do_iget_got(type (InnerConstructor), this(InnerConstructor))
+            |            }
+            |          };
             |      });
             |
             |      ```
@@ -2363,36 +2369,42 @@ class SyntaxMacroStageTest {
             |          return__3 = void
             |      });
             |      @fn @visibility(\public) @stay @fromType(FrontConstructor) let getgot__0;
-            |      getgot__0 = (@stay fn (@impliedThis(FrontConstructor) this__4: FrontConstructor) /* return__5 */: Int32 {
-            |          return__5 = getp(got__0, this__4)
+            |      getgot__0 = (@stay fn (@impliedThis(FrontConstructor) this__5: FrontConstructor) /* return__6 */: Int32 {
+            |          return__6 = getp(got__0, this__5)
             |      });
             |      @fn @visibility(\public) @stay @fromType(FrontConstructor) let getcalculated__0;
-            |      getcalculated__0 = (@stay fn (@impliedThis(FrontConstructor) this__5: FrontConstructor) /* return__6 */: Int32 {
-            |          return__6 = getp(calculated__0, this__5)
+            |      getcalculated__0 = (@stay fn (@impliedThis(FrontConstructor) this__6: FrontConstructor) /* return__7 */: Int32 {
+            |          return__7 = getp(calculated__0, this__6)
             |      });
             |      @fn @visibility(\public) @stay @fromType(FrontConstructor) let getusingThis__0;
-            |      getusingThis__0 = (@stay fn (@impliedThis(FrontConstructor) this__6: FrontConstructor) /* return__7 */: Int32 {
-            |          return__7 = getp(usingThis__0, this__6)
+            |      getusingThis__0 = (@stay fn (@impliedThis(FrontConstructor) this__7: FrontConstructor) /* return__8 */: Int32 {
+            |          return__8 = getp(usingThis__0, this__7)
             |      });
             |      @fn @visibility(\public) @stay @fromType(FrontConstructor) let getusingProp__0;
-            |      getusingProp__0 = (@stay fn (@impliedThis(FrontConstructor) this__7: FrontConstructor) /* return__8 */: Int32 {
-            |          return__8 = getp(usingProp__0, this__7)
+            |      getusingProp__0 = (@stay fn (@impliedThis(FrontConstructor) this__8: FrontConstructor) /* return__9 */: Int32 {
+            |          return__9 = getp(usingProp__0, this__8)
             |      });
             |      @visibility(\private) @fn @stay @fromType(InnerConstructor) let constructor__1;
             |      constructor__1 = (@stay fn constructor(@impliedThis(InnerConstructor) this__3: InnerConstructor, got__2 /* aka got */: Int32) /* return__4 */: Void {
-            |          setp(got__3, this__3, got__2);
+            |          var t#8;
+            |          t#8 = do_ibind_inc(type (InnerConstructor), this__3)(got__2);
+            |          setp(got__3, this__3, t#8);
             |          return__4 = void
             |      });
             |      @visibility(\public) @stay @fromType(InnerConstructor) let got__3: Int32;
             |      @visibility(\public) @stay @fromType(InnerConstructor) let calculated__1: Int32;
             |      calculated__1 = (fn otherInc)(getp(got__3, error ()));
+            |      @visibility(\public) @fn @stay @fromType(InnerConstructor) let inc__1;
+            |      inc__1 = (@stay fn inc(@impliedThis(InnerConstructor) this__4: InnerConstructor, i__3 /* aka i */: Int32) /* return__5 */: Int32 {
+            |          return__5 = i__3 + getp(got__3, this__4)
+            |      });
             |      @fn @visibility(\public) @stay @fromType(InnerConstructor) let getgot__1;
-            |      getgot__1 = (@stay fn (@impliedThis(InnerConstructor) this__8: InnerConstructor) /* return__9 */: Int32 {
-            |          return__9 = getp(got__3, this__8)
+            |      getgot__1 = (@stay fn (@impliedThis(InnerConstructor) this__9: InnerConstructor) /* return__10 */: Int32 {
+            |          return__10 = getp(got__3, this__9)
             |      });
             |      @fn @visibility(\public) @stay @fromType(InnerConstructor) let getcalculated__1;
-            |      getcalculated__1 = (@stay fn (@impliedThis(InnerConstructor) this__9: InnerConstructor) /* return__10 */: Int32 {
-            |          return__10 = getp(calculated__1, this__9)
+            |      getcalculated__1 = (@stay fn (@impliedThis(InnerConstructor) this__10: InnerConstructor) /* return__11 */: Int32 {
+            |          return__11 = getp(calculated__1, this__10)
             |      })
             |
             |      ```
