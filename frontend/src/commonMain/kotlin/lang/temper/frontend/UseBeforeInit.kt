@@ -13,7 +13,6 @@ import lang.temper.common.mapFirst
 import lang.temper.common.putMultiSet
 import lang.temper.frontend.rw.NestedFunction
 import lang.temper.frontend.rw.ReadsAndWrites
-import lang.temper.frontend.typestage.isConstructor
 import lang.temper.log.LogEntry
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
@@ -37,7 +36,6 @@ import lang.temper.value.ValueLeaf
 import lang.temper.value.debug
 import lang.temper.value.errorFn
 import lang.temper.value.fromTypeSymbol
-import lang.temper.value.impliedThisSymbol
 import lang.temper.value.isImplicits
 import lang.temper.value.orderedPathIndices
 import lang.temper.value.toPseudoCode
@@ -47,7 +45,7 @@ import lang.temper.value.typeDefinitionAtLeafOrNull
 import lang.temper.value.typeFromSignature
 import lang.temper.value.void
 
-private const val DEBUG = true
+private const val DEBUG = false
 
 /**
  * Replaces uses of a variable name before it's initialized
@@ -192,21 +190,11 @@ internal class UseBeforeInit(
             inputParameters: List<DeclTree>,
             returnDecl: DeclTree?,
             root: BlockTree,
-            isConstructor: Boolean = false,
         ): FreeNames {
             debug {
                 group("Processing body") {
                     root.toPseudoCode(textOutput, detail = PseudoCodeDetail(elideFunctionBodies = true))
                 }
-            }
-            val thisName = when {
-                isConstructor -> inputParameters.getOrNull(0)?.parts?.let { paramParts ->
-                    paramParts.metadataSymbolMap[impliedThisSymbol]?.let { paramParts.name.content }
-                }
-                else -> null // we only care about `this` for constructors
-            }
-            if ("plicits" !in root.pos.loc.diagnostic && isConstructor) {
-                root.lastChild
             }
 
             val readsAndWrites =
@@ -231,7 +219,6 @@ internal class UseBeforeInit(
                             inputParameters = fnInputParameters,
                             returnDecl = fnReturnDecl,
                             root = fnBody,
-                            isConstructor = fn.tree.isConstructor(),
                         )
                         freePerFn[fn] = freeForFn
                     }
@@ -284,7 +271,6 @@ internal class UseBeforeInit(
 
             fun checkElement(
                 element: MaximalPath.Element,
-                /** Absent means unset. Empty value means set in all paths. Otherwise, paths where (un?)set. */
                 missingCoverage: MutableMap<ResolvedName, MutableSet<MaximalPathIndex>>,
             ) {
                 val reads = readsAndWrites.readsByPathElement[element]
@@ -313,17 +299,8 @@ internal class UseBeforeInit(
                         continue
                     }
 
-                    if (isConstructor && name == thisName) {
-                        // TODO If not setp or getp (see a.txt), check writes to all backed props.
-                        if ("plicits" !in root.pos.loc.diagnostic) {
-                            thisName.displayName
-                        }
-                        name.displayName
-                    }
-
                     if (name !in readsAndWrites.localNames) {
                         // Propagate that to the outer function.
-                        // TODO If isConstructor and this is a getp, check for matching setp.
                         val pos = read.pos
                         if (pos != null) {
                             freeNames.putMultiSet(name, pos)
@@ -399,7 +376,6 @@ internal class UseBeforeInit(
                     missingCoverage.remove(declared)
                 }
                 readsAndWrites.writesByPathElement[element]?.forEach { write ->
-                    // Mark the write along this path.
                     missingCoverage.getOrPut(write.name) {
                         mutableSetOf()
                     }.clear()
