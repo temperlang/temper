@@ -67,7 +67,8 @@ private fun transformConstructor(tree: FunTree) {
         }
     }
     val visited = mutableSetOf<MaximalPathIndex>()
-    val 
+    // TODO The idea is to find the latest common preceding element for first non-init uses of `this` across all
+    // TODO branches.
     var pathIndex = paths.entryPathIndex
     visited.add(pathIndex)
     while (visited.size < paths.maximalPaths.size) {
