@@ -532,6 +532,12 @@ internal fun typeShapeMacro(macroEnv: MacroEnvironment): PartialResult {
 
             fn?.parts?.let {
                 methodShape.parameterInfo = ExtraNonNormativeParameterInfo(it)
+                val fnBody = fn.parts?.body as? BlockTree
+                if (fnBody != null && methodKind == MethodKind.Constructor) {
+                    // We already standardized explicit constructors and also identified dot operations
+                    // in syntax macro stage. That provides the info we need to split init and usage sections.
+                    ConstructorTransformer.transform(fnBody, typeShape.properties)
+                }
             }
         }
     }
