@@ -88,8 +88,9 @@ export sealed interface Never<out T> {}
  * *String?* is a valid type for a local variable or function
  * input that might refer to either *null* or a string value.
  */
+@imu
 @mayDowncastTo(true)
-export class Null extends Equatable, Imu {
+export class Null extends Equatable {
   private constructor(): Void {}
 }
 
@@ -118,8 +119,9 @@ export class Null extends Equatable, Imu {
  * //!outputs  "Empty is not null: true"
  * ```
  */
+@imu
 @connected("Empty")
-export class Empty extends Equatable, Imu {
+export class Empty extends Equatable {
   private constructor(): Void {}
 }
 let emptySingleton: Empty = doPure { new Empty() };
@@ -138,8 +140,9 @@ export interface GeneratorFn extends Function {}
 /**
  * One of a sequence of results from a [snippet/type/Generator].
  */
+@partialImu
 @connected("GeneratorResult")
-export sealed interface GeneratorResult<out YIELD extends AnyValue> extends PartialImu {}
+export sealed interface GeneratorResult<out YIELD extends AnyValue> {}
 
 /**
  * A multi-step computation that may be scheduled for a step by calling the
@@ -225,8 +228,9 @@ export interface SafeGenerator<out YIELD extends AnyValue> extends Generator<YIE
  * A result produced from [snippet/type/Generator/method/next] when there is a value to produce and
  * [snippet/type/Generator/property/done] is [snippet/builtin/false].
  */
+@partialImu
 @connected("ValueResult")
-export class ValueResult<out YIELD extends AnyValue> extends GeneratorResult<YIELD>, PartialImu {
+export class ValueResult<out YIELD extends AnyValue> extends GeneratorResult<YIELD> {
   public value: YIELD;
   @connected("ValueResult::constructor")
   public constructor(value: YIELD): Void {
@@ -238,8 +242,9 @@ export class ValueResult<out YIELD extends AnyValue> extends GeneratorResult<YIE
  * A result produced from [snippet/type/Generator/method/next] when there is no value to produce and
  * [snippet/type/Generator/property/done] is [snippet/builtin/true].
  */
+@imu
 @connected("DoneResult")
-export class DoneResult<out YIELD extends AnyValue> extends GeneratorResult<YIELD>, Imu {}
+export class DoneResult<out YIELD extends AnyValue> extends GeneratorResult<YIELD> {}
 @connected("doneResult")
 export let doneResult<YIELD extends AnyValue>(): DoneResult<YIELD> { new DoneResult<YIELD>() }
 
@@ -348,7 +353,8 @@ export class PromiseBuilder<R extends AnyValue> {
  * Limited at present to String and Int keys but expected to be
  * user-implementable in the future.
  */
-export /*sealed*/ interface MapKey extends Equatable, Imu {}
+@imu
+export /*sealed*/ interface MapKey extends Equatable {}
 
 /**
  * A *String* is a chunk of textual content.
@@ -646,8 +652,9 @@ export class String extends MapKey {
  * *StringIndexOption* combines those two options in a type-safe way
  * that typically translates to an idiomatic integer.
  */
+@imu
 @connected("StringIndexOption")
-export sealed interface StringIndexOption extends Equatable, Imu {
+export sealed interface StringIndexOption extends Equatable {
   /**
    * Sorts [snippet/type/StringIndex/static/none] before every valid string index.
    *
@@ -1009,8 +1016,9 @@ export sealed interface Listed<T> {
  *
  * See also `Listed` for recommendations on `List` vs `Listed` use.
  */
+@partialImu
 @mayDowncastTo(false) // Just use Listed::toList if immutable wanted.
-export class List<out T> extends Listed<T>, PartialImu {
+export class List<out T> extends Listed<T> {
   // TODO: Until Types.list is the same as List<T>, we need this trick.
   private let content: builtins.List<T>;
 
@@ -1292,8 +1300,9 @@ export sealed interface Mapped<in K extends MapKey, V> {
 /**
  * A *Map* is a read-only key-value collection.
  */
+@partialImu
 @mayDowncastTo(false) // Just use Mapped::toMap if immutable wanted.
-export class Map<in K extends MapKey, out V> extends Mapped<K, V>, PartialImu {
+export class Map<in K extends MapKey, out V> extends Mapped<K, V> {
   // The content is used only from extension functions.
   private content: AnyValue;
 
@@ -1387,8 +1396,9 @@ export class Deque<T> {
  *
  * ⎀ syntax/BooleanLiteral -heading
  */
+@imu
 @mayDowncastTo(false) // Confusable with numbers and scalars on many backends
-export class Boolean extends Equatable, Imu {
+export class Boolean extends Equatable {
   private let content: builtins.Boolean;
 
   /**
@@ -1502,8 +1512,9 @@ export class Int32 extends MapKey {
  *
  * ⎀ syntax/int64/examples
  */
+@imu
 @mayDowncastTo(false) // Confusable with scalars on some dynlang backends.
-export class Int64 extends Equatable, Imu { // TODO extends MapKey?
+export class Int64 extends Equatable { // TODO extends MapKey?
   private let content: builtins.Int64;
 
   /** Bubbles if the result isn't within the exponent error of the original. */
@@ -1555,8 +1566,9 @@ export class Int64 extends Equatable, Imu { // TODO extends MapKey?
  *
  * [FP64]: https://en.wikipedia.org/wiki/Double-precision_floating-point_format
  */
+@imu
 @mayDowncastTo(false) // Confusable with scalars on many dynlang backends
-export class Float64 extends Equatable, Imu {
+export class Float64 extends Equatable {
   private let content: builtins.Float64;
 
   /**
