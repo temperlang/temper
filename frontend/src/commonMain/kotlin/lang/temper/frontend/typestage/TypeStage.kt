@@ -116,6 +116,8 @@ internal class TypeStage(
             }
 
             Debug.Frontend.TypeStage.AfterSimplifyFlow.snapshot(configKey, AstSnapshotKey, root)
+
+            ConstructorTransformer.transformConstructors(root)
         }
 
         // Find terminal expressions and introduce explicit assignments to function output

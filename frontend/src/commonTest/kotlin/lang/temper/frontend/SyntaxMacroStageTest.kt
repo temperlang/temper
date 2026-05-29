@@ -2248,7 +2248,9 @@ class SyntaxMacroStageTest {
             |}
             |export class InnerConstructor {
             |  private constructor(got: Int): Void {
-            |    this.got = inc(got);
+            |    class Hi(n: Int) {}
+            |    let hello(): Void {}
+            |    this.got = inc(if (got < 1) { return; } else { bubble(); got });
             |  }
             |  public got: Int;
             |  public calculated: Int = otherInc(got);
@@ -2259,9 +2261,11 @@ class SyntaxMacroStageTest {
             |    this.got = got;
             |    if (got > 0) {
             |      this.more = 0;
-            |      this.more = inc(got);
             |    } else {
             |      this.more = got;
+            |    }
+            |    if (got > 0) {
+            |      this.more = inc(got);
             |    }
             |  }
             |  public got: Int;
