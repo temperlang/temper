@@ -176,37 +176,37 @@ class ImuCheckerTest {
 
     companion object {
         private val testSourceCode = """
-            |class ImuNoProperties extends Imu {}
-            |class ImuOneProperty extends Imu {
+            |@imu class ImuNoProperties extends Imu {}
+            |@imu class ImuOneProperty extends Imu {
             |  public p: ImuNoProperties;
             |}
-            |class ImuRecursive extends Imu {
+            |@imu class ImuRecursive extends Imu {
             |  public p: ImuRecursive?;
             |}
-            |class ImuGeneric<T extends Imu> {
+            |@imu class ImuGeneric<T extends Imu> {
             |  public p: T;
             |}
             |class Neither {}
-            |class BadImuProp extends Imu {
+            |@imu class BadImuProp extends Imu {
             |  public p: Neither;
             |}
-            |class BadImuVar extends Imu {
+            |@imu class BadImuVar extends Imu {
             |  public var p: ImuOneProperty;
             |}
-            |class BadImuGeneric1<T extends PartialImu> extends Imu {
+            |@imu class BadImuGeneric1<T extends PartialImu> extends Imu {
             |  public p: T;
             |}
-            |class BadImuGeneric2<T> extends Imu {
+            |@imu class BadImuGeneric2<T> extends Imu {
             |  public p: T;
             |}
-            |class BadImuContravariant<in T extends Imu> extends Imu {
+            |@imu class BadImuContravariant<in T extends Imu> extends Imu {
             |  public p: List<T>;
             |}
-            |class ImuWithParameterizedPartialList<T extends Imu> extends Imu {
+            |@imu class ImuWithParameterizedPartialList<T extends Imu> extends Imu {
             |  public p: List<T>;
             |}
             |
-            |interface PartialImuInterfaceNoTypeArgs extends PartialImu {}
+            |@partialImu interface PartialImuInterfaceNoTypeArgs extends PartialImu {}
             |class BadPartialImuNoTypeArgs extends PartialImu {}
             |class PartialImuDirectClass<T> extends PartialImu {
             |  public p: T;

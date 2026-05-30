@@ -3637,7 +3637,7 @@ class BuildTreeTest {
     @Test
     fun classDeclaration3() = assertAst(
         input = """
-            class Complex<E> extends A, B {
+            class Complex<@imu @whatever("hi") E> extends A, B {
                 y: E;
                 constructor(...) { }
                 get x() { 42 }
@@ -3649,7 +3649,18 @@ class BuildTreeTest {
             [ "Value", "\\word: Symbol" ],
             [ "LeftName", "Complex" ],
             [ "Value", "\\typeArg: Symbol" ],
-            [ "RightName", "E" ],
+            [ "Call", [
+                [ "RightName", "@" ],
+                [ "RightName", "imu" ],
+                [ "Call", [
+                    [ "RightName", "@" ],
+                    [ "Call", [
+                        [ "RightName", "whatever" ],
+                        [ "Value", "\"hi\": String" ],
+                    ]],
+                    [ "RightName", "E" ],
+                ]],
+            ]],
             [ "Value", "\\super: Symbol" ],
             [ "RightName", "A" ],
             [ "Value", "\\super: Symbol" ],

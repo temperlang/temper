@@ -2785,7 +2785,7 @@ class ParseTest {
     @Test
     fun classDeclWithComputedPropertyAndSuperTypes() = assertParseTree(
         input = """
-            class Cee extends Dee<Eee>, Eff {
+            class Cee extends Dee<@imu Eee, @blah @blech Gee>, Eff {
                 get ex() { 42 };
             }
         """,
@@ -2797,7 +2797,11 @@ class ParseTest {
             [
               ["Dee"],
               "<",
-              ["Eee"],
+              [
+                ["@", ["imu"], ["Eee"]],
+                ",",
+                ["@", ["blah"], ["@", ["blech"], ["Gee"]]],
+              ],
               ">",
             ],
             ",",

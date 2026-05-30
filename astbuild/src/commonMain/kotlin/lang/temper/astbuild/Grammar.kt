@@ -103,6 +103,8 @@ private object ProductionNames : DomainSpecificLanguage() {
     val Callee = Ref("Callee")
     val CalleeAndArgs = Ref("CalleeAndArgs")
     val CalleeAndRequiredArgs = Ref("CalleeAndRequiredArgs")
+    val DecoratedExpr = Ref("DecoratedExpr")
+    val DecoratedExprBody = Ref("DecoratedExprBody")
     val DecoratedLet = Ref("DecoratedLet")
     val DecoratedLetBody = Ref("DecoratedLetBody")
     val DecoratedTopLevel = Ref("DecoratedTopLevel")
@@ -1021,7 +1023,41 @@ val grammar = ProductionNames.run {
             ">"
         )
 
-    TypeArgument `：＝` (typeArgSymbol y Expr)
+    TypeArgument `：＝` (typeArgSymbol y DecoratedExpr)
+
+    DecoratedExpr `：＝` Expr / Counter(
+        DecoratedExpr,
+        (
+            Operator.At y DecoratedExprBody y finishSplitCommaSoft() y
+                CountForEach(DecoratedExpr, finishSplitCall())
+            ),
+    )
+
+    DecoratedExprBody `：＝` (
+        (
+            Operator.At y `(` y
+                // Count the number of calls to at so that we can finish them after all the
+                // declarations have been nested in them
+                startSplitTree(
+                    /* call to @ */
+                ) y CountUp(DecoratedExpr) y
+                "@".rename("@") y (
+                // We need to start a comma call tree after the annotation argument in both
+                // branches here so that the annotation applies both to the declaration here
+                // and any in the declarations following commas.
+                // In DecoratedLet, we finish the split block.
+                (Expr y DecoratedExprBody y `)`) /
+                    (
+                        Operator.Paren y `(` y Expr y "(" y
+                            NegLA(epsilon y Operator.Comma) y DecoratedExprBody y ")" y `)` y `)`
+                        )
+                )
+            ) / (
+            startSplitTree(
+                /*Block*/
+            ) y Expr
+            )
+        )
 
     TypeArgumentName `：＝` (
         Operator.Leaf y (
