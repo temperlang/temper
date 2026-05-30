@@ -218,21 +218,20 @@ internal object IfTransform : ControlFlowTransform("if") {
                     }
                 }
 
-                // `if` chains that don't end in an `else` should be typed as Void.
-                // See LoopTransform comments on typing as for the problems with control-flow
-                // constructs that start with a condition and which don't reliably follow it
-                // with a typeable tree.
-                if (controlFlow != null && !hasFinalElse) {
-                    controlFlow = ControlFlow.StmtBlock(
-                        controlFlow.pos,
-                        listOf(
-                            controlFlow,
-                            ControlFlow.Stmt(
-                                macroCursor.referenceToVoid(controlFlow.pos.rightEdge),
-                            ),
-                        ),
-                    )
-                }
+                // NOTE: we do NOT append a trailing void here for the !hasFinalElse case.
+                // The innermost synthetic else clause (built above at lines 190-195 when
+                // hasFinalElse = false) already inserts a void reference for the "fell
+                // through all arms" path. A trailing sequential void after the if-chain is
+                // redundant and harmful: findUnsetTerminalExpressions picks it up as the
+                // terminal expression on every exit path, causing the entire when expression
+                // to be typed as Void regardless of what the arms return.
+                //
+                // Without the trailing void, findUnsetTerminalExpressions finds the arm body
+                // expressions as terminals alongside the innermost else void, so the inferred
+                // type is arm_types | Void instead of Void alone. This is the correct
+                // behaviour for `when` expressions whose arms use `is TypeName` patterns.
+                //
+                // See: https://github.com/temperlang/temper/issues/427
 
                 controlFlow?.let { ControlFlowSubflow(it) }
             }

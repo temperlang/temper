@@ -2394,6 +2394,49 @@ class TypeStageTest {
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
+
+    // https://github.com/temperlang/temper/issues/427
+    // A `when` expression without `else` whose arms return String should assign
+    // the return variable on each arm (String | Void), not initialise the whole
+    // result to void (Void). Before the IfTransform fix, the body was
+    // `let return__0; return__0 = void` — the arms were never assigned.
+    @Test
+    fun whenIsTypeNoElse() = assertModuleAtStage(
+        input = "when (c) { is String -> \"yes\"; is Int -> \"no\"; }",
+        moduleResultNeeded = true,
+        stage = Stage.Type,
+        want = """
+        {
+          type: {
+            body:
+            ```
+            let return__0;
+            var t#0, t#1;
+            if (!false) {
+              t#0 = is(c, String)
+            } else {
+              t#0 = false
+            };
+            if (t#0) {
+              return__0 = "yes"
+            } else {
+              if (!false) {
+                t#1 = is(c, Int32)
+              } else {
+                t#1 = false
+              };
+              if (t#1) {
+                return__0 = "no"
+              } else {
+                return__0 = void
+              }
+            };
+
+            ```
+          }
+        }
+        """,
+    )
 }
 
 private object ImpureIgnoreFn : NamedBuiltinFun, CallableValue {
