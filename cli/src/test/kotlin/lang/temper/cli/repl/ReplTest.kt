@@ -553,7 +553,7 @@ class ReplTest {
         assertPendingContains(
             Regex(
                 """
-                    |        def b\(a: 'a'\) -> 'a':
+                    |        def b\(a: 'a', /\) -> 'a':
                     |            return a
                 """.trimMargin(),
             ),

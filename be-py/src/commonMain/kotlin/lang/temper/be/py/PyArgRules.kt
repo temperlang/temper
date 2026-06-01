@@ -21,6 +21,7 @@ fun callArgsIssues(args: Iterable<Py.CallArg>): String? {
 fun argumentsValid(args: Iterable<Py.Arg>): Boolean = argumentsIssues(args) == null
 
 fun argumentsIssues(args: Iterable<Py.Arg>): String? {
+    var slash = false
     var star = false // Only ** can follow *
     var doubleStar = false // Nothing can follow **
     var defaults = false // Can't have required arguments after optional
@@ -29,12 +30,16 @@ fun argumentsIssues(args: Iterable<Py.Arg>): String? {
         // if (defaults && arg.defaultValue == null && arg.prefix == Py.ArgPrefix.None) {
         //     return "$arg: required argument following optional"
         // }
+        if (slash && arg.prefix == Py.ArgPrefix.Slash) {
+            return "only one slash arg allowed at most"
+        }
         if (star && arg.prefix != Py.ArgPrefix.DoubleStar) {
             return "$arg: only **keywords can follow *vararg"
         }
         if (doubleStar) {
             return "$arg: nothing can follow **keywords"
         }
+        slash = slash || arg.prefix == Py.ArgPrefix.Slash
         star = star || arg.prefix == Py.ArgPrefix.Star
         doubleStar = doubleStar || arg.prefix == Py.ArgPrefix.DoubleStar
         defaults = defaults || arg.defaultValue != null

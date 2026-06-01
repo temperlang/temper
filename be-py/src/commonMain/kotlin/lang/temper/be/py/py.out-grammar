@@ -431,6 +431,8 @@ ComprehensionIf.operatorDefinition = `null`;
  * parameter               ::=  identifier [":" expression]
  * defparameter            ::=  parameter ["=" expression]
  * ```
+ *
+ * With positional-only "/" added in https://github.com/python/cpython/blob/3.8/Grammar/Grammar
  */
 Arguments ::= args%Arg*", ";
 Arguments.hasAnnotations%`Boolean` = `args.any { it.annotation != null }`;  // Lambdas can't have annotations.
@@ -438,19 +440,26 @@ Arguments requires `argumentsValid(args), issue { argumentsIssues(args) }`;
 Arguments.operatorDefinition = `null`;
 
 Arg ::=
-      ((prefix%ArgPrefix == Star => `starToken`)
+      ((prefix%ArgPrefix == Slash => `slashToken`)
+       || (prefix%ArgPrefix == Star => `starToken`)
        || (prefix == DoubleStar => `starStarToken`)
        || ())
-    & arg%Identifier
+    & arg%Identifier?
     & ((annotation%Expr? => ":" & annotation) || ())
     & ((defaultValue%Expr? => "=" & defaultValue) || ());
 Arg requires `prefix == ArgPrefix.None || defaultValue == null`;
+Arg requires `arg != null || prefix == ArgPrefix.Slash || prefix == ArgPrefix.Star`;
+Arg requires `arg != null || (annotation == null && defaultValue == null)`;
 Arg.annotation.default = `null`;
 Arg.defaultValue.default = `null`;
 Arg.operatorDefinition = `null`;
 Arg.prefix.default = `ArgPrefix.None`;
 
-enum ArgPrefix = None | Star | DoubleStar;
+/**
+ * [Slash] is standalone rather than a prefix, and [Star] can go either way, but
+ * keeping them all together still helps with organization.
+ */
+enum ArgPrefix = None | Slash | Star | DoubleStar;
 
 Call requires `callArgsValid(args), issue { callArgsIssues(args) }`;
 Decorator requires `callArgsValid(args), issue { callArgsIssues(args) }`;
@@ -476,7 +485,7 @@ CallArg {
 // Prohibit **x=y
 CallArg requires `prefix == ArgPrefix.None || arg == null`;
 // This ArgPrefix is used by Arg.
-CallArg requires `prefix != ArgPrefix.Star`;
+CallArg requires `prefix != ArgPrefix.Slash`;
 
 /** A Python identifier that does not participate in expressions. */
 Identifier(id%`PyIdentifierName`, sourceIdentifier%`TemperName?`);
