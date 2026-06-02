@@ -75,6 +75,7 @@ import lang.temper.value.TVoid
 import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
+import lang.temper.value.atBuiltinName
 import lang.temper.value.constructorPropertySymbol
 import lang.temper.value.constructorSymbol
 import lang.temper.value.extendsBuiltinName
@@ -1353,14 +1354,19 @@ private fun checkAgainstVirtualGenericMethod(
         if (kid.symbolContained == typeArgSymbol) {
             // Dig out the type parameter name for better distinction in error messages.
             // TODO Move this whole validation to somewhere where things have already been worked out in advance?
-            val name = when (val next = memberTree.childOrNull(index + 1)) {
-                is NameLeaf -> next.content.displayName
-                is CallTree -> when (next.childOrNull(0)?.nameContained?.builtinKey) {
-                    extendsBuiltinName.builtinKey -> next.childOrNull(1)?.nameContained?.displayName
+            // TODO Unify name extraction logic with formalizeTypeArg, but more happens there.
+            var nameTree = memberTree.childOrNull(index + 1)
+            findName@ while (true) {
+                nameTree = when (nameTree) {
+                    is CallTree -> when (nameTree.childOrNull(0)?.nameContained?.builtinKey) {
+                        atBuiltinName.builtinKey -> nameTree.childOrNull(2)
+                        extendsBuiltinName.builtinKey -> nameTree.childOrNull(1)
+                        else -> null
+                    }
                     else -> null
-                }
-                else -> null
-            } ?: "?"
+                } ?: break@findName
+            }
+            val name = nameTree?.nameContained?.displayName ?: "?"
             macroEnv.logSink.log(Log.Error, MessageTemplate.TypeParameterInInterfaceMethod, kid.pos, listOf(name))
         }
     }
