@@ -1290,21 +1290,21 @@ class GenerateCodeStageTest {
     fun typeParameterCanExtendConcreteType() = assertModuleAtStage(
         stage = Stage.GenerateCode,
         input = """
-            |interface I { public f<S extends String>(s: S): Void; }
+            |@imu interface I { public f<S extends String>(@imu s: S): Void; }
         """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
             |{
             |  generateCode: {
             |    body: ```
+            |        @typeDecl(I__0) @stay @imu @reach(\none) let I__0;
+            |        I__0 = type (I__0);
             |        @method(\f) @visibility(\public) @fn @stay @fromType(I__0) @reach(\none) let f__0;
             |        @typeFormal(\S) @typeDecl(S__0) @reach(\none) let S__0;
             |        S__0 = type (S__0);
-            |        f__0 = (@stay fn f<S__0 extends String>(@impliedThis(I__0) this__0: I__0, s__0 /* aka s */: S__0) /* return__0 */: Void {
+            |        f__0 = (@stay fn f<S__0 extends String>(@impliedThis(I__0) this__0: I__0, @imu s__0 /* aka s */: S__0) /* return__0 */: Void {
             |            pureVirtual()
-            |        });
-            |        @typeDecl(I__0) @stay @reach(\none) let I__0;
-            |        I__0 = type (I__0)
+            |        })
             |
             |        ```
             |  },

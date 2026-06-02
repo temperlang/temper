@@ -54,6 +54,7 @@ import lang.temper.value.TSymbol
 import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
+import lang.temper.value.atBuiltinName
 import lang.temper.value.errorFn
 import lang.temper.value.freeTarget
 import lang.temper.value.freeTree
@@ -652,6 +653,7 @@ private val typeFormalOperatorToNameIndex = mapOf(
     contravariantAnnotationNameText to 1,
     covariantAnnotationNameText to 1,
     Operator.Eq.text!! to 1,
+    atBuiltinName.builtinKey to 2,
 )
 
 /**
