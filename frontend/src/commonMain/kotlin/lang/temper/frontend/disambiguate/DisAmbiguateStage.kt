@@ -47,11 +47,13 @@ import lang.temper.value.NameLeaf
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
+import lang.temper.value.Planting
 import lang.temper.value.ReifiedType
 import lang.temper.value.RightNameLeaf
 import lang.temper.value.TEdge
 import lang.temper.value.TSymbol
 import lang.temper.value.Tree
+import lang.temper.value.TreeTemplate
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 import lang.temper.value.atBuiltinName
@@ -542,6 +544,7 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
     var hasUpperBound = false
     // Walk through `extends`, etc. to find the declared name.
     // TODO: Can this be shared with similar code in TypeDisAmbiguateMacro?
+    var decoratedEdge: TEdge? = null
     while (true) {
         val nameTree = nameEdge.target
         if (nameTree is CallTree && nameTree.size != 0) {
@@ -554,15 +557,19 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
                 else -> (callee.functionContained as? NamedBuiltinFun)?.name
             }
             val nameIndex = typeFormalOperatorToNameIndex[builtinNameText]
+            if (nameIndex != null) {
+                nameEdge = nameTree.edge(nameIndex)
+            }
             when (builtinNameText) {
                 covariantAnnotationNameText -> variance = Variance.Covariant
                 contravariantAnnotationNameText -> variance = Variance.Contravariant
                 Operator.ExtendsComma.text,
                 Operator.ImplementsComma.text,
                 -> hasUpperBound = true
+                // Presume decoration is outermost. We want to keep decoration.
+                atBuiltinName.builtinKey -> decoratedEdge = nameEdge
             }
             if (nameIndex != null) {
-                nameEdge = nameTree.edge(nameIndex)
                 continue
             }
         }
@@ -593,26 +600,43 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
         },
     )
     val typeValue = Value(ReifiedType(MkType2(typeFormal).get()))
+    if ("plicits" !in e.target.pos.loc.diagnostic) {
+        e.target
+    }
+    // Prepare for either raw or decorated decl.
+    val effectiveTarget = when (decoratedEdge) {
+        null -> target
+        else -> decoratedEdge.target
+    }
+    fun Planting.buildDecl(): TreeTemplate<DeclTree> {
+        return Decl(pos, name) {
+            // When the syntax stage resolves names, use declarationName.
+            V(leftPos, vResolutionSymbol)
+            Ln(declarationName)
+            V(leftPos, vTypeFormalSymbol)
+            V(leftPos, nameSymbol)
+            V(leftPos, typeDeclSymbol)
+            V(leftPos, typeValue)
+            V(leftPos, vInitSymbol)
+            V(pos, typeValue)
+            if (genre == Genre.Documentation) {
+                V(leftPos, vWithinDocFoldSymbol)
+                V(leftPos, void)
+            }
+        }
+    }
+    // With decorations, we need to put the decl inside them.
+    decoratedEdge?.replace { buildDecl() }
     e.replace {
         Block {
-            Decl(pos, name) {
-                // When the syntax stage resolves names, use declarationName.
-                V(leftPos, vResolutionSymbol)
-                Ln(declarationName)
-                V(leftPos, vTypeFormalSymbol)
-                V(leftPos, nameSymbol)
-                V(leftPos, typeDeclSymbol)
-                V(leftPos, typeValue)
-                V(leftPos, vInitSymbol)
-                V(pos, typeValue)
-                if (genre == Genre.Documentation) {
-                    V(leftPos, vWithinDocFoldSymbol)
-                    V(leftPos, void)
-                }
+            // But then we need either the plain decl or decorations inside the new block.
+            when (decoratedEdge) {
+                null -> buildDecl()
+                else -> Replant(freeTarget(e))
             }
-            // Replant so that any `extends` clauses fire to actually connect super-types.
-            if (target !is RightNameLeaf) {
-                Replant(freeTree(target))
+            // Replant the target that any `extends` clauses fire to actually connect super-types.
+            if (effectiveTarget !is RightNameLeaf) {
+                Replant(freeTree(effectiveTarget))
             }
             V(typeValue)
         }
