@@ -683,7 +683,7 @@ class GenerateCodeStageTest {
             |        typePlaceholder#0 = {class: Empty__0};
             |        let `test//`.more;
             |        `test//`.more = new Map<String, Hidden__0>(list());
-            |        @typeFormal(\HI) @typeDefined(HI__0) @fromType(Exported<HI__0>) let HI__0;
+            |        @typeFormal(\HI) @typeDefined(HI__0) @stay @fromType(Exported<HI__0>) let HI__0;
             |        HI__0 = type (HI__0);
             |        @constructorProperty @visibility(\public) @stay @fromType(Exported<HI__0>) let hi__0: Hidden__0;
             |        @visibility(\public) @fn @stay @fromType(Exported<HI__0>) let attempt__0;
@@ -691,7 +691,7 @@ class GenerateCodeStageTest {
             |            return__0 = getp(hi__0, this__0)
             |        });
             |        @visibility(\public) @fn @stay @fromType(Exported<HI__0>) let attempt2__0;
-            |        @typeFormal(\H) @typeDecl(H__0) let H__0;
+            |        @typeFormal(\H) @typeDecl(H__0) @stay let H__0;
             |        H__0 = type (H__0);
             |        attempt2__0 = (@stay fn attempt2<H__0 extends Hidden__0>(@impliedThis(Exported<HI__0>) this__1: Exported<HI__0>, hmm__0 /* aka hmm */: H__0) /* return__1 */: H__0 {
             |            return__1 = hmm__0
@@ -716,7 +716,7 @@ class GenerateCodeStageTest {
             |        `test//`.consider = (@stay fn consider(hu__0 /* aka hu */: Hidden__0) /* return__5 */: (Hidden__0?) {
             |            return__5 = hu__0
             |        });
-            |        @typeFormal(\H) @typeDecl(H__1) let H__1;
+            |        @typeFormal(\H) @typeDecl(H__1) @stay let H__1;
             |        H__1 = type (H__1);
             |        `test//`.sneak = (@stay fn sneak<H__1 extends Hidden__0>(he__0 /* aka he */: H__1) /* return__6 */: H__1 {
             |            return__6 = he__0
@@ -1247,29 +1247,29 @@ class GenerateCodeStageTest {
             |{
             |  generateCode: {
             |    body: ```
-            |        @typeFormal(\T) @memberTypeFormal(\T) @typeDefined(T__0) @fromType(I__0<T__0>) @reach(\none) let T__0;
+            |        @typeFormal(\T) @memberTypeFormal(\T) @typeDefined(T__0) @stay @fromType(I__0<T__0>) @reach(\none) let T__0;
             |        T__0 = type (T__0);
             |        @method(\f) @visibility(\public) @fn @stay @fromType(I__0<T__0>) @reach(\none) let f__0;
-            |        @typeFormal(\A) @typeDecl(A__0) @reach(\none) let A__0;
+            |        @typeFormal(\A) @typeDecl(A__0) @stay @reach(\none) let A__0;
             |        A__0 = type (A__0);
-            |        f__0 = (@stay fn f<A__0 extends AnyValue>(@impliedThis(I__0<T__0>) this__0: I__0<T__0>, x__0 /* aka x */: A__0, t__0 /* aka t */: T__0, i__0 /* aka i */: I__0<T__0>) /* return__1 */: T__0 {
+            |        f__0 = (@stay fn f<A__0 extends AnyValue>(@impliedThis(I__0<T__0>) this__0: I__0<T__0>, x__0 /* aka x */: A__0, t__0 /* aka t */: T__0, i__0 /* aka i */: I__0<T__0>) /* return__0 */: T__0 {
             |            pureVirtual()
             |        });
             |        @typeDecl(I__0<T__0>) @stay @reach(\none) let I__0;
             |        I__0 = type (I__0);
             |        @typeDecl(C__0<U__0>) @stay @reach(\none) let C__0;
             |        C__0 = type (C__0);
-            |        @typeFormal(\U) @memberTypeFormal(\U) @typeDefined(U__0) @fromType(C__0<U__0>) @reach(\none) let U__0;
+            |        @typeFormal(\U) @memberTypeFormal(\U) @typeDefined(U__0) @stay @fromType(C__0<U__0>) @reach(\none) let U__0;
             |        U__0 = type (U__0);
             |        @method(\f) @visibility(\protected) @fn @stay @fromType(C__0<U__0>) @reach(\none) let f__1;
-            |        @typeFormal(\B) @typeDecl(B__0) @reach(\none) let B__0;
+            |        @typeFormal(\B) @typeDecl(B__0) @stay @reach(\none) let B__0;
             |        B__0 = type (B__0);
-            |        f__1 = (@stay fn f<B__0 extends AnyValue>(@impliedThis(C__0<U__0>) this__1: C__0<U__0>, x__1 /* aka x */: B__0, u__0 /* aka u */: U__0, i__1 /* aka i */: I__0<U__0>) /* return__2 */: U__0 {
-            |            return__2 = u__0
+            |        f__1 = (@stay fn f<B__0 extends AnyValue>(@impliedThis(C__0<U__0>) this__1: C__0<U__0>, x__1 /* aka x */: B__0, u__0 /* aka u */: U__0, i__1 /* aka i */: I__0<U__0>) /* return__1 */: U__0 {
+            |            return__1 = u__0
             |        });
             |        @fn @method(\constructor) @visibility(\public) @stay @fromType(C__0<U__0>) @reach(\none) let constructor__0;
-            |        constructor__0 = (@stay fn constructor(@impliedThis(C__0<U__0>) this__2: C__0<U__0>) /* return__3 */: Void {
-            |            return__3 = void
+            |        constructor__0 = (@stay fn constructor(@impliedThis(C__0<U__0>) this__2: C__0<U__0>) /* return__2 */: Void {
+            |            return__2 = void
             |        })
             |
             |        ```
@@ -1302,7 +1302,7 @@ class GenerateCodeStageTest {
             |        @typeDecl(I__0) @stay @imu @reach(\none) let I__0;
             |        I__0 = type (I__0);
             |        @method(\f) @visibility(\public) @fn @stay @fromType(I__0) @reach(\none) let f__0;
-            |        @typeFormal(\S) @typeDecl(S__0) @partialImu @imu @reach(\none) let S__0;
+            |        @typeFormal(\S) @typeDecl(S__0) @stay @partialImu @imu @reach(\none) let S__0;
             |        S__0 = type (S__0);
             |        f__0 = (@stay fn f<S__0 extends String>(@impliedThis(I__0) this__0: I__0, @imu s__0 /* aka s */: S__0) /* return__0 */: Void {
             |            pureVirtual()

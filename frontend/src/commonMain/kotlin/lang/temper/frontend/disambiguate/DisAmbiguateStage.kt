@@ -50,6 +50,7 @@ import lang.temper.value.PartialResult
 import lang.temper.value.Planting
 import lang.temper.value.ReifiedType
 import lang.temper.value.RightNameLeaf
+import lang.temper.value.StayLeaf
 import lang.temper.value.TEdge
 import lang.temper.value.TSymbol
 import lang.temper.value.Tree
@@ -76,6 +77,7 @@ import lang.temper.value.vDefaultSymbol
 import lang.temper.value.vInitSymbol
 import lang.temper.value.vResolutionSymbol
 import lang.temper.value.vRestFormalSymbol
+import lang.temper.value.vStaySymbol
 import lang.temper.value.vTypeArgSymbol
 import lang.temper.value.vTypeFormalSymbol
 import lang.temper.value.vWithinDocFoldSymbol
@@ -113,6 +115,9 @@ internal class DisAmbiguateStage(
                     hoistDecls(root)
                     flipDeclaredNames(root)
                     Debug.Frontend.DisAmbiguateStage.After.snapshot(configKey, AstSnapshotKey, root)
+                    if ("plicits" !in root.pos.loc.diagnostic) {
+                        root.pos
+                    }
                 },
             )
         }
@@ -586,6 +591,7 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
     val pos = e.target.pos
     val leftPos = pos.leftEdge
     val declarationName = document.nameMaker.unusedSourceName(name)
+    val stayLeaf = StayLeaf(target.document, pos)
     val typeFormal = TypeFormal(
         pos,
         declarationName,
@@ -598,6 +604,7 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
         } else {
             listOf(MkType.nominal(WellKnownTypes.anyValueTypeDefinition))
         },
+        stayLeaf = stayLeaf,
     )
     val typeValue = Value(ReifiedType(MkType2(typeFormal).get()))
     if ("plicits" !in e.target.pos.loc.diagnostic) {
@@ -617,6 +624,8 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
             V(leftPos, nameSymbol)
             V(leftPos, typeDeclSymbol)
             V(leftPos, typeValue)
+            V(vStaySymbol)
+            Replant(stayLeaf)
             V(leftPos, vInitSymbol)
             V(pos, typeValue)
             if (genre == Genre.Documentation) {

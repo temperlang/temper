@@ -94,81 +94,81 @@ class ImuCheckerTest {
         assertEquals(
             """
                 |BadImuProp:
-                |class BadImuProp extends Imu {
+                |class BadImuProp {
                 |  public p: Neither;
                 |}
-                |-> Class BadImuProp extends Imu but property p has type Neither__5 which is not Imu!
+                |-> Class BadImuProp claims imu but property p has type Neither__5 which is not imu!
                 |
                 |BadImuVar:
-                |class BadImuVar extends Imu {
+                |class BadImuVar {
                 |  public var p: ImuOneProperty;
                 |}
-                |-> Class BadImuVar extends Imu but has a `var` property, p!
+                |-> Class BadImuVar claims imu but has a `var` property, p!
                 |
                 |BadImuGeneric1:
-                |class BadImuGeneric1<T extends PartialImu> extends Imu {
+                |class BadImuGeneric1<@partialImu T> {
                 |  public p: T;
                 |}
-                |-> Class BadImuGeneric1 extends Imu but property p has type T__9 which is not Imu!
+                |-> Class BadImuGeneric1 claims imu but property p has type T__9 which is not imu!
                 |
                 |BadImuGeneric2:
-                |class BadImuGeneric2<T> extends Imu {
+                |class BadImuGeneric2<T> {
                 |  public p: T;
                 |}
-                |-> Class BadImuGeneric2 extends Imu but property p has type T__11 which is not Imu!
+                |-> Class BadImuGeneric2 claims imu but property p has type T__11 which is not imu!
                 |
                 |BadImuContravariant:
-                |class BadImuContravariant<in T extends Imu> extends Imu {
+                |class BadImuContravariant<@imu in T> {
                 |  public p: List<T>;
                 |}
-                |-> Class BadImuContravariant extends Imu but property p: List<T__13> uses contravariant type T__13!
+                |-> Class BadImuContravariant claims imu but property p: List<T__13> uses contravariant type T__13!
                 |
                 |BadPartialImuNoTypeArgs:
-                |class BadPartialImuNoTypeArgs extends PartialImu {}
-                |-> Type BadPartialImuNoTypeArgs extends PartialImu but has no type parameters!
+                |class BadPartialImuNoTypeArgs {}
+                |-> Type BadPartialImuNoTypeArgs claims partialImu but has no type parameters!
                 |
                 |BadPartialImuClass:
-                |class BadPartialImuClass<T> extends PartialImu {
+                |class BadPartialImuClass<T> {
                 |  public p: T; // ok
                 |  public q: ListBuilder<T>; // not imu under any parameterization
                 |}
-                |-> Class BadPartialImuClass extends PartialImu but property q has type ListBuilder<T__35> which is not Imu!
+                |-> Class BadPartialImuClass claims partialImu but property q has type ListBuilder<T__35> which is not imu!
                 |
                 |BadPartialImuDeepInterface1:
                 |interface BadPartialImuDeepInterface1<T> extends PartialImuInterfaceTwoArgs<T, Neither> {}
-                |-> PartialImu interface BadPartialImuDeepInterface1 could have Imu parameters but it extends PartialImuInterfaceTwoArgs__22<T__37, Neither__5> which cannot be Imu because Neither__5 is not!
+                |-> PartialImu interface BadPartialImuDeepInterface1 could have imu parameters but it extends PartialImuInterfaceTwoArgs__22<T__37, Neither__5> which cannot be imu because Neither__5 is not!
                 |
                 |BadPartialImuDeepInterface2:
                 |interface BadPartialImuDeepInterface2<T>
                 |extends PartialImuInterfaceOneArg<T> & PartialImuInterfaceTwoArgs<T, Neither> {}
-                |-> PartialImu interface BadPartialImuDeepInterface2 could have Imu parameters but it extends PartialImuInterfaceTwoArgs__22<T__39, Neither__5> which cannot be Imu because Neither__5 is not!
+                |-> PartialImu interface BadPartialImuDeepInterface2 could have imu parameters but it extends PartialImuInterfaceTwoArgs__22<T__39, Neither__5> which cannot be imu because Neither__5 is not!
                 |
                 |BadImuClassWithImuDeepInterface:
                 |class BadImuClassWithImuDeepInterface extends ImuDeepInterface {
                 |  public n: Neither;
                 |}
-                |-> Class BadImuClassWithImuDeepInterface extends Imu but property n has type Neither__5 which is not Imu!
+                |-> Class BadImuClassWithImuDeepInterface claims imu but property n has type Neither__5 which is not imu!
                 |
                 |BadPartialImuClassWithPartialImuDeepInterface:
                 |class BadPartialImuClassWithPartialImuDeepInterface<T> extends PartialImuDeepInterface1<T> {
                 |  public n: Neither;
                 |}
-                |-> Class BadPartialImuClassWithPartialImuDeepInterface extends PartialImu but property n has type Neither__5 which is not Imu!
+                |-> Class BadPartialImuClassWithPartialImuDeepInterface claims partialImu but property n has type Neither__5 which is not imu!
                 |
                 |BadPartialImuViaUpcast:
                 |interface BadPartialImuViaUpcast<T, U> extends PartialImuInterfaceOneArg<List<U>> {}
-                |-> PartialImu interface BadPartialImuViaUpcast's type parameter <T> would not be Imu when cast to its effectively Imu super-type PartialImuInterfaceOneArg__20<List<U__46>> because T__45 is not Imu!
+                |-> PartialImu interface BadPartialImuViaUpcast's type parameter <T> would not be imu when cast to its effectively Imu super-type PartialImuInterfaceOneArg__20<List<U__46>> because T__45 is not imu!
                 |
                 |BadImuClassUsingPartialImu:
-                |class BadImuClassUsingPartialImu<T> extends Imu {
+                |class BadImuClassUsingPartialImu<T> {
                 |  public p: List<Neither>;
                 |}
-                |-> Expected Imu type but got Neither__5!
-                |-> Class BadImuClassUsingPartialImu extends Imu but property p has type List<Neither__5> which is not Imu!
+                |-> Expected imu type but got Neither__5!
+                |-> Class BadImuClassUsingPartialImu claims imu but property p has type List<Neither__5> which is not imu!
                 |
                 |BadPartialImuInterfaceHidesParam:
                 |interface BadPartialImuInterfaceHidesParam<T> extends PartialImuInterfaceOneArg<ListBuilder<T>> {}
-                |-> PartialImu interface BadPartialImuInterfaceHidesParam could have Imu parameters but it extends PartialImuInterfaceOneArg__20<ListBuilder<T__53>> which cannot be Imu because ListBuilder<T__53> is not!
+                |-> PartialImu interface BadPartialImuInterfaceHidesParam could have imu parameters but it extends PartialImuInterfaceOneArg__20<ListBuilder<T__53>> which cannot be imu because ListBuilder<T__53> is not!
             """.trimMargin().trimEnd(),
             got.trimEnd(),
         )
@@ -176,48 +176,48 @@ class ImuCheckerTest {
 
     companion object {
         private val testSourceCode = """
-            |@imu class ImuNoProperties extends Imu {}
-            |@imu class ImuOneProperty extends Imu {
+            |@imu class ImuNoProperties {}
+            |@imu class ImuOneProperty {
             |  public p: ImuNoProperties;
             |}
-            |@imu class ImuRecursive extends Imu {
+            |@imu class ImuRecursive {
             |  public p: ImuRecursive?;
             |}
-            |@imu class ImuGeneric<T extends Imu> {
+            |@imu class ImuGeneric<@imu T> {
             |  public p: T;
             |}
             |class Neither {}
-            |@imu class BadImuProp extends Imu {
+            |@imu class BadImuProp {
             |  public p: Neither;
             |}
-            |@imu class BadImuVar extends Imu {
+            |@imu class BadImuVar {
             |  public var p: ImuOneProperty;
             |}
-            |@imu class BadImuGeneric1<T extends PartialImu> extends Imu {
+            |@imu class BadImuGeneric1<@partialImu T> {
             |  public p: T;
             |}
-            |@imu class BadImuGeneric2<T> extends Imu {
+            |@imu class BadImuGeneric2<T> {
             |  public p: T;
             |}
-            |@imu class BadImuContravariant<in T extends Imu> extends Imu {
+            |@imu class BadImuContravariant<@imu in T> {
             |  public p: List<T>;
             |}
-            |@imu class ImuWithParameterizedPartialList<T extends Imu> extends Imu {
+            |@imu class ImuWithParameterizedPartialList<@imu T> {
             |  public p: List<T>;
             |}
             |
-            |@partialImu interface PartialImuInterfaceNoTypeArgs extends PartialImu {}
-            |class BadPartialImuNoTypeArgs extends PartialImu {}
-            |class PartialImuDirectClass<T> extends PartialImu {
+            |@partialImu interface PartialImuInterfaceNoTypeArgs {}
+            |@partialImu class BadPartialImuNoTypeArgs {}
+            |@partialImu class PartialImuDirectClass<T> {
             |  public p: T;
             |}
-            |interface PartialImuInterfaceOneArg<T> extends PartialImu {}
-            |interface PartialImuInterfaceTwoArgs<T, U> extends PartialImu {}
-            |interface PartialImuInterfaceTwoArgsOneImu<T, U extends Imu> extends PartialImu {}
+            |@partialImu interface PartialImuInterfaceOneArg<T> {}
+            |@partialImu interface PartialImuInterfaceTwoArgs<T, U> {}
+            |@partialImu interface PartialImuInterfaceTwoArgsOneImu<T, @imu U> {}
             |interface PartialImuDeepInterface1<T> extends PartialImuInterfaceTwoArgs<T, T> {}
             |interface PartialImuDeepInterface2<T> extends PartialImuInterfaceOneArg<List<T>> {}
             |interface PartialImuDeepInterface3<T> extends PartialImuInterfaceTwoArgs<T, Null> {}
-            |class BadPartialImuClass<T> extends PartialImu {
+            |@partialImu class BadPartialImuClass<T> {
             |  public p: T; // ok
             |  public q: ListBuilder<T>; // not imu under any parameterization
             |}
@@ -226,7 +226,7 @@ class ImuCheckerTest {
             |interface BadPartialImuDeepInterface2<T>
             |extends PartialImuInterfaceOneArg<T> & PartialImuInterfaceTwoArgs<T, Neither> {}
             |
-            |interface ImuDeepInterface extends Imu {}
+            |interface ImuDeepInterface extends ImuNoProperties {}
             |class BadImuClassWithImuDeepInterface extends ImuDeepInterface {
             |  public n: Neither;
             |}
@@ -236,13 +236,13 @@ class ImuCheckerTest {
             |
             |interface BadPartialImuViaUpcast<T, U> extends PartialImuInterfaceOneArg<List<U>> {}
             |
-            |class ImuClassUsesPartialImu extends Imu {
+            |@imu class ImuClassUsesPartialImu {
             |  public p: PartialImuInterfaceOneArg<ImuOneProperty>;
             |}
-            |class PartialImuClassUsingPartialImuContingently<T> extends PartialImu {
+            |@partialImu class PartialImuClassUsingPartialImuContingently<T> {
             |  public p: List<T>;
             |}
-            |class BadImuClassUsingPartialImu<T> extends Imu {
+            |@imu class BadImuClassUsingPartialImu<T> {
             |  public p: List<Neither>;
             |}
             |interface BadPartialImuInterfaceHidesParam<T> extends PartialImuInterfaceOneArg<ListBuilder<T>> {}

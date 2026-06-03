@@ -66,6 +66,7 @@ import lang.temper.value.NameLeaf
 import lang.temper.value.ReifiedType
 import lang.temper.value.Result
 import lang.temper.value.RightNameLeaf
+import lang.temper.value.StayLeaf
 import lang.temper.value.TBoolean
 import lang.temper.value.TEdge
 import lang.temper.value.TFunction
@@ -884,7 +885,7 @@ internal fun typeDisambiguateMacro(
     // Pull type formals into body alongside other members.
     //     class C<T> { ... }  ->  class C { @typeFormal @typeDefined(T__0) let T = ...; ... }
     // Since each type formal also is a TypeDefinition, we allocate a type name.
-    val formalDecls = mutableListOf<DeclTree>()
+    val formalDecls = mutableListOf<Tree>()
     val formalEffects = mutableListOf<CallTree>()
     val errorNodes = mutableListOf<Tree>()
     val reifiedFormals = mutableListOf<Pair<Position, ReifiedType>>()
@@ -901,10 +902,12 @@ internal fun typeDisambiguateMacro(
             val upperBounds = mutableListOf<Tree>()
             var variance = Variance.Default
             var hasUpperBound = false
+            var decoratedEdge: TEdge? = null
             // Look for patterns like
             // 1. @out Name                           // Parsed from `out name` via TypeArgumentName
             // 2. @in  Name
-            // 3.      Name extends TypeExpression
+            // 3. @... Name
+            // 4.      Name extends TypeExpression
             formalNameLoop@
             while (formalName is CallTree) {
                 val callee = formalName.child(0) as? RightNameLeaf ?: break
@@ -927,6 +930,11 @@ internal fun typeDisambiguateMacro(
                         upperBounds.add(freeTarget(formalName.edge(2)))
                         hasUpperBound = true
                         formalName = freeTarget(formalName.edge(1))
+                    }
+                    (atBuiltinName.builtinKey to BINARY_OP_CALL_ARG_COUNT) -> {
+                        // No freeing here because we want to keep the decoration structure.
+                        decoratedEdge = formalName.edge(2)
+                        formalName = decoratedEdge.target
                     }
                     else -> break@formalNameLoop
                 }
@@ -954,6 +962,7 @@ internal fun typeDisambiguateMacro(
                 }
                 val stableFormalName = predefinedFormalDefinition?.name
                     ?: doc.nameMaker.unusedSourceName(ParsedName(formalSymbol.text))
+                val stayLeaf = StayLeaf(doc, formalPos)
                 val formalDefinition = when {
                     predefinedFormalDefinition != null -> {
                         if (predefinedFormalDefinition.variance != variance) {
@@ -983,6 +992,7 @@ internal fun typeDisambiguateMacro(
                                 // bound like `Bubble` which is disjoint from AnyValue.
                                 listOf(WellKnownTypes.anyValueType)
                             },
+                            stayLeaf = stayLeaf,
                         )
                     }
                 }
@@ -998,6 +1008,8 @@ internal fun typeDisambiguateMacro(
                         V(Value(reifiedFormal))
                         V(vResolutionSymbol)
                         Ln(formalDefinition.name)
+                        V(vStaySymbol)
+                        Replant(stayLeaf)
                         V(vInitSymbol)
                         V(formalPos, Value(reifiedFormal))
                         if (genre == Genre.Documentation) {
@@ -1006,7 +1018,16 @@ internal fun typeDisambiguateMacro(
                         }
                     },
                 )
-                formalDecls.add(DeclTree(doc, formalPos, formalDeclChildren))
+                val formalDecl = DeclTree(doc, formalPos, formalDeclChildren)
+                val formalDeclWrapped = when (decoratedEdge) {
+                    null -> formalDecl // actually not wrapped
+                    else -> {
+                        decoratedEdge.replace(formalDecl)
+                        // Decorations, if present, are always the outer layer of type args.
+                        next
+                    }
+                }
+                formalDecls.add(formalDeclWrapped)
                 reifiedFormals.add(formalPos to reifiedFormal)
                 if (predefinedFormalDefinition == null) {
                     typeShape.typeParameters.add(
