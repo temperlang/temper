@@ -16,8 +16,6 @@ import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
 import lang.temper.type.Variance
 import lang.temper.type.WellKnownTypes
-import lang.temper.type.WellKnownTypes.imuTypeDefinition
-import lang.temper.type.WellKnownTypes.partialImuTypeDefinition
 import lang.temper.type2.MkType2
 import lang.temper.type2.SuperTypeTree2
 import lang.temper.type2.Type2
@@ -93,8 +91,6 @@ class ImuChecker(
         val supers = getSuperTypeTree(type)
         return when (typeShape) {
             // Special-case some core types.
-            imuTypeDefinition,
-            partialImuTypeDefinition,
             WellKnownTypes.listTypeDefinition,
             WellKnownTypes.mapTypeDefinition,
             -> true
@@ -150,9 +146,7 @@ class ImuChecker(
                 // They all need to have effectively imu types when type bindings are imu.
 
                 // Find the shallowest super-types that are partial imu.
-                val partialImuSupers = typeShape.superTypes.filter { superType ->
-                    superType.definition != partialImuTypeDefinition
-                }.map { superType ->
+                val partialImuSupers = typeShape.superTypes.map { superType ->
                     hackMapOldStyleToNew(superType)
                 }.filter { superType ->
                     getSuperTypeTree(superType).hasSymbol(partialImuSymbol)
@@ -373,7 +367,6 @@ class ImuChecker(
 
         if (
             superTypeTree.hasSymbol(partialImuSymbol) &&
-            type.definition != partialImuTypeDefinition &&
             // Type formals do not have parameters so PartialImu makes little sense there.
             type.definition is TypeShape
         ) {

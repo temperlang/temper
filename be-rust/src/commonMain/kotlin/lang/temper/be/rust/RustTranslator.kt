@@ -709,7 +709,6 @@ class RustTranslator(
         sups@ for ((subShape, sup) in decl.typeShape.allInterfaces(allowStart = true)) {
             // Only handle type shapes, and only unique ones.
             val supShape = (sup.definition as? TypeShape) ?: continue@sups
-            supShape.isFiction() && continue@sups
             val supDecl = supShape.stayLeaf?.incoming?.source as? DeclTree
             // For sealed enums, this picks an arbitrary winner. TODO Allow diamonds and/or check against them earlier.
             handledSups.add(supShape.name) || continue@sups
@@ -1015,7 +1014,6 @@ class RustTranslator(
                         add(EQ_NAME.toId(bound.pos))
                         add(HASH_NAME.toId(bound.pos))
                     }
-                    else if boundDef.isFiction() -> {}
                     // Translate general cases to trait names.
                     else -> translateTypeAsTraitName(bound).also { add(it) }
                 }
@@ -3133,10 +3131,7 @@ class RustTranslator(
         // Otherwise look up well-known types or use the user-defined type.
         return when (def.sourceLocation) {
             ImplicitsCodeLocation -> when (def) {
-                WellKnownTypes.anyValueTypeDefinition,
-                WellKnownTypes.imuTypeDefinition,
-                WellKnownTypes.partialImuTypeDefinition,
-                -> OutName(ANY_NAME, def.name)
+                WellKnownTypes.anyValueTypeDefinition -> OutName(ANY_NAME, def.name)
                 WellKnownTypes.booleanTypeDefinition -> OutName("bool", def.name)
                 WellKnownTypes.denseBitVectorTypeDefinition -> OutName(DENSE_BIT_VECTOR_NAME, def.name)
                 WellKnownTypes.dequeTypeDefinition -> OutName(DEQUE_NAME, def.name)

@@ -115,9 +115,6 @@ internal class DisAmbiguateStage(
                     hoistDecls(root)
                     flipDeclaredNames(root)
                     Debug.Frontend.DisAmbiguateStage.After.snapshot(configKey, AstSnapshotKey, root)
-                    if ("plicits" !in root.pos.loc.diagnostic) {
-                        root.pos
-                    }
                 },
             )
         }

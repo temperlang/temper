@@ -9,17 +9,6 @@
 export interface AnyValue {}
 
 /**
- * Marker interface for types that must be deeply immutable.
- */
-export interface Imu {}
-
-/**
- * Marker interface for types that must be deeply immutable when
- * their actual type parameters are deeply immutable.
- */
-export interface PartialImu {}
-
-/**
  * Indicates that values can be tested for equality using `==` and `!=`.
  * User-defined types can't currently extend Equatable, but we expect to support
  * this in the future.

@@ -1653,7 +1653,7 @@ Top levels in the context of a larger semicolon separated run.
 
 #### Syntax for *TypeArgument*
 
-![TypeArgument &#58;&#61; Expr](../snippet/syntax/TypeArgument/snippet.svg)
+![TypeArgument &#58;&#61; DecoratedExpr](../snippet/syntax/TypeArgument/snippet.svg)
 
 <!-- /snippet: syntax/TypeArgument -->
 

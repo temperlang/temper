@@ -299,11 +299,7 @@ class PyTranslator(
 
         var needsGeneric = true
         val needsProto = t.kind == TmpL.TypeDeclarationKind.Interface
-        t.superTypes.forEach superTypes@{ nominalType ->
-            when (nominalType.typeName.sourceDefinition) {
-                WellKnownTypes.imuTypeDefinition, WellKnownTypes.partialImuTypeDefinition -> return@superTypes
-                else -> {}
-            }
+        t.superTypes.forEach { nominalType ->
             if (nominalType.params.isNotEmpty()) {
                 needsGeneric = false
             }
@@ -375,7 +371,7 @@ class PyTranslator(
         ): List<Py.Stmt> = buildList {
             // TODO: substitute python parameter names for TmpL names
             // See be-java's javadoc(...) helpers.
-            val fnDocumentation = s.documentation.prettyPleaseHelp()
+            val fnDocumentation = s.documentation?.prettyPleaseHelp()
             if (fnDocumentation != null) {
                 add(translateDocString(fnDocumentation, s.pos))
             }
@@ -1120,7 +1116,7 @@ class PyTranslator(
         // TODO We also need to have renamed globals for rare cases of conflict with named args.
         // TODO Is the above still a valid concern?
         // TODO Why don't method bodies currently include declareReferences?
-        val documentation = func.documentation.prettyPleaseHelp()
+        val documentation = func.documentation?.prettyPleaseHelp()
         if (documentation != null) {
             add(translateDocString(documentation, func.pos))
         }
@@ -1576,7 +1572,6 @@ class PyTranslator(
                 is TmpL.ConnectedToTypeName -> null
             }
             when (typeDefinition) {
-                // TODO Translate Imu, PartialImu
                 WellKnownTypes.emptyTypeDefinition -> Py.Tuple(type.pos, emptyList())
                 WellKnownTypes.listTypeDefinition,
                 WellKnownTypes.listedTypeDefinition,
