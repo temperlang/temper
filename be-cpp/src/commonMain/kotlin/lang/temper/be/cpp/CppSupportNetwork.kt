@@ -16,6 +16,7 @@ import lang.temper.format.OutputToken
 import lang.temper.format.TokenSink
 import lang.temper.lexer.Genre
 import lang.temper.log.Position
+import lang.temper.type.WellKnownTypes
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.value.BuiltinOperatorId
@@ -24,11 +25,17 @@ import lang.temper.value.pureVirtualBuiltinName
 
 internal const val TEMPER_CORE_NAMESPACE = "temper::core"
 
+/**
+ * Maps Temper builtin operations and runtime type operations to C++ implementations.
+ *
+ * Builtins are translated to calls into `temper::core::*` helper functions defined in
+ * `core.hpp`. Runtime type operations (`is`, `as`, `assertAs`) use `dynamic_pointer_cast`
+ * for reference types and `AnyValueBox` unboxing for value types.
+ */
 internal object CppSupportNetwork : SupportNetwork {
-    override val backendDescription: String
-        get() = "Cpp Backend"
+    override val backendDescription: String = "Cpp Backend"
     override val bubbleStrategy: BubbleBranchStrategy = BubbleBranchStrategy.CatchBubble
-    override val coroutineStrategy: CoroutineStrategy = CoroutineStrategy.TranslateToGenerator
+    override val coroutineStrategy: CoroutineStrategy = CoroutineStrategy.TranslateToRegularFunction
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionType
 
     override fun representationOfVoid(
@@ -47,220 +54,242 @@ internal object CppSupportNetwork : SupportNetwork {
         BuiltinOperatorId.BitwiseNegation32, BuiltinOperatorId.BitwiseNegation64 -> Like.unary("~")
         BuiltinOperatorId.BitwiseShl32, BuiltinOperatorId.BitwiseShl64 -> Like.binary("<<")
         BuiltinOperatorId.BitwiseShr32, BuiltinOperatorId.BitwiseShr64 -> Like.binary(">>")
-        BuiltinOperatorId.BitwiseShrUnsigned32 -> Like.core("ushr32")
-        BuiltinOperatorId.BitwiseShrUnsigned64 -> Like.core("ushr64")
+        BuiltinOperatorId.BitwiseShrUnsigned32 -> Like.core("Int::ushr")
+        BuiltinOperatorId.BitwiseShrUnsigned64 -> Like.core("Int64::ushr")
         BuiltinOperatorId.IsNull -> Like.core("is_null")
         BuiltinOperatorId.NotNull -> Like.core("not_null")
         BuiltinOperatorId.DivFltFlt -> Like.binary("/")
-        BuiltinOperatorId.DivIntInt, BuiltinOperatorId.DivIntInt64 -> Like.binary("/")
-        BuiltinOperatorId.DivIntIntSafe, BuiltinOperatorId.DivIntInt64Safe -> Like.core("div_safe")
-        BuiltinOperatorId.ModFltFlt -> Like.binary("%")
-        BuiltinOperatorId.ModIntInt, BuiltinOperatorId.ModIntInt64 -> Like.binary("%")
-        BuiltinOperatorId.ModIntIntSafe, BuiltinOperatorId.ModIntInt64Safe -> Like.core("mod_safe")
+        BuiltinOperatorId.DivIntInt -> Like.core("Int::div_wrap")
+        BuiltinOperatorId.DivIntInt64 -> Like.core("Int64::div_wrap")
+        BuiltinOperatorId.DivIntIntSafe -> Like.core("Int::div_safe")
+        BuiltinOperatorId.DivIntInt64Safe -> Like.core("Int64::div_safe")
+        BuiltinOperatorId.ModFltFlt -> Like.name("std", "fmod")
+        BuiltinOperatorId.ModIntInt -> Like.core("Int::mod_wrap")
+        BuiltinOperatorId.ModIntInt64 -> Like.core("Int64::mod_wrap")
+        BuiltinOperatorId.ModIntIntSafe -> Like.core("Int::mod_safe")
+        BuiltinOperatorId.ModIntInt64Safe -> Like.core("Int64::mod_safe")
         BuiltinOperatorId.MinusFlt -> Like.unary("-")
         BuiltinOperatorId.MinusFltFlt -> Like.binary("-")
-        BuiltinOperatorId.MinusInt, BuiltinOperatorId.MinusInt64 -> Like.unary("-")
-        BuiltinOperatorId.MinusIntInt, BuiltinOperatorId.MinusIntInt64 -> Like.binary("-")
+        // Int arithmetic uses wrapping core helpers (well-defined two's-complement
+        // overflow without depending on the `-fwrapv` compiler flag). Float keeps native
+        // operators.
+        BuiltinOperatorId.MinusInt -> Like.core("Int::neg")
+        BuiltinOperatorId.MinusInt64 -> Like.core("Int64::neg")
+        BuiltinOperatorId.MinusIntInt -> Like.core("Int::sub")
+        BuiltinOperatorId.MinusIntInt64 -> Like.core("Int64::sub")
         BuiltinOperatorId.PlusFltFlt -> Like.binary("+")
-        BuiltinOperatorId.PlusIntInt, BuiltinOperatorId.PlusIntInt64 -> Like.binary("+")
-        BuiltinOperatorId.TimesIntInt, BuiltinOperatorId.TimesIntInt64 -> Like.binary("*")
+        BuiltinOperatorId.PlusIntInt -> Like.core("Int::add")
+        BuiltinOperatorId.PlusIntInt64 -> Like.core("Int64::add")
+        BuiltinOperatorId.TimesIntInt -> Like.core("Int::mul")
+        BuiltinOperatorId.TimesIntInt64 -> Like.core("Int64::mul")
         BuiltinOperatorId.TimesFltFlt -> Like.binary("*")
-        BuiltinOperatorId.PowFltFlt -> Like.core("pow")
-        BuiltinOperatorId.LtFltFlt -> Like.core("lt")
+        BuiltinOperatorId.PowFltFlt -> Like.core("Float64::pow")
+        BuiltinOperatorId.LtFltFlt -> Like.core("Float64::lt")
         BuiltinOperatorId.LtIntInt -> Like.binary("<")
-        BuiltinOperatorId.LtStrStr -> Like.core("lt")
-        BuiltinOperatorId.LtGeneric -> TODO()
-        BuiltinOperatorId.LeFltFlt -> Like.core("le")
+        BuiltinOperatorId.LtStrStr -> Like.core("Compare::lt")
+        BuiltinOperatorId.LtGeneric -> Like.core("Compare::lt")
+        BuiltinOperatorId.LeFltFlt -> Like.core("Float64::le")
         BuiltinOperatorId.LeIntInt -> Like.binary("<=")
-        BuiltinOperatorId.LeStrStr -> Like.core("le")
-        BuiltinOperatorId.LeGeneric -> TODO()
-        BuiltinOperatorId.GtFltFlt -> Like.core("gt")
+        BuiltinOperatorId.LeStrStr -> Like.core("Compare::le")
+        BuiltinOperatorId.LeGeneric -> Like.core("Compare::le")
+        BuiltinOperatorId.GtFltFlt -> Like.core("Float64::gt")
         BuiltinOperatorId.GtIntInt -> Like.binary(">")
-        BuiltinOperatorId.GtStrStr -> Like.core("gt")
-        BuiltinOperatorId.GtGeneric -> TODO()
-        BuiltinOperatorId.GeFltFlt -> Like.core("ge")
+        BuiltinOperatorId.GtStrStr -> Like.core("Compare::gt")
+        BuiltinOperatorId.GtGeneric -> Like.core("Compare::gt")
+        BuiltinOperatorId.GeFltFlt -> Like.core("Float64::ge")
         BuiltinOperatorId.GeIntInt -> Like.binary(">=")
-        BuiltinOperatorId.GeStrStr -> Like.core("ge")
-        BuiltinOperatorId.GeGeneric -> TODO()
-        BuiltinOperatorId.EqFltFlt -> Like.core("eq")
+        BuiltinOperatorId.GeStrStr -> Like.core("Compare::ge")
+        BuiltinOperatorId.GeGeneric -> Like.core("Compare::ge")
+        BuiltinOperatorId.EqFltFlt -> Like.core("Float64::eq")
         BuiltinOperatorId.EqIntInt -> Like.binary("==")
-        BuiltinOperatorId.EqStrStr -> Like.core("eq")
-        BuiltinOperatorId.EqGeneric -> TODO()
-        BuiltinOperatorId.NeFltFlt -> Like.core("ne")
+        BuiltinOperatorId.EqStrStr -> Like.core("Compare::eq")
+        BuiltinOperatorId.EqGeneric -> Like.core("Compare::eq")
+        BuiltinOperatorId.NeFltFlt -> Like.core("Float64::ne")
         BuiltinOperatorId.NeIntInt -> Like.binary("!=")
-        BuiltinOperatorId.NeStrStr -> Like.core("ne")
-        BuiltinOperatorId.NeGeneric -> TODO()
-        BuiltinOperatorId.CmpFltFlt -> Like.core("cmp")
-        BuiltinOperatorId.CmpIntInt -> Like.core("cop")
-        BuiltinOperatorId.CmpStrStr -> Like.core("cmp")
-        BuiltinOperatorId.CmpGeneric -> TODO()
-        BuiltinOperatorId.Bubble -> Like.core("bubble")
+        BuiltinOperatorId.NeStrStr -> Like.core("Compare::ne")
+        BuiltinOperatorId.NeGeneric -> Like.core("Compare::ne")
+        BuiltinOperatorId.CmpFltFlt -> Like.core("Float64::cmp")
+        BuiltinOperatorId.CmpIntInt -> Like.core("Compare::cmp")
+        BuiltinOperatorId.CmpStrStr -> Like.core("Compare::cmp")
+        BuiltinOperatorId.CmpGeneric -> Like.core("Compare::cmp")
+        BuiltinOperatorId.Bubble -> handle {
+            // bubble() is template<class T = void> — need explicit type when used in expression context
+            val cppRetType = translator.translateType2(retType)
+            cpp.callExpr(
+                cpp.template(
+                    cpp.name(TEMPER_CORE_NAMESPACE, "bubble"),
+                    listOf(cppRetType),
+                ),
+                values,
+            )
+        }
         BuiltinOperatorId.Print -> Like.core("print")
         BuiltinOperatorId.StrCat -> Like.core("cat")
-        BuiltinOperatorId.Listify -> Like.core("List::make")
-        BuiltinOperatorId.AdaptGeneratorFn -> TODO()
-        BuiltinOperatorId.SafeAdaptGeneratorFn -> TODO()
-        BuiltinOperatorId.Async -> TODO()
+        BuiltinOperatorId.Listify -> handle {
+            // List::make needs explicit template parameter since Elem can't be deduced
+            val elemType = (retType as? lang.temper.type2.DefinedType)?.bindings?.firstOrNull()
+            if (elemType != null) {
+                cpp.callExpr(
+                    cpp.template(
+                        cpp.name(TEMPER_CORE_NAMESPACE, "List", "make"),
+                        listOf(translator.translateType2(elemType)),
+                    ),
+                    values,
+                )
+            } else {
+                cpp.callExpr(
+                    cpp.name(TEMPER_CORE_NAMESPACE, "List", "make"),
+                    values,
+                )
+            }
+        }
+        BuiltinOperatorId.AdaptGeneratorFn -> Like.core("adapt_generator_fn")
+        BuiltinOperatorId.SafeAdaptGeneratorFn -> Like.core("safe_adapt_generator_fn")
+        BuiltinOperatorId.Async -> Like.core("async_run")
         null -> when (builtin.name) {
             pureVirtualBuiltinName.builtinKey -> Like.core("pure_virtual")
-            else -> TODO("builtin: ${builtin.javaClass} ${builtin.name}")
+            // Coroutine→control-flow lowering for `await`: awakeUpon(promise, generator)
+            // registers the resume, getPromiseResultSync(fail, promise) reads the value.
+            "awakeUpon" -> Like.core("awake_upon")
+            "getPromiseResultSync" -> Like.core("get_promise_result_sync")
+            else -> null
         }
 
-        BuiltinOperatorId.Panic -> TODO()
+        BuiltinOperatorId.Panic -> handle {
+            val cppRetType = translator.translateType2(retType)
+            cpp.callExpr(
+                cpp.template(
+                    cpp.name(TEMPER_CORE_NAMESPACE, "panic"),
+                    listOf(cppRetType),
+                ),
+                values,
+            )
+        }
     }
 
     override fun optionalSupportCode(
         optionalSupportCodeKind: OptionalSupportCodeKind,
     ): Pair<SupportCode, Signature2>? = null
 
+    private val connectedRefs: Map<String, SupportCode> by lazy { buildMap {
+        put("::getConsole", Like.core("Console::get_console"))
+        put("empty", Like.core("empty"))
+        put("ignore", Like.ignoring(theLastArg))
+        put("Boolean::toString", Like.core("Boolean::toString"))
+        put("Date::getDay", Like.core("Date::getDay"))
+        put("Date::getMonth", Like.core("Date::getMonth"))
+        put("Date::getYear", Like.core("Date::getYear"))
+        put("Date::getDayOfWeek", Like.core("Date::getDayOfWeek"))
+        put("Date::toString", Like.core("Date::toString"))
+        put("Date::yearsBetween", Like.core("Date::yearsBetween"))
+        for (fn in listOf(
+            "e", "pi", "abs", "acos", "asin", "atan", "atan2", "ceil", "cos", "cosh",
+            "exp", "expm1", "floor", "log", "log10", "log1p", "max", "min", "near",
+            "round", "sign", "sin", "sinh", "sqrt", "tan", "tanh",
+            "toInt32", "toInt32Unsafe", "toInt64", "toInt64Unsafe", "toString",
+        )) put("Float64::$fn", Like.core("Float64::$fn"))
+        for (fn in listOf("max", "min", "toFloat64", "toFloat64Unsafe", "toString", "toInt64"))
+            put("Int32::$fn", Like.core("Int::$fn"))
+        for (fn in listOf("max", "min", "toFloat64", "toFloat64Unsafe", "toInt32", "toInt32Unsafe", "toString"))
+            put("Int64::$fn", Like.core("Int64::$fn"))
+        for (fn in listOf("breakPromise", "complete", "getPromise"))
+            put("PromiseBuilder::${fn}", Like.core(fn.lowercase()))
+        put("PromiseBuilder::constructor", Like.coreWithRetTypeArgs("PromiseBuilderNs::make"))
+        for (fn in listOf(
+            "toInt64", "fromCodePoint", "fromCodePoints", "isEmpty", "begin", "end",
+            "get", "countBetween", "forEach", "hasAtLeast", "hasIndex", "next", "prev",
+            "slice", "split", "step", "toFloat64", "toInt32", "toString", "indexOf",
+        )) put("String::$fn", Like.core("String::$fn"))
+        put("String::fromCodePoint", Like.core("String::fromCodepoint"))
+        put("String::fromCodePoints", Like.core("String::fromCodepoints"))
+        put("StringIndex::none", Like.core("String::none"))
+        put("StringIndexOption::compareTo", Like.core("Compare::cmp"))
+        for ((op, sym) in listOf("eq" to "==", "ne" to "!=", "lt" to "<", "le" to "<=", "gt" to ">", "ge" to ">="))
+            put("StringIndexOption::compareTo::$op", Like.binary(sym))
+        put("StringBuilder::constructor", Like.coreWithRetTypeArgs("StringBuilder::make"))
+        for (fn in listOf("append", "appendBetween", "toString", "clear", "end"))
+            put("StringBuilder::$fn", Like.core("StringBuilder::$fn"))
+        put("StringBuilder::appendCodePoint", Like.core("StringBuilder::appendCodepoint"))
+        put("Console::log", Like.core("Console::log"))
+        for (fn in listOf("isEmpty", "forEach", "get", "length", "toList", "toListBuilder"))
+            put("List::$fn", Like.core("List::$fn"))
+        for (fn in listOf("filter", "isEmpty", "join", "map", "mapDropping", "slice", "get", "getOr", "length", "reduce", "sorted", "toList", "toListBuilder", "indexOf"))
+            put("Listed::$fn", Like.core("List::$fn"))
+        put("ListBuilder::constructor", Like.coreWithRetTypeArgs("ListBuilder::make"))
+        for (fn in listOf("add", "addAll", "removeLast", "reverse", "splice", "set", "sort"))
+            put("ListBuilder::$fn", Like.coreWithFirstArgTypeArgs("ListBuilder::$fn"))
+        put("ListBuilder::toList", Like.core("List::toList"))
+        put("ListBuilder::toListBuilder", Like.core("List::toListBuilder"))
+        put("ListBuilder::length", Like.core("List::length"))
+        put("Map::constructor", Like.coreWithRetTypeArgs("Map::make"))
+        put("MapBuilder::constructor", Like.coreWithRetTypeArgs("Map::make"))
+        for (fn in listOf("clear", "remove", "set"))
+            put("MapBuilder::$fn", Like.coreWithFirstArgTypeArgs("MapBuilder::$fn"))
+        put("Pair::constructor", Like.coreWithRetTypeArgs("PairFactory::make"))
+        put("Mapped::length", Like.core("Mapped::length"))
+        for (fn in listOf("get", "getOr", "has"))
+            put("Mapped::$fn", Like.coreWithFirstArgTypeArgs("Mapped::$fn"))
+        for (fn in listOf("keys", "values", "toMap", "toMapBuilder", "toList", "toListBuilder", "toListWith", "toListBuilderWith", "forEach"))
+            put("Mapped::$fn", Like.core("Mapped::$fn"))
+        put("Mapped::set", Like.core("MapBuilder::set"))
+        put("DenseBitVector::constructor", Like.coreWithRetTypeArgs("DenseBitVector::make"))
+        put("DenseBitVector::get", Like.core("DenseBitVector::get"))
+        put("DenseBitVector::set", Like.core("DenseBitVector::set"))
+        put("Deque::constructor", Like.coreWithRetTypeArgs("Deque::make"))
+        for (fn in listOf("add", "isEmpty", "removeFirst"))
+            put("Deque::$fn", Like.coreWithFirstArgTypeArgs("Deque::$fn"))
+        for (fn in listOf("compiledFind", "compiledFound", "compiledReplace", "compiledSplit", "compileFormatted"))
+            put("Regex::$fn", Like.core("Regex::$fn"))
+        put("RegexFormatter::pushCaptureName", Like.core("Regex::pushCaptureName"))
+        put("RegexFormatter::pushCodeTo", Like.core("Regex::pushCodeTo"))
+        put("Test::bail", Like.core("testBail"))
+        put("Generator::next", Like.core("next"))
+        put("SafeGenerator::next", Like.core("next"))
+        put("doneResult", Like.core("doneResult"))
+    }}
+
     override fun translateConnectedReference(
         pos: Position,
         connectedKey: String,
         genre: Genre,
-    ): SupportCode? = when (connectedKey) {
-        "::getConsole" -> Like.core("get_console")
-        "ignore" -> Like.ignoring(theLastArg)
-        "Boolean::toString" -> Like.core("toString")
-        "Date::constructor" -> Like.core("Date::make")
-        "Date::fromIsoString" -> Like.core("Date::make")
-        "Date::getDay" -> Like.core("get_day")
-        "Date::getMonth" -> Like.core("get_month")
-        "Date::getYear" -> Like.core("get_year")
-        "Date::getDayOfWeek" -> Like.core("get_day_of_week")
-        "Date::toString" -> Like.core("toString")
-        "Date::today" -> Like.core("to_day")
-        "Date::yearsBetween" -> Like.core("years_between")
-        "Float64::e" -> Like.core("Float64::e")
-        "Float64::pi" -> Like.core("Float64::pi")
-        "Float64::abs" -> Like.core("abs")
-        "Float64::acos" -> Like.core("acos")
-        "Float64::asin" -> Like.core("asin")
-        "Float64::atan" -> Like.core("atan")
-        "Float64::atan2" -> Like.core("atan2")
-        "Float64::ceil" -> Like.core("ceil")
-        "Float64::cos" -> Like.core("cos")
-        "Float64::cosh" -> Like.core("cosh")
-        "Float64::exp" -> Like.core("exp")
-        "Float64::expm1" -> Like.core("expm1")
-        "Float64::floor" -> Like.core("floor")
-        "Float64::log" -> Like.core("log")
-        "Float64::log10" -> Like.core("log10")
-        "Float64::log1p" -> Like.core("log1p")
-        "Float64::max" -> Like.core("max")
-        "Float64::min" -> Like.core("min")
-        "Float64::near" -> Like.core("near")
-        "Float64::round" -> Like.core("round")
-        "Float64::sign" -> Like.core("sign")
-        "Float64::sin" -> Like.core("sin")
-        "Float64::sinh" -> Like.core("sinh")
-        "Float64::sqrt" -> Like.core("sqrt")
-        "Float64::tan" -> Like.core("tan")
-        "Float64::tanh" -> Like.core("tanh")
-        "Float64::toInt32" -> Like.core("toInt")
-        "Float64::toInt32Unsafe" -> Like.core("toIntUnsafe")
-        "Float64::toString" -> Like.core("toString")
-        "Int32::max" -> Like.core("max")
-        "Int32::min" -> Like.core("min")
-        "Int32::toFloat64" -> Like.core("toFloat64")
-        "Int32::toFloat64Unsafe" -> Like.core("toFloat64Unsafe")
-        "Int32::toString" -> Like.core("toString")
-        "PromiseBuilder::breakPromise" -> Like.core("breakpromise")
-        "PromiseBuilder::complete" -> Like.core("complete")
-        "PromiseBuilder::constructor" -> Like.core("PromiseBuilder::make")
-        "PromiseBuilder::getPromise" -> Like.core("getpromise")
-        "String::fromCodePoint" -> Like.core("make")
-        "String::fromCodePoints" -> Like.core("make")
-        "String::isEmpty" -> Like.core("isempty")
-        "String::begin" -> Like.core("begin")
-        "String::end" -> Like.core("end")
-        "String::get" -> Like.core("get")
-        "String::countBetween" -> Like.core("countbetween")
-        "String::forEach" -> Like.core("foreach")
-        "String::hasAtLeast" -> Like.core("hasAtLeast")
-        "String::hasIndex" -> Like.core("hasIndex")
-        "String::next" -> Like.core("next")
-        "String::prev" -> Like.core("prev")
-        "String::slice" -> Like.core("slice")
-        "String::split" -> Like.core("split")
-        "String::toFloat64" -> Like.core("toFloat64")
-        "String::toInt32" -> Like.core("toInt")
-        "String::toString" -> Like.core("toString")
-        "StringBuilder::constructor" -> Like.core("StringBuilder::make")
-        "StringBuilder::append" -> Like.core("append")
-        "StringBuilder::appendBetween" -> Like.core("appendBetween")
-        "StringBuilder::appendCodePoint" -> Like.core("appendCodepoint")
-        "StringBuilder::toString" -> Like.core("toString")
-        "StringIndex::none" -> Like.core("none")
-        "StringIndexOption::compareTo" -> Like.core("cmp")
-        "Console::log" -> Like.core("log")
-        "List::isEmpty" -> Like.core("isempty")
-        "List::forEach" -> Like.core("foreach")
-        "List::get" -> Like.core("get")
-        "List::length" -> Like.core("length")
-        "List::toList" -> Like.core("toList")
-        "List::toListBuilder" -> Like.core("toListBuilder")
-        "Listed::filter" -> Like.core("filter")
-        "Listed::isEmpty" -> Like.core("is_empty")
-        "Listed::join" -> Like.core("join")
-        "Listed::map" -> Like.core("map")
-        "Listed::mapDropping" -> Like.core("mapDropping")
-        "Listed::slice" -> Like.core("slice")
-        "Listed::get" -> Like.core("get")
-        "Listed::getOr" -> Like.core("getor")
-        "Listed::length" -> Like.core("length")
-        "Listed::reduce" -> Like.core("reduce")
-        "Listed::reduceFrom" -> Like.core("reduce_from")
-        "Listed::sorted" -> Like.core("sorted")
-        "Listed::toList" -> Like.core("toList")
-        "Listed::toListBuilder" -> Like.core("toListBuilder")
-        "ListBuilder::constructor" -> Like.core("ListBuilder::make")
-        "ListBuilder::add" -> Like.core("add")
-        "ListBuilder::addAll" -> Like.core("addall")
-        "ListBuilder::removeLast" -> Like.core("removeLast")
-        "ListBuilder::reverse" -> Like.core("reverse")
-        "ListBuilder::splice" -> Like.core("splice")
-        "ListBuilder::toList" -> Like.core("toList")
-        "ListBuilder::toListBuilder" -> Like.core("toListBuilder")
-        "ListBuilder::set" -> Like.core("set")
-        "ListBuilder::sort" -> Like.core("sort")
-        "ListBuilder::length" -> Like.core("length")
-        "Map::constructor" -> Like.core("Map::make")
-        "MapBuilder::constructor" -> Like.core("MapBuilder::make")
-        "MapBuilder::remove" -> Like.core("remove")
-        "MapBuilder::set" -> Like.core("set")
-        "Pair::constructor" -> Like.core("Pair::make")
-        "Mapped::length" -> Like.core("length")
-        "Mapped::get" -> Like.core("get")
-        "Mapped::getOr" -> Like.core("getor")
-        "Mapped::has" -> Like.core("has")
-        "Mapped::keys" -> Like.core("keys")
-        "Mapped::values" -> Like.core("values")
-        "Mapped::toMap" -> Like.core("toMap")
-        "Mapped::toMapBuilder" -> Like.core("toMapBuilder")
-        "Mapped::toList" -> Like.core("toList")
-        "Mapped::toListBuilder" -> Like.core("toListBuilder")
-        "Mapped::toListWith" -> Like.core("toListWith")
-        "Mapped::toListBuilderWith" -> Like.core("toListBuilderWith")
-        "Mapped::forEach" -> Like.core("forEach")
-        "DenseBitVector::constructor" -> Like.core("DenseBitVector::make")
-        "DenseBitVector::get" -> Like.core("get")
-        "DenseBitVector::set" -> Like.core("set")
-        "Deque::constructor" -> Like.core("Deque::make")
-        "Deque::add" -> Like.core("add")
-        "Deque::isEmpty" -> Like.core("isEmpty")
-        "Deque::removeFirst" -> Like.core("removeFirst")
-        "Regex::compiledFind" -> Like.core("compiledFind")
-        "Regex::compiledFound" -> Like.core("compiledFound")
-        "Regex::compiledReplace" -> Like.core("compiledReplace")
-        "Regex::compiledSplit" -> Like.core("compiledSplit")
-        "Regex::compileFormatted" -> Like.core("compileFormatted")
-        "RegexFormatter::pushCaptureName" -> Like.core("pushCaptureName")
-        "RegexFormatter::pushCodeTo" -> Like.core("pushCodeTo")
-        "Test::bail" -> Like.core("testBail")
-        "Generator::next", "SafeGenerator::next" -> Like.core("next")
-
-        "Regex::format" -> Like.core("format")
-        else -> TODO("connected: $connectedKey")
+    ): SupportCode? = connectedRefs[connectedKey] ?: when (connectedKey) {
+        "Date::constructor" -> handle {
+            val innerType = retType.bindings.firstOrNull() ?: retType
+            val rawDateName = translator.resolveTypeName(innerType.definition)
+            cpp.callExpr(
+                cpp.template(cpp.name(TEMPER_CORE_NAMESPACE, "Date", "makeDate"), listOf(rawDateName)),
+                values,
+            )
+        }
+        "Date::fromIsoString" -> handle {
+            val innerType = retType.bindings.firstOrNull() ?: retType
+            val rawDateName = translator.resolveTypeName(innerType.definition)
+            cpp.callExpr(
+                cpp.template(cpp.name(TEMPER_CORE_NAMESPACE, "Date", "fromIso"), listOf(rawDateName)),
+                values,
+            )
+        }
+        "Date::today" -> handle {
+            val innerType = retType.bindings.firstOrNull() ?: retType
+            val rawDateName = translator.resolveTypeName(innerType.definition)
+            cpp.callExpr(
+                cpp.template(cpp.name(TEMPER_CORE_NAMESPACE, "Date", "today"), listOf(rawDateName)),
+                emptyList(),
+            )
+        }
+        "Listed::reduceFrom" -> handle {
+            val name = cpp.name(TEMPER_CORE_NAMESPACE, "List", "reduceFrom")
+            val elemType = types.getOrNull(0)?.let { type ->
+                type.bindings.firstOrNull()?.let { translator.translateType2(it) }
+            }
+            val accType = translator.translateType2(retType)
+            if (elemType != null) {
+                cpp.callExpr(cpp.template(name, listOf(elemType, accType)), values)
+            } else {
+                cpp.callExpr(name, values)
+            }
+        }
+        else -> null
     }
 
     override fun translatedConnectedType(
@@ -278,17 +307,60 @@ internal object CppSupportNetwork : SupportNetwork {
         sourceType: TmpL.NominalType,
         targetType: TmpL.NominalType,
     ): SupportCode = handle {
-        val src = cpp.name(sourceType.typeName.sourceDefinition.name)
-        val dest = cpp.name(targetType.typeName.sourceDefinition.name)
-        val func = when (rto) {
-            RuntimeTypeOperation.As -> "${src}::as_${dest}"
-            RuntimeTypeOperation.AssertAs -> "${src}::assert_as_${dest}"
-            RuntimeTypeOperation.Is -> "${src}::is_${dest}"
-        }
-        cpp.callExpr(
-            cpp.name(func),
-            listOf(values[0]),
+        val dest = translator.resolveTypeName(targetType.typeName.sourceDefinition)
+        val targetDef = targetType.typeName.sourceDefinition
+        val isTargetValueType = translator.isValueTypeDef(targetDef)
+        val isSourceValueType = translator.isValueTypeDef(sourceType.typeName.sourceDefinition)
+        val isCast = rto == RuntimeTypeOperation.As || rto == RuntimeTypeOperation.AssertAs
+        val value = values[0]
+
+        fun dynamicPtrCast(castType: Cpp.Type): Cpp.Expr = cpp.callExpr(
+            cpp.template(cpp.name("std", "dynamic_pointer_cast"), listOf(castType)),
+            listOf(value),
         )
+
+        fun notNull(expr: Cpp.Expr): Cpp.Expr =
+            cpp.op("!=", listOf(expr, cpp.literal(cpp.raw("nullptr"))))
+
+        when (targetDef) {
+            WellKnownTypes.stringIndexTypeDefinition -> cpp.callExpr(
+                cpp.name(TEMPER_CORE_NAMESPACE, "String", if (isCast) "requireStringIndex" else "isStringIndex"),
+                listOf(value),
+            )
+            WellKnownTypes.noStringIndexTypeDefinition -> cpp.callExpr(
+                cpp.name(TEMPER_CORE_NAMESPACE, "String", if (isCast) "requireNoStringIndex" else "isNoStringIndex"),
+                listOf(value),
+            )
+            else -> when {
+                isTargetValueType && isSourceValueType -> if (isCast) value else cpp.literal(true)
+                isTargetValueType && isCast -> cpp.op(
+                    "->",
+                    cpp.callExpr(
+                        cpp.template(cpp.name(TEMPER_CORE_NAMESPACE, "checked_cast_box"), listOf(dest)),
+                        listOf(value),
+                    ),
+                    cpp.singleName(CppName("value", allowKey = false)),
+                )
+                isTargetValueType -> notNull(dynamicPtrCast(
+                    cpp.template(cpp.name(TEMPER_CORE_NAMESPACE, "AnyValueBox"), listOf(dest)),
+                ))
+                isCast -> {
+                    val fullTargetType = translator.translateType(targetType)
+                    val castTarget = (fullTargetType as? Cpp.TemplateType)
+                        ?.args?.firstOrNull()
+                        ?.takeIf { it !is Cpp.TemplateType }
+                    if (castTarget != null) {
+                        cpp.callExpr(
+                            cpp.template(cpp.name(TEMPER_CORE_NAMESPACE, "checked_cast"), listOf(castTarget)),
+                            listOf(value),
+                        )
+                    } else {
+                        value
+                    }
+                }
+                else -> notNull(dynamicPtrCast(dest))
+            }
+        }
     }
 }
 
@@ -326,6 +398,27 @@ internal object Like {
     fun core(vararg parts: String): CppInlineSupportCode = handle {
         fromParts(listOf(TEMPER_CORE_NAMESPACE) + parts.toList()).generate(this)
     }
+
+    private fun coreWithTypeArgs(
+        parts: List<String>,
+        extractBindings: InlineContext.() -> List<Type2>,
+    ): CppInlineSupportCode = handle {
+        val name = cpp.name(
+            (listOf(TEMPER_CORE_NAMESPACE) + parts).flatMap { it.split("::") },
+        )
+        val typeArgs = extractBindings().map { translator.translateType2(it) }
+        if (typeArgs.isNotEmpty()) {
+            cpp.callExpr(cpp.template(name, typeArgs), values)
+        } else {
+            cpp.callExpr(name, values)
+        }
+    }
+
+    fun coreWithFirstArgTypeArgs(vararg parts: String): CppInlineSupportCode =
+        coreWithTypeArgs(parts.toList()) { types.firstOrNull()?.bindings ?: emptyList() }
+
+    fun coreWithRetTypeArgs(vararg parts: String): CppInlineSupportCode =
+        coreWithTypeArgs(parts.toList()) { retType.bindings }
 
     fun name(vararg parts: String): CppInlineSupportCode = handle {
         fromParts(parts.toList()).generate(this)

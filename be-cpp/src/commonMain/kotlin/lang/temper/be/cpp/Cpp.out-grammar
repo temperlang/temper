@@ -10,7 +10,7 @@ let imports = """
 Program ::= stmts%Global*"\n" & "\n";
 
 // top-levels
-Global = StructDecl | FuncDecl | VarDecl | StructDef | TypeDef | FuncDef | VarDef | PreProc | Comment | Namespace;
+Global = StructDecl | FuncDecl | VarDecl | StructDef | DerivedStructDef | TemplateStructDef | TemplateFuncDef | TemplateFuncDecl | TypeDef | FuncDef | VarDef | PreProc | Comment | Namespace;
 
 PreProc = Define | Undef | Pragma | IncludeGuard | Include | IfPreProc;
 Include ::= "#" & "include" & "<" & path%Raw & ">" & "\n";
@@ -28,17 +28,27 @@ Namespace ::= "namespace" & (name%SingleName || ()) & "{" & body%Global*"" & "}"
 
 StructDecl ::= "struct" & name%Name & ";";
 StructDef ::= "struct" & name%Name & "{" & fields%StructPart*"" & "}" & ";";
+DerivedStructDef ::= "struct" & name%Name & ":" & "public" & base%Name & "{" & fields%StructPart*"" & "}" & ";";
+TemplateStructDef ::= "template" & "<" & typeParams%FuncParam*"," & ">" & def%StructDef;
+TemplateFuncDef ::= "template" & "<" & typeParams%FuncParam*"," & ">" & def%FuncDef;
+TemplateFuncDecl ::= "template" & "<" & typeParams%FuncParam*"," & ">" & decl%FuncDecl;
 StructPart = StructField | FuncDecl | FuncDef | Comment;
 StructField ::= type%Type & name%SingleName & ";";
 
 enum DefMod = Static;
 
+// Trailing method qualifier, e.g. `const` on a non-mutating member function.
+enum MethodQualifier = Const;
+
 // Optional return type allows for constructors.
-FuncDecl ::= ret%Type? & convention%SingleName? & name%SingleName & "(" & args%Type*"," & ")" & ";";
+FuncDecl ::= mod%DefMod? & ret%Type? & convention%SingleName? & name%SingleName & "(" & args%Type*"," & ")" & qual%MethodQualifier? & ";";
+FuncDecl.mod.default = `null`;
 FuncDecl.convention.default = `null`;
-FuncDef ::= mod%DefMod? & ret%Type? & convention%SingleName? & name%Name & "(" & args%FuncParam*"," & ")" & body%BlockStmt;
+FuncDecl.qual.default = `null`;
+FuncDef ::= mod%DefMod? & ret%Type? & convention%SingleName? & name%Name & "(" & args%FuncParam*"," & ")" & qual%MethodQualifier? & body%BlockStmt;
 FuncDef.mod.default = `null`;
 FuncDef.convention.default = `null`;
+FuncDef.qual.default = `null`;
 FuncParam ::= type%Type & name%SingleName;
 
 VarDecl ::= "extern" & type%Type & name%SingleName & ";";

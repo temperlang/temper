@@ -15,12 +15,14 @@ import lang.temper.fs.OutputRoot
 import lang.temper.log.FilePath
 import lang.temper.name.ModuleName
 import lang.temper.tests.FunctionalTestBase
+import lang.temper.tests.FunctionalTests
 import kotlin.test.Test
 
 class CppFunctionalTest : FunctionalTestRunner<CppBackend>(CppBackend.Cpp11) {
+
     @Test
     override fun algosHelloWorld() {
-        super.algosHelloWorld()
+        runFunctionalTest(FunctionalTests.AlgosHelloWorld)
     }
 
     override fun runGeneratedCode(
@@ -51,7 +53,7 @@ class CppFunctionalTest : FunctionalTestRunner<CppBackend>(CppBackend.Cpp11) {
             var pass = false
             try {
                 if (test.runAsTest) {
-                    assertTestingTest(test, result, Regex("""Test_\.test_(.*?)(?:__\d+)?"""))
+                    assertTestingTest(test, result)
                 } else {
                     test.assertRunOutput(result)
                 }
@@ -59,6 +61,15 @@ class CppFunctionalTest : FunctionalTestRunner<CppBackend>(CppBackend.Cpp11) {
             } finally {
                 if (!pass) {
                     dumpModuleBodies(modules)
+                    // Surface the C++ compiler's stderr, which is otherwise hidden and is usually
+                    // what's needed to diagnose a generated-code compilation failure.
+                    val effort = result.failure?.effort
+                    if (effort is lang.temper.be.cli.EffortSuccess) {
+                        val stderr = effort.auxOut[lang.temper.be.cli.Aux.Stderr]
+                        if (stderr != null) {
+                            System.err.println("C++ compiler stderr:\n$stderr")
+                        }
+                    }
                     result.print(console, asError = true)
                 }
             }

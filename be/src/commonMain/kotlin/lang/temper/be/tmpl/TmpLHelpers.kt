@@ -27,6 +27,7 @@ import lang.temper.name.ResolvedNameMaker
 import lang.temper.name.SourceName
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
+import lang.temper.type.Abstractness
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
 import lang.temper.type.StaticPropertyShape
@@ -392,6 +393,277 @@ fun TmpL.Tree.referencedNames(): Sequence<ResolvedName> = sequence {
             yieldAll(kid.referencedNames())
         }
     }
+}
+
+/**
+ * Member dotNames (methods, getters, setters) across [modules] whose receiver (`this`)
+ * may be mutated when the member runs — directly (a property write or setter call on
+ * `this`) or transitively (calling another such member on `this`). Setters always
+ * qualify. The result is keyed by dotName so it is identical for every declaration in an
+ * override slot, which is what lets a backend emit a `const`/readonly qualifier
+ * consistently (C++ requires matching const-ness across a virtual override slot).
+ *
+ * This is a backend-agnostic mutation analysis. It is conservative: it errs toward
+ * "mutates" (descending into nested closures, which share `this`), so a member is marked
+ * non-mutating only when nothing observed could write `this`. A member NOT in the result
+ * provably does not mutate its receiver within the analyzed module set.
+ */
+fun mutatingMemberNames(
+    modules: Iterable<TmpL.Module>,
+    /**
+     * Member dotNames a backend wants treated as non-const for its own reasons (e.g. a
+     * representation that can't be const-qualified). Seeded into the analysis so the
+     * constraint propagates transitively through `this`-calls and override slots.
+     */
+    forcedMutating: Set<String> = emptySet(),
+): Set<String> {
+    val directlyMutates = forcedMutating.toMutableSet()
+    // member dotName -> dotNames it invokes on `this`
+    val callsOnThis = mutableMapOf<String, MutableSet<String>>()
+    // Undirected equivalence between a member's dotName and the dotName(s) it overrides.
+    // Members in the same override slot must agree on const-ness, so mutation propagates
+    // across these edges.
+    val overrideEquiv = mutableMapOf<String, MutableSet<String>>()
+    fun linkOverride(a: String, b: String) {
+        overrideEquiv.getOrPut(a) { mutableSetOf() }.add(b)
+        overrideEquiv.getOrPut(b) { mutableSetOf() }.add(a)
+    }
+
+    fun analyze(name: String, body: TmpL.Tree?, thisName: ResolvedName?) {
+        if (body == null) return
+        // `this` inside a member body is a reference to the member's first (receiver)
+        // parameter, or a `This` node.
+        fun isThisRef(n: TmpL.Tree): Boolean =
+            n is TmpL.This ||
+                (n is TmpL.Reference && thisName != null && n.id.name == thisName)
+        fun walk(node: TmpL.Tree) {
+            when (node) {
+                is TmpL.SetProperty -> {
+                    // `this.field = ...` reassigns a field of the receiver (the only kind
+                    // of mutation a C++ `const` method actually forbids, since the model
+                    // is shared_ptr-shallow). Deep mutation through a field is allowed by
+                    // both Temper-as-modeled and C++ shallow const, so it's not flagged.
+                    if (isThisRef(node.left.subject)) directlyMutates.add(name) else walk(node.left.subject)
+                    walk(node.right)
+                }
+                is TmpL.MethodReference -> {
+                    if (isThisRef(node.subject)) {
+                        callsOnThis.getOrPut(name) { mutableSetOf() }.add(node.methodName.dotNameText)
+                    } else {
+                        walk(node.subject)
+                    }
+                }
+                is TmpL.PropertyReference -> {
+                    // Reading a property of `this` is fine; only recurse when the subject
+                    // is some other expression that might itself use `this` as a value.
+                    if (!isThisRef(node.subject)) walk(node.subject)
+                }
+                else -> {
+                    if (isThisRef(node)) {
+                        // `this` used as a value (call argument, return value, RHS, closure
+                        // capture): a const method cannot hand out a non-const shared_ptr
+                        // to its own receiver, so such a method cannot be const.
+                        directlyMutates.add(name)
+                    } else {
+                        for (kid in node.children) walk(kid)
+                    }
+                }
+            }
+        }
+        walk(body)
+    }
+
+    for (mod in modules) {
+        for (top in mod.topLevels) {
+            if (top !is TmpL.TypeDeclaration) continue
+            for (member in top.members) {
+                val name: String
+                val body: TmpL.BlockStatement?
+                val overridden: List<TmpL.SuperTypeMethod>
+                val parameters: TmpL.Parameters
+                when (member) {
+                    is TmpL.NormalMethod -> {
+                        name = member.dotName.dotNameText; body = member.body
+                        overridden = member.overridden; parameters = member.parameters
+                    }
+                    is TmpL.Getter -> {
+                        name = member.dotName.dotNameText; body = member.body
+                        overridden = member.overridden; parameters = member.parameters
+                    }
+                    is TmpL.Setter -> {
+                        name = member.dotName.dotNameText; body = member.body
+                        overridden = member.overridden; parameters = member.parameters
+                        directlyMutates.add(name)
+                    }
+                    else -> continue
+                }
+                val thisName = parameters.parameters.firstOrNull()?.name?.name
+                analyze(name, body, thisName)
+                for (sup in overridden) {
+                    linkOverride(name, sup.name.dotNameText)
+                }
+            }
+        }
+    }
+
+    // Propagate mutation to a fixpoint across both call edges (a member invoking a
+    // mutating member on `this` is mutating) and override-slot edges (any member of a
+    // slot mutating taints the whole slot, keeping const-ness consistent).
+    val mutating = directlyMutates.toMutableSet()
+    var changed = true
+    while (changed) {
+        changed = false
+        for ((caller, callees) in callsOnThis) {
+            if (caller !in mutating && callees.any { it in mutating }) {
+                mutating.add(caller)
+                changed = true
+            }
+        }
+        for ((a, neighbors) in overrideEquiv) {
+            if (a !in mutating && neighbors.any { it in mutating }) {
+                mutating.add(a)
+                changed = true
+            }
+        }
+    }
+    return mutating
+}
+
+/**
+ * Type dotNames that a backend may safely represent as a *value* type (inline, copied)
+ * rather than behind a reference/shared-pointer, without changing observable behavior.
+ *
+ * Soundness rests on Temper exposing no user-facing reference-identity operator: two
+ * distinct-but-equal immutable instances are distinguishable ONLY through `==`. So a type
+ * is value-safe exactly when copying it can't be observed. The gates (ALL required) make
+ * each way that could be observed impossible:
+ *
+ *  1. Concrete `class`, no type parameters — a value struct, nothing abstract/generic (v1).
+ *  2. Immutable (`extends Imu`) — post-construction state never changes, so a copy and the
+ *     original stay forever indistinguishable by field reads.
+ *  3. Not polymorphic — no real supertypes (only the erased Imu/PartialImu markers), no
+ *     sealed subtypes, and never named as another type's supertype. A value can't be sliced
+ *     or dynamically dispatched, so forbidding inheritance keeps it from ever needing to be.
+ *  4. Identity unobserved — the type defines its own `==` (structural), so equality compares
+ *     fields, not addresses. (Without a custom `==`, the default is pointer identity, which a
+ *     copy would change; such types are conservatively excluded.)
+ *  5. `this` never escapes as a value — no member hands `this` to a call/return/RHS/closure.
+ *     A value has no stable address to borrow, so a method that needs `&this` as a sharable
+ *     reference can't be on a value type.
+ *
+ * Field acyclicity (a value type may not contain itself by value, directly or transitively)
+ * is left to the backend, which alone knows which field types it will render inline.
+ *
+ * Conservative: a type absent from the result is NOT necessarily unsafe, only unproven here.
+ */
+fun valueEligibleTypeDefs(
+    modules: Iterable<TmpL.Module>,
+    debug: Boolean = false,
+): Set<TypeShape> {
+    val decls = mutableListOf<TmpL.TypeDeclaration>()
+    val namedAsSuper = mutableSetOf<TypeShape>()
+    for (mod in modules) {
+        for (top in mod.topLevels) {
+            if (top !is TmpL.TypeDeclaration) continue
+            decls.add(top)
+            for (sup in top.superTypes) {
+                (sup.typeName.sourceDefinition as? TypeShape)?.let { namedAsSuper.add(it) }
+            }
+        }
+    }
+
+    fun isImuMarker(def: Any?): Boolean =
+        def == WellKnownTypes.imuTypeDefinition || def == WellKnownTypes.partialImuTypeDefinition
+
+    // Does any member use `this` as a value (not merely as the subject of a property/method
+    // access)? Mirrors the disqualifier in mutatingMemberNames: such a member would need a
+    // sharable reference to its receiver, which a value type can't provide.
+    fun escapesThis(top: TmpL.TypeDeclaration): Boolean {
+        for (member in top.members) {
+            val body: TmpL.BlockStatement?
+            val parameters: TmpL.Parameters
+            when (member) {
+                is TmpL.NormalMethod -> { body = member.body; parameters = member.parameters }
+                is TmpL.Getter -> { body = member.body; parameters = member.parameters }
+                is TmpL.Setter -> { body = member.body; parameters = member.parameters }
+                else -> continue
+            }
+            if (body == null) continue
+            val thisName = parameters.parameters.firstOrNull()?.name?.name
+            fun isThisRef(n: TmpL.Tree): Boolean =
+                n is TmpL.This ||
+                    (n is TmpL.Reference && thisName != null && n.id.name == thisName)
+            var escapes = false
+            fun walk(node: TmpL.Tree) {
+                if (escapes) return
+                when (node) {
+                    is TmpL.SetProperty -> {
+                        if (!isThisRef(node.left.subject)) walk(node.left.subject)
+                        walk(node.right)
+                    }
+                    is TmpL.MethodReference ->
+                        if (!isThisRef(node.subject)) walk(node.subject)
+                    is TmpL.PropertyReference ->
+                        if (!isThisRef(node.subject)) walk(node.subject)
+                    else ->
+                        if (isThisRef(node)) escapes = true
+                        else for (kid in node.children) walk(kid)
+                }
+            }
+            walk(body)
+            if (escapes) return true
+        }
+        return false
+    }
+
+    fun hasCustomEq(top: TmpL.TypeDeclaration): Boolean =
+        top.members.any { m ->
+            val dn = when (m) {
+                is TmpL.NormalMethod -> m.dotName.dotNameText
+                is TmpL.Getter -> m.dotName.dotNameText
+                else -> return@any false
+            }
+            dn.substringAfterLast('.') == "=="
+        }
+
+    val eligible = mutableSetOf<TypeShape>()
+    for (top in decls) {
+        val name = top.typeShape.name.toString()
+        fun reject(reason: String): Boolean {
+            if (debug) println("[value-eligible] REJECT $name: $reason")
+            return false
+        }
+        val ok = run {
+            if (top.kind != TmpL.TypeDeclarationKind.Class) return@run reject("not a class")
+            if (top.typeShape.abstractness != Abstractness.Concrete) return@run reject("not concrete")
+            if (top.typeParameters.ot.typeParameters.isNotEmpty()) return@run reject("has type parameters")
+            val realSupers = top.superTypes.filterNot { isImuMarker(it.typeName.sourceDefinition) }
+            if (realSupers.isNotEmpty()) return@run reject("has real supertypes")
+            if (top.superTypes.none { isImuMarker(it.typeName.sourceDefinition) }) {
+                return@run reject("does not extend Imu")
+            }
+            if (top.typeShape.sealedSubTypes?.isNotEmpty() == true) return@run reject("has sealed subtypes")
+            if (top.typeShape in namedAsSuper) return@run reject("used as a supertype")
+            if (!hasCustomEq(top)) return@run reject("no custom ==")
+            if (escapesThis(top)) return@run reject("a member escapes `this` as a value")
+            true
+        }
+        if (ok) {
+            if (debug) {
+                val members = top.members.mapNotNull {
+                    when (it) {
+                        is TmpL.NormalMethod -> it.dotName.dotNameText
+                        is TmpL.Getter -> "get ${it.dotName.dotNameText}"
+                        is TmpL.Property -> "field ${it.name.name}"
+                        else -> null
+                    }
+                }
+                println("[value-eligible] ACCEPT $name  members=$members")
+            }
+            eligible.add(top.typeShape)
+        }
+    }
+    return eligible
 }
 
 /** Find mutable vars declared in this scope that are referenced in functions beneath this node. */

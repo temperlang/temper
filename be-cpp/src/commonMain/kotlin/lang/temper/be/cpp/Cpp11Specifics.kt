@@ -40,9 +40,6 @@ val FilePath.goodFilePath: FilePath
     get() = FilePath(segments = goodFileSegments, isDir = isDir)
 
 object Cpp11Specifics : RunnerSpecifics {
-    @Suppress("unused")
-    private val Compiler = CompilerTool("cc")
-
     override fun runSingleSource(
         cliEnv: CliEnv,
         code: String,
@@ -50,7 +47,7 @@ object Cpp11Specifics : RunnerSpecifics {
         aux: Map<Aux, FilePath>,
     ): RResult<EffortSuccess, CliFailure> =
         cliEnv.composing(this) {
-            TODO("Run single C++")
+            error("single-source C++ execution not yet supported")
         }
 
     override fun runBestEffort(
@@ -59,11 +56,11 @@ object Cpp11Specifics : RunnerSpecifics {
         code: OutDir,
         dependencies: Dependencies<*>,
     ): List<ToolchainResult> {
-        TODO("Run best effort C++")
+        return runCpp11(cliEnv, dependencies, request)
     }
 
     override val tools: List<ToolSpecifics>
-        get() = listOf()
+        get() = listOf(GppCommand, ShCommand)
     override val backendId: BackendId
         get() = CppLang.Cpp11.id
 }

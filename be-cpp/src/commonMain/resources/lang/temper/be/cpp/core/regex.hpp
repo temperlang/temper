@@ -1,0 +1,237 @@
+#pragma once
+#include <cstdint>
+#include <iomanip>
+#include <memory>
+#include <regex>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+#include "any_value.hpp"
+#include "string_builder.hpp"
+#include "mapped.hpp"
+#include "map.hpp"
+
+namespace temper {
+    namespace core {
+
+        namespace Regex {
+
+            struct CompiledRegex : AnyValueBase {
+                std::regex re;
+                CompiledRegex(std::regex r) : re(std::move(r)) {}
+            };
+
+            template<class T>
+            std::shared_ptr<AnyValueBase> compileFormatted(std::shared_ptr<T>, std::string formatted) {
+                try {
+                    return std::make_shared<CompiledRegex>(std::regex(formatted, std::regex::ECMAScript));
+                } catch (const std::regex_error&) {
+                    return std::make_shared<CompiledRegex>(std::regex("(?!)", std::regex::ECMAScript));
+                }
+            }
+
+            template<class T>
+            bool compiledFound(std::shared_ptr<T>, std::shared_ptr<AnyValueBase> compiled, std::string text) {
+                std::shared_ptr<CompiledRegex> cr = std::dynamic_pointer_cast<CompiledRegex>(compiled);
+                if (cr == nullptr) {
+                    return false;
+                }
+                return std::regex_search(text, cr->re);
+            }
+
+            template<class T, class RegexRefsT>
+            std::pair<bool, decltype(std::declval<RegexRefsT>().get_match())> compiledFindImpl(
+            std::shared_ptr<T>,
+            std::shared_ptr<AnyValueBase> compiled,
+            std::string text,
+            int32_t beginIdx,
+            std::shared_ptr<RegexRefsT> regexRefs
+            ) {
+                std::shared_ptr<CompiledRegex> cr = std::dynamic_pointer_cast<CompiledRegex>(compiled);
+                decltype(regexRefs->get_match()) empty_match;
+                if (cr == nullptr) {
+                    return std::make_pair(false, empty_match);
+                }
+                // Clamp beginIdx into [0, len] before turning it into an iterator: an
+                // out-of-range value (e.g. from arithmetic at a call site) would otherwise make
+                // `text.cbegin() + beginIdx` point outside the string, which is undefined.
+                int32_t clampLen = static_cast<int32_t>(text.size());
+                if (beginIdx < 0) {
+                    beginIdx = 0;
+                }
+                if (beginIdx > clampLen) {
+                    beginIdx = clampLen;
+                }
+                // Search within the original string starting at beginIdx using iterators
+                // rather than a substring, so that anchors and look-behind see the real
+                // context: `match_prev_avail` (when not at the very start) tells the engine
+                // a previous character exists, which keeps `^` from matching at every
+                // resumed position and lets `\b` consider the preceding character.
+                std::smatch sm;
+                std::string::const_iterator searchBegin = text.cbegin() + beginIdx;
+                std::regex_constants::match_flag_type flags = std::regex_constants::match_default;
+                if (beginIdx > 0) {
+                    flags |= std::regex_constants::match_prev_avail;
+                }
+                if (!std::regex_search(searchBegin, text.cend(), sm, cr->re, flags)) {
+                    return std::make_pair(false, empty_match);
+                }
+                int32_t matchBegin = static_cast<int32_t>(sm.position(0) + beginIdx);
+                int32_t matchEnd = static_cast<int32_t>(matchBegin + static_cast<int32_t>(sm.length(0)));
+                std::string fullValue = sm.str(0);
+                decltype(regexRefs->get_group()) fullGroup = decltype(regexRefs->get_group())::element_type::make(
+                std::string("full"), fullValue, matchBegin, matchEnd
+                );
+                std::shared_ptr<Mapped::Ordered<std::string, decltype(fullGroup)>> groups =
+                Map::make<std::string, decltype(fullGroup)>();
+                decltype(regexRefs->get_match()) match = decltype(regexRefs->get_match())::element_type::make(fullGroup, groups);
+                return std::make_pair(true, match);
+            }
+
+            template<class T, class RegexRefsT>
+            decltype(std::declval<RegexRefsT>().get_match())
+            compiledFind(
+            std::shared_ptr<T> self,
+            std::shared_ptr<AnyValueBase> compiled,
+            std::string text,
+            int32_t beginIdx,
+            std::shared_ptr<RegexRefsT> regexRefs
+            ) {
+                std::pair<bool, decltype(regexRefs->get_match())> result =
+                compiledFindImpl(self, compiled, text, beginIdx, regexRefs);
+                if (!result.first) {
+                    throw TemperBubble();
+                }
+                return result.second;
+            }
+
+            template<class T, class FormatFn, class RegexRefsT>
+            std::string compiledReplace(
+            std::shared_ptr<T> self,
+            std::shared_ptr<AnyValueBase> compiled,
+            std::string text,
+            FormatFn formatFn,
+            std::shared_ptr<RegexRefsT> regexRefs
+            ) {
+                std::shared_ptr<CompiledRegex> cr = std::dynamic_pointer_cast<CompiledRegex>(compiled);
+                if (cr == nullptr) {
+                    return text;
+                }
+                std::string result;
+                int32_t begin_pos = 0;
+                int32_t keepBegin = 0;
+                int32_t textLen = static_cast<int32_t>(text.size());
+                while (begin_pos <= textLen) {
+                    std::pair<bool, decltype(regexRefs->get_match())> found =
+                    compiledFindImpl(self, compiled, text, begin_pos, regexRefs);
+                    if (!found.first) {
+                        if (result.empty()) {
+                            return text;
+                        }
+                        // Append the remaining unmatched tail and finish. Returning here
+                        // (rather than breaking) avoids the trailing append below running
+                        // a second time.
+                        result.append(text.substr(keepBegin));
+                        return result;
+                    }
+                    decltype(regexRefs->get_match()) match = found.second;
+                    decltype(match->get_full()) fullGroup = match->get_full();
+                    int32_t mBegin = fullGroup->get_begin();
+                    int32_t mEnd = fullGroup->get_end();
+                    result.append(text.substr(keepBegin, mBegin - keepBegin));
+                    result.append(formatFn(match));
+                    keepBegin = mEnd;
+                    if (mEnd > begin_pos) {
+                        begin_pos = mEnd;
+                    } else {
+                        begin_pos = begin_pos + 1;
+                    }
+                }
+                if (keepBegin < textLen) {
+                    result.append(text.substr(keepBegin));
+                }
+                return result;
+            }
+
+            template<class T, class RegexRefsT>
+            std::shared_ptr<std::vector<std::string>> compiledSplit(
+            std::shared_ptr<T> self,
+            std::shared_ptr<AnyValueBase> compiled,
+            std::string text,
+            std::shared_ptr<RegexRefsT> regexRefs
+            ) {
+                std::shared_ptr<CompiledRegex> cr = std::dynamic_pointer_cast<CompiledRegex>(compiled);
+                std::shared_ptr<std::vector<std::string>> parts = std::make_shared<std::vector<std::string>>();
+                if (cr == nullptr) {
+                    parts->push_back(text); return parts;
+                }
+                int32_t begin_pos = 0;
+                int32_t textLen = static_cast<int32_t>(text.size());
+                while (begin_pos <= textLen) {
+                    std::pair<bool, decltype(regexRefs->get_match())> found =
+                    compiledFindImpl(self, compiled, text, begin_pos, regexRefs);
+                    if (!found.first) {
+                        parts->push_back(text.substr(begin_pos));
+                        break;
+                    }
+                    decltype(regexRefs->get_match()) match = found.second;
+                    decltype(match->get_full()) fullGroup = match->get_full();
+                    int32_t mBegin = fullGroup->get_begin();
+                    int32_t mEnd = fullGroup->get_end();
+                    parts->push_back(text.substr(begin_pos, mBegin - begin_pos));
+                    if (mEnd == begin_pos) {
+                        if (begin_pos < textLen) {
+                            parts->push_back(text.substr(begin_pos, 1));
+                        }
+                        begin_pos = begin_pos + 1;
+                    } else {
+                        begin_pos = mEnd;
+                    }
+                }
+                return parts;
+            }
+
+            template<class T>
+            void pushCaptureName(std::shared_ptr<T>, std::shared_ptr<std::ostringstream> out, std::string name) {
+                StringBuilder::append(out, std::string("?<").append(name).append(">"));
+            }
+
+            template<class T>
+            void pushCodeTo(std::shared_ptr<T>, std::shared_ptr<std::ostringstream> out, int32_t code, bool insideCodeSet) {
+                (void) insideCodeSet;
+                if (code < 0x80) {
+                    std::string ch(1, static_cast<char>(code));
+                    if (std::string("\\^$.|?*+()[]{}/-").find(ch) != std::string::npos) {
+                        StringBuilder::append(out, std::string("\\").append(ch));
+                    } else {
+                        StringBuilder::append(out, ch);
+                    }
+                } else {
+                    std::string utf8;
+                    if (code < 0x800) {
+                        utf8.push_back(static_cast<char>(0xC0 | (code >> 6)));
+                        utf8.push_back(static_cast<char>(0x80 | (code & 0x3F)));
+                    } else if (code < 0x10000) {
+                        utf8.push_back(static_cast<char>(0xE0 | (code >> 12)));
+                        utf8.push_back(static_cast<char>(0x80 | ((code >> 6) & 0x3F)));
+                        utf8.push_back(static_cast<char>(0x80 | (code & 0x3F)));
+                    } else {
+                        utf8.push_back(static_cast<char>(0xF0 | (code >> 18)));
+                        utf8.push_back(static_cast<char>(0x80 | ((code >> 12) & 0x3F)));
+                        utf8.push_back(static_cast<char>(0x80 | ((code >> 6) & 0x3F)));
+                        utf8.push_back(static_cast<char>(0x80 | (code & 0x3F)));
+                    }
+                    std::ostringstream oss;
+                    for (size_t i = 0; i < utf8.size(); ++i) {
+                        oss << "\\x" << std::hex << std::setfill('0') << std::setw(2)
+                        << static_cast<int>(static_cast<unsigned char>(utf8[i]));
+                    }
+                    StringBuilder::append(out, oss.str());
+                }
+            }
+
+        }
+
+    }
+}
