@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+#include "temper_bubble.hpp"
 #include "base_types.hpp"
 
 namespace temper {

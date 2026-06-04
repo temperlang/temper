@@ -4,8 +4,13 @@ import lang.temper.format.CodeFormatter
 import lang.temper.format.toStringViaTokenSink
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import lang.temper.log.unknownPos as p0
 
+/**
+ * Golden tests for the C++ AST formatter. The expected strings assert the formatter's *raw* token
+ * stream, so some spacing looks unidiomatic for hand-written C++ (e.g. `}else {`, `if(x)`,
+ * `[ = , & x]`). That is expected: generated code is passed through clang-format downstream, so the
+ * formatter only needs to emit syntactically faithful tokens, not pretty ones.
+ */
 class CppGrammarTest {
 
     private fun assertCode(expected: String, ast: Cpp.Tree) {
@@ -329,7 +334,7 @@ class CppGrammarTest {
             """.trimIndent(),
             cpp.derivedStructDef(
                 cpp.singleName("Dog"),
-                cpp.singleName("Animal"),
+                listOf(cpp.baseSpec(virtual = false, cpp.singleName("Animal"))),
                 emptyList(),
             ),
         )
@@ -345,8 +350,35 @@ class CppGrammarTest {
             """.trimIndent(),
             cpp.derivedStructDef(
                 cpp.singleName("Dog"),
-                cpp.singleName("Animal"),
+                listOf(cpp.baseSpec(virtual = false, cpp.singleName("Animal"))),
                 listOf(cpp.structField(cpp.type("int"), cpp.singleName("age"))),
+            ),
+        )
+    }
+
+    @Test
+    fun derivedStructDefVirtualBase() {
+        assertCode(
+            "struct Cat : virtual public temper::core::AnyValueBase {};",
+            cpp.derivedStructDef(
+                cpp.singleName("Cat"),
+                listOf(cpp.baseSpec(virtual = true, cpp.name("temper", "core", "AnyValueBase"))),
+                emptyList(),
+            ),
+        )
+    }
+
+    @Test
+    fun derivedStructDefMultipleBases() {
+        assertCode(
+            "struct C : public A, public B {};",
+            cpp.derivedStructDef(
+                cpp.singleName("C"),
+                listOf(
+                    cpp.baseSpec(virtual = false, cpp.singleName("A")),
+                    cpp.baseSpec(virtual = false, cpp.singleName("B")),
+                ),
+                emptyList(),
             ),
         )
     }
@@ -480,6 +512,86 @@ class CppGrammarTest {
         assertCode(
             "throw 1;",
             cpp.throwStmt(cpp.literal(1)),
+        )
+    }
+
+    @Test
+    fun tryCatchStmt() {
+        assertCode(
+            """
+            try {
+              return 1;
+            }catch(const temper::core::TemperBubble & ) {
+              return 2;
+            }
+            """.trimIndent(),
+            cpp.tryCatch(
+                cpp.blockStmt(listOf(cpp.returnStmt(cpp.literal(1)))),
+                cpp.blockStmt(listOf(cpp.returnStmt(cpp.literal(2)))),
+            ),
+        )
+    }
+
+    @Test
+    fun breakStmt() {
+        assertCode("break;", cpp.breakStmt())
+    }
+
+    @Test
+    fun switchStmt() {
+        assertCode(
+            """
+            switch(s) {
+              case 0 : case 1 : {
+                return 1;
+              }
+              default : {
+                return 2;
+              }
+            }
+            """.trimIndent(),
+            cpp.switchStmt(
+                cpp.singleName("s"),
+                listOf(
+                    cpp.switchCase(
+                        listOf(cpp.caseLabel(cpp.literal(0)), cpp.caseLabel(cpp.literal(1))),
+                        cpp.blockStmt(listOf(cpp.returnStmt(cpp.literal(1)))),
+                    ),
+                ),
+                cpp.blockStmt(listOf(cpp.returnStmt(cpp.literal(2)))),
+            ),
+        )
+    }
+
+    @Test
+    fun lambdaExpr() {
+        assertCode(
+            """
+            [ = , & x](int32_t y)->int32_t {
+              return 1;
+            }
+            """.trimIndent(),
+            cpp.lambda(
+                captures = listOf(cpp.lambdaCapture(cpp.singleName("x"))),
+                params = listOf(cpp.funcParam(cpp.type("int32_t"), cpp.singleName("y"))),
+                mutable = false,
+                ret = cpp.type("int32_t"),
+                body = cpp.blockStmt(listOf(cpp.returnStmt(cpp.literal(1)))),
+            ),
+        )
+    }
+
+    @Test
+    fun lambdaExprMutableNoCaptures() {
+        assertCode(
+            "[ = ]()mutable->void {}",
+            cpp.lambda(
+                captures = emptyList(),
+                params = emptyList(),
+                mutable = true,
+                ret = cpp.type("void"),
+                body = cpp.blockStmt(emptyList()),
+            ),
         )
     }
 

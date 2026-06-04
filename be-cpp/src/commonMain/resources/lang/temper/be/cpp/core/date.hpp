@@ -5,6 +5,7 @@
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include "temper_bubble.hpp"
 #include "base_types.hpp"
 
 namespace temper {
@@ -13,16 +14,22 @@ namespace temper {
         namespace Date {
 
             template<class D>
-            int32_t getYear(std::shared_ptr<D> d) { return d->year; }
+            int32_t getYear(const std::shared_ptr<D>& d) {
+                return d->year;
+            }
 
             template<class D>
-            int32_t getMonth(std::shared_ptr<D> d) { return d->month; }
+            int32_t getMonth(const std::shared_ptr<D>& d) {
+                return d->month;
+            }
 
             template<class D>
-            int32_t getDay(std::shared_ptr<D> d) { return d->day; }
+            int32_t getDay(const std::shared_ptr<D>& d) {
+                return d->day;
+            }
 
             template<class D>
-            int32_t getDayOfWeek(std::shared_ptr<D> d) {
+            int32_t getDayOfWeek(const std::shared_ptr<D>& d) {
                 static int t[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
                 int64_t y = d->year;
                 int64_t m = d->month;
@@ -41,7 +48,7 @@ namespace temper {
 
             template<class D>
             std::string toString(
-            std::shared_ptr<D> d,
+            const std::shared_ptr<D>& d,
             typename std::enable_if<
             std::is_same<decltype(std::declval<D>().year), int32_t>::value
             && std::is_same<decltype(std::declval<D>().month), int32_t>::value
@@ -73,7 +80,7 @@ namespace temper {
             }
 
             template<class D>
-            int32_t yearsBetween(std::shared_ptr<D> from, std::shared_ptr<D> to) {
+            int32_t yearsBetween(const std::shared_ptr<D>& from, const std::shared_ptr<D>& to) {
                 int32_t years = to->year - from->year;
                 if (to->month < from->month
                 || (to->month == from->month && to->day < from->day)) {

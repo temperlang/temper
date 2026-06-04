@@ -1,9 +1,11 @@
 #pragma once
 #include <cctype>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
+#include "temper_bubble.hpp"
 #include "base_types.hpp"
 
 namespace temper {
@@ -19,6 +21,11 @@ namespace temper {
             }
             inline bool isSpaceChar(char c) {
                 return std::isspace(static_cast<unsigned char>(c)) != 0;
+            }
+
+            // True for a UTF-8 continuation byte (0x80..0xBF).
+            inline bool isContinuationByte(char c) {
+                return (static_cast<unsigned char>(c) & 0xC0) == 0x80;
             }
 
             inline int32_t utf8_seq_len(unsigned char b) {
@@ -60,7 +67,7 @@ namespace temper {
                 return result;
             }
 
-            inline std::string fromCodepoints(std::shared_ptr<std::vector<int32_t>> codePoints) {
+            inline std::string fromCodepoints(const std::shared_ptr<std::vector<int32_t>>& codePoints) {
                 std::string result;
                 for (int32_t cp : *codePoints) {
                     result.append(fromCodepoint(cp));
@@ -68,11 +75,17 @@ namespace temper {
                 return result;
             }
 
-            inline bool isEmpty(std::string s) { return s.empty(); }
-            inline int32_t begin() { return 0; }
-            inline int32_t end(std::string s) { return static_cast<int32_t>(s.size()); }
+            inline bool isEmpty(const std::string& s) {
+                return s.empty();
+            }
+            inline int32_t begin() {
+                return 0;
+            }
+            inline int32_t end(const std::string& s) {
+                return static_cast<int32_t>(s.size());
+            }
 
-            inline int32_t get(std::string s, int32_t index) {
+            inline int32_t get(const std::string& s, int32_t index) {
                 int32_t len = static_cast<int32_t>(s.size());
                 if (index < 0 || index >= len) {
                     bubble<int32_t>("string index out of bounds");
@@ -84,16 +97,26 @@ namespace temper {
                 if (b0 < 0x80) {
                     return b0;
                 }
-                if ((b0 & 0xE0) == 0xC0 && index + 1 < len) {
+                // A well-formed multi-byte sequence must have every trailing byte be a
+                // continuation byte (0x80..0xBF). A truncated or otherwise malformed
+                // sequence falls through to the U+FFFD replacement character rather than
+                // decoding adjacent bytes into a garbage code point.
+                if ((b0 & 0xE0) == 0xC0 && index + 1 < len
+                    && isContinuationByte(s[index + 1])) {
                     return ((b0 & 0x1F) << 6)
                     | (static_cast<unsigned char>(s[index + 1]) & 0x3F);
                 }
-                if ((b0 & 0xF0) == 0xE0 && index + 2 < len) {
+                if ((b0 & 0xF0) == 0xE0 && index + 2 < len
+                    && isContinuationByte(s[index + 1])
+                    && isContinuationByte(s[index + 2])) {
                     return ((b0 & 0x0F) << 12)
                     | ((static_cast<unsigned char>(s[index + 1]) & 0x3F) << 6)
                     | (static_cast<unsigned char>(s[index + 2]) & 0x3F);
                 }
-                if ((b0 & 0xF8) == 0xF0 && index + 3 < len) {
+                if ((b0 & 0xF8) == 0xF0 && index + 3 < len
+                    && isContinuationByte(s[index + 1])
+                    && isContinuationByte(s[index + 2])
+                    && isContinuationByte(s[index + 3])) {
                     return ((b0 & 0x07) << 18)
                     | ((static_cast<unsigned char>(s[index + 1]) & 0x3F) << 12)
                     | ((static_cast<unsigned char>(s[index + 2]) & 0x3F) << 6)
@@ -102,7 +125,7 @@ namespace temper {
                 return 0xFFFD;
             }
 
-            inline int32_t countBetween(std::string s, int32_t start, int32_t end_pos) {
+            inline int32_t countBetween(const std::string& s, int32_t start, int32_t end_pos) {
                 int32_t count = 0;
                 int32_t i = start;
                 if (i < 0) {
@@ -116,7 +139,7 @@ namespace temper {
                 return count;
             }
 
-            inline bool hasAtLeast(std::string s, int32_t begin_pos, int32_t end_pos, int32_t minCount) {
+            inline bool hasAtLeast(const std::string& s, int32_t begin_pos, int32_t end_pos, int32_t minCount) {
                 int32_t count = 0;
                 int32_t i = begin_pos;
                 if (i < 0) {
@@ -133,11 +156,11 @@ namespace temper {
                 return count >= minCount;
             }
 
-            inline bool hasIndex(std::string s, int32_t index) {
+            inline bool hasIndex(const std::string& s, int32_t index) {
                 return index >= 0 && index < static_cast<int32_t>(s.size());
             }
 
-            inline int32_t next(std::string s, int32_t index) {
+            inline int32_t next(const std::string& s, int32_t index) {
                 int32_t len = static_cast<int32_t>(s.size());
                 if (index < 0 || index >= len) {
                     return len;
@@ -145,7 +168,7 @@ namespace temper {
                 return index + utf8_seq_len(static_cast<unsigned char>(s[index]));
             }
 
-            inline int32_t prev(std::string s, int32_t index) {
+            inline int32_t prev(const std::string& s, int32_t index) {
                 if (index <= 0) {
                     return 0;
                 }
@@ -156,11 +179,15 @@ namespace temper {
                 return index;
             }
 
-            inline int32_t step(std::string s, int32_t index, int32_t by) {
+            inline int32_t step(const std::string& s, int32_t index, int32_t by) {
                 if (by >= 0) {
-                    for (int32_t i = 0; i < by; ++i) { index = next(s, index); }
+                    for (int32_t i = 0; i < by; ++i) {
+                        index = next(s, index);
+                    }
                 } else {
-                    for (int32_t i = 0; i > by; --i) { index = prev(s, index); }
+                    for (int32_t i = 0; i > by; --i) {
+                        index = prev(s, index);
+                    }
                 }
                 return index;
             }
@@ -168,7 +195,7 @@ namespace temper {
             // `start`/`end_pos` are byte offsets that callers are expected to have placed on
             // UTF-8 code-point boundaries (e.g. via next()/prev()). Out-of-range values are
             // clamped; a mid-sequence offset would yield bytes that are not valid UTF-8.
-            inline std::string slice(std::string s, int32_t start, int32_t end_pos) {
+            inline std::string slice(const std::string& s, int32_t start, int32_t end_pos) {
                 if (start < 0) {
                     start = 0;
                 }
@@ -181,7 +208,7 @@ namespace temper {
                 return s.substr(start, end_pos - start);
             }
 
-            inline int32_t indexOf(std::string s, std::string target, int32_t start = 0) {
+            inline int32_t indexOf(const std::string& s, const std::string& target, int32_t start = 0) {
                 // Clamp a negative start to 0; casting it straight to size_t would wrap to a
                 // huge offset and make find() report "not found" even when the target is present.
                 if (start < 0) {
@@ -194,7 +221,7 @@ namespace temper {
                 return static_cast<int32_t>(pos);
             }
 
-            inline std::shared_ptr<std::vector<std::string>> split(std::string s, std::string delimiter) {
+            inline std::shared_ptr<std::vector<std::string>> split(const std::string& s, const std::string& delimiter) {
                 std::shared_ptr<std::vector<std::string>> result = std::make_shared<std::vector<std::string>>();
                 if (delimiter.empty()) {
                     size_t i = 0;
@@ -217,7 +244,7 @@ namespace temper {
             }
 
             template<class F>
-            void forEach(std::string s, F fn) {
+            void forEach(const std::string& s, F fn) {
                 int32_t i = 0;
                 int32_t len = static_cast<int32_t>(s.size());
                 while (i < len) {
@@ -226,7 +253,7 @@ namespace temper {
                 }
             }
 
-            inline double toFloat64(std::string s) {
+            inline double toFloat64(const std::string& s) {
                 size_t start = s.find_first_not_of(" \t\n\r");
                 size_t end_pos = s.find_last_not_of(" \t\n\r");
                 if (start == std::string::npos) {
@@ -249,13 +276,17 @@ namespace temper {
                 if (i >= trimmed.size() || !isDigitChar(trimmed[i])) {
                     bubble("invalid float");
                 }
-                while (i < trimmed.size() && isDigitChar(trimmed[i])) { i++; }
+                while (i < trimmed.size() && isDigitChar(trimmed[i])) {
+                    i++;
+                }
                 if (i < trimmed.size() && trimmed[i] == '.') {
                     i++;
                     if (i >= trimmed.size() || !isDigitChar(trimmed[i])) {
                         bubble("invalid float");
                     }
-                    while (i < trimmed.size() && isDigitChar(trimmed[i])) { i++; }
+                    while (i < trimmed.size() && isDigitChar(trimmed[i])) {
+                        i++;
+                    }
                 }
                 if (i < trimmed.size() && (trimmed[i] == 'e' || trimmed[i] == 'E')) {
                     i++;
@@ -265,20 +296,32 @@ namespace temper {
                     if (i >= trimmed.size() || !isDigitChar(trimmed[i])) {
                         bubble("invalid float");
                     }
-                    while (i < trimmed.size() && isDigitChar(trimmed[i])) { i++; }
+                    while (i < trimmed.size() && isDigitChar(trimmed[i])) {
+                        i++;
+                    }
                 }
                 if (i != trimmed.size()) {
                     bubble("invalid float");
                 }
-                try { return std::stod(trimmed); }
-                catch (const TemperBubble&) { throw; }
-                catch (const std::exception&) { bubble<double>("invalid float"); }
+                try {
+                    return std::stod(trimmed);
+                }
+                catch (const TemperBubble&) {
+                    throw;
+                }
+                catch (const std::exception&) {
+                    bubble<double>("invalid float");
+                }
             }
 
-            inline int32_t toInt32(std::string s) {
+            inline int32_t toInt32(const std::string& s) {
                 size_t start = 0, end_pos = s.size();
-                while (start < end_pos && isSpaceChar(s[start])) { ++start; }
-                while (end_pos > start && isSpaceChar(s[end_pos - 1])) { --end_pos; }
+                while (start < end_pos && isSpaceChar(s[start])) {
+                    ++start;
+                }
+                while (end_pos > start && isSpaceChar(s[end_pos - 1])) {
+                    --end_pos;
+                }
                 std::string trimmed = s.substr(start, end_pos - start);
                 if (trimmed.empty()) {
                     bubble<int32_t>("invalid int");
@@ -290,17 +333,25 @@ namespace temper {
                         bubble<int32_t>("invalid int");
                     }
                     return result;
-                } catch (const TemperBubble&) { throw; }
-                catch (const std::exception&) { bubble<int32_t>("invalid int"); }
+                } catch (const TemperBubble&) {
+                    throw;
+                }
+                catch (const std::exception&) {
+                    bubble<int32_t>("invalid int");
+                }
             }
 
-            inline int32_t toInt32(std::string s, int32_t base) {
+            inline int32_t toInt32(const std::string& s, int32_t base) {
                 if (base < 2 || base > 36) {
                     bubble<int32_t>("invalid base");
                 }
                 size_t start = 0, end_pos = s.size();
-                while (start < end_pos && isSpaceChar(s[start])) { ++start; }
-                while (end_pos > start && isSpaceChar(s[end_pos - 1])) { --end_pos; }
+                while (start < end_pos && isSpaceChar(s[start])) {
+                    ++start;
+                }
+                while (end_pos > start && isSpaceChar(s[end_pos - 1])) {
+                    --end_pos;
+                }
                 std::string trimmed = s.substr(start, end_pos - start);
                 if (trimmed.empty()) {
                     bubble<int32_t>("invalid int");
@@ -312,14 +363,22 @@ namespace temper {
                         bubble<int32_t>("invalid int");
                     }
                     return result;
-                } catch (const TemperBubble&) { throw; }
-                catch (const std::exception&) { bubble<int32_t>("invalid int"); }
+                } catch (const TemperBubble&) {
+                    throw;
+                }
+                catch (const std::exception&) {
+                    bubble<int32_t>("invalid int");
+                }
             }
 
-            inline int64_t toInt64(std::string s) {
+            inline int64_t toInt64(const std::string& s) {
                 size_t start = 0, end_pos = s.size();
-                while (start < end_pos && isSpaceChar(s[start])) { ++start; }
-                while (end_pos > start && isSpaceChar(s[end_pos - 1])) { --end_pos; }
+                while (start < end_pos && isSpaceChar(s[start])) {
+                    ++start;
+                }
+                while (end_pos > start && isSpaceChar(s[end_pos - 1])) {
+                    --end_pos;
+                }
                 std::string trimmed = s.substr(start, end_pos - start);
                 if (trimmed.empty()) {
                     bubble<int64_t>("invalid int64");
@@ -331,17 +390,25 @@ namespace temper {
                         bubble<int64_t>("invalid int64");
                     }
                     return result;
-                } catch (const TemperBubble&) { throw; }
-                catch (const std::exception&) { bubble<int64_t>("invalid int64"); }
+                } catch (const TemperBubble&) {
+                    throw;
+                }
+                catch (const std::exception&) {
+                    bubble<int64_t>("invalid int64");
+                }
             }
 
-            inline int64_t toInt64(std::string s, int32_t base) {
+            inline int64_t toInt64(const std::string& s, int32_t base) {
                 if (base < 2 || base > 36) {
                     bubble<int64_t>("invalid base");
                 }
                 size_t start = 0, end_pos = s.size();
-                while (start < end_pos && isSpaceChar(s[start])) { ++start; }
-                while (end_pos > start && isSpaceChar(s[end_pos - 1])) { --end_pos; }
+                while (start < end_pos && isSpaceChar(s[start])) {
+                    ++start;
+                }
+                while (end_pos > start && isSpaceChar(s[end_pos - 1])) {
+                    --end_pos;
+                }
                 std::string trimmed = s.substr(start, end_pos - start);
                 if (trimmed.empty()) {
                     bubble<int64_t>("invalid int64");
@@ -353,14 +420,26 @@ namespace temper {
                         bubble<int64_t>("invalid int64");
                     }
                     return result;
-                } catch (const TemperBubble&) { throw; }
-                catch (const std::exception&) { bubble<int64_t>("invalid int64"); }
+                } catch (const TemperBubble&) {
+                    throw;
+                }
+                catch (const std::exception&) {
+                    bubble<int64_t>("invalid int64");
+                }
             }
 
-            inline std::string toString(std::string s) { return s; }
-            inline int32_t none() { return -1; }
-            inline bool isStringIndex(int32_t i) { return i >= 0; }
-            inline bool isNoStringIndex(int32_t i) { return i < 0; }
+            inline std::string toString(const std::string& s) {
+                return s;
+            }
+            inline int32_t none() {
+                return -1;
+            }
+            inline bool isStringIndex(int32_t i) {
+                return i >= 0;
+            }
+            inline bool isNoStringIndex(int32_t i) {
+                return i < 0;
+            }
 
             inline int32_t requireStringIndex(int32_t i) {
                 if (i < 0) {

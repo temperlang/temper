@@ -23,13 +23,13 @@ namespace temper {
             NullableParam(std::nullptr_t) : value(), has_value(false) {}
 
             template<
-            class U,
-            typename std::enable_if<
-            std::is_convertible<U, T>::value
-            && !std::is_same<typename std::decay<U>::type, T>::value
-            && !std::is_same<typename std::decay<U>::type, NullableParam<T>>::value,
-            int
-            >::type = 0
+                class U,
+                typename std::enable_if<
+                    std::is_convertible<U, T>::value
+                    && !std::is_same<typename std::decay<U>::type, T>::value
+                    && !std::is_same<typename std::decay<U>::type, NullableParam<T>>::value,
+                    int
+                >::type = 0
             >
             NullableParam(U&& v) : value(std::forward<U>(v)), has_value(true) {}
 
@@ -64,13 +64,13 @@ namespace temper {
             }
 
             template<
-            class U,
-            typename std::enable_if<
-            std::is_convertible<U, T>::value
-            && !std::is_same<typename std::decay<U>::type, T>::value
-            && !std::is_same<typename std::decay<U>::type, NullableParam<T>>::value,
-            int
-            >::type = 0
+                class U,
+                typename std::enable_if<
+                    std::is_convertible<U, T>::value
+                    && !std::is_same<typename std::decay<U>::type, T>::value
+                    && !std::is_same<typename std::decay<U>::type, NullableParam<T>>::value,
+                    int
+                >::type = 0
             >
             NullableParam& operator=(U&& v) {
                 value = std::forward<U>(v);

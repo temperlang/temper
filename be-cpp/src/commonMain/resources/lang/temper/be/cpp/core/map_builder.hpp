@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <memory>
+#include "temper_bubble.hpp"
 #include "base_types.hpp"
 #include "mapped.hpp"
 
@@ -10,7 +11,7 @@ namespace temper {
         namespace MapBuilder {
 
             template<class Key, class Value>
-            void set(std::shared_ptr<Mapped::Ordered<Key, Value>> m, Key key, Value value) {
+            void set(const std::shared_ptr<Mapped::Ordered<Key, Value>>& m, Key key, Value value) {
                 bool isNew = (m->data.find(key) == m->data.end());
                 m->data[key] = value;
                 if (isNew) {
@@ -19,7 +20,7 @@ namespace temper {
             }
 
             template<class Key, class Value>
-            Value remove(std::shared_ptr<Mapped::Ordered<Key, Value>> m, Key key) {
+            Value remove(const std::shared_ptr<Mapped::Ordered<Key, Value>>& m, Key key) {
                 typename std::map<Key, Value>::iterator it = m->data.find(key);
                 if (it == m->data.end()) {
                     bubble<Value>("key not found");
@@ -33,7 +34,9 @@ namespace temper {
                     std::remove_if(
                         m->order.begin(),
                         m->order.end(),
-                        [&key](const Key& k) { return !(k < key) && !(key < k); }
+                        [&key](const Key& k) {
+                            return !(k < key) && !(key < k);
+                        }
                     ),
                     m->order.end()
                 );
@@ -41,7 +44,7 @@ namespace temper {
             }
 
             template<class Key, class Value>
-            void clear(std::shared_ptr<Mapped::Ordered<Key, Value>> m) {
+            void clear(const std::shared_ptr<Mapped::Ordered<Key, Value>>& m) {
                 m->data.clear();
                 m->order.clear();
             }

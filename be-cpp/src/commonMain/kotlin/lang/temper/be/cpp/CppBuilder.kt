@@ -79,13 +79,15 @@ class CppBuilder(
         Cpp.StructField(pos, type.deepCopy(), name.deepCopy())
     fun derivedStructDef(
         name: Cpp.SingleName,
-        base: Cpp.Name,
+        bases: Iterable<Cpp.BaseSpec>,
         fields: Iterable<Cpp.StructPart>,
     ): Cpp.DerivedStructDef =
-        Cpp.DerivedStructDef(pos, name.deepCopy(), base.deepCopy(), fields.deepCopy())
+        Cpp.DerivedStructDef(pos, name.deepCopy(), bases.deepCopy(), fields.deepCopy())
+    fun baseSpec(virtual: Boolean, base: Cpp.Type): Cpp.BaseSpec =
+        Cpp.BaseSpec(pos, virt = if (virtual) Cpp.VirtualMod.Virtual else null, base = base.deepCopy())
     fun templateStructDef(
         typeParams: Iterable<Cpp.FuncParam>,
-        def: Cpp.StructDef,
+        def: Cpp.AnyStructDef,
     ): Cpp.TemplateStructDef =
         Cpp.TemplateStructDef(pos, typeParams.deepCopy(), def.deepCopy())
     fun templateFuncDef(
@@ -198,6 +200,33 @@ class CppBuilder(
         Cpp.ReturnStmt(pos, value?.deepCopy())
     fun throwStmt(value: Cpp.Expr): Cpp.ThrowStmt =
         Cpp.ThrowStmt(pos, value.deepCopy())
+    fun tryCatch(tryBody: Cpp.Stmt, catchBody: Cpp.Stmt): Cpp.TryCatchStmt =
+        Cpp.TryCatchStmt(pos, tryBody.deepCopy(), catchBody.deepCopy())
+    fun breakStmt(): Cpp.BreakStmt =
+        Cpp.BreakStmt(pos)
+    fun switchStmt(subject: Cpp.Expr, cases: Iterable<Cpp.SwitchCase>, defaultBody: Cpp.Stmt): Cpp.SwitchStmt =
+        Cpp.SwitchStmt(pos, subject.deepCopy(), cases.deepCopy(), defaultBody.deepCopy())
+    fun switchCase(labels: Iterable<Cpp.CaseLabel>, body: Cpp.Stmt): Cpp.SwitchCase =
+        Cpp.SwitchCase(pos, labels.deepCopy(), body.deepCopy())
+    fun caseLabel(value: Cpp.Expr): Cpp.CaseLabel =
+        Cpp.CaseLabel(pos, value.deepCopy())
+    fun lambda(
+        captures: Iterable<Cpp.LambdaCapture>,
+        params: Iterable<Cpp.FuncParam>,
+        mutable: Boolean,
+        ret: Cpp.Type,
+        body: Cpp.BlockStmt,
+    ): Cpp.LambdaExpr =
+        Cpp.LambdaExpr(
+            pos,
+            captures.deepCopy(),
+            params.deepCopy(),
+            mut = if (mutable) Cpp.LambdaMod.Mutable else null,
+            ret = ret.deepCopy(),
+            body = body.deepCopy(),
+        )
+    fun lambdaCapture(name: Cpp.SingleName): Cpp.LambdaCapture =
+        Cpp.LambdaCapture(pos, name.deepCopy())
 
     fun indexExpr(base: Cpp.Expr, index: Cpp.Expr): Cpp.IndexExpr =
         Cpp.IndexExpr(pos, base.deepCopy(), index.deepCopy())
@@ -301,7 +330,15 @@ class CppBuilder(
         argNames: Iterable<Cpp.SingleName>,
         block: Cpp.BlockStmt,
         qual: Cpp.MethodQualifier? = null,
-    ): Func = func(name, retType, convention = null, argTypes = argTypes, argNames = argNames, block = block, qual = qual)
+    ): Func = func(
+        name,
+        retType,
+        convention = null,
+        argTypes = argTypes,
+        argNames = argNames,
+        block = block,
+        qual = qual,
+    )
 
     fun func(
         name: Cpp.Name,
@@ -359,7 +396,7 @@ class CppBuilder(
             } else if (ch in ' '..'~') {
                 sb.append(ch)
             } else {
-                sb.append("\\${unsigned.toString(OCTAL_RADIX).padStart(3, '0')}")
+                sb.append("\\${unsigned.toString(OCTAL_RADIX).padStart(OCTAL_ESCAPE_DIGITS, '0')}")
             }
         }
         // Use std::string(data, length) constructor for strings with embedded null bytes
@@ -611,6 +648,9 @@ class CppBuilder(
     }
 
     companion object {
+        /** Width of an octal byte escape (`\NNN`): a byte's max octal value 377 is 3 digits. */
+        private const val OCTAL_ESCAPE_DIGITS = 3
+
         private val escapeCodes = mapOf<Char, String>(
             7.toChar() to "\\a",
             8.toChar() to "\\b",

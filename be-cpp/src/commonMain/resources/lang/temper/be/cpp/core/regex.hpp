@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include "temper_bubble.hpp"
 #include "any_value.hpp"
 #include "string_builder.hpp"
 #include "mapped.hpp"
@@ -19,15 +20,81 @@ namespace temper {
 
             struct CompiledRegex : AnyValueBase {
                 std::regex re;
-                CompiledRegex(std::regex r) : re(std::move(r)) {}
+                // Names of the capturing groups, in the order they appear in the pattern.
+                // groupNames[k] is the name of capture group number k+1 (group 0 is the full
+                // match). Used to map std::smatch's numeric groups back to Temper's named ones.
+                std::vector<std::string> groupNames;
+                CompiledRegex(std::regex r, std::vector<std::string> names)
+                : re(std::move(r)), groupNames(std::move(names)) {}
             };
+
+            // libstdc++'s std::regex rejects ECMAScript named-group syntax `(?<name>...)`
+            // outright, so the Temper regex formatter's named captures would otherwise fail to
+            // compile. Rewrite each `(?<name>` into a plain capturing group `(` and record the
+            // names in order: since the formatter emits every other group as non-capturing
+            // `(?:...)`, the k-th recorded name corresponds exactly to std::regex capture group
+            // number k+1. Escapes and character classes are skipped so a `(?<` appearing there
+            // (e.g. as literal text) is not mistaken for a group opener.
+            inline std::string rewriteNamedGroups(const std::string& pat, std::vector<std::string>& names) {
+                std::string out;
+                out.reserve(pat.size());
+                bool inClass = false;
+                size_t i = 0;
+                while (i < pat.size()) {
+                    char c = pat[i];
+                    if (c == '\\' && i + 1 < pat.size()) {
+                        out.push_back(c);
+                        out.push_back(pat[i + 1]);
+                        i += 2;
+                        continue;
+                    }
+                    if (inClass) {
+                        if (c == ']') {
+                            inClass = false;
+                        }
+                        out.push_back(c);
+                        i += 1;
+                        continue;
+                    }
+                    if (c == '[') {
+                        inClass = true;
+                        out.push_back(c);
+                        i += 1;
+                        continue;
+                    }
+                    if (c == '(' && i + 2 < pat.size() && pat[i + 1] == '?' && pat[i + 2] == '<'
+                        // Exclude lookbehind `(?<=` / `(?<!` (the formatter does not emit these,
+                        // but guard so they are never treated as named captures).
+                        && !(i + 3 < pat.size() && (pat[i + 3] == '=' || pat[i + 3] == '!'))) {
+                        size_t j = i + 3;
+                        std::string name;
+                        while (j < pat.size() && pat[j] != '>') {
+                            name.push_back(pat[j]);
+                            ++j;
+                        }
+                        if (j < pat.size() && pat[j] == '>') {
+                            names.push_back(name);
+                            out.push_back('(');
+                            i = j + 1;
+                            continue;
+                        }
+                    }
+                    out.push_back(c);
+                    i += 1;
+                }
+                return out;
+            }
 
             template<class T>
             std::shared_ptr<AnyValueBase> compileFormatted(std::shared_ptr<T>, std::string formatted) {
+                std::vector<std::string> names;
+                std::string rewritten = rewriteNamedGroups(formatted, names);
                 try {
-                    return std::make_shared<CompiledRegex>(std::regex(formatted, std::regex::ECMAScript));
+                    return std::make_shared<CompiledRegex>(
+                    std::regex(rewritten, std::regex::ECMAScript), std::move(names));
                 } catch (const std::regex_error&) {
-                    return std::make_shared<CompiledRegex>(std::regex("(?!)", std::regex::ECMAScript));
+                    return std::make_shared<CompiledRegex>(
+                    std::regex("(?!)", std::regex::ECMAScript), std::vector<std::string>());
                 }
             }
 
@@ -85,6 +152,27 @@ namespace temper {
                 );
                 std::shared_ptr<Mapped::Ordered<std::string, decltype(fullGroup)>> groups =
                 Map::make<std::string, decltype(fullGroup)>();
+                // Map each named capture group back from its numeric std::smatch slot. Group
+                // number k+1 corresponds to cr->groupNames[k]. Unmatched optional groups (e.g.
+                // the untaken branch of an alternation) are skipped, matching the other backends.
+                for (size_t gi = 0; gi < cr->groupNames.size(); ++gi) {
+                    size_t groupNum = gi + 1;
+                    if (groupNum >= sm.size() || !sm[groupNum].matched) {
+                        continue;
+                    }
+                    const std::string& gname = cr->groupNames[gi];
+                    std::string gvalue = sm.str(groupNum);
+                    int32_t gBegin = static_cast<int32_t>(sm.position(groupNum) + beginIdx);
+                    int32_t gEnd = static_cast<int32_t>(gBegin + static_cast<int32_t>(sm.length(groupNum)));
+                    decltype(fullGroup) group = decltype(regexRefs->get_group())::element_type::make(
+                    gname, gvalue, gBegin, gEnd
+                    );
+                    bool isNew = groups->data.find(gname) == groups->data.end();
+                    groups->data[gname] = group;
+                    if (isNew) {
+                        groups->order.push_back(gname);
+                    }
+                }
                 decltype(regexRefs->get_match()) match = decltype(regexRefs->get_match())::element_type::make(fullGroup, groups);
                 return std::make_pair(true, match);
             }
@@ -119,6 +207,10 @@ namespace temper {
                     return text;
                 }
                 std::string result;
+                // Track whether any match occurred separately from whether `result` is
+                // non-empty: a match at offset 0 replaced with the empty string (a prefix
+                // deletion) leaves `result` empty yet must NOT return the original text.
+                bool matched = false;
                 int32_t begin_pos = 0;
                 int32_t keepBegin = 0;
                 int32_t textLen = static_cast<int32_t>(text.size());
@@ -126,15 +218,9 @@ namespace temper {
                     std::pair<bool, decltype(regexRefs->get_match())> found =
                     compiledFindImpl(self, compiled, text, begin_pos, regexRefs);
                     if (!found.first) {
-                        if (result.empty()) {
-                            return text;
-                        }
-                        // Append the remaining unmatched tail and finish. Returning here
-                        // (rather than breaking) avoids the trailing append below running
-                        // a second time.
-                        result.append(text.substr(keepBegin));
-                        return result;
+                        break;
                     }
+                    matched = true;
                     decltype(regexRefs->get_match()) match = found.second;
                     decltype(match->get_full()) fullGroup = match->get_full();
                     int32_t mBegin = fullGroup->get_begin();
@@ -147,6 +233,9 @@ namespace temper {
                     } else {
                         begin_pos = begin_pos + 1;
                     }
+                }
+                if (!matched) {
+                    return text;
                 }
                 if (keepBegin < textLen) {
                     result.append(text.substr(keepBegin));

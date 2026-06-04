@@ -28,8 +28,14 @@ Namespace ::= "namespace" & (name%SingleName || ()) & "{" & body%Global*"" & "}"
 
 StructDecl ::= "struct" & name%Name & ";";
 StructDef ::= "struct" & name%Name & "{" & fields%StructPart*"" & "}" & ";";
-DerivedStructDef ::= "struct" & name%Name & ":" & "public" & base%Name & "{" & fields%StructPart*"" & "}" & ";";
-TemplateStructDef ::= "template" & "<" & typeParams%FuncParam*"," & ">" & def%StructDef;
+DerivedStructDef ::= "struct" & name%Name & ":" & bases%BaseSpec*"," & "{" & fields%StructPart*"" & "}" & ";";
+// A single base class is inherited `virtual` (to keep a shared `AnyValueBase` subobject
+// under diamond inheritance); with multiple bases each is plain `public`.
+BaseSpec ::= virt%VirtualMod? & "public" & base%Type;
+BaseSpec.virt.default = `null`;
+enum VirtualMod = Virtual;
+AnyStructDef = StructDef | DerivedStructDef;
+TemplateStructDef ::= "template" & "<" & typeParams%FuncParam*"," & ">" & def%AnyStructDef;
 TemplateFuncDef ::= "template" & "<" & typeParams%FuncParam*"," & ">" & def%FuncDef;
 TemplateFuncDecl ::= "template" & "<" & typeParams%FuncParam*"," & ">" & decl%FuncDecl;
 StructPart = StructField | FuncDecl | FuncDef | Comment;
@@ -68,15 +74,22 @@ ConstType ::= base%Type & "const";
 PtrType ::= base%Type & "*";
 
 // sStmt
-Stmt = BlockStmt | ExprStmt | LabelStmt | GotoStmt | ReturnStmt | ThrowStmt | Comment | IfStmt | WhileStmt | VarDef;
+Stmt = BlockStmt | ExprStmt | LabelStmt | GotoStmt | ReturnStmt | ThrowStmt | TryCatchStmt | BreakStmt | SwitchStmt | Comment | IfStmt | WhileStmt | VarDef;
 BlockStmt ::= "{" & stmts%Stmt*"" & "}";
 ExprStmt ::= expr%Expr & ";";
 LabelStmt ::= label%SingleName & ":" & stmt%Stmt;
 GotoStmt ::= "goto" & label%SingleName & ";";
 ReturnStmt ::= "return" & (value%Expr || ()) & ";";
 ThrowStmt ::= "throw" & value%Expr & ";";
+// Catches the runtime bubble type; the catch clause is fixed boilerplate.
+TryCatchStmt ::= "try" & tryBody%Stmt & "catch" & "(" & "const" & "temper" & "::" & "core" & "::" & "TemperBubble" & "&" & ")" & catchBody%Stmt;
+BreakStmt ::= "break" & ";";
+// A `default:` clause is always emitted, so it is part of the node rather than a case.
+SwitchStmt ::= "switch" & "(" & subject%Expr & ")" & "{" & cases%SwitchCase*"" & "default" & ":" & defaultBody%Stmt & "}";
+SwitchCase ::= labels%CaseLabel*"" & body%Stmt;
+CaseLabel ::= "case" & value%Expr & ":";
 
-Expr = IndexExpr | CallExpr | MemberExpr | Name | LiteralExpr | BinaryExpr | UnaryExpr | CastExpr | PreComment | PostComment | ThisExpr | TemplateType;
+Expr = IndexExpr | CallExpr | MemberExpr | Name | LiteralExpr | BinaryExpr | UnaryExpr | CastExpr | PreComment | PostComment | ThisExpr | TemplateType | LambdaExpr;
 CastExpr ::= "(" & type%Type & ")" & expr%Expr;
 IndexExpr ::= base%Expr & "[" & index%Expr & "]";
 CallExpr ::= func%Expr & "(" & args%Expr*"," & ")";
@@ -87,6 +100,12 @@ BinaryExpr ::= left%Expr & op%BinaryOp & right%Expr;
 BinaryExpr.operatorDefinition = `op.opEnum.operatorDefinition`;
 LiteralExpr ::= repr%Raw;
 ThisExpr ::= "this";
+// A C++ lambda. Captures default to by-value (`=`); `captures` lists the extra by-reference
+// captures. `mut` is `mutable` when the lambda owns its captured state across invocations.
+LambdaExpr ::= "[" & "=" & captures%LambdaCapture*"" & "]" & "(" & params%FuncParam*"," & ")" & mut%LambdaMod? & "->" & ret%Type & body%BlockStmt;
+LambdaExpr.mut.default = `null`;
+LambdaCapture ::= "," & "&" & name%SingleName;
+enum LambdaMod = Mutable;
 
 IfStmt ::= "if" & "(" & cond%Expr & ")" & ifTrue%Stmt & ("else" & ifFalse%Stmt || ());
 WhileStmt ::= "while" & "(" & cond%Expr & ")" & body%Stmt;

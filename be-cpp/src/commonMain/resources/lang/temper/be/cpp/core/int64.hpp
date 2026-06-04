@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <limits>
 #include <string>
+#include "temper_bubble.hpp"
 #include "base_types.hpp"
 
 namespace temper {
@@ -83,6 +84,9 @@ namespace temper {
                 return static_cast<int32_t>(i);
             }
 
+            // See int.hpp for the `_wrap` (general, zero-checked) vs `_safe` (divisor
+            // statically non-zero, zero-check elided) distinction. Both keep the
+            // `INT64_MIN / -1` guard because that division is UB in C++ regardless.
             inline int64_t div_wrap(int64_t a, int64_t b) {
                 if (b == 0) {
                     bubble("division by zero");
@@ -93,10 +97,8 @@ namespace temper {
                 return a / b;
             }
 
+            // Divisor is statically known to be non-zero; the zero check is elided.
             inline int64_t div_safe(int64_t a, int64_t b) {
-                if (b == 0) {
-                    bubble("division by zero");
-                }
                 if (a == std::numeric_limits<int64_t>::min() && b == -1) {
                     return std::numeric_limits<int64_t>::min();
                 }
@@ -113,10 +115,8 @@ namespace temper {
                 return a % b;
             }
 
+            // Divisor is statically known to be non-zero; the zero check is elided.
             inline int64_t mod_safe(int64_t a, int64_t b) {
-                if (b == 0) {
-                    bubble("division by zero");
-                }
                 if (b == -1 && a == std::numeric_limits<int64_t>::min()) {
                     return 0;
                 }

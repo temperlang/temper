@@ -9,37 +9,13 @@ import lang.temper.be.cli.RunnerSpecifics
 import lang.temper.be.cli.ToolSpecifics
 import lang.temper.be.cli.ToolchainRequest
 import lang.temper.be.cli.ToolchainResult
-import lang.temper.be.cli.VersionedTool
 import lang.temper.be.cli.composing
 import lang.temper.common.RResult
-import lang.temper.common.RSuccess
-import lang.temper.common.subListToEnd
 import lang.temper.fs.OutDir
 import lang.temper.log.FilePath
-import lang.temper.log.FilePathSegment
 import lang.temper.name.BackendId
 
-class CompilerTool(val name: String) : VersionedTool {
-    override val cliNames: List<String>
-        get() = listOf(name)
-
-    override val versionCheckArgs: List<String>
-        get() = listOf("-v")
-
-    override fun checkVersion(run: EffortSuccess): RResult<Unit, CliFailure> = RSuccess(Unit)
-}
-
-/** The path segments but skipping over the initial `cpp` path segment. */
-val FilePath.goodFileSegments: List<FilePathSegment>
-    get() {
-        var skipped = 0
-        if (segments.getOrNull(skipped)?.fullName == CppLang.Cpp11.id.uniqueId) { skipped += 1 }
-        return segments.subListToEnd(skipped)
-    }
-val FilePath.goodFilePath: FilePath
-    get() = FilePath(segments = goodFileSegments, isDir = isDir)
-
-object Cpp11Specifics : RunnerSpecifics {
+object CppSpecifics : RunnerSpecifics {
     override fun runSingleSource(
         cliEnv: CliEnv,
         code: String,
@@ -56,11 +32,11 @@ object Cpp11Specifics : RunnerSpecifics {
         code: OutDir,
         dependencies: Dependencies<*>,
     ): List<ToolchainResult> {
-        return runCpp11(cliEnv, dependencies, request)
+        return runCpp(cliEnv, dependencies, request)
     }
 
     override val tools: List<ToolSpecifics>
-        get() = listOf(GppCommand, ShCommand)
+        get() = listOf(GppCommand)
     override val backendId: BackendId
-        get() = CppLang.Cpp11.id
+        get() = CppLang.Cpp.id
 }

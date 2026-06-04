@@ -12,6 +12,8 @@ import lang.temper.name.Temporary
 import lang.temper.name.identifiers.IdentStyle
 
 private val reservedRegex = Regex("^_[A-Z]|__")
+private val underscoreRunRegex = Regex("_+")
+private val leadingUnderscoreUpperRegex = Regex("^_[A-Z].*")
 
 // cppref: https://en.cppreference.com/w/cpp/keyword
 // Public so the be-cppv backend (a separate module) can share the keyword set.
@@ -98,10 +100,19 @@ class CppNames {
      */
     private fun disambiguatedName(base: String, uid: Int, owner: ResolvedName): CppName {
         fun candidate(suffix: String): String {
-            val joined = fixName("${base}_$suffix")
+            var joined = fixName("${base}_$suffix")
             // A trailing `_` on `base` (or anything fixName left) could create a `__` run, which
             // C++ reserves; collapse runs of underscores so the identifier stays legal.
-            return if (joined.contains("__")) joined.replace(Regex("_+"), "_") else joined
+            if (joined.contains("__")) {
+                joined = joined.replace(underscoreRunRegex, "_")
+            }
+            // C++ also reserves identifiers that begin with an underscore followed by an
+            // uppercase letter. `base` can start with `_` (e.g. a source name like `_Foo`), so
+            // drop a leading underscore that would otherwise make `CppName` reject the result.
+            if (joined.matches(leadingUnderscoreUpperRegex)) {
+                joined = joined.trimStart('_')
+            }
+            return joined
         }
         var text = candidate("$uid")
         var attempt = 2
@@ -159,4 +170,3 @@ class CppNames {
         return CppName(IdentStyle.Camel.convertTo(IdentStyle.Snake, name))
     }
 }
-

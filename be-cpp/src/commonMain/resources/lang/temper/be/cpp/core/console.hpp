@@ -16,7 +16,8 @@ namespace temper {
             };
 
             inline void log(std::shared_ptr<Type> console, std::string msg) {
-                console->logger(std::string(msg).append("\n"));
+                msg.append("\n");
+                console->logger(std::move(msg));
             }
 
             inline std::shared_ptr<Type> get_console() {

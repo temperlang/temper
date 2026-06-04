@@ -21,8 +21,12 @@ namespace temper {
         struct ValueResult : GeneratorResult<T> {
             T held;
             explicit ValueResult(T value) : held(std::move(value)) {}
-            bool is_done() const override { return false; }
-            T value() const override { return held; }
+            bool is_done() const override {
+                return false;
+            }
+            T value() const override {
+                return held;
+            }
             static std::shared_ptr<GeneratorResult<T>> make(T value) {
                 return std::make_shared<ValueResult<T>>(std::move(value));
             }
@@ -30,7 +34,9 @@ namespace temper {
 
         template<class T>
         struct DoneResult : GeneratorResult<T> {
-            bool is_done() const override { return true; }
+            bool is_done() const override {
+                return true;
+            }
             T value() const override {
                 return bubble<T>("generator is exhausted");
             }
@@ -58,17 +64,24 @@ namespace temper {
             Step step;
             bool done = false;
             explicit Generator(Step step) : step(std::move(step)) {}
-            void close() { done = true; }
+            void close() {
+                done = true;
+            }
         };
 
-        // A generator whose `next` does not bubble.
+        // A generator whose `next` does not bubble. This is deliberately a separate struct from
+        // [Generator] rather than a shared template specialized on a flag: the two are distinct C++
+        // types so the `next` overloads below resolve statically to the bubbling or non-bubbling
+        // variant at each call site (the `Step` self-type also differs accordingly).
         template<class T>
         struct SafeGenerator {
             using Step = std::function<std::shared_ptr<GeneratorResult<T>>(std::shared_ptr<SafeGenerator<T>>)>;
             Step step;
             bool done = false;
             explicit SafeGenerator(Step step) : step(std::move(step)) {}
-            void close() { done = true; }
+            void close() {
+                done = true;
+            }
         };
 
         // The parameter is spelled out as std::function (rather than the Step typedef)
@@ -88,7 +101,7 @@ namespace temper {
         }
 
         template<class T>
-        std::shared_ptr<GeneratorResult<T>> next(std::shared_ptr<Generator<T>> generator) {
+        std::shared_ptr<GeneratorResult<T>> next(const std::shared_ptr<Generator<T>>& generator) {
             if (generator->done) {
                 return std::make_shared<DoneResult<T>>();
             }
@@ -100,7 +113,7 @@ namespace temper {
         }
 
         template<class T>
-        std::shared_ptr<GeneratorResult<T>> next(std::shared_ptr<SafeGenerator<T>> generator) {
+        std::shared_ptr<GeneratorResult<T>> next(const std::shared_ptr<SafeGenerator<T>>& generator) {
             if (generator->done) {
                 return std::make_shared<DoneResult<T>>();
             }

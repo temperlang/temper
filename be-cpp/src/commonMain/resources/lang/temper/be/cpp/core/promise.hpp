@@ -36,22 +36,29 @@ namespace temper {
                 return;
             }
             async_loop_running() = true;
+            // Reset the running flag even if a task throws (Temper bubbles are C++
+            // exceptions); otherwise a bubble escaping the loop would permanently
+            // wedge the async subsystem and strand any remaining queued tasks.
+            struct ResetGuard {
+                ~ResetGuard() { async_loop_running() = false; }
+            } resetGuard;
             while (!async_task_queue().empty()) {
                 std::function<void()> task = async_task_queue().front();
                 async_task_queue().pop_front();
                 task();
             }
-            async_loop_running() = false;
         }
 
         template<class R>
         struct PromiseState {
-            bool ready = false;
-            bool broken = false;
-            R value{};
+            // Larger-alignment members first to minimize padding; all members are
+            // accessed by name only, never positionally, so the order is unobservable.
             // A promise may be awaited from several places before it settles, so keep
             // every registered continuation rather than only the most recent one.
             std::vector<std::function<void()>> continuations;
+            R value{};
+            bool ready = false;
+            bool broken = false;
 
             void settle() {
                 std::vector<std::function<void()>> pending;
@@ -77,7 +84,9 @@ namespace temper {
                 }
             }
 
-            bool is_broken() const { return state->broken; }
+            bool is_broken() const {
+                return state->broken;
+            }
 
             R get() {
                 if (state->broken) {
@@ -128,7 +137,9 @@ namespace temper {
         // Resume `generator` when `promise` settles. Used to implement `await`.
         template<class T, class GenT>
         void awake_upon(std::shared_ptr<Promise<T>> promise, std::shared_ptr<GenT> generator) {
-            promise->on_ready([generator]() { next(generator); });
+            promise->on_ready([generator]() {
+                next(generator);
+            });
         }
 
         // Read the value an awaited promise settled with. A handler scope cannot span a
@@ -149,7 +160,9 @@ namespace temper {
         // or SafeGenerator (next() is overloaded for both).
         template<class FactoryFn>
         void async_run(FactoryFn factory) {
-            async_enqueue([factory]() { next(factory()); });
+            async_enqueue([factory]() {
+                next(factory());
+            });
             async_drain();
         }
 

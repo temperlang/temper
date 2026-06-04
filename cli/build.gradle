@@ -67,21 +67,11 @@ jar {
 }
 
 def getTemperVersion() {
-    // Prefer the git description, but fall back to a dev version when git is
-    // unavailable (e.g. not installed) so the build still works.
-    try {
-        def execOutput = providers.exec {
-            commandLine(["git", "describe", "--dirty", "--always"])
-            ignoreExitValue = true
-        }
-        if (execOutput.result.get().exitValue != 0) {
-            return "0.0.0-dev"
-        }
-        def output = execOutput.standardOutput.asText.get()
-        return convertGitDescription(output.toString().trim())
-    } catch (Exception ignored) {
-        return "0.0.0-dev"
-    }
+    def output = providers.exec {
+        // This requires git present to build a jar, and that's ok.
+        commandLine(["git", "describe", "--dirty", "--always"])
+    }.standardOutput.asText.get()
+    convertGitDescription(output.toString().trim())
 }
 
 static def convertGitDescription(String text) {

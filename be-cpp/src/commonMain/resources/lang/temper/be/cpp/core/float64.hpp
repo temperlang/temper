@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <limits>
 #include <sstream>
 #include <string>
@@ -14,28 +15,72 @@ namespace temper {
 
         namespace Float64 {
 
-            inline double e() { return M_E; }
-            inline double pi() { return M_PI; }
-            inline double abs(double f) { return std::abs(f); }
-            inline double acos(double f) { return std::acos(f); }
-            inline double asin(double f) { return std::asin(f); }
-            inline double atan(double f) { return std::atan(f); }
-            inline double atan2(double a, double b) { return std::atan2(a, b); }
-            inline double ceil(double f) { return std::ceil(f); }
-            inline double cos(double f) { return std::cos(f); }
-            inline double cosh(double f) { return std::cosh(f); }
-            inline double exp(double f) { return std::exp(f); }
-            inline double expm1(double f) { return std::expm1(f); }
-            inline double floor(double f) { return std::floor(f); }
-            inline double log(double f) { return std::log(f); }
-            inline double log10(double f) { return std::log10(f); }
-            inline double log1p(double f) { return std::log1p(f); }
-            inline double round(double f) { return std::round(f); }
-            inline double sin(double f) { return std::sin(f); }
-            inline double sinh(double f) { return std::sinh(f); }
-            inline double sqrt(double f) { return std::sqrt(f); }
-            inline double tan(double f) { return std::tan(f); }
-            inline double tanh(double f) { return std::tanh(f); }
+            inline double e() {
+                return M_E;
+            }
+            inline double pi() {
+                return M_PI;
+            }
+            inline double abs(double f) {
+                return std::abs(f);
+            }
+            inline double acos(double f) {
+                return std::acos(f);
+            }
+            inline double asin(double f) {
+                return std::asin(f);
+            }
+            inline double atan(double f) {
+                return std::atan(f);
+            }
+            inline double atan2(double a, double b) {
+                return std::atan2(a, b);
+            }
+            inline double ceil(double f) {
+                return std::ceil(f);
+            }
+            inline double cos(double f) {
+                return std::cos(f);
+            }
+            inline double cosh(double f) {
+                return std::cosh(f);
+            }
+            inline double exp(double f) {
+                return std::exp(f);
+            }
+            inline double expm1(double f) {
+                return std::expm1(f);
+            }
+            inline double floor(double f) {
+                return std::floor(f);
+            }
+            inline double log(double f) {
+                return std::log(f);
+            }
+            inline double log10(double f) {
+                return std::log10(f);
+            }
+            inline double log1p(double f) {
+                return std::log1p(f);
+            }
+            inline double round(double f) {
+                return std::round(f);
+            }
+            inline double sin(double f) {
+                return std::sin(f);
+            }
+            inline double sinh(double f) {
+                return std::sinh(f);
+            }
+            inline double sqrt(double f) {
+                return std::sqrt(f);
+            }
+            inline double tan(double f) {
+                return std::tan(f);
+            }
+            inline double tanh(double f) {
+                return std::tanh(f);
+            }
 
             inline double max(double a, double b) {
                 if (std::isnan(a) || std::isnan(b)) {
@@ -180,12 +225,24 @@ namespace temper {
                 return 0;
             }
 
-            inline bool lt(double a, double b) { return cmp(a, b) < 0; }
-            inline bool le(double a, double b) { return cmp(a, b) <= 0; }
-            inline bool gt(double a, double b) { return cmp(a, b) > 0; }
-            inline bool ge(double a, double b) { return cmp(a, b) >= 0; }
-            inline bool eq(double a, double b) { return cmp(a, b) == 0; }
-            inline bool ne(double a, double b) { return cmp(a, b) != 0; }
+            inline bool lt(double a, double b) {
+                return cmp(a, b) < 0;
+            }
+            inline bool le(double a, double b) {
+                return cmp(a, b) <= 0;
+            }
+            inline bool gt(double a, double b) {
+                return cmp(a, b) > 0;
+            }
+            inline bool ge(double a, double b) {
+                return cmp(a, b) >= 0;
+            }
+            inline bool eq(double a, double b) {
+                return cmp(a, b) == 0;
+            }
+            inline bool ne(double a, double b) {
+                return cmp(a, b) != 0;
+            }
 
             template<class T>
             inline std::string toString(const NullableParam<T>& v) {

@@ -44,13 +44,26 @@ namespace temper {
                 return a == b;
             }
 
+            // dynamic_cast<void*> yields the address of the most-derived object, so identity
+            // holds even when a and b point at the same object through different base
+            // subobjects (multiple/virtual inheritance) where the raw pointers would otherwise
+            // differ. dynamic_cast<void*> is only well-formed for polymorphic types, so this
+            // overload is constrained to the case where both pointees have a vtable.
             template<class A, class B>
-            bool eq(std::shared_ptr<A> a, std::shared_ptr<B> b) {
-                // dynamic_cast<void*> yields the address of the most-derived object, so
-                // identity holds even when a and b point at the same object through
-                // different base subobjects (multiple/virtual inheritance) where the raw
-                // pointers would otherwise differ.
+            typename std::enable_if<
+            std::is_polymorphic<A>::value && std::is_polymorphic<B>::value, bool>::type
+            eq(std::shared_ptr<A> a, std::shared_ptr<B> b) {
                 return dynamic_cast<void*>(a.get()) == dynamic_cast<void*>(b.get());
+            }
+
+            // For non-polymorphic pointees dynamic_cast<void*> would not compile, so fall back
+            // to comparing the raw addresses. Without a vtable there is no most-derived-object
+            // adjustment to make, so plain pointer identity is the correct notion of equality.
+            template<class A, class B>
+            typename std::enable_if<
+            !(std::is_polymorphic<A>::value && std::is_polymorphic<B>::value), bool>::type
+            eq(std::shared_ptr<A> a, std::shared_ptr<B> b) {
+                return static_cast<const void*>(a.get()) == static_cast<const void*>(b.get());
             }
 
             inline bool eq(std::string a, const char* b) {
@@ -70,8 +83,17 @@ namespace temper {
             }
 
             template<class A, class B>
-            bool ne(std::shared_ptr<A> a, std::shared_ptr<B> b) {
+            typename std::enable_if<
+            std::is_polymorphic<A>::value && std::is_polymorphic<B>::value, bool>::type
+            ne(std::shared_ptr<A> a, std::shared_ptr<B> b) {
                 return dynamic_cast<void*>(a.get()) != dynamic_cast<void*>(b.get());
+            }
+
+            template<class A, class B>
+            typename std::enable_if<
+            !(std::is_polymorphic<A>::value && std::is_polymorphic<B>::value), bool>::type
+            ne(std::shared_ptr<A> a, std::shared_ptr<B> b) {
+                return static_cast<const void*>(a.get()) != static_cast<const void*>(b.get());
             }
 
             inline bool ne(std::string a, const char* b) {

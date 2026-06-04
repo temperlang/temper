@@ -5,7 +5,11 @@
 namespace temper {
     namespace core {
 
-        struct AnyValueBase {
+        // Every polymorphic Temper object shares a single (virtually inherited) `AnyValueBase`
+        // root. Deriving it from enable_shared_from_this lets `borrow_this` recover a properly
+        // owning shared_ptr for `this` (objects are always created via make_shared), instead of
+        // a non-owning alias that would dangle if a callee stored it.
+        struct AnyValueBase : std::enable_shared_from_this<AnyValueBase> {
             virtual ~AnyValueBase() = default;
         };
 

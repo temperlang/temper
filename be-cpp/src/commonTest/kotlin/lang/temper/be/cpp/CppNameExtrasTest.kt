@@ -101,5 +101,4 @@ class CppNameExtrasTest {
         assertEquals(a, b)
         assertEquals(a.hashCode(), b.hashCode())
     }
-
 }

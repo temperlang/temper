@@ -1,6 +1,7 @@
 #pragma once
 #include <deque>
 #include <memory>
+#include "temper_bubble.hpp"
 #include "base_types.hpp"
 
 namespace temper {
@@ -14,17 +15,17 @@ namespace temper {
             }
 
             template<class Elem>
-            void add(std::shared_ptr<std::deque<Elem>> dq, typename NonDeduced<Elem>::type elem) {
+            void add(const std::shared_ptr<std::deque<Elem>>& dq, typename NonDeduced<Elem>::type elem) {
                 dq->push_back(elem);
             }
 
             template<class Elem>
-            bool isEmpty(std::shared_ptr<std::deque<Elem>> dq) {
+            bool isEmpty(const std::shared_ptr<std::deque<Elem>>& dq) {
                 return dq->empty();
             }
 
             template<class Elem>
-            Elem removeFirst(std::shared_ptr<std::deque<Elem>> dq) {
+            Elem removeFirst(const std::shared_ptr<std::deque<Elem>>& dq) {
                 if (dq->empty()) {
                     bubble<Elem>("removeFirst on empty deque");
                 }

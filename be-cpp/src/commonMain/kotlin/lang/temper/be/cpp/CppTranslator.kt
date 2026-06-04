@@ -1,7 +1,6 @@
 package lang.temper.be.cpp
 
 import lang.temper.be.Backend
-import lang.temper.be.Dependencies
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.mapParameters
@@ -25,6 +24,7 @@ import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
 import lang.temper.type.PropertyShape
 import lang.temper.type.TypeDefinition
+import lang.temper.type.TypeFormal
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.NullableType
 import lang.temper.type2.Nullity
@@ -45,16 +45,6 @@ import lang.temper.value.TString
 private const val STD_FUNCTION_PREFIX = "std::function"
 
 /**
- * Matches a rendered C++ leaf type name that looks like an (unresolved) Temper type formal:
- * compiler-introduced formals render as all-uppercase letters optionally followed by a numeric
- * disambiguation suffix (`T`, `T184`, `T_9`, `KEY`, `VALUE`, `YIELD`), whereas generated struct
- * names always contain lowercase letters. The suffix may or may not be underscore-separated
- * depending on how [CppNames] disambiguated a clashing bare name, so both forms are accepted.
- * See [CppTranslator.looksLikeTypeFormalName].
- */
-private val typeFormalNameRegex = Regex("^[A-Z]+(_?\\d+)*$")
-
-/**
  * Translates a TmpL module into C++ source files.
  *
  * Constructed once per module by [CppBackend.translate]. The translator is stateful:
@@ -71,7 +61,6 @@ private val typeFormalNameRegex = Regex("^[A-Z]+(_?\\d+)*$")
 class CppTranslator(
     cppNames: CppNames,
     private val cppLibraryName: String? = null,
-    private val dependenciesBuilder: Dependencies.Builder<CppBackend>? = null,
     libraryRootToOutputDir: Map<FilePath, String> = emptyMap(),
     /**
      * Member dotNames (methods and getters) whose receiver may be mutated (transitively),
@@ -322,11 +311,9 @@ class CppTranslator(
      */
     private fun wrapWithListUpcastIfNeeded(
         translatedExpr: Cpp.Expr,
-        declaredType: Cpp.Type,
         initExprType: Type2?,
         declaredTmpLType: Type2?,
     ): Cpp.Expr {
-        ignore(declaredType)
         if (initExprType == null || declaredTmpLType == null) return translatedExpr
         // Only List and Listed take part in covariant element upcasts here; ListBuilder is
         // intentionally excluded (it is mutable, so element-type covariance is unsound), which
@@ -363,7 +350,7 @@ class CppTranslator(
         actualType: Type2?,
         paramType: Type2?,
     ): Cpp.Expr {
-        val listAdjusted = wrapWithListUpcastIfNeeded(translated, cpp.type("void"), actualType, paramType)
+        val listAdjusted = wrapWithListUpcastIfNeeded(translated, actualType, paramType)
         return wrapWithNarrowingCastIfNeeded(listAdjusted, actualType, paramType)
     }
 
@@ -413,21 +400,27 @@ class CppTranslator(
         if (fullSourceType is Cpp.TemplateType) {
             val srcBaseName = leafNameOf(fullSourceType.base)
             if (srcBaseName != "shared_ptr") return translatedExpr
-            // If source and target inner types are the same text, skip (no-op cast)
+            // Skip only when source and target translate to the *same* C++ type, i.e. the
+            // cast would be a no-op. Compare the fully-rendered type (which includes any
+            // namespace qualification), not just the leaf name: two distinct types that
+            // share a simple name (e.g. `a::Node` vs `b::Node`) must still be cast, since
+            // `srcDef == tgtDef` (the same-definition case) was already excluded above.
             val srcInner = fullSourceType.args.firstOrNull()
-            if (srcInner is Cpp.SingleName && innerType is Cpp.SingleName &&
-                srcInner.id.text == (innerType as Cpp.SingleName).id.text
-            ) {
+            if (srcInner != null && renderToString(srcInner) == renderToString(innerType)) {
                 return translatedExpr
             }
         } else {
             return translatedExpr
         }
-        // Skip if inner type looks like a type formal (not a concrete struct we generated).
-        // An unresolved formal can appear as a bare name or a `temper::core::`-qualified name,
-        // so check the leaf.
+        // Skip if the cast target is a type formal (not a concrete struct we generated):
+        // casting to a template parameter before instantiation is meaningless. Detect the
+        // formal structurally from the definition (every non-formal shape — value types,
+        // collections, applied generics, functions — was already excluded above). This used
+        // to be a regex on the rendered name, which both misfired on all-uppercase user type
+        // names (`HTTP`, `URL`, `UUID`) and missed formals not registered in `typeFormalNames`
+        // (e.g. coroutine `YIELD` formals), emitting a bogus upcast for the latter.
         val innerLeaf = leafNameOf(innerType)
-        if (innerLeaf != null && looksLikeTypeFormalName(innerLeaf)) return translatedExpr
+        if (tgtDef is TypeFormal) return translatedExpr
         // Don't re-cast a value already cast to this type (avoids redundant nested casts).
         if (isPointerCastToLeaf(translatedExpr, innerLeaf)) return translatedExpr
         return cpp.callExpr(
@@ -526,6 +519,28 @@ class CppTranslator(
         }
     }
 
+    /**
+     * Append the optional-parameter [overloads] produced by [generateOptionalOverloads] for an
+     * instance or static method: template methods keep their definitions inline in
+     * [templateMethodDefs]; plain methods emit a declaration into the struct (the receiver) and an
+     * out-of-line definition into [impl].
+     */
+    private fun MutableList<Cpp.StructPart>.emitMethodOverloads(
+        overloads: List<Pair<Cpp.FuncDecl, Cpp.FuncDef>>,
+        isTemplate: Boolean,
+        impl: MutableList<Cpp.Global>,
+        templateMethodDefs: MutableList<Cpp.Global>,
+    ) {
+        for ((decl, def) in overloads) {
+            if (isTemplate) {
+                templateMethodDefs.add(def)
+            } else {
+                add(decl)
+                impl.add(def)
+            }
+        }
+    }
+
     private fun pureVirtualBody(): Cpp.BlockStmt = cpp.blockStmt(
         listOf(cpp.exprStmt(cpp.callExpr(cpp.name(TEMPER_CORE_NAMESPACE, "pure_virtual")))),
     )
@@ -537,12 +552,6 @@ class CppTranslator(
         qual: Cpp.MethodQualifier? = null,
     ): Cpp.FuncDef = cpp.funcDef(null, retType, virtualConvention, name, params, pureVirtualBody(), qual = qual)
 
-    /**
-     * The C++ `const` qualifier for a property getter that does not mutate the
-     * receiver, or null otherwise. A getter is non-mutating when no class in the
-     * library defines a computed (potentially-mutating) getter for the property; the
-     * decision is by property name so it is identical across an override slot.
-     */
     /**
      * The `const` qualifier for a member (method or getter) that does not mutate its
      * receiver per the cross-member mutation analysis, or null otherwise. Keyed by the
@@ -629,9 +638,9 @@ class CppTranslator(
         }
         val def = type.definition
         if (
-            def != WellKnownTypes.functionTypeDefinition
-            && def.typeCategory == TypeCategory.Functional
-            && type is lang.temper.type2.DefinedType
+            def != WellKnownTypes.functionTypeDefinition &&
+            def.typeCategory == TypeCategory.Functional &&
+            type is lang.temper.type2.DefinedType
         ) {
             val sig = sigForFunInterfaceType(type)
             if (sig != null) {
@@ -771,7 +780,6 @@ class CppTranslator(
                 }
                 is TmpL.TypeIntersection -> sharedPtr(cpp.name(TEMPER_CORE_NAMESPACE, "AnyValueBase"))
                 is TmpL.TypeUnion -> {
-                    var isBubble = false
                     var isNull = false
                     val other = mutableListOf<TmpL.Type>()
 
@@ -788,9 +796,9 @@ class CppTranslator(
                                 }
                                 else -> other.add(type)
                             }
-                            is TmpL.BubbleType -> {
-                                isBubble = true
-                            }
+                            // A bubble contributes no value-carrying alternative to the union's
+                            // C++ type; the bubble path is realized via coroutine lowering, not here.
+                            is TmpL.BubbleType -> {}
                             else -> other.add(type)
                         }
                     }
@@ -929,342 +937,22 @@ class CppTranslator(
     }
 
     /** Translate a TmpL expression to a C++ expression. */
+    // Dispatches each expression node to a dedicated translate* method, mirroring the
+    // mature backends (e.g. Rust's translateExpression). The `cpp.pos(expr)` scope sets
+    // the source position for the dynamic extent, so the delegated methods emit nodes at
+    // the right position without each re-establishing it.
     private fun translateExpression(expr: TmpL.Expression): Cpp.Expr = cpp.pos(expr) {
         when (expr) {
             is TmpL.AwaitExpression -> unsupportedConstruct(expr)
-            is TmpL.BubbleSentinel -> {
-                // Compile-time type errors generate bubble at runtime
-                cpp.callExpr(
-                    cpp.template(
-                        cpp.name(TEMPER_CORE_NAMESPACE, "bubble"),
-                        listOf(cpp.type("void")),
-                    ),
-                    emptyList(),
-                )
-            }
-            is TmpL.CallExpression -> {
-                when (val fn = expr.fn) {
-                    is TmpL.GarbageCallable -> {
-                        unsupportedConstruct(fn)
-                    }
-
-                    is TmpL.InlineSupportCodeWrapper -> {
-                        when (val supportCode = fn.supportCode) {
-                            is CppInlineSupportCode -> supportCode.inlineToTree(
-                                expr.pos,
-                                expr.mapParameters { actual, staticType, _ ->
-                                    val actualExpr = actual as? TmpL.Expression
-                                        ?: error("expected expression in inline support code args")
-                                    TypedArg(
-                                        translateExpression(actualExpr),
-                                        staticType ?: WellKnownTypes.anyValueType2,
-                                    )
-                                },
-                                expr.type,
-                                this,
-                            ) as? Cpp.Expr ?: error("inline support code did not produce an expression")
-
-                            else -> unsupportedConstruct(expr)
-                        }
-                    }
-
-                    is TmpL.ConstructorReference -> {
-                        // For constructor calls, get the concrete type from the
-                        // call expression's return type (not the generic signature)
-                        val callReturnType = expr.type
-                        val baseTypeName = translateTypeName(fn.typeName)
-                        val bindings = callReturnType.bindings
-                        val qualifiedType = if (bindings.isNotEmpty()) {
-                            cpp.template(baseTypeName, bindings.map { translateType2(it) })
-                        } else {
-                            baseTypeName
-                        }
-                        val callable = cpp.scopedName(
-                            qualifiedType,
-                            cpp.singleName(CppName("make")),
-                        )
-                        val sig = fn.type
-                        val ctxSig = expr.contextualizedSig
-                        val numRequired = sig.requiredInputTypes.size -
-                            (if (sig.hasThisFormal) 1 else 0)
-                        val optionalTypes = sig.optionalInputTypes
-                        val ctorParamTypes = ctxSig.requiredInputTypes.drop(
-                            if (sig.hasThisFormal) 1 else 0,
-                        )
-                        cpp.callExpr(
-                            callable,
-                            expr.parameters.mapIndexed { idx, actual ->
-                                val actualExpr = actual as TmpL.Expression
-                                val optionalIdx = idx - numRequired
-                                val isOptionalParam = optionalIdx >= 0
-                                val isNullLiteral = actualExpr is TmpL.ValueReference &&
-                                    actualExpr.value.typeTag == TNull
-                                if (isOptionalParam && optionalIdx < optionalTypes.size) {
-                                    val optType = optionalTypes[optionalIdx]
-                                    if (isNullLiteral) {
-                                        wrapInNullableParamIfNeeded(optType)
-                                    } else {
-                                        wrapInNullableParamIfNeeded(
-                                            optType,
-                                            translateExpression(actualExpr),
-                                        )
-                                    }
-                                } else {
-                                    val translated = translateExpression(actualExpr)
-                                    val paramType = ctorParamTypes.getOrNull(idx)
-                                    wrapArgForParam(
-                                        translated,
-                                        actualExpr.type,
-                                        paramType,
-                                    )
-                                }
-                            },
-                        )
-                    }
-
-                    else -> {
-                        val sig = fn.type
-                        // Check for argument type mismatches that would fail in C++
-                        val hasArgMismatch = run {
-                            val paramTypes = sig.requiredInputTypes.drop(
-                                if (sig.hasThisFormal) 1 else 0,
-                            )
-                            expr.parameters.filterIsInstance<TmpL.Expression>().withIndex().any { (idx, arg) ->
-                                val paramType = paramTypes.getOrNull(idx) ?: return@any false
-                                isTypeMismatch2(paramType, arg)
-                            }
-                        }
-                        if (hasArgMismatch) {
-                            return@pos cpp.callExpr(
-                                cpp.template(
-                                    cpp.name(TEMPER_CORE_NAMESPACE, "bubble"),
-                                    listOf(cpp.type("void")),
-                                ),
-                                emptyList(),
-                            )
-                        }
-                        // Use contextualized sig for optional types
-                        // so type formals are resolved to concrete types
-                        val ctxSig = expr.contextualizedSig
-                        // requiredInputTypes includes `this` when hasThisFormal,
-                        // but expr.parameters doesn't include `this`
-                        val numRequired = sig.requiredInputTypes.size -
-                            (if (sig.hasThisFormal) 1 else 0)
-                        val optionalTypes = ctxSig.optionalInputTypes
-                        // Add explicit template args for template functions
-                        // to help C++ template argument deduction
-                        val callableExpr = run {
-                            val base = translateCallable(fn)
-                            val typeBindings = expr.typeActuals.bindings
-                            if (fn is TmpL.FnReference &&
-                                typeBindings.isNotEmpty() &&
-                                fn.type.typeFormals.isNotEmpty() &&
-                                base is Cpp.Type
-                            ) {
-                                val typeArgs = fn.type.typeFormals.mapNotNull { formal ->
-                                    typeBindings[formal]?.let { translateType2(it) }
-                                }
-                                if (typeArgs.isNotEmpty()) {
-                                    cpp.template(base, typeArgs) as Cpp.Expr
-                                } else {
-                                    base
-                                }
-                            } else {
-                                base
-                            }
-                        }
-                        val restType = sig.restInputsType
-                        val numNonRest = numRequired +
-                            optionalTypes.size
-                        val paramTypes = ctxSig.requiredInputTypes.drop(
-                            if (sig.hasThisFormal) 1 else 0,
-                        )
-                        val translatedArgs = mutableListOf<Cpp.Expr>()
-                        for (
-                        (idx, actual) in
-                        expr.parameters.withIndex()
-                        ) {
-                            if (actual is TmpL.RestSpread) {
-                                translatedArgs.add(
-                                    cpp.name(actual.parameterName),
-                                )
-                                continue
-                            }
-                            val actualExpr = actual as TmpL.Expression
-                            if (restType != null && idx >= numNonRest) {
-                                continue
-                            }
-                            val optionalIdx = idx - numRequired
-                            val isOptionalParam = optionalIdx >= 0
-                            val isNullLiteral =
-                                actualExpr is TmpL.ValueReference &&
-                                    actualExpr.value.typeTag == TNull
-                            if (
-                                isOptionalParam &&
-                                optionalIdx < optionalTypes.size
-                            ) {
-                                val optType = optionalTypes[optionalIdx]
-                                if (isNullLiteral) {
-                                    translatedArgs.add(
-                                        wrapInNullableParamIfNeeded(optType),
-                                    )
-                                } else {
-                                    translatedArgs.add(
-                                        wrapInNullableParamIfNeeded(
-                                            optType,
-                                            translateExpression(actualExpr),
-                                        ),
-                                    )
-                                }
-                            } else {
-                                val translated = translateExpression(actualExpr)
-                                val paramType = paramTypes.getOrNull(idx)
-                                translatedArgs.add(
-                                    wrapArgForParam(
-                                        translated,
-                                        actualExpr.type,
-                                        paramType,
-                                    ),
-                                )
-                            }
-                        }
-                        // Wrap rest args into a list
-                        if (restType != null) {
-                            val restArgs = expr.parameters
-                                .drop(numNonRest)
-                                .filterIsInstance<TmpL.Expression>()
-                            val elemType = translateType2(restType)
-                            val listExpr = cpp.callExpr(
-                                cpp.template(
-                                    cpp.name(
-                                        TEMPER_CORE_NAMESPACE,
-                                        "List", "make",
-                                    ),
-                                    listOf(elemType),
-                                ),
-                                restArgs.map {
-                                    translateExpression(it)
-                                },
-                            )
-                            translatedArgs.add(listExpr)
-                        }
-                        cpp.callExpr(callableExpr, translatedArgs)
-                    }
-                }
-            }
-            is TmpL.CastExpression -> {
-                // Use checked_cast for shared_ptr types (throws on failure), static_cast for value types
-                val targetType = translateType(expr.checkedType)
-                val sourceExpr = translateExpression(expr.expr)
-                val innerCheckedType = expr.checkedType.privOtOrNull
-                val isCastToValueType = innerCheckedType != null &&
-                    innerCheckedType is TmpL.NominalType &&
-                    isValueTypeDef(innerCheckedType.typeName.sourceDefinition)
-                if (isCastToValueType) {
-                    // Casting to a value type — identity cast (value types can't be cast dynamically)
-                    sourceExpr
-                } else if (targetType is Cpp.TemplateType) {
-                    val innerType = targetType.args.firstOrNull() ?: targetType
-                    if (isPointerCastToLeaf(sourceExpr, leafNameOf(innerType))) {
-                        // Subject is already cast to this type (e.g. narrowed by an `is`
-                        // check); don't add a redundant checked_cast.
-                        sourceExpr
-                    } else {
-                        cpp.callExpr(
-                            cpp.template(
-                                cpp.name(TEMPER_CORE_NAMESPACE, "checked_cast"),
-                                listOf(innerType),
-                            ),
-                            listOf(sourceExpr),
-                        )
-                    }
-                } else {
-                    // Bare type name or unrecognized form — identity cast
-                    // (avoid C-style casts which can silently reinterpret)
-                    sourceExpr
-                }
-            }
+            // Compile-time type errors generate a bubble at runtime.
+            is TmpL.BubbleSentinel -> bubbleVoid()
+            is TmpL.CallExpression -> translateCallExpression(expr)
+            is TmpL.CastExpression -> translateCastExpression(expr)
             is TmpL.FunInterfaceExpression -> translateCallable(expr.callable)
             is TmpL.GarbageExpression -> unsupportedConstruct(expr)
-            is TmpL.GetAbstractProperty -> {
-                // Abstract properties are accessed via getter methods
-                val propDotName = when (val prop = expr.property) {
-                    is TmpL.ExternalPropertyId -> prop.name.dotNameText
-                    is TmpL.InternalPropertyId -> propertyDotNames[propKey(prop.name.name)] ?: prop.name.name.toString()
-                }
-                // Use narrowing-aware subject translation for type-checked variables
-                val subjectExpr = translateWithNarrowing(expr.subject)
-                val getterName = getterMethodNames[propDotName]
-                if (getterName != null) {
-                    cpp.callExpr(
-                        cpp.op("->", subjectExpr, getterName),
-                        listOf(),
-                    )
-                } else if (expr.property is TmpL.ExternalPropertyId) {
-                    val inferredGetterName = cpp.singleName(
-                        CppName(fixName("get_$propDotName")),
-                    )
-                    cpp.callExpr(
-                        cpp.op("->", subjectExpr, inferredGetterName),
-                        listOf(),
-                    )
-                } else {
-                    cpp.op("->", subjectExpr, translatePropertyId(expr.property))
-                }
-            }
-            is TmpL.GetBackedProperty -> {
-                val propName = translatePropertyId(expr.property)
-                when (val subject = expr.subject) {
-                    is TmpL.Expression -> cpp.op("->", translateWithNarrowing(subject), propName)
-                    is TmpL.ConnectedToTypeName -> cpp.scopedName(translateTypeName(subject), propName)
-                    is TmpL.TemperTypeName -> cpp.scopedName(translateTypeName(subject), propName)
-                }
-            }
-            is TmpL.InstanceOfExpression -> {
-                val targetType = translateType(expr.checkedType)
-                val sourceExpr = translateExpression(expr.expr)
-                // Check if the checked type is a value type (Object<T> resolves to T, not shared_ptr<T>)
-                val innerCheckedType = expr.checkedType.privOtOrNull
-                val checkedTypeDef = when (innerCheckedType) {
-                    is TmpL.NominalType -> innerCheckedType.typeName.sourceDefinition
-                    else -> null
-                }
-                val isCheckedValueType = isValueTypeDef(checkedTypeDef)
-                if (isCheckedValueType) {
-                    // Value type — can't use dynamic_pointer_cast.
-                    // Check if source is nullable (shared_ptr or function type that might be null)
-                    val sourceType = expr.expr.type
-                    val isSourceRefType = !isValueType(sourceType) &&
-                        sourceType.definition != WellKnownTypes.nullTypeDefinition
-                    if (isSourceRefType) {
-                        // Source is a reference type (shared_ptr) being checked against a value type
-                        // This is effectively a null check
-                        cpp.op("!=", listOf(sourceExpr, cpp.literal(cpp.raw("nullptr"))))
-                    } else {
-                        // Source is already a value type — always true
-                        cpp.literal(true)
-                    }
-                } else if (targetType is Cpp.TemplateType) {
-                    // Object<T> = shared_ptr<T> → use dynamic_pointer_cast
-                    val innerType = targetType.args.firstOrNull() ?: targetType
-                    cpp.op(
-                        "!=",
-                        listOf(
-                            cpp.callExpr(
-                                cpp.template(
-                                    cpp.name("std", "dynamic_pointer_cast"),
-                                    listOf(innerType),
-                                ),
-                                listOf(sourceExpr),
-                            ),
-                            cpp.literal(cpp.raw("nullptr")),
-                        ),
-                    )
-                } else {
-                    // Value type — check is always true at this point
-                    cpp.literal(true)
-                }
-            }
+            is TmpL.GetAbstractProperty -> translateGetAbstractProperty(expr)
+            is TmpL.GetBackedProperty -> translateGetBackedProperty(expr)
+            is TmpL.InstanceOfExpression -> translateInstanceOfExpression(expr)
             is TmpL.InfixOperation -> {
                 val left = translateExpression(expr.left)
                 val right = translateExpression(expr.right)
@@ -1273,22 +961,7 @@ class CppTranslator(
             is TmpL.PrefixOperation -> {
                 cpp.unaryExpr(cpp.unaryOp(expr.op.kind.outputToken.text), translateExpression(expr.operand))
             }
-            is TmpL.Reference -> {
-                val resolved = resolveNameCrossModule(expr.id)
-                val varName = cpp.name(expr.id).id.text
-                val narrowedType = narrowingContext[varName]
-                if (narrowedType != null) {
-                    cpp.callExpr(
-                        cpp.template(
-                            cpp.name("std", "dynamic_pointer_cast"),
-                            listOf(narrowedType),
-                        ),
-                        listOf(resolved),
-                    )
-                } else {
-                    resolved
-                }
-            }
+            is TmpL.Reference -> translateReference(expr)
             is TmpL.RestParameterCountExpression -> cpp.callExpr(
                 cpp.name(TEMPER_CORE_NAMESPACE, "List", "length"),
                 listOf(cpp.name(expr.parameterName)),
@@ -1305,41 +978,397 @@ class CppTranslator(
                 cpp.name(TEMPER_CORE_NAMESPACE, "not_null"),
                 translateExpression(expr.expression),
             )
-            is TmpL.ValueReference -> {
-                val value = expr.value
-                when (value.typeTag) {
-                    TBoolean -> cpp.literal(TBoolean.unpack(value))
-                    TInt -> cpp.literal(TInt.unpack(value))
-                    TInt64 -> cpp.literal(cpp.raw("${TInt64.unpack(value)}LL"))
-                    TFloat64 -> {
-                        val d = TFloat64.unpack(value)
-                        when {
-                            d.isNaN() -> cpp.literal(cpp.raw("std::numeric_limits<double>::quiet_NaN()"))
-                            d.isInfinite() && d > 0 ->
-                                cpp.literal(cpp.raw("std::numeric_limits<double>::infinity()"))
-                            d.isInfinite() && d < 0 ->
-                                cpp.literal(cpp.raw("(-std::numeric_limits<double>::infinity())"))
-                            else -> cpp.literal(d)
-                        }
-                    }
-                    TString -> cpp.literal(TString.unpack(value))
-                    TNull -> {
-                        // nullptr converts to: shared_ptr nullptr,
-                        // NullableParam has_value=false (for value types).
-                        // C++ runtime functions with optional params use NullableParam.
-                        cpp.literal(cpp.raw("nullptr"))
-                    }
-                    TProblem -> cpp.literal(cpp.raw("/* error value */ 0"))
-                    else -> {
-                        val type = expr.type
-                        when (type.definition) {
-                            WellKnownTypes.voidType.definition -> cpp.literal(cpp.raw("(void)0"))
-                            WellKnownTypes.typeType.definition -> cpp.literal(
-                                cpp.raw("0"),
+            is TmpL.ValueReference -> translateValueReference(expr)
+        }
+    }
+
+    /** A runtime `bubble<void>()` call, emitted where a type error must fail at runtime. */
+    private fun bubbleVoid(): Cpp.Expr = cpp.callExpr(
+        cpp.template(
+            cpp.name(TEMPER_CORE_NAMESPACE, "bubble"),
+            listOf(cpp.type("void")),
+        ),
+        emptyList(),
+    )
+
+    private fun translateCallExpression(expr: TmpL.CallExpression): Cpp.Expr {
+        return when (val fn = expr.fn) {
+            is TmpL.GarbageCallable -> {
+                unsupportedConstruct(fn)
+            }
+
+            is TmpL.InlineSupportCodeWrapper -> {
+                when (val supportCode = fn.supportCode) {
+                    is CppInlineSupportCode -> supportCode.inlineToTree(
+                        expr.pos,
+                        expr.mapParameters { actual, staticType, _ ->
+                            val actualExpr = actual as? TmpL.Expression
+                                ?: error("expected expression in inline support code args")
+                            TypedArg(
+                                translateExpression(actualExpr),
+                                staticType ?: WellKnownTypes.anyValueType2,
                             )
-                            else -> cpp.literal(cpp.raw("/* unhandled literal: ${value.typeTag} */ 0"))
+                        },
+                        expr.type,
+                        this,
+                    ) as? Cpp.Expr ?: error("inline support code did not produce an expression")
+
+                    else -> unsupportedConstruct(expr)
+                }
+            }
+
+            is TmpL.ConstructorReference -> {
+                // For constructor calls, get the concrete type from the
+                // call expression's return type (not the generic signature)
+                val callReturnType = expr.type
+                val baseTypeName = translateTypeName(fn.typeName)
+                val bindings = callReturnType.bindings
+                val qualifiedType = if (bindings.isNotEmpty()) {
+                    cpp.template(baseTypeName, bindings.map { translateType2(it) })
+                } else {
+                    baseTypeName
+                }
+                val callable = cpp.scopedName(
+                    qualifiedType,
+                    cpp.singleName(CppName("make")),
+                )
+                val sig = fn.type
+                val ctxSig = expr.contextualizedSig
+                val numRequired = sig.requiredInputTypes.size -
+                    (if (sig.hasThisFormal) 1 else 0)
+                val optionalTypes = sig.optionalInputTypes
+                val ctorParamTypes = ctxSig.requiredInputTypes.drop(
+                    if (sig.hasThisFormal) 1 else 0,
+                )
+                cpp.callExpr(
+                    callable,
+                    expr.parameters.mapIndexed { idx, actual ->
+                        val actualExpr = actual as TmpL.Expression
+                        val optionalIdx = idx - numRequired
+                        val isOptionalParam = optionalIdx >= 0
+                        val isNullLiteral = actualExpr is TmpL.ValueReference &&
+                            actualExpr.value.typeTag == TNull
+                        if (isOptionalParam && optionalIdx < optionalTypes.size) {
+                            val optType = optionalTypes[optionalIdx]
+                            if (isNullLiteral) {
+                                wrapInNullableParamIfNeeded(optType)
+                            } else {
+                                wrapInNullableParamIfNeeded(
+                                    optType,
+                                    translateExpression(actualExpr),
+                                )
+                            }
+                        } else {
+                            val translated = translateExpression(actualExpr)
+                            val paramType = ctorParamTypes.getOrNull(idx)
+                            wrapArgForParam(
+                                translated,
+                                actualExpr.type,
+                                paramType,
+                            )
                         }
+                    },
+                )
+            }
+
+            else -> {
+                val sig = fn.type
+                // Check for argument type mismatches that would fail in C++
+                val hasArgMismatch = run {
+                    val paramTypes = sig.requiredInputTypes.drop(
+                        if (sig.hasThisFormal) 1 else 0,
+                    )
+                    expr.parameters.filterIsInstance<TmpL.Expression>().withIndex().any { (idx, arg) ->
+                        val paramType = paramTypes.getOrNull(idx) ?: return@any false
+                        isTypeMismatch2(paramType, arg)
                     }
+                }
+                if (hasArgMismatch) {
+                    return bubbleVoid()
+                }
+                // Use contextualized sig for optional types
+                // so type formals are resolved to concrete types
+                val ctxSig = expr.contextualizedSig
+                // requiredInputTypes includes `this` when hasThisFormal,
+                // but expr.parameters doesn't include `this`
+                val numRequired = sig.requiredInputTypes.size -
+                    (if (sig.hasThisFormal) 1 else 0)
+                val optionalTypes = ctxSig.optionalInputTypes
+                // Add explicit template args for template functions
+                // to help C++ template argument deduction
+                val callableExpr = run {
+                    val base = translateCallable(fn)
+                    val typeBindings = expr.typeActuals.bindings
+                    if (fn is TmpL.FnReference &&
+                        typeBindings.isNotEmpty() &&
+                        fn.type.typeFormals.isNotEmpty() &&
+                        base is Cpp.Type
+                    ) {
+                        val typeArgs = fn.type.typeFormals.mapNotNull { formal ->
+                            typeBindings[formal]?.let { translateType2(it) }
+                        }
+                        if (typeArgs.isNotEmpty()) {
+                            cpp.template(base, typeArgs) as Cpp.Expr
+                        } else {
+                            base
+                        }
+                    } else {
+                        base
+                    }
+                }
+                val restType = sig.restInputsType
+                val numNonRest = numRequired +
+                    optionalTypes.size
+                val paramTypes = ctxSig.requiredInputTypes.drop(
+                    if (sig.hasThisFormal) 1 else 0,
+                )
+                val translatedArgs = mutableListOf<Cpp.Expr>()
+                for (
+                (idx, actual) in
+                expr.parameters.withIndex()
+                ) {
+                    if (actual is TmpL.RestSpread) {
+                        translatedArgs.add(
+                            cpp.name(actual.parameterName),
+                        )
+                        continue
+                    }
+                    val actualExpr = actual as TmpL.Expression
+                    if (restType != null && idx >= numNonRest) {
+                        continue
+                    }
+                    val optionalIdx = idx - numRequired
+                    val isOptionalParam = optionalIdx >= 0
+                    val isNullLiteral =
+                        actualExpr is TmpL.ValueReference &&
+                            actualExpr.value.typeTag == TNull
+                    if (
+                        isOptionalParam &&
+                        optionalIdx < optionalTypes.size
+                    ) {
+                        val optType = optionalTypes[optionalIdx]
+                        if (isNullLiteral) {
+                            translatedArgs.add(
+                                wrapInNullableParamIfNeeded(optType),
+                            )
+                        } else {
+                            translatedArgs.add(
+                                wrapInNullableParamIfNeeded(
+                                    optType,
+                                    translateExpression(actualExpr),
+                                ),
+                            )
+                        }
+                    } else {
+                        val translated = translateExpression(actualExpr)
+                        val paramType = paramTypes.getOrNull(idx)
+                        translatedArgs.add(
+                            wrapArgForParam(
+                                translated,
+                                actualExpr.type,
+                                paramType,
+                            ),
+                        )
+                    }
+                }
+                // Wrap rest args into a list
+                if (restType != null) {
+                    val restArgs = expr.parameters
+                        .drop(numNonRest)
+                        .filterIsInstance<TmpL.Expression>()
+                    val elemType = translateType2(restType)
+                    val listExpr = cpp.callExpr(
+                        cpp.template(
+                            cpp.name(
+                                TEMPER_CORE_NAMESPACE,
+                                "List", "make",
+                            ),
+                            listOf(elemType),
+                        ),
+                        restArgs.map {
+                            translateExpression(it)
+                        },
+                    )
+                    translatedArgs.add(listExpr)
+                }
+                cpp.callExpr(callableExpr, translatedArgs)
+            }
+        }
+    }
+
+    private fun translateCastExpression(expr: TmpL.CastExpression): Cpp.Expr {
+        // Use checked_cast for shared_ptr types (throws on failure), static_cast for value types
+        val targetType = translateType(expr.checkedType)
+        val sourceExpr = translateExpression(expr.expr)
+        val innerCheckedType = expr.checkedType.privOtOrNull
+        val isCastToValueType = innerCheckedType != null &&
+            innerCheckedType is TmpL.NominalType &&
+            isValueTypeDef(innerCheckedType.typeName.sourceDefinition)
+        return if (isCastToValueType) {
+            // Casting to a value type — identity cast (value types can't be cast dynamically)
+            sourceExpr
+        } else if (targetType is Cpp.TemplateType) {
+            val innerType = targetType.args.firstOrNull() ?: targetType
+            if (isPointerCastToLeaf(sourceExpr, leafNameOf(innerType))) {
+                // Subject is already cast to this type (e.g. narrowed by an `is`
+                // check); don't add a redundant checked_cast.
+                sourceExpr
+            } else {
+                cpp.callExpr(
+                    cpp.template(
+                        cpp.name(TEMPER_CORE_NAMESPACE, "checked_cast"),
+                        listOf(innerType),
+                    ),
+                    listOf(sourceExpr),
+                )
+            }
+        } else {
+            // Bare type name or unrecognized form — identity cast
+            // (avoid C-style casts which can silently reinterpret)
+            sourceExpr
+        }
+    }
+
+    private fun translateGetAbstractProperty(expr: TmpL.GetAbstractProperty): Cpp.Expr {
+        // Abstract properties are accessed via getter methods
+        val propDotName = when (val prop = expr.property) {
+            is TmpL.ExternalPropertyId -> prop.name.dotNameText
+            is TmpL.InternalPropertyId -> propertyDotNames[propKey(prop.name.name)] ?: prop.name.name.toString()
+        }
+        // Use narrowing-aware subject translation for type-checked variables
+        val subjectExpr = translateWithNarrowing(expr.subject)
+        val getterName = getterMethodNames[propDotName]
+        return if (getterName != null) {
+            cpp.callExpr(
+                cpp.op("->", subjectExpr, getterName),
+                listOf(),
+            )
+        } else if (expr.property is TmpL.ExternalPropertyId) {
+            val inferredGetterName = cpp.singleName(
+                CppName(fixName("get_$propDotName")),
+            )
+            cpp.callExpr(
+                cpp.op("->", subjectExpr, inferredGetterName),
+                listOf(),
+            )
+        } else {
+            cpp.op("->", subjectExpr, translatePropertyId(expr.property))
+        }
+    }
+
+    private fun translateGetBackedProperty(expr: TmpL.GetBackedProperty): Cpp.Expr {
+        val propName = translatePropertyId(expr.property)
+        return when (val subject = expr.subject) {
+            is TmpL.Expression -> cpp.op("->", translateWithNarrowing(subject), propName)
+            is TmpL.ConnectedToTypeName -> cpp.scopedName(translateTypeName(subject), propName)
+            is TmpL.TemperTypeName -> cpp.scopedName(translateTypeName(subject), propName)
+        }
+    }
+
+    private fun translateInstanceOfExpression(expr: TmpL.InstanceOfExpression): Cpp.Expr {
+        val targetType = translateType(expr.checkedType)
+        val sourceExpr = translateExpression(expr.expr)
+        // Check if the checked type is a value type (Object<T> resolves to T, not shared_ptr<T>)
+        val innerCheckedType = expr.checkedType.privOtOrNull
+        val checkedTypeDef = when (innerCheckedType) {
+            is TmpL.NominalType -> innerCheckedType.typeName.sourceDefinition
+            else -> null
+        }
+        val isCheckedValueType = isValueTypeDef(checkedTypeDef)
+        return if (isCheckedValueType) {
+            // Value type — can't use dynamic_pointer_cast.
+            // Check if source is nullable (shared_ptr or function type that might be null)
+            val sourceType = expr.expr.type
+            val isSourceRefType = !isValueType(sourceType) &&
+                sourceType.definition != WellKnownTypes.nullTypeDefinition
+            if (isSourceRefType) {
+                // Source is a reference type (shared_ptr) being checked against a value type
+                // This is effectively a null check
+                cpp.op("!=", listOf(sourceExpr, cpp.literal(cpp.raw("nullptr"))))
+            } else {
+                // Source is already a value type — always true
+                cpp.literal(true)
+            }
+        } else if (targetType is Cpp.TemplateType) {
+            // Object<T> = shared_ptr<T> → use dynamic_pointer_cast
+            val innerType = targetType.args.firstOrNull() ?: targetType
+            cpp.op(
+                "!=",
+                listOf(
+                    cpp.callExpr(
+                        cpp.template(
+                            cpp.name("std", "dynamic_pointer_cast"),
+                            listOf(innerType),
+                        ),
+                        listOf(sourceExpr),
+                    ),
+                    cpp.literal(cpp.raw("nullptr")),
+                ),
+            )
+        } else {
+            // Value type — check is always true at this point
+            cpp.literal(true)
+        }
+    }
+
+    private fun translateReference(expr: TmpL.Reference): Cpp.Expr {
+        val resolved = resolveNameCrossModule(expr.id)
+        val varName = cpp.name(expr.id).id.text
+        val narrowedType = narrowingContext[varName]
+        return if (narrowedType != null) {
+            cpp.callExpr(
+                cpp.template(
+                    cpp.name("std", "dynamic_pointer_cast"),
+                    listOf(narrowedType),
+                ),
+                listOf(resolved),
+            )
+        } else {
+            resolved
+        }
+    }
+
+    private fun translateValueReference(expr: TmpL.ValueReference): Cpp.Expr {
+        val value = expr.value
+        return when (value.typeTag) {
+            TBoolean -> cpp.literal(TBoolean.unpack(value))
+            TInt -> cpp.literal(TInt.unpack(value))
+            TInt64 -> cpp.literal(cpp.raw("${TInt64.unpack(value)}LL"))
+            TFloat64 -> {
+                val d = TFloat64.unpack(value)
+                when {
+                    d.isNaN() -> cpp.literal(cpp.raw("std::numeric_limits<double>::quiet_NaN()"))
+                    d.isInfinite() && d > 0 ->
+                        cpp.literal(cpp.raw("std::numeric_limits<double>::infinity()"))
+                    d.isInfinite() && d < 0 ->
+                        cpp.literal(cpp.raw("(-std::numeric_limits<double>::infinity())"))
+                    else -> cpp.literal(d)
+                }
+            }
+            TString -> cpp.literal(TString.unpack(value))
+            TNull -> {
+                // nullptr converts to: shared_ptr nullptr,
+                // NullableParam has_value=false (for value types).
+                // C++ runtime functions with optional params use NullableParam.
+                cpp.literal(cpp.raw("nullptr"))
+            }
+            // The frontend already reported an error for this program, so it will not
+            // be run; emit a benign placeholder purely so diagnostic codegen completes.
+            TProblem -> cpp.literal(cpp.raw("/* error value */ 0"))
+            else -> {
+                val type = expr.type
+                when (type.definition) {
+                    WellKnownTypes.voidType.definition -> cpp.literal(cpp.raw("(void)0"))
+                    WellKnownTypes.typeType.definition -> cpp.literal(
+                        cpp.raw("0"),
+                    )
+                    // An unrecognised literal tag would otherwise be silently emitted as
+                    // `0`, compiling into subtly wrong behaviour. Fail loudly at translation
+                    // time instead so the gap is caught rather than shipped.
+                    else -> error(
+                        "C++ backend cannot translate literal with tag ${value.typeTag} " +
+                            "(type ${type.definition})",
+                    )
                 }
             }
         }
@@ -1405,7 +1434,7 @@ class CppTranslator(
                     val finalRight = if (right is TmpL.Expression) {
                         val rhsType = right.type
                         wrapWithListUpcastIfNeeded(
-                            rightExpr, translateType2(stmt.type), rhsType, stmt.type,
+                            rightExpr, rhsType, stmt.type,
                         ).let { upcast ->
                             wrapWithNarrowingCastIfNeeded(upcast, rhsType, stmt.type)
                         }
@@ -1426,7 +1455,7 @@ class CppTranslator(
             is TmpL.BoilerplateCodeFoldEnd -> noCodeFor(stmt)
             is TmpL.BoilerplateCodeFoldStart -> noCodeFor(stmt)
             is TmpL.BreakStatement -> when (val label = stmt.label) {
-                null -> listOf(cpp.exprStmt(cpp.literal(cpp.raw("break"))))
+                null -> listOf(cpp.breakStmt())
                 else -> {
                     val labelName = renderToString(cpp.name(label.id))
                     listOf(cpp.gotoStmt(cpp.singleName("${labelName}_end")))
@@ -1498,7 +1527,6 @@ class CppTranslator(
                     val finalInit = if (translatedInit != null && initExpr != null) {
                         wrapWithListUpcastIfNeeded(
                             translatedInit,
-                            translateType(stmt.type),
                             initExpr.type,
                             stmt.descriptor,
                         )
@@ -1518,15 +1546,9 @@ class CppTranslator(
             is TmpL.LocalFunctionDeclaration -> {
                 // Only emit the assignment here; the forward declaration
                 // is hoisted by translateBlock to support mutual recursion.
-                val params = stmt.parameters.parameters.joinToString(", ") { param ->
-                    "${renderToString(translateType(param.type))} ${renderToString(cpp.name(param.name))}"
+                val params = stmt.parameters.parameters.map { param ->
+                    cpp.funcParam(translateType(param.type), cpp.name(param.name))
                 }
-                val retTypeStr = renderToString(translateType(stmt.returnType))
-                val bodyBlock = translateBlock(stmt.body)
-                val bodyStr = toStringViaTokenSink(
-                    CppFormattingHints.getInstance(),
-                ) { bodyBlock.renderTo(it) }
-                val nameStr = renderToString(cpp.name(stmt.name))
                 // A coroutine state machine (produced by the coroutine→control-flow
                 // lowering) takes the generator as its sole argument and is invoked
                 // repeatedly via next(). Its persistent locals (case index, surviving
@@ -1558,15 +1580,15 @@ class CppTranslator(
                 val byRef = byRefCandidates
                     .distinct()
                     .filter { name -> name in referencedNamesInBody }
-                val captureClause = if (byRef.isEmpty()) {
-                    "[=]"
-                } else {
-                    "[=, " + byRef.joinToString(", ") { "&$it" } + "]"
-                }
-                val mutableKeyword = if (isCoroutineStateMachine) " mutable" else ""
-                val lambdaExpr = "$captureClause($params)$mutableKeyword -> $retTypeStr $bodyStr"
+                val lambda = cpp.lambda(
+                    captures = byRef.map { cpp.lambdaCapture(cpp.singleName(it)) },
+                    params = params,
+                    mutable = isCoroutineStateMachine,
+                    ret = translateType(stmt.returnType),
+                    body = translateBlock(stmt.body),
+                )
                 listOf(
-                    cpp.exprStmt(cpp.literal(cpp.raw("$nameStr = $lambdaExpr"))),
+                    cpp.exprStmt(cpp.op("=", cpp.name(stmt.name), lambda)),
                 )
             }
             is TmpL.ModuleInitFailed -> unsupportedStatement(stmt)
@@ -1576,25 +1598,29 @@ class CppTranslator(
                 // Emit a C++ switch. The TmpL translator only produces these from
                 // internal lowering (e.g. the coroutine state machine), never from
                 // user `break`, so an unlabeled `break` safely exits the switch here.
-                val exprStr = renderToString(translateExpression(stmt.caseExpr))
-                val sb = StringBuilder("switch (").append(exprStr).append(") {")
-                fun appendCaseBody(body: TmpL.BlockStatement) {
-                    sb.append(' ').append(renderToString(translateBlock(body)))
-                    // Prevent fall-through unless control already left the block.
-                    if (!blockEndsWithControlLeave(body)) {
-                        sb.append(" break;")
+                // Append a `break;` to a case body that doesn't already leave control,
+                // to prevent fall-through.
+                fun caseBody(body: TmpL.BlockStatement): Cpp.BlockStmt {
+                    val block = translateBlock(body)
+                    return if (blockEndsWithControlLeave(body)) {
+                        block
+                    } else {
+                        cpp.blockStmt(block.stmts + cpp.breakStmt())
                     }
                 }
-                for (case in stmt.cases) {
-                    for (value in case.values) {
-                        sb.append(" case ").append(value.index).append(':')
-                    }
-                    appendCaseBody(case.body)
+                val cases = stmt.cases.map { case ->
+                    cpp.switchCase(
+                        case.values.map { cpp.caseLabel(cpp.literal(it.index)) },
+                        caseBody(case.body),
+                    )
                 }
-                sb.append(" default:")
-                appendCaseBody(stmt.elseCase.body)
-                sb.append(" }")
-                listOf(cpp.exprStmt(cpp.literal(cpp.raw(sb.toString()))))
+                listOf(
+                    cpp.switchStmt(
+                        translateExpression(stmt.caseExpr),
+                        cases,
+                        caseBody(stmt.elseCase.body),
+                    ),
+                )
             }
             is TmpL.IfStatement -> {
                 // Translate condition first
@@ -1643,22 +1669,12 @@ class CppTranslator(
                     cpp.labelStmt(endLabel, cpp.exprStmt(cpp.literal(cpp.raw("(void)0")))),
                 )
             }
-            is TmpL.TryStatement -> {
-                val fmtHints = CppFormattingHints.getInstance()
-                val tryStmts = translateStatement(stmt.tried).toList()
-                val recoverStmts = translateStatement(stmt.recover).toList()
-                val tryBodyStr = toStringViaTokenSink(
-                    formattingHints = fmtHints,
-                ) { cpp.blockStmt(tryStmts).renderTo(it) }
-                val catchBodyStr = toStringViaTokenSink(
-                    formattingHints = fmtHints,
-                ) { cpp.blockStmt(recoverStmts).renderTo(it) }
-                listOf(
-                    cpp.exprStmt(
-                        cpp.literal(cpp.raw("try $tryBodyStr catch (const temper::core::TemperBubble&) $catchBodyStr")),
-                    ),
-                )
-            }
+            is TmpL.TryStatement -> listOf(
+                cpp.tryCatch(
+                    cpp.blockStmt(translateStatement(stmt.tried).toList()),
+                    cpp.blockStmt(translateStatement(stmt.recover).toList()),
+                ),
+            )
             is TmpL.WhileStatement -> listOf(
                 cpp.whileStmt(
                     translateExpression(stmt.test),
@@ -1694,7 +1710,9 @@ class CppTranslator(
             is TmpL.SetAbstractProperty -> translateSetProperty(stmt.left, stmt.right, useSetterMethod = true)
             is TmpL.SetBackedProperty -> translateSetProperty(stmt.left, stmt.right, useSetterMethod = false)
             is TmpL.ThrowStatement -> listOf(
-                cpp.exprStmt(cpp.literal(cpp.raw("throw temper::core::TemperBubble()"))),
+                cpp.throwStmt(
+                    cpp.callExpr(cpp.name(TEMPER_CORE_NAMESPACE, "TemperBubble"), emptyList()),
+                ),
             )
             is TmpL.YieldStatement -> unsupportedStatement(stmt)
         }
@@ -1703,26 +1721,20 @@ class CppTranslator(
     private fun translatePropertyId(prop: TmpL.PropertyId): Cpp.SingleName = when (prop) {
         is TmpL.ExternalPropertyId -> cpp.singleName(CppName(fixName(prop.name.dotNameText)))
         is TmpL.InternalPropertyId -> {
-            val key = propKey(prop.name.name)
-            val dotName = propertyDotNames[key]
+            // A backing field is emitted under its property's dot name (see
+            // translatePropertyMember / translateGetterMember), so resolve the access
+            // through the same dotName registered in [propertyDotNames].
+            // prepopulatePropertyDotNames seeds an entry for every property of the
+            // enclosing type before any method body is translated, so a hit is the
+            // normal case.
+            val dotName = propertyDotNames[propKey(prop.name.name)]
             if (dotName != null) {
                 cpp.singleName(CppName(fixName(dotName)))
             } else {
-                // For backing fields (prefixed with _), strip prefix and look up again
-                val name = prop.name.name
-                val displayName = name.displayName
-                val strippedName = if (displayName.startsWith("_")) displayName.removePrefix("_") else null
-                val matchingDotName = strippedName?.let { stripped ->
-                    propertyDotNames.entries.firstOrNull { (_, v) ->
-                        v == stripped || v == "_$stripped"
-                    }?.value
-                }
-                if (matchingDotName != null) {
-                    // Backing field — use the property's dot name with _ prefix
-                    cpp.singleName(CppName(fixName("_$matchingDotName")))
-                } else {
-                    cpp.name(prop.name.name)
-                }
+                // Not a registered property of this type (e.g. a synthesized internal
+                // name whose resolved text already equals the field name). Fall back to
+                // the resolved name directly.
+                cpp.name(prop.name.name)
             }
         }
     }
@@ -1781,7 +1793,6 @@ class CppTranslator(
             else -> false
         }
 
-    /** True if [code] references [identifier] as a whole C++ identifier token. */
     /** Emit a forward declaration for a local function: `std::function<Ret(Params...)> name` */
     private fun localFuncForwardDecl(stmt: TmpL.LocalFunctionDeclaration): Cpp.Stmt {
         val paramTypeStrs = stmt.parameters.parameters.joinToString(", ") { param ->
@@ -1817,11 +1828,9 @@ class CppTranslator(
     }
 
     private fun translateBlockWithThis(
-        thisType: Cpp.Type,
         thisName: Cpp.SingleName,
         block: TmpL.BlockStatement,
     ): Cpp.BlockStmt = cpp.pos(block) {
-        ignore(thisType)
         val savedThisVarName = currentThisVarName
         currentThisVarName = thisName.id.text
         val savedLocalFuncRefCaptures = localFuncRefCaptures.toList()
@@ -1860,9 +1869,7 @@ class CppTranslator(
         }
     }
 
-    /**
-     * Wraps optional parameter type in NullableParam<T>.
-     */
+    /** True if [type] is a union that includes `Null` (i.e. already an optional type). */
     private fun isNullableType(type: TmpL.Type): Boolean = when (type) {
         is TmpL.TypeUnion -> type.types.any { t ->
             t is TmpL.NominalType && t.typeName.sourceDefinition == WellKnownTypes.nullTypeDefinition
@@ -1898,14 +1905,6 @@ class CppTranslator(
             }
         }
     }
-
-    /**
-     * Whether a rendered C++ leaf type name looks like an (unresolved) Temper type formal rather
-     * than a generated struct. This is a heuristic on the rendered name (see [typeFormalNameRegex])
-     * because the Type2 binding for the formal is no longer available once the inner type has been
-     * lowered to a C++ name at the call site.
-     */
-    private fun looksLikeTypeFormalName(leaf: String): Boolean = leaf.matches(typeFormalNameRegex)
 
     /** A reference-counted (shared_ptr) or std::function type — expensive to copy. */
     private fun isIndirectType(type: Cpp.Type): Boolean = when (type) {
@@ -2045,12 +2044,1133 @@ class CppTranslator(
     }
 
     /**
-     * Translate a TmpL module into a .hpp and .cpp file pair.
-     *
-     * Clears all per-module state, processes imports, then iterates over
-     * top-level declarations to build header and implementation sections.
-     * Returns the file specifications for the generated source files.
+     * Pre-populate [propertyDotNames] (and getter method names for abstract getters)
+     * from a type's members so method bodies can resolve backing field names
+     * regardless of member ordering in TmpL.
      */
+    private fun prepopulatePropertyDotNames(topLevel: TmpL.TypeDeclaration) {
+        for (member in topLevel.members) {
+            when (member) {
+                is TmpL.Property -> {
+                    propertyDotNames[propKey(member.name.name)] = member.dotName.dotNameText
+                }
+                is TmpL.Getter -> {
+                    if (member.propertyShape.abstractness != Abstractness.Concrete) {
+                        val getterDotName = member.dotName.dotNameText
+                        val propDotName = getterDotName.removePrefix("get.")
+                        propertyDotNames.getOrPut(propKey(member.name.name)) { propDotName }
+                        val getterCppName = cpp.singleName(
+                            CppName(fixName(accessorMethodName(getterDotName, "get"))),
+                        )
+                        getterMethodNames[propDotName] = getterCppName
+                    }
+                }
+                else -> {}
+            }
+        }
+    }
+
+    /**
+     * Emit a static property member: a `static` struct field declaration plus its
+     * out-of-line definition (with initializer) in the .cpp.
+     */
+    private fun MutableList<Cpp.StructPart>.translateStaticPropertyMember(
+        member: TmpL.StaticProperty,
+        topLevel: TmpL.TypeDeclaration,
+        impl: MutableList<Cpp.Global>,
+    ) {
+        propertyDotNames[propKey(member.name.name)] = member.dotName.dotNameText
+        val propCppName = CppName(fixName(member.dotName.dotNameText))
+        val typeStr = renderToString(translateType(member.type))
+        // Declare as static in struct using raw StructField
+        add(
+            cpp.structField(
+                cpp.singleName(CppName("static $typeStr", raw = true)),
+                cpp.singleName(propCppName),
+            ),
+        )
+        // Define outside the struct in the .cpp
+        impl.add(
+            Cpp.VarDef(
+                cpp.pos,
+                type = translateType(member.type),
+                name = cpp.scopedName(
+                    cpp.name(topLevel.name),
+                    cpp.singleName(propCppName),
+                ),
+                init = translateExpression(member.expression),
+            ),
+        )
+    }
+
+    /**
+     * Emit a regular (instance) property member as a struct field, unless the property
+     * is abstract (in which case the backing field is provided by a concrete subtype).
+     */
+    private fun MutableList<Cpp.StructPart>.translatePropertyMember(member: TmpL.Property) {
+        propertyDotNames[propKey(member.name.name)] = member.dotName.dotNameText
+        val propShape = member.memberShape as? PropertyShape
+        if (propShape?.abstractness != Abstractness.Abstract) {
+            add(
+                cpp.structField(
+                    translateType(member.type),
+                    cpp.singleName(
+                        CppName(fixName(member.dotName.dotNameText)),
+                    ),
+                ),
+            )
+        }
+    }
+
+    /**
+     * Emit a getter member: a backed getter returning the field for concrete properties,
+     * or a pure-virtual / bodied accessor (using the `get_` prefix) for abstract ones.
+     */
+    private fun MutableList<Cpp.StructPart>.translateGetterMember(
+        member: TmpL.Getter,
+        topLevel: TmpL.TypeDeclaration,
+        isInterface: Boolean,
+        realSuperTypes: List<TmpL.NominalType>,
+        isTemplate: Boolean,
+        impl: MutableList<Cpp.Global>,
+        templateMethodDefs: MutableList<Cpp.Global>,
+    ) {
+        // Generate getter for concrete (backed) properties
+        // Always generate to ensure GetAbstractProperty
+        // finds the method regardless of type hierarchy
+        if (member.propertyShape.abstractness == Abstractness.Concrete) {
+            val needsVirtual = isInterface ||
+                realSuperTypes.any()
+            // Generate getter that returns backing field
+            val getterDotName = member.dotName.dotNameText
+            // Ensure getter method name differs from field name
+            val getterCppName = cpp.singleName(
+                CppName(fixName(accessorMethodName(getterDotName, "get"))),
+            )
+            val propDotName = getterDotName.removePrefix("get.")
+            getterMethodNames[propDotName] = getterCppName
+            propertyDotNames.getOrPut(propKey(member.name.name)) { propDotName }
+            val backingFieldName = cpp.singleName(
+                CppName(fixName(propDotName)),
+            )
+            val func = cpp.func(
+                cpp.scopedName(
+                    cpp.name(topLevel.name),
+                    getterCppName,
+                ),
+                translateType(member.returnType),
+                emptyList(),
+                cpp.blockStmt(
+                    listOf(
+                        cpp.returnStmt(
+                            cpp.op(
+                                "->",
+                                cpp.literal(cpp.raw("this")),
+                                backingFieldName,
+                            ),
+                        ),
+                    ),
+                ),
+                // Backed getter reads a field: non-mutating, so const.
+                qual = memberConstQualifier(getterDotName),
+            )
+            emitMethodDeclAndDef(func, isTemplate, needsVirtual, impl, templateMethodDefs)
+        } else {
+            // Abstract getter — use get_ prefix to avoid
+            // field/method name collision in subtypes
+            val getterDotName = member.dotName.dotNameText
+            val getterCppName = cpp.singleName(
+                CppName(fixName(accessorMethodName(getterDotName, "get"))),
+            )
+            val propDotName = getterDotName.removePrefix("get.")
+            getterMethodNames[propDotName] = getterCppName
+            propertyDotNames.getOrPut(propKey(member.name.name)) { propDotName }
+            when (val body = member.body) {
+                null -> {
+                    // Pure-virtual getter has no body to mutate: const
+                    // when the property's slot is non-mutating.
+                    add(
+                        pureVirtualMethod(
+                            translateType(member.returnType),
+                            getterCppName,
+                            qual = memberConstQualifier(getterDotName),
+                        ),
+                    )
+                }
+                else -> {
+                    val func = cpp.func(
+                        cpp.scopedName(
+                            cpp.name(topLevel.name),
+                            getterCppName,
+                        ),
+                        translateType(member.returnType),
+                        member.parameters.parameters.drop(1).map { param ->
+                            cpp.pos(param) {
+                                val type = translateParamType(param)
+                                val name = cpp.name(param.name)
+                                type to name
+                            }
+                        },
+                        translateBlockWithThis(
+                            cpp.name(member.parameters.parameters.first().name),
+                            body,
+                        ),
+                        qual = memberConstQualifier(getterDotName),
+                    )
+                    val needsVirtualGetter = isInterface ||
+                        realSuperTypes.any()
+                    emitMethodDeclAndDef(func, isTemplate, needsVirtualGetter, impl, templateMethodDefs)
+                }
+            }
+        }
+    }
+
+    /**
+     * Emit a setter member: an override doing direct field assignment for concrete
+     * backed properties under inheritance, or a pure-virtual / bodied setter (using the
+     * `set_` prefix) for abstract ones. Tracks already-declared setters in [declaredSetters].
+     */
+    private fun MutableList<Cpp.StructPart>.translateSetterMember(
+        member: TmpL.Setter,
+        topLevel: TmpL.TypeDeclaration,
+        isInterface: Boolean,
+        realSuperTypes: List<TmpL.NominalType>,
+        isTemplate: Boolean,
+        impl: MutableList<Cpp.Global>,
+        templateMethodDefs: MutableList<Cpp.Global>,
+        declaredSetters: MutableSet<String>,
+    ) {
+        if (member.propertyShape.abstractness == Abstractness.Concrete) {
+            if (isInterface || realSuperTypes.any()) {
+                // Generate an override setter that does direct field assignment
+                val setterDotName = member.dotName.dotNameText
+                val setterCppName = cpp.singleName(
+                    CppName(fixName(accessorMethodName(setterDotName, "set"))),
+                )
+                val propDotName =
+                    member.dotName.dotNameText.removePrefix("set.")
+                setterMethodNames[propDotName] = setterCppName
+                val setterKey = setterCppName.id.text
+                val valueParams = member.parameters.parameters.drop(1)
+                val backingFieldName = cpp.singleName(
+                    CppName(fixName(propDotName)),
+                )
+                val func = cpp.func(
+                    cpp.scopedName(
+                        cpp.name(topLevel.name),
+                        setterCppName,
+                    ),
+                    translateType(member.returnType),
+                    valueParams.map { param ->
+                        cpp.pos(param) {
+                            val type = translateParamType(param)
+                            val name = cpp.name(param.name)
+                            type to name
+                        }
+                    },
+                    cpp.blockStmt(
+                        listOf(
+                            cpp.exprStmt(
+                                cpp.op(
+                                    "=",
+                                    cpp.op(
+                                        "->",
+                                        cpp.literal(cpp.raw("this")),
+                                        backingFieldName,
+                                    ),
+                                    cpp.name(valueParams.first().name),
+                                ),
+                            ),
+                        ),
+                    ),
+                )
+                val firstDecl = setterKey !in declaredSetters
+                if (firstDecl) declaredSetters.add(setterKey)
+                emitMethodDeclAndDef(func, isTemplate, true, impl, templateMethodDefs, emitDecl = firstDecl)
+            }
+            // else: no supertypes, backed properties use direct field access
+        } else {
+            // Abstract setter — use set_ prefix to avoid
+            // field/method name collision in subtypes
+            val setterDotName = member.dotName.dotNameText
+            val setterCppName = cpp.singleName(
+                CppName(fixName(accessorMethodName(setterDotName, "set"))),
+            )
+            val propDotName = setterDotName.removePrefix("set.")
+            setterMethodNames[propDotName] = setterCppName
+            val setterKey = setterCppName.id.text
+            when (val body = member.body) {
+                null -> {
+                    if (setterKey !in declaredSetters) {
+                        declaredSetters.add(setterKey)
+                        val paramTypes = member.parameters.parameters.drop(1).map {
+                            translateParamType(it)
+                        }
+                        add(
+                            pureVirtualMethod(
+                                translateType(member.returnType),
+                                setterCppName,
+                                paramTypes.mapIndexed { i, t ->
+                                    cpp.funcParam(t, cpp.singleName(CppName("arg_$i")))
+                                },
+                            ),
+                        )
+                    }
+                }
+                else -> {
+                    val func = cpp.func(
+                        cpp.scopedName(
+                            cpp.name(topLevel.name),
+                            setterCppName,
+                        ),
+                        translateType(member.returnType),
+                        member.parameters.parameters.drop(1).map { param ->
+                            cpp.pos(param) {
+                                val type = translateParamType(param)
+                                val name = cpp.name(param.name)
+                                type to name
+                            }
+                        },
+                        translateBlockWithThis(
+                            cpp.name(member.parameters.parameters.first().name),
+                            body,
+                        ),
+                    )
+                    val needsVirtualSetter = isInterface ||
+                        realSuperTypes.any()
+                    val firstDecl = setterKey !in declaredSetters
+                    if (firstDecl) declaredSetters.add(setterKey)
+                    emitMethodDeclAndDef(
+                        func, isTemplate, needsVirtualSetter, impl, templateMethodDefs, emitDecl = firstDecl,
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Emit a normal (instance) method member: a pure-virtual declaration for abstract
+     * methods, otherwise a virtual-as-needed definition plus any optional-parameter overloads.
+     */
+    private fun MutableList<Cpp.StructPart>.translateNormalMethodMember(
+        member: TmpL.NormalMethod,
+        topLevel: TmpL.TypeDeclaration,
+        isInterface: Boolean,
+        realSuperTypes: List<TmpL.NominalType>,
+        isTemplate: Boolean,
+        impl: MutableList<Cpp.Global>,
+        templateMethodDefs: MutableList<Cpp.Global>,
+    ) {
+        // If this method overrides a supertype getter/setter,
+        // use the overridden dotName for the C++ method name
+        // so it matches the interface's virtual method name.
+        // E.g., interface has "get.something" → "get_something",
+        // but concrete override has dotName "getsomething".
+        val overriddenDotName = member.overridden
+            .firstOrNull()?.name?.dotNameText
+        val effectiveDotName = if (
+            overriddenDotName != null &&
+            overriddenDotName.contains('.')
+        ) {
+            overriddenDotName.replace('.', '_')
+        } else {
+            member.dotName.dotNameText
+        }
+        val methodCppName0 = cpp.singleName(
+            CppName(fixName(effectiveDotName)),
+        )
+        // Emit `const` for a method the mutation analysis shows never
+        // mutates its receiver. (Generators and optional-param methods are
+        // seeded as mutating in that analysis, so they resolve to null here.)
+        val methodQual = memberConstQualifier(member.dotName.dotNameText)
+        when (val body = member.body) {
+            null -> {
+                val paramTypes = member.parameters.parameters.drop(1).map {
+                    translateParamType(it)
+                }
+                add(
+                    pureVirtualMethod(
+                        translateType(member.returnType),
+                        methodCppName0,
+                        paramTypes.mapIndexed { i, t ->
+                            cpp.funcParam(t, cpp.singleName(CppName("arg_$i")))
+                        },
+                        qual = methodQual,
+                    ),
+                )
+            }
+            else -> {
+                val methodCppName = cpp.singleName(
+                    CppName(fixName(effectiveDotName)),
+                )
+                val methodFormals =
+                    member.parameters.parameters.drop(1)
+                val hasOptional =
+                    methodFormals.any { it.optional }
+                // Methods need 'virtual' for
+                // polymorphic dispatch in C++
+                val needsVirtual = isInterface ||
+                    realSuperTypes.any()
+                val func = cpp.func(
+                    cpp.scopedName(
+                        cpp.name(topLevel.name),
+                        methodCppName,
+                    ),
+                    translateType(member.returnType),
+                    methodFormals.map { param ->
+                        cpp.pos(param) {
+                            translateParamType(param) to
+                                cpp.name(param.name)
+                        }
+                    },
+                    translateBlockWithThis(
+                        cpp.name(member.parameters.parameters.first().name),
+                        body,
+                    ),
+                    qual = methodQual,
+                )
+                emitMethodDeclAndDef(func, isTemplate, needsVirtual, impl, templateMethodDefs)
+                if (hasOptional) {
+                    val scopedName = cpp.scopedName(
+                        cpp.name(topLevel.name),
+                        methodCppName.deepCopy(),
+                    )
+                    val retType =
+                        translateType(member.returnType)
+                    emitMethodOverloads(
+                        generateOptionalOverloads(scopedName, retType, methodFormals.toList()),
+                        isTemplate, impl, templateMethodDefs,
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Emit a static method member: skips abstract statics, otherwise a `static` definition
+     * plus any optional-parameter overloads.
+     */
+    private fun MutableList<Cpp.StructPart>.translateStaticMethodMember(
+        member: TmpL.StaticMethod,
+        topLevel: TmpL.TypeDeclaration,
+        isTemplate: Boolean,
+        impl: MutableList<Cpp.Global>,
+        templateMethodDefs: MutableList<Cpp.Global>,
+    ) {
+        when (val body = member.body) {
+            null -> {
+                // Abstract static method — skip
+            }
+            else -> {
+                val methodCppName = cpp.singleName(
+                    CppName(fixName(member.dotName.dotNameText)),
+                )
+                val methodFormals =
+                    member.parameters.parameters
+                val hasOptional =
+                    methodFormals.any { it.optional }
+                val func = cpp.func(
+                    cpp.scopedName(
+                        cpp.name(topLevel.name),
+                        methodCppName,
+                    ),
+                    translateType(member.returnType),
+                    methodFormals.map { param ->
+                        cpp.pos(param) {
+                            translateParamType(param) to
+                                cpp.name(param.name)
+                        }
+                    },
+                    translateBlock(body),
+                )
+                emitMethodDeclAndDef(func, isTemplate, false, impl, templateMethodDefs, declMod = Cpp.DefMod.Static)
+                if (hasOptional) {
+                    val scopedName = cpp.scopedName(
+                        cpp.name(topLevel.name),
+                        methodCppName.deepCopy(),
+                    )
+                    val retType =
+                        translateType(member.returnType)
+                    emitMethodOverloads(
+                        generateOptionalOverloads(
+                            scopedName, retType, methodFormals.toList(), declMod = Cpp.DefMod.Static,
+                        ),
+                        isTemplate, impl, templateMethodDefs,
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Emit a constructor member as a static `make()` factory that stack-constructs the
+     * value, runs the body, and returns a `make_shared` of it, plus optional-parameter overloads.
+     */
+    private fun MutableList<Cpp.StructPart>.translateConstructorMember(
+        member: TmpL.Constructor,
+        topLevel: TmpL.TypeDeclaration,
+        impl: MutableList<Cpp.Global>,
+    ) {
+        val thisParam = member.parameters.parameters.first()
+        val thisName = cpp.name(thisParam.name)
+        val typeName = cpp.name(topLevel.name)
+        val resultName = cpp.tmp("result")
+        val makeName = cpp.singleName(CppName("make"))
+        val constructorFormals =
+            member.parameters.parameters.drop(1)
+        val params = constructorFormals.map {
+            cpp.pos(it) {
+                cpp.funcParam(translateParamType(it), cpp.name(it.name))
+            }
+        }
+        val paramTypes = constructorFormals.map {
+            cpp.pos(it) { translateParamType(it) }
+        }
+        val objectType = sharedPtr(typeName)
+        val body = cpp.pos(member.body) {
+            cpp.blockStmt(
+                buildList {
+                    // Construct the object on the heap up front so `this` points at the very
+                    // instance the returned shared_ptr owns. A previous version built a stack
+                    // temporary, took its address as `this`, and copied it into a shared_ptr on
+                    // return: that left `this` dangling if the body let it escape, and gave the
+                    // returned object a different identity than the one the body mutated.
+                    add(
+                        cpp.varDef(
+                            objectType.deepCopy(),
+                            resultName,
+                            cpp.callExpr(
+                                cpp.template(
+                                    cpp.name("std", "make_shared"),
+                                    listOf(typeName),
+                                ),
+                            ),
+                        ),
+                    )
+                    add(
+                        cpp.varDef(
+                            cpp.ptr(typeName),
+                            thisName,
+                            cpp.literal(
+                                cpp.raw(
+                                    "${resultName.id.text}.get()",
+                                ),
+                            ),
+                        ),
+                    )
+                    member.body.statements.forEach { stmt ->
+                        if (stmt is TmpL.ReturnStatement) {
+                            return@forEach
+                        }
+                        addAll(translateStatement(stmt))
+                    }
+                    add(cpp.returnStmt(resultName.deepCopy()))
+                },
+            )
+        }
+        val isTemplateStruct =
+            topLevel.typeParameters.ot
+                .typeParameters.isNotEmpty()
+        val hasOptionalParams =
+            constructorFormals.any { it.optional }
+        if (isTemplateStruct) {
+            // Template struct: must inline make()
+            add(
+                cpp.funcDef(
+                    Cpp.DefMod.Static,
+                    objectType,
+                    makeName,
+                    params,
+                    body,
+                ),
+            )
+        } else {
+            // Non-template struct: declare in header,
+            // define in .cpp to avoid scope issues
+            add(
+                cpp.funcDecl(
+                    Cpp.DefMod.Static,
+                    objectType,
+                    makeName,
+                    paramTypes,
+                ),
+            )
+            impl.add(
+                cpp.funcDef(
+                    objectType,
+                    cpp.scopedName(
+                        typeName,
+                        makeName.deepCopy(),
+                    ),
+                    params,
+                    body,
+                ),
+            )
+            if (hasOptionalParams) {
+                val scopedMake = cpp.scopedName(
+                    typeName.deepCopy(),
+                    makeName.deepCopy(),
+                )
+                for ((decl, def) in generateOptionalOverloads(
+                    scopedMake,
+                    objectType.deepCopy(),
+                    constructorFormals.toList(),
+                    declMod = Cpp.DefMod.Static,
+                )) {
+                    add(decl)
+                    impl.add(def)
+                }
+            }
+        }
+    }
+
+    /**
+     * Emit the struct definition for a type declaration: forward declaration, struct body
+     * (with base specifiers for inherited/interface types), and out-of-line template method
+     * definitions rewritten with `ClassName<T...>::method` scoping for template structs.
+     */
+    private fun emitStructDefinition(
+        topLevel: TmpL.TypeDeclaration,
+        isInterface: Boolean,
+        realSuperTypes: List<TmpL.NominalType>,
+        structFields: List<Cpp.StructPart>,
+        templateMethodDefs: List<Cpp.Global>,
+        headerTypeDecl: MutableList<Cpp.Global>,
+        headerTypeDefs: MutableList<Cpp.Global>,
+    ) {
+        val structName = cpp.name(topLevel.name)
+        val struct = cpp.struct(structName, structFields)
+        val superTypes = realSuperTypes
+
+        // The base-class specifiers for this struct. A single base is inherited `virtual`
+        // so the shared `AnyValueBase` subobject stays unique under diamond inheritance;
+        // multiple bases are plain `public`. An interface with no declared supertypes
+        // virtually inherits the common `AnyValueBase` root.
+        fun baseSpecs(): List<Cpp.BaseSpec> = if (superTypes.isNotEmpty()) {
+            superTypes.map { cpp.baseSpec(virtual = superTypes.size == 1, base = translateSuperType(it)) }
+        } else {
+            listOf(cpp.baseSpec(virtual = true, base = cpp.name(TEMPER_CORE_NAMESPACE, "AnyValueBase")))
+        }
+        val typeFormals = topLevel.typeParameters.ot.typeParameters
+
+        // A plain (rootless) reference struct — no supertypes and not an interface — does not
+        // share the `AnyValueBase` root that inheritance/interface types use, so it carries its
+        // own CRTP `enable_shared_from_this<Self>`. That lets `borrow_this` recover a properly
+        // owning shared_ptr for `this` (objects are created via make_shared) instead of a
+        // non-owning alias that would dangle if a callee stored it. Non-virtual: each plain
+        // struct is the unique enable_shared_from_this in its (single-node) hierarchy.
+        fun enableSharedFromThisBase(): Cpp.BaseSpec {
+            val selfType: Cpp.Type = if (typeFormals.isNotEmpty()) {
+                cpp.template(structName.deepCopy(), typeFormals.map { cpp.name(it.name) })
+            } else {
+                structName.deepCopy()
+            }
+            return cpp.baseSpec(
+                virtual = false,
+                base = cpp.template(cpp.name("std", "enable_shared_from_this"), listOf(selfType)),
+            )
+        }
+        if (typeFormals.isNotEmpty()) {
+            val templateParams = typeFormals.map { formal ->
+                cpp.funcParam(
+                    cpp.singleName(CppName("class", allowKey = true)),
+                    cpp.name(formal.name),
+                )
+            }
+            // For template structs, skip the forward declaration
+            // and emit the full template struct definition
+            val structDefToUse: Cpp.AnyStructDef = if (superTypes.isNotEmpty() || isInterface) {
+                cpp.derivedStructDef(structName, baseSpecs(), structFields)
+            } else {
+                // No supertypes: carry a CRTP enable_shared_from_this base (see above).
+                cpp.derivedStructDef(structName, listOf(enableSharedFromThisBase()), structFields)
+            }
+            headerTypeDefs.add(
+                cpp.templateStructDef(templateParams, structDefToUse),
+            )
+            // Emit out-of-line template method definitions after the struct.
+            // The func.def uses ClassName::method() scoping,
+            // but we need ClassName<T1,T2>::method() for templates.
+            if (templateMethodDefs.isNotEmpty()) {
+                val typeParamStr = typeFormals.joinToString(", ") { formal ->
+                    cpp.name(formal.name).id.text
+                }
+                for (methodDef in templateMethodDefs) {
+                    if (methodDef is Cpp.FuncDef) {
+                        // Rewrite scoped name to include template params
+                        val fixedDef = when (val defName = methodDef.name) {
+                            is Cpp.ScopedName -> {
+                                val parentText = when (val p = defName.parent) {
+                                    is Cpp.SingleName -> p.id.text
+                                    is Cpp.ScopedName -> p.member.id.text
+                                    else -> structName.id.text
+                                }
+                                val rawParent = "$parentText<$typeParamStr>"
+                                cpp.funcDef(
+                                    methodDef.mod,
+                                    methodDef.ret,
+                                    methodDef.convention,
+                                    cpp.scopedName(
+                                        cpp.singleName(CppName(rawParent, raw = true)),
+                                        defName.member.deepCopy(),
+                                    ),
+                                    methodDef.args.toList(),
+                                    methodDef.body,
+                                    // Preserve the const qualifier so the out-of-line
+                                    // template method definition matches its declaration.
+                                    qual = methodDef.qual,
+                                )
+                            }
+                            else -> methodDef
+                        }
+                        headerTypeDefs.add(
+                            cpp.templateFuncDef(templateParams, fixedDef),
+                        )
+                    }
+                }
+            }
+        } else if (superTypes.isNotEmpty() || isInterface) {
+            // Class with inheritance (one or more super types) or an interface, which
+            // virtually inherits the common AnyValueBase root.
+            headerTypeDecl.add(struct.decl)
+            headerTypeDefs.add(
+                cpp.derivedStructDef(structName, baseSpecs(), structFields),
+            )
+        } else {
+            // No supertypes: carry a CRTP enable_shared_from_this base (see above) so
+            // `borrow_this` can hand out an owning shared_ptr for `this`.
+            headerTypeDecl.add(struct.decl)
+            headerTypeDefs.add(
+                cpp.derivedStructDef(structName, listOf(enableSharedFromThisBase()), structFields),
+            )
+        }
+    }
+
+    /**
+     * Translate a single TmpL type declaration (class or interface), appending its members to the
+     * given header/implementation sections: per-member declarations and definitions are emitted via
+     * the `translate*Member` helpers, then [emitStructDefinition] assembles the struct itself.
+     */
+    private fun translateTypeDeclaration(
+        topLevel: TmpL.TypeDeclaration,
+        impl: MutableList<Cpp.Global>,
+        headerTypeDecl: MutableList<Cpp.Global>,
+        headerTypeDefs: MutableList<Cpp.Global>,
+    ) {
+        val isInterface = topLevel.kind == TmpL.TypeDeclarationKind.Interface
+        // `Imu` and `PartialImu` are checker-only "fiction" marker interfaces
+        // (see ImuChecker); they carry no members and are erased during codegen,
+        // matching be-py and be-rust. Emitting them as C++ base classes would
+        // reference undefined `temper::core::Imu` types.
+        val realSuperTypes = topLevel.superTypes.filterNot { sup ->
+            val def = sup.typeName.sourceDefinition
+            def == WellKnownTypes.imuTypeDefinition ||
+                def == WellKnownTypes.partialImuTypeDefinition
+        }
+        // Populate type formal names for template struct
+        val structTypeFormals = topLevel.typeParameters.ot.typeParameters
+        val isTemplate = structTypeFormals.isNotEmpty()
+        // For template types, method defs go in header after struct,
+        // wrapped with template<class T> prefix
+        val templateMethodDefs = mutableListOf<Cpp.Global>()
+        val structTypeFormalKeys = mutableListOf<String>()
+        for (formal in structTypeFormals) {
+            val cppName = cpp.name(formal.name)
+            typeFormalNames[formal.definition] = cppName
+            val key = typeFormalKey(formal.definition)
+            typeFormalNamesByText[key] = cppName
+            structTypeFormalKeys.add(key)
+        }
+        // Pre-populate propertyDotNames so method bodies
+        // can resolve backing field names regardless of
+        // member ordering in TmpL.
+        prepopulatePropertyDotNames(topLevel)
+        val declaredSetters = mutableSetOf<String>()
+        val structFields = buildList<Cpp.StructPart> {
+            // Add virtual destructor for interfaces to enable dynamic_pointer_cast
+            if (isInterface) {
+                val dtorName = "~${cpp.name(topLevel.name).id.text}"
+                add(
+                    cpp.funcDef(
+                        null,
+                        null,
+                        cpp.singleName(CppName("virtual", allowKey = true)),
+                        cpp.singleName(CppName(dtorName, raw = true)),
+                        emptyList(),
+                        cpp.blockStmt(emptyList()),
+                    ),
+                )
+            }
+            for (member in topLevel.members) {
+                cpp.pos(member) {
+                    when (member) {
+                        is TmpL.StaticProperty ->
+                            translateStaticPropertyMember(member, topLevel, impl)
+                        is TmpL.Property ->
+                            translatePropertyMember(member)
+                        is TmpL.Getter ->
+                            translateGetterMember(
+                                member, topLevel, isInterface, realSuperTypes,
+                                isTemplate, impl, templateMethodDefs,
+                            )
+                        is TmpL.Setter ->
+                            translateSetterMember(
+                                member, topLevel, isInterface, realSuperTypes,
+                                isTemplate, impl, templateMethodDefs, declaredSetters,
+                            )
+                        is TmpL.NormalMethod ->
+                            translateNormalMethodMember(
+                                member, topLevel, isInterface, realSuperTypes,
+                                isTemplate, impl, templateMethodDefs,
+                            )
+                        is TmpL.StaticMethod ->
+                            translateStaticMethodMember(
+                                member, topLevel, isTemplate, impl, templateMethodDefs,
+                            )
+                        is TmpL.Constructor ->
+                            translateConstructorMember(member, topLevel, impl)
+                        is TmpL.GarbageStatement -> {
+                            add(cpp.comment("skipped: GarbageStatement"))
+                        }
+                    }
+                }
+            }
+        }
+        emitStructDefinition(
+            topLevel, isInterface, realSuperTypes, structFields,
+            templateMethodDefs, headerTypeDecl, headerTypeDefs,
+        )
+        // Clean up type formal names after type declaration
+        for (formal in structTypeFormals) {
+            typeFormalNames.remove(formal.definition)
+        }
+        for (key in structTypeFormalKeys) {
+            typeFormalNamesByText.remove(key)
+        }
+    }
+
+    /**
+     * Translate a module-level function declaration, emitting its (possibly template)
+     * definition and any optional-parameter overloads into the header/impl sections.
+     */
+    private fun translateModuleFunction(
+        topLevel: TmpL.ModuleFunctionDeclaration,
+        headerFunctions: MutableList<Cpp.Global>,
+        impl: MutableList<Cpp.Global>,
+    ) {
+        val formals = topLevel.parameters.parameters
+        val hasOptional = formals.any { it.optional }
+        val typeFormals =
+            topLevel.typeParameters.ot.typeParameters
+        // Populate type formal map BEFORE translating
+        // return type, param types, and body
+        val savedTypeFormalNames = mutableMapOf<TypeDefinition, Cpp.SingleName>()
+        val savedTypeFormalKeys = mutableListOf<String>()
+        for (formal in typeFormals) {
+            val cppName = cpp.name(formal.name)
+            savedTypeFormalNames[formal.definition] = cppName
+            typeFormalNames[formal.definition] = cppName
+            val key = typeFormalKey(formal.definition)
+            typeFormalNamesByText[key] = cppName
+            savedTypeFormalKeys.add(key)
+        }
+        val paramTypes = formals.map {
+            translateParamType(it)
+        }
+        val restParam =
+            topLevel.parameters.restParameter
+        val allParamTypes = if (restParam != null) {
+            val elemType =
+                translateType(restParam.type)
+            paramTypes + sharedPtr(stdVector(elemType))
+        } else {
+            paramTypes
+        }
+        val allParamNames = if (restParam != null) {
+            formals.map { cpp.name(it.name) } +
+                cpp.name(restParam.name)
+        } else {
+            formals.map { cpp.name(it.name) }
+        }
+        val func = cpp.func(
+            cpp.name(topLevel.name),
+            translateType(topLevel.returnType),
+            allParamTypes,
+            allParamNames,
+            translateBlock(topLevel.body),
+        )
+        if (typeFormals.isNotEmpty()) {
+            val templateParams = typeFormals.map { formal ->
+                cpp.funcParam(
+                    cpp.singleName(
+                        CppName("class", allowKey = true),
+                    ),
+                    savedTypeFormalNames[formal.definition]
+                        ?: cpp.name(formal.name),
+                )
+            }
+            headerFunctions.add(
+                cpp.templateFuncDef(templateParams, func.def),
+            )
+            if (hasOptional) {
+                val funcName = cpp.name(topLevel.name)
+                val retType =
+                    translateType(topLevel.returnType)
+                for (
+                (_, def) in generateOptionalOverloads(
+                    funcName,
+                    retType,
+                    formals.toList(),
+                )
+                ) {
+                    headerFunctions.add(
+                        cpp.templateFuncDef(
+                            templateParams.map {
+                                it.deepCopy()
+                            },
+                            def,
+                        ),
+                    )
+                }
+            }
+        } else {
+            headerFunctions.add(func.decl)
+            impl.add(func.def)
+            if (hasOptional) {
+                val funcName = cpp.name(topLevel.name)
+                val retType =
+                    translateType(topLevel.returnType)
+                for ((decl, def) in generateOptionalOverloads(
+                    funcName,
+                    retType,
+                    formals.toList(),
+                )) {
+                    headerFunctions.add(decl)
+                    impl.add(def)
+                }
+            }
+        }
+        for (formal in typeFormals) {
+            typeFormalNames.remove(formal.definition)
+        }
+        for (key in savedTypeFormalKeys) {
+            typeFormalNamesByText.remove(key)
+        }
+    }
+
+    /**
+     * Translate a module-level variable declaration, forward-declaring it (or as `static`)
+     * and deferring its initializer assignment into [deferredInitStmts] to avoid SIOF.
+     * Imported names and non-"real" (e.g. void/intersection) types are skipped.
+     */
+    private fun translateModuleLevelDeclaration(
+        topLevel: TmpL.ModuleLevelDeclaration,
+        hasTemplateFunctions: Boolean,
+        headerDecl: MutableList<Cpp.Global>,
+        implVarDecls: MutableList<Cpp.Global>,
+        deferredInitStmts: MutableList<Cpp.Stmt>,
+    ) {
+        // Skip declarations for imported names — they're
+        // resolved to the source module's namespace.
+        val nameKey = cpp.name(topLevel.name).id.text
+        if (nameKey in importedNames) {
+            // noop: imported
+        } else {
+            val isReal = when (val type = topLevel.type.ot) {
+                is TmpL.FunctionType -> true
+                is TmpL.TypeIntersection -> false
+                is TmpL.TypeUnion -> true
+                is TmpL.GarbageType -> false
+                is TmpL.NominalType -> when (type.typeName.sourceDefinition) {
+                    WellKnownTypes.voidType.definition -> false
+                    else -> true
+                }
+                is TmpL.BubbleType -> false
+                is TmpL.NeverType -> false
+                is TmpL.TopType -> true
+            }
+            if (isReal) {
+                val type = translateType(topLevel.type)
+                val name = cpp.name(topLevel.name)
+                val isExported = topLevel.name.name is ExportedName
+                val initExpr = topLevel.init
+                val translatedInit = if (
+                    initExpr != null &&
+                    isAnyValueTmpLType(topLevel.type.ot) &&
+                    isValueType(initExpr.type)
+                ) {
+                    cpp.callExpr(
+                        cpp.name(TEMPER_CORE_NAMESPACE, "any_box"),
+                        listOf(translateExpression(initExpr)),
+                    )
+                } else {
+                    translateExpressionOrNull(initExpr)
+                }
+                // Always declare with null init and defer assignment
+                // to the init function to avoid SIOF.
+                if (isExported || hasTemplateFunctions) {
+                    headerDecl.add(cpp.varDecl(type, name))
+                    implVarDecls.add(cpp.varDef(type, name, null))
+                } else {
+                    implVarDecls.add(
+                        cpp.varDef(
+                            Cpp.DefMod.Static, type, name, null,
+                        ),
+                    )
+                }
+                if (translatedInit != null) {
+                    deferredInitStmts.add(
+                        cpp.exprStmt(
+                            cpp.binaryExpr(
+                                cpp.literal(cpp.raw(name.id.text)),
+                                cpp.binaryOp("="),
+                                translatedInit,
+                            ),
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Translate a test top-level into a free function, emitting it and recording its
+     * fully-qualified name in [testInfos] for later main.cpp generation.
+     */
+    private fun translateModuleTest(
+        topLevel: TmpL.Test,
+        headerFunctions: MutableList<Cpp.Global>,
+        impl: MutableList<Cpp.Global>,
+    ) {
+        // Tests are translated as functions
+        val cppName = cpp.name(topLevel.name)
+        val func = cpp.func(
+            cppName,
+            translateType(topLevel.returnType),
+            topLevel.parameters.parameters.map { translateParamType(it) },
+            topLevel.parameters.parameters.map { cpp.name(it.name) },
+            translateBlock(topLevel.body),
+        )
+        headerFunctions.add(func.decl)
+        impl.add(func.def)
+        // Collect test info for main.cpp generation
+        val libNs = cppLibraryName?.let {
+            cpp.libraryName(it).id.text
+        }
+        val qualifiedName = when (libNs) {
+            null -> "temper::${cppName.id.text}"
+            else -> "temper::${libNs}::${cppName.id.text}"
+        }
+        testInfos.add(qualifiedName to topLevel.rawName)
+    }
+
+    /**
+     * Gather the fully-qualified `temper_init_*` calls for every imported dependency module,
+     * adding each dependency's header to [includes] as a side effect.
+     */
+    private fun gatherDependencyInitCalls(): MutableSet<String> {
+        val depInitCalls = mutableSetOf<String>()
+        for ((_, info) in importedNames) {
+            val depModName = info.sourceModule
+            val libNs = cpp.nameTextForModule(depModName)
+            val depRelPath = depModName.relativePath()
+            val depBaseName = when {
+                depRelPath.segments.isEmpty() -> INIT_NAME
+                else -> depRelPath.segments.last().baseName
+            }
+            val sanitizedDep = depBaseName.replace(Regex("[^a-zA-Z0-9_]"), "_")
+            depInitCalls.add("temper::${libNs}::temper_init_$sanitizedDep")
+            // Add include for the dependency module's header so its init decl is visible
+            includes.add(cpp.includePathForModule(depModName))
+        }
+        return depInitCalls
+    }
+
+    /**
+     * Emit the deferred `temper_init_<module>()` function (header decl + impl def) that guards
+     * against double init, calls dependency module inits, then runs the deferred variable
+     * initializations. Sets [moduleInitFuncName] as a side effect.
+     */
+    private fun emitModuleInit(
+        sanitizedModuleName: String,
+        deferredInitStmts: List<Cpp.Stmt>,
+        headerInit: MutableList<Cpp.Global>,
+        impl: MutableList<Cpp.Global>,
+    ) {
+        // Generate module init function with dependency init calls
+        // and deferred variable initializations.
+        val initFuncName = cpp.singleName(CppName("temper_init_$sanitizedModuleName"))
+        moduleInitFuncName = initFuncName.id.text
+
+        val bodyStmts = mutableListOf<Cpp.Stmt>()
+        // static bool guard — prevent double initialization
+        bodyStmts.add(
+            cpp.exprStmt(
+                cpp.literal(
+                    cpp.raw(
+                        "static bool initialized = false",
+                    ),
+                ),
+            ),
+        )
+        bodyStmts.add(
+            cpp.ifStmt(
+                cpp.literal(cpp.raw("initialized")),
+                cpp.blockStmt(listOf(cpp.returnStmt(null))),
+            ),
+        )
+        bodyStmts.add(
+            cpp.exprStmt(
+                cpp.binaryExpr(
+                    cpp.literal(cpp.raw("initialized")),
+                    cpp.binaryOp("="),
+                    cpp.literal(cpp.raw("true")),
+                ),
+            ),
+        )
+        // Call dependency modules' init functions using fully qualified names.
+        val depInitCalls = gatherDependencyInitCalls()
+        for (call in depInitCalls.sorted()) {
+            bodyStmts.add(
+                cpp.exprStmt(
+                    cpp.callExpr(
+                        cpp.literal(cpp.raw(call)),
+                        listOf(),
+                    ),
+                ),
+            )
+        }
+        // Add deferred variable initializations (for modules without init blocks)
+        bodyStmts.addAll(deferredInitStmts)
+
+        val voidType = cpp.type("void")
+        // Declaration in header
+        headerInit.add(
+            cpp.funcDecl(
+                mod = null,
+                ret = voidType,
+                name = initFuncName,
+                args = listOf(),
+            ),
+        )
+        // Definition in cpp — placed at the beginning so the
+        // dependency-trigger struct constructor can call it.
+        val initFuncDef = cpp.funcDef(
+            ret = voidType,
+            name = initFuncName,
+            args = listOf(),
+            body = cpp.blockStmt(bodyStmts),
+        )
+        // Add init function definition at the end of the impl file (after
+        // all static variable declarations so it can reference them).
+        // No auto-trigger struct — init must be called explicitly from
+        // main() or the generated main.cpp. Auto-trigger via static
+        // constructors causes cross-TU init order issues: std::function
+        // variables have non-trivial default constructors that can zero
+        // out values set by an earlier cross-TU init call.
+        impl.add(initFuncDef)
+    }
+
     fun translateModule(mod: TmpL.Module): List<Backend.TranslatedFileSpecification> {
         includes.clear()
         currentModuleLocation = mod.codeLocation.codeLocation
@@ -2110,8 +3230,6 @@ class CppTranslator(
                     tl.typeParameters.ot.typeParameters.isNotEmpty()
             }
 
-            val hasInitBlocks = mod.topLevels.any { it is TmpL.ModuleInitBlock }
-
             // All variable initializations and init blocks are deferred to
             // the init function body to avoid the Static Initialization Order
             // Fiasco (SIOF). Variables are forward-declared in implVarDecls,
@@ -2133,847 +3251,15 @@ class CppTranslator(
                             val block = translateBlock(topLevel.body)
                             deferredInitStmts.addAll(block.stmts)
                         }
-                        is TmpL.ModuleFunctionDeclaration -> {
-                            val formals = topLevel.parameters.parameters
-                            val hasOptional = formals.any { it.optional }
-                            val typeFormals =
-                                topLevel.typeParameters.ot.typeParameters
-                            // Populate type formal map BEFORE translating
-                            // return type, param types, and body
-                            val savedTypeFormalNames = mutableMapOf<TypeDefinition, Cpp.SingleName>()
-                            val savedTypeFormalKeys = mutableListOf<String>()
-                            for (formal in typeFormals) {
-                                val cppName = cpp.name(formal.name)
-                                savedTypeFormalNames[formal.definition] = cppName
-                                typeFormalNames[formal.definition] = cppName
-                                val key = typeFormalKey(formal.definition)
-                                typeFormalNamesByText[key] = cppName
-                                savedTypeFormalKeys.add(key)
-                            }
-                            val paramTypes = formals.map {
-                                translateParamType(it)
-                            }
-                            val restParam =
-                                topLevel.parameters.restParameter
-                            val allParamTypes = if (restParam != null) {
-                                val elemType =
-                                    translateType(restParam.type)
-                                paramTypes + sharedPtr(stdVector(elemType))
-                            } else {
-                                paramTypes
-                            }
-                            val allParamNames = if (restParam != null) {
-                                formals.map { cpp.name(it.name) } +
-                                    cpp.name(restParam.name)
-                            } else {
-                                formals.map { cpp.name(it.name) }
-                            }
-                            val func = cpp.func(
-                                cpp.name(topLevel.name),
-                                translateType(topLevel.returnType),
-                                allParamTypes,
-                                allParamNames,
-                                translateBlock(topLevel.body),
+                        is TmpL.ModuleFunctionDeclaration ->
+                            translateModuleFunction(topLevel, headerFunctions, impl)
+                        is TmpL.ModuleLevelDeclaration ->
+                            translateModuleLevelDeclaration(
+                                topLevel, hasTemplateFunctions, headerDecl,
+                                implVarDecls, deferredInitStmts,
                             )
-                            if (typeFormals.isNotEmpty()) {
-                                val templateParams = typeFormals.map { formal ->
-                                    cpp.funcParam(
-                                        cpp.singleName(
-                                            CppName("class", allowKey = true),
-                                        ),
-                                        savedTypeFormalNames[formal.definition]
-                                            ?: cpp.name(formal.name),
-                                    )
-                                }
-                                headerFunctions.add(
-                                    cpp.templateFuncDef(templateParams, func.def),
-                                )
-                                if (hasOptional) {
-                                    val funcName = cpp.name(topLevel.name)
-                                    val retType =
-                                        translateType(topLevel.returnType)
-                                    for (
-                                    (_, def) in generateOptionalOverloads(
-                                        funcName,
-                                        retType,
-                                        formals.toList(),
-                                    )
-                                    ) {
-                                        headerFunctions.add(
-                                            cpp.templateFuncDef(
-                                                templateParams.map {
-                                                    it.deepCopy()
-                                                },
-                                                def,
-                                            ),
-                                        )
-                                    }
-                                }
-                            } else {
-                                headerFunctions.add(func.decl)
-                                impl.add(func.def)
-                                if (hasOptional) {
-                                    val funcName = cpp.name(topLevel.name)
-                                    val retType =
-                                        translateType(topLevel.returnType)
-                                    for ((decl, def) in generateOptionalOverloads(
-                                        funcName,
-                                        retType,
-                                        formals.toList(),
-                                    )) {
-                                        headerFunctions.add(decl)
-                                        impl.add(def)
-                                    }
-                                }
-                            }
-                            for (formal in typeFormals) {
-                                typeFormalNames.remove(formal.definition)
-                            }
-                            for (key in savedTypeFormalKeys) {
-                                typeFormalNamesByText.remove(key)
-                            }
-                        }
-                        is TmpL.ModuleLevelDeclaration -> {
-                            // Skip declarations for imported names — they're
-                            // resolved to the source module's namespace.
-                            val nameKey = cpp.name(topLevel.name).id.text
-                            if (nameKey in importedNames) {
-                                // noop: imported
-                            } else {
-                                val isReal = when (val type = topLevel.type.ot) {
-                                    is TmpL.FunctionType -> true
-                                    is TmpL.TypeIntersection -> false
-                                    is TmpL.TypeUnion -> true
-                                    is TmpL.GarbageType -> false
-                                    is TmpL.NominalType -> when (type.typeName.sourceDefinition) {
-                                        WellKnownTypes.voidType.definition -> false
-                                        else -> true
-                                    }
-                                    is TmpL.BubbleType -> false
-                                    is TmpL.NeverType -> false
-                                    is TmpL.TopType -> true
-                                }
-                                if (isReal) {
-                                    val type = translateType(topLevel.type)
-                                    val name = cpp.name(topLevel.name)
-                                    val isExported = topLevel.name.name is ExportedName
-                                    val initExpr = topLevel.init
-                                    val translatedInit = if (
-                                        initExpr != null &&
-                                        isAnyValueTmpLType(topLevel.type.ot) &&
-                                        isValueType(initExpr.type)
-                                    ) {
-                                        cpp.callExpr(
-                                            cpp.name(TEMPER_CORE_NAMESPACE, "any_box"),
-                                            listOf(translateExpression(initExpr)),
-                                        )
-                                    } else {
-                                        translateExpressionOrNull(initExpr)
-                                    }
-                                    // Always declare with null init and defer assignment
-                                    // to the init function to avoid SIOF.
-                                    if (isExported || hasTemplateFunctions) {
-                                        headerDecl.add(cpp.varDecl(type, name))
-                                        implVarDecls.add(cpp.varDef(type, name, null))
-                                    } else {
-                                        implVarDecls.add(
-                                            cpp.varDef(
-                                                Cpp.DefMod.Static, type, name, null,
-                                            ),
-                                        )
-                                    }
-                                    if (translatedInit != null) {
-                                        deferredInitStmts.add(
-                                            cpp.exprStmt(
-                                                cpp.binaryExpr(
-                                                    cpp.literal(cpp.raw(name.id.text)),
-                                                    cpp.binaryOp("="),
-                                                    translatedInit,
-                                                ),
-                                            ),
-                                        )
-                                    }
-                                }
-                            } // end if not imported
-                        }
-                        is TmpL.TypeDeclaration -> {
-                            val isInterface = topLevel.kind == TmpL.TypeDeclarationKind.Interface
-                            // `Imu` and `PartialImu` are checker-only "fiction" marker interfaces
-                            // (see ImuChecker); they carry no members and are erased during codegen,
-                            // matching be-py and be-rust. Emitting them as C++ base classes would
-                            // reference undefined `temper::core::Imu` types.
-                            val realSuperTypes = topLevel.superTypes.filterNot { sup ->
-                                val def = sup.typeName.sourceDefinition
-                                def == WellKnownTypes.imuTypeDefinition ||
-                                    def == WellKnownTypes.partialImuTypeDefinition
-                            }
-                            // Populate type formal names for template struct
-                            val structTypeFormals = topLevel.typeParameters.ot.typeParameters
-                            val isTemplate = structTypeFormals.isNotEmpty()
-                            // For template types, method defs go in header after struct,
-                            // wrapped with template<class T> prefix
-                            val templateMethodDefs = mutableListOf<Cpp.Global>()
-                            val structTypeFormalKeys = mutableListOf<String>()
-                            for (formal in structTypeFormals) {
-                                val cppName = cpp.name(formal.name)
-                                typeFormalNames[formal.definition] = cppName
-                                val key = typeFormalKey(formal.definition)
-                                typeFormalNamesByText[key] = cppName
-                                structTypeFormalKeys.add(key)
-                            }
-                            // Pre-populate propertyDotNames so method bodies
-                            // can resolve backing field names regardless of
-                            // member ordering in TmpL.
-                            for (member in topLevel.members) {
-                                when (member) {
-                                    is TmpL.Property -> {
-                                        propertyDotNames[propKey(member.name.name)] = member.dotName.dotNameText
-                                    }
-                                    is TmpL.Getter -> {
-                                        if (member.propertyShape.abstractness != Abstractness.Concrete) {
-                                            val getterDotName = member.dotName.dotNameText
-                                            val propDotName = getterDotName.removePrefix("get.")
-                                            propertyDotNames[propKey(member.name.name)]?.let { } ?: run {
-                                                propertyDotNames[propKey(member.name.name)] = propDotName
-                                            }
-                                            val getterCppName = cpp.singleName(
-                                                CppName(fixName(accessorMethodName(getterDotName, "get"))),
-                                            )
-                                            getterMethodNames[propDotName] = getterCppName
-                                        }
-                                    }
-                                    else -> {}
-                                }
-                            }
-                            val declaredSetters = mutableSetOf<String>()
-                            val structFields = buildList<Cpp.StructPart> {
-                                // Add virtual destructor for interfaces to enable dynamic_pointer_cast
-                                if (isInterface) {
-                                    val dtorName = "~${cpp.name(topLevel.name).id.text}"
-                                    add(
-                                        cpp.funcDef(
-                                            null,
-                                            null,
-                                            cpp.singleName(CppName("virtual", allowKey = true)),
-                                            cpp.singleName(CppName(dtorName, raw = true)),
-                                            emptyList(),
-                                            cpp.blockStmt(emptyList()),
-                                        ),
-                                    )
-                                }
-                                for (member in topLevel.members) {
-                                    cpp.pos(member) {
-                                        when (member) {
-                                            is TmpL.StaticProperty -> {
-                                                propertyDotNames[propKey(member.name.name)] = member.dotName.dotNameText
-                                                val propCppName = CppName(fixName(member.dotName.dotNameText))
-                                                val typeStr = renderToString(translateType(member.type))
-                                                // Declare as static in struct using raw StructField
-                                                add(
-                                                    cpp.structField(
-                                                        cpp.singleName(CppName("static $typeStr", raw = true)),
-                                                        cpp.singleName(propCppName),
-                                                    ),
-                                                )
-                                                // Define outside the struct in the .cpp
-                                                impl.add(
-                                                    Cpp.VarDef(
-                                                        cpp.pos,
-                                                        type = translateType(member.type),
-                                                        name = cpp.scopedName(
-                                                            cpp.name(topLevel.name),
-                                                            cpp.singleName(propCppName),
-                                                        ),
-                                                        init = translateExpression(member.expression),
-                                                    ),
-                                                )
-                                            }
-                                            is TmpL.Property -> {
-                                                propertyDotNames[propKey(member.name.name)] = member.dotName.dotNameText
-                                                val propShape = member.memberShape as? PropertyShape
-                                                if (propShape?.abstractness != Abstractness.Abstract) {
-                                                    add(
-                                                        cpp.structField(
-                                                            translateType(member.type),
-                                                            cpp.singleName(
-                                                                CppName(fixName(member.dotName.dotNameText)),
-                                                            ),
-                                                        ),
-                                                    )
-                                                }
-                                            }
-                                            is TmpL.Getter -> {
-                                                // Generate getter for concrete (backed) properties
-                                                // Always generate to ensure GetAbstractProperty
-                                                // finds the method regardless of type hierarchy
-                                                if (member.propertyShape.abstractness == Abstractness.Concrete) {
-                                                    val needsVirtual = isInterface ||
-                                                        realSuperTypes.any()
-                                                    // Generate getter that returns backing field
-                                                    val getterDotName = member.dotName.dotNameText
-                                                    // Ensure getter method name differs from field name
-                                                    val getterCppName = cpp.singleName(
-                                                        CppName(fixName(accessorMethodName(getterDotName, "get"))),
-                                                    )
-                                                    val propDotName = getterDotName.removePrefix("get.")
-                                                    getterMethodNames[propDotName] = getterCppName
-                                                    propertyDotNames[propKey(member.name.name)]?.let { } ?: run {
-                                                        propertyDotNames[propKey(member.name.name)] = propDotName
-                                                    }
-                                                    val backingFieldName = cpp.singleName(
-                                                        CppName(fixName(propDotName)),
-                                                    )
-                                                    val func = cpp.func(
-                                                        cpp.scopedName(
-                                                            cpp.name(topLevel.name),
-                                                            getterCppName,
-                                                        ),
-                                                        translateType(member.returnType),
-                                                        emptyList(),
-                                                        cpp.blockStmt(
-                                                            listOf(
-                                                                cpp.returnStmt(
-                                                                    cpp.op(
-                                                                        "->",
-                                                                        cpp.literal(cpp.raw("this")),
-                                                                        backingFieldName,
-                                                                    ),
-                                                                ),
-                                                            ),
-                                                        ),
-                                                        // Backed getter reads a field: non-mutating, so const.
-                                                        qual = memberConstQualifier(getterDotName),
-                                                    )
-                                                    emitMethodDeclAndDef(func, isTemplate, needsVirtual, impl, templateMethodDefs)
-                                                } else {
-                                                    // Abstract getter — use get_ prefix to avoid
-                                                    // field/method name collision in subtypes
-                                                    val getterDotName = member.dotName.dotNameText
-                                                    val getterCppName = cpp.singleName(
-                                                        CppName(fixName(accessorMethodName(getterDotName, "get"))),
-                                                    )
-                                                    val propDotName = getterDotName.removePrefix("get.")
-                                                    getterMethodNames[propDotName] = getterCppName
-                                                    propertyDotNames[propKey(member.name.name)]?.let { } ?: run {
-                                                        propertyDotNames[propKey(member.name.name)] = propDotName
-                                                    }
-                                                    when (val body = member.body) {
-                                                        null -> {
-                                                            // Pure-virtual getter has no body to mutate: const
-                                                            // when the property's slot is non-mutating.
-                                                            add(pureVirtualMethod(
-                                                                translateType(member.returnType),
-                                                                getterCppName,
-                                                                qual = memberConstQualifier(getterDotName),
-                                                            ))
-                                                        }
-                                                        else -> {
-                                                            val func = cpp.func(
-                                                                cpp.scopedName(
-                                                                    cpp.name(topLevel.name),
-                                                                    getterCppName,
-                                                                ),
-                                                                translateType(member.returnType),
-                                                                member.parameters.parameters.drop(1).map { param ->
-                                                                    cpp.pos(param) {
-                                                                        val type = translateParamType(param)
-                                                                        val name = cpp.name(param.name)
-                                                                        type to name
-                                                                    }
-                                                                },
-                                                                translateBlockWithThis(
-                                                                    cpp.name(topLevel.name),
-                                                                    cpp.name(member.parameters.parameters.first().name),
-                                                                    body,
-                                                                ),
-                                                                qual = memberConstQualifier(getterDotName),
-                                                            )
-                                                            val needsVirtualGetter = isInterface ||
-                                                                realSuperTypes.any()
-                                                            emitMethodDeclAndDef(func, isTemplate, needsVirtualGetter, impl, templateMethodDefs)
-                                                        }
-                                                    }
-                                                } // end else (abstract getter)
-                                            }
-                                            is TmpL.Setter -> {
-                                                if (member.propertyShape.abstractness == Abstractness.Concrete) {
-                                                    if (isInterface || realSuperTypes.any()) {
-                                                        // Generate an override setter that does direct field assignment
-                                                        val setterDotName = member.dotName.dotNameText
-                                                        val setterCppName = cpp.singleName(
-                                                            CppName(fixName(accessorMethodName(setterDotName, "set"))),
-                                                        )
-                                                        val propDotName =
-                                                            member.dotName.dotNameText.removePrefix("set.")
-                                                        setterMethodNames[propDotName] = setterCppName
-                                                        val setterKey = setterCppName.id.text
-                                                        val valueParams = member.parameters.parameters.drop(1)
-                                                        val backingFieldName = cpp.singleName(
-                                                            CppName(fixName(propDotName)),
-                                                        )
-                                                        val func = cpp.func(
-                                                            cpp.scopedName(
-                                                                cpp.name(topLevel.name),
-                                                                setterCppName,
-                                                            ),
-                                                            translateType(member.returnType),
-                                                            valueParams.map { param ->
-                                                                cpp.pos(param) {
-                                                                    val type = translateParamType(param)
-                                                                    val name = cpp.name(param.name)
-                                                                    type to name
-                                                                }
-                                                            },
-                                                            cpp.blockStmt(
-                                                                listOf(
-                                                                    cpp.exprStmt(
-                                                                        cpp.op(
-                                                                            "=",
-                                                                            cpp.op(
-                                                                                "->",
-                                                                                cpp.literal(cpp.raw("this")),
-                                                                                backingFieldName,
-                                                                            ),
-                                                                            cpp.name(valueParams.first().name),
-                                                                        ),
-                                                                    ),
-                                                                ),
-                                                            ),
-                                                        )
-                                                        val firstDecl = setterKey !in declaredSetters
-                                                        if (firstDecl) declaredSetters.add(setterKey)
-                                                        emitMethodDeclAndDef(func, isTemplate, true, impl, templateMethodDefs, emitDecl = firstDecl)
-                                                    }
-                                                    // else: no supertypes, backed properties use direct field access
-                                                } else {
-                                                    // Abstract setter — use set_ prefix to avoid
-                                                    // field/method name collision in subtypes
-                                                    val setterDotName = member.dotName.dotNameText
-                                                    val setterCppName = cpp.singleName(
-                                                        CppName(fixName(accessorMethodName(setterDotName, "set"))),
-                                                    )
-                                                    val propDotName = setterDotName.removePrefix("set.")
-                                                    setterMethodNames[propDotName] = setterCppName
-                                                    val setterKey = setterCppName.id.text
-                                                    when (val body = member.body) {
-                                                        null -> {
-                                                            if (setterKey !in declaredSetters) {
-                                                                declaredSetters.add(setterKey)
-                                                                val paramTypes = member.parameters.parameters.drop(1).map {
-                                                                    translateParamType(it)
-                                                                }
-                                                                add(pureVirtualMethod(
-                                                                    translateType(member.returnType),
-                                                                    setterCppName,
-                                                                    paramTypes.mapIndexed { i, t ->
-                                                                        cpp.funcParam(t, cpp.singleName(CppName("arg_$i")))
-                                                                    },
-                                                                ))
-                                                            }
-                                                        }
-                                                        else -> {
-                                                            val func = cpp.func(
-                                                                cpp.scopedName(
-                                                                    cpp.name(topLevel.name),
-                                                                    setterCppName,
-                                                                ),
-                                                                translateType(member.returnType),
-                                                                member.parameters.parameters.drop(1).map { param ->
-                                                                    cpp.pos(param) {
-                                                                        val type = translateParamType(param)
-                                                                        val name = cpp.name(param.name)
-                                                                        type to name
-                                                                    }
-                                                                },
-                                                                translateBlockWithThis(
-                                                                    cpp.name(topLevel.name),
-                                                                    cpp.name(member.parameters.parameters.first().name),
-                                                                    body,
-                                                                ),
-                                                            )
-                                                            val needsVirtualSetter = isInterface ||
-                                                                realSuperTypes.any()
-                                                            val firstDecl = setterKey !in declaredSetters
-                                                            if (firstDecl) declaredSetters.add(setterKey)
-                                                            emitMethodDeclAndDef(func, isTemplate, needsVirtualSetter, impl, templateMethodDefs, emitDecl = firstDecl)
-                                                        }
-                                                    }
-                                                } // end if not concrete setter
-                                            }
-                                            is TmpL.NormalMethod -> {
-                                                // If this method overrides a supertype getter/setter,
-                                                // use the overridden dotName for the C++ method name
-                                                // so it matches the interface's virtual method name.
-                                                // E.g., interface has "get.something" → "get_something",
-                                                // but concrete override has dotName "getsomething".
-                                                val overriddenDotName = member.overridden
-                                                    .firstOrNull()?.name?.dotNameText
-                                                val effectiveDotName = if (
-                                                    overriddenDotName != null &&
-                                                    overriddenDotName.contains('.')
-                                                ) {
-                                                    overriddenDotName.replace('.', '_')
-                                                } else {
-                                                    member.dotName.dotNameText
-                                                }
-                                                val methodCppName0 = cpp.singleName(
-                                                    CppName(fixName(effectiveDotName)),
-                                                )
-                                                // Emit `const` for a method the mutation analysis shows never
-                                                // mutates its receiver. (Generators and optional-param methods are
-                                                // seeded as mutating in that analysis, so they resolve to null here.)
-                                                val methodQual = memberConstQualifier(member.dotName.dotNameText)
-                                                when (val body = member.body) {
-                                                    null -> {
-                                                        val paramTypes = member.parameters.parameters.drop(1).map {
-                                                            translateParamType(it)
-                                                        }
-                                                        add(pureVirtualMethod(
-                                                            translateType(member.returnType),
-                                                            methodCppName0,
-                                                            paramTypes.mapIndexed { i, t ->
-                                                                cpp.funcParam(t, cpp.singleName(CppName("arg_$i")))
-                                                            },
-                                                            qual = methodQual,
-                                                        ))
-                                                    }
-                                                    else -> {
-                                                        val methodCppName = cpp.singleName(
-                                                            CppName(fixName(effectiveDotName)),
-                                                        )
-                                                        val methodFormals =
-                                                            member.parameters.parameters.drop(1)
-                                                        val hasOptional =
-                                                            methodFormals.any { it.optional }
-                                                        // Methods need 'virtual' for
-                                                        // polymorphic dispatch in C++
-                                                        val needsVirtual = isInterface ||
-                                                            realSuperTypes.any()
-                                                        val func = cpp.func(
-                                                            cpp.scopedName(
-                                                                cpp.name(topLevel.name),
-                                                                methodCppName,
-                                                            ),
-                                                            translateType(member.returnType),
-                                                            methodFormals.map { param ->
-                                                                cpp.pos(param) {
-                                                                    translateParamType(param) to
-                                                                        cpp.name(param.name)
-                                                                }
-                                                            },
-                                                            translateBlockWithThis(
-                                                                cpp.name(topLevel.name),
-                                                                cpp.name(member.parameters.parameters.first().name),
-                                                                body,
-                                                            ),
-                                                            qual = methodQual,
-                                                        )
-                                                        emitMethodDeclAndDef(func, isTemplate, needsVirtual, impl, templateMethodDefs)
-                                                        if (hasOptional) {
-                                                            val scopedName = cpp.scopedName(
-                                                                cpp.name(topLevel.name),
-                                                                methodCppName.deepCopy(),
-                                                            )
-                                                            val retType =
-                                                                translateType(member.returnType)
-                                                            for ((decl, def) in generateOptionalOverloads(
-                                                                scopedName,
-                                                                retType,
-                                                                methodFormals.toList(),
-                                                            )) {
-                                                                if (isTemplate) {
-                                                                    templateMethodDefs.add(def)
-                                                                } else {
-                                                                    add(decl)
-                                                                    impl.add(def)
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            is TmpL.StaticMethod -> {
-                                                when (val body = member.body) {
-                                                    null -> {
-                                                        // Abstract static method — skip
-                                                    }
-                                                    else -> {
-                                                        val methodCppName = cpp.singleName(
-                                                            CppName(fixName(member.dotName.dotNameText)),
-                                                        )
-                                                        val methodFormals =
-                                                            member.parameters.parameters
-                                                        val hasOptional =
-                                                            methodFormals.any { it.optional }
-                                                        val func = cpp.func(
-                                                            cpp.scopedName(
-                                                                cpp.name(topLevel.name),
-                                                                methodCppName,
-                                                            ),
-                                                            translateType(member.returnType),
-                                                            methodFormals.map { param ->
-                                                                cpp.pos(param) {
-                                                                    translateParamType(param) to
-                                                                        cpp.name(param.name)
-                                                                }
-                                                            },
-                                                            translateBlock(body),
-                                                        )
-                                                        emitMethodDeclAndDef(func, isTemplate, false, impl, templateMethodDefs, declMod = Cpp.DefMod.Static)
-                                                        if (hasOptional) {
-                                                            val scopedName = cpp.scopedName(
-                                                                cpp.name(topLevel.name),
-                                                                methodCppName.deepCopy(),
-                                                            )
-                                                            val retType =
-                                                                translateType(member.returnType)
-                                                            for ((decl, def) in generateOptionalOverloads(
-                                                                scopedName,
-                                                                retType,
-                                                                methodFormals.toList(),
-                                                                declMod = Cpp.DefMod.Static,
-                                                            )) {
-                                                                if (isTemplate) {
-                                                                    templateMethodDefs.add(def)
-                                                                } else {
-                                                                    add(decl)
-                                                                    impl.add(def)
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            is TmpL.Constructor -> {
-                                                val thisParam = member.parameters.parameters.first()
-                                                val thisName = cpp.name(thisParam.name)
-                                                val typeName = cpp.name(topLevel.name)
-                                                val resultName = cpp.tmp("result")
-                                                val makeName = cpp.singleName(CppName("make"))
-                                                val constructorFormals =
-                                                    member.parameters.parameters.drop(1)
-                                                val params = constructorFormals.map {
-                                                    cpp.pos(it) {
-                                                        cpp.funcParam(translateParamType(it), cpp.name(it.name))
-                                                    }
-                                                }
-                                                val paramTypes = constructorFormals.map {
-                                                    cpp.pos(it) { translateParamType(it) }
-                                                }
-                                                val objectType = sharedPtr(typeName)
-                                                val body = cpp.pos(member.body) {
-                                                    cpp.blockStmt(
-                                                        buildList {
-                                                            add(cpp.varDef(typeName, resultName))
-                                                            add(
-                                                                cpp.varDef(
-                                                                    cpp.ptr(typeName),
-                                                                    thisName,
-                                                                    cpp.literal(
-                                                                        cpp.raw(
-                                                                            "&${resultName.id.text}",
-                                                                        ),
-                                                                    ),
-                                                                ),
-                                                            )
-                                                            member.body.statements.forEach { stmt ->
-                                                                if (stmt is TmpL.ReturnStatement) {
-                                                                    return@forEach
-                                                                }
-                                                                addAll(translateStatement(stmt))
-                                                            }
-                                                            add(
-                                                                cpp.returnStmt(
-                                                                    cpp.callExpr(
-                                                                        cpp.template(
-                                                                            cpp.name(
-                                                                                "std",
-                                                                                "make_shared",
-                                                                            ),
-                                                                            listOf(typeName),
-                                                                        ),
-                                                                        listOf(
-                                                                            resultName.deepCopy(),
-                                                                        ),
-                                                                    ),
-                                                                ),
-                                                            )
-                                                        },
-                                                    )
-                                                }
-                                                val isTemplateStruct =
-                                                    topLevel.typeParameters.ot
-                                                        .typeParameters.isNotEmpty()
-                                                val hasOptionalParams =
-                                                    constructorFormals.any { it.optional }
-                                                if (isTemplateStruct) {
-                                                    // Template struct: must inline make()
-                                                    add(
-                                                        cpp.funcDef(
-                                                            Cpp.DefMod.Static,
-                                                            objectType,
-                                                            makeName,
-                                                            params,
-                                                            body,
-                                                        ),
-                                                    )
-                                                } else {
-                                                    // Non-template struct: declare in header,
-                                                    // define in .cpp to avoid scope issues
-                                                    add(
-                                                        cpp.funcDecl(
-                                                            Cpp.DefMod.Static,
-                                                            objectType,
-                                                            makeName,
-                                                            paramTypes,
-                                                        ),
-                                                    )
-                                                    impl.add(
-                                                        cpp.funcDef(
-                                                            objectType,
-                                                            cpp.scopedName(
-                                                                typeName,
-                                                                makeName.deepCopy(),
-                                                            ),
-                                                            params,
-                                                            body,
-                                                        ),
-                                                    )
-                                                    if (hasOptionalParams) {
-                                                        val scopedMake = cpp.scopedName(
-                                                            typeName.deepCopy(),
-                                                            makeName.deepCopy(),
-                                                        )
-                                                        for ((decl, def) in generateOptionalOverloads(
-                                                            scopedMake,
-                                                            objectType.deepCopy(),
-                                                            constructorFormals.toList(),
-                                                            declMod = Cpp.DefMod.Static,
-                                                        )) {
-                                                            add(decl)
-                                                            impl.add(def)
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            is TmpL.GarbageStatement -> {
-                                                add(cpp.comment("skipped: GarbageStatement"))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            val structName = cpp.name(topLevel.name)
-                            val struct = cpp.struct(structName, structFields)
-                            val superTypes = realSuperTypes
-                            val typeFormals = topLevel.typeParameters.ot.typeParameters
-                            if (typeFormals.isNotEmpty()) {
-                                val templateParams = typeFormals.map { formal ->
-                                    cpp.funcParam(
-                                        cpp.singleName(CppName("class", allowKey = true)),
-                                        cpp.name(formal.name),
-                                    )
-                                }
-                                // For template structs, skip the forward declaration
-                                // and emit the full template struct definition
-                                val structDefToUse = if (superTypes.isNotEmpty()) {
-                                    val baseStrs = superTypes.map { renderToString(translateSuperType(it)) }
-                                    val inheritancePrefix = if (superTypes.size == 1) "virtual public" else "public"
-                                    val rawName =
-                                        "${structName.id.text} : ${baseStrs.joinToString(", ") { "$inheritancePrefix $it" }}"
-                                    cpp.structDef(
-                                        cpp.singleName(CppName(rawName, raw = true)),
-                                        structFields,
-                                    )
-                                } else if (isInterface) {
-                                    val rawName = "${structName.id.text} : virtual public temper::core::AnyValueBase"
-                                    cpp.structDef(
-                                        cpp.singleName(CppName(rawName, raw = true)),
-                                        structFields,
-                                    )
-                                } else {
-                                    // No supertypes
-                                    cpp.structDef(structName, structFields)
-                                }
-                                headerTypeDefs.add(
-                                    cpp.templateStructDef(templateParams, structDefToUse),
-                                )
-                                // Emit out-of-line template method definitions after the struct.
-                                // The func.def uses ClassName::method() scoping,
-                                // but we need ClassName<T1,T2>::method() for templates.
-                                if (templateMethodDefs.isNotEmpty()) {
-                                    val typeParamStr = typeFormals.joinToString(", ") { formal ->
-                                        cpp.name(formal.name).id.text
-                                    }
-                                    for (methodDef in templateMethodDefs) {
-                                        if (methodDef is Cpp.FuncDef) {
-                                            // Rewrite scoped name to include template params
-                                            val fixedDef = when (val defName = methodDef.name) {
-                                                is Cpp.ScopedName -> {
-                                                    val parentText = when (val p = defName.parent) {
-                                                        is Cpp.SingleName -> p.id.text
-                                                        is Cpp.ScopedName -> p.member.id.text
-                                                        else -> structName.id.text
-                                                    }
-                                                    val rawParent = "$parentText<$typeParamStr>"
-                                                    cpp.funcDef(
-                                                        methodDef.mod,
-                                                        methodDef.ret,
-                                                        methodDef.convention,
-                                                        cpp.scopedName(
-                                                            cpp.singleName(CppName(rawParent, raw = true)),
-                                                            defName.member.deepCopy(),
-                                                        ),
-                                                        methodDef.args.toList(),
-                                                        methodDef.body,
-                                                        // Preserve the const qualifier so the out-of-line
-                                                        // template method definition matches its declaration.
-                                                        qual = methodDef.qual,
-                                                    )
-                                                }
-                                                else -> methodDef
-                                            }
-                                            headerTypeDefs.add(
-                                                cpp.templateFuncDef(templateParams, fixedDef),
-                                            )
-                                        }
-                                    }
-                                }
-                            } else if (superTypes.isNotEmpty()) {
-                                // Class with inheritance (may have multiple super types)
-                                val baseStrs = superTypes.map { renderToString(translateSuperType(it)) }
-                                val inheritPrefix = if (superTypes.size == 1) "virtual public" else "public"
-                                val rawName =
-                                    "${structName.id.text} : ${baseStrs.joinToString(", ") { "$inheritPrefix $it" }}"
-                                headerTypeDecl.add(struct.decl)
-                                headerTypeDefs.add(
-                                    cpp.structDef(
-                                        cpp.singleName(CppName(rawName, raw = true)),
-                                        structFields,
-                                    ),
-                                )
-                            } else if (isInterface) {
-                                val rawName = "${structName.id.text} : virtual public temper::core::AnyValueBase"
-                                headerTypeDecl.add(struct.decl)
-                                headerTypeDefs.add(
-                                    cpp.structDef(
-                                        cpp.singleName(CppName(rawName, raw = true)),
-                                        structFields,
-                                    ),
-                                )
-                            } else {
-                                // No supertypes
-                                headerTypeDecl.add(struct.decl)
-                                headerTypeDefs.add(struct.def)
-                            }
-                            // Clean up type formal names after type declaration
-                            for (formal in structTypeFormals) {
-                                typeFormalNames.remove(formal.definition)
-                            }
-                            for (key in structTypeFormalKeys) {
-                                typeFormalNamesByText.remove(key)
-                            }
-                        }
+                        is TmpL.TypeDeclaration ->
+                            translateTypeDeclaration(topLevel, impl, headerTypeDecl, headerTypeDefs)
                         is TmpL.TypeConnection -> {
                             // Type connections are handled by the support network
                         }
@@ -2983,28 +3269,8 @@ class CppTranslator(
                         is TmpL.SupportCodeDeclaration -> {
                             // Support code declarations are handled inline
                         }
-                        is TmpL.Test -> {
-                            // Tests are translated as functions
-                            val cppName = cpp.name(topLevel.name)
-                            val func = cpp.func(
-                                cppName,
-                                translateType(topLevel.returnType),
-                                topLevel.parameters.parameters.map { translateParamType(it) },
-                                topLevel.parameters.parameters.map { cpp.name(it.name) },
-                                translateBlock(topLevel.body),
-                            )
-                            headerFunctions.add(func.decl)
-                            impl.add(func.def)
-                            // Collect test info for main.cpp generation
-                            val libNs = cppLibraryName?.let {
-                                cpp.libraryName(it).id.text
-                            }
-                            val qualifiedName = when (libNs) {
-                                null -> "temper::${cppName.id.text}"
-                                else -> "temper::${libNs}::${cppName.id.text}"
-                            }
-                            testInfos.add(qualifiedName to topLevel.rawName)
-                        }
+                        is TmpL.Test ->
+                            translateModuleTest(topLevel, headerFunctions, impl)
                         is TmpL.GarbageTopLevel -> {
                             // Skip garbage
                         }
@@ -3015,91 +3281,7 @@ class CppTranslator(
                 }
             }
 
-            // Generate module init function with dependency init calls
-            // and deferred variable initializations.
-            val initFuncName = cpp.singleName(CppName("temper_init_$sanitizedModuleName"))
-            moduleInitFuncName = initFuncName.id.text
-
-            val bodyStmts = mutableListOf<Cpp.Stmt>()
-            // static bool guard — prevent double initialization
-            bodyStmts.add(
-                cpp.exprStmt(
-                    cpp.literal(
-                        cpp.raw(
-                            "static bool initialized = false",
-                        ),
-                    ),
-                ),
-            )
-            bodyStmts.add(
-                cpp.ifStmt(
-                    cpp.literal(cpp.raw("initialized")),
-                    cpp.blockStmt(listOf(cpp.returnStmt(null))),
-                ),
-            )
-            bodyStmts.add(
-                cpp.exprStmt(
-                    cpp.binaryExpr(
-                        cpp.literal(cpp.raw("initialized")),
-                        cpp.binaryOp("="),
-                        cpp.literal(cpp.raw("true")),
-                    ),
-                ),
-            )
-            // Call dependency modules' init functions using fully qualified names.
-            val depInitCalls = mutableSetOf<String>()
-            for ((_, info) in importedNames) {
-                val depModName = info.sourceModule
-                val libNs = cpp.nameTextForModule(depModName)
-                val depRelPath = depModName.relativePath()
-                val depBaseName = when {
-                    depRelPath.segments.isEmpty() -> INIT_NAME
-                    else -> depRelPath.segments.last().baseName
-                }
-                val sanitizedDep = depBaseName.replace(Regex("[^a-zA-Z0-9_]"), "_")
-                depInitCalls.add("temper::${libNs}::temper_init_$sanitizedDep")
-                // Add include for the dependency module's header so its init decl is visible
-                includes.add(cpp.includePathForModule(depModName))
-            }
-            for (call in depInitCalls.sorted()) {
-                bodyStmts.add(
-                    cpp.exprStmt(
-                        cpp.callExpr(
-                            cpp.literal(cpp.raw(call)),
-                            listOf(),
-                        ),
-                    ),
-                )
-            }
-            // Add deferred variable initializations (for modules without init blocks)
-            bodyStmts.addAll(deferredInitStmts)
-
-            val voidType = cpp.type("void")
-            // Declaration in header
-            headerInit.add(
-                cpp.funcDecl(
-                    mod = null,
-                    ret = voidType,
-                    name = initFuncName,
-                    args = listOf(),
-                ),
-            )
-            // Definition in cpp — placed at the beginning so the
-            // dependency-trigger struct constructor can call it.
-            val initFuncDef = cpp.funcDef(
-                ret = voidType,
-                name = initFuncName,
-                args = listOf(),
-                body = cpp.blockStmt(bodyStmts),
-            )
-            // Add init function definition at the end of the impl file (after
-            // all static variable declarations so it can reference them).
-            // No auto-trigger struct — init must be called explicitly from
-            // main() or the generated main.cpp. Auto-trigger via static
-            // constructors causes cross-TU init order issues: std::function
-            // variables have non-trivial default constructors that can zero
-            // out values set by an earlier cross-TU init call.
-            impl.add(initFuncDef)
+            emitModuleInit(sanitizedModuleName, deferredInitStmts, headerInit, impl)
 
             val modPath = mod.codeLocation.outputPath
             val hppName = path.withTemperAwareExtension(HPP_EXT)

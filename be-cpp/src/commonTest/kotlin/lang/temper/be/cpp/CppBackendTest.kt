@@ -2,8 +2,13 @@ package lang.temper.be.cpp
 
 import lang.temper.be.Backend
 import lang.temper.be.assertGeneratedCode
+import lang.temper.be.generateCode
+import lang.temper.common.ListBackedLogSink
+import lang.temper.fs.MemoryFileSystem
+import lang.temper.lexer.Genre
 import lang.temper.log.filePath
 import kotlin.test.Test
+import kotlin.test.assertTrue
 
 @SuppressWarnings("MaxLineLength")
 class CppBackendTest {
@@ -58,6 +63,7 @@ class CppBackendTest {
             """,
         )
     }
+
     @Test
     fun simpleFunction() {
         assertGenerated(
@@ -134,6 +140,7 @@ class CppBackendTest {
             """,
         )
     }
+
     @Test
     fun booleanFunction() {
         assertGenerated(
@@ -213,6 +220,7 @@ class CppBackendTest {
             """,
         )
     }
+
     @Test
     fun interfaceInheritance() {
         assertGeneratedContains(
@@ -250,6 +258,23 @@ class CppBackendTest {
             ),
         )
     }
+
+    @Test
+    fun instanceOfValueTypeOnAnyValue() {
+        // `x is Int` where x is a boxed AnyValue must check the boxed payload's type,
+        // not merely that the box is non-null (which would accept a box holding anything).
+        assertGeneratedContains(
+            temper = """
+                |export let isInt(x: AnyValue): Boolean {
+                |  return x is Int;
+                |}
+            """,
+            cppContains = listOf(
+                "temper::core::is_box<temper::core::Int32>",
+            ),
+        )
+    }
+
     @Test
     fun ifReturn() {
         assertGeneratedContains(
@@ -336,7 +361,9 @@ class CppBackendTest {
                 |}
             """,
             cppContains = listOf(
-                "struct Point",
+                // A plain (rootless) struct carries its own CRTP enable_shared_from_this so
+                // borrow_this can hand out an owning shared_ptr for `this`.
+                "struct Point : public std::enable_shared_from_this<Point>",
                 "int32_t get_x()",
                 "int32_t get_y()",
                 "std::shared_ptr<Point>",
@@ -401,8 +428,8 @@ class CppBackendTest {
         )
     }
 
-    // Note: this exercises passing a local as a call argument, not closure capture (despite the
-    // old name). Capture-by-value/by-reference is covered end-to-end by the functional suite.
+    // Exercises passing a local as a call argument (not closure capture, which the functional
+    // suite covers end-to-end).
     @Test
     fun functionCallWithLocalArgument() {
         assertGeneratedContains(
@@ -605,34 +632,34 @@ private fun assertGeneratedContains(
     temper: String,
     cppContains: List<String>,
 ) {
-    val logSink = lang.temper.common.ListBackedLogSink()
-    val result = lang.temper.be.generateCode(
+    val logSink = ListBackedLogSink()
+    val result = generateCode(
         inputs = listOf(filePath("something", "something.temper") to temper.trimMargin()),
-        factory = CppBackend.Cpp11,
+        factory = CppBackend.Cpp,
         backendConfig = Backend.Config.production,
-        genre = lang.temper.lexer.Genre.Library,
+        genre = Genre.Library,
         moduleResultNeeded = false,
         logSink = logSink,
     )
-    val memfs = result.fs as lang.temper.fs.MemoryFileSystem
+    val memfs = result.fs as MemoryFileSystem
     val allContent = buildString {
-        fun walk(file: lang.temper.fs.MemoryFileSystem.FileOrDirectory) {
+        fun walk(file: MemoryFileSystem.FileOrDirectory) {
             when (file) {
-                is lang.temper.fs.MemoryFileSystem.File -> {
+                is MemoryFileSystem.File -> {
                     if (!file.absolutePath.toString().endsWith(".map")) {
                         append(file.textContent)
                         append("\n")
                     }
                 }
-                is lang.temper.fs.MemoryFileSystem.SubDirectory -> file.ls().forEach(::walk)
+                is MemoryFileSystem.SubDirectory -> file.ls().forEach(::walk)
             }
         }
         memfs.root.ls().forEach(::walk)
     }
     for (expected in cppContains) {
-        kotlin.test.assertTrue(
+        assertTrue(
             allContent.contains(expected),
-            "Generated code should contain '$expected' but didn't.\n${allContent.take(3000)}",
+            "Generated code should contain '$expected' but didn't.\n$allContent",
         )
     }
 }
@@ -650,7 +677,7 @@ private fun assertGenerated(
     """.trimMargin()
     assertGeneratedCode(
         backendConfig = Backend.Config.production,
-        factory = CppBackend.Cpp11,
+        factory = CppBackend.Cpp,
         inputs = listOf(filePath("something", "something.temper") to temper.trimMargin()),
         moduleResultNeeded = false,
         want = """

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <limits>
 #include <string>
+#include "temper_bubble.hpp"
 #include "base_types.hpp"
 
 namespace temper {
@@ -69,6 +70,13 @@ namespace temper {
                 return static_cast<int64_t>(i);
             }
 
+            // General integer division (`DivIntInt`): the divisor may be zero, so we
+            // bubble on zero. The `_safe` variant is emitted by the frontend only when
+            // the divisor is statically known to be non-zero (`DivIntIntSafe`) and
+            // elides that check. This mirrors Rust's `int_div` (checked) vs
+            // `wrapping_div` (unchecked). Both variants must keep the `INT_MIN / -1`
+            // guard: that division is undefined behavior in C++ (unlike Rust's
+            // `wrapping_div`), independent of whether the divisor is zero.
             inline int32_t div_wrap(int32_t a, int32_t b) {
                 if (b == 0) {
                     bubble("division by zero");
@@ -79,10 +87,9 @@ namespace temper {
                 return a / b;
             }
 
+            // Divisor is statically known to be non-zero; the zero check is elided. The
+            // `INT_MIN / -1` guard remains because that case is UB regardless.
             inline int32_t div_safe(int32_t a, int32_t b) {
-                if (b == 0) {
-                    bubble("division by zero");
-                }
                 if (a == std::numeric_limits<int32_t>::min() && b == -1) {
                     return std::numeric_limits<int32_t>::min();
                 }
@@ -99,10 +106,9 @@ namespace temper {
                 return a % b;
             }
 
+            // Divisor is statically known to be non-zero; the zero check is elided. The
+            // `INT_MIN % -1` guard remains because that case is UB regardless.
             inline int32_t mod_safe(int32_t a, int32_t b) {
-                if (b == 0) {
-                    bubble("division by zero");
-                }
                 if (b == -1 && a == std::numeric_limits<int32_t>::min()) {
                     return 0;
                 }

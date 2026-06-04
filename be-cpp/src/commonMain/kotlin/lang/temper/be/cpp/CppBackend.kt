@@ -7,6 +7,7 @@ import lang.temper.be.cli.RunnerSpecifics
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
+import lang.temper.be.tmpl.asReceiverMember
 import lang.temper.be.tmpl.mutatingMemberNames
 import lang.temper.common.MimeType
 import lang.temper.fs.ResourceDescriptor
@@ -77,14 +78,9 @@ class CppBackend private constructor(
             for (top in mod.topLevels) {
                 if (top !is TmpL.TypeDeclaration) continue
                 for (member in top.members) {
-                    val (dotName, parameters, mayYield) = when (member) {
-                        is TmpL.NormalMethod -> Triple(member.dotName.dotNameText, member.parameters, member.mayYield)
-                        is TmpL.Getter -> Triple(member.dotName.dotNameText, member.parameters, false)
-                        is TmpL.Setter -> Triple(member.dotName.dotNameText, member.parameters, false)
-                        else -> continue
-                    }
-                    val hasOptional = parameters.parameters.drop(1).any { it.optional }
-                    if (mayYield || hasOptional) add(dotName)
+                    val rm = member.asReceiverMember() ?: continue
+                    val hasOptional = rm.parameters.parameters.drop(1).any { it.optional }
+                    if (rm.mayYield || hasOptional) add(rm.dotName)
                 }
             }
         }
@@ -118,7 +114,6 @@ class CppBackend private constructor(
             val translator = CppTranslator(
                 cppNames,
                 cppLibraryName = cppLibraryName,
-                dependenciesBuilder = dependenciesBuilder,
                 libraryRootToOutputDir = libraryRootToOutputDir,
                 mutatingMethodNames = mutatingMethodNames,
             )
@@ -145,150 +140,78 @@ class CppBackend private constructor(
         // Compute the C++ namespace for the std library's Test type
         val testNs = "temper::${safeCppNamespace(cppNames.library("std").text)}"
 
-        val mainContent = if (allTestInfos.isNotEmpty()) {
-            buildString {
-                appendLine("#include <fstream>")
-                appendLine("#include <sstream>")
-                appendLine("#include <string>")
-                appendLine("#include <vector>")
-                for (inc in allInitIncludes.sorted()) {
-                    appendLine("""#include "$inc"""")
-                }
-                appendLine("""#include "std/testing.hpp"""")
-                appendLine("std::string xmlEscape(const std::string& s) {")
-                appendLine("  std::string out;")
-                appendLine("  for (char c : s) {")
-                appendLine("    switch (c) {")
-                appendLine("""      case '&': out += "&amp;"; break;""")
-                appendLine("""      case '<': out += "&lt;"; break;""")
-                appendLine("""      case '>': out += "&gt;"; break;""")
-                appendLine("""      case '"': out += "&quot;"; break;""")
-                appendLine("      default: out += c;")
-                appendLine("    }")
-                appendLine("  }")
-                appendLine("  return out;")
-                appendLine("}")
-                appendLine("int main() {")
-                // Call module init functions in order (each has a
-                // static guard so dependency order is handled).
-                for (initFunc in allInitFuncs) {
-                    appendLine("  ${initFunc}();")
-                }
-                appendLine("  struct TestResult {")
-                appendLine("    std::string name;")
-                appendLine("    bool passed;")
-                appendLine("    std::string messages;")
-                appendLine("  };")
-                appendLine("  std::vector<TestResult> results;")
-                for ((funcName, rawName) in allTestInfos) {
-                    val escapedName = rawName
-                        .replace("\\", "\\\\")
-                        .replace("\"", "\\\"")
-                    appendLine("  {")
-                    appendLine("    auto t = $testNs::Test::make();")
-                    // An uncaught exception means the generated code is broken: record it as a
-                    // failure with its message rather than swallowing it (which would let a
-                    // crashing test masquerade as whatever get_passing() happened to return).
-                    appendLine("    bool threw = false;")
-                    appendLine("    std::string thrownMessage;")
-                    appendLine("    try { $funcName(t); }")
-                    appendLine(
-                        "    catch (const std::exception& e) { threw = true; thrownMessage = e.what(); }",
-                    )
-                    appendLine(
-                        "    catch (...) { threw = true; thrownMessage = \"unknown C++ exception\"; }",
-                    )
-                    appendLine("    auto mc = t->messagesCombined();")
-                    appendLine(
-                        "    std::string combinedMessages = temper::core::is_null(mc)" +
-                            " ? std::string() : (std::string)mc;",
-                    )
-                    appendLine("    if (threw) {")
-                    appendLine("""      if (!combinedMessages.empty()) { combinedMessages += "\n"; }""")
-                    appendLine("""      combinedMessages += "uncaught exception: " + thrownMessage;""")
-                    appendLine("    }")
-                    appendLine(
-                        "    results.push_back({\"$escapedName\"," +
-                            " threw ? false : (bool)t->get_passing()," +
-                            " combinedMessages});",
-                    )
-                    appendLine("  }")
-                }
-                appendLine("  int failures = 0;")
-                appendLine(
-                    "  for (auto& r : results)" +
-                        " if (!r.passed) failures++;",
-                )
-                appendLine("  std::ostringstream xml;")
-                appendLine(
-                    "  xml << \"<?xml version=\\\"1.0\\\" encoding=\\\"UTF-8\\\"?>\\n\"" +
-                        " << \"<testsuites>\\n\"" +
-                        " << \"  <testsuite name=\\\"suite\\\"" +
-                        " tests=\\\"\" << results.size()" +
-                        " << \"\\\" failures=\\\"\"" +
-                        " << failures << \"\\\" time=\\\"0\\\">\\n\";",
-                )
-                appendLine("  for (auto& r : results) {")
-                appendLine(
-                    "    xml << \"    <testcase name=\\\"\"" +
-                        " << xmlEscape(r.name) << \"\\\" classname=\\\"\"" +
-                        " << xmlEscape(r.name) << \"\\\" time=\\\"0\\\">\\n\";",
-                )
-                appendLine("    if (!r.passed) {")
-                appendLine(
-                    "      xml << \"      <failure message=\\\"\"" +
-                        " << xmlEscape(r.messages)" +
-                        " << \"\\\"><![CDATA[\" << r.messages" +
-                        " << \"]]></failure>\\n\";",
-                )
-                appendLine("    }")
-                appendLine(
-                    "    xml << \"    </testcase>\\n\";",
-                )
-                appendLine("  }")
-                appendLine(
-                    "  xml << \"  </testsuite>\\n\"" +
-                        " << \"</testsuites>\\n\";",
-                )
-                appendLine("""  std::ofstream out("test-results.xml");""")
-                appendLine("  if (out.is_open()) {")
-                appendLine("    out << xml.str();")
-                appendLine("    out.close();")
-                appendLine("  }")
-                appendLine("  return 0;")
-                append("}")
-            }
-        } else {
-            if (allInitFuncs.isNotEmpty()) {
-                buildString {
-                    for (inc in allInitIncludes.sorted()) {
-                        appendLine("""#include "$inc"""")
-                    }
-                    appendLine("int main() {")
-                    for (initFunc in allInitFuncs) {
-                        appendLine("  ${initFunc}();")
-                    }
-                    append("}")
-                }
-            } else {
-                "int main() {}"
-            }
-        }
+        val mainContent = generateMainCpp(
+            initIncludes = allInitIncludes.sorted(),
+            initFuncs = allInitFuncs,
+            testInfos = allTestInfos,
+            testNs = testNs,
+        )
 
         return translations + listOf(
             MetadataFileSpecification(
-                path = filePath("main.cpp"),
+                path = filePath(MAIN_CPP_FILE),
                 mimeType = MimeType.cppSource,
                 content = mainContent,
             ),
         )
     }
 
+    /**
+     * Build the contents of `main.cpp`: include each module's header, call its init
+     * function (each guarded so dependency order is handled), and — when the library
+     * contains tests — hand the test harness one closure per test.
+     *
+     * [initIncludes] should already be sorted for deterministic output. [testInfos] pairs
+     * each test's generated function name with its raw (display) name. [testNs] is the
+     * C++ namespace of the std library's `Test` type.
+     */
+    private fun generateMainCpp(
+        initIncludes: List<String>,
+        initFuncs: List<String>,
+        testInfos: List<Pair<String, String>>,
+        testNs: String,
+    ): String = buildString {
+        for (inc in initIncludes) {
+            appendLine("""#include "$inc"""")
+        }
+        if (testInfos.isNotEmpty()) {
+            appendLine("""#include "std/testing.hpp"""")
+            appendLine("""#include "temper-core/test_main.hpp"""")
+        }
+        appendLine("int main() {")
+        for (initFunc in initFuncs) {
+            appendLine("  $initFunc();")
+        }
+        if (testInfos.isNotEmpty()) {
+            // Hand the harness one closure per test. Each closure runs the test and
+            // reports its outcome; run_tests (in temper-core/test_main.hpp) owns the
+            // exception handling, JUnit-XML serialization, and file writing.
+            appendLine("  return temper::core::run_tests({")
+            for ((funcName, rawName) in testInfos) {
+                val escapedName = rawName
+                    .replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                appendLine("    { \"$escapedName\", []() -> temper::core::TestOutcome {")
+                appendLine("      auto t = $testNs::Test::make();")
+                appendLine("      $funcName(t);")
+                appendLine("      auto mc = t->messagesCombined();")
+                appendLine(
+                    "      std::string messages = temper::core::is_null(mc)" +
+                        " ? std::string() : (std::string)mc;",
+                )
+                appendLine("      return { (bool)t->get_passing(), messages };")
+                appendLine("    } },")
+            }
+            appendLine("  });")
+        }
+        append("}")
+    }
+
     override val supportNetwork: SupportNetwork = CppSupportNetwork
 
     @PluginBackendId("cpp")
     @BackendSupportLevel(isSupported = true, isDefaultSupported = false, isTested = true)
-    data object Cpp11 : CppFactory(CppLang.Cpp11)
+    data object Cpp : CppFactory(CppLang.Cpp)
 
     sealed class CppFactory(val lang: CppLang) : Factory<CppBackend> {
         override val backendId = lang.id
@@ -307,7 +230,7 @@ class CppBackend private constructor(
             )
 
         override val specifics: RunnerSpecifics get() = when (lang) {
-            CppLang.Cpp11 -> Cpp11Specifics
+            CppLang.Cpp -> CppSpecifics
         }
 
         override val coreLibraryResources: List<ResourceDescriptor>
@@ -340,6 +263,9 @@ class CppBackend private constructor(
                     filePath("generator.hpp"),
                     filePath("promise.hpp"),
                     filePath("core.hpp"),
+                    // Test harness used only by the generated `main.cpp`; intentionally not
+                    // pulled into core.hpp so its <fstream>/<sstream> stay out of every TU.
+                    filePath("test_main.hpp"),
                 )
             }
 
@@ -350,12 +276,15 @@ class CppBackend private constructor(
 }
 
 enum class CppLang(val id: BackendId, val languageLabel: LanguageLabel, val ext: String) {
-    Cpp11(BackendId(uniqueId = "cpp"), LanguageLabel("cpp"), CPP_EXT),
+    Cpp(BackendId(uniqueId = "cpp"), LanguageLabel("cpp"), CPP_EXT),
 }
 
 internal const val CPP_EXT = ".cpp"
 internal const val HPP_EXT = ".hpp"
 internal const val INIT_NAME = "init"
+
+/** The per-library entry-point file holding `int main()`. */
+internal const val MAIN_CPP_FILE = "main.cpp"
 
 internal fun CliEnv.copyCppTemperCore(factory: Backend.Factory<CppBackend>, prefix: List<String>? = null) {
     val dir = dirPath((prefix ?: listOf(factory.backendId.uniqueId)) + listOf("temper-core"))

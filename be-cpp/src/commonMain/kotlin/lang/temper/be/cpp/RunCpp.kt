@@ -7,25 +7,30 @@ import lang.temper.be.cli.CliFailure
 import lang.temper.be.cli.Command
 import lang.temper.be.cli.EXIT_UNAVAILABLE
 import lang.temper.be.cli.Effort
+import lang.temper.be.cli.EffortSuccess
 import lang.temper.be.cli.RunBackendSpecificCompilationStepRequest
 import lang.temper.be.cli.RunLibraryRequest
 import lang.temper.be.cli.RunTestsRequest
-import lang.temper.be.cli.ToolSpecifics
 import lang.temper.be.cli.ToolchainRequest
 import lang.temper.be.cli.ToolchainResult
+import lang.temper.be.cli.VersionedTool
+import lang.temper.be.cli.checkMin
 import lang.temper.be.cli.maybeLogBeforeRunning
 import lang.temper.common.MimeType
 import lang.temper.common.RFailure
-import lang.temper.fs.escapeShellString
+import lang.temper.common.RResult
 import lang.temper.library.relativeOutputDirectoryForLibrary
-import lang.temper.log.FilePath
-import lang.temper.log.dirPath
+import lang.temper.log.FilePathAndMimeTypeOrNull
 import lang.temper.log.filePath
 import lang.temper.log.resolveDir
 import lang.temper.log.resolveFile
 import lang.temper.name.DashedIdentifier
+import lang.temper.name.SemVer
 
-fun runCpp11(
+/** A SemVer is `major.minor.patch` — three components, which [GppCommand.checkVersion] pads to. */
+private const val SEM_VER_PART_COUNT = 3
+
+fun runCpp(
     cliEnv: CliEnv,
     dependencies: Dependencies<*>,
     request: ToolchainRequest,
@@ -33,7 +38,8 @@ fun runCpp11(
     return when (request) {
         is RunLibraryRequest -> cliEnv.runLibrary(request, dependencies)
         is RunTestsRequest -> cliEnv.runTests(request, dependencies)
-        is RunBackendSpecificCompilationStepRequest -> error("unsupported request: RunBackendSpecificCompilationStepRequest")
+        is RunBackendSpecificCompilationStepRequest ->
+            error("unsupported request: RunBackendSpecificCompilationStepRequest")
         // Return a failure result rather than throwing for request kinds the C++ backend does
         // not serve (e.g. an interactive REPL), matching how the Rust backend degrades.
         else -> listOf(
@@ -53,46 +59,57 @@ fun runCpp11(
     }
 }
 
-object GppCommand : ToolSpecifics {
+object GppCommand : VersionedTool {
     override val cliNames = listOf("g++")
-}
 
-object ShCommand : ToolSpecifics {
-    override val cliNames = listOf("sh")
-}
+    // `-dumpversion` prints just the version (e.g. "11.4.0"); older g++ may print only the
+    // major number, so checkVersion normalizes to a full `major.minor.patch` before parsing.
+    override val versionCheckArgs = listOf("-dumpversion")
 
-/** Virtual memory limit in KB for g++ compilation and binary execution (4 GB). */
-private const val MEMORY_LIMIT_KB = 4_194_304
+    override fun checkVersion(run: EffortSuccess): RResult<Unit, CliFailure> {
+        // Pull the leading numeric version out of stdout and pad missing components with zeros
+        // so SemVer (which requires major.minor.patch) can parse it.
+        val raw = Regex("""\d+(\.\d+)*""").find(run.stdout.trim())?.value ?: ""
+        val parts = raw.split('.')
+        val normalized = (parts + List(SEM_VER_PART_COUNT) { "0" })
+            .take(SEM_VER_PART_COUNT)
+            .joinToString(".")
+        return SemVer(normalized).checkMin(run, minVersion)
+    }
+
+    /**
+     * g++ 5 is a safe floor for the full C++14 feature set we compile with (`-std=c++14`);
+     * C++14 support landed in g++ 5.
+     */
+    @Suppress("MagicNumber")
+    val minVersion = SemVer(5, 0, 0)
+}
 
 private fun CliEnv.runLibrary(
     request: RunLibraryRequest,
     dependencies: Dependencies<*>,
 ): List<ToolchainResult> {
     val libraryName = request.libraryName
-    val backendId = CppLang.Cpp11.id
+    val backendId = CppLang.Cpp.id
     val runDir = relativeOutputDirectoryForLibrary(backendId, libraryName)
     val buildDir = runDir.resolveDir("build")
     makeDir(buildDir)
     val gpp = this[GppCommand]
-    val sh = this[ShCommand]
-    // Discover all transitively-needed .cpp files by scanning #include directives.
-    // backendDir is the parent of runDir (e.g., "cpp/" when runDir is "cpp/work/").
-    val backendDir = dirPath(backendId.uniqueId)
-    val depCppFiles = discoverTransitiveCppDeps(backendDir, libraryName, dependencies)
+    // The set of .cpp files to compile comes straight from the dependency graph the
+    // frontend already recorded — the current library's files plus those of every
+    // transitive dependency — rather than re-deriving it by scanning #include lines.
+    // This mirrors how the Rust backend hands its dependency set to Cargo.
+    val depCppFiles = transitiveCppDepFiles(libraryName, dependencies)
 
     val gppArgs = buildList {
         add("-I..")
         add("-std=c++14")
-        add("-fwrapv") // Signed integer overflow wraps (Temper semantics)
-        // Compile .cpp files from current library
-        files@ for (file in dependencies.filesPerLibrary[libraryName]!!) {
-            file.mimeType == MimeType.cppSource || continue@files
-            val path = file.filePath.toString()
-            if (path.endsWith(CPP_EXT)) {
-                add(path)
-            }
+        // Compile .cpp files from the current library.
+        for (path in cppSourcePaths(dependencies.filesPerLibrary[libraryName].orEmpty())) {
+            add(path)
         }
-        // Compile transitively-needed dependency .cpp files
+        // Compile dependency .cpp files, referenced through `..` (the backend output
+        // root, added to the include path with `-I..`).
         for (depPath in depCppFiles) {
             add("../$depPath")
         }
@@ -100,100 +117,65 @@ private fun CliEnv.runLibrary(
         add("build/main")
     }
 
-    // Wrap g++ in a shell with ulimit to prevent OOM
-    val shellCmd = buildString {
-        append("ulimit -v $MEMORY_LIMIT_KB && ")
-        append(escapeShellString(gpp.command))
-        for (arg in gppArgs) {
-            append(' ')
-            append(escapeShellString(arg))
-        }
-    }
+    // Invoke g++ directly as a process, the same way the Rust backend invokes `cargo`,
+    // rather than going through a shell wrapper.
     val buildCommand = Command(
-        args = listOf("-c", shellCmd),
+        args = gppArgs,
         aux = mapOf(Aux.Stderr to buildDir.resolveFile("stderr-build.txt")),
         cwd = runDir,
     )
-    buildCommand.maybeLogBeforeRunning(sh, shellPreferences)
-    val buildResult = ToolchainResult(libraryName = libraryName, result = sh.run(buildCommand))
-    buildResult.result.failure != null && return listOf(buildResult)
-    // Now run the binary, also with a memory limit.
+    buildCommand.maybeLogBeforeRunning(gpp, shellPreferences)
+    val buildResult = ToolchainResult(libraryName = libraryName, result = gpp.run(buildCommand))
+    if (buildResult.result.failure != null) {
+        return listOf(buildResult)
+    }
+    // Now run the compiled binary directly (no shell), reusing the tool plumbing by pointing
+    // it at the built executable's path.
     val binaryPath = envPath(runDir.resolve(filePath("build", "main")))
-    val runShellCmd = "ulimit -v $MEMORY_LIMIT_KB && ${escapeShellString(binaryPath)}"
+    val binary = gpp.withCommandPath(binaryPath)
     val runAux = buildMap {
         put(Aux.Stderr, runDir.resolveFile("stderr-run.txt"))
         put(Aux.JunitXml, runDir.resolveFile("test-results.xml"))
     }
     val runCommand = Command(
-        args = listOf("-c", runShellCmd),
+        args = emptyList(),
         aux = runAux,
         cwd = runDir,
     )
-    runCommand.maybeLogBeforeRunning(sh, shellPreferences)
-    val runResult = ToolchainResult(libraryName = request.libraryName, result = sh.run(runCommand))
+    runCommand.maybeLogBeforeRunning(binary, shellPreferences)
+    val runResult = ToolchainResult(libraryName = request.libraryName, result = binary.run(runCommand))
     return listOf(runResult)
 }
 
+/** The `.cpp` source paths among [files], relative to their own library's output directory. */
+private fun cppSourcePaths(files: Set<FilePathAndMimeTypeOrNull>): List<String> =
+    files.asSequence()
+        .filter { it.mimeType == MimeType.cppSource }
+        .map { it.filePath.toString() }
+        .filter { it.endsWith(CPP_EXT) }
+        .sorted()
+        .toList()
+
 /**
- * Discover needed .cpp files from dependency libraries by scanning
- * #include directives in the current library's .hpp and .cpp files.
- * [backendDir] is the parent directory containing all library output directories.
+ * The `.cpp` files of every transitive dependency of [libraryName], as paths relative to
+ * the backend output root (`<library>/<file>.cpp`). Sourced from the dependency graph the
+ * frontend recorded ([Dependencies.transitiveDependencies] over [Dependencies.filesPerLibrary])
+ * rather than by scraping `#include` directives, which is the authoritative set and avoids
+ * guessing `.hpp`→`.cpp` mappings or reading files off disk.
  */
-private fun CliEnv.discoverTransitiveCppDeps(
-    backendDir: FilePath,
+private fun transitiveCppDepFiles(
     libraryName: DashedIdentifier,
     dependencies: Dependencies<*>,
-): Set<String> {
-    val libPrefix = "$libraryName/"
-    val result = mutableSetOf<String>()
-    val scannedHpp = mutableSetOf<String>()
-    val includeRegex = Regex("""#include\s+[<"]([^>"]+\.hpp)[>"]""")
-
-    fun scanFileForIncludes(content: String) {
-        for (match in includeRegex.findAll(content)) {
-            val includePath = match.groupValues[1]
-            if ('/' !in includePath || includePath.startsWith("temper-core/")) continue
-            if (includePath.startsWith(libPrefix)) continue // same library
-            if (includePath in scannedHpp) continue // already scanned
-            scannedHpp.add(includePath)
-
-            // Add the corresponding .cpp for this dependency include
-            val cppPath = includePath.replace(HPP_EXT, CPP_EXT)
-            val cppParts = cppPath.split('/')
-            var cppFilePath = backendDir
-            for (part in cppParts.dropLast(1)) {
-                cppFilePath = cppFilePath.resolveDir(part)
-            }
-            cppFilePath = cppFilePath.resolveFile(cppParts.last())
-            if (fileExists(cppFilePath)) {
-                result.add(cppPath)
-            }
-
-            // Transitively scan the included header for its own dependencies
-            val hppParts = includePath.split('/')
-            var hppFilePath = backendDir
-            for (part in hppParts.dropLast(1)) {
-                hppFilePath = hppFilePath.resolveDir(part)
-            }
-            hppFilePath = hppFilePath.resolveFile(hppParts.last())
-            val hppContent = if (fileExists(hppFilePath)) readFile(hppFilePath) else continue
-            scanFileForIncludes(hppContent)
+): List<String> = buildList {
+    for (depLib in dependencies.transitiveDependencies[libraryName].orEmpty()) {
+        for (path in cppSourcePaths(dependencies.filesPerLibrary[depLib].orEmpty())) {
+            // Each library generates its own `main.cpp` entry point; only the current
+            // library's belongs in the link. Skip dependencies' to avoid a duplicate `main`.
+            if (path == MAIN_CPP_FILE) continue
+            add("${depLib.text}/$path")
         }
     }
-
-    // Scan all files from the current library for dependency includes
-    val currentFiles = dependencies.filesPerLibrary[libraryName] ?: return emptySet()
-    for (file in currentFiles) {
-        val path = file.filePath.toString()
-        if (!path.endsWith(HPP_EXT) && !path.endsWith(CPP_EXT)) continue
-
-        val filePath = backendDir.resolveDir(libraryName.text).resolveFile(path)
-        val content = if (fileExists(filePath)) readFile(filePath) else continue
-        scanFileForIncludes(content)
-    }
-
-    return result
-}
+}.sorted()
 
 private fun CliEnv.runTests(
     request: RunTestsRequest,

@@ -4,6 +4,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include "temper_bubble.hpp"
 #include "any_value.hpp"
 #include "nullable_param.hpp"
@@ -36,8 +37,42 @@ namespace temper {
             return std::make_shared<Base>(fields...);
         }
 
+        // Recover an owning shared_ptr for `this` so it can be passed where an `Object<T>` is
+        // expected. Every Temper object is created via make_shared, so the control block is
+        // recoverable and the result keeps the object alive even if the callee stores it.
+        //
+        // Two ownership-bearing shapes exist (see the struct emitter): inheritance/interface
+        // types share a single virtual `AnyValueBase` root (which derives enable_shared_from_this
+        // <AnyValueBase>), and plain rootless structs carry their own CRTP enable_shared_from_this
+        // <T>. They are dispatched separately because the former needs a down-cast from the shared
+        // root while the latter (non-polymorphic, so dynamic_cast is unavailable) does not.
+
+        // Inheritance/interface types: shared_from_this() yields shared_ptr<AnyValueBase>; the
+        // object's most-derived type is T, so down-cast (the type is polymorphic via AnyValueBase).
         template<class T>
-        std::shared_ptr<T> borrow_this(T* ptr) {
+        typename std::enable_if<std::is_base_of<AnyValueBase, T>::value, std::shared_ptr<T>>::type
+        borrow_this(T* ptr) {
+            return std::dynamic_pointer_cast<T>(ptr->shared_from_this());
+        }
+
+        // Plain rootless structs: shared_from_this() already yields shared_ptr<T> directly.
+        template<class T>
+        typename std::enable_if<
+            !std::is_base_of<AnyValueBase, T>::value
+            && std::is_base_of<std::enable_shared_from_this<T>, T>::value,
+            std::shared_ptr<T>>::type
+        borrow_this(T* ptr) {
+            return ptr->shared_from_this();
+        }
+
+        // Anything else (e.g. core helper types not rooted at either base): non-owning alias.
+        // Safe only as a transient borrow that does not outlive the object.
+        template<class T>
+        typename std::enable_if<
+            !std::is_base_of<AnyValueBase, T>::value
+            && !std::is_base_of<std::enable_shared_from_this<T>, T>::value,
+            std::shared_ptr<T>>::type
+        borrow_this(T* ptr) {
             return std::shared_ptr<T>(std::shared_ptr<T>{}, ptr);
         }
 
@@ -70,6 +105,9 @@ namespace temper {
 
         template<class T = void>
         [[noreturn]] T panic(std::string message) {
+            // Surface the panic message before aborting; otherwise the reason for the
+            // crash is lost.
+            std::cerr << message << std::endl;
             std::terminate();
         }
 
