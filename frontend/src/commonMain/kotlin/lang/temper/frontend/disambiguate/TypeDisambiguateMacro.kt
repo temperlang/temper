@@ -962,7 +962,7 @@ internal fun typeDisambiguateMacro(
                 }
                 val stableFormalName = predefinedFormalDefinition?.name
                     ?: doc.nameMaker.unusedSourceName(ParsedName(formalSymbol.text))
-                val stayLeaf = StayLeaf(doc, formalPos)
+                val stayLeaf = decoratedEdge?.let { StayLeaf(doc, formalPos) }
                 val formalDefinition = when {
                     predefinedFormalDefinition != null -> {
                         if (predefinedFormalDefinition.variance != variance) {
@@ -1008,8 +1008,10 @@ internal fun typeDisambiguateMacro(
                         V(Value(reifiedFormal))
                         V(vResolutionSymbol)
                         Ln(formalDefinition.name)
-                        V(vStaySymbol)
-                        Replant(stayLeaf)
+                        if (stayLeaf != null) {
+                            V(vStaySymbol)
+                            Replant(stayLeaf)
+                        }
                         V(vInitSymbol)
                         V(formalPos, Value(reifiedFormal))
                         if (genre == Genre.Documentation) {

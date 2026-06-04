@@ -588,7 +588,7 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
     val pos = e.target.pos
     val leftPos = pos.leftEdge
     val declarationName = document.nameMaker.unusedSourceName(name)
-    val stayLeaf = StayLeaf(target.document, pos)
+    val stayLeaf = decoratedEdge?.let { StayLeaf(target.document, pos) }
     val typeFormal = TypeFormal(
         pos,
         declarationName,
@@ -621,8 +621,10 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
             V(leftPos, nameSymbol)
             V(leftPos, typeDeclSymbol)
             V(leftPos, typeValue)
-            V(vStaySymbol)
-            Replant(stayLeaf)
+            if (stayLeaf != null) {
+                V(vStaySymbol)
+                Replant(stayLeaf)
+            }
             V(leftPos, vInitSymbol)
             V(pos, typeValue)
             if (genre == Genre.Documentation) {
