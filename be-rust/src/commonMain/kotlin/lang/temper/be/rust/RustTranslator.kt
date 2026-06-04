@@ -1006,7 +1006,7 @@ class RustTranslator(
     private fun buildBounds(typeParam: TmpL.TypeFormal): List<Rust.TypeParamBound> {
         val bounds = buildList {
             bounds@ for (bound in typeParam.upperBounds) {
-                when (val boundDef = bound.typeName.sourceDefinition) {
+                when (bound.typeName.sourceDefinition) {
                     // Special cases. TODO Others?
                     WellKnownTypes.anyValueTypeDefinition -> {}
                     WellKnownTypes.equatableTypeDefinition -> add(PARTIAL_EQ_NAME.toId(bound.pos))

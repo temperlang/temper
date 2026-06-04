@@ -1042,16 +1042,16 @@ val grammar = ProductionNames.run {
                     /* call to @ */
                 ) y CountUp(DecoratedExpr) y
                 "@".rename("@") y (
-                // We need to start a comma call tree after the annotation argument in both
-                // branches here so that the annotation applies both to the declaration here
-                // and any in the declarations following commas.
-                // In DecoratedLet, we finish the split block.
-                (Expr y DecoratedExprBody y `)`) /
-                    (
-                        Operator.Paren y `(` y Expr y "(" y
-                            NegLA(epsilon y Operator.Comma) y DecoratedExprBody y ")" y `)` y `)`
-                        )
-                )
+                    // We need to start a comma call tree after the annotation argument in both
+                    // branches here so that the annotation applies both to the declaration here
+                    // and any in the declarations following commas.
+                    // In DecoratedLet, we finish the split block.
+                    (Expr y DecoratedExprBody y `)`) /
+                        (
+                            Operator.Paren y `(` y Expr y "(" y
+                                NegLA(epsilon y Operator.Comma) y DecoratedExprBody y ")" y `)` y `)`
+                            )
+                    )
             ) / (
             startSplitTree(
                 /*Block*/
