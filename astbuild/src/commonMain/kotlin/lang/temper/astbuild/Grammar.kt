@@ -1046,6 +1046,7 @@ val grammar = ProductionNames.run {
                 // branches here so that the annotation applies both to the declaration here
                 // and any in the declarations following commas.
                 // In DecoratedLet, we finish the split block.
+                (Expr y Operator.In y `(` y Expr y "in" y Expr y `)` y `)`) /
                 (Expr y DecoratedExprBody y `)`) /
                     (
                         Operator.Paren y `(` y Expr y "(" y

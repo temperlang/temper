@@ -3718,6 +3718,80 @@ class BuildTreeTest {
     )
 
     @Test
+    fun classDeclarationDecoratedVariance() = assertAst(
+        input = """
+            |class Sure<in First, @hi @there in Thing, @bye @yall out Where> {}
+        """.trimMargin(),
+        wantJson = """
+            |[ "Call", [
+            |    [ "RightName", "class" ],
+            |    [ "Value", "\\word: Symbol" ],
+            |    [ "LeftName", "Sure" ],
+            |    [ "Value", "\\typeArg: Symbol" ],
+            |    [ "Call", [
+            |        [ "RightName", "@in" ],
+            |        [ "RightName", "First" ],
+            |    ]],
+            |    [ "Value", "\\typeArg: Symbol" ],
+            |    [ "Call", [
+            |        [ "RightName", "@" ],
+            |        [ "RightName", "bye" ],
+            |        [ "Call", [
+            |            [ "RightName", "@" ],
+            |            [ "RightName", "yall" ],
+            |            [ "Call", [
+            |                [ "RightName", "@out" ],
+            |                [ "RightName", "Where" ],
+            |            ]],
+            |        ]],
+            |    ]],
+            |    [ "Fun", [
+            |        [ "Block", [
+            |          ]
+            |        ]
+            |      ]
+            |    ]
+            |  ]
+            |]
+        """.trimMargin(),
+    )
+
+    @Test
+    fun classDeclarationDecoratedVarianceMinimal() = assertAst(
+        input = """
+            |class Sure<@hi @there out Thing> {}
+        """.trimMargin(),
+        wantJson = """
+            |[ "Call", [
+            |    [ "RightName", "class" ],
+            |    [ "Value", "\\word: Symbol" ],
+            |    [ "LeftName", "Sure" ],
+            |    [ "Value", "\\typeArg: Symbol" ],
+            |    [ "Value", "\\typeArg: Symbol" ],
+            |    [ "Call", [
+            |        [ "RightName", "@" ],
+            |        [ "RightName", "hi" ],
+            |        [ "Call", [
+            |            [ "RightName", "@" ],
+            |            [ "RightName", "there" ],
+            |            [ "Call", [
+            |                [ "RightName", "@in" ],
+            |                [ "RightName", "Things" ],
+            |            ]],
+            |        ]],
+            |    ]],
+            |    [ "Fun", [
+            |        [ "Block", [
+            |          ]
+            |        ]
+            |      ]
+            |    ]
+            |  ]
+            |]
+        """.trimMargin(),
+    )
+
+    @Test
     fun classDeclaration4() = assertAst(
         input = """
             |class C<T>(a: Int, let b: Boolean) extends Super {}

@@ -2827,6 +2827,31 @@ class ParseTest {
     )
 
     @Test
+    fun classDeclWithDecoratedVariance() = assertParseTree(
+        input = """
+            class Sure<in First, @hi @there in Thing, @bye @yall out Where> {}
+        """,
+        want = """
+        [
+          [
+            [ "class", "Sure" ],
+            "<",
+            [
+              ["in", "First"],
+              ",",
+              ["@", ["hi"], ["@", [["there"], "in", ["Thing"]]]],
+              ",",
+              ["@", ["bye"], ["@", ["yall"], ["out", "Where"]]],
+            ],
+            ">",
+          ],
+          "{",
+          "}"
+        ]
+        """,
+    )
+
+    @Test
     fun anglesAndLt() = assertParseTree(
         input = """Foo<A, B>() < Bar<C<D>>()""",
         want = """
