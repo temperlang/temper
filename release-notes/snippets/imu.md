@@ -1,4 +1,4 @@
-### Imu and PartialImu tag interfaces
+### Decorators for immutable types
 
 The following interfaces are now built into Temper. These tag interfaces are
 commitments on the part of any type that extends them:

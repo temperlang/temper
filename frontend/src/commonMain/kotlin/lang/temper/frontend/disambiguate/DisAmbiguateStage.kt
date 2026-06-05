@@ -604,9 +604,6 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
         stayLeaf = stayLeaf,
     )
     val typeValue = Value(ReifiedType(MkType2(typeFormal).get()))
-    if ("plicits" !in e.target.pos.loc.diagnostic) {
-        e.target
-    }
     // Prepare for either raw or decorated decl.
     val effectiveTarget = when (decoratedEdge) {
         null -> target
