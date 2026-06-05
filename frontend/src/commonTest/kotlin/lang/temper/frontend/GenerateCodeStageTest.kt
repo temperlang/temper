@@ -1252,7 +1252,7 @@ class GenerateCodeStageTest {
             |        @method(\f) @visibility(\public) @fn @stay @fromType(I__0<T__0>) @reach(\none) let f__0;
             |        @typeFormal(\A) @typeDecl(A__0) @reach(\none) let A__0;
             |        A__0 = type (A__0);
-            |        f__0 = (@stay fn f<A__0 extends AnyValue>(@impliedThis(I__0<T__0>) this__0: I__0<T__0>, x__0 /* aka x */: A__0, t__0 /* aka t */: T__0, i__0 /* aka i */: I__0<T__0>) /* return__0 */: T__0 {
+            |        f__0 = (@stay fn f<A__0 extends AnyValue>(@impliedThis(I__0<T__0>) this__0: I__0<T__0>, x__0 /* aka x */: A__0, t__0 /* aka t */: T__0, i__0 /* aka i */: I__0<T__0>) /* return__1 */: T__0 {
             |            pureVirtual()
             |        });
             |        @typeDecl(I__0<T__0>) @stay @reach(\none) let I__0;
@@ -1264,12 +1264,12 @@ class GenerateCodeStageTest {
             |        @method(\f) @visibility(\protected) @fn @stay @fromType(C__0<U__0>) @reach(\none) let f__1;
             |        @typeFormal(\B) @typeDecl(B__0) @reach(\none) let B__0;
             |        B__0 = type (B__0);
-            |        f__1 = (@stay fn f<B__0 extends AnyValue>(@impliedThis(C__0<U__0>) this__1: C__0<U__0>, x__1 /* aka x */: B__0, u__0 /* aka u */: U__0, i__1 /* aka i */: I__0<U__0>) /* return__1 */: U__0 {
-            |            return__1 = u__0
+            |        f__1 = (@stay fn f<B__0 extends AnyValue>(@impliedThis(C__0<U__0>) this__1: C__0<U__0>, x__1 /* aka x */: B__0, u__0 /* aka u */: U__0, i__1 /* aka i */: I__0<U__0>) /* return__2 */: U__0 {
+            |            return__2 = u__0
             |        });
             |        @fn @method(\constructor) @visibility(\public) @stay @fromType(C__0<U__0>) @reach(\none) let constructor__0;
-            |        constructor__0 = (@stay fn constructor(@impliedThis(C__0<U__0>) this__2: C__0<U__0>) /* return__2 */: Void {
-            |            return__2 = void
+            |        constructor__0 = (@stay fn constructor(@impliedThis(C__0<U__0>) this__2: C__0<U__0>) /* return__3 */: Void {
+            |            return__3 = void
             |        })
             |
             |        ```
