@@ -24,6 +24,7 @@ def download(*, out_dir: p.Path, tag: str) -> p.Path:
     # Get releases for tag.
     tag = quote(tag)
     url = f"https://api.github.com/repos/{org}/{repo}/releases/tags/{tag}"
+    print(f"tom!!! <---- Downloading: {url}")
     response = session.get(url)
     assert response.status_code == 200
     release: Release = response.json()
