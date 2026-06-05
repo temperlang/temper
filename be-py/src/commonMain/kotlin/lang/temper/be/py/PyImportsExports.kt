@@ -390,7 +390,7 @@ private fun Py.Arg.gatherImports(sink: ImportSink, exclude: Set<OutName>) {
 
 private fun Py.Arguments.gatherNames(names: MutableSet<OutName>) {
     args.forEach { arg ->
-        names.add(arg.arg.outName)
+        arg.arg?.also { names.add(it.outName) }
     }
 }
 
