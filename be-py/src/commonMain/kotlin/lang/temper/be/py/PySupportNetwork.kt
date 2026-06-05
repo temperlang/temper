@@ -753,7 +753,6 @@ val ListBuilderSet = PySeparateCode("list_builder_set", RUNTIME)
 val ListGetOr = PySeparateCode("list_get_or", RUNTIME)
 val ListJoin = PySeparateCode("list_join", RUNTIME)
 val ListMap = PySeparateCode("list_map", RUNTIME)
-val ListMapDropping = PySeparateCode("list_map_dropping", RUNTIME)
 val ListSlice = PySeparateCode("list_slice", RUNTIME)
 val LenFunction = PySeparateCode("len", SYS_BUILTINS)
 
@@ -1143,7 +1142,6 @@ private val pyConnections = mapOf(
     "Listed::join" to ListJoin,
     "Listed::length" to LenFunction,
     "Listed::map" to ListMap,
-    "Listed::mapDropping" to ListMapDropping,
     "Listed::reduce" to ListedReduce,
     "Listed::reduceFrom" to ListedReduceFrom,
     "Listed::slice" to ListSlice,

@@ -955,13 +955,6 @@ export sealed interface Listed<T> {
   @connected("Listed::toListBuilder")
   public toListBuilder(): ListBuilder<T>;
 
-  /**
-   * Maps elements using [transform] and filtering out elements for which
-   * [transform] fails.
-   */
-  @connected("Listed::mapDropping")
-  public mapDropping<O>(transform: fn (T): O throws Bubble): List<O>;
-
   /** Maps elements using [transform]. */
   @connected("Listed::map")
   public map<O>(transform: fn (T): O): List<O>;

@@ -2110,17 +2110,4 @@ do
     end
 end
 
-function temper.listed_mapdropping(list, f)
-    local ret = {}
-    local head = 1
-    for i = 1, #list do
-        local ok, val = pcall(f, list[i])
-        if ok then
-            ret[head] = val
-            head = head + 1
-        end
-    end
-    return ret
-end
-
 return temper
