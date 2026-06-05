@@ -271,7 +271,7 @@ class CppBackendTest {
             |        content: ```
             |          #include <temper-core/core.hpp>
             |          namespace my_test_library {
-            |            void f__0(std::shared_ptr<std::vector<int32_t> const> b) {
+            |            void f(std::shared_ptr<std::vector<int32_t> const> b) {
             |              if(b->empty()) {
             |                temper::core::log(std::make_shared<std::string const>("empty", 5));
             |              }else {
@@ -281,8 +281,8 @@ class CppBackendTest {
             |            namespace {
             |              struct _Init0 {
             |                _Init0() {
-            |                  f__0(temper::core::listify<int32_t>(2, 3));
-            |                  f__0(temper::core::listify<int32_t>());
+            |                  f(temper::core::listify<int32_t>(2, 3));
+            |                  f(temper::core::listify<int32_t>());
             |                }
             |              };
             |              _Init0 _init0;
