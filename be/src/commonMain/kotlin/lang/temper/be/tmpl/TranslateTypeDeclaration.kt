@@ -696,7 +696,7 @@ internal fun translateTypeDeclaration(
 
     // Walk the super-type tree figuring out which members are inherited that we need to
     // represent so that backends can easily produce bridging definitions.
-    val inherited = mutableMapOf<String, TmpL.SuperTypeMethod>()
+    val inherited = mutableListOf<TmpL.SuperTypeMethod>()
     run {
         // Find the overrides so that we can avoid them when computing the inherited members
         val superTypeMembersSeen = mutableSetOf<VisibleMemberShape>()
@@ -746,8 +746,7 @@ internal fun translateTypeDeclaration(
                     superType = projectedSuperType,
                     superTypeMember = memberShape,
                 )?.let {
-                    // We get these in breadth-first order, so exclude repeats.
-                    inherited.putIfAbsent(memberShape.symbol.text, makeSuperTypeMethod(it))
+                    inherited.add(makeSuperTypeMethod(it))
                 }
             }
             // Continue to super-types of the super-type
@@ -769,7 +768,7 @@ internal fun translateTypeDeclaration(
         typeParameters = typeParameters,
         superTypes = superTypes,
         members = adjustedMembers,
-        inherited = inherited.values,
+        inherited = inherited.toList(),
         kind = kind,
         typeShape = typeShape,
     ) to otherTopLevels.toList()

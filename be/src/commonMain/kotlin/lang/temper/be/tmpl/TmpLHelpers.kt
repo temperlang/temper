@@ -746,28 +746,38 @@ class TentativeTmpL internal constructor(
     internal val nascentModule: NascentModule,
 )
 
-fun <BE : Backend<BE>> Backend<BE>.injectSuperCallMethods(
+fun <BE : Backend<BE>, IC> Backend<BE>.injectSuperCallMethods(
     tentativeTmpl: TentativeTmpL,
-    injectInto: (TmpL.TypeDeclaration) -> Boolean,
-    chooseSuperName: (MethodKind, String) -> String,
+    injectWith: (TmpL.TypeDeclaration) -> IC?,
+    chooseSuperName: (IC, MethodKind, String) -> String?,
 ) {
     val nascentModule = tentativeTmpl.nascentModule
     val translator = tentativeTmpl.tmpLTranslator
     val supportNetwork = this.supportNetwork
     val namingContext = nascentModule.codeLocation.origin
     for (topLevel in nascentModule.topLevels) {
-        if (topLevel is TmpL.TypeDeclaration && injectInto(topLevel)) {
-            topLevel.injectSuperCallMethods<BE>(translator, supportNetwork, namingContext, chooseSuperName)
+        if (topLevel is TmpL.TypeDeclaration) {
+            val injectionContext = injectWith(topLevel)
+            if (injectionContext != null) {
+                topLevel.injectSuperCallMethods<BE, IC>(
+                    translator,
+                    supportNetwork,
+                    namingContext,
+                    injectionContext,
+                    chooseSuperName,
+                )
+            }
         }
     }
 }
 
 /** Creates methods that call super methods not present in this type. */
-internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
+internal fun <BE : Backend<BE>, IC> TmpL.TypeDeclaration.injectSuperCallMethods(
     translator: TmpLTranslator,
     supportNetwork: SupportNetwork,
     namingContext: NamingContext,
-    chooseSuperName: (MethodKind, String) -> String,
+    injectionContext: IC,
+    chooseSuperName: (IC, MethodKind, String) -> String?,
 ) {
     val missingMethods = this.inherited
     // TODO Pass genre into here?
@@ -784,6 +794,8 @@ internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
         val nameHints = method.parameterInfo?.names ?: listOf()
         val dotName = TmpL.DotName(pos, method.symbol.text)
         val name = TmpL.Id(pos, method.name as ResolvedName) // Unique if we don't have overloading.
+        val superName = chooseSuperName(injectionContext, method.methodKind, dotName.dotNameText)
+            ?: return@missingMethods null
         val metadata = translator.translateDeclarationMetadataValueMultimap(method.metadata)
         val parameters = funType.allValueFormals.mapIndexedNotNull { i, valueFormal ->
             // TODO Unify with logic in TypeTranslator?
@@ -835,7 +847,7 @@ internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
             statements = listOf(
                 TmpL.CallExpression(
                     pos,
-                    fn = chooseSuperName(method.methodKind, dotName.dotNameText).let { superName ->
+                    fn = superName.let { superName ->
                         TmpL.MethodReference(
                             pos,
                             subject = TmpL.TemperTypeName(pos, method.enclosingType),

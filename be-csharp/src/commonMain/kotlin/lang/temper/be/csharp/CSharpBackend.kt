@@ -135,7 +135,7 @@ import lang.temper.type.MethodKind
  * [CsTrace]: https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.trace
  */
 class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>(Factory.backendId, setup) {
-    override fun tentativeTmpL(): TmpL.ModuleSet =
+    override fun tentativeTmpL(): TmpL.ModuleSet = run {
         TmpLTranslator.translateModules(
             logSink,
             readyModules,
@@ -143,15 +143,22 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
             libraryConfigurations,
             dependencyResolver,
             tentativeOutputPathFor = ::tentativeOutputPathFor,
-            withTentative = {
+            withTentative = { tentativeTmpl ->
                 injectSuperCallMethods(
-                    it,
-                    injectInto = { decl ->
+                    tentativeTmpl,
+                    injectWith = { decl ->
                         // For default interface methods, you can't use them directly on classes unless you redefine them.
                         // But this only applies to classes, not sub-interfaces.
-                        decl.kind != TmpL.TypeDeclarationKind.Interface
+//                        decl.inherited.mapTo(mutableSetOf()) { it.name.dotNameText }
+                        when (decl.kind) {
+                            TmpL.TypeDeclarationKind.Interface -> null
+                            else -> mutableSetOf<String>() // For tracking used names.
+                        }
                     },
-                    chooseSuperName = { methodKind, name ->
+                    chooseSuperName = chooseSuperName@{ superCalls, methodKind, name ->
+                        // We get these in breadth-first order, so exclude repeats.
+                        name in superCalls && return@chooseSuperName null
+                        superCalls.add(name)
                         // Currently this will need to translate from camel to pascal again later, sadly.
                         when (methodKind) {
                             MethodKind.Normal -> "${name}Default"
@@ -162,9 +169,10 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
                     },
                 )
             },
-        ).also {
-            storeDescriptorsForDeclarations(it, Factory)
+        ).also { tmpl ->
+            storeDescriptorsForDeclarations(tmpl, Factory)
         }
+    }
 
     override fun translate(finished: TmpL.ModuleSet): List<OutputFileSpecification> {
         return buildList {
