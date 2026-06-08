@@ -35,3 +35,22 @@ Also test results of using these methods.
 false
 false
 ```
+
+## Override resolution order
+
+Also ensure that overrides are the same across backends. Does `A` or `C` have
+priority for `D`?
+
+    interface A { a(): String { "A wins!" } }
+    interface B extends A {}
+    interface C { a(): String { "C wins!" } }
+    class D extends B & C {}
+    console.log(new D().a());
+
+In Python's C3 linearization, `A` wins, but that's not expected in Temper. Maybe
+it's ok if subtypes of `A` implemented in Python follow Python rules, but code
+written in Temper needs consistent semantics.
+
+```log
+C wins!
+```
