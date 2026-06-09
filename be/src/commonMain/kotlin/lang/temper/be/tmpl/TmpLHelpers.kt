@@ -29,7 +29,6 @@ import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
-import lang.temper.type.NominalType
 import lang.temper.type.StaticPropertyShape
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
@@ -765,19 +764,44 @@ fun <BE : Backend<BE>> Backend<BE>.injectSuperCallMethods(
 }
 
 fun TmpL.TypeDeclaration.hasSplitSupers(inherited: TmpL.SuperTypeMethod): Boolean = run {
-    typeShape.hasSplitSupers(inherited.name.dotNameText)
+    val kind = (inherited.memberOverride.superTypeMember as? MethodShape)?.methodKind ?: return false
+    typeShape.hasSplitSupers(kind, inherited.name.dotNameText)
 }
 
-/** Whether different branches in the hierarchy have implementations for the method name given. */
-private fun TypeShape.hasSplitSupers(name: String): Boolean = run {
-    val implementingTypes = mutableSetOf<TemperName>()
-    fun dig(type: TypeDefinition) {
-        for (type in type.superTypes) {
-            dig(type.definition)
+/**
+ * Whether different branches in the hierarchy have implementations for the method name given.
+ * TODO Move this elsewhere since it has no TmpL in it?
+ */
+private fun TypeShape.hasSplitSupers(kind: MethodKind, name: String): Boolean = run {
+    val findings = mutableMapOf<ResolvedName, Boolean>()
+    fun dig(type: TypeDefinition, foundEarlierOnThisPath: Boolean): Boolean = run {
+        // See what we have here.
+        val method = (type as? TypeShape)?.members?.find { member ->
+            (member as? MethodShape)?.methodKind == kind && member.symbol.text == name
+        } as? MethodShape
+        val foundHere = method?.isPureVirtual == false
+        val foundByHere = foundEarlierOnThisPath || foundHere
+        // Compare findings on this path vs elsewhere.
+        val foundElsewhere = findings[type.name]
+        when (foundElsewhere) {
+            true -> when {
+                foundEarlierOnThisPath -> return@dig true // Multiple paths.
+                else -> return@dig false // Just elsewhere, but no need to continue digging.
+            }
+            false -> when {
+                foundByHere -> findings[type.name] = true // Previous path here didn't find it, so dig more.
+                else -> return@dig false // Neither of us found it, so no new information.
+            }
+            null -> findings[type.name] = foundByHere // First here, so record either yea or nay.
         }
+        // Found a reason to keep digging.
+        for (superType in type.superTypes) {
+            dig(superType.definition, foundByHere) && return@dig true
+        }
+        // No split findings on this path.
+        false
     }
-    dig(this)
-    true
+    dig(this, false)
 }
 
 /** Creates methods that call super methods not present in this type. */

@@ -10,6 +10,7 @@ import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLOperator
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.aType
+import lang.temper.be.tmpl.hasSplitSupers
 import lang.temper.be.tmpl.isNullValue
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapParameters
@@ -680,7 +681,7 @@ class RustTranslator(
                         addAll(translateMethodLike(member, generics = generics, type = typeRef, typePub = pub))
                     }
                     for (inherited in decl.inherited) {
-                        addAll(translateMethodSuperCall(inherited))
+                        addAll(translateMethodSuperCall(decl, inherited))
                     }
                 },
             ).toItem().also { moduleItems.add(it) }
@@ -2664,11 +2665,14 @@ class RustTranslator(
         }.let { listOf(it) }
     }
 
-    private fun translateMethodSuperCall(inherited: TmpL.SuperTypeMethod): Collection<Rust.Item> = run {
+    private fun translateMethodSuperCall(
+        decl: TmpL.TypeDeclaration,
+        inherited: TmpL.SuperTypeMethod,
+    ): Collection<Rust.Item> = run {
         val superShape = inherited.memberOverride.superTypeMember
         val targetType = superShape.enclosingType
         val methodKind = (superShape as? MethodShape)?.methodKind ?: return listOf()
-        // TODO Figure out if we actually need to do this forwarding.
+        decl.hasSplitSupers(inherited) || return listOf()
         buildForwarderFromClassToTrait(inherited.pos, targetType, superShape, methodKind)
     }
 
