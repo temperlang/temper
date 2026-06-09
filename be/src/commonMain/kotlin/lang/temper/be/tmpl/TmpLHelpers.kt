@@ -29,7 +29,9 @@ import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
+import lang.temper.type.NominalType
 import lang.temper.type.StaticPropertyShape
+import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
 import lang.temper.type.Visibility
@@ -760,6 +762,22 @@ fun <BE : Backend<BE>> Backend<BE>.injectSuperCallMethods(
             topLevel.injectSuperCallMethods<BE>(translator, supportNetwork, namingContext, chooseSuperName)
         }
     }
+}
+
+fun TmpL.TypeDeclaration.hasSplitSupers(inherited: TmpL.SuperTypeMethod): Boolean = run {
+    typeShape.hasSplitSupers(inherited.name.dotNameText)
+}
+
+/** Whether different branches in the hierarchy have implementations for the method name given. */
+private fun TypeShape.hasSplitSupers(name: String): Boolean = run {
+    val implementingTypes = mutableSetOf<TemperName>()
+    fun dig(type: TypeDefinition) {
+        for (type in type.superTypes) {
+            dig(type.definition)
+        }
+    }
+    dig(this)
+    true
 }
 
 /** Creates methods that call super methods not present in this type. */
