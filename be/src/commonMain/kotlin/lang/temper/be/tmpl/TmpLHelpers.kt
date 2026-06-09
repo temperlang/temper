@@ -770,9 +770,12 @@ fun TmpL.TypeDeclaration.hasSplitSupers(inherited: TmpL.SuperTypeMethod): Boolea
 
 /**
  * Whether different branches in the hierarchy have implementations for the method name given.
+ * The goal is to avoid putting in explicit overrides when not needed.
  * TODO Move this elsewhere since it has no TmpL in it?
  */
 private fun TypeShape.hasSplitSupers(kind: MethodKind, name: String): Boolean = run {
+    // Findings is entered for any type reached.
+    // True means the method was found *prior* to reaching the named supertype.
     val findings = mutableMapOf<ResolvedName, Boolean>()
     fun dig(type: TypeDefinition, foundEarlierOnThisPath: Boolean): Boolean = run {
         // See what we have here.
@@ -785,14 +788,14 @@ private fun TypeShape.hasSplitSupers(kind: MethodKind, name: String): Boolean = 
         val foundElsewhere = findings[type.name]
         when (foundElsewhere) {
             true -> when {
-                foundEarlierOnThisPath -> return@dig true // Multiple paths.
+                foundByHere -> return@dig true // Multiple paths.
                 else -> return@dig false // Just elsewhere, but no need to continue digging.
             }
             false -> when {
-                foundByHere -> findings[type.name] = true // Previous path here didn't find it, so dig more.
+                foundByHere -> findings[type.name] = foundEarlierOnThisPath // Dig to maybe flip more true.
                 else -> return@dig false // Neither of us found it, so no new information.
             }
-            null -> findings[type.name] = foundByHere // First here, so record either yea or nay.
+            null -> findings[type.name] = foundEarlierOnThisPath // First here, so record either yea or nay.
         }
         // Found a reason to keep digging.
         for (superType in type.superTypes) {

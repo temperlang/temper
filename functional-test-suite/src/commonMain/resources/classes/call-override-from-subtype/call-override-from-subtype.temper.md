@@ -69,3 +69,40 @@ Here, C *doesn't* extend A.
 ```log
 C wins!
 ```
+
+### Deep inheritance
+
+Here, both sides extend A, but one side is longer than the other, so
+breadth-first search isn't good enough.
+
+    interface ADeep { a(): String { "A wins!" } }
+
+D -> B3 -> B2 -> B1 is 3 steps, and B1 is still under A, so B1 should override
+A.
+
+    interface B1Deep extends ADeep { a(): String { "B1 wins!" } }
+    interface B2Deep extends B1Deep {}
+    interface B3Deep extends B2Deep {}
+
+But D -> C -> A is only 2 steps, so A is closer by breadth-first than B1. This
+would cause A to win if we use simple breadth-first, which denies the override
+of B1Deep.
+
+    interface CDeep extends ADeep {}
+    class DDeep extends B2Deep & CDeep {}
+    console.log(new DDeep().a());
+
+```log
+B1 wins!
+```
+
+But for kicks, let's reverse the order and see what happens.
+
+    class EDeep extends CDeep & B2Deep {}
+    console.log(new EDeep().a());
+
+And this is different from Python's C3 linearization.
+
+```log
+A wins!
+```
