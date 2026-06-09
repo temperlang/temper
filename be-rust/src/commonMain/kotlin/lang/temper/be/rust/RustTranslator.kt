@@ -675,8 +675,13 @@ class RustTranslator(
                 generics = generics.deepCopy(),
                 trait = null,
                 type = typeRef,
-                items = decl.members.flatMap { member ->
-                    translateMethodLike(member, generics = generics, type = typeRef, typePub = pub)
+                items = buildList {
+                    for (member in decl.members) {
+                        addAll(translateMethodLike(member, generics = generics, type = typeRef, typePub = pub))
+                    }
+                    for (inherited in decl.inherited) {
+                        addAll(translateMethodSuperCall(inherited))
+                    }
                 },
             ).toItem().also { moduleItems.add(it) }
         } finally {
@@ -1125,6 +1130,15 @@ class RustTranslator(
             // Just let the trait handle this one directly. Self-call here is infinite recursion.
             return listOf()
         }
+        buildForwarderFromClassToTrait(pos, targetType, superShape, methodKind)
+    }
+
+    private fun buildForwarderFromClassToTrait(
+        pos: Position,
+        targetType: TypeShape?,
+        superShape: VisibleMemberShape,
+        methodKind: MethodKind,
+    ): List<Rust.Item> = run {
         buildForwarderToTrait(pos, targetType, superShape, methodKind) result@{ traitType, methodId, argIds ->
             Rust.Call(
                 pos,
@@ -2648,6 +2662,14 @@ class RustTranslator(
             is TmpL.InstanceProperty -> return listOf() // handled separately
             is TmpL.StaticProperty -> translateStaticProperty(member)
         }.let { listOf(it) }
+    }
+
+    private fun translateMethodSuperCall(inherited: TmpL.SuperTypeMethod): Collection<Rust.Item> = run {
+        val superShape = inherited.memberOverride.superTypeMember
+        val targetType = superShape.enclosingType
+        val methodKind = (superShape as? MethodShape)?.methodKind ?: return listOf()
+        // TODO Figure out if we actually need to do this forwarding.
+        buildForwarderFromClassToTrait(inherited.pos, targetType, superShape, methodKind)
     }
 
     private fun translateModuleInitFailed(statement: TmpL.ModuleInitFailed): Rust.Statement {

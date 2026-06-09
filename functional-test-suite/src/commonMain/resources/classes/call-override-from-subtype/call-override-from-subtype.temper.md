@@ -38,18 +38,33 @@ false
 
 ## Override resolution order
 
-Also ensure that overrides are the same across backends. Does `A` or `C` have
-priority for `D`?
+Also ensure that overrides are the same across backends. Which interface version
+is called by default? And for some target languages, we need to choose a winner
+explicitly to avoid compiler errors.
+
+### Joined inheritance
+
+Here, B and C both extend A.
 
     interface A { a(): String { "A wins!" } }
     interface B extends A {}
-    interface C { a(): String { "C wins!" } }
+    interface C extends A { a(): String { "C wins!" } }
     class D extends B & C {}
     console.log(new D().a());
 
-In Python's C3 linearization, `A` wins, but that's not expected in Temper. Maybe
-it's ok if subtypes of `A` implemented in Python follow Python rules, but code
-written in Temper needs consistent semantics.
+```log
+C wins!
+```
+
+### Split inheritance
+
+Here, C *doesn't* extend A.
+
+    interface ASplit { a(): String { "A wins!" } }
+    interface BSplit extends ASplit {}
+    interface CSplit { a(): String { "C wins!" } }
+    class DSplit extends BSplit & CSplit {}
+    console.log(new DSplit().a());
 
 ```log
 C wins!
