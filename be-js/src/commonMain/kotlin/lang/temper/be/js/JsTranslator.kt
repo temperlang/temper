@@ -1141,18 +1141,7 @@ internal class JsTranslator(
 
         val classDoc = translateDocClassType(d)?.also { before.add(it) }
 
-        val memberNames = mutableSetOf<TmpL.DotName>()
-
         val (elementsPart, otherPart) = d.members.flatMap { m ->
-            when (m) {
-                is TmpL.Getter -> memberNames.add(m.dotName)
-                is TmpL.Setter -> memberNames.add(m.dotName)
-                is TmpL.NormalMethod -> memberNames.add(m.dotName)
-                is TmpL.StaticMethod -> memberNames.add(m.dotName)
-                is TmpL.InstanceProperty -> memberNames.add(m.dotName)
-                is TmpL.StaticProperty -> memberNames.add(m.dotName)
-                is TmpL.Garbage, is TmpL.Constructor -> {}
-            }
             translateClassMember(m, classNameId, classDoc)
         }.partition()
 

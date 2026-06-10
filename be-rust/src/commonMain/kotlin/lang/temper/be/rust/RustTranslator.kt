@@ -2669,10 +2669,10 @@ class RustTranslator(
         decl: TmpL.TypeDeclaration,
         inherited: TmpL.SuperTypeMethod,
     ): Collection<Rust.Item> = run {
+        decl.hasSplitSupers(inherited) || return listOf()
         val superShape = inherited.memberOverride.superTypeMember
         val targetType = superShape.enclosingType
         val methodKind = (superShape as? MethodShape)?.methodKind ?: return listOf()
-        decl.hasSplitSupers(inherited) || return listOf()
         buildForwarderFromClassToTrait(inherited.pos, targetType, superShape, methodKind)
     }
 
