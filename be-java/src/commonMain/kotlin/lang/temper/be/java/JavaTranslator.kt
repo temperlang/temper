@@ -10,6 +10,7 @@ import lang.temper.be.tmpl.TmpLOperator
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.autodocFor
 import lang.temper.be.tmpl.dependencyCategory
+import lang.temper.be.tmpl.findImmediateSuperReaching
 import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapGeneric
@@ -30,6 +31,7 @@ import lang.temper.name.ModuleName
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
 import lang.temper.type.Abstractness
+import lang.temper.type.MethodShape
 import lang.temper.type.isVoidLike
 import lang.temper.type.mentionsInvalid
 import lang.temper.type.simplify
@@ -1977,12 +1979,18 @@ class JavaTranslator(
             val subject = fn.subject
             val methodSignature = toSigBestEffort(fn.method?.descriptor)
             when (subject) {
-                is TmpL.SuperSubject -> return J.SuperMethodInvocationExpr(
-                    pos,
-                    type = names.classTypeName(subject.typeName.sourceDefinition).toQualIdent(subject.pos),
-                    method = names.method(fn.methodName).toIdentifier(fn.methodName.pos),
-                    args = callActuals(actuals, methodSignature),
-                )
+                is TmpL.SuperSubject -> {
+                    // We really need and expect this, but allow fallbacks anyway.
+                    val superType = (fn.method as? MethodShape)?.let {
+                        subject.subType.findImmediateSuperReaching(it)?.definition
+                    } ?: subject.typeName.sourceDefinition
+                    return J.SuperMethodInvocationExpr(
+                        pos,
+                        type = names.classTypeName(superType).toQualIdent(subject.pos),
+                        method = names.method(fn.methodName).toIdentifier(fn.methodName.pos),
+                        args = callActuals(actuals, methodSignature),
+                    )
+                }
                 is TmpL.TypeName -> return J.StaticMethodInvocationExpr(
                     pos,
                     type = names.classTypeName(subject.sourceDefinition).toQualIdent(subject.pos),

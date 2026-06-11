@@ -8,6 +8,7 @@ import lang.temper.be.tmpl.SuperCallConfig
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
+import lang.temper.be.tmpl.hasSplitSupers
 import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.common.MimeType
 import lang.temper.fs.ResourceDescriptor
@@ -113,18 +114,20 @@ class JavaBackend private constructor(
         withTentative = { tentativeTmpL ->
             injectSuperCallMethods(
                 tentativeTmpL,
-                injectInto = { true }, // Needed also for interfaces in java.
-                configSuperCall = { type, method ->
-                    // TODO For classes, we need to implement only where split.
-                    // TODO For interfaces, always implement to leave the call chain open.
-                    val inName = method.name.dotNameText
-                    val name = when ((method.memberOverride.superTypeMember as MethodShape).methodKind) {
-                        MethodKind.Normal -> inName
-                        MethodKind.Getter -> "get$inName"
-                        MethodKind.Setter -> "set$inName"
-                        MethodKind.Constructor -> error("unexpected")
-                    }
-                    SuperCallConfig(name = name, skipThis = true)
+                injectInto = { true },
+                configSuperCall = configSuperCall@{ type, method ->
+                    // Provide Unit for continue or null for unwanted in this `when`.
+                    when {
+                        // We apparently see pure virtuals here sometimes, which we don't need to worry about.
+                        (method.memberOverride.superTypeMember as? MethodShape)?.isPureVirtual == true -> null
+                        // For interfaces, always implement to leave the call chain open.
+                        type.kind == TmpL.TypeDeclarationKind.Interface -> {}
+                        // For classes, we need to implement only where split options are available.
+                        type.hasSplitSupers(method) -> {}
+                        else -> null
+                    } ?: return@configSuperCall null
+                    // Got a unit, so config the call. Supercalls in Java exclude `this`.
+                    SuperCallConfig(skipThis = true)
                 },
             )
         },

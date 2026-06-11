@@ -153,17 +153,7 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
                         // But this only applies to classes, not sub-interfaces.
                         type.kind != TmpL.TypeDeclarationKind.Interface
                     },
-                    configSuperCall = { type, method ->
-                        // Currently this will need to translate from camel to pascal again later, sadly.
-                        val inName = method.name.dotNameText
-                        val name = when ((method.memberOverride.superTypeMember as MethodShape).methodKind) {
-                            MethodKind.Normal -> "${inName}Default"
-                            MethodKind.Getter -> "get${inName.camelToPascal()}Default"
-                            MethodKind.Setter -> "set${inName.camelToPascal()}Default"
-                            MethodKind.Constructor -> error("unexpected")
-                        }
-                        SuperCallConfig(name = name, skipThis = false)
-                    },
+                    configSuperCall = { _, _ -> SuperCallConfig(skipThis = false) },
                 )
             },
         ).also {

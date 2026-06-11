@@ -226,7 +226,7 @@ internal interface TmpLTreeRewriter {
 
     fun rewriteSubject(x: TmpL.Subject): TmpL.Subject = when (x) {
         is TmpL.Expression -> rewriteExpression(x)
-        is TmpL.SuperSubject -> TmpL.SuperSubject(x.pos, rewriteTypeName(x.typeName))
+        is TmpL.SuperSubject -> TmpL.SuperSubject(x.pos, rewriteTypeName(x.typeName), x.subType)
         is TmpL.TypeName -> rewriteTypeName(x)
     }
 

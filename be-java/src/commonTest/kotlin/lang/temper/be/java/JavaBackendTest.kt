@@ -848,6 +848,7 @@ class JavaBackendTest {
             |export interface B extends A {}
             |export interface C { a(): String { "C wins!" } }
             |export class D extends B & C {}
+            |console.log(new D().a());
         """.trimMargin(),
         want = """
                 |"pom.xml": "__DO_NOT_CARE__",
@@ -878,6 +879,9 @@ class JavaBackendTest {
                 |                        ```
                 |                        package my_test_library.test;
                 |                        public interface B extends A {
+                |                            default String a() {
+                |                                return A.super.a();
+                |                            }
                 |                        }
                 |
                 |                        ```
@@ -904,7 +908,7 @@ class JavaBackendTest {
                 |                            public D() {
                 |                            }
                 |                            public String a() {
-                |                                return C.super.a(this);
+                |                                return C.super.a();
                 |                            }
                 |                        }
                 |

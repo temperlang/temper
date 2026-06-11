@@ -14,7 +14,6 @@ import lang.temper.log.CodeLocation
 import lang.temper.log.FilePath
 import lang.temper.log.Position
 import lang.temper.log.filePath
-import lang.temper.name.BuiltinName
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ExportedName
 import lang.temper.name.ImplicitsCodeLocation
@@ -29,7 +28,7 @@ import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
-import lang.temper.type.StaticPropertyShape
+import lang.temper.type.NominalType
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
@@ -748,14 +747,13 @@ class TentativeTmpL internal constructor(
 )
 
 data class SuperCallConfig(
-    val name: String,
     val skipThis: Boolean,
 )
 
 fun <BE : Backend<BE>> Backend<BE>.injectSuperCallMethods(
     tentativeTmpl: TentativeTmpL,
     injectInto: (TmpL.TypeDeclaration) -> Boolean,
-    configSuperCall: (TmpL.TypeDeclaration, TmpL.SuperTypeMethod) -> SuperCallConfig,
+    configSuperCall: (TmpL.TypeDeclaration, TmpL.SuperTypeMethod) -> SuperCallConfig?,
 ) {
     val nascentModule = tentativeTmpl.nascentModule
     val translator = tentativeTmpl.tmpLTranslator
@@ -773,7 +771,7 @@ internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
     translator: TmpLTranslator,
     supportNetwork: SupportNetwork,
     namingContext: NamingContext,
-    configSuperCall: (TmpL.TypeDeclaration, TmpL.SuperTypeMethod) -> SuperCallConfig,
+    configSuperCall: (TmpL.TypeDeclaration, TmpL.SuperTypeMethod) -> SuperCallConfig?,
 ) {
     val missingMethods = this.inherited
     // TODO Pass genre into here?
@@ -836,30 +834,23 @@ internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
         }.let { TmpL.TypeParameters(pos, it) }
         val overridden: List<TmpL.SuperTypeMethod> = emptyList() // TODO should this point to the super?
         val visibility = TmpL.VisibilityModifier(pos, method.visibility.toTmpL())
-        val superConfig = configSuperCall(this, missingMethod)
+        val superConfig = configSuperCall(this, missingMethod) ?: return@missingMethods null
         val body = TmpL.BlockStatement(
             pos,
             statements = listOf(
                 TmpL.CallExpression(
                     pos,
-                    fn = superConfig.name.let { superName ->
-                        // Abusively using the wrong kind of shape here.
-                        val methodShape = StaticPropertyShape(
-                            enclosingType = method.enclosingType,
-                            name = BuiltinName(superName), // Expected generated to match this.
-                            stay = null,
-                            symbol = Symbol(superName),
-                            visibility = Visibility.Protected, // TODO Support configuration of this?
-                        )
-                        methodShape.descriptor = method.descriptor
-                        TmpL.MethodReference(
+                    fn = TmpL.MethodReference(
+                        pos,
+                        subject = TmpL.SuperSubject(
                             pos,
-                            subject = TmpL.SuperSubject(pos, TmpL.TemperTypeName(pos, method.enclosingType)),
-                            methodName = TmpL.DotName(pos, superName),
-                            method = methodShape,
-                            type = funType,
-                        )
-                    },
+                            typeName = TmpL.TemperTypeName(pos, method.enclosingType),
+                            subType = typeShape,
+                        ),
+                        methodName = missingMethod.name.deepCopy(),
+                        method = method,
+                        type = funType,
+                    ),
                     parameters = parameters.parameters.zip(funType.requiredInputTypes + funType.optionalInputTypes)
                         .mapIndexedNotNull { index, (parameter, valueFormal) ->
                             val paramName = parameter.name.deepCopy()
@@ -938,6 +929,40 @@ internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
     this.members += injectedMethods
 }
 
+/**
+ * Return an immediate supertype of [this] that has a path to the inherited method
+ * and which also has no other supertypes in the chain that also implement it.
+ *
+ * The returned type might *not* have the shortest path, if there are multiple.
+ *
+ * TODO Move out of tmpl?
+ */
+fun TypeShape.findImmediateSuperReaching(inherited: MethodShape): NominalType? = run {
+    val target = inherited.enclosingType
+    fun dig(shape: TypeShape): NominalType? = run {
+        superTypes@ for (sup in shape.superTypes) {
+            val supShape = sup.definition as? TypeShape ?: continue@superTypes
+            if (supShape == target) {
+                // This sup is the type we're looking for.
+                // Because it's the original enclosing type, it must have the method defined in it.
+                return sup
+            }
+            val found = supShape.methods.any { it.methodKind == inherited.methodKind && it.symbol == inherited.symbol }
+            if (found) {
+                // We found the method, but in the wrong type, so this path is no good.
+                continue@superTypes
+            }
+            if (dig(supShape) != null) {
+                // We found a path up the chain, and they reach it through sup.
+                return sup
+            }
+        }
+        // No path found this way.
+        null
+    }
+    dig(this)
+}
+
 fun TmpL.TypeDeclaration.hasSplitSupers(inherited: TmpL.SuperTypeMethod): Boolean = run {
     val kind = (inherited.memberOverride.superTypeMember as? MethodShape)?.methodKind ?: return false
     typeShape.hasSplitSupers(kind, inherited.name.dotNameText)
@@ -948,7 +973,7 @@ fun TmpL.TypeDeclaration.hasSplitSupers(inherited: TmpL.SuperTypeMethod): Boolea
  * The goal is to avoid putting in explicit overrides when not needed.
  * TODO Move this elsewhere since it has no TmpL in it?
  */
-private fun TypeShape.hasSplitSupers(kind: MethodKind, name: String): Boolean = run {
+fun TypeShape.hasSplitSupers(kind: MethodKind, name: String): Boolean = run {
     // Findings is entered for any type reached.
     // True means the method was found *prior* to reaching the named supertype.
     val findings = mutableMapOf<ResolvedName, Boolean>()

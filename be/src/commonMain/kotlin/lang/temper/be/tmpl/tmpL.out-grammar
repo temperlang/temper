@@ -1469,9 +1469,8 @@ TypeSubject =
       SuperSubject
     | TypeName;
 
-/**
- * Only applies to instance methods, but easier to allow on subjects generally.
- */
+/** Involved in a call to a supertype method. */
+SuperSubject(subType%`TypeShape`);
 SuperSubject ::= "super" & typeName%TypeName;
 
 ValueReference(

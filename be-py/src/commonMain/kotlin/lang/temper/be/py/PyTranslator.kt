@@ -1421,7 +1421,7 @@ class PyTranslator(
 
     internal fun subject(x: TmpL.Subject): Py.Expr = when (x) {
         is TmpL.Expression -> expr(x)
-        is TmpL.TypeName -> translateTypeName(x)
+        is TmpL.TypeSubject -> translateTypeName(x.typeName)
     }
 
     private fun translateCall(x: TmpL.CallExpression): Py.Tree =

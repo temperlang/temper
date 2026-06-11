@@ -7272,12 +7272,11 @@ object TmpL {
         override fun deepCopy(): TypeName
     }
 
-    /**
-     * Only applies to instance methods, but easier to allow on subjects generally.
-     */
+    /** Involved in a call to a supertype method. */
     class SuperSubject(
         pos: Position,
         typeName: TypeName,
+        var subType: TypeShape,
     ) : BaseTree(pos), TypeSubject {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
@@ -7298,17 +7297,19 @@ object TmpL {
             get() = _typeName
             set(newValue) { _typeName = updateTreeConnection(_typeName, newValue) }
         override fun deepCopy(): SuperSubject {
-            return SuperSubject(pos, typeName = this.typeName.deepCopy())
+            return SuperSubject(pos, typeName = this.typeName.deepCopy(), subType = this.subType)
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is SuperSubject && this.typeName == other.typeName
+            return other is SuperSubject && this.typeName == other.typeName && this.subType == other.subType
         }
         override fun hashCode(): Int {
-            return typeName.hashCode()
+            var hc = typeName.hashCode()
+            hc = 31 * hc + subType.hashCode()
+            return hc
         }
         init {
             this._typeName = updateTreeConnection(null, typeName)
