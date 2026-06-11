@@ -842,6 +842,86 @@ class JavaBackendTest {
     }
 
     @Test
+    fun multipleInheritance() = assertGeneratedJavaRaw(
+        input = """
+            |export interface A { a(): String { "A wins!" } }
+            |export interface B extends A {}
+            |export interface C { a(): String { "C wins!" } }
+            |export class D extends B & C {}
+        """.trimMargin(),
+        want = """
+                |"pom.xml": "__DO_NOT_CARE__",
+                |"src": {
+                |    "main": {
+                |        "java": {
+                |            "my_test_library": {
+                |                "test": {
+                |                    "TestGlobal.java": "__DO_NOT_CARE__",
+                |                    "TestGlobal.java.map": "__DO_NOT_CARE__",
+                |                    "TestMain.java": "__DO_NOT_CARE__",
+                |                    "TestMain.java.map": "__DO_NOT_CARE__",
+                |                    "A.java": {
+                |                        "content":
+                |                        ```
+                |                        package my_test_library.test;
+                |                        public interface A {
+                |                            default String a() {
+                |                                return "A wins!";
+                |                            }
+                |                        }
+                |
+                |                        ```
+                |                    },
+                |                    "A.java.map": "__DO_NOT_CARE__",
+                |                    "B.java": {
+                |                        "content":
+                |                        ```
+                |                        package my_test_library.test;
+                |                        public interface B extends A {
+                |                        }
+                |
+                |                        ```
+                |                    },
+                |                    "B.java.map": "__DO_NOT_CARE__",
+                |                    "C.java": {
+                |                        "content":
+                |                        ```
+                |                        package my_test_library.test;
+                |                        public interface C {
+                |                            default String a() {
+                |                                return "C wins!";
+                |                            }
+                |                        }
+                |
+                |                        ```
+                |                    },
+                |                    "C.java.map": "__DO_NOT_CARE__",
+                |                    "D.java": {
+                |                        "content":
+                |                        ```
+                |                        package my_test_library.test;
+                |                        public final class D implements B, C {
+                |                            public D() {
+                |                            }
+                |                            public String a() {
+                |                                return C.super.a(this);
+                |                            }
+                |                        }
+                |
+                |                        ```
+                |                    },
+                |                    "D.java.map": "__DO_NOT_CARE__"
+                |                },
+                |                "MyTestLibraryGlobal.java": "__DO_NOT_CARE__",
+                |                "MyTestLibraryMain.java": "__DO_NOT_CARE__",
+                |            }
+                |        }
+                |    }
+                |}
+            """.trimMargin(),
+    )
+
+    @Test
     fun coroutineConversion() = assertGeneratedJavaRaw(
         """
             |let f(factory: fn (): SafeGenerator<Empty>): Void {

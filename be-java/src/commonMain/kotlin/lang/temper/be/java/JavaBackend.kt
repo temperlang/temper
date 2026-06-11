@@ -4,9 +4,11 @@ import lang.temper.be.Backend
 import lang.temper.be.BackendSetup
 import lang.temper.be.names.NameSelection
 import lang.temper.be.tmpl.LibraryRootContext
+import lang.temper.be.tmpl.SuperCallConfig
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
+import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.common.MimeType
 import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
@@ -25,6 +27,8 @@ import lang.temper.name.ModuleName
 import lang.temper.name.OutName
 import lang.temper.name.Symbol
 import lang.temper.name.rootModuleName
+import lang.temper.type.MethodKind
+import lang.temper.type.MethodShape
 import lang.temper.be.java.Java as J
 import lang.temper.value.DependencyCategory as DepCat
 
@@ -106,6 +110,24 @@ class JavaBackend private constructor(
         libraryConfigurations = libraryConfigurations,
         dependencyResolver = dependencyResolver,
         tentativeOutputPathFor = { allocateTextFile(it, sourceFileExtension) },
+        withTentative = { tentativeTmpL ->
+            injectSuperCallMethods(
+                tentativeTmpL,
+                injectInto = { true }, // Needed also for interfaces in java.
+                configSuperCall = { type, method ->
+                    // TODO For classes, we need to implement only where split.
+                    // TODO For interfaces, always implement to leave the call chain open.
+                    val inName = method.name.dotNameText
+                    val name = when ((method.memberOverride.superTypeMember as MethodShape).methodKind) {
+                        MethodKind.Normal -> inName
+                        MethodKind.Getter -> "get$inName"
+                        MethodKind.Setter -> "set$inName"
+                        MethodKind.Constructor -> error("unexpected")
+                    }
+                    SuperCallConfig(name = name, skipThis = true)
+                },
+            )
+        },
     )
 
     private val names: JavaNames =

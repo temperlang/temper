@@ -1785,7 +1785,7 @@ class RustTranslator(
                         }
                         translateExpression(subject, avoidClone = true).member(member)
                     }
-                    is TmpL.TypeName -> translateTypeName(subject).extendWith(listOf(member))
+                    is TmpL.TypeSubject -> translateTypeName(subject.typeName).extendWith(listOf(member))
                 }
             }
             is TmpL.GarbageCallable -> translateGarbage(callable)
@@ -2812,9 +2812,9 @@ class RustTranslator(
         }
         val subject = when (val subject = ref.subject) {
             is TmpL.Expression -> subject
-            is TmpL.TypeName -> {
+            is TmpL.TypeSubject -> {
                 // Static property access.
-                val callee = translateTypeName(subject).extendWith(listOf(propertyId))
+                val callee = translateTypeName(subject.typeName).extendWith(listOf(propertyId))
                 return Rust.Call(ref.pos, callee = callee, args = listOf())
             }
         }
@@ -2933,7 +2933,7 @@ class RustTranslator(
         // Get the property type so we know if we need to wrap the value. TODO Factor out any of this?
         val subjectShape = when (val subject = statement.left.subject) {
             is TmpL.Expression -> (subject.type as? DefinedNonNullType)?.definition
-            is TmpL.TypeName -> subject.sourceDefinition as? TypeShape
+            is TmpL.TypeSubject -> subject.typeName.sourceDefinition as? TypeShape
         }
         val propertyText = when (val property = statement.left.property) {
             is TmpL.ExternalPropertyId -> property.name.dotNameText
@@ -2949,7 +2949,7 @@ class RustTranslator(
                 val ref = statement.left
                 val subject = when (val subj = ref.subject) {
                     is TmpL.Expression -> translateExpression(subj, avoidClone = true)
-                    is TmpL.TypeName -> translateTypeName(subj) // wrong but also shouldn't happen
+                    is TmpL.TypeSubject -> translateTypeName(subj.typeName) // wrong but also shouldn't happen
                 }
                 val setter = "set_${translatePropertyId(ref.property)}"
                 subject.methodCall(setter, listOf(value))

@@ -6,6 +6,7 @@ import lang.temper.be.MetadataKey
 import lang.temper.be.cli.RunnerSpecifics
 import lang.temper.be.names.NameSelection
 import lang.temper.be.storeDescriptorsForDeclarations
+import lang.temper.be.tmpl.SuperCallConfig
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
@@ -36,6 +37,7 @@ import lang.temper.name.ModuleName
 import lang.temper.name.Symbol
 import lang.temper.name.rootModuleName
 import lang.temper.type.MethodKind
+import lang.temper.type.MethodShape
 
 /**
  * <!-- snippet: backend/csharp -->
@@ -146,19 +148,21 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
             withTentative = {
                 injectSuperCallMethods(
                     it,
-                    injectInto = { decl ->
+                    injectInto = { type ->
                         // For default interface methods, you can't use them directly on classes unless you redefine them.
                         // But this only applies to classes, not sub-interfaces.
-                        decl.kind != TmpL.TypeDeclarationKind.Interface
+                        type.kind != TmpL.TypeDeclarationKind.Interface
                     },
-                    chooseSuperName = { methodKind, name ->
+                    configSuperCall = { type, method ->
                         // Currently this will need to translate from camel to pascal again later, sadly.
-                        when (methodKind) {
-                            MethodKind.Normal -> "${name}Default"
-                            MethodKind.Getter -> "get${name.camelToPascal()}Default"
-                            MethodKind.Setter -> "set${name.camelToPascal()}Default"
+                        val inName = method.name.dotNameText
+                        val name = when ((method.memberOverride.superTypeMember as MethodShape).methodKind) {
+                            MethodKind.Normal -> "${inName}Default"
+                            MethodKind.Getter -> "get${inName.camelToPascal()}Default"
+                            MethodKind.Setter -> "set${inName.camelToPascal()}Default"
                             MethodKind.Constructor -> error("unexpected")
                         }
+                        SuperCallConfig(name = name, skipThis = false)
                     },
                 )
             },

@@ -30,7 +30,6 @@ import lang.temper.name.ModuleName
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
 import lang.temper.type.Abstractness
-import lang.temper.type.Visibility
 import lang.temper.type.isVoidLike
 import lang.temper.type.mentionsInvalid
 import lang.temper.type.simplify
@@ -1839,8 +1838,8 @@ class JavaTranslator(
                     expr = expr(subject),
                     field = names.field(gp.property),
                 )
-                is TmpL.TypeName ->
-                    names.classTypeName(subject.sourceDefinition)
+                is TmpL.TypeSubject ->
+                    names.classTypeName(subject.typeName.sourceDefinition)
                         .qualify(names.staticField(gp.property))
                         .toNameExpr(gp.pos)
             }
@@ -1978,6 +1977,12 @@ class JavaTranslator(
             val subject = fn.subject
             val methodSignature = toSigBestEffort(fn.method?.descriptor)
             when (subject) {
+                is TmpL.SuperSubject -> return J.SuperMethodInvocationExpr(
+                    pos,
+                    type = names.classTypeName(subject.typeName.sourceDefinition).toQualIdent(subject.pos),
+                    method = names.method(fn.methodName).toIdentifier(fn.methodName.pos),
+                    args = callActuals(actuals, methodSignature),
+                )
                 is TmpL.TypeName -> return J.StaticMethodInvocationExpr(
                     pos,
                     type = names.classTypeName(subject.sourceDefinition).toQualIdent(subject.pos),

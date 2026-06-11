@@ -236,10 +236,10 @@ private class ModuleParts(
         is TmpL.Expression ->
             translateExpr(subject)
         // TODO: we need some way to refer to a holder of statics
-        is TmpL.TemperTypeName ->
-            Lua.Name(subject.pos, luaNames.name(subject.typeDefinition.name))
         is TmpL.ConnectedToTypeName ->
             TODO("Handle be-lua's flavour of TargetLanguageTypeName when it has one")
+        is TmpL.TypeSubject ->
+            Lua.Name(subject.pos, luaNames.name(subject.typeName.typeDefinition.name))
     }
 
     private fun translateExpr(

@@ -504,7 +504,7 @@ internal class JsTranslator(
                 is TmpL.MethodReference -> {
                     val obj = when (val subject = fn.subject) {
                         is TmpL.Expression -> translateExpression(subject)
-                        is TmpL.TypeName -> translateTypeName(subject, asExpr = true)
+                        is TmpL.TypeSubject -> translateTypeName(subject.typeName, asExpr = true)
                     }
                     val methodShape = fn.method
                     val (method, _) = decomposeMemberKey(
@@ -701,8 +701,8 @@ internal class JsTranslator(
         is TmpL.GetProperty -> {
             val (subject, propertyId) = when (val subject = e.subject) {
                 is TmpL.Expression -> translateExpression(subject) to e.property
-                is TmpL.TypeName -> {
-                    val propertyId = when (val def = subject.sourceDefinition) {
+                is TmpL.TypeSubject -> {
+                    val propertyId = when (val def = subject.typeName.sourceDefinition) {
                         is TypeShape -> (e.property as? TmpL.ExternalPropertyId)?.let { external ->
                             def.staticProperties.firstOrNull { prop ->
                                 prop.symbol.text == external.name.dotNameText
@@ -718,7 +718,7 @@ internal class JsTranslator(
                         }
                         else -> null
                     } ?: e.property
-                    translateTypeName(subject, asExpr = true) to propertyId
+                    translateTypeName(subject.typeName, asExpr = true) to propertyId
                 }
             }
             val (property, propertyComputed) = decomposeMemberKey(propertyId)

@@ -1462,7 +1462,17 @@ MethodReferenceLike(
  */
 Subject =
       Expression
+    | TypeSubject;
+
+TypeSubject(typeName%TypeName);
+TypeSubject =
+      SuperSubject
     | TypeName;
+
+/**
+ * Only applies to instance methods, but easier to allow on subjects generally.
+ */
+SuperSubject ::= "super" & typeName%TypeName;
 
 ValueReference(
     value%`Value<*>`,
@@ -1707,6 +1717,7 @@ NominalType.connectsFrom.default = `null`;
 
 TypeName = TemperTypeName | ConnectedToTypeName;
 TypeName(sourceDefinition%`TypeDefinition`);
+TypeName.typeName%TypeName = `this`;
 
 /** A type name that is defined in Temper, not connected to a backend-specific type. */
 TemperTypeName(typeDefinition%`TypeDefinition`);

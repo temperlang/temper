@@ -1916,9 +1916,8 @@ internal class CSharpTranslator(
                 val type = subject.type
                 type.definition to translateExpression(subject) as CSharp.PrimaryExpression
             }
-
-            is TmpL.TypeName -> {
-                val (d, t) = translateTypeName(subject)
+            is TmpL.TypeSubject -> {
+                val (d, t) = translateTypeName(subject.typeName)
                 d to (t as CSharp.PrimaryExpression)
             }
         }
