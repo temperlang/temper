@@ -783,6 +783,8 @@ internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
     val injectedMethods = missingMethods.mapNotNull missingMethods@{ missingMethod ->
         val method = missingMethod.memberOverride.superTypeMember as? MethodShape
             ?: return@missingMethods null
+        method.isPureVirtual
+            && return@missingMethods null // not needed
         val funType = missingMethod.memberOverride.superTypeMemberTypeInSubTypeContext as? Signature2
             ?: return@missingMethods null
         val nameHints = method.parameterInfo?.names ?: listOf()

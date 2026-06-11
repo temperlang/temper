@@ -118,8 +118,6 @@ class JavaBackend private constructor(
                 configSuperCall = configSuperCall@{ type, method ->
                     // Provide Unit for continue or null for unwanted in this `when`.
                     when {
-                        // We apparently see pure virtuals here sometimes, which we don't need to worry about.
-                        (method.memberOverride.superTypeMember as? MethodShape)?.isPureVirtual == true -> null
                         // For interfaces, always implement to leave the call chain open.
                         type.kind == TmpL.TypeDeclarationKind.Interface -> {}
                         // For classes, we need to implement only where split options are available.
