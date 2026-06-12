@@ -280,18 +280,7 @@ class PyBackend private constructor(
             tentativeOutputPathFor = {
                 pyPathForModuleLocation(it.loc as ModuleName, pyLibraryNames)
             },
-            withTentative = { tentativeTmpL ->
-                injectSuperCallMethods(
-                    tentativeTmpL,
-                    injectInto = { it.kind != TmpL.TypeDeclarationKind.Interface },
-                    configSuperCall = configSuperCall@{ type, method ->
-                        when {
-                            type.hasSplitSupers(method) -> SuperCallConfig(skipThis = false)
-                            else -> null
-                        }
-                    },
-                )
-            },
+            withTentative = { injectSuperCallMethods(it) },
         )
     }
 

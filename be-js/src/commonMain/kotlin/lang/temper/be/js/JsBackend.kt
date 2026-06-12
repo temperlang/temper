@@ -200,18 +200,7 @@ class JsBackend private constructor(
         tentativeOutputPathFor = { module ->
             allocateTextFile(module, extension, defaultName = INDEX_NAME)
         },
-        withTentative = { tentativeTmpL ->
-            injectSuperCallMethods(
-                tentativeTmpL,
-                injectInto = { it.kind != TmpL.TypeDeclarationKind.Interface },
-                configSuperCall = configSuperCall@{ type, method ->
-                    when {
-                        type.hasSplitSupers(method) -> SuperCallConfig(skipThis = false)
-                        else -> null
-                    }
-                },
-            )
-        },
+        withTentative = { injectSuperCallMethods(it) },
     )
 
     override fun translate(finished: TmpL.ModuleSet): List<OutputFileSpecification> {

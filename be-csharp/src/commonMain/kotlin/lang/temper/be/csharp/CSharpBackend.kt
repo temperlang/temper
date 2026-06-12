@@ -145,14 +145,10 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
             libraryConfigurations,
             dependencyResolver,
             tentativeOutputPathFor = ::tentativeOutputPathFor,
-            withTentative = {
+            withTentative = { tentativeTmpL ->
                 injectSuperCallMethods(
-                    it,
-                    injectInto = { type ->
-                        // For default interface methods, you can't use them directly on classes unless you redefine them.
-                        // But this only applies to classes, not sub-interfaces.
-                        type.kind != TmpL.TypeDeclarationKind.Interface
-                    },
+                    tentativeTmpL,
+                    // We always need these in C# classes, even when there's not ambiguity in other languages.
                     configSuperCall = { _, _ -> SuperCallConfig(skipThis = false) },
                 )
             },

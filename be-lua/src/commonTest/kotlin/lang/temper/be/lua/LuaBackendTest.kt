@@ -352,6 +352,9 @@ class LuaBackendTest {
             |D.constructor = function(this__2)
             |  return nil;
             |end;
+            |D.methods.a = function(inp_0)
+            |  return C.methods.a(inp_0);
+            |end;
             |exports = {};
             |exports.A = A;
             |exports.B = B;

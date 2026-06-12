@@ -752,8 +752,14 @@ data class SuperCallConfig(
 
 fun <BE : Backend<BE>> Backend<BE>.injectSuperCallMethods(
     tentativeTmpl: TentativeTmpL,
-    injectInto: (TmpL.TypeDeclaration) -> Boolean,
-    configSuperCall: (TmpL.TypeDeclaration, TmpL.SuperTypeMethod) -> SuperCallConfig?,
+    injectInto: (TmpL.TypeDeclaration) -> Boolean = { it.kind != TmpL.TypeDeclarationKind.Interface },
+    configSuperCall: (TmpL.TypeDeclaration, TmpL.SuperTypeMethod) -> SuperCallConfig? =
+        configSuperCall@{ type, method ->
+            when {
+                type.hasSplitSupers(method) -> SuperCallConfig(skipThis = false)
+                else -> null
+            }
+        },
 ) {
     val nascentModule = tentativeTmpl.nascentModule
     val translator = tentativeTmpl.tmpLTranslator
