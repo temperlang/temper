@@ -36,8 +36,6 @@ import lang.temper.name.LanguageLabel
 import lang.temper.name.ModuleName
 import lang.temper.name.Symbol
 import lang.temper.name.rootModuleName
-import lang.temper.type.MethodKind
-import lang.temper.type.MethodShape
 
 /**
  * <!-- snippet: backend/csharp -->

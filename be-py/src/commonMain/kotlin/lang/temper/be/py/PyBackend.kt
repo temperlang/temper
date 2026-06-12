@@ -12,11 +12,9 @@ import lang.temper.be.py.PyDottedIdentifier.Companion.dotted
 import lang.temper.be.py.helper.MypySpecifics
 import lang.temper.be.py.helper.PythonSpecifics
 import lang.temper.be.tmpl.LibraryRootContext
-import lang.temper.be.tmpl.SuperCallConfig
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
-import lang.temper.be.tmpl.hasSplitSupers
 import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.common.MimeType
 import lang.temper.common.console
