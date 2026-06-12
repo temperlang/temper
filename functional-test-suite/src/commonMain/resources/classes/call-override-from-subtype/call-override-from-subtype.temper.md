@@ -70,7 +70,7 @@ Here, C *doesn't* extend A.
 
     interface ASplit { a(): String { "A wins!" } }
     interface BSplit extends ASplit {}
-    interface CSplit extends ASplit { a(): String { "C wins!" } }
+    interface CSplit { a(): String { "C wins!" } }
     class DSplit extends BSplit & CSplit {}
     console.log(new DSplit().a());
 
