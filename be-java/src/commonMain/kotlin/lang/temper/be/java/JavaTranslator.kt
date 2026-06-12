@@ -31,7 +31,9 @@ import lang.temper.name.ModuleName
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
 import lang.temper.type.Abstractness
+import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
+import lang.temper.type.WellKnownTypes
 import lang.temper.type.isVoidLike
 import lang.temper.type.mentionsInvalid
 import lang.temper.type.simplify
@@ -1980,14 +1982,25 @@ class JavaTranslator(
             val methodSignature = toSigBestEffort(fn.method?.descriptor)
             when (subject) {
                 is TmpL.SuperSubject -> {
+                    val namePos = fn.methodName.pos
                     // We really need and expect this, but allow fallbacks anyway.
-                    val superType = (fn.method as? MethodShape)?.let {
-                        subject.subType.findImmediateSuperReaching(it)?.definition
-                    } ?: subject.typeName.sourceDefinition
+                    val (superType, methodName) = (fn.method as? MethodShape)?.let { method ->
+                        val methodName = when (method.methodKind) {
+                            MethodKind.Getter -> {
+                                val returnType = method.descriptor?.returnType2 ?: WellKnownTypes.invalidType2
+                                names.getterName(fn.methodName, returnType)
+                            }
+                            MethodKind.Setter -> names.setterName(fn.methodName)
+                            else -> names.method(fn.methodName).toIdentifier(namePos)
+                        }
+                        subject.subType.findImmediateSuperReaching(method)?.definition?.let { superType ->
+                            superType to methodName
+                        }
+                    } ?: (subject.typeName.sourceDefinition to names.method(fn.methodName).toIdentifier(namePos))
                     return J.SuperMethodInvocationExpr(
                         pos,
                         type = names.classTypeName(superType).toQualIdent(subject.pos),
-                        method = names.method(fn.methodName).toIdentifier(fn.methodName.pos),
+                        method = methodName,
                         args = callActuals(actuals, methodSignature),
                     )
                 }

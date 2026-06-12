@@ -39,6 +39,7 @@ import lang.temper.name.ResolvedName
 import lang.temper.name.TemperName
 import lang.temper.type.Abstractness
 import lang.temper.type.MethodKind
+import lang.temper.type.MethodShape
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeShape
 import lang.temper.type.Visibility
@@ -1541,7 +1542,13 @@ class PyTranslator(
     private fun notNullExpr(x: TmpL.Expression): Py.Expr = expr(x)
 
     private fun translateCallable(f: TmpL.Callable): Py.Expr = when (f) {
-        is TmpL.MethodReference -> subject(f.subject).attribute(methodReferenceNameText(f), pos = f.pos)
+        is TmpL.MethodReference -> subject(f.subject).attribute(methodReferenceNameText(f), pos = f.pos).let { ref ->
+            when ((f.method as? MethodShape)?.methodKind) {
+                MethodKind.Getter -> ref.attribute("__get__")
+                MethodKind.Setter -> ref.attribute("__set__")
+                else -> ref
+            }
+        }
         is TmpL.InlineSupportCodeWrapper -> garbageExpr(f.pos, "translateCallable", "$f should have been eliminated")
         is TmpL.FnReference -> name(f.id)
         is TmpL.ConstructorReference -> constructorReference(f)

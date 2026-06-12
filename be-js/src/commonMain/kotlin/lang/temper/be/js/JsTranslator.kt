@@ -49,6 +49,8 @@ import lang.temper.name.ResolvedName
 import lang.temper.name.ResolvedParsedName
 import lang.temper.name.SourceName
 import lang.temper.type.Abstractness
+import lang.temper.type.MethodKind
+import lang.temper.type.MethodShape
 import lang.temper.type.TypeShape
 import lang.temper.type.Visibility
 import lang.temper.type.WellKnownTypes
@@ -517,6 +519,26 @@ internal class JsTranslator(
                         }
                     }
                     val methodShape = fn.method
+                    when ((methodShape as? MethodShape)?.methodKind) {
+                        MethodKind.Getter -> "get"
+                        MethodKind.Setter -> "set"
+                        else -> null
+                    }?.let { reflectMethod ->
+                        // Approximately `Reflect.(get|set)(proto, "prop", ...)`.
+                        // TODO Cache top-level `Object.getOwnPropertyDescriptor(proto, "prop")` instead?
+                        return@translateExpression Js.CallExpression(
+                            fn.pos,
+                            callee = Js.MemberExpression(
+                                fn.pos,
+                                obj = Js.Identifier(fn.pos, JsIdentifierName("Reflect"), null),
+                                property = Js.Identifier(fn.pos, JsIdentifierName(reflectMethod), null),
+                            ),
+                            arguments = listOf(
+                                obj,
+                                Js.StringLiteral(fn.pos, fn.methodName.dotNameText),
+                            ) + translateParameters(e.parameters),
+                        )
+                    }
                     val (method, _) = decomposeMemberKey(
                         fn.methodName, methodShape?.let { it.name as ResolvedName },
                         methodShape?.visibility?.toTmpL() ?: TmpL.Visibility.Public,

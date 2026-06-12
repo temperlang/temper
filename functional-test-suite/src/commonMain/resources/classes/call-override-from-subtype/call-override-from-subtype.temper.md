@@ -46,14 +46,22 @@ explicitly to avoid compiler errors.
 
 Here, B and C both extend A.
 
-    interface A { a(): String { "A wins!" } }
+    interface A {
+      a(): String { "A wins!" }
+      get thing(): String { "A has thing!" }
+    }
     interface B extends A {}
-    interface C extends A { a(): String { "C wins!" } }
+    interface C extends A {
+      a(): String { "C wins!" }
+      get thing(): String { "C has thing!" }
+    }
     class D extends B & C {}
     console.log(new D().a());
+    console.log(new D().thing);
 
 ```log
 C wins!
+C has thing!
 ```
 
 ### Split inheritance
@@ -62,7 +70,7 @@ Here, C *doesn't* extend A.
 
     interface ASplit { a(): String { "A wins!" } }
     interface BSplit extends ASplit {}
-    interface CSplit { a(): String { "C wins!" } }
+    interface CSplit extends ASplit { a(): String { "C wins!" } }
     class DSplit extends BSplit & CSplit {}
     console.log(new DSplit().a());
 
