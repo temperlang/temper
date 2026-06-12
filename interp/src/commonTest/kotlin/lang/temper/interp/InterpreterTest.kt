@@ -374,8 +374,9 @@ class InterpreterTest {
             while (true) {     i = i + 1 }
         f.t:3+4-13: Interpreting
             i = i + 1
-        f.t:3+6-7: Interpretation aborted
-            =
+        f.t:3+4: Interpretation aborted
+            ${""}
+
         """.trimIndent(),
     )
 

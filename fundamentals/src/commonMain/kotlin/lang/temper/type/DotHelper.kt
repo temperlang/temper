@@ -8,7 +8,9 @@ import lang.temper.format.OutputToken
 import lang.temper.format.OutputTokenType
 import lang.temper.format.TokenSerializable
 import lang.temper.format.TokenSink
+import lang.temper.lexer.TokenType
 import lang.temper.log.MessageTemplate
+import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.ResolvedName
 import lang.temper.name.TemperName
@@ -16,24 +18,30 @@ import lang.temper.type2.Signature2
 import lang.temper.value.ActualValues
 import lang.temper.value.BuiltinStatelessMacroValue
 import lang.temper.value.CallableValue
+import lang.temper.value.Document
 import lang.temper.value.Fail
-import lang.temper.value.InternalFeatureKeys
 import lang.temper.value.InterpreterCallback
+import lang.temper.value.LeafTree
 import lang.temper.value.MacroEnvironment
+import lang.temper.value.MacroValue
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
+import lang.temper.value.ReifiedType
+import lang.temper.value.RightNameLeaf
 import lang.temper.value.SpecialFunction
 import lang.temper.value.StaySink
 import lang.temper.value.TClass
 import lang.temper.value.TFunction
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
+import lang.temper.value.ValueStability
 import lang.temper.value.and
+import lang.temper.value.stability
 import lang.temper.value.staticBuiltinName
 import lang.temper.value.typeShapeAtLeafOrNull
 
-private const val DEBUG = false
+private const val DEBUG = true // do not commit
 private inline fun debug(action: () -> Unit) {
     if (DEBUG) {
         action()
@@ -44,17 +52,43 @@ private inline fun debug(action: () -> Unit) {
  * Info about how to resolve an extension method
  * (see @extension and @staticExtension in builtins).
  */
-sealed class ExtensionResolution {
-    abstract val resolution: ResolvedName
+sealed class ExtensionResolution : TokenSerializable {
+    abstract fun toLeaf(document: Document, pos: Position): LeafTree
 }
 
+sealed class NameExtensionResolution : ExtensionResolution() {
+    abstract val resolution: ResolvedName
+
+    override fun toLeaf(document: Document, pos: Position) =
+        RightNameLeaf(document, pos, resolution)
+
+    override fun renderTo(tokenSink: TokenSink) {
+        tokenSink.emit(resolution.toToken(false))
+    }
+}
 data class InstanceExtensionResolution(
     override val resolution: ResolvedName,
-) : ExtensionResolution()
+) : NameExtensionResolution()
 
 data class StaticExtensionResolution(
     override val resolution: ResolvedName,
-) : ExtensionResolution()
+) : NameExtensionResolution()
+
+data class FunctionResolution(
+    val fn: CallableValue,
+) : ExtensionResolution() {
+    override fun toLeaf(document: Document, pos: Position) =
+        ValueLeaf(document, pos, Value(fn))
+
+    override fun renderTo(tokenSink: TokenSink) {
+        val builtinOperatorId = (fn as? NamedBuiltinFun)?.builtinOperatorId
+        if (builtinOperatorId != null) {
+            tokenSink.emit(OutputToken(builtinOperatorId.name, OutputTokenType.Word))
+        } else {
+            Value(fn).renderTo(tokenSink)
+        }
+    }
+}
 
 /**
  * Implements support for desugared dot operations including:
@@ -71,7 +105,7 @@ data class StaticExtensionResolution(
 class DotHelper(
     val memberAccessor: MemberAccessor,
     val member: Member,
-    /** Resolutions of relevant extension function in scope with the same symbol. */
+    /** Resolutions of the relevant extension function in scope with the same symbol. */
     val extensions: List<ExtensionResolution> = emptyList(),
 ) : SpecialFunction, NamedBuiltinFun, BuiltinStatelessMacroValue, TokenSerializable {
     override val name: String get() = buildString {
@@ -91,25 +125,24 @@ class DotHelper(
                     tokenSink.emit(OutToks.comma)
                 }
                 when (extensionResolution) {
-                    is InstanceExtensionResolution -> {}
+                    is FunctionResolution,
+                    is InstanceExtensionResolution,
+                    -> {}
                     is StaticExtensionResolution -> {
                         tokenSink.emit(staticBuiltinName.toToken(inOperatorPosition = false))
                     }
                 }
-                tokenSink.emit(extensionResolution.resolution.toToken(inOperatorPosition = false))
+                extensionResolution.renderTo(tokenSink)
             }
             tokenSink.emit(OutToks.rightSquare)
         }
     }
 
-    override fun invoke(
-        macroEnv: MacroEnvironment,
-        interpMode: InterpMode,
-    ): PartialResult {
-        if (interpMode == InterpMode.Partial) {
-            return Fail
-        }
-        if (extensions.isNotEmpty()) {
+    override fun invoke(macroEnv: MacroEnvironment, interpMode: InterpMode): PartialResult {
+        val c = lang.temper.common.console // do not commit
+        c.log("DotHelper.invoke $this")
+        if ((interpMode == InterpMode.Partial || extensions.isNotEmpty()) &&
+            memberAccessor !is BindMemberAccessor) {
             // If we want to implement pre TypeStage execution,
             // we'd need to recognize and predict changes by
             // maybeAdjustDotHelper like treating Internal{Get,Set}s
@@ -133,34 +166,39 @@ class DotHelper(
             ExternalBind -> 1 // (this)
             InternalBind -> 2 // (containingTypeShape, this)
         }
+        c.log(". args=$args, sizeWanted=$sizeWanted, n=${args.size}")
         if (args.size != sizeWanted) {
             return macroEnv.fail(MessageTemplate.ArityMismatch, values = listOf(sizeWanted))
         }
         val subjectIndex = memberAccessor.firstArgumentIndex
-        var subject = when (val result = args.evaluate(subjectIndex, interpMode)) {
-            NotYet, is Fail -> return result
-            is Value<*> -> result
+        val originalSubject = args.evaluate(subjectIndex, interpMode)
+        var subject: Value<*> = when (originalSubject) {
+            NotYet, is Fail -> return originalSubject
+            is Value<*> -> originalSubject
         }
-        val classType: TClass = when (val typeTag = subject.typeTag) {
-            is TClass -> typeTag
-            else -> {
-                val promoter = TFunction.unpackOrNull(
-                    macroEnv.getFeatureImplementation(
-                        InternalFeatureKeys.PromoteSimpleValueToClassInstance.featureKey,
-                    ) as? Value<*>,
-                ) as? CallableValue
-                val subjectArgList = ActualValues.from(subject)
-                subject = promoter?.invoke(subjectArgList, macroEnv, interpMode) as? Value<*>
-                    ?: run {
-                        return@invoke macroEnv.fail(
-                            MessageTemplate.ExpectedValueOfType,
-                            pos = args.pos(0),
-                            values = listOf("class instance", subject.typeTag),
-                        )
-                    }
-                subject.typeTag as TClass
+        c.log(". subject=$subject")
+        // Promote the subject from a builtin type (like TInt) to the backing class
+        if (subject.typeTag !is TClass) {
+            subject = promoteSimpleValue(subject) ?: subject
+        }
+        val subjectTypeTag = subject.typeTag
+        if (subjectTypeTag !is TClass) {
+            if (memberAccessor is BindMemberAccessor) {
+                // We can fall back to extensions if there is no class type.
+                // This allows executing DotHelpers that are basic arithmetic
+                // operators
+                val bound = tryBindExtensions(this, subject, macroEnv)
+                if (bound != null) {
+                    return bound
+                }
             }
+            return macroEnv.fail(
+                MessageTemplate.ExpectedValueOfType,
+                pos = args.pos(0),
+                values = listOf("$subjectTypeTag's wrapper class", subject.typeTag),
+            )
         }
+        val classType: TClass = subjectTypeTag
         val instancePropertyRecord = classType.unpack(subject)
         val objProperties = instancePropertyRecord.properties
 
@@ -263,7 +301,8 @@ class DotHelper(
             }
             ExternalBind, InternalBind ->
                 when (val method = accessibleMembers.firstOrNull()) {
-                    null -> inaccessible()
+                    null -> tryBindExtensions(this, originalSubject, macroEnv)
+                        ?: inaccessible()
                     is MethodShape -> {
                         if (method.methodKind == MethodKind.Normal) {
                             lookupMemberDefinition(method).and { methodValue ->
@@ -359,24 +398,32 @@ private fun lookupMemberDefinition(
     return methodDefinition?.value ?: NotYet
 }
 
-private class BoundMethod(
-    private val methodShape: MethodShape,
-    private val method: CallableValue,
-    private val subject: Value<*>,
+private abstract class BoundCallable(
+    protected val fn: CallableValue,
+    protected val subject: Value<*>,
 ) : CallableValue, TokenSerializable {
     override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
         val allArgs = ActualValues.cat(ActualValues.from(subject), args)
-        return method.invoke(allArgs, cb, interpMode)
+        return fn.invoke(allArgs, cb, interpMode)
     }
 
-    override val sigs: List<Signature2>? get() = method.sigs?.map { sig ->
+    override val sigs: List<Signature2>? get() = fn.sigs?.map { sig ->
         sig.copy(requiredInputTypes = sig.requiredInputTypes.drop(1), hasThisFormal = false)
     }
 
-    override fun addStays(s: StaySink) {
-        // Not stable
-    }
+    override val isPure get() = fn.isPure && subject.stability == ValueStability.Stable
 
+    override fun addStays(s: StaySink) {
+        fn.addStays(s)
+        subject.addStays(s)
+    }
+}
+
+private class BoundMethod(
+    private val methodShape: MethodShape,
+    method: CallableValue,
+    subject: Value<*>,
+) : BoundCallable(method, subject) {
     override fun toString(): String = "BoundMethod(${subject}.${methodShape.name})"
 
     override fun renderTo(tokenSink: TokenSink) {
@@ -388,5 +435,72 @@ private class BoundMethod(
         tokenSink.emit(OutToks.dot)
         tokenSink.emit(methodShape.name.toToken(inOperatorPosition = false))
         tokenSink.emit(OutToks.rightParen)
+    }
+}
+
+private class BoundFn(
+    fn: CallableValue,
+    subject: Value<*>,
+) : BoundCallable(fn, subject) {
+    override fun toString(): String = "BoundFn($fn to ($subject))"
+
+    override fun renderTo(tokenSink: TokenSink) {
+        tokenSink.emit(OutputToken("ƒ", OutputTokenType.Word))
+        tokenSink.emit(OutToks.dot)
+        tokenSink.emit(OutputToken("bind", OutputTokenType.Name))
+        tokenSink.emit(OutToks.leftParen)
+        Value(fn).renderTo(tokenSink)
+        tokenSink.emit(OutToks.comma)
+        subject.renderTo(tokenSink)
+        tokenSink.emit(OutToks.rightParen)
+    }
+}
+
+
+private fun tryBindExtensions(
+    dotHelper: DotHelper,
+    subject: Value<*>,
+    macroEnv: MacroEnvironment,
+): PartialResult? {
+    val c = lang.temper.common.console // do not commit
+    c.group(". extensions") {
+        dotHelper.extensions.forEach { extensionResolution ->
+            c.log("- $extensionResolution")
+        }
+    }
+    var nApplicable = 0
+    var firstApplicable: MacroValue? = null
+    for (ext in dotHelper.extensions) {
+        val fn = when (ext) {
+            is FunctionResolution -> ext.fn
+            is NameExtensionResolution -> TFunction.unpackOrNull(
+                macroEnv.environment[ext.resolution, macroEnv] as? Value<*>,
+            )
+        }
+        if (fn != null) {
+            val sigs = fn.sigs
+            val applicable = when {
+                sigs == null -> true
+                else -> sigs.any {
+                    if (it is Signature2) {
+                        val f = it.valueFormalForActual(0)
+                        f != null && ReifiedType(f.type).valuePredicate(subject)
+                    } else {
+                        false
+                    }
+                }
+            }
+            if (applicable) {
+                nApplicable += 1
+                if (firstApplicable == null) {
+                    firstApplicable = fn
+                }
+            }
+        }
+    }
+    return if (nApplicable == 1 && firstApplicable is CallableValue) {
+        Value(BoundFn(firstApplicable, subject))
+    } else {
+        null
     }
 }

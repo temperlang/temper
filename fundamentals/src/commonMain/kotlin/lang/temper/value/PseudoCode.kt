@@ -2,6 +2,7 @@ package lang.temper.value
 
 import lang.temper.common.Either
 import lang.temper.common.EnumRange
+import lang.temper.common.Freq3
 import lang.temper.common.LeftOrRight
 import lang.temper.common.NoneShortOrLong
 import lang.temper.common.TextOutput
@@ -9,6 +10,7 @@ import lang.temper.common.TriState
 import lang.temper.common.abbreviate
 import lang.temper.common.allMapToSameElseNull
 import lang.temper.common.mapInterleaving
+import lang.temper.common.subListToEnd
 import lang.temper.common.temperEscaper
 import lang.temper.common.toStringViaTextOutput
 import lang.temper.cst.InnerOperatorStackElement
@@ -204,126 +206,107 @@ internal class PseudoTreeBuilder(
             is CallTree -> {
                 if (tree.size == 0) {
                     PseudoError(pos)
-                } else if (detail.resugarDotHelpers && isDotHelperCall(tree)) {
-                    val calleePos = tree.child(0).pos
-                    val dotHelper = extractDotHelperFromCall(tree)!!
-                    val memberAccessor = dotHelper.memberAccessor
-                    val firstArgumentChildIndex = memberAccessor.firstArgumentIndex + 1 // skip over callee
-                    val subject = tree.childOrNull(firstArgumentChildIndex) ?: return PseudoError(pos)
-                    val operation = when (val member = dotHelper.member) {
-                        is DotMember -> PseudoCall(
-                            pos = tree.pos,
-                            callee = PseudoNameLeaf(calleePos, dotBuiltinName),
-                            typeArgs = emptyList(),
-                            args = listOf(
-                                buildPseudoTree(subject),
-                                PseudoNameLeaf(calleePos.rightEdge, ParsedName(member.dotName.text)),
-                            ),
-                        )
-                        is OperatorMember -> PseudoNameLeaf(calleePos, BuiltinName(member.operator))
-                    }
-                    when (memberAccessor) {
-                        is GetMemberAccessor -> operation
-                        is SetMemberAccessor -> PseudoCall(
-                            pos,
-                            PseudoNameLeaf(subject.pos.rightEdge, assignBuiltinName),
-                            emptyList(),
-                            listOf(
-                                operation,
-                                buildPseudoTree(tree.child(firstArgumentChildIndex + 1)),
-                            ),
-                        )
-
-                        is BindMemberAccessor -> operation
-                    }
                 } else {
-                    var callee = buildPseudoTree(tree.child(0))
-                    val typeArgs = mutableListOf<PseudoTree>()
-                    var typeArgsInferred = false
-                    var args: List<PseudoTree>? = null
-                    var argListStart = 1 // Index into children where arguments start.
-                    // Special case `.` operator since its right operand is a symbol but
-                    // should render as a bare name.
-                    if (
-                        tree.size == BINARY_OP_CALL_ARG_COUNT &&
-                        callee isProbablyBuiltinFunNamed "."
-                    ) {
-                        val right = tree.child(2)
-                        val rightSymbol = right.symbolContained
-                        if (rightSymbol != null) {
-                            args = listOf(
-                                buildPseudoTree(tree.child(1)),
-                                PseudoNameLeaf(right.pos, ParsedName(rightSymbol.text)),
-                            )
-                        }
-                        argListStart = tree.size // all done
-                    } else if (
-                        callee isProbablyBuiltinFunNamed "new" &&
-                        tree.size >= 2 && symbolTextFor(tree.child(1)) == null
-                    ) {
-                        // Reshuffle
-                        //     new(TypeToCreate, ConstructorArg0)
-                        // to
-                        //     new TypeToCreate(ConstructorArg0)
-                        val typeArg: Tree? = run {
-                            val c1 = tree.child(1)
-                            // `void` in type position indicates type needs to be inferred.
-                            if (c1.valueContained == void) {
-                                null
-                            } else {
-                                c1
+                    val fromDotHelper: PseudoTree? = maybeBuildDotHelper(tree)
+                    if (fromDotHelper != null) {
+                        fromDotHelper
+                    } else {
+                        var callee = buildPseudoTree(tree.child(0))
+                        val typeArgs = mutableListOf<PseudoTree>()
+                        var typeArgsInferred = false
+                        var args: List<PseudoTree>? = null
+                        var argListStart = 1 // Index into children where arguments start.
+                        // Special case `.` operator since its right operand is a symbol but
+                        // should render as a bare name.
+                        if (
+                            tree.size == BINARY_OP_CALL_ARG_COUNT &&
+                            callee isProbablyBuiltinFunNamed "."
+                        ) {
+                            val right = tree.child(2)
+                            val rightSymbol = right.symbolContained
+                            if (rightSymbol != null) {
+                                args = listOf(
+                                    buildPseudoTree(tree.child(1)),
+                                    PseudoNameLeaf(right.pos, ParsedName(rightSymbol.text)),
+                                )
                             }
-                        }
-                        if (typeArg != null) {
-                            callee = PseudoCall(
-                                listOfNotNull(callee, typeArg).spanningPosition(callee.pos),
-                                callee,
-                                emptyList(),
-                                listOf(buildPseudoTree(typeArg)),
-                            )
-                        }
-                        argListStart = 2
-                    }
-                    // Consume type arguments into
-                    while (argListStart + 1 < tree.size) {
-                        val childAtArgListStart = tree.child(argListStart)
-                        if (childAtArgListStart.symbolContained != typeArgSymbol) {
-                            break
-                        }
-                        typeArgs.add(buildPseudoTree(tree.child(argListStart + 1)))
-                        argListStart += 2
-                    }
-                    // Show inferred type arguments if we don't have explicit ones and the details
-                    // ask for them.
-                    if (typeArgs.isEmpty() && detail.showInferredTypes) {
-                        val calleeType = tree.childOrNull(0)?.typeInferences?.type
-                        val variant = calleeType as? FunctionType
-                            ?: tree.typeInferences?.variant as? FunctionType
-                        val bindings = tree.typeInferences?.bindings2
-                        if (variant != null && variant.typeFormals.isNotEmpty() && bindings != null) {
-                            val inferredTypeArgs = variant.typeFormals.map {
-                                bindings[it]
-                            }
-                            if (null !in inferredTypeArgs) {
-                                inferredTypeArgs.mapTo(typeArgs) {
-                                    PseudoType(callee.pos.rightEdge, it!!)
+                            argListStart = tree.size // all done
+                        } else if (
+                            callee isProbablyBuiltinFunNamed "new" &&
+                            tree.size >= 2 && symbolTextFor(tree.child(1)) == null
+                        ) {
+                            // Reshuffle
+                            //     new(TypeToCreate, ConstructorArg0)
+                            // to
+                            //     new TypeToCreate(ConstructorArg0)
+                            val typeArg: Tree? = run {
+                                val c1 = tree.child(1)
+                                // `void` in type position indicates type needs to be inferred.
+                                if (c1.valueContained == void) {
+                                    null
+                                } else {
+                                    c1
                                 }
-                                typeArgsInferred = true
+                            }
+                            if (typeArg != null) {
+                                callee = PseudoCall(
+                                    listOfNotNull(callee, typeArg).spanningPosition(callee.pos),
+                                    callee,
+                                    emptyList(),
+                                    listOf(buildPseudoTree(typeArg)),
+                                )
+                            }
+                            argListStart = 2
+                        } else if (
+                            // desugarOperation(nym`+`, x, y) -> nym`+`(x, y)
+                            detail.resugarDotHelpers > Freq3.Never &&
+                            callee.isProbablyBuiltinFunNamed("desugarOperation") &&
+                            tree.size > 1
+                        ) {
+                            callee = buildPseudoTree(tree.child(1))
+                            argListStart = 2
+                        }
+                        // Consume type arguments into
+                        while (argListStart + 1 < tree.size) {
+                            val childAtArgListStart = tree.child(argListStart)
+                            if (childAtArgListStart.symbolContained != typeArgSymbol) {
+                                break
+                            }
+                            typeArgs.add(buildPseudoTree(tree.child(argListStart + 1)))
+                            argListStart += 2
+                        }
+                        // Show inferred type arguments if we don't have explicit ones and the details
+                        // ask for them.
+                        if (typeArgs.isEmpty() && detail.showInferredTypes) {
+                            val calleeType = tree.childOrNull(0)?.typeInferences?.type
+                            val variant = calleeType as? FunctionType
+                                ?: tree.typeInferences?.variant as? FunctionType
+                            val bindings = tree.typeInferences?.bindings2
+                            if (variant != null && variant.typeFormals.isNotEmpty() && bindings != null) {
+                                val inferredTypeArgs = variant.typeFormals.map {
+                                    bindings[it]
+                                }
+                                if (null !in inferredTypeArgs) {
+                                    inferredTypeArgs.mapTo(typeArgs) {
+                                        PseudoType(callee.pos.rightEdge, it!!)
+                                    }
+                                    typeArgsInferred = true
+                                }
                             }
                         }
-                    }
-                    if (args == null) {
-                        args = (argListStart until tree.size).map {
-                            buildPseudoTree(tree.child(it))
+                        if (args == null) {
+                            args = (argListStart until tree.size).map {
+                                buildPseudoTree(tree.child(it))
+                            }
                         }
+                        PseudoCall(
+                            pos = pos,
+                            callee = callee,
+                            typeArgs = typeArgs.toList(),
+                            args = args,
+                            typeArgsInferred = typeArgsInferred,
+                        )
                     }
-                    PseudoCall(
-                        pos = pos,
-                        callee = callee,
-                        typeArgs = typeArgs.toList(),
-                        args = args,
-                        typeArgsInferred = typeArgsInferred,
-                    )
                 }
             }
 
@@ -442,6 +425,71 @@ internal class PseudoTreeBuilder(
             PseudoHighlight(pseudoTree)
         } else {
             pseudoTree
+        }
+    }
+
+    private fun maybeBuildDotHelper(callTree: CallTree): PseudoTree? {
+        val resugarDotHelpers = detail.resugarDotHelpers
+        if  (resugarDotHelpers == Freq3.Never) { return null }
+
+        // Uncurry dot helpers when we need all the operands to an operation
+        val (tree, dotHelper, extraArgs) = run findDotHelper@{
+            val callee = callTree.childOrNull(0)
+            if (callee is CallTree) {
+                val dotHelper = extractDotHelperFromCall(callee)
+                if (dotHelper?.memberAccessor is BindMemberAccessor && dotHelper.member is OperatorMember) {
+                    return@findDotHelper Triple(callee, dotHelper, callTree.children.subListToEnd(1))
+                }
+            }
+            extractDotHelperFromCall(callTree)?.let {
+                Triple(callTree, it, listOf())
+            }
+        } ?: return null
+
+        val member = dotHelper.member
+        when (member) {
+            is DotMember -> if (resugarDotHelpers < Freq3.Always) { return null }
+            is OperatorMember -> {}
+        }
+
+        val calleePos = tree.child(0).pos
+        val memberAccessor = dotHelper.memberAccessor
+        val firstArgumentChildIndex = memberAccessor.firstArgumentIndex + 1 // skip over callee
+        val subject = tree.childOrNull(firstArgumentChildIndex) ?: return null
+        val operation = when (member) {
+            is DotMember -> PseudoCall(
+                pos = tree.pos,
+                callee = PseudoNameLeaf(calleePos, dotBuiltinName),
+                typeArgs = emptyList(),
+                args = buildList {
+                    add(buildPseudoTree(subject))
+                    add(PseudoNameLeaf(calleePos.rightEdge, ParsedName(member.dotName.text)))
+                    extraArgs.mapTo(this) { buildPseudoTree(it) }
+                },
+            )
+            is OperatorMember -> PseudoCall(
+                pos = tree.pos,
+                callee = PseudoNameLeaf(calleePos, BuiltinName(member.operator)),
+                typeArgs = emptyList(),
+                args = buildList {
+                    add(buildPseudoTree(subject))
+                    extraArgs.mapTo(this) { buildPseudoTree(it) }
+                },
+            )
+        }
+        return when (memberAccessor) {
+            is GetMemberAccessor -> operation
+            is SetMemberAccessor -> PseudoCall(
+                tree.pos,
+                PseudoNameLeaf(subject.pos.rightEdge, assignBuiltinName),
+                emptyList(),
+                listOf(
+                    operation,
+                    buildPseudoTree(tree.child(firstArgumentChildIndex + 1)),
+                ),
+            )
+
+            is BindMemberAccessor -> operation
         }
     }
 
@@ -788,8 +836,8 @@ private class OperatorStackElementSubView(val e: OperatorStackElement) : Operato
  * Returns a tree that allows [t] to nest in its parent.
  * Usually this means parentheses, but sometimes we use a different strategy:
  *
- * - when [t] is a block statement because `(` followed by `{` starts an object property bag, or
- * - when [t] is a comma operation because commas inside parentheses might be a tuple.
+ * - When [t] is a block statement because `(` followed by `{` starts an object property bag, or
+ * - When [t] is a comma operation because commas inside parentheses might be a tuple.
  */
 private fun wrap(t: OpTree): OpTree {
     val pos = t.pos
@@ -1441,12 +1489,11 @@ internal class PseudoDecl(
         reduce(emitDeclKeyword = TriState.TRUE)
 
     fun reduce(emitDeclKeyword: TriState): OpTree {
-        val symbolToken = if (word == null) {
-            null
-        } else if (word is PseudoValueLeaf && word.value.typeTag == TSymbol) {
-            OutputToken.makeSlashStarComment("aka ${TSymbol.unpack(word.value).text}")
-        } else {
-            OutputToken.makeSlashStarComment("aka ???")
+        val symbolToken = when (word) {
+            null -> null
+            is PseudoValueLeaf if word.value.typeTag == TSymbol ->
+                OutputToken.makeSlashStarComment("aka ${TSymbol.unpack(word.value).text}")
+            else -> OutputToken.makeSlashStarComment("aka ???")
         }
         val keyword = when {
             // Assume caller knows what they're doing
@@ -2159,7 +2206,7 @@ internal class PseudoLoop(
                 continuingClause = ContinuingClause(OutToks.whileWord, condition, parenthesize = true)
             }
             increment != null -> {
-                // for (;condition;increment) {body}
+                // for (; condition; increment) {body}
                 parenthesized = Either.Right(Triple(null, condition, increment))
                 keyword = OutToks.forWord
                 continuingClause = null
@@ -2537,8 +2584,6 @@ private fun maybeTagStringValue(stringValue: String): Pair<String?, String> {
     }
     return null to escapedString
 }
-
-private fun isDotHelperCall(t: CallTree) = extractDotHelperFromCall(t) != null
 
 private fun extractDotHelperFromCall(t: CallTree): DotHelper? {
     val callee = t.child(0)

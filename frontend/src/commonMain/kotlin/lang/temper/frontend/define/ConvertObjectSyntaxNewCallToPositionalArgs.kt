@@ -6,7 +6,7 @@ import lang.temper.common.subListToEnd
 import lang.temper.env.InterpMode
 import lang.temper.interp.EmptyEnvironment
 import lang.temper.interp.LazyActualsList
-import lang.temper.interp.isKnownStable
+import lang.temper.builtin.isKnownStable
 import lang.temper.type.MethodKind
 import lang.temper.type.NominalType
 import lang.temper.type.TypeShape

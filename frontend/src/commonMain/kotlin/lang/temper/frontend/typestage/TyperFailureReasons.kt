@@ -112,15 +112,15 @@ internal class BecauseIllegalAssignment(
     }
 }
 
-internal class BecauseTypeInfoMissingForName(
+internal class BecauseTypeInfoMissing(
     override val pos: Position,
-    val nameMissingInfo: ResolvedName,
+    val missingInfo: TokenSerializable,
 ) : AbstractTypeReasonElement() {
-    override val name get() = "BecauseTypeInfoMissingForName"
+    override val name get() = "BecauseTypeInfoMissing"
     override val level: Log.Level get() = Log.Error
     override val formatString get() = "Missing type info for %s"
     override val templateFillers: List<TokenSerializable>
-        get() = listOf(nameMissingInfo.toToken(inOperatorPosition = false))
+        get() = listOf(missingInfo)
 }
 
 internal abstract class BecauseNoMemberAccessible(

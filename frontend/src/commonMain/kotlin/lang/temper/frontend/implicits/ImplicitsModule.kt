@@ -1,12 +1,10 @@
 package lang.temper.frontend.implicits
 
-import lang.temper.builtin.PureCallableValue
 import lang.temper.common.AppendingTextOutput
 import lang.temper.common.Console
 import lang.temper.common.Log
 import lang.temper.common.console
 import lang.temper.env.Environment
-import lang.temper.env.InterpMode
 import lang.temper.frontend.Module
 import lang.temper.frontend.ModuleSource
 import lang.temper.fs.loadResource
@@ -24,28 +22,12 @@ import lang.temper.log.excerpt
 import lang.temper.log.filePath
 import lang.temper.name.BuiltinName
 import lang.temper.name.ImplicitsCodeLocation
-import lang.temper.name.ModularName
 import lang.temper.name.TemperName
 import lang.temper.stage.Stage
-import lang.temper.type.Abstractness
-import lang.temper.type.NominalType
-import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.initializeBindingsFromImplicits
-import lang.temper.type2.Signature2
-import lang.temper.value.ActualValues
-import lang.temper.value.InstancePropertyRecord
-import lang.temper.value.InternalFeatureKeys
-import lang.temper.value.InterpreterCallback
-import lang.temper.value.NamedBuiltinFun
-import lang.temper.value.NotYet
-import lang.temper.value.PartialResult
-import lang.temper.value.ReifiedType
-import lang.temper.value.TClass
-import lang.temper.value.TType
 import lang.temper.value.Value
 import lang.temper.value.toPseudoCode
-import lang.temper.value.unpackPositionedOr
 
 private const val DEBUG = false
 
@@ -181,40 +163,6 @@ object ImplicitsModule {
             init()
             return singletonModule!!
         }
-
-    /**
-     * The class type and closed over environment for a class that provides methods for a builtin
-     * type.
-     */
-    internal fun promoteSimpleValueToClassType(
-        value: Value<*>,
-    ): Value<InstancePropertyRecord>? {
-        val typeTag = value.typeTag
-        val typeName = typeTag.name.builtinKey
-        val exportedValue = module.exports?.firstOrNull {
-            it.name.baseName.nameText == typeName
-        }?.value
-        if (exportedValue != null) {
-            val exportedType = TType.unpackOrNull(exportedValue)
-            if (exportedType is ReifiedType) {
-                val t = (exportedType.type as? NominalType)?.definition as? TypeShape
-                if (t != null) {
-                    // The wrapper types must have a single backed property.
-                    val backedProperty =
-                        t.properties.firstOrNull { it.abstractness == Abstractness.Concrete }
-                    if (backedProperty != null) {
-                        val wrappingObject = InstancePropertyRecord(
-                            mutableMapOf(
-                                backedProperty.name as ModularName to value,
-                            ),
-                        )
-                        return Value(wrappingObject, TClass(t))
-                    }
-                }
-            }
-        }
-        return null
-    }
 }
 
 private class FailFastLogSink(private val code: CharSequence) : LogSink {
@@ -278,16 +226,6 @@ fun builtinEnvironment(
     val implicitsBindings = if (skipImplicits) emptyMap() else allImplicitlyImportedNames
     val implicitsEnvironment = immutableEnvironment(parent, implicitsBindings, isLongLived = true)
     return builtinOnlyEnvironment(implicitsEnvironment, genre = genre)
-}
-
-internal object PromoteSimpleFn : NamedBuiltinFun, PureCallableValue {
-    override val name: String = InternalFeatureKeys.PromoteSimpleValueToClassInstance.name
-    override val sigs: List<Signature2>? = null
-
-    override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
-        val (arg) = args.unpackPositionedOr(1, cb) { return@invoke it }
-        return ImplicitsModule.promoteSimpleValueToClassType(arg) ?: NotYet
-    }
 }
 
 private object NeverStop : ContinueCondition {

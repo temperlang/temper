@@ -3,6 +3,7 @@ package lang.temper.interp
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.DesugarPrefixOperatorMacro
 import lang.temper.builtin.Types
+import lang.temper.builtin.simpleBuiltinKeyFromCompoundOperator
 import lang.temper.builtin.vStringCatMacro
 import lang.temper.common.TriState
 import lang.temper.env.ChildEnvironment
@@ -14,8 +15,6 @@ import lang.temper.env.ReferentBitSet
 import lang.temper.env.ReferentSource
 import lang.temper.interp.importExport.ExportDecorator
 import lang.temper.interp.importExport.ImportMacro
-import lang.temper.lexer.Operator
-import lang.temper.lexer.TokenType
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.TemperName
@@ -61,7 +60,7 @@ private object Builtins {
         val m = mutableMapOf(
             "++" to Value(DesugarPrefixOperatorMacro("++", BuiltinFuns.plusFn)),
             "--" to Value(DesugarPrefixOperatorMacro("--", BuiltinFuns.minusFn)),
-            "+" to BuiltinFuns.vPlusFn,
+//            "+" to BuiltinFuns.vPlusFn, // do not commit
             "-" to BuiltinFuns.vMinusFn,
             "*" to Value(BuiltinFuns.timesFn),
             "**" to Value(BuiltinFuns.powFn),
@@ -455,7 +454,7 @@ private object Builtins {
              * ```
              *
              * For now, only explicit methods are allowed for overloads.
-             * Constructors, propertiers, and top-level functions are unsupported.
+             * Constructors, properties, and top-level functions are unsupported.
              *
              * No actual function or method with the overload name itself must be
              * present.
@@ -898,17 +897,6 @@ internal class BuiltinEnvironment(
         BuiltinName(it)
     }
 }
-
-private fun simpleBuiltinKeyFromCompoundOperator(builtinKey: String?): String? =
-    if (
-        builtinKey != null &&
-        Operator.isProbablyAssignmentOperator(builtinKey, TokenType.Punctuation) &&
-        builtinKey != "="
-    ) {
-        builtinKey.substring(0, builtinKey.length - 1)
-    } else {
-        null
-    }
 
 private fun <T : MacroValue> keyPair(v: Value<T>): Pair<String, Value<T>> {
     fun nameOf(f: MacroValue): String = when (f) {

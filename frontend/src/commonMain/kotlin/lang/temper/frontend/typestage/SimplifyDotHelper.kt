@@ -135,8 +135,9 @@ internal fun simplifyDotHelper(
             }
 
             val extensionResolution = chosenVariantResolution.item
+            val doc = toReplace.target.document
             toReplace.replace {
-                Rn(callee.pos, extensionResolution.resolution)
+                Replant(extensionResolution.toLeaf(doc, callee.pos))
             }
 
             if (extensionResolution is StaticExtensionResolution) {
@@ -153,7 +154,7 @@ internal fun simplifyDotHelper(
     }
 
     val functionTypes = extractAtoms(variantMatch) { it as? FunctionType }
-    // Supply this types so we can figure out whether a referenced property is backed.
+    // Supply "this" types so we can figure out whether a referenced property is backed.
     val subjectTypeShapes = buildSet {
         fun addTypeShapesFrom(definition: TypeDefinition) {
             when (definition) {

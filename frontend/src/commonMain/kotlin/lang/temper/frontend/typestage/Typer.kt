@@ -57,7 +57,6 @@ import lang.temper.type.ExtensionResolution
 import lang.temper.type.ExtraNonNormativeParameterInfo
 import lang.temper.type.FunctionType
 import lang.temper.type.GetMemberAccessor
-import lang.temper.type.InstanceExtensionResolution
 import lang.temper.type.InternalMemberAccessor
 import lang.temper.type.InvalidType
 import lang.temper.type.MemberOverride2
@@ -368,7 +367,7 @@ internal class Typer(
         fun isUndecided(tree: Tree) = !isDecided(tree)
 
         fun binding(name: ResolvedName) = bindings[name]
-        fun decisionType(tree: Tree) = decisions[tree]?.type
+        fun decisionType(tree: Tree?) = decisions[tree]?.type
         fun decision(tree: Tree) = decisions[tree]
 
         fun extensionReceiverTypes(name: ResolvedName) = extensionReceiverTypes[name] ?: emptyList()
@@ -823,11 +822,38 @@ internal class Typer(
             tree.childOrNull(0)
         }
 
+        val c = if ("foo" in "${effectiveCallee?.toPseudoCode()}") console else null // do not commit
         val calleeFn = effectiveCallee?.functionContained
         val coverFn = calleeFn as? CoverFunction
-        var inputTrees = tree.children.subListToEnd(tree.firstArgumentIndex)
+        val isDotHelper = calleeFn is DotHelper
+        val isDotBind = isDotHelper && calleeFn.memberAccessor is BindMemberAccessor
+        val nestedDotBind =
+            if (effectiveCallee is CallTree && isDotHelperCall(effectiveCallee)) {
+                effectiveCallee
+            } else {
+                null
+            }
+        val dotHelper: DotHelper? = when {
+            isDotHelper -> calleeFn
+            else -> nestedDotBind?.run { child(0).functionContained as DotHelper }
+        }
 
-        val isDotBind = calleeFn is DotHelper && calleeFn.memberAccessor is BindMemberAccessor
+        var inputTrees = if (nestedDotBind != null) {
+            // Combine bound `this` argument with other args
+            buildList {
+                addAll(nestedDotBind.children.subListToEnd(nestedDotBind.firstArgumentIndex))
+                addAll(tree.children.subListToEnd(tree.firstArgumentIndex))
+            }
+        } else {
+            tree.children.subListToEnd(tree.firstArgumentIndex)
+        }
+
+        val typedMembersAndExtensions = when {
+            isDotHelper -> typeForDotHelper(tree, calleeFn)
+            nestedDotBind != null -> typeForDotHelper(nestedDotBind, dotHelper!!)
+            else -> null
+        }
+        c?.log("nestedDotBind=${nestedDotBind?.toPseudoCode()}, typedMembersAndExtesions=$typedMembersAndExtensions")
 
         // Does the context in which the call happens place bounds on the return type?
         // For example, if t is the right hand of the assignment, then we might be able to
@@ -918,6 +944,31 @@ internal class Typer(
             null
         }
 
+        val effectiveCalleeTypeThunk = lazy {
+            ti.decisionType(effectiveCallee)?.let { inferredType ->
+                if (inferredType == functionType) { // do not commit
+                    null
+                } else if (typedMembersAndExtensions != null) {
+                    null
+                } else if (isNew) {
+                    inferredType // Probably just Type.  Handled below.
+                } else if (inferredType is NominalType && functionalInterfaceSymbol in inferredType.definition.metadata) {
+                    inferredType
+                } else { // Extract function types
+                    distributeCalleeTypeThroughIntersection(
+                        coerceCalleeTypeToIntersectionOfFunctionTypes(inferredType).also { coerced ->
+                            if (isDotBind) {
+                                calleeFn.sigs = buildList {
+                                    explodeCalleeType(coerced, CalleePriority.Default) { it }
+                                }.map {
+                                    it.sig
+                                }
+                            }
+                        },
+                    )
+                }
+            }
+        }
         val explicitActualTypesAndPositions: List<Pair<StaticType, Position>>? =
             if (effectiveCallee is CallTree && isTypeAngleCall(effectiveCallee)) {
                 // If the callee is a function to which `<>` is applied, then pull the effective
@@ -947,43 +998,45 @@ internal class Typer(
                 null
             }
 
-        val effectiveCalleeType = effectiveCallee?.let { ti.decisionType(it) }?.let { inferredType ->
-            if (isNew) {
-                inferredType // Probably just Type.  Handled below.
-            } else if (inferredType is NominalType && functionalInterfaceSymbol in inferredType.definition.metadata) {
-                inferredType
-            } else { // Extract function types
-                distributeCalleeTypeThroughIntersection(
-                    coerceCalleeTypeToIntersectionOfFunctionTypes(inferredType).also { coerced ->
-                        if (isDotBind) {
-                            calleeFn.sigs = buildList {
-                                explodeCalleeType(coerced, CalleePriority.Default)
-                            }.map {
-                                it.sig
-                            }
-                        }
-                    },
+        if (isDotBind) {
+            val effectiveCalleeType = effectiveCalleeTypeThunk.value
+            if (effectiveCalleeType is FunctionType && calleeFn.sigs != null) {
+                // We stored the sigs above.  The call wrapping this needs those.
+                val decision = Decision(
+                    type = effectiveCalleeType.returnType,
+                    variant = effectiveCalleeType,
+                    explanations = priorProblems.toList(),
                 )
+                ti.decide(tree, decision)
+                return
             }
         }
-        if (effectiveCalleeType is FunctionType && isDotBind && calleeFn.sigs != null) {
-            // We stored the sigs above.  The call wrapping this needs those.
-            val decision = Decision(
-                type = effectiveCalleeType.returnType,
-                variant = effectiveCalleeType,
-                explanations = priorProblems.toList(),
-            )
-            ti.decide(tree, decision)
-            return
+
+        fun specialize(sig: Signature2): Signature2 {
+            val explicitActualTypesAndPositions = explicitActualTypesAndPositions
+            return if (explicitActualTypesAndPositions == null) {
+                sig
+            } else {
+                val bindings = buildMap {
+                    for (i in sig.typeFormals.indices) {
+                        val tf = sig.typeFormals[i]
+                        val (actual) = explicitActualTypesAndPositions.getOrNull(i) ?: break
+                        this[tf] = hackMapOldStyleToNew(actual)
+                    }
+                }
+                sig.copy(typeFormals = sig.typeFormals.drop(bindings.size)).mapType(bindings)
+            }
         }
 
         val calleeVariants: List<Callee> = buildSet {
             if (isNew) {
+                val effectiveCalleeType = effectiveCalleeTypeThunk.value
                 val constructorSigs = when (effectiveCalleeType) {
                     null -> {
                         // Late-typed constructor reference
                         return@typeRegularCall
                     }
+
                     WellKnownTypes.typeType -> {
                         @Suppress("SENSELESS_COMPARISON")
                         check(effectiveCallee != null) // because the type is not null above
@@ -995,6 +1048,7 @@ internal class Typer(
 
                         type
                     }
+
                     else -> listOf()
                 }
                 constructorSigs.mapNotNullTo(this) { constructorSig ->
@@ -1002,16 +1056,39 @@ internal class Typer(
                         Callee(it, CalleePriority.Default)
                     }
                 }
+            } else if (typedMembersAndExtensions != null) {
+                if (nestedDotBind != null) {
+                    for (fnType in typedMembersAndExtensions.fnType.fnTypesIterable) {
+                        val returnFnType = fnType.returnType as FunctionType
+                        val uncurried = MkType.fnDetails(
+                            typeFormals = fnType.typeFormals + returnFnType.typeFormals,
+                            valueFormals = fnType.valueFormals + returnFnType.valueFormals,
+                            restValuesFormal = returnFnType.restValuesFormal,
+                            returnType = returnFnType.returnType,
+                        )
+                        hackTryStaticTypeToSig(uncurried)?.let { sig ->
+                            add(Callee(sig, CalleePriority.Default))
+                        }
+                    }
+                } else {
+                    for (fnType in typedMembersAndExtensions.fnType.fnTypesIterable) {
+                        hackTryStaticTypeToSig(fnType)?.let { sig ->
+                            add(Callee(sig, CalleePriority.Default))
+                        }
+                    }
+                }
             } else if (coverFn != null) {
                 val (mainCalleeType, fallbackCalleeType) = splitCoverFnType(coverFn)
-                explodeCalleeType(mainCalleeType, CalleePriority.Default)
-                fallbackCalleeType?.let { explodeCalleeType(it, CalleePriority.Fallback) }
+                explodeCalleeType(mainCalleeType, CalleePriority.Default, ::specialize)
+                fallbackCalleeType?.let { explodeCalleeType(it, CalleePriority.Fallback, ::specialize) }
             } else if (calleeFn?.sigs != null) {
                 calleeFn.sigs?.mapNotNullTo(this) { anySig ->
                     (anySig as? Signature2)?.let { Callee(it, CalleePriority.Default) }
                 }
-            } else if (effectiveCalleeType != null) {
-                explodeCalleeType(effectiveCalleeType, CalleePriority.Default)
+            } else {
+                effectiveCalleeTypeThunk.value?.let { effectiveCalleeType ->
+                    explodeCalleeType(effectiveCalleeType, CalleePriority.Default, ::specialize)
+                }
             }
         }.toList()
 
@@ -1753,9 +1830,9 @@ internal class Typer(
             constructorShape.descriptor
                 ?: run {
                     explanations.add(
-                        BecauseTypeInfoMissingForName(
+                        BecauseTypeInfoMissing(
                             pos = typeReferencePos,
-                            nameMissingInfo = constructorShape.name as ResolvedName,
+                            missingInfo = constructorShape.name as ResolvedName,
                         ),
                     )
                     invalidSig
@@ -2077,7 +2154,7 @@ internal class Typer(
                         type?.let { Decision(it) }
                             ?: Decision(
                                 InvalidType,
-                                explanations = listOf(BecauseTypeInfoMissingForName(t.pos, name)),
+                                explanations = listOf(BecauseTypeInfoMissing(t.pos, name)),
                             ),
                     )
                 } else if (t is CallTree && isAssignment(t)) {
@@ -2562,7 +2639,7 @@ internal class Typer(
             val memberDescriptor = member.descriptor
                 ?: return TypedMembersAndExtensions(
                     InvalidType,
-                    listOf(BecauseTypeInfoMissingForName(pos, member.name as ResolvedName)),
+                    listOf(BecauseTypeInfoMissing(pos, member.name as ResolvedName)),
                 )
             val memberType = when (memberDescriptor) {
                 is Signature2 -> typeFromSignature(memberDescriptor)
@@ -2575,7 +2652,7 @@ internal class Typer(
             val extensionType = typeForExtensionResolution(pos, extension)
                 ?: return TypedMembersAndExtensions(
                     InvalidType,
-                    listOf(BecauseTypeInfoMissingForName(pos, extension.resolution)),
+                    listOf(BecauseTypeInfoMissing(pos, extension.resolution)),
                 )
             addVariant(extensionType, Either.Right(extension))
         }
@@ -2890,7 +2967,7 @@ internal class Typer(
                             variants.add(mapper(asMethodType) to Either.Left(memberShape))
                         } else {
                             explanations.add(
-                                BecauseTypeInfoMissingForName(
+                                BecauseTypeInfoMissing(
                                     t.pos,
                                     memberShape.name as ResolvedName,
                                 ),
@@ -2901,24 +2978,17 @@ internal class Typer(
                 }
             }
             dotHelper.extensions.forEach { extensionResolution ->
-                when (extensionResolution) {
-                    is InstanceExtensionResolution -> {} // Proceed to below
+                if (extensionResolution is StaticExtensionResolution) {
                     // StaticExtensionResolutions are handled elsewhere by typing
                     // DotHelper operations where the first argument is a type expression
                     // as if they were getStatic resolutions.
-                    is StaticExtensionResolution -> return@forEach
+                    return@forEach
                 }
-                val extensionName = extensionResolution.resolution
                 val extensionType = typeForExtensionResolution(t.pos, extensionResolution)
                 if (extensionType != null) {
                     variants.add(extensionType to Either.Right(extensionResolution))
                 } else {
-                    explanations.add(
-                        BecauseTypeInfoMissingForName(
-                            t.pos,
-                            extensionName,
-                        ),
-                    )
+                    explanations.add(BecauseTypeInfoMissing(t.pos, extensionResolution))
                     includeInvalid = true
                 }
             }
@@ -3021,7 +3091,7 @@ internal class Typer(
         extensionResolution: ExtensionResolution,
     ): StaticType? {
         val document = ti.typerPlan.root.document
-        val extensionRef = RightNameLeaf(document, pos, extensionResolution.resolution)
+        val extensionRef = extensionResolution.toLeaf(document, pos)
         typeSubTree(extensionRef)
         return ti.decisionType(extensionRef)
     }
@@ -3483,29 +3553,6 @@ internal fun LogSink.logInvalid2BecauseMissingType(p: Positioned, subject: Strin
     return t
 }
 
-private fun MutableCollection<Callee>.explodeCalleeType(t: StaticType, priority: CalleePriority) {
-    when (t) {
-        is FunctionType -> add(Callee(t, priority))
-        is NominalType -> {
-            if (functionalInterfaceSymbol in t.definition.metadata) {
-                withType(
-                    hackMapOldStyleToNew(t),
-                    fn = { _, sig, _ ->
-                        add(Callee(sig, priority))
-                    },
-                    fallback = {},
-                )
-            }
-        }
-        is AndType ->
-            for (mt in t.members) {
-                explodeCalleeType(mt, priority)
-            }
-        OrType.emptyOrType -> {}
-        is OrType -> explodeCalleeType(excludeNullAndBubble(t), priority)
-        else -> {} // TODO: add a problem?
-    }
-}
 
 internal val Tree.needsTypeInfo get() = when (this) {
     is NoTypeInferencesTree -> false
@@ -3515,4 +3562,44 @@ internal val Tree.needsTypeInfo get() = when (this) {
     is FunTree -> true
     is NameLeaf -> true
     is ValueLeaf -> true
+}
+
+private val StaticType.fnTypesIterable: Iterable<FunctionType> get() {
+    if (this is FunctionType) {
+        return listOf(this)
+    }
+    if (this is AndType) {
+        return members.flatMap {
+            it.fnTypesIterable
+        }
+    }
+    return listOf()
+}
+
+private fun MutableCollection<Callee>.explodeCalleeType(
+    t: StaticType,
+    priority: CalleePriority,
+    specialize: (Signature2) -> Signature2,
+) {
+    when (t) {
+        is FunctionType -> add(Callee(t, priority))
+        is NominalType -> {
+            if (functionalInterfaceSymbol in t.definition.metadata) {
+                withType(
+                    hackMapOldStyleToNew(t),
+                    fn = { _, sig, _ ->
+                        add(Callee(specialize(sig), priority))
+                    },
+                    fallback = {},
+                )
+            }
+        }
+        is AndType ->
+            for (mt in t.members) {
+                explodeCalleeType(mt, priority, specialize)
+            }
+        OrType.emptyOrType -> {}
+        is OrType -> explodeCalleeType(excludeNullAndBubble(t), priority, specialize)
+        else -> {} // TODO: add a problem?
+    }
 }

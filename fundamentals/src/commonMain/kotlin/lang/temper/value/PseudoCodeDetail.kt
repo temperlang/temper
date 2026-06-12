@@ -1,5 +1,6 @@
 package lang.temper.value
 
+import lang.temper.common.Freq3
 import lang.temper.common.NoneShortOrLong
 
 /**
@@ -44,8 +45,15 @@ data class PseudoCodeDetail(
     /**
      * False to leave *DotHelper* calls as `do_get_i(subject)` instead of
      * resugaring them to `subject.i`.
+     *
+     * [Freq3.Never] to never resugar.
+     *
+     * [Freq3.Sometimes] (the default) to resugar infix and prefix operators
+     * which are otherwise unwieldy in output.
+     *
+     * [Freq3.Always] to also resugar property and method accesses.
      */
-    val resugarDotHelpers: Boolean = false,
+    val resugarDotHelpers: Freq3 = Freq3.Sometimes,
     /**
      * True for any tree that should be marked with comments to draw viewers
      * attention.

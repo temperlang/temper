@@ -34,6 +34,7 @@ import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
+import lang.temper.type.NameExtensionResolution
 import lang.temper.type.NominalType
 import lang.temper.type.StaticType
 import lang.temper.type.TypeShape
@@ -509,8 +510,8 @@ private fun stageGeneratedCodeAndFoldIntoModule(
                     val v = t.content
                     when (v.typeTag) {
                         TFunction -> (TFunction.unpack(v) as? DotHelper)?.let { dotHelper ->
-                            dotHelper.extensions.mapTo(atl.namesUsed) {
-                                it.resolution
+                            dotHelper.extensions.mapNotNullTo(atl.namesUsed) {
+                                (it as? NameExtensionResolution)?.resolution
                             }
                         }
                         TType -> TType.unpack(v).let { reifiedType ->
@@ -627,7 +628,7 @@ private fun stageGeneratedCodeAndFoldIntoModule(
         }
     }
 
-    // Incorporate needed supported declarations
+    // Incorporate necessary supported declarations
     while (true) {
         var insertionPointForDecl = 0
         val nUnincorporatedBefore = unincorporated.size

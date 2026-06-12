@@ -219,6 +219,7 @@ class DisAmbiguateStageTest {
     fun stagingAnnotation() = assertModuleAtStage(
         stage = Stage.DisAmbiguate,
         input = "@(A..S) fn (x) {}",
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
         want = """
         {
           disAmbiguate: {
@@ -330,8 +331,11 @@ class DisAmbiguateStageTest {
                               ],
                               [ "Block", [
                                   [ "Call", [
-                                      [ "RightName", "+" ],
-                                      [ "RightName", "x" ],
+                                      [ "Call", [
+                                          [ "Value", "nym`do_bind__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function" ],
+                                          [ "RightName", "x" ],
+                                        ]
+                                      ],
                                       [ "RightName", "y" ]
                                     ]
                                   ]

@@ -7,10 +7,12 @@ import lang.temper.log.LogEntry
 import lang.temper.log.MessageTemplate
 import lang.temper.name.BuiltinName
 import lang.temper.name.Symbol
+import lang.temper.name.TemperName
 import lang.temper.value.CallTree
 import lang.temper.value.Fail
 import lang.temper.value.FunTree
 import lang.temper.value.MacroActuals
+import lang.temper.value.MacroValue
 import lang.temper.value.NotYet
 import lang.temper.value.TProblem
 import lang.temper.value.TString
@@ -52,7 +54,7 @@ internal val connectedDecorator = MetadataDecorator(
 val vConnectedDecorator = Value(connectedDecorator)
 val connectedDecoratorName = BuiltinName(connectedDecorator.name)
 
-val connectedDecoratorBindings = mapOf(
+val connectedDecoratorBindings: Map<TemperName, Value<MacroValue>> = mapOf(
     connectedDecoratorName to vConnectedDecorator,
     connectedDecoratorName.baseName to vConnectedDecorator,
 )

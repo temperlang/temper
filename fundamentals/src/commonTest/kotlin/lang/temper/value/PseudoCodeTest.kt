@@ -6,6 +6,7 @@ import lang.temper.astbuild.buildTree
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.Types
 import lang.temper.common.AppendingTextOutput
+import lang.temper.common.Freq3
 import lang.temper.common.ListBackedLogSink
 import lang.temper.common.NoneShortOrLong
 import lang.temper.common.TestDocumentContext
@@ -32,6 +33,7 @@ import lang.temper.type.ExternalBind
 import lang.temper.type.ExternalGet
 import lang.temper.type.ExternalSet
 import lang.temper.type.MkType
+import lang.temper.type.OperatorMember
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.MkType2
 import kotlin.test.Test
@@ -49,6 +51,13 @@ class PseudoCodeTest {
     fun prefixOp() = assertPseudoCode(
         input = "-123",
         want = "-123\n",
+    )
+
+    @Test
+    fun explicitPrefixOp() = assertPseudoCode(
+        input = "-123",
+        want = "desugarOperation (nym`-`, 123)\n",
+        detail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
     )
 
     @Test
@@ -954,7 +963,7 @@ class PseudoCodeTest {
             |x.j = x.i + x.f(1)
             |
         """.trimMargin(),
-        detail = PseudoCodeDetail(resugarDotHelpers = true),
+        detail = PseudoCodeDetail(resugarDotHelpers = Freq3.Always),
         makeInput = { doc, pos ->
             doc.treeFarm.grow(pos) {
                 Call(DotHelper(ExternalSet, DotMember(Symbol("j")), emptyList())) {
@@ -994,7 +1003,7 @@ class PseudoCodeTest {
             |f()
             |
         """.trimMargin(),
-        detail = PseudoCodeDetail(resugarDotHelpers = true) {
+        detail = PseudoCodeDetail(resugarDotHelpers = Freq3.Always) {
             it is CallTree && it.incoming?.edgeIndex == 2
         },
         makeInput = { doc, pos ->
@@ -1026,6 +1035,87 @@ class PseudoCodeTest {
                         V(emptyValue)
                     }
                     V(void)
+                }
+            }
+        },
+    )
+
+    @Test
+    fun resugarPostDesugarOperationsCall() = assertPseudoCode(
+        want = """
+            |x + y
+            |
+        """.trimMargin(),
+        makeInput = { doc, pos ->
+            doc.treeFarm.grow(pos) {
+                Call {
+                    Call {
+                        V(Value(DotHelper(ExternalBind, OperatorMember("_+_"))))
+                        Rn(ParsedName("x"))
+                    }
+                    Rn(ParsedName("y"))
+                }
+            }
+        },
+    )
+
+    @Test
+    fun explicitPostDesugarOperationsCall() = assertPseudoCode(
+        want = """
+            |nym`do_bind__+_`(x)(y)
+            |
+        """.trimMargin(),
+        detail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
+        makeInput = { doc, pos ->
+            doc.treeFarm.grow(pos) {
+                Call {
+                    Call {
+                        V(Value(DotHelper(ExternalBind, OperatorMember("_+_"))))
+                        Rn(ParsedName("x"))
+                    }
+                    Rn(ParsedName("y"))
+                }
+            }
+        },
+    )
+
+    @Test
+    fun resugarPostDesugarMethodCall() = assertPseudoCode(
+        want = """
+            |subject.verb(object1, object2)
+            |
+        """.trimMargin(),
+        detail = PseudoCodeDetail(resugarDotHelpers = Freq3.Always),
+        makeInput = { doc, pos ->
+            doc.treeFarm.grow(pos) {
+                Call {
+                    Call {
+                        V(Value(DotHelper(ExternalBind, DotMember(Symbol("verb")))))
+                        Rn(ParsedName("subject"))
+                    }
+                    Rn(ParsedName("object1"))
+                    Rn(ParsedName("object2"))
+                }
+            }
+        },
+    )
+
+    @Test
+    fun explicitPostDesugarMethodCall() = assertPseudoCode(
+        want = """
+            |do_bind_verb(subject)(object1, object2)
+            |
+        """.trimMargin(),
+        detail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
+        makeInput = { doc, pos ->
+            doc.treeFarm.grow(pos) {
+                Call {
+                    Call {
+                        V(Value(DotHelper(ExternalBind, DotMember(Symbol("verb")))))
+                        Rn(ParsedName("subject"))
+                    }
+                    Rn(ParsedName("object1"))
+                    Rn(ParsedName("object2"))
                 }
             }
         },

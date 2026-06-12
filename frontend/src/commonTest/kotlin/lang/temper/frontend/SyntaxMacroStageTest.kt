@@ -3,6 +3,7 @@
 package lang.temper.frontend
 
 import lang.temper.builtin.Types
+import lang.temper.common.Freq3
 import lang.temper.common.NoneShortOrLong
 import lang.temper.common.json.JsonArray
 import lang.temper.common.json.JsonObject
@@ -76,29 +77,32 @@ class SyntaxMacroStageTest {
                       ]
                     ],
                     [ "Call", [
-                        [ "RightName", "+" ],
                         [ "Call", [
-                            [ "RightName", "do" ],
-                            [ "Fun", [
-                                [ "Block", [
-                                    [ "Decl", [
-                                        [ "LeftName", "a__1" ],
-                                        [ "Value", [ "init", "Symbol" ] ],
-                                        [ "Value", [ 2, "Int32" ] ],
-                                        [ "Value", "\\QName: Symbol" ],
-                                        [ "Value", "\"test-code.a=\": String" ],
+                            [ "Value", "nym`do_bind__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function" ],
+                            [ "Call", [
+                                [ "RightName", "do" ],
+                                [ "Fun", [
+                                    [ "Block", [
+                                        [ "Decl", [
+                                            [ "LeftName", "a__1" ],
+                                            [ "Value", [ "init", "Symbol" ] ],
+                                            [ "Value", [ 2, "Int32" ] ],
+                                            [ "Value", "\\QName: Symbol" ],
+                                            [ "Value", "\"test-code.a=\": String" ],
+                                          ]
+                                        ],
+                                        [ "Call", [
+                                            [ "Value", "REM: Function" ],
+                                            [ "Value", ```
+                                              "Why do I feel compelled to write `let ... in` here?\nI wish I knew how to quit you, OCaml!": String
+                                              ``` ],
+                                            [ "Value", "null: Null" ],
+                                            [ "Value", "false: Boolean" ],
+                                          ]
+                                        ],
+                                        [ "RightName", "a__1" ]
                                       ]
-                                    ],
-                                    [ "Call", [
-                                        [ "Value", "REM: Function" ],
-                                        [ "Value", ```
-                                          "Why do I feel compelled to write `let ... in` here?\nI wish I knew how to quit you, OCaml!": String
-                                          ``` ],
-                                        [ "Value", "null: Null" ],
-                                        [ "Value", "false: Boolean" ],
-                                      ]
-                                    ],
-                                    [ "RightName", "a__1" ]
+                                    ]
                                   ]
                                 ]
                               ]
@@ -465,8 +469,11 @@ class SyntaxMacroStageTest {
                   ]
                 ],
                 [ "Call", [
-                    [ "RightName", "+" ],
-                    [ "RightName", "x__0" ],
+                    [ "Call", [
+                        [ "Value", "nym`do_bind__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function" ],
+                        [ "RightName", "x__0" ],
+                      ],
+                    ],
                     [ "RightName", "y__1" ]
                   ]
                 ]
@@ -686,11 +693,14 @@ class SyntaxMacroStageTest {
             |            ]
             |          ],
             |          [ "Call", [
-            |              [ "RightName", "+" ],
             |              [ "Call", [
-            |                  [ "Value", "do_get_bar: Function" ],
-            |                  [ "RightName", "foo__0" ],
-            |                ]
+            |                  [ "Value", "nym`do_bind__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function" ],
+            |                  [ "Call", [
+            |                      [ "Value", "do_get_bar: Function" ],
+            |                      [ "RightName", "foo__0" ],
+                |                ]
+                |              ]
+                |            ]
             |              ],
             |              [ "RightName", "bar__1" ]
             |            ]
@@ -2279,5 +2289,52 @@ class SyntaxMacroStageTest {
             |  ]
             |}
         """.trimMargin(),
+    )
+
+    @Test
+    fun desugarCompoundOp() = assertModuleAtStage(
+        stage = Stage.SyntaxMacro,
+        input = """
+            |var x = 1;
+            |x += 2;
+        """.trimMargin(),
+        pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
+        want = """
+            |{
+            |  parse: {
+            |    body: ```
+            |      nym`@`(var, let x = 1);
+            |## Parse produces a desugar call for `+=`
+            |      desugarOperation (nym`+=`, x, 2);
+            |
+            |      ```
+            |  },
+            |  import: {
+            |    body: ```
+            |      nym`@`(var, let x = 1);
+            |## That resolves early to an assignment to x with a desugar call with the builtin variants.
+            |      x = (nym`do_bind__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(x)(2);
+            |
+            |      ```
+            |  },
+            |  disAmbiguate: {
+            |    body: ```
+            |## `let` macro applied
+            |      var x = 1;
+            |      x = (nym`do_bind__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(x)(2);
+            |
+            |      ```
+            |  },
+            |  syntaxMacro: {
+            |    body: ```
+            |## Names resolved
+            |      var x__0 = 1;
+            |      x__0 = (nym`do_bind__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(x__0)(2);
+            |
+            |      ```
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
     )
 }

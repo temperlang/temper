@@ -297,6 +297,7 @@ class DefineStageTest {
     fun constantFolding() = assertModuleAtStage(
         stage = Stage.Define,
         input = "1 + 1",
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
         want = """
         {
           syntaxMacro: {
