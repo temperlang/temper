@@ -504,14 +504,33 @@ internal class JsTranslator(
                 is TmpL.MethodReference -> {
                     val obj = when (val subject = fn.subject) {
                         is TmpL.Expression -> translateExpression(subject)
-                        is TmpL.TypeSubject -> translateTypeName(subject.typeName, asExpr = true)
+                        is TmpL.TypeSubject -> {
+                            val typeName = translateTypeName(subject.typeName, asExpr = true)
+                            when (subject) {
+                                is TmpL.SuperSubject -> Js.MemberExpression(
+                                    subject.pos,
+                                    obj = typeName,
+                                    property = Js.Identifier(subject.pos, JsIdentifierName("prototype"), null),
+                                )
+                                is TmpL.TypeName -> typeName
+                            }
+                        }
                     }
                     val methodShape = fn.method
                     val (method, _) = decomposeMemberKey(
                         fn.methodName, methodShape?.let { it.name as ResolvedName },
                         methodShape?.visibility?.toTmpL() ?: TmpL.Visibility.Public,
                     )
-                    val member = Js.MemberExpression(fn.pos, obj, method)
+                    val member = Js.MemberExpression(fn.pos, obj, method).let { member ->
+                        when (fn.subject) {
+                            is TmpL.SuperSubject -> Js.MemberExpression(
+                                fn.pos,
+                                obj = member,
+                                property = Js.Identifier(fn.pos, JsIdentifierName("call"), null),
+                            )
+                            else -> member
+                        }
+                    }
                     Js.CallExpression(e.pos, member, translateParameters(e.parameters))
                 }
             }

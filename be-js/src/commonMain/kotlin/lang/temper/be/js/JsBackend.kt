@@ -6,11 +6,14 @@ import lang.temper.be.BackendHelpTopicKey
 import lang.temper.be.BackendHelpTopicKeys
 import lang.temper.be.BackendSetup
 import lang.temper.be.globalPathSegment
+import lang.temper.be.tmpl.SuperCallConfig
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TESTING_BASENAME
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
 import lang.temper.be.tmpl.findCommonTopLevels
+import lang.temper.be.tmpl.hasSplitSupers
+import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.be.tmpl.matchesStdTesting
 import lang.temper.common.MimeType
 import lang.temper.common.json.JsonObject
@@ -196,6 +199,18 @@ class JsBackend private constructor(
         dependencyResolver = dependencyResolver,
         tentativeOutputPathFor = { module ->
             allocateTextFile(module, extension, defaultName = INDEX_NAME)
+        },
+        withTentative = { tentativeTmpL ->
+            injectSuperCallMethods(
+                tentativeTmpL,
+                injectInto = { it.kind != TmpL.TypeDeclarationKind.Interface },
+                configSuperCall = configSuperCall@{ type, method ->
+                    when {
+                        type.hasSplitSupers(method) -> SuperCallConfig(skipThis = false)
+                        else -> null
+                    }
+                },
+            )
         },
     )
 

@@ -122,8 +122,8 @@ class JavaBackend private constructor(
                         type.kind == TmpL.TypeDeclarationKind.Interface -> {}
                         // For classes, we need to implement only where split options are available.
                         type.hasSplitSupers(method) -> {}
-                        else -> null
-                    } ?: return@configSuperCall null
+                        else -> return@configSuperCall null
+                    }
                     // Got a unit, so config the call. Supercalls in Java exclude `this`.
                     SuperCallConfig(skipThis = true)
                 },
