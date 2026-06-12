@@ -1212,19 +1212,6 @@ val JavaLang.listMap by receiver {
             .staticMethod(args.unpackArgs(), pos)
     }
 }
-val JavaLang.listMapDropping by receiver {
-    inlineSupport("List::mapDropping", 2, needsSelf = true) { pos, args, _ ->
-        // listMapDropping(0=List<T>, 1=fun (T): U)
-        val (inType, outType) = functionSimpleArgumentTypes(args[1].type)
-        val fromType = when (val name = inType.shortCamelName) {
-            "Bool", "Long" -> "Obj"
-            else -> name
-        }
-        val toType = outType.shortCamelName
-        temperListMapDropping.suffix("${fromType}To${toType}")
-            .staticMethod(args.unpackArgs(), pos)
-    }
-}
 val JavaLang.listedReduce by receiver {
     inlineSupport("Listed::reduce", 2, needsSelf = true) inline@{ pos, args, _ ->
         // listedReduce(0=List<T>, 1=fun (T, T): T)
@@ -1525,7 +1512,6 @@ private val connections: Map<String, ((JavaLang) -> SupportCode)> = mapOf(
     "Listed::join" to { it.listJoin },
     "Listed::length" to { it.listLength },
     "Listed::map" to { it.listMap },
-    "Listed::mapDropping" to { it.listMapDropping },
     "Listed::reduce" to { it.listedReduce },
     "Listed::reduceFrom" to { it.listedReduceFrom },
     "Listed::slice" to { it.listSlice },

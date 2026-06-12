@@ -196,7 +196,6 @@ fun builtinLibraryConnecteds() = listOf(
     ListFns.Join,
     ListFns.Length,
     ListFns.Map,
-    ListFns.MapDropping,
     ListFns.Slice,
     ListFns.Sorted,
     ListBuilderFns.Add,
@@ -254,7 +253,6 @@ fun standardLibraryConnecteds() = builtinLibraryConnecteds() + mapOf(
     "Listed::join" to { sig -> ListFns.Join.fn(sig) },
     "Listed::length" to { sig -> ListFns.Length.fn(sig) },
     "Listed::map" to { sig -> ListFns.Map.fn(sig) },
-    "Listed::mapDropping" to { sig -> ListFns.MapDropping.fn(sig) },
     "Listed::slice" to { sig -> ListFns.Slice.fn(sig) },
     "ListBuilder::filter" to { sig -> ListFns.Filter.fn(sig) },
     "ListBuilder::get" to { sig -> ListFns.Get.fn(sig) },
@@ -262,7 +260,6 @@ fun standardLibraryConnecteds() = builtinLibraryConnecteds() + mapOf(
     "ListBuilder::join" to { sig -> ListFns.Join.fn(sig) },
     "ListBuilder::length" to { sig -> ListFns.Length.fn(sig) },
     "ListBuilder::map" to { sig -> ListFns.Map.fn(sig) },
-    "ListBuilder::mapDropping" to { sig -> ListFns.MapDropping.fn(sig) },
     "ListBuilder::slice" to { sig -> ListFns.Slice.fn(sig) },
     // Other std
     "Regex::compileFormatted" to { sig -> Value(RegexCompileFormattedFn(sig)) },

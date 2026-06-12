@@ -203,7 +203,6 @@ internal object CppSupportNetwork : SupportNetwork {
         "Listed::isEmpty" -> Like.core("is_empty")
         "Listed::join" -> Like.core("join")
         "Listed::map" -> Like.core("map")
-        "Listed::mapDropping" -> Like.core("mapDropping")
         "Listed::slice" -> Like.core("slice")
         "Listed::get" -> Like.core("get")
         "Listed::getOr" -> Like.core("getor")
