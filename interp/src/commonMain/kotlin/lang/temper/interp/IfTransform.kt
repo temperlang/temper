@@ -242,7 +242,7 @@ internal object IfTransform : ControlFlowTransform("if") {
                 // constructs that start with a condition and which don't reliably follow it
                 // with a typeable tree.
                 if (controlFlow != null && !hasFinalElse && !exhaustiveAutoFinalElse) {
-                    // TODO Record metadata at the start of the chain to improve error messaging?
+                    // TODO Record metadata on the added voids for better messages in case of errors later?
                     // TODO Maybe: "Use final `else` to provide a default value when not checking all sealed subtypes"?
                     controlFlow = ControlFlow.StmtBlock(
                         controlFlow.pos,
