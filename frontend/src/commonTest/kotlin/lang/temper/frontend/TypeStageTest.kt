@@ -2407,6 +2407,7 @@ class TypeStageTest {
             |  when (s) {
             |    is Circle -> "circle";
             |    is Square -> "square";
+            |    // defaults to panic here because above is exhaustive
             |  }
             |}
         """.trimMargin(),
@@ -2454,6 +2455,69 @@ class TypeStageTest {
             |                return__2 = panic ⋖ String ⋗()
             |              }
             |            };
+            |          }
+            |      })
+            |
+            |      ```
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
+    @Test
+    fun unsealedWhen() = assertModuleAtStage(
+        stage = Stage.Type,
+        pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
+        input = """
+            |export /* totally not sealed */ interface Shape {}
+            |export class Circle() extends Shape {}
+            |export class Square() extends Shape {}
+            |export let describe(s: Shape): String {
+            |  when (s) {
+            |    is Circle -> "circle";
+            |    is Square -> "square";
+            |    // defaults to void here
+            |  }
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  type: {
+            |    body:
+            |      ```
+            |      @typeDecl(Shape) @stay let `test//`.Shape ⦂ Type;
+            |      `test//`.Shape = type (Shape);
+            |      @typeDecl(Circle) @stay let `test//`.Circle ⦂ Type;
+            |      `test//`.Circle = type (Circle);
+            |      @typeDecl(Square) @stay let `test//`.Square ⦂ Type;
+            |      `test//`.Square = type (Square);
+            |      @fn let `test//`.describe ⦂(fn (Shape): String), @typePlaceholder(Shape) typePlaceholder#0: Empty;
+            |      typePlaceholder#0 = {class: Empty__0};
+            |      @fn @visibility(\public) @stay @fromType(Circle) let constructor__0 ⦂(fn (Circle): Void);
+            |      constructor__0 = (@stay fn constructor(@impliedThis(Circle) this__0: Circle) /* return__0 */: Void {
+            |          return__0 = void
+            |      });
+            |      @fn @visibility(\public) @stay @fromType(Square) let constructor__1 ⦂(fn (Square): Void);
+            |      constructor__1 = (@stay fn constructor(@impliedThis(Square) this__1: Square) /* return__1 */: Void {
+            |          return__1 = void
+            |      });
+            |      `test//`.describe = (@stay fn describe(s__0 /* aka s */: Shape) /* return__2 */: String {
+            |          var t#0 ⦂ Boolean, t#1 ⦂ Boolean;
+            |          fn__0: do {
+            |            if (!false) {
+            |              t#0 = is(s__0, Circle)
+            |            } else {
+            |              t#0 = false
+            |            };
+            |            if (!t#0) {
+            |              if (!false) {
+            |                t#1 = is(s__0, Square)
+            |              } else {
+            |                t#1 = false
+            |              };
+            |              if (t#1) {}
+            |            };
+            |            return__2 = void
             |          }
             |      })
             |

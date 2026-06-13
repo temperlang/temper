@@ -191,6 +191,7 @@ internal object IfTransform : ControlFlowTransform("if") {
                 }
                 // Build branching subsystems from `else` backwards to `if`.
                 val hasFinalElse = branches.last().first == null
+                val exhaustiveAutoFinalElse = !hasFinalElse && anySealedTypesExhaustive(branches)
                 var branchIndex = branches.size
                 var controlFlow: ControlFlow? =
                     if (hasFinalElse) {
@@ -198,7 +199,7 @@ internal object IfTransform : ControlFlowTransform("if") {
                     } else {
                         when {
                             // If someone has checked all subtypes for some supertype, panic instead of void.
-                            anySealedTypesExhaustive(branches) -> {
+                            exhaustiveAutoFinalElse -> {
                                 val pos = macroCursor.macroEnvironment.pos
                                 val panicCall = macroCursor.macroEnvironment.document.treeFarm.grow(pos) {
                                     Block {
@@ -235,6 +236,25 @@ internal object IfTransform : ControlFlowTransform("if") {
                         body
                     }
                 }
+
+                // Non-exhaustive `if` chains that don't end in `else` should be typed as Void.
+                // See LoopTransform comments on typing as for the problems with control-flow
+                // constructs that start with a condition and which don't reliably follow it
+                // with a typeable tree.
+                if (controlFlow != null && !hasFinalElse && !exhaustiveAutoFinalElse) {
+                    // TODO Record metadata at the start of the chain to improve error messaging?
+                    // TODO Maybe: "Use final `else` to provide a default value when not checking all sealed subtypes"?
+                    controlFlow = ControlFlow.StmtBlock(
+                        controlFlow.pos,
+                        listOf(
+                            controlFlow,
+                            ControlFlow.Stmt(
+                                macroCursor.referenceToVoid(controlFlow.pos.rightEdge),
+                            ),
+                        ),
+                    )
+                }
+
                 controlFlow?.let { ControlFlowSubflow(it) }
             }
         }
