@@ -287,6 +287,7 @@ class SyntaxMacroStageTest {
         input = """
         let f = fn (x) {};
         let g = fn g(y) {};
+        var h = fn (z) {}; // *var* fn should get neither symbol nor qname
         """.trimIndent(),
         want = """
         {
@@ -356,6 +357,35 @@ class SyntaxMacroStageTest {
                     [ "Value", "\"test-code.g()\": String" ],
                   ]
                 ],
+
+                [ "Decl", [
+                    [ "LeftName", "h__0" ],
+                    [ "Value", "\\init: Symbol" ],
+                    [ "Fun", [
+                        [ "Decl", [
+                            [ "LeftName", "z__0" ],
+                            [ "Value", "\\word: Symbol" ],
+                            [ "Value", "\\z: Symbol" ],
+                            [ "Value", "\\QName: Symbol" ],
+                            [ "Value", "\"test-code.h().(z)\": String" ],
+                          ]
+                        ],
+                        [ "Value", "\\returnedFrom: Symbol" ],
+                        [ "Value", "true: Boolean" ],
+                        [ "Block", [
+                            [ "Value", "\\label: Symbol" ],
+                            [ "LeftName", "fn__0" ]
+                          ]
+                        ]
+                      ]
+                    ],
+                    [ "Value", "\\var: Symbol" ],
+                    [ "Value", "void: Void" ],
+                    [ "Value", "\\QName: Symbol" ],
+                    [ "Value", "\"test-code.h()\": String" ],
+                  ]
+                ],
+
                 [ "Value", "void: Void" ],
               ]
             ]

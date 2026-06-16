@@ -41,6 +41,7 @@ import lang.temper.value.staticPropertySymbol
 import lang.temper.value.typeDeclSymbol
 import lang.temper.value.typeDefinedSymbol
 import lang.temper.value.typeFormalSymbol
+import lang.temper.value.varSymbol
 
 /**
  * Attaches [qNameSymbol] to [QName] metadata to [DeclTree]s.
@@ -103,7 +104,7 @@ internal fun attachQNameMetadata(module: Module, root: BlockTree) {
                     qNameBuilder.part(parsedName, kind)
                     val qName = qNameBuilder.toQName()
                     qNameToDecls.putMultiList(qName, t)
-                    if (initial is FunTree) {
+                    if (initial is FunTree && varSymbol !in metadata) {
                         declToFn[t] = initial
                     }
                 } else {
@@ -172,6 +173,7 @@ internal fun attachQNameMetadata(module: Module, root: BlockTree) {
                     V(pos, qNameSymbol)
                     V(pos, nameTextValue)
                 }
+                // Also put qname on const-assigned function trees.
                 declToFn[decl]?.let { fn ->
                     fn.insert(fn.size - 1) {
                         V(pos, qNameSymbol)
