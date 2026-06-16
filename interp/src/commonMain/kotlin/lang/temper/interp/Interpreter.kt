@@ -108,6 +108,7 @@ import lang.temper.value.TBoolean
 import lang.temper.value.TEdge
 import lang.temper.value.TFunction
 import lang.temper.value.TNull
+import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.Tree
@@ -132,6 +133,7 @@ import lang.temper.value.labelSymbol
 import lang.temper.value.matches
 import lang.temper.value.optionalAsTriState
 import lang.temper.value.optionalSymbol
+import lang.temper.value.qNameSymbol
 import lang.temper.value.restFormalSymbol
 import lang.temper.value.returnDeclSymbol
 import lang.temper.value.returnParsedName
@@ -183,6 +185,19 @@ class Interpreter(
     private var stepCount = 0
     private var goingOutOfStyle = stage == Stage.Run
     private val isProcessingImplicits = nameMaker.namingContext.isImplicits
+
+    fun connection(qname: String?, connectedKey: String?): ((Signature2) -> Value<*>)? {
+        // TODO Remove this precheck. It's here just to prove we can do this.
+        if (qname == null) {
+            return null
+        }
+        val result = qname?.let { connecteds[it] }
+            ?: connectedKey?.let { connecteds[it] }
+        if (result != null) {
+            connectedKey?.length
+        }
+        return result
+    }
 
     @Suppress("SimplifyBooleanWithConstants")
     private fun beSpammy(spammy: Boolean) =
@@ -1829,7 +1844,8 @@ class Interpreter(
             restInputsType = restType?.type2,
             typeFormals = typeFormals.toList(),
         )
-        val connected = connecteds[parts?.connected]?.let { it(signature) }
+        val qname = parts?.metadataSymbolMap[qNameSymbol]?.valueContained(TString)
+        val connected = connection(qname = qname, connectedKey = parts?.connected)?.let { it(signature) }
 
         val superTypes = SuperTypeTree(superTypeSet)
         // We use decomposeFun (I know I said above we wouldn't, but now we've expanded macros) just
@@ -2469,7 +2485,9 @@ class Interpreter(
         override val isProcessingImplicits: Boolean
             get() = document.isImplicits
 
-        override fun connection(connectedKey: String): ((Signature2) -> Value<*>)? = connecteds[connectedKey]
+        override fun connection(qname: String, connectedKey: String): ((Signature2) -> Value<*>)? {
+            return this@Interpreter.connection(qname = qname, connectedKey = connectedKey)
+        }
 
         val ancestorReplaced: TEdge? get() = callSiteAncestorToReplace
     }

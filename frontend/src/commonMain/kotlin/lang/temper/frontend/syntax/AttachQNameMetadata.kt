@@ -1,5 +1,7 @@
 package lang.temper.frontend.syntax
 
+import lang.temper.ast.TreeVisit
+import lang.temper.ast.VisitCue
 import lang.temper.common.Log
 import lang.temper.common.RSuccess
 import lang.temper.common.putMultiList
@@ -21,12 +23,12 @@ import lang.temper.value.DeclTree
 import lang.temper.value.FunTree
 import lang.temper.value.LinearFlow
 import lang.temper.value.MetadataMultimapHelpers.get
-import lang.temper.value.ReifiedType
 import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.Tree
 import lang.temper.value.Value
+import lang.temper.value.connectedSymbol
 import lang.temper.value.constructorSymbol
 import lang.temper.value.fnSymbol
 import lang.temper.value.getterSymbol
@@ -57,6 +59,7 @@ internal fun attachQNameMetadata(module: Module, root: BlockTree) {
     // Walk tree to allocated QNames and collect them in a map.
     // Later, we disambiguate and store them back.
     val qNameToDecls = mutableMapOf<QName, MutableList<DeclTree>>()
+    val declToFn = mutableMapOf<DeclTree, FunTree>()
     val qNameBuilder = QName.Builder(libraryName, relPath)
     fun visit(t: Tree, inLocalContext: Boolean) {
         val partCount = qNameBuilder.partCount
@@ -100,6 +103,9 @@ internal fun attachQNameMetadata(module: Module, root: BlockTree) {
                     qNameBuilder.part(parsedName, kind)
                     val qName = qNameBuilder.toQName()
                     qNameToDecls.putMultiList(qName, t)
+                    if (initial is FunTree) {
+                        declToFn[t] = initial
+                    }
                 } else {
                     // Store existing QNames in case some micro-passes pre-allocate them.
                     val qNameText = metadata[qNameSymbol, TString]
@@ -121,7 +127,7 @@ internal fun attachQNameMetadata(module: Module, root: BlockTree) {
             if (parts != null) {
                 val metadata = parts.metadataSymbolMultimap
                 val typeDefined = metadata[typeDefinedSymbol, TType]
-                val definition = ((typeDefined as? ReifiedType)?.type as? NominalType)?.definition
+                val definition = (typeDefined?.type as? NominalType)?.definition
                 if (definition is TypeShape) {
                     val name = parsedNameFor(definition.name)
                     if (name != null) {
@@ -161,10 +167,16 @@ internal fun attachQNameMetadata(module: Module, root: BlockTree) {
             if (edge != null) {
                 edge.replace { V(edge.target.pos, nameTextValue) }
             } else {
+                val pos = (parts?.name?.pos ?: decl.pos).leftEdge
                 decl.insert(decl.size) {
-                    val pos = (parts?.name?.pos ?: decl.pos).leftEdge
                     V(pos, qNameSymbol)
                     V(pos, nameTextValue)
+                }
+                declToFn[decl]?.let { fn ->
+                    fn.insert(fn.size - 1) {
+                        V(pos, qNameSymbol)
+                        V(pos, nameTextValue)
+                    }
                 }
             }
         }
@@ -175,3 +187,20 @@ val implicitsLibraryName = DashedIdentifier("implicits")
 
 private fun parsedNameFor(name: TemperName?): ParsedName? =
     (name as? ParsedName) ?: (name as? ResolvedParsedName)?.baseName
+
+internal fun provideConnectedsbyQName(module: Module) {
+    val byQName = buildMap byQName@{
+        TreeVisit.startingAt(module.generatedCode!!).forEach { tree ->
+            when (tree) {
+                is DeclTree -> tree.parts?.metadataSymbolMultimap?.let metadata@{ metadata ->
+                    val key = metadata[connectedSymbol, TString] ?: return@metadata
+                    val value = metadata[qNameSymbol, TString] ?: return@metadata
+                    this@byQName[key] = value
+                }
+                else -> {}
+            }
+            VisitCue.Continue
+        }.visitPreOrder()
+    }
+    byQName.size
+}

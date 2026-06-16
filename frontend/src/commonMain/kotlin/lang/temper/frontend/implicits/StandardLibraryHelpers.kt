@@ -295,7 +295,7 @@ internal interface IntFns {
         }
     }
 
-    object ToString : SigFnBuilder("Int32::toString") {
+    object ToString : SigFnBuilder("implicits.type Int32.toString()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             @Suppress("MagicNumber")
             val radix = TInt.unpackWithNullDefault(args, 1, 10, cb, interpMode) { return@invoke it }

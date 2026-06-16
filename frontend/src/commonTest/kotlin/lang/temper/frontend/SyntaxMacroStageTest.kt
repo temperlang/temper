@@ -251,6 +251,8 @@ class SyntaxMacroStageTest {
                         [ "Value", "true: Boolean" ],
                         [ "Value", "\\word: Symbol" ],
                         [ "Value", "\\f: Symbol" ],
+                        [ "Value", "\\QName: Symbol" ],
+                        [ "Value", "\"test-code.f()\": String" ],
                         [ "Block", [
                             [ "Value", "\\label: Symbol" ],
                             [ "LeftName", "fn__4" ]
@@ -307,6 +309,8 @@ class SyntaxMacroStageTest {
                         [ "Value", "true: Boolean" ],
                         [ "Value", "\\word: Symbol" ],
                         [ "Value", "\\f: Symbol" ],
+                        [ "Value", "\\QName: Symbol" ],
+                        [ "Value", "\"test-code.f()\": String" ],
                         [ "Block", [
                             [ "Value", "\\label: Symbol" ],
                             [ "LeftName", "fn__2" ]
@@ -337,6 +341,8 @@ class SyntaxMacroStageTest {
                         [ "Value", "true: Boolean" ],
                         [ "Value", "\\word: Symbol" ],
                         [ "Value", "\\g: Symbol" ],
+                        [ "Value", "\\QName: Symbol" ],
+                        [ "Value", "\"test-code.g()\": String" ],
                         [ "Block", [
                             [ "Value", "\\label: Symbol" ],
                             [ "LeftName", "fn__5" ]

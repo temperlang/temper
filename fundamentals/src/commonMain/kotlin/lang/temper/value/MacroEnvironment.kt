@@ -170,7 +170,7 @@ interface MacroEnvironment : InterpreterCallback, Positioned, ConfigurationKey.H
      * Connections for example to connect functions in Implicits to backing Kotlin code
      * based on decorations like `@connected("Type::member")`.
      */
-    fun connection(connectedKey: String): ((Signature2) -> Value<*>)?
+    fun connection(qname: String, connectedKey: String): ((Signature2) -> Value<*>)?
 
     /**
      * True if the macro call is in the Implicits module.

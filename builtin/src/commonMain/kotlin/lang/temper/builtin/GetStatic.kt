@@ -28,6 +28,7 @@ import lang.temper.value.Value
 import lang.temper.value.connectedSymbol
 import lang.temper.value.getStaticBuiltinName
 import lang.temper.value.internalGetStaticBuiltinName
+import lang.temper.value.qNameSymbol
 import lang.temper.value.symbolContained
 import lang.temper.value.typeFromSignature
 
@@ -91,7 +92,8 @@ sealed class GetStaticOp : SpecialFunction, NamedBuiltinFun {
             val connectedKey = member.metadata[connectedSymbol]
                 ?.lastOrNull()?.let { TString.unpackOrNull(it) }
             if (connectedKey != null) {
-                val connectedFnValue = macroEnv.connection(connectedKey)?.let {
+                val qname = member.metadata.getValue(qNameSymbol).last().let { TString.unpack(it!!) }
+                val connectedFnValue = macroEnv.connection(qname = qname, connectedKey = connectedKey)?.let {
                     it(
                         Signature2(
                             returnType2 = member.descriptor?.let { descriptor ->

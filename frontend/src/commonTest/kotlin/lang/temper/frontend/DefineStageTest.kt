@@ -496,6 +496,8 @@ class DefineStageTest {
                                             ["Value", "\"test-code.type C.constructor().return=\": String"],
                                           ]
                                         ],
+                                        ["Value", "\\QName: Symbol"],
+                                        ["Value", "\"test-code.type C.constructor()\": String"],
                                         ["Block", [
                                           ]
                                         ],
@@ -613,6 +615,8 @@ class DefineStageTest {
                                 ["Value", "void: Void"],
                               ]
                             ],
+                            ["Value", "\\QName: Symbol"],
+                            ["Value", "\"test-code.type C.constructor()\": String"],
                             ["Value", "\\stay: Symbol"], ["Stay"],
                             ["Block", [
                               ]
@@ -1460,6 +1464,8 @@ class DefineStageTest {
             |                      [ "Value", "void: Void" ],
             |                    ]
             |                  ],
+            |                  [ "Value", "\\QName: Symbol" ],
+            |                  [ "Value", "\"test-code.type C.constructor()\": String" ],
             |                  [ "Value", "\\stay: Symbol" ],
             |                  [ "Stay" ],
             |                  [ "Block", [
@@ -1527,6 +1533,8 @@ class DefineStageTest {
             |                  [ "Value", "\\f: Symbol" ],
             |                  [ "Value", "\\typeFormal: Symbol" ],
             |                  [ "Value", "U__0: Type" ],
+            |                  [ "Value", "\\QName: Symbol" ],
+            |                  [ "Value", "\"test-code.f()\": String" ],
             |                  [ "Value", "\\stay: Symbol" ],
             |                  [ "Stay" ],
             |                  [ "Block", [
@@ -2664,45 +2672,45 @@ class DefineStageTest {
             |      `test//`.e = 2;
             |      @typeFormal(\F) @typeDecl(F__0) @QName("test-code.f().<F>") let F__0;
             |      F__0 = type (F__0);
-            |      f__0 = fn f<F__0 extends AnyValue>(@QName("test-code.f().(x)") x__2 /* aka x */: Int32, @QName("test-code.f().(y)") y__0 /* aka y */: F__0) /* return__0 */: Int32 {
-            |        fn__0: do {
-            |          @fn @QName("test-code.f().helper()") let helper__0, @QName("test-code.f().local=") local__0;
-            |          local__0 = x__2;
-            |          helper__0 = fn helper(@QName("test-code.f().helper().(z)") z__0 /* aka z */: Int32) /* return__1 */: Int32 {
-            |            fn__1: do {
-            |              local__0 + z__0
-            |            }
-            |          };
-            |          helper__0(1)
-            |        }
-            |      };
+            |      f__0 = (@QName("test-code.f()") fn f<F__0 extends AnyValue>(@QName("test-code.f().(x)") x__2 /* aka x */: Int32, @QName("test-code.f().(y)") y__0 /* aka y */: F__0) /* return__0 */: Int32 {
+            |          fn__0: do {
+            |            @fn @QName("test-code.f().helper()") let helper__0, @QName("test-code.f().local=") local__0;
+            |            local__0 = x__2;
+            |            helper__0 = (@QName("test-code.f().helper()") fn helper(@QName("test-code.f().helper().(z)") z__0 /* aka z */: Int32) /* return__1 */: Int32 {
+            |                fn__1: do {
+            |                  local__0 + z__0
+            |                }
+            |            });
+            |            helper__0(1)
+            |          }
+            |      });
             |      @typeFormal(\T) @memberTypeFormal(\T) @typeDefined(T__0) @QName("test-code.type I.<T>") @fromType(I__0<T__0>) let T__0;
             |      T__0 = type (T__0);
             |      I__0<T__0> extends AnyValue;
             |      @property(\x) @visibility(\public) @QName("test-code.type I.x") @stay @fromType(I__0<T__0>) let x__3: T__0;
             |      @property(\y) @visibility(\public) @QName("test-code.type I.y") @stay @fromType(I__0<T__0>) let y__1;
-            |      @method(\y) @getter @visibility(\public) @fn @QName("test-code.type I.get y()") @stay @fromType(I__0<T__0>) let nym`get.y__2`;
-            |      nym`get.y__2` = fn nym`get.y`(@impliedThis(I__0<T__0>) @QName("test-code.type I.get y().(this)") this__0: I__0<T__0>) /* return__2 */: Int32 {
-            |        fn__2: do {
-            |          pureVirtual()
-            |        }
-            |      };
-            |      @method(\y) @setter @visibility(\public) @fn @QName("test-code.type I.set y()") @stay @fromType(I__0<T__0>) let nym`set.y__3`;
-            |      nym`set.y__3` = fn nym`set.y`(@impliedThis(I__0<T__0>) @QName("test-code.type I.set y().(this)") this__1: I__0<T__0>, @QName("test-code.type I.set y().(newY)") newY__0 /* aka newY */: Int32) /* return__3 */: Void {
-            |        fn__3: do {
-            |          pureVirtual()
-            |        }
-            |      };
+            |      @method(\y) @getter @visibility(\public) @fn @QName("test-code.type I.get y()") @stay @fromType(I__0<T__0>) let nym`get.y__0`;
+            |      nym`get.y__0` = (@QName("test-code.type I.get y()") fn nym`get.y`(@impliedThis(I__0<T__0>) @QName("test-code.type I.get y().(this)") this__0: I__0<T__0>) /* return__2 */: Int32 {
+            |          fn__2: do {
+            |            pureVirtual()
+            |          }
+            |      });
+            |      @method(\y) @setter @visibility(\public) @fn @QName("test-code.type I.set y()") @stay @fromType(I__0<T__0>) let nym`set.y__0`;
+            |      nym`set.y__0` = (@QName("test-code.type I.set y()") fn nym`set.y`(@impliedThis(I__0<T__0>) @QName("test-code.type I.set y().(this)") this__1: I__0<T__0>, @QName("test-code.type I.set y().(newY)") newY__0 /* aka newY */: Int32) /* return__3 */: Void {
+            |          fn__3: do {
+            |            pureVirtual()
+            |          }
+            |      });
             |      @method(\method) @visibility(\public) @fn @QName("test-code.type I.method()") @stay @fromType(I__0<T__0>) let method__0;
-            |      method__0 = fn method(@impliedThis(I__0<T__0>) @QName("test-code.type I.method().(this)") this__2: I__0<T__0>) /* return__4 */: Void {
-            |        fn__4: do {
-            |          pureVirtual()
-            |        }
-            |      };
+            |      method__0 = (@QName("test-code.type I.method()") fn method(@impliedThis(I__0<T__0>) @QName("test-code.type I.method().(this)") this__2: I__0<T__0>) /* return__4 */: Void {
+            |          fn__4: do {
+            |            pureVirtual()
+            |          }
+            |      });
             |      @staticProperty(\staticMethod) @fn @static @visibility(\public) @QName("test-code.type I.staticMethod()") @stay @fromType(I__0<T__0>) let staticMethod__0;
             |      @typeFormal(\T) @typeDecl(T__1) @QName("test-code.type I.staticMethod().<T>") let T__1;
             |      T__1 = type (T__1);
-            |      staticMethod__0 = (@stay fn staticMethod<T__1 extends AnyValue>(@QName("test-code.type I.staticMethod().(i)") i__0 /* aka i */: I__0<T__1>) /* return__5 */: Void {
+            |      staticMethod__0 = (@QName("test-code.type I.staticMethod()") @stay fn staticMethod<T__1 extends AnyValue>(@QName("test-code.type I.staticMethod().(i)") i__0 /* aka i */: I__0<T__1>) /* return__5 */: Void {
             |          fn__5: do {}
             |      });
             |      void;
