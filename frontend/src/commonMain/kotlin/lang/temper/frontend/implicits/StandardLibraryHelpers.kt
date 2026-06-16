@@ -250,25 +250,19 @@ fun standardLibraryConnecteds() = builtinLibraryConnecteds() + mapOf(
     "core.type Listed.filter()" to { sig -> ListFns.Filter.fn(sig) },
     "core.type Listed.get()" to { sig -> ListFns.Get.fn(sig) },
     "core.type Listed.getOr()" to { sig -> ListFns.GetOr.fn(sig) },
-    "Listed::join" to { sig -> ListFns.Join.fn(sig) },
-    "Listed::length" to { sig -> ListFns.Length.fn(sig) },
-    "Listed::map" to { sig -> ListFns.Map.fn(sig) },
-    "Listed::slice" to { sig -> ListFns.Slice.fn(sig) },
-    "ListBuilder::filter" to { sig -> ListFns.Filter.fn(sig) },
-    "ListBuilder::get" to { sig -> ListFns.Get.fn(sig) },
-    "ListBuilder::getOr" to { sig -> ListFns.GetOr.fn(sig) },
-    "ListBuilder::join" to { sig -> ListFns.Join.fn(sig) },
-    "ListBuilder::length" to { sig -> ListFns.Length.fn(sig) },
-    "ListBuilder::map" to { sig -> ListFns.Map.fn(sig) },
-    "ListBuilder::slice" to { sig -> ListFns.Slice.fn(sig) },
+    "core.type Listed.join()" to { sig -> ListFns.Join.fn(sig) },
+    "core.type Listed.get length()" to { sig -> ListFns.Length.fn(sig) },
+    "core.type Listed.map()" to { sig -> ListFns.Map.fn(sig) },
+    "core.type Listed.slice()" to { sig -> ListFns.Slice.fn(sig) },
+    "core.type ListBuilder.get length()" to { sig -> ListFns.Length.fn(sig) },
     // Other std
-    "Regex::compileFormatted" to { sig -> Value(RegexCompileFormattedFn(sig)) },
-    "Regex::compiledFind" to { sig -> Value(RegexCompiledFindFn(sig)) },
-    "Regex::compiledFound" to { sig -> Value(RegexCompiledFoundFn(sig)) },
-    "Regex::compiledReplace" to { sig -> Value(RegexCompiledReplaceFn(sig)) },
-    "Regex::compiledSplit" to { sig -> Value(RegexCompiledSplitFn(sig)) },
-    "Regex::format" to { sig -> Value(RegexFormatFn(sig)) },
-    "Date::today" to { sig -> Value(DateTodayFn(sig)) },
+    "std/regex.type RegexFormatter.regexCompileFormatted()" to { sig -> Value(RegexCompileFormattedFn(sig)) },
+    "std/regex.type Regex.compiledFind()" to { sig -> Value(RegexCompiledFindFn(sig)) },
+    "std/regex.type Regex.compiledFound()" to { sig -> Value(RegexCompiledFoundFn(sig)) },
+    "std/regex.type Regex.compiledReplace()" to { sig -> Value(RegexCompiledReplaceFn(sig)) },
+    "std/regex.type Regex.compiledSplit()" to { sig -> Value(RegexCompiledSplitFn(sig)) },
+    "std/regex.type RegexFormatter.regexFormat()" to { sig -> Value(RegexFormatFn(sig)) },
+    "std/temporal.type Date.today()" to { sig -> Value(DateTodayFn(sig)) },
 )
 
 const val TEMPER_MD_FILE_EXTENSION = "$TEMPER_FILE_EXTENSION.md"
@@ -306,7 +300,7 @@ internal interface IntFns {
 }
 
 internal interface Int64Fns {
-    object ToFloat64 : SigFnBuilder("Int64::toFloat64") {
+    object ToFloat64 : SigFnBuilder("core.type Int64.toFloat64()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val long = TInt64.unpackContent(args[0])
             val double = long.toDouble()
@@ -317,13 +311,13 @@ internal interface Int64Fns {
         }
     }
 
-    object ToFloat64Unsafe : SigFnBuilder("Int64::toFloat64Unsafe") {
+    object ToFloat64Unsafe : SigFnBuilder("core.type Int64.toFloat64Unsafe()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(TInt64.unpackContent(args[0]).toDouble(), TFloat64)
         }
     }
 
-    object ToInt32 : SigFnBuilder("Int64::toInt32") {
+    object ToInt32 : SigFnBuilder("core.type Int64.toInt32()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val long = TInt64.unpackContent(args[0])
             val int = long.toInt()
@@ -334,13 +328,13 @@ internal interface Int64Fns {
         }
     }
 
-    object ToInt32Unsafe : SigFnBuilder("Int64::toInt32Unsafe") {
+    object ToInt32Unsafe : SigFnBuilder("core.type Int64.toInt32Unsafe()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(TInt64.unpackContent(args[0]).toInt(), TInt)
         }
     }
 
-    object ToString : SigFnBuilder("Int64::toString") {
+    object ToString : SigFnBuilder("core.type Int64.toString()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             @Suppress("MagicNumber")
             val radix = TInt.unpackWithNullDefault(args, 1, 10, cb, interpMode) { return@invoke it }

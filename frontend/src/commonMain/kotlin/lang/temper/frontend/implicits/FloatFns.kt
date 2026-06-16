@@ -36,7 +36,7 @@ import kotlin.math.tan
 import kotlin.math.tanh
 
 internal interface FloatFns {
-    object ToInt : SigFnBuilder("Float64::toInt32") {
+    object ToInt : SigFnBuilder("core.type Float64.toInt32()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val double = TFloat64.unpackContent(args[0])
             val int = double.toInt()
@@ -47,13 +47,13 @@ internal interface FloatFns {
         }
     }
 
-    object ToIntUnsafe : SigFnBuilder("Float64::toInt32Unsafe") {
+    object ToIntUnsafe : SigFnBuilder("core.type Float64.toInt32Unsafe()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(TFloat64.unpackContent(args[0]).toInt(), TInt)
         }
     }
 
-    object ToInt64 : SigFnBuilder("Float64::toInt64") {
+    object ToInt64 : SigFnBuilder("core.type Float64.toInt64()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return when (val double = TFloat64.unpackContent(args[0])) {
                 in -MANTISSA64_LIMIT_F64..MANTISSA64_LIMIT_F64 -> Value(double.toLong(), TInt64)
@@ -62,13 +62,13 @@ internal interface FloatFns {
         }
     }
 
-    object ToInt64Unsafe : SigFnBuilder("Float64::toInt64Unsafe") {
+    object ToInt64Unsafe : SigFnBuilder("core.type Float64.toInt64Unsafe()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(TFloat64.unpackContent(args[0]).toLong(), TInt64)
         }
     }
 
-    object ToString : SigFnBuilder("Float64::toString") {
+    object ToString : SigFnBuilder("core.type Float64.toString()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val d = TFloat64.unpackContent(args[0])
             return Value(formatDouble(d, decimalPlaces = F64_DECIMAL_DIGITS), TString)
@@ -77,141 +77,141 @@ internal interface FloatFns {
 
     // Math ops.
 
-    object Abs : SigFnBuilder("Float64::abs") {
+    object Abs : SigFnBuilder("core.type Float64.abs()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(TFloat64.unpackContent(args[0]).absoluteValue, TFloat64)
         }
     }
 
-    object Acos : SigFnBuilder("Float64::acos") {
+    object Acos : SigFnBuilder("core.type Float64.acos()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(acos(TFloat64.unpackContent(args[0])), TFloat64)
         }
     }
 
-    object Asin : SigFnBuilder("Float64::asin") {
+    object Asin : SigFnBuilder("core.type Float64.asin()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(asin(TFloat64.unpackContent(args[0])), TFloat64)
         }
     }
 
-    object Atan : SigFnBuilder("Float64::atan") {
+    object Atan : SigFnBuilder("core.type Float64.atan()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(atan(TFloat64.unpackContent(args[0])), TFloat64)
         }
     }
 
-    object Atan2 : SigFnBuilder("Float64::atan2") {
+    object Atan2 : SigFnBuilder("core.type Float64.atan2()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(atan2(TFloat64.unpackContent(args[0]), TFloat64.unpackContent(args[1])), TFloat64)
         }
     }
 
-    object Ceil : SigFnBuilder("Float64::ceil") {
+    object Ceil : SigFnBuilder("core.type Float64.ceil()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(ceil(TFloat64.unpackContent(args[0])), TFloat64)
         }
     }
 
-    object Cos : SigFnBuilder("Float64::cos") {
+    object Cos : SigFnBuilder("core.type Float64.cos()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(cos(TFloat64.unpackContent(args[0])), TFloat64)
         }
     }
 
-    object Cosh : SigFnBuilder("Float64::cosh") {
+    object Cosh : SigFnBuilder("core.type Float64.cosh()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(cosh(TFloat64.unpackContent(args[0])), TFloat64)
         }
     }
 
-    object Exp : SigFnBuilder("Float64::exp") {
+    object Exp : SigFnBuilder("core.type Float64.exp()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(exp(TFloat64.unpackContent(args[0])), TFloat64)
         }
     }
 
-    object Expm1 : SigFnBuilder("Float64::expm1") {
+    object Expm1 : SigFnBuilder("core.type Float64.expm1()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(expm1(TFloat64.unpackContent(args[0])), TFloat64)
         }
     }
 
-    object Floor : SigFnBuilder("Float64::floor") {
+    object Floor : SigFnBuilder("core.type Float64.floor()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(floor(TFloat64.unpackContent(args[0])), TFloat64)
         }
     }
 
-    object Log : SigFnBuilder("Float64::log") {
+    object Log : SigFnBuilder("core.type Float64.log()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(ln(TFloat64.unpackContent(args[0])), TFloat64)
         }
     }
 
-    object Log10 : SigFnBuilder("Float64::log10") {
+    object Log10 : SigFnBuilder("core.type Float64.log10()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(log10(TFloat64.unpackContent(args[0])), TFloat64)
         }
     }
 
-    object Log1p : SigFnBuilder("Float64::log1p") {
+    object Log1p : SigFnBuilder("core.type Float64.log1p()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(ln1p(TFloat64.unpackContent(args[0])), TFloat64)
         }
     }
 
     /** Result is NaN if either is NaN. */
-    object Max : SigFnBuilder("Float64::max") {
+    object Max : SigFnBuilder("core.type Float64.max()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(max(TFloat64.unpackContent(args[0]), TFloat64.unpackContent(args[1])), TFloat64)
         }
     }
 
     /** Result is NaN if either is NaN. */
-    object Min : SigFnBuilder("Float64::min") {
+    object Min : SigFnBuilder("core.type Float64.min()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(min(TFloat64.unpackContent(args[0]), TFloat64.unpackContent(args[1])), TFloat64)
         }
     }
 
-    object Round : SigFnBuilder("Float64::round") {
+    object Round : SigFnBuilder("core.type Float64.round()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(round(TFloat64.unpackContent(args[0])), TFloat64)
         }
     }
 
-    object Sign : SigFnBuilder("Float64::sign") {
+    object Sign : SigFnBuilder("core.type Float64.sign()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(sign(TFloat64.unpackContent(args[0])), TFloat64)
         }
     }
 
-    object Sin : SigFnBuilder("Float64::sin") {
+    object Sin : SigFnBuilder("core.type Float64.sin()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(sin(TFloat64.unpackContent(args[0])), TFloat64)
         }
     }
 
-    object Sinh : SigFnBuilder("Float64::sinh") {
+    object Sinh : SigFnBuilder("core.type Float64.sinh()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(sinh(TFloat64.unpackContent(args[0])), TFloat64)
         }
     }
 
-    object Sqrt : SigFnBuilder("Float64::sqrt") {
+    object Sqrt : SigFnBuilder("core.type Float64.sqrt()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(sqrt(TFloat64.unpackContent(args[0])), TFloat64)
         }
     }
 
-    object Tan : SigFnBuilder("Float64::tan") {
+    object Tan : SigFnBuilder("core.type Float64.tan()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(tan(TFloat64.unpackContent(args[0])), TFloat64)
         }
     }
 
-    object Tanh : SigFnBuilder("Float64::tanh") {
+    object Tanh : SigFnBuilder("core.type Float64.tanh()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(tanh(TFloat64.unpackContent(args[0])), TFloat64)
         }

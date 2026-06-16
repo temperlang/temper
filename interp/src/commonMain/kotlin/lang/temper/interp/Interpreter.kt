@@ -187,16 +187,9 @@ class Interpreter(
     private val isProcessingImplicits = nameMaker.namingContext.isImplicits
 
     fun connection(qname: String?, connectedKey: String?): ((Signature2) -> Value<*>)? {
-        // TODO Remove this precheck. It's here just to prove we can do this.
-        if (qname == null) {
-            return null
-        }
-        val result = qname?.let { connecteds[it] }
-            ?: connectedKey?.let { connecteds[it] }
-        if (result != null) {
-            connectedKey?.length
-        }
-        return result
+        // Require `@connected` annotation. TODO Simpler representation for connected tag.
+        connectedKey ?: return null
+        return qname?.let { connecteds[it] }
     }
 
     @Suppress("SimplifyBooleanWithConstants")

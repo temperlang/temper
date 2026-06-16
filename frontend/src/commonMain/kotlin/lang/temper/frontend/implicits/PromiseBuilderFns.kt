@@ -72,12 +72,12 @@ internal object PromiseBuilderFns {
         }
     }
 
-    object BreakPromise : ResolveHelper("PromiseBuilder::breakPromise") {
+    object BreakPromise : ResolveHelper("core.type PromiseBuilder.breakPromise()") {
         override val arity: Int = 1
         override fun getResolution(args: List<Value<*>>): Result = Fail
     }
 
-    object Complete : ResolveHelper("PromiseBuilder::complete") {
+    object Complete : ResolveHelper("core.type PromiseBuilder.complete()") {
         override val arity: Int = 2
         override fun getResolution(args: List<Value<*>>): Result = args[1]
     }
