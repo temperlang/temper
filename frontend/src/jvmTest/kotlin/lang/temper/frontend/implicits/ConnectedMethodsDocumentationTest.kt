@@ -81,7 +81,7 @@ class ConnectedMethodsDocumentationTest {
 private fun extractConnectedMethodKeys(module: Module, connectedMethodKeys: MutableList<String>) {
     TreeVisit
         .startingAt(
-            module.treeForDebug ?: fail("Implicits module broken"),
+            module.treeForDebug ?: fail("Core module broken"),
         )
         .forEachContinuing { t ->
             val metadata = (t as? DeclTree)?.parts?.metadataSymbolMultimap

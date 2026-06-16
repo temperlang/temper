@@ -2096,7 +2096,7 @@ class GenerateCodeStageTest {
             |            do_bind_log(console#0)("Third");
             |            yield();
             |            do_bind_log(console#0)("Fourth");
-            |            return__3 = implicits.doneResult<Empty>()
+            |            return__3 = core.doneResult<Empty>()
             |        })
             |    });
             |
@@ -2170,7 +2170,7 @@ class GenerateCodeStageTest {
             |    runItThrice__0(fn /* return__2 */{
             |## Adapt call specialized to adaptGeneratorFnSafe
             |        return__2 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__3 */: (GeneratorResult<Empty>) implements GeneratorFn {
-            |            return__3 = implicits.doneResult<Empty>();
+            |            return__3 = core.doneResult<Empty>();
             |## The interpreter needs to distinguish a legit return result with the result from a yield.
             |            void;
             |            while (true) {

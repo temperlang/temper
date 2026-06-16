@@ -48,7 +48,7 @@ import lang.temper.value.varSymbol
  */
 internal fun attachQNameMetadata(module: Module, root: BlockTree) {
     val (libraryName, relPath) = when (val loc = module.loc) {
-        is ImplicitsCodeLocation -> implicitsLibraryName to FilePath.emptyPath
+        is ImplicitsCodeLocation -> coreLibraryName to FilePath.emptyPath
         is ModuleName -> {
             val libraryName = module.sharedLocationContext[loc, LibraryNameLocationKey] ?: return
             var relPath = loc.relativePath()
@@ -185,7 +185,7 @@ internal fun attachQNameMetadata(module: Module, root: BlockTree) {
     }
 }
 
-val implicitsLibraryName = DashedIdentifier("implicits")
+val coreLibraryName = DashedIdentifier(ImplicitsCodeLocation.diagnostic)
 
 private fun parsedNameFor(name: TemperName?): ParsedName? =
     (name as? ParsedName) ?: (name as? ResolvedParsedName)?.baseName

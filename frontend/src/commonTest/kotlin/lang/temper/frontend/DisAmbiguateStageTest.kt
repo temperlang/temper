@@ -750,7 +750,7 @@ class DisAmbiguateStageTest {
                 },
                 supers: [
                   {
-                    module: "implicits",
+                    module: "core",
                     abbrev: "AnyValue__0",
                     uid: 0
                   }

@@ -26,7 +26,7 @@ internal object PromiseBuilderFns {
         WellKnownTypes.promiseBuilderTypeDefinition.properties.first { it.abstractness == Abstractness.Concrete }
     }
 
-    object Constructor : SigFnBuilder("implicits.type PromiseBuilder.constructor()") {
+    object Constructor : SigFnBuilder("core.type PromiseBuilder.constructor()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val (thisValue) = args.unpackPositionedOr(1, cb) { return@invoke it }
             val type = thisValue.typeTag as? TClass

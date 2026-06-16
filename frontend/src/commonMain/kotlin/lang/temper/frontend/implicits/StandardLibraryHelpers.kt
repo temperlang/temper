@@ -247,9 +247,9 @@ fun builtinLibraryConnecteds() = listOf(
 
 fun standardLibraryConnecteds() = builtinLibraryConnecteds() + mapOf(
     // Builtin aliases
-    "Listed::filter" to { sig -> ListFns.Filter.fn(sig) },
-    "Listed::get" to { sig -> ListFns.Get.fn(sig) },
-    "Listed::getOr" to { sig -> ListFns.GetOr.fn(sig) },
+    "core.type Listed.filter()" to { sig -> ListFns.Filter.fn(sig) },
+    "core.type Listed.get()" to { sig -> ListFns.Get.fn(sig) },
+    "core.type Listed.getOr()" to { sig -> ListFns.GetOr.fn(sig) },
     "Listed::join" to { sig -> ListFns.Join.fn(sig) },
     "Listed::length" to { sig -> ListFns.Length.fn(sig) },
     "Listed::map" to { sig -> ListFns.Map.fn(sig) },
@@ -275,7 +275,7 @@ const val TEMPER_MD_FILE_EXTENSION = "$TEMPER_FILE_EXTENSION.md"
 private val temperExtensions = listOf(TEMPER_FILE_EXTENSION, TEMPER_MD_FILE_EXTENSION)
 
 internal interface ConsoleFns {
-    object GlobalLog : SigFnBuilder("GlobalConsole::globalLog") {
+    object GlobalLog : SigFnBuilder("core.type GlobalConsole.globalLog()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return (BuiltinFuns.print as CallableValue).invoke(ActualValues.from(args[1]), cb, interpMode)
         }
@@ -283,19 +283,19 @@ internal interface ConsoleFns {
 }
 
 internal interface IntFns {
-    object ToFloat64 : SigFnBuilder("Int32::toFloat64") {
+    object ToFloat64 : SigFnBuilder("core.type Int32.toFloat64()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(TInt.unpackContent(args[0]).toDouble(), TFloat64)
         }
     }
 
-    object ToInt64 : SigFnBuilder("Int32::toInt64") {
+    object ToInt64 : SigFnBuilder("core.type Int32.toInt64()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(TInt.unpackContent(args[0]).toLong(), TInt64)
         }
     }
 
-    object ToString : SigFnBuilder("implicits.type Int32.toString()") {
+    object ToString : SigFnBuilder("core.type Int32.toString()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             @Suppress("MagicNumber")
             val radix = TInt.unpackWithNullDefault(args, 1, 10, cb, interpMode) { return@invoke it }

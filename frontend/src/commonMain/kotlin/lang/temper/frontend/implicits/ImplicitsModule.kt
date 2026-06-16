@@ -132,7 +132,7 @@ object ImplicitsModule {
             )
             module.advance()
             if (DEBUG) {
-                console.group("Implicits module at ${module.stageCompleted}") {
+                console.group("Core module at ${module.stageCompleted}") {
                     module.treeForDebug?.toPseudoCode(console.textOutput)
                 }
             }
@@ -147,11 +147,11 @@ object ImplicitsModule {
             val ok = module.ok
             val hasExports = !module.exports.isNullOrEmpty()
             throw ImplicitsUnavailableException(
-                "Implicits module stalled at ${module.stageCompleted}, ok=$ok, hasExports=$hasExports",
+                "Core module stalled at ${module.stageCompleted}, ok=$ok, hasExports=$hasExports",
             )
         }
         if (DEBUG) {
-            console.group("Implicits module exports") {
+            console.group("Core module exports") {
                 module.exports?.forEach {
                     console.log("- $it")
                 }
