@@ -116,7 +116,7 @@ internal fun decomposeFun(tree: FunTree, metadataMultimap: LiveMetadataMap): FnP
     val typeFormals = metadataMultimap[typeFormalSymbol].map {
         it to FnParts.unpackTypeFormal(it.target)
     }
-    val connected = metadataMultimap.get1(connectedSymbol)?.target?.valueContained(TString)
+    val connected = metadataMultimap.get1(connectedSymbol)?.valueContained(TString)
 
     // 3: The body
     if (childIndex + 1 != n) {
