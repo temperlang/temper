@@ -1,7 +1,5 @@
 package lang.temper.frontend.syntax
 
-import lang.temper.ast.TreeVisit
-import lang.temper.ast.VisitCue
 import lang.temper.common.Log
 import lang.temper.common.RSuccess
 import lang.temper.common.putMultiList
@@ -28,7 +26,6 @@ import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.Tree
 import lang.temper.value.Value
-import lang.temper.value.connectedSymbol
 import lang.temper.value.constructorSymbol
 import lang.temper.value.fnSymbol
 import lang.temper.value.getterSymbol
@@ -189,20 +186,3 @@ val coreLibraryName = DashedIdentifier(ImplicitsCodeLocation.diagnostic)
 
 private fun parsedNameFor(name: TemperName?): ParsedName? =
     (name as? ParsedName) ?: (name as? ResolvedParsedName)?.baseName
-
-internal fun provideConnectedsbyQName(module: Module) {
-    val byQName = buildMap byQName@{
-        TreeVisit.startingAt(module.generatedCode!!).forEach { tree ->
-            when (tree) {
-                is DeclTree -> tree.parts?.metadataSymbolMultimap?.let metadata@{ metadata ->
-                    val key = metadata[connectedSymbol, TString] ?: return@metadata
-                    val value = metadata[qNameSymbol, TString] ?: return@metadata
-                    this@byQName[key] = value
-                }
-                else -> {}
-            }
-            VisitCue.Continue
-        }.visitPreOrder()
-    }
-    byQName.size
-}

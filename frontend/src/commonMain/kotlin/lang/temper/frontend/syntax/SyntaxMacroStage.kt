@@ -84,7 +84,6 @@ internal class SyntaxMacroStage(
                         .snapshot(configKey, AstSnapshotKey, root)
 
                     attachQNameMetadata(module, root)
-                    provideConnectedsbyQName(module)
                     turnEmbeddedCommentsIntoDocStrings(root)
                     flipDeclaredNames(root)
                     promoteOutTypesToReturnDecls(root)
