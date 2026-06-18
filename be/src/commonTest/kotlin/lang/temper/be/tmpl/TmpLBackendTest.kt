@@ -2205,13 +2205,13 @@ class TmpLBackendTest {
                     |{
                     |  defines: {
                     |    defines.temper: ```
-                    |      @connected("C")
+                    |      @connected
                     |      export class C {
-                    |        @connected("C::f")
+                    |        @connected
                     |        public static let f(): Void { console.log("f"); }
-                    |        @connected("C::g")
+                    |        @connected
                     |        public static let g(): Void { console.log("g"); }
-                    |        @connected("C::constructor")
+                    |        @connected
                     |        public constructor() {}
                     |      }
                     |      ```
@@ -2287,7 +2287,7 @@ class TmpLBackendTest {
             |}
         """.trimMargin(),
         supportNetwork = defaultTestSupportNetwork.copy(
-            isConnected = { it == "::getConsole" },
+            isConnected = { it == "core.getConsole()" },
         ),
     )
 
@@ -2333,7 +2333,7 @@ class TmpLBackendTest {
             |}
         """.trimMargin(),
         supportNetwork = defaultTestSupportNetwork.copy(
-            isConnected = { it == "::getConsole" || it == "C::f" },
+            isConnected = { it == "core.getConsole()" || it == "C::f" },
         ),
     )
 
@@ -2380,7 +2380,7 @@ class TmpLBackendTest {
             |}
         """.trimMargin(),
         supportNetwork = defaultTestSupportNetwork.copy(
-            isConnected = { it == "::getConsole" || it == "C::f" || it == "C" || it == "C::constructor" },
+            isConnected = { it == "core.getConsole()" || it == "C::f" || it == "C" || it == "C::constructor" },
         ),
     )
 
@@ -2402,15 +2402,15 @@ class TmpLBackendTest {
                 |  foo: {
                 |    foo.temper:
                 |      ```
-                |      @connected("I")
+                |      @connected
                 |      export interface I {
-                |        @connected("I::f")
+                |        @connected
                 |        f(): Void {}
-                |        @connected("I::g")
+                |        @connected
                 |        g(): Void;
-                |        @connected("I::getA")
+                |        @connected
                 |        get a(): Int { 42 }
-                |        @connected("I::getB")
+                |        @connected
                 |        get b(): Int;
                 |      }
                 |      ```,
@@ -2525,7 +2525,7 @@ class TmpLBackendTest {
                 connectedKey: String,
                 genre: Genre,
             ): SupportCode? {
-                if (connectedKey == "Date::today") {
+                if (connectedKey == "std/temporal.type Date.today()") {
                     return object : InlineSupportCode<TmpL.Tree, TmpLTranslator> {
                         override val needsThisEquivalent: Boolean get() = false
                         override fun inlineToTree(
@@ -3567,12 +3567,12 @@ class TmpLBackendTest {
             |{
             |  foo: {
             |    "foo.temper": ```
-            |      @connected("C")
+            |      @connected
             |      class C {
-            |        @connected("C::constructor")
+            |        @connected
             |        public constructor(): Void {}
             |
-            |        @connected("C::a")
+            |        @connected
             |        public a(): String { "" }
             |
             |        // not connected
@@ -3639,7 +3639,7 @@ class TmpLBackendTest {
     fun multipleUsersOfSameConnected() = assertGeneratedCode(
         inputJsonPathToContent = """
             |{
-            |  // Both of these use String::get
+            |  // Both of these use core.type String.get()
             |  foo: {
             |    "foo.temper": ```
             |      export let f(s: String): Int { s[String.begin] orelse 0 }

@@ -767,7 +767,7 @@ class DisAmbiguateStageTest {
                   },
                 ],
                 metadata: {
-                  connected: ["\"Empty\": String"],
+                  connected: ["void: Void"],
                 }
               },
             }

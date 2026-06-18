@@ -91,22 +91,22 @@ Here's just enough of a Date type to get us started.
      * It is unconnected to a time of day or a timezone.
      */
     @json
-    @connected("Date")
+    @connected
     export class Date extends Imu {
       /** The year.  1900 means 1900. */
-      @connected("Date::getYear")
+      @connected
       public year: Int;
       /** The month of the year in [1, 12]. */
-      @connected("Date::getMonth")
+      @connected
       public month: Int;
       /**
        * The day of the month in [1, 31]
        * additionally constrained by the length of [month].
        */
-      @connected("Date::getDay")
+      @connected
       public day: Int;
 
-      @connected("Date::constructor")
+      @connected
       public constructor(year: Int, month: Int, day: Int): Void throws Bubble {
         if (1 <= month && month <= 12 &&
             1 <= day && (
@@ -124,7 +124,7 @@ Here's just enough of a Date type to get us started.
       }
 
       /** An ISO 8601 Date string with dashes like "2000-12-31". */
-      @connected("Date::toString")
+      @connected
       public toString(): String {
         let sb = new StringBuilder();
         padTo(4, year, sb);
@@ -136,7 +136,7 @@ Here's just enough of a Date type to get us started.
       }
 
       /** Parses a Date from an ISO 8601 Date string with dashes like "2000-12-21". */
-      @connected("Date::fromIsoString")
+      @connected
       public static fromIsoString(isoString: String): Date throws Bubble {
         let end = isoString.end;
         var strIndex = isoString.prev(isoString.prev(end));
@@ -183,7 +183,7 @@ Here's just enough of a Date type to get us started.
        * day of 2020 but 2021-03-01 is only the 60th day of
        * that year.
        */
-      @connected("Date::yearsBetween")
+      @connected
       public static let yearsBetween(start: Date, end: Date): Int {
         let yearDelta = end.year - start.year;
         let monthDelta = end.month - start.month;
@@ -199,7 +199,7 @@ Here's just enough of a Date type to get us started.
 
       /** Today's date in UTC */
       // TODO: take a zone
-      @connected("Date::today")
+      @connected
       public static let today(): Date;
 
       /**
@@ -215,7 +215,7 @@ Here's just enough of a Date type to get us started.
        * |      6 | Saturday |
        * |      7 | Sunday   |
        */
-      @connected("Date::getDayOfWeek")
+      @connected
       public get dayOfWeek(): Int {
         // Gauss's method.
         let y = year;

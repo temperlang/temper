@@ -39,29 +39,29 @@ case, send should return a broken promise.
 
 Response bundles together parts of an HTTP response.
 
-    @connected("NetResponse")
+    @connected
     export interface NetResponse {
 
 *status* is an [HTTP Status Code](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status).
 
-      @connected("NetResponse::getStatus")
+      @connected
       get status(): Int;
 
 *contentType* describes the content type of the body if any.
 
-      @connected("NetResponse::getContentType")
+      @connected
       get contentType(): String?;
 
 *bodyContent* is the textual content of the body if it is textual.
 
-      @connected("NetResponse::getBodyContent")
+      @connected
       get bodyContent(): Promise<String?>;
     }
 
 This connected method does the work but is not directly
 accessible to Temper code.
 
-    @connected("stdNetSend")
+    @connected
     let sendRequest(
       url: String,
       method: String,

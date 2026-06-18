@@ -86,12 +86,7 @@ private fun extractConnectedMethodKeys(module: Module, connectedMethodKeys: Muta
         .forEachContinuing { t ->
             val metadata = (t as? DeclTree)?.parts?.metadataSymbolMultimap
             if (metadata != null && importedSymbol !in metadata) { // If it's imported, the metadata is inherited
-                val connectedMetadata = metadata[connectedSymbol] ?: emptyList()
-                for (connectedMetadataEdge in connectedMetadata) {
-                    val arg = connectedMetadataEdge.target.valueContained(TString)
-                        ?: fail("Malformed metadata in ${t.toPseudoCode()} at ${t.pos}")
-                    connectedMethodKeys.add(arg)
-                }
+                t.parts?.connectedKey?.also { connectedMethodKeys.add(it) }
             }
         }
         .visitPostOrder()

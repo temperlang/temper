@@ -73,8 +73,8 @@ const skipped = new Set([
     "float64Sqrt",
     "float64Tan",
     "float64Tanh",
-    "::getConsole",
-    "ignore",
+    "core.getConsole()",
+    "core.ignore()",
     "int32Max",
     "int32Min",
     "int32ToFloat64",
@@ -104,7 +104,7 @@ const skipped = new Set([
     "noStringIndex",
     "noStringIndexConstructor", // not constructible
     // Related types are connected.
-    "doneResult",
+    "core.doneResult()",
     "generator",
     "generatorClose",
     "generatorDone",

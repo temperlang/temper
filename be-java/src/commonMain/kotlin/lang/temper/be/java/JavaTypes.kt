@@ -246,9 +246,7 @@ sealed interface JavaType : TargetLanguageTypeName {
                         WKT.voidTypeDefinition -> Void
                         else -> {
                             // Ask JavaSupportNetwork if it's @connected to a known Java type.
-                            val connectedKey = TString.unpackOrNull(
-                                definition.metadata[connectedSymbol]?.firstOrNull(),
-                            )
+                            val connectedKey = definition.connectedKey
                             val args = principal.bindings.map { JavaTypeArg.fromTypeActual(it, names) }
                             val connectedType: JavaType? = connectedKey?.let {
                                 names.javaLang.supportNetwork.translatedConnectedTypeToJavaType(connectedKey, args)

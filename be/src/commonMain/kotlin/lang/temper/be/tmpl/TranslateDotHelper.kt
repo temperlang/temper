@@ -307,7 +307,7 @@ internal object TranslateDotHelper {
             }
         }
         val typeIsConnected = firstMember != null && firstMember.enclosingType.let { typeShape ->
-            val connectedKey = typeShape.metadata[connectedSymbol, TString]
+            val connectedKey = typeShape.connectedKey
             if (connectedKey == null) {
                 false
             } else {
@@ -476,12 +476,12 @@ internal fun connectedKeyForMember(member: MemberShape): String? = when (member)
     is PropertyShape -> connectedMethodKeyForProperty(member) {
         GETTER_AFFIX !in it && SETTER_AFFIX !in it
     }
-    is VisibleMemberShape -> member.metadata[connectedSymbol, TString]
+    is VisibleMemberShape -> member.connectedKey
     else -> null
 }
 
 private fun connectedKeyForMethod(methodShape: MethodShape): String? {
-    val connectedMethodKey = methodShape.metadata[connectedSymbol, TString]
+    val connectedMethodKey = methodShape.connectedKey
     if (connectedMethodKey != null) {
         return connectedMethodKey
     }
@@ -506,9 +506,8 @@ private fun connectedKeyForMethod(methodShape: MethodShape): String? {
 private fun connectedMethodKeyForProperty(
     propertyShape: PropertyShape,
     filter: (String) -> Boolean,
-): String? = propertyShape.metadata[connectedSymbol]?.mapFirst { value ->
-    val stringContent = TString.unpackOrNull(value)
-    if (stringContent != null && filter(stringContent)) {
+): String? = propertyShape.connectedKey?.let { stringContent ->
+    if (filter(stringContent)) {
         stringContent
     } else {
         null

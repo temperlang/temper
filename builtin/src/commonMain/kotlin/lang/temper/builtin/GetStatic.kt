@@ -89,11 +89,9 @@ sealed class GetStaticOp : SpecialFunction, NamedBuiltinFun {
         val definingContext = (memberName as? ModularName)?.origin as? BindingNamingContext
         val binding = definingContext?.getTopLevelBinding(memberName)
         if (binding != null && binding.value == null) {
-            val connectedKey = member.metadata[connectedSymbol]
-                ?.lastOrNull()?.let { TString.unpackOrNull(it) }
+            val connectedKey = member.connectedKey
             if (connectedKey != null) {
-                val qname = member.metadata.getValue(qNameSymbol).last().let { TString.unpack(it!!) }
-                val connectedFnValue = macroEnv.connection(qname = qname, connectedKey = connectedKey)?.let {
+                val connectedFnValue = macroEnv.connection(connectedKey)?.let {
                     it(
                         Signature2(
                             returnType2 = member.descriptor?.let { descriptor ->

@@ -747,16 +747,16 @@ fun RttiCheckFunction.problems(
                         // of sealed interfaces since each sealed interface knows how to
                         // differentiate their sub-types.
                         //
-                        //     @connected("I") sealed interface I {}
-                        //     @connected("J") sealed interface J {}
-                        //     @connected("K") sealed interface K extends I {}
+                        //     @connected sealed interface I {}
+                        //     @connected sealed interface J {}
+                        //     @connected sealed interface K extends I {}
                         //
-                        //     @connected("L") interface L extends J {}
+                        //     @connected interface L extends J {}
                         //
-                        //     @connected("C") class C extends I {}
-                        //     @connected("D") class D extends J {}
-                        //     @connected("E") class E extends L {}
-                        //     @connected("F") class E extends K {}
+                        //     @connected class C extends I {}
+                        //     @connected class D extends J {}
+                        //     @connected class E extends L {}
+                        //     @connected class E extends K {}
                         //
                         // In the above, the following casts are distinguishable:
                         //     I to C

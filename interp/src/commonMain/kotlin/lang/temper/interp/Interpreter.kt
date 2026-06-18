@@ -186,10 +186,9 @@ class Interpreter(
     private var goingOutOfStyle = stage == Stage.Run
     private val isProcessingImplicits = nameMaker.namingContext.isImplicits
 
-    fun connection(qname: String?, connectedKey: String?): ((Signature2) -> Value<*>)? {
-        // Require `@connected` annotation. TODO Simpler representation for connected tag.
-        connectedKey ?: return null
-        return qname?.let { connecteds[it] }
+    /** Helps centralize tracking access to connecteds. */
+    fun connection(qname: String?): ((Signature2) -> Value<*>)? {
+        return connecteds[qname]
     }
 
     @Suppress("SimplifyBooleanWithConstants")
@@ -1837,8 +1836,7 @@ class Interpreter(
             restInputsType = restType?.type2,
             typeFormals = typeFormals.toList(),
         )
-        val qname = parts?.metadataSymbolMap[qNameSymbol]?.valueContained(TString)
-        val connected = connection(qname = qname, connectedKey = parts?.connected)?.let { it(signature) }
+        val connected = connection(parts?.connectedKey)?.let { it(signature) }
 
         val superTypes = SuperTypeTree(superTypeSet)
         // We use decomposeFun (I know I said above we wouldn't, but now we've expanded macros) just
@@ -2478,8 +2476,8 @@ class Interpreter(
         override val isProcessingImplicits: Boolean
             get() = document.isImplicits
 
-        override fun connection(qname: String, connectedKey: String): ((Signature2) -> Value<*>)? {
-            return this@Interpreter.connection(qname = qname, connectedKey = connectedKey)
+        override fun connection(qname: String): ((Signature2) -> Value<*>)? {
+            return this@Interpreter.connection(qname)
         }
 
         val ancestorReplaced: TEdge? get() = callSiteAncestorToReplace

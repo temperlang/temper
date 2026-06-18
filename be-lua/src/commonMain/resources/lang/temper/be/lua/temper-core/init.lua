@@ -529,7 +529,7 @@ function temper.float64_toint32(n)
     if temper.is_safe_int32(ret) then
         return ret
     else
-        return temper.bubble("Float64::toInt32 failed")
+        return temper.bubble("core.type Float64.toInt32() failed")
     end
 end
 
@@ -587,7 +587,7 @@ end
 function temper.deque_removefirst(deque)
     local head = deque.head
     if head == deque.tail then
-        return temper.bubble("Deque::removeFirst on empty deque")
+        return temper.bubble("core.type Deque.removeFirst() on empty deque")
     end
     local first = deque[head]
     deque.head = head + 1
@@ -736,7 +736,7 @@ do
     local function temper_get(list, index)
         local got = list[index + 1]
         if got == nil then
-            return temper.bubble("Listed::get(" .. tostring(index) .. ") index out of bounds 0 .. " .. tostring(#list))
+            return temper.bubble("core.type Listed.get(" .. tostring(index) .. ") index out of bounds 0 .. " .. tostring(#list))
         end
         return got
     end
@@ -749,7 +749,7 @@ do
     local function temper_get(mapped, index)
         local got = mapped[index]
         if got == nil then
-            temper.bubble("Mapped::get no such key " .. tostring(index))
+            temper.bubble("core.type Mapped.get() no such key " .. tostring(index))
         end
         return got
     end
@@ -866,7 +866,7 @@ function temper.listbuilder_splice(builder, at, remove, new)
     remove = temper.null_to_nil(remove) or len
     new = temper.null_to_nil(new) or {}
     if at < 0 or at > len then
-        return temper.bubble("ListBuilder::splice index to high or too many to remove")
+        return temper.bubble("core.type ListBuilder.splice() index to high or too many to remove")
     end
     local ret = {}
     for i = 1, remove do
@@ -883,7 +883,7 @@ function temper.listbuilder_addall(builder, from, at)
     local len = #builder
     at = temper.null_to_nil(at) or len
     if at < 0 or at > len then
-        return temper.bubble("ListBuilder::addAll index " .. tostring(at) .. "out of range 0 .. " .. tostring(len))
+        return temper.bubble("core.type ListBuilder.addAll() index " .. tostring(at) .. "out of range 0 .. " .. tostring(len))
     end
     if at == len then
         for read = 1, #from do
@@ -902,7 +902,7 @@ function temper.listbuilder_add(builder, obj, at)
     local len = #builder
     at = temper.null_to_nil(at) or len
     if at < 0 or at > len then
-        return temper.bubble("ListBuilder::add index " .. tostring(at) .. "out of range 0 .. " .. tostring(len))
+        return temper.bubble("core.type ListBuilder.add() index " .. tostring(at) .. "out of range 0 .. " .. tostring(len))
     end
     if at == len then
         builder[at + 1] = obj
@@ -1332,7 +1332,7 @@ function temper.string_fromcodepoint(code_point)
         or (code_point >= 0xD800 and code_point <= 0xDFFF)
         or code_point > 0x10FFFF
     then
-        temper.bubble("String::fromCodePoint invalid scalar value")
+        temper.bubble("core.type String.fromCodePoint() invalid scalar value")
     end
     return temper_utf8.char(code_point)
 end
@@ -1434,7 +1434,7 @@ end
 function temper.listbuilder_removelast(lb)
     local len = #lb
     if len == 0 then
-        return temper.bubble("ListBuilder::removeLast on empty list")
+        return temper.bubble("core.type ListBuilder.removeLast() on empty list")
     end
     local got = lb[len]
     lb[len] = nil
@@ -1513,7 +1513,7 @@ function temper.string_tofloat64(str)
             end
         end
     end
-    temper.bubble("String::toFloat64 failed")
+    temper.bubble("core.type String.toFloat64() failed")
 end
 
 function temper.string_toint32(str, radix)
@@ -1524,11 +1524,11 @@ function temper.string_toint32(str, radix)
     if temper.is_safe_int32(ret) then
         return ret
     end
-    temper.bubble("String::toInt32 failed")
+    temper.bubble("core.type String.toInt32() failed")
 end
 
 function temper.string_end(str)
-    return #str + 1 -- String::begin is 1 and range ends need to be exclusive
+    return #str + 1 -- core.type String.begin is 1 and range ends need to be exclusive
 end
 
 function temper.string_slice(str, begin, end_)
@@ -1543,7 +1543,7 @@ end
 
 function temper.string_get(str, i)
     if i > #str then
-        temper.bubble("String::get failed")
+        temper.bubble("core.type String.get() failed")
     end
     local ok, cp = pcall(temper_utf8.codepoint, str, i)
     if ok then return cp; end
@@ -1751,7 +1751,7 @@ end
 function temper.mapbuilder_remove(builder, key)
     local got = builder[key]
     if got == nil then
-        temper.bubble("MapBuilder::remove key not found: " .. tostring(key))
+        temper.bubble("core.type MapBuilder.remove() key not found: " .. tostring(key))
     end
     rawset(builder, key, nil)
     local key_order_list = rawget(builder, map_key_order)
@@ -1826,10 +1826,10 @@ do
 
     function temper.date_constructor(year, month, day)
         if not (1 <= month and month <= 12) then
-            temper.bubble("Date::constructor bad month " .. month)
+            temper.bubble("std/temporal.type Date.constructor() bad month " .. month)
         end
         if not (1 <= day and day <= days_in_month_of_year(year, month)) then
-            temper.bubble("Date::constructor can only go up to day " .. days_in_month_of_year(year, month) .. ", got " .. day)
+            temper.bubble("std/temporal.type Date.constructor() can only go up to day " .. days_in_month_of_year(year, month) .. ", got " .. day)
         end
         return {
             year = year,

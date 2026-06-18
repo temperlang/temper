@@ -10,8 +10,11 @@ import lang.temper.name.ModuleLocation
 import lang.temper.name.Symbol
 import lang.temper.value.StayReferrer
 import lang.temper.value.StaySink
+import lang.temper.value.TString
 import lang.temper.value.TypeInferences
 import lang.temper.value.Value
+import lang.temper.value.connectedSymbol
+import lang.temper.value.qNameSymbol
 
 /** That which may export [ExportedName]s to importers. */
 interface Exporter {
@@ -38,6 +41,13 @@ data class Export(
         get() = position
     override val reifiedType: Value<*>?
         get() = null // Could we get one from typeInferences?
+
+    val connectedKey: String?
+        get() = when {
+            connectedSymbol in declarationMetadata ->
+                declarationMetadata[qNameSymbol]?.lastOrNull()?.let { TString.unpackOrNull(it) }
+            else -> null
+        }
 
     override fun addStays(s: StaySink) {
         if (value != null) {

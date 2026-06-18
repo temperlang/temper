@@ -631,7 +631,7 @@ internal fun translateTypeDeclaration(
                 )
             }
             methodMeta != null && initial is FunTree -> {
-                val expected = initial.parts?.connected?.let { connectedName ->
+                val expected = initial.parts?.connectedKey?.let { connectedName ->
                     val genre = initial.document.context.genre
                     translator.supportNetwork.translateConnectedReference(initial.pos, connectedName, genre)
                 } == null

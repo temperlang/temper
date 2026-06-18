@@ -38,6 +38,7 @@ import lang.temper.value.StayLeaf
 import lang.temper.value.StayReferrer
 import lang.temper.value.StaySink
 import lang.temper.value.TString
+import lang.temper.value.connectedSymbol
 import lang.temper.value.constructorPropertySymbol
 import lang.temper.value.docStringSymbol
 import lang.temper.value.fnSymbol
@@ -73,6 +74,11 @@ sealed interface TypeDefinition : StayReferrer, Structured, TokenSerializable, P
 
     // TODO: store metadata from type formal definitions here to
     val metadata: MetadataValueMultimap get() = MetadataValueMultimap.empty
+
+    val connectedKey: String? get() = when {
+        connectedSymbol in metadata -> metadata[qNameSymbol]?.lastOrNull()?.let { TString.unpack(it) }
+        else -> null
+    }
 
     fun renderName(tokenSink: TokenSink) {
         tokenSink.emit(name.toToken(inOperatorPosition = false))

@@ -1,11 +1,11 @@
 
-// Implements extension method Deque::add
+// Implements extension method core.type Deque.add()
 import {bubble} from "./core.js";
 
 const DEQUE_NTAKEN = Symbol("Deque::nTaken");
 
 /**
- * Implements extension method Deque::constructor
+ * Implements extension method core.type Deque.constructor()
  * @template T
  * @returns {T[]}
  */
@@ -16,7 +16,7 @@ export const dequeConstructor = () => {
 };
 
 /**
- * Implements extension method Deque::add
+ * Implements extension method core.type Deque.add()
  * @template T
  * @param {T[]} deque
  * @param {T} element
@@ -26,7 +26,7 @@ export const dequeAdd = (deque, element) => {
 };
 
 /**
- * Implements extension method Deque::isEmpty
+ * Implements extension method core.type Deque.get isEmpty()
  * @template T
  * @param {T[]} deque
  * @returns {boolean}
@@ -36,7 +36,7 @@ export const dequeIsEmpty = (deque) => {
 };
 
 /**
- * Implements extension method Deque::removeFirst
+ * Implements extension method core.type Deque.removeFirst()
  * @template T
  * @param {T[]} deque
  * @returns {T}

@@ -114,7 +114,7 @@ internal class TypeTranslator(
     ): TmpL.NominalType {
         val connectedKey = when (definition) {
             is TypeFormal -> null
-            is TypeShape -> TString.unpackOrNull(definition.metadata[connectedSymbol]?.firstOrNull())
+            is TypeShape -> definition.connectedKey
         }
         if (connectedKey != null) {
             check(definition is TypeShape) // connectedKey only non-null when definition is a TypeShape
@@ -149,7 +149,7 @@ internal class TypeTranslator(
         val connectedKey = if (followConnected) {
             when (definition) {
                 is TypeFormal -> null
-                is TypeShape -> TString.unpackOrNull(definition.metadata[connectedSymbol]?.firstOrNull())
+                is TypeShape -> definition.connectedKey
             }
         } else {
             null

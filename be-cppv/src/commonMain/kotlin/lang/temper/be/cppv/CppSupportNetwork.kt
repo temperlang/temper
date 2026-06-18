@@ -199,7 +199,7 @@ internal class MethodCall(
     }
 }
 
-internal object ConsoleLog : CppInlineSupportCode("Console::log") {
+internal object ConsoleLog : CppInlineSupportCode("core.type Console.log()") {
     override fun inlineToTree(
         arguments: List<TypedArg<Cpp.Tree>>,
         returnType: Type2,
@@ -214,7 +214,7 @@ internal object ConsoleLog : CppInlineSupportCode("Console::log") {
     }
 }
 
-private object GetConsole : CppInlineSupportCode("::getConsole") {
+private object GetConsole : CppInlineSupportCode("core.getConsole()") {
     override fun inlineToTree(
         arguments: List<TypedArg<Cpp.Tree>>,
         returnType: Type2,
@@ -254,10 +254,10 @@ private val geGeneric = Infix("GeGeneric", BinaryOpEnum.Ge, BuiltinOperatorId.Ge
 private val geIntInt = Infix("GeIntInt", BinaryOpEnum.Ge, BuiltinOperatorId.GeIntInt)
 private val gtGeneric = Infix("GtGeneric", BinaryOpEnum.Gt, BuiltinOperatorId.GtGeneric)
 private val gtIntInt = Infix("GtIntInt", BinaryOpEnum.Gt, BuiltinOperatorId.GtIntInt)
-private val intMax = FunctionCall("max", listOf("Int32::max", "Int64::max"), namespace = "std")
-private val intMin = FunctionCall("min", listOf("Int32::min", "Int64::min"), namespace = "std")
-private val int32ToInt64 = FunctionCall("int64_t", listOf("Int32::toInt64"), namespace = null)
-private val int64ToInt32Unsafe = FunctionCall("int32_t", listOf("Int64::toInt32Unsafe"), namespace = null)
+private val intMax = FunctionCall("max", listOf("core.type Int32.max()", "core.type Int64.max()"), namespace = "std")
+private val intMin = FunctionCall("min", listOf("core.type Int32.min()", "core.type Int64.min()"), namespace = "std")
+private val int32ToInt64 = FunctionCall("int64_t", listOf("core.type Int32.toInt64()"), namespace = null)
+private val int64ToInt32Unsafe = FunctionCall("int32_t", listOf("core.type Int64.toInt32Unsafe()"), namespace = null)
 private val leGeneric = Infix("LeGeneric", BinaryOpEnum.Le, BuiltinOperatorId.LeGeneric)
 private val leIntInt = Infix("LeIntInt", BinaryOpEnum.Le, BuiltinOperatorId.LeIntInt)
 private val listedTypes = listOf("Listed", "List", "ListBuilder")
@@ -272,9 +272,9 @@ private val neGeneric = Infix("NeGeneric", BinaryOpEnum.Ne, BuiltinOperatorId.Ne
 private val neIntInt = Infix("NeIntInt", BinaryOpEnum.Ne, BuiltinOperatorId.NeIntInt)
 private val plusIntInt = FunctionCall("add", listOf("PlusIntInt"), BuiltinOperatorId.PlusIntInt)
 private val timesIntInt = FunctionCall("mul", listOf("TimesIntInt"), BuiltinOperatorId.TimesIntInt)
-private val toString = FunctionCall("to_string", listOf("Int32::toString", "Int64::toString"))
-private val toInt32 = FunctionCall("to_int32", listOf("Int64::toInt32", "String::toInt32"))
-private val toInt64 = FunctionCall("to_int64", listOf("String::toInt64"))
+private val toString = FunctionCall("to_string", listOf("core.type Int32.toString()", "core.type Int64.toString()"))
+private val toInt32 = FunctionCall("to_int32", listOf("core.type Int64.toInt32()", "core.type String.toInt32()"))
+private val toInt64 = FunctionCall("to_int64", listOf("core.type String.toInt64()"))
 
 private val connectedReferences = listOf(
     ConsoleLog,

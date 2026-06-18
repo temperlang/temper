@@ -75,7 +75,6 @@ import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.TVoid
 import lang.temper.value.YieldingFnKind
-import lang.temper.value.connectedSymbol
 import kotlin.math.abs
 
 /** Use a new translator for each temper module. */
@@ -1521,7 +1520,7 @@ internal class CSharpTranslator(
         val definition = nominalType.definition
 
         // TODO: Shouldn't we have a TmpL.TypeName here?
-        val connectedKey = definition.metadata[connectedSymbol, TString]
+        val connectedKey = definition.connectedKey
         val (typeName: CSharp.UnboundTypeName, bindings: List<Type2>) = connectedKey?.let {
             val connectedType = CSharpSupportNetwork.translatedConnectedType(pos, connectedKey, genre, nominalType)
             connectedType?.let { connectedType.first.toTypeName(pos) to connectedType.second }

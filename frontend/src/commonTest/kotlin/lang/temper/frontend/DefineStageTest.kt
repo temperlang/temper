@@ -2196,7 +2196,7 @@ class DefineStageTest {
                 |{
                 |  define: {
                 |    body: ```
-                |          @stay @imported(\(`std//testing/`.runTestCases)) @connected("::runTestCases") let runTestCases__0;
+                |          @stay @imported(\(`std//testing/`.runTestCases)) @connected let runTestCases__0;
                 |          runTestCases__0 = `std//testing/`.runTestCases;
                 |          @implicit @imported(\(`std//testing/`.Test)) let Test__0;
                 |          Test__0 = type (Test);

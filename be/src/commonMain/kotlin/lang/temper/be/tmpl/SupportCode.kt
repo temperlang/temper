@@ -75,7 +75,7 @@ data class TypedArg<T> (val expr: T, val type: Type2)
 
 /**
  * Support code that the [SupportNetwork] intends to be inlined.
- * For example, calls to `String::isEmpty` could be inlined to a use of a builtin operator
+ * For example, calls to `core.type String.get isEmpty()` could be inlined to a use of a builtin operator
  * on some backends.
  *
  * Instances may be inlined when used in [TmpL.CallExpression.fn].

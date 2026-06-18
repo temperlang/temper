@@ -1497,7 +1497,7 @@ class SyntaxMacroStageTest {
         stage = Stage.SyntaxMacro,
         input = """
             |class Hi {
-            |  @connected("Hi::there")
+            |  @connected
             |  private there();
             |}
         """.trimMargin(),
@@ -1508,7 +1508,7 @@ class SyntaxMacroStageTest {
             |        @typeDecl(Hi__0) @stay let Hi__0 = type (Hi__0);
             |        class(\word, \Hi, \concrete, true, @typeDefined(Hi__0) fn {
             |            Hi__0 extends AnyValue;
-            |            @method(\there) @visibility(\private) @connected("Hi::there") @fn let there__0 = (@connected("Hi::there") fn there(@impliedThis(Hi__0) this__0: Hi__0) {
+            |            @method(\there) @visibility(\private) @connected @fn let there__0 = (@connected fn there(@impliedThis(Hi__0) this__0: Hi__0) {
             |                fn__0: do {
             |                  pureVirtual()
             |                }

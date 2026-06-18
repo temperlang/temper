@@ -3125,7 +3125,7 @@ class RustTranslator(
 
     internal fun translateTypeDefinition(def: TypeDefinition, pos: Position, isParam: Boolean = false): Rust.Type {
         // First see if we have a connected type.
-        TString.unpackOrNull(def.metadata[connectedSymbol]?.firstOrNull())?.let { key ->
+        def.connectedKey?.let { key ->
             connectedTypes[key]?.let { typeName ->
                 return@translateTypeDefinition translateTypeConnected(pos, typeName)
             }

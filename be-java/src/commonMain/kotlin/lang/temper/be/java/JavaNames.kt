@@ -384,9 +384,7 @@ class JavaNames private constructor(
         if (typeDef is TypeFormal) {
             return typeFormal(typeDef.name).toQualName()
         }
-        val connectedKey = TString.unpackOrNull(
-            typeDef.metadata[connectedSymbol]?.firstOrNull(),
-        )
+        val connectedKey = typeDef.connectedKey
         if (connectedKey != null) {
             val jt = supportNetwork.translatedConnectedTypeToJavaType(connectedKey, emptyList())
             if (jt is ReferenceType) {

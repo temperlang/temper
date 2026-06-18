@@ -182,8 +182,8 @@ internal open class TestSupportNetwork(
                 .joinToString("") { it.asciiTitleCase() },
         )
         return when (connectedKey) {
-            "Int32::toString" -> IntToStringAsTmpL
-            "List::length" -> InlineTestSupportCode(baseName = baseName)
+            "core.type Int32.toString()" -> IntToStringAsTmpL
+            "core.type List.get length()" -> InlineTestSupportCode(baseName = baseName)
             // Pretend we're a call on a test instance even if we hack around that here for now.
             "Test::assert" -> InlineTestSupportCode(baseName = ParsedName("assert_true"))
             else -> TestSupportCode(baseName = baseName, signature = null)

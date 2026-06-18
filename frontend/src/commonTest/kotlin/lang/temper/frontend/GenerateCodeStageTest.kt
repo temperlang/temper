@@ -1414,7 +1414,7 @@ class GenerateCodeStageTest {
             |          },
             |        ],
             |        metadata: {
-            |          connected: ["\"Empty\": String"],
+            |          connected: ["void: Void"],
             |        }
             |      },
             |    },
@@ -2595,17 +2595,17 @@ class GenerateCodeStageTest {
                 ModuleSource(
                     filePath = testCodeLocation,
                     fetchedContent = """
-                        |@connected("S")
+                        |@connected
                         |export sealed interface S {}
                         |
-                        |@connected("C")
+                        |@connected
                         |class C extends S {}
-                        |@connected("D")
+                        |@connected
                         |class D extends S {}
                         |
-                        |@connected("NS")
+                        |@connected
                         |interface NS extends S {}
-                        |@connected("E")
+                        |@connected
                         |class E extends NS {}
                         |
                         |export let f(a: AnyValue, s: S): Void throws Bubble {
