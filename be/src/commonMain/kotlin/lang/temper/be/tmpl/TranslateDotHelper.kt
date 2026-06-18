@@ -473,9 +473,7 @@ internal object TranslateDotHelper {
 
 internal fun connectedKeyForMember(member: MemberShape): String? = when (member) {
     is MethodShape -> connectedKeyForMethod(member)
-    is PropertyShape -> connectedMethodKeyForProperty(member) {
-        GETTER_AFFIX !in it && SETTER_AFFIX !in it
-    }
+    is PropertyShape -> member.connectedKey
     is VisibleMemberShape -> member.connectedKey
     else -> null
 }
@@ -488,37 +486,14 @@ private fun connectedKeyForMethod(methodShape: MethodShape): String? {
     // Look on a property definition for a getter or setters member.
     return when (methodShape.methodKind) {
         MethodKind.Normal -> null
-        MethodKind.Getter -> propertyShapeFor(methodShape)?.let { propertyShape ->
-            connectedMethodKeyForProperty(propertyShape) { GETTER_AFFIX in it }
-        }
-        MethodKind.Setter -> propertyShapeFor(methodShape)?.let { propertyShape ->
-            connectedMethodKeyForProperty(propertyShape) { SETTER_AFFIX in it }
-        }
+        MethodKind.Getter -> propertyShapeFor(methodShape)?.connectedKey
+        MethodKind.Setter -> propertyShapeFor(methodShape)?.connectedKey
         MethodKind.Constructor -> null
-    }
-}
-
-/**
- * There may be multiple connected keys attached to a property.
- * Return the first one matching filter which lets us use the `::getFoo` key for
- * a getter and the `::setFoo` key for the setter.
- */
-private fun connectedMethodKeyForProperty(
-    propertyShape: PropertyShape,
-    filter: (String) -> Boolean,
-): String? = propertyShape.connectedKey?.let { stringContent ->
-    if (filter(stringContent)) {
-        stringContent
-    } else {
-        null
     }
 }
 
 private fun propertyShapeFor(methodShape: MethodShape): PropertyShape? =
     methodShape.enclosingType.properties.firstOrNull { it.symbol == methodShape.symbol }
-
-private const val GETTER_AFFIX = "::get"
-private const val SETTER_AFFIX = "::set"
 
 private fun garbageTranslatedHelper(pos: Position, message: String) =
     TranslateDotHelper.TranslatedDotHelper(
