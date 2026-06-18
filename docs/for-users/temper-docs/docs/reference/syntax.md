@@ -159,10 +159,10 @@ Besides those, any expression may appear in statement position.
 ![Nop &#58;&#61; &#34;&#59;&#34;](../snippet/syntax/Nop/snippet.svg)
 
 A semicolon used to separate statements.
-Since our parser is built around an operator precedence parser, and semicolon is a low
-precedence operator, this grammar consumes them, but does not require them.
+Since our parser is built around an operator precedence parser, and semicolon is a
+low-precedence operator, this grammar consumes semicolons but does not require them.
 
-Not all semicolons need to appear explicitly in program text.
+Not all semicolons need to appear explicitly in the program text.
 
 <!-- snippet: semicolon-insertion -->
 
@@ -396,7 +396,7 @@ A `{` ... `}` delimited block of statements.
 
 ### Syntax for *Expr*
 
-![Expr &#58;&#61; &#40;&#41; &#124; Jump &#124; AwaitReturnThrowYield &#124; Id &#124; TypeArgumentName &#124; SymbolLiteral &#124; List &#124; New &#124; Prefix &#124; SpecialDot &#124; RegularDot &#124; StringExpr &#124; TaggedString &#124; Call &#124; &#34;&#40;&#34; &#40;&#40;Disallowed&#58; &#40;&#41;&#41; TopLevelNoGarbageNoComment &#124; Garbage&#41; &#34;&#41;&#34; &#124; OfExpr &#124; Throws &#124; Infix &#124; Postfix &#124; Member &#124; Specialize &#124; Literal &#124; RegExp &#124; Obj &#124; RawBlock &#124; &#34;&#40;&#34; Garbage](../snippet/syntax/Expr/snippet.svg)
+![Expr &#58;&#61; Jump &#124; AwaitReturnThrowYield &#124; Id &#124; SymbolLiteral &#124; List &#124; New &#124; Prefix &#124; SpecialDot &#124; RegularDot &#124; StringExpr &#124; TaggedString &#124; Call &#124; DecoratedExpr &#124; &#34;&#40;&#34; &#40;&#40;Disallowed&#58; &#40;&#41;&#41; TopLevelNoGarbageNoComment &#124; Garbage&#41; &#34;&#41;&#34; &#124; OfExpr &#124; Throws &#124; Infix &#124; Postfix &#124; Member &#124; Specialize &#124; Literal &#124; RegExp &#124; Obj &#124; RawBlock &#124; &#34;&#40;&#34; Garbage](../snippet/syntax/Expr/snippet.svg)
 
 An expression is evaluated to produce a result and/or a side effect.
 
@@ -478,7 +478,7 @@ It may be followed by an `extends` clause that specifies marker interfaces
 that are super-types for the produced function value.
 
 The signature is followed by the double-semicolon token (`;;`) which is
-distinct from two, space separated semicolons (`; ;`).
+distinct from two, space-separated semicolons (`; ;`).
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/BlockLambda/snippet.md/0 -->
 
@@ -506,7 +506,7 @@ someFunction /* <- callee */ {
 ![BlockLambdaSignatureAndSupers &#58;&#61; BlockLambdaSignatureAndSupers BlockLambdaSupers &#124; BlockLambdaSignature &#124; Garbage](../snippet/syntax/BlockLambdaSignatureAndSupers/snippet.svg)
 
 The signature of a block lambda explains the names of arguments
-visible within the body, optionally their types and return type.
+visible within the body, optionally their types, and return type.
 
 The signature also includes other interfaces that the lambda must
 implement.  For example, a function that might pause execution
@@ -515,7 +515,7 @@ could use a signature line as below:
     (x: Int): Int extends GeneratorFn =>
 
 That describes a function that takes an integer `x` and which
-also is a sub-type of [*GeneratorFn*](types.md#type-GeneratorFn).
+also is a subtype of [*GeneratorFn*](types.md#type-GeneratorFn).
 
 The `extends` clause may be left off entirely if no super-types
 are desired, or multiple super-types may be specified:
@@ -551,7 +551,7 @@ g { (x): Void =>
 
 ### Syntax for *BlockLambdaSignature*
 
-![BlockLambdaSignature &#58;&#61; &#34;&#40;&#34; Formals&#63; &#34;&#41;&#34; &#34;&#58;&#34; Type &#124; &#34;&#40;&#34; &#40;&#34;&#46;&#46;&#46;&#34; &#124; Formals&#63;&#41; &#34;&#41;&#34;](../snippet/syntax/BlockLambdaSignature/snippet.svg)
+![BlockLambdaSignature &#58;&#61; &#34;&#40;&#34; Formals&#63; &#34;&#41;&#34; &#34;&#58;&#34; Type &#124; &#34;&#40;&#34; &#40;&#34;&#46;&#46;&#46;&#34; &#124; Formals &#124; &#40;&#41;&#41; &#34;&#41;&#34;](../snippet/syntax/BlockLambdaSignature/snippet.svg)
 
 A block lambda signature line like `(x: Int): ReturnType` or just
 `(x)` to take advantage of the more aggressive type inference for block
@@ -588,7 +588,7 @@ These syntactic constructs are interpreted as if preceded by
 
 ### Syntax for *BlockLambdaBody*
 
-![BlockLambdaBody &#58;&#61; TopLevelsInSemi &#124; TopLevel&#63;](../snippet/syntax/BlockLambdaBody/snippet.svg)
+![BlockLambdaBody &#58;&#61; TopLevelsInSemi &#124; TopLevel &#124; &#40;&#41;](../snippet/syntax/BlockLambdaBody/snippet.svg)
 
 <!-- /snippet: syntax/BlockLambdaBody -->
 
@@ -600,7 +600,7 @@ These syntactic constructs are interpreted as if preceded by
 
 #### Syntax for *Arg*
 
-![Arg &#58;&#61; &#34;&#64;&#34; &#40;Expr &#34;&#40;&#34; TopLevelNoGarbageNoComment &#34;&#41;&#34; Arg &#124; Expr Arg&#41; &#124; &#40;&#40;&#41; &#124; &#40;Disallowed&#58; &#40;Disallowed&#58; &#34;let&#34;&#41;&#41;&#41; &#40;ArgNoInit &#34;&#61;&#34; Expr &#124; ArgNoInit &#124; &#34;&#46;&#46;&#46;&#34; &#124; LetArg&#41; &#124; Garbage](../snippet/syntax/Arg/snippet.svg)
+![Arg &#58;&#61; &#34;&#64;&#34; &#40;Expr Arg &#124; Expr &#34;&#40;&#34; Arg &#34;&#41;&#34;&#41; &#124; &#40;&#40;&#41; &#124; &#40;Disallowed&#58; &#40;Disallowed&#58; &#34;let&#34;&#41;&#41;&#41; &#40;ArgNoInit &#34;&#61;&#34; Expr &#124; ArgNoInit &#124; &#34;&#46;&#46;&#46;&#34; &#124; LetArg&#41; &#124; Garbage](../snippet/syntax/Arg/snippet.svg)
 
 <!-- /snippet: syntax/Arg -->
 
@@ -630,7 +630,7 @@ These syntactic constructs are interpreted as if preceded by
 
 #### Syntax for *CallArgs*
 
-![CallArgs &#58;&#61; &#34;&#40;&#34; &#40;ForArgs &#124; Args&#63;&#41; &#34;&#41;&#34;](../snippet/syntax/CallArgs/snippet.svg)
+![CallArgs &#58;&#61; &#34;&#40;&#34; &#40;ForArgs &#124; Args &#124; &#40;&#41;&#41; &#34;&#41;&#34;](../snippet/syntax/CallArgs/snippet.svg)
 
 Arguments to a function call.
 
@@ -651,7 +651,11 @@ A function call's arguments may be one of:
 
 ![CallHead &#58;&#61; CalleeAndArgs BlockLambda &#124; CalleeAndRequiredArgs](../snippet/syntax/CallHead/snippet.svg)
 
-The function called, its arguments, and any block lambda
+The function called, its arguments, and any block lambda.
+This is one part of a possibly joined call.
+Syntactically, `do { body } while (condition);` is two joined calls.
+The first part `do { body }` is the callee `do` applied to a block as its argument.
+The word `while` joins the argument list `(condition)` to that call.
 
 <!-- /snippet: syntax/CallHead -->
 
@@ -722,7 +726,7 @@ This production allows a callee to have:
 
 ![CalleeAndArgs &#58;&#61; CalleeAndArgs &#34;&#58;&#34; Type &#124; CalleeAndArgs &#40;&#34;extends&#34; &#124; &#34;implements&#34;&#41; Type &#40;&#34;&#44;&#34; Type&#41;&#42; &#124; CalleeAndArgs &#34;forbids&#34; Type &#40;&#34;&#44;&#34; Type&#41;&#42; &#124; CalleeAndArgs &#34;supports&#34; Type &#40;&#34;&#44;&#34; Type&#41;&#42; &#124; Callee CallArgs &#124; Callee](../snippet/syntax/CalleeAndArgs/snippet.svg)
 
-Captures low precedence operators that may follow a parenthesized argument list.
+Captures low-precedence operators that may follow a parenthesized argument list.
 
 - `: ReturnType` desugars to `\outType`, `ReturnType`.
 - `extends SuperType` and `implements SuperType* desugars to `\super`, `SuperType`.
@@ -971,7 +975,7 @@ autodoc comments before declarations into Python doc strings.
 
 #### Syntax for *Formal*
 
-![Formal &#58;&#61; &#34;&#64;&#34; &#40;Expr &#34;&#40;&#34; TopLevelNoGarbageNoComment &#34;&#41;&#34; Arg &#124; Expr Arg&#41; &#124; &#40;&#40;&#41; &#124; &#40;Disallowed&#58; &#40;Disallowed&#58; &#34;let&#34;&#41;&#41;&#41; &#40;ArgNoInit &#34;&#61;&#34; Expr &#124; FormalNoInit &#124; &#34;&#46;&#46;&#46;&#34; &#124; LetArg&#41; &#124; Garbage](../snippet/syntax/Formal/snippet.svg)
+![Formal &#58;&#61; &#34;&#64;&#34; &#40;Expr Arg &#124; Expr &#34;&#40;&#34; Arg &#34;&#41;&#34;&#41; &#124; &#40;&#40;&#41; &#124; &#40;Disallowed&#58; &#40;Disallowed&#58; &#34;let&#34;&#41;&#41;&#41; &#40;ArgNoInit &#34;&#61;&#34; Expr &#124; FormalNoInit &#124; &#34;&#46;&#46;&#46;&#34; &#124; LetArg&#41; &#124; Garbage](../snippet/syntax/Formal/snippet.svg)
 
 <!-- /snippet: syntax/Formal -->
 
@@ -1041,7 +1045,7 @@ autodoc comments before declarations into Python doc strings.
 
 #### Syntax for *JsonArray*
 
-![JsonArray &#58;&#61; &#34;&#91;&#34; &#40;JsonValue &#40;&#34;&#44;&#34; JsonValue&#41;&#42; &#34;&#44;&#34;&#63; &#124; JsonValue&#63;&#41; &#34;&#93;&#34;](../snippet/syntax/JsonArray/snippet.svg)
+![JsonArray &#58;&#61; &#34;&#91;&#34; &#40;JsonValue &#40;&#34;&#44;&#34; JsonValue&#41;&#42; &#34;&#44;&#34;&#63; &#124; JsonValue &#124; &#40;&#41;&#41; &#34;&#93;&#34;](../snippet/syntax/JsonArray/snippet.svg)
 
 <!-- /snippet: syntax/JsonArray -->
 
@@ -1083,7 +1087,7 @@ Truth values are represented using the keywords `false` and `true`.
 
 #### Syntax for *JsonObject*
 
-![JsonObject &#58;&#61; &#34;&#123;&#34; &#40;JsonProperty &#40;&#34;&#44;&#34; JsonProperty&#41;&#42; &#34;&#44;&#34;&#63; &#124; JsonProperty&#63;&#41; &#34;&#125;&#34;](../snippet/syntax/JsonObject/snippet.svg)
+![JsonObject &#58;&#61; &#34;&#123;&#34; &#40;JsonProperty &#40;&#34;&#44;&#34; JsonProperty&#41;&#42; &#34;&#44;&#34;&#63; &#124; JsonProperty &#124; &#40;&#41;&#41; &#34;&#125;&#34;](../snippet/syntax/JsonObject/snippet.svg)
 
 <!-- /snippet: syntax/JsonObject -->
 
@@ -1183,7 +1187,7 @@ Truth values are represented using the keywords `false` and `true`.
 
 #### Syntax for *ListContent*
 
-![ListContent &#58;&#61; ListElements &#124; ListElement &#124; Garbage&#63;](../snippet/syntax/ListContent/snippet.svg)
+![ListContent &#58;&#61; ListElements &#124; ListElement &#124; Garbage &#124; &#40;&#41;](../snippet/syntax/ListContent/snippet.svg)
 
 <!-- /snippet: syntax/ListContent -->
 
@@ -1235,7 +1239,7 @@ Truth values are represented using the keywords `false` and `true`.
 
 ![MatchBranch &#58;&#61; &#34;else&#34; &#34;&#45;&#92;u003e&#34; Expr &#124; MatchCase &#34;&#45;&#92;u003e&#34; Expr &#124; MatchCase &#40;&#34;&#44;&#34; MatchCase&#41;&#42; &#34;&#44;&#34;&#63; &#34;&#45;&#92;u003e&#34; Expr](../snippet/syntax/MatchBranch/snippet.svg)
 
-Relates a match case, e.g. a pattern, to a consequence of matching that pattern.
+Relates a match case, e.g., a pattern, to a consequence of matching that pattern.
 
 <!-- /snippet: syntax/MatchBranch -->
 
@@ -1633,7 +1637,7 @@ decoded.
 
 ![TopLevelsInSemi &#58;&#61; &#40;Nop&#42; TopLevel&#41;&#42; TrailingSemi](../snippet/syntax/TopLevelsInSemi/snippet.svg)
 
-Top levels in the context of a larger semicolon separated run.
+Top levels in the context of a larger semicolon-separated run.
 
 <!-- /snippet: syntax/TopLevelsInSemi -->
 
@@ -1653,7 +1657,7 @@ Top levels in the context of a larger semicolon separated run.
 
 #### Syntax for *TypeArgument*
 
-![TypeArgument &#58;&#61; Expr](../snippet/syntax/TypeArgument/snippet.svg)
+![TypeArgument &#58;&#61; TypeArgumentName](../snippet/syntax/TypeArgument/snippet.svg)
 
 <!-- /snippet: syntax/TypeArgument -->
 
@@ -1663,7 +1667,7 @@ Top levels in the context of a larger semicolon separated run.
 
 #### Syntax for *TypeArgumentName*
 
-![TypeArgumentName &#58;&#61; &#40;&#34;in&#34; &#124; &#34;out&#34;&#41; Id](../snippet/syntax/TypeArgumentName/snippet.svg)
+![TypeArgumentName &#58;&#61; TypeArgumentName &#40;&#34;extends&#34; &#124; &#34;implements&#34;&#41; Type &#40;&#34;&#44;&#34; Type&#41;&#42; &#124; TypeArgumentName &#34;forbids&#34; Type &#40;&#34;&#44;&#34; Type&#41;&#42; &#124; TypeArgumentName &#34;supports&#34; Type &#40;&#34;&#44;&#34; Type&#41;&#42; &#124; &#34;&#64;&#34; &#40;Expr TypeArgumentName &#124; Expr &#34;&#40;&#34; TypeArgumentName &#34;&#41;&#34;&#41; &#124; Expr](../snippet/syntax/TypeArgumentName/snippet.svg)
 
 <!-- /snippet: syntax/TypeArgumentName -->
 
