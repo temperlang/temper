@@ -198,6 +198,7 @@ class CppTranslator(
                     )
 
                     is TmpL.ConnectedToTypeName -> TODO()
+                    is TmpL.SuperSubject -> TODO()
                     is TmpL.TemperTypeName -> TODO()
                 }
         }
@@ -261,6 +262,7 @@ class CppTranslator(
                         },
                     )
                     is TmpL.ConnectedToTypeName -> TODO()
+                    is TmpL.SuperSubject -> TODO()
                     is TmpL.TemperTypeName -> TODO()
                 }
             }

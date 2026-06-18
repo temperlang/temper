@@ -15,6 +15,7 @@ import lang.temper.be.tmpl.LibraryRootContext
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
+import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.common.MimeType
 import lang.temper.common.console
 import lang.temper.common.jsonEscaper
@@ -277,6 +278,7 @@ class PyBackend private constructor(
             tentativeOutputPathFor = {
                 pyPathForModuleLocation(it.loc as ModuleName, pyLibraryNames)
             },
+            withTentative = { injectSuperCallMethods(it) },
         )
     }
 
