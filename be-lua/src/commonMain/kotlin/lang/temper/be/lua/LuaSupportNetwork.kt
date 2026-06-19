@@ -14,6 +14,7 @@ import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.RuntimeTypeOperation
+import lang.temper.common.subListToEnd
 import lang.temper.format.TokenSink
 import lang.temper.lexer.Genre
 import lang.temper.log.Position
@@ -522,7 +523,13 @@ internal object LuaSupportNetwork : SupportNetwork {
         else -> temperMethod(
             connectedKey,
             connectedKey
-                .replace("::", "_")
+                .split(".", "::")
+                // Skip module name.
+                .subListToEnd(1)
+                .joinToString("_") { part ->
+                    // Skip qualifiers and parens.
+                    part.split(" ").last().trimEnd('(', ')')
+                }
                 .lowercase(),
         )
     }

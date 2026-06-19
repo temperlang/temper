@@ -1840,19 +1840,19 @@ do
     end
 end
 
-function temper.date_getyear(date)
+function temper.date_year(date)
     return date.year
 end
 
-function temper.date_getmonth(date)
+function temper.date_month(date)
     return date.month
 end
 
-function temper.date_getday(date)
+function temper.date_day(date)
     return date.day
 end
 
-function temper.date_getdayofweek(date)
+function temper.date_dayofweek(date)
     -- os.date week days are 1 indexed: Sunday is 1, Monday is 2, ... Saturday is 7
     local wday = os.date("*t", os.time {
         year = date.year,
@@ -2073,7 +2073,7 @@ end
 do
     local TemperRegexNFA = nil
 
-    function temper.regex_format(data)
+    function temper.regexformatter_regexformat(data)
         if TemperRegexNFA == nil then
             require('temper-core/regex/runtime')
             TemperRegexNFA = require("temper-regex-engine/nfa/nfa").TemperRegexNFA
@@ -2097,7 +2097,7 @@ do
         return pat:found(text)
     end
 
-    function temper.regex_compileformatted(self, regex)
+    function temper.regexformatter_regexcompileformatted(self, regex)
         return regex
     end
 

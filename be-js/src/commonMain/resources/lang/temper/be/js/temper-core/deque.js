@@ -31,7 +31,7 @@ export const dequeAdd = (deque, element) => {
  * @param {T[]} deque
  * @returns {boolean}
  */
-export const dequeIsEmpty = (deque) => {
+export const dequeGetIsEmpty = (deque) => {
   return deque.length === (deque[DEQUE_NTAKEN] || 0);
 };
 

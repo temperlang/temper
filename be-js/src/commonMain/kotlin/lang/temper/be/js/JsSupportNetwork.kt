@@ -26,6 +26,7 @@ import lang.temper.common.AtomicCounter
 import lang.temper.common.OpenOrClosed
 import lang.temper.common.asciiTitleCase
 import lang.temper.common.asciiUnTitleCase
+import lang.temper.common.subListToEnd
 import lang.temper.format.CodeFormatter
 import lang.temper.format.OutToks
 import lang.temper.format.OutputToken
@@ -236,11 +237,11 @@ internal object JsSupportNetwork : SupportNetwork {
             "core.type Int32.toString()" -> toStringIdiomExpander
             "core.type Int32.toInt64()" -> bigintExpander
             "core.type Int64.toString()" -> toStringIdiomExpander
-            "core.type List.isEmpty()" -> listIsEmptyIdiomExpander
+            "core.type List.get isEmpty()" -> listIsEmptyIdiomExpander
             "core.type List.forEach()" -> listForEachIdiomExpander
             "core.type List.toList()" -> identityIdiomExpander
             "core.type List.toListBuilder()" -> listToListBuilderIdiomExpander
-            "core.type Listed.isEmpty()" -> listIsEmptyIdiomExpander
+            "core.type Listed.get isEmpty()" -> listIsEmptyIdiomExpander
             "core.type ListBuilder.constructor()" -> listBuilderConstructorIdiomExpander
             "core.type ListBuilder.toListBuilder()" -> listToListBuilderIdiomExpander
             "core.type String.get isEmpty()" -> stringIsEmptyIdiomExpander
@@ -289,7 +290,7 @@ internal object JsSupportNetwork : SupportNetwork {
             "core.type Int32.max()" -> mathCall("max", 2)
             "core.type Int32.min()" -> mathCall("min", 2)
             // Mapped things
-            "core.type Mapped.length()" -> mappedSizeExpander
+            "core.type Mapped.get length()" -> mappedSizeExpander
             "core.type Mapped.has()" -> mappedHasExpander
             "core.type Mapped.keys()" -> mappedKeysExpander
             "core.type Mapped.values()" -> mappedValuesExpander
@@ -423,7 +424,7 @@ private val supportedAutoConnecteds = setOf(
     "core.type MapBuilder.remove()",
     "core.type MapBuilder.set()",
     "core.type Pair.constructor()",
-    "core.type Mapped.length()",
+    "core.type Mapped.get length()",
     "core.type Mapped.get()",
     "core.type Mapped.getOr()",
     "core.type Mapped.has()",
@@ -444,7 +445,7 @@ private val supportedAutoConnecteds = setOf(
     "core.type Deque.get isEmpty()",
     "core.type Deque.removeFirst()",
     "core.type PromiseBuilder",
-    "std/regex.type Regex.compileFormatted()",
+    "std/regex.type RegexFormatter.regexCompileFormatted()",
     "std/regex.type Regex.compiledFind()",
     "std/regex.type Regex.compiledFound()",
     "std/regex.type Regex.compiledReplace()",
@@ -1508,15 +1509,20 @@ private val ignoreIdiomExpander: Inliner =
  * `runtime-support/index.js`.
  */
 internal fun connectedKeyToExportedName(connectedKey: String) = JsIdentifierName(
-    connectedKey.split("::")
+    // Logic here keeps things somewhat matching pre-qname expectations. TODO Update expectations?
+    connectedKey
+        // Split segments and qualifiers, including `::` pseudos.
+        .split(".", "::", " ")
+        // Skip the module part of the qname and also type qualifiers.
+        .subListToEnd(1)
+        .filter { it != "type" }
+        // Make what's left camelCase.
         .mapIndexed { i, segment ->
-            if (i == 0) {
-                segment.asciiUnTitleCase()
-            } else {
-                segment.asciiTitleCase()
-            }
-        }
-        .joinToString(""),
+            when (i) {
+                0 -> segment.asciiUnTitleCase()
+                else -> segment.asciiTitleCase()
+            }.trimEnd('(', ')') // Exclude parens.
+        }.joinToString(""),
 )
 
 private fun runtimeLibraryBackedSupportCode(

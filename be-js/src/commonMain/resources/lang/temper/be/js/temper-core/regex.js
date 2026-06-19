@@ -112,7 +112,7 @@ export const regexCompiledSplit = (_, compiled, text) => {
  * @param {string} formatted
  * @returns {RegExp}
  */
-export const regexCompileFormatted = (_, formatted) => {
+export const regexFormatterRegexCompileFormatted = (_, formatted) => {
   if (formatted.includes("\\&")) {
     // std/regex escapes '&' because that's needed on Python, but
     // EcmaScript's builtin complains.
