@@ -910,7 +910,7 @@ val JavaLang.stringBuilderClear by receiver {
     }
 }
 val JavaLang.stringBuilderEnd by receiver {
-    inlineSupport("core.type StringBuilder.end()", arity = 1, needsSelf = true) { pos, args ->
+    inlineSupport("core.type StringBuilder.get end()", arity = 1, needsSelf = true) { pos, args ->
         args[0].method("length", pos = pos)
     }
 }
@@ -1305,7 +1305,7 @@ val JavaLang.pairConstructor by receiver {
     }
 }
 val JavaLang.mappedLength by receiver {
-    inlineSupport("core.type Mapped.length()", arity = 1, needsSelf = true) { pos, args ->
+    inlineSupport("core.type Mapped.get length()", arity = 1, needsSelf = true) { pos, args ->
         args[0].method("size", pos = pos)
     }
 }
@@ -1498,7 +1498,7 @@ private val connections: Map<String, ((JavaLang) -> SupportCode)> = mapOf(
     "core.type ListBuilder.add()" to { it.listBuilderAdd },
     "core.type ListBuilder.addAll()" to { it.listBuilderAddAll },
     "core.type ListBuilder.constructor()" to { it.listBuilderMake },
-    "core.type ListBuilder.length()" to { it.listLength },
+    "core.type ListBuilder.get length()" to { it.listLength },
     "core.type ListBuilder.removeLast()" to { it.listBuilderRemoveLast },
     "core.type ListBuilder.reverse()" to { it.listBuilderReverse },
     "core.type ListBuilder.sort()" to { it.listBuilderSort },
@@ -1508,7 +1508,7 @@ private val connections: Map<String, ((JavaLang) -> SupportCode)> = mapOf(
     "core.type Listed.filter()" to { it.listFilter },
     "core.type Listed.get()" to { it.listGet },
     "core.type Listed.getOr()" to { it.listGetOr },
-    "core.type Listed.isEmpty()" to { it.genericIsEmpty },
+    "core.type Listed.get isEmpty()" to { it.genericIsEmpty },
     "core.type Listed.join()" to { it.listJoin },
     "core.type Listed.get length()" to { it.listLength },
     "core.type Listed.map()" to { it.listMap },
@@ -1527,7 +1527,7 @@ private val connections: Map<String, ((JavaLang) -> SupportCode)> = mapOf(
     "core.type Mapped.getOr()" to { it.mappedGetOr },
     "core.type Mapped.has()" to { it.mappedHas },
     "core.type Mapped.keys()" to { it.mappedKeys },
-    "core.type Mapped.length()" to { it.mappedLength },
+    "core.type Mapped.get length()" to { it.mappedLength },
     "core.type Mapped.toList()" to { it.mappedToList },
     "core.type Mapped.toListBuilder()" to { it.mappedToListBuilder },
     "core.type Mapped.toListBuilderWith()" to { it.mappedToListBuilderWith },
@@ -1539,7 +1539,7 @@ private val connections: Map<String, ((JavaLang) -> SupportCode)> = mapOf(
     "core.type PromiseBuilder.breakPromise()" to { it.promiseBuilderBreakPromise },
     "core.type PromiseBuilder.complete()" to { it.promiseBuilderComplete },
     "core.type PromiseBuilder.get promise()" to { it.promiseBuilderGetPromise },
-    "std/regex.type Regex.compileFormatted()" to { it.regexCompiledFormatted },
+    "std/regex.type RegexFormatter.regexCompileFormatted()" to { it.regexCompiledFormatted },
     "std/regex.type Regex.compiledFind()" to { it.regexCompiledFind },
     "std/regex.type Regex.compiledFound()" to { it.regexCompiledFound },
     "std/regex.type Regex.compiledReplace()" to { it.regexCompiledReplace },
@@ -1558,7 +1558,7 @@ private val connections: Map<String, ((JavaLang) -> SupportCode)> = mapOf(
     "core.type String.get()" to { it.stringGet },
     "core.type String.hasAtLeast()" to { it.stringHasAtLeast },
     "core.type String.hasIndex()" to { it.stringHasIndex },
-    "core.type String.isEmpty()" to { it.genericIsEmpty },
+    "core.type String.get isEmpty()" to { it.genericIsEmpty },
     "core.type String.next()" to { it.stringNext },
     "core.type String.prev()" to { it.stringPrev },
     "core.type String.step()" to { it.stringStep },
@@ -1573,7 +1573,7 @@ private val connections: Map<String, ((JavaLang) -> SupportCode)> = mapOf(
     "core.type StringBuilder.appendCodePoint()" to { it.stringBuilderAppendCodePoint },
     "core.type StringBuilder.clear()" to { it.stringBuilderClear },
     "core.type StringBuilder.constructor()" to { it.stringBuilderConstructor },
-    "core.type StringBuilder.end()" to { it.stringBuilderEnd },
+    "core.type StringBuilder.get end()" to { it.stringBuilderEnd },
     "core.type StringBuilder.toString()" to { it.stringBuilderToString },
     "core.type StringIndex.none" to { it.stringIndexNone },
     "core.type StringIndexOption.compareTo()" to { it.stringIndexOptionCompareTo },

@@ -832,11 +832,11 @@ private val gtIntInt = Infix("GtIntInt", BuiltinOperatorId.GtIntInt, RustOperato
 private val gtStrStr = Infix("GtStrStr", BuiltinOperatorId.GtStrStr, RustOperator.GreaterThan)
 private val ignore = FunctionCall("core.ignore()", "temper_core::ignore")
 
-private object IntToFloat64 : Cast("Int32::toFloat64") {
+private object IntToFloat64 : Cast("core.type Int32.toFloat64()") {
     override fun buildType(pos: Position) = "f64".toId(pos)
 }
 
-private object IntToInt64 : Cast("Int32::toInt64") {
+private object IntToInt64 : Cast("core.type Int32.toInt64()") {
     override fun buildType(pos: Position) = "i64".toId(pos)
 }
 
@@ -848,7 +848,7 @@ private object Int64ToInt32Unsafe : Cast("core.type Int64.toInt32Unsafe()") {
     override fun buildType(pos: Position) = "i32".toId(pos)
 }
 
-internal val intToString = FunctionCall("Int32::toString", "temper_core::int_to_string")
+internal val intToString = FunctionCall("core.type Int32.toString()", "temper_core::int_to_string")
 private val int64ToFloat64 = FunctionCall("core.type Int64.toFloat64()", "temper_core::int64_to_float64")
 private val int64ToInt32 = FunctionCall("core.type Int64.toInt32()", "temper_core::int64_to_int32")
 internal val int64ToString = FunctionCall("core.type Int64.toString()", "temper_core::int64_to_string")
@@ -874,13 +874,13 @@ private val listBuilderSort = FunctionCall("core.type ListBuilder.sort()", "temp
 private val listBuilderSplice = FunctionCall("core.type ListBuilder.splice()", "temper_core::listed::splice", fnIndex = -1)
 private val listedFilter =
     FunctionCall("core.type Listed.filter()", "temper_core::listed::filter", hasGeneric = true, fnIndex = -1)
-private val listedGet = FunctionCall(listedTypes.map { "$it::get" }, "$LISTED_TRAIT_NAME::get", hasGeneric = true)
+private val listedGet = FunctionCall(listedTypes.map { "core.type $it.get()" }, "$LISTED_TRAIT_NAME::get", hasGeneric = true)
 private val listedGetOr = FunctionCall("core.type Listed.getOr()", "$LISTED_TRAIT_NAME::get_or", hasGeneric = true)
 
 private val listedIsEmpty =
-    FunctionCall(listedTypes.map { "$it::isEmpty" }, "$LISTED_TRAIT_NAME::is_empty", hasGeneric = true)
+    FunctionCall(listedTypes.map { "core.type $it.get isEmpty()" }, "$LISTED_TRAIT_NAME::is_empty", hasGeneric = true)
 private val listedJoin = FunctionCall("core.type Listed.join()", "temper_core::listed::join", hasGeneric = true, fnIndex = -1)
-private val listedLength = FunctionCall(listedTypes.map { "$it::length" }, "$LISTED_TRAIT_NAME::len", hasGeneric = true)
+private val listedLength = FunctionCall(listedTypes.map { "core.type $it.get length()" }, "$LISTED_TRAIT_NAME::len", hasGeneric = true)
 private val listedMap = FunctionCall("core.type Listed.map()", "temper_core::listed::map", hasGeneric = true, fnIndex = -1)
 private val listedReduce =
     FunctionCall("core.type Listed.reduce()", "temper_core::listed::reduce", hasGeneric = true, fnIndex = -1)
@@ -890,9 +890,9 @@ private val listedSlice = FunctionCall("core.type Listed.slice()", "temper_core:
 private val listedSorted =
     FunctionCall("core.type Listed.sorted()", "temper_core::listed::sorted", hasGeneric = true, fnIndex = -1)
 private val listedToList =
-    FunctionCall(listedTypes.map { "$it::toList" }, "$LISTED_TRAIT_NAME::to_list", hasGeneric = true)
+    FunctionCall(listedTypes.map { "core.type $it.toList()" }, "$LISTED_TRAIT_NAME::to_list", hasGeneric = true)
 private val listedToListBuilder = FunctionCall(
-    connectedNames = listedTypes.map { "$it::toListBuilder" },
+    connectedNames = listedTypes.map { "core.type $it.toListBuilder()" },
     functionName = "$LISTED_TRAIT_NAME::to_list_builder",
     hasGeneric = true,
 )
@@ -933,7 +933,7 @@ private val mappedForEach =
 private val mappedGet = FunctionCall("core.type Mapped.get()", "temper_core::MappedTrait::get", hasGeneric = true)
 private val mappedGetOr = FunctionCall("core.type Mapped.getOr()", "temper_core::MappedTrait::get_or", hasGeneric = true)
 private val mappedHas = FunctionCall("core.type Mapped.has()", "temper_core::MappedTrait::has", hasGeneric = true)
-private val mappedLength = FunctionCall("core.type Mapped.length()", "temper_core::MappedTrait::len")
+private val mappedLength = FunctionCall("core.type Mapped.get length()", "temper_core::MappedTrait::len")
 private val mappedKeys = FunctionCall("core.type Mapped.keys()", "temper_core::MappedTrait::keys")
 private val mappedToList = FunctionCall("core.type Mapped.toList()", "temper_core::MappedTrait::to_list")
 private val mappedToListBuilder = FunctionCall("core.type Mapped.toListBuilder()", "temper_core::MappedTrait::to_list_builder")
@@ -992,7 +992,7 @@ internal object PureVirtualBuiltin : RustInlineSupportCode(pureVirtualBuiltinNam
     ) = Rust.Call(pos, callee = "panic!".toId(pos), args = listOf())
 }
 
-private val regexCompileFormatted = FunctionCall("std/regex.type Regex.compileFormatted()", "compile_formatted")
+private val regexCompileFormatted = FunctionCall("std/regex.type RegexFormatter.regexCompileFormatted()", "compile_formatted")
 private val regexCompiledFind = FunctionCall("std/regex.type Regex.compiledFind()", "compiled_find")
 private val regexCompiledFound = FunctionCall("std/regex.type Regex.compiledFound()", "compiled_found")
 private val regexCompiledReplace = FunctionCall("std/regex.type Regex.compiledReplace()", "compiled_replace", fnIndex = 2)
@@ -1109,7 +1109,7 @@ internal object TestBail : RustInlineSupportCode("std/testing.type Test.bail()")
 private val timesFltFlt = Infix("TimesFltFlt", BuiltinOperatorId.TimesFltFlt, RustOperator.Multiplication)
 private val timesIntInt = MethodCall("TimesIntInt", "wrapping_mul", BuiltinOperatorId.TimesIntInt)
 private val valueResultConstructor =
-    FunctionCall("ValueResult::constructor", "Some", cloneEvenIfFirst = true, hasGeneric = true)
+    FunctionCall("core.type ValueResult.constructor()", "Some", cloneEvenIfFirst = true, hasGeneric = true)
 
 private val connectedReferences = listOf(
     CmpGeneric,

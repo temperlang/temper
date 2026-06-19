@@ -638,7 +638,7 @@ private val denseBitVectorSet = StaticCall("core.type DenseBitVector.set()", Sta
 private val dequeAdd = MethodCall("core.type Deque.add()", "Enqueue")
 private val dequeConstructor = ObjectCreation("core.type Deque.constructor()", StandardNames.systemCollectionsGenericQueue)
 private val dequeRemoveFirst = MethodCall("core.type Deque.removeFirst()", "Dequeue")
-private val empty = StaticCall("empty", StandardNames.temperCoreCoreEmpty)
+private val empty = StaticCall("core.empty()", StandardNames.temperCoreCoreEmpty)
 
 private class Float64Compare(
     baseName: String,
@@ -664,7 +664,7 @@ private class Float64Compare(
     }
 }
 
-private class Float64Math(name: String, backendName: String? = null) : CSharpInlineSupportCode("Float64::$name") {
+private class Float64Math(name: String, backendName: String? = null) : CSharpInlineSupportCode("core.type Float64.$name()") {
     private val member = StandardNames.systemMath.member(backendName ?: name.camelToPascal())
 
     override fun inlineToTree(
@@ -853,7 +853,7 @@ private object ListedGet : CSharpInlineSupportCode(listedTypes.map { "core.type 
 
 private val listedGetOr = StaticCall("core.type Listed.getOr()", StandardNames.temperCoreListedGetOr)
 
-private object ListedIsEmpty : CSharpInlineSupportCode(listOf("Deque", "Listed").map { "core.type $it.isEmpty()" }) {
+private object ListedIsEmpty : CSharpInlineSupportCode(listOf("Deque", "Listed").map { "core.type $it.get isEmpty()" }) {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<CSharp.Tree>>,
@@ -919,7 +919,7 @@ private fun commonListedMethod(
 }
 
 private val mappedLength = StaticCall(
-    "core.type Mapped.length()",
+    "core.type Mapped.get length()",
     StandardNames.temperCoreMappedLength,
 )
 private val mappedGetOr = StaticCall(
@@ -1329,7 +1329,7 @@ private object IsNull : CSharpInlineSupportCode("isNull", BuiltinOperatorId.IsNu
 }
 
 private val regexCompileFormatted =
-    StaticCall("std/regex.type Regex.compileFormatted()", StandardNames.temperStdRegexRegexSupport.member("CompileFormatted"))
+    StaticCall("std/regex.type RegexFormatter.regexCompileFormatted()", StandardNames.temperStdRegexRegexSupport.member("CompileFormatted"))
 private val regexCompiledFind =
     StaticCall("std/regex.type Regex.compiledFind()", StandardNames.temperStdRegexRegexSupport.member("CompiledFind"))
 private val regexCompiledFound =

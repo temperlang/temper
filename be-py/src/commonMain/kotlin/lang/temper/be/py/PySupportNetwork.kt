@@ -802,7 +802,7 @@ val MapBuilderSet = PySeparateCode("map_builder_set", RUNTIME)
 val PairConstructor = PySeparateCode("Pair", RUNTIME)
 val PairType = PySeparateCode("Pair", RUNTIME)
 val MappedType = PySeparateCode("Mapping", RUNTIME)
-val MappedLength = PyInlineSupportCode("core.type Mapped.length()", arity = 1, needsSelf = true) { pos, args ->
+val MappedLength = PyInlineSupportCode("core.type Mapped.get length()", arity = 1, needsSelf = true) { pos, args ->
     Py.Call(
         pos,
         func = Py.Name(pos.leftEdge, PyIdentifierName("len")),
@@ -1120,7 +1120,7 @@ private val pyConnections = mapOf(
     "core.type Int64.toString()" to IntToString,
     "core.type List.forEach()" to ListForEach,
     "core.type List.get()" to ListGet,
-    "core.type List.isEmpty()" to GenericIsEmpty,
+    "core.type List.get isEmpty()" to GenericIsEmpty,
     "core.type List.get length()" to LenFunction,
     "core.type List.toList()" to Identity,
     "core.type List.toListBuilder()" to ListType,
@@ -1138,7 +1138,7 @@ private val pyConnections = mapOf(
     "core.type Listed.filter()" to ListFilter,
     "core.type Listed.get()" to ListGet,
     "core.type Listed.getOr()" to ListGetOr,
-    "core.type Listed.isEmpty()" to GenericIsEmpty,
+    "core.type Listed.get isEmpty()" to GenericIsEmpty,
     "core.type Listed.join()" to ListJoin,
     "core.type Listed.get length()" to LenFunction,
     "core.type Listed.map()" to ListMap,
@@ -1157,7 +1157,7 @@ private val pyConnections = mapOf(
     "core.type Mapped.getOr()" to MappedGetOr,
     "core.type Mapped.has()" to MappedHas,
     "core.type Mapped.keys()" to MappedKeys,
-    "core.type Mapped.length()" to MappedLength,
+    "core.type Mapped.get length()" to MappedLength,
     "core.type Mapped.toList()" to MappedToList,
     "core.type Mapped.toListBuilder()" to MappedToListBuilder,
     "core.type Mapped.toListBuilderWith()" to MappedToListBuilderWith,
@@ -1174,7 +1174,7 @@ private val pyConnections = mapOf(
     "core.type PromiseBuilder.complete()" to PromiseBuilderComplete,
     "core.type PromiseBuilder.constructor()" to PromiseBuilderConstructor,
     "core.type PromiseBuilder.get promise()" to PromiseBuilderGetPromise,
-    "std/regex.type Regex.compileFormatted()" to RegexCompileFormatted,
+    "std/regex.type RegexFormatter.regexCompileFormatted()" to RegexCompileFormatted,
     "std/regex.type Regex.compiledFind()" to RegexCompiledFind,
     "std/regex.type Regex.compiledFound()" to RegexCompiledFound,
     "std/regex.type Regex.compiledReplace()" to RegexCompiledReplace,
