@@ -1,7 +1,6 @@
 package lang.temper.be.tmpl
 
 import lang.temper.common.Either
-import lang.temper.common.mapFirst
 import lang.temper.common.subListToEnd
 import lang.temper.frontend.typestage.BindMethodTypeHelper
 import lang.temper.log.Position
@@ -44,9 +43,7 @@ import lang.temper.type2.withType
 import lang.temper.value.CallTree
 import lang.temper.value.CallTypeInferences
 import lang.temper.value.MetadataValueMapHelpers.get
-import lang.temper.value.TString
 import lang.temper.value.Tree
-import lang.temper.value.connectedSymbol
 import lang.temper.value.functionContained
 import lang.temper.value.toLispy
 

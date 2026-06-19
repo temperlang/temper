@@ -79,7 +79,6 @@ import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.TVoid
-import lang.temper.value.connectedSymbol
 import lang.temper.value.failSymbol
 import lang.temper.value.sealedTypeSymbol
 

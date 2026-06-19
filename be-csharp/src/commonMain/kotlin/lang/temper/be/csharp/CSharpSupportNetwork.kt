@@ -636,7 +636,8 @@ private val denseBitVectorGet = StaticCall("core.type DenseBitVector.get()", Sta
 private val denseBitVectorSet = StaticCall("core.type DenseBitVector.set()", StandardNames.temperCoreCoreBitSet)
 
 private val dequeAdd = MethodCall("core.type Deque.add()", "Enqueue")
-private val dequeConstructor = ObjectCreation("core.type Deque.constructor()", StandardNames.systemCollectionsGenericQueue)
+private val dequeConstructor =
+    ObjectCreation("core.type Deque.constructor()", StandardNames.systemCollectionsGenericQueue)
 private val dequeRemoveFirst = MethodCall("core.type Deque.removeFirst()", "Dequeue")
 private val empty = StaticCall("core.empty()", StandardNames.temperCoreCoreEmpty)
 
@@ -664,7 +665,8 @@ private class Float64Compare(
     }
 }
 
-private class Float64Math(name: String, backendName: String? = null) : CSharpInlineSupportCode("core.type Float64.$name()") {
+private class Float64Math(name: String, backendName: String? = null) :
+    CSharpInlineSupportCode("core.type Float64.$name()") {
     private val member = StandardNames.systemMath.member(backendName ?: name.camelToPascal())
 
     override fun inlineToTree(
@@ -819,7 +821,8 @@ internal val listify = StaticCall(
 
 private val listBuilderAdd = StaticCall("core.type ListBuilder.add()", StandardNames.temperCoreListedAdd)
 private val listBuilderAddAll = StaticCall("core.type ListBuilder.addAll()", StandardNames.temperCoreListedAddAll)
-private val listBuilderRemoveLast = StaticCall("core.type ListBuilder.removeLast()", StandardNames.temperCoreListedRemoveLast)
+private val listBuilderRemoveLast =
+    StaticCall("core.type ListBuilder.removeLast()", StandardNames.temperCoreListedRemoveLast)
 private val listBuilderReverse = StaticCall("core.type ListBuilder.reverse()", StandardNames.temperCoreListedReverse)
 private val listBuilderSort = StaticCall("core.type ListBuilder.sort()", StandardNames.temperCoreListedSort)
 private val listBuilderSplice = StaticCall("core.type ListBuilder.splice()", StandardNames.temperCoreListedSplice)
@@ -836,7 +839,9 @@ private object ListedFilter : CSharpInlineSupportCode("core.type Listed.filter()
 }
 
 private val listForEach = StaticCall("core.type List.forEach()", StandardNames.temperCoreListedForEach)
-private object ListedGet : CSharpInlineSupportCode(listedTypes.map { "core.type $it.get()" } + listOf("core.type Mapped.get()")) {
+private object ListedGet : CSharpInlineSupportCode(
+    listedTypes.map { "core.type $it.get()" } + listOf("core.type Mapped.get()"),
+) {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<CSharp.Tree>>,
@@ -853,7 +858,9 @@ private object ListedGet : CSharpInlineSupportCode(listedTypes.map { "core.type 
 
 private val listedGetOr = StaticCall("core.type Listed.getOr()", StandardNames.temperCoreListedGetOr)
 
-private object ListedIsEmpty : CSharpInlineSupportCode(listOf("Deque", "Listed").map { "core.type $it.get isEmpty()" }) {
+private object ListedIsEmpty : CSharpInlineSupportCode(
+    listOf("Deque", "Listed").map { "core.type $it.get isEmpty()" },
+) {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<CSharp.Tree>>,
@@ -895,7 +902,8 @@ private val listedReduce = StaticCall(
 
 private val listedSlice = StaticCall("core.type Listed.slice()", StandardNames.temperCoreListedSlice)
 private val listedSorted = StaticCall("core.type Listed.sorted()", StandardNames.temperCoreListedSorted)
-private val listedToList = StaticCall(listedTypes.map { "core.type $it.toList()" }, StandardNames.temperCoreListedToReadOnlyList)
+private val listedToList =
+    StaticCall(listedTypes.map { "core.type $it.toList()" }, StandardNames.temperCoreListedToReadOnlyList)
 
 private val listedToListBuilder =
     StaticCall(listedTypes.map { "core.type $it.toListBuilder()" }, StandardNames.systemLinqEnumerableToList)
@@ -964,11 +972,14 @@ private val mappedToListBuilderWith = StaticCall(
 )
 private val mappedForEach = StaticCall("core.type Mapped.forEach()", StandardNames.temperCoreMappedForEach)
 private val mapConstructor = StaticCall("core.type Map.constructor()", StandardNames.temperCoreMapConstructor)
-private val mapBuilderConstructor = ObjectCreation("core.type MapBuilder.constructor()", StandardNames.temperCoreOrderedDictionary)
+private val mapBuilderConstructor =
+    ObjectCreation("core.type MapBuilder.constructor()", StandardNames.temperCoreOrderedDictionary)
 private val mapBuilderRemove = StaticCall("core.type MapBuilder.remove()", StandardNames.temperCoreCoreRemoveGet)
-private val pairConstructor = ObjectCreation("core.type Pair.constructor()", StandardNames.systemCollectionsGenericKeyValuePair)
+private val pairConstructor =
+    ObjectCreation("core.type Pair.constructor()", StandardNames.systemCollectionsGenericKeyValuePair)
 
-private object MapBuilderSet : CSharpInlineSupportCode(listOf("core.type ListBuilder.set()", "core.type MapBuilder.set()")) {
+private object MapBuilderSet :
+    CSharpInlineSupportCode(listOf("core.type ListBuilder.set()", "core.type MapBuilder.set()")) {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<CSharp.Tree>>,
@@ -1010,7 +1021,8 @@ private object StrCat : CSharpInlineSupportCode("StrCat") {
     }
 }
 
-private val stringFromCodePoint = StaticCall("core.type String.fromCodePoint()", StandardNames.temperCoreCoreStringFromCodePoint)
+private val stringFromCodePoint =
+    StaticCall("core.type String.fromCodePoint()", StandardNames.temperCoreCoreStringFromCodePoint)
 private val stringFromCodePoints =
     StaticCall("core.type String.fromCodePoints()", StandardNames.temperCoreCoreStringFromCodePoints)
 
@@ -1328,20 +1340,28 @@ private object IsNull : CSharpInlineSupportCode("isNull", BuiltinOperatorId.IsNu
     ) = translator.translateIsNull(pos, arguments[0].expr as CSharp.Expression, arguments[0].type)
 }
 
-private val regexCompileFormatted =
-    StaticCall("std/regex.type RegexFormatter.regexCompileFormatted()", StandardNames.temperStdRegexRegexSupport.member("CompileFormatted"))
+private val regexCompileFormatted = StaticCall(
+    "std/regex.type RegexFormatter.regexCompileFormatted()",
+    StandardNames.temperStdRegexRegexSupport.member("CompileFormatted"),
+)
 private val regexCompiledFind =
     StaticCall("std/regex.type Regex.compiledFind()", StandardNames.temperStdRegexRegexSupport.member("CompiledFind"))
 private val regexCompiledFound =
     StaticCall("std/regex.type Regex.compiledFound()", StandardNames.temperStdRegexRegexSupport.member("CompiledFound"))
-private val regexCompiledReplace =
-    StaticCall("std/regex.type Regex.compiledReplace()", StandardNames.temperStdRegexRegexSupport.member("CompiledReplace"))
+private val regexCompiledReplace = StaticCall(
+    "std/regex.type Regex.compiledReplace()",
+    StandardNames.temperStdRegexRegexSupport.member("CompiledReplace"),
+)
 private val regexCompiledSplit =
     StaticCall("std/regex.type Regex.compiledSplit()", StandardNames.temperStdRegexRegexSupport.member("CompiledSplit"))
-private val regexFormatterAdjustCodeSet =
-    StaticCall("std/regex.type RegexFormatter.adjustCodeSet()", StandardNames.temperStdRegexRegexSupport.member("AdjustCodeSet"))
-private val regexFormatterPushCodeTo =
-    StaticCall("std/regex.type RegexFormatter.pushCodeTo()", StandardNames.temperStdRegexRegexSupport.member("PushCodeTo"))
+private val regexFormatterAdjustCodeSet = StaticCall(
+    "std/regex.type RegexFormatter.adjustCodeSet()",
+    StandardNames.temperStdRegexRegexSupport.member("AdjustCodeSet"),
+)
+private val regexFormatterPushCodeTo = StaticCall(
+    "std/regex.type RegexFormatter.pushCodeTo()",
+    StandardNames.temperStdRegexRegexSupport.member("PushCodeTo"),
+)
 
 private val dateConstructor = ObjectCreation("std/temporal.type Date.constructor()", StandardNames.systemDateTime)
 private val dateGetDay = PropertyAccess("std/temporal.type Date.day", "Day")
@@ -1361,7 +1381,8 @@ private val dateToString = MethodCall(
 }
 private val dateFromIsoString =
     StaticCall("std/temporal.type Date.fromIsoString()", StandardNames.temperStdTemporalTemporalSupportFromIsoString)
-private val dateToday = StaticCall("std/temporal.type Date.today()", StandardNames.temperStdTemporalTemporalSupportToday)
+private val dateToday =
+    StaticCall("std/temporal.type Date.today()", StandardNames.temperStdTemporalTemporalSupportToday)
 private val dateYearsBetween =
     StaticCall("std/temporal.type Date.yearsBetween()", StandardNames.temperStdTemporalTemporalSupportYearsBetween)
 
@@ -1511,7 +1532,8 @@ private val connectedReferences = listOf(
 
 private val connectedTypes = mapOf<String, Pair<AbstractTypeName, ((List<Type2>) -> List<Type2>)?>>(
     "std/temporal.type Date" to (StandardNames.systemDateTime to null),
-    "core.type Empty" to (StandardNames.systemTuple to { listOf(WellKnownTypes.anyValueType2.withNullity(Nullity.OrNull)) }),
+    "core.type Empty" to
+        (StandardNames.systemTuple to { listOf(WellKnownTypes.anyValueType2.withNullity(Nullity.OrNull)) }),
     // Task<T>
     "core.type Promise" to (StandardNames.systemThreadingTasksTask to null),
     // TaskCompletionSource<T>

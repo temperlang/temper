@@ -754,7 +754,9 @@ val JavaLang.float64Atan by receiver {
     inlineSupport("core.type Float64.atan()", 1) { pos, args -> javaMathAtan.staticMethod(args[0], pos = pos) }
 }
 val JavaLang.float64Atan2 by receiver {
-    inlineSupport("core.type Float64.atan2()", 2) { pos, args -> javaMathAtan2.staticMethod(args[0], args[1], pos = pos) }
+    inlineSupport("core.type Float64.atan2()", 2) { pos, args ->
+        javaMathAtan2.staticMethod(args[0], args[1], pos = pos)
+    }
 }
 val JavaLang.float64Ceil by receiver {
     inlineSupport("core.type Float64.ceil()", 1) { pos, args -> javaMathCeil.staticMethod(args[0], pos = pos) }
@@ -1215,7 +1217,8 @@ val JavaLang.listMap by receiver {
 val JavaLang.listedReduce by receiver {
     inlineSupport("core.type Listed.reduce()", 2, needsSelf = true) inline@{ pos, args, _ ->
         // listedReduce(0=List<T>, 1=fun (T, T): T)
-        val (adjustedArgs, fnType) = adaptFn(args) ?: return@inline garbageExpr(pos, "core.type Listed.reduce()", "$args")
+        val (adjustedArgs, fnType) = adaptFn(args)
+            ?: return@inline garbageExpr(pos, "core.type Listed.reduce()", "$args")
         val type = functionSimpleArgumentTypes(fnType).first
         // See `fun simpleType` for expected names.
         temperListedReduce.suffix(type.shortCamelName)
@@ -1226,7 +1229,8 @@ val JavaLang.listedReduceFrom by receiver {
     @Suppress("MagicNumber")
     inlineSupport("core.type Listed.reduceFrom()", 3, needsSelf = true) inline@{ pos, args, _ ->
         // listedReduce(0=List<T>, 1=U, 2=fun (U, T): U)
-        val (adjustedArgs, fnType) = adaptFn(args) ?: return@inline garbageExpr(pos, "core.type Listed.reduceFrom()", "$args")
+        val (adjustedArgs, fnType) = adaptFn(args)
+            ?: return@inline garbageExpr(pos, "core.type Listed.reduceFrom()", "$args")
         val (inType, outType) = functionSimpleArgumentTypes(fnType, inputIndex = 1)
         temperListedReduce.suffix("${inType.shortCamelName}To${outType.shortCamelName}")
             .staticMethod(adjustedArgs, pos)
@@ -1236,7 +1240,8 @@ val JavaLang.listSlice by receiver { separateCode(temperListSlice) }
 val JavaLang.listSorted by receiver {
     // TODO This could potentially be factored along with core.type ListBuilder.sort().
     inlineSupport("core.type Listed.sorted()", 2, needsSelf = true) inline@{ pos, args, _ ->
-        val (adjustedArgs, fnType) = adaptFn(args) ?: return@inline garbageExpr(pos, "core.type Listed.sorted()", "$args")
+        val (adjustedArgs, fnType) = adaptFn(args)
+            ?: return@inline garbageExpr(pos, "core.type Listed.sorted()", "$args")
         val (inType, _) = functionSimpleArgumentTypes(fnType)
         when (inType) {
             Jst.JstInt -> temperListSorted.suffix(inType.shortCamelName).staticMethod(args.unpackArgs(), pos)
@@ -1283,7 +1288,8 @@ val JavaLang.listBuilderReverse by receiver { separateCode(javaUtilCollectionsRe
 val JavaLang.listBuilderSort by receiver {
     // TODO This could potentially be factored along with core.type Listed.sorted().
     inlineSupport("core.type ListBuilder.sort()", 2, needsSelf = true) inline@{ pos, args, _ ->
-        val (adjustedArgs, fnType) = adaptFn(args) ?: return@inline garbageExpr(pos, "core.type ListBuilder.sort()", "$args")
+        val (adjustedArgs, fnType) = adaptFn(args)
+            ?: return@inline garbageExpr(pos, "core.type ListBuilder.sort()", "$args")
         val (inType, _) = functionSimpleArgumentTypes(fnType)
         when (inType) {
             Jst.JstInt -> temperListSort.suffix(inType.shortCamelName).staticMethod(args.unpackArgs(), pos)

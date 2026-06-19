@@ -513,12 +513,18 @@ internal object LuaSupportNetwork : SupportNetwork {
         "core.type StringIndexOption.compareTo()" -> InlineLua(connectedKey) { pos, args ->
             Lua.BinaryExpr(pos, args[0], Lua.BinaryOp(pos, BinaryOpEnum.Sub, LuaOperatorDefinition.Sub), args[1])
         }
-        "core.type StringIndexOption.compareTo()::eq" -> inlineBinaryOp(connectedKey, BinaryOpEnum.Eq, LuaOperatorDefinition.Eq)
-        "core.type StringIndexOption.compareTo()::ne" -> inlineBinaryOp(connectedKey, BinaryOpEnum.NotEq, LuaOperatorDefinition.Ne)
-        "core.type StringIndexOption.compareTo()::lt" -> inlineBinaryOp(connectedKey, BinaryOpEnum.Lt, LuaOperatorDefinition.Lt)
-        "core.type StringIndexOption.compareTo()::le" -> inlineBinaryOp(connectedKey, BinaryOpEnum.LtEq, LuaOperatorDefinition.Le)
-        "core.type StringIndexOption.compareTo()::gt" -> inlineBinaryOp(connectedKey, BinaryOpEnum.Gt, LuaOperatorDefinition.Gt)
-        "core.type StringIndexOption.compareTo()::ge" -> inlineBinaryOp(connectedKey, BinaryOpEnum.GtEq, LuaOperatorDefinition.Ge)
+        "core.type StringIndexOption.compareTo()::eq" ->
+            inlineBinaryOp(connectedKey, BinaryOpEnum.Eq, LuaOperatorDefinition.Eq)
+        "core.type StringIndexOption.compareTo()::ne" ->
+            inlineBinaryOp(connectedKey, BinaryOpEnum.NotEq, LuaOperatorDefinition.Ne)
+        "core.type StringIndexOption.compareTo()::lt" ->
+            inlineBinaryOp(connectedKey, BinaryOpEnum.Lt, LuaOperatorDefinition.Lt)
+        "core.type StringIndexOption.compareTo()::le" ->
+            inlineBinaryOp(connectedKey, BinaryOpEnum.LtEq, LuaOperatorDefinition.Le)
+        "core.type StringIndexOption.compareTo()::gt" ->
+            inlineBinaryOp(connectedKey, BinaryOpEnum.Gt, LuaOperatorDefinition.Gt)
+        "core.type StringIndexOption.compareTo()::ge" ->
+            inlineBinaryOp(connectedKey, BinaryOpEnum.GtEq, LuaOperatorDefinition.Ge)
 
         else -> temperMethod(
             connectedKey,

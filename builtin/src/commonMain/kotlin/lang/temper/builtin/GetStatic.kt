@@ -23,12 +23,9 @@ import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
 import lang.temper.value.SpecialFunction
 import lang.temper.value.TFunction
-import lang.temper.value.TString
 import lang.temper.value.Value
-import lang.temper.value.connectedSymbol
 import lang.temper.value.getStaticBuiltinName
 import lang.temper.value.internalGetStaticBuiltinName
-import lang.temper.value.qNameSymbol
 import lang.temper.value.symbolContained
 import lang.temper.value.typeFromSignature
 

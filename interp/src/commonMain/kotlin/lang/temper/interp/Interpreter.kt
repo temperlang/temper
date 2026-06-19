@@ -108,7 +108,6 @@ import lang.temper.value.TBoolean
 import lang.temper.value.TEdge
 import lang.temper.value.TFunction
 import lang.temper.value.TNull
-import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.Tree
@@ -133,7 +132,6 @@ import lang.temper.value.labelSymbol
 import lang.temper.value.matches
 import lang.temper.value.optionalAsTriState
 import lang.temper.value.optionalSymbol
-import lang.temper.value.qNameSymbol
 import lang.temper.value.restFormalSymbol
 import lang.temper.value.returnDeclSymbol
 import lang.temper.value.returnParsedName

@@ -26,8 +26,6 @@ import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.withType
 import lang.temper.value.DependencyCategory.Production
-import lang.temper.value.TString
-import lang.temper.value.connectedSymbol
 import lang.temper.be.java.Java as J
 
 class JavaNames private constructor(

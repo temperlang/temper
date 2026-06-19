@@ -10,11 +10,7 @@ import lang.temper.fs.temperRoot
 import lang.temper.interp.importExport.STANDARD_LIBRARY_NAME
 import lang.temper.log.filePath
 import lang.temper.value.DeclTree
-import lang.temper.value.TString
-import lang.temper.value.connectedSymbol
 import lang.temper.value.importedSymbol
-import lang.temper.value.toPseudoCode
-import lang.temper.value.valueContained
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test

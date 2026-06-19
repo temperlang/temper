@@ -535,12 +535,18 @@ private fun stringIndexOptionComparer(
     }
 
 val StringIndexOptionCompareTo = stringIndexOptionComparer("core.type StringIndexOption.compareTo()", BinaryOpEnum.Sub)
-val StringIndexOptionCompareToEq = stringIndexOptionComparer("core.type StringIndexOption.compareTo()::eq", BinaryOpEnum.Eq)
-val StringIndexOptionCompareToGe = stringIndexOptionComparer("core.type StringIndexOption.compareTo()::ge", BinaryOpEnum.GtEq)
-val StringIndexOptionCompareToGt = stringIndexOptionComparer("core.type StringIndexOption.compareTo()::gt", BinaryOpEnum.Gt)
-val StringIndexOptionCompareToLe = stringIndexOptionComparer("core.type StringIndexOption.compareTo()::le", BinaryOpEnum.LtEq)
-val StringIndexOptionCompareToLt = stringIndexOptionComparer("core.type StringIndexOption.compareTo()::lt", BinaryOpEnum.Lt)
-val StringIndexOptionCompareToNe = stringIndexOptionComparer("core.type StringIndexOption.compareTo()::ne", BinaryOpEnum.NotEq)
+val StringIndexOptionCompareToEq =
+    stringIndexOptionComparer("core.type StringIndexOption.compareTo()::eq", BinaryOpEnum.Eq)
+val StringIndexOptionCompareToGe =
+    stringIndexOptionComparer("core.type StringIndexOption.compareTo()::ge", BinaryOpEnum.GtEq)
+val StringIndexOptionCompareToGt =
+    stringIndexOptionComparer("core.type StringIndexOption.compareTo()::gt", BinaryOpEnum.Gt)
+val StringIndexOptionCompareToLe =
+    stringIndexOptionComparer("core.type StringIndexOption.compareTo()::le", BinaryOpEnum.LtEq)
+val StringIndexOptionCompareToLt =
+    stringIndexOptionComparer("core.type StringIndexOption.compareTo()::lt", BinaryOpEnum.Lt)
+val StringIndexOptionCompareToNe =
+    stringIndexOptionComparer("core.type StringIndexOption.compareTo()::ne", BinaryOpEnum.NotEq)
 val RequireStringIndex = PySeparateCode("require_string_index", RUNTIME)
 val RequireNoStringIndex = PySeparateCode("require_no_string_index", RUNTIME)
 
@@ -762,19 +768,20 @@ val ListedSorted = PySeparateCode("listed_sorted", RUNTIME)
 val ListedToList = PySeparateCode("listed_to_list", RUNTIME)
 
 val ListBuilderAdd = PySeparateCode("list_builder_add", RUNTIME)
-val ListBuilderAddInliner = PyInlineSupportCode("core.type ListBuilder.add()", arity = 2..3, needsSelf = true) { pos, args, t ->
-    when (args.size) {
-        // Add at end
-        2 -> args[0].method("append", args[1], pos = pos)
-        // Insert at location
-        3 -> Py.Call(
-            pos,
-            t.request(ListBuilderAdd).asPyName(pos.leftEdge),
-            args.map { Py.CallArg(it) },
-        )
-        else -> garbageExpr(pos, "Wrong number of arguments: $args", null)
+val ListBuilderAddInliner =
+    PyInlineSupportCode("core.type ListBuilder.add()", arity = 2..3, needsSelf = true) { pos, args, t ->
+        when (args.size) {
+            // Add at end
+            2 -> args[0].method("append", args[1], pos = pos)
+            // Insert at location
+            3 -> Py.Call(
+                pos,
+                t.request(ListBuilderAdd).asPyName(pos.leftEdge),
+                args.map { Py.CallArg(it) },
+            )
+            else -> garbageExpr(pos, "Wrong number of arguments: $args", null)
+        }
     }
-}
 val ListBuilderAddAll = PySeparateCode("list_builder_add_all", RUNTIME)
 val ListBuilderRemoveLast = PyInlineSupportCode(
     "core.type ListBuilder.removeLast()",
@@ -912,7 +919,8 @@ val NetResponse = PyConnectedType("NetResponse", RUNTIME)
 // docs.python.org/3/library/urllib.request.html#urllib.response.addinfourl.status
 val NetResponseGetStatus =
     inlineAttribute("std/net.type NetResponse.get status()", PyIdentifierName("status"))
-val NetResponseGetContentType = inlineAttribute("std/net.type NetResponse.get contentType()", PyIdentifierName("content_type"))
+val NetResponseGetContentType =
+    inlineAttribute("std/net.type NetResponse.get contentType()", PyIdentifierName("content_type"))
 val NetResponseGetBodyContent = inlineAttribute("std/net.type NetResponse.get bodyContent()", PyIdentifierName("text"))
 val StdNetSend = PySeparateCode("std_net_send", RUNTIME)
 

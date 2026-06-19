@@ -866,22 +866,29 @@ private val listForEach =
 private val listBuilderAdd = FunctionCall("core.type ListBuilder.add()", "temper_core::listed::add", hasGeneric = true)
 private val listBuilderAddAll = FunctionCall("core.type ListBuilder.addAll()", "temper_core::listed::add_all")
 private val listBuilderClear = FunctionCall("core.type ListBuilder.clear()", "temper_core::listed::clear")
-private val listBuilderConstructor = FunctionCall("core.type ListBuilder.constructor()", "temper_core::listed::new_builder")
-private val listBuilderRemoveLast = FunctionCall("core.type ListBuilder.removeLast()", "temper_core::listed::remove_last")
+private val listBuilderConstructor =
+    FunctionCall("core.type ListBuilder.constructor()", "temper_core::listed::new_builder")
+private val listBuilderRemoveLast =
+    FunctionCall("core.type ListBuilder.removeLast()", "temper_core::listed::remove_last")
 private val listBuilderReverse = FunctionCall("core.type ListBuilder.reverse()", "temper_core::listed::reverse")
 private val listBuilderSet = FunctionCall("core.type ListBuilder.set()", "temper_core::listed::set", hasGeneric = true)
 private val listBuilderSort = FunctionCall("core.type ListBuilder.sort()", "temper_core::listed::sort", fnIndex = -1)
-private val listBuilderSplice = FunctionCall("core.type ListBuilder.splice()", "temper_core::listed::splice", fnIndex = -1)
+private val listBuilderSplice =
+    FunctionCall("core.type ListBuilder.splice()", "temper_core::listed::splice", fnIndex = -1)
 private val listedFilter =
     FunctionCall("core.type Listed.filter()", "temper_core::listed::filter", hasGeneric = true, fnIndex = -1)
-private val listedGet = FunctionCall(listedTypes.map { "core.type $it.get()" }, "$LISTED_TRAIT_NAME::get", hasGeneric = true)
+private val listedGet =
+    FunctionCall(listedTypes.map { "core.type $it.get()" }, "$LISTED_TRAIT_NAME::get", hasGeneric = true)
 private val listedGetOr = FunctionCall("core.type Listed.getOr()", "$LISTED_TRAIT_NAME::get_or", hasGeneric = true)
 
 private val listedIsEmpty =
     FunctionCall(listedTypes.map { "core.type $it.get isEmpty()" }, "$LISTED_TRAIT_NAME::is_empty", hasGeneric = true)
-private val listedJoin = FunctionCall("core.type Listed.join()", "temper_core::listed::join", hasGeneric = true, fnIndex = -1)
-private val listedLength = FunctionCall(listedTypes.map { "core.type $it.get length()" }, "$LISTED_TRAIT_NAME::len", hasGeneric = true)
-private val listedMap = FunctionCall("core.type Listed.map()", "temper_core::listed::map", hasGeneric = true, fnIndex = -1)
+private val listedJoin =
+    FunctionCall("core.type Listed.join()", "temper_core::listed::join", hasGeneric = true, fnIndex = -1)
+private val listedLength =
+    FunctionCall(listedTypes.map { "core.type $it.get length()" }, "$LISTED_TRAIT_NAME::len", hasGeneric = true)
+private val listedMap =
+    FunctionCall("core.type Listed.map()", "temper_core::listed::map", hasGeneric = true, fnIndex = -1)
 private val listedReduce =
     FunctionCall("core.type Listed.reduce()", "temper_core::listed::reduce", hasGeneric = true, fnIndex = -1)
 private val listedReduceFrom =
@@ -927,16 +934,19 @@ private val mapBuilderConstructor =
 // infrastructure for MethodCall to match things in FunctionCall, and FunctionCall works for now.
 private val mapBuilderRemove =
     FunctionCall("core.type MapBuilder.remove()", "temper_core::MapBuilder::remove", hasGeneric = true)
-private val mapBuilderSet = FunctionCall("core.type MapBuilder.set()", "temper_core::MapBuilder::set", hasGeneric = true)
+private val mapBuilderSet =
+    FunctionCall("core.type MapBuilder.set()", "temper_core::MapBuilder::set", hasGeneric = true)
 private val mappedForEach =
     FunctionCall("core.type Mapped.forEach()", "temper_core::MappedTrait::for_each", hasGeneric = true, fnIndex = -1)
 private val mappedGet = FunctionCall("core.type Mapped.get()", "temper_core::MappedTrait::get", hasGeneric = true)
-private val mappedGetOr = FunctionCall("core.type Mapped.getOr()", "temper_core::MappedTrait::get_or", hasGeneric = true)
+private val mappedGetOr =
+    FunctionCall("core.type Mapped.getOr()", "temper_core::MappedTrait::get_or", hasGeneric = true)
 private val mappedHas = FunctionCall("core.type Mapped.has()", "temper_core::MappedTrait::has", hasGeneric = true)
 private val mappedLength = FunctionCall("core.type Mapped.get length()", "temper_core::MappedTrait::len")
 private val mappedKeys = FunctionCall("core.type Mapped.keys()", "temper_core::MappedTrait::keys")
 private val mappedToList = FunctionCall("core.type Mapped.toList()", "temper_core::MappedTrait::to_list")
-private val mappedToListBuilder = FunctionCall("core.type Mapped.toListBuilder()", "temper_core::MappedTrait::to_list_builder")
+private val mappedToListBuilder =
+    FunctionCall("core.type Mapped.toListBuilder()", "temper_core::MappedTrait::to_list_builder")
 private val mappedToListBuilderWith = FunctionCall(
     "core.type Mapped.toListBuilderWith()",
     "temper_core::MappedTrait::to_list_builder_with",
@@ -946,7 +956,8 @@ private val mappedToListBuilderWith = FunctionCall(
 private val mappedToListWith =
     FunctionCall("core.type Mapped.toListWith()", "temper_core::mapped_to_list_with", hasGeneric = true, fnIndex = -1)
 private val mappedToMap = FunctionCall("core.type Mapped.toMap()", "temper_core::MappedTrait::to_map")
-private val mappedToMapBuilder = FunctionCall("core.type Mapped.toMapBuilder()", "temper_core::MappedTrait::to_map_builder")
+private val mappedToMapBuilder =
+    FunctionCall("core.type Mapped.toMapBuilder()", "temper_core::MappedTrait::to_map_builder")
 private val mappedValues = FunctionCall("core.type Mapped.values()", "temper_core::MappedTrait::values")
 private val minusFlt = Prefix("MinusFlt", BuiltinOperatorId.MinusFlt, RustOperator.Minus)
 private val minusFltFlt = Infix("MinusFltFlt", BuiltinOperatorId.MinusFltFlt, RustOperator.Subtraction)
@@ -992,10 +1003,12 @@ internal object PureVirtualBuiltin : RustInlineSupportCode(pureVirtualBuiltinNam
     ) = Rust.Call(pos, callee = "panic!".toId(pos), args = listOf())
 }
 
-private val regexCompileFormatted = FunctionCall("std/regex.type RegexFormatter.regexCompileFormatted()", "compile_formatted")
+private val regexCompileFormatted =
+    FunctionCall("std/regex.type RegexFormatter.regexCompileFormatted()", "compile_formatted")
 private val regexCompiledFind = FunctionCall("std/regex.type Regex.compiledFind()", "compiled_find")
 private val regexCompiledFound = FunctionCall("std/regex.type Regex.compiledFound()", "compiled_found")
-private val regexCompiledReplace = FunctionCall("std/regex.type Regex.compiledReplace()", "compiled_replace", fnIndex = 2)
+private val regexCompiledReplace =
+    FunctionCall("std/regex.type Regex.compiledReplace()", "compiled_replace", fnIndex = 2)
 private val regexCompiledSplit = FunctionCall("std/regex.type Regex.compiledSplit()", "compiled_split")
 private val regexFormatterPushCodeTo = FunctionCall("std/regex.type RegexFormatter.pushCodeTo()", "push_code_to")
 
@@ -1049,8 +1062,10 @@ private object StringBegin : Constant("core.type String.begin") {
 private val stringCountBetween = FunctionCall("core.type String.countBetween()", "temper_core::string::count_between")
 private val stringEnd = MethodCall("core.type String.get end()", "len")
 private val stringForEach = FunctionCall("core.type String.forEach()", "temper_core::string::for_each", fnIndex = -1)
-private val stringFromCodePoint = FunctionCall("core.type String.fromCodePoint()", "temper_core::string::from_code_point")
-private val stringFromCodePoints = FunctionCall("core.type String.fromCodePoints()", "temper_core::string::from_code_points")
+private val stringFromCodePoint =
+    FunctionCall("core.type String.fromCodePoint()", "temper_core::string::from_code_point")
+private val stringFromCodePoints =
+    FunctionCall("core.type String.fromCodePoints()", "temper_core::string::from_code_points")
 private val stringGet = FunctionCall("core.type String.get()", "temper_core::string::get")
 private val stringHasAtLeast = FunctionCall("core.type String.hasAtLeast()", "temper_core::string::has_at_least")
 private val stringHasIndex = FunctionCall("core.type String.hasIndex()", "temper_core::string::has_index")

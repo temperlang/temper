@@ -34,8 +34,6 @@ import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
-import lang.temper.value.TString
-import lang.temper.value.connectedSymbol
 import lang.temper.be.java.Java as J
 import lang.temper.type.WellKnownTypes as WKT
 

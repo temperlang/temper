@@ -12,8 +12,6 @@ import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.withType
-import lang.temper.value.TString
-import lang.temper.value.connectedSymbol
 
 internal class TypeTranslator(
     private val supportNetwork: SupportNetwork,
