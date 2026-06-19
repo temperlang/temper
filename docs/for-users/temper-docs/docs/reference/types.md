@@ -4190,31 +4190,6 @@ Always creates a new object and backing buffer even if this is already a
 
 <!-- /snippet: type/Listed/method/toListBuilder -->
 
-<!-- snippet: type/Listed/method/mapDropping -->
-
-<a name="type&#45;Listed&#45;method&#45;mapDropping" class="snippet-anchor-name"></a>
-
-#### `Listed.mapDropping`
-
-<!-- snippet: type/Listed/method/mapDropping/sig -->
-
-<a name="type&#45;Listed&#45;method&#45;mapDropping&#45;sig" class="snippet-anchor-name"></a>
-
-`:` `fn<`*O*`>(`[*Listed*](#type-Listed)&lt;[*T*](#type-Listed-typeFormal-T)&gt;, `fn(`[*T*](#type-Listed-typeFormal-T)`):` *O* `throws` [*Bubble*](#type-Bubble)`):` [*List*](#type-List)&lt;*O*&gt;
-
-<!-- /snippet: type/Listed/method/mapDropping/sig -->
-
-<!-- snippet: type/Listed/method/mapDropping/commentary -->
-
-<a name="type&#45;Listed&#45;method&#45;mapDropping&#45;commentary" class="snippet-anchor-name"></a>
-
-Maps elements using [transform] and filtering out elements for which
-[transform] fails.
-
-<!-- /snippet: type/Listed/method/mapDropping/commentary -->
-
-<!-- /snippet: type/Listed/method/mapDropping -->
-
 <!-- snippet: type/Listed/method/map -->
 
 <a name="type&#45;Listed&#45;method&#45;map" class="snippet-anchor-name"></a>

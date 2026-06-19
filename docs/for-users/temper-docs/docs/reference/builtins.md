@@ -1675,7 +1675,7 @@ console.log((value is MyTypeName<AnyValue, AnyValue>).toString()); //!outputs "t
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/class/snippet.md/0 -->
 
 A minimal class declaration may omit many of those elements along with
-the brackets and keyword (like [# `extends` keyword](#builtin-extends)):
+the brackets and [`extends` clause](#typedef-extends):
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/builtin/class/snippet.md/1 -->
 
@@ -1936,7 +1936,7 @@ brackets are treated as statements, not object properties.
 
 <a name="syntax&#45;bag&#45;preceders" class="snippet-anchor-name"></a>
 
-#### Blocks vs bags
+#### Blocks vs. bags
 Putting `do` before curly brackets, `do {⋯}` specifies a block of statements, not a bag of
 key/value properties à la JSON.
 
@@ -1979,7 +1979,7 @@ there can be confusion otherwise.
 <!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/bag-preceders/snippet.md/1 -->
 
 Whether a `{` is followed by properties or statements is made based on the preceding
-non-comment & non-space token.
+non-comment, non-space token.
 
 | Preceding Token Text        | Contains   | Classification                              |
 | --------------------------- | ---------- | ------------------------------------------- |
@@ -2040,66 +2040,6 @@ enum members to their language's idiomatic equivalent.
 TODO: Document how Temper enum types relate to types per backend.
 
 <!-- /snippet: builtin/enum -->
-
-<!-- snippet: builtin/extends : # `extends` keyword -->
-
-<a name="builtin&#45;extends" class="snippet-anchor-name"></a>
-
-### *SubType* `extends` *SuperType*
-
-The *extends* keyword expresses that the thing to the left is a subtype of
-the thing to the right.
-
-It's used in two different contexts.
-
-First, when defining types.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/extends/snippet.md/0 -->
-
-```temper
-interface SuperType {}
-class SubType extends SuperType {}
-
-// An instance of a subtype may be assigned to a variable
-// whose type is the supertype.
-let x: SuperType = new SubType();
-// ✅ null
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/extends/snippet.md/0 -->
-
-Second, when declaring a type variable.
-The below defines an upper bound: the type variable may only bind to types
-that are subtypes of the upper bound.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/extends/snippet.md/1 -->
-
-```temper
-let f<T extends Listed<String>>(x: T): T { x }
-// ✅ null
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/extends/snippet.md/1 -->
-
-When more than one super-type is extended, use
-[type intersection](#type-intersection-fn) syntax (`&`).
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/extends/snippet.md/2 -->
-
-```temper
-interface I {}
-interface J {}
-
-class C extends I & J {}
-
-let f<T extends I & J>(x: T): T { x }
-// T extends I and T extends J
-// ✅ null
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/extends/snippet.md/2 -->
-
-<!-- /snippet: builtin/extends -->
 
 <!-- snippet: builtin/fn -->
 
@@ -2469,11 +2409,71 @@ Defines an abstract `interface` type.
 Interface types may define abstract properties but may not define constructors or backed
 properties.
 Interface's properties may be overridden by backed properties in a [`class`](#builtin-class)
-sub-type.
+subtype.
 
 See also [`class`](#builtin-class) for details and examples of type declaration syntax.
 
 Source: [*TypeDefinitionMacro.kt*](https://github.com/temperlang/temper/blob/main/frontend/src/commonMain/kotlin/lang/temper/frontend/TypeDefinitionMacro.kt)
+
+<!-- snippet: typedef/extends : # `extends` keyword -->
+
+<a name="typedef&#45;extends" class="snippet-anchor-name"></a>
+
+#### *SubType* `extends` *SuperType*
+
+The *extends* keyword expresses that the thing to the left is a subtype of
+the thing to the right.
+
+It's used in two different contexts.
+
+First, when defining types.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/typedef/extends/snippet.md/0 -->
+
+```temper
+interface SuperType {}
+class SubType extends SuperType {}
+
+// An instance of a subtype may be assigned to a variable
+// whose type is the supertype.
+let x: SuperType = new SubType();
+// ✅ null
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/typedef/extends/snippet.md/0 -->
+
+Second, when declaring a type variable.
+The below defines an upper bound: the type variable may only bind to types
+that are subtypes of the upper bound.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/typedef/extends/snippet.md/1 -->
+
+```temper
+let f<T extends Listed<String>>(x: T): T { x }
+// ✅ null
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/typedef/extends/snippet.md/1 -->
+
+When more than one super-type is extended, use
+[type intersection](#type-intersection-fn) syntax (`&`).
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/typedef/extends/snippet.md/2 -->
+
+```temper
+interface I {}
+interface J {}
+
+class C extends I & J {}
+
+let f<T extends I & J>(x: T): T { x }
+// T extends I and T extends J
+// ✅ null
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/typedef/extends/snippet.md/2 -->
+
+<!-- /snippet: typedef/extends -->
 
 <!-- /snippet: builtin/interface -->
 
@@ -3186,14 +3186,16 @@ For example:
 
 <!-- /snippet: builtin/@fun -->
 
-<!-- snippet: builtin/@imu -->
+<!-- snippet: builtin/@in -->
 
-<a name="builtin&#45;&#64;imu" class="snippet-anchor-name"></a>
+<a name="builtin&#45;&#64;in" class="snippet-anchor-name"></a>
 
-### `@imu` decorator
-Marker for types that must be deeply immutable.
+### `@in` deprecated variance notation
+`@in` may decorate a type formal declaration to specify covariant (input) variance.
 
-<!-- /snippet: builtin/@imu -->
+It is going away.
+
+<!-- /snippet: builtin/@in -->
 
 <!-- snippet: builtin/@inlineUnrealizedGoal -->
 
@@ -3668,6 +3670,17 @@ where `+` is the sample operator.
 
 <!-- /snippet: builtin/@operator -->
 
+<!-- snippet: builtin/@out -->
+
+<a name="builtin&#45;&#64;out" class="snippet-anchor-name"></a>
+
+### `@out` deprecated variance notation
+`@out` may decorate a type formal declaration to specify covariant (input) variance.
+
+It is going away.
+
+<!-- /snippet: builtin/@out -->
+
 <!-- snippet: builtin/@overload -->
 
 <a name="builtin&#45;&#64;overload" class="snippet-anchor-name"></a>
@@ -3798,7 +3811,7 @@ See also [`@private` visibility](#builtin-@private)
 
 ### `sealed` type modifier
 Marks an interface type as sealed; only types declared in the same source file
-may [extend](#builtin-extends) it.
+may [extend](#typedef-extends) it.
 
 Sealed types are important because the Temper translator can assume there are
 no direct subtypes that it does not know about.

@@ -115,7 +115,13 @@ class ImuCheckerTest {
                 |class BadImuGeneric2<T> {
                 |  public p: T;
                 |}
-                |-> Class BadImuGeneric2 claims imu but property p has type T__11 which is not imu!
+                |-> Class BadImuGeneric2 claims imu but property p has type T__11 which is not Imu!
+                |
+                |BadImuContravariant:
+                |class BadImuContravariant<@imu @in T> {
+                |  public p: List<T>;
+                |}
+                |-> Class BadImuContravariant claims imu but property p: List<T__13> uses contravariant type T__13!
                 |
                 |BadPartialImuNoTypeArgs:
                 |class BadPartialImuNoTypeArgs {}
@@ -193,9 +199,9 @@ class ImuCheckerTest {
             |@imu class BadImuGeneric2<T> {
             |  public p: T;
             |}
-            |// @imu class BadImuContravariant<@imu in T> {
-            |//   public p: List<T>;
-            |// }
+            |@imu class BadImuContravariant<@imu @in T> {
+            |  public p: List<T>;
+            |}
             |@imu class ImuWithParameterizedPartialList<@imu T> {
             |  public p: List<T>;
             |}

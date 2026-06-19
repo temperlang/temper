@@ -35,7 +35,6 @@ const skipped = new Set([
     "listGetOr",
     "listJoin",
     "listMap",
-    "listMapDropping",
     "listSlice",
     "listedLength",
     "listedToListBuilder",

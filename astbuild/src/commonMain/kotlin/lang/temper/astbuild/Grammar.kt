@@ -79,12 +79,13 @@ import lang.temper.value.typeArgSymbol
 import lang.temper.value.typeSymbol
 import lang.temper.value.unholeBuiltinName
 import lang.temper.value.vPostponedCaseMacro
+import lang.temper.value.vTypeArgSymbol
 import lang.temper.value.void
 import lang.temper.value.wordSymbol
 
 /** Production names as symbols. */
 private object ProductionNames : DomainSpecificLanguage() {
-    // Allows annotations to apply to a comma separated group of declarators.
+    // Allows annotations to apply to a comma-separated group of declarators.
     val Arg = Ref("Arg")
     val ArgNoInit = Ref("ArgNoInit")
     val Args = Ref("Args") // Cover grammar for both actual and formal arguments
@@ -103,8 +104,6 @@ private object ProductionNames : DomainSpecificLanguage() {
     val Callee = Ref("Callee")
     val CalleeAndArgs = Ref("CalleeAndArgs")
     val CalleeAndRequiredArgs = Ref("CalleeAndRequiredArgs")
-    val DecoratedExpr = Ref("DecoratedExpr")
-    val DecoratedExprBody = Ref("DecoratedExprBody")
     val DecoratedLet = Ref("DecoratedLet")
     val DecoratedLetBody = Ref("DecoratedLetBody")
     val DecoratedTopLevel = Ref("DecoratedTopLevel")
@@ -123,6 +122,9 @@ private object ProductionNames : DomainSpecificLanguage() {
     val DeclReifies = Ref("DeclReifies")
     val DeclType = Ref("DeclType")
     val DeclTypeNested = Ref("DeclTypeNested")
+
+    val DecoratedExpr = Ref("DecoratedExpr")
+
     val EmbeddedComment = Ref("EmbeddedComment")
 
     val Expr = Ref("Expr")
@@ -234,11 +236,11 @@ private object ProductionNames : DomainSpecificLanguage() {
  *
  * The following conventions apply herein:
  * - All production names are defined in [ProductionNames].
- * - NAME `：＝` PATTERN declares that de-referencing NAME will apply PATTERN
+ * - NAME `：＝` PATTERN declares that dereferencing NAME will apply PATTERN
  * - Every PATTERN is a [Combinator] which consumes input pseudo-tokens to emit a flattened subtree
  *   to the output that can then be [lift]ed into an AST.
  * - (P y Q) is pattern concatenation.
- * - (P / Q) means try P, and use its result if it succeeds; else try Q.
+ * - (P / Q) means try P and use its result if it succeeds; else try Q.
  * - opt(P) means (P / epsilon) where *epsilon* always succeeds and consumes no input.
  *   It's easiest to think of *epsilon* as matching the empty string though that isn't quite right
  *   since `""` would mean "match a token that has zero characters".
@@ -278,7 +280,7 @@ val grammar = ProductionNames.run {
         (Operator.Semi y `(` y TopLevelsInSemi y `)`) /
             TopLevel,
     )
-    /** Top levels in the context of a larger semicolon separated run. */
+    /** Top levels in the context of a larger semicolon-separated run. */
     TopLevelsInSemi `：＝` (any(any(Nop) y TopLevel) y TrailingSemi)
     /**
      * A top-level is roughly a whole declaration, or expression.
@@ -379,29 +381,7 @@ val grammar = ProductionNames.run {
     DecoratedTopLevel `：＝`
         // `let`s are special because in a `;` or root context, we need the `@` to distribute
         // over comma.
-        DecoratedLet / (
-            Operator.At y (
-                callTree(
-                    `(` y "@".rename("@") y (
-                        // There are two forms to handle:
-                        // - `@` with two operands
-                        // - `@` with a call with a single argument where that argument should
-                        //   have been treated as a second, parenthesized operand.
-                        // After trying the first form above, we look for the overall closing
-                        // pseudo-paren, and fail over to the second if it's no there, because
-                        // there's more  content which means we also have to look for a closing
-                        // pseudo-paren in the second branch.
-                        (
-                            (Expr y TopLevelNoGarbageNoComment y `)`) /
-                                (
-                                    Operator.Paren y `(` y Expr y
-                                        "(" y TopLevelNoGarbageNoComment y ")" y `)` y `)`
-                                    )
-                            )
-                        ),
-                )
-                )
-            )
+        DecoratedLet / decorated(TopLevelNoGarbageNoComment)
 
     /**
      * The call expression includes simple function calls (`f(args)`) as well as calls with
@@ -416,10 +396,17 @@ val grammar = ProductionNames.run {
             CallHead,
     )
 
-    /** The function called, its arguments, and any block lambda */
-    CallHead `：＝`
+    /**
+     * The function called, its arguments, and any block lambda.
+     * This is one part of a possibly joined call.
+     * Syntactically, `do { body } while (condition);` is two joined calls.
+     * The first part `do { body }` is the callee `do` applied to a block as its argument.
+     * The word `while` joins the argument list `(condition)` to that call.
+     */
+    CallHead `：＝` (
         (Operator.Curly y `(` y CalleeAndArgs y BlockLambda y `)`) /
-        ((Operator.HighColon / Operator.Paren) y CalleeAndRequiredArgs)
+            ((Operator.HighColon / Operator.Paren) y CalleeAndRequiredArgs)
+        )
 
     CallTail `：＝` (
         // An intermediate chain element
@@ -445,7 +432,7 @@ val grammar = ProductionNames.run {
 
     // Changes to this may need to be reflected in CalleeAndRequiredArgs
     /**
-     * Captures low precedence operators that may follow a parenthesized argument list.
+     * Captures low-precedence operators that may follow a parenthesized argument list.
      *
      * - `: ReturnType` desugars to `\outType`, `ReturnType`.
      * - `extends SuperType` and `implements SuperType* desugars to `\super`, `SuperType`.
@@ -453,34 +440,8 @@ val grammar = ProductionNames.run {
     CalleeAndArgs `：＝` (
         // The "return type" desugars to a declaration of an output parameter
         // named "return"
-        (
-            Operator.HighColon y `(` y CalleeAndArgs y
-                ":".asSymbol(outTypeSymbol) y Type y `)`
-            ) /
-            (
-                setOf(Operator.ExtendsComma, Operator.ImplementsComma) y `(` y
-                    CalleeAndArgs y
-                    (
-                        "extends".asSymbol(superSymbol) /
-                            "implements".asSymbol(superSymbol)
-                        ) y
-                    Type y any(",".asSymbol(superSymbol) y Type) y
-                    `)`
-                ) /
-            (
-                setOf(Operator.ForbidsComma) y `(` y
-                    CalleeAndArgs y
-                    "forbids".asSymbol(forbidsSymbol) y
-                    Type y any(",".asSymbol(forbidsSymbol) y Type) y
-                    `)`
-                ) /
-            (
-                supports y `(` y
-                    CalleeAndArgs y
-                    "supports".asSymbol(supportsSymbol) y
-                    Type y any(",".asSymbol(supportsSymbol) y Type) y
-                    `)`
-                ) /
+        (Operator.HighColon y `(` y CalleeAndArgs y ":".asSymbol(outTypeSymbol) y Type y `)`) /
+            extendsLikeModifiers(CalleeAndArgs) /
             (Operator.Paren y `(` y Callee y CallArgs y `)`) /
             Callee
         )
@@ -563,10 +524,10 @@ val grammar = ProductionNames.run {
         )
 
     /**
-     * Relates a match case, e.g. a pattern, to a consequence of matching that pattern.
+     * Relates a match case, e.g., a pattern, to a consequence of matching that pattern.
      */
     MatchBranch `：＝` (
-        // Put else first to special case it before general expressions. //
+        // Put else first to special-case it before general expressions.
         (
             Operator.ThinArrow y `(` y Operator.Leaf y `(` y "else".asSymbol(defaultSymbol) y `)` y
                 "->" y Expr y `)`
@@ -651,10 +612,10 @@ val grammar = ProductionNames.run {
 
     /**
      * A semicolon used to separate statements.
-     * Since our parser is built around an operator precedence parser, and semicolon is a low
-     * precedence operator, this grammar consumes them, but does not require them.
+     * Since our parser is built around an operator precedence parser, and semicolon is a
+     * low-precedence operator, this grammar consumes semicolons but does not require them.
      *
-     * Not all semicolons need to appear explicitly in program text.
+     * Not all semicolons need to appear explicitly in the program text.
      *
      * ⎀ semicolon-insertion
      */
@@ -716,7 +677,7 @@ val grammar = ProductionNames.run {
      * that are super-types for the produced function value.
      *
      * The signature is followed by the double-semicolon token (`;;`) which is
-     * distinct from two, space separated semicolons (`; ;`).
+     * distinct from two, space-separated semicolons (`; ;`).
      *
      * ```temper inert
      * someFunction /* <- callee */ {
@@ -748,7 +709,7 @@ val grammar = ProductionNames.run {
         )
     /**
      * The signature of a block lambda explains the names of arguments
-     * visible within the body, optionally their types and return type.
+     * visible within the body, optionally their types, and return type.
      *
      * The signature also includes other interfaces that the lambda must
      * implement.  For example, a function that might pause execution
@@ -757,7 +718,7 @@ val grammar = ProductionNames.run {
      *     (x: Int): Int extends GeneratorFn =>
      *
      * That describes a function that takes an integer `x` and which
-     * also is a sub-type of [snippet/type/GeneratorFn].
+     * also is a subtype of [snippet/type/GeneratorFn].
      *
      * The `extends` clause may be left off entirely if no super-types
      * are desired, or multiple super-types may be specified:
@@ -904,23 +865,18 @@ val grammar = ProductionNames.run {
 
     DecoratedLetBody `：＝` (
         (
-            Operator.At y `(` y
-                // Count the number of calls to at so that we can finish them after all the
+            decorated(
+                DecoratedLetBody,
+                NegLA(epsilon y Operator.Comma) y DecoratedLetBody,
+                // Count the number of calls to "2" so that we can finish them after all the
                 // declarations have been nested in them
-                startSplitTree(
-                    /* call to @ */
-                ) y CountUp(DecoratedLet) y
-                "@".rename("@") y (
-                    // We need to start a comma call tree after the annotation argument in both
-                    // branches here so that the annotation applies both to the declaration here
-                    // and any in the declarations following commas.
-                    // In DecoratedLet, we finish the split block.
-                    (Expr y DecoratedLetBody y `)`) /
-                        (
-                            Operator.Paren y `(` y Expr y "(" y
-                                NegLA(epsilon y Operator.Comma) y DecoratedLetBody y ")" y `)` y `)`
-                            )
-                    )
+                beforeAt = (
+                    epsilon y startSplitTree(
+                        /* a call to @ */
+                    ) y CountUp(DecoratedLet)
+                    ),
+                wrapperTree = { it },
+            )
             ) / (
             startSplitTree(
                 /*Block*/
@@ -1000,9 +956,9 @@ val grammar = ProductionNames.run {
 
     // During the DisAmbiguate stage, we need to distinguish between type formals and type actuals.
     // A type formal like those in `let f<T extends AnyValue>(x: T): T { ... }` must fit one of
-    // several patterns
-    // - `T extends SuperType1 & SuperType2`: a name with default variance and
-    // - `in T`: has a variance indicator
+    // several patterns:
+    // - `T extends SuperType1 & SuperType2`: a name with upper bounds
+    // - `@in T`: has a variance indicator
     // - `@Decorator T`: a decorated
     //
     // A type actual like those in `f<Foo>(foo)` can be an arbitrary expression.
@@ -1010,11 +966,7 @@ val grammar = ProductionNames.run {
     // But constant expressions are not easily bounded at parse time.
     //
     // The only kind of formal that does not fit in the actual grammar is the variance annotations.
-    //     <@Decorator in T extends Super1 & Super2 = DefaultTypeExpressionForT>
-    // In this case the `in T` is a variance annotation
-    // `in` is an infix operator, and parsing this when the `in T` is deeply nested in other
-    // constructs is complicated.
-    // So `Expr` has a special case, TypeArgumentName, just for this case.
+    //     <@Decorator @in T extends Super1 & Super2 = DefaultTypeExpressionForT>
     TypeArguments `：＝` (
         "<" y (
             (Operator.Comma y `(` y TypeArgument y any("," y TypeArgument) y `)`) /
@@ -1023,50 +975,19 @@ val grammar = ProductionNames.run {
             ">"
         )
 
-    TypeArgument `：＝` (typeArgSymbol y DecoratedExpr)
-
-    DecoratedExpr `：＝` Expr / Counter(
-        DecoratedExpr,
-        (
-            Operator.At y DecoratedExprBody y finishSplitCommaSoft() y
-                CountForEach(DecoratedExpr, finishSplitCall())
-            ),
-    )
-
-    DecoratedExprBody `：＝` (
-        (
-            Operator.At y `(` y
-                // Count the number of calls to at so that we can finish them after all the
-                // declarations have been nested in them
-                startSplitTree(
-                    /* call to @ */
-                ) y CountUp(DecoratedExpr) y
-                "@".rename("@") y (
-                    // We need to start a comma call tree after the annotation argument in both
-                    // branches here so that the annotation applies both to the declaration here
-                    // and any in the declarations following commas.
-                    // In DecoratedLet, we finish the split block.
-                    (Expr y DecoratedExprBody y `)`) /
-                        (
-                            Operator.Paren y `(` y Expr y "(" y
-                                NegLA(epsilon y Operator.Comma) y DecoratedExprBody y ")" y `)` y `)`
-                            )
-                    )
-            ) / (
-            startSplitTree(
-                /*Block*/
-            ) y Expr
-            )
-        )
+    TypeArgument `：＝` (typeArgSymbol y TypeArgumentName)
 
     TypeArgumentName `：＝` (
-        Operator.Leaf y (
-            callTree(
-                `(` y
-                    ("in".rename(ParsedName("@in")) / "out".rename(ParsedName("@out"))) y
-                    Id y `)`,
+        // Output complex type arguments like complex value arguments,
+        // a block with metadata that is converted early on into a declaration.
+        (
+            allExtendsLike y blockTree(
+                impliedValue(vTypeArgSymbol) y
+                    extendsLikeModifiers(TypeArgumentName),
             )
-            )
+            ) /
+            decorated(TypeArgumentName) /
+            Expr
         )
 
     CommaExpr `：＝` (Operator.Comma y callTree(CommaOp)) / Expr
@@ -1079,7 +1000,7 @@ val grammar = ProductionNames.run {
             ) y `)`
         )
 
-    // A RawCommaOp is a comma separated group of expressions.
+    // A RawCommaOp is a comma-separated group of expressions.
     // So [a, b, c] uses RawCommaOp to parse the elements of a list constructor call, but [(a, b, c)] is a list
     // constructor call whose sole element is a CommaOp.
     RawCommaOp `：＝` (
@@ -1103,7 +1024,6 @@ val grammar = ProductionNames.run {
         Jump /
         AwaitReturnThrowYield /
         Id /
-        TypeArgumentName / // Hack for ambiguity resolved later.  See notes on TypeArgument.
         SymbolLiteral /
         List /
         New /
@@ -1113,6 +1033,7 @@ val grammar = ProductionNames.run {
         StringExpr /
         TaggedString /
         Call /
+        DecoratedExpr /
         // Parentheses for grouping
         (
             Operator.ParenGroup y `(` y "(" y
@@ -1217,6 +1138,8 @@ val grammar = ProductionNames.run {
             `(` y ForInitLet y "of".rename(ofBuiltinName) y shiftLeft y Expr y `)`,
         )
         )
+
+    DecoratedExpr `：＝` decorated(Expr)
 
     /** Converts to a *Result* type. */
     Throws `：＝`
@@ -1564,19 +1487,7 @@ val grammar = ProductionNames.run {
     //     name \type typeExpr \init initExpr
     fun argActualOrFormal(argNoInit: Ref, withDefault: Ref = argNoInit) =
         DecorateWithDocCommentCombinator(
-            // See DecoratedTopLevel for why there are two `@` cases
-            (
-                Operator.At y callTree(
-                    `(` y "@".rename("@") y (
-                        (
-                            Operator.Paren y `(` y
-                                callTree(Expr y "(" y TopLevelNoGarbageNoComment y ")") y
-                                `)` y Arg
-                            ) /
-                            (Expr y Arg)
-                        ) y `)`,
-                )
-                ) /
+            decorated(Arg) /
                 softBlockTree( // This block is eliminated during Stage.DisAmbiguate
                     opt(
                         (
@@ -1640,7 +1551,7 @@ val grammar = ProductionNames.run {
             `(` y
                 // Unescape can be recognized as a hole by a template processor.
                 // TODO: Make sure this isn't ambiguous if a template mentions Unescape.
-                "\${".rename(unholeBuiltinName) y funTree(CommaExpr) y "}" y
+                $$"${".rename(unholeBuiltinName) y funTree(CommaExpr) y "}" y
                 `)`,
         )
         )
@@ -1899,6 +1810,54 @@ internal abstract class DomainSpecificLanguage {
         next is CstToken && next.synthetic
     }
 
+    fun extendsLikeModifiers(target: Combinator): Combinator = ProductionNames.run {
+        // Sometimes we unroll `extends` clauses out.   For example for a class.
+        // But if we're rolling type parameters out, we can't unroll their super-types.
+        fun makeMatch(ops: Set<Operator>, metadataKey: Symbol): Combinator {
+            val names = buildSet { ops.mapTo(this) { it.text!! } }.toList()
+            // It becomes an annotation call like `(Call @ extends target Type)`
+            val op = names.fold(Or.empty as Combinator) { comb, name ->
+                comb / name.asSymbol(metadataKey)
+            }
+            return ops y `(` y target y op y Type y any(",".asSymbol(metadataKey) y Type) y `)`
+        }
+        makeMatch(extendsImplements, superSymbol) /
+            makeMatch(forbids, forbidsSymbol) /
+            makeMatch(supports, supportsSymbol)
+    }
+
+    /** Handles `@` syntax */
+    fun decorated(
+        target: Ref,
+        targetInParens: Combinator = target,
+        /** Anything needed on a successful match before we output the `@` callee? */
+        beforeAt: Combinator = epsilon,
+        /** usually, the decoration is wrapped in a call. */
+        wrapperTree: (Combinator) -> Combinator = ::callTree,
+    ): Combinator = ProductionNames.run {
+        Operator.At y (
+            wrapperTree(
+                `(` y beforeAt y "@".rename("@") y (
+                    // There are two forms to handle:
+                    // - `@` with two operands
+                    // - `@` with a call with a single argument where that argument should
+                    //   have been treated as a second, parenthesized operand.
+                    // After trying the first form above, we look for the overall closing
+                    // pseudo-paren, and fail over to the second if it's not there, because
+                    // there's more  content which means we also have to look for a closing
+                    // pseudo-paren in the second branch.
+                    (
+                        (Expr y target y `)`) /
+                            (
+                                Operator.Paren y `(` y ProductionNames.Expr y
+                                    "(" y targetInParens y ")" y `)` y `)`
+                                )
+                        )
+                    ),
+            )
+            )
+    }
+
     fun startSplitTree() = EmitBefore(epsilon) { p -> StartTree(p) }
     private fun finishSplitTree(tt: FinishedType) = EmitBefore(epsilon) { p -> FinishTree(p, tt) }
     fun finishSplitCall() = finishSplitTree(FinishedTreeType(InnerTreeType.Call))
@@ -2009,7 +1968,7 @@ internal abstract class DomainSpecificLanguage {
 
     /**
      * <!-- snippet: syntax/bag-preceders -->
-     * # Blocks vs bags
+     * # Blocks vs. bags
      * Putting `do` before curly brackets, `do {⋯}` specifies a block of statements, not a bag of
      * key/value properties à la JSON.
      *
@@ -2042,7 +2001,7 @@ internal abstract class DomainSpecificLanguage {
      * ```
      *
      * Whether a `{` is followed by properties or statements is made based on the preceding
-     * non-comment & non-space token.
+     * non-comment, non-space token.
      *
      * | Preceding Token Text        | Contains   | Classification                              |
      * | --------------------------- | ---------- | ------------------------------------------- |
@@ -2056,7 +2015,7 @@ internal abstract class DomainSpecificLanguage {
     val isBagPreceder = isBagPreceder@{ prefix: Prefix ->
         val prevToken = prefix.prevToken
         when (val tokenText = prevToken?.tokenText) {
-            null -> true // As if curlies at start of file start a bag.
+            null -> true // Curlies at the start of input start a bag.
             // Since TokenSourceAdapter inserts "let" tokens after "var" and "const", those are
             // effectively bag preceders.
             // "await", "return", "throw", and "yield" denote operators that expect expressions.
@@ -2077,7 +2036,13 @@ internal abstract class DomainSpecificLanguage {
     val propertyBagPreceder = Lookbehind(GrammarDoc.NonTerminal("BagPreceder"), isBagPreceder)
     val blockPreceder = Lookbehind(GrammarDoc.NonTerminal("!BagPreceder")) { !isBagPreceder(it) }
     val infixColons = setOf(Operator.LowColon, Operator.HighColon)
-    val supports = setOf(Operator.SupportsNoComma, Operator.SupportsComma)
+    val extendsImplements = setOf(
+        Operator.ExtendsComma, Operator.ExtendsNoComma,
+        Operator.ImplementsComma, Operator.ImplementsNoComma,
+    )
+    val forbids = setOf(Operator.ForbidsComma, Operator.ForbidsNoComma)
+    val supports = setOf(Operator.SupportsComma, Operator.SupportsNoComma)
+    val allExtendsLike = extendsImplements + forbids + supports
     val bracketGroups = setOf(Operator.ParenGroup, Operator.CurlyGroup)
 }
 
@@ -2086,14 +2051,14 @@ internal abstract class DomainSpecificLanguage {
 // This works around.
 private val (Operator).textNotNull: String get() = this.text!!
 
-/** Either single arg or else nested comma expression with multiple args and optional trailing comma. */
+/** Either a single arg or else a nested comma expression with multiple args and optional trailing comma. */
 private fun argsActualOrFormal(arg: Ref) = (
     (Operator.Comma y `(` y opt(arg y any("," y arg)) y opt(",") y `)`) /
         arg /
         Garbage("Arguments", stopBefore = setOf(")", "=>"), requireSome = true)
     )
 
-/** Either single arg or else nested comma expression with multiple args but no trailing comma. */
+/** Either a single arg or else a nested comma expression with multiple args but no trailing comma. */
 private fun argsActualOrFormalNoTrailingComma(arg: Ref) = (
     (Operator.Comma y `(` y opt(arg y any("," y arg)) y `)`) /
         arg /

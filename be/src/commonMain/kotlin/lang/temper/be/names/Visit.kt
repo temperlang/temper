@@ -104,8 +104,7 @@ private fun NameVisitor.visitParams(px: TmpL.Parameters) {
 
 private fun subjectTypeName(s: TmpL.Subject): ResolvedName? = when (s) {
     is TmpL.Expression -> (s.type as? DefinedType)?.definition?.name
-    is TmpL.TemperTypeName -> s.typeDefinition.name
-    is TmpL.ConnectedToTypeName -> s.sourceDefinition.name
+    is TmpL.TypeSubject -> s.typeName.sourceDefinition.name
 }
 
 private fun NameVisitor.visitTypeParamsDecl(px: TmpL.ATypeParameters) = when (val t = px.t) {

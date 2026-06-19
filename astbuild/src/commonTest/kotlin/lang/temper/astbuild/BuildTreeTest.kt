@@ -431,7 +431,7 @@ class BuildTreeTest {
 
     @Test
     fun whenBlock() = assertAst(
-        // At top level, we should be able to treat `someValue` as a value even without `${someValue}` escaping.
+        // At the top level, we should be able to treat `someValue` as a value even without `${someValue}` escaping.
         // In some nested setting like `[${someValue}]`, we might need to use escape holes for values instead of
         // captures, but even for object literals, we might not *need* them. For example, we could say
         // `{ blah: someValue }`, and know that `someValue` has to be a value because for renaming, we intend to
@@ -3605,10 +3605,10 @@ class BuildTreeTest {
     @Test
     fun classDeclaration2() = assertAst(
         input = """
-            interface IFoo extends IBar {
-                f(): Never;
-            }
-        """.trimIndent(),
+            |interface IFoo extends IBar {
+            |    f(): Never;
+            |}
+        """.trimMargin(),
         wantJson = """
         [ "Call", [
             ["RightName", "interface"],
@@ -3906,6 +3906,32 @@ class BuildTreeTest {
           ]
         ]
         """,
+    )
+
+    @Test
+    fun annotatedClassDecl() = assertAst(
+        input = "export class Foo extends Bar {}",
+        wantJson = """
+            |[ "Call", [
+            |    [ "RightName", "@" ],
+            |    [ "RightName", "export" ],
+            |    [ "Call", [
+            |        [ "RightName", "class" ],
+            |        [ "Value", "\\word: Symbol" ],
+            |        [ "LeftName", "Foo" ],
+            |        [ "Value", "\\super: Symbol" ],
+            |        [ "RightName", "Bar" ],
+            |        [ "Fun", [
+            |            [ "Block", [
+            |              ]
+            |            ]
+            |          ]
+            |        ]
+            |      ]
+            |    ]
+            |  ]
+            |]
+        """.trimMargin(),
     )
 
     @Test
@@ -5058,9 +5084,40 @@ class BuildTreeTest {
     )
 
     @Test
+    fun typeParamWithAnnotationAndBound() = assertAst(
+        input = "let f<@imu T extends Foo>() {}",
+        wantJson = """
+            |[ "Call", [
+            |    [ "RightName", "let" ],
+            |    [ "Value", "\\word: Symbol" ], [ "LeftName", "f" ],
+            |
+            |    [ "Value", "\\typeArg: Symbol" ],
+            |    [ "Call", [
+            |        [ "RightName", "@" ],
+            |        [ "RightName", "imu" ],
+            |        [ "Block", [
+            |            [ "Value", "\\typeArg: Symbol" ],
+            |            [ "RightName", "T" ],
+            |            [ "Value", "\\super: Symbol" ],
+            |            [ "RightName", "Foo" ],
+            |          ]
+            |        ],
+            |      ]
+            |    ],
+            |
+            |    [ "Fun", [
+            |        ["Block", []],
+            |      ]
+            |    ],
+            |  ]
+            |]
+        """.trimMargin(),
+    )
+
+    @Test
     fun genericLetDecl() = assertAst(
         input = """
-            |let f<A, B extends Super1 & Super2, in C, out D extends Super3>()
+            |let f<A, B extends Super1 & Super2, @in C, @out D extends Super3>()
         """.trimMargin(),
         wantJson = """
             |[ "Call", [
@@ -5071,9 +5128,10 @@ class BuildTreeTest {
             |    [ "RightName", "A" ],
             |
             |    [ "Value", "\\typeArg: Symbol" ],
-            |    [ "Call", [
-            |        [ "RightName", "extends" ],
+            |    [ "Block", [
+            |        [ "Value", "\\typeArg: Symbol" ],
             |        [ "RightName", "B" ],
+            |        [ "Value", "\\super: Symbol" ],
             |        [ "Call", [
             |            [ "RightName", "&" ],
             |            [ "RightName", "Super1" ],
@@ -5085,22 +5143,63 @@ class BuildTreeTest {
             |
             |    [ "Value", "\\typeArg: Symbol" ],
             |    [ "Call", [
-            |        [ "RightName", "@in" ],
+            |        [ "RightName", "@" ],
+            |        [ "RightName", "in" ],
             |        [ "RightName", "C" ],
             |      ]
             |    ],
             |
             |    [ "Value", "\\typeArg: Symbol" ],
             |    [ "Call", [
-            |        [ "RightName", "extends" ],
-            |        [ "Call", [
-            |            [ "RightName", "@out" ],
+            |        [ "RightName", "@" ],
+            |        [ "RightName", "out" ],
+            |        [ "Block", [
+            |            [ "Value", "\\typeArg: Symbol" ],
             |            [ "RightName", "D" ],
+            |            [ "Value", "\\super: Symbol" ],
+            |            [ "RightName", "Super3" ],
             |          ]
             |        ],
-            |        [ "RightName", "Super3" ],
             |      ]
             |    ]
+            |  ]
+            |]
+        """.trimMargin(),
+    )
+
+    @Test
+    fun typeDefinitionWithParams() = assertAst(
+        input = "interface I<@in @on K extends MapKey, V> {}",
+        wantJson = """
+            |[ "Call", [
+            |    [ "RightName", "interface" ],
+            |
+            |    [ "Value", "\\word: Symbol" ],
+            |    [ "LeftName", "I" ],
+            |
+            |    [ "Value", "\\typeArg: Symbol" ],
+            |    [ "Call", [
+            |        [ "RightName", "@" ],
+            |        [ "RightName", "in" ],
+            |        [ "Call", [
+            |            [ "RightName", "@" ],
+            |            [ "RightName", "on" ],
+            |            [ "Block", [
+            |                [ "Value", "\\typeArg: Symbol" ],
+            |                [ "RightName", "K" ],
+            |                [ "Value", "\\super: Symbol" ],
+            |                [ "RightName", "MapKey" ],
+            |              ]
+            |            ],
+            |          ]
+            |        ],
+            |      ]
+            |    ],
+            |
+            |    [ "Value", "\\typeArg: Symbol" ],
+            |    [ "RightName", "V" ],
+            |
+            |    [ "Fun", [ [ "Block", [] ] ] ],
             |  ]
             |]
         """.trimMargin(),

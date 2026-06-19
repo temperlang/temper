@@ -1,11 +1,4 @@
 
-// Implements extension method Listed::mapDropping
-import {bubble} from "./core.js";
-
-export const listedMapDropping = () => {
-  throw new Error("TODO List::mapDropping");
-}
-
 /**
  * Implements extension method Listed::map
  * @template T

@@ -65,7 +65,7 @@ export sealed interface Invalid {}
  *
  * [bottom type]: https://en.wikipedia.org/wiki/Bottom_type
  */
-export sealed interface Never<out T> {}
+export sealed interface Never<@out T> {}
 
 /**
  * The singleton [*null*][snippet/builtin/null] value represents
@@ -131,7 +131,7 @@ export interface GeneratorFn extends Function {}
  */
 @partialImu
 @connected("GeneratorResult")
-export sealed interface GeneratorResult<out YIELD extends AnyValue> {}
+export sealed interface GeneratorResult<@out YIELD extends AnyValue> {}
 
 /**
  * A multi-step computation that may be scheduled for a step by calling the
@@ -150,7 +150,7 @@ export sealed interface GeneratorResult<out YIELD extends AnyValue> {}
  * narrowly with a kind of parallelism.
  */
 @connected("Generator")
-export interface Generator<out YIELD extends AnyValue> {
+export interface Generator<@out YIELD extends AnyValue> {
   /**
    * Starts/resumes the computation and runs until it pauses or completes.
    *
@@ -195,7 +195,7 @@ export interface Generator<out YIELD extends AnyValue> {
  * A variant of [snippet/type/Generator] that does not bubble
  * when computing the next result.
  */
-export interface SafeGenerator<out YIELD extends AnyValue> extends Generator<YIELD> {
+export interface SafeGenerator<@out YIELD extends AnyValue> extends Generator<YIELD> {
   /**
    * Starts/resumes the computation and runs until it pauses or completes.
    *
@@ -219,7 +219,7 @@ export interface SafeGenerator<out YIELD extends AnyValue> extends Generator<YIE
  */
 @partialImu
 @connected("ValueResult")
-export class ValueResult<out YIELD extends AnyValue> extends GeneratorResult<YIELD> {
+export class ValueResult<@out YIELD extends AnyValue> extends GeneratorResult<YIELD> {
   public value: YIELD;
   @connected("ValueResult::constructor")
   public constructor(value: YIELD): Void {
@@ -233,14 +233,14 @@ export class ValueResult<out YIELD extends AnyValue> extends GeneratorResult<YIE
  */
 @imu
 @connected("DoneResult")
-export class DoneResult<out YIELD extends AnyValue> extends GeneratorResult<YIELD> {}
+export class DoneResult<@out YIELD extends AnyValue> extends GeneratorResult<YIELD> {}
 @connected("doneResult")
 export let doneResult<YIELD extends AnyValue>(): DoneResult<YIELD> { new DoneResult<YIELD>() }
 
 /**
  * Wraps a [snippet/type/GeneratorFn] as a [snippet/type/Generator].
  */
-class GeneratorFnWrapper<out YIELD extends AnyValue>
+class GeneratorFnWrapper<@out YIELD extends AnyValue>
 extends Generator<YIELD> {
   private let generatorFn: fn (): GeneratorResult<YIELD> throws Bubble;
   private var _done: Boolean = false;
@@ -272,7 +272,7 @@ extends Generator<YIELD> {
 /**
  * Like *GeneratorFnWrapper* but wraps as a [snippet/type/SafeGenerator].
  */
-class SafeGeneratorFnWrapper<out YIELD extends AnyValue>
+class SafeGeneratorFnWrapper<@out YIELD extends AnyValue>
 extends SafeGenerator<YIELD> {
   private let generatorFn: fn (): GeneratorResult<YIELD>;
   private var _done: Boolean = false;
@@ -309,7 +309,7 @@ extends SafeGenerator<YIELD> {
  * Use [builtin/await] to get at the value asynchronously.
  */
 @connected("Promise")
-export class Promise<out R extends AnyValue> {}
+export class Promise<@out R extends AnyValue> {}
 
 /**
  * A promise builder contains a promise that may be shared, but the
@@ -951,13 +951,6 @@ export sealed interface Listed<T> {
   @connected("Listed::toListBuilder")
   public toListBuilder(): ListBuilder<T>;
 
-  /**
-   * Maps elements using [transform] and filtering out elements for which
-   * [transform] fails.
-   */
-  @connected("Listed::mapDropping")
-  public mapDropping<O>(transform: fn (T): O throws Bubble): List<O>;
-
   /** Maps elements using [transform]. */
   @connected("Listed::map")
   public map<O>(transform: fn (T): O): List<O>;
@@ -1007,7 +1000,7 @@ export sealed interface Listed<T> {
  */
 @partialImu
 @mayDowncastTo(false) // Just use Listed::toList if immutable wanted.
-export class List<out T> extends Listed<T> {
+export class List<@out T> extends Listed<T> {
   // TODO: Until Types.list is the same as List<T>, we need this trick.
   private let content: builtins.List<T>;
 
@@ -1122,7 +1115,7 @@ export class ListBuilder<T> extends Listed<T> {
   }
 }
 
-export class Pair<out K, out V> {
+export class Pair<@out K, @out V> {
   public key: K;
   public value: V;
 
@@ -1137,7 +1130,7 @@ export class Pair<out K, out V> {
  * A *Mapped* is a read-only view to key-value mapped data, such as a `Map` or
  * `MapBuilder`.
  */
-export sealed interface Mapped<in K extends MapKey, V> {
+export sealed interface Mapped<@in K extends MapKey, V> {
   /**
    * The number of key value pairs in the [snippet/type/Mapped].
    */
@@ -1291,7 +1284,7 @@ export sealed interface Mapped<in K extends MapKey, V> {
  */
 @partialImu
 @mayDowncastTo(false) // Just use Mapped::toMap if immutable wanted.
-export class Map<in K extends MapKey, out V> extends Mapped<K, V> {
+export class Map<@in K extends MapKey, @out V> extends Mapped<K, V> {
   // The content is used only from extension functions.
   private content: AnyValue;
 

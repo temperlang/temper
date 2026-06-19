@@ -479,49 +479,75 @@ class DisAmbiguateStageTest {
     fun typeFormalsOnClassDeclaration() = assertModuleAtStage(
         stage = Stage.DisAmbiguate,
         input = """
-        class C<T, U extends D, out V, in W> extends A, B {}
-        """.trimIndent(),
+            |class C<T, U extends D, @out V, @in W> extends A, B {}
+        """.trimMargin(),
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
         want = """
-        {
-          disAmbiguate: {
-            body:
-            ```
-            @typeDecl(C__0<T__1, U__2, V__3, W__4>) @hoistLeft(true) @resolution(C__0) @stay let C = type (C__0);
-            class(\word, C, \concrete, true, @typeDefined(C__0<T__1, U__2, V__3, W__4>) fn {
-                @typeFormal(\T) @typeDefined(T__1) @resolution(T__1) let T = type (T__1);
-                @typeFormal(\U) @typeDefined(U__2) @resolution(U__2) let U = type (U__2);
-                @typeFormal(\V) @typeDefined(V__3) @resolution(V__3) @variance(1) let V = type (V__3);
-                @typeFormal(\W) @typeDefined(W__4) @resolution(W__4) @variance(-1) let W = type (W__4);
-                U extends D;
-                C__0<T__1, U__2, V__3, W__4> extends A;
-                C__0<T__1, U__2, V__3, W__4> extends B
-            });
-            C
+            |{
+            |  disAmbiguate: {
+            |    body:
+            |    ```
+            |    @typeDecl(C__0<T__1, U__2, V__3, W__4>) @hoistLeft(true) @resolution(C__0) @stay let C = type (C__0);
+            |    class(\word, C, \concrete, true, @typeDefined(C__0<T__1, U__2, V__3, W__4>) fn {
+            |        @typeFormal(\T) @typeDefined(T__1) @resolution(T__1) let T = type (T__1);
+            |        @typeFormal(\U) @typeDefined(U__2) @resolution(U__2) let U = type (U__2);
+            |        @typeFormal(\V) @typeDefined(V__3) @resolution(V__3) @variance(1) let V = type (V__3);
+            |        @typeFormal(\W) @typeDefined(W__4) @resolution(W__4) @variance(-1) let W = type (W__4);
+            |        U extends D;
+            |        C__0<T__1, U__2, V__3, W__4> extends A;
+            |        C__0<T__1, U__2, V__3, W__4> extends B
+            |    });
+            |    C
+            |
+            |    ```,
+            |    types: {
+            |      C: {
+            |        word: "C",
+            |        typeParameters: [
+            |          { name: "T__1" },
+            |          { name: "U__2" },
+            |          { name: "V__3" },
+            |          { name: "W__4" },
+            |        ]
+            |      },
+            |      T: { name: "T__1", word: "T" },
+            |      U: { name: "U__2", word: "U", upperBounds: [] }, // UpperBound D should fill in later
+            |      V: { name: "V__3", word: "V", variance: "Covariant" },
+            |      W: { name: "W__4", word: "W", variance: "Contravariant" },
+            |    }
+            |  }
+            |}
+        """.trimMargin(),
+    )
 
-            ```,
-            types: {
-              C: {
-                word: "C",
-                typeParameters: [
-                  { name: "T__1" },
-                  { name: "U__2" },
-                  { name: "V__3" },
-                  { name: "W__4" },
-                ]
-              },
-              T: { name: "T__1", word: "T" },
-              U: { name: "U__2", word: "U", upperBounds: [] }, // UpperBound D should fill in later
-              V: { name: "V__3", word: "V", variance: "Covariant" },
-              W: { name: "W__4", word: "W", variance: "Contravariant" },
-            }
-          }
-        }
-        """,
+    @Test
+    fun genericFnWithComplexTypeFormal() = assertModuleAtStage(
+        stage = Stage.DisAmbiguate,
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        input = """
+            |let f<@in T extends MapKey>(x: T): Void {}
+        """.trimMargin(),
+        want = """
+            |{
+            |  disAmbiguate: {
+            |    body:
+            |    ```
+            |    let(\word, f, \typeFormal, do {
+            |        @resolution(T__0) @typeFormal(\T) @typeDecl(T__0) let T = type (T__0);
+            |        T__0 extends MapKey;
+            |        type (T__0)
+            |      }, let x /* aka x */: T, \outType, Void, fn {})
+            |
+            |    ```
+            |  }
+            |}
+        """.trimMargin(),
     )
 
     @Test
     fun genericMethodsDisallowedInInterface() = assertModuleAtStage(
         stage = Stage.DisAmbiguate,
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
         // Generic instance methods should be reported. Variety here is just to be sure about internal forms.
         // Static methods in interfaces can be generic if they want.
         input = """
@@ -549,7 +575,7 @@ class DisAmbiguateStageTest {
             |                type (B__0)
             |              }, \typeFormal, do {
             |                @resolution(C__0) @typeFormal(\C) @typeDecl(C__0) let C = type (C__0);
-            |                C extends Whatever;
+            |                C__0 extends Whatever;
             |                type (C__0)
             |              }, @impliedThis(Whatever__0) let this__1: Whatever__0, let b /* aka b */: B, let c /* aka c */: C, \outType, B, fn {
             |                b

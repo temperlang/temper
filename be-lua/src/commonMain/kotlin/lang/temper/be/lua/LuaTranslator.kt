@@ -24,6 +24,8 @@ import lang.temper.log.last
 import lang.temper.log.spanningPosition
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ExportedName
+import lang.temper.type.MethodKind
+import lang.temper.type.MethodShape
 import lang.temper.value.DependencyCategory
 import lang.temper.value.TBoolean
 import lang.temper.value.TClass
@@ -214,12 +216,21 @@ private class ModuleParts(
             is TmpL.MethodReference if fn.subject !is TmpL.TypeName -> {
                 val subject = translateSubject(fn.subject)
                 val dotName = fn.methodName.dotNameText
-                Lua.MethodCallExpr(
-                    expr.pos,
-                    subject,
-                    Lua.Name(fn.methodName.pos, safeName(dotName)),
-                    args.value,
-                )
+                when (fn.subject) {
+                    // For super calls, we need to know the method kind.
+                    is TmpL.SuperSubject -> when ((fn.method as? MethodShape)?.methodKind) {
+                        MethodKind.Getter -> "get"
+                        MethodKind.Setter -> "set"
+                        else -> "methods"
+                    }.let { it -> subject.dot(it).dotSafe(dotName).call(args.value) }
+                    // Others are standard method calls.
+                    else -> Lua.MethodCallExpr(
+                        expr.pos,
+                        subject,
+                        Lua.Name(fn.methodName.pos, safeName(dotName)),
+                        args.value,
+                    )
+                }
             }
             is TmpL.GarbageCallable -> translateGarbage(fn)
             is TmpL.FnReference,
@@ -236,10 +247,10 @@ private class ModuleParts(
         is TmpL.Expression ->
             translateExpr(subject)
         // TODO: we need some way to refer to a holder of statics
-        is TmpL.TemperTypeName ->
-            Lua.Name(subject.pos, luaNames.name(subject.typeDefinition.name))
         is TmpL.ConnectedToTypeName ->
             TODO("Handle be-lua's flavour of TargetLanguageTypeName when it has one")
+        is TmpL.TypeSubject ->
+            Lua.Name(subject.pos, luaNames.name(subject.typeName.sourceDefinition.name))
     }
 
     private fun translateExpr(

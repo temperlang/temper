@@ -14,7 +14,6 @@ import lang.temper.log.CodeLocation
 import lang.temper.log.FilePath
 import lang.temper.log.Position
 import lang.temper.log.filePath
-import lang.temper.name.BuiltinName
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ExportedName
 import lang.temper.name.ImplicitsCodeLocation
@@ -29,7 +28,8 @@ import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
-import lang.temper.type.StaticPropertyShape
+import lang.temper.type.NominalType
+import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
 import lang.temper.type.Visibility
@@ -746,10 +746,20 @@ class TentativeTmpL internal constructor(
     internal val nascentModule: NascentModule,
 )
 
+data class SuperCallConfig(
+    val skipThis: Boolean,
+)
+
 fun <BE : Backend<BE>> Backend<BE>.injectSuperCallMethods(
     tentativeTmpl: TentativeTmpL,
-    injectInto: (TmpL.TypeDeclaration) -> Boolean,
-    chooseSuperName: (MethodKind, String) -> String,
+    injectInto: (TmpL.TypeDeclaration) -> Boolean = { it.kind != TmpL.TypeDeclarationKind.Interface },
+    configSuperCall: (TmpL.TypeDeclaration, TmpL.SuperTypeMethod) -> SuperCallConfig? =
+        configSuperCall@{ type, method ->
+            when {
+                type.hasSplitSupers(method) -> SuperCallConfig(skipThis = false)
+                else -> null
+            }
+        },
 ) {
     val nascentModule = tentativeTmpl.nascentModule
     val translator = tentativeTmpl.tmpLTranslator
@@ -757,7 +767,7 @@ fun <BE : Backend<BE>> Backend<BE>.injectSuperCallMethods(
     val namingContext = nascentModule.codeLocation.origin
     for (topLevel in nascentModule.topLevels) {
         if (topLevel is TmpL.TypeDeclaration && injectInto(topLevel)) {
-            topLevel.injectSuperCallMethods<BE>(translator, supportNetwork, namingContext, chooseSuperName)
+            topLevel.injectSuperCallMethods<BE>(translator, supportNetwork, namingContext, configSuperCall)
         }
     }
 }
@@ -767,7 +777,7 @@ internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
     translator: TmpLTranslator,
     supportNetwork: SupportNetwork,
     namingContext: NamingContext,
-    chooseSuperName: (MethodKind, String) -> String,
+    configSuperCall: (TmpL.TypeDeclaration, TmpL.SuperTypeMethod) -> SuperCallConfig?,
 ) {
     val missingMethods = this.inherited
     // TODO Pass genre into here?
@@ -779,6 +789,8 @@ internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
     val injectedMethods = missingMethods.mapNotNull missingMethods@{ missingMethod ->
         val method = missingMethod.memberOverride.superTypeMember as? MethodShape
             ?: return@missingMethods null
+        method.isPureVirtual &&
+            return@missingMethods null // not needed
         val funType = missingMethod.memberOverride.superTypeMemberTypeInSubTypeContext as? Signature2
             ?: return@missingMethods null
         val nameHints = method.parameterInfo?.names ?: listOf()
@@ -830,31 +842,31 @@ internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
         }.let { TmpL.TypeParameters(pos, it) }
         val overridden: List<TmpL.SuperTypeMethod> = emptyList() // TODO should this point to the super?
         val visibility = TmpL.VisibilityModifier(pos, method.visibility.toTmpL())
+        val superConfig = configSuperCall(this, missingMethod) ?: return@missingMethods null
         val body = TmpL.BlockStatement(
             pos,
             statements = listOf(
                 TmpL.CallExpression(
                     pos,
-                    fn = chooseSuperName(method.methodKind, dotName.dotNameText).let { superName ->
-                        TmpL.MethodReference(
+                    fn = TmpL.MethodReference(
+                        pos,
+                        subject = TmpL.SuperSubject(
                             pos,
-                            subject = TmpL.TemperTypeName(pos, method.enclosingType),
-                            methodName = TmpL.DotName(pos, superName),
-                            method = StaticPropertyShape(
-                                enclosingType = method.enclosingType,
-                                name = BuiltinName(superName), // Expected generated to match this.
-                                stay = null,
-                                symbol = Symbol(superName),
-                                visibility = Visibility.Protected, // TODO Support configuration of this?
-                            ),
-                            type = funType,
-                        )
-                    },
+                            typeName = TmpL.TemperTypeName(pos, method.enclosingType),
+                            subType = typeShape,
+                        ),
+                        methodName = missingMethod.name.deepCopy(),
+                        method = method,
+                        type = funType,
+                    ),
                     parameters = parameters.parameters.zip(funType.requiredInputTypes + funType.optionalInputTypes)
-                        .mapIndexed { index, (parameter, valueFormal) ->
+                        .mapIndexedNotNull { index, (parameter, valueFormal) ->
                             val paramName = parameter.name.deepCopy()
                             when (index) {
-                                0 -> TmpL.This(pos, paramName, valueFormal as DefinedNonNullType)
+                                0 -> when {
+                                    superConfig.skipThis -> null
+                                    else -> TmpL.This(pos, paramName, valueFormal as DefinedNonNullType)
+                                }
                                 else -> TmpL.Reference(paramName, valueFormal)
                             }
                         },
@@ -923,6 +935,84 @@ internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
     }
     // Combine all.
     this.members += injectedMethods
+}
+
+/**
+ * Return an immediate supertype of [this] that has a path to the inherited method
+ * and which also has no other supertypes in the chain that also implement it.
+ *
+ * The returned type might *not* have the shortest path, if there are multiple.
+ *
+ * TODO Move out of tmpl?
+ */
+fun TypeShape.findImmediateSuperReaching(inherited: MethodShape): NominalType? = run {
+    val target = inherited.enclosingType
+    fun dig(shape: TypeShape): NominalType? = run {
+        superTypes@ for (sup in shape.superTypes) {
+            val supShape = sup.definition as? TypeShape ?: continue@superTypes
+            if (supShape == target) {
+                // This sup is the type we're looking for.
+                // Because it's the original enclosing type, it must have the method defined in it.
+                return sup
+            }
+            val found = supShape.methods.any { it.methodKind == inherited.methodKind && it.symbol == inherited.symbol }
+            if (found) {
+                // We found the method, but in the wrong type, so this path is no good.
+                continue@superTypes
+            }
+            if (dig(supShape) != null) {
+                // We found a path up the chain, and they reach it through sup.
+                return sup
+            }
+        }
+        // No path found this way.
+        null
+    }
+    dig(this)
+}
+
+fun TmpL.TypeDeclaration.hasSplitSupers(inherited: TmpL.SuperTypeMethod): Boolean = run {
+    val kind = (inherited.memberOverride.superTypeMember as? MethodShape)?.methodKind ?: return false
+    typeShape.hasSplitSupers(kind, inherited.name.dotNameText)
+}
+
+/**
+ * Whether different branches in the hierarchy have implementations for the method name given.
+ * The goal is to avoid putting in explicit overrides when not needed.
+ * TODO Move this elsewhere since it has no TmpL in it?
+ */
+fun TypeShape.hasSplitSupers(kind: MethodKind, name: String): Boolean = run {
+    // Findings is entered for any type reached.
+    // True means the method was found *prior* to reaching the named supertype.
+    val findings = mutableMapOf<ResolvedName, Boolean>()
+    fun dig(type: TypeDefinition, foundEarlierOnThisPath: Boolean): Boolean = run {
+        // See what we have here.
+        val method = (type as? TypeShape)?.members?.find { member ->
+            (member as? MethodShape)?.methodKind == kind && member.symbol.text == name
+        } as? MethodShape
+        val foundHere = method?.isPureVirtual == false
+        val foundByHere = foundEarlierOnThisPath || foundHere
+        // Compare findings on this path vs elsewhere.
+        val foundElsewhere = findings[type.name]
+        when (foundElsewhere) {
+            true -> when {
+                foundByHere -> return@dig true // Multiple paths.
+                else -> return@dig false // Just elsewhere, but no need to continue digging.
+            }
+            false -> when {
+                foundByHere -> findings[type.name] = foundEarlierOnThisPath // Dig to maybe flip more true.
+                else -> return@dig false // Neither of us found it, so no new information.
+            }
+            null -> findings[type.name] = foundEarlierOnThisPath // First here, so record either yea or nay.
+        }
+        // Found a reason to keep digging.
+        for (superType in type.superTypes) {
+            dig(superType.definition, foundByHere) && return@dig true
+        }
+        // No split findings on this path.
+        false
+    }
+    dig(this, false)
 }
 
 /** Typically for constructing dependency metadata. */
