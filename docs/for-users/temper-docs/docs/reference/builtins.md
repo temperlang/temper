@@ -3186,6 +3186,15 @@ For example:
 
 <!-- /snippet: builtin/@fun -->
 
+<!-- snippet: builtin/@imu -->
+
+<a name="builtin&#45;&#64;imu" class="snippet-anchor-name"></a>
+
+### `@imu` decorator
+Marker for types that must be deeply immutable.
+
+<!-- /snippet: builtin/@imu -->
+
 <!-- snippet: builtin/@in -->
 
 <a name="builtin&#45;&#64;in" class="snippet-anchor-name"></a>
