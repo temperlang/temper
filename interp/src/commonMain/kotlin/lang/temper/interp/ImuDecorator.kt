@@ -22,8 +22,8 @@ val vImuDecorator = Value(imuDecorator)
 /**
  * <!-- snippet: builtin/@partialImu -->
  * # `@partialImu` decorator
- * Marker interface for types that must be deeply immutable when
- * their actual type parameters are deeply immutable.
+ * Marker for types that must be deeply immutable when their actual type
+ * parameters are deeply immutable.
  */
 val partialImuDecorator = MetadataDecorator(
     partialImuSymbol,

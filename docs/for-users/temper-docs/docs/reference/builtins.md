@@ -3743,8 +3743,8 @@ Also detail interaction between extension methods and overloads.
 <a name="builtin&#45;&#64;partialImu" class="snippet-anchor-name"></a>
 
 ### `@partialImu` decorator
-Marker interface for types that must be deeply immutable when
-their actual type parameters are deeply immutable.
+Marker for types that must be deeply immutable when their actual type
+parameters are deeply immutable.
 
 <!-- /snippet: builtin/@partialImu -->
 
