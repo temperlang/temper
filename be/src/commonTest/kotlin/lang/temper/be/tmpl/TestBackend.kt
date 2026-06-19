@@ -11,6 +11,7 @@ import lang.temper.common.MimeType
 import lang.temper.common.asciiTitleCase
 import lang.temper.common.console
 import lang.temper.common.putMultiList
+import lang.temper.common.subListToEnd
 import lang.temper.format.CodeFormatter
 import lang.temper.format.CodeFormattingTemplate
 import lang.temper.format.FormattingHints
@@ -177,18 +178,22 @@ internal open class TestSupportNetwork(
         if (!isConnected(connectedKey)) {
             return null
         }
-        val baseName = ParsedName(
-            connectedKey.split("::")
-                .joinToString("") { it.asciiTitleCase() },
-        )
+        val baseName = ParsedName(mungeQName(connectedKey))
         return when (connectedKey) {
             "core.type Int32.toString()" -> IntToStringAsTmpL
             "core.type List.get length()" -> InlineTestSupportCode(baseName = baseName)
             // Pretend we're a call on a test instance even if we hack around that here for now.
-            "Test::assert" -> InlineTestSupportCode(baseName = ParsedName("assert_true"))
+            "std/testing.type Test.assert()" -> InlineTestSupportCode(baseName = ParsedName("assert_true"))
             else -> TestSupportCode(baseName = baseName, signature = null)
         }
     }
+
+    private fun mungeQName(qname: String): String = qname
+        .split(".", "::", " ")
+        // Skip module name and type qualifier.
+        .subListToEnd(1)
+        .filter { it != "type" }
+        .joinToString("") { it.trimEnd('(', ')').asciiTitleCase() }
 
     override fun translatedConnectedType(
         pos: Position,
@@ -199,7 +204,7 @@ internal open class TestSupportNetwork(
         if (!isConnected(connectedKey)) {
             return null
         }
-        return TestTargetLanguageTypeName(connectedKey) to
+        return TestTargetLanguageTypeName(mungeQName(connectedKey)) to
             if (temperType is DefinedType) {
                 temperType.bindings
             } else {
