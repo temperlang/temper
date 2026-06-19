@@ -8,7 +8,7 @@ import lang.temper.value.void
 /**
  * <!-- snippet: builtin/@imu -->
  * # `@imu` decorator
- * Marker interface for types that must be deeply immutable.
+ * Marker for types that must be deeply immutable.
  */
 val imuDecorator = MetadataDecorator(
     imuSymbol,

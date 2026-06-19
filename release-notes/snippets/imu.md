@@ -1,7 +1,7 @@
 ### Decorators for immutable types
 
-The following interfaces are now built into Temper. These tag interfaces are
-commitments on the part of any type that extends them:
+The following decorators are now built into Temper. These tags are commitments
+on the part of any type that extends them:
 
 - `@imu` - Any type decorated with `@imu` must be deeply immutable with not even
   any internal state changes allowed. Built-in `@imu` types include *String*,

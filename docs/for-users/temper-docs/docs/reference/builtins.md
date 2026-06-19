@@ -3191,7 +3191,7 @@ For example:
 <a name="builtin&#45;&#64;imu" class="snippet-anchor-name"></a>
 
 ### `@imu` decorator
-Marker interface for types that must be deeply immutable.
+Marker for types that must be deeply immutable.
 
 <!-- /snippet: builtin/@imu -->
 
