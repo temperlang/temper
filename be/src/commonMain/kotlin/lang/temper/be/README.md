@@ -29,7 +29,10 @@ The set of *\@connected* methods from Temper's *ImplicitsModule* are:
 
 <!-- The below is kept up-to-date automatically -->
 <!-- start ImplicitsModule-connected -->
+- `core.doneResult()`
+- `core.empty()`
 - `core.getConsole()`
+- `core.ignore()`
 - `core.type Boolean.toString()`
 - `core.type Console.log()`
 - `core.type DenseBitVector.constructor()`
@@ -74,7 +77,7 @@ The set of *\@connected* methods from Temper's *ImplicitsModule* are:
 - `core.type Float64.toString()`
 - `core.type Generator`
 - `core.type Generator.close()`
-- `core.type Generator.done()`
+- `core.type Generator.done`
 - `core.type Generator.next()`
 - `core.type GeneratorResult`
 - `core.type GlobalConsole.globalLog()`
@@ -91,15 +94,15 @@ The set of *\@connected* methods from Temper's *ImplicitsModule* are:
 - `core.type Int64.toInt32Unsafe()`
 - `core.type Int64.toString()`
 - `core.type List.forEach()`
-- `core.type List.get()`
 - `core.type List.get length()`
+- `core.type List.get()`
 - `core.type List.toList()`
 - `core.type List.toListBuilder()`
 - `core.type ListBuilder.add()`
 - `core.type ListBuilder.addAll()`
 - `core.type ListBuilder.clear()`
 - `core.type ListBuilder.constructor()`
-- `core.type ListBuilder.length()`
+- `core.type ListBuilder.get length()`
 - `core.type ListBuilder.removeLast()`
 - `core.type ListBuilder.reverse()`
 - `core.type ListBuilder.set()`
@@ -108,11 +111,11 @@ The set of *\@connected* methods from Temper's *ImplicitsModule* are:
 - `core.type ListBuilder.toList()`
 - `core.type ListBuilder.toListBuilder()`
 - `core.type Listed.filter()`
+- `core.type Listed.get isEmpty()`
+- `core.type Listed.get length()`
 - `core.type Listed.get()`
 - `core.type Listed.getOr()`
-- `core.type Listed.isEmpty()`
 - `core.type Listed.join()`
-- `core.type Listed.length()`
 - `core.type Listed.map()`
 - `core.type Listed.reduce()`
 - `core.type Listed.reduceFrom()`
@@ -126,11 +129,11 @@ The set of *\@connected* methods from Temper's *ImplicitsModule* are:
 - `core.type MapBuilder.remove()`
 - `core.type MapBuilder.set()`
 - `core.type Mapped.forEach()`
+- `core.type Mapped.get length()`
 - `core.type Mapped.get()`
 - `core.type Mapped.getOr()`
 - `core.type Mapped.has()`
 - `core.type Mapped.keys()`
-- `core.type Mapped.length()`
 - `core.type Mapped.toList()`
 - `core.type Mapped.toListBuilder()`
 - `core.type Mapped.toListBuilderWith()`
@@ -150,15 +153,15 @@ The set of *\@connected* methods from Temper's *ImplicitsModule* are:
 - `core.type SafeGenerator.next()`
 - `core.type String.begin`
 - `core.type String.countBetween()`
-- `core.type String.get end()`
 - `core.type String.forEach()`
 - `core.type String.fromCodePoint()`
 - `core.type String.fromCodePoints()`
+- `core.type String.get end()`
+- `core.type String.get isEmpty()`
 - `core.type String.get()`
 - `core.type String.hasAtLeast()`
 - `core.type String.hasIndex()`
 - `core.type String.indexOf()`
-- `core.type String.get isEmpty()`
 - `core.type String.next()`
 - `core.type String.prev()`
 - `core.type String.slice()`
@@ -180,11 +183,8 @@ The set of *\@connected* methods from Temper's *ImplicitsModule* are:
 - `core.type StringIndex.none`
 - `core.type StringIndexOption`
 - `core.type StringIndexOption.compareTo()`
-- `ValueResult`
-- `ValueResult::constructor`
-- `doneResult`
-- `empty`
-- `ignore`
+- `core.type ValueResult`
+- `core.type ValueResult.constructor()`
 <!-- end ImplicitsModule-connected -->
 
 ### Standard library connected methods
@@ -195,37 +195,37 @@ to implement:
 
 <!-- The below is kept up-to-date automatically -->
 <!-- start std-connected -->
-- `std/testing.processTestCases()`
-- `std/testing.reportTestResults()`
-- `std/testing.runTestCases()`
-- `Date`
-- `std/temporal.type Date.constructor()`
-- `std/temporal.type Date.fromIsoString()`
-- `std/temporal.type Date.day`
-- `std/temporal.type Date.get dayOfWeek()`
-- `std/temporal.type Date.month`
-- `std/temporal.type Date.year`
-- `std/temporal.type Date.toString()`
-- `std/temporal.type Date.today()`
-- `std/temporal.type Date.yearsBetween()`
-- `NetResponse`
+- `std/net.sendRequest()`
+- `std/net.type NetResponse`
 - `std/net.type NetResponse.get bodyContent()`
 - `std/net.type NetResponse.get contentType()`
 - `std/net.type NetResponse.get status()`
-- `std/regex.type Regex.compileFormatted()`
 - `std/regex.type Regex.compiledFind()`
 - `std/regex.type Regex.compiledFound()`
 - `std/regex.type Regex.compiledReplace()`
 - `std/regex.type Regex.compiledSplit()`
-- `std/regex.type Regex.format()`
 - `std/regex.type RegexFormatter.adjustCodeSet()`
 - `std/regex.type RegexFormatter.pushCaptureName()`
 - `std/regex.type RegexFormatter.pushCodeTo()`
-- `Test::assert`
-- `Test::assertHard`
+- `std/regex.type RegexFormatter.regexCompileFormatted()`
+- `std/regex.type RegexFormatter.regexFormat()`
+- `std/temporal.type Date`
+- `std/temporal.type Date.constructor()`
+- `std/temporal.type Date.day`
+- `std/temporal.type Date.fromIsoString()`
+- `std/temporal.type Date.get dayOfWeek()`
+- `std/temporal.type Date.month`
+- `std/temporal.type Date.toString()`
+- `std/temporal.type Date.today()`
+- `std/temporal.type Date.year`
+- `std/temporal.type Date.yearsBetween()`
+- `std/testing.processTestCases()`
+- `std/testing.reportTestResults()`
+- `std/testing.runTestCases()`
+- `std/testing.type Test.assert()`
+- `std/testing.type Test.assertHard()`
 - `std/testing.type Test.bail()`
-- `Test::failedOnAssert`
-- `Test::messages`
-- `Test::passing`
-- `stdNetSend`
+- `std/testing.type Test.get failedOnAssert()`
+- `std/testing.type Test.get passing()`
+- `std/testing.type Test.messages()`
 <!-- end std-connected -->

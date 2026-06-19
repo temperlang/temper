@@ -73,8 +73,8 @@ const skipped = new Set([
     "float64Sqrt",
     "float64Tan",
     "float64Tanh",
-    "core.getConsole()",
-    "core.ignore()",
+    "getConsole",
+    "ignore",
     "int32Max",
     "int32Min",
     "int32ToFloat64",
@@ -104,7 +104,7 @@ const skipped = new Set([
     "noStringIndex",
     "noStringIndexConstructor", // not constructible
     // Related types are connected.
-    "core.doneResult()",
+    "doneResult",
     "generator",
     "generatorClose",
     "generatorDone",
@@ -117,6 +117,9 @@ const skipped = new Set([
     "stringIndex",
     "valueResult",
     "valueResultConstructor",
+    // Other custom things.
+    "dequeIsEmpty",
+    "promiseBuilderPromise",
     // Default js member already works.
     "listBuilderSort",
     "listLength",
@@ -130,11 +133,18 @@ const skipped = new Set([
 describe("runtime-support", () => {
     it('connected-methods-exported', () => {
         const connectedMethodKeys = connectedsList.map(
-            (connectedMethod) => `${
-                connectedMethod[0].toLowerCase()
-            }${
-                connectedMethod.substring(1).replace(/::(.)/g, (_, x) => x.toUpperCase())
-            }`);
+            /** @param {string} connectedMethod */
+            (connectedMethod) => {
+                // Duplicate logic from JsSupportNetwork's connectedKeyToExportedName.
+                return connectedMethod
+                    .split(/\.|::/)
+                    .slice(1)
+                    // .filter((x) => x != "type")
+                    .map((x) => x.split(" ").at(-1))
+                    .map((x) => x.replace(/[()]+$/, ""))
+                    .map((x, i) => (i ? x[0].toUpperCase() : x[0].toLowerCase()) + x.slice(1))
+                    .join("");
+            });
         const expected = connectedMethodKeys.filter(
             // We also don't actually expect StringSlice methods because we
             // replace the full type.
