@@ -118,7 +118,7 @@ class ImuCheckerTest {
                 |-> Class BadImuGeneric2 extends Imu but property p has type T__11 which is not Imu!
                 |
                 |BadImuContravariant:
-                |class BadImuContravariant<in T extends Imu> extends Imu {
+                |class BadImuContravariant<@in T extends Imu> extends Imu {
                 |  public p: List<T>;
                 |}
                 |-> Class BadImuContravariant extends Imu but property p: List<T__13> uses contravariant type T__13!
@@ -187,7 +187,7 @@ class ImuCheckerTest {
             |class BadImuGeneric2<T> extends Imu {
             |  public p: T;
             |}
-            |class BadImuContravariant<in T extends Imu> extends Imu {
+            |class BadImuContravariant<@in T extends Imu> extends Imu {
             |  public p: List<T>;
             |}
             |class ImuWithParameterizedPartialList<T extends Imu> extends Imu {

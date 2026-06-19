@@ -5,6 +5,7 @@ import lang.temper.ast.VisitCue
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.Types
 import lang.temper.builtin.isComplexArg
+import lang.temper.builtin.isComplexTypeArg
 import lang.temper.builtin.isRemCall
 import lang.temper.common.Either
 import lang.temper.common.Log
@@ -50,7 +51,6 @@ import lang.temper.type2.DefinedNonNullType
 import lang.temper.type2.MkType2
 import lang.temper.type2.Type2
 import lang.temper.type2.applyDotName
-import lang.temper.value.BINARY_OP_CALL_ARG_COUNT
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.DeclParts
@@ -77,7 +77,6 @@ import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 import lang.temper.value.constructorPropertySymbol
 import lang.temper.value.constructorSymbol
-import lang.temper.value.extendsBuiltinName
 import lang.temper.value.fnBuiltinName
 import lang.temper.value.fnSymbol
 import lang.temper.value.freeTarget
@@ -90,7 +89,6 @@ import lang.temper.value.letBuiltinName
 import lang.temper.value.lookThroughDecorations
 import lang.temper.value.memberTypeFormalSymbol
 import lang.temper.value.methodSymbol
-import lang.temper.value.nameContained
 import lang.temper.value.noPropertySymbol
 import lang.temper.value.outTypeSymbol
 import lang.temper.value.propertySymbol
@@ -168,7 +166,7 @@ internal fun typeDisambiguateMacro(
         }
 
         if (classBodyAsLambda == null && abstractness == Abstractness.Abstract) {
-            // Convert lambda using abbreviated syntax to one that does not.
+            // Convert a lambda using abbreviated syntax to one that does not.
             //     interface TypeName(formals): ReturnType;
             // =>
             //     interface TypeName { let apply(formals): ReturnType; }
@@ -383,7 +381,7 @@ internal fun typeDisambiguateMacro(
     // Move constructor properties into the class body.
     // Also, store them so we can differentiate properties where the `= expr` in
     // `propName: Type = expr` means a default expression for a constructor
-    // parameter vs an initializer expression for the constructor body.
+    // parameter vs. an initializer expression for the constructor body.
     if (classValueFormals.isNotEmpty()) {
         val children = macroCall.children.toList()
         macroCall.replace(macroCall.indices) {
@@ -880,7 +878,7 @@ internal fun typeDisambiguateMacro(
     } else {
         null
     }
-    // Pull type formals into body alongside other members.
+    // Pull type formals into the body alongside other members.
     //     class C<T> { ... }  ->  class C { @typeFormal @typeDefined(T__0) let T = ...; ... }
     // Since each type formal also is a TypeDefinition, we allocate a type name.
     val formalDecls = mutableListOf<DeclTree>()
@@ -892,62 +890,41 @@ internal fun typeDisambiguateMacro(
             val nextEdge = macroCall.edge(keyIndex + 1)
             val next = nextEdge.target
             val formalPos = next.pos
+
+            val typeFormalPieces = inspectTypeFormal(nextEdge)
+            val problems = typeFormalPieces.problems
+            val upperBounds = typeFormalPieces.upperBounds
+            val variance = typeFormalPieces.variance
+            val variancePos = typeFormalPieces.variancePos
+            val formalName = typeFormalPieces.formalName
+
             // Splice out formal
             macroCall.removeChildren(keyIndex..keyIndex + 1)
             // Reconstitute as a declaration
             val formalDeclChildren = mutableListOf<Tree>()
-            var formalName: Tree = next // This may be a lie
-            val upperBounds = mutableListOf<Tree>()
-            var variance = Variance.Default
-            var hasUpperBound = false
-            // Look for patterns like
-            // 1. @out Name                           // Parsed from `out name` via TypeArgumentName
-            // 2. @in  Name
-            // 3.      Name extends TypeExpression
-            formalNameLoop@
-            while (formalName is CallTree) {
-                val callee = formalName.child(0) as? RightNameLeaf ?: break
-                val builtinKey = callee.content.builtinKey
-                when (builtinKey to formalName.size) {
-                    "@in" to 2, "@out" to 2 -> {
-                        variance = if (builtinKey == "@out") {
-                            Variance.Covariant
-                        } else {
-                            Variance.Contravariant
-                        }
-                        val varianceValue = Value(variance.sign, TInt)
-                        formalDeclChildren.add(valueLeaf(callee.pos, vVarianceSymbol))
-                        formalDeclChildren.add(valueLeaf(callee.pos, varianceValue))
-                        formalName = freeTarget(formalName.edge(1))
-                    }
-                    ("extends" to BINARY_OP_CALL_ARG_COUNT),
-                    ("implements" to BINARY_OP_CALL_ARG_COUNT),
-                    -> {
-                        upperBounds.add(freeTarget(formalName.edge(2)))
-                        hasUpperBound = true
-                        formalName = freeTarget(formalName.edge(1))
-                    }
-                    else -> break@formalNameLoop
-                }
+
+            if (variance != Variance.Invariant) {
+                check(variancePos != null)
+                val varianceValue = Value(variance.sign, TInt)
+                formalDeclChildren.add(valueLeaf(variancePos, vVarianceSymbol))
+                formalDeclChildren.add(valueLeaf(variancePos, varianceValue))
             }
+            for (problem in problems) {
+                errorNodes.add(errorNodeFor(freeTarget(nextEdge), problem))
+            }
+
             val formalSymbol = (formalName as? NameLeaf)?.content?.toSymbol()
             if (formalSymbol == null) {
                 // We've spliced out the formal, so no need to put an error node somewhere if
                 // we're going to have the AST be authoritative w.r.t. errors.
-                errorNodes.add(
-                    errorNodeFor(
-                        nextEdge.target,
-                        LogEntry(
-                            Log.Error,
-                            MessageTemplate.MalformedDeclaration,
-                            formalPos,
-                            emptyList(),
-                        ),
-                    ),
+                val problem = LogEntry(
+                    Log.Error,
+                    MessageTemplate.MalformedDeclaration,
+                    formalPos,
+                    emptyList(),
                 )
+                errorNodes.add(errorNodeFor(nextEdge.target, problem))
             } else {
-                @Suppress("USELESS_IS_CHECK")
-                check(formalName is NameLeaf)
                 val predefinedFormalDefinition = predefinedFormalDecls?.first {
                     it.word == formalSymbol
                 }
@@ -974,7 +951,7 @@ internal fun typeDisambiguateMacro(
                             formalSymbol,
                             variance,
                             doc.context.definitionMutationCounter,
-                            upperBounds = if (hasUpperBound) {
+                            upperBounds = if (upperBounds.isNotEmpty()) {
                                 emptyList() // Filled in later by `extends` macro
                             } else {
                                 // The lack of an extends clause defaults to AnyValue.
@@ -1021,7 +998,7 @@ internal fun typeDisambiguateMacro(
                             listOf(
                                 valueLeaf(upperBoundPos, vExtendsFn),
                                 formalName.copyRight(),
-                                upperBound,
+                                freeTree(upperBound),
                             ),
                         ),
                     )
@@ -1105,6 +1082,7 @@ internal fun typeDisambiguateMacro(
         )
     }
     // Put the formal declarations before the glue so that its type expression can refer to them.
+    prefixBlockWith(errorNodes, classBody)
     prefixBlockWith(superCalls, classBody)
     prefixBlockWith(formalEffects, classBody)
     prefixBlockWith(formalDecls, classBody)
@@ -1351,16 +1329,14 @@ private fun checkAgainstVirtualGenericMethod(
     for (index in 0 until memberTree.size) {
         val kid = memberTree.child(index)
         if (kid.symbolContained == typeArgSymbol) {
+            val typeArgEdge = memberTree.edge(index + 1)
             // Dig out the type parameter name for better distinction in error messages.
             // TODO Move this whole validation to somewhere where things have already been worked out in advance?
-            val name = when (val next = memberTree.childOrNull(index + 1)) {
-                is NameLeaf -> next.content.displayName
-                is CallTree -> when (next.childOrNull(0)?.nameContained?.builtinKey) {
-                    extendsBuiltinName.builtinKey -> next.childOrNull(1)?.nameContained?.displayName
-                    else -> null
-                }
-                else -> null
-            } ?: "?"
+            var nameTree = lookThroughDecorations(typeArgEdge).target
+            if (isComplexTypeArg(nameTree)) {
+                nameTree = nameTree.child(1)
+            }
+            val name = (nameTree as? NameLeaf)?.content?.displayName ?: "?"
             macroEnv.logSink.log(Log.Error, MessageTemplate.TypeParameterInInterfaceMethod, kid.pos, listOf(name))
         }
     }

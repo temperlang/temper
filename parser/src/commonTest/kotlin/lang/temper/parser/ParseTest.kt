@@ -660,141 +660,6 @@ class ParseTest {
     )
 
     @Test
-    fun tag() = assertParseTree(
-        input = "<bar>",
-        want = """
-        [
-          "<",
-          [ "bar" ],
-          ">"
-        ]
-        """,
-    )
-
-    @Test
-    fun closeTag() = assertParseTree(
-        input = "<bar> . x . </bar>",
-        want = """
-        [
-          [
-            [
-              "<",
-              [ "bar" ],
-              ">",
-            ],
-            ".",
-            [ "x" ],
-          ],
-          ".",
-          [
-            "</",
-            [ "bar" ],
-            ">",
-          ],
-        ]
-        """,
-    )
-
-    @Test
-    fun tagWithMultipleAttributes() = assertParseTree(
-        input = """<html:a b="c" d="e" f:g="h">""",
-        want = """
-        [
-          "<",
-          [
-            [ "html" ],
-            ":",
-            [ "a" ],
-          ],
-          [
-            [ "b" ],
-            "=",
-            [
-              "(",
-              [ "\"", ["c"], "\"" ],
-              ")"
-            ]
-          ],
-          [
-            [ "d" ],
-            "=",
-            [
-              "(",
-              [ "\"", ["e"], "\"" ],
-              ")"
-            ]
-          ],
-          [
-            [
-              [ "f" ],
-              ":",
-              [ "g" ]
-            ],
-            "=",
-            [
-              "(",
-              [ "\"", ["h"], "\"" ],
-              ")"
-            ]
-          ],
-          ">",
-        ]
-        """,
-    )
-
-    @Test
-    fun multiTagExample() = assertParseTree(
-        input = """<foo:bar one="1" two="2"> & <a href=url title="title"> & </a>""",
-        want = """
-        [
-          [
-            "<",
-            [
-              [ "foo" ],
-              ":",
-              [ "bar" ],
-            ],
-            [
-              [ "one" ],
-              "=",
-              [ "(", [ "\"", ["1"], "\"" ], ")" ]
-            ],
-            [
-              [ "two" ],
-              "=",
-              [ "(", [ "\"", ["2"], "\"" ], ")" ]
-            ],
-            ">",
-          ],
-          "&",
-          [
-            [
-              "<",
-              [ "a" ],
-              [
-                [ "href" ],
-                "=",
-                [ "url" ],
-              ],
-              [
-                [ "title" ],
-                "=",
-                [ "(", [ "\"", ["title"], "\"" ], ")" ]
-              ],
-              ">",
-            ],
-            "&",
-            [
-              "</",
-              [ "a" ],
-              ">",
-            ]
-          ]
-        ]
-        """,
-    )
-
-    @Test
     fun noAngleBracketConfusion() = assertParseTree(
         """
         [
@@ -2960,16 +2825,16 @@ class ParseTest {
 
     @Test
     fun adjacentWords() = assertParseTree(
-        input = "public class Foo extends Bar",
+        input = "export class Foo extends Bar",
         want = """
         [
           "@",
-          [ "public" ],
+          [ "export" ],
           [
             [ "class", "Foo" ],
             "extends",
             [ "Bar" ],
-          ]
+          ],
         ]
         """,
     )
@@ -3129,6 +2994,48 @@ class ParseTest {
           "}"
         ]
         """,
+    )
+
+    @Test
+    fun extendsWithDecoration() = assertParseTree(
+        input = "class C<@A T extends D, @B(1) U implements E> {}",
+        want = """
+             |[
+             |  [
+             |    ["class", "C"],
+             |    "<",
+             |    [
+             |      [
+             |        "@",
+             |        ["A"],
+             |        [
+             |          ["T"],
+             |          "extends",
+             |          ["D"]
+             |        ],
+             |      ],
+             |      ",", // Comma does not follow extends
+             |      [
+             |        "@",
+             |        [
+             |          ["B"],
+             |          "(",
+             |          [ "1" ],
+             |          ")",
+             |        ],
+             |        [
+             |          ["U"],
+             |          "implements",
+             |          ["E"]
+             |        ]
+             |      ],
+             |    ],
+             |    ">",
+             |  ],
+             |  "{",
+             |  "}"
+             |]
+        """.trimMargin(),
     )
 
     @Test
