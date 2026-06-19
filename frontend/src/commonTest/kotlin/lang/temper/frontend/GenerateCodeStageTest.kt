@@ -35,6 +35,7 @@ class GenerateCodeStageTest {
     @Test
     fun simpleDoNothingLoop() = assertModuleAtStage(
         stage = Stage.GenerateCode,
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
         input = """
         // This example is interesting because the infer result pass actually adds two assignments
         // to gather results from terminal expression.
@@ -53,10 +54,11 @@ class GenerateCodeStageTest {
             "type": {
                 "body":
                 ```
-                var i__0;
+                var t#0, i__0;
                 i__0 = 0;
                 while (i__0 < 3) {
-                  i__0 = i__0 + 1
+                  t#0 = i__0 + 1;
+                  i__0 = t#0
                 }
 
                 ```
@@ -64,10 +66,11 @@ class GenerateCodeStageTest {
             "generateCode": {
                 "body":
                 ```
-                var i__0;
+                var t#1, i__0;
                 i__0 = 0;
                 while (i__0 < 3) {
-                  i__0 = i__0 + 1
+                  t#1 = i__0 + 1;
+                  i__0 = t#1
                 }
 
                 ```

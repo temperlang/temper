@@ -8,6 +8,7 @@ import lang.temper.builtin.RttiCheckFunction
 import lang.temper.builtin.SETP_ARITY
 import lang.temper.builtin.Types
 import lang.temper.builtin.asReifiedType
+import lang.temper.builtin.isDotHelperCall
 import lang.temper.builtin.isNotNullCall
 import lang.temper.builtin.isTypeAngleCall
 import lang.temper.common.AtomicCounter
@@ -823,6 +824,7 @@ internal class Typer(
         }
 
         val c = if ("foo" in "${effectiveCallee?.toPseudoCode()}") console else null // do not commit
+        c?.log("typeRegularCall(${tree.toPseudoCode()})")
         val calleeFn = effectiveCallee?.functionContained
         val coverFn = calleeFn as? CoverFunction
         val isDotHelper = calleeFn is DotHelper
@@ -853,7 +855,7 @@ internal class Typer(
             nestedDotBind != null -> typeForDotHelper(nestedDotBind, dotHelper!!)
             else -> null
         }
-        c?.log("nestedDotBind=${nestedDotBind?.toPseudoCode()}, typedMembersAndExtesions=$typedMembersAndExtensions")
+        c?.log(". isDotBind=$isDotBind\n. nestedDotBind=${nestedDotBind?.toPseudoCode()}\n. typedMembersAndExtesions=$typedMembersAndExtensions")
 
         // Does the context in which the call happens place bounds on the return type?
         // For example, if t is the right hand of the assignment, then we might be able to
@@ -962,6 +964,8 @@ internal class Typer(
                                     explodeCalleeType(coerced, CalleePriority.Default) { it }
                                 }.map {
                                     it.sig
+                                }.also {
+                                    c?.log(". isDotBind got sigs $isDotBind")
                                 }
                             }
                         },
@@ -1000,16 +1004,38 @@ internal class Typer(
 
         if (isDotBind) {
             val effectiveCalleeType = effectiveCalleeTypeThunk.value
+            c?.log(". isDotBind effectiveCalleeType=$effectiveCalleeType, sigs=${calleeFn.sigs}")
+            val decision: Decision
+            if (typedMembersAndExtensions != null) {
+                priorProblems.addAll(typedMembersAndExtensions.reasons)
+            }
             if (effectiveCalleeType is FunctionType && calleeFn.sigs != null) {
                 // We stored the sigs above.  The call wrapping this needs those.
-                val decision = Decision(
+                decision = Decision(
                     type = effectiveCalleeType.returnType,
                     variant = effectiveCalleeType,
                     explanations = priorProblems.toList(),
                 )
-                ti.decide(tree, decision)
-                return
+            } else if (typedMembersAndExtensions != null) {
+                decision = Decision(
+                    type = functionType,
+                    variant = MkType.fn(
+                        typeFormals = listOf(),
+                        valueFormals = listOf(typedMembersAndExtensions.receiverType),
+                        restValuesFormal = null,
+                        returnType = functionType),
+                    explanations = priorProblems.toList(),
+                )
+            } else {
+                decision = Decision(
+                    type = InvalidType,
+                    variant = typeFromSignature(invalidSig),
+                    explanations = priorProblems.toList(),
+                )
             }
+            c?.log(". deciding isDotBind $decision")
+            ti.decide(tree, decision)
+            return
         }
 
         fun specialize(sig: Signature2): Signature2 {
@@ -1058,20 +1084,25 @@ internal class Typer(
                 }
             } else if (typedMembersAndExtensions != null) {
                 if (nestedDotBind != null) {
-                    for (fnType in typedMembersAndExtensions.fnType.fnTypesIterable) {
-                        val returnFnType = fnType.returnType as FunctionType
-                        val uncurried = MkType.fnDetails(
-                            typeFormals = fnType.typeFormals + returnFnType.typeFormals,
-                            valueFormals = fnType.valueFormals + returnFnType.valueFormals,
-                            restValuesFormal = returnFnType.restValuesFormal,
-                            returnType = returnFnType.returnType,
-                        )
-                        hackTryStaticTypeToSig(uncurried)?.let { sig ->
-                            add(Callee(sig, CalleePriority.Default))
+                    for (fnType in typedMembersAndExtensions.fnTypes) {
+                        if (fnType !is FunctionType) {
+                            add(Callee(invalidSig, CalleePriority.Default))
+                        } else {
+                            val returnFnType = fnType.returnType as FunctionType
+                            val uncurried = MkType.fnDetails(
+                                typeFormals = fnType.typeFormals + returnFnType.typeFormals,
+                                valueFormals = fnType.valueFormals + returnFnType.valueFormals,
+                                restValuesFormal = returnFnType.restValuesFormal,
+                                returnType = returnFnType.returnType,
+                            )
+                            c?.log(". uncurrying $fnType to $uncurried")
+                            hackTryStaticTypeToSig(uncurried)?.let { sig ->
+                                add(Callee(sig, CalleePriority.Default))
+                            }
                         }
                     }
                 } else {
-                    for (fnType in typedMembersAndExtensions.fnType.fnTypesIterable) {
+                    for (fnType in typedMembersAndExtensions.fnTypes) {
                         hackTryStaticTypeToSig(fnType)?.let { sig ->
                             add(Callee(sig, CalleePriority.Default))
                         }
@@ -1091,6 +1122,12 @@ internal class Typer(
                 }
             }
         }.toList()
+
+        c?.group(". calleeVariants") {
+            calleeVariants.forEach {
+                c.log("  - $it")
+            }
+        }
 
         calleeVariants.firstOrNull()?.let { callee ->
             val reordered =
@@ -2447,7 +2484,7 @@ internal class Typer(
             BuiltinFuns.asFn, BuiltinFuns.assertAsFn -> typeForAs(t, callable)
             BuiltinFuns.commaFn -> typeForComma(t)
             is DotHelper -> typeForDotHelper(t, callable).let {
-                it.fnType to it.reasons
+                MkType.and(it.fnTypes) to it.reasons
             }
             else -> null
         }
@@ -2557,9 +2594,9 @@ internal class Typer(
         val receiverType = reifiedType.type
         val memberName = symbolArg.symbolContained
             ?: return InvalidType to listOf(BecauseMalformedSpecialCall(t.pos, t))
-        val (type, reasons) =
+        val (_, type, reasons) =
             typeForGets(t.pos, typeArg.pos, receiverType, memberName, emptyList(), callable)
-        return type to reasons
+        return MkType.and(type) to reasons
     }
 
     private fun typeForGets(
@@ -2585,7 +2622,8 @@ internal class Typer(
             // If we have no applicable extensions, then explain any problems with the
             // receiver type or missing members.
             return TypedMembersAndExtensions(
-                InvalidType,
+                receiverType,
+                listOf(InvalidType),
                 listOf(
                     if (typeShape == null) {
                         BecauseExpectedNamedType(receiverTypePos, receiverType)
@@ -2619,7 +2657,7 @@ internal class Typer(
             //    let stringOrNullF(i: Int): Void { ... }
         }
 
-        val variants = mutableListOf<StaticType>()
+        val variants = mutableListOf<FunctionType>()
         val resolutions = mutableListOf<Pair<StaticType, Either<VisibleMemberShape, ExtensionResolution>>>()
         fun addVariant(simpleType: StaticType, r: Either<VisibleMemberShape, ExtensionResolution>) {
             val getSType = MkType.fn(
@@ -2638,7 +2676,8 @@ internal class Typer(
         if (member != null) {
             val memberDescriptor = member.descriptor
                 ?: return TypedMembersAndExtensions(
-                    InvalidType,
+                    receiverType,
+                    listOf(InvalidType),
                     listOf(BecauseTypeInfoMissing(pos, member.name as ResolvedName)),
                 )
             val memberType = when (memberDescriptor) {
@@ -2651,7 +2690,8 @@ internal class Typer(
         for (extension in applicableExtensions) {
             val extensionType = typeForExtensionResolution(pos, extension)
                 ?: return TypedMembersAndExtensions(
-                    InvalidType,
+                    receiverType,
+                    listOf(InvalidType),
                     listOf(BecauseTypeInfoMissing(pos, extension.resolution)),
                 )
             addVariant(extensionType, Either.Right(extension))
@@ -2659,7 +2699,8 @@ internal class Typer(
 
         // The callee type is a tad different
         return TypedMembersAndExtensions(
-            MkType.and(variants),
+            receiverType,
+            variants,
             listOf(),
             resolutions.toList(),
         )
@@ -2708,7 +2749,8 @@ internal class Typer(
     }
 
     private data class TypedMembersAndExtensions(
-        val fnType: StaticType,
+        val receiverType: StaticType,
+        val fnTypes: List<StaticType>,
         val reasons: List<TypeReasonElement>,
         /** For each variant, the associated member shape or extension function name. */
         val typedCandidates: List<Pair<StaticType, Either<VisibleMemberShape, ExtensionResolution>>> = emptyList(),
@@ -3073,7 +3115,8 @@ internal class Typer(
             }
 
             return@typeForDotHelper TypedMembersAndExtensions(
-                type,
+                thisType ?: InvalidType,
+                variantTypes.toList(),
                 explanations.toList(),
                 variants.toList(),
             )
@@ -3362,9 +3405,6 @@ private fun StaticType.hasUnbound(): Boolean {
         else -> false
     }
 }
-
-private fun isDotHelperCall(t: Tree) =
-    t is CallTree && t.childOrNull(0)?.functionContained is DotHelper
 
 /**
  * Pulls out the function type parts of a complex callee type.

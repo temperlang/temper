@@ -5,6 +5,7 @@ import lang.temper.ast.VisitCue
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.RttiCheckFunction
 import lang.temper.builtin.SETP_ARITY
+import lang.temper.builtin.isDotBindCall
 import lang.temper.builtin.problems
 import lang.temper.common.Either
 import lang.temper.common.Log
@@ -15,7 +16,7 @@ import lang.temper.frontend.typestage.isConstructor
 import lang.temper.frontend.typestage.logInvalid2BecauseMissingType
 import lang.temper.frontend.typestage.logInvalidBecauseMissingType
 import lang.temper.interp.New
-import lang.temper.interp.forEachActual
+import lang.temper.interp.forEachActualIncludingThis
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.name.Symbol
@@ -23,7 +24,9 @@ import lang.temper.name.TemperName
 import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
 import lang.temper.type.AndType
+import lang.temper.type.BindMemberAccessor
 import lang.temper.type.BubbleType
+import lang.temper.type.DotHelper
 import lang.temper.type.FunctionType
 import lang.temper.type.InvalidType
 import lang.temper.type.MkType
@@ -69,6 +72,8 @@ import lang.temper.value.functionContained
 import lang.temper.value.nameContained
 import lang.temper.value.staticTypeContained
 import lang.temper.value.symbolContained
+import lang.temper.value.toLispy
+import lang.temper.value.toPseudoCode
 import lang.temper.value.typeDeclSymbol
 import lang.temper.value.visibilitySymbol
 
@@ -482,10 +487,46 @@ internal class TypeChecker(
                             returnType = bind(calleeType.returnType),
                         )
                     }
+                    if (boundCalleeType.returnType == WellKnownTypes.functionType && isDotBindCall(t)) {
+                        // We use a simple return type of function type when there's a still
+                        // ambiguous dot helper, and instead focus on analysis of the outer
+                        // call.
+                        return
+                    }
+
                     val valueFormals = boundCalleeType.valueFormals
                     val restValuesFormal = boundCalleeType.restValuesFormal
 
                     if (actuals.size !in boundCalleeType.arityRange) {
+                        val c = lang.temper.common.console // do not commit
+                        c.group("Mismatch") {
+                            c.group("Tree") {
+                                t.toPseudoCode(c.textOutput)
+                            }
+                            c.group("actuals #${actuals.size}") {
+                                actuals.forEachIndexed { index, actual ->
+                                    c.log("#$index : $actual")
+                                }
+                            }
+                            c.group("why actuals") {
+                                val callee = t.children.getOrNull(0)
+                                c.log("callee=${callee?.toPseudoCode()}")
+                                if (callee is CallTree) { // Extract this from a bind DotHelper
+                                    val calleeFn = callee.child(0).functionContained
+                                    c.log("calleeFn=$calleeFn")
+                                    if (calleeFn is DotHelper) {
+                                        val memberAccessor = calleeFn.memberAccessor
+                                        c.log("memberAccessor=$memberAccessor, fai=${memberAccessor.firstArgumentIndex}, callee.size=${callee.size}, 2+fai=${2 + memberAccessor.firstArgumentIndex}")
+                                        if (memberAccessor is BindMemberAccessor && callee.size == 2 + memberAccessor.firstArgumentIndex) {
+                                            val thisArg = callee.child(memberAccessor.firstArgumentIndex + 1)
+                                            c.log("thisArg=${thisArg.toPseudoCode()}")
+                                        }
+                                    }
+                                }
+                            }
+                            c.log("boundCalleeType=$boundCalleeType")
+                            c.log("arityRange=${boundCalleeType.arityRange}")
+                        }
                         logSink.log(
                             level = Log.Error,
                             template = MessageTemplate.ArityMismatch,
@@ -544,6 +585,17 @@ internal class TypeChecker(
                         )
                     }
                     if (failsValidSubtypeCheck(boundCalleeReturnType, computedType)) {
+                        val c = lang.temper.common.console // do not commit
+                        c.group("ValidSubtype Mismatch") {
+                            c.log("boundCalleeReturnType=$boundCalleeReturnType")
+                            c.log("computed=$computedType")
+                            c.group("t") {
+                                t.toPseudoCode(c.textOutput)
+                            }
+                            c.group("Lispy") {
+                                c.log(t.toLispy())
+                            }
+                        }
                         logSink.log(
                             level = Log.Error,
                             template = MessageTemplate.ExpectedSubType,
@@ -587,7 +639,7 @@ internal class TypeChecker(
     }
 }
 
-private class TypedActual(
+private data class TypedActual(
     val symbol: Symbol?,
     val symbolPos: Position?,
     val type: StaticType,
@@ -596,10 +648,15 @@ private class TypedActual(
 
 private fun extractTypedActuals(t: CallTree): List<TypedActual>? {
     val actuals = mutableListOf<TypedActual>()
-    t.forEachActual { _, symbolChild, child ->
-        val type = child.typeInferences?.type ?: return@extractTypedActuals null
-        val symbol = symbolChild?.symbolContained
-        actuals.add(TypedActual(symbol = symbol, symbolPos = symbolChild?.pos, type = type, pos = child.pos))
+    var problemExtracting = false
+    t.forEachActualIncludingThis { _, symbolChild, child ->
+        val type = child.typeInferences?.type
+        if (type != null) {
+            val symbol = symbolChild?.symbolContained
+            actuals.add(TypedActual(symbol = symbol, symbolPos = symbolChild?.pos, type = type, pos = child.pos))
+        } else {
+            problemExtracting = true
+        }
     }
-    return actuals
+    return if (!problemExtracting) { actuals } else { null }
 }

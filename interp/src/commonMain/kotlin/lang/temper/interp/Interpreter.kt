@@ -14,6 +14,7 @@ import lang.temper.common.TriState
 import lang.temper.common.compatRemoveLast
 import lang.temper.common.compatReversed
 import lang.temper.common.console
+import lang.temper.common.doNotCommit
 import lang.temper.common.ignore
 import lang.temper.common.rangesOfSetBits
 import lang.temper.common.subListToEnd
@@ -2347,12 +2348,14 @@ class Interpreter(
                         }
                         throw ex
                     }
-                    c.group("Replacement $callDoNotCommit") {
-                        c.group("Before") {
-                            c.log(before)
-                        }
-                        c.group("After") {
-                            edgeToReplace.target.toPseudoCode(c.textOutput, detail = detailDoNotCommit)
+                    if (false.doNotCommit) {
+                        c.group("Replacement $callDoNotCommit") {
+                            c.group("Before") {
+                                c.log(before)
+                            }
+                            c.group("After") {
+                                edgeToReplace.target.toPseudoCode(c.textOutput, detail = detailDoNotCommit)
+                            }
                         }
                     }
                     // Mark the macro call as complete, for this stage, even if it's relocated.

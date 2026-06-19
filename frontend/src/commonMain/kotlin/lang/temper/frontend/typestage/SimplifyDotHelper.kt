@@ -22,6 +22,7 @@ import lang.temper.value.CallTree
 import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.functionContained
+import lang.temper.value.toPseudoCode
 
 private typealias VariantResolution = Either<VisibleMemberShape, ExtensionResolution>
 private typealias Variant = Pair<StaticType, VariantResolution>
@@ -36,10 +37,11 @@ internal fun simplifyDotHelper(
     variants: List<Variant>,
     retypeTree: (Tree) -> Unit,
 ) {
+    val c = lang.temper.common.console // do not commit
     val calleeEdge = call.edge(0)
     val callee = calleeEdge.target
     val typeInferences = call.typeInferences
-    val variantMatch = typeInferences?.variant ?: return
+    val variantMatch = typeInferences?.variant
     val variantFunctionType = variantMatch as? FunctionType
     val variantMatchRefined = (variantFunctionType?.returnType as? AndType)?.let { andType ->
         when {
@@ -52,6 +54,20 @@ internal fun simplifyDotHelper(
             )
             else -> null
         }
+    }
+    c.group("Simplifying dot helper") {
+        c.group("call") {
+            call.toPseudoCode(c.textOutput)
+        }
+        c.group("variants") {
+            variants.forEach {
+                c.log("- $it")
+            }
+        }
+        c.log("typeInferences=$typeInferences")
+        c.log("variantMatch=${variantMatch}")
+        c.log("variantFunctionType=$variantFunctionType")
+        c.log("variantMatchRefined=$variantMatchRefined")
     }
 
     // Give preference to members over extensions
@@ -67,6 +83,7 @@ internal fun simplifyDotHelper(
     }
 
     val chosenVariantResolution = lastNonExtensionResolution ?: lastResolution
+    c.log(". chosenVariantResolution=$chosenVariantResolution")
     when (chosenVariantResolution) {
         null,
         is Either.Left,
@@ -153,7 +170,9 @@ internal fun simplifyDotHelper(
         }
     }
 
-    val functionTypes = extractAtoms(variantMatch) { it as? FunctionType }
+    val functionTypes = variantMatch?.let {
+        extractAtoms(it) { atom -> atom as? FunctionType }
+    } ?: setOf()
     // Supply "this" types so we can figure out whether a referenced property is backed.
     val subjectTypeShapes = buildSet {
         fun addTypeShapesFrom(definition: TypeDefinition) {

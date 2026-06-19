@@ -1695,8 +1695,8 @@ class TyperTest {
             |
             |    c.foo(1234);
             |/// ┗━━━━━━━━━┛ : Int32
-            |    //     c.foo("hi");          // do not commit
-            |    // /// ┗━━━━━━━━━┛ : String  // do not commit
+            |    c.foo("hi");
+            |/// ┗━━━━━━━━━┛ : String
         """.trimMargin(),
         skipImplicits = true.doNotCommit,
     )
@@ -1933,7 +1933,7 @@ class TyperTest {
         wantErrors: List<String> = emptyList(),
         verbose: Boolean = false,
         nameSimplifying: Boolean = true,
-        skipImplicits: Boolean = false,
+        skipImplicits: Boolean = true.doNotCommit,
     ) {
         val filePath = testCodeLocation
         val source = ModuleSource(

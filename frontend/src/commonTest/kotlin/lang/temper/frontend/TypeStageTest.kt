@@ -563,9 +563,30 @@ class TypeStageTest {
             |}
         """.trimMargin(),
         moduleResultNeeded = true,
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
         want = """
             |{
-            |  run: [5, "Int32"]
+            |  run: [5, "Int32"],
+            |  type: {
+            |    body: ```
+            |      let return__0;
+            |      var t#0, t#1, i__0: Int32;
+            |      i__0 = 0;
+            |      outer__0: while (i__0 < 5) {
+            |        t#0 = i__0 + 1;
+            |        i__0 = t#0;
+            |        while (i__0 < 10) {
+            |          if (i__0 < 6) {
+            |            continue outer__0;
+            |          };
+            |          t#1 = i__0 + 10;
+            |          i__0 = t#1
+            |        }
+            |      };
+            |      return__0 = i__0;
+            |
+            |      ```
+            |  }
             |}
         """.trimMargin(),
     )
