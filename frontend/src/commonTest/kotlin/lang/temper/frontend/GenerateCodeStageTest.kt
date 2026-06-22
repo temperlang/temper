@@ -1286,33 +1286,67 @@ class GenerateCodeStageTest {
     fun decoratedTypeFormal() = assertModuleAtStage(
         stage = Stage.GenerateCode,
         input = """
-        |class C<T> {}
-        |class D<@imu T> {}
+        |class C<@in @imu T> {}
+        |class D<@imu @in T> {}
+        |let f<@imu T>(t: T) {}
         """.trimMargin(),
         want = """
         |{
+        |  disAmbiguate: {
+        |    body:
+        |      ```
+        |      @typeDecl(C__0<T__0>) @hoistLeft(true) @resolution(C__0) @stay let C = type (C__0);
+        |      class(\word, C, \concrete, true, @typeDefined(C__0<T__0>) fn {
+        |          @typeFormal(\T) @typeDefined(T__0) @resolution(T__0) @stay @variance(-1) @imu let T = type (T__0);
+        |          C__0<T__0> extends AnyValue
+        |      });
+        |      @typeDecl(D__0<T__1>) @hoistLeft(true) @resolution(D__0) @stay let D = type (D__0);
+        |      class(\word, D, \concrete, true, @typeDefined(D__0<T__1>) fn {
+        |          @typeFormal(\T) @typeDefined(T__1) @resolution(T__1) @stay @variance(-1) @imu let T = type (T__1);
+        |          D__0<T__1> extends AnyValue
+        |      });
+        |      let(\word, f, \typeFormal, nym`@imu`(do {
+        |            @resolution(T__2) @typeFormal(\T) @typeDecl(T__2) let T = type (T__2);
+        |            type (T__2)
+        |        }), let t /* aka t */: T, fn {})
+        |
+        |      ```
+        |  },
         |  generateCode: {
         |    body:
         |      ```
-        |      @typeFormal(\T) @typeDefined(T__0) @fromType(C__0<T__0>) @reach(\none) let T__0;
+        |      var t#0;
+        |      @typeDecl(C__0<T__0>) @stay @reach(\none) let C__0;
+        |      C__0 = type (C__0);
+        |      @typeDecl(D__0<T__1>) @stay @reach(\none) let D__0;
+        |      D__0 = type (D__0);
+        |      @fn @reach(\none) let f__0;
+        |      @typeFormal(\T) @typeDefined(T__0) @stay @variance(-1) @imu @fromType(C__0<T__0>) @reach(\none) let T__0;
         |      T__0 = type (T__0);
         |      @fn @visibility(\public) @stay @fromType(C__0<T__0>) @reach(\none) let constructor__0;
         |      constructor__0 = (@stay fn constructor(@impliedThis(C__0<T__0>) this__0: C__0<T__0>) /* return__0 */: Void {
         |          return__0 = void
         |      });
-        |      @typeDecl(C__0<T__0>) @stay @reach(\none) let C__0;
-        |      C__0 = type (C__0);
-        |      @typeDecl(D__0<T__1>) @stay @reach(\none) let D__0;
-        |      D__0 = type (D__0);
-        |      @typeFormal(\T) @typeDefined(T__1) @stay @imu @fromType(D__0<T__1>) @reach(\none) let T__1;
+        |      @typeFormal(\T) @typeDefined(T__1) @stay @variance(-1) @imu @fromType(D__0<T__1>) @reach(\none) let T__1;
         |      T__1 = type (T__1);
         |      @fn @visibility(\public) @stay @fromType(D__0<T__1>) @reach(\none) let constructor__1;
         |      constructor__1 = (@stay fn constructor(@impliedThis(D__0<T__1>) this__1: D__0<T__1>) /* return__1 */: Void {
         |          return__1 = void
-        |      })
+        |      });
+        |      @typeFormal(\T) @typeDecl(T__2) let T__2;
+        |      T__2 = type (T__2);
+        |      t#0 = nym`@imu`(type (T__2));
+        |      f__0 = fn f<inconceivable>(t__0 /* aka t */: T) /* return__2 */{
+        |        return__2 = void
+        |      }
         |
         |      ```
-        |  }
+        |  },
+        |  errors: [
+        |    "Expected function type, but got Invalid!",
+        |    "No declaration for T!",
+        |    "Void expressions cannot be used as values!",
+        |  ]
         |}
         """.trimMargin(),
     )
