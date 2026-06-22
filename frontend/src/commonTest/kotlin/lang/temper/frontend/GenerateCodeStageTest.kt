@@ -1282,6 +1282,41 @@ class GenerateCodeStageTest {
         """.trimMargin(),
     )
 
+    @Test
+    fun decoratedTypeFormal() = assertModuleAtStage(
+        stage = Stage.GenerateCode,
+        input = """
+        |class C<T> {}
+        |class D<@imu T> {}
+        """.trimMargin(),
+        want = """
+        |{
+        |  generateCode: {
+        |    body:
+        |      ```
+        |      @typeFormal(\T) @typeDefined(T__0) @fromType(C__0<T__0>) @reach(\none) let T__0;
+        |      T__0 = type (T__0);
+        |      @fn @visibility(\public) @stay @fromType(C__0<T__0>) @reach(\none) let constructor__0;
+        |      constructor__0 = (@stay fn constructor(@impliedThis(C__0<T__0>) this__0: C__0<T__0>) /* return__0 */: Void {
+        |          return__0 = void
+        |      });
+        |      @typeDecl(C__0<T__0>) @stay @reach(\none) let C__0;
+        |      C__0 = type (C__0);
+        |      @typeDecl(D__0<T__1>) @stay @reach(\none) let D__0;
+        |      D__0 = type (D__0);
+        |      @typeFormal(\T) @typeDefined(T__1) @stay @imu @fromType(D__0<T__1>) @reach(\none) let T__1;
+        |      T__1 = type (T__1);
+        |      @fn @visibility(\public) @stay @fromType(D__0<T__1>) @reach(\none) let constructor__1;
+        |      constructor__1 = (@stay fn constructor(@impliedThis(D__0<T__1>) this__1: D__0<T__1>) /* return__1 */: Void {
+        |          return__1 = void
+        |      })
+        |
+        |      ```
+        |  }
+        |}
+        """.trimMargin(),
+    )
+
     /**
      * No [lang.temper.log.MessageTemplate.CannotExtendConcrete] because of `<S extends String>`.
      * *S* can validly bind to *String* or *Never*.
@@ -1292,7 +1327,7 @@ class GenerateCodeStageTest {
         // Add some decorations for bonus testing, where saying `@partialImu` here doesn't really
         // make sense here, but it allows testing nesting.
         input = """
-            |@imu interface I { public f<@imu @partialImu S extends String>(@imu s: S): Void; }
+            |@imu interface I { public f<@in @imu("hi") @partialImu S extends String>(@imu s: S): Void; }
         """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """

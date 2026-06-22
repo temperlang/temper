@@ -530,10 +530,10 @@ private fun splitComplexArgIntoWordAndType(e: TEdge) {
  * @return true if we manage to do the rewrite.
  */
 private fun formalizeTypeArg(e: TEdge): Boolean {
-    val typeFormaPieces = inspectTypeFormal(e)
-    val nameTree = typeFormaPieces.formalName
-    val upperBounds = typeFormaPieces.upperBounds
-    val variance = typeFormaPieces.variance
+    val typeFormalPieces = inspectTypeFormal(e)
+    val nameTree = typeFormalPieces.formalName
+    val upperBounds = typeFormalPieces.upperBounds
+    val variance = typeFormalPieces.variance
 
     val document = nameTree.document
     val genre = document.context.genre
@@ -577,10 +577,10 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
         }
     }
 
-    typeFormaPieces.decorated.replace {
+    typeFormalPieces.decorated.replace {
         Block {
             declareTypeFormal()
-            for (upperBound in typeFormaPieces.upperBounds) {
+            for (upperBound in typeFormalPieces.upperBounds) {
                 Call(upperBound.pos, vExtendsFn) {
                     V(upperBound.pos.leftEdge, typeValue)
                     Replant(freeTree(upperBound))
@@ -589,7 +589,7 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
             V(typeValue)
         }
     }
-    return typeFormaPieces.problems.isEmpty()
+    return typeFormalPieces.problems.isEmpty()
 }
 
 private fun augmentDeclWithSymbol(
