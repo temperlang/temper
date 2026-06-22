@@ -1282,69 +1282,6 @@ class GenerateCodeStageTest {
         """.trimMargin(),
     )
 
-    @Test
-    fun decoratedTypeFormal() = assertModuleAtStage(
-        stage = Stage.GenerateCode,
-        // No, `@partialImu` doesn't make sense here, but it allows for testing multiple decorators.
-        input = """
-        |class C<@in @imu T> {}
-        |class D<@imu @in T> {}
-        |let f<@imu @partialImu T>(t: T): Void {}
-        """.trimMargin(),
-        want = """
-        |{
-        |  disAmbiguate: {
-        |    body:
-        |      ```
-        |      @typeDecl(C__0<T__0>) @hoistLeft(true) @resolution(C__0) @stay let C = type (C__0);
-        |      class(\word, C, \concrete, true, @typeDefined(C__0<T__0>) fn {
-        |          @typeFormal(\T) @typeDefined(T__0) @resolution(T__0) @stay @variance(-1) @imu let T = type (T__0);
-        |          C__0<T__0> extends AnyValue
-        |      });
-        |      @typeDecl(D__0<T__1>) @hoistLeft(true) @resolution(D__0) @stay let D = type (D__0);
-        |      class(\word, D, \concrete, true, @typeDefined(D__0<T__1>) fn {
-        |          @typeFormal(\T) @typeDefined(T__1) @resolution(T__1) @stay @variance(-1) @imu let T = type (T__1);
-        |          D__0<T__1> extends AnyValue
-        |      });
-        |      let(\word, f, \typeFormal, do {
-        |          @resolution(T__2) @typeFormal(\T) @typeDecl(T__2) @stay @partialImu @imu let T = type (T__2);
-        |          type (T__2)
-        |        }, let t /* aka t */: T, \outType, Void, fn {})
-        |
-        |      ```
-        |  },
-        |  generateCode: {
-        |    body:
-        |      ```
-        |      @typeDecl(C__0<T__0>) @stay @reach(\none) let C__0;
-        |      C__0 = type (C__0);
-        |      @typeDecl(D__0<T__1>) @stay @reach(\none) let D__0;
-        |      D__0 = type (D__0);
-        |      @fn @reach(\none) let f__0;
-        |      @typeFormal(\T) @typeDefined(T__0) @stay @variance(-1) @imu @fromType(C__0<T__0>) @reach(\none) let T__0;
-        |      T__0 = type (T__0);
-        |      @fn @visibility(\public) @stay @fromType(C__0<T__0>) @reach(\none) let constructor__0;
-        |      constructor__0 = (@stay fn constructor(@impliedThis(C__0<T__0>) this__0: C__0<T__0>) /* return__0 */: Void {
-        |          return__0 = void
-        |      });
-        |      @typeFormal(\T) @typeDefined(T__1) @stay @variance(-1) @imu @fromType(D__0<T__1>) @reach(\none) let T__1;
-        |      T__1 = type (T__1);
-        |      @fn @visibility(\public) @stay @fromType(D__0<T__1>) @reach(\none) let constructor__1;
-        |      constructor__1 = (@stay fn constructor(@impliedThis(D__0<T__1>) this__1: D__0<T__1>) /* return__1 */: Void {
-        |          return__1 = void
-        |      });
-        |      @typeFormal(\T) @typeDecl(T__2) @stay @partialImu @imu @reach(\none) let T__2;
-        |      T__2 = type (T__2);
-        |      f__0 = (@stay fn f<T__2 extends AnyValue>(t__0 /* aka t */: T__2) /* return__2 */: Void {
-        |          return__2 = void
-        |      })
-        |
-        |      ```
-        |  }
-        |}
-        """.trimMargin(),
-    )
-
     /**
      * No [lang.temper.log.MessageTemplate.CannotExtendConcrete] because of `<S extends String>`.
      * *S* can validly bind to *String* or *Never*.

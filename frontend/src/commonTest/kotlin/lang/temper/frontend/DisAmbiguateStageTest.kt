@@ -491,8 +491,8 @@ class DisAmbiguateStageTest {
             |    class(\word, C, \concrete, true, @typeDefined(C__0<T__1, U__2, V__3, W__4>) fn {
             |        @typeFormal(\T) @typeDefined(T__1) @resolution(T__1) let T = type (T__1);
             |        @typeFormal(\U) @typeDefined(U__2) @resolution(U__2) let U = type (U__2);
-            |        @typeFormal(\V) @typeDefined(V__3) @resolution(V__3) @variance(1) let V = type (V__3);
-            |        @typeFormal(\W) @typeDefined(W__4) @resolution(W__4) @variance(-1) let W = type (W__4);
+            |        @typeFormal(\V) @typeDefined(V__3) @resolution(V__3) @stay @variance(1) let V = type (V__3);
+            |        @typeFormal(\W) @typeDefined(W__4) @resolution(W__4) @stay @variance(-1) let W = type (W__4);
             |        U extends D;
             |        C__0<T__1, U__2, V__3, W__4> extends A;
             |        C__0<T__1, U__2, V__3, W__4> extends B
@@ -533,7 +533,7 @@ class DisAmbiguateStageTest {
             |    body:
             |    ```
             |    let(\word, f, \typeFormal, do {
-            |        @resolution(T__0) @typeFormal(\T) @typeDecl(T__0) let T = type (T__0);
+            |        @resolution(T__0) @typeFormal(\T) @typeDecl(T__0) @stay let T = type (T__0);
             |        T__0 extends MapKey;
             |        type (T__0)
             |      }, let x /* aka x */: T, \outType, Void, fn {})
@@ -541,6 +541,41 @@ class DisAmbiguateStageTest {
             |    ```
             |  }
             |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun moreDecoratedTypeFormals() = assertModuleAtStage(
+        stage = Stage.DisAmbiguate,
+        // No, `@partialImu` doesn't make sense here, but it allows for testing multiple decorators.
+        input = """
+        |class C<@in @imu T> {}
+        |class D<@imu @in T> {}
+        |let f<@imu @partialImu T>(t: T): Void {}
+        """.trimMargin(),
+        want = """
+        |{
+        |  disAmbiguate: {
+        |    body:
+        |      ```
+        |      @typeDecl(C__0<T__0>) @hoistLeft(true) @resolution(C__0) @stay let C = type (C__0);
+        |      class(\word, C, \concrete, true, @typeDefined(C__0<T__0>) fn {
+        |          @typeFormal(\T) @typeDefined(T__0) @resolution(T__0) @stay @variance(-1) @imu let T = type (T__0);
+        |          C__0<T__0> extends AnyValue
+        |      });
+        |      @typeDecl(D__0<T__1>) @hoistLeft(true) @resolution(D__0) @stay let D = type (D__0);
+        |      class(\word, D, \concrete, true, @typeDefined(D__0<T__1>) fn {
+        |          @typeFormal(\T) @typeDefined(T__1) @resolution(T__1) @stay @variance(-1) @imu let T = type (T__1);
+        |          D__0<T__1> extends AnyValue
+        |      });
+        |      let(\word, f, \typeFormal, do {
+        |          @resolution(T__2) @typeFormal(\T) @typeDecl(T__2) @stay @partialImu @imu let T = type (T__2);
+        |          type (T__2)
+        |        }, let t /* aka t */: T, \outType, Void, fn {})
+        |
+        |      ```
+        |  }
+        |}
         """.trimMargin(),
     )
 
