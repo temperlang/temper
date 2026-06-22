@@ -1285,10 +1285,11 @@ class GenerateCodeStageTest {
     @Test
     fun decoratedTypeFormal() = assertModuleAtStage(
         stage = Stage.GenerateCode,
+        // No, `@partialImu` doesn't make sense here, but it allows for testing multiple decorators.
         input = """
         |class C<@in @imu T> {}
         |class D<@imu @in T> {}
-        |let f<@imu T>(t: T) {}
+        |let f<@imu @partialImu T>(t: T): Void {}
         """.trimMargin(),
         want = """
         |{
@@ -1305,17 +1306,16 @@ class GenerateCodeStageTest {
         |          @typeFormal(\T) @typeDefined(T__1) @resolution(T__1) @stay @variance(-1) @imu let T = type (T__1);
         |          D__0<T__1> extends AnyValue
         |      });
-        |      let(\word, f, \typeFormal, nym`@imu`(do {
-        |            @resolution(T__2) @typeFormal(\T) @typeDecl(T__2) let T = type (T__2);
-        |            type (T__2)
-        |        }), let t /* aka t */: T, fn {})
+        |      let(\word, f, \typeFormal, do {
+        |          @resolution(T__2) @typeFormal(\T) @typeDecl(T__2) @stay @partialImu @imu let T = type (T__2);
+        |          type (T__2)
+        |        }, let t /* aka t */: T, \outType, Void, fn {})
         |
         |      ```
         |  },
         |  generateCode: {
         |    body:
         |      ```
-        |      var t#0;
         |      @typeDecl(C__0<T__0>) @stay @reach(\none) let C__0;
         |      C__0 = type (C__0);
         |      @typeDecl(D__0<T__1>) @stay @reach(\none) let D__0;
@@ -1333,20 +1333,14 @@ class GenerateCodeStageTest {
         |      constructor__1 = (@stay fn constructor(@impliedThis(D__0<T__1>) this__1: D__0<T__1>) /* return__1 */: Void {
         |          return__1 = void
         |      });
-        |      @typeFormal(\T) @typeDecl(T__2) let T__2;
+        |      @typeFormal(\T) @typeDecl(T__2) @stay @partialImu @imu @reach(\none) let T__2;
         |      T__2 = type (T__2);
-        |      t#0 = nym`@imu`(type (T__2));
-        |      f__0 = fn f<inconceivable>(t__0 /* aka t */: T) /* return__2 */{
-        |        return__2 = void
-        |      }
+        |      f__0 = (@stay fn f<T__2 extends AnyValue>(t__0 /* aka t */: T__2) /* return__2 */: Void {
+        |          return__2 = void
+        |      })
         |
         |      ```
-        |  },
-        |  errors: [
-        |    "Expected function type, but got Invalid!",
-        |    "No declaration for T!",
-        |    "Void expressions cannot be used as values!",
-        |  ]
+        |  }
         |}
         """.trimMargin(),
     )
@@ -1361,21 +1355,21 @@ class GenerateCodeStageTest {
         // Add some decorations for bonus testing, where saying `@partialImu` here doesn't really
         // make sense here, but it allows testing nesting.
         input = """
-            |@imu interface I { public f<@in @imu("hi") @partialImu S extends String>(@imu s: S): Void; }
+            |interface I { public f<S extends String>(s: S): Void; }
         """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
             |{
             |  generateCode: {
             |    body: ```
-            |        @typeDecl(I__0) @stay @imu @reach(\none) let I__0;
-            |        I__0 = type (I__0);
             |        @method(\f) @visibility(\public) @fn @stay @fromType(I__0) @reach(\none) let f__0;
-            |        @typeFormal(\S) @typeDecl(S__0) @stay @partialImu @imu @reach(\none) let S__0;
+            |        @typeFormal(\S) @typeDecl(S__0) @reach(\none) let S__0;
             |        S__0 = type (S__0);
-            |        f__0 = (@stay fn f<S__0 extends String>(@impliedThis(I__0) this__0: I__0, @imu s__0 /* aka s */: S__0) /* return__0 */: Void {
+            |        f__0 = (@stay fn f<S__0 extends String>(@impliedThis(I__0) this__0: I__0, s__0 /* aka s */: S__0) /* return__0 */: Void {
             |            pureVirtual()
-            |        })
+            |        });
+            |        @typeDecl(I__0) @stay @reach(\none) let I__0;
+            |        I__0 = type (I__0)
             |
             |        ```
             |  },

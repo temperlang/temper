@@ -46,9 +46,11 @@ import lang.temper.value.PartialResult
 import lang.temper.value.Planting
 import lang.temper.value.ReifiedType
 import lang.temper.value.RightNameLeaf
+import lang.temper.value.StayLeaf
 import lang.temper.value.TEdge
 import lang.temper.value.TSymbol
 import lang.temper.value.Tree
+import lang.temper.value.TreeTemplate
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 import lang.temper.value.errorFn
@@ -69,6 +71,7 @@ import lang.temper.value.vDefaultSymbol
 import lang.temper.value.vInitSymbol
 import lang.temper.value.vResolutionSymbol
 import lang.temper.value.vRestFormalSymbol
+import lang.temper.value.vStaySymbol
 import lang.temper.value.vTypeArgSymbol
 import lang.temper.value.vTypeFormalSymbol
 import lang.temper.value.vWithinDocFoldSymbol
@@ -544,6 +547,10 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
     val pos = e.target.pos
     val leftPos = pos.leftEdge
     val declarationName = document.nameMaker.unusedSourceName(name)
+    val stayLeaf = when {
+        typeFormalPieces.decorations.isEmpty() -> null
+        else -> StayLeaf(e.target.document, pos)
+    }
     val typeFormal = TypeFormal(
         pos,
         declarationName,
@@ -556,11 +563,12 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
         } else {
             listOf(MkType.nominal(WellKnownTypes.anyValueTypeDefinition))
         },
+        stayLeaf = stayLeaf,
     )
     val typeValue = Value(ReifiedType(MkType2(typeFormal).get()))
 
-    fun Planting.declareTypeFormal() {
-        Decl(pos, name) {
+    fun Planting.declareTypeFormal(): TreeTemplate<DeclTree> {
+        return Decl(pos, name) {
             // When the syntax stage resolves names, use declarationName.
             V(leftPos, vResolutionSymbol)
             Ln(declarationName)
@@ -568,6 +576,10 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
             V(leftPos, nameSymbol)
             V(leftPos, typeDeclSymbol)
             V(leftPos, typeValue)
+            if (stayLeaf != null) {
+                V(vStaySymbol)
+                Replant(stayLeaf)
+            }
             V(leftPos, vInitSymbol)
             V(pos, typeValue)
             if (genre == Genre.Documentation) {
@@ -577,9 +589,15 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
         }
     }
 
-    typeFormalPieces.decorated.replace {
+    if (typeFormalPieces.decorations.isNotEmpty()) {
+        typeFormalPieces.decorated.replace { declareTypeFormal() }
+    }
+    e.replace {
         Block {
-            declareTypeFormal()
+            when {
+                typeFormalPieces.decorations.isEmpty() -> declareTypeFormal()
+                else -> Replant(freeTarget(e))
+            }
             for (upperBound in typeFormalPieces.upperBounds) {
                 Call(upperBound.pos, vExtendsFn) {
                     V(upperBound.pos.leftEdge, typeValue)
