@@ -16,10 +16,8 @@ import lang.temper.value.superSymbol
 import lang.temper.value.symbolContained
 
 internal data class TypeFormalHelper(
-    /** The edge inside decorations, if any, but still outside any supertype information. */
-    val decorated: TEdge,
-    /** Decorations excluding any variance, which might need restructured because of that exclusion. */
-    val decorations: List<Tree>,
+    /** If decorations exist, the edge pointing from them to the tree being decorated. */
+    val decorated: TEdge?,
     val formalName: Tree,
     val upperBounds: List<Tree>,
     val variance: Variance,
@@ -32,7 +30,7 @@ internal fun inspectTypeFormal(
     typeFormalEdge: TEdge,
 ): TypeFormalHelper {
     var formalName: Tree = typeFormalEdge.target // This may be a lie
-    val decorations = mutableListOf<Tree>()
+    var decorated: TEdge? = null
     val upperBounds = mutableListOf<Tree>()
     var variance = Variance.Default
     var variancePos: Position? = null
@@ -51,18 +49,14 @@ internal fun inspectTypeFormal(
         when (edges[1].nameContained?.builtinKey) {
             Variance.Contravariant.keyword -> Variance.Contravariant
             Variance.Covariant.keyword -> Variance.Covariant
-            else -> {
-                decorations.add(formalName)
-                null
-            }
+            else -> null
         }?.also { foundVariance ->
             variance = foundVariance
             variancePos = callee.pos
         }
-        formalName = edges[2].target
+        decorated = edges[2]
+        formalName = decorated.target
     }
-    // Gone through any decorations at this point.
-    val inner = formalName.incoming!!
 
     // Unpack complex type arg like: { \typeArg name metadata }
     if (isComplexTypeArg(formalName)) {
@@ -93,8 +87,7 @@ internal fun inspectTypeFormal(
     }
 
     return TypeFormalHelper(
-        decorated = inner,
-        decorations = decorations,
+        decorated = decorated,
         formalName = formalName,
         upperBounds = upperBounds,
         variance = variance,

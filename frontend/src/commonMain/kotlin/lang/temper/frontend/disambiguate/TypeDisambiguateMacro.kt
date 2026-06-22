@@ -931,10 +931,7 @@ internal fun typeDisambiguateMacro(
                 }
                 val stableFormalName = predefinedFormalDefinition?.name
                     ?: doc.nameMaker.unusedSourceName(ParsedName(formalSymbol.text))
-                val stayLeaf = when {
-                    typeFormalPieces.decorations.isEmpty() -> null
-                    else -> StayLeaf(doc, formalPos)
-                }
+                val stayLeaf = typeFormalPieces.decorated?.let { StayLeaf(doc, formalPos) }
                 val formalDefinition = when {
                     predefinedFormalDefinition != null -> {
                         if (predefinedFormalDefinition.variance != variance) {
@@ -993,8 +990,8 @@ internal fun typeDisambiguateMacro(
                     },
                 )
                 val formalDecl = DeclTree(doc, formalPos, formalDeclChildren)
-                val formalDeclWrapped = when {
-                    typeFormalPieces.decorations.isEmpty() -> formalDecl
+                val formalDeclWrapped = when (typeFormalPieces.decorated) {
+                    null -> formalDecl
                     else -> {
                         typeFormalPieces.decorated.replace(formalDecl)
                         // Decorations, if present, are always the outer layer of type args.

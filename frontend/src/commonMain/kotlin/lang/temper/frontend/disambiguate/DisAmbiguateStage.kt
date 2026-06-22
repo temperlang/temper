@@ -30,7 +30,6 @@ import lang.temper.name.Symbol
 import lang.temper.stage.Stage
 import lang.temper.type.MkType
 import lang.temper.type.TypeFormal
-import lang.temper.type.Variance
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.MkType2
 import lang.temper.value.BlockTree
@@ -547,10 +546,7 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
     val pos = e.target.pos
     val leftPos = pos.leftEdge
     val declarationName = document.nameMaker.unusedSourceName(name)
-    val stayLeaf = when {
-        typeFormalPieces.decorations.isEmpty() -> null
-        else -> StayLeaf(e.target.document, pos)
-    }
+    val stayLeaf = typeFormalPieces.decorated?.let { StayLeaf(e.target.document, pos) }
     val typeFormal = TypeFormal(
         pos,
         declarationName,
@@ -589,13 +585,12 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
         }
     }
 
-    if (typeFormalPieces.decorations.isNotEmpty()) {
-        typeFormalPieces.decorated.replace { declareTypeFormal() }
-    }
+    // With decorations, we need to put the decl inside them.
+    typeFormalPieces.decorated?.replace { declareTypeFormal() }
     e.replace {
         Block {
-            when {
-                typeFormalPieces.decorations.isEmpty() -> declareTypeFormal()
+            when (typeFormalPieces.decorated) {
+                null -> declareTypeFormal()
                 else -> Replant(freeTarget(e))
             }
             for (upperBound in typeFormalPieces.upperBounds) {
@@ -633,9 +628,6 @@ private fun augmentDeclWithSymbol(
         declChildren.add(ValueLeaf(doc, pos, Value(symbol, TSymbol)))
     }
 }
-
-internal val contravariantAnnotationNameText = "@${Variance.Contravariant.keyword}"
-internal val covariantAnnotationNameText = "@${Variance.Covariant.keyword}"
 
 /**
  * Make sure formals have \word metadata.
