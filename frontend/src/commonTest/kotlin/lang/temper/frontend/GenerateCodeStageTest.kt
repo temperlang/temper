@@ -1289,8 +1289,6 @@ class GenerateCodeStageTest {
     @Test
     fun typeParameterCanExtendConcreteType() = assertModuleAtStage(
         stage = Stage.GenerateCode,
-        // Add some decorations for bonus testing, where saying `@partialImu` here doesn't really
-        // make sense here, but it allows testing nesting.
         input = """
             |interface I { public f<S extends String>(s: S): Void; }
         """.trimMargin(),
