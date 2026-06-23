@@ -41,7 +41,7 @@ A *Boolean* is a truth value that may be used in `if` and loop conditions.
 
 <a name="type&#45;Boolean&#45;sig" class="snippet-anchor-name"></a>
 
-*Boolean* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable), [*Imu*](#type-Imu)
+*Boolean* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)
 
 <!-- /snippet: type/Boolean/sig -->
 
@@ -443,7 +443,7 @@ let my64: Int64 = 1i64;
 
 <a name="type&#45;Int64&#45;sig" class="snippet-anchor-name"></a>
 
-*Int64* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable), [*Imu*](#type-Imu)
+*Int64* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)
 
 <!-- /snippet: type/Int64/sig -->
 
@@ -809,7 +809,7 @@ Temper also does not recognize all C's number suffixes.
 
 <a name="type&#45;Float64&#45;sig" class="snippet-anchor-name"></a>
 
-*Float64* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable), [*Imu*](#type-Imu)
+*Float64* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)
 
 <!-- /snippet: type/Float64/sig -->
 
@@ -2963,7 +2963,7 @@ that typically translates to an idiomatic integer.
 
 <a name="type&#45;StringIndexOption&#45;sig" class="snippet-anchor-name"></a>
 
-*StringIndexOption* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable), [*Imu*](#type-Imu)
+*StringIndexOption* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)
 
 <!-- /snippet: type/StringIndexOption/sig -->
 
@@ -3318,7 +3318,7 @@ See also `Listed` for recommendations on `List` vs `Listed` use.
 
 <a name="type&#45;List&#45;sig" class="snippet-anchor-name"></a>
 
-*List* `<`[*T*](#type-List-typeFormal-T)`>` `extends` [*AnyValue*](#type-AnyValue), [*Listed*](#type-Listed)&lt;[*T*](#type-List-typeFormal-T)&gt;, [*PartialImu*](#type-PartialImu)
+*List* `<`[*T*](#type-List-typeFormal-T)`>` `extends` [*AnyValue*](#type-AnyValue), [*Listed*](#type-Listed)&lt;[*T*](#type-List-typeFormal-T)&gt;
 
 <!-- /snippet: type/List/sig -->
 
@@ -4385,7 +4385,7 @@ A *Map* is a read-only key-value collection.
 
 <a name="type&#45;Map&#45;sig" class="snippet-anchor-name"></a>
 
-*Map* `<`[*K*](#type-Map-typeFormal-K), [*V*](#type-Map-typeFormal-V)`>` `extends` [*AnyValue*](#type-AnyValue), [*Mapped*](#type-Mapped)&lt;[*K*](#type-Map-typeFormal-K), [*V*](#type-Map-typeFormal-V)&gt;, [*PartialImu*](#type-PartialImu)
+*Map* `<`[*K*](#type-Map-typeFormal-K), [*V*](#type-Map-typeFormal-V)`>` `extends` [*AnyValue*](#type-AnyValue), [*Mapped*](#type-Mapped)&lt;[*K*](#type-Map-typeFormal-K), [*V*](#type-Map-typeFormal-V)&gt;
 
 <!-- /snippet: type/Map/sig -->
 
@@ -5276,7 +5276,7 @@ user-implementable in the future.
 
 <a name="type&#45;MapKey&#45;sig" class="snippet-anchor-name"></a>
 
-*MapKey* `extends` [*AnyValue*](#type-AnyValue), [*Imu*](#type-Imu), [*Equatable*](#type-Equatable)
+*MapKey* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)
 
 <!-- /snippet: type/MapKey/sig -->
 
@@ -5882,7 +5882,7 @@ input that might refer to either *null* or a string value.
 
 <a name="type&#45;Null&#45;sig" class="snippet-anchor-name"></a>
 
-*Null* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable), [*Imu*](#type-Imu)
+*Null* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)
 
 <!-- /snippet: type/Null/sig -->
 
@@ -5967,7 +5967,7 @@ console.log("Empty is not null: ${e != null}");
 
 <a name="type&#45;Empty&#45;sig" class="snippet-anchor-name"></a>
 
-*Empty* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable), [*Imu*](#type-Imu)
+*Empty* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)
 
 <!-- /snippet: type/Empty/sig -->
 
@@ -6525,7 +6525,7 @@ One of a sequence of results from a [*Generator*](#type-Generator).
 
 <a name="type&#45;GeneratorResult&#45;sig" class="snippet-anchor-name"></a>
 
-*GeneratorResult* `<`[*YIELD*](#type-GeneratorResult-typeFormal-YIELD)`>` `extends` [*AnyValue*](#type-AnyValue), [*PartialImu*](#type-PartialImu)
+*GeneratorResult* `<`[*YIELD*](#type-GeneratorResult-typeFormal-YIELD)`>` `extends` [*AnyValue*](#type-AnyValue)
 
 <!-- /snippet: type/GeneratorResult/sig -->
 
@@ -6602,7 +6602,7 @@ A result produced from [`Generator.next`](#type-Generator-method-next) when ther
 
 <a name="type&#45;ValueResult&#45;sig" class="snippet-anchor-name"></a>
 
-*ValueResult* `<`[*YIELD*](#type-ValueResult-typeFormal-YIELD)`>` `extends` [*AnyValue*](#type-AnyValue), [*GeneratorResult*](#type-GeneratorResult)&lt;[*YIELD*](#type-ValueResult-typeFormal-YIELD)&gt;, [*PartialImu*](#type-PartialImu)
+*ValueResult* `<`[*YIELD*](#type-ValueResult-typeFormal-YIELD)`>` `extends` [*AnyValue*](#type-AnyValue), [*GeneratorResult*](#type-GeneratorResult)&lt;[*YIELD*](#type-ValueResult-typeFormal-YIELD)&gt;
 
 <!-- /snippet: type/ValueResult/sig -->
 
@@ -6727,7 +6727,7 @@ A result produced from [`Generator.next`](#type-Generator-method-next) when ther
 
 <a name="type&#45;DoneResult&#45;sig" class="snippet-anchor-name"></a>
 
-*DoneResult* `<`[*YIELD*](#type-DoneResult-typeFormal-YIELD)`>` `extends` [*AnyValue*](#type-AnyValue), [*GeneratorResult*](#type-GeneratorResult)&lt;[*YIELD*](#type-DoneResult-typeFormal-YIELD)&gt;, [*Imu*](#type-Imu)
+*DoneResult* `<`[*YIELD*](#type-DoneResult-typeFormal-YIELD)`>` `extends` [*AnyValue*](#type-AnyValue), [*GeneratorResult*](#type-GeneratorResult)&lt;[*YIELD*](#type-DoneResult-typeFormal-YIELD)&gt;
 
 <!-- /snippet: type/DoneResult/sig -->
 
@@ -6808,129 +6808,6 @@ A result produced from [`Generator.next`](#type-Generator-method-next) when ther
 </blockquote>
 
 <!-- /snippet: type/DoneResult -->
-
-</section>
-
-## Verified Immutability
-
-<section markdown="1">
-
-<!-- snippet: type/Imu -->
-
-<a name="type&#45;Imu" class="snippet-anchor-name"></a>
-
-### *interface Imu*
-
-<!-- snippet: type/Imu/commentary -->
-
-<a name="type&#45;Imu&#45;commentary" class="snippet-anchor-name"></a>
-
-Marker interface for types that must be deeply immutable.
-
-<!-- /snippet: type/Imu/commentary -->
-
-<!-- snippet: type/Imu/sig -->
-
-<a name="type&#45;Imu&#45;sig" class="snippet-anchor-name"></a>
-
-*Imu* `extends` [*AnyValue*](#type-AnyValue)
-
-<!-- /snippet: type/Imu/sig -->
-
-<blockquote markdown="1" class="indent-only">
-
-<!-- snippet: type/Imu/members -->
-
-<a name="type&#45;Imu&#45;members" class="snippet-anchor-name"></a>
-
-<!-- snippet: type/Imu/typeFormals -->
-
-<a name="type&#45;Imu&#45;typeFormals" class="snippet-anchor-name"></a>
-
-<!-- /snippet: type/Imu/typeFormals -->
-
-<!-- snippet: type/Imu/properties -->
-
-<a name="type&#45;Imu&#45;properties" class="snippet-anchor-name"></a>
-
-<!-- /snippet: type/Imu/properties -->
-
-<!-- snippet: type/Imu/methods -->
-
-<a name="type&#45;Imu&#45;methods" class="snippet-anchor-name"></a>
-
-<!-- /snippet: type/Imu/methods -->
-
-<!-- snippet: type/Imu/statics -->
-
-<a name="type&#45;Imu&#45;statics" class="snippet-anchor-name"></a>
-
-<!-- /snippet: type/Imu/statics -->
-
-<!-- /snippet: type/Imu/members -->
-
-</blockquote>
-
-<!-- /snippet: type/Imu -->
-
-<!-- snippet: type/PartialImu -->
-
-<a name="type&#45;PartialImu" class="snippet-anchor-name"></a>
-
-### *interface PartialImu*
-
-<!-- snippet: type/PartialImu/commentary -->
-
-<a name="type&#45;PartialImu&#45;commentary" class="snippet-anchor-name"></a>
-
-Marker interface for types that must be deeply immutable when
-their actual type parameters are deeply immutable.
-
-<!-- /snippet: type/PartialImu/commentary -->
-
-<!-- snippet: type/PartialImu/sig -->
-
-<a name="type&#45;PartialImu&#45;sig" class="snippet-anchor-name"></a>
-
-*PartialImu* `extends` [*AnyValue*](#type-AnyValue)
-
-<!-- /snippet: type/PartialImu/sig -->
-
-<blockquote markdown="1" class="indent-only">
-
-<!-- snippet: type/PartialImu/members -->
-
-<a name="type&#45;PartialImu&#45;members" class="snippet-anchor-name"></a>
-
-<!-- snippet: type/PartialImu/typeFormals -->
-
-<a name="type&#45;PartialImu&#45;typeFormals" class="snippet-anchor-name"></a>
-
-<!-- /snippet: type/PartialImu/typeFormals -->
-
-<!-- snippet: type/PartialImu/properties -->
-
-<a name="type&#45;PartialImu&#45;properties" class="snippet-anchor-name"></a>
-
-<!-- /snippet: type/PartialImu/properties -->
-
-<!-- snippet: type/PartialImu/methods -->
-
-<a name="type&#45;PartialImu&#45;methods" class="snippet-anchor-name"></a>
-
-<!-- /snippet: type/PartialImu/methods -->
-
-<!-- snippet: type/PartialImu/statics -->
-
-<a name="type&#45;PartialImu&#45;statics" class="snippet-anchor-name"></a>
-
-<!-- /snippet: type/PartialImu/statics -->
-
-<!-- /snippet: type/PartialImu/members -->
-
-</blockquote>
-
-<!-- /snippet: type/PartialImu -->
 
 </section>
 

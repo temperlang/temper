@@ -9,7 +9,7 @@ The follow construct tests a form that was causing this problem.
 There's no need to execute any code here. The error happened from these
 definitions alone.
 
-    class Blah<T> { }
+    @imu class Blah<@imu T> { } // include @imu for bonus testing
 
     class Hi(
       public let thing: Blah<String>,

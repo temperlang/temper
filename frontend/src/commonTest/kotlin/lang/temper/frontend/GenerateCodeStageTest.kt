@@ -1404,7 +1404,7 @@ class GenerateCodeStageTest {
             |        }
             |      },
             |      Empty: {
-            |        supers: ["AnyValue__0", "Equatable__0", "Imu__0"],
+            |        supers: ["AnyValue__0", "Equatable__0"],
             |        methods: [
             |          {
             |            name: "constructor__0",
@@ -1415,6 +1415,7 @@ class GenerateCodeStageTest {
             |        ],
             |        metadata: {
             |          connected: ["\"Empty\": String"],
+            |          imu: ["void: Void"],
             |        }
             |      },
             |    },

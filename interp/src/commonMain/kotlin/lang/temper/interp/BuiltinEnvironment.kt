@@ -802,6 +802,8 @@ private object Builtins {
              */
             keyPair(jsonNameDecorator),
             keyPair(vFunDecorator),
+            keyPair(vImuDecorator),
+            keyPair(vPartialImuDecorator),
 
             "new" to Value(New),
             keyPair(Value(ImportMacro)),
