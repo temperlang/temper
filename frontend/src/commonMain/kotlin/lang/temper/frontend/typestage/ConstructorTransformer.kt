@@ -73,6 +73,9 @@ private fun transformConstructor(tree: FunTree) {
     visited.add(pathIndex)
     while (visited.size < paths.maximalPaths.size) {
         val path = paths[pathIndex]
+        if (true) {
+            break
+        }
     }
 }
 
