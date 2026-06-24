@@ -953,7 +953,7 @@ class CppTranslator(
                                 MethodKind.Normal -> cpp.singleName(CppName(fn.methodName.dotNameText))
                                 MethodKind.Getter -> getterSingleName(fn.methodName.dotNameText)
                                 MethodKind.Setter -> setterSingleName(fn.methodName.dotNameText)
-                                else -> TODO()
+                                else -> error("invalid method kind for super call")
                             },
                         ),
                     )
