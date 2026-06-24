@@ -136,21 +136,6 @@ namespace temper {
                 return result;
             }
 
-            template<class Elem, class F>
-            auto mapDropping(
-                const std::shared_ptr<std::vector<Elem>>& list,
-                F fn
-            ) -> std::shared_ptr<std::vector<decltype(fn(std::declval<const Elem&>()))>> {
-                using R = decltype(fn(std::declval<const Elem&>()));
-                std::shared_ptr<std::vector<R>> result = std::make_shared<std::vector<R>>();
-                for (const Elem& elem : *list) {
-                    try {
-                        result->push_back(fn(elem));
-                    } catch (const TemperBubble&) {}
-                }
-                return result;
-            }
-
             template<class Elem>
             std::string join(const std::shared_ptr<std::vector<Elem>>& list, const std::string& separator) {
                 std::ostringstream oss;

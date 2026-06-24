@@ -406,7 +406,6 @@ private val supportedAutoConnecteds = setOf(
     "Listed::getOr",
     "Listed::join",
     "Listed::map",
-    "Listed::mapDropping",
     "Listed::reduceFrom",
     "Listed::slice",
     "Listed::sorted",

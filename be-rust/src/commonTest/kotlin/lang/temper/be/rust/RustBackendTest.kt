@@ -1602,6 +1602,12 @@ class RustBackendTest {
                 |        let selfish = F(std::sync::Arc::new(FStruct {}));
                 |        return selfish;
                 |    }
+                |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        BTrait::whatever(self)
+                |    }
+                |    fn greeting(& self) -> std::sync::Arc<String> {
+                |        ATrait::greeting(self)
+                |    }
                 |}
                 |impl BTrait<C<A>> for F {
                 |    fn clone_boxed(& self) -> B<C<A>> {

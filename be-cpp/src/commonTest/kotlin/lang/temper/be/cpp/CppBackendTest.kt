@@ -538,6 +538,26 @@ class CppBackendTest {
     }
 
     @Test
+    fun callThisMethods() {
+        assertGeneratedContains(
+            temper = """
+                |export interface Apple {
+                |  thing(i: Int): Int;
+                |  twiceThing(i: Int): Int { 2 * thing(i) }
+                |}
+            """,
+            cppContains = listOf(
+                """
+                    |    int32_t Apple::twiceThing(int32_t i_8)const {
+                    |      auto this_1 = temper::core::borrow_this(this);
+                    |      return temper::core::Int::mul(2, this_1->thing(i_8));
+                    |    }
+                """.trimMargin(),
+            ),
+        )
+    }
+
+    @Test
     fun importsBetweenModules() {
         assertGeneratedContains(
             temper = """

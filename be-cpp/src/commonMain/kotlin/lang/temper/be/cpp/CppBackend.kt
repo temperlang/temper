@@ -8,6 +8,7 @@ import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
 import lang.temper.be.tmpl.asReceiverMember
+import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.be.tmpl.mutatingMemberNames
 import lang.temper.common.MimeType
 import lang.temper.fs.ResourceDescriptor
@@ -65,6 +66,7 @@ class CppBackend private constructor(
         tentativeOutputPathFor = { outRoot },
         libraryConfigurations = libraryConfigurations,
         dependencyResolver = dependencyResolver,
+        withTentative = { injectSuperCallMethods(it) },
     )
 
     /**

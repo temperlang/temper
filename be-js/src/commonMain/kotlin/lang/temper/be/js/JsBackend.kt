@@ -11,6 +11,7 @@ import lang.temper.be.tmpl.TESTING_BASENAME
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
 import lang.temper.be.tmpl.findCommonTopLevels
+import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.be.tmpl.matchesStdTesting
 import lang.temper.common.MimeType
 import lang.temper.common.json.JsonObject
@@ -197,6 +198,7 @@ class JsBackend private constructor(
         tentativeOutputPathFor = { module ->
             allocateTextFile(module, extension, defaultName = INDEX_NAME)
         },
+        withTentative = { injectSuperCallMethods(it) },
     )
 
     override fun translate(finished: TmpL.ModuleSet): List<OutputFileSpecification> {

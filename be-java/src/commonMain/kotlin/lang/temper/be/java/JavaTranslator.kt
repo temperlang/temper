@@ -10,6 +10,7 @@ import lang.temper.be.tmpl.TmpLOperator
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.autodocFor
 import lang.temper.be.tmpl.dependencyCategory
+import lang.temper.be.tmpl.findImmediateSuperReaching
 import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapGeneric
@@ -30,7 +31,9 @@ import lang.temper.name.ModuleName
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
 import lang.temper.type.Abstractness
-import lang.temper.type.Visibility
+import lang.temper.type.MethodKind
+import lang.temper.type.MethodShape
+import lang.temper.type.WellKnownTypes
 import lang.temper.type.isVoidLike
 import lang.temper.type.mentionsInvalid
 import lang.temper.type.simplify
@@ -1839,8 +1842,8 @@ class JavaTranslator(
                     expr = expr(subject),
                     field = names.field(gp.property),
                 )
-                is TmpL.TypeName ->
-                    names.classTypeName(subject.sourceDefinition)
+                is TmpL.TypeSubject ->
+                    names.classTypeName(subject.typeName.sourceDefinition)
                         .qualify(names.staticField(gp.property))
                         .toNameExpr(gp.pos)
             }
@@ -1978,6 +1981,29 @@ class JavaTranslator(
             val subject = fn.subject
             val methodSignature = toSigBestEffort(fn.method?.descriptor)
             when (subject) {
+                is TmpL.SuperSubject -> {
+                    val namePos = fn.methodName.pos
+                    // We really need and expect this, but allow fallbacks anyway.
+                    val (superType, methodName) = (fn.method as? MethodShape)?.let { method ->
+                        val methodName = when (method.methodKind) {
+                            MethodKind.Getter -> {
+                                val returnType = method.descriptor?.returnType2 ?: WellKnownTypes.invalidType2
+                                names.getterName(fn.methodName, returnType)
+                            }
+                            MethodKind.Setter -> names.setterName(fn.methodName)
+                            else -> names.method(fn.methodName).toIdentifier(namePos)
+                        }
+                        subject.subType.findImmediateSuperReaching(method)?.definition?.let { superType ->
+                            superType to methodName
+                        }
+                    } ?: (subject.typeName.sourceDefinition to names.method(fn.methodName).toIdentifier(namePos))
+                    return J.SuperMethodInvocationExpr(
+                        pos,
+                        type = names.classTypeName(superType).toQualIdent(subject.pos),
+                        method = methodName,
+                        args = callActuals(actuals, methodSignature),
+                    )
+                }
                 is TmpL.TypeName -> return J.StaticMethodInvocationExpr(
                     pos,
                     type = names.classTypeName(subject.sourceDefinition).toQualIdent(subject.pos),

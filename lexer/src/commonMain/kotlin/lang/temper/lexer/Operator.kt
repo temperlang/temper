@@ -151,7 +151,7 @@ enum class Operator(
     // intersection and union types.
     ExtendsComma(6, "extends", Infix, followers = Commas, maxArity = Int.MAX_VALUE),
     ImplementsComma(
-        7,
+        6,
         "implements",
         Infix,
         followers = Commas,
@@ -258,11 +258,6 @@ enum class Operator(
     DollarCurly(24, $$"${", Prefix, closer = true, minArity = 0, maxArity = 1),
     UnicodeRun(24, "\\u{", Prefix, closer = true, minArity = 0, maxArity = Int.MAX_VALUE),
 
-    /**
-     * Tag is a prefix operator, so that use of brackets outside of infix position gets us
-     * something vaguely like JSX tag expressions.
-     */
-    Tag(24, "<", Prefix, closer = true, minArity = 1, maxArity = Int.MAX_VALUE),
     New(24, "new", Prefix, minArity = 0),
 
     /** Groups together parts of a quoted string including character data leaves and embedded expressions. */
@@ -311,6 +306,8 @@ enum class Operator(
             value(precedence.intValue)
         }
     }
+
+    val isBracket get() = closer && text in openBrackets
 
     companion object {
         private val lowestPrecedences: Map<String, Precedence>

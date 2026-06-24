@@ -21,7 +21,9 @@ class ListLogEntriesTest {
         val found = context.moduleData.logEntries.map { it.messageText }
         val expected = listOf(
             "Cannot assign to String from Fish!",
-            "No callee matches inputs [Invalid, Invalid] among [(Int32, Int32) -> Int32, (Int32) -> Int32, (Int64, Int64) -> Int64, (Int64) -> Int64, (Float64, Float64) -> Float64, (Float64) -> Float64]!",
+            // We don't get this anymore when the numeric types share Equatable as a supertype.
+            // TODO Will this be a non-issue after new overloading is finished?
+            // "No callee matches inputs [Invalid, Invalid] among [(Int32, Int32) -> Int32, (Int32) -> Int32, (Int64, Int64) -> Int64, (Int64) -> Int64, (Float64, Float64) -> Float64, (Float64) -> Float64]!",
             "No declaration for a!",
             "No declaration for card!",
             "No declaration for b!",

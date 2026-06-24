@@ -242,7 +242,7 @@ internal object CppSupportNetwork : SupportNetwork {
                 put("List::$fn", Like.core("List::$fn"))
             }
             for (fn in listOf(
-                "filter", "isEmpty", "join", "map", "mapDropping", "slice", "get", "getOr",
+                "filter", "isEmpty", "join", "map", "slice", "get", "getOr",
                 "length", "reduce", "sorted", "toList", "toListBuilder", "indexOf",
             )) {
                 put("Listed::$fn", Like.core("List::$fn"))

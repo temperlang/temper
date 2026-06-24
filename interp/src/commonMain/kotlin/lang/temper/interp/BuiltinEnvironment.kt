@@ -148,8 +148,6 @@ private object Builtins {
             keyPair(BuiltinFuns.vTestMacro),
             keyPair(BuiltinFuns.vYield),
 
-            keyPair(vExtendsFn),
-
             "@" to vApplyDecoratorsMacro,
             /**
              * <!-- snippet: builtin/@protected -->
@@ -229,7 +227,7 @@ private object Builtins {
              * <!-- snippet: builtin/@sealed : `sealed` type modifier -->
              * # `sealed` type modifier
              * Marks an interface type as sealed; only types declared in the same source file
-             * may [extend][snippet/builtin/extends] it.
+             * may [extend][snippet/typedef/extends] it.
              *
              * Sealed types are important because the Temper translator can assume there are
              * no direct subtypes that it does not know about.
@@ -317,6 +315,22 @@ private object Builtins {
              * [snippet/builtin/let] and [`const`][snippet/builtin/@const].
              */
             keyPair(MetadataDecorator(varSymbol, findDecoratorInsertions = ::noDupeInsertions) { void }),
+            /**
+             * <!-- snippet: builtin/@in -->
+             * # `@in` deprecated variance notation
+             * `@in` may decorate a type formal declaration to specify covariant (input) variance.
+             *
+             * It is going away.
+             */
+            keyPair(DoNothingDecorator("@in")),
+            /**
+             * <!-- snippet: builtin/@out -->
+             * # `@out` deprecated variance notation
+             * `@out` may decorate a type formal declaration to specify covariant (input) variance.
+             *
+             * It is going away.
+             */
+            keyPair(DoNothingDecorator("@out")),
             "@export" to Value(ExportDecorator),
             "@test" to vTestDecorator,
 
@@ -788,6 +802,8 @@ private object Builtins {
              */
             keyPair(jsonNameDecorator),
             keyPair(vFunDecorator),
+            keyPair(vImuDecorator),
+            keyPair(vPartialImuDecorator),
 
             "new" to Value(New),
             keyPair(Value(ImportMacro)),
