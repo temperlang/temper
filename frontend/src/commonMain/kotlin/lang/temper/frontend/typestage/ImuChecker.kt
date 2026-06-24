@@ -19,6 +19,7 @@ import lang.temper.type.WellKnownTypes
 import lang.temper.type2.MkType2
 import lang.temper.type2.SuperTypeTree2
 import lang.temper.type2.Type2
+import lang.temper.type2.TypeParamRef
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.value.DeclTree
 import lang.temper.value.Tree
@@ -111,13 +112,25 @@ class ImuChecker(
     }
 
     private fun checkPartialImu(typeShape: TypeShape, typeName: TemperName): Boolean {
+        // Find the shallowest super-types that are partial imu.
+        val partialImuSupers = typeShape.superTypes.map { superType ->
+            hackMapOldStyleToNew(superType)
+        }.filter { superType ->
+            getSuperTypeTree(superType).hasSymbol(partialImuSymbol)
+        }
+
         val presumedImu = buildSet {
-            typeShape.formals.mapTo(this) {
-                MkType2(it).get()
+            typeShape.formals.mapNotNullTo(this) { formal ->
+                when {
+                    // All partialImu supers need to reference this formal to be able to presume imu.
+                    // Otherwise, even for classes, we could upcast and hide mutability.
+                    partialImuSupers.all { it.references(formal) } -> MkType2(formal).get()
+                    else -> null
+                }
             }
         }
         var passes = true
-        if (presumedImu.isEmpty() && typeShape.abstractness == Abstractness.Concrete) {
+        if (typeShape.formals.isEmpty() && typeShape.abstractness == Abstractness.Concrete) {
             // Class with no type parameters has no reason to be PartialImu.
             passes = false
             logSink.log(
@@ -139,20 +152,15 @@ class ImuChecker(
         }
 
         when (typeShape.abstractness) {
+            // If we require the same for classes as for interfaces, we can't distinguish
+            // backed properties vs computed-only things.
             Abstractness.Concrete -> {}
             Abstractness.Abstract -> {
                 // For an interface type, look at its super-types that are partial imu and make sure that
                 // its parameterizations of them imply consistently
                 // They all need to have effectively imu types when type bindings are imu.
 
-                // Find the shallowest super-types that are partial imu.
-                val partialImuSupers = typeShape.superTypes.map { superType ->
-                    hackMapOldStyleToNew(superType)
-                }.filter { superType ->
-                    getSuperTypeTree(superType).hasSymbol(partialImuSymbol)
-                }
-
-                // For each of them, the type projection has to imply consistency when up-cast.
+                // For each of partialImu super, the type projection has to imply consistency when up-cast.
                 for (partialImuSuper in partialImuSupers) {
                     // Check consistency of down-casting.
                     //
@@ -428,3 +436,12 @@ private fun mentionedInType(type: Type2, typeDefs: Set<TypeDefinition>): TypeDef
 
 private val TypeDefinition.diagnosticTypeName: TemperName get() =
     (this.name as? ResolvedParsedName)?.baseName ?: this.name
+
+private fun Type2.references(formal: TypeFormal): Boolean {
+    return bindings.any { binding ->
+        when (binding) {
+            is TypeParamRef -> binding.definition == formal
+            else -> binding.references(formal)
+        }
+    }
+}
