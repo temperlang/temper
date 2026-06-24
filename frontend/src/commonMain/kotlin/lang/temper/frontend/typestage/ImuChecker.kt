@@ -45,7 +45,7 @@ enum class ImuMessage(
     ),
     ExpectedImuType("Expected imu type but got %s"),
     DeepPartialImuTypeDoesNotImplySuperTypeImu(
-        "PartialImu interface %s's type parameter <%s> would not be imu" +
+        "PartialImu type %s's type parameter <%s> would not be imu" +
             " when cast to its effectively Imu super-type %s because %s is not imu",
     ),
     DeepPartialImuTypeCanNeverBeImu(
@@ -119,16 +119,16 @@ class ImuChecker(
             getSuperTypeTree(superType).hasSymbol(partialImuSymbol)
         }
 
-        val presumedImu = buildSet {
-            typeShape.formals.mapNotNullTo(this) { formal ->
-                when {
-                    // All partialImu supers need to reference this formal to be able to presume imu.
-                    // Otherwise, even for classes, we could upcast and hide mutability.
-                    partialImuSupers.all { it.references(formal) } -> MkType2(formal).get()
-                    else -> null
-                }
+        // Split formals into those referenced by all partialImuSupers and those that aren't.
+        // For those that aren't, we could track all non-referencers, but one is good enough.
+        val (presumedImu, novelFormals) = typeShape.formals
+            .map { formal -> MkType2(formal).get() to partialImuSupers.find { !it.references(formal) } }
+            .partition { (_, partialImuSuperWithoutFormal) -> partialImuSuperWithoutFormal == null }
+            .let { (presumedImu, novelFormals) ->
+                buildSet { presumedImu.mapTo(this) { it.first } } to
+                    @Suppress("UNCHECKED_CAST")
+                    (novelFormals.toMap() as Map<TypeParamRef, Type2>)
             }
-        }
         var passes = true
         if (typeShape.formals.isEmpty() && typeShape.metadata.containsKey(partialImuSymbol)) {
             // Types with no type parameters have no reason to be directly tagged partialImu.
@@ -146,6 +146,7 @@ class ImuChecker(
                 typeName,
                 partialImuSymbol,
                 presumedImu = presumedImu,
+                novelFormals = novelFormals,
             )
         ) {
             passes = false
@@ -279,6 +280,8 @@ class ImuChecker(
         typeName: TemperName,
         claimed: Symbol,
         presumedImu: Set<Type2> = emptySet(),
+        /** Formals that could be presumed imu except they're absent in partialImu supertypes. */
+        novelFormals: Map<TypeParamRef, Type2> = emptyMap(),
     ): Boolean {
         var passes = true
         val contravariantTypeParameters = contravariantTypeParametersFor(typeShape)
@@ -293,6 +296,7 @@ class ImuChecker(
                             contravariantTypeParameters,
                             claimed,
                             presumedImu = presumedImu,
+                            novelFormals = novelFormals,
                         )
                     ) {
                         passes = false
@@ -309,6 +313,8 @@ class ImuChecker(
         contravariantTypeParameters: Set<TypeDefinition>,
         claimed: Symbol,
         presumedImu: Set<Type2> = emptySet(),
+        /** Formals that could be presumed imu except they're absent in partialImu supertypes. */
+        novelFormals: Map<TypeParamRef, Type2> = emptyMap(),
     ): Boolean {
         var passes = true
         val propertyName = ParsedName(property.symbol.text)
@@ -330,11 +336,23 @@ class ImuChecker(
                         ?: property.declarationPos
                     logSink.log(ImuMessage.ExpectedImuType, typePos, listOf(nonImuPart))
                 }
-                logSink.log(
-                    ImuMessage.ImuClassPropertyIsNotImu,
-                    property.declarationPos,
-                    listOf(typeName, claimed.text, propertyName, staticType),
-                )
+                when (val hiddenMutSuper = novelFormals[nonImuPart]) {
+                    null -> logSink.log(
+                        ImuMessage.ImuClassPropertyIsNotImu,
+                        property.declarationPos,
+                        listOf(typeName, claimed.text, propertyName, staticType),
+                    )
+                    else -> logSink.log(
+                        ImuMessage.DeepPartialImuTypeDoesNotImplySuperTypeImu,
+                        property.declarationPos,
+                        listOf(
+                            typeName,
+                            nonImuPart.definition.diagnosticTypeName,
+                            hiddenMutSuper,
+                            nonImuPart,
+                        ),
+                    )
+                }
             } else {
                 val contravariantParamUsed = mentionedInType(staticType, contravariantTypeParameters)
                 if (contravariantParamUsed != null) {

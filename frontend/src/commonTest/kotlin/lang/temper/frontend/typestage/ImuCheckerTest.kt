@@ -161,26 +161,26 @@ class ImuCheckerTest {
                 |
                 |BadPartialImuViaUpcast:
                 |interface BadPartialImuViaUpcast<T, U> extends PartialImuInterfaceOneArg<List<U>> {}
-                |-> PartialImu interface BadPartialImuViaUpcast's type parameter <T> would not be imu when cast to its effectively Imu super-type PartialImuInterfaceOneArg__20<List<U__46>> because T__45 is not imu!
+                |-> PartialImu type BadPartialImuViaUpcast's type parameter <T> would not be imu when cast to its effectively Imu super-type PartialImuInterfaceOneArg__20<List<U__46>> because T__45 is not imu!
                 |
                 |BadPartialImuViaUpcast2:
                 |interface BadPartialImuViaUpcast2<T, U> extends PartialImuInterfaceOneArg<U> {}
-                |-> PartialImu interface BadPartialImuViaUpcast2's type parameter <T> would not be imu when cast to its effectively Imu super-type PartialImuInterfaceOneArg__20<U__49> because T__48 is not imu!
+                |-> PartialImu type BadPartialImuViaUpcast2's type parameter <T> would not be imu when cast to its effectively Imu super-type PartialImuInterfaceOneArg__20<U__49> because T__48 is not imu!
                 |
                 |BadPartialImuViaUpcast3:
                 |interface BadPartialImuViaUpcast3<T> extends BadPartialImuInterfaceNoTypeArgs {}
-                |-> PartialImu interface BadPartialImuViaUpcast3's type parameter <T> would not be imu when cast to its effectively Imu super-type BadPartialImuInterfaceNoTypeArgs__16 because T__51 is not imu!
+                |-> PartialImu type BadPartialImuViaUpcast3's type parameter <T> would not be imu when cast to its effectively Imu super-type BadPartialImuInterfaceNoTypeArgs__16 because T__51 is not imu!
                 |
                 |BadPartialImuClassViaUpcast:
                 |class BadPartialImuClassViaUpcast<T, U>(
                 |  public prop: T,
                 |  public prop2: U,
                 |) extends PartialImuInterfaceOneArg<List<U>> {}
-                |-> Class BadPartialImuClassViaUpcast claims partialImu but property prop has type T__56 which is not imu!
+                |-> PartialImu type BadPartialImuClassViaUpcast's type parameter <T> would not be imu when cast to its effectively Imu super-type PartialImuInterfaceOneArg__20<List<U__57>> because T__56 is not imu!
                 |
                 |BadPartialImuClassViaUpcast2:
                 |class BadPartialImuClassViaUpcast2<T>(public prop: T) extends BadPartialImuInterfaceNoTypeArgs {}
-                |-> Class BadPartialImuClassViaUpcast2 claims partialImu but property prop has type T__59 which is not imu!
+                |-> PartialImu type BadPartialImuClassViaUpcast2's type parameter <T> would not be imu when cast to its effectively Imu super-type BadPartialImuInterfaceNoTypeArgs__16 because T__59 is not imu!
                 |
                 |BadImuClassUsingPartialImu:
                 |class BadImuClassUsingPartialImu<T> {
