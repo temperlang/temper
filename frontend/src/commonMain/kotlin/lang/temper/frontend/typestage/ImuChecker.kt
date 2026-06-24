@@ -130,8 +130,8 @@ class ImuChecker(
             }
         }
         var passes = true
-        if (typeShape.formals.isEmpty() && typeShape.abstractness == Abstractness.Concrete) {
-            // Class with no type parameters has no reason to be PartialImu.
+        if (typeShape.formals.isEmpty() && typeShape.metadata.containsKey(partialImuSymbol)) {
+            // Types with no type parameters have no reason to be directly tagged partialImu.
             passes = false
             logSink.log(
                 ImuMessage.PartialImuTypeHasNoTypeParameters,
