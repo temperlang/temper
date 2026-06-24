@@ -90,9 +90,10 @@ Here's just enough of a Date type to get us started.
      * A Date identifies a day in the proleptic Gregorian calendar.
      * It is unconnected to a time of day or a timezone.
      */
+    @imu
     @json
     @connected("Date")
-    export class Date extends Imu {
+    export class Date {
       /** The year.  1900 means 1900. */
       @connected("Date::getYear")
       public year: Int;

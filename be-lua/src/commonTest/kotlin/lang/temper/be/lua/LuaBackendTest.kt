@@ -327,6 +327,43 @@ class LuaBackendTest {
             |
         """.trimMargin(),
     )
+
+    @Test
+    fun multipleInheritance() = assertGenerated(
+        temper = """
+            |export interface A { a(): String { "A wins!" } }
+            |export interface B extends A {}
+            |export interface C { a(): String { "C wins!" } }
+            |export class D extends B & C {}
+        """.trimMargin(),
+        lua = """
+            |local temper = require('temper-core');
+            |local A, B, C, D, exports;
+            |A = temper.type('A');
+            |A.methods.a = function(this__0)
+            |  return 'A wins!';
+            |end;
+            |B = temper.type('B', A);
+            |C = temper.type('C');
+            |C.methods.a = function(this__1)
+            |  return 'C wins!';
+            |end;
+            |D = temper.type('D', B, C);
+            |D.constructor = function(this__2)
+            |  return nil;
+            |end;
+            |D.methods.a = function(inp_0)
+            |  return C.methods.a(inp_0);
+            |end;
+            |exports = {};
+            |exports.A = A;
+            |exports.B = B;
+            |exports.C = C;
+            |exports.D = D;
+            |return exports;
+            |
+        """.trimMargin(),
+    )
 }
 
 private fun assertGenerated(

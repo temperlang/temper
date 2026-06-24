@@ -305,7 +305,7 @@ do
         local methods = {}
         local super = {}
 
-        for i = 1, select('#', ...) do
+        for i = select('#', ...), 1, -1 do
             local t = select(i, ...)
             for k, v in pairs(t.get) do
                 get[k] = v
@@ -330,13 +330,6 @@ do
         }
 
         tab.super[typename] = true
-
-        for i = 1, #super do
-            local t = super[i]
-            for k, v in pairs(t) do
-                tab[k] = tab[k] or v
-            end
-        end
 
         setmetatable(tab, type_meta)
 
@@ -2108,19 +2101,6 @@ do
     function temper.regex_compiledsplit(self, pat, text)
         return pat:split(text)
     end
-end
-
-function temper.listed_mapdropping(list, f)
-    local ret = {}
-    local head = 1
-    for i = 1, #list do
-        local ok, val = pcall(f, list[i])
-        if ok then
-            ret[head] = val
-            head = head + 1
-        end
-    end
-    return ret
 end
 
 return temper

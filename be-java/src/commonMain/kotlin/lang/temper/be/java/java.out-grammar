@@ -1021,6 +1021,7 @@ ExpressionStatementExpr =
   | Operation
   | InstanceMethodInvocationExpr // 15.12
   | StaticMethodInvocationExpr // 15.12
+  | SuperMethodInvocationExpr // 15.12
   | InstanceCreationExpr // 15.9
   ;
 
@@ -1160,6 +1161,20 @@ StaticMethodInvocationExpr.operatorDefinition = `JavaOperatorDefinition.Atom` ;
 // Valid: Type.method()      type specified, type args raw.
 // Valid: method()           type not specified, type args raw.
 StaticMethodInvocationExpr requires `type != null || typeArgs == null`;
+
+/**
+ * Invokes a super method. `Type.super.<args>method(arg, arg, ...)` JLS 15.12
+ * Unqualified super unsupported.
+ */
+SuperMethodInvocationExpr ::=
+    type%QualIdentifier & "."
+  & "super" & "."
+  & ( typeArgs%TypeArguments || () )
+  & method%Identifier & "("
+  & args%Argument*", "
+  & ")" ;
+SuperMethodInvocationExpr.typeArgs.default = `null` ;
+SuperMethodInvocationExpr.operatorDefinition = `JavaOperatorDefinition.Atom` ;
 
 /**
  * A static field access expression looks up a field of an enum, class or interface type.

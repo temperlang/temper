@@ -8,12 +8,12 @@ import lang.temper.be.tmpl.DependencyGrouping
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
+import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.common.Console
 import lang.temper.common.MimeType
 import lang.temper.common.currents.SignalRFuture
 import lang.temper.common.ignore
 import lang.temper.common.isNotEmpty
-import lang.temper.frontend.Module
 import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
 import lang.temper.fs.loadResource
@@ -73,6 +73,7 @@ class LuaBackend private constructor(
         tentativeOutputPathFor = { outRoot },
         libraryConfigurations = libraryConfigurations,
         dependencyResolver = dependencyResolver,
+        withTentative = { injectSuperCallMethods(it) },
     )
 
     override fun translate(finished: TmpL.ModuleSet): List<OutputFileSpecification> {

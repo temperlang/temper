@@ -7,6 +7,7 @@ import lang.temper.be.tmpl.mapParameters
 import lang.temper.be.tmpl.referencedNames
 import lang.temper.common.MimeType
 import lang.temper.common.ignore
+import lang.temper.common.subListToEnd
 import lang.temper.format.toStringViaTokenSink
 import lang.temper.lexer.withTemperAwareExtension
 import lang.temper.log.FilePath
@@ -22,6 +23,8 @@ import lang.temper.name.ResolvedName
 import lang.temper.name.SourceName
 import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
+import lang.temper.type.MethodKind
+import lang.temper.type.MethodShape
 import lang.temper.type.PropertyShape
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
@@ -453,6 +456,15 @@ class CppTranslator(
 
     private fun accessorMethodName(dotName: String, prefix: String): String =
         if (dotName.contains('.')) dotName.replace('.', '_') else "${prefix}_$dotName"
+
+    private fun accessorSingleName(dotName: String, prefix: String): Cpp.SingleName =
+        cpp.singleName(CppName(fixName(accessorMethodName(dotName, prefix = prefix))))
+
+    private fun getterSingleName(dotName: String): Cpp.SingleName =
+        accessorSingleName(dotName = dotName, prefix = "get")
+
+    private fun setterSingleName(dotName: String): Cpp.SingleName =
+        accessorSingleName(dotName = dotName, prefix = "set")
 
     /**
      * The primitive value types that can be implicitly converted between one another (used by
@@ -932,6 +944,19 @@ class CppTranslator(
                         translateTypeName(subject),
                         cpp.singleName(CppName(fn.methodName.dotNameText)),
                     )
+                    is TmpL.SuperSubject -> cpp.op(
+                        "->",
+                        cpp.name(currentThisVarName!!),
+                        cpp.scopedName(
+                            translateTypeName(subject.typeName),
+                            when ((fn.method as? MethodShape)?.methodKind) {
+                                MethodKind.Normal -> cpp.singleName(CppName(fn.methodName.dotNameText))
+                                MethodKind.Getter -> getterSingleName(fn.methodName.dotNameText)
+                                MethodKind.Setter -> setterSingleName(fn.methodName.dotNameText)
+                                else -> TODO()
+                            },
+                        ),
+                    )
                 }
         }
     }
@@ -1119,14 +1144,16 @@ class CppTranslator(
                 val restType = sig.restInputsType
                 val numNonRest = numRequired +
                     optionalTypes.size
+                val isSuperCall = (fn as? TmpL.MethodReference)?.subject is TmpL.SuperSubject
                 val paramTypes = ctxSig.requiredInputTypes.drop(
-                    if (sig.hasThisFormal) 1 else 0,
+                    if (sig.hasThisFormal || isSuperCall) 1 else 0,
                 )
                 val translatedArgs = mutableListOf<Cpp.Expr>()
-                for (
-                (idx, actual) in
-                expr.parameters.withIndex()
-                ) {
+                val parameters = when {
+                    isSuperCall -> expr.parameters.subListToEnd(1) // called on (borrowed) `this`
+                    else -> expr.parameters
+                }
+                for ((idx, actual) in parameters.withIndex()) {
                     if (actual is TmpL.RestSpread) {
                         translatedArgs.add(
                             cpp.name(actual.parameterName),
@@ -1262,6 +1289,7 @@ class CppTranslator(
             is TmpL.Expression -> cpp.op("->", translateWithNarrowing(subject), propName)
             is TmpL.ConnectedToTypeName -> cpp.scopedName(translateTypeName(subject), propName)
             is TmpL.TemperTypeName -> cpp.scopedName(translateTypeName(subject), propName)
+            is TmpL.SuperSubject -> error("illegal super call for backed property")
         }
     }
 
@@ -1769,6 +1797,7 @@ class CppTranslator(
                     cpp.scopedName(translateTypeName(subj), setterName),
                     translateExpression(right),
                 )
+                is TmpL.SuperSubject -> error("super property handled elsewhere")
             }
             return listOf(cpp.exprStmt(call))
         }
@@ -1777,6 +1806,7 @@ class CppTranslator(
             is TmpL.Expression -> cpp.op("->", translateExpression(subj), propSingleName)
             is TmpL.ConnectedToTypeName -> cpp.scopedName(translateTypeName(subj), propSingleName)
             is TmpL.TemperTypeName -> cpp.scopedName(translateTypeName(subj), propSingleName)
+            is TmpL.SuperSubject -> error("illegal super call for backed property")
         }
         return listOf(
             cpp.exprStmt(cpp.op("=", lhs, translateExpression(right))),
@@ -2059,9 +2089,7 @@ class CppTranslator(
                         val getterDotName = member.dotName.dotNameText
                         val propDotName = getterDotName.removePrefix("get.")
                         propertyDotNames.getOrPut(propKey(member.name.name)) { propDotName }
-                        val getterCppName = cpp.singleName(
-                            CppName(fixName(accessorMethodName(getterDotName, "get"))),
-                        )
+                        val getterCppName = getterSingleName(getterDotName)
                         getterMethodNames[propDotName] = getterCppName
                     }
                 }
@@ -2144,9 +2172,7 @@ class CppTranslator(
             // Generate getter that returns backing field
             val getterDotName = member.dotName.dotNameText
             // Ensure getter method name differs from field name
-            val getterCppName = cpp.singleName(
-                CppName(fixName(accessorMethodName(getterDotName, "get"))),
-            )
+            val getterCppName = getterSingleName(getterDotName)
             val propDotName = getterDotName.removePrefix("get.")
             getterMethodNames[propDotName] = getterCppName
             propertyDotNames.getOrPut(propKey(member.name.name)) { propDotName }
@@ -2179,9 +2205,7 @@ class CppTranslator(
             // Abstract getter — use get_ prefix to avoid
             // field/method name collision in subtypes
             val getterDotName = member.dotName.dotNameText
-            val getterCppName = cpp.singleName(
-                CppName(fixName(accessorMethodName(getterDotName, "get"))),
-            )
+            val getterCppName = getterSingleName(getterDotName)
             val propDotName = getterDotName.removePrefix("get.")
             getterMethodNames[propDotName] = getterCppName
             propertyDotNames.getOrPut(propKey(member.name.name)) { propDotName }
@@ -2243,10 +2267,7 @@ class CppTranslator(
         if (member.propertyShape.abstractness == Abstractness.Concrete) {
             if (isInterface || realSuperTypes.any()) {
                 // Generate an override setter that does direct field assignment
-                val setterDotName = member.dotName.dotNameText
-                val setterCppName = cpp.singleName(
-                    CppName(fixName(accessorMethodName(setterDotName, "set"))),
-                )
+                val setterCppName = setterSingleName(member.dotName.dotNameText)
                 val propDotName =
                     member.dotName.dotNameText.removePrefix("set.")
                 setterMethodNames[propDotName] = setterCppName
@@ -2293,9 +2314,7 @@ class CppTranslator(
             // Abstract setter — use set_ prefix to avoid
             // field/method name collision in subtypes
             val setterDotName = member.dotName.dotNameText
-            val setterCppName = cpp.singleName(
-                CppName(fixName(accessorMethodName(setterDotName, "set"))),
-            )
+            val setterCppName = setterSingleName(setterDotName)
             val propDotName = setterDotName.removePrefix("set.")
             setterMethodNames[propDotName] = setterCppName
             val setterKey = setterCppName.id.text
@@ -2758,15 +2777,7 @@ class CppTranslator(
         headerTypeDefs: MutableList<Cpp.Global>,
     ) {
         val isInterface = topLevel.kind == TmpL.TypeDeclarationKind.Interface
-        // `Imu` and `PartialImu` are checker-only "fiction" marker interfaces
-        // (see ImuChecker); they carry no members and are erased during codegen,
-        // matching be-py and be-rust. Emitting them as C++ base classes would
-        // reference undefined `temper::core::Imu` types.
-        val realSuperTypes = topLevel.superTypes.filterNot { sup ->
-            val def = sup.typeName.sourceDefinition
-            def == WellKnownTypes.imuTypeDefinition ||
-                def == WellKnownTypes.partialImuTypeDefinition
-        }
+        val superTypes = topLevel.superTypes
         // Populate type formal names for template struct
         val structTypeFormals = topLevel.typeParameters.ot.typeParameters
         val isTemplate = structTypeFormals.isNotEmpty()
@@ -2810,17 +2821,17 @@ class CppTranslator(
                             translatePropertyMember(member)
                         is TmpL.Getter ->
                             translateGetterMember(
-                                member, topLevel, isInterface, realSuperTypes,
+                                member, topLevel, isInterface, superTypes,
                                 isTemplate, impl, templateMethodDefs,
                             )
                         is TmpL.Setter ->
                             translateSetterMember(
-                                member, topLevel, isInterface, realSuperTypes,
+                                member, topLevel, isInterface, superTypes,
                                 isTemplate, impl, templateMethodDefs, declaredSetters,
                             )
                         is TmpL.NormalMethod ->
                             translateNormalMethodMember(
-                                member, topLevel, isInterface, realSuperTypes,
+                                member, topLevel, isInterface, superTypes,
                                 isTemplate, impl, templateMethodDefs,
                             )
                         is TmpL.StaticMethod ->
@@ -2837,7 +2848,7 @@ class CppTranslator(
             }
         }
         emitStructDefinition(
-            topLevel, isInterface, realSuperTypes, structFields,
+            topLevel, isInterface, superTypes, structFields,
             templateMethodDefs, headerTypeDecl, headerTypeDefs,
         )
         // Clean up type formal names after type declaration

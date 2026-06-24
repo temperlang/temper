@@ -595,11 +595,11 @@ class GenerateCodeStageTest {
 
     @Ignore // TODO(mikesamuel): Fix typing of generic methods with explicit actuals
     @Test
-    fun mapDroppingTypes() = assertModuleAtStage(
+    fun mapTypeArg() = assertModuleAtStage(
         stage = Stage.GenerateCode,
         input = """
             |let ls: List<Int> = [1, 2];
-            |ls.mapDropping<String> { (x: Int): String => x.toString(10) }
+            |ls.map<String> { (x: Int): String => x.toString(10) }
         """.trimMargin(),
         want = """
             |{
@@ -1404,7 +1404,7 @@ class GenerateCodeStageTest {
             |        }
             |      },
             |      Empty: {
-            |        supers: ["AnyValue__0", "Equatable__0", "Imu__0"],
+            |        supers: ["AnyValue__0", "Equatable__0"],
             |        methods: [
             |          {
             |            name: "constructor__0",
@@ -1415,6 +1415,7 @@ class GenerateCodeStageTest {
             |        ],
             |        metadata: {
             |          connected: ["\"Empty\": String"],
+            |          imu: ["void: Void"],
             |        }
             |      },
             |    },

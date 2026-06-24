@@ -114,7 +114,6 @@ The set of *\@connected* methods from Temper's *ImplicitsModule* are:
 - `Listed::join`
 - `Listed::length`
 - `Listed::map`
-- `Listed::mapDropping`
 - `Listed::reduce`
 - `Listed::reduceFrom`
 - `Listed::slice`

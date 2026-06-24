@@ -17,22 +17,19 @@ import lang.temper.frontend.flipDeclaredNames
 import lang.temper.frontend.interpretiveDanceStage
 import lang.temper.frontend.syntax.maybeAttachEmbeddedComment
 import lang.temper.interp.convertToErrorNode
+import lang.temper.interp.vExtendsFn
 import lang.temper.lexer.Genre
-import lang.temper.lexer.Operator
 import lang.temper.log.Debug
 import lang.temper.log.FailLog
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.snapshot
 import lang.temper.log.spanningPosition
-import lang.temper.name.BuiltinName
 import lang.temper.name.ParsedName
-import lang.temper.name.ResolvedName
 import lang.temper.name.Symbol
 import lang.temper.stage.Stage
 import lang.temper.type.MkType
 import lang.temper.type.TypeFormal
-import lang.temper.type.Variance
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.MkType2
 import lang.temper.value.BlockTree
@@ -41,23 +38,23 @@ import lang.temper.value.DeclTree
 import lang.temper.value.Document
 import lang.temper.value.Fail
 import lang.temper.value.FunTree
-import lang.temper.value.InnerTree
 import lang.temper.value.MacroEnvironment
 import lang.temper.value.NameLeaf
-import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
+import lang.temper.value.Planting
 import lang.temper.value.ReifiedType
 import lang.temper.value.RightNameLeaf
+import lang.temper.value.StayLeaf
 import lang.temper.value.TEdge
 import lang.temper.value.TSymbol
 import lang.temper.value.Tree
+import lang.temper.value.TreeTemplate
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 import lang.temper.value.errorFn
 import lang.temper.value.freeTarget
 import lang.temper.value.freeTree
-import lang.temper.value.functionContained
 import lang.temper.value.impliedThisSymbol
 import lang.temper.value.initSymbol
 import lang.temper.value.lookThroughDecorations
@@ -73,6 +70,7 @@ import lang.temper.value.vDefaultSymbol
 import lang.temper.value.vInitSymbol
 import lang.temper.value.vResolutionSymbol
 import lang.temper.value.vRestFormalSymbol
+import lang.temper.value.vStaySymbol
 import lang.temper.value.vTypeArgSymbol
 import lang.temper.value.vTypeFormalSymbol
 import lang.temper.value.vWithinDocFoldSymbol
@@ -128,7 +126,7 @@ private fun actualizeRemainingCallArgs(tree: Tree, logSink: LogSink) {
                     val child = t.child(i)
                     i +=
                         if (isComplexArg(child)) {
-                            val replacements = actualizeGroupedFormal(child as BlockTree, logSink)
+                            val replacements = actualizeGroupedFormal(child, logSink)
                             t.replace(i..i) {
                                 replacements.forEach { Replant(it) }
                             }
@@ -158,7 +156,7 @@ private fun actualizeRemainingCallArgs(tree: Tree, logSink: LogSink) {
                     val angleCallPos = t.children.subList(0, endOfTypeArgs)
                         .spanningPosition(callee.pos)
                     t.replace(startOfTypeArgs until endOfTypeArgs) {
-                        // Replace with nothing
+                        // Replace them with nothing
                     }
                     t.replace(0..0) {
                         Call(angleCallPos) {
@@ -204,7 +202,7 @@ private fun actualizeGroupedFormal(
     logSink: LogSink,
 ): List<Tree> {
     run {
-        // In `/** commentary */ x = 1`, a doc comments got
+        // In `/** commentary */ x = 1`, a doc comment got
         // stored in a complex arg.
         // If we're using the complex arg as an actual, there'll
         // never be anything to attach the comment to, so just
@@ -332,7 +330,7 @@ internal fun formalizeArgs(
     val isFunctionConstructor = isDeclaration || (n != 0 && rawTreeList[n - 1] is FunTree)
 
     // collect changes to make based on edges before doing things that might
-    // upset indexing into args then execute them after we don't care about indices.
+    // upset indexing into args, then execute them after we don't care about indices.
     val pending = mutableListOf<() -> Unit>()
 
     var i = 0
@@ -467,7 +465,6 @@ private fun splitComplexArgIntoWordAndType(e: TEdge) {
             splitComplexArgIntoWordAndType(decorated)
         }
     } else if (isComplexArg(tree)) {
-        require(tree is InnerTree)
         val nameOrType = tree.childOrNull(1) ?: return
         var type: Tree? = null
 
@@ -513,12 +510,12 @@ private fun splitComplexArgIntoWordAndType(e: TEdge) {
 }
 
 /**
- * Converts type formals like
+ * Converts type formals like the below that are marked with [vTypeArgSymbol] to a declaration.
  *
  * - `<T>`
  * - `<T extends A & B>`
  *
- * that are marked with [vTypeArgSymbol] to a declaration like
+ *  The declaration looks like:
  *
  *     {
  *       // Define T as a name.
@@ -535,40 +532,11 @@ private fun splitComplexArgIntoWordAndType(e: TEdge) {
  * @return true if we manage to do the rewrite.
  */
 private fun formalizeTypeArg(e: TEdge): Boolean {
-    val target = e.target
-    var nameEdge = e
-    var variance = Variance.Invariant
-    var hasUpperBound = false
-    // Walk through `extends`, etc. to find the declared name.
-    // TODO: Can this be shared with similar code in TypeDisAmbiguateMacro?
-    while (true) {
-        val nameTree = nameEdge.target
-        if (nameTree is CallTree && nameTree.size != 0) {
-            val builtinNameText = when (val callee = nameTree.child(0)) {
-                is RightNameLeaf -> when (val calleeName = callee.content) {
-                    is BuiltinName -> calleeName.builtinKey
-                    is ParsedName -> calleeName.nameText
-                    is ResolvedName -> null
-                }
-                else -> (callee.functionContained as? NamedBuiltinFun)?.name
-            }
-            val nameIndex = typeFormalOperatorToNameIndex[builtinNameText]
-            when (builtinNameText) {
-                covariantAnnotationNameText -> variance = Variance.Covariant
-                contravariantAnnotationNameText -> variance = Variance.Contravariant
-                Operator.ExtendsComma.text,
-                Operator.ImplementsComma.text,
-                -> hasUpperBound = true
-            }
-            if (nameIndex != null) {
-                nameEdge = nameTree.edge(nameIndex)
-                continue
-            }
-        }
-        break // We continue above if there's more work to do
-    }
+    val typeFormalPieces = inspectTypeFormal(e)
+    val nameTree = typeFormalPieces.formalName
+    val upperBounds = typeFormalPieces.upperBounds
+    val variance = typeFormalPieces.variance
 
-    val nameTree = nameEdge.target
     val document = nameTree.document
     val genre = document.context.genre
 
@@ -578,45 +546,63 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
     val pos = e.target.pos
     val leftPos = pos.leftEdge
     val declarationName = document.nameMaker.unusedSourceName(name)
+    val stayLeaf = typeFormalPieces.decorated?.let { StayLeaf(e.target.document, pos) }
     val typeFormal = TypeFormal(
         pos,
         declarationName,
         nameSymbol,
         variance,
         document.context.definitionMutationCounter,
-        if (hasUpperBound) {
+        if (upperBounds.isNotEmpty()) {
             // upperBounds to be filled in by `extends` macro
             emptyList()
         } else {
             listOf(MkType.nominal(WellKnownTypes.anyValueTypeDefinition))
         },
+        stayLeaf = stayLeaf,
     )
     val typeValue = Value(ReifiedType(MkType2(typeFormal).get()))
+
+    fun Planting.declareTypeFormal(): TreeTemplate<DeclTree> {
+        return Decl(pos, name) {
+            // When the syntax stage resolves names, use declarationName.
+            V(leftPos, vResolutionSymbol)
+            Ln(declarationName)
+            V(leftPos, vTypeFormalSymbol)
+            V(leftPos, nameSymbol)
+            V(leftPos, typeDeclSymbol)
+            V(leftPos, typeValue)
+            if (stayLeaf != null) {
+                V(vStaySymbol)
+                Replant(stayLeaf)
+            }
+            V(leftPos, vInitSymbol)
+            V(pos, typeValue)
+            if (genre == Genre.Documentation) {
+                V(leftPos, vWithinDocFoldSymbol)
+                V(leftPos, void)
+            }
+        }
+    }
+
+    // With decorations, we need to put the decl inside them.
+    typeFormalPieces.decorated?.replace { declareTypeFormal() }
     e.replace {
         Block {
-            Decl(pos, name) {
-                // When the syntax stage resolves names, use declarationName.
-                V(leftPos, vResolutionSymbol)
-                Ln(declarationName)
-                V(leftPos, vTypeFormalSymbol)
-                V(leftPos, nameSymbol)
-                V(leftPos, typeDeclSymbol)
-                V(leftPos, typeValue)
-                V(leftPos, vInitSymbol)
-                V(pos, typeValue)
-                if (genre == Genre.Documentation) {
-                    V(leftPos, vWithinDocFoldSymbol)
-                    V(leftPos, void)
-                }
+            when (typeFormalPieces.decorated) {
+                null -> declareTypeFormal()
+                else -> Replant(freeTarget(e))
             }
-            // Replant so that any `extends` clauses fire to actually connect super-types.
-            if (target !is RightNameLeaf) {
-                Replant(freeTree(target))
+            for (upperBound in typeFormalPieces.upperBounds) {
+                Call(upperBound.pos, vExtendsFn) {
+                    V(upperBound.pos.leftEdge, typeValue)
+                    Replant(freeTree(upperBound))
+                }
             }
             V(typeValue)
         }
     }
-    return true
+    return typeFormalPieces.problems.isEmpty()
 }
 
 private fun augmentDeclWithSymbol(
@@ -642,17 +628,6 @@ private fun augmentDeclWithSymbol(
         declChildren.add(ValueLeaf(doc, pos, Value(symbol, TSymbol)))
     }
 }
-
-private val contravariantAnnotationNameText = "@${Variance.Contravariant.keyword}"
-private val covariantAnnotationNameText = "@${Variance.Covariant.keyword}"
-private val typeFormalOperatorToNameIndex = mapOf(
-    Operator.ExtendsComma.text!! to 1,
-    Operator.ImplementsComma.text!! to 1,
-    Operator.Instanceof.text!! to 1,
-    contravariantAnnotationNameText to 1,
-    covariantAnnotationNameText to 1,
-    Operator.Eq.text!! to 1,
-)
 
 /**
  * Make sure formals have \word metadata.

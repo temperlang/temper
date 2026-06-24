@@ -1,4 +1,4 @@
-<svg class="railroad-diagram" width="267.5" height="101" viewBox="0 0 267.5 101" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>BlockLambdaBody &#58;&#61; TopLevelsInSemi &#124; TopLevel&#63;</title>
+<svg class="railroad-diagram" width="267.5" height="101" viewBox="0 0 267.5 101" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>BlockLambdaBody &#58;&#61; TopLevelsInSemi &#124; TopLevel &#124; &#40;&#41;</title>
 <style><![CDATA[
 svg.railroad-diagram {
     background-color: hsl(30,20%,95%);
@@ -52,12 +52,12 @@ svg.railroad-diagram g.diagram-text:hover path.diagram-text {
 
 <g transform="translate(.5 .5)">
 <g>
-<path d="M20 60v20m10 -20v20m-10 -10h20"></path>
+<path d="M20 51v20m10 -20v20m-10 -10h20"></path>
 </g>
 <g>
-<path d="M40 70h0"></path>
-<path d="M227.5 70h0"></path>
-<path d="M40 70a10 10 0 0 0 10 -10v-19a10 10 0 0 1 10 -10"></path>
+<path d="M40 61h0"></path>
+<path d="M227.5 61h0"></path>
+<path d="M40 61a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
 <g class="non-terminal">
 <path d="M60 31h0"></path>
 <path d="M207.5 31h0"></path>
@@ -65,28 +65,22 @@ svg.railroad-diagram g.diagram-text:hover path.diagram-text {
 <a xlink:href="/reference/syntax/#syntax-for-toplevelsinsemi"><text x="133.75" y="35">TopLevelsInSemi</text>
 </a>
 </g>
-<path d="M207.5 31a10 10 0 0 1 10 10v19a10 10 0 0 0 10 10"></path>
-<path d="M40 70h20"></path>
-<g>
-<path d="M60 70h9.75"></path>
-<path d="M197.75 70h9.75"></path>
-<path d="M69.75 70a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
-<g>
-<path d="M89.75 50h88"></path>
-</g>
-<path d="M177.75 50a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
-<path d="M69.75 70h20"></path>
+<path d="M207.5 31a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
+<path d="M40 61h20"></path>
 <g class="non-terminal">
-<path d="M89.75 70h0"></path>
-<path d="M177.75 70h0"></path>
-<rect x="89.75" y="59" width="88" height="22"></rect>
-<a xlink:href="/reference/syntax/#syntax-for-toplevel"><text x="133.75" y="74">TopLevel</text>
+<path d="M60 61h29.75"></path>
+<path d="M177.75 61h29.75"></path>
+<rect x="89.75" y="50" width="88" height="22"></rect>
+<a xlink:href="/reference/syntax/#syntax-for-toplevel"><text x="133.75" y="65">TopLevel</text>
 </a>
 </g>
-<path d="M177.75 70h20"></path>
+<path d="M207.5 61h20"></path>
+<path d="M40 61a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M60 81h147.5"></path>
 </g>
-<path d="M207.5 70h20"></path>
+<path d="M207.5 81a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
 </g>
-<path d="M 227.5 70 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+<path d="M 227.5 61 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
 </g>
 </svg>

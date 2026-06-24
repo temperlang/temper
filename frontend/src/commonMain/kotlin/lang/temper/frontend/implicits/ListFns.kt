@@ -85,23 +85,6 @@ internal object ListFns {
         }
     }
 
-    object MapDropping : SigFnBuilder("List::mapDropping") {
-        override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
-            val ls = TList.unpackContent(args[0])
-            val f = TFunction.unpackOrFail(args, 1, cb, interpMode) { return@invoke it }
-            if (f !is CallableValue) {
-                return Fail
-            }
-            val elements = ls.mapNotNull {
-                when (val result = f.invoke(ActualValues.from(it), cb, interpMode)) {
-                    is Fail, NotYet -> null
-                    is Value<*> -> result
-                }
-            }
-            return Value(elements, TList)
-        }
-    }
-
     object Filter : SigFnBuilder("List::filter") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val ls = TList.unpackContent(args[0])

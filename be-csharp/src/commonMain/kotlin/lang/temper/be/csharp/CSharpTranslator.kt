@@ -39,6 +39,8 @@ import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
+import lang.temper.type.MethodKind
+import lang.temper.type.MethodShape
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
@@ -383,10 +385,14 @@ internal class CSharpTranslator(
 
     private fun makeSafeName(wantedName: String) = "${wantedName}_" // TODO Explore better safety options.
 
-    private fun makeSafeNameMaybe(typeName: String, memberName: String): String {
-        return when (memberName) {
-            typeName -> makeSafeName(memberName)
+    private fun makeSafeNameMaybe(typeName: String, memberName: String, isSuper: Boolean): String {
+        val adjustedName = when {
+            isSuper -> "${memberName}Default"
             else -> memberName
+        }
+        return when (adjustedName) {
+            typeName -> makeSafeName(adjustedName)
+            else -> adjustedName
         }
     }
 
@@ -1075,9 +1081,10 @@ internal class CSharpTranslator(
         )
     }
 
-    private fun translateDotName(name: TmpL.DotName, typeName: String): CSharp.Identifier {
+    private fun translateDotName(name: TmpL.DotName, typeName: String, isSuper: Boolean = false): CSharp.Identifier {
         // C# doesn't allow non-constructor member names to match enclosing class names, so uniquify as needed.
-        val safeName = makeSafeNameMaybe(typeName = typeName, memberName = name.dotNameText.camelToPascal())
+        val memberName = name.dotNameText.camelToPascal()
+        val safeName = makeSafeNameMaybe(typeName = typeName, memberName = memberName, isSuper = isSuper)
         return CSharp.Identifier(name.pos, OutName(safeName, null))
     }
 
@@ -1439,9 +1446,16 @@ internal class CSharpTranslator(
         val typeName = (typeDefinition ?: return expr).name.toStyle(NameStyle.PrettyPascal)
         val method = ref.method
             ?: return makeGarbageExpression(ref.pos, "Missing method in $typeName")
+        val memberName = when ((ref.method as? MethodShape)?.methodKind) {
+            // Getters and setters can happen here for now for super calls.
+            MethodKind.Getter -> "Get${method.symbol.text.camelToPascal()}"
+            MethodKind.Setter -> "Set${method.symbol.text.camelToPascal()}"
+            else -> method.name.toStyle(NameStyle.PrettyPascal)
+        }
         val methodName = makeSafeNameMaybe(
             typeName = typeName,
-            memberName = method.name.toStyle(NameStyle.PrettyPascal),
+            memberName = memberName,
+            isSuper = ref.subject is TmpL.SuperSubject,
         )
         return CSharp.MemberAccess(
             ref.pos,
@@ -1727,9 +1741,13 @@ internal class CSharpTranslator(
         }
     }
 
-    private fun translatePropertyId(property: TmpL.PropertyId, typeName: String): CSharp.Identifier {
+    private fun translatePropertyId(
+        property: TmpL.PropertyId,
+        typeName: String,
+        isSuper: Boolean = false,
+    ): CSharp.Identifier {
         return when (property) {
-            is TmpL.ExternalPropertyId -> translateDotName(property.name, typeName = typeName)
+            is TmpL.ExternalPropertyId -> translateDotName(property.name, typeName = typeName, isSuper = isSuper)
             is TmpL.InternalPropertyId -> translateId(property.name)
         }
     }
@@ -1755,7 +1773,7 @@ internal class CSharpTranslator(
         return type to CSharp.MemberAccess(
             get.pos,
             expr = expr,
-            id = translatePropertyId(get.property, typeName = typeName),
+            id = translatePropertyId(get.property, typeName = typeName, isSuper = get.subject is TmpL.SuperSubject),
         )
     }
 
@@ -1916,9 +1934,8 @@ internal class CSharpTranslator(
                 val type = subject.type
                 type.definition to translateExpression(subject) as CSharp.PrimaryExpression
             }
-
-            is TmpL.TypeName -> {
-                val (d, t) = translateTypeName(subject)
+            is TmpL.TypeSubject -> {
+                val (d, t) = translateTypeName(subject.typeName)
                 d to (t as CSharp.PrimaryExpression)
             }
         }
