@@ -946,7 +946,7 @@ class CppTranslator(
                     )
                     is TmpL.SuperSubject -> cpp.op(
                         "->",
-                        cpp.name(currentThisVarName!!),
+                        cpp.singleName(currentThisVarName!!),
                         cpp.scopedName(
                             translateTypeName(subject.typeName),
                             when ((fn.method as? MethodShape)?.methodKind) {
