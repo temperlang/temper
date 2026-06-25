@@ -1242,6 +1242,13 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait!(C, []);
+                |mod builders {
+                |    #[derive(Clone, Default)]
+                |    pub struct CBuilder {
+                |        pub x: Option<std::sync::Arc<String>>, pub y: Option<std::sync::Arc<String>>
+                |    }
+                |    use super::*;
+                |}
             """.trimMargin(),
         )
     }

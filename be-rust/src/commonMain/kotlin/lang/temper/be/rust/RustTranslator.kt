@@ -96,9 +96,10 @@ class RustTranslator(
         DescriptorsForDeclarations.Key(RustBackend.Factory),
     )?.nameToDescriptor ?: mapOf()
     private var closureCount = 0
+    private val builderItems = mutableListOf<Rust.Item>()
     private val decls = mutableMapOf<ResolvedName, DeclInfo>()
-    private var insideMutableType = false
     private val failVars = mutableSetOf<ResolvedName>()
+    private var insideMutableType = false
     private val functionContextStack = mutableListOf<FunctionContext>()
     private val logSink = LogSink.devNull // TODO what?
     private val loopLabels = mutableListOf<Rust.Id?>()
@@ -179,6 +180,15 @@ class RustTranslator(
                     // Init and declare our own things.
                     add(init)
                     addAll(moduleItems)
+                    // Builders.
+                    if (builderItems.isNotEmpty()) {
+                        builderItems.add(Rust.Use(pos, "super::*".toId(pos)).toItem())
+                        Rust.Module(
+                            pos,
+                            id = "builders".toId(pos), // TODO Uniqueness?
+                            block = Rust.Block(pos, statements = builderItems),
+                        ).toItem().also { add(it) }
+                    }
                     // Tests.
                     if (testItems.isNotEmpty()) {
                         testItems.add(Rust.Use(pos, "super::*".toId(pos)).toItem())
@@ -358,6 +368,37 @@ class RustTranslator(
         }.let { (requireds, optionals) ->
             requireds.map { it.second } to optionals.map { it.second }
         }
+        fun paramsToStructAddedChain(): List<Rust.GenericParam> {
+            val id = builderId.deepCopy() // TODO Stop the deepCopy later.
+            val params = rustParams
+            val attrs = listOf(buildDerive(pos, listOf("Clone", "Default")))
+            val usedTypes = params.findAllSimpleTypeNames()
+            val filteredGenerics = generics.filter { genericReused ->
+                val generic = genericReused.deepCopy() // TODO Stop the deepCopy later.
+                val genericId = when (generic) {
+                    is Rust.Id -> generic
+                    is Rust.TypeParam -> generic.id
+                    else -> error(generic)
+                }.outName.outputNameText
+                genericId in usedTypes
+            }.deepCopy()
+            Rust.Struct(
+                pos = pos,
+                id = id,
+                generics = filteredGenerics,
+                fields = paramPairs.map { (tmpl, paramReused) ->
+                    val param = paramReused.deepCopy() // TODO Stop the deepCopy later.
+                    param as Rust.FunctionParam
+                    val type = when {
+                        tmpl.optional -> param.type
+                        else -> param.type?.deepCopy()?.option()
+                    }
+                    Rust.StructField(param.pos, pub = pub, id = param.pattern as Rust.Id, type = type)
+                },
+            ).also { builderItems.add(it.toItem(attrs = attrs, pub = pub)) }
+            return filteredGenerics
+        }
+        paramsToStructAddedChain()
         fun paramsToStructAdded(
             id: Rust.Id,
             params: List<Rust.FunctionParamOption>,
