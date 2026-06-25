@@ -1247,6 +1247,16 @@ class RustBackendTest {
                 |    pub struct CBuilder {
                 |        pub x: Option<std::sync::Arc<String>>, pub y: Option<std::sync::Arc<String>>
                 |    }
+                |    impl CBuilder {
+                |        fn x(mut x: std::sync::Arc<String>) -> Self {
+                |            self.x = Some(x);
+                |            self
+                |        }
+                |        fn y(mut y: std::sync::Arc<String>) -> Self {
+                |            self.y = Some(y);
+                |            self
+                |        }
+                |    }
                 |    use super::*;
                 |}
             """.trimMargin(),
@@ -1834,6 +1844,23 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait!(Ha<T>, []);
+                |mod builders {
+                |    #[derive(Clone, Default)]
+                |    pub struct HaBuilder {
+                |        pub i: Option<i32>, pub j: Option<i32>
+                |    }
+                |    impl HaBuilder {
+                |        fn i(mut i: i32) -> Self {
+                |            self.i = Some(i);
+                |            self
+                |        }
+                |        fn j(mut j: i32) -> Self {
+                |            self.j = Some(j);
+                |            self
+                |        }
+                |    }
+                |    use super::*;
+                |}
             """.trimMargin(),
         )
     }
@@ -1904,6 +1931,27 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait!(Hi<T, U>, [] where U: std::cmp::Eq + std::hash::Hash);
+                |mod builders {
+                |    #[derive(Clone, Default)]
+                |    pub struct HiBuilder<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |        pub t: Option<Option<T>>, pub u: Option<U>, pub i: Option<i32>
+                |    }
+                |    impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> HiBuilder<T, U> {
+                |        fn t(mut t: Option<T>) -> Self {
+                |            self.t = Some(t);
+                |            self
+                |        }
+                |        fn u(mut u: U) -> Self {
+                |            self.u = Some(u);
+                |            self
+                |        }
+                |        fn i(mut i: i32) -> Self {
+                |            self.i = Some(i);
+                |            self
+                |        }
+                |    }
+                |    use super::*;
+                |}
             """.trimMargin(),
         )
     }
@@ -2188,6 +2236,23 @@ class RustBackendTest {
             |    }
             |}
             |temper_core::impl_any_value_trait!(Vec2, []);
+            |mod builders {
+            |    #[derive(Clone, Default)]
+            |    pub struct Vec2Builder {
+            |        pub x: Option<f64>, pub y: Option<f64>
+            |    }
+            |    impl Vec2Builder {
+            |        fn x(mut x: f64) -> Self {
+            |            self.x = Some(x);
+            |            self
+            |        }
+            |        fn y(mut y: f64) -> Self {
+            |            self.y = Some(y);
+            |            self
+            |        }
+            |    }
+            |    use super::*;
+            |}
         """.trimMargin(),
     )
 

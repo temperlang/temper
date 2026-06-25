@@ -368,6 +368,7 @@ class RustTranslator(
         }.let { (requireds, optionals) ->
             requireds.map { it.second } to optionals.map { it.second }
         }
+        val self = "self".toKeyId(pos)
         fun paramsToStructAddedChain(): List<Rust.GenericParam> {
             val id = builderId.deepCopy() // TODO Stop the deepCopy later.
             val params = rustParams
@@ -391,11 +392,72 @@ class RustTranslator(
                     param as Rust.FunctionParam
                     val type = when {
                         tmpl.optional -> param.type
+                        // Add optional for storage.
                         else -> param.type?.deepCopy()?.option()
                     }
                     Rust.StructField(param.pos, pub = pub, id = param.pattern as Rust.Id, type = type)
                 },
             ).also { builderItems.add(it.toItem(attrs = attrs, pub = pub)) }
+            Rust.Impl(
+                pos = pos,
+                generics = filteredGenerics.deepCopy(),
+                trait = null,
+                type = builderId.makeTypeRef(filteredGenerics),
+                items = buildList methods@{
+                    for ((tmpl, param) in paramPairs) {
+                        param as Rust.FunctionParam
+                        val type = when {
+                            // Undo optional for setter method params.
+                            tmpl.optional -> (param.type as? Rust.GenericType)?.args?.first() as Rust.Type?
+                            else -> param.type
+                        }?.deepCopy()
+                        val paramId = param.pattern as Rust.Id
+                        Rust.Function(
+                            pos = param.pos,
+                            id = paramId.deepCopy(),
+                            params = listOf(
+                                Rust.FunctionParam(
+                                    pos = param.pos,
+                                    pattern = Rust.IdPattern(pos, Rust.IdPatternMut(pos), paramId.deepCopy()),
+                                    type = type,
+                                ),
+                            ),
+                            returnType = "Self".toKeyId(param.pos),
+                            block = Rust.Block(
+                                pos,
+                                statements = Rust.ExprStatement(
+                                    param.pos,
+                                    Rust.Operation(
+                                        param.pos,
+                                        self.deepCopy().member(paramId.deepCopy(), notMethod = true),
+                                        Rust.Operator(pos, RustOperator.Assign),
+                                        paramId.deepCopy().wrapSome(),
+                                    ),
+                                ).let { listOf(it) },
+                                result = self.deepCopy(),
+                            ),
+                        ).also { this@methods.add(it.toItem()) }
+                    }
+//                    Rust.Function(
+//                        pos,
+//                        id = "build".toId(pos),
+//                        params = listOf(self),
+//                        returnType = rustReturnType,
+//                        block = Rust.Block(
+//                            pos,
+//                            result = when {
+//                                // Just call the constructor if we only have requireds.
+//                                optionals.isEmpty() -> callNew(requireds)
+//                                // Delegate to the with-optionals builder.
+//                                else -> self.deepCopy().methodCall(
+//                                    key = "build_with",
+//                                    args = listOf(makePath(pos, "std", "default", "Default", "default").call()),
+//                                )
+//                            },
+//                        ),
+//                    ).also { add(it.toItem(pub = pub)) }
+                }
+            ).also { builderItems.add(it.toItem()) }
             return filteredGenerics
         }
         paramsToStructAddedChain()
@@ -426,7 +488,6 @@ class RustTranslator(
             ).also { moduleItems.add(it.toItem(attrs = attrs, pub = pub)) }
             return filteredGenerics
         }
-        val self = "self".toKeyId(pos)
         fun callNew(params: List<Rust.FunctionParamOption>) = Rust.Call(
             pos,
             callee = targetId.deepCopy().extendWith("new"),
