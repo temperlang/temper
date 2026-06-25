@@ -3,7 +3,9 @@ package lang.temper.be.cpp
 import lang.temper.be.FunctionalTestRunner
 import lang.temper.be.assertRunOutput
 import lang.temper.be.assertTestingTest
+import lang.temper.be.cli.Aux
 import lang.temper.be.cli.CliEnv
+import lang.temper.be.cli.EffortSuccess
 import lang.temper.be.cli.ShellPreferences
 import lang.temper.be.cli.ToolchainRequest
 import lang.temper.be.cli.cliEnvImplemented
@@ -15,12 +17,14 @@ import lang.temper.fs.OutputRoot
 import lang.temper.log.FilePath
 import lang.temper.name.ModuleName
 import lang.temper.tests.FunctionalTestBase
+import lang.temper.tests.FunctionalTests
 import kotlin.test.Test
 
-class CppFunctionalTest : FunctionalTestRunner<CppBackend>(CppBackend.Cpp11) {
+class CppFunctionalTest : FunctionalTestRunner<CppBackend>(CppBackend.Cpp) {
+
     @Test
     override fun algosHelloWorld() {
-        super.algosHelloWorld()
+        runFunctionalTest(FunctionalTests.AlgosHelloWorld)
     }
 
     override fun runGeneratedCode(
@@ -38,10 +42,10 @@ class CppFunctionalTest : FunctionalTestRunner<CppBackend>(CppBackend.Cpp11) {
 
         val shellPreferences = ShellPreferences.functionalTests(console)
 
-        CliEnv.using(Cpp11Specifics, shellPreferences, backend.cancelGroup) {
+        CliEnv.using(CppSpecifics, shellPreferences, backend.cancelGroup) {
             copyOutputDir(outputRoot, FilePath.emptyPath)
             copyCppTemperCore(factory)
-            val specifics = specifics as Cpp11Specifics
+            val specifics = specifics as CppSpecifics
             val result = specifics.runBestEffort(
                 cliEnv = this,
                 request = request,
@@ -51,7 +55,7 @@ class CppFunctionalTest : FunctionalTestRunner<CppBackend>(CppBackend.Cpp11) {
             var pass = false
             try {
                 if (test.runAsTest) {
-                    assertTestingTest(test, result, Regex("""Test_\.test_(.*?)(?:__\d+)?"""))
+                    assertTestingTest(test, result)
                 } else {
                     test.assertRunOutput(result)
                 }
@@ -59,6 +63,15 @@ class CppFunctionalTest : FunctionalTestRunner<CppBackend>(CppBackend.Cpp11) {
             } finally {
                 if (!pass) {
                     dumpModuleBodies(modules)
+                    // Surface the C++ compiler's stderr, which is otherwise hidden and is usually
+                    // what's needed to diagnose a generated-code compilation failure.
+                    val effort = result.failure?.effort
+                    if (effort is EffortSuccess) {
+                        val stderr = effort.auxOut[Aux.Stderr]
+                        if (stderr != null) {
+                            System.err.println("C++ compiler stderr:\n$stderr")
+                        }
+                    }
                     result.print(console, asError = true)
                 }
             }

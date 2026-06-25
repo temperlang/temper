@@ -25,8 +25,10 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
     issue(Ft.RegexZeroAdvance, lua(166))
     issue(Ft.NamesNonascii, lua(228))
     214.let { issue(Ft.TypesNetresponse, cpp(it), interp(it), lua(it)) }
-    onlyPasses(
+    onlyFails(
         cpp(198),
+        Ft.RegexMatch,
+        Ft.TypesNetresponse,
     )
     onlyPasses(
         cppv(198),
