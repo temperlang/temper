@@ -456,6 +456,35 @@ class CSharpBackendTest {
     }
 
     @Test
+    fun mapBuilderToMap() {
+        assertGeneratedGlobalClass(
+            temper = """
+                |let builder: MapBuilder<String, String> = new MapBuilder<String, String>();
+                |export let map1 = builder.toMap();
+                |let mapped: Mapped<String, String> = builder;
+                |export let map2 = mapped.toMap();
+            """.trimMargin(),
+            usings = """
+                |using G = System.Collections.Generic;
+                |using C = TemperLang.Core;
+            """.trimMargin(),
+            csharp = """
+                |internal static G::IDictionary<string, string> builder__0;
+                |public static G::IReadOnlyDictionary<string, string> Map1;
+                |internal static G::IReadOnlyDictionary<string, string> mapped__0;
+                |public static G::IReadOnlyDictionary<string, string> Map2;
+                |static TestGlobal()
+                |{
+                |    builder__0 = new C::OrderedDictionary<string, string>();
+                |    Map1 = C::Mapped.ToMap(builder__0);
+                |    mapped__0 = C::Mapped.AsReadOnly(builder__0);
+                |    Map2 = C::Mapped.ToMap(mapped__0);
+                |}
+            """.trimMargin(),
+        )
+    }
+
+    @Test
     fun pureVirtualDefault() = assertGeneratedUserClass(
         temper = """
             |export interface A {

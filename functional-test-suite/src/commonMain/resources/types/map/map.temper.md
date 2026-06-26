@@ -220,14 +220,26 @@ other key = other value
 added key = added value
 ```
 
+Casting the builder to a mapped doesn't lead to false assumptions about
+the API not allowing mutation preventing mutation by code that has an alias
+via a mutable API.
+
+    let builderAsMapped: Mapped<String, String> = builder;
+    let newMapFromMapped = builderAsMapped.toMap();
+
 The resulting map is immutable, so changes to the builder no longer impact it
 
     builder.remove("other key");
     builder["key"] = "double replaced value";
     printMap("builder to map (same as above)", newMap);
+    printMap("builder to map via mapped (same as above)", newMapFromMapped);
 
 ```log
 --- builder to map (same as above) ---
+key = replaced value
+other key = other value
+added key = added value
+--- builder to map via mapped (same as above) ---
 key = replaced value
 other key = other value
 added key = added value
