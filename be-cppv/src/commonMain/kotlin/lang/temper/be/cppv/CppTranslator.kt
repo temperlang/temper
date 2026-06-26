@@ -401,7 +401,7 @@ open class CppTranslator(
     private fun translatePropertyReference(ref: TmpL.PropertyReference): Cpp.Expr = cpp.pos(ref) {
         val subject = when (val subject = ref.subject) {
             is TmpL.Expression -> translateExpression(subject)
-            is TmpL.TypeName -> cpp.literal("TODO: $subject")
+            is TmpL.TypeSubject -> cpp.literal("TODO: $subject")
         }
         val propertyId = translatePropertyId(ref.property)
         cpp.binaryExpr(subject, Cpp.BinaryOp(cpp.pos, BinaryOpEnum.Arrow), propertyId).let { expr ->

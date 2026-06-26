@@ -71,7 +71,7 @@ fun parse(
     while (true) {
         if (tokenStackElement != null) {
             // Consume the token from the last iteration through.
-            // We do this at the top to avoid any chance of infinite recursion, and to make it clear
+            // We do this at the top to avoid any chance of infinite recursion and to make it clear
             // that every token gets added to the tree exactly once, and that the in-order traversal
             // of the built tree is the token stream (with synthetics).
             operatorStack.addToTop(tokenStackElement)
@@ -98,12 +98,12 @@ fun parse(
         val tok = tokenStackElement.tokenText
 
         if (tok == "=") {
-            // Convert Operator.LowColon to Operator.HighColon if there's an equals sign seen while
+            // Convert Operator.LowColon to Operator.HighColon if there's an equal sign seen while
             // it's open.
             // This is an ugly hack that allows us to properly handle:
             //     propertyName: PropertyType = initialValueExpression;
             // in a class body.  The first three tokens could be a prefix of a labeled statement,
-            // but we do not allow labeling of un-bracketed assignment or comma expressions, so
+            // but we do not allow labeling of unbracketed assignment or comma expressions, so
             // we convert the LowColon to a HighColon which allows us to treat that as
             //     (propertyName: PropertyType) = initialValueExpression;
             // See Operator.LowColon for more details on how `:` is exceptionally weird.
@@ -224,7 +224,7 @@ fun parse(
             //     DASH: ((x) -) -
             //     ROOT:
             // where the incomplete binary operator is the left operand of the new subtraction.
-            // Eventually, when we process "y" and commit the stack we'd end up with an expression
+            // Eventually, when we process "y" and commit the stack, we'd end up with an expression
             // like
             //     (x - ?) - y
             // This check makes sure that the second `-` is interpreted as a prefix operator, so
@@ -243,7 +243,14 @@ fun parse(
                 val grandParent = operatorStack.getOrNull(topIndex - 1)
                 for (op in prefixOperatorsMatching) {
                     val candidate = Candidate(tokenStackElement, op)
-                    if (canNest(grandParent = grandParent, parent = top, child = candidate)) {
+                    if (
+                        canNest(
+                            bracket = operatorStack.innermostBracket,
+                            grandParent = grandParent,
+                            parent = top,
+                            child = candidate,
+                        )
+                    ) {
                         mayInfix = false
                         break
                     }
@@ -294,6 +301,7 @@ fun parse(
             if (
                 el.operator.operatorType != OperatorType.Postfix &&
                 canNest(
+                    bracket = operatorStack.innermostBracket,
                     grandParent = operatorStack.getOrNull(i - 1),
                     parent = el,
                     child = candidate,
@@ -307,33 +315,18 @@ fun parse(
             operatorStack.commitTo(closeTo)
         }
 
-        var top = operatorStack.last()
+        val top = operatorStack.last()
         // In certain contexts, we close operators rather than adding extra operands.
         while (
             top.operator.maxArity != Int.MAX_VALUE && // Rules out Root
             !top.operator.closer && top.operator.followers == Followers.None &&
             top.childCount >= top.operator.maxArity + 1 // for operator text
         ) {
-            val topIndex = operatorStack.lastIndex
-            val parentOp = top.operator
-            // It's safe to fetch at size - 2 because parentOp is not Root.
-            val grandParentOp = operatorStack[topIndex - 1].operator
-            val greatGrandParentOp = operatorStack.getOrNull(topIndex - 2)?.operator
-            val shouldShunt = shuntContentAsIfImpliedSeparator(
-                greatGrandParentOp,
-                grandParentOp,
-                parentOp,
-            )
-            if (shouldShunt) {
-                operatorStack.commitTo(topIndex)
-                top = operatorStack.last()
-            } else {
-                break
-            }
+            break
         }
         // If we ever wanted to extend our precedence checks to
-        // include a canTokenAppearIn(op, nonOperatorToken) or
-        // canMergeInto(nonOperatorTokens, nonOperatorToken)
+        // include `canTokenAppearIn(op, nonOperatorToken)` or
+        // `canMergeInto(nonOperatorTokens, nonOperatorToken)`
         // predicates, this is where they'd go.
         if (top.operator != Operator.Leaf) {
             operatorStack.push(tokenStackElement.pos, candidate.operator)
@@ -381,10 +374,12 @@ private fun tryOperatorsThatPrecedeAnOperand(
 
             // Can we swap el into a new binary operator as the left argument?
             val grandParent = operatorStack[i - 1]
+            val bracket = operatorStack.innermostBracket
             if ( // Can candidate contain el?
-                canNest(grandParent = grandParent, parent = candidate, child = el) &&
+                canNest(bracket = bracket, grandParent = grandParent, parent = candidate, child = el) &&
                 // Can el's existing parent contain candidate?
                 canNest(
+                    bracket = bracket,
                     grandParent = operatorStack.getOrNull(i - 2),
                     parent = grandParent,
                     child = candidate,
@@ -426,9 +421,10 @@ private fun trySeparators(
             }
 
             val elParent = operatorStack.getOrNull(i - 1)
+            val bracket = operatorStack.innermostBracket
 
             // Maybe we have a separator without a left operand.
-            if (canNest(grandParent = elParent, parent = el, child = innerCandidate)) {
+            if (canNest(bracket = bracket, grandParent = elParent, parent = el, child = innerCandidate)) {
                 rightDepth = i
             }
 
@@ -438,9 +434,10 @@ private fun trySeparators(
             if (
                 elParent != null &&
                 // Can candidate contain el?
-                canNest(grandParent = elParent, parent = outerCandidate, child = el) &&
+                canNest(bracket = bracket, grandParent = elParent, parent = outerCandidate, child = el) &&
                 // Can el's existing parent contain candidate?
                 canNest(
+                    bracket = bracket,
                     grandParent = operatorStack.getOrNull(i - 2),
                     parent = elParent,
                     child = outerCandidate,
@@ -463,6 +460,7 @@ private fun trySeparators(
                         // fill the grandparent's operator pattern.
                         break
                     }
+                    val bracket = operatorStack.innermostBracket
                     val grandParentWithoutAdopted = object : OperatorStackElement by grandParent {
                         override val childCount: Int = grandParent.childCount - nToAdopt
                         override val eventualChildCount: Int get() = childCount
@@ -477,7 +475,7 @@ private fun trySeparators(
                             grandParent.child(grandParent.childCount - nToAdopt + i)
                     }
 
-                    if (canNest(grandParentWithoutAdopted, parentAfterSwap, sibling)) {
+                    if (canNest(bracket, grandParentWithoutAdopted, parentAfterSwap, sibling)) {
                         nToAdopt += 1
                     } else {
                         break
@@ -500,6 +498,7 @@ private fun tryPrefixOperators(
     tokenStackElement: TokenStackElement,
     prefixOperatorsMatching: List<Operator>,
 ): Boolean {
+    val bracket = operatorStack.innermostBracket
     for (op in prefixOperatorsMatching) {
         val candidate = Candidate(tokenStackElement, op)
         // Commit stack elements that cannot contain candidate, so we
@@ -510,7 +509,7 @@ private fun tryPrefixOperators(
             val stackOp = el.operator
             if (
                 stackOp.operatorType != OperatorType.Postfix &&
-                canNest(grandParent = elParent, parent = el, child = candidate)
+                canNest(bracket = bracket, grandParent = elParent, parent = el, child = candidate)
             ) {
                 operatorStack.commitTo(i + 1)
                 operatorStack.push(tokenStackElement.pos, candidate.operator)
@@ -522,44 +521,6 @@ private fun tryPrefixOperators(
         }
     }
     return false
-}
-
-/**
- * When are we allowed to treat two adjacent things as being separated?
- *
- * This function provides a narrowly tailored answer to the question,
- *
- * > If I have enough operands for [parent] which is nested inside [grandParent] which is either
- * > [Operator.Root] or is nested in [greatGrandParent], should I close [parent] rather than glom
- * > another operand onto it?
- *
- * In C-like languages, separators are explicit.  `;` or `,` are used to separate adjacent items
- * in a list.
- *
- * So our broad strategy is to glom tokens onto the end of existing constructs.  But some JSX like
- * constructs don't have this property.
- * In tags,
- *
- *     <name attr1="value1" attr2="value2">
- *
- * there are no explicit separator tokens.
- */
-private fun shuntContentAsIfImpliedSeparator(
-    greatGrandParent: Operator?,
-    grandParent: Operator,
-    parent: Operator,
-) = when {
-    grandParent == Operator.Tag ->
-        // HighColon to shunt after `namespace:tagOrAttributeName`
-        // Eq        to shunt after `attribute=value`
-        // Leaf      to shunt between `tagName` and `attributeName`
-        parent == Operator.HighColon || parent == Operator.Eq || parent == Operator.Leaf
-    greatGrandParent == Operator.Tag ->
-        // namespace:tagOrAttributeName shunts
-        (grandParent == Operator.HighColon && parent == Operator.Leaf) ||
-            // shunt between `attribute=value` and `followingAttribute`
-            (grandParent == Operator.Eq)
-    else -> false
 }
 
 private val quotedGroupOperators = listOf(Operator.QuotedGroup)

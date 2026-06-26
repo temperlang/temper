@@ -6,6 +6,7 @@ import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedParsedName
+import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.type.Abstractness
 import lang.temper.type.MemberShape
@@ -15,14 +16,14 @@ import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
 import lang.temper.type.Variance
 import lang.temper.type.WellKnownTypes
-import lang.temper.type.WellKnownTypes.imuTypeDefinition
-import lang.temper.type.WellKnownTypes.partialImuTypeDefinition
 import lang.temper.type2.MkType2
 import lang.temper.type2.SuperTypeTree2
 import lang.temper.type2.Type2
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.value.DeclTree
 import lang.temper.value.Tree
+import lang.temper.value.imuSymbol
+import lang.temper.value.partialImuSymbol
 import lang.temper.value.typeDeclSymbol
 import lang.temper.value.typeShapeAtLeafOrNull
 import lang.temper.value.typeSymbol
@@ -31,32 +32,29 @@ import lang.temper.value.varSymbol
 enum class ImuMessage(
     override val formatString: String,
 ) : LeveledMessageTemplate {
-    ImuTypeHasVar("Class %s extends %s but has a `var` property, %s"),
+    ImuTypeHasVar("Class %s claims %s but has a `var` property, %s"),
     ImuClassPropertyIsNotImu(
-        "Class %s extends %s but property %s has type %s which is not Imu",
+        "Class %s claims %s but property %s has type %s which is not imu",
     ),
     ImuClassPropertyUsesContravariantType(
-        "Class %s extends %s but property %s: %s uses contravariant type %s",
+        "Class %s claims %s but property %s: %s uses contravariant type %s",
     ),
     PartialImuTypeHasNoTypeParameters(
-        "Type %s extends PartialImu but has no type parameters",
+        "Type %s claims partialImu but has no type parameters",
     ),
-    ExpectedImuType("Expected Imu type but got %s"),
+    ExpectedImuType("Expected imu type but got %s"),
     DeepPartialImuTypeDoesNotImplySuperTypeImu(
-        "PartialImu interface %s's type parameter <%s> would not be Imu" +
-            " when cast to its effectively Imu super-type %s because %s is not Imu",
+        "PartialImu interface %s's type parameter <%s> would not be imu" +
+            " when cast to its effectively Imu super-type %s because %s is not imu",
     ),
     DeepPartialImuTypeCanNeverBeImu(
-        "PartialImu interface %s could have Imu parameters but it extends" +
-            " %s which cannot be Imu because %s is not",
+        "PartialImu interface %s could have imu parameters but it extends" +
+            " %s which cannot be imu because %s is not",
     ),
     ;
 
     override val suggestedLevel: Log.Level = Log.Error
 }
-
-private val imuTypeName = imuTypeDefinition.diagnosticTypeName
-private val partialImuTypeName = partialImuTypeDefinition.diagnosticTypeName
 
 class ImuChecker(
     private val logSink: LogSink,
@@ -93,16 +91,14 @@ class ImuChecker(
         val supers = getSuperTypeTree(type)
         return when (typeShape) {
             // Special-case some core types.
-            imuTypeDefinition,
-            partialImuTypeDefinition,
             WellKnownTypes.listTypeDefinition,
             WellKnownTypes.mapTypeDefinition,
             -> true
 
             // Check others that claim something.
-            else if supers[imuTypeDefinition].isNotEmpty() ->
+            else if supers.hasSymbol(imuSymbol) ->
                 checkImu(typeShape, typeShape.diagnosticTypeName)
-            else if supers[partialImuTypeDefinition].isNotEmpty() ->
+            else if supers.hasSymbol(partialImuSymbol) ->
                 checkPartialImu(typeShape, typeShape.diagnosticTypeName)
 
             // No claim to check.
@@ -111,7 +107,7 @@ class ImuChecker(
     }
 
     private fun checkImu(typeShape: TypeShape, typeName: TemperName): Boolean {
-        return checkBackedProperties(typeShape, typeName, imuTypeName)
+        return checkBackedProperties(typeShape, typeName, imuSymbol)
     }
 
     private fun checkPartialImu(typeShape: TypeShape, typeName: TemperName): Boolean {
@@ -121,7 +117,8 @@ class ImuChecker(
             }
         }
         var passes = true
-        if (presumedImu.isEmpty()) {
+        if (presumedImu.isEmpty() && typeShape.abstractness == Abstractness.Concrete) {
+            // Class with no type parameters has no reason to be PartialImu.
             passes = false
             logSink.log(
                 ImuMessage.PartialImuTypeHasNoTypeParameters,
@@ -134,7 +131,7 @@ class ImuChecker(
             !checkBackedProperties(
                 typeShape,
                 typeName,
-                partialImuTypeName,
+                partialImuSymbol,
                 presumedImu = presumedImu,
             )
         ) {
@@ -149,12 +146,10 @@ class ImuChecker(
                 // They all need to have effectively imu types when type bindings are imu.
 
                 // Find the shallowest super-types that are partial imu.
-                val partialImuSupers = typeShape.superTypes.filter { superType ->
-                    superType.definition != partialImuTypeDefinition
-                }.map { superType ->
+                val partialImuSupers = typeShape.superTypes.map { superType ->
                     hackMapOldStyleToNew(superType)
                 }.filter { superType ->
-                    getSuperTypeTree(superType)[partialImuTypeDefinition].isNotEmpty()
+                    getSuperTypeTree(superType).hasSymbol(partialImuSymbol)
                 }
 
                 // For each of them, the type projection has to imply consistency when up-cast.
@@ -228,10 +223,10 @@ class ImuChecker(
                             val tDefinition = t.definition
                             if (tDefinition is TypeFormal) {
                                 setOf(t)
-                            } else if (tSuperTree[imuTypeDefinition].isNotEmpty()) {
+                            } else if (tSuperTree.hasSymbol(imuSymbol)) {
                                 // We don't consider an Imu sub-type as implying anything about type args
                                 emptySet()
-                            } else if (tSuperTree[partialImuTypeDefinition].isNotEmpty()) {
+                            } else if (tSuperTree.hasSymbol(partialImuSymbol)) {
                                 check(tDefinition is TypeShape) // Not formal above
                                 buildSet {
                                     for ((i, binding) in t.bindings.withIndex()) {
@@ -274,7 +269,7 @@ class ImuChecker(
     private fun checkBackedProperties(
         typeShape: TypeShape,
         typeName: TemperName,
-        extended: TemperName,
+        claimed: Symbol,
         presumedImu: Set<Type2> = emptySet(),
     ): Boolean {
         var passes = true
@@ -288,7 +283,7 @@ class ImuChecker(
                             property,
                             typeName,
                             contravariantTypeParameters,
-                            extended,
+                            claimed,
                             presumedImu = presumedImu,
                         )
                     ) {
@@ -304,7 +299,7 @@ class ImuChecker(
         property: PropertyShape,
         typeName: TemperName,
         contravariantTypeParameters: Set<TypeDefinition>,
-        extended: TemperName,
+        claimed: Symbol,
         presumedImu: Set<Type2> = emptySet(),
     ): Boolean {
         var passes = true
@@ -315,7 +310,7 @@ class ImuChecker(
             logSink.log(
                 ImuMessage.ImuTypeHasVar,
                 property.declarationPos,
-                listOf(typeName, extended, propertyName),
+                listOf(typeName, claimed.text, propertyName),
             )
         }
         if (staticType != null) {
@@ -330,7 +325,7 @@ class ImuChecker(
                 logSink.log(
                     ImuMessage.ImuClassPropertyIsNotImu,
                     property.declarationPos,
-                    listOf(typeName, extended, propertyName, staticType),
+                    listOf(typeName, claimed.text, propertyName, staticType),
                 )
             } else {
                 val contravariantParamUsed = mentionedInType(staticType, contravariantTypeParameters)
@@ -339,7 +334,7 @@ class ImuChecker(
                     logSink.log(
                         ImuMessage.ImuClassPropertyUsesContravariantType,
                         property.declarationPos,
-                        listOf(typeName, extended, propertyName, staticType, contravariantParamUsed.name),
+                        listOf(typeName, claimed.text, propertyName, staticType, contravariantParamUsed.name),
                     )
                 }
             }
@@ -366,13 +361,12 @@ class ImuChecker(
     private fun findNonImuPart(type: Type2, presumedImu: Set<Type2>): Type2? {
         if (type in presumedImu) { return null }
         val superTypeTree = getSuperTypeTree(type)
-        if (superTypeTree[imuTypeDefinition].isNotEmpty()) {
+        if (superTypeTree.hasSymbol(imuSymbol)) {
             return null
         }
 
         if (
-            superTypeTree[partialImuTypeDefinition].isNotEmpty() &&
-            type.definition != partialImuTypeDefinition &&
+            superTypeTree.hasSymbol(partialImuSymbol) &&
             // Type formals do not have parameters so PartialImu makes little sense there.
             type.definition is TypeShape
         ) {
@@ -391,9 +385,18 @@ class ImuChecker(
     }
 
     private fun getSuperTypeTree(nominalType: Type2) =
+        // TODO Also cache imuSymbol and partialImuSymbol lookups?
         superTypesCache.getOrPut(nominalType) {
             SuperTypeTree2.of(nominalType)
         }
+}
+
+private fun Collection<TypeDefinition>.hasSymbol(symbol: Symbol): Boolean = run {
+    any { it.metadata.containsKey(symbol) }
+}
+
+private fun SuperTypeTree2<Type2>.hasSymbol(symbol: Symbol): Boolean = run {
+    byDefinition.keys.hasSymbol(symbol)
 }
 
 private val MemberShape.declarationPos get() =

@@ -765,7 +765,7 @@ private fun maybeParenthesize(ot: OpTree, grandParentView: OperatorStackElementS
                 val child = children[i]
                 maybeParenthesize(child, outerView)
                 if (
-                    child !is Tok && !canNest(grandParentView, outerView, child) &&
+                    child !is Tok && !canNest(null, grandParentView, outerView, child) &&
                     child.operator != Operator.CallJoin
                 ) {
                     children[i] = wrap(child)

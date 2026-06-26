@@ -19,7 +19,7 @@ class BundledBackendsTest {
     @Test
     fun hasDefaultFactories() {
         val wanted = setOf(
-            CppBackend.Cpp11,
+            CppBackend.Cpp,
             CSharpBackend.Factory,
             DataBackend.Factory,
             JavaBackend.Java8,

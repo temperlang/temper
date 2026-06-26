@@ -10,6 +10,7 @@ import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLOperator
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.aType
+import lang.temper.be.tmpl.hasSplitSupers
 import lang.temper.be.tmpl.isNullValue
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapParameters
@@ -674,8 +675,13 @@ class RustTranslator(
                 generics = generics.deepCopy(),
                 trait = null,
                 type = typeRef,
-                items = decl.members.flatMap { member ->
-                    translateMethodLike(member, generics = generics, type = typeRef, typePub = pub)
+                items = buildList {
+                    for (member in decl.members) {
+                        addAll(translateMethodLike(member, generics = generics, type = typeRef, typePub = pub))
+                    }
+                    for (inherited in decl.inherited) {
+                        addAll(translateMethodSuperCall(decl, inherited))
+                    }
                 },
             ).toItem().also { moduleItems.add(it) }
         } finally {
@@ -708,7 +714,6 @@ class RustTranslator(
         sups@ for ((subShape, sup) in decl.typeShape.allInterfaces(allowStart = true)) {
             // Only handle type shapes, and only unique ones.
             val supShape = (sup.definition as? TypeShape) ?: continue@sups
-            supShape.isFiction() && continue@sups
             val supDecl = supShape.stayLeaf?.incoming?.source as? DeclTree
             // For sealed enums, this picks an arbitrary winner. TODO Allow diamonds and/or check against them earlier.
             handledSups.add(supShape.name) || continue@sups
@@ -1006,7 +1011,7 @@ class RustTranslator(
     private fun buildBounds(typeParam: TmpL.TypeFormal): List<Rust.TypeParamBound> {
         val bounds = buildList {
             bounds@ for (bound in typeParam.upperBounds) {
-                when (val boundDef = bound.typeName.sourceDefinition) {
+                when (bound.typeName.sourceDefinition) {
                     // Special cases. TODO Others?
                     WellKnownTypes.anyValueTypeDefinition -> {}
                     WellKnownTypes.equatableTypeDefinition -> add(PARTIAL_EQ_NAME.toId(bound.pos))
@@ -1014,7 +1019,6 @@ class RustTranslator(
                         add(EQ_NAME.toId(bound.pos))
                         add(HASH_NAME.toId(bound.pos))
                     }
-                    else if boundDef.isFiction() -> {}
                     // Translate general cases to trait names.
                     else -> translateTypeAsTraitName(bound).also { add(it) }
                 }
@@ -1124,6 +1128,15 @@ class RustTranslator(
             // Just let the trait handle this one directly. Self-call here is infinite recursion.
             return listOf()
         }
+        buildForwarderFromClassToTrait(pos, targetType, superShape, methodKind)
+    }
+
+    private fun buildForwarderFromClassToTrait(
+        pos: Position,
+        targetType: TypeShape?,
+        superShape: VisibleMemberShape,
+        methodKind: MethodKind,
+    ): List<Rust.Item> = run {
         buildForwarderToTrait(pos, targetType, superShape, methodKind) result@{ traitType, methodId, argIds ->
             Rust.Call(
                 pos,
@@ -1769,7 +1782,7 @@ class RustTranslator(
                         }
                         translateExpression(subject, avoidClone = true).member(member)
                     }
-                    is TmpL.TypeName -> translateTypeName(subject).extendWith(listOf(member))
+                    is TmpL.TypeSubject -> translateTypeName(subject.typeName).extendWith(listOf(member))
                 }
             }
             is TmpL.GarbageCallable -> translateGarbage(callable)
@@ -2649,6 +2662,17 @@ class RustTranslator(
         }.let { listOf(it) }
     }
 
+    private fun translateMethodSuperCall(
+        decl: TmpL.TypeDeclaration,
+        inherited: TmpL.SuperTypeMethod,
+    ): Collection<Rust.Item> = run {
+        decl.hasSplitSupers(inherited) || return listOf()
+        val superShape = inherited.memberOverride.superTypeMember
+        val targetType = superShape.enclosingType
+        val methodKind = (superShape as? MethodShape)?.methodKind ?: return listOf()
+        buildForwarderFromClassToTrait(inherited.pos, targetType, superShape, methodKind)
+    }
+
     private fun translateModuleInitFailed(statement: TmpL.ModuleInitFailed): Rust.Statement {
         return Rust.ExprStatement(
             statement.pos,
@@ -2785,9 +2809,9 @@ class RustTranslator(
         }
         val subject = when (val subject = ref.subject) {
             is TmpL.Expression -> subject
-            is TmpL.TypeName -> {
+            is TmpL.TypeSubject -> {
                 // Static property access.
-                val callee = translateTypeName(subject).extendWith(listOf(propertyId))
+                val callee = translateTypeName(subject.typeName).extendWith(listOf(propertyId))
                 return Rust.Call(ref.pos, callee = callee, args = listOf())
             }
         }
@@ -2906,7 +2930,7 @@ class RustTranslator(
         // Get the property type so we know if we need to wrap the value. TODO Factor out any of this?
         val subjectShape = when (val subject = statement.left.subject) {
             is TmpL.Expression -> (subject.type as? DefinedNonNullType)?.definition
-            is TmpL.TypeName -> subject.sourceDefinition as? TypeShape
+            is TmpL.TypeSubject -> subject.typeName.sourceDefinition as? TypeShape
         }
         val propertyText = when (val property = statement.left.property) {
             is TmpL.ExternalPropertyId -> property.name.dotNameText
@@ -2922,7 +2946,7 @@ class RustTranslator(
                 val ref = statement.left
                 val subject = when (val subj = ref.subject) {
                     is TmpL.Expression -> translateExpression(subj, avoidClone = true)
-                    is TmpL.TypeName -> translateTypeName(subj) // wrong but also shouldn't happen
+                    is TmpL.TypeSubject -> translateTypeName(subj.typeName) // wrong but also shouldn't happen
                 }
                 val setter = "set_${translatePropertyId(ref.property)}"
                 subject.methodCall(setter, listOf(value))

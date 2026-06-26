@@ -72,8 +72,18 @@ sealed interface TypeDefinition : StayReferrer, Structured, TokenSerializable, P
     /** Likely cheaper to access than [formals]. */
     val hasFormals: Boolean
 
-    // TODO: store metadata from type formal definitions here to
-    val metadata: MetadataValueMultimap get() = MetadataValueMultimap.empty
+    /**
+     * A reference to the declaration that specifies this type.
+     */
+    val stayLeaf: StayLeaf?
+
+    /**
+     * Derived from decorators applied to type definitions.
+     */
+    val metadata: MetadataValueMultimap get() = when (val sl = stayLeaf) {
+        null -> MetadataValueMultimap.empty
+        else -> MetadataValueMultimapImpl(sl)
+    }
 
     val connectedKey: String? get() = when {
         connectedSymbol in metadata -> metadata[qNameSymbol]?.lastOrNull()?.let { TString.unpack(it) }
@@ -162,6 +172,7 @@ sealed interface TypeFormal : TypeDefinition {
             variance: Variance,
             mutationCount: AtomicCounter,
             upperBounds: List<NominalType> = emptyList(),
+            stayLeaf: StayLeaf? = null,
         ): TypeFormal = MutableTypeFormal(
             pos,
             name,
@@ -169,6 +180,7 @@ sealed interface TypeFormal : TypeDefinition {
             variance,
             mutationCount,
             upperBounds,
+            stayLeaf,
         )
     }
 }
@@ -186,12 +198,22 @@ class MutableTypeFormal(
     override var variance: Variance,
     mutationCount: AtomicCounter,
     upperBounds: List<NominalType>,
+    override val stayLeaf: StayLeaf?,
 ) : TypeFormal, LawfulEvilOverlord() {
     override val upperBounds = lawfulEvilListOf<NominalType>(mutationCount)
     init {
         if (upperBounds.isNotEmpty()) {
             this.upperBounds.addAll(upperBounds)
         }
+    }
+
+    override fun addStays(s: StaySink) {
+        this.stayLeaf?.let { stayLeaf ->
+            s.whenUnvisited(this) {
+                s.add(stayLeaf)
+            }
+        }
+        super.addStays(s)
     }
 
     override fun toString() = toStringViaBuilder {
@@ -260,11 +282,6 @@ sealed interface TypeShape : TypeDefinition {
      */
     val abstractness: Abstractness
 
-    /**
-     * A reference to the declaration that specifies this type.
-     */
-    val stayLeaf: StayLeaf?
-
     /** The resolved type expressions in the `extends` clause. */
     override val superTypes: List<NominalType>
 
@@ -295,14 +312,6 @@ sealed interface TypeShape : TypeDefinition {
      * inheritance.
      */
     val inheritanceDepth: Int
-
-    /**
-     * Derived from decorators applied to type definitions.
-     */
-    override val metadata: MetadataValueMultimap get() = when (val sl = stayLeaf) {
-        null -> MetadataValueMultimap.empty
-        else -> MetadataValueMultimapImpl(sl)
-    }
 
     /**
      * All members (parameters, properties, and methods) defined on the type, not including any

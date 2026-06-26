@@ -336,7 +336,7 @@ internal data class Or private constructor(val options: List<Combinator>) : Comb
     }
 
     companion object {
-        private val empty = Or(emptyList())
+        val empty = Or(emptyList())
         fun new(options: List<Combinator>): Combinator {
             val flatList = options.flatMap {
                 if (it is Or) {
@@ -347,8 +347,8 @@ internal data class Or private constructor(val options: List<Combinator>) : Comb
             }
             return when (flatList.size) {
                 0 -> empty
-                1 -> options[0]
-                else -> Or(options)
+                1 -> flatList[0]
+                else -> Or(flatList)
             }
         }
     }
