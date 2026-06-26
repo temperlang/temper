@@ -470,7 +470,7 @@ internal object TranslateDotHelper {
 
 internal fun connectedKeyForMember(member: MemberShape): String? = when (member) {
     is MethodShape -> connectedKeyForMethod(member)
-    is PropertyShape -> member.connectedKey
+    is PropertyShape -> null // connect only through accessors methods for now
     is VisibleMemberShape -> member.connectedKey
     else -> null
 }

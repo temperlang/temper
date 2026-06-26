@@ -77,7 +77,7 @@ The set of *\@connected* methods from Temper's *ImplicitsModule* are:
 - `core.type Float64.toString()`
 - `core.type Generator`
 - `core.type Generator.close()`
-- `core.type Generator.done`
+- `core.type Generator.get done()`
 - `core.type Generator.next()`
 - `core.type GeneratorResult`
 - `core.type GlobalConsole.globalLog()`
@@ -211,13 +211,13 @@ to implement:
 - `std/regex.type RegexFormatter.regexFormat()`
 - `std/temporal.type Date`
 - `std/temporal.type Date.constructor()`
-- `std/temporal.type Date.day`
 - `std/temporal.type Date.fromIsoString()`
+- `std/temporal.type Date.get day()`
 - `std/temporal.type Date.get dayOfWeek()`
-- `std/temporal.type Date.month`
+- `std/temporal.type Date.get month()`
+- `std/temporal.type Date.get year()`
 - `std/temporal.type Date.toString()`
 - `std/temporal.type Date.today()`
-- `std/temporal.type Date.year`
 - `std/temporal.type Date.yearsBetween()`
 - `std/testing.processTestCases()`
 - `std/testing.reportTestResults()`

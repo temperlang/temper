@@ -178,7 +178,7 @@ export interface Generator<@out YIELD extends AnyValue> {
    * would get [snippet/builtin/true].
    */
   @connected
-  public done: Boolean;
+  public get done(): Boolean;
   /**
    * Should be called once it is realized that
    * [snippet/type/Generator/method/next] is not going to be called

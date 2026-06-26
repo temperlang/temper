@@ -1364,13 +1364,13 @@ private val regexFormatterPushCodeTo = StaticCall(
 )
 
 private val dateConstructor = ObjectCreation("std/temporal.type Date.constructor()", StandardNames.systemDateTime)
-private val dateGetDay = PropertyAccess("std/temporal.type Date.day", "Day")
+private val dateGetDay = PropertyAccess("std/temporal.type Date.get day()", "Day")
 private val dateGetDayOfWeek = StaticCall(
     "std/temporal.type Date.get dayOfWeek()",
     StandardNames.temperStdTemporalTemporalSupportIsoWeekdayNum,
 )
-private val dateGetMonth = PropertyAccess("std/temporal.type Date.month", "Month")
-private val dateGetYear = PropertyAccess("std/temporal.type Date.year", "Year")
+private val dateGetMonth = PropertyAccess("std/temporal.type Date.get month()", "Month")
+private val dateGetYear = PropertyAccess("std/temporal.type Date.get year()", "Year")
 private val dateToString = MethodCall(
     baseName = "std/temporal.type Date.toString()",
     memberNameId = "ToString",

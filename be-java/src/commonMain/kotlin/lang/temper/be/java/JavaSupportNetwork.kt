@@ -975,20 +975,20 @@ val JavaLang.dateToString by receiver {
     }
 }
 val JavaLang.dateGetYear by receiver {
-    inlineSupport("std/temporal.type Date.year", arity = 1, needsSelf = true) { pos, args ->
+    inlineSupport("std/temporal.type Date.get year()", arity = 1, needsSelf = true) { pos, args ->
         // LocalDate.getYear returns a proleptic year.  2 BC and before are negative.
         args[0].method("getYear", pos = pos)
     }
 }
 val JavaLang.dateGetMonth by receiver {
-    inlineSupport("std/temporal.type Date.month", arity = 1, needsSelf = true) { pos, args ->
+    inlineSupport("std/temporal.type Date.get month()", arity = 1, needsSelf = true) { pos, args ->
         // LocalDate.getMonth returns an instance of the Month enumeration
         // .getMonthValue returns an int.
         args[0].method("getMonthValue", pos = pos)
     }
 }
 val JavaLang.dateGetDay by receiver {
-    inlineSupport("std/temporal.type Date.day", arity = 1, needsSelf = true) { pos, args ->
+    inlineSupport("std/temporal.type Date.get day()", arity = 1, needsSelf = true) { pos, args ->
         args[0].method("getDayOfMonth", pos = pos)
     }
 }
@@ -1439,10 +1439,10 @@ private val connections: Map<String, ((JavaLang) -> SupportCode)> = mapOf(
     // "core.type Console.log()" to null,
     "std/temporal.type Date.constructor()" to { it.dateConstructor },
     "std/temporal.type Date.fromIsoString()" to { it.dateFromIsoString },
-    "std/temporal.type Date.day" to { it.dateGetDay },
+    "std/temporal.type Date.get day()" to { it.dateGetDay },
     "std/temporal.type Date.get dayOfWeek()" to { it.dateGetDayOfWeek },
-    "std/temporal.type Date.month" to { it.dateGetMonth },
-    "std/temporal.type Date.year" to { it.dateGetYear },
+    "std/temporal.type Date.get month()" to { it.dateGetMonth },
+    "std/temporal.type Date.get year()" to { it.dateGetYear },
     "std/temporal.type Date.toString()" to { it.dateToString },
     "std/temporal.type Date.today()" to { it.dateToday },
     "std/temporal.type Date.yearsBetween()" to { it.dateYearsBetween },

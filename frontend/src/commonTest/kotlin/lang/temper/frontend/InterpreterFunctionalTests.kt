@@ -53,6 +53,8 @@ class InterpreterFunctionalTests : FunctionalTestSuiteI {
 
     private var _cancelGroup: CancelGroup? = null
 
+    @Test override fun typesDate() = super.typesDate()
+
     @BeforeTest
     fun makeCancelGroup() {
         _cancelGroup = makeCancelGroupForTest()

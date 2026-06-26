@@ -249,9 +249,9 @@ internal object JsSupportNetwork : SupportNetwork {
             "std/temporal.type Date.constructor()" -> { p, args, strict, translator ->
                 newDateIdiomExpander(p, args, strict = strict, genre = genre, translator = translator)
             }
-            "std/temporal.type Date.year" -> propertyReadToMethodCall("getUTCFullYear")
-            "std/temporal.type Date.month" -> dateGetMonthExpander // Need to add one to index
-            "std/temporal.type Date.day" -> propertyReadToMethodCall("getUTCDate") // getUTCDay is weekday
+            "std/temporal.type Date.get year()" -> propertyReadToMethodCall("getUTCFullYear")
+            "std/temporal.type Date.get month()" -> dateGetMonthExpander // Need to add one to index
+            "std/temporal.type Date.get day()" -> propertyReadToMethodCall("getUTCDate") // getUTCDay is weekday
             "std/temporal.type Date.get dayOfWeek()" -> dateGetDayOfWeekExpander // JS has Sunday as 0, not 7
             "std/temporal.type Date.toString()" -> dateToIsoStringExpander
             "std/temporal.type Date.fromIsoString()" -> { p, args, strict, _ ->

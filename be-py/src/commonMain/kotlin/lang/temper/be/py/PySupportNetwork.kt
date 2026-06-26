@@ -379,9 +379,9 @@ val DictType = PySeparateCode("dict", SYS_BUILTINS)
 val MappingProxyType = PySeparateCode("MappingProxyType", SYS_TYPES)
 val DateConstructor = PySeparateCode("date", DATE_TIME)
 val DateType = PyConnectedType("date", DATE_TIME)
-val DateGetDay = inlineAttribute("std/temporal.type Date.day", PyIdentifierName("day"))
-val DateGetMonth = inlineAttribute("std/temporal.type Date.month", PyIdentifierName("month"))
-val DateGetYear = inlineAttribute("std/temporal.type Date.year", PyIdentifierName("year"))
+val DateGetDay = inlineAttribute("std/temporal.type Date.get day()", PyIdentifierName("day"))
+val DateGetMonth = inlineAttribute("std/temporal.type Date.get month()", PyIdentifierName("month"))
+val DateGetYear = inlineAttribute("std/temporal.type Date.get year()", PyIdentifierName("year"))
 val DateGetDayOfWeek = PyInlineSupportCode(
     "std/temporal.type Date.get dayOfWeek()",
     arity = 1,
@@ -1068,10 +1068,10 @@ private val pyConnections = mapOf(
     "core.type Boolean.toString()" to BooleanToString,
     "std/temporal.type Date.constructor()" to DateConstructor,
     "std/temporal.type Date.fromIsoString()" to DateFromIsoString,
-    "std/temporal.type Date.day" to DateGetDay,
+    "std/temporal.type Date.get day()" to DateGetDay,
     "std/temporal.type Date.get dayOfWeek()" to DateGetDayOfWeek,
-    "std/temporal.type Date.month" to DateGetMonth,
-    "std/temporal.type Date.year" to DateGetYear,
+    "std/temporal.type Date.get month()" to DateGetMonth,
+    "std/temporal.type Date.get year()" to DateGetYear,
     "std/temporal.type Date.toString()" to DateToString,
     "std/temporal.type Date.today()" to DateToday,
     "std/temporal.type Date.yearsBetween()" to DateYearsBetween,

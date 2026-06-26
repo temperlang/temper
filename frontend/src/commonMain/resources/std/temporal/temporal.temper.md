@@ -90,22 +90,25 @@ Here's just enough of a Date type to get us started.
      * A Date identifies a day in the proleptic Gregorian calendar.
      * It is unconnected to a time of day or a timezone.
      */
-    @imu
-    @json
-    @connected @imu @json
+    @imu @json @connected
     export class Date {
       /** The year.  1900 means 1900. */
       @connected
-      public year: Int;
+      public get year(): Int { _year }
+      private _year: Int;
+
       /** The month of the year in [1, 12]. */
       @connected
-      public month: Int;
+      public get month(): Int { _month }
+      private _month: Int;
+
       /**
        * The day of the month in [1, 31]
        * additionally constrained by the length of [month].
        */
       @connected
-      public day: Int;
+      public get day(): Int { _day }
+      private _day: Int;
 
       @connected
       public constructor(year: Int, month: Int, day: Int): Void throws Bubble {
@@ -116,9 +119,9 @@ Here's just enough of a Date type to get us started.
               } else {
                 isLeapYear(year)
               })) {
-          this.year = year;
-          this.month = month;
-          this.day = day;
+          this._year = year;
+          this._month = month;
+          this._day = day;
         } else {
           bubble();
         }

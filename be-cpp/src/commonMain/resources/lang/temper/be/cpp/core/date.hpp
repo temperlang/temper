@@ -15,31 +15,31 @@ namespace temper {
 
             template<class D>
             int32_t getYear(const std::shared_ptr<D>& d) {
-                return d->year;
+                return d->_year;
             }
 
             template<class D>
             int32_t getMonth(const std::shared_ptr<D>& d) {
-                return d->month;
+                return d->_month;
             }
 
             template<class D>
             int32_t getDay(const std::shared_ptr<D>& d) {
-                return d->day;
+                return d->_day;
             }
 
             template<class D>
             int32_t getDayOfWeek(const std::shared_ptr<D>& d) {
                 static int t[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
-                int64_t y = d->year;
-                int64_t m = d->month;
+                int64_t y = d->_year;
+                int64_t m = d->_month;
                 if (m < 1 || m > 12) {
                     bubble<int32_t>("month out of range");
                 }
                 if (m < 3) {
                     y = y - 1;
                 }
-                int64_t dow = (y + y/4 - y/100 + y/400 + t[m-1] + d->day) % 7;
+                int64_t dow = (y + y/4 - y/100 + y/400 + t[m-1] + d->_day) % 7;
                 if (dow < 0) {
                     dow = dow + 7;
                 }
@@ -50,13 +50,13 @@ namespace temper {
             std::string toString(
             const std::shared_ptr<D>& d,
             typename std::enable_if<
-            std::is_same<decltype(std::declval<D>().year), int32_t>::value
-            && std::is_same<decltype(std::declval<D>().month), int32_t>::value
-            && std::is_same<decltype(std::declval<D>().day), int32_t>::value
+            std::is_same<decltype(std::declval<D>()._year), int32_t>::value
+            && std::is_same<decltype(std::declval<D>()._month), int32_t>::value
+            && std::is_same<decltype(std::declval<D>()._day), int32_t>::value
             >::type* = nullptr
             ) {
                 std::ostringstream oss;
-                int32_t y = d->year;
+                int32_t y = d->_year;
                 if (y < 0) {
                     oss << '-'; y = -y;
                 }
@@ -68,22 +68,22 @@ namespace temper {
                     oss << "0";
                 }
                 oss << y << '-';
-                if (d->month < 10) {
+                if (d->_month < 10) {
                     oss << '0';
                 }
-                oss << d->month << '-';
-                if (d->day < 10) {
+                oss << d->_month << '-';
+                if (d->_day < 10) {
                     oss << '0';
                 }
-                oss << d->day;
+                oss << d->_day;
                 return oss.str();
             }
 
             template<class D>
             int32_t yearsBetween(const std::shared_ptr<D>& from, const std::shared_ptr<D>& to) {
-                int32_t years = to->year - from->year;
-                if (to->month < from->month
-                || (to->month == from->month && to->day < from->day)) {
+                int32_t years = to->_year - from->_year;
+                if (to->_month < from->_month
+                || (to->_month == from->_month && to->_day < from->_day)) {
                     years = years - 1;
                 }
                 return years;
@@ -92,9 +92,9 @@ namespace temper {
             template<class D>
             std::shared_ptr<D> makeDate(int32_t year, int32_t month, int32_t day) {
                 std::shared_ptr<D> d = std::make_shared<D>();
-                d->year = year;
-                d->month = month;
-                d->day = day;
+                d->_year = year;
+                d->_month = month;
+                d->_day = day;
                 return d;
             }
 

@@ -39,9 +39,9 @@ class DateTodayFn(val sig: Signature2) : CallableValue, Stayless {
                 val propertyName = propertyShape.name as ModularName
                 val propertyParsedName = (propertyName as ResolvedParsedName).baseName
                 val value = when (propertyParsedName.nameText) {
-                    "year" -> Value(today.year, TInt)
-                    "month" -> Value(today.monthNumber, TInt)
-                    "day" -> Value(today.dayOfMonth, TInt)
+                    "_year" -> Value(today.year, TInt)
+                    "_month" -> Value(today.monthNumber, TInt)
+                    "_day" -> Value(today.dayOfMonth, TInt)
                     else -> error(propertyName)
                 }
                 properties[propertyName] = value
