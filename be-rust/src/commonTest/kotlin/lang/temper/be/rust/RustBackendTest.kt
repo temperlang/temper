@@ -1248,11 +1248,11 @@ class RustBackendTest {
                 |        pub x: Option<std::sync::Arc<String>>, pub y: Option<std::sync::Arc<String>>
                 |    }
                 |    impl CBuilder {
-                |        fn x(mut x: std::sync::Arc<String>) -> Self {
+                |        fn x(mut self, x: std::sync::Arc<String>) -> Self {
                 |            self.x = Some(x);
                 |            self
                 |        }
-                |        fn y(mut y: std::sync::Arc<String>) -> Self {
+                |        fn y(mut self, y: std::sync::Arc<String>) -> Self {
                 |            self.y = Some(y);
                 |            self
                 |        }
@@ -1850,11 +1850,11 @@ class RustBackendTest {
                 |        pub i: Option<i32>, pub j: Option<i32>
                 |    }
                 |    impl HaBuilder {
-                |        fn i(mut i: i32) -> Self {
+                |        fn i(mut self, i: i32) -> Self {
                 |            self.i = Some(i);
                 |            self
                 |        }
-                |        fn j(mut j: i32) -> Self {
+                |        fn j(mut self, j: i32) -> Self {
                 |            self.j = Some(j);
                 |            self
                 |        }
@@ -1937,15 +1937,15 @@ class RustBackendTest {
                 |        pub t: Option<Option<T>>, pub u: Option<U>, pub i: Option<i32>
                 |    }
                 |    impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> HiBuilder<T, U> {
-                |        fn t(mut t: Option<T>) -> Self {
+                |        fn t(mut self, t: Option<T>) -> Self {
                 |            self.t = Some(t);
                 |            self
                 |        }
-                |        fn u(mut u: U) -> Self {
+                |        fn u(mut self, u: U) -> Self {
                 |            self.u = Some(u);
                 |            self
                 |        }
-                |        fn i(mut i: i32) -> Self {
+                |        fn i(mut self, i: i32) -> Self {
                 |            self.i = Some(i);
                 |            self
                 |        }
@@ -2242,11 +2242,11 @@ class RustBackendTest {
             |        pub x: Option<f64>, pub y: Option<f64>
             |    }
             |    impl Vec2Builder {
-            |        fn x(mut x: f64) -> Self {
+            |        fn x(mut self, x: f64) -> Self {
             |            self.x = Some(x);
             |            self
             |        }
-            |        fn y(mut y: f64) -> Self {
+            |        fn y(mut self, y: f64) -> Self {
             |            self.y = Some(y);
             |            self
             |        }

@@ -418,7 +418,12 @@ class RustTranslator(
                             params = listOf(
                                 Rust.FunctionParam(
                                     pos = param.pos,
-                                    pattern = Rust.IdPattern(pos, Rust.IdPatternMut(pos), paramId.deepCopy()),
+                                    pattern = Rust.IdPattern(pos, Rust.IdPatternMut(pos), self.deepCopy()),
+                                    type = null,
+                                ),
+                                Rust.FunctionParam(
+                                    pos = param.pos,
+                                    pattern = paramId.deepCopy(),
                                     type = type,
                                 ),
                             ),
