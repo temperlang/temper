@@ -2,7 +2,6 @@ package lang.temper.frontend.disambiguate
 
 import lang.temper.builtin.isComplexTypeArg
 import lang.temper.common.Log
-import lang.temper.common.subListToEnd
 import lang.temper.log.LogEntry
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
@@ -12,13 +11,13 @@ import lang.temper.value.CallTree
 import lang.temper.value.RightNameLeaf
 import lang.temper.value.TEdge
 import lang.temper.value.Tree
-import lang.temper.value.lookThroughDecorations
 import lang.temper.value.nameContained
 import lang.temper.value.superSymbol
 import lang.temper.value.symbolContained
 
 internal data class TypeFormalHelper(
-    val decorated: TEdge,
+    /** If decorations exist, the edge pointing from them to the tree being decorated. */
+    val decorated: TEdge?,
     val formalName: Tree,
     val upperBounds: List<Tree>,
     val variance: Variance,
@@ -31,6 +30,7 @@ internal fun inspectTypeFormal(
     typeFormalEdge: TEdge,
 ): TypeFormalHelper {
     var formalName: Tree = typeFormalEdge.target // This may be a lie
+    var decorated: TEdge? = null
     val upperBounds = mutableListOf<Tree>()
     var variance = Variance.Default
     var variancePos: Position? = null
@@ -43,31 +43,20 @@ internal fun inspectTypeFormal(
     formalNameLoop@
     while (formalName is CallTree) {
         val callee = formalName.child(0) as? RightNameLeaf ?: break
-        var builtinKey = callee.content.builtinKey
-        var edges = formalName.edges
-        if (builtinKey == "@") {
-            // If the `@` hasn't fired yet, reassemble the decoration name
-            val decoration = edges.getOrNull(1)?.nameContained?.builtinKey
-            if (decoration != null) {
-                edges = edges.subListToEnd(1)
-                builtinKey = "@$decoration"
-            }
+        val builtinKey = callee.content.builtinKey
+        val edges = formalName.edges
+        builtinKey == "@" && edges.size == DECORATOR_EDGE_COUNT || break@formalNameLoop
+        when (edges[1].nameContained?.builtinKey) {
+            Variance.Contravariant.keyword -> Variance.Contravariant
+            Variance.Covariant.keyword -> Variance.Covariant
+            else -> null
+        }?.also { foundVariance ->
+            variance = foundVariance
+            variancePos = callee.pos
         }
-        when (builtinKey to edges.size) {
-            covariantAnnotationNameText to 2, contravariantAnnotationNameText to 2 -> {
-                variance = if (builtinKey == covariantAnnotationNameText) {
-                    Variance.Covariant
-                } else {
-                    Variance.Contravariant
-                }
-                formalName = edges[1].target
-                variancePos = callee.pos
-            }
-            else -> break@formalNameLoop
-        }
+        decorated = edges[2]
+        formalName = decorated.target
     }
-
-    val decorated = lookThroughDecorations(typeFormalEdge)
 
     // Unpack complex type arg like: { \typeArg name metadata }
     if (isComplexTypeArg(formalName)) {
@@ -106,3 +95,5 @@ internal fun inspectTypeFormal(
         problems = problems.toList(),
     )
 }
+
+private const val DECORATOR_EDGE_COUNT = 3

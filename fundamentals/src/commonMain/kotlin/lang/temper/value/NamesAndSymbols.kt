@@ -564,6 +564,9 @@ val vParameterNameSymbolsListSymbol = Value(parameterNameSymbolsListSymbol)
  */
 val functionalInterfaceSymbol = Symbol("functionalInterface")
 
+val imuSymbol = Symbol("imu")
+val partialImuSymbol = Symbol("partialImu")
+
 /**
  * The receiver type when an extension (see [extensionSymbol]) function is invoked via
  * `ReceiverType.dotName(...)` syntax.

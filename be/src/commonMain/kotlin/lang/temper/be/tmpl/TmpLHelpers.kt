@@ -394,6 +394,155 @@ fun TmpL.Tree.referencedNames(): Sequence<ResolvedName> = sequence {
     }
 }
 
+/**
+ * A type member that carries a receiver (`this`): a method, getter, or setter. Bundles the
+ * fields the receiver-oriented analyses (e.g. [mutatingMemberNames] and the C++ backend's
+ * const pass) read, so each works off one shared destructuring instead of repeating the
+ * member `when`. Members without a receiver (constructors, properties, static and garbage
+ * members) yield null from [asReceiverMember] and are skipped by those analyses.
+ */
+class ReceiverMember(
+    val dotName: String,
+    val parameters: TmpL.Parameters,
+    val body: TmpL.BlockStatement?,
+    val overridden: List<TmpL.SuperTypeMethod>,
+    /** A setter always mutates its receiver; methods and getters only if analysis says so. */
+    val isSetter: Boolean,
+    /** A generator member, whose lowered representation can't be const-qualified. */
+    val mayYield: Boolean,
+) {
+    /** The receiver (`this`) parameter's resolved name, or null if the member has no parameters. */
+    val thisName: ResolvedName?
+        get() = parameters.parameters.firstOrNull()?.name?.name
+}
+
+/** This member viewed as a [ReceiverMember] if it has a receiver, else null. */
+fun TmpL.MemberOrGarbage.asReceiverMember(): ReceiverMember? = when (this) {
+    is TmpL.NormalMethod ->
+        ReceiverMember(dotName.dotNameText, parameters, body, overridden, isSetter = false, mayYield = mayYield)
+    is TmpL.Getter ->
+        ReceiverMember(dotName.dotNameText, parameters, body, overridden, isSetter = false, mayYield = false)
+    is TmpL.Setter ->
+        ReceiverMember(dotName.dotNameText, parameters, body, overridden, isSetter = true, mayYield = false)
+    else -> null
+}
+
+/**
+ * Member dotNames (methods, getters, setters) across [modules] whose receiver (`this`)
+ * may be mutated when the member runs — directly (a property write or setter call on
+ * `this`) or transitively (calling another such member on `this`). Setters always
+ * qualify. The result is keyed by dotName so it is identical for every declaration in an
+ * override slot, which is what lets a backend emit a `const`/readonly qualifier
+ * consistently (C++ requires matching const-ness across a virtual override slot).
+ *
+ * This is a backend-agnostic mutation analysis. It is conservative: it errs toward
+ * "mutates" (descending into nested closures, which share `this`), so a member is marked
+ * non-mutating only when nothing observed could write `this`. A member NOT in the result
+ * provably does not mutate its receiver within the analyzed module set.
+ */
+fun mutatingMemberNames(
+    modules: Iterable<TmpL.Module>,
+    /**
+     * Member dotNames a backend wants treated as non-const for its own reasons (e.g. a
+     * representation that can't be const-qualified). Seeded into the analysis so the
+     * constraint propagates transitively through `this`-calls and override slots.
+     */
+    forcedMutating: Set<String> = emptySet(),
+): Set<String> {
+    val directlyMutates = forcedMutating.toMutableSet()
+    // member dotName -> dotNames it invokes on `this`
+    val callsOnThis = mutableMapOf<String, MutableSet<String>>()
+    // Undirected equivalence between a member's dotName and the dotName(s) it overrides.
+    // Members in the same override slot must agree on const-ness, so mutation propagates
+    // across these edges.
+    val overrideEquiv = mutableMapOf<String, MutableSet<String>>()
+    fun linkOverride(a: String, b: String) {
+        overrideEquiv.getOrPut(a) { mutableSetOf() }.add(b)
+        overrideEquiv.getOrPut(b) { mutableSetOf() }.add(a)
+    }
+
+    fun analyze(name: String, body: TmpL.Tree?, thisName: ResolvedName?) {
+        if (body == null) return
+        // `this` inside a member body is a reference to the member's first (receiver)
+        // parameter, or a `This` node.
+        fun isThisRef(n: TmpL.Tree): Boolean =
+            n is TmpL.This ||
+                (n is TmpL.Reference && thisName != null && n.id.name == thisName)
+        fun walk(node: TmpL.Tree) {
+            when (node) {
+                is TmpL.SetProperty -> {
+                    // `this.field = ...` reassigns a field of the receiver (the only kind
+                    // of mutation a C++ `const` method actually forbids, since the model
+                    // is shared_ptr-shallow). Deep mutation through a field is allowed by
+                    // both Temper-as-modeled and C++ shallow const, so it's not flagged.
+                    if (isThisRef(node.left.subject)) directlyMutates.add(name) else walk(node.left.subject)
+                    walk(node.right)
+                }
+                is TmpL.MethodReference -> {
+                    if (isThisRef(node.subject)) {
+                        callsOnThis.getOrPut(name) { mutableSetOf() }.add(node.methodName.dotNameText)
+                    } else {
+                        walk(node.subject)
+                    }
+                }
+                is TmpL.PropertyReference -> {
+                    // Reading a property of `this` is fine; only recurse when the subject
+                    // is some other expression that might itself use `this` as a value.
+                    if (!isThisRef(node.subject)) walk(node.subject)
+                }
+                else -> {
+                    if (isThisRef(node)) {
+                        // `this` used as a value (call argument, return value, RHS, closure
+                        // capture): a const method cannot hand out a non-const shared_ptr
+                        // to its own receiver, so such a method cannot be const.
+                        directlyMutates.add(name)
+                    } else {
+                        for (kid in node.children) walk(kid)
+                    }
+                }
+            }
+        }
+        walk(body)
+    }
+
+    for (mod in modules) {
+        for (top in mod.topLevels) {
+            if (top !is TmpL.TypeDeclaration) continue
+            for (member in top.members) {
+                val rm = member.asReceiverMember() ?: continue
+                // A setter always mutates its receiver.
+                if (rm.isSetter) directlyMutates.add(rm.dotName)
+                analyze(rm.dotName, rm.body, rm.thisName)
+                for (sup in rm.overridden) {
+                    linkOverride(rm.dotName, sup.name.dotNameText)
+                }
+            }
+        }
+    }
+
+    // Propagate mutation to a fixpoint across both call edges (a member invoking a
+    // mutating member on `this` is mutating) and override-slot edges (any member of a
+    // slot mutating taints the whole slot, keeping const-ness consistent).
+    val mutating = directlyMutates.toMutableSet()
+    var changed = true
+    while (changed) {
+        changed = false
+        for ((caller, callees) in callsOnThis) {
+            if (caller !in mutating && callees.any { it in mutating }) {
+                mutating.add(caller)
+                changed = true
+            }
+        }
+        for ((a, neighbors) in overrideEquiv) {
+            if (a !in mutating && neighbors.any { it in mutating }) {
+                mutating.add(a)
+                changed = true
+            }
+        }
+    }
+    return mutating
+}
+
 /** Find mutable vars declared in this scope that are referenced in functions beneath this node. */
 fun TmpL.Tree.mutableCaptures(): Set<ResolvedName> {
     // Skip this because it's likely already a function, and we want to handle functions below specially, not this one.

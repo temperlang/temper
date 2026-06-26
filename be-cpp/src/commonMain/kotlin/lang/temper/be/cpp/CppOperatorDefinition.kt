@@ -5,7 +5,7 @@ import lang.temper.format.OperatorDefinition
 import kotlin.math.sign
 
 // cppref: https://en.cppreference.com/w/cpp/language/operator_precedence
-@Suppress("MagicNumber")
+@Suppress("MagicNumber") // Operator precedence levels from C++ spec
 enum class CppOperatorDefinition(
     val precedence: Int,
     private val associativity: LeftOrRight = LeftOrRight.Left,

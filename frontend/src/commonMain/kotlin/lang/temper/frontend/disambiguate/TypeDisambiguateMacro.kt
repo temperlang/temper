@@ -66,6 +66,7 @@ import lang.temper.value.NameLeaf
 import lang.temper.value.ReifiedType
 import lang.temper.value.Result
 import lang.temper.value.RightNameLeaf
+import lang.temper.value.StayLeaf
 import lang.temper.value.TBoolean
 import lang.temper.value.TEdge
 import lang.temper.value.TFunction
@@ -881,7 +882,7 @@ internal fun typeDisambiguateMacro(
     // Pull type formals into the body alongside other members.
     //     class C<T> { ... }  ->  class C { @typeFormal @typeDefined(T__0) let T = ...; ... }
     // Since each type formal also is a TypeDefinition, we allocate a type name.
-    val formalDecls = mutableListOf<DeclTree>()
+    val formalDecls = mutableListOf<Tree>()
     val formalEffects = mutableListOf<CallTree>()
     val errorNodes = mutableListOf<Tree>()
     val reifiedFormals = mutableListOf<Pair<Position, ReifiedType>>()
@@ -930,6 +931,7 @@ internal fun typeDisambiguateMacro(
                 }
                 val stableFormalName = predefinedFormalDefinition?.name
                     ?: doc.nameMaker.unusedSourceName(ParsedName(formalSymbol.text))
+                val stayLeaf = typeFormalPieces.decorated?.let { StayLeaf(doc, formalPos) }
                 val formalDefinition = when {
                     predefinedFormalDefinition != null -> {
                         if (predefinedFormalDefinition.variance != variance) {
@@ -959,6 +961,7 @@ internal fun typeDisambiguateMacro(
                                 // bound like `Bubble` which is disjoint from AnyValue.
                                 listOf(WellKnownTypes.anyValueType)
                             },
+                            stayLeaf = stayLeaf,
                         )
                     }
                 }
@@ -974,6 +977,10 @@ internal fun typeDisambiguateMacro(
                         V(Value(reifiedFormal))
                         V(vResolutionSymbol)
                         Ln(formalDefinition.name)
+                        if (stayLeaf != null) {
+                            V(vStaySymbol)
+                            Replant(stayLeaf)
+                        }
                         V(vInitSymbol)
                         V(formalPos, Value(reifiedFormal))
                         if (genre == Genre.Documentation) {
@@ -982,7 +989,16 @@ internal fun typeDisambiguateMacro(
                         }
                     },
                 )
-                formalDecls.add(DeclTree(doc, formalPos, formalDeclChildren))
+                val formalDecl = DeclTree(doc, formalPos, formalDeclChildren)
+                val formalDeclWrapped = when (typeFormalPieces.decorated) {
+                    null -> formalDecl
+                    else -> {
+                        typeFormalPieces.decorated.replace(formalDecl)
+                        // Decorations, if present, are always the outer layer of type args.
+                        next
+                    }
+                }
+                formalDecls.add(formalDeclWrapped)
                 reifiedFormals.add(formalPos to reifiedFormal)
                 if (predefinedFormalDefinition == null) {
                     typeShape.typeParameters.add(

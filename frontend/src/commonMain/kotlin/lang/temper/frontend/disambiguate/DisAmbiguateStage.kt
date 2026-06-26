@@ -30,7 +30,6 @@ import lang.temper.name.Symbol
 import lang.temper.stage.Stage
 import lang.temper.type.MkType
 import lang.temper.type.TypeFormal
-import lang.temper.type.Variance
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.MkType2
 import lang.temper.value.BlockTree
@@ -46,9 +45,11 @@ import lang.temper.value.PartialResult
 import lang.temper.value.Planting
 import lang.temper.value.ReifiedType
 import lang.temper.value.RightNameLeaf
+import lang.temper.value.StayLeaf
 import lang.temper.value.TEdge
 import lang.temper.value.TSymbol
 import lang.temper.value.Tree
+import lang.temper.value.TreeTemplate
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 import lang.temper.value.errorFn
@@ -69,6 +70,7 @@ import lang.temper.value.vDefaultSymbol
 import lang.temper.value.vInitSymbol
 import lang.temper.value.vResolutionSymbol
 import lang.temper.value.vRestFormalSymbol
+import lang.temper.value.vStaySymbol
 import lang.temper.value.vTypeArgSymbol
 import lang.temper.value.vTypeFormalSymbol
 import lang.temper.value.vWithinDocFoldSymbol
@@ -530,10 +532,10 @@ private fun splitComplexArgIntoWordAndType(e: TEdge) {
  * @return true if we manage to do the rewrite.
  */
 private fun formalizeTypeArg(e: TEdge): Boolean {
-    val typeFormaPieces = inspectTypeFormal(e)
-    val nameTree = typeFormaPieces.formalName
-    val upperBounds = typeFormaPieces.upperBounds
-    val variance = typeFormaPieces.variance
+    val typeFormalPieces = inspectTypeFormal(e)
+    val nameTree = typeFormalPieces.formalName
+    val upperBounds = typeFormalPieces.upperBounds
+    val variance = typeFormalPieces.variance
 
     val document = nameTree.document
     val genre = document.context.genre
@@ -544,6 +546,7 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
     val pos = e.target.pos
     val leftPos = pos.leftEdge
     val declarationName = document.nameMaker.unusedSourceName(name)
+    val stayLeaf = typeFormalPieces.decorated?.let { StayLeaf(e.target.document, pos) }
     val typeFormal = TypeFormal(
         pos,
         declarationName,
@@ -556,11 +559,12 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
         } else {
             listOf(MkType.nominal(WellKnownTypes.anyValueTypeDefinition))
         },
+        stayLeaf = stayLeaf,
     )
     val typeValue = Value(ReifiedType(MkType2(typeFormal).get()))
 
-    fun Planting.declareTypeFormal() {
-        Decl(pos, name) {
+    fun Planting.declareTypeFormal(): TreeTemplate<DeclTree> {
+        return Decl(pos, name) {
             // When the syntax stage resolves names, use declarationName.
             V(leftPos, vResolutionSymbol)
             Ln(declarationName)
@@ -568,6 +572,10 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
             V(leftPos, nameSymbol)
             V(leftPos, typeDeclSymbol)
             V(leftPos, typeValue)
+            if (stayLeaf != null) {
+                V(vStaySymbol)
+                Replant(stayLeaf)
+            }
             V(leftPos, vInitSymbol)
             V(pos, typeValue)
             if (genre == Genre.Documentation) {
@@ -577,10 +585,15 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
         }
     }
 
-    typeFormaPieces.decorated.replace {
+    // With decorations, we need to put the decl inside them.
+    typeFormalPieces.decorated?.replace { declareTypeFormal() }
+    e.replace {
         Block {
-            declareTypeFormal()
-            for (upperBound in typeFormaPieces.upperBounds) {
+            when (typeFormalPieces.decorated) {
+                null -> declareTypeFormal()
+                else -> Replant(freeTarget(e))
+            }
+            for (upperBound in typeFormalPieces.upperBounds) {
                 Call(upperBound.pos, vExtendsFn) {
                     V(upperBound.pos.leftEdge, typeValue)
                     Replant(freeTree(upperBound))
@@ -589,7 +602,7 @@ private fun formalizeTypeArg(e: TEdge): Boolean {
             V(typeValue)
         }
     }
-    return typeFormaPieces.problems.isEmpty()
+    return typeFormalPieces.problems.isEmpty()
 }
 
 private fun augmentDeclWithSymbol(
@@ -615,9 +628,6 @@ private fun augmentDeclWithSymbol(
         declChildren.add(ValueLeaf(doc, pos, Value(symbol, TSymbol)))
     }
 }
-
-internal val contravariantAnnotationNameText = "@${Variance.Contravariant.keyword}"
-internal val covariantAnnotationNameText = "@${Variance.Covariant.keyword}"
 
 /**
  * Make sure formals have \word metadata.

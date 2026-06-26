@@ -3186,6 +3186,15 @@ For example:
 
 <!-- /snippet: builtin/@fun -->
 
+<!-- snippet: builtin/@imu -->
+
+<a name="builtin&#45;&#64;imu" class="snippet-anchor-name"></a>
+
+### `@imu` decorator
+Marker for types that must be deeply immutable.
+
+<!-- /snippet: builtin/@imu -->
+
 <!-- snippet: builtin/@in -->
 
 <a name="builtin&#45;&#64;in" class="snippet-anchor-name"></a>
@@ -3728,6 +3737,16 @@ TODO Should extension methods have the same prohibition?
 Also detail interaction between extension methods and overloads.
 
 <!-- /snippet: builtin/@overload -->
+
+<!-- snippet: builtin/@partialImu -->
+
+<a name="builtin&#45;&#64;partialImu" class="snippet-anchor-name"></a>
+
+### `@partialImu` decorator
+Marker for types that must be deeply immutable when their actual type
+parameters are deeply immutable.
+
+<!-- /snippet: builtin/@partialImu -->
 
 <!-- snippet: builtin/@private -->
 

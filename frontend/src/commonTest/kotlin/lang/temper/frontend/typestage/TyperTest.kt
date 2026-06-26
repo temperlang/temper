@@ -1462,7 +1462,7 @@ class TyperTest {
         |    }
         """.trimMargin(),
         wantErrors = listOf(
-            "2+23-35: No member toString in Imu | AnyValue | Equatable!",
+            "2+23-35: No member toString in Equatable | AnyValue!",
             "2+23-35: Type Invalid mentions Invalid",
             "2+25-33: Type Invalid mentions Invalid",
         ),
@@ -1994,7 +1994,7 @@ class TyperTest {
         //  B     C
         //   \   /
         //     D
-        $$"""
+        """
             |    interface A { a<T>(x: T): T { x } }
             |    interface B extends A {}
             |    interface C { a<T>(x: T): T { x } }

@@ -715,7 +715,6 @@ class RustTranslator(
         sups@ for ((subShape, sup) in decl.typeShape.allInterfaces(allowStart = true)) {
             // Only handle type shapes, and only unique ones.
             val supShape = (sup.definition as? TypeShape) ?: continue@sups
-            supShape.isFiction() && continue@sups
             val supDecl = supShape.stayLeaf?.incoming?.source as? DeclTree
             // For sealed enums, this picks an arbitrary winner. TODO Allow diamonds and/or check against them earlier.
             handledSups.add(supShape.name) || continue@sups
@@ -1013,7 +1012,7 @@ class RustTranslator(
     private fun buildBounds(typeParam: TmpL.TypeFormal): List<Rust.TypeParamBound> {
         val bounds = buildList {
             bounds@ for (bound in typeParam.upperBounds) {
-                when (val boundDef = bound.typeName.sourceDefinition) {
+                when (bound.typeName.sourceDefinition) {
                     // Special cases. TODO Others?
                     WellKnownTypes.anyValueTypeDefinition -> {}
                     WellKnownTypes.equatableTypeDefinition -> add(PARTIAL_EQ_NAME.toId(bound.pos))
@@ -1021,7 +1020,6 @@ class RustTranslator(
                         add(EQ_NAME.toId(bound.pos))
                         add(HASH_NAME.toId(bound.pos))
                     }
-                    else if boundDef.isFiction() -> {}
                     // Translate general cases to trait names.
                     else -> translateTypeAsTraitName(bound).also { add(it) }
                 }
