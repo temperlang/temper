@@ -24,7 +24,6 @@ import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.ResolvedName
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
-import lang.temper.type.BindMemberAccessor
 import lang.temper.type.DotHelper
 import lang.temper.type.ExternalSet
 import lang.temper.type.InternalSet
@@ -419,12 +418,9 @@ class Weaver private constructor(
             child is CallTree -> {
                 // Some calls are intermediate steps to other calls:
                 // - angle bracket calls associate type parameters with a callee.
-                // - do_bind_xyz calls associate a subject with a method dot name
                 // These should stay in situ.
-                val callee = child.childOrNull(0)
-                when (val calleeFn = callee?.functionContained) {
+                when (child.childOrNull(0)?.functionContained) {
                     BuiltinFuns.angleFn -> child.size != 1 || shouldExtract(child, 1)
-                    is DotHelper -> calleeFn.memberAccessor !is BindMemberAccessor
                     else -> true
                 }
             }

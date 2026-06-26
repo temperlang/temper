@@ -58,7 +58,6 @@ import lang.temper.name.SourceName
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
-import lang.temper.type.BindMemberAccessor
 import lang.temper.type.DotHelper
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
@@ -1763,15 +1762,6 @@ class TmpLTranslator internal constructor(
             translateDotHelperCall(
                 tree,
                 callee = effectiveCallee,
-                outerCallTree = null,
-                typeActuals = typeActuals,
-            )
-        } else if (dotHelperFromCallOrNull(effectiveCallee)?.memberAccessor is BindMemberAccessor) {
-            check(effectiveCallee is CallTree)
-            translateDotHelperCall(
-                effectiveCallee,
-                callee = effectiveCallee.child(0),
-                outerCallTree = tree,
                 typeActuals = typeActuals,
             )
         } else {
@@ -2790,20 +2780,17 @@ class TmpLTranslator internal constructor(
         translateDotHelperCall(
             callTree,
             callTree.child(0),
-            null,
             emptyList(),
         )
 
     private fun translateDotHelperCall(
         callTree: CallTree,
         callee: Tree,
-        outerCallTree: CallTree?,
         typeActuals: List<Tree>,
     ): StmtOrExpr {
         val dotTranslation = TranslateDotHelper.translate(
             callTree = callTree,
             callee = callee,
-            outerCallTree = outerCallTree,
             typeActuals = typeActuals,
             translator = this,
         )

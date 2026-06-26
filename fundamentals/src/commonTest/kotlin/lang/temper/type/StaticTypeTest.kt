@@ -3,6 +3,8 @@ package lang.temper.type
 import lang.temper.common.assertStringsEqual
 import lang.temper.common.assertStructure
 import lang.temper.format.toStringViaTokenSink
+import lang.temper.type2.hackMapNewStyleToOld
+import lang.temper.type2.makeTypeFormalsForTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -27,6 +29,26 @@ class StaticTypeTest {
             "Bubble",
             toStringViaTokenSink { BubbleType.renderTo(it) },
         )
+        val strToVoid = MkType.fn(listOf(), listOf(WellKnownTypes.stringType), null, WellKnownTypes.voidType)
+        assertStringsEqual(
+            "fn (String): Void",
+            toStringViaTokenSink { strToVoid.renderTo(it) },
+        )
+        val strToVoidOrNull = MkType.nullable(strToVoid)
+        assertStringsEqual(
+            "(fn (String): Void)?",
+            toStringViaTokenSink { strToVoidOrNull.renderTo(it) },
+        )
+        val (typeParamRefT) = makeTypeFormalsForTest("T" to WellKnownTypes.anyValueType)
+        val genericFnType = MkType.fn(
+            listOf(typeParamRefT.definition),
+            listOf(hackMapNewStyleToOld(typeParamRefT)), null, WellKnownTypes.voidType,
+        )
+        assertStringsEqual(
+            "fn<T extends AnyValue>(T): Void",
+            toStringViaTokenSink { genericFnType.renderTo(it) },
+        )
+
         TypeTestHarness(
             """
             |interface Foo<T, U>;

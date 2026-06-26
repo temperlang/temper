@@ -407,8 +407,8 @@ class TypeStageTest {
             |    console#0 = doPure(@stay fn: Console {
             |        getConsole()
             |    });
-            |    do_bind_forEach(list("foo"))(fn (x__0) {
-            |        do_bind_log(console#0)(x__0)
+            |    do_call_forEach(list("foo"), @stay fn (x__0) {
+            |        do_call_log(console#0, x__0)
             |    })
             |
             |    ```
@@ -429,12 +429,12 @@ class TypeStageTest {
             |    i__0 = 0;
             |    while (i__0 < n__0) {
             |      let el__0: String;
-            |      el__0 = do_bind_get(this__0)(i__0);
+            |      el__0 = do_call_get(this__0, i__0);
             |      i__0 = i__0 + 1;
             |## Inlined block lambda
             |      let x__0;
             |      x__0 = el__0;
-            |      do_bind_log(console#0)(x__0);
+            |      do_call_log(console#0, x__0);
             |## End of inlined block lambda
             |    };
             |
@@ -476,7 +476,7 @@ class TypeStageTest {
                 |    i__0 = 0;
                 |    while (i__0 < n__0) {
                 |      let el__0: String;
-                |      el__0 = do_bind_get(this__0)(i__0);
+                |      el__0 = do_call_get(this__0, i__0);
                 |      i__0 = i__0 + 1;${
                 "" // Here we start the inlined block lambda parameters.
             }
@@ -488,7 +488,7 @@ class TypeStageTest {
                 |      if (x__0 == "c") {
                 |        break;
                 |      };
-                |      do_bind_log(console#0)(x__0);${
+                |      do_call_log(console#0, x__0);${
                 "" // Did not inline `return__0 = void`.  Not ok for local vars.
                 // Here's the end of the inlined block lambda.
             }
@@ -534,9 +534,9 @@ class TypeStageTest {
             |        outer__0: do {
             |          body#0: do {}
             |        };
-            |        do_bind_log(doPure(@stay fn /* return__0 */: Console {
+            |        do_call_log(doPure(@stay fn /* return__0 */: Console {
             |              return__0 = getConsole();
-            |        }))("yes");
+            |          }), "yes");
             |
             |        ```
             |  },
@@ -915,10 +915,10 @@ class TypeStageTest {
           type: {
             body:
               ```
-              fn (i__0 /* aka i */: Int32) /* return__0 */: String {
+              @stay fn (i__0 /* aka i */: Int32) /* return__0 */: String {
                 void;
                 fn__0: do {
-                  return__0 = do_bind_toString(do_bind_toString(do_bind_toString(i__0)())())();
+                  return__0 = do_call_toString(do_call_toString(do_call_toString(i__0)));
                 }
               }
 
@@ -1188,7 +1188,7 @@ class TypeStageTest {
         |## body's semantics would result in "0" if x could be bound.
         |        (fn i)("0")
         |      } orelse {
-        |        do_bind_log(t#0)("bad");
+        |        do_call_log(t#0, "bad");
         |      };
         |      return__0 = void
         |
@@ -1674,17 +1674,17 @@ class TypeStageTest {
             |        return__0 = getConsole();
             |    });
             |    @fn let f__0;
-            |    f__0 = fn f(returnEarly__0 /* aka returnEarly */: Boolean) /* return__1 */: Void {
-            |      void;
-            |      fn__0: do {
-            |        if (returnEarly__0) {
-            |          return__1 = void;
-            |          break fn__0;
-            |        };
-            |        do_bind_log(console#0)("Did not return early");
-            |        return__1 = void
-            |      }
-            |    }
+            |    f__0 = (@stay fn f(returnEarly__0 /* aka returnEarly */: Boolean) /* return__1 */: Void {
+            |        void;
+            |        fn__0: do {
+            |          if (returnEarly__0) {
+            |            return__1 = void;
+            |            break fn__0;
+            |          };
+            |          do_call_log(console#0, "Did not return early");
+            |          return__1 = void
+            |        }
+            |    })
             |
             |    ```
             |  }
@@ -1737,20 +1737,20 @@ class TypeStageTest {
             |  type: {
             |    body: ```
             |      @fn let a__0;
-            |      a__0 = fn a(i__0 /* aka i */: List<Int32>) /* return__1 */: (List<Int32>) {
-            |        void;
-            |        fn__0: do {
-            |          if (do_get_length(i__0) == 0) {
-            |            return__1 = list();
-            |            break fn__0;
-            |          };
-            |          let n__0;
-            |          n__0 = new ListBuilder<Int32>();
-            |          return__1 = do_bind_map(n__0)(@stay fn (it__0 /* aka it */) /* return__2 */: Int32 {
-            |              return__2 = 2 * it__0
-            |          });
-            |        }
-            |      }
+            |      a__0 = (@stay fn a(i__0 /* aka i */: List<Int32>) /* return__1 */: (List<Int32>) {
+            |          void;
+            |          fn__0: do {
+            |            if (do_get_length(i__0) == 0) {
+            |              return__1 = list();
+            |              break fn__0;
+            |            };
+            |            let n__0;
+            |            n__0 = new ListBuilder<Int32>();
+            |            return__1 = do_call_map(n__0, @stay fn (it__0 /* aka it */) /* return__2 */: Int32 {
+            |                return__2 = 2 * it__0
+            |            });
+            |          }
+            |      })
             |
             |      ```,
             |  }
@@ -1795,7 +1795,7 @@ class TypeStageTest {
             |          return__3 = void
             |      });
             |      if (isZero__0(0)) {
-            |        return__0 = do_bind_isZero(new Zero__0())();
+            |        return__0 = do_call_isZero(new Zero__0());
             |      } else {
             |        return__0 = false
             |      };
@@ -1829,7 +1829,7 @@ class TypeStageTest {
             |            x__0 == 0
             |          }
             |      });
-            |      if((do_bind_isZero[static isZero__0])(type (Int32))(0), @stay fn {
+            |      if((do_call_isZero[static isZero__0])(type (Int32), 0), @stay fn {
             |          true
             |        }, \else, fn (f#0) {
             |          f#0(@stay fn {
@@ -1880,16 +1880,16 @@ class TypeStageTest {
             |          return__0 = getConsole();
             |      });
             |      @fn let f__0;
-            |      f__0 = fn f(hi__0 /* aka hi */: String) /* return__1 */: Void {
-            |        void;
-            |        fn__0: do {
-            |          let s__0: String;
-            |          s__0 = cat("Hello, ", str(hi__0), "!");
-            |          do_bind_log(console#0)(s__0);
-            |          do_bind_log(console#0)(s__0);
-            |          return__1 = void
-            |        }
-            |      }
+            |      f__0 = (@stay fn f(hi__0 /* aka hi */: String) /* return__1 */: Void {
+            |          void;
+            |          fn__0: do {
+            |            let s__0: String;
+            |            s__0 = cat("Hello, ", str(hi__0), "!");
+            |            do_call_log(console#0, s__0);
+            |            do_call_log(console#0, s__0);
+            |            return__1 = void
+            |          }
+            |      })
             |
             |      ```
             |  }
@@ -1906,10 +1906,10 @@ class TypeStageTest {
             |    body: ```
             |        @stay @imported(\(`half//`.intHalf)) @fn @extension("half") let intHalf__0;
             |        intHalf__0 = (fn intHalf);
-            |        do_bind_log(doPure(@stay fn /* return__0 */: Console {
+            |        do_call_log(doPure(@stay fn /* return__0 */: Console {
             |              return__0 = getConsole();
-            |        }))(do_bind_toString(intHalf__0(84))());
-            |##                           ^^^^^^^^^^ extension resolved across module boundaries
+            |          }), do_call_toString(intHalf__0(84)));
+            |##                             ^^^^^^^^^^ extension resolved across module boundaries
             |
             |        ```
             |  }
@@ -2076,16 +2076,15 @@ class TypeStageTest {
             |    body:
             |      ```
             |      @fn let f__0 ⦂(fn (List<String>, List<String>): String), @fn `test//`.g ⦂(fn (String): String);
-            |      f__0 = fn f(literals__0 /* aka literals */: List<String>, values__0 /* aka values */: List<String>) /* return__0 */: String {
-            |        void;
-            |        fn__0: do {
-            |          return__0 = do_bind_get(literals__0)(0);
-            |        }
-            |      };
-            |      `test//`.g = (@stay fn g(there__0 /* aka there */: String) /* return__1 */: String {
+            |      f__0 = (@stay fn f(literals__0 /* aka literals */: List<String>, values__0 /* aka values */: List<String>) /* return__0 */: String {
             |          void;
+            |          fn__0: do {
+            |            return__0 = do_call_get(literals__0, 0);
+            |          }
+            |      });
+            |      `test//`.g = (@stay fn g(there__0 /* aka there */: String) /* return__1 */: String {
             |          fn__1: do {
-            |            return__1 = f__0(list ⋖ String ⋗("hi", ""), list ⋖ String ⋗(there__0));
+            |            return__1 = (fn f)(list ⋖ String ⋗("hi", ""), list ⋖ String ⋗(there__0))
             |          }
             |      })
             |
@@ -2128,27 +2127,27 @@ class TypeStageTest {
             |      @fn let `test//`.crazySum ⦂(fn (IntMaker, Int64, String): Int32 | Bubble);
             |      @constructorProperty @visibility(\public) @stay @fromType(IntMaker) let radix__0: Int32;
             |      @visibility(\public) @overload("toInt") @fn @stay @fromType(IntMaker) let int64ToInt__0 ⦂(fn (IntMaker, Int64): Int32 | Bubble);
-            |      int64ToInt__0 = fn int64ToInt(@impliedThis(IntMaker) this__0: IntMaker, int__0 /* aka int */: Int64) /* return__0 */: (Int32 | Bubble) {
-            |        void;
-            |        fn__0: do {
-            |          var fail#0 ⦂ Boolean;
-            |          return__0 = hs ⋖ Int32 ⋗(fail#0, do_bind_toInt32(int__0)());
-            |          if (fail#0) {
-            |            bubble ⋖ Int32 ⋗()
-            |          };
-            |        }
-            |      };
+            |      int64ToInt__0 = (@stay fn int64ToInt(@impliedThis(IntMaker) this__0: IntMaker, int__0 /* aka int */: Int64) /* return__0 */: (Int32 | Bubble) {
+            |          void;
+            |          fn__0: do {
+            |            var fail#0 ⦂ Boolean;
+            |            return__0 = hs ⋖ Int32 ⋗(fail#0, do_call_toInt32(int__0));
+            |            if (fail#0) {
+            |              bubble ⋖ Int32 ⋗()
+            |            };
+            |          }
+            |      });
             |      @visibility(\public) @overload("toInt") @fn @stay @fromType(IntMaker) let stringToInt__0 ⦂(fn (IntMaker, String): Int32 | Bubble);
-            |      stringToInt__0 = fn stringToInt(@impliedThis(IntMaker) this__1: IntMaker, string__0 /* aka string */: String) /* return__1 */: (Int32 | Bubble) {
-            |        void;
-            |        fn__1: do {
-            |          var fail#1 ⦂ Boolean;
-            |          return__1 = hs ⋖ Int32 ⋗(fail#1, do_bind_toInt32(string__0)(getp(radix__0, this__1)));
-            |          if (fail#1) {
-            |            bubble ⋖ Int32 ⋗()
-            |          };
-            |        }
-            |      };
+            |      stringToInt__0 = (@stay fn stringToInt(@impliedThis(IntMaker) this__1: IntMaker, string__0 /* aka string */: String) /* return__1 */: (Int32 | Bubble) {
+            |          void;
+            |          fn__1: do {
+            |            var fail#1 ⦂ Boolean;
+            |            return__1 = hs ⋖ Int32 ⋗(fail#1, do_call_toInt32(string__0, getp(radix__0, this__1)));
+            |            if (fail#1) {
+            |              bubble ⋖ Int32 ⋗()
+            |            };
+            |          }
+            |      });
             |      @visibility(\public) @overload("justMe") @fn @stay @fromType(IntMaker) let int32ToInt__0 ⦂(fn (IntMaker, Int32): Int32);
             |      int32ToInt__0 = (@stay fn int32ToInt(@impliedThis(IntMaker) this__2: IntMaker, int__1 /* aka int */: Int32) /* return__2 */: Int32 {
             |          fn__2: do {
@@ -2164,23 +2163,23 @@ class TypeStageTest {
             |      getradix__0 = (@stay fn (@impliedThis(IntMaker) this__4: IntMaker) /* return__4 */: Int32 {
             |          return__4 = getp(radix__0, this__4)
             |      });
-            |      `test//`.crazySum = fn crazySum(intMaker__0 /* aka intMaker */: IntMaker, int__2 /* aka int */: Int64, string__1 /* aka string */: String) /* return__5 */: (Int32 | Bubble) {
-            |        void;
-            |        fn__3: do {
-            |          var fail#2 ⦂ Boolean, fail#3 ⦂ Boolean;
-            |          let intInt__0 ⦂ Int32;
-            |          intInt__0 = hs ⋖ Int32 ⋗(fail#2, do_bind_int64ToInt(intMaker__0)(int__2));
-            |          if (fail#2) {
-            |            bubble ⋖ Int32 ⋗()
-            |          };
-            |          let stringInt__0 ⦂ Int32;
-            |          stringInt__0 = hs ⋖ Int32 ⋗(fail#3, do_bind_stringToInt(intMaker__0)(string__1));
-            |          if (fail#3) {
-            |            bubble ⋖ Int32 ⋗()
-            |          };
-            |          return__5 = do_bind_int32ToInt(intMaker__0)(intInt__0 + stringInt__0);
-            |        }
-            |      }
+            |      `test//`.crazySum = (@stay fn crazySum(intMaker__0 /* aka intMaker */: IntMaker, int__2 /* aka int */: Int64, string__1 /* aka string */: String) /* return__5 */: (Int32 | Bubble) {
+            |          void;
+            |          fn__3: do {
+            |            var fail#2 ⦂ Boolean, fail#3 ⦂ Boolean;
+            |            let intInt__0 ⦂ Int32;
+            |            intInt__0 = hs ⋖ Int32 ⋗(fail#2, do_call_int64ToInt(intMaker__0, int__2));
+            |            if (fail#2) {
+            |              bubble ⋖ Int32 ⋗()
+            |            };
+            |            let stringInt__0 ⦂ Int32;
+            |            stringInt__0 = hs ⋖ Int32 ⋗(fail#3, do_call_stringToInt(intMaker__0, string__1));
+            |            if (fail#3) {
+            |              bubble ⋖ Int32 ⋗()
+            |            };
+            |            return__5 = do_call_int32ToInt(intMaker__0, intInt__0 + stringInt__0);
+            |          }
+            |      })
             |
             |      ```
             |  }
@@ -2235,15 +2234,15 @@ class TypeStageTest {
             |      @stay @imported(\(`test//c/`.C)) let C__0 ⦂ Type;
             |      C__0 = type (C);
             |      @fn let `test//`.useC ⦂(fn (C): Void);
-            |      `test//`.useC = fn useC(c__0 /* aka c */: C) /* return__0 */: Void {
-            |        void;
-            |        fn__0: do {
-            |          do_bind_fooInt32(c__0)(1);
-            |          do_bind_foolean(c__0)(true);
-            |          do_bind_fooString(c__0)("");
-            |          return__0 = void
-            |        }
-            |      }
+            |      `test//`.useC = (@stay fn useC(c__0 /* aka c */: C) /* return__0 */: Void {
+            |          void;
+            |          fn__0: do {
+            |            do_call_fooInt32(c__0, 1);
+            |            do_call_foolean(c__0, true);
+            |            do_call_fooString(c__0, "");
+            |            return__0 = void
+            |          }
+            |      })
             |
             |      ```
             |  }
@@ -2298,12 +2297,12 @@ class TypeStageTest {
             |          pureVirtual ⋖ String ⋗()
             |        }
             |      };
-            |      `test//`.stringifyLists = fn stringifyLists(stringer__0 /* aka stringer */: Stringer, int__1 /* aka int */: Int32, ints__1 /* aka ints */: List<Int32>, strings__0 /* aka strings */: List<String>) /* return__3 */: String {
-            |        void;
-            |        fn__3: do {
-            |          return__3 = cat(str(do_bind_stringifyInt32(stringer__0)(int__1)), ", ", str(do_bind_stringifyInt32List(stringer__0)(ints__1)), ", ", str(do_bind_stringifyStringList(stringer__0)(strings__0)))
-            |        }
-            |      }
+            |      `test//`.stringifyLists = (@stay fn stringifyLists(stringer__0 /* aka stringer */: Stringer, int__1 /* aka int */: Int32, ints__1 /* aka ints */: List<Int32>, strings__0 /* aka strings */: List<String>) /* return__3 */: String {
+            |          void;
+            |          fn__3: do {
+            |            return__3 = cat(str(do_call_stringifyInt32(stringer__0, int__1)), ", ", str(do_call_stringifyInt32List(stringer__0, ints__1)), ", ", str(do_call_stringifyStringList(stringer__0, strings__0)))
+            |          }
+            |      })
             |
             |      ```
             |  }
@@ -2341,27 +2340,27 @@ class TypeStageTest {
             |      @fn let `test//`.crazySum ⦂(fn (IntMaker, Int64, String): Int32 | Bubble);
             |      @constructorProperty @visibility(\public) @stay @fromType(IntMaker) let radix__0: Int32;
             |      @visibility(\public) @fn @stay @fromType(IntMaker) let toInt__0 ⦂(fn (IntMaker, Int64): Int32 | Bubble);
-            |      toInt__0 = fn toInt(@impliedThis(IntMaker) this__0: IntMaker, int__0 /* aka int */: Int64) /* return__0 */: (Int32 | Bubble) {
-            |        void;
-            |        fn__0: do {
-            |          var fail#0 ⦂ Boolean;
-            |          return__0 = hs ⋖ Int32 ⋗(fail#0, do_bind_toInt32(int__0)());
-            |          if (fail#0) {
-            |            bubble ⋖ Int32 ⋗()
-            |          };
-            |        }
-            |      };
+            |      toInt__0 = (@stay fn toInt(@impliedThis(IntMaker) this__0: IntMaker, int__0 /* aka int */: Int64) /* return__0 */: (Int32 | Bubble) {
+            |          void;
+            |          fn__0: do {
+            |            var fail#0 ⦂ Boolean;
+            |            return__0 = hs ⋖ Int32 ⋗(fail#0, do_call_toInt32(int__0));
+            |            if (fail#0) {
+            |              bubble ⋖ Int32 ⋗()
+            |            };
+            |          }
+            |      });
             |      @visibility(\public) @fn @stay @fromType(IntMaker) let toInt__1 ⦂(fn (IntMaker, String): Int32 | Bubble);
-            |      toInt__1 = fn toInt(@impliedThis(IntMaker) this__1: IntMaker, string__0 /* aka string */: String) /* return__1 */: (Int32 | Bubble) {
-            |        void;
-            |        fn__1: do {
-            |          var fail#1 ⦂ Boolean;
-            |          return__1 = hs ⋖ Int32 ⋗(fail#1, do_bind_toInt32(string__0)(getp(radix__0, this__1)));
-            |          if (fail#1) {
-            |            bubble ⋖ Int32 ⋗()
-            |          };
-            |        }
-            |      };
+            |      toInt__1 = (@stay fn toInt(@impliedThis(IntMaker) this__1: IntMaker, string__0 /* aka string */: String) /* return__1 */: (Int32 | Bubble) {
+            |          void;
+            |          fn__1: do {
+            |            var fail#1 ⦂ Boolean;
+            |            return__1 = hs ⋖ Int32 ⋗(fail#1, do_call_toInt32(string__0, getp(radix__0, this__1)));
+            |            if (fail#1) {
+            |              bubble ⋖ Int32 ⋗()
+            |            };
+            |          }
+            |      });
             |      @fn @visibility(\public) @stay @fromType(IntMaker) let constructor__0 ⦂(fn (IntMaker, Int32): Void);
             |      constructor__0 = (@stay fn constructor(@impliedThis(IntMaker) this__2: IntMaker, radix__1 /* aka radix */: Int32) /* return__2 */: Void {
             |          setp(radix__0, this__2, radix__1);
@@ -2371,23 +2370,23 @@ class TypeStageTest {
             |      getradix__0 = (@stay fn (@impliedThis(IntMaker) this__3: IntMaker) /* return__3 */: Int32 {
             |          return__3 = getp(radix__0, this__3)
             |      });
-            |      `test//`.crazySum = fn crazySum(intMaker__0 /* aka intMaker */: IntMaker, int__1 /* aka int */: Int64, string__1 /* aka string */: String) /* return__4 */: (Int32 | Bubble) {
-            |        void;
-            |        fn__2: do {
-            |          var fail#2 ⦂ Boolean, fail#3 ⦂ Boolean;
-            |          let intInt__0 ⦂ Int32;
-            |          intInt__0 = hs ⋖ Int32 ⋗(fail#2, do_bind_toInt(intMaker__0)(int__1));
-            |          if (fail#2) {
-            |            bubble ⋖ Int32 ⋗()
-            |          };
-            |          let stringInt__0 ⦂ Int32;
-            |          stringInt__0 = hs ⋖ Int32 ⋗(fail#3, do_bind_toInt(intMaker__0)(string__1));
-            |          if (fail#3) {
-            |            bubble ⋖ Int32 ⋗()
-            |          };
-            |          return__4 = intInt__0 + stringInt__0
-            |        }
-            |      }
+            |      `test//`.crazySum = (@stay fn crazySum(intMaker__0 /* aka intMaker */: IntMaker, int__1 /* aka int */: Int64, string__1 /* aka string */: String) /* return__4 */: (Int32 | Bubble) {
+            |          void;
+            |          fn__2: do {
+            |            var fail#2 ⦂ Boolean, fail#3 ⦂ Boolean;
+            |            let intInt__0 ⦂ Int32;
+            |            intInt__0 = hs ⋖ Int32 ⋗(fail#2, do_call_toInt(intMaker__0, int__1));
+            |            if (fail#2) {
+            |              bubble ⋖ Int32 ⋗()
+            |            };
+            |            let stringInt__0 ⦂ Int32;
+            |            stringInt__0 = hs ⋖ Int32 ⋗(fail#3, do_call_toInt(intMaker__0, string__1));
+            |            if (fail#3) {
+            |              bubble ⋖ Int32 ⋗()
+            |            };
+            |            return__4 = intInt__0 + stringInt__0
+            |          }
+            |      })
             |
             |      ```
             |  }

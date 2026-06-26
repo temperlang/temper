@@ -13,6 +13,7 @@ import lang.temper.common.assertStringsEqual
 import lang.temper.common.console
 import lang.temper.common.toStringViaBuilder
 import lang.temper.cst.CstComment
+import lang.temper.cst.NameConstants
 import lang.temper.interp.emptyValue
 import lang.temper.lexer.Lexer
 import lang.temper.log.FilePositions
@@ -28,10 +29,12 @@ import lang.temper.name.Symbol
 import lang.temper.parser.parse
 import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
-import lang.temper.type.ExternalBind
+import lang.temper.type.ExternalCall
 import lang.temper.type.ExternalGet
 import lang.temper.type.ExternalSet
+import lang.temper.type.FunctionType
 import lang.temper.type.MkType
+import lang.temper.type.TypeTestHarness
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.MkType2
 import kotlin.test.Test
@@ -963,12 +966,56 @@ class PseudoCodeTest {
                         Call(DotHelper(ExternalGet, DotMember(Symbol("i")), emptyList())) {
                             Rn(ParsedName("x"))
                         }
-                        Call {
-                            Call(DotHelper(ExternalBind, DotMember(Symbol("f")), emptyList())) {
-                                Rn(ParsedName("x"))
-                            }
+                        Call(DotHelper(ExternalCall, DotMember(Symbol("f")), emptyList())) {
+                            Rn(ParsedName("x"))
                             V(Value(1, TInt))
                         }
+                    }
+                }
+            }
+        },
+    )
+
+    @Test
+    fun explicitAndNonExplicitTypeParameters() = assertPseudoCode(
+        want = """
+            |o.foo<String>(str);
+            |o.bar ⋖ String ⋗(str)
+            |
+        """.trimMargin(),
+        detail = PseudoCodeDetail(resugarDotHelpers = true, showInferredTypes = true),
+        makeInput = { doc, pos ->
+            val unboundCalleeType: FunctionType
+            val tiWithBindings: CallTypeInferences
+            TypeTestHarness("").run {
+                unboundCalleeType = type("fn<T>(T): Void") as FunctionType
+                tiWithBindings = CallTypeInferences(
+                    WellKnownTypes.voidType,
+                    variant = type("fn (String): Void"),
+                    bindings2 = mapOf(unboundCalleeType.typeFormals[0] to WellKnownTypes.stringType),
+                    explanations = listOf(),
+                )
+            }
+
+            doc.treeFarm.grow(pos) {
+                Block {
+                    Call {
+                        Call {
+                            Rn(BuiltinName(NameConstants.Angle))
+                            V(Value(DotHelper(ExternalCall, DotMember(Symbol("foo")), emptyList())))
+                            V(Value(Types.string))
+                        }
+                        Rn(ParsedName("o"))
+                        Rn(ParsedName("str"))
+                    }
+
+                    Call(tiWithBindings) {
+                        V(
+                            Value(DotHelper(ExternalCall, DotMember(Symbol("bar")), emptyList())),
+                            type = unboundCalleeType,
+                        )
+                        Rn(ParsedName("o"))
+                        Rn(ParsedName("str"))
                     }
                 }
             }

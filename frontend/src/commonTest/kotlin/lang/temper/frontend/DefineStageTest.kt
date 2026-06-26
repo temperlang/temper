@@ -50,7 +50,7 @@ class DefineStageTest {
             |{
             |  define: {
             |    body: ```
-            |      do_bind_verb(subject)(arg)
+            |      do_call_verb(subject, arg)
             |
             |      ```,
             |  }
@@ -111,7 +111,7 @@ class DefineStageTest {
               nym`get.next__13` = fn nym`get.next`(@impliedThis(C__1) this__3: C__1) /* return__14 */{
                 fn__15: do {
                   do {
-                    return__14 = do_ibind_f(type (C__1), this__3)() + 1;
+                    return__14 = do_icall_f(type (C__1), this__3) + 1;
                     break(\label, fn__15)
                   }
                 }
@@ -154,7 +154,7 @@ class DefineStageTest {
               });
               let c__22;
               c__22 = new C__1();
-              do_bind_log(console#0)(do_get_i(c__22), do_get_x(c__22), do_get_x(c__22), do_bind_f(c__22)());
+              do_call_log(console#0, do_get_i(c__22), do_get_x(c__22), do_get_x(c__22), do_call_f(c__22));
               do {
                 do_set_next(c__22, 42);
                 42
@@ -879,21 +879,21 @@ class DefineStageTest {
             |            }
             |          }
             |      });
-            |      `test//`.prodWrap = fn prodWrap(i__1 /* aka i */: Int32, j__1 /* aka j */: List<Int32?>) /* return__1 */: Int32 {
-            |        fn__1: do {
-            |          i__1 * do {
-            |            let subject#0;
-            |            subject#0 = do_bind_get(j__1)(0);
-            |            {
-            |              if (subject#0 != null) {
-            |                subject#0
-            |              } else {
-            |                1
+            |      `test//`.prodWrap = (@stay fn prodWrap(i__1 /* aka i */: Int32, j__1 /* aka j */: List<Int32?>) /* return__1 */: Int32 {
+            |          fn__1: do {
+            |            i__1 * do {
+            |              let subject#0;
+            |              subject#0 = do_call_get(j__1, 0);
+            |              {
+            |                if (subject#0 != null) {
+            |                  subject#0
+            |                } else {
+            |                  1
+            |                }
             |              }
             |            }
             |          }
-            |        }
-            |      };
+            |      });
             |
             |      ```
             |  },
@@ -932,8 +932,8 @@ class DefineStageTest {
                   i__1
                 }
             });
-            do_bind_log(console#0)(cat("f( )=", str(do_bind_toString(42)())));
-            do_bind_log(console#0)(cat("f(1)=", str(do_bind_toString(1)())));
+            do_call_log(console#0, cat("f( )=", str(do_call_toString(42))));
+            do_call_log(console#0, cat("f(1)=", str(do_call_toString(1))));
 
             ```
           },
@@ -977,8 +977,8 @@ class DefineStageTest {
                 i__4
               }
             };
-            do_bind_log(console#0)(cat("f(true )=", str(f__1(true))));
-            do_bind_log(console#0)(cat("f(false)=", str(f__1(false))));
+            do_call_log(console#0, cat("f(true )=", str(f__1(true))));
+            do_call_log(console#0, cat("f(false)=", str(f__1(false))));
 
             ```
           },
@@ -2126,12 +2126,12 @@ class DefineStageTest {
             |        as(2, Mystery);
             |        as(3, type (List)<Mystery>);
             |        error (list("`(Leaf`", "4", "`Leaf)`", "as"));
-            |        do_bind_as(5)(type (Int32));
-            |        do_bind_as(6)(Mystery);
-            |        do_bind_as(7)();
+            |        do_call_as(5, type (Int32));
+            |        do_call_as(6, Mystery);
+            |        do_call_as(7);
             |        do_get_as(8);
-            |        as(do_bind_get(list(9))(0), Int32);
-            |        as(do_bind_toString(10)(), String);
+            |        as(do_call_get(list(9), 0), Int32);
+            |        as(do_call_toString(10), String);
             |
             |        ```
             |  },
@@ -2291,19 +2291,19 @@ class DefineStageTest {
             |        Test__0 = type (Test);
             |        @fn @test("- does / this : work?") let doesThisWork__0;
             |        doesThisWork__0 = fn doesThisWork(test#0: Test) /* return__0 */: (Void | Bubble) {
-            |          do_bind_assert(test#0)(true, @stay fn {
+            |          do_call_assert(test#0, true, @stay fn {
             |              "or what?"
             |          })
             |        };
             |        @fn @test("does\tthis\nwork") let doesThisWork__1;
             |        doesThisWork__1 = fn doesThisWork(test__0 /* aka test */: Test) /* return__1 */: (Void | Bubble) {
-            |          do_bind_assert(test__0)(false, @stay fn {
+            |          do_call_assert(test__0, false, @stay fn {
             |              "or that"
             |          })
             |        };
             |        @fn @test("again") let again__0;
             |        again__0 = fn again(t__0 /* aka t */: Test) /* return__2 */: (Void | Bubble) {
-            |          do_bind_assert(t__0)(true, @stay fn {
+            |          do_call_assert(t__0, true, @stay fn {
             |              "whatever"
             |          })
             |        };
@@ -2336,8 +2336,8 @@ class DefineStageTest {
             |            actual#0 = 4;
             |            let expected#0;
             |            expected#0 = 3;
-            |            do_bind_assert(test#0)(false, fn {
-            |                cat("expected num == (", do_bind_toString(3)(), ") not (", do_bind_toString(4)(), ")")
+            |            do_call_assert(test#0, false, @stay fn {
+            |                cat("expected num == (", do_call_toString(3), ") not (", do_call_toString(4), ")")
             |            })
             |          };
             |        };
@@ -2345,7 +2345,7 @@ class DefineStageTest {
             |        ha__0 = fn ha(test#1: Test) /* return__1 */: (Void | Bubble) {
             |          let condition__0;
             |          condition__0 = false;
-            |          do_bind_assert(test#1)(false, @stay fn {
+            |          do_call_assert(test#1, false, @stay fn {
             |              "expected condition"
             |          });
             |        };
@@ -2554,9 +2554,9 @@ class DefineStageTest {
         }@imported(\(`std//regex/`.End)) End__0 = `std//regex/`.End, ${
             listOf(
                 // r1 = rgx(list("a.b*"), list())
-                """r1 = do_bind_compiled(new Sequence(list(new CodePoints("a"), Dot__0, new Repeat(new CodePoints("b"), 0, null, false))))()""",
+                """r1 = do_call_compiled(new Sequence(list(new CodePoints("a"), Dot__0, new Repeat(new CodePoints("b"), 0, null, false))))""",
                 // r2 = rgx(list("a.\u{24}{b}*"), list())
-                """r2 = do_bind_compiled(new Sequence(list(new CodePoints("a"), Dot__0, End__0, new CodePoints("{b"), new Repeat(new CodePoints("}"), 0, null, false))))()""",
+                """r2 = do_call_compiled(new Sequence(list(new CodePoints("a"), Dot__0, End__0, new CodePoints("{b"), new Repeat(new CodePoints("}"), 0, null, false))))""",
                 """r3 = rgx(list("(?/g)a.b*"), list())""",
                 """b = r3""",
                 // Here, r4 and r5 interpolate regex objects, but we don't support those yet.
@@ -2591,9 +2591,9 @@ class DefineStageTest {
             |        End__0 = `std//regex/`.End;
             |        let r1__0;
             |## Types have been inlined into `new` operators
-            |        r1__0 = do_bind_compiled(new Sequence(list(new CodePoints("a"), Dot__0, new Repeat(new CodePoints("b"), 0, null, false))))();
+            |        r1__0 = do_call_compiled(new Sequence(list(new CodePoints("a"), Dot__0, new Repeat(new CodePoints("b"), 0, null, false))));
             |        let r2__0;
-            |        r2__0 = do_bind_compiled(new Sequence(list(new CodePoints("a"), Dot__0, End__0, new CodePoints("{b"), new Repeat(new CodePoints("}"), 0, null, false))))();
+            |        r2__0 = do_call_compiled(new Sequence(list(new CodePoints("a"), Dot__0, End__0, new CodePoints("{b"), new Repeat(new CodePoints("}"), 0, null, false))));
             |        let r3__0;
             |## (/g) unrecognized in rgx(list("(?/g)a.b*"), list());
             |        r3__0 = error (UnrecognizedToken);
@@ -2605,13 +2605,13 @@ class DefineStageTest {
             |        let r5__0;
             |        r5__0 = error (UnrecognizedToken);
             |        let r6__0;
-            |        r6__0 = do_bind_compiled(new Sequence__0(list(new CodePoints__0("a"), new Repeat__0(new CodePoints__0("."), 0, null, false))))();
+            |        r6__0 = do_call_compiled(new Sequence__0(list(new CodePoints__0("a"), new Repeat__0(new CodePoints__0("."), 0, null, false))));
             |        let r7__0;
-            |        r7__0 = do_bind_compiled(new Sequence(list(new CodePoints("a"), Dot, new Repeat(new CodePoints("b"), 0, null))))();
+            |        r7__0 = do_call_compiled(new Sequence(list(new CodePoints("a"), Dot, new Repeat(new CodePoints("b"), 0, null))));
             |        let s__0;
             |        s__0 = "[a]";
             |        let r8__0;
-            |        r8__0 = do_bind_compiled(new Sequence__0(list(Dot__0, new CodePoints__0("[a]"), Dot__0)))();
+            |        r8__0 = do_call_compiled(new Sequence__0(list(Dot__0, new CodePoints__0("[a]"), Dot__0)));
             |
             |        ```
             |  },
@@ -3097,9 +3097,9 @@ class DefineStageTest {
             |## Here are members for the generated JSON adapter class
             |      PointJsonAdapter__0 extends JsonAdapter<Point__0>;
             |      @visibility(\public) @fn @stay @fromType(PointJsonAdapter__0) let encodeToJson__0;
-            |      encodeToJson__0 = fn (@impliedThis(PointJsonAdapter__0) this__0: PointJsonAdapter__0, x__1: Point__0, p__0: JsonProducer) /* return__0 */: Void {
-            |        do_bind_encodeToJson(x__1)(p__0)
-            |      };
+            |      encodeToJson__0 = (@stay fn (@impliedThis(PointJsonAdapter__0) this__0: PointJsonAdapter__0, x__1: Point__0, p__0: JsonProducer) /* return__0 */: Void {
+            |          do_call_encodeToJson(x__1, p__0)
+            |      });
             |      @visibility(\public) @fn @stay @fromType(PointJsonAdapter__0) let decodeFromJson__0;
             |      decodeFromJson__0 = fn (@impliedThis(PointJsonAdapter__0) this__1: PointJsonAdapter__0, t__0: JsonSyntaxTree, ic__0: InterchangeContext) /* return__1 */: (Point__0 | Bubble) {
             |        getStatic(Point__0, \decodeFromJson)(t__0, ic__0)
@@ -3153,24 +3153,24 @@ class DefineStageTest {
             |## Here is the encodeToJson method added to point.
             |      @visibility(\public) @fn @stay @fromType(Point__0) let encodeToJson__1;
             |      encodeToJson__1 = fn (@impliedThis(Point__0) this__7: Point__0, p__1: JsonProducer) /* return__7 */: Void {
-            |        do_bind_startObject(p__1)();
-            |        do_bind_objectKey(p__1)("x");
+            |        do_call_startObject(p__1);
+            |        do_call_objectKey(p__1, "x");
             |## `this` in the generated expression `this.x` got rewritten to `this__7`, after
             |## the regular type processing pass adds that implied parameter.
-            |        do_bind_int32Value(p__1)(getp(x__0, this__7));
-            |        do_bind_objectKey(p__1)("y");
-            |        do_bind_int32Value(p__1)(getp(y__0, this__7));
-            |        do_bind_endObject(p__1)();
+            |        do_call_int32Value(p__1, getp(x__0, this__7));
+            |        do_call_objectKey(p__1, "y");
+            |        do_call_int32Value(p__1, getp(y__0, this__7));
+            |        do_call_endObject(p__1);
             |      };
             |      @static @visibility(\public) @fn @stay @fromType(Point__0) let decodeFromJson__1;
-            |      decodeFromJson__1 = fn (t__1: JsonSyntaxTree, ic__1: InterchangeContext) /* return__8 */: (Point__0 | Bubble) {
-            |        let obj__0;
-            |        obj__0 = as(t__1, JsonObject);
-            |        let x__3: Int32, y__2: Int32;
-            |        x__3 = do_bind_asInt32(as(do_bind_propertyValueOrBubble(obj__0)("x"), JsonNumeric))();
-            |        y__2 = do_bind_asInt32(as(do_bind_propertyValueOrBubble(obj__0)("y"), JsonNumeric))();
-            |        new Point__0(x__3, y__2)
-            |      };
+            |      decodeFromJson__1 = (@stay fn (t__1: JsonSyntaxTree, ic__1: InterchangeContext) /* return__8 */: (Point__0 | Bubble) {
+            |          let obj__0;
+            |          obj__0 = as(t__1, JsonObject);
+            |          let x__3: Int32, y__2: Int32;
+            |          x__3 = do_call_asInt32(as(do_call_propertyValueOrBubble(obj__0, "x"), JsonNumeric));
+            |          y__2 = do_call_asInt32(as(do_call_propertyValueOrBubble(obj__0, "y"), JsonNumeric));
+            |          new Point__0(x__3, y__2)
+            |      });
             |      @static @visibility(\public) @fn @stay @fromType(Point__0) let jsonAdapter__0;
             |      jsonAdapter__0 = (@stay fn /* return__9 */: (JsonAdapter<Point__0>) {
             |          new PointJsonAdapter__0()
@@ -3337,19 +3337,19 @@ class DefineStageTest {
             |          accumulator#0 = new TheCount__0();
             |## We inlined the body here.
             |          do {
-            |            do_bind_appendSafe(accumulator#0)("Zero: ");
+            |            do_call_appendSafe(accumulator#0, "Zero: ");
             |## Unsafe interpolations become regular appends.
-            |            do_bind_append(accumulator#0)(0);
-            |            do_bind_appendSafe(accumulator#0)("\nOne: ");
-            |            do_bind_append(accumulator#0)(1);
-            |            do_bind_appendSafe(accumulator#0)("\n");
+            |            do_call_append(accumulator#0, 0);
+            |            do_call_appendSafe(accumulator#0, "\nOne: ");
+            |            do_call_append(accumulator#0, 1);
+            |            do_call_appendSafe(accumulator#0, "\n");
             |## The loop becomes just a regular forEach application and the content are appends.
-            |            do_bind_forEach(list(2, 3, 4))(fn (n__0) {
-            |                do_bind_appendSafe(accumulator#0)(" ");
-            |                do_bind_append(accumulator#0)(n__0);
+            |            do_call_forEach(list(2, 3, 4), fn (n__0) {
+            |                do_call_appendSafe(accumulator#0, " ");
+            |                do_call_append(accumulator#0, n__0);
             |            });
-            |            do_bind_appendSafe(accumulator#0)("!\nFive: ");
-            |            do_bind_append(accumulator#0)(5);
+            |            do_call_appendSafe(accumulator#0, "!\nFive: ");
+            |            do_call_append(accumulator#0, 5);
             |          };
             |## We inject a `.accumulated` fetch for the block result
             |          do_get_accumulated(accumulator#0)
@@ -3358,9 +3358,9 @@ class DefineStageTest {
             |          let accumulator#1;
             |          accumulator#1 = new TheCount__0();
             |          do {
-            |            do_bind_append(accumulator#1)(6);
-            |            do_bind_appendSafe(accumulator#1)(", ");
-            |            do_bind_append(accumulator#1)(7)
+            |            do_call_append(accumulator#1, 6);
+            |            do_call_appendSafe(accumulator#1, ", ");
+            |            do_call_append(accumulator#1, 7)
             |          };
             |          do_get_accumulated(accumulator#1)
             |        }
@@ -3414,20 +3414,20 @@ class DefineStageTest {
             |          accumulator#0 = new TheCount__0();
             |## We inlined the body here.
             |          do {
-            |            do_bind_appendSafe(accumulator#0)("Zero: ");
+            |            do_call_appendSafe(accumulator#0, "Zero: ");
             |## Unsafe interpolations become regular appends.
-            |            do_bind_append(accumulator#0)(0);
-            |            do_bind_appendSafe(accumulator#0)("\nOne: ");
-            |            do_bind_append(accumulator#0)(1);
-            |            do_bind_appendSafe(accumulator#0)("\nTwo: ");
-            |            do_bind_append(accumulator#0)(2);
-            |            do_bind_appendSafe(accumulator#0)("\nThree: ");
-            |            do_bind_append(accumulator#0)(3);
-            |            do_bind_appendSafe(accumulator#0)("\nF\\our: ");
-            |            do_bind_append(accumulator#0)(4);
-            |            do_bind_appendSafe(accumulator#0)("\nFive: ");
-            |            do_bind_append(accumulator#0)(5);
-            |            do_bind_appendSafe(accumulator#0)("\n")
+            |            do_call_append(accumulator#0, 0);
+            |            do_call_appendSafe(accumulator#0, "\nOne: ");
+            |            do_call_append(accumulator#0, 1);
+            |            do_call_appendSafe(accumulator#0, "\nTwo: ");
+            |            do_call_append(accumulator#0, 2);
+            |            do_call_appendSafe(accumulator#0, "\nThree: ");
+            |            do_call_append(accumulator#0, 3);
+            |            do_call_appendSafe(accumulator#0, "\nF\\our: ");
+            |            do_call_append(accumulator#0, 4);
+            |            do_call_appendSafe(accumulator#0, "\nFive: ");
+            |            do_call_append(accumulator#0, 5);
+            |            do_call_appendSafe(accumulator#0, "\n")
             |          };
             |## We inject a `.accumulated` fetch for the block result
             |          do_get_accumulated(accumulator#0)
@@ -3436,9 +3436,9 @@ class DefineStageTest {
             |          let accumulator#1;
             |          accumulator#1 = new TheCount__0();
             |          do {
-            |            do_bind_append(accumulator#1)(6);
-            |            do_bind_appendSafe(accumulator#1)(", ");
-            |            do_bind_append(accumulator#1)(7)
+            |            do_call_append(accumulator#1, 6);
+            |            do_call_appendSafe(accumulator#1, ", ");
+            |            do_call_append(accumulator#1, 7)
             |          };
             |          do_get_accumulated(accumulator#1)
             |        }
@@ -3469,9 +3469,9 @@ class DefineStageTest {
             |        let accumulator#0;
             |        accumulator#0 = new HtmlBuilder();
             |        do {
-            |          do_bind_appendSafe(accumulator#0)(raw "<style>body { background: '\<");
-            |          do_bind_append(accumulator#0)("/style/");
-            |          do_bind_appendSafe(accumulator#0)("' }</style>")
+            |          do_call_appendSafe(accumulator#0, raw "<style>body { background: '\<");
+            |          do_call_append(accumulator#0, "/style/");
+            |          do_call_appendSafe(accumulator#0, "' }</style>")
             |        };
             |        do_get_accumulated(accumulator#0)
             |      }
