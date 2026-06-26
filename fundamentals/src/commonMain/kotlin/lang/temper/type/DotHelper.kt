@@ -332,6 +332,8 @@ private fun lookupMemberDefinition(
 
 private val arityOne = 1..1
 private val arityTwo = 2..2
+
+@Suppress("MagicNumber") // Three is what's written on the tin.  (The magic tin)
 private val arityThree = 3..3
 private val arityOneOrMore = 1..Int.MAX_VALUE
 private val arityTwoOrMore = 2..Int.MAX_VALUE
