@@ -414,8 +414,9 @@ class RustTranslator(
             else -> {
                 // Manage optionals independently so they can default more easily.
                 val attrs = listOf(buildDerive(pos, listOf("Clone")))
+                val selfishParam = Rust.FunctionParam(pos, selfish.deepCopy(), builderId.makeTypeRef(filteredGenerics))
                 val selfishPlusOptionals = buildList {
-                    add(Rust.FunctionParam(pos, selfish.deepCopy(), builderId.makeTypeRef(filteredGenerics)))
+                    add(selfishParam)
                     addAll(optionals)
                 }
                 val optionalGenerics = paramsToStructAdded(optionsId, selfishPlusOptionals, attrs = attrs)
@@ -425,6 +426,26 @@ class RustTranslator(
                     trait = null,
                     type = optionsId.makeTypeRef(optionalGenerics),
                     items = buildList {
+                        Rust.Function(
+                            pos,
+                            id = "new".toId(pos),
+                            params = listOf(selfishParam.deepCopy()),
+                            returnType = "Self".toKeyId(pos),
+                            block = Rust.Block(
+                                pos,
+                                result = Rust.StructExpr(
+                                    pos,
+                                    id = "Self".toKeyId(pos),
+                                    members = buildList {
+                                        add(Rust.StructExprField(pos, selfish.deepCopy(), null))
+                                        for (param in optionals) {
+                                            param is Rust.FunctionParam
+                                            add(Rust.StructExprField(pos, param.toId(), expr = "None".toId(pos)))
+                                        }
+                                    },
+                                ),
+                            ),
+                        ).also { add(it.toItem(pub = pub.deepCopy())) }
                         for (param in optionals) {
                             param as Rust.FunctionParam
                             // Undo optional for setter method params.

@@ -1184,15 +1184,6 @@ class RustBackendTest {
                 |}
                 |#[derive(Clone)]
                 |pub struct C(std::sync::Arc<std::sync::RwLock<CStruct>>);
-                |#[derive(Clone)]
-                |pub struct CBuilder {
-                |    pub x: std::sync::Arc<String>, pub y: std::sync::Arc<String>
-                |}
-                |impl CBuilder {
-                |    pub fn build(self) -> C {
-                |        C::new(self.x, self.y)
-                |    }
-                |}
                 |impl C {
                 |    pub fn v(& self) -> std::sync::Arc<String> {
                 |        return std::sync::Arc::new("ciao".to_string());
@@ -1243,18 +1234,13 @@ class RustBackendTest {
                 |}
                 |temper_core::impl_any_value_trait!(C, []);
                 |mod builders {
-                |    #[derive(Clone, Default)]
+                |    #[derive(Clone)]
                 |    pub struct CBuilder {
-                |        pub x: Option<std::sync::Arc<String>>, pub y: Option<std::sync::Arc<String>>
+                |        pub x: std::sync::Arc<String>, pub y: std::sync::Arc<String>
                 |    }
                 |    impl CBuilder {
-                |        fn x(mut self, x: std::sync::Arc<String>) -> Self {
-                |            self.x = Some(x);
-                |            self
-                |        }
-                |        fn y(mut self, y: std::sync::Arc<String>) -> Self {
-                |            self.y = Some(y);
-                |            self
+                |        pub fn build(self) -> C {
+                |            C::new(self.x, self.y)
                 |        }
                 |    }
                 |    use super::*;
@@ -1816,15 +1802,6 @@ class RustBackendTest {
                 |}
                 |#[derive(Clone)]
                 |pub struct Ha<T: Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<HaStruct<T>>);
-                |#[derive(Clone)]
-                |pub struct HaBuilder {
-                |    pub i: i32, pub j: i32
-                |}
-                |impl HaBuilder {
-                |    pub fn build(self) -> Ha<T> {
-                |        Ha::new(self.i, self.j)
-                |    }
-                |}
                 |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> Ha<T> {
                 |    pub fn new(i__0: i32, j__0: i32) -> Ha<T> {
                 |        let i;
@@ -1845,18 +1822,13 @@ class RustBackendTest {
                 |}
                 |temper_core::impl_any_value_trait!(Ha<T>, []);
                 |mod builders {
-                |    #[derive(Clone, Default)]
+                |    #[derive(Clone)]
                 |    pub struct HaBuilder {
-                |        pub i: Option<i32>, pub j: Option<i32>
+                |        pub i: i32, pub j: i32
                 |    }
                 |    impl HaBuilder {
-                |        fn i(mut self, i: i32) -> Self {
-                |            self.i = Some(i);
-                |            self
-                |        }
-                |        fn j(mut self, j: i32) -> Self {
-                |            self.j = Some(j);
-                |            self
+                |        pub fn build(self) -> Ha<T> {
+                |            Ha::new(self.i, self.j)
                 |        }
                 |    }
                 |    use super::*;
@@ -1925,6 +1897,11 @@ class RustBackendTest {
                 |        selfish: HiBuilder<T, U>, i: Option<i32>
                 |    }
                 |    impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> HiOptions<T, U> {
+                |        pub fn new(selfish: HiBuilder<T, U>) -> Self {
+                |            Self {
+                |                selfish, i: None
+                |            }
+                |        }
                 |        pub fn i(mut self, i: i32) -> Self {
                 |            self.i = Some(i);
                 |            self
@@ -2187,15 +2164,6 @@ class RustBackendTest {
             |}
             |#[derive(Clone)]
             |pub struct Vec2(std::sync::Arc<Vec2Struct>);
-            |#[derive(Clone, Default)]
-            |pub struct Vec2Options {
-            |    pub x: Option<f64>, pub y: Option<f64>
-            |}
-            |impl Vec2Options {
-            |    pub fn build(self) -> Vec2 {
-            |        Vec2::new(self.x, self.y)
-            |    }
-            |}
             |impl Vec2 {
             |    pub fn new(x__0: Option<f64>, y__0: Option<f64>) -> Vec2 {
             |        let x;
@@ -2228,18 +2196,36 @@ class RustBackendTest {
             |}
             |temper_core::impl_any_value_trait!(Vec2, []);
             |mod builders {
-            |    #[derive(Clone, Default)]
-            |    pub struct Vec2Builder {
-            |        pub x: Option<f64>, pub y: Option<f64>
+            |    #[derive(Clone)]
+            |    pub struct Vec2Builder {}
+            |    #[derive(Clone)]
+            |    pub struct Vec2Options {
+            |        selfish: Vec2Builder, x: Option<f64>, y: Option<f64>
             |    }
-            |    impl Vec2Builder {
-            |        fn x(mut self, x: f64) -> Self {
+            |    impl Vec2Options {
+            |        pub fn new(selfish: Vec2Builder) -> Self {
+            |            Self {
+            |                selfish, x: None, y: None
+            |            }
+            |        }
+            |        pub fn x(mut self, x: f64) -> Self {
             |            self.x = Some(x);
             |            self
             |        }
-            |        fn y(mut self, y: f64) -> Self {
+            |        pub fn y(mut self, y: f64) -> Self {
             |            self.y = Some(y);
             |            self
+            |        }
+            |        pub fn build(self) -> Vec2 {
+            |            Vec2::new(self.x, self.y)
+            |        }
+            |    }
+            |    impl Vec2Builder {
+            |        pub fn build(self) -> Vec2 {
+            |            self.options().build()
+            |        }
+            |        pub fn options(self) -> Vec2Options {
+            |            Vec2Options::new(self)
             |        }
             |    }
             |    use super::*;
