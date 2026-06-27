@@ -1888,22 +1888,6 @@ class RustBackendTest {
                 |}
                 |#[derive(Clone)]
                 |pub struct Hi<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<HiStruct<T, U>>);
-                |#[derive(Clone, Default)]
-                |pub struct HiOptions {
-                |    pub i: Option<i32>
-                |}
-                |#[derive(Clone)]
-                |pub struct HiBuilder<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> {
-                |    pub t: Option<T>, pub u: U
-                |}
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> HiBuilder<T, U> {
-                |    pub fn build(self) -> Hi<T, U> {
-                |        self.build_with(std::default::Default::default())
-                |    }
-                |    pub fn build_with(self, options: HiOptions) -> Hi<T, U> {
-                |        Hi::new(self.t, self.u, options.i)
-                |    }
-                |}
                 |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> Hi<T, U> {
                 |    pub fn new(t__0: Option<T>, u__0: U, i__0: Option<i32>) -> Hi<T, U> {
                 |        let t;
@@ -1932,22 +1916,29 @@ class RustBackendTest {
                 |}
                 |temper_core::impl_any_value_trait!(Hi<T, U>, [] where U: std::cmp::Eq + std::hash::Hash);
                 |mod builders {
-                |    #[derive(Clone, Default)]
+                |    #[derive(Clone)]
                 |    pub struct HiBuilder<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> {
-                |        pub t: Option<Option<T>>, pub u: Option<U>, pub i: Option<i32>
+                |        pub t: Option<T>, pub u: U
                 |    }
-                |    impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> HiBuilder<T, U> {
-                |        fn t(mut self, t: Option<T>) -> Self {
-                |            self.t = Some(t);
-                |            self
-                |        }
-                |        fn u(mut self, u: U) -> Self {
-                |            self.u = Some(u);
-                |            self
-                |        }
-                |        fn i(mut self, i: i32) -> Self {
+                |    #[derive(Clone)]
+                |    pub struct HiOptions<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |        selfish: HiBuilder<T, U>, i: Option<i32>
+                |    }
+                |    impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> HiOptions<T, U> {
+                |        pub fn i(mut self, i: i32) -> Self {
                 |            self.i = Some(i);
                 |            self
+                |        }
+                |        pub fn build(self) -> Hi<T, U> {
+                |            Hi::new(self.selfish.t, self.selfish.u, self.i)
+                |        }
+                |    }
+                |    impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> HiBuilder<T, U> {
+                |        pub fn build(self) -> Hi<T, U> {
+                |            self.options().build()
+                |        }
+                |        pub fn options<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static>(self) -> HiOptions<T, U> {
+                |            HiOptions::new(self)
                 |        }
                 |    }
                 |    use super::*;
