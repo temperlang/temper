@@ -1979,6 +1979,13 @@ function temper.cast_to_listbuilder(thing)
     return thing
 end
 
+function temper.cast_to_listed(thing)
+    if type(thing) ~= 'table' or (thing[temper.type_tag] ~= 'List' and thing[temper.type_tag] ~= 'ListBuilder') then
+        return temper.bubble("cast to Listed")
+    end
+    return thing
+end
+
 function temper.cast_to_map(thing)
     if type(thing) ~= 'table' or thing[temper.type_tag] ~= 'Map' then
         return temper.bubble("cast to Map")
@@ -1989,6 +1996,13 @@ end
 function temper.cast_to_mapbuilder(thing)
     if type(thing) ~= 'table' or thing[temper.type_tag] ~= 'MapBuilder' then
         return temper.bubble("cast to MapBuilder")
+    end
+    return thing
+end
+
+function temper.cast_to_map(thing)
+    if type(thing) ~= 'table' or (thing[temper.type_tag] ~= 'Map' and thing[temper.type_tag] ~= 'MapBuilder') then
+        return temper.bubble("cast to Mapped")
     end
     return thing
 end
@@ -2008,8 +2022,19 @@ function temper.cast_to(thing, type)
     end
 end
 
-function temper.instance_of(thing, tag)
-    return type(thing) == "table" and thing[temper.type_tag].super[tag.typename]
+function temper.instance_of(thing, ...)
+    if type(thing) ~= "table" then
+        return false
+    end
+    local n = select('#', ...)
+    local type_tag = temper.type_tag
+    for i=1,n do
+        local tag = select(i, ...)
+        if thing[type_tag].super[tag.typename] then
+            return true
+        end
+    end
+    return false
 end
 
 function temper.test_bail()

@@ -813,16 +813,14 @@ internal class JsTranslator(
             ImplicitTypeTag.Int -> op.isInt(pos, type, x)
             ImplicitTypeTag.String -> op.allHaveTypeof(pos, type, JsTypeOf.string, x)
             ImplicitTypeTag.Function -> op.allHaveTypeof(pos, type, JsTypeOf.function, x)
-            ImplicitTypeTag.ListBuilder, ImplicitTypeTag.List ->
+            ImplicitTypeTag.ListBuilder, ImplicitTypeTag.List, ImplicitTypeTag.Listed ->
                 // TODO(tjp, backend): Distinguish on frozen? Disable checks for List(Builder)?
                 op.isArray(pos, type, x)
             else -> {
                 val type = rt.ot.withoutBubbleOrNull
                 val nType = type as? TmpL.NominalType
                 val typeShape = nType?.typeName?.sourceDefinition as? TypeShape
-                if (typeShape == WellKnownTypes.listedTypeDefinition) {
-                    op.isArray(pos, type, x)
-                } else if (typeShape != null) {
+                if (typeShape != null) {
                     val typeName = translateIdStrict(TmpL.Id(rt.pos, typeShape.name))
                     op.instanceOf(pos, type, typeShape, typeName, x)
                 } else {
