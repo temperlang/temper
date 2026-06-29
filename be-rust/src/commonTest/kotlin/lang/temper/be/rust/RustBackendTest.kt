@@ -1233,7 +1233,7 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait!(C, []);
-                |mod builders {
+                |pub mod builders {
                 |    #[derive(Clone)]
                 |    pub struct CBuilder {
                 |        pub x: std::sync::Arc<String>, pub y: std::sync::Arc<String>
@@ -1821,7 +1821,7 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait!(Ha<T>, []);
-                |mod builders {
+                |pub mod builders {
                 |    #[derive(Clone)]
                 |    pub struct HaBuilder {
                 |        pub i: i32, pub j: i32
@@ -1887,7 +1887,7 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait!(Hi<T, U>, [] where U: std::cmp::Eq + std::hash::Hash);
-                |mod builders {
+                |pub mod builders {
                 |    #[derive(Clone)]
                 |    pub struct HiBuilder<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> {
                 |        pub t: Option<T>, pub u: U
@@ -2195,7 +2195,7 @@ class RustBackendTest {
             |    }
             |}
             |temper_core::impl_any_value_trait!(Vec2, []);
-            |mod builders {
+            |pub mod builders {
             |    #[derive(Clone)]
             |    pub struct Vec2Builder {}
             |    #[derive(Clone)]

@@ -187,7 +187,7 @@ class RustTranslator(
                             pos,
                             id = "builders".toId(pos), // TODO Uniqueness?
                             block = Rust.Block(pos, statements = builderItems),
-                        ).toItem().also { add(it) }
+                        ).toItem(pub = Rust.VisibilityPub(pos)).also { add(it) }
                     }
                     // Tests.
                     if (testItems.isNotEmpty()) {
