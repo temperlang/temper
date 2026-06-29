@@ -379,14 +379,7 @@ class RustTranslator(
             // Work with Rust nodes rather than TmpL nodes because we already have generics handy in Rust form.
             // Any simple type name matching a formal has to be a reference to that formal.
             val usedTypes = params.findAllSimpleTypeNames()
-            val filteredGenerics = generics.filter { generic ->
-                val genericId = when (generic) {
-                    is Rust.Id -> generic
-                    is Rust.TypeParam -> generic.id
-                    else -> error(generic)
-                }.outName.outputNameText
-                genericId in usedTypes
-            }.deepCopy()
+            val filteredGenerics = generics.filter { it.lastIdText() in usedTypes }.deepCopy()
             Rust.Struct(
                 pos = pos,
                 id = id,
@@ -406,7 +399,7 @@ class RustTranslator(
         // Requireds struct first to get its generics.
         // Adding new requireds is a breaking change anyway, so presume this is also fixed in Rust.
         val attrs = listOf(buildDerive(pos, listOf("Clone")))
-        val filteredGenerics = paramsToStructAdded(builderId, requireds, attrs = attrs, fieldPub = pub)
+        val requiredGenerics = paramsToStructAdded(builderId, requireds, attrs = attrs, fieldPub = pub)
         val rustReturnType = translateType(returnType, fn.returnType.pos)
         // Optionals struct and impl next. We at least want optionals generics before requireds impl.
         val optionalGenerics = when {
@@ -414,7 +407,7 @@ class RustTranslator(
             else -> {
                 // Manage optionals independently so they can default more easily.
                 val attrs = listOf(buildDerive(pos, listOf("Clone")))
-                val selfishParam = Rust.FunctionParam(pos, selfish.deepCopy(), builderId.makeTypeRef(filteredGenerics))
+                val selfishParam = Rust.FunctionParam(pos, selfish.deepCopy(), builderId.makeTypeRef(requiredGenerics))
                 val selfishPlusOptionals = buildList {
                     add(selfishParam)
                     addAll(optionals)
@@ -485,6 +478,7 @@ class RustTranslator(
                         Rust.Function(
                             pos,
                             id = "build".toId(pos),
+                            generics = generics.except(optionalGenerics),
                             // Pass self by move on purpose in these, so we can avoid cloning.
                             // We make builder types Clone in case anyone badly wants copies on their own.
                             params = listOf(self.deepCopy()),
@@ -517,13 +511,14 @@ class RustTranslator(
         // So make a builder independent of optionals, and another that acknowledges them if present.
         Rust.Impl(
             pos,
-            generics = filteredGenerics.deepCopy(),
+            generics = requiredGenerics.deepCopy(),
             trait = null,
-            type = builderId.makeTypeRef(filteredGenerics),
+            type = builderId.makeTypeRef(requiredGenerics),
             items = buildList {
                 Rust.Function(
                     pos,
                     id = "build".toId(pos),
+                    generics = generics.except(requiredGenerics),
                     params = listOf(self),
                     returnType = rustReturnType,
                     block = Rust.Block(
@@ -540,7 +535,7 @@ class RustTranslator(
                     Rust.Function(
                         pos,
                         id = "options".toId(pos),
-                        generics = optionalGenerics.deepCopy(),
+                        generics = optionalGenerics.except(requiredGenerics),
                         params = listOf(self.deepCopy()),
                         returnType = optionsId.makeTypeRef(optionalGenerics),
                         block = Rust.Block(

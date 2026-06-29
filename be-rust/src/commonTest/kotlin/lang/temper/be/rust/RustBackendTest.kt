@@ -1827,7 +1827,7 @@ class RustBackendTest {
                 |        pub i: i32, pub j: i32
                 |    }
                 |    impl HaBuilder {
-                |        pub fn build(self) -> Ha<T> {
+                |        pub fn build<T: Clone + std::marker::Send + std::marker::Sync + 'static>(self) -> Ha<T> {
                 |            Ha::new(self.i, self.j)
                 |        }
                 |    }
@@ -1914,7 +1914,7 @@ class RustBackendTest {
                 |        pub fn build(self) -> Hi<T, U> {
                 |            self.options().build()
                 |        }
-                |        pub fn options<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static>(self) -> HiOptions<T, U> {
+                |        pub fn options(self) -> HiOptions<T, U> {
                 |            HiOptions::new(self)
                 |        }
                 |    }
