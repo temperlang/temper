@@ -77,6 +77,89 @@ class GenerateCodeStageTest {
     )
 
     @Test
+    fun sealedWhen() = assertModuleAtStage(
+        stage = Stage.GenerateCode,
+        pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
+        input = """
+            |export interface Geometric {}
+            |export class Ray extends Geometric {}
+            |export sealed interface Shape extends Geometric {}
+            |export class Circle() extends Shape {}
+            |export class Square() extends Shape {}
+            |export let describeGeometric(g: Geometric): String {
+            |  when (g) {
+            |    is Circle -> "circle";
+            |    is Square -> "square";
+            |    // defaults to void here because it starts above the sealed type
+            |  }
+            |}
+            |export let describeShape(s: Shape): String {
+            |  when (s) {
+            |    is Circle -> "circle";
+            |    is Square -> "square";
+            |    // defaults to panic here because those are exhaustive for Shape
+            |  }
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  generateCode: {
+            |    body:
+            |      ```
+            |      @typeDecl(Geometric) @stay let `test//`.Geometric ⦂ Type;
+            |      `test//`.Geometric = type (Geometric);
+            |      @typeDecl(Ray) @stay let `test//`.Ray ⦂ Type;
+            |      `test//`.Ray = type (Ray);
+            |      @typeDecl(Shape) @stay @sealedType let `test//`.Shape ⦂ Type;
+            |      `test//`.Shape = type (Shape);
+            |      @typeDecl(Circle) @stay let `test//`.Circle ⦂ Type;
+            |      `test//`.Circle = type (Circle);
+            |      @typeDecl(Square) @stay let `test//`.Square ⦂ Type;
+            |      `test//`.Square = type (Square);
+            |      @fn let `test//`.describeGeometric ⦂(fn (Geometric): String), @fn `test//`.describeShape ⦂(fn (Shape): String), @typePlaceholder(Geometric) typePlaceholder#0: Empty;
+            |      typePlaceholder#0 = {class: Empty__0};
+            |      @fn @visibility(\public) @stay @fromType(Ray) let constructor__0 ⦂(fn (Ray): Void);
+            |      constructor__0 = (@stay fn constructor(@impliedThis(Ray) this__0: Ray) /* return__0 */: Void {
+            |          return__0 = void
+            |      });
+            |      @typePlaceholder(Shape) let typePlaceholder#1: Empty;
+            |      typePlaceholder#1 = {class: Empty__0};
+            |      @fn @visibility(\public) @stay @fromType(Circle) let constructor__1 ⦂(fn (Circle): Void);
+            |      constructor__1 = (@stay fn constructor(@impliedThis(Circle) this__1: Circle) /* return__1 */: Void {
+            |          return__1 = void
+            |      });
+            |      @fn @visibility(\public) @stay @fromType(Square) let constructor__2 ⦂(fn (Square): Void);
+            |      constructor__2 = (@stay fn constructor(@impliedThis(Square) this__2: Square) /* return__2 */: Void {
+            |          return__2 = void
+            |      });
+            |      `test//`.describeGeometric = (@stay fn describeGeometric(g__0 /* aka g */: Geometric) /* return__3 */: String {
+            |          if (!is(g__0, Circle)) {
+            |            if (is(g__0, Square)) {}
+            |          };
+            |          return__3 = void
+            |      });
+            |      `test//`.describeShape = (@stay fn describeShape(s__0 /* aka s */: Shape) /* return__4 */: String {
+            |          if (!is(s__0, Circle)) {
+            |            if (is(s__0, Square)) {}
+            |          };
+            |          return__4 = void
+            |      })
+            |
+            |      ```
+            |  },
+            |  errors: [
+            |    "Cannot assign to String from Void!",
+            |    "Expected subtype of String, but got Void!",
+            |    "Void expressions cannot be used as values!",
+            |    "Cannot assign to String from Void!",
+            |    "Expected subtype of String, but got Void!",
+            |    "Void expressions cannot be used as values!",
+            |  ]
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
+    @Test
     fun assignmentsToTypedReturnAreChecked() = assertModuleAtStage(
         stage = Stage.GenerateCode,
         input = """
