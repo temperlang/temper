@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
 namespace TemperLang.Core
@@ -12,20 +13,12 @@ namespace TemperLang.Core
         /// might also be held via a reference typed as Temper Map<...>.
         public static IReadOnlyDictionary<TKey, TValue> ToMap<TKey, TValue>(
             this IReadOnlyDictionary<TKey, TValue> dictionary
-        ) => (dictionary is ReadOnlyDictionaryWrapper<TKey, TValue>)
-            ? dictionary as ReadOnlyDictionaryWrapper<TKey, TValue>
-            : new ReadOnlyDictionaryWrapper<TKey, TValue>(
-                new OrderedDictionary<TKey, TValue>(dictionary.ToList())
-            );
+        ) => dictionary.ToImmutableDictionary();
 
         /// ToMap needs to make a copy if input might be mutated.
         public static IReadOnlyDictionary<TKey, TValue> ToMap<TKey, TValue>(
             this IDictionary<TKey, TValue> dictionary
-        ) => (dictionary is ReadOnlyDictionaryWrapper<TKey, TValue>)
-            ? dictionary as ReadOnlyDictionaryWrapper<TKey, TValue>
-            : new ReadOnlyDictionaryWrapper<TKey, TValue>(
-                new OrderedDictionary<TKey, TValue>(dictionary.ToList())
-            );
+        ) => dictionary.ToImmutableDictionary();
 
         /// Duplicated for IDictionary below.
         #region Static Methods for IReadOnlyDictionary
