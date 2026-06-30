@@ -59,6 +59,7 @@ import lang.temper.value.TList
 import lang.temper.value.TNull
 import lang.temper.value.TString
 import lang.temper.value.Value
+import lang.temper.value.VoidishPanicFn
 import lang.temper.value.helpSnippet
 import lang.temper.value.listBuiltinName
 import lang.temper.value.or
@@ -2007,6 +2008,7 @@ object BuiltinFuns {
     val handlerScope: MacroValue = HandlerScopeFn
     val bubble: NamedBuiltinFun = BubbleFn
     val panic: NamedBuiltinFun = PanicFn
+    val voidishPanic: NamedBuiltinFun = VoidishPanicFn
 
     val makeClosRec: MacroValue = MakeClosRec
     val getCR: CallableValue = GetCR
@@ -2026,6 +2028,7 @@ object BuiltinFuns {
     val vCharTagFn = Value(charTagFn)
     val vBubble = Value(bubble)
     val vPanic = Value(panic)
+    val vVoidishPanic = Value(voidishPanic)
     val vCmp = Value(cmpFn)
     val vCommaFn = Value(commaFn)
     val vMinusFn = Value(minusFn)

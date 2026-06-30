@@ -45,6 +45,25 @@ object BubbleFn : NullaryNeverFn {
 }
 
 /**
+ * Specifically so far, this is inserted for missing else clauses. This should
+ * stay panic if the else is found unreachable based on type information.
+ * Otherwise, it should become void. The value formals are the value being
+ * checked and the static type it needs to have for the check to be exhaustive.
+ */
+object VoidishPanicFn : NullaryNeverFn {
+    override val name = "voidishPanic"
+
+    override val callMayFailPerSe: Boolean get() = false
+
+    override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode) =
+        throw Panic()
+
+    override val sigs = nullaryNeverReturnsSigs(
+        requiredInputTypes = listOf(WKT.anyValueType2, WKT.typeType2),
+    ) { it }
+}
+
+/**
  * Panics immediately.
  *
  *  * <!-- snippet: builtin/panic -->
@@ -164,6 +183,7 @@ object ErrorFn : NullaryNeverFn, TokenSerializable {
 }
 
 private fun NamedBuiltinFun.nullaryNeverReturnsSigs(
+    requiredInputTypes: List<Type2> = listOf(),
     makeReturnType: (Type2) -> Type2,
 ): List<Signature2> {
     val nameKey = "${name}T"
@@ -187,13 +207,13 @@ private fun NamedBuiltinFun.nullaryNeverReturnsSigs(
     return listOf(
         Signature2(
             returnType2 = neverVoidReturnType,
-            requiredInputTypes = listOf(),
+            requiredInputTypes = requiredInputTypes,
             hasThisFormal = false,
             typeFormals = listOf(),
         ),
         Signature2(
             returnType2 = neverTReturnType,
-            requiredInputTypes = listOf(),
+            requiredInputTypes = requiredInputTypes,
             hasThisFormal = false,
             typeFormals = listOf(typeFormal),
         ),

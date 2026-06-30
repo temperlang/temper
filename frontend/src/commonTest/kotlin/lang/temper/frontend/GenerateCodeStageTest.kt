@@ -147,16 +147,13 @@ class GenerateCodeStageTest {
             |          } else if (is(s__0, Square)) {
             |            return__4 = "square"
             |          } else {
-            |            return__4 = void
+            |            return__4 = panic ⋖ String ⋗()
             |          }
             |      })
             |
             |      ```
             |  },
             |  errors: [
-            |    "Cannot assign to String from Void!",
-            |    "Expected subtype of String, but got Void!",
-            |    "Void expressions cannot be used as values!",
             |    "Cannot assign to String from Void!",
             |    "Expected subtype of String, but got Void!",
             |    "Void expressions cannot be used as values!",
@@ -2942,9 +2939,7 @@ class GenerateCodeStageTest {
             |          return__0 = do_get_end(s__0)
             |      });
             |      f__0 = (@stay fn f(s__1 /* aka s */: String) /* return__1 */: Boolean {
-            |          let t#0;
-            |          t#0 = (fn g)(s__1);
-            |          return__1 = is(t#0, NoStringIndex)
+            |          return__1 = is((fn g)(s__1), NoStringIndex)
             |      })
             |
             |      ```

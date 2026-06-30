@@ -1,6 +1,8 @@
 package lang.temper.frontend.typestage
 
 import lang.temper.ast.TreeVisit
+import lang.temper.ast.VisitCue
+import lang.temper.builtin.BuiltinFuns
 import lang.temper.common.Console
 import lang.temper.common.benchmarkIf
 import lang.temper.common.calledFor
@@ -26,11 +28,19 @@ import lang.temper.log.snapshot
 import lang.temper.name.ResolvedName
 import lang.temper.stage.Stage
 import lang.temper.type.InvalidType
+import lang.temper.type.NominalType
 import lang.temper.type.StaticType
+import lang.temper.type.WellKnownTypes
+import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockTree
+import lang.temper.value.CallTree
 import lang.temper.value.TBoolean
 import lang.temper.value.Tree
+import lang.temper.value.VoidishPanicFn
+import lang.temper.value.functionContained
+import lang.temper.value.staticTypeContained
 import lang.temper.value.toLispy
+import lang.temper.value.void
 import lang.temper.value.InterpreterCallback.NullInterpreterCallback as nullCallback
 
 private const val BENCHMARK = true
@@ -152,6 +162,9 @@ internal class TypeStage(
             dumpMissingTypeInfo(root, "After typer", console)
         }
 
+        // With type info, we can finalize `else` values.
+        replaceVoidishPanics(root)
+
         if (genre != Genre.Documentation) {
             Debug.Frontend.TypeStage.UseBeforeInit(configKey)
                 .benchmarkIf(BENCHMARK, "UseBeforeInit") {
@@ -251,4 +264,44 @@ private fun dumpMissingTypeInfo(ast: Tree, description: String, console: Console
             }
         }
     }
+}
+
+/**
+ * Replace voidish panics with either void or panic.
+ * TODO Flow typing would be more general than this.
+ */
+private fun replaceVoidishPanics(root: BlockTree) {
+    val expectedTreeSize = VoidishPanicFn.sigs.first().requiredInputTypes.size + 1
+    TreeVisit.startingAt(root).forEach tree@{ tree ->
+        tree is CallTree || return@tree VisitCue.Continue
+        tree.size == expectedTreeSize || return@tree VisitCue.Continue
+        tree.child(0).functionContained == VoidishPanicFn || return@tree VisitCue.Continue
+        // From here down, we know we need either void or standard panic.
+        val incoming = tree.incoming
+        incoming?.replace {
+            run exhaustive@{
+                // Check fail bailing with null goes to void below.
+                val foundType = tree.child(1).typeInferences?.type ?: return@exhaustive null
+                val expectedType = tree.child(2).staticTypeContained ?: return@exhaustive null
+                foundType is NominalType && expectedType is NominalType || return@exhaustive null
+                // We don't support subtyping the same interface under different type actuals,
+                // so simple subtyping is fine here. Any broken type actuals will cause static
+                // type errors elsewhere.
+                isSimpleSubtype(foundType, expectedType) || return@exhaustive null
+                // Passed all checks, so panic it is.
+                Call(tree.typeInferences) { V(BuiltinFuns.vPanic) }
+            } ?: run {
+                // Or bail here to void on check fails.
+                V(void, WellKnownTypes.voidType)
+            }
+        }
+        // Either way, these calls are effectively leaves, so don't bother with kids.
+        VisitCue.SkipOne
+    }.visitPreOrder() // Ok because we never recurse target kids.
+}
+
+/** Just checks for same or subtype, ignoring type actuals. */
+private fun isSimpleSubtype(sub: NominalType, sup: NominalType): Boolean {
+    sub.definition == sup.definition && return true
+    return sub.definition.superTypes.any { isSimpleSubtype(it, sup) }
 }
