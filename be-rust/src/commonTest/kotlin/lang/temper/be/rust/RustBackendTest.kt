@@ -1184,15 +1184,6 @@ class RustBackendTest {
                 |}
                 |#[derive(Clone)]
                 |pub struct C(std::sync::Arc<std::sync::RwLock<CStruct>>);
-                |#[derive(Clone)]
-                |pub struct CBuilder {
-                |    pub x: std::sync::Arc<String>, pub y: std::sync::Arc<String>
-                |}
-                |impl CBuilder {
-                |    pub fn build(self) -> C {
-                |        C::new(self.x, self.y)
-                |    }
-                |}
                 |impl C {
                 |    pub fn v(& self) -> std::sync::Arc<String> {
                 |        return std::sync::Arc::new("ciao".to_string());
@@ -1242,6 +1233,18 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait!(C, []);
+                |pub mod builders {
+                |    #[derive(Clone)]
+                |    pub struct CBuilder {
+                |        pub x: std::sync::Arc<String>, pub y: std::sync::Arc<String>
+                |    }
+                |    impl CBuilder {
+                |        pub fn build(self) -> C {
+                |            C::new(self.x, self.y)
+                |        }
+                |    }
+                |    use super::*;
+                |}
             """.trimMargin(),
         )
     }
@@ -1799,15 +1802,6 @@ class RustBackendTest {
                 |}
                 |#[derive(Clone)]
                 |pub struct Ha<T: Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<HaStruct<T>>);
-                |#[derive(Clone)]
-                |pub struct HaBuilder {
-                |    pub i: i32, pub j: i32
-                |}
-                |impl HaBuilder {
-                |    pub fn build(self) -> Ha<T> {
-                |        Ha::new(self.i, self.j)
-                |    }
-                |}
                 |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> Ha<T> {
                 |    pub fn new(i__0: i32, j__0: i32) -> Ha<T> {
                 |        let i;
@@ -1827,6 +1821,18 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait!(Ha<T>, []);
+                |pub mod builders {
+                |    #[derive(Clone)]
+                |    pub struct HaBuilder {
+                |        pub i: i32, pub j: i32
+                |    }
+                |    impl HaBuilder {
+                |        pub fn build<T: Clone + std::marker::Send + std::marker::Sync + 'static>(self) -> Ha<T> {
+                |            Ha::new(self.i, self.j)
+                |        }
+                |    }
+                |    use super::*;
+                |}
             """.trimMargin(),
         )
     }
@@ -1854,22 +1860,6 @@ class RustBackendTest {
                 |}
                 |#[derive(Clone)]
                 |pub struct Hi<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<HiStruct<T, U>>);
-                |#[derive(Clone, Default)]
-                |pub struct HiOptions {
-                |    pub i: Option<i32>
-                |}
-                |#[derive(Clone)]
-                |pub struct HiBuilder<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> {
-                |    pub t: Option<T>, pub u: U
-                |}
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> HiBuilder<T, U> {
-                |    pub fn build(self) -> Hi<T, U> {
-                |        self.build_with(std::default::Default::default())
-                |    }
-                |    pub fn build_with(self, options: HiOptions) -> Hi<T, U> {
-                |        Hi::new(self.t, self.u, options.i)
-                |    }
-                |}
                 |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> Hi<T, U> {
                 |    pub fn new(t__0: Option<T>, u__0: U, i__0: Option<i32>) -> Hi<T, U> {
                 |        let t;
@@ -1897,6 +1887,39 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait!(Hi<T, U>, [] where U: std::cmp::Eq + std::hash::Hash);
+                |pub mod builders {
+                |    #[derive(Clone)]
+                |    pub struct HiBuilder<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |        pub t: Option<T>, pub u: U
+                |    }
+                |    #[derive(Clone)]
+                |    pub struct HiOptions<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |        selfish: HiBuilder<T, U>, i: Option<i32>
+                |    }
+                |    impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> HiOptions<T, U> {
+                |        pub fn new(selfish: HiBuilder<T, U>) -> Self {
+                |            Self {
+                |                selfish, i: None
+                |            }
+                |        }
+                |        pub fn i(mut self, i: i32) -> Self {
+                |            self.i = Some(i);
+                |            self
+                |        }
+                |        pub fn build(self) -> Hi<T, U> {
+                |            Hi::new(self.selfish.t, self.selfish.u, self.i)
+                |        }
+                |    }
+                |    impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> HiBuilder<T, U> {
+                |        pub fn build(self) -> Hi<T, U> {
+                |            self.options().build()
+                |        }
+                |        pub fn options(self) -> HiOptions<T, U> {
+                |            HiOptions::new(self)
+                |        }
+                |    }
+                |    use super::*;
+                |}
             """.trimMargin(),
         )
     }
@@ -2141,15 +2164,6 @@ class RustBackendTest {
             |}
             |#[derive(Clone)]
             |pub struct Vec2(std::sync::Arc<Vec2Struct>);
-            |#[derive(Clone, Default)]
-            |pub struct Vec2Options {
-            |    pub x: Option<f64>, pub y: Option<f64>
-            |}
-            |impl Vec2Options {
-            |    pub fn build(self) -> Vec2 {
-            |        Vec2::new(self.x, self.y)
-            |    }
-            |}
             |impl Vec2 {
             |    pub fn new(x__0: Option<f64>, y__0: Option<f64>) -> Vec2 {
             |        let x;
@@ -2181,6 +2195,41 @@ class RustBackendTest {
             |    }
             |}
             |temper_core::impl_any_value_trait!(Vec2, []);
+            |pub mod builders {
+            |    #[derive(Clone)]
+            |    pub struct Vec2Builder {}
+            |    #[derive(Clone)]
+            |    pub struct Vec2Options {
+            |        selfish: Vec2Builder, x: Option<f64>, y: Option<f64>
+            |    }
+            |    impl Vec2Options {
+            |        pub fn new(selfish: Vec2Builder) -> Self {
+            |            Self {
+            |                selfish, x: None, y: None
+            |            }
+            |        }
+            |        pub fn x(mut self, x: f64) -> Self {
+            |            self.x = Some(x);
+            |            self
+            |        }
+            |        pub fn y(mut self, y: f64) -> Self {
+            |            self.y = Some(y);
+            |            self
+            |        }
+            |        pub fn build(self) -> Vec2 {
+            |            Vec2::new(self.x, self.y)
+            |        }
+            |    }
+            |    impl Vec2Builder {
+            |        pub fn build(self) -> Vec2 {
+            |            self.options().build()
+            |        }
+            |        pub fn options(self) -> Vec2Options {
+            |            Vec2Options::new(self)
+            |        }
+            |    }
+            |    use super::*;
+            |}
         """.trimMargin(),
     )
 

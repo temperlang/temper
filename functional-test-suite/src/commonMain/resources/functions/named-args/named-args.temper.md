@@ -12,7 +12,7 @@ but named values only work for constructing class instances.
 So make an abusive class that has a constructor only for side effects, so we
 can see what happens.
 
-    class Greet {
+    export class Greet { // export for exploring generated builders
       public constructor(
         @noProperty message: String = "Hi!",
         @noProperty repeat: Boolean = false,
