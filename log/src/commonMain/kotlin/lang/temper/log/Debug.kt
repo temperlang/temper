@@ -51,7 +51,7 @@ object Debug : LogConfigurations("*", null, listOf("frontend", "backend", "docge
             object AfterInterpretation : LogConfigurations("frontend.syntaxMacroStage.afterInterpretation", "frontend.syntaxMacroStage", listOf())
             object After : LogConfigurations("frontend.syntaxMacroStage.after", "frontend.syntaxMacroStage", listOf())
         }
-        object DefineStage : LogConfigurations("frontend.defineStage", "frontend", listOf("frontend.defineStage.before", "frontend.defineStage.afterInterpretation", "frontend.defineStage.afterInheritPropertyReassignability", "frontend.defineStage.desugarDotOperations", "frontend.defineStage.afterDesugarDotOperations", "frontend.defineStage.linkThis", "frontend.defineStage.afterLinkThis", "frontend.defineStage.convertClasses", "frontend.defineStage.afterConvertClasses", "frontend.defineStage.afterAddTemperTestInstructions", "frontend.defineStage.simplifyDeclarations", "frontend.defineStage.afterSimplifyDeclarations", "frontend.defineStage.convertObjectSyntax", "frontend.defineStage.after")) {
+        object DefineStage : LogConfigurations("frontend.defineStage", "frontend", listOf("frontend.defineStage.before", "frontend.defineStage.afterInterpretation", "frontend.defineStage.afterInheritPropertyReassignability", "frontend.defineStage.desugarDotOperations", "frontend.defineStage.afterDesugarDotOperations", "frontend.defineStage.linkThis", "frontend.defineStage.afterLinkThis", "frontend.defineStage.convertClasses", "frontend.defineStage.afterConvertClasses", "frontend.defineStage.afterAddTemperTestInstructions", "frontend.defineStage.fillInMissingQNames", "frontend.defineStage.afterFillInMissingQNames", "frontend.defineStage.simplifyDeclarations", "frontend.defineStage.afterSimplifyDeclarations", "frontend.defineStage.convertObjectSyntax", "frontend.defineStage.after")) {
             object Before : LogConfigurations("frontend.defineStage.before", "frontend.defineStage", listOf())
             object AfterInterpretation : LogConfigurations("frontend.defineStage.afterInterpretation", "frontend.defineStage", listOf())
             object AfterInheritPropertyReassignability : LogConfigurations("frontend.defineStage.afterInheritPropertyReassignability", "frontend.defineStage", listOf())
@@ -62,6 +62,8 @@ object Debug : LogConfigurations("*", null, listOf("frontend", "backend", "docge
             object ConvertClasses : LogConfigurations("frontend.defineStage.convertClasses", "frontend.defineStage", listOf())
             object AfterConvertClasses : LogConfigurations("frontend.defineStage.afterConvertClasses", "frontend.defineStage", listOf())
             object AfterAddTemperTestInstructions : LogConfigurations("frontend.defineStage.afterAddTemperTestInstructions", "frontend.defineStage", listOf())
+            object FillInMissingQNames : LogConfigurations("frontend.defineStage.fillInMissingQNames", "frontend.defineStage", listOf())
+            object AfterFillInMissingQNames : LogConfigurations("frontend.defineStage.afterFillInMissingQNames", "frontend.defineStage", listOf())
             object SimplifyDeclarations : LogConfigurations("frontend.defineStage.simplifyDeclarations", "frontend.defineStage", listOf())
             object AfterSimplifyDeclarations : LogConfigurations("frontend.defineStage.afterSimplifyDeclarations", "frontend.defineStage", listOf())
             object ConvertObjectSyntax : LogConfigurations("frontend.defineStage.convertObjectSyntax", "frontend.defineStage", listOf())
@@ -162,6 +164,8 @@ val logConfigurationsByName: Map<String, LogConfigurations> = mapOf(
     "frontend.defineStage.convertClasses" to Debug.Frontend.DefineStage.ConvertClasses,
     "frontend.defineStage.afterConvertClasses" to Debug.Frontend.DefineStage.AfterConvertClasses,
     "frontend.defineStage.afterAddTemperTestInstructions" to Debug.Frontend.DefineStage.AfterAddTemperTestInstructions,
+    "frontend.defineStage.fillInMissingQNames" to Debug.Frontend.DefineStage.FillInMissingQNames,
+    "frontend.defineStage.afterFillInMissingQNames" to Debug.Frontend.DefineStage.AfterFillInMissingQNames,
     "frontend.defineStage.simplifyDeclarations" to Debug.Frontend.DefineStage.SimplifyDeclarations,
     "frontend.defineStage.afterSimplifyDeclarations" to Debug.Frontend.DefineStage.AfterSimplifyDeclarations,
     "frontend.defineStage.convertObjectSyntax" to Debug.Frontend.DefineStage.ConvertObjectSyntax,

@@ -1887,7 +1887,6 @@ class SyntaxMacroStageTest {
             |      @typeDecl(C__0) @stay let C__0 = type (C__0);
             |      class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
             |          C__0 extends AnyValue;
-            |          @property(\x) @visibility(\public) let x__0;
             |          REM("Returns 1", true, false);
             |          @method(\x) @getter @visibility(\public) @fn let nym`get.x__1` = (@docString(...) fn nym`get.x`(@impliedThis(C__0) this__0: C__0) /* return__0 */: (Int) {
             |              fn__0: do {

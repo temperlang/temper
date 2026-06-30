@@ -1251,7 +1251,7 @@ class CleanupTemporariesTest {
                 |//    ```,
                 |  pseudoCodeAfter: ```
                 |      let return__0;
-                |      @visibility(\public) @stay @fromType(C__0) let p__0;
+                |      @visibility(\public) @stay @fromType(C__0) let p__0: Boolean;
                 |      @visibility(\public) @fn @stay @fromType(C__0) let nym`set.p__1`;
                 |      nym`set.p__1` = (@stay fn nym`set.p`(@impliedThis(C__0) this__0: C__0, newValue__0 /* aka newValue */: Boolean) /* return__1 */: Void {
                 |          return__1 = void;
@@ -1261,6 +1261,10 @@ class CleanupTemporariesTest {
                 |      constructor__0 = (@stay fn constructor(@impliedThis(C__0) this__1: C__0) /* return__2 */: Void {
                 |          return__2 = void
                 |      });
+                |      @fn @visibility(\public) @stay @fromType(C__0) let getp__0;
+                |      getp__0 = fn (@impliedThis(C__0) this__2: C__0) /* return__3 */: Boolean {
+                |        pureVirtual()
+                |      };
                 |      @typeDecl(C__0) @stay let C__0;
                 |      C__0 = type (C__0);
                 |      let c__0;
