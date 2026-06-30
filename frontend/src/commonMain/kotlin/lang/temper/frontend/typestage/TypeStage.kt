@@ -31,7 +31,6 @@ import lang.temper.type.InvalidType
 import lang.temper.type.NominalType
 import lang.temper.type.StaticType
 import lang.temper.type.WellKnownTypes
-import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.TBoolean

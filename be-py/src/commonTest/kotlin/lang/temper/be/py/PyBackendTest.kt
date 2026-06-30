@@ -133,7 +133,7 @@ class PyBackendTest {
             |var m: MapBuilder<String, Int>? = null;
             |for (let e of [1, 2, 3]) {
             |  if (e == 2) {
-            |    m = new MapBuilder<String, Int>()
+            |    m = new MapBuilder<String, Int>();
             |  }
             |}
             |if (m is MapBuilder<String, Int>) {
