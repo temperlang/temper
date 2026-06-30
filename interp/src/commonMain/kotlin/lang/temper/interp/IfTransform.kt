@@ -197,11 +197,13 @@ internal object IfTransform : ControlFlowTransform("if") {
                     if (hasFinalElse) {
                         null
                     } else {
+                        // Using `rightEdge` here improves diagnostic positions such as in UseBeforeInit.
+                        val endPos = wholePos.rightEdge
                         when (val nameType = anyExhaustiveSealedType(branches)) {
-                            null -> macroCursor.referenceToVoid(wholePos)
+                            null -> macroCursor.referenceToVoid(endPos)
                             else -> {
                                 val (checkedName, expectedType) = nameType
-                                val panicCall = macroCursor.macroEnvironment.document.treeFarm.grow(wholePos) {
+                                val panicCall = macroCursor.macroEnvironment.document.treeFarm.grow(endPos) {
                                     Block {
                                         Call {
                                             V(BuiltinFuns.vVoidishPanic)
