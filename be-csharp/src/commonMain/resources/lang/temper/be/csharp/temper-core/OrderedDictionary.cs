@@ -13,12 +13,24 @@ namespace TemperLang.Core
         /// might also be held via a reference typed as Temper Map<...>.
         public static IReadOnlyDictionary<TKey, TValue> ToMap<TKey, TValue>(
             this IReadOnlyDictionary<TKey, TValue> dictionary
-        ) => dictionary.ToImmutableDictionary();
+        ) => (dictionary is ReadOnlyDictionaryWrapper<TKey, TValue>)
+            ? (ReadOnlyDictionaryWrapper<TKey, TValue>)dictionary
+            : (dictionary is ImmutableDictionary<TKey, TValue>)
+            ? (ImmutableDictionary<TKey, TValue>)dictionary
+            : new ReadOnlyDictionaryWrapper<TKey, TValue>(
+                new OrderedDictionary<TKey, TValue>(dictionary.ToList())
+            );
 
         /// ToMap needs to make a copy if input might be mutated.
         public static IReadOnlyDictionary<TKey, TValue> ToMap<TKey, TValue>(
             this IDictionary<TKey, TValue> dictionary
-        ) => dictionary.ToImmutableDictionary();
+        ) => (dictionary is ReadOnlyDictionaryWrapper<TKey, TValue>)
+            ? (ReadOnlyDictionaryWrapper<TKey, TValue>)dictionary
+            : (dictionary is ImmutableDictionary<TKey, TValue>)
+            ? (ImmutableDictionary<TKey, TValue>)dictionary
+            : new ReadOnlyDictionaryWrapper<TKey, TValue>(
+                new OrderedDictionary<TKey, TValue>(dictionary.ToList())
+            );
 
         /// Duplicated for IDictionary below.
         #region Static Methods for IReadOnlyDictionary
