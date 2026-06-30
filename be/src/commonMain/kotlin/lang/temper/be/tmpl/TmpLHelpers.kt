@@ -52,6 +52,7 @@ import lang.temper.value.TNull
 import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.Value
+import lang.temper.value.connectedSymbol
 import lang.temper.value.docStringSymbol
 import lang.temper.value.noneSymbol
 import lang.temper.value.qNameSymbol
@@ -1262,4 +1263,9 @@ fun toSigBestEffort(descriptor: Descriptor?) = when (descriptor) {
     null -> null
     is Signature2 -> descriptor
     is Type2 -> withType(descriptor, fn = { _, sig, _ -> sig }, fallback = { null })
+}
+
+fun Map<Symbol, Value<*>>?.connectedKey(): String? = when {
+    this != null && connectedSymbol in this -> this[qNameSymbol]?.let { TString.unpackOrNull(it) }
+    else -> null
 }

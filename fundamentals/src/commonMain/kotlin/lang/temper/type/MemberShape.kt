@@ -18,7 +18,10 @@ import lang.temper.value.MetadataValueMultimap
 import lang.temper.value.StayLeaf
 import lang.temper.value.StayReferrer
 import lang.temper.value.StaySink
+import lang.temper.value.TString
+import lang.temper.value.connectedSymbol
 import lang.temper.value.fnSymbol
+import lang.temper.value.qNameSymbol
 
 /** A named fragment of a [TypeShape]. */
 sealed class MemberShape(
@@ -52,6 +55,11 @@ sealed class MemberShape(
             null -> MetadataValueMultimap.empty
             else -> MetadataValueMultimapImpl(stay)
         }
+
+    val connectedKey: String? get() = when {
+        connectedSymbol in metadata -> metadata[qNameSymbol]?.lastOrNull()?.let { TString.unpack(it) }
+        else -> null
+    }
 }
 
 /** The shape of a type parameter.  E.g. `T` in `class C<T>`. */

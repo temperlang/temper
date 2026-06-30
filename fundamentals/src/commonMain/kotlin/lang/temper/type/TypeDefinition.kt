@@ -38,6 +38,7 @@ import lang.temper.value.StayLeaf
 import lang.temper.value.StayReferrer
 import lang.temper.value.StaySink
 import lang.temper.value.TString
+import lang.temper.value.connectedSymbol
 import lang.temper.value.constructorPropertySymbol
 import lang.temper.value.docStringSymbol
 import lang.temper.value.fnSymbol
@@ -82,6 +83,11 @@ sealed interface TypeDefinition : StayReferrer, Structured, TokenSerializable, P
     val metadata: MetadataValueMultimap get() = when (val sl = stayLeaf) {
         null -> MetadataValueMultimap.empty
         else -> MetadataValueMultimapImpl(sl)
+    }
+
+    val connectedKey: String? get() = when {
+        connectedSymbol in metadata -> metadata[qNameSymbol]?.lastOrNull()?.let { TString.unpack(it) }
+        else -> null
     }
 
     fun renderName(tokenSink: TokenSink) {

@@ -1002,7 +1002,7 @@ class TypeStageTest {
               ```
               ignore(fn /* return__0 */{
                   return__0 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__1 */: (GeneratorResult<Empty>) implements GeneratorFn {
-                      return__1 = implicits.doneResult<Empty>();
+                      return__1 = core.doneResult<Empty>();
                       void;
                       while (true) {
                         cat(str(123));
@@ -1056,7 +1056,7 @@ class TypeStageTest {
                                                   [ "Call", [
                                                       [ "Call", [
                                                           [ "Value", "nym`<>`: Function" ],
-                                                          [ "RightName", "implicits.doneResult" ],
+                                                          [ "RightName", "core.doneResult" ],
                                                           [ "Value", "Empty: Type" ],
                                                         ]
                                                       ]

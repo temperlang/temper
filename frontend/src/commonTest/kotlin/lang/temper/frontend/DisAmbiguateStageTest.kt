@@ -811,7 +811,7 @@ class DisAmbiguateStageTest {
                 },
                 supers: [
                   {
-                    module: "implicits",
+                    module: "core",
                     abbrev: "AnyValue__0",
                     uid: 0
                   }
@@ -828,7 +828,7 @@ class DisAmbiguateStageTest {
                   },
                 ],
                 metadata: {
-                  connected: ["\"Empty\": String"],
+                  connected: ["void: Void"],
                   imu: ["void: Void"],
                 }
               },

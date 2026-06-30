@@ -186,109 +186,122 @@ internal object CppSupportNetwork : SupportNetwork {
             fun put(key: String, code: SupportCode) {
                 require(table.put(key, code) == null) { "duplicate connectedRefs entry for '$key'" }
             }
-            put("::getConsole", Like.core("Console::get_console"))
-            put("empty", Like.core("empty"))
-            put("ignore", Like.ignoring(theLastArg))
-            put("Boolean::toString", Like.core("Boolean::toString"))
-            put("Date::getDay", Like.core("Date::getDay"))
-            put("Date::getMonth", Like.core("Date::getMonth"))
-            put("Date::getYear", Like.core("Date::getYear"))
-            put("Date::getDayOfWeek", Like.core("Date::getDayOfWeek"))
-            put("Date::toString", Like.core("Date::toString"))
-            put("Date::yearsBetween", Like.core("Date::yearsBetween"))
+            put("core.getConsole()", Like.core("Console::get_console"))
+            put("core.empty()", Like.core("empty"))
+            put("core.ignore()", Like.ignoring(theLastArg))
+            put("core.type Boolean.toString()", Like.core("Boolean::toString"))
+            put("std/temporal.type Date.day", Like.core("Date::getDay"))
+            put("std/temporal.type Date.month", Like.core("Date::getMonth"))
+            put("std/temporal.type Date.year", Like.core("Date::getYear"))
+            put("std/temporal.type Date.get dayOfWeek()", Like.core("Date::getDayOfWeek"))
+            put("std/temporal.type Date.toString()", Like.core("Date::toString"))
+            put("std/temporal.type Date.yearsBetween()", Like.core("Date::yearsBetween"))
+            for (prop in listOf("e", "pi")) {
+                put("core.type Float64.$prop", Like.core("Float64::$prop"))
+            }
             for (fn in listOf(
-                "e", "pi", "abs", "acos", "asin", "atan", "atan2", "ceil", "cos", "cosh",
+                "abs", "acos", "asin", "atan", "atan2", "ceil", "cos", "cosh",
                 "exp", "expm1", "floor", "log", "log10", "log1p", "max", "min", "near",
                 "round", "sign", "sin", "sinh", "sqrt", "tan", "tanh",
                 "toInt32", "toInt32Unsafe", "toInt64", "toInt64Unsafe", "toString",
             )) {
-                put("Float64::$fn", Like.core("Float64::$fn"))
+                put("core.type Float64.$fn()", Like.core("Float64::$fn"))
             }
             for (fn in listOf("max", "min", "toFloat64", "toFloat64Unsafe", "toString", "toInt64")) {
-                put("Int32::$fn", Like.core("Int::$fn"))
+                put("core.type Int32.$fn()", Like.core("Int::$fn"))
             }
             for (fn in listOf("max", "min", "toFloat64", "toFloat64Unsafe", "toInt32", "toInt32Unsafe", "toString")) {
-                put("Int64::$fn", Like.core("Int64::$fn"))
+                put("core.type Int64.$fn()", Like.core("Int64::$fn"))
             }
-            put("PromiseBuilder::breakPromise", Like.core("breakpromise"))
-            put("PromiseBuilder::complete", Like.core("complete"))
-            put("PromiseBuilder::getPromise", Like.core("getpromise"))
-            put("PromiseBuilder::constructor", Like.coreWithRetTypeArgs("PromiseBuilderNs::make"))
+            put("core.type PromiseBuilder.breakPromise()", Like.core("breakpromise"))
+            put("core.type PromiseBuilder.complete()", Like.core("complete"))
+            put("core.type PromiseBuilder.get promise()", Like.core("getpromise"))
+            put("core.type PromiseBuilder.constructor()", Like.coreWithRetTypeArgs("PromiseBuilderNs::make"))
+            put("core.type String.begin", Like.core("String::begin"))
+            for (prop in listOf("isEmpty", "end")) {
+                put("core.type String.get $prop()", Like.core("String::$prop"))
+            }
             for (fn in listOf(
                 "toInt64", "isEmpty", "begin", "end",
                 "get", "countBetween", "forEach", "hasAtLeast", "hasIndex", "next", "prev",
                 "slice", "split", "step", "toFloat64", "toInt32", "toString", "indexOf",
             )) {
-                put("String::$fn", Like.core("String::$fn"))
+                put("core.type String.$fn()", Like.core("String::$fn"))
             }
             // Cased separately: the C++ core symbols spell these `fromCodepoint`/`fromCodepoints`.
-            put("String::fromCodePoint", Like.core("String::fromCodepoint"))
-            put("String::fromCodePoints", Like.core("String::fromCodepoints"))
-            put("StringIndex::none", Like.core("String::none"))
-            put("StringIndexOption::compareTo", Like.core("Compare::cmp"))
+            put("core.type String.fromCodePoint()", Like.core("String::fromCodepoint"))
+            put("core.type String.fromCodePoints()", Like.core("String::fromCodepoints"))
+            put("core.type StringIndex.none", Like.core("String::none"))
+            put("core.type StringIndexOption.compareTo()", Like.core("Compare::cmp"))
             for ((op, sym) in listOf(
                 "eq" to "==", "ne" to "!=", "lt" to "<",
                 "le" to "<=", "gt" to ">", "ge" to ">=",
             )) {
-                put("StringIndexOption::compareTo::$op", Like.binary(sym))
+                put("core.type StringIndexOption.compareTo()::$op", Like.binary(sym))
             }
-            put("StringBuilder::constructor", Like.coreWithRetTypeArgs("StringBuilder::make"))
-            for (fn in listOf("append", "appendBetween", "toString", "clear", "end")) {
-                put("StringBuilder::$fn", Like.core("StringBuilder::$fn"))
+            put("core.type StringBuilder.constructor()", Like.coreWithRetTypeArgs("StringBuilder::make"))
+            put("core.type StringBuilder.get end()", Like.core("StringBuilder::end"))
+            for (fn in listOf("append", "appendBetween", "toString", "clear")) {
+                put("core.type StringBuilder.$fn()", Like.core("StringBuilder::$fn"))
             }
-            put("StringBuilder::appendCodePoint", Like.core("StringBuilder::appendCodepoint"))
-            put("Console::log", Like.core("Console::log"))
-            for (fn in listOf("isEmpty", "forEach", "get", "length", "toList", "toListBuilder")) {
-                put("List::$fn", Like.core("List::$fn"))
+            put("core.type StringBuilder.appendCodePoint()", Like.core("StringBuilder::appendCodepoint"))
+            put("core.type Console.log()", Like.core("Console::log"))
+            put("core.type List.get length()", Like.coreWithRetTypeArgs("List::length"))
+            for (fn in listOf("forEach", "get", "toList", "toListBuilder")) {
+                put("core.type List.$fn()", Like.core("List::$fn"))
+            }
+            for (prop in listOf("isEmpty", "length")) {
+                put("core.type Listed.get $prop()", Like.core("List::$prop"))
             }
             for (fn in listOf(
-                "filter", "isEmpty", "join", "map", "slice", "get", "getOr",
-                "length", "reduce", "sorted", "toList", "toListBuilder", "indexOf",
+                "filter", "join", "map", "slice", "get", "getOr",
+                "reduce", "sorted", "toList", "toListBuilder", "indexOf",
             )) {
-                put("Listed::$fn", Like.core("List::$fn"))
+                put("core.type Listed.$fn()", Like.core("List::$fn"))
             }
-            put("ListBuilder::constructor", Like.coreWithRetTypeArgs("ListBuilder::make"))
+            put("core.type ListBuilder.constructor()", Like.coreWithRetTypeArgs("ListBuilder::make"))
             for (fn in listOf("add", "addAll", "removeLast", "reverse", "splice", "set", "sort")) {
-                put("ListBuilder::$fn", Like.coreWithFirstArgTypeArgs("ListBuilder::$fn"))
+                put("core.type ListBuilder.$fn()", Like.coreWithFirstArgTypeArgs("ListBuilder::$fn"))
             }
-            put("ListBuilder::toList", Like.core("List::toList"))
-            put("ListBuilder::toListBuilder", Like.core("List::toListBuilder"))
-            put("ListBuilder::length", Like.core("List::length"))
-            put("Map::constructor", Like.coreWithRetTypeArgs("Map::make"))
-            put("MapBuilder::constructor", Like.coreWithRetTypeArgs("Map::make"))
+            put("core.type ListBuilder.toList()", Like.core("List::toList"))
+            put("core.type ListBuilder.toListBuilder()", Like.core("List::toListBuilder"))
+            put("core.type ListBuilder.get length()", Like.core("List::length"))
+            put("core.type Map.constructor()", Like.coreWithRetTypeArgs("Map::make"))
+            put("core.type MapBuilder.constructor()", Like.coreWithRetTypeArgs("Map::make"))
             for (fn in listOf("clear", "remove", "set")) {
-                put("MapBuilder::$fn", Like.coreWithFirstArgTypeArgs("MapBuilder::$fn"))
+                put("core.type MapBuilder.$fn()", Like.coreWithFirstArgTypeArgs("MapBuilder::$fn"))
             }
-            put("Pair::constructor", Like.coreWithRetTypeArgs("PairFactory::make"))
-            put("Mapped::length", Like.core("Mapped::length"))
+            put("core.type Pair.constructor()", Like.coreWithRetTypeArgs("PairFactory::make"))
+            put("core.type Mapped.get length()", Like.core("Mapped::length"))
             for (fn in listOf("get", "getOr", "has")) {
-                put("Mapped::$fn", Like.coreWithFirstArgTypeArgs("Mapped::$fn"))
+                put("core.type Mapped.$fn()", Like.coreWithFirstArgTypeArgs("Mapped::$fn"))
             }
             for (fn in listOf(
                 "keys", "values", "toMap", "toMapBuilder", "toList",
                 "toListBuilder", "toListWith", "toListBuilderWith", "forEach",
             )) {
-                put("Mapped::$fn", Like.core("Mapped::$fn"))
+                put("core.type Mapped.$fn()", Like.core("Mapped::$fn"))
             }
-            put("Mapped::set", Like.core("MapBuilder::set"))
-            put("DenseBitVector::constructor", Like.coreWithRetTypeArgs("DenseBitVector::make"))
-            put("DenseBitVector::get", Like.core("DenseBitVector::get"))
-            put("DenseBitVector::set", Like.core("DenseBitVector::set"))
-            put("Deque::constructor", Like.coreWithRetTypeArgs("Deque::make"))
-            for (fn in listOf("add", "isEmpty", "removeFirst")) {
-                put("Deque::$fn", Like.coreWithFirstArgTypeArgs("Deque::$fn"))
+            put("core.type DenseBitVector.constructor()", Like.coreWithRetTypeArgs("DenseBitVector::make"))
+            put("core.type DenseBitVector.get()", Like.core("DenseBitVector::get"))
+            put("core.type DenseBitVector.set()", Like.core("DenseBitVector::set"))
+            put("core.type Deque.constructor()", Like.coreWithRetTypeArgs("Deque::make"))
+            put("core.type Deque.get isEmpty()", Like.coreWithRetTypeArgs("Deque::isEmpty"))
+            for (fn in listOf("add", "removeFirst")) {
+                put("core.type Deque.$fn()", Like.coreWithFirstArgTypeArgs("Deque::$fn"))
             }
             for (fn in listOf(
-                "compiledFind", "compiledFound", "compiledReplace", "compiledSplit", "compileFormatted",
+                "compiledFind", "compiledFound", "compiledReplace", "compiledSplit",
             )) {
-                put("Regex::$fn", Like.core("Regex::$fn"))
+                put("std/regex.type Regex.$fn()", Like.core("Regex::$fn"))
             }
-            put("RegexFormatter::pushCaptureName", Like.core("Regex::pushCaptureName"))
-            put("RegexFormatter::pushCodeTo", Like.core("Regex::pushCodeTo"))
-            put("Test::bail", Like.core("testBail"))
-            put("Generator::next", Like.core("next"))
-            put("SafeGenerator::next", Like.core("next"))
-            put("doneResult", Like.core("doneResult"))
+            put("std/regex.type RegexFormatter.regexCompileFormatted()", Like.core("Regex::compileFormatted"))
+            put("std/regex.type RegexFormatter.pushCaptureName()", Like.core("Regex::pushCaptureName"))
+            put("std/regex.type RegexFormatter.pushCodeTo()", Like.core("Regex::pushCodeTo"))
+            put("std/testing.type Test.bail()", Like.core("testBail"))
+            put("core.type Generator.next()", Like.core("next"))
+            put("core.type SafeGenerator.next()", Like.core("next"))
+            put("core.doneResult()", Like.core("doneResult"))
         }
     }
 
@@ -297,7 +310,7 @@ internal object CppSupportNetwork : SupportNetwork {
         connectedKey: String,
         genre: Genre,
     ): SupportCode? = connectedRefs[connectedKey] ?: when (connectedKey) {
-        "Date::constructor" -> handle {
+        "std/temporal.type Date.constructor()" -> handle {
             val innerType = retType.bindings.firstOrNull() ?: retType
             val rawDateName = translator.resolveTypeName(innerType.definition)
             cpp.callExpr(
@@ -305,7 +318,7 @@ internal object CppSupportNetwork : SupportNetwork {
                 values,
             )
         }
-        "Date::fromIsoString" -> handle {
+        "std/temporal.type Date.fromIsoString()" -> handle {
             val innerType = retType.bindings.firstOrNull() ?: retType
             val rawDateName = translator.resolveTypeName(innerType.definition)
             cpp.callExpr(
@@ -313,7 +326,7 @@ internal object CppSupportNetwork : SupportNetwork {
                 values,
             )
         }
-        "Date::today" -> handle {
+        "std/temporal.type Date.today()" -> handle {
             val innerType = retType.bindings.firstOrNull() ?: retType
             val rawDateName = translator.resolveTypeName(innerType.definition)
             cpp.callExpr(
@@ -321,7 +334,7 @@ internal object CppSupportNetwork : SupportNetwork {
                 emptyList(),
             )
         }
-        "Listed::reduceFrom" -> handle {
+        "core.type Listed.reduceFrom()" -> handle {
             val name = cpp.name(TEMPER_CORE_NAMESPACE, "List", "reduceFrom")
             val elemType = types.getOrNull(0)?.let { type ->
                 type.bindings.firstOrNull()?.let { translator.translateType2(it) }

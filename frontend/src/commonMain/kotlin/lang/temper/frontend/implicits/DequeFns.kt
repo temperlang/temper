@@ -13,7 +13,7 @@ import lang.temper.value.Value
 import lang.temper.value.void
 
 internal interface DequeFns {
-    object Constructor : SigFnBuilder("Deque::constructor") {
+    object Constructor : SigFnBuilder("core.type Deque.constructor()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val content = Value(ArrayDeque(), TListBuilder)
             val thisValue = args[0]
@@ -30,7 +30,7 @@ internal interface DequeFns {
         }
     }
 
-    object Add : SigFnBuilder("Deque::add", impure = true) {
+    object Add : SigFnBuilder("core.type Deque.add()", impure = true) {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val deque = TListBuilder.unpackContent(args[0]) as ArrayDeque
             val element = args[1]
@@ -39,14 +39,14 @@ internal interface DequeFns {
         }
     }
 
-    object IsEmpty : SigFnBuilder("Deque::isEmpty") {
+    object IsEmpty : SigFnBuilder("core.type Deque.get isEmpty()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val deque = TListBuilder.unpackContent(args[0])
             return TBoolean.value(deque.isEmpty())
         }
     }
 
-    object RemoveFirst : SigFnBuilder("Deque::removeFirst", impure = true) {
+    object RemoveFirst : SigFnBuilder("core.type Deque.removeFirst()", impure = true) {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val deque = TListBuilder.unpackContent(args[0]) as ArrayDeque
             if (deque.isEmpty()) {

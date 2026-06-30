@@ -101,7 +101,7 @@ interface SupportNetwork {
     ): SupportCode? = when (fn) {
         is NamedBuiltinFun -> getSupportCode(pos, fn, genre)
         is CoverFunction -> getSupportCode(pos, fn, genre)
-        is LongLivedUserFunction -> (fn.stayLeaf.incoming?.source as? FunTree)?.parts?.connected?.let { key ->
+        is LongLivedUserFunction -> (fn.stayLeaf.incoming?.source as? FunTree)?.parts?.connectedKey?.let { key ->
             translateConnectedReference(pos, key, genre)
         }
         else -> null
@@ -126,7 +126,7 @@ interface SupportNetwork {
     ): Pair<SupportCode, Signature2>?
 
     /**
-     * Translate connected method references, like `String::isEmpty` to support code.
+     * Translate connected method references, like `core.type String.get isEmpty()` to support code.
      * Return value null indicates that the original Temper method implementation should be used.
      */
     fun translateConnectedReference(

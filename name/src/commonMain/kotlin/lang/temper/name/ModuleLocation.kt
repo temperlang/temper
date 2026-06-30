@@ -40,9 +40,9 @@ sealed interface ModuleLocation : CodeLocation, Comparable<ModuleLocation>, Toke
  * imported by all other modules.
  */
 object ImplicitsCodeLocation : ModuleLocation {
-    override val diagnostic = wordImplicits.text
+    override val diagnostic = wordCore.text
     override fun renderTo(tokenSink: TokenSink, context: SharedLocationContext?) {
-        tokenSink.emit(wordImplicits)
+        tokenSink.emit(wordCore)
     }
 
     override fun compareTo(other: ModuleLocation): Int = when (other) {
@@ -50,10 +50,10 @@ object ImplicitsCodeLocation : ModuleLocation {
         is ModuleName -> -1
     }
 
-    override fun toString() = wordImplicits.text
+    override fun toString() = wordCore.text
 }
 
-private val wordImplicits = OutputToken("implicits", OutputTokenType.Word)
+private val wordCore = OutputToken("core", OutputTokenType.Word)
 
 /**
  * A module name is a cross-version identifier for a module.

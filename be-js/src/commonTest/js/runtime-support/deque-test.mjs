@@ -1,7 +1,7 @@
 import {
   dequeConstructor,
   dequeAdd,
-  dequeIsEmpty,
+  dequeGetIsEmpty,
   dequeRemoveFirst,
 } from '../../../commonMain/resources/lang/temper/be/js/temper-core/index.js';
 import {describe, it} from 'mocha';
@@ -15,10 +15,10 @@ describe("Deque", () => {
         dequeAdd(deque, `${i}`);
       }
       for (let i = 0; i < 10; ++i) {
-        expect(dequeIsEmpty(deque)).to.be.false;
+        expect(dequeGetIsEmpty(deque)).to.be.false;
         expect(dequeRemoveFirst(deque)).to.equal(`${i}`);
       }
-      expect(dequeIsEmpty(deque)).to.be.true;
+      expect(dequeGetIsEmpty(deque)).to.be.true;
     });
     it("fuzzily", () => {
       // Throw a series of random adds and removes at two implementations:
@@ -36,7 +36,7 @@ describe("Deque", () => {
         // 40% removes, 50% adds, 10% isEmpty tests
         if (rand < 0.1) {
           wanted.push(`empty:${slowButSimple.length === 0}`);
-          got.push(`empty:${dequeIsEmpty(deque)}`);
+          got.push(`empty:${dequeGetIsEmpty(deque)}`);
         } else if (rand < 0.5) { // remove
           let shifted = slowButSimple.shift()
           wanted.push(shifted === undefined ? "FAIL" : shifted);
@@ -61,6 +61,6 @@ describe("Deque", () => {
   });
   it("emptyIsEmpty", () => {
     let deque = dequeConstructor();
-    expect(dequeIsEmpty(deque)).to.be.true;
+    expect(dequeGetIsEmpty(deque)).to.be.true;
   });
 });

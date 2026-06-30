@@ -14,6 +14,7 @@ import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.RuntimeTypeOperation
+import lang.temper.common.subListToEnd
 import lang.temper.format.TokenSink
 import lang.temper.lexer.Genre
 import lang.temper.log.Position
@@ -411,10 +412,10 @@ internal object LuaSupportNetwork : SupportNetwork {
         connectedKey: String,
         genre: Genre,
     ): SupportCode? = when (connectedKey) {
-        "::getConsole" -> InlineLua(connectedKey) { pos, _ ->
+        "core.getConsole()" -> InlineLua(connectedKey) { pos, _ ->
             Lua.Num(pos, 0.0)
         }
-        "Console::log" -> InlineLua(connectedKey) { pos, args ->
+        "core.type Console.log()" -> InlineLua(connectedKey) { pos, args ->
             Lua.FunctionCallExpr(
                 pos,
                 Lua.DotIndexExpr(
@@ -428,16 +429,16 @@ internal object LuaSupportNetwork : SupportNetwork {
                 ),
             )
         }
-        "String::begin" -> InlineLua(connectedKey) { pos, _ ->
+        "core.type String.begin" -> InlineLua(connectedKey) { pos, _ ->
             // Strings in Lua are one-indexed
             Lua.Num(pos, 1.0)
         }
-        "StringIndex::none" -> InlineLua(connectedKey) { pos, _ ->
+        "core.type StringIndex.none" -> InlineLua(connectedKey) { pos, _ ->
             // -1 is out of band
             Lua.Num(pos, -1.0)
         }
-        "Generator::next",
-        "SafeGenerator::next",
+        "core.type Generator.next()",
+        "core.type SafeGenerator.next()",
         -> InlineLua(connectedKey) { pos, args ->
             require(args.size == 1)
             Lua.FunctionCallExpr(
@@ -451,32 +452,32 @@ internal object LuaSupportNetwork : SupportNetwork {
             )
         }
 
-        // Int32::toFloat64 is identity in Lua (all numbers are doubles).
-        "Int32::toFloat64" -> inlineIdentity(connectedKey)
+        // core.type Int32.toFloat64() is identity in Lua (all numbers are doubles).
+        "core.type Int32.toFloat64()" -> inlineIdentity(connectedKey)
 
         // Math functions → Lua's math.* standard library (available in 5.1+).
-        "Float64::abs" -> inlineGlobalCall(connectedKey, "math", "abs")
-        "Float64::ceil" -> inlineGlobalCall(connectedKey, "math", "ceil")
-        "Float64::floor" -> inlineGlobalCall(connectedKey, "math", "floor")
-        "Float64::sqrt" -> inlineGlobalCall(connectedKey, "math", "sqrt")
-        "Float64::sin" -> inlineGlobalCall(connectedKey, "math", "sin")
-        "Float64::cos" -> inlineGlobalCall(connectedKey, "math", "cos")
-        "Float64::tan" -> inlineGlobalCall(connectedKey, "math", "tan")
-        "Float64::asin" -> inlineGlobalCall(connectedKey, "math", "asin")
-        "Float64::acos" -> inlineGlobalCall(connectedKey, "math", "acos")
-        "Float64::atan" -> inlineGlobalCall(connectedKey, "math", "atan")
-        "Float64::exp" -> inlineGlobalCall(connectedKey, "math", "exp")
-        "Float64::log" -> inlineGlobalCall(connectedKey, "math", "log")
-        // Float64::max/min have NaN propagation semantics; cannot use math.max/min directly.
-        "Int32::max" -> inlineGlobalCall(connectedKey, "math", "max")
-        "Int32::min" -> inlineGlobalCall(connectedKey, "math", "min")
+        "core.type Float64.abs()" -> inlineGlobalCall(connectedKey, "math", "abs")
+        "core.type Float64.ceil()" -> inlineGlobalCall(connectedKey, "math", "ceil")
+        "core.type Float64.floor()" -> inlineGlobalCall(connectedKey, "math", "floor")
+        "core.type Float64.sqrt()" -> inlineGlobalCall(connectedKey, "math", "sqrt")
+        "core.type Float64.sin()" -> inlineGlobalCall(connectedKey, "math", "sin")
+        "core.type Float64.cos()" -> inlineGlobalCall(connectedKey, "math", "cos")
+        "core.type Float64.tan()" -> inlineGlobalCall(connectedKey, "math", "tan")
+        "core.type Float64.asin()" -> inlineGlobalCall(connectedKey, "math", "asin")
+        "core.type Float64.acos()" -> inlineGlobalCall(connectedKey, "math", "acos")
+        "core.type Float64.atan()" -> inlineGlobalCall(connectedKey, "math", "atan")
+        "core.type Float64.exp()" -> inlineGlobalCall(connectedKey, "math", "exp")
+        "core.type Float64.log()" -> inlineGlobalCall(connectedKey, "math", "log")
+        // core.type Float64.max()/min() have NaN propagation semantics; cannot use math.max/min directly.
+        "core.type Int32.max()" -> inlineGlobalCall(connectedKey, "math", "max")
+        "core.type Int32.min()" -> inlineGlobalCall(connectedKey, "math", "min")
 
         // Math constants.
-        "Float64::pi" -> inlineGlobalProp(connectedKey, "math", "pi")
-        "Float64::infinity" -> inlineGlobalProp(connectedKey, "math", "huge")
+        "core.type Float64.pi" -> inlineGlobalProp(connectedKey, "math", "pi")
+        "core.type Float64.infinity()" -> inlineGlobalProp(connectedKey, "math", "huge")
 
-        // String::isEmpty → #str == 0 (byte-length check, correct for empty strings).
-        "String::isEmpty" -> InlineLua(connectedKey) { pos, args ->
+        // core.type String.get isEmpty() → #str == 0 (byte-length check, correct for empty strings).
+        "core.type String.get isEmpty()" -> InlineLua(connectedKey) { pos, args ->
             Lua.BinaryExpr(
                 pos,
                 Lua.UnaryExpr(
@@ -489,9 +490,9 @@ internal object LuaSupportNetwork : SupportNetwork {
             )
         }
 
-        // List::isEmpty → #list == 0.
-        "List::isEmpty",
-        "Listed::isEmpty",
+        // core.type List.isEmpty() → #list == 0.
+        "core.type List.isEmpty()",
+        "core.type Listed.isEmpty()",
         -> InlineLua(connectedKey) { pos, args ->
             Lua.BinaryExpr(
                 pos,
@@ -505,24 +506,36 @@ internal object LuaSupportNetwork : SupportNetwork {
             )
         }
 
-        // Boolean::toString → tostring(). (Int32::toString has a radix param, can't inline.)
-        "Boolean::toString" -> inlineBuiltinCall(connectedKey, "tostring")
+        // core.type Boolean.toString() → tostring(). (core.type Int32.toString() has a radix param, can't inline.)
+        "core.type Boolean.toString()" -> inlineBuiltinCall(connectedKey, "tostring")
 
         // StringIndex comparisons → native Lua operators (they're just integers).
-        "StringIndexOption::compareTo" -> InlineLua(connectedKey) { pos, args ->
+        "core.type StringIndexOption.compareTo()" -> InlineLua(connectedKey) { pos, args ->
             Lua.BinaryExpr(pos, args[0], Lua.BinaryOp(pos, BinaryOpEnum.Sub, LuaOperatorDefinition.Sub), args[1])
         }
-        "StringIndexOption::compareTo::eq" -> inlineBinaryOp(connectedKey, BinaryOpEnum.Eq, LuaOperatorDefinition.Eq)
-        "StringIndexOption::compareTo::ne" -> inlineBinaryOp(connectedKey, BinaryOpEnum.NotEq, LuaOperatorDefinition.Ne)
-        "StringIndexOption::compareTo::lt" -> inlineBinaryOp(connectedKey, BinaryOpEnum.Lt, LuaOperatorDefinition.Lt)
-        "StringIndexOption::compareTo::le" -> inlineBinaryOp(connectedKey, BinaryOpEnum.LtEq, LuaOperatorDefinition.Le)
-        "StringIndexOption::compareTo::gt" -> inlineBinaryOp(connectedKey, BinaryOpEnum.Gt, LuaOperatorDefinition.Gt)
-        "StringIndexOption::compareTo::ge" -> inlineBinaryOp(connectedKey, BinaryOpEnum.GtEq, LuaOperatorDefinition.Ge)
+        "core.type StringIndexOption.compareTo()::eq" ->
+            inlineBinaryOp(connectedKey, BinaryOpEnum.Eq, LuaOperatorDefinition.Eq)
+        "core.type StringIndexOption.compareTo()::ne" ->
+            inlineBinaryOp(connectedKey, BinaryOpEnum.NotEq, LuaOperatorDefinition.Ne)
+        "core.type StringIndexOption.compareTo()::lt" ->
+            inlineBinaryOp(connectedKey, BinaryOpEnum.Lt, LuaOperatorDefinition.Lt)
+        "core.type StringIndexOption.compareTo()::le" ->
+            inlineBinaryOp(connectedKey, BinaryOpEnum.LtEq, LuaOperatorDefinition.Le)
+        "core.type StringIndexOption.compareTo()::gt" ->
+            inlineBinaryOp(connectedKey, BinaryOpEnum.Gt, LuaOperatorDefinition.Gt)
+        "core.type StringIndexOption.compareTo()::ge" ->
+            inlineBinaryOp(connectedKey, BinaryOpEnum.GtEq, LuaOperatorDefinition.Ge)
 
         else -> temperMethod(
             connectedKey,
             connectedKey
-                .replace("::", "_")
+                .split(".", "::")
+                // Skip module name.
+                .subListToEnd(1)
+                .joinToString("_") { part ->
+                    // Skip qualifiers and parens.
+                    part.split(" ").last().trimEnd('(', ')')
+                }
                 .lowercase(),
         )
     }

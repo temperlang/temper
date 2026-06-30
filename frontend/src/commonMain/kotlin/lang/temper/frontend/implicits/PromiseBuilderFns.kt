@@ -26,7 +26,7 @@ internal object PromiseBuilderFns {
         WellKnownTypes.promiseBuilderTypeDefinition.properties.first { it.abstractness == Abstractness.Concrete }
     }
 
-    object Constructor : SigFnBuilder("PromiseBuilder::constructor") {
+    object Constructor : SigFnBuilder("core.type PromiseBuilder.constructor()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val (thisValue) = args.unpackPositionedOr(1, cb) { return@invoke it }
             val type = thisValue.typeTag as? TClass
@@ -72,12 +72,12 @@ internal object PromiseBuilderFns {
         }
     }
 
-    object BreakPromise : ResolveHelper("PromiseBuilder::breakPromise") {
+    object BreakPromise : ResolveHelper("core.type PromiseBuilder.breakPromise()") {
         override val arity: Int = 1
         override fun getResolution(args: List<Value<*>>): Result = Fail
     }
 
-    object Complete : ResolveHelper("PromiseBuilder::complete") {
+    object Complete : ResolveHelper("core.type PromiseBuilder.complete()") {
         override val arity: Int = 2
         override fun getResolution(args: List<Value<*>>): Result = args[1]
     }

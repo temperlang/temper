@@ -80,7 +80,6 @@ import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.TVoid
-import lang.temper.value.connectedSymbol
 import lang.temper.value.failSymbol
 import lang.temper.value.sealedTypeSymbol
 
@@ -3149,7 +3148,7 @@ class RustTranslator(
 
     internal fun translateTypeDefinition(def: TypeDefinition, pos: Position, isParam: Boolean = false): Rust.Type {
         // First see if we have a connected type.
-        TString.unpackOrNull(def.metadata[connectedSymbol]?.firstOrNull())?.let { key ->
+        def.connectedKey?.let { key ->
             connectedTypes[key]?.let { typeName ->
                 return@translateTypeDefinition translateTypeConnected(pos, typeName)
             }

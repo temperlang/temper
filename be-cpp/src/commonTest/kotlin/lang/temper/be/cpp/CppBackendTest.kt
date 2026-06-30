@@ -65,6 +65,25 @@ class CppBackendTest {
     }
 
     @Test
+    fun dates() {
+        assertGeneratedContains(
+            temper = """
+                |let { Date } = import("std/temporal");
+                |export let day(date: Date): Int {
+                |  date.day
+                |}
+            """,
+            cppContains = listOf(
+                """
+                    |    int32_t day(std::shared_ptr<temper_std::Date> const & date) {
+                    |      return temper::core::Date::getDay(date);
+                    |    }
+                """.trimMargin(),
+            ),
+        )
+    }
+
+    @Test
     fun simpleFunction() {
         assertGenerated(
             temper = """

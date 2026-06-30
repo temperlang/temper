@@ -512,7 +512,7 @@ def int_sub(a: int, b: int) -> int:
 
 
 def int_to_string(num: int, radix: int = 10) -> str:
-    "Implements connected method Int32::toString."
+    "Implements connected method core.type Int32.toString()."
     if not 2 <= radix < 36:
         raise ValueError()
     elif radix == 10:
@@ -574,32 +574,32 @@ def int64_sub(a: int, b: int) -> int:
 
 
 def int64_to_float64(value: int) -> float:
-    "Implements connected method Int64::toFloat64."
+    "Implements connected method core.type Int64.toFloat64()."
     if -0x20_0000_0000_0000 < value < 0x20_0000_0000_0000:
         return float(value)
     raise OverflowError()
 
 
 def int64_to_int32(value: int) -> int:
-    "Implements connected method Int64::toInt32."
+    "Implements connected method core.type Int64.toInt32()."
     if -0x8000_0000 <= value <= 0x7FFF_FFFF:
         return int(value)
     raise OverflowError()
 
 
 def int64_to_int32_unsafe(value: int) -> int:
-    "Implements connected method Int64::toInt32Unsafe."
+    "Implements connected method core.type Int64.toInt32Unsafe()."
     return int_clamp(int(value))
 
 
 def float64_max(x: float, y: float) -> float:
-    "Implements connected method Float64::max."
+    "Implements connected method core.type Float64.max()."
     # Already returns nan if x is nan.
     return nan if isnan(y) else max(x, y)
 
 
 def float64_min(x: float, y: float) -> float:
-    "Implements connected method Float64::min."
+    "Implements connected method core.type Float64.min()."
     # Already returns nan if x is nan.
     return nan if isnan(y) else min(x, y)
 
@@ -610,7 +610,7 @@ def float64_near(
     rel_tol: Optional[float] = Unset,
     abs_tol: Optional[float] = Unset,
 ) -> bool:
-    "Implements connected method Float64::near."
+    "Implements connected method core.type Float64.near()."
     # This exactly matches isclose behavior, but matching our forwarding our
     # optionals to python named args is awkward, so duplicate the logic.
     # TODO We could possibly inline usage of isclose instead of this logic.
@@ -622,12 +622,12 @@ def float64_near(
 
 
 def float64_sign(x: float) -> float:
-    "Implements connected method Float64::sign."
+    "Implements connected method core.type Float64.sign()."
     return x if isnan(x) or x == 0.0 else copysign(1.0, x)
 
 
 def float64_to_int(value: float) -> int:
-    "Implements connected method Float64::toInt32."
+    "Implements connected method core.type Float64.toInt32()."
     if -0x8000_0001 < value < 0x8000_0000:
         return int(value)
     if isnan(value):
@@ -637,7 +637,7 @@ def float64_to_int(value: float) -> int:
 
 
 def float64_to_int_unsafe(value: float) -> int:
-    "Implements connected method Float64::toInt32Unsafe."
+    "Implements connected method core.type Float64.toInt32Unsafe()."
     try:
         # Checks limits first to avoid absurdly large ints.
         return float64_to_int(value)
@@ -649,7 +649,7 @@ def float64_to_int_unsafe(value: float) -> int:
 
 
 def float64_to_int64(value: float) -> int:
-    "Implements connected method Float64::toInt64."
+    "Implements connected method core.type Float64.toInt64()."
     if -0x1F_FFFF_FFFF_FFFF <= value <= 0x1F_FFFF_FFFF_FFFF:
         return int(value)
     if isnan(value):
@@ -659,7 +659,7 @@ def float64_to_int64(value: float) -> int:
 
 
 def float64_to_int64_unsafe(value: float) -> int:
-    "Implements connected method Float64::toInt64Unsafe."
+    "Implements connected method core.type Float64.toInt64Unsafe()."
     # Avoid converting crazy large float to int.
     if -0x8000_0000_0000_0000 <= value <= 0x7FFF_FFFF_FFFF_FFFF:
         return int(value)
@@ -679,7 +679,7 @@ def _ensure_dot_frac(text: str) -> str:
 
 
 def float64_to_string(value: float) -> str:
-    "Implements connected method Float64::toString."
+    "Implements connected method core.type Float64.toString()."
     if value == inf:
         return "Infinity"
     elif value == -inf:

@@ -1,52 +1,27 @@
 package lang.temper.interp
 
-import lang.temper.builtin.Types
-import lang.temper.common.Log
-import lang.temper.env.InterpMode
-import lang.temper.log.LogEntry
-import lang.temper.log.MessageTemplate
 import lang.temper.name.BuiltinName
 import lang.temper.name.Symbol
 import lang.temper.value.CallTree
-import lang.temper.value.Fail
 import lang.temper.value.FunTree
 import lang.temper.value.MacroActuals
-import lang.temper.value.NotYet
-import lang.temper.value.TProblem
-import lang.temper.value.TString
 import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.connectedSymbol
 import lang.temper.value.initSymbol
 import lang.temper.value.symbolContained
+import lang.temper.value.void
 
 /**
- * `@connected("Context::Key") methodOrPropertyDefinition...`
- * lets us connect types and type members to native code.
+ * `@connected methodOrPropertyDefinition...`
+ * lets us connect types and type members to native code,
+ * where the connection key is defined by the qname.
  */
 internal val connectedDecorator = MetadataDecorator(
     connectedSymbol,
-    argumentTypes = listOf(Types.string),
     findDecoratorInsertions = ::findConnectedDecoratorInsertions,
-) { args ->
-    when (val r = args.evaluate(1, InterpMode.Partial)) {
-        NotYet, is Fail -> r
-        is Value<*> -> {
-            if (r.typeTag == TString) {
-                r
-            } else {
-                Value(
-                    LogEntry(
-                        level = Log.Error,
-                        template = MessageTemplate.ExpectedValueOfType,
-                        pos = args.pos(1),
-                        values = listOf(TString, r),
-                    ),
-                    TProblem,
-                )
-            }
-        }
-    }
+) {
+    void
 }
 
 val vConnectedDecorator = Value(connectedDecorator)

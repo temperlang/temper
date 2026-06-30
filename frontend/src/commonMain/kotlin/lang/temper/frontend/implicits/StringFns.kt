@@ -39,7 +39,7 @@ internal object StringFns {
         noStringIndexTClass,
     )
 
-    object Get : SigFnBuilder("String::get") {
+    object Get : SigFnBuilder("core.type String.get()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val str = TString.unpackContent(args[0])
             val index = stringIndexTClass.unpackOrFail(args, 1, cb, interpMode) {
@@ -71,7 +71,7 @@ internal object StringFns {
         return f(str, leftAdjusted, rightAdjusted)
     }
 
-    object CountBetween : SigFnBuilder("String::countBetween") {
+    object CountBetween : SigFnBuilder("core.type String.countBetween()") {
         private const val ARITY = 3
 
         override fun invoke(
@@ -106,7 +106,7 @@ internal object StringFns {
         }
     }
 
-    object FromCodePoint : SigFnBuilder("String::fromCodePoint") {
+    object FromCodePoint : SigFnBuilder("core.type String.fromCodePoint()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val codePoint = TInt.unpackOrFail(args, 0, cb, interpMode) {
                 return@invoke it
@@ -123,7 +123,7 @@ internal object StringFns {
         }
     }
 
-    object FromCodePoints : SigFnBuilder("String::fromCodePoints") {
+    object FromCodePoints : SigFnBuilder("core.type String.fromCodePoints()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             // TODO Convenient way to unpack content without throwing exceptions on failure?
             val codePoints = TList.unpackContent(args[0])
@@ -140,20 +140,20 @@ internal object StringFns {
         }
     }
 
-    object GetBegin : SigFnBuilder("String::begin") {
+    object GetBegin : SigFnBuilder("core.type String.begin") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return packStringIndex(0)
         }
     }
 
-    object GetEnd : SigFnBuilder("String::end") {
+    object GetEnd : SigFnBuilder("core.type String.get end()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val str = TString.unpackContent(args[0])
             return packStringIndex(str.length)
         }
     }
 
-    object HasAtLeast : SigFnBuilder("String::hasAtLeast") {
+    object HasAtLeast : SigFnBuilder("core.type String.hasAtLeast()") {
         private const val COUNT_ARG_INDEX = 3
         private const val ARITY = 4
 
@@ -181,7 +181,7 @@ internal object StringFns {
         }
     }
 
-    object HasIndex : SigFnBuilder("String::hasIndex") {
+    object HasIndex : SigFnBuilder("core.type String.hasIndex()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val str = TString.unpackContent(args[0])
             val index = stringIndexTClass.unpackOrFail(args, 1, cb, interpMode) {
@@ -191,7 +191,7 @@ internal object StringFns {
         }
     }
 
-    object Next : SigFnBuilder("String::next") {
+    object Next : SigFnBuilder("core.type String.next()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val str = TString.unpackContent(args[0])
             val index = stringIndexTClass.unpackOrFail(args, 1, cb, interpMode) {
@@ -206,7 +206,7 @@ internal object StringFns {
         }
     }
 
-    object Prev : SigFnBuilder("String::prev") {
+    object Prev : SigFnBuilder("core.type String.prev()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val str = TString.unpackContent(args[0])
             val index = stringIndexTClass.unpackOrFail(args, 1, cb, interpMode) {
@@ -227,7 +227,7 @@ internal object StringFns {
         }
     }
 
-    object Split : SigFnBuilder("String::split") {
+    object Split : SigFnBuilder("core.type String.split()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val separated = TString.unpackContent(args[0])
             val separator = TString.unpackOrFail(args, 1, cb, interpMode) { return@invoke it }
@@ -251,7 +251,7 @@ internal object StringFns {
         }
     }
 
-    object Slice : SigFnBuilder("String::slice") {
+    object Slice : SigFnBuilder("core.type String.slice()") {
         private const val ARITY = 3
 
         override fun invoke(
@@ -263,7 +263,7 @@ internal object StringFns {
         }
     }
 
-    object ToFloat64 : SigFnBuilder("String::toFloat64") {
+    object ToFloat64 : SigFnBuilder("core.type String.toFloat64()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val string = TString.unpackContent(args[0]).trim()
             val float = when (string.startsWith('.') || string.endsWith('.')) {
@@ -274,7 +274,7 @@ internal object StringFns {
         }
     }
 
-    object ToInt : SigFnBuilder("String::toInt32") {
+    object ToInt : SigFnBuilder("core.type String.toInt32()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             // This radix unpacking is the same as for `Int32::toString`.
             @Suppress("MagicNumber")
@@ -285,7 +285,7 @@ internal object StringFns {
         }
     }
 
-    object ToInt64 : SigFnBuilder("String::toInt64") {
+    object ToInt64 : SigFnBuilder("core.type String.toInt64()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             // This radix unpacking is the same as for `Int32::toString`.
             @Suppress("MagicNumber")
@@ -296,13 +296,13 @@ internal object StringFns {
         }
     }
 
-    object GetNone : SigFnBuilder("StringIndex::none") {
+    object GetNone : SigFnBuilder("core.type StringIndex.none") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return packNoStringIndex()
         }
     }
 
-    object StringIndexOptionCompareTo : SigFnBuilder("StringIndexOption::compareTo") {
+    object StringIndexOptionCompareTo : SigFnBuilder("core.type StringIndexOption.compareTo()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return StringIndexSupport.compare(args, cb, interpMode)
         }
