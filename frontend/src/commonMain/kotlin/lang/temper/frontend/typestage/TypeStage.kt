@@ -288,7 +288,7 @@ private fun replaceVoidishPanics(root: BlockTree) {
                 // type errors elsewhere.
                 isSimpleSubtype(foundType, expectedType) || return@exhaustive null
                 // Passed all checks, so panic it is.
-                Call(tree.typeInferences) { V(BuiltinFuns.vPanic) }
+                Call(BuiltinFuns.vPanic, tree.typeInferences) {}
             } ?: run {
                 // Or bail here to void on check fails.
                 V(void, WellKnownTypes.voidType)

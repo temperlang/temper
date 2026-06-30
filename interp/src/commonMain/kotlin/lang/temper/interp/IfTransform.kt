@@ -198,11 +198,10 @@ internal object IfTransform : ControlFlowTransform("if") {
                         null
                     } else {
                         when (val nameType = anyExhaustiveSealedType(branches)) {
-                            null -> macroCursor.referenceToVoid(macroCursor.macroEnvironment.pos.rightEdge)
+                            null -> macroCursor.referenceToVoid(wholePos)
                             else -> {
                                 val (checkedName, expectedType) = nameType
-                                val pos = macroCursor.macroEnvironment.pos
-                                val panicCall = macroCursor.macroEnvironment.document.treeFarm.grow(pos) {
+                                val panicCall = macroCursor.macroEnvironment.document.treeFarm.grow(wholePos) {
                                     Block {
                                         Call {
                                             V(BuiltinFuns.vVoidishPanic)
