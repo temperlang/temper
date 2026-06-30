@@ -179,8 +179,21 @@ fun simplifyControlFlow(
 ): StructuredFlow {
     val nameMaker = block.document.nameMaker
 
-    fun truthiness(ref: BlockChildReference) =
-        block.dereference(ref)?.valueContained(TBoolean)
+    fun truthiness(ref: BlockChildReference): Boolean? {
+        // Ideally, we just have a simple boolean value.
+        val tree = (block.dereference(ref) ?: return null).target
+        tree.valueContained(TBoolean)?.let { simpleAnswer -> return@truthiness simpleAnswer }
+        // Not completely simple, but check for simple negation of a boolean value.
+        tree is CallTree && tree.size == 2 || return null
+        val value = tree.child(1).valueContained(TBoolean) ?: return null
+        // Single boolean operand, so dig more at the function.
+        val fn = tree.child(0).functionContained ?: return null
+        fn is CoverFunction && fn.covered.all { covered ->
+            covered is NamedBuiltinFun && covered.builtinOperatorId == BuiltinOperatorId.BooleanNegation
+        } || return null
+        // Yep, got it.
+        return !value
+    }
 
     val loopDepth = DepthCounter()
 
