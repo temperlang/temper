@@ -42,7 +42,6 @@ import lang.temper.type2.withNullity
 import lang.temper.type2.withType
 import lang.temper.value.CallTree
 import lang.temper.value.CallTypeInferences
-import lang.temper.value.MetadataValueMapHelpers.get
 import lang.temper.value.Tree
 import lang.temper.value.functionContained
 import lang.temper.value.toLispy
@@ -470,7 +469,10 @@ internal object TranslateDotHelper {
 
 internal fun connectedKeyForMember(member: MemberShape): String? = when (member) {
     is MethodShape -> connectedKeyForMethod(member)
-    is PropertyShape -> member.connectedKey
+    is PropertyShape -> when {
+        member.hasSetter || member.getter != null -> null // any hint of accessors means no connection
+        else -> member.connectedKey
+    }
     is VisibleMemberShape -> member.connectedKey
     else -> null
 }
@@ -483,8 +485,18 @@ private fun connectedKeyForMethod(methodShape: MethodShape): String? {
     // Look on a property definition for a getter or setters member.
     return when (methodShape.methodKind) {
         MethodKind.Normal -> null
-        MethodKind.Getter -> propertyShapeFor(methodShape)?.connectedKey
-        MethodKind.Setter -> propertyShapeFor(methodShape)?.connectedKey
+        MethodKind.Getter -> propertyShapeFor(methodShape)?.let { propertyShape ->
+            when {
+                propertyShape.hasSetter -> null
+                else -> propertyShape.connectedKey // no reliable `hasGetter`
+            }
+        }
+        MethodKind.Setter -> propertyShapeFor(methodShape)?.let { propertyShape ->
+            when {
+                propertyShape.hasSetter && propertyShape.getter == null -> propertyShape.connectedKey
+                else -> null
+            }
+        }
         MethodKind.Constructor -> null
     }
 }
