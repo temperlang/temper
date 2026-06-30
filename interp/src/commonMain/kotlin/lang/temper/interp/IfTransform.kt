@@ -218,22 +218,6 @@ internal object IfTransform : ControlFlowTransform("if") {
                     }
                 }
 
-                // `if` chains that don't end in an `else` should be typed as Void.
-                // See LoopTransform comments on typing as for the problems with control-flow
-                // constructs that start with a condition and which don't reliably follow it
-                // with a typeable tree.
-                if (controlFlow != null && !hasFinalElse) {
-                    controlFlow = ControlFlow.StmtBlock(
-                        controlFlow.pos,
-                        listOf(
-                            controlFlow,
-                            ControlFlow.Stmt(
-                                macroCursor.referenceToVoid(controlFlow.pos.rightEdge),
-                            ),
-                        ),
-                    )
-                }
-
                 controlFlow?.let { ControlFlowSubflow(it) }
             }
         }

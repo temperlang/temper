@@ -133,16 +133,22 @@ class GenerateCodeStageTest {
             |          return__2 = void
             |      });
             |      `test//`.describeGeometric = (@stay fn describeGeometric(g__0 /* aka g */: Geometric) /* return__3 */: String {
-            |          if (!is(g__0, Circle)) {
-            |            if (is(g__0, Square)) {}
-            |          };
-            |          return__3 = void
+            |          if (is(g__0, Circle)) {
+            |            return__3 = "circle"
+            |          } else if (is(g__0, Square)) {
+            |            return__3 = "square"
+            |          } else {
+            |            return__3 = void
+            |          }
             |      });
             |      `test//`.describeShape = (@stay fn describeShape(s__0 /* aka s */: Shape) /* return__4 */: String {
-            |          if (!is(s__0, Circle)) {
-            |            if (is(s__0, Square)) {}
-            |          };
-            |          return__4 = void
+            |          if (is(s__0, Circle)) {
+            |            return__4 = "circle"
+            |          } else if (is(s__0, Square)) {
+            |            return__4 = "square"
+            |          } else {
+            |            return__4 = void
+            |          }
             |      })
             |
             |      ```
