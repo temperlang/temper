@@ -98,9 +98,9 @@ internal fun typeShapeMacro(macroEnv: MacroEnvironment): PartialResult {
 
     val bodyIndex = args.size - 1
 
-    // Concrete -> values exist of the type that are not values of a sub-type?
+    // Concrete -> values exist of the type that are not values of a subtype?
     var typeAbstractness = Abstractness.Abstract
-    // Open -> may be overridden in a sub-type.
+    // Open -> may be overridden in a subtype.
     var memberOpenness = OpenOrClosed.Open
     var sawName = false
     val typeDefinedAsValue = Value(reifiedTypeFor(typeShape))
@@ -313,9 +313,47 @@ internal fun typeShapeMacro(macroEnv: MacroEnvironment): PartialResult {
                 null
             }
 
-        if (propDef == null) {
-            // Insert a property definition before the earliest getter/setter
-            val propertyVisibility: Visibility = when {
+        var propertyTypeEdge: TEdge? = null
+
+        // TODO: maybe capture property type in a temporary if not collapsed to a value yet
+        fun propertyTypePlanter(): (Planting.() -> TreeTemplate<*>)? {
+            val propertyTypeEdge = propertyTypeEdge ?: return null
+
+            return {
+                val propertyTypeTree = propertyTypeEdge.target
+                val propertyTypePos = propertyTypeTree.pos
+                val typeValue = macroEnv.evaluateEdge(propertyTypeEdge, InterpMode.Partial)
+
+                val extractedPropertyType = if (typeValue is Value<*>) {
+                    Either.Left(typeValue)
+                } else {
+                    var sibling = propertyTypeEdge
+                    while (sibling.source != body) {
+                        sibling = sibling.source!!.incoming!!
+                    }
+                    maybeExtractIntoTemporary(
+                        propertyTypeEdge,
+                        treeFollower = sibling,
+                    )
+                }
+
+                when (extractedPropertyType) {
+                    is Either.Left -> V(propertyTypePos, extractedPropertyType.item)
+                    is Either.Right -> Rn(propertyTypePos, extractedPropertyType.item)
+                }
+            }
+        }
+
+        fun propertyVisibility(): Visibility {
+            val propDef = propDef
+            val getterVisibility = getterVisibility
+            val setterVisibility = setterVisibility
+            return when {
+                propDef != null -> visibilityFor(
+                    propDef.second,
+                    macroEnv,
+                    defaultVisibility = defaultVisibility,
+                )
                 getterVisibility == null -> setterVisibility ?: defaultVisibility
                 setterVisibility == null -> getterVisibility
                 else -> if (getterVisibility > setterVisibility) {
@@ -323,6 +361,27 @@ internal fun typeShapeMacro(macroEnv: MacroEnvironment): PartialResult {
                 } else {
                     setterVisibility
                 }
+            }
+        }
+
+        if (propDef == null && macroEnv.stage == Stage.Define) {
+            // Insert a property definition before the earliest getter/setter
+            val propertyVisibility = propertyVisibility()
+
+            if (getter != null && propertyTypeEdge == null) {
+                // Look at the getter return type for a type hint for the property type
+                val getterParts = getter.second
+                propertyTypeEdge = getterParts.metadataSymbolMap[typeSymbol]
+            }
+            if (setter != null && propertyTypeEdge == null) {
+                // Look at input parameter for a type hint for the property type
+                val setterParts = setter.second
+                val setterFnEdge = setterParts.metadataSymbolMap[initSymbol]?.let { lookThroughDecorations(it) }
+                val setterFnParts = (setterFnEdge?.target as? FunTree)?.parts
+                val newValueParam = setterFnParts?.formals?.firstOrNull {
+                    it.parts?.metadataSymbolMap?.containsKey(impliedThisSymbol) == false
+                }
+                propertyTypeEdge = newValueParam?.parts?.metadataSymbolMap[typeSymbol]
             }
 
             val edge0 = sameNameDefs[0].first
@@ -334,6 +393,10 @@ internal fun typeShapeMacro(macroEnv: MacroEnvironment): PartialResult {
                     V(symbol)
                     V(visibilitySymbol)
                     V(propertyVisibility.toSymbol())
+                    propertyTypePlanter()?.let { plantPropertyType ->
+                        V(typeSymbol)
+                        plantPropertyType()
+                    }
                 }
             }
             run {
@@ -365,59 +428,37 @@ internal fun typeShapeMacro(macroEnv: MacroEnvironment): PartialResult {
                 addVisibilityAnnotationTo(setter.first.target as DeclTree, setterVisibility)
             }
         }
-        val memberName = propDef.second.name.content
+        if (propertyTypeEdge == null && propDef != null) {
+            propertyTypeEdge = propDef.second.metadataSymbolMap[typeSymbol]
+        }
+        val memberName = propDef?.second?.name?.content
+        val propertyAbstractness = when {
+            propDef == null -> Abstractness.Abstract
+            memberName != null -> typeShape.properties.firstOrNull { it.name == memberName }
+                ?.abstractness
+            else -> null
+        } ?: if (
+            typeAbstractness == Abstractness.Concrete && getter == null && setter == null
+        ) {
+            Abstractness.Concrete
+        } else {
+            Abstractness.Abstract
+        }
 
         // If we've already decided this property is backed, then keep that decision.  This allows
         // adding public getters/setters to expose a public&backed property.
-        val propertyAbstractness =
-            typeShape.properties.firstOrNull { it.name == memberName }
-                ?.abstractness
-                ?: if (
-                    typeAbstractness == Abstractness.Concrete && getter == null && setter == null
-                ) {
-                    Abstractness.Concrete
-                } else {
-                    Abstractness.Abstract
-                }
 
-        val visibility = visibilityFor(
-            propDef.second,
-            macroEnv,
-            defaultVisibility = defaultVisibility,
-        )
-        val propStay = stayFor(propDef)
+        val visibility = propertyVisibility()
 
         // Infer getters and setters for public&backed properties.
         // This allows backends to use `private` properties for the storage of backed property's
-        // values internally, and to channel external access through getters/setters.
+        // values internally and to channel external access through getters/setters.
         if (
-            macroEnv.stage == Stage.Define && propertyAbstractness == Abstractness.Concrete &&
-            visibility == Visibility.Public && defineImpliedMethod != null
+            macroEnv.stage == Stage.Define &&
+            visibility == Visibility.Public &&
+            defineImpliedMethod != null
         ) {
-            // TODO: maybe capture property type in a temporary if not collapsed to a value yet
-            val plantPropertyType = propDef.second.type?.let { propertyTypeEdge ->
-                val propertyTypeTree = propertyTypeEdge.target
-                val propertyTypePos = propertyTypeTree.pos
-                val typeValue = macroEnv.evaluateEdge(propertyTypeEdge, InterpMode.Partial)
-
-                val extractedPropertyType = if (typeValue is Value<*>) {
-                    Either.Left(typeValue)
-                } else {
-                    maybeExtractIntoTemporary(
-                        propertyTypeEdge,
-                        treeFollower = propDef.first,
-                    )
-                }
-
-                fun plantPropertyType(p: Planting) {
-                    when (extractedPropertyType) {
-                        is Either.Left -> p.V(propertyTypePos, extractedPropertyType.item)
-                        is Either.Right -> p.Rn(propertyTypePos, extractedPropertyType.item)
-                    }
-                }
-
-                ::plantPropertyType
-            }
+            check(propDef != null)
             if (getter == null) {
                 getter = defineImpliedGetterOrSetter(
                     macroEnv,
@@ -425,7 +466,8 @@ internal fun typeShapeMacro(macroEnv: MacroEnvironment): PartialResult {
                     defineImpliedMethod,
                     propDef,
                     typeDefinedAsValue,
-                    plantPropertyType,
+                    propertyTypePlanter(),
+                    propertyAbstractness,
                     isGetter = true,
                 )
                 sameNameDefs.add(getter)
@@ -437,27 +479,30 @@ internal fun typeShapeMacro(macroEnv: MacroEnvironment): PartialResult {
                     defineImpliedMethod,
                     propDef,
                     typeDefinedAsValue,
-                    plantPropertyType,
+                    propertyTypePlanter(),
+                    propertyAbstractness,
                     isGetter = false,
                 )
                 sameNameDefs.add(setter)
             }
         }
 
-        addOrReplaceNamed(
-            typeShape.properties,
-            PropertyShape(
-                typeShape,
-                memberName,
-                symbol,
-                propStay,
-                visibility,
-                abstractness = propertyAbstractness,
-                getter = getter?.second?.name?.content,
-                setter = setter?.second?.name?.content,
-                hasSetter = setter != null || varSymbol in propDef.second.metadataSymbolMap,
-            ),
-        )
+        if (memberName != null) {
+            addOrReplaceNamed(
+                typeShape.properties,
+                PropertyShape(
+                    typeShape,
+                    memberName,
+                    symbol,
+                    stayFor(propDef),
+                    visibility,
+                    abstractness = propertyAbstractness,
+                    getter = getter?.second?.name?.content,
+                    setter = setter?.second?.name?.content,
+                    hasSetter = setter != null || varSymbol in propDef.second.metadataSymbolMap,
+                ),
+            )
+        }
 
         for (accessor in listOfNotNull(getter, setter)) {
             var accessorVisibility = if (accessor == getter) getterVisibility else setterVisibility
@@ -564,7 +609,7 @@ internal fun stayFor(
 ): StayLeaf? = stayFor(decl.first.target as DeclTree)
 
 /**
- * Gets the [StayLeaf] associated with a member declarations if present.
+ * Gets the [StayLeaf] associated with a member declaration if present.
  * If not present, and we're late enough that stays won't be obsoleted by name resolution,
  * create one and attach it.
  */
@@ -698,7 +743,8 @@ private fun defineImpliedGetterOrSetter(
     defineImpliedMethod: DefineImpliedMethod,
     propDef: Pair<TEdge, DeclParts>,
     containingClassAsValue: Value<ReifiedType>,
-    plantPropertyType: ((Planting) -> Unit)?,
+    plantPropertyType: (Planting.() -> TreeTemplate<*>)?,
+    abstractness: Abstractness,
     isGetter: Boolean,
 ): Pair<TEdge, DeclParts> {
     val getterName = macroEnv.nameMaker.unusedSourceName(
@@ -737,7 +783,7 @@ private fun defineImpliedGetterOrSetter(
                     Decl(newValueName) {
                         if (plantPropertyType != null) {
                             V(typeSymbol)
-                            plantPropertyType(this)
+                            plantPropertyType()
                         }
                     }
                 }
@@ -751,30 +797,37 @@ private fun defineImpliedGetterOrSetter(
                         }
                         plantPropertyType != null -> {
                             V(typeSymbol)
-                            plantPropertyType(this)
+                            plantPropertyType()
                         }
                         else -> {}
                     }
                 }
                 Block {
-                    if (newValueName != null) { // If a setter, set the property
-                        check(!isGetter)
-                        Call(BuiltinFuns.setpFn) {
-                            Rn(propDef.second.name.content)
-                            Rn(thisName)
-                            Rn(newValueName)
+                    when (abstractness) {
+                        Abstractness.Abstract -> {
+                            Call(BuiltinFuns.vPureVirtual) {}
                         }
-                    }
-                    // Either way, the value of the property is what we return
-                    Call(BuiltinFuns.setLocalFn) {
-                        Ln(returnName)
-                        if (isGetter) {
-                            Call(BuiltinFuns.getpFn) {
-                                Rn(propDef.second.name.content)
-                                Rn(thisName)
+                        Abstractness.Concrete -> {
+                            if (newValueName != null) { // If a setter, set the property
+                                check(!isGetter)
+                                Call(BuiltinFuns.setpFn) {
+                                    Rn(propDef.second.name.content)
+                                    Rn(thisName)
+                                    Rn(newValueName)
+                                }
                             }
-                        } else {
-                            V(void)
+                            // Either way, the value of the property is what we return
+                            Call(BuiltinFuns.setLocalFn) {
+                                Ln(returnName)
+                                if (isGetter) {
+                                    Call(BuiltinFuns.getpFn) {
+                                        Rn(propDef.second.name.content)
+                                        Rn(thisName)
+                                    }
+                                } else {
+                                    V(void)
+                                }
+                            }
                         }
                     }
                 }

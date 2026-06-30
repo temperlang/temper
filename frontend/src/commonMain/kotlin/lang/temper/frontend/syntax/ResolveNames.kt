@@ -177,9 +177,9 @@ internal fun resolveNames(root: BlockTree, logSink: LogSink) {
                     1
                 }
             }
-            return declarations.toList()
+            declarations.toList()
         } else {
-            return emptyList()
+            emptyList()
         }
     }
 

@@ -724,10 +724,10 @@ class TmpLBackendTest {
                         /* this */ this__1.prop__4 = prop__6;
                         return;
                       }
-                      @reach(\none) get.prop -> getprop__8(this = this__9, @impliedThis(C__0) this__9: C__0): Int32 {
+                      @QName("test-library/C.type C.get prop()") @reach(\none) get.prop -> getprop__8(this = this__9, @QName("test-library/C.type C.get prop().(this)") @impliedThis(C__0) this__9: C__0): Int32 {
                         return /* this */ this__9.prop__4;
                       }
-                      @reach(\none) set.prop -> setprop__11(this = this__13, @impliedThis(C__0) this__13: C__0, newProp__12: Int32): Void {
+                      @QName("test-library/C.type C.set prop()") @reach(\none) set.prop -> setprop__11(this = this__13, @QName("test-library/C.type C.set prop().(this)") @impliedThis(C__0) this__13: C__0, @QName("test-library/C.type C.set prop().(newProp)") newProp__12: Int32): Void {
                         /* this */ this__13.prop__4 = newProp__12;
                         return;
                       }
@@ -1258,7 +1258,7 @@ class TmpLBackendTest {
             |            /* this */ this__2.x__0 = x__1;
             |            return;
             |          }
-            |          get.x -> getx__0(this = this__3, @impliedThis(C) this__3: C): Int32 {
+            |          @QName("test-library/myClass.type C.get x()") get.x -> getx__0(this = this__3, @QName("test-library/myClass.type C.get x().(this)") @impliedThis(C) this__3: C): Int32 {
             |            return /* this */ this__3.x__0;
             |          }
             |        }
@@ -1320,9 +1320,12 @@ class TmpLBackendTest {
             |                //// work//aType/ => aType.tmpl
             |                require temper-core;
             |                let InterfaceTypeSupport#0 = InterfaceTypeSupport;
+            |                let pureVirtual#0 = builtins.pureVirtual;
             |                @QName("test-library/aType.type I") interface I / I {
             |                  @QName("test-library/aType.type I.x") let x__0: String;
-            |                  get.x -> nym`get.x#0`(this = this#0, this#0: I): String;
+            |                  @QName("test-library/aType.type I.get x()") get.x -> getx__0(this = this__0, @QName("test-library/aType.type I.get x().(this)") @impliedThis(I) this__0: I): String {
+            |                    pureVirtual#0();
+            |                  }
             |                }
             |
             |                ```
@@ -1465,10 +1468,10 @@ class TmpLBackendTest {
             |                /* this */ this__0.p__0 = p__1;
             |                return;
             |              }
-            |              get.p -> getp__0(this = this__1, @impliedThis(C__0) this__1: C__0): Int32 {
+            |              @QName("test-library/foo.type C.get p()") get.p -> getp__0(this = this__1, @QName("test-library/foo.type C.get p().(this)") @impliedThis(C__0) this__1: C__0): Int32 {
             |                return /* this */ this__1.p__0;
             |              }
-            |              set.p -> setp__0(this = this__2, @impliedThis(C__0) this__2: C__0, newP__0: Int32): Void {
+            |              @QName("test-library/foo.type C.set p()") set.p -> setp__0(this = this__2, @QName("test-library/foo.type C.set p().(this)") @impliedThis(C__0) this__2: C__0, @QName("test-library/foo.type C.set p().(newP)") newP__0: Int32): Void {
             |                /* this */ this__2.p__0 = newP__0;
             |                return;
             |              }
@@ -1664,7 +1667,7 @@ class TmpLBackendTest {
             |            /* this */ this__0.x__0 = x__1;
             |            return;
             |          }
-            |          get.x -> getx__0(this = this__1, @impliedThis(Point) this__1: Point): Int32 {
+            |          @QName("test-library/foo.type Point.get x()") get.x -> getx__0(this = this__1, @QName("test-library/foo.type Point.get x().(this)") @impliedThis(Point) this__1: Point): Int32 {
             |            return /* this */ this__1.x__0;
             |          }
             |        }
@@ -2029,7 +2032,7 @@ class TmpLBackendTest {
             |            /* this */ this__0.a__0 = a__2;
             |            return;
             |          }
-            |          get.a -> geta__0(this = this__1, @impliedThis(A) this__1: A): String {
+            |          @QName("test-library/foo.type A.get a()") get.a -> geta__0(this = this__1, @QName("test-library/foo.type A.get a().(this)") @impliedThis(A) this__1: A): String {
             |            return /* this */ this__1.a__0;
             |          }
             |        }
@@ -3015,7 +3018,7 @@ class TmpLBackendTest {
             |            ConsoleLog#0(console#0, "Made C");
             |            return;
             |          }
-            |          get.s -> gets__0(this = this__1, @impliedThis(C__0) this__1: C__0): String {
+            |          @QName("test-library/foo.type C.get s()") get.s -> gets__0(this = this__1, @QName("test-library/foo.type C.get s().(this)") @impliedThis(C__0) this__1: C__0): String {
             |            return /* this */ this__1.s__0;
             |          }
             |        }
@@ -3727,7 +3730,7 @@ class TmpLBackendTest {
             |            /* this */ this__0.s__0 = s__1;
             |            return;
             |          }
-            |          get.s -> gets__0(this = this__1, @impliedThis(StringBoxes) this__1: StringBoxes): String {
+            |          @QName("test-library/foo.type StringBoxes.get s()") get.s -> gets__0(this = this__1, @QName("test-library/foo.type StringBoxes.get s().(this)") @impliedThis(StringBoxes) this__1: StringBoxes): String {
             |            return /* this */ this__1.s__0;
             |          }
             |        }
@@ -3890,6 +3893,44 @@ class TmpLBackendTest {
             |        ```
             |    },
             |    "foo.tmpl.map": "__DO_NOT_CARE__",
+            |  }
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun interfaceWithAbstractProperty() = assertGeneratedCode(
+        inputFileMapFromJson(
+            """
+                |{
+                |  foo.temper:
+                |    ```
+                |    export interface I {
+                |      b: Boolean;
+                |    }
+                |    ```
+                |}
+            """.trimMargin(),
+        ),
+        want = """
+            |{
+            |  tmpl: {
+            |    test_library.tmpl: {
+            |      content: ```
+            |        //// work// => test_library.tmpl
+            |        require temper-core;
+            |        let InterfaceTypeSupport#0 = InterfaceTypeSupport;
+            |        let pureVirtual#0 = builtins.pureVirtual;
+            |        @QName("test-library.type I") interface I / I {
+            |          @QName("test-library.type I.b") let b__0: Boolean;
+            |          @QName("test-library.type I.get b()") get.b -> getb__0(this = this__0, @QName("test-library.type I.get b().(this)") @impliedThis(I) this__0: I): Boolean {
+            |            pureVirtual#0();
+            |          }
+            |        }
+            |
+            |        ```,
+            |    },
+            |    test_library.tmpl.map: "__DO_NOT_CARE__"
             |  }
             |}
         """.trimMargin(),

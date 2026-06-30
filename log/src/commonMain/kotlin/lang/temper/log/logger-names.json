@@ -48,6 +48,8 @@
     "frontend.defineStage.convertClasses",
     "frontend.defineStage.afterConvertClasses",
     "frontend.defineStage.afterAddTemperTestInstructions",
+    "frontend.defineStage.fillInMissingQNames",
+    "frontend.defineStage.afterFillInMissingQNames",
     "frontend.defineStage.simplifyDeclarations",
     "frontend.defineStage.afterSimplifyDeclarations",
     "frontend.defineStage.convertObjectSyntax",

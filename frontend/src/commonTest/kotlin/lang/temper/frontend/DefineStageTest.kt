@@ -90,11 +90,16 @@ class DefineStageTest {
               });
               I__0 extends AnyValue;
               @property(\next) @stay @fromType(I__0) let next__7;
+              @getter @method(\next) @fn @visibility(\public) @stay @fromType(I__0) let getnext__0;
+              getnext__0 = fn (@impliedThis(I__0) this__0: I__0) /* return__0 */{
+                pureVirtual()
+              };
               @typeDecl(I__0) @stay let I__0;
               I__0 = type (I__0);
               @typeDecl(C__1) @stay let C__1;
               C__1 = type (C__1);
               interface(\word, \I, \concrete, false, @typeDefined(I__0) fn {
+                  do {};
                   do {};
                   do {}
               });
@@ -166,6 +171,7 @@ class DefineStageTest {
               "C": {
                 supers: ["I__0"],
                 properties: [
+                  { name: "i__9", abstract: false, visibility: "private" },
                   {
                     name: "next__12",
                     abstract: true,
@@ -173,7 +179,6 @@ class DefineStageTest {
                     setter: "set.next__16",
                     visibility: "public"
                   },
-                  { name: "i__9", abstract: false, visibility: "private" },
                 ],
                 methods: [
                   { name: "get.next__13",
@@ -189,8 +194,12 @@ class DefineStageTest {
                 abstract: true,
                 supers: ["AnyValue__0"],
                 properties: [
-                  { name: "next__7", abstract: true, visibility: "public" }
+                  { name: "next__7", abstract: true, visibility: "public", getter: "getnext__0" }
                 ],
+                methods: [
+                  { name: "getnext__0",
+                    symbol: "next", open: true, visibility: "public", kind: "Getter" },
+                ]
               },
               "Void": { supers: [] },
               "Console": "__DO_NOT_CARE__",
@@ -733,6 +742,18 @@ class DefineStageTest {
               I__0 extends AnyValue;
               @property(\m) @stay @fromType(I__0) var m__7;
               @property(\p) @stay @fromType(I__0) let p__8;
+              @getter @method(\m) @fn @visibility(\public) @stay @fromType(I__0) let getm__0;
+              getm__0 = fn (@impliedThis(I__0) this__0: I__0) /* return__0 */{
+                pureVirtual()
+              };
+              @setter @method(\m) @fn @visibility(\public) @stay @fromType(I__0) let setm__0;
+              setm__0 = fn (@impliedThis(I__0) this__1: I__0, newM__0) /* return__1 */: Void {
+                pureVirtual()
+              };
+              @getter @method(\p) @fn @visibility(\public) @stay @fromType(I__0) let getp__0;
+              getp__0 = fn (@impliedThis(I__0) this__2: I__0) /* return__2 */{
+                pureVirtual()
+              };
               @typeDecl(I__0) @stay let I__0;
               I__0 = type (I__0);
               @typeDecl(J__1) @stay let J__1;
@@ -742,15 +763,23 @@ class DefineStageTest {
               interface(\word, \I, \concrete, false, @typeDefined(I__0) fn {
                   do {};
                   do {};
+                  do {};
+                  do {};
+                  do {};
                   do {}
               });
               J__1 extends AnyValue;
               @property(\n) @visibility(\public) @stay @fromType(J__1) let n__10;
               @method(\n) @setter @fn @stay @fromType(J__1) let nym`set.n__11`;
-              nym`set.n__11` = (@stay fn nym`set.n`(@impliedThis(J__1) this__3: J__1) /* return__0 */: Void {
+              nym`set.n__11` = (@stay fn nym`set.n`(@impliedThis(J__1) this__3: J__1) /* return__11 */: Void {
                   fn__12: do {}
               });
+              @getter @method(\n) @fn @visibility(\public) @stay @fromType(J__1) let getn__0;
+              getn__0 = fn (@impliedThis(J__1) this__4: J__1) /* return__12 */{
+                pureVirtual()
+              };
               interface(\word, \J, \concrete, false, @typeDefined(J__1) fn {
+                  do {};
                   do {};
                   do {};
                   do {}
@@ -763,10 +792,35 @@ class DefineStageTest {
               @property(\p) @stay @fromType(K__2) let p__17;
               @property(\q) @stay @fromType(K__2) let q__18;
               @method(\o) @setter @fn @stay @fromType(K__2) let nym`set.o__19`;
-              nym`set.o__19` = (@stay fn nym`set.o`(@impliedThis(K__2) this__4: K__2) /* return__1 */: Void {
+              nym`set.o__19` = (@stay fn nym`set.o`(@impliedThis(K__2) this__14: K__2) /* return__15 */: Void {
                   fn__20: do {}
               });
+              @getter @method(\m) @fn @visibility(\public) @stay @fromType(K__2) let getm__1;
+              getm__1 = fn (@impliedThis(K__2) this__6: K__2) /* return__6 */{
+                pureVirtual()
+              };
+              @getter @method(\n) @fn @visibility(\public) @stay @fromType(K__2) let getn__1;
+              getn__1 = fn (@impliedThis(K__2) this__7: K__2) /* return__7 */{
+                pureVirtual()
+              };
+              @getter @method(\o) @fn @visibility(\public) @stay @fromType(K__2) let geto__0;
+              geto__0 = fn (@impliedThis(K__2) this__8: K__2) /* return__8 */{
+                pureVirtual()
+              };
+              @getter @method(\p) @fn @visibility(\public) @stay @fromType(K__2) let getp__1;
+              getp__1 = fn (@impliedThis(K__2) this__9: K__2) /* return__9 */{
+                pureVirtual()
+              };
+              @getter @method(\q) @fn @visibility(\public) @stay @fromType(K__2) let getq__0;
+              getq__0 = fn (@impliedThis(K__2) this__10: K__2) /* return__10 */{
+                pureVirtual()
+              };
               interface(\word, \K, \concrete, false, @typeDefined(K__2) fn {
+                  do {};
+                  do {};
+                  do {};
+                  do {};
+                  do {};
                   do {};
                   do {};
                   do {};
@@ -1208,9 +1262,14 @@ class DefineStageTest {
         |      ```
         |      I__0 extends AnyValue;
         |      @property(\p) @visibility(\public) @stay @fromType(I__0) let p__3;
+        |      @getter @method(\p) @fn @visibility(\public) @stay @fromType(I__0) let getp__0;
+        |      getp__0 = fn (@impliedThis(I__0) this__0: I__0) /* return__0 */{
+        |        pureVirtual()
+        |      };
         |      @typeDecl(I__0) @stay let I__0;
         |      I__0 = type (I__0);
         |      interface(\word, \I, \concrete, false, @typeDefined(I__0) fn {
+        |          do {};
         |          do {};
         |          do {}
         |      });
@@ -2680,7 +2739,7 @@ class DefineStageTest {
             |      T__0 = type (T__0);
             |      I__0<T__0> extends AnyValue;
             |      @property(\x) @visibility(\public) @QName("test-code.type I.x") @stay @fromType(I__0<T__0>) let x__3: T__0;
-            |      @property(\y) @visibility(\public) @QName("test-code.type I.y") @stay @fromType(I__0<T__0>) let y__1;
+            |      @property(\y) @visibility(\public) @stay @fromType(I__0<T__0>) @QName("test-code.type I.y") let y__1: Int32;
             |      @method(\y) @getter @visibility(\public) @fn @QName("test-code.type I.get y()") @stay @fromType(I__0<T__0>) let nym`get.y__2`;
             |      nym`get.y__2` = fn nym`get.y`(@impliedThis(I__0<T__0>) @QName("test-code.type I.get y().(this)") this__0: I__0<T__0>) /* return__2 */: Int32 {
             |        fn__2: do {
@@ -2706,7 +2765,12 @@ class DefineStageTest {
             |          fn__5: do {}
             |      });
             |      void;
+            |      @getter @method(\x) @fn @visibility(\public) @stay @fromType(I__0<T__0>) @QName("test-code.type I.get x()") let getx__0;
+            |      getx__0 = fn (@impliedThis(I__0<T__0>) @QName("test-code.type I.get x().(this)") this__3: I__0<T__0>) /* return__6 */: T__0 {
+            |        pureVirtual()
+            |      };
             |      interface(\word, \I, \concrete, false, @typeDefined(I__0<T__0>) fn {
+            |          do {};
             |          do {};
             |          do {};
             |          do {};

@@ -11,6 +11,7 @@ import lang.temper.frontend.flipDeclaredNames
 import lang.temper.frontend.interpretiveDanceStage
 import lang.temper.frontend.json.mixinJsonInterop
 import lang.temper.frontend.syntax.DotOperationDesugarer
+import lang.temper.frontend.syntax.fillInMissingQnameMetadata
 import lang.temper.log.Debug
 import lang.temper.log.FailLog
 import lang.temper.log.LogSink
@@ -31,7 +32,7 @@ internal class DefineStage(
     fun process(callback: (outputs: StageOutputs) -> Unit) {
         val configKey = root.configurationKey
         var addTemperTestInstructions = false
-        val outputs = Debug.Frontend.DefineStage(configKey).group("Debug stage") {
+        val outputs = Debug.Frontend.DefineStage(configKey).group("Define Stage") {
             interpretiveDanceStage(
                 stage = Stage.Define,
                 root = root,
@@ -97,6 +98,14 @@ internal class DefineStage(
                         Debug.Frontend.DefineStage.AfterAddTemperTestInstructions
                             .snapshot(configKey, AstSnapshotKey, root)
                     }
+
+                    Debug.Frontend.DefineStage.FillInMissingQNames(configKey)
+                        .benchmarkIf(BENCHMARK, "FillInMissingQNames") {
+                            fillInMissingQnameMetadata(root)
+                        }
+
+                    Debug.Frontend.DefineStage.AfterFillInMissingQNames
+                        .snapshot(configKey, AstSnapshotKey, root)
 
                     Debug.Frontend.DefineStage.SimplifyDeclarations(configKey)
                         .benchmarkIf(BENCHMARK, "SimplifyDeclarations") {

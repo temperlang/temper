@@ -318,10 +318,14 @@ class GenerateCodeStageTest {
         |      nym`get.superGetter__1` = (@stay fn nym`get.superGetter`(@impliedThis(I) this__0: I) /* return__0 */: Int32 {
         |          return__0 = 10
         |      });
-        |      @visibility(\public) @stay @fromType(I) let superSetter__0;
+        |      @visibility(\public) @stay @fromType(I) let superSetter__0: Int32;
         |      @visibility(\public) @fn @stay @fromType(I) let nym`set.superSetter__1`;
         |      nym`set.superSetter__1` = (@stay fn nym`set.superSetter`(@impliedThis(I) this__1: I, i__0 /* aka i */: Int32) /* return__1 */: Void {
         |          return__1 = void
+        |      });
+        |      @fn @visibility(\public) @stay @fromType(I) let getsuperSetter__0;
+        |      getsuperSetter__0 = (@stay fn (@impliedThis(I) this__17: I) /* return__12 */: Int32 {
+        |          pureVirtual()
         |      });
         |      @visibility(\public) @stay @fromType(C) let propNotVar__0: Int32;
         |      @visibility(\public) @stay @fromType(C) var propVar__0: Int32;
@@ -350,7 +354,7 @@ class GenerateCodeStageTest {
         |          setp(propVar__0, this__3, "hi");
         |          return__3 = void
         |      });
-        |      @visibility(\public) @stay @fromType(C) let extraSetter__0;
+        |      @visibility(\public) @stay @fromType(C) let extraSetter__0: Int32;
         |      @visibility(\public) @fn @stay @fromType(C) let nym`set.extraSetter__1`;
         |      nym`set.extraSetter__1` = (@stay fn nym`set.extraSetter`(@impliedThis(C) this__4: C, k__0 /* aka k */: Int32) /* return__4 */: Void {
         |          setp(propVar__0, this__4, k__0);
@@ -373,6 +377,10 @@ class GenerateCodeStageTest {
         |      setpropVar__0 = (@stay fn (@impliedThis(C) this__8: C, newPropVar__0: Int32) /* return__8 */: Void {
         |          setp(propVar__0, this__8, newPropVar__0);
         |          return__8 = void
+        |      });
+        |      @fn @visibility(\public) @stay @fromType(C) let getextraSetter__0;
+        |      getextraSetter__0 = (@stay fn (@impliedThis(C) this__20: C) /* return__20 */: Int32 {
+        |          pureVirtual()
         |      });
         |      `test//`.alsoUpdate = (@stay fn alsoUpdate(c__0 /* aka c */: C, j__0 /* aka j */: Int32) /* return__9 */: Void {
         |          var t#5, t#6, t#7, t#8;
@@ -401,8 +409,6 @@ class GenerateCodeStageTest {
         |  },
         |  errors: [
         |    "No member wrong in C | I!",
-        |    "Wrong number of arguments.  Expected 2!",
-        |    "Expected subtype of Type, but got C!",
         |    "Member extraGetter defined in C | I incompatible with usage!",
         |    "Member superGetter defined in C | I incompatible with usage!",
         |    "Member propNotVar defined in C incompatible with usage!",
@@ -411,6 +417,8 @@ class GenerateCodeStageTest {
         |    "Expected subtype of Int32, but got String!",
         |    "Member extraGetter defined in C | I incompatible with usage!",
         |    "No member extraWrong in C | I!",
+        |    "Type C must implement get extraSetter from C.  Maybe add `public get extraSetter(): Int32`!",
+        |    "Type C must implement get superSetter from I.  Maybe add `public get superSetter(): Int32`!"
         |  ],
         |}
         """.trimMargin(),
@@ -985,7 +993,7 @@ class GenerateCodeStageTest {
             |      body: ```
             |      let return__0, console#0;
             |      console#0 = getConsole();
-            |      @property(\p) @visibility(\public) @stay @fromType(C__0) let p__0;
+            |      @property(\p) @visibility(\public) @stay @fromType(C__0) let p__0: Int32;
             |      @method(\p) @setter @visibility(\public) @fn @stay @fromType(C__0) let nym`set.p__1`;
             |      nym`set.p__1` = (@stay fn nym`set.p`(@impliedThis(C__0) this__0: C__0, newValue__0 /* aka newValue */: Int32) /* return__1 */: Void {
             |          var t#0;
@@ -996,6 +1004,12 @@ class GenerateCodeStageTest {
             |      @fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) let constructor__0;
             |      constructor__0 = (@stay fn constructor(@impliedThis(C__0) this__1: C__0) /* return__2 */: Void {
             |          return__2 = void
+            |      });
+            |      @getter @method(\p) @fn @visibility(\public) @stay @fromType(C__0) let getp__0;
+            |      getp__0 = (@stay fn (@impliedThis(C__0) this__2: C__0) /* return__3 */: Int32 {
+            |## TODO: This pureVirtual occurs in a concrete method, so should be flagged as a failure
+            |## to implement.  Set-only properties are not translatable so we insist on a getter.
+            |          pureVirtual()
             |      });
             |      @typeDecl(C__0) @stay let C__0;
             |      C__0 = type (C__0);
@@ -1008,7 +1022,7 @@ class GenerateCodeStageTest {
             |      ```
             |  }
             |}
-        """.trimMargin(),
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
         moduleResultNeeded = true,
     ) { module, _ ->
         val input = $$"""
@@ -1176,15 +1190,19 @@ class GenerateCodeStageTest {
             |    body: ```
             |        let return__0;
             |        @property(\x) @visibility(\public) @stay @fromType(I__0) let x__0: Int32;
+            |        @getter @method(\x) @fn @visibility(\public) @stay @fromType(I__0) let getx__0;
+            |        getx__0 = (@stay fn (@impliedThis(I__0) this__0: I__0) /* return__1 */: Int32 {
+            |            pureVirtual()
+            |        });
             |        @typeDecl(I__0) @stay let I__0;
             |        I__0 = type (I__0);
             |        @typeDecl(C__0) @stay let C__0;
             |        C__0 = type (C__0);
             |        @constructorProperty @property(\x) @visibility(\protected) @stay @fromType(C__0) let x__1: Int32;
             |        @fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) let constructor__0;
-            |        constructor__0 = (@stay fn constructor(@impliedThis(C__0) this__0: C__0, x__2 /* aka x */: Int32) /* return__1 */: Void {
-            |            setp(x__1, this__0, x__2);
-            |            return__1 = void
+            |        constructor__0 = (@stay fn constructor(@impliedThis(C__0) this__1: C__0, x__2 /* aka x */: Int32) /* return__2 */: Void {
+            |            setp(x__1, this__1, x__2);
+            |            return__2 = void
             |        });
             |        return__0 = type (C__0)
             |
@@ -1358,7 +1376,7 @@ class GenerateCodeStageTest {
             |        constructor__0 = (@stay fn constructor(@impliedThis(Something__0) this__0: Something__0) /* return__0 */: Void {
             |            return__0 = void
             |        });
-            |        @property(\blah) @visibility(\public) @stay @fromType(Something__0) @reach(\none) let blah__0;
+            |        @property(\blah) @visibility(\public) @stay @fromType(Something__0) @reach(\none) let blah__0: Int32;
             |        @method(\blah) @getter @visibility(\public) @fn @stay @fromType(Something__0) @reach(\none) let nym`get.blah__1`;
             |        nym`get.blah__1` = (@stay fn nym`get.blah`(@impliedThis(Something__0) this__1: Something__0) /* return__1 */{
             |            return__1 = 5
