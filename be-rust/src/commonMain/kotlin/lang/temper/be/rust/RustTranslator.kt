@@ -1036,27 +1036,29 @@ class RustTranslator(
         pos: Position,
         found: Description,
         wanted: Description,
-    ): Rust.Path = when {
-        found.definition() == WellKnownTypes.noStringIndexTypeDefinition &&
-            wanted.definition() == WellKnownTypes.stringIndexOptionTypeDefinition
-        -> "temper_core".toKeyId(pos).extendWith(listOf("string", "cast_none_as_index_option"))
-
-        found.definition() == WellKnownTypes.stringIndexTypeDefinition &&
-            wanted.definition() == WellKnownTypes.stringIndexOptionTypeDefinition -> makePath(pos, "Some")
-
-        found.definition() == WellKnownTypes.stringIndexOptionTypeDefinition &&
-            wanted.definition() == WellKnownTypes.stringIndexTypeDefinition
-        -> "temper_core".toKeyId(pos).extendWith(listOf("string", "cast_as_index"))
-
-        found.definition() == WellKnownTypes.stringIndexOptionTypeDefinition &&
-            wanted.definition() == WellKnownTypes.noStringIndexTypeDefinition
-        -> "temper_core".toKeyId(pos).extendWith(listOf("string", "cast_as_no_index"))
-
-        else -> {
-            val typeSegment = Rust.GenericArgs(pos, listOf(translateType(wanted.type!!, pos)))
-            // TODO Some way to make fewer intermediate lists?
-            "temper_core".toKeyId(pos).extendWith("cast").extendWith(listOf(typeSegment))
+    ): Rust.Path = when (found.definition()) {
+        WellKnownTypes.listTypeDefinition, WellKnownTypes.listBuilderTypeDefinition -> when (wanted.definition()) {
+            WellKnownTypes.listedTypeDefinition -> TO_LISTED_TO_LISTED_NAME.toId(pos)
+            else -> null
         }
+        WellKnownTypes.noStringIndexTypeDefinition -> when (wanted.definition()) {
+            WellKnownTypes.stringIndexOptionTypeDefinition -> "cast_none_as_index_option"
+            else -> null
+        }?.let { "temper_core".toKeyId(pos).extendWith(listOf("string", it)) }
+        WellKnownTypes.stringIndexTypeDefinition -> when (wanted.definition()) {
+            WellKnownTypes.stringIndexOptionTypeDefinition -> makePath(pos, "Some")
+            else -> null
+        }
+        WellKnownTypes.stringIndexOptionTypeDefinition -> when (wanted.definition()) {
+            WellKnownTypes.stringIndexTypeDefinition -> "cast_as_index"
+            WellKnownTypes.noStringIndexTypeDefinition -> "cast_as_no_index"
+            else -> null
+        }?.let { "temper_core".toKeyId(pos).extendWith(listOf("string", it)) }
+        else -> null
+    } ?: run {
+        val typeSegment = Rust.GenericArgs(pos, listOf(translateType(wanted.type!!, pos)))
+        // TODO Some way to make fewer intermediate lists?
+        "temper_core".toKeyId(pos).extendWith("cast").extendWith(listOf(typeSegment))
     }
 
     private fun buildDerive(pos: Position, deriveArgs: List<String>) = Rust.AttrOuter(
@@ -1825,6 +1827,12 @@ class RustTranslator(
             }
         }.let { result ->
             when {
+                // Upcasting to listed doesn't need checked at all for any valid casts.
+                // Any invalid casts are reported as errors by frontend validation.
+                // But we still need to wrapOk because outer layers with less context still
+                // see the claimed tmpl type as being bubbly.
+                wanted.definition() == WellKnownTypes.listedTypeDefinition -> result.wrapOk()
+                // For others, trust standard type expectations.
                 cast.type.described().bubbly -> result.wrapOkOrElse(pos)
                 else -> result.methodCall("unwrap") // such as for assertAs
             }
