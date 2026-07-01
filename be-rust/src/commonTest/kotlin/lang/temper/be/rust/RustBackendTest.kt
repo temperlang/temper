@@ -96,14 +96,11 @@ class RustBackendTest {
             |            pub (crate) fn init() -> temper_core::Result<()> {
             |                static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |                INIT_ONCE.get_or_init(| |{
+            |                        let stringifyValue__0: std::sync::Arc<dyn Fn (i32) -> std::sync::Arc<String> + std::marker::Send + std::marker::Sync> = std::sync::Arc::new(crate::bar::stringify.clone());
             |                        println!("{}", "Foo");
-            |                        STRINGIFY_VALUE_HERE.set(std::sync::Arc::new(stringifyHere__0.clone())).unwrap_or_else(| _ | panic!());
+            |                        let stringifyValueHere__0: std::sync::Arc<dyn Fn (i32) -> std::sync::Arc<String> + std::marker::Send + std::marker::Sync> = std::sync::Arc::new(stringifyHere__0.clone());
             |                        Ok(())
             |                }).clone()
-            |            }
-            |            static STRINGIFY_VALUE_HERE: std::sync::OnceLock<std::sync::Arc<dyn Fn (i32) -> std::sync::Arc<String> + std::marker::Send + std::marker::Sync>> = std::sync::OnceLock::new();
-            |            fn stringify_value_here() -> std::sync::Arc<dyn Fn (i32) -> std::sync::Arc<String> + std::marker::Send + std::marker::Sync> {
-            |                ( * STRINGIFY_VALUE_HERE.get().unwrap()).clone()
             |            }
             |            fn stringifyHere__0(i__0: i32) -> std::sync::Arc<String> {
             |                return temper_core::int_to_string(i__0, None);
@@ -111,13 +108,13 @@ class RustBackendTest {
             |            pub fn hi(nums__0: impl temper_core::ToListed<i32>) -> std::sync::Arc<String> {
             |                let nums__0 = nums__0.to_listed();
             |                let a__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & crate::bar::stringify.clone());
-            |                let b__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & ( * crate::bar::stringify_value().clone()));
+            |                let b__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & crate::bar::stringify.clone());
             |                let c__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & stringifyHere__0.clone());
-            |                let d__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & ( * stringify_value_here().clone()));
+            |                let d__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & stringifyHere__0.clone());
             |                return std::sync::Arc::new(format!("{}{}{}{}", a__0, b__0.clone(), c__0.clone(), d__0.clone()));
             |            }
-            |            pub fn make_talk_here(talker__1: crate::bar::Talker) {
-            |                talker__1.talk();
+            |            pub fn make_talk_here(talker__0: crate::bar::Talker) {
+            |                talker__0.talk();
             |            }
             |
             |            ```
@@ -173,8 +170,8 @@ class RustBackendTest {
             |              pub fn stringify(i__1: i32) -> std::sync::Arc<String> {
             |                  return temper_core::int_to_string(i__1, None);
             |              }
-            |              pub fn make_talk(talker__0: Talker) {
-            |                  talker__0.talk();
+            |              pub fn make_talk(talker__1: Talker) {
+            |                  talker__1.talk();
             |              }
             |
             |              ```
