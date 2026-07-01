@@ -3070,7 +3070,7 @@ class CppTranslator(
         }
         val qualifiedName = when (libNs) {
             null -> "temper::${cppName.id.text}"
-            else -> "temper::${libNs}::${cppName.id.text}"
+            else -> "$libNs::${cppName.id.text}"
         }
         testInfos.add(qualifiedName to topLevel.rawName)
     }
@@ -3090,7 +3090,7 @@ class CppTranslator(
                 else -> depRelPath.segments.last().baseName
             }
             val sanitizedDep = depBaseName.replace(Regex("[^a-zA-Z0-9_]"), "_")
-            depInitCalls.add("temper::${libNs}::temper_init_$sanitizedDep")
+            depInitCalls.add("$libNs::temper_init_$sanitizedDep")
             // Add include for the dependency module's header so its init decl is visible
             includes.add(cpp.includePathForModule(depModName))
         }
@@ -3202,8 +3202,7 @@ class CppTranslator(
                 null -> body
                 else -> listOf(cpp.namespace(cpp.libraryName(cppLibraryName), body))
             }
-            val finalNamespace = cpp.namespace(cpp.singleName(CppName("temper")), innerNamespace)
-            return@pos listOf(finalNamespace)
+            return@pos innerNamespace
         }
 
         val relPath = mod.codeLocation.codeLocation.relativePath()

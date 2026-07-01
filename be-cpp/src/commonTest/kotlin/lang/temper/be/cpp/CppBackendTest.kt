@@ -26,26 +26,24 @@ class CppBackendTest {
             """,
             cpp = """
                 |#include <my-test-library/something.hpp>
-                |namespace temper {
-                |  namespace my_test_library {
-                |    static std::shared_ptr<temper::core::Console::Type> console_0;
-                |    static int32_t x;
-                |    void greet(std::string name) {
-                |      temper::core::Console::log(console_0, "Hi:");
-                |      temper::core::Console::log(console_0, name);
+                |namespace my_test_library {
+                |  static std::shared_ptr<temper::core::Console::Type> console_0;
+                |  static int32_t x;
+                |  void greet(std::string name) {
+                |    temper::core::Console::log(console_0, "Hi:");
+                |    temper::core::Console::log(console_0, name);
+                |    return;
+                |  }
+                |  void temper_init_something() {
+                |    static bool initialized = false;
+                |    if(initialized) {
                 |      return;
                 |    }
-                |    void temper_init_something() {
-                |      static bool initialized = false;
-                |      if(initialized) {
-                |        return;
-                |      }
-                |      initialized = true;
-                |      console_0 = temper::core::Console::get_console();
-                |      greet("world");
-                |      x = 3;
-                |      greet(temper::core::cat("world ", temper::core::Int::toString(3)));
-                |    }
+                |    initialized = true;
+                |    console_0 = temper::core::Console::get_console();
+                |    greet("world");
+                |    x = 3;
+                |    greet(temper::core::cat("world ", temper::core::Int::toString(3)));
                 |  }
                 |}
                 |
@@ -53,11 +51,9 @@ class CppBackendTest {
             hpp = """
                 |#pragma once
                 |#include <temper-core/core.hpp>
-                |namespace temper {
-                |  namespace my_test_library {
-                |    void greet(std::string);
-                |    void temper_init_something();
-                |  }
+                |namespace my_test_library {
+                |  void greet(std::string);
+                |  void temper_init_something();
                 |}
                 |
             """,
@@ -75,9 +71,9 @@ class CppBackendTest {
             """,
             cppContains = listOf(
                 """
-                    |    int32_t day(std::shared_ptr<temper_std::Date> const & date) {
-                    |      return temper::core::Date::getDay(date);
-                    |    }
+                    |  int32_t day(std::shared_ptr<temper_std::Date> const & date) {
+                    |    return temper::core::Date::getDay(date);
+                    |  }
                 """.trimMargin(),
             ),
         )
@@ -93,18 +89,16 @@ class CppBackendTest {
             """,
             cpp = """
                 |#include <my-test-library/something.hpp>
-                |namespace temper {
-                |  namespace my_test_library {
-                |    int32_t add(int32_t a, int32_t b) {
-                |      return temper::core::Int::add(a, b);
+                |namespace my_test_library {
+                |  int32_t add(int32_t a, int32_t b) {
+                |    return temper::core::Int::add(a, b);
+                |  }
+                |  void temper_init_something() {
+                |    static bool initialized = false;
+                |    if(initialized) {
+                |      return;
                 |    }
-                |    void temper_init_something() {
-                |      static bool initialized = false;
-                |      if(initialized) {
-                |        return;
-                |      }
-                |      initialized = true;
-                |    }
+                |    initialized = true;
                 |  }
                 |}
                 |
@@ -112,11 +106,9 @@ class CppBackendTest {
             hpp = """
                 |#pragma once
                 |#include <temper-core/core.hpp>
-                |namespace temper {
-                |  namespace my_test_library {
-                |    int32_t add(int32_t, int32_t);
-                |    void temper_init_something();
-                |  }
+                |namespace my_test_library {
+                |  int32_t add(int32_t, int32_t);
+                |  void temper_init_something();
                 |}
                 |
             """,
@@ -131,17 +123,15 @@ class CppBackendTest {
             """,
             cpp = """
                 |#include <my-test-library/something.hpp>
-                |namespace temper {
-                |  namespace my_test_library {
-                |    int32_t x;
-                |    void temper_init_something() {
-                |      static bool initialized = false;
-                |      if(initialized) {
-                |        return;
-                |      }
-                |      initialized = true;
-                |      x = 42;
+                |namespace my_test_library {
+                |  int32_t x;
+                |  void temper_init_something() {
+                |    static bool initialized = false;
+                |    if(initialized) {
+                |      return;
                 |    }
+                |    initialized = true;
+                |    x = 42;
                 |  }
                 |}
                 |
@@ -149,11 +139,9 @@ class CppBackendTest {
             hpp = """
                 |#pragma once
                 |#include <temper-core/core.hpp>
-                |namespace temper {
-                |  namespace my_test_library {
-                |    extern int32_t x;
-                |    void temper_init_something();
-                |  }
+                |namespace my_test_library {
+                |  extern int32_t x;
+                |  void temper_init_something();
                 |}
                 |
             """,
@@ -170,18 +158,16 @@ class CppBackendTest {
             """,
             cpp = """
                 |#include <my-test-library/something.hpp>
-                |namespace temper {
-                |  namespace my_test_library {
-                |    bool isPositive(int32_t x) {
-                |      return x> 0;
+                |namespace my_test_library {
+                |  bool isPositive(int32_t x) {
+                |    return x> 0;
+                |  }
+                |  void temper_init_something() {
+                |    static bool initialized = false;
+                |    if(initialized) {
+                |      return;
                 |    }
-                |    void temper_init_something() {
-                |      static bool initialized = false;
-                |      if(initialized) {
-                |        return;
-                |      }
-                |      initialized = true;
-                |    }
+                |    initialized = true;
                 |  }
                 |}
                 |
@@ -189,11 +175,9 @@ class CppBackendTest {
             hpp = """
                 |#pragma once
                 |#include <temper-core/core.hpp>
-                |namespace temper {
-                |  namespace my_test_library {
-                |    bool isPositive(int32_t);
-                |    void temper_init_something();
-                |  }
+                |namespace my_test_library {
+                |  bool isPositive(int32_t);
+                |  void temper_init_something();
                 |}
                 |
             """,
@@ -210,18 +194,16 @@ class CppBackendTest {
             """,
             cpp = """
                 |#include <my-test-library/something.hpp>
-                |namespace temper {
-                |  namespace my_test_library {
-                |    int32_t multiply(int32_t a, int32_t b) {
-                |      return temper::core::Int::mul(a, b);
+                |namespace my_test_library {
+                |  int32_t multiply(int32_t a, int32_t b) {
+                |    return temper::core::Int::mul(a, b);
+                |  }
+                |  void temper_init_something() {
+                |    static bool initialized = false;
+                |    if(initialized) {
+                |      return;
                 |    }
-                |    void temper_init_something() {
-                |      static bool initialized = false;
-                |      if(initialized) {
-                |        return;
-                |      }
-                |      initialized = true;
-                |    }
+                |    initialized = true;
                 |  }
                 |}
                 |
@@ -229,11 +211,9 @@ class CppBackendTest {
             hpp = """
                 |#pragma once
                 |#include <temper-core/core.hpp>
-                |namespace temper {
-                |  namespace my_test_library {
-                |    int32_t multiply(int32_t, int32_t);
-                |    void temper_init_something();
-                |  }
+                |namespace my_test_library {
+                |  int32_t multiply(int32_t, int32_t);
+                |  void temper_init_something();
                 |}
                 |
             """,
@@ -567,10 +547,10 @@ class CppBackendTest {
             """,
             cppContains = listOf(
                 """
-                    |    int32_t Apple::twiceThing(int32_t i_8)const {
-                    |      auto this_1 = temper::core::borrow_this(this);
-                    |      return temper::core::Int::mul(2, this_1->thing(i_8));
-                    |    }
+                    |  int32_t Apple::twiceThing(int32_t i_8)const {
+                    |    auto this_1 = temper::core::borrow_this(this);
+                    |    return temper::core::Int::mul(2, this_1->thing(i_8));
+                    |  }
                 """.trimMargin(),
             ),
         )

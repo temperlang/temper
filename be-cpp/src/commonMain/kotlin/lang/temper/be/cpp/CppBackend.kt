@@ -123,7 +123,7 @@ class CppBackend private constructor(
             allTestInfos.addAll(translator.testInfos)
             translator.moduleInitFuncName?.let { name ->
                 val libNs = safeCppNamespace(cppNames.library(cppLibraryName).text)
-                allInitFuncs.add("temper::${libNs}::$name")
+                allInitFuncs.add("$libNs::$name")
                 // Track include path for this module's header so main.cpp can see all init decls
                 val loc = mod.codeLocation.codeLocation
                 allInitIncludes.add(translator.cpp.includePathForModule(loc))
@@ -140,7 +140,7 @@ class CppBackend private constructor(
         )
 
         // Compute the C++ namespace for the std library's Test type
-        val testNs = "temper::${safeCppNamespace(cppNames.library("std").text)}"
+        val testNs = safeCppNamespace(cppNames.library("std").text)
 
         val mainContent = generateMainCpp(
             initIncludes = allInitIncludes.sorted(),
