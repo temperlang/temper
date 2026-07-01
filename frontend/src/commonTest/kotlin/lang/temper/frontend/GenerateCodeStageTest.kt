@@ -1428,7 +1428,7 @@ class GenerateCodeStageTest {
             |          },
             |        ],
             |        metadata: {
-            |          connected: ["\"Empty\": String"],
+            |          connected: ["void: Void"],
             |          imu: ["void: Void"],
             |        }
             |      },
@@ -2111,7 +2111,7 @@ class GenerateCodeStageTest {
             |            do_call_log(console#0, "Third");
             |            yield();
             |            do_call_log(console#0, "Fourth");
-            |            return__3 = implicits.doneResult<Empty>()
+            |            return__3 = core.doneResult<Empty>()
             |        })
             |    });
             |
@@ -2185,7 +2185,7 @@ class GenerateCodeStageTest {
             |    runItThrice__0(fn /* return__2 */{
             |## Adapt call specialized to adaptGeneratorFnSafe
             |        return__2 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__3 */: (GeneratorResult<Empty>) implements GeneratorFn {
-            |            return__3 = implicits.doneResult<Empty>();
+            |            return__3 = core.doneResult<Empty>();
             |## The interpreter needs to distinguish a legit return result with the result from a yield.
             |            void;
             |            while (true) {
@@ -2610,17 +2610,17 @@ class GenerateCodeStageTest {
                 ModuleSource(
                     filePath = testCodeLocation,
                     fetchedContent = """
-                        |@connected("S")
+                        |@connected
                         |export sealed interface S {}
                         |
-                        |@connected("C")
+                        |@connected
                         |class C extends S {}
-                        |@connected("D")
+                        |@connected
                         |class D extends S {}
                         |
-                        |@connected("NS")
+                        |@connected
                         |interface NS extends S {}
-                        |@connected("E")
+                        |@connected
                         |class E extends NS {}
                         |
                         |export let f(a: AnyValue, s: S): Void throws Bubble {

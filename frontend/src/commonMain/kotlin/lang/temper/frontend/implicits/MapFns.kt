@@ -17,7 +17,7 @@ import lang.temper.value.Value
 import lang.temper.value.void
 
 internal object MapFns {
-    object Constructor : SigFnBuilder("Map::constructor") {
+    object Constructor : SigFnBuilder("core.type Map.constructor()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             // Associate preserves order.
             val map = TList.unpackContent(args[1]).associate { unpackPair(it) ?: return@invoke Fail }
@@ -28,27 +28,27 @@ internal object MapFns {
 }
 
 internal object MapBuilderFns {
-    object Constructor : SigFnBuilder("MapBuilder::constructor") {
+    object Constructor : SigFnBuilder("core.type MapBuilder.constructor()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             setContent(args, Value(linkedMapOf(), TMapBuilder))
             return void
         }
     }
 
-    object Clear : SigFnBuilder("MapBuilder::clear") {
+    object Clear : SigFnBuilder("core.type MapBuilder.clear()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             TMapBuilder.unpackContent(args[0]).clear()
             return void
         }
     }
 
-    object Remove : SigFnBuilder("MapBuilder::remove") {
+    object Remove : SigFnBuilder("core.type MapBuilder.remove()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return TMapBuilder.unpackContent(args[0]).remove(args[1]) ?: Fail
         }
     }
 
-    object Set : SigFnBuilder("MapBuilder::set") {
+    object Set : SigFnBuilder("core.type MapBuilder.set()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             TMapBuilder.unpackContent(args[0])[args[1]] = args[2]
             return void
@@ -57,49 +57,49 @@ internal object MapBuilderFns {
 }
 
 internal object MappedFns {
-    object Get : SigFnBuilder("Mapped::get") {
+    object Get : SigFnBuilder("core.type Mapped.get()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return TMap.unpackContent(args[0]).getOrDefault(args[1], Fail)
         }
     }
 
-    object GetOr : SigFnBuilder("Mapped::getOr") {
+    object GetOr : SigFnBuilder("core.type Mapped.getOr()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return TMap.unpackContent(args[0]).getOrDefault(args[1], args[2])
         }
     }
 
-    object Has : SigFnBuilder("Mapped::has") {
+    object Has : SigFnBuilder("core.type Mapped.has()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(TMap.unpackContent(args[0]).contains(args[1]), TBoolean)
         }
     }
 
-    object Keys : SigFnBuilder("Mapped::keys") {
+    object Keys : SigFnBuilder("core.type Mapped.keys()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(TMap.unpackContent(args[0]).keys.toList(), TList)
         }
     }
 
-    object Values : SigFnBuilder("Mapped::values") {
+    object Values : SigFnBuilder("core.type Mapped.values()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(TMap.unpackContent(args[0]).values.toList(), TList)
         }
     }
 
-    object ToMap : SigFnBuilder("Mapped::toMap") {
+    object ToMap : SigFnBuilder("core.type Mapped.toMap()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(LinkedHashMap(TMap.unpackContent(args[0])), TMap)
         }
     }
 
-    object ToMapBuilder : SigFnBuilder("Mapped::toMapBuilder") {
+    object ToMapBuilder : SigFnBuilder("core.type Mapped.toMapBuilder()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(LinkedHashMap(TMap.unpackContent(args[0])), TMapBuilder)
         }
     }
 
-    object ToListWith : SigFnBuilder("Mapped::toListWith") {
+    object ToListWith : SigFnBuilder("core.type Mapped.toListWith()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val makeEntry = args[1]
             val entries = TMap.unpackContent(args[0]).map { entry ->
@@ -112,7 +112,7 @@ internal object MappedFns {
         }
     }
 
-    object ToListBuilderWith : SigFnBuilder("Mapped::toListWith") {
+    object ToListBuilderWith : SigFnBuilder("core.type Mapped.toListBuilderWith()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val makeEntry = args[1]
             val entries = TMap.unpackContent(args[0]).map { entry ->
@@ -125,7 +125,7 @@ internal object MappedFns {
         }
     }
 
-    object ForEach : SigFnBuilder("Mapped::forEach") {
+    object ForEach : SigFnBuilder("core.type Mapped.forEach()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val callback = args[1]
             TMap.unpackContent(args[0]).forEach { entry ->

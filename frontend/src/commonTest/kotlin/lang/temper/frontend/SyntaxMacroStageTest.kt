@@ -251,6 +251,8 @@ class SyntaxMacroStageTest {
                         [ "Value", "true: Boolean" ],
                         [ "Value", "\\word: Symbol" ],
                         [ "Value", "\\f: Symbol" ],
+                        [ "Value", "\\QName: Symbol" ],
+                        [ "Value", "\"test-code.f()\": String" ],
                         [ "Block", [
                             [ "Value", "\\label: Symbol" ],
                             [ "LeftName", "fn__4" ]
@@ -285,6 +287,7 @@ class SyntaxMacroStageTest {
         input = """
         let f = fn (x) {};
         let g = fn g(y) {};
+        var h = fn (z) {}; // *var* fn should get neither symbol nor qname
         """.trimIndent(),
         want = """
         {
@@ -307,6 +310,8 @@ class SyntaxMacroStageTest {
                         [ "Value", "true: Boolean" ],
                         [ "Value", "\\word: Symbol" ],
                         [ "Value", "\\f: Symbol" ],
+                        [ "Value", "\\QName: Symbol" ],
+                        [ "Value", "\"test-code.f()\": String" ],
                         [ "Block", [
                             [ "Value", "\\label: Symbol" ],
                             [ "LeftName", "fn__2" ]
@@ -337,6 +342,8 @@ class SyntaxMacroStageTest {
                         [ "Value", "true: Boolean" ],
                         [ "Value", "\\word: Symbol" ],
                         [ "Value", "\\g: Symbol" ],
+                        [ "Value", "\\QName: Symbol" ],
+                        [ "Value", "\"test-code.g()\": String" ],
                         [ "Block", [
                             [ "Value", "\\label: Symbol" ],
                             [ "LeftName", "fn__5" ]
@@ -350,6 +357,35 @@ class SyntaxMacroStageTest {
                     [ "Value", "\"test-code.g()\": String" ],
                   ]
                 ],
+
+                [ "Decl", [
+                    [ "LeftName", "h__0" ],
+                    [ "Value", "\\init: Symbol" ],
+                    [ "Fun", [
+                        [ "Decl", [
+                            [ "LeftName", "z__0" ],
+                            [ "Value", "\\word: Symbol" ],
+                            [ "Value", "\\z: Symbol" ],
+                            [ "Value", "\\QName: Symbol" ],
+                            [ "Value", "\"test-code.h().(z)\": String" ],
+                          ]
+                        ],
+                        [ "Value", "\\returnedFrom: Symbol" ],
+                        [ "Value", "true: Boolean" ],
+                        [ "Block", [
+                            [ "Value", "\\label: Symbol" ],
+                            [ "LeftName", "fn__0" ]
+                          ]
+                        ]
+                      ]
+                    ],
+                    [ "Value", "\\var: Symbol" ],
+                    [ "Value", "void: Void" ],
+                    [ "Value", "\\QName: Symbol" ],
+                    [ "Value", "\"test-code.h()\": String" ],
+                  ]
+                ],
+
                 [ "Value", "void: Void" ],
               ]
             ]
@@ -1462,7 +1498,7 @@ class SyntaxMacroStageTest {
         stage = Stage.SyntaxMacro,
         input = """
             |class Hi {
-            |  @connected("Hi::there")
+            |  @connected
             |  private there();
             |}
         """.trimMargin(),
@@ -1473,7 +1509,7 @@ class SyntaxMacroStageTest {
             |        @typeDecl(Hi__0) @stay let Hi__0 = type (Hi__0);
             |        class(\word, \Hi, \concrete, true, @typeDefined(Hi__0) fn {
             |            Hi__0 extends AnyValue;
-            |            @method(\there) @visibility(\private) @connected("Hi::there") @fn let there__0 = (@connected("Hi::there") fn there(@impliedThis(Hi__0) this__0: Hi__0) {
+            |            @method(\there) @visibility(\private) @connected @fn let there__0 = (@connected fn there(@impliedThis(Hi__0) this__0: Hi__0) {
             |                fn__0: do {
             |                  pureVirtual()
             |                }

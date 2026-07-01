@@ -20,7 +20,7 @@ class FnParts internal constructor(
     // Since the actual type of the varArg from the caller's perspective doesn't exist as a decl
     // we need a more advanced type here
     val restFormal: RestFormal?,
-    val connected: String?,
+    val connected: Boolean,
     metadataSymbolMultimap: MetadataMultimap,
     val body: Tree,
 ) : AbstractParts(metadataSymbolMultimap) {
@@ -49,6 +49,11 @@ class FnParts internal constructor(
         SuperTypeParts(SuperTypeTree(superTypes), incomplete = incomplete.toList())
     }
     val superTypes get() = superTypesLazy.value
+
+    val connectedKey: String? = when {
+        connected -> metadataSymbolMap[qNameSymbol]?.valueContained(TString)
+        else -> null
+    }
 
     val mayYield: Boolean? get() = when {
         superTypes.superTypeTree[WellKnownTypes.generatorFnTypeDefinition].isNotEmpty() -> true
@@ -116,7 +121,6 @@ internal fun decomposeFun(tree: FunTree, metadataMultimap: LiveMetadataMap): FnP
     val typeFormals = metadataMultimap[typeFormalSymbol].map {
         it to FnParts.unpackTypeFormal(it.target)
     }
-    val connected = metadataMultimap.get1(connectedSymbol)?.target?.valueContained(TString)
 
     // 3: The body
     if (childIndex + 1 != n) {
@@ -130,7 +134,7 @@ internal fun decomposeFun(tree: FunTree, metadataMultimap: LiveMetadataMap): FnP
         typeFormals = typeFormals,
         formals = formals,
         restFormal = typeOfList(restFormal.firstOrNull()),
-        connected = connected,
+        connected = connectedSymbol in metadataMultimap,
         metadataSymbolMultimap = metadataMultimap,
         body = body,
     )

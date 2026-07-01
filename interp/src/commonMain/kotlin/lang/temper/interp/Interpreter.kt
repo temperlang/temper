@@ -184,6 +184,11 @@ class Interpreter(
     private var goingOutOfStyle = stage == Stage.Run
     private val isProcessingImplicits = nameMaker.namingContext.isImplicits
 
+    /** Helps centralize tracking access to connecteds. */
+    fun connection(qname: String?): ((Signature2) -> Value<*>)? {
+        return connecteds[qname]
+    }
+
     @Suppress("SimplifyBooleanWithConstants")
     private fun beSpammy(spammy: Boolean) =
         spammy && (SPAMMY_INCLUDES_IMPLICITS || !isProcessingImplicits)
@@ -1829,7 +1834,7 @@ class Interpreter(
             restInputsType = restType?.type2,
             typeFormals = typeFormals.toList(),
         )
-        val connected = connecteds[parts?.connected]?.let { it(signature) }
+        val connected = connection(parts?.connectedKey)?.let { it(signature) }
 
         val superTypes = SuperTypeTree(superTypeSet)
         // We use decomposeFun (I know I said above we wouldn't, but now we've expanded macros) just
@@ -2469,7 +2474,9 @@ class Interpreter(
         override val isProcessingImplicits: Boolean
             get() = document.isImplicits
 
-        override fun connection(connectedKey: String): ((Signature2) -> Value<*>)? = connecteds[connectedKey]
+        override fun connection(qname: String): ((Signature2) -> Value<*>)? {
+            return this@Interpreter.connection(qname)
+        }
 
         val ancestorReplaced: TEdge? get() = callSiteAncestorToReplace
     }

@@ -12,8 +12,6 @@ import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.withType
-import lang.temper.value.TString
-import lang.temper.value.connectedSymbol
 
 internal class TypeTranslator(
     private val supportNetwork: SupportNetwork,
@@ -114,7 +112,7 @@ internal class TypeTranslator(
     ): TmpL.NominalType {
         val connectedKey = when (definition) {
             is TypeFormal -> null
-            is TypeShape -> TString.unpackOrNull(definition.metadata[connectedSymbol]?.firstOrNull())
+            is TypeShape -> definition.connectedKey
         }
         if (connectedKey != null) {
             check(definition is TypeShape) // connectedKey only non-null when definition is a TypeShape
@@ -149,7 +147,7 @@ internal class TypeTranslator(
         val connectedKey = if (followConnected) {
             when (definition) {
                 is TypeFormal -> null
-                is TypeShape -> TString.unpackOrNull(definition.metadata[connectedSymbol]?.firstOrNull())
+                is TypeShape -> definition.connectedKey
             }
         } else {
             null

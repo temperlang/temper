@@ -120,12 +120,12 @@ namespace TemperLang.Core
 
         public static int UShr(this int a, int b)
         {
-            return (int) ((uint) a >> (b & 0x1f));
+            return (int)((uint)a >> (b & 0x1f));
         }
 
         public static long UShr(this long a, int b)
         {
-            return (long) ((ulong) a >> (b & 0x3f));
+            return (long)((ulong)a >> (b & 0x3f));
         }
 
         private const string DIGITS = "0123456789abcdefghijklmnopqrstuvwxyz";
@@ -138,15 +138,17 @@ namespace TemperLang.Core
             if (n < 0)
             {
                 signed = true;
-                un = ((uint) ~n) + 1;
-            } else {
-                un = (uint) n;
+                un = ((uint)~n) + 1;
             }
-            uint uRadix = (uint) radix;
+            else
+            {
+                un = (uint)n;
+            }
+            uint uRadix = (uint)radix;
             // do...while means for 0 we get "0"
             do
             {
-                int digitValue = (int) (un % uRadix);
+                int digitValue = (int)(un % uRadix);
                 un = un / uRadix;
                 sb.Append(DIGITS[digitValue]);
             }
@@ -172,15 +174,17 @@ namespace TemperLang.Core
             if (n < 0)
             {
                 signed = true;
-                un = ((ulong) ~n) + 1;
-            } else {
-                un = (ulong) n;
+                un = ((ulong)~n) + 1;
             }
-            uint uRadix = (uint) radix;
+            else
+            {
+                un = (ulong)n;
+            }
+            uint uRadix = (uint)radix;
             // do...while means for 0 we get "0"
             do
             {
-                int digitValue = (int) (un % uRadix);
+                int digitValue = (int)(un % uRadix);
                 un = un / uRadix;
                 sb.Append(DIGITS[digitValue]);
             }

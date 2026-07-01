@@ -1,10 +1,10 @@
 // @ts-check
 
-// Implements extension method Float64::near
+// Implements extension method core.type Float64.near()
 import {bubble, INT32_MAX, INT32_MIN, INT64_MAX, INT64_MIN} from "./core.js";
 
 /**
- * Implements extension method Float64::near
+ * Implements extension method core.type Float64.near()
  * @param {number} x
  * @param {number} y
  * @param {number | null} [relTol]
@@ -23,7 +23,7 @@ export const float64Near = (x, y, relTol, absTol) => {
 }
 
 /**
- * Implements extension method Float64::toInt32
+ * Implements extension method core.type Float64.toInt32()
  * @param {number} n
  * @returns {number}
  */
@@ -37,7 +37,7 @@ export const float64ToInt32 = (n) => {
 }
 
 /**
- * Implements extension method Float64::toInt32Unsafe
+ * Implements extension method core.type Float64.toInt32Unsafe()
  * @param {number} n
  * @returns {number}
  */
@@ -52,7 +52,7 @@ export const float64ToInt32Unsafe = (n) => {
 }
 
 /**
- * Implements extension method Float64::toInt64
+ * Implements extension method core.type Float64.toInt64()
  * @param {number} n
  * @returns {bigint}
  */
@@ -65,7 +65,7 @@ export const float64ToInt64 = (n) => {
 }
 
 /**
- * Implements extension method Float64::toInt64Unsafe
+ * Implements extension method core.type Float64.toInt64Unsafe()
  * @param {number} n
  * @returns {bigint}
  */
@@ -81,7 +81,7 @@ export const float64ToInt64Unsafe = (n) => {
 }
 
 /**
- * Implements extension method Float64::toString
+ * Implements extension method core.type Float64.toString()
  * @param {number} n
  * @returns
  */

@@ -960,7 +960,7 @@ private fun buildStdModules(
     val modulesByFullSpecifier = buildMap {
         for (module in modules) {
             when (val loc = module.loc) {
-                is ImplicitsCodeLocation -> error("implicits is not in std")
+                is ImplicitsCodeLocation -> error("core is not in std")
                 is ModuleName -> {
                     val specifier = buildString {
                         append(tentativeStdLibraryConfiguration.libraryName)

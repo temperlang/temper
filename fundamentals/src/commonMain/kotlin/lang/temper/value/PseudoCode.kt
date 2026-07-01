@@ -395,6 +395,7 @@ internal class PseudoTreeBuilder(
                     filterBySymbol = { symbol ->
                         when (symbol) {
                             in typeMemberMetadataSymbols -> detail.showTypeMemberMetadata
+                            qNameSymbol -> detail.showQNames
                             returnedFromSymbol,
                             restFormalSymbol,
                             typeFormalSymbol,

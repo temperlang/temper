@@ -1,7 +1,6 @@
 package lang.temper.be.tmpl
 
 import lang.temper.common.Either
-import lang.temper.common.mapFirst
 import lang.temper.common.subListToEnd
 import lang.temper.log.Position
 import lang.temper.name.ResolvedName
@@ -41,10 +40,7 @@ import lang.temper.type2.withNullity
 import lang.temper.type2.withType
 import lang.temper.value.CallTree
 import lang.temper.value.CallTypeInferences
-import lang.temper.value.MetadataValueMapHelpers.get
-import lang.temper.value.TString
 import lang.temper.value.Tree
-import lang.temper.value.connectedSymbol
 import lang.temper.value.functionContained
 import lang.temper.value.toLispy
 
@@ -276,7 +272,7 @@ internal object TranslateDotHelper {
             }
         }
         val typeIsConnected = firstMember != null && firstMember.enclosingType.let { typeShape ->
-            val connectedKey = typeShape.metadata[connectedSymbol, TString]
+            val connectedKey = typeShape.connectedKey
             if (connectedKey == null) {
                 false
             } else {
@@ -444,15 +440,16 @@ internal object TranslateDotHelper {
 
 internal fun connectedKeyForMember(member: MemberShape): String? = when (member) {
     is MethodShape -> connectedKeyForMethod(member)
-    is PropertyShape -> connectedMethodKeyForProperty(member) {
-        GETTER_AFFIX !in it && SETTER_AFFIX !in it
+    is PropertyShape -> when {
+        member.hasSetter || member.getter != null -> null // any hint of accessors means no connection
+        else -> member.connectedKey
     }
-    is VisibleMemberShape -> member.metadata[connectedSymbol, TString]
+    is VisibleMemberShape -> member.connectedKey
     else -> null
 }
 
 private fun connectedKeyForMethod(methodShape: MethodShape): String? {
-    val connectedMethodKey = methodShape.metadata[connectedSymbol, TString]
+    val connectedMethodKey = methodShape.connectedKey
     if (connectedMethodKey != null) {
         return connectedMethodKey
     }
@@ -460,37 +457,23 @@ private fun connectedKeyForMethod(methodShape: MethodShape): String? {
     return when (methodShape.methodKind) {
         MethodKind.Normal -> null
         MethodKind.Getter -> propertyShapeFor(methodShape)?.let { propertyShape ->
-            connectedMethodKeyForProperty(propertyShape) { GETTER_AFFIX in it }
+            when {
+                propertyShape.hasSetter -> null
+                else -> propertyShape.connectedKey // no reliable `hasGetter`
+            }
         }
         MethodKind.Setter -> propertyShapeFor(methodShape)?.let { propertyShape ->
-            connectedMethodKeyForProperty(propertyShape) { SETTER_AFFIX in it }
+            when {
+                propertyShape.hasSetter && propertyShape.getter == null -> propertyShape.connectedKey
+                else -> null
+            }
         }
         MethodKind.Constructor -> null
     }
 }
 
-/**
- * There may be multiple connected keys attached to a property.
- * Return the first one matching filter which lets us use the `::getFoo` key for
- * a getter and the `::setFoo` key for the setter.
- */
-private fun connectedMethodKeyForProperty(
-    propertyShape: PropertyShape,
-    filter: (String) -> Boolean,
-): String? = propertyShape.metadata[connectedSymbol]?.mapFirst { value ->
-    val stringContent = TString.unpackOrNull(value)
-    if (stringContent != null && filter(stringContent)) {
-        stringContent
-    } else {
-        null
-    }
-}
-
 private fun propertyShapeFor(methodShape: MethodShape): PropertyShape? =
     methodShape.enclosingType.properties.firstOrNull { it.symbol == methodShape.symbol }
-
-private const val GETTER_AFFIX = "::get"
-private const val SETTER_AFFIX = "::set"
 
 private fun garbageTranslatedHelper(pos: Position, message: String) =
     TranslateDotHelper.TranslatedDotHelper(

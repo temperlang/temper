@@ -80,7 +80,6 @@ import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.TVoid
-import lang.temper.value.connectedSymbol
 import lang.temper.value.failSymbol
 import lang.temper.value.sealedTypeSymbol
 
@@ -96,9 +95,10 @@ class RustTranslator(
         DescriptorsForDeclarations.Key(RustBackend.Factory),
     )?.nameToDescriptor ?: mapOf()
     private var closureCount = 0
+    private val builderItems = mutableListOf<Rust.Item>()
     private val decls = mutableMapOf<ResolvedName, DeclInfo>()
-    private var insideMutableType = false
     private val failVars = mutableSetOf<ResolvedName>()
+    private var insideMutableType = false
     private val functionContextStack = mutableListOf<FunctionContext>()
     private val logSink = LogSink.devNull // TODO what?
     private val loopLabels = mutableListOf<Rust.Id?>()
@@ -179,6 +179,15 @@ class RustTranslator(
                     // Init and declare our own things.
                     add(init)
                     addAll(moduleItems)
+                    // Builders.
+                    if (builderItems.isNotEmpty()) {
+                        builderItems.add(Rust.Use(pos, "super::*".toId(pos)).toItem())
+                        Rust.Module(
+                            pos,
+                            id = "builders".toId(pos), // TODO Uniqueness?
+                            block = Rust.Block(pos, statements = builderItems),
+                        ).toItem(pub = Rust.VisibilityPub(pos)).also { add(it) }
+                    }
                     // Tests.
                     if (testItems.isNotEmpty()) {
                         testItems.add(Rust.Use(pos, "super::*".toId(pos)).toItem())
@@ -324,7 +333,7 @@ class RustTranslator(
         returnType: Type2,
     ) {
         // TODO Share this exclusion logic with Java & Js.
-        // If only `this` plus up to 1 more, don't bother with builder. TODO Instead checked named/optional?
+        // If only `this` plus up to 1 more, don't bother with builder.
         fn.parameters.parameters.count { it.name != fn.parameters.thisName } <= 1 && return
         // And for now, skip those with rest parameters. TODO Extract to list value?
         fn.parameters.restParameter != null && return
@@ -343,7 +352,7 @@ class RustTranslator(
         val builderId = "${targetId.outName.outputNameText}Builder".toId(targetId.pos)
         val optionsId = "${targetId.outName.outputNameText}Options".toId(targetId.pos)
         // Figure out if we have requireds and/or optionals.
-        // We need to separate these in Rust because requireds often can't Default.
+        // We need to separate these in Rust because requireds often can't default.
         // We could get fancy about which requireds can, but that also becomes cognitive effort for users.
         val rustParams = translateParameters(
             fn.parameters,
@@ -358,110 +367,121 @@ class RustTranslator(
         }.let { (requireds, optionals) ->
             requireds.map { it.second } to optionals.map { it.second }
         }
+        val self = "self".toKeyId(pos)
+        val selfish = "selfish".toKeyId(pos)
         fun paramsToStructAdded(
             id: Rust.Id,
             params: List<Rust.FunctionParamOption>,
             attrs: List<Rust.AttrOuter> = listOf(),
+            fieldPub: Rust.VisibilityPub? = null,
         ): List<Rust.GenericParam> {
             // Work with Rust nodes rather than TmpL nodes because we already have generics handy in Rust form.
             // Any simple type name matching a formal has to be a reference to that formal.
             val usedTypes = params.findAllSimpleTypeNames()
-            val filteredGenerics = generics.filter { generic ->
-                val genericId = when (generic) {
-                    is Rust.Id -> generic
-                    is Rust.TypeParam -> generic.id
-                    else -> error(generic)
-                }.outName.outputNameText
-                genericId in usedTypes
-            }.deepCopy()
+            val filteredGenerics = generics.filter { it.lastIdText() in usedTypes }.deepCopy()
             Rust.Struct(
                 pos = pos,
                 id = id,
                 generics = filteredGenerics,
                 fields = params.map { param ->
                     param as Rust.FunctionParam
-                    Rust.StructField(param.pos, pub = pub, id = param.pattern as Rust.Id, type = param.type)
+                    Rust.StructField(param.pos, pub = fieldPub, id = param.pattern as Rust.Id, type = param.type)
                 },
-            ).also { moduleItems.add(it.toItem(attrs = attrs, pub = pub)) }
+            ).also { builderItems.add(it.toItem(attrs = attrs, pub = pub)) }
             return filteredGenerics
         }
-        val self = "self".toKeyId(pos)
         fun callNew(params: List<Rust.FunctionParamOption>) = Rust.Call(
             pos,
             callee = targetId.deepCopy().extendWith("new"),
             args = params.map { self.deepCopy().member(it.toId(), notMethod = true) },
         )
+        // Requireds struct first to get its generics.
+        // Adding new requireds is a breaking change anyway, so presume this is also fixed in Rust.
+        val attrs = listOf(buildDerive(pos, listOf("Clone")))
+        val requiredGenerics = paramsToStructAdded(builderId, requireds, attrs = attrs, fieldPub = pub)
         val rustReturnType = translateType(returnType, fn.returnType.pos)
+        // Optionals struct and impl next. We at least want optionals generics before requireds impl.
         val optionalGenerics = when {
             optionals.isEmpty() -> listOf()
             else -> {
                 // Manage optionals independently so they can default more easily.
-                val attrs = listOf(buildDerive(pos, listOf("Clone", "Default")))
-                val optionalGenerics = paramsToStructAdded(optionsId, optionals, attrs = attrs)
-                if (requireds.isEmpty()) {
-                    // If someone adds requireds later, then that's already breaking, so this is fine here.
-                    Rust.Impl(
-                        pos,
-                        generics = optionalGenerics.deepCopy(),
-                        trait = null,
-                        type = optionsId.makeTypeRef(optionalGenerics),
-                        items = buildList {
-                            Rust.Function(
-                                pos,
-                                id = "build".toId(pos),
-                                // Pass self by move on purpose in these, so we can avoid cloning.
-                                // We make builder types Clone in case anyone badly wants copies on their own.
-                                params = listOf(self),
-                                returnType = rustReturnType,
-                                block = Rust.Block(pos, result = callNew(optionals)),
-                            ).also { add(it.toItem(pub = pub)) }
-                        },
-                    ).also { moduleItems.add(it.toItem()) }
+                val attrs = listOf(buildDerive(pos, listOf("Clone")))
+                val selfishParam = Rust.FunctionParam(pos, selfish.deepCopy(), builderId.makeTypeRef(requiredGenerics))
+                val selfishPlusOptionals = buildList {
+                    add(selfishParam)
+                    addAll(optionals)
                 }
-                optionalGenerics
-            }
-        }
-        if (requireds.isNotEmpty()) {
-            // Adding new requireds is a breaking change anyway, so presume this is also fixed in Rust.
-            val attrs = listOf(buildDerive(pos, listOf("Clone")))
-            val filteredGenerics = paramsToStructAdded(builderId, requireds, attrs = attrs)
-            // Adding new optionals *isn't* breaking, but adding a new related "options" field to requireds would be.
-            // So make a builder independent of optionals, and another that acknowledges them if present.
-            Rust.Impl(
-                pos,
-                generics = filteredGenerics.deepCopy(),
-                trait = null,
-                type = builderId.makeTypeRef(filteredGenerics),
-                items = buildList {
-                    Rust.Function(
-                        pos,
-                        id = "build".toId(pos),
-                        params = listOf(self),
-                        returnType = rustReturnType,
-                        block = Rust.Block(
-                            pos,
-                            result = when {
-                                // Just call the constructor if we only have requireds.
-                                optionals.isEmpty() -> callNew(requireds)
-                                // Delegate to the with-optionals builder.
-                                else -> self.deepCopy().methodCall(
-                                    key = "build_with",
-                                    args = listOf(makePath(pos, "std", "default", "Default", "default").call()),
-                                )
-                            },
-                        ),
-                    ).also { add(it.toItem(pub = pub)) }
-                    if (optionals.isNotEmpty()) {
-                        val optionsArg = "options".toId(pos)
+                val optionalGenerics = paramsToStructAdded(optionsId, selfishPlusOptionals, attrs = attrs)
+                Rust.Impl(
+                    pos,
+                    generics = optionalGenerics.deepCopy(),
+                    trait = null,
+                    type = optionsId.makeTypeRef(optionalGenerics),
+                    items = buildList {
                         Rust.Function(
                             pos,
-                            id = "build_with".toId(pos),
-                            generics = optionalGenerics.deepCopy(),
-                            params = listOf(
-                                self.deepCopy(),
-                                Rust.FunctionParam(pos, optionsArg, optionsId.makeTypeRef(optionalGenerics)),
+                            id = "new".toId(pos),
+                            params = listOf(selfishParam.deepCopy()),
+                            returnType = "Self".toKeyId(pos),
+                            block = Rust.Block(
+                                pos,
+                                result = Rust.StructExpr(
+                                    pos,
+                                    id = "Self".toKeyId(pos),
+                                    members = buildList {
+                                        add(Rust.StructExprField(pos, selfish.deepCopy(), null))
+                                        for (param in optionals) {
+                                            param is Rust.FunctionParam
+                                            add(Rust.StructExprField(pos, param.toId(), expr = "None".toId(pos)))
+                                        }
+                                    },
+                                ),
                             ),
-                            returnType = rustReturnType,
+                        ).also { add(it.toItem(pub = pub.deepCopy())) }
+                        for (param in optionals) {
+                            param as Rust.FunctionParam
+                            // Undo optional for setter method params.
+                            val type = (param.type as? Rust.GenericType)?.args?.first() as Rust.Type?
+                            val paramId = param.pattern as Rust.Id
+                            Rust.Function(
+                                pos = param.pos,
+                                id = paramId.deepCopy(),
+                                params = listOf(
+                                    Rust.FunctionParam(
+                                        pos = param.pos,
+                                        pattern = Rust.IdPattern(pos, Rust.IdPatternMut(pos), self.deepCopy()),
+                                        type = null,
+                                    ),
+                                    Rust.FunctionParam(
+                                        pos = param.pos,
+                                        pattern = paramId.deepCopy(),
+                                        type = type,
+                                    ),
+                                ),
+                                returnType = "Self".toKeyId(param.pos),
+                                block = Rust.Block(
+                                    pos,
+                                    statements = Rust.ExprStatement(
+                                        param.pos,
+                                        Rust.Operation(
+                                            param.pos,
+                                            self.deepCopy().member(paramId.deepCopy(), notMethod = true),
+                                            Rust.Operator(pos, RustOperator.Assign),
+                                            paramId.deepCopy().wrapSome(),
+                                        ),
+                                    ).let { listOf(it) },
+                                    result = self.deepCopy(),
+                                ),
+                            ).also { add(it.toItem(pub = pub.deepCopy())) }
+                        }
+                        Rust.Function(
+                            pos,
+                            id = "build".toId(pos),
+                            generics = generics.except(optionalGenerics),
+                            // Pass self by move on purpose in these, so we can avoid cloning.
+                            // We make builder types Clone in case anyone badly wants copies on their own.
+                            params = listOf(self.deepCopy()),
+                            returnType = rustReturnType.deepCopy(),
                             block = Rust.Block(
                                 pos,
                                 result = Rust.Call(
@@ -470,19 +490,65 @@ class RustTranslator(
                                     args = buildList {
                                         // Different subjects for each case here.
                                         for (param in requireds) {
-                                            add(self.deepCopy().member(param.toId(), notMethod = true))
+                                            val selfish = self.deepCopy().member("selfish")
+                                            add(selfish.member(param.toId(), notMethod = true))
                                         }
                                         for (param in optionals) {
-                                            add(optionsArg.deepCopy().member(param.toId(), notMethod = true))
+                                            add(self.deepCopy().member(param.toId(), notMethod = true))
                                         }
                                     },
                                 ),
                             ),
-                        ).also { add(it.toItem(pub = pub)) }
-                    }
-                },
-            ).also { moduleItems.add(it.toItem()) }
+                        ).also { add(it.toItem(pub = pub.deepCopy())) }
+                    },
+                ).also { builderItems.add(it.toItem()) }
+                optionalGenerics
+            }
         }
+        // Requireds impl.
+        // Adding new optionals *isn't* breaking, but adding a new related "options" field to requireds would be.
+        // So make a builder independent of optionals, and another that acknowledges them if present.
+        Rust.Impl(
+            pos,
+            generics = requiredGenerics.deepCopy(),
+            trait = null,
+            type = builderId.makeTypeRef(requiredGenerics),
+            items = buildList {
+                Rust.Function(
+                    pos,
+                    id = "build".toId(pos),
+                    generics = generics.except(requiredGenerics),
+                    params = listOf(self),
+                    returnType = rustReturnType,
+                    block = Rust.Block(
+                        pos,
+                        result = when {
+                            // Just call the constructor if we only have requireds.
+                            optionals.isEmpty() -> callNew(requireds)
+                            // Or else delegate to the optionals builder.
+                            else -> self.deepCopy().methodCall("options").methodCall("build")
+                        },
+                    ),
+                ).also { add(it.toItem(pub = pub)) }
+                if (optionals.isNotEmpty()) {
+                    Rust.Function(
+                        pos,
+                        id = "options".toId(pos),
+                        generics = optionalGenerics.except(requiredGenerics),
+                        params = listOf(self.deepCopy()),
+                        returnType = optionsId.makeTypeRef(optionalGenerics),
+                        block = Rust.Block(
+                            pos,
+                            result = Rust.Call(
+                                pos,
+                                callee = optionsId.deepCopy().extendWith("new"),
+                                args = listOf(self.deepCopy()),
+                            ),
+                        ),
+                    ).also { add(it.toItem(pub = pub)) }
+                }
+            },
+        ).also { builderItems.add(it.toItem()) }
     }
 
     private fun processModuleFunctionDeclaration(decl: TmpL.ModuleFunctionDeclaration) {
@@ -1036,27 +1102,29 @@ class RustTranslator(
         pos: Position,
         found: Description,
         wanted: Description,
-    ): Rust.Path = when {
-        found.definition() == WellKnownTypes.noStringIndexTypeDefinition &&
-            wanted.definition() == WellKnownTypes.stringIndexOptionTypeDefinition
-        -> "temper_core".toKeyId(pos).extendWith(listOf("string", "cast_none_as_index_option"))
-
-        found.definition() == WellKnownTypes.stringIndexTypeDefinition &&
-            wanted.definition() == WellKnownTypes.stringIndexOptionTypeDefinition -> makePath(pos, "Some")
-
-        found.definition() == WellKnownTypes.stringIndexOptionTypeDefinition &&
-            wanted.definition() == WellKnownTypes.stringIndexTypeDefinition
-        -> "temper_core".toKeyId(pos).extendWith(listOf("string", "cast_as_index"))
-
-        found.definition() == WellKnownTypes.stringIndexOptionTypeDefinition &&
-            wanted.definition() == WellKnownTypes.noStringIndexTypeDefinition
-        -> "temper_core".toKeyId(pos).extendWith(listOf("string", "cast_as_no_index"))
-
-        else -> {
-            val typeSegment = Rust.GenericArgs(pos, listOf(translateType(wanted.type!!, pos)))
-            // TODO Some way to make fewer intermediate lists?
-            "temper_core".toKeyId(pos).extendWith("cast").extendWith(listOf(typeSegment))
+    ): Rust.Path = when (found.definition()) {
+        WellKnownTypes.listTypeDefinition, WellKnownTypes.listBuilderTypeDefinition -> when (wanted.definition()) {
+            WellKnownTypes.listedTypeDefinition -> TO_LISTED_TO_LISTED_NAME.toId(pos)
+            else -> null
         }
+        WellKnownTypes.noStringIndexTypeDefinition -> when (wanted.definition()) {
+            WellKnownTypes.stringIndexOptionTypeDefinition -> "cast_none_as_index_option"
+            else -> null
+        }?.let { "temper_core".toKeyId(pos).extendWith(listOf("string", it)) }
+        WellKnownTypes.stringIndexTypeDefinition -> when (wanted.definition()) {
+            WellKnownTypes.stringIndexOptionTypeDefinition -> makePath(pos, "Some")
+            else -> null
+        }
+        WellKnownTypes.stringIndexOptionTypeDefinition -> when (wanted.definition()) {
+            WellKnownTypes.stringIndexTypeDefinition -> "cast_as_index"
+            WellKnownTypes.noStringIndexTypeDefinition -> "cast_as_no_index"
+            else -> null
+        }?.let { "temper_core".toKeyId(pos).extendWith(listOf("string", it)) }
+        else -> null
+    } ?: run {
+        val typeSegment = Rust.GenericArgs(pos, listOf(translateType(wanted.type!!, pos)))
+        // TODO Some way to make fewer intermediate lists?
+        "temper_core".toKeyId(pos).extendWith("cast").extendWith(listOf(typeSegment))
     }
 
     private fun buildDerive(pos: Position, deriveArgs: List<String>) = Rust.AttrOuter(
@@ -1825,6 +1893,12 @@ class RustTranslator(
             }
         }.let { result ->
             when {
+                // Upcasting to listed doesn't need checked at all for any valid casts.
+                // Any invalid casts are reported as errors by frontend validation.
+                // But we still need to wrapOk because outer layers with less context still
+                // see the claimed tmpl type as being bubbly.
+                wanted.definition() == WellKnownTypes.listedTypeDefinition -> result.wrapOk()
+                // For others, trust standard type expectations.
                 cast.type.described().bubbly -> result.wrapOkOrElse(pos)
                 else -> result.methodCall("unwrap") // such as for assertAs
             }
@@ -3149,7 +3223,7 @@ class RustTranslator(
 
     internal fun translateTypeDefinition(def: TypeDefinition, pos: Position, isParam: Boolean = false): Rust.Type {
         // First see if we have a connected type.
-        TString.unpackOrNull(def.metadata[connectedSymbol]?.firstOrNull())?.let { key ->
+        def.connectedKey?.let { key ->
             connectedTypes[key]?.let { typeName ->
                 return@translateTypeDefinition translateTypeConnected(pos, typeName)
             }

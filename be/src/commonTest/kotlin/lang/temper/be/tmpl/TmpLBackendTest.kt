@@ -830,9 +830,9 @@ class TmpLBackendTest {
             |           content:
             |               ```
             |               //// work//isEmptyWrapper/ => isEmptyWrapper.tmpl
-            |               let StringIsEmpty#0 = builtins.StringIsEmpty;
+            |               let StringGetIsEmpty#0 = builtins.StringGetIsEmpty;
             |               let return__0(@QName("test-library/isEmptyWrapper.(s)") s__1: String): Boolean {
-            |                 return StringIsEmpty#0(s__1);
+            |                 return StringGetIsEmpty#0(s__1);
             |               }
             |               export return__0;
             |
@@ -866,7 +866,7 @@ class TmpLBackendTest {
             |               ```
             |               //// work//lengthWrapper/ => lengthWrapper.tmpl
             |               let return__0(@QName("test-library/lengthWrapper.(ls)") ls__1: List<Int32>): Int32 {
-            |                 return (inline ListLength)(ls__1);
+            |                 return (inline ListGetLength)(ls__1);
             |               }
             |               export return__0;
             |
@@ -1402,7 +1402,7 @@ class TmpLBackendTest {
             |            "content": ```
             |                //// work//example/ => example.tmpl
             |                let GetConsole#0 = builtins.GetConsole;
-            |                let DequeIsEmpty#0 = builtins.DequeIsEmpty;
+            |                let DequeGetIsEmpty#0 = builtins.DequeGetIsEmpty;
             |                let DequeRemoveFirst#0 = builtins.DequeRemoveFirst;
             |                let isNull#0 = builtins.isNull /* <isNullT extends AnyValue>(isNullT?) -> Boolean */;
             |                let ConsoleLog#0 = builtins.ConsoleLog;
@@ -1411,7 +1411,7 @@ class TmpLBackendTest {
             |                  var t#0: String | Null;
             |                  @fail var fail#0: Boolean;
             |                  @QName("test-library/example.f().c=") let c__0: String | Null;
-            |                  if (!DequeIsEmpty#0(d__0)) {
+            |                  if (!DequeGetIsEmpty#0(d__0)) {
             |                    t#0 = DequeRemoveFirst#0(d__0);
             |                    c__0 = t#0;
             |                  } else {
@@ -2205,13 +2205,13 @@ class TmpLBackendTest {
                     |{
                     |  defines: {
                     |    defines.temper: ```
-                    |      @connected("C")
+                    |      @connected
                     |      export class C {
-                    |        @connected("C::f")
+                    |        @connected
                     |        public static let f(): Void { console.log("f"); }
-                    |        @connected("C::g")
+                    |        @connected
                     |        public static let g(): Void { console.log("g"); }
-                    |        @connected("C::constructor")
+                    |        @connected
                     |        public constructor() {}
                     |      }
                     |      ```
@@ -2287,7 +2287,7 @@ class TmpLBackendTest {
             |}
         """.trimMargin(),
         supportNetwork = defaultTestSupportNetwork.copy(
-            isConnected = { it == "::getConsole" },
+            isConnected = { it == "core.getConsole()" },
         ),
     )
 
@@ -2333,7 +2333,7 @@ class TmpLBackendTest {
             |}
         """.trimMargin(),
         supportNetwork = defaultTestSupportNetwork.copy(
-            isConnected = { it == "::getConsole" || it == "C::f" },
+            isConnected = { it == "core.getConsole()" || it == "test-library/defines.type C.f()" },
         ),
     )
 
@@ -2380,7 +2380,16 @@ class TmpLBackendTest {
             |}
         """.trimMargin(),
         supportNetwork = defaultTestSupportNetwork.copy(
-            isConnected = { it == "::getConsole" || it == "C::f" || it == "C" || it == "C::constructor" },
+            isConnected = { key ->
+                when (key) {
+                    "core.getConsole()",
+                    "test-library/defines.type C",
+                    "test-library/defines.type C.constructor()",
+                    "test-library/defines.type C.f()",
+                    -> true
+                    else -> false
+                }
+            },
         ),
     )
 
@@ -2390,8 +2399,13 @@ class TmpLBackendTest {
         supportNetwork = defaultTestSupportNetwork.copy(
             isConnected = { connectedKey ->
                 when (connectedKey) {
-                    "I", "I::f", "I::getA" -> true
-                    "I::g", "I::getB" -> false
+                    "test-library/foo.type I",
+                    "test-library/foo.type I.f()",
+                    "test-library/foo.type I.get a()",
+                    -> true
+                    "test-library/foo.type I.g()",
+                    "test-library/foo.type I.get b()",
+                    -> false
                     else -> false
                 }
             },
@@ -2402,15 +2416,15 @@ class TmpLBackendTest {
                 |  foo: {
                 |    foo.temper:
                 |      ```
-                |      @connected("I")
+                |      @connected
                 |      export interface I {
-                |        @connected("I::f")
+                |        @connected
                 |        f(): Void {}
-                |        @connected("I::g")
+                |        @connected
                 |        g(): Void;
-                |        @connected("I::getA")
+                |        @connected
                 |        get a(): Int { 42 }
-                |        @connected("I::getB")
+                |        @connected
                 |        get b(): Int;
                 |      }
                 |      ```,
@@ -2525,7 +2539,7 @@ class TmpLBackendTest {
                 connectedKey: String,
                 genre: Genre,
             ): SupportCode? {
-                if (connectedKey == "Date::today") {
+                if (connectedKey == "std/temporal.type Date.today()") {
                     return object : InlineSupportCode<TmpL.Tree, TmpLTranslator> {
                         override val needsThisEquivalent: Boolean get() = false
                         override fun inlineToTree(
@@ -3567,12 +3581,12 @@ class TmpLBackendTest {
             |{
             |  foo: {
             |    "foo.temper": ```
-            |      @connected("C")
+            |      @connected
             |      class C {
-            |        @connected("C::constructor")
+            |        @connected
             |        public constructor(): Void {}
             |
-            |        @connected("C::a")
+            |        @connected
             |        public a(): String { "" }
             |
             |        // not connected
@@ -3639,7 +3653,7 @@ class TmpLBackendTest {
     fun multipleUsersOfSameConnected() = assertGeneratedCode(
         inputJsonPathToContent = """
             |{
-            |  // Both of these use String::get
+            |  // Both of these use core.type String.get()
             |  foo: {
             |    "foo.temper": ```
             |      export let f(s: String): Int { s[String.begin] orelse 0 }

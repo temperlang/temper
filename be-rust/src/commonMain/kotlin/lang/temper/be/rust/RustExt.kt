@@ -377,13 +377,28 @@ internal fun Rust.FunctionParamOption.toId(): Rust.Id {
     }
 }
 
-internal fun Rust.GenericParam.toArg(): Rust.Id {
+internal fun Iterable<Rust.GenericParam>.except(unwanteds: Iterable<Rust.GenericParam>): List<Rust.GenericParam> {
+    val unwantedIdTexts = unwanteds.mapTo(mutableSetOf()) { it.lastIdText() }
+    return buildList {
+        for (generic in this@except) {
+            if (generic.lastIdText() !in unwantedIdTexts) {
+                add(generic.deepCopy())
+            }
+        }
+    }
+}
+
+internal fun Rust.GenericParam.lastId(): Rust.Id {
     return when (this) {
         is Rust.Id -> this
         is Rust.TypeParam -> id
         is Rust.PathSegments -> segments.last() as Rust.Id
-    }.deepCopy()
+    }
 }
+
+internal fun Rust.GenericParam.lastIdText(): String = lastId().outName.outputNameText
+
+internal fun Rust.GenericParam.toArg(): Rust.Id = lastId().deepCopy()
 
 internal fun Rust.Path.makeTypeRef(generics: List<Rust.GenericParam>): Rust.Type = when {
     generics.isEmpty() -> this

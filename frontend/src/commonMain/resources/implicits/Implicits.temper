@@ -109,12 +109,12 @@ export class Null extends Equatable {
  * ```
  */
 @imu
-@connected("Empty")
+@connected
 export class Empty extends Equatable {
   private constructor(): Void {}
 }
 let emptySingleton: Empty = doPure { new Empty() };
-@connected("empty")
+@connected
 export let empty(): Empty { emptySingleton }
 
 export interface Function {}
@@ -130,7 +130,7 @@ export interface GeneratorFn extends Function {}
  * One of a sequence of results from a [snippet/type/Generator].
  */
 @partialImu
-@connected("GeneratorResult")
+@connected
 export sealed interface GeneratorResult<@out YIELD extends AnyValue> {}
 
 /**
@@ -149,7 +149,7 @@ export sealed interface GeneratorResult<@out YIELD extends AnyValue> {}
  * We avoid the term "coroutine" because many programmers associate it
  * narrowly with a kind of parallelism.
  */
-@connected("Generator")
+@connected
 export interface Generator<@out YIELD extends AnyValue> {
   /**
    * Starts/resumes the computation and runs until it pauses or completes.
@@ -165,7 +165,7 @@ export interface Generator<@out YIELD extends AnyValue> {
    * [snippet/builtin/yield].  If a *GeneratorFn* bubbles, the call to
    * next propagates it.
    */
-  @connected("Generator::next")
+  @connected
   public next(): GeneratorResult<YIELD> throws Bubble;
   /**
    * True if subsequent calls to [snippet/type/Generator/method/next]
@@ -177,7 +177,7 @@ export interface Generator<@out YIELD extends AnyValue> {
    * *next* would return a *DoneResult* and reading *done* after that
    * would get [snippet/builtin/true].
    */
-  @connected("Generator::done")
+  @connected
   public done: Boolean;
   /**
    * Should be called once it is realized that
@@ -187,7 +187,7 @@ export interface Generator<@out YIELD extends AnyValue> {
    * After *close* exits, [snippet/type/Generator/property/done]
    * will be [snippet/builtin/true].
    */
-  @connected("Generator::close")
+  @connected
   public close(): Void;
 }
 
@@ -209,7 +209,7 @@ export interface SafeGenerator<@out YIELD extends AnyValue> extends Generator<YI
    * For a [snippet/type/GeneratorFn], this is the value passed to
    * [snippet/builtin/yield].
    */
-  @connected("SafeGenerator::next")
+  @connected
   public next(): GeneratorResult<YIELD>;
 }
 
@@ -218,10 +218,10 @@ export interface SafeGenerator<@out YIELD extends AnyValue> extends Generator<YI
  * [snippet/type/Generator/property/done] is [snippet/builtin/false].
  */
 @partialImu
-@connected("ValueResult")
+@connected
 export class ValueResult<@out YIELD extends AnyValue> extends GeneratorResult<YIELD> {
   public value: YIELD;
-  @connected("ValueResult::constructor")
+  @connected
   public constructor(value: YIELD): Void {
     this.value = value;
   }
@@ -232,9 +232,9 @@ export class ValueResult<@out YIELD extends AnyValue> extends GeneratorResult<YI
  * [snippet/type/Generator/property/done] is [snippet/builtin/true].
  */
 @imu
-@connected("DoneResult")
+@connected
 export class DoneResult<@out YIELD extends AnyValue> extends GeneratorResult<YIELD> {}
-@connected("doneResult")
+@connected
 export let doneResult<YIELD extends AnyValue>(): DoneResult<YIELD> { new DoneResult<YIELD>() }
 
 /**
@@ -308,7 +308,7 @@ extends SafeGenerator<YIELD> {
  * value is available or what it is.
  * Use [builtin/await] to get at the value asynchronously.
  */
-@connected("Promise")
+@connected
 export class Promise<@out R extends AnyValue> {}
 
 /**
@@ -322,19 +322,19 @@ export class Promise<@out R extends AnyValue> {}
  * provided resolution instead of that provided by the owner of the promise
  * builder.
  */
-@connected("PromiseBuilder")
+@connected
 export class PromiseBuilder<R extends AnyValue> {
   private let _promise: Promise<R>;
 
-  @connected("PromiseBuilder::getPromise")
+  @connected
   public get promise(): Promise<R> { _promise }
-  @connected("PromiseBuilder::constructor")
+  @connected
   public constructor(): Void;
 
-  @connected("PromiseBuilder::complete")
+  @connected
   public complete(completion: R): Void;
 
-  @connected("PromiseBuilder::breakPromise")
+  @connected
   public breakPromise(): Void;
 }
 
@@ -375,21 +375,21 @@ export class String extends MapKey {
    * must be a Unicode scalar value, which is between 0 and 0x10FFFF, inclusive,
    * except for the surrogate range 0xD800 through 0xDFFF.
    */
-  @connected("String::fromCodePoint")
+  @connected
   public static fromCodePoint(codePoint: Int): String throws Bubble;
 
   /** Convert the list of code points to a string if they're valid. */
-  @connected("String::fromCodePoints")
+  @connected
   public static fromCodePoints(codePoints: Listed<Int>): String throws Bubble;
 
   /** True iff this string has no code-points. */
-  @connected("String::isEmpty")
+  @connected
   public get isEmpty(): builtins.Boolean { content == "" }
 
   /**
    * A string index that works for the start of any string.
    */
-  @connected("String::begin")
+  @connected
   public static let begin: StringIndex;
 
   /**
@@ -403,7 +403,7 @@ export class String extends MapKey {
    * "foo".end.compareTo(String.begin) >  0
    * ```
    */
-  @connected("String::end")
+  @connected
   public get end(): StringIndex;
 
   /**
@@ -419,7 +419,7 @@ export class String extends MapKey {
    * "foo"[String.begin] == char'f'
    * ```
    */
-  @connected("String::get")
+  @connected
   public get(index: StringIndex): Int;
 
   /**
@@ -429,13 +429,13 @@ export class String extends MapKey {
    * !"".hasIndex(String.begin) && "foo".hasIndex(String.begin)
    * ```
    */
-  @connected("String::hasIndex")
+  @connected
   public hasIndex(index: StringIndex): Boolean;
 
   /**
    * The first index of *target* if found, starting from *start*.
    */
-  @connected("String::indexOf")
+  @connected
   public indexOf(
     target: String,
     start: StringIndex = String.begin,
@@ -470,7 +470,7 @@ export class String extends MapKey {
    * s[i] == char'b'
    * ```
    */
-  @connected("String::next")
+  @connected
   public next(index: StringIndex): StringIndex;
 
   /**
@@ -484,7 +484,7 @@ export class String extends MapKey {
    * s[i] == char'c'
    * ```
    */
-  @connected("String::prev")
+  @connected
   public prev(index: StringIndex): StringIndex;
 
   /**
@@ -492,7 +492,7 @@ export class String extends MapKey {
    * negative/backward. If forward but there's no such code-point, returns *end*, or
    * else *begin* for no such code-point when stepping backward.
    */
-  @connected("String::step")
+  @connected
   public step(index: StringIndex, by: Int): StringIndex {
     var newIndex = index;
     if (by >= 0) {
@@ -549,7 +549,7 @@ export class String extends MapKey {
    * !s.hasAtLeast(i, j, 100)   // Fast path too
    * ```
    */
-  @connected("String::hasAtLeast")
+  @connected
   public hasAtLeast(begin: StringIndex, end: StringIndex, minCount: Int): Boolean;
 
   /**
@@ -567,7 +567,7 @@ export class String extends MapKey {
    * s.countBetween(i, j) == (26 - 2)
    * ```
    */
-  @connected("String::countBetween")
+  @connected
   public countBetween(begin: StringIndex, end: StringIndex): Int;
 
   /**
@@ -583,11 +583,11 @@ export class String extends MapKey {
    * "sub" == s.slice(i, j)
    * ```
    */
-  @connected("String::slice")
+  @connected
   public slice(begin: StringIndex, end: StringIndex): String;
 
   /** Where splitting by "" returns each code point as a separate string. */
-  @connected("String::split")
+  @connected
   public split(separator: builtins.String): List<builtins.String>;
 
   /**
@@ -606,7 +606,7 @@ export class String extends MapKey {
    * //!outputs "U+72"
    * ```
    */
-  @connected("String::forEach")
+  @connected
   public forEach(@inlineUnrealizedGoal let body: fn (Int): Void): Void {
     for (var index = String.begin; this.hasIndex(index); index = this.next(index)) {
       let codePoint: Int = this[index];
@@ -615,18 +615,18 @@ export class String extends MapKey {
   }
 
   /** Supports numeric JSON format plus Infinity and NaN. */
-  @connected("String::toFloat64")
+  @connected
   public toFloat64(): builtins.Float64 throws Bubble;
 
   /** Supports integer JSON format, plus any radix 2 through 36. */
-  @connected("String::toInt32")
+  @connected
   public toInt32(radix: builtins.Int = 10): builtins.Int throws Bubble;
 
   /** Supports integer JSON format, plus any radix 2 through 36. */
-  @connected("String::toInt64")
+  @connected
   public toInt64(radix: builtins.Int = 10): builtins.Int64 throws Bubble;
 
-  @connected("String::toString")
+  @connected
   public toString(): builtins.String { content }
 }
 
@@ -642,7 +642,7 @@ export class String extends MapKey {
  * that typically translates to an idiomatic integer.
  */
 @imu
-@connected("StringIndexOption")
+@connected
 export sealed interface StringIndexOption extends Equatable {
   /**
    * Sorts [snippet/type/StringIndex/static/none] before every valid string index.
@@ -651,7 +651,7 @@ export sealed interface StringIndexOption extends Equatable {
    * that is stable within the language but which may differ across translation targets
    * with different internal string representations.
    */
-  @connected("StringIndexOption::compareTo")
+  @connected
   public compareTo(other: StringIndexOption): Int;
 }
 
@@ -661,9 +661,9 @@ export sealed interface StringIndexOption extends Equatable {
  * As noted in [snippet/type/StringIndexOption], this is an integer-like type
  * that represents the failure to find a valid string index.
  */
-@connected("NoStringIndex")
+@connected
 export class NoStringIndex extends StringIndexOption {
-  @connected("NoStringIndex::constructor")
+  @connected
   private constructor() {}
 }
 
@@ -700,10 +700,10 @@ export class NoStringIndex extends StringIndexOption {
  * string content.  This lets Temper provide consistent, efficient string operations regardless
  * of the native character size.
  */
-@connected("StringIndex")
+@connected
 export class StringIndex extends StringIndexOption {
   /** The singleton [snippet/type/NoStringIndex] value */
-  @connected("StringIndex::none")
+  @connected
   public static let none: NoStringIndex;
 
   private offset: builtins.Int;
@@ -725,17 +725,17 @@ export class StringIndex extends StringIndexOption {
  * console.log(stringBuilder.toString()); //!outputs "Goodbye."
  * ```
  */
-@connected("StringBuilder")
+@connected
 export class StringBuilder {
   private let substrings: ListBuilder<String>;
 
-  @connected("StringBuilder::constructor")
+  @connected
   public constructor(): Void {
     this.substrings = new ListBuilder<String>();
   }
 
   /** You can append a string at the end. */
-  @connected("StringBuilder::append")
+  @connected
   public append(substring: String): Void {
     substrings.add(substring);
   }
@@ -746,7 +746,7 @@ export class StringBuilder {
    * the call bubbles.  This operation can be more efficient on some backends
    * than making a temporary string from a code point just for appending.
    */
-  @connected("StringBuilder::appendCodePoint")
+  @connected
   public appendCodePoint(cp: Int): Void throws Bubble {
     append(String.fromCodePoint(cp));
   }
@@ -755,7 +755,7 @@ export class StringBuilder {
    * *appendBetween* can be connected to a function that appends a substring
    * without creating a new backing array for the substring.
    */
-  @connected("StringBuilder::appendBetween")
+  @connected
   public appendBetween(
     source: String,
     begin: StringIndex,
@@ -780,7 +780,7 @@ export class StringBuilder {
    *
    * This *StringBuilder* may be reused after clearing.
    */
-  @connected("StringBuilder::clear")
+  @connected
   public clear(): Void {
     this.substrings.clear();
   }
@@ -806,7 +806,7 @@ export class StringBuilder {
    * // stringBuilder.toString()[afterHello] would panic!
    * ```
    */
-  @connected("StringBuilder::end")
+  @connected
   public get end(): StringIndex {
     let substrings = this.substrings;
     when (substrings.length) {
@@ -823,7 +823,7 @@ export class StringBuilder {
     }
   }
 
-  @connected("StringBuilder::toString")
+  @connected
   public toString(): String {
     this.substrings.join("") { substring: String => substring }
   }
@@ -840,7 +840,7 @@ export interface Console {
   /**
    * Log a message at default informational level to this console.
    */
-   @connected("Console::log")
+   @connected
    public log(message: String): Void;
 
   // Additional methods are expected in the future.
@@ -851,7 +851,7 @@ class GlobalConsole extends Console {
     globalLog(message)
   }
 
-  @connected("GlobalConsole::globalLog")
+  @connected
   private globalLog(message: String): Void;
 }
 
@@ -867,7 +867,7 @@ export let console: Console = doPure { (): Console => new GlobalConsole() };
  * idiomatic backend library or module name for logging purposes. The default of
  * empty string is merely a placeholder.
  */
-@connected("::getConsole")
+@connected
 export let getConsole(name: String = ""): Console { console }
 
 /**
@@ -896,12 +896,12 @@ export sealed interface Listed<T> {
    * myList.length == 2
    * ```
    */
-  @connected("Listed::length")
+  @connected
   public get length(): builtins.Int;
 
   /** True if this contains no elements. */
   // TODO(tjp): Overrides don't seem to work here.
-  @connected("Listed::isEmpty")
+  @connected
   public get isEmpty(): builtins.Boolean { length == 0 }
 
   /**
@@ -924,51 +924,51 @@ export sealed interface Listed<T> {
    * // console.log(ls[ 3]);
    * ```
    */
-  @connected("Listed::get")
+  @connected
   public get(index: builtins.Int): T;
 
-  @connected("Listed::getOr")
+  @connected
   public getOr(index: builtins.Int, fallback: T): T;
 
   /**
    * A new list containing all and only elements from [begin] inclusive
    * to just before [end] exclusive.
    */
-  @connected("Listed::slice")
+  @connected
   public slice(begin: Int, end: Int): List<T>;
 
   /**
    * Provides an immutable `List` with the values of this `Listed`. If this is
    * already a `List`, typically just returns `this` without any copying.
    */
-  @connected("Listed::toList")
+  @connected
   public toList(): List<T>;
 
   /**
    * Always creates a new object and backing buffer even if this is already a
    * `ListBuilder`.
    */
-  @connected("Listed::toListBuilder")
+  @connected
   public toListBuilder(): ListBuilder<T>;
 
   /** Maps elements using [transform]. */
-  @connected("Listed::map")
+  @connected
   public map<O>(transform: fn (T): O): List<O>;
 
-  @connected("Listed::filter")
+  @connected
   public filter(predicate: fn (T): Boolean): List<T>;
 
   /**
    * Reduce to a single value, starting from the first item in this list.
    * Panic if empty.
    */
-  @connected("Listed::reduce")
+  @connected
   public reduce(accumulate: fn (T, T): T): T {
     reduceFromIndex(this[0], 1, accumulate)
   }
 
   /** Reduce to a single value, starting from the given initial value. */
-  @connected("Listed::reduceFrom")
+  @connected
   public reduceFrom<O>(initial: O, accumulate: fn (O, T): O): O {
     reduceFromIndex(initial, 0, accumulate)
   }
@@ -981,13 +981,13 @@ export sealed interface Listed<T> {
     result
   }
 
-  @connected("Listed::join")
+  @connected
   public join(separator: String, stringify: fn (T): String): String;
 
   /**
    * Returns a sorted version of this listed. Uses stable sorting.
    */
-  @connected("Listed::sorted")
+  @connected
   public sorted(compare: fn (T, T): Int): List<T>;
 }
 
@@ -1007,17 +1007,17 @@ export class List<@out T> extends Listed<T> {
   /** Same as `[...]` syntax but provides an explicit type argument. */
   public static nym`of`<T>(...content: List<T>): List<T> { content }
 
-  @connected("List::length")
+  @connected
   public get length(): builtins.Int;
 
   /** Panic on index out of bounds. */
-  @connected("List::get")
+  @connected
   public get(index: builtins.Int): T;
 
-  @connected("List::toList")
+  @connected
   public toList(): List<T> { this }
 
-  @connected("List::toListBuilder")
+  @connected
   public toListBuilder(): ListBuilder<T> {
     // TODO(tjp): If in `Listed` gives error: Expected subtype of AnyValue, but got T__40
     let result: ListBuilder<T> = new ListBuilder<T>();
@@ -1027,7 +1027,7 @@ export class List<@out T> extends Listed<T> {
 
   // TODO(mikesamuel): once we know what semantics we want for iterating when body mutates,
   // move this onto Listed.
-  @connected("List::forEach")
+  @connected
   public forEach(@inlineUnrealizedGoal let body: fn (T): Void): Void {
     let n = length;
     var i = 0;
@@ -1048,44 +1048,44 @@ export class ListBuilder<T> extends Listed<T> {
   // The content is used only from extension functions.
   private let content: AnyValue;
 
-  @connected("ListBuilder::constructor")
+  @connected
   public constructor();
   // TODO More useful as below once we have default args? Or use rest args?
   // public constructor(initialContent: Listed<T> = [] as Listed<T>);
 
   /** Panics for `at` less than 0 or greater than `length`. */
-  @connected("ListBuilder::add")
+  @connected
   public add(newValue: T, at: builtins.Int = length): Void;
 
   /** Panics for `at` less than 0 or greater than `length`. */
-  @connected("ListBuilder::addAll")
+  @connected
   public addAll(newValues: Listed<T>, at: builtins.Int = length): Void;
 
   /** Removes all values, retaining internal capacity where possible. */
-  @connected("ListBuilder::clear")
+  @connected
   public clear(): Void;
 
   /**
    * Removes the last value if any, and returns it. Expected to be constant
    * time. Panics if empty.
    */
-  @connected("ListBuilder::removeLast")
+  @connected
   public removeLast(): T;
 
   /**
    * Reverses this list builder in place.
    */
-  @connected("ListBuilder::reverse")
+  @connected
   public reverse(): Void;
 
   /** Panics on index out of bounds. */
-  @connected("ListBuilder::set")
+  @connected
   public set(index: builtins.Int, newValue: T): Void;
 
   /**
    * Sorts in place. Uses stable sorting.
    */
-  @connected("ListBuilder::sort")
+  @connected
   public sort(compare: fn (T, T): Int): Void;
 
   /**
@@ -1093,20 +1093,20 @@ export class ListBuilder<T> extends Listed<T> {
    * current items. Returns the removed items, and `newValues` are put in their
    * place. The `index` is clamped to current bounds.
    */
-  @connected("ListBuilder::splice")
+  @connected
   public splice(
     index: builtins.Int = 0,
     removeCount: builtins.Int = length,
     newValues: builtins.Listed<T> = [],
   ): builtins.List<T>;
 
-  @connected("ListBuilder::length")
+  @connected
   public get length(): builtins.Int;
 
-  @connected("ListBuilder::toList")
+  @connected
   public toList(): List<T>;
 
-  @connected("ListBuilder::toListBuilder")
+  @connected
   public toListBuilder(): ListBuilder<T> {
     // TODO(tjp): If in `Listed` gives error: Expected subtype of AnyValue, but got T__40
     let result: ListBuilder<T> = new ListBuilder<T>();
@@ -1119,7 +1119,7 @@ export class Pair<@out K, @out V> {
   public key: K;
   public value: V;
 
-  @connected("Pair::constructor")
+  @connected
   public constructor(key: K, value: V) {
     this.key = key;
     this.value = value;
@@ -1134,7 +1134,7 @@ export sealed interface Mapped<@in K extends MapKey, V> {
   /**
    * The number of key value pairs in the [snippet/type/Mapped].
    */
-  @connected("Mapped::length")
+  @connected
   public get length(): builtins.Int {
     toListBuilder().length
   }
@@ -1142,7 +1142,7 @@ export sealed interface Mapped<@in K extends MapKey, V> {
   /**
    * Get the value associated with [key], or [snippet/builtin/bubble]s if no key is found.
    */
-  @connected("Mapped::get")
+  @connected
   public get(key: K): V throws Bubble {
     var values = new ListBuilder<V>();
     forEach { k, v =>
@@ -1159,7 +1159,7 @@ export sealed interface Mapped<@in K extends MapKey, V> {
   /**
    * Get the value associated with [key], falling back to [fallback] when no such key exists.
    */
-  @connected("Mapped::getOr")
+  @connected
   public getOr(key: K, fallback: V): V {
     // TODO Reimplement this to allow panic on simple get???
     // TODO Is this method just for better optimization on some backends?
@@ -1169,7 +1169,7 @@ export sealed interface Mapped<@in K extends MapKey, V> {
   /**
    * Checks whether [key] is present in the [snippet/type/Mapped].
    */
-  @connected("Mapped::has")
+  @connected
   public has(key: K): builtins.Boolean {
     return do { this[key]; true } orelse false;
   }
@@ -1177,7 +1177,7 @@ export sealed interface Mapped<@in K extends MapKey, V> {
   /**
    * Gets a [snippet/type/Listed] of all of the keys.
    */
-  @connected("Mapped::keys")
+  @connected
   public keys(): Listed<K> {
     var all = new ListBuilder<K>();
     forEach { key, value =>
@@ -1189,7 +1189,7 @@ export sealed interface Mapped<@in K extends MapKey, V> {
   /**
    * Gets a [snippet/type/Listed] of all of the values.
    */
-  @connected("Mapped::values")
+  @connected
   public values(): Listed<V> {
     var all = new ListBuilder<V>();
     forEach { key, value =>
@@ -1204,7 +1204,7 @@ export sealed interface Mapped<@in K extends MapKey, V> {
    * It does not need to make a copy if the [snippet/type/Mapped] is already a [snippet/type/Map]
    * because neither can be mutated.
    */
-  @connected("Mapped::toMap")
+  @connected
   public toMap(): Map<K, V> {
     new Map<K, V>(toList())
   }
@@ -1215,7 +1215,7 @@ export sealed interface Mapped<@in K extends MapKey, V> {
    * It must make a copy, even when the [snippet/type/Mapped] is already a [snippet/type/MapBuilder]
    * so that both can be mutated independently.
    */
-  @connected("Mapped::toMapBuilder")
+  @connected
   public toMapBuilder(): MapBuilder<K, V> {
     var builder = new MapBuilder<K, V>();
     forEach { key, value =>
@@ -1230,7 +1230,7 @@ export sealed interface Mapped<@in K extends MapKey, V> {
    * Constructs a [Pair][snippet/type/Pair]<[snippet/type/Mapped/typeFormal/K], [snippet/type/Mapped/typeFormal/V]>
    * for each key and value in the [snippet/type/Mapped].
    */
-  @connected("Mapped::toList")
+  @connected
   public toList(): List<Pair<K, V>> {
     toListBuilder().toList()
   }
@@ -1239,7 +1239,7 @@ export sealed interface Mapped<@in K extends MapKey, V> {
    * Constructs a [Pair][snippet/type/Pair]<[snippet/type/Mapped/typeFormal/K], [snippet/type/Mapped/typeFormal/V]>
    * for each key and value in the [snippet/type/Mapped].
    */
-  @connected("Mapped::toListBuilder")
+  @connected
   public toListBuilder(): ListBuilder<Pair<K, V>> {
     toListBuilderWith { (key: K, value: V): Pair<K, V> =>
       new Pair(key, value)
@@ -1251,7 +1251,7 @@ export sealed interface Mapped<@in K extends MapKey, V> {
    *
    * Calls [func] on each key and value in the [snippet/type/Mapped].
    */
-  @connected("Mapped::toListWith")
+  @connected
   public toListWith<T>(func: fn(K, V): T): List<T> {
     toListBuilderWith(func).toList()
   }
@@ -1261,7 +1261,7 @@ export sealed interface Mapped<@in K extends MapKey, V> {
    *
    * Calls [func] on each key and value in the [snippet/type/Mapped].
    */
-  @connected("Mapped::toListBuilderWith")
+  @connected
   public toListBuilderWith<T>(func: fn(K, V): T): ListBuilder<T> {
     var builder = new ListBuilder<T>();
     forEach { key, value =>
@@ -1275,7 +1275,7 @@ export sealed interface Mapped<@in K extends MapKey, V> {
    *
    * This method is more likely to change or be removed before Temper 1.0 than most
    */
-  @connected("Mapped::forEach")
+  @connected
   public forEach(func: fn(K, V): Void): Void;
 }
 
@@ -1283,19 +1283,19 @@ export sealed interface Mapped<@in K extends MapKey, V> {
  * A *Map* is a read-only key-value collection.
  */
 @partialImu
-@mayDowncastTo(false) // Just use Mapped::toMap if immutable wanted.
+@mayDowncastTo(false) // Just use core.type Mapped.toMap() if immutable wanted.
 export class Map<@in K extends MapKey, @out V> extends Mapped<K, V> {
   // The content is used only from extension functions.
   private content: AnyValue;
 
   // TODO Override toMap for identity.
-  // @connected("Map::toMap")
+  // @connected
   // public toMap(): Map<K, V> { this }
 
   /**
    * Preserves entry order when accessed from Temper code.
    */
-  @connected("Map::constructor")
+  @connected
   public constructor(entries: List<Pair<K, V>>);
 }
 
@@ -1308,25 +1308,25 @@ export class MapBuilder<K extends MapKey, V> extends Mapped<K, V> {
   // The content is used only from connected functions.
   private content: AnyValue;
 
-  @connected("MapBuilder::constructor")
+  @connected
   public constructor();
 
   /** Removes all entries, retaining internal capacity where possible. */
-  @connected("MapBuilder::clear")
+  @connected
   public clear(): Void;
 
   /** Removes the given entry if found, and returns its value. */
-  @connected("MapBuilder::remove")
+  @connected
   public remove(key: K): V throws Bubble;
 
-  @connected("MapBuilder::set")
+  @connected
   public set(key: K, newValue: V): Void;
 }
 
 /**
  * Ignore any value.
  */
-@connected("ignore")
+@connected
 export let ignore(value: AnyValue): Void {}
 
 /**
@@ -1351,25 +1351,25 @@ export let ignore(value: AnyValue): Void {}
 export class Deque<T> {
   private let content: ListBuilder<T>;
 
-  @connected("Deque::constructor")
+  @connected
   public constructor();
 
   /**
    * Add an element at the end.
    */
-  @connected("Deque::add")
+  @connected
   public add(element: T): Void;
 
   /**
    * True if this contains no elements.
    */
-  @connected("Deque::isEmpty")
+  @connected
   public get isEmpty(): builtins.Boolean;
 
   /**
    * Removes and returns the first element. Panics if empty.
    */
-  @connected("Deque::removeFirst")
+  @connected
   public removeFirst(): T;
 }
 
@@ -1387,7 +1387,7 @@ export class Boolean extends Equatable {
    * For [snippet/builtin/false], the string `"false"`.
    * For [snippet/builtin/true], the string `"true"`.
    */
-  @connected("Boolean::toString")
+  @connected
   public toString(): builtins.String {
     if (content) { "true" } else { "false" }
   }
@@ -1401,7 +1401,7 @@ export class Boolean extends Equatable {
 export class DenseBitVector {
   private let bits: ListBuilder<builtins.Boolean>;
 
-  @connected("DenseBitVector::constructor")
+  @connected
   public constructor(capacity: builtins.Int) {
     bits = new ListBuilder<builtins.Boolean>();
     for (var i = 0; i < capacity; ++i) {
@@ -1413,7 +1413,7 @@ export class DenseBitVector {
    * The bit at the given [index].  If a bit has not previously been set then
    * it is assumed to be [snippet/builtin/false].
    */
-  @connected("DenseBitVector::get")
+  @connected
   public get(index: builtins.Int): builtins.Boolean {
     if (0 <= index && index < bits.length) {
       bits[index]
@@ -1435,7 +1435,7 @@ export class DenseBitVector {
    * console.log(bitVector.get(3).toString()); //!outputs "false"
    * ```
    */
-  @connected("DenseBitVector::set")
+  @connected
   public set(index: builtins.Int, newValue: builtins.Boolean): Void {
     let bits = this.bits;
     var limit = bits.length;
@@ -1466,22 +1466,22 @@ export let Int = Int32;
 export class Int32 extends MapKey {
   private let content: builtins.Int;
 
-  @connected("Int32::toFloat64")
+  @connected
   public toFloat64(): Float64;
 
-  @connected("Int32::toInt64")
+  @connected
   public toInt64(): Int64;
 
   /** Supports radix 2 through 36. Doesn't prefix `+` for positive. */
-  @connected("Int32::toString")
+  @connected
   public toString(radix: builtins.Int = 10): String;
 
-  @connected("Int32::min")
+  @connected
   public min(other: builtins.Int): builtins.Int {
     if (content <= other) { content } else { other }
   }
 
-  @connected("Int32::max")
+  @connected
   public max(other: builtins.Int): builtins.Int {
     if (content >= other) { content } else { other }
   }
@@ -1500,11 +1500,11 @@ export class Int64 extends Equatable { // TODO extends MapKey?
   private let content: builtins.Int64;
 
   /** Bubbles if the result isn't within the exponent error of the original. */
-  @connected("Int64::toFloat64")
+  @connected
   public toFloat64(): Float64 throws Bubble;
 
   /** If outside bounds, returns a backend-dependent value. Use fuzz testing. */
-  @connected("Int64::toFloat64Unsafe")
+  @connected
   public toFloat64Unsafe(): Float64;
 
   /**
@@ -1512,7 +1512,7 @@ export class Int64 extends Equatable { // TODO extends MapKey?
    * TODO Should this panic instead since this is an easy check?
    * TODO But many others cost more to check the panic on fail.
    */
-  @connected("Int64::toInt32")
+  @connected
   public toInt32(): Int32 throws Bubble;
 
   /**
@@ -1520,19 +1520,19 @@ export class Int64 extends Equatable { // TODO extends MapKey?
    * TODO Ensure wrapping here since we do that elsewhere?
    * TODO For symmetry, define consistent semantics for all lossy conversions?
    */
-  @connected("Int64::toInt32Unsafe")
+  @connected
   public toInt32Unsafe(): Int32;
 
   /** Supports radix 2 through 36. Doesn't prefix `+` for positive. */
-  @connected("Int64::toString")
+  @connected
   public toString(radix: builtins.Int = 10): String;
 
-  @connected("Int64::min")
+  @connected
   public min(other: builtins.Int64): builtins.Int64 {
     if (content <= other) { content } else { other }
   }
 
-  @connected("Int64::max")
+  @connected
   public max(other: builtins.Int64): builtins.Int64 {
     if (content >= other) { content } else { other }
   }
@@ -1556,90 +1556,90 @@ export class Float64 extends Equatable {
   /**
    * Truncates toward zero. Bubbles if the value isn't within 1 of Int32 limits.
    */
-  @connected("Float64::toInt32")
+  @connected
   public toInt32(): Int throws Bubble;
 
   /** If outside bounds, returns a backend-dependent value. Use fuzz testing. */
-  @connected("Float64::toInt32Unsafe")
+  @connected
   public toInt32Unsafe(): Int;
 
   /**
    * Truncates toward zero. Bubbles if the value isn't within plus or minus
    * 0x1f_ffff_ffff_ffff, inclusive.
    */
-  @connected("Float64::toInt64")
+  @connected
   public toInt64(): Int64 throws Bubble;
 
   /** If outside bounds, returns a backend-dependent value. Use fuzz testing. */
-  @connected("Float64::toInt64Unsafe")
+  @connected
   public toInt64Unsafe(): Int64;
 
-  @connected("Float64::toString")
+  @connected
   public toString(): String;
 
   // Constants.
 
-  @connected("Float64::e")
+  @connected
   public static e = 2.718281828459045;
 
-  @connected("Float64::pi")
+  @connected
   public static pi = 3.141592653589793;
 
   // Math ops.
 
-  @connected("Float64::abs")
+  @connected
   public abs(): Float64;
 
-  @connected("Float64::acos")
+  @connected
   public acos(): Float64;
 
-  @connected("Float64::asin")
+  @connected
   public asin(): Float64;
 
-  @connected("Float64::atan")
+  @connected
   public atan(): Float64;
 
   /** The y coordinate is this object. */
-  @connected("Float64::atan2")
+  @connected
   public atan2(x: Float64): Float64;
 
-  @connected("Float64::ceil")
+  @connected
   public ceil(): Float64;
 
-  @connected("Float64::cos")
+  @connected
   public cos(): Float64;
 
-  @connected("Float64::cosh")
+  @connected
   public cosh(): Float64;
 
-  @connected("Float64::exp")
+  @connected
   public exp(): Float64;
 
-  @connected("Float64::expm1")
+  @connected
   public expm1(): Float64;
 
-  @connected("Float64::floor")
+  @connected
   public floor(): Float64;
 
-  @connected("Float64::log")
+  @connected
   public log(): Float64;
 
-  @connected("Float64::log10")
+  @connected
   public log10(): Float64;
 
-  @connected("Float64::log1p")
+  @connected
   public log1p(): Float64;
 
   /** Result is NaN if either is NaN. */
-  @connected("Float64::max")
+  @connected
   public max(other: Float64): Float64;
 
   /** Result is NaN if either is NaN. */
-  @connected("Float64::min")
+  @connected
   public min(other: Float64): Float64;
 
   /** Matches semantics of Python's *math.isclose*. */
-  @connected("Float64::near")
+  @connected
   public near(
     other: builtins.Float64,
     relTol: builtins.Float64 = 1e-9,
@@ -1649,25 +1649,25 @@ export class Float64 extends Equatable {
     (content - other).abs() <= margin
   }
 
-  @connected("Float64::round")
+  @connected
   public round(): Float64;
 
-  @connected("Float64::sign")
+  @connected
   public sign(): Float64;
 
-  @connected("Float64::sin")
+  @connected
   public sin(): Float64;
 
-  @connected("Float64::sinh")
+  @connected
   public sinh(): Float64;
 
-  @connected("Float64::sqrt")
+  @connected
   public sqrt(): Float64;
 
-  @connected("Float64::tan")
+  @connected
   public tan(): Float64;
 
-  @connected("Float64::tanh")
+  @connected
   public tanh(): Float64;
 }
 

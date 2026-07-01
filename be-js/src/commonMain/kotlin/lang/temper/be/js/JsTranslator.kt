@@ -727,11 +727,7 @@ internal class JsTranslator(
                     x: TmpL.Expression,
                 ) = Js.CallExpression(
                     pos,
-                    Js.MemberExpression(
-                        pos,
-                        Js.Identifier(pos, JsIdentifierName("Array"), null),
-                        Js.Identifier(pos, JsIdentifierName("isArray"), null),
-                    ),
+                    Js.Identifier(type.pos, requireExternalReference(requireIsArray), null),
                     listOf(translateExpression(x)),
                 )
             },
@@ -817,7 +813,7 @@ internal class JsTranslator(
             ImplicitTypeTag.Int -> op.isInt(pos, type, x)
             ImplicitTypeTag.String -> op.allHaveTypeof(pos, type, JsTypeOf.string, x)
             ImplicitTypeTag.Function -> op.allHaveTypeof(pos, type, JsTypeOf.function, x)
-            ImplicitTypeTag.ListBuilder, ImplicitTypeTag.List ->
+            ImplicitTypeTag.ListBuilder, ImplicitTypeTag.List, ImplicitTypeTag.Listed ->
                 // TODO(tjp, backend): Distinguish on frozen? Disable checks for List(Builder)?
                 op.isArray(pos, type, x)
             else -> {
@@ -895,7 +891,7 @@ internal class JsTranslator(
             Js.ThisExpression(id.pos)
         } else {
             val jsName = JsIdentifierName(name.prefix())
-            return Js.Identifier(
+            Js.Identifier(
                 pos = id.pos,
                 name = jsName,
                 sourceIdentifier = name as? ResolvedParsedName,
@@ -948,7 +944,7 @@ internal class JsTranslator(
                 specifiers = emptyList(),
                 source = null,
             )
-            return topLevelsWithExport.toList()
+            topLevelsWithExport.toList()
         } else {
             topLevels
         }
@@ -1074,7 +1070,7 @@ internal class JsTranslator(
                     // Make sure to capture it via that name.
                     TODO()
                     // Can this actually happen?  What does the `this`
-                    // parameter mean in that case
+                    // parameter mean in that case?
                 }
                 buildList {
                     add(
@@ -2208,6 +2204,11 @@ internal val bubbleException = JsIdentifierName("Error")
 internal val requireInstanceOf = JsUnInlinedExternalFunctionReference(
     DashedIdentifier.temperCoreLibraryIdentifier,
     JsIdentifierName("requireInstanceOf"),
+)
+
+internal val requireIsArray = JsUnInlinedExternalFunctionReference(
+    DashedIdentifier.temperCoreLibraryIdentifier,
+    JsIdentifierName("requireIsArray"),
 )
 
 internal val requireSame = JsUnInlinedExternalFunctionReference(

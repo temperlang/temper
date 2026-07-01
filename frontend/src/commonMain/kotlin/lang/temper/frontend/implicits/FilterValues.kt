@@ -20,7 +20,7 @@ internal fun filterValues(
     unfiltered.filterTo(filtered) {
         // Even though mayFail = false,
         // we propagate failure out when the predicate does not return a boolean, because
-        // the static type of List::filter in ImplicitsModule requires that predicate has
+        // the static type of core.type List.filter() in ImplicitsModule requires that predicate has
         // type (T) -> Boolean
         when (val result = f.invoke(ActualValues.from(it), callback, InterpMode.Full)) {
             is Fail, NotYet -> return (result as? Fail) ?: Fail

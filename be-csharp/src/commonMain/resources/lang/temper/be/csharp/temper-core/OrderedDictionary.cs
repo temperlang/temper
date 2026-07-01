@@ -1,23 +1,36 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
 namespace TemperLang.Core
 {
     public static class Mapped
     {
-        /// ToMap does not need to make a copy, if both are immutable
+        /// ToMap needs to make a copy if input might be aliased via a mutable API
+        /// because IReadOnlyDictionary is the same type as Temper Mapped<...>, so
+        /// might also be held via a reference typed as Temper Map<...>.
         public static IReadOnlyDictionary<TKey, TValue> ToMap<TKey, TValue>(
             this IReadOnlyDictionary<TKey, TValue> dictionary
-        ) => dictionary;
+        ) => (dictionary is ReadOnlyDictionaryWrapper<TKey, TValue>)
+            ? (ReadOnlyDictionaryWrapper<TKey, TValue>)dictionary
+            : (dictionary is ImmutableDictionary<TKey, TValue>)
+            ? (ImmutableDictionary<TKey, TValue>)dictionary
+            : new ReadOnlyDictionaryWrapper<TKey, TValue>(
+                new OrderedDictionary<TKey, TValue>(dictionary.ToList())
+            );
 
-        /// ToMap needs to make a copy, the input is mutable
+        /// ToMap needs to make a copy if input might be mutated.
         public static IReadOnlyDictionary<TKey, TValue> ToMap<TKey, TValue>(
             this IDictionary<TKey, TValue> dictionary
-        ) => new ReadOnlyDictionaryWrapper<TKey, TValue>(
-            new OrderedDictionary<TKey, TValue>(dictionary.ToList())
-        );
+        ) => (dictionary is ReadOnlyDictionaryWrapper<TKey, TValue>)
+            ? (ReadOnlyDictionaryWrapper<TKey, TValue>)dictionary
+            : (dictionary is ImmutableDictionary<TKey, TValue>)
+            ? (ImmutableDictionary<TKey, TValue>)dictionary
+            : new ReadOnlyDictionaryWrapper<TKey, TValue>(
+                new OrderedDictionary<TKey, TValue>(dictionary.ToList())
+            );
 
         /// Duplicated for IDictionary below.
         #region Static Methods for IReadOnlyDictionary

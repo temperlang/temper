@@ -5,7 +5,6 @@ import lang.temper.be.Backend
 import lang.temper.common.RFailure
 import lang.temper.common.RSuccess
 import lang.temper.format.TokenSink
-import lang.temper.frontend.Module
 import lang.temper.frontend.ModuleNamingContext
 import lang.temper.lexer.Genre
 import lang.temper.lexer.withTemperAwareExtension
@@ -52,6 +51,7 @@ import lang.temper.value.TNull
 import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.Value
+import lang.temper.value.connectedSymbol
 import lang.temper.value.docStringSymbol
 import lang.temper.value.noneSymbol
 import lang.temper.value.qNameSymbol
@@ -431,7 +431,7 @@ fun TmpL.MemberOrGarbage.asReceiverMember(): ReceiverMember? = when (this) {
  * Member dotNames (methods, getters, setters) across [modules] whose receiver (`this`)
  * may be mutated when the member runs — directly (a property write or setter call on
  * `this`) or transitively (calling another such member on `this`). Setters always
- * qualify. The result is keyed by dotName so it is identical for every declaration in an
+ * qualify. The result is keyed by dotName, so it is identical for every declaration in an
  * override slot, which is what lets a backend emit a `const`/readonly qualifier
  * consistently (C++ requires matching const-ness across a virtual override slot).
  *
@@ -634,26 +634,6 @@ object GetStaticSupport : InlineTmpLSupportCode {
 operator fun TmpL.Declaration.get(key: Symbol) =
     metadata.find { it.key.symbol == key }?.value
 
-/**
- * Modules usually carry the library name, so we can interpret them for the output root.
- * However, in some cases, such as currently for docgen and repl, we don't yet provide
- * library names, so we need to relativize based on the input path.
- */
-class LibraryRootContext(
-    /** The input path to the library root containing Temper source. */
-    val inRoot: FilePath,
-    /** The output path to the library root, based on the library name, that will contain backend code. */
-    val outRoot: FilePath,
-) {
-    fun rootFor(module: TmpL.Module) = rootFor(module.codeLocation.origin)
-    fun rootFor(module: Module) = rootFor(module.namingContext)
-    fun rootFor(origin: NamingContext) = when (origin) {
-        is ModuleNamingContext -> outRoot
-        // This currently can happen at least in docgen and repl.
-        else -> inRoot
-    }
-}
-
 val TmpL.Type.withoutNullOrBubble: TmpL.Type get() = this.withoutAtom {
     it is TmpL.BubbleType ||
         (it is TmpL.NominalType && it.typeName.sourceDefinition == WellKnownTypes.nullTypeDefinition)
@@ -754,8 +734,10 @@ enum class ImplicitTypeTag {
     String,
     List,
     ListBuilder,
+    Listed,
     Map,
     MapBuilder,
+    Mapped,
     Null,
     Void,
     Other,
@@ -778,8 +760,10 @@ val TmpL.NominalType.implicitTypeTag: ImplicitTypeTag get() = when (this.typeNam
     WellKnownTypes.functionTypeDefinition -> ImplicitTypeTag.Function
     WellKnownTypes.intTypeDefinition -> ImplicitTypeTag.Int
     WellKnownTypes.listTypeDefinition -> ImplicitTypeTag.List
+    WellKnownTypes.listedTypeDefinition -> ImplicitTypeTag.Listed
     WellKnownTypes.listBuilderTypeDefinition -> ImplicitTypeTag.ListBuilder
     WellKnownTypes.mapTypeDefinition -> ImplicitTypeTag.Map
+    WellKnownTypes.mappedTypeDefinition -> ImplicitTypeTag.Mapped
     WellKnownTypes.mapBuilderTypeDefinition -> ImplicitTypeTag.MapBuilder
     WellKnownTypes.nullTypeDefinition -> ImplicitTypeTag.Null
     WellKnownTypes.stringTypeDefinition -> ImplicitTypeTag.String
@@ -1094,9 +1078,9 @@ internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
  *
  * TODO Move out of tmpl?
  */
-fun TypeShape.findImmediateSuperReaching(inherited: MethodShape): NominalType? = run {
+fun TypeShape.findImmediateSuperReaching(inherited: MethodShape): NominalType? {
     val target = inherited.enclosingType
-    fun dig(shape: TypeShape): NominalType? = run {
+    fun dig(shape: TypeShape): NominalType? {
         superTypes@ for (sup in shape.superTypes) {
             val supShape = sup.definition as? TypeShape ?: continue@superTypes
             if (supShape == target) {
@@ -1115,14 +1099,14 @@ fun TypeShape.findImmediateSuperReaching(inherited: MethodShape): NominalType? =
             }
         }
         // No path found this way.
-        null
+        return null
     }
-    dig(this)
+    return dig(this)
 }
 
-fun TmpL.TypeDeclaration.hasSplitSupers(inherited: TmpL.SuperTypeMethod): Boolean = run {
+fun TmpL.TypeDeclaration.hasSplitSupers(inherited: TmpL.SuperTypeMethod): Boolean {
     val kind = (inherited.memberOverride.superTypeMember as? MethodShape)?.methodKind ?: return false
-    typeShape.hasSplitSupers(kind, inherited.name.dotNameText)
+    return typeShape.hasSplitSupers(kind, inherited.name.dotNameText)
 }
 
 /**
@@ -1262,4 +1246,9 @@ fun toSigBestEffort(descriptor: Descriptor?) = when (descriptor) {
     null -> null
     is Signature2 -> descriptor
     is Type2 -> withType(descriptor, fn = { _, sig, _ -> sig }, fallback = { null })
+}
+
+fun Map<Symbol, Value<*>>?.connectedKey(): String? = when {
+    this != null && connectedSymbol in this -> this[qNameSymbol]?.let { TString.unpackOrNull(it) }
+    else -> null
 }
