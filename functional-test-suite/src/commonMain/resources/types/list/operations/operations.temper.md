@@ -411,3 +411,30 @@ C\# had a problem with these, trying to make overloads in local variables.
 ```log
 Called with listed.
 ```
+
+## List / ListBuilder independence
+
+This mirrors tests related to the Map / MapBuilder relationship
+to show we can build a list, and continue to mutate the builder
+without affecting previously built lists.
+
+    do {
+      let aListBuilder = new ListBuilder<String>();
+      aListBuilder.add("first");
+
+      let builtFirst = aListBuilder.toList();
+
+      aListBuilder.add("second");
+
+      let builtSecond = (aListBuilder as Listed<String>).toList();
+
+      aListBuilder.add("third");
+
+      console.log("builtFirst has ${builtFirst.join(", ") { s => s }}");
+      console.log("builtSecond has ${builtSecond.join(", ") { s => s }}");
+    }
+
+```log
+builtFirst has first
+builtSecond has first, second
+```

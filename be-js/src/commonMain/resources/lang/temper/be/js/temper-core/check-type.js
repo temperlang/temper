@@ -21,6 +21,18 @@ export const requireInstanceOf = (x, typeRequirement) => {
 
 /**
  * @template T
+ * @param {any} x
+ * @returns {Array<T> | ReadonlyArray<T>}
+ */
+export const requireIsArray = (x) => {
+  if (!Array.isArray(x)) {
+    bubble();
+  }
+  return x;
+};
+
+/**
+ * @template T
  * @param {T?} x
  * @returns {T}
  */
