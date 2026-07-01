@@ -476,7 +476,7 @@ class CSharpBackendTest {
                 |static TestGlobal()
                 |{
                 |    builder__0 = new C::OrderedDictionary<string, string>();
-                |    Map1 = C::Mapped.ToMap(builder__0);
+                |    Map1 = C::Mapped.ToMap(C::Mapped.AsReadOnly(builder__0));
                 |    mapped__0 = C::Mapped.AsReadOnly(builder__0);
                 |    Map2 = C::Mapped.ToMap(mapped__0);
                 |}
