@@ -34,7 +34,7 @@ class CppBackendTest {
                 |    temper::core::Console::log(console_0, name);
                 |    return;
                 |  }
-                |  void temper_init_something() {
+                |  void global_init_something() {
                 |    static bool initialized = false;
                 |    if(initialized) {
                 |      return;
@@ -53,7 +53,7 @@ class CppBackendTest {
                 |#include <temper-core/core.hpp>
                 |namespace my_test_library {
                 |  void greet(std::string);
-                |  void temper_init_something();
+                |  void global_init_something();
                 |}
                 |
             """,
@@ -93,7 +93,7 @@ class CppBackendTest {
                 |  int32_t add(int32_t a, int32_t b) {
                 |    return temper::core::Int::add(a, b);
                 |  }
-                |  void temper_init_something() {
+                |  void global_init_something() {
                 |    static bool initialized = false;
                 |    if(initialized) {
                 |      return;
@@ -108,7 +108,7 @@ class CppBackendTest {
                 |#include <temper-core/core.hpp>
                 |namespace my_test_library {
                 |  int32_t add(int32_t, int32_t);
-                |  void temper_init_something();
+                |  void global_init_something();
                 |}
                 |
             """,
@@ -125,7 +125,7 @@ class CppBackendTest {
                 |#include <my-test-library/something.hpp>
                 |namespace my_test_library {
                 |  int32_t x;
-                |  void temper_init_something() {
+                |  void global_init_something() {
                 |    static bool initialized = false;
                 |    if(initialized) {
                 |      return;
@@ -141,7 +141,7 @@ class CppBackendTest {
                 |#include <temper-core/core.hpp>
                 |namespace my_test_library {
                 |  extern int32_t x;
-                |  void temper_init_something();
+                |  void global_init_something();
                 |}
                 |
             """,
@@ -162,7 +162,7 @@ class CppBackendTest {
                 |  bool isPositive(int32_t x) {
                 |    return x> 0;
                 |  }
-                |  void temper_init_something() {
+                |  void global_init_something() {
                 |    static bool initialized = false;
                 |    if(initialized) {
                 |      return;
@@ -177,7 +177,7 @@ class CppBackendTest {
                 |#include <temper-core/core.hpp>
                 |namespace my_test_library {
                 |  bool isPositive(int32_t);
-                |  void temper_init_something();
+                |  void global_init_something();
                 |}
                 |
             """,
@@ -198,7 +198,7 @@ class CppBackendTest {
                 |  int32_t multiply(int32_t a, int32_t b) {
                 |    return temper::core::Int::mul(a, b);
                 |  }
-                |  void temper_init_something() {
+                |  void global_init_something() {
                 |    static bool initialized = false;
                 |    if(initialized) {
                 |      return;
@@ -213,7 +213,7 @@ class CppBackendTest {
                 |#include <temper-core/core.hpp>
                 |namespace my_test_library {
                 |  int32_t multiply(int32_t, int32_t);
-                |  void temper_init_something();
+                |  void global_init_something();
                 |}
                 |
             """,

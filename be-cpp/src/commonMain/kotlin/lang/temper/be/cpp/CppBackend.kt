@@ -41,7 +41,7 @@ import lang.temper.name.LanguageLabel
  * ## Initialization
  *
  * All module-level variable initializations and init blocks are deferred to an explicit
- * `temper_init_<module>()` function, called from `main()`, to avoid the Static
+ * `global_init_<module>()` function, called from `main()`, to avoid the Static
  * Initialization Order Fiasco (SIOF). Cross-module dependency init functions are
  * called first within each module's init function.
  *

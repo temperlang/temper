@@ -3076,7 +3076,7 @@ class CppTranslator(
     }
 
     /**
-     * Gather the fully-qualified `temper_init_*` calls for every imported dependency module,
+     * Gather the fully-qualified `global_init_*` calls for every imported dependency module,
      * adding each dependency's header to [includes] as a side effect.
      */
     private fun gatherDependencyInitCalls(): MutableSet<String> {
@@ -3090,7 +3090,7 @@ class CppTranslator(
                 else -> depRelPath.segments.last().baseName
             }
             val sanitizedDep = depBaseName.replace(Regex("[^a-zA-Z0-9_]"), "_")
-            depInitCalls.add("$libNs::temper_init_$sanitizedDep")
+            depInitCalls.add("$libNs::global_init_$sanitizedDep")
             // Add include for the dependency module's header so its init decl is visible
             includes.add(cpp.includePathForModule(depModName))
         }
@@ -3098,7 +3098,7 @@ class CppTranslator(
     }
 
     /**
-     * Emit the deferred `temper_init_<module>()` function (header decl + impl def) that guards
+     * Emit the deferred `global_init_<module>()` function (header decl + impl def) that guards
      * against double init, calls dependency module inits, then runs the deferred variable
      * initializations. Sets [moduleInitFuncName] as a side effect.
      */
@@ -3110,7 +3110,7 @@ class CppTranslator(
     ) {
         // Generate module init function with dependency init calls
         // and deferred variable initializations.
-        val initFuncName = cpp.singleName(CppName("temper_init_$sanitizedModuleName"))
+        val initFuncName = cpp.singleName(CppName("global_init_$sanitizedModuleName"))
         moduleInitFuncName = initFuncName.id.text
 
         val bodyStmts = mutableListOf<Cpp.Stmt>()
