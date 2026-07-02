@@ -24,9 +24,7 @@ import lang.temper.name.OutName
 import lang.temper.name.ParsedName
 import lang.temper.name.name
 import lang.temper.type.WellKnownTypes
-import lang.temper.type2.DefinedNonNullType
 import lang.temper.type2.DefinedType
-import lang.temper.type2.MkType2
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.withType
@@ -678,19 +676,8 @@ private object CmpGeneric : MethodCall(
         returnType: Type2,
         translator: RustTranslator,
     ): Rust.Expr {
-        // Work around core.type StringIndexOption.compareTo() typing if needed.
-        val self = arguments.getOrNull(0)
-        val effectiveArgs = when ((self?.type as? DefinedNonNullType)?.definition) {
-            WellKnownTypes.stringIndexTypeDefinition -> buildList {
-                // Left should be an option, not a string index, but we don't get the function type that way.
-                val optionType = MkType2(WellKnownTypes.stringIndexOptionTypeDefinition).get()
-                add(TypedArg((self.expr as Rust.Expr).wrapSome(), optionType))
-                addAll(arguments.subListToEnd(1))
-            }
-            else -> arguments
-        }
-        // And cast result as i32 for be-rust int expectations.
-        return super.inlineToTree(pos, effectiveArgs, returnType, translator).infix(RustOperator.As, "i32".toId(pos))
+        // Cast result as i32 for temper Int type expectations.
+        return super.inlineToTree(pos, arguments, returnType, translator).infix(RustOperator.As, "i32".toId(pos))
     }
 }
 
