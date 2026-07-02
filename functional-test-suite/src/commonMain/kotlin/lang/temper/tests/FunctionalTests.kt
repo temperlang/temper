@@ -56,6 +56,7 @@ enum class FunctionalTests(val test: FunctionalTestBase) {
     ControlFlowLoopReenterable(markdown("control-flow/loop-reenterable/loop-reenterable.temper.md", "ControlFlowLoopReenterable")),
     ControlFlowLoops(markdown("control-flow/loops/loops.temper.md", "ControlFlowLoops")),
     FunctionsAsValues(markdown("functions/as-values/as-values.temper.md", "FunctionsAsValues")),
+    FunctionsConnected(markdown("functions/connected/connected.temper.md", "FunctionsConnected")),
     FunctionsConstructorCallbacks(markdown("functions/constructor-callbacks/constructor-callbacks.temper.md", "FunctionsConstructorCallbacks")),
     FunctionsDefaulting(markdown("functions/defaulting/defaulting.temper.md", "FunctionsDefaulting")),
     FunctionsLocals(markdown("functions/locals/locals.temper.md", "FunctionsLocals")),

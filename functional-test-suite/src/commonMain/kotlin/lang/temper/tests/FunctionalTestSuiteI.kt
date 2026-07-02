@@ -161,6 +161,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.FunctionsAsValues)
 
     @Test
+    fun functionsConnected() =
+        runFunctionalTest(Ft.FunctionsConnected)
+
+    @Test
     fun functionsConstructorCallbacks() =
         runFunctionalTest(Ft.FunctionsConstructorCallbacks)
 
