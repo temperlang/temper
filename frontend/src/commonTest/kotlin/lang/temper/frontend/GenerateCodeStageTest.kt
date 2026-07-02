@@ -247,7 +247,7 @@ class GenerateCodeStageTest {
             |  generateCode: {
             |    body: ```
             |      let return__0;
-            |      do_bind_log(getConsole())("Done once");
+            |      do_call_log(getConsole(), "Done once");
             |      return__0 = void
             |
             |      ```
@@ -291,6 +291,20 @@ class GenerateCodeStageTest {
           },
         }
         """,
+    )
+
+    @Test
+    fun simpleMethodCall() = assertModuleAtStage(
+        input = """
+            |1.toString()
+        """.trimMargin(),
+        stage = Stage.Run,
+        moduleResultNeeded = true,
+        want = """
+            |{
+            |  run: ["1", "String"],
+            |}
+        """.trimMargin(),
     )
 
     @Suppress("SpellCheckingInspection") // getprop/setprop
@@ -578,12 +592,12 @@ class GenerateCodeStageTest {
         |      @fn @reach(\none) let f__0;
         |      f__0 = (@stay fn f(s__0 /* aka s */: String) /* return__1 */: Void {
         |          var t#0, t#1, t#2;
-        |          cat(do_bind_toString(0)());
-        |          t#0 = do_bind_toString(0)();
+        |          cat(do_call_toString(0));
+        |          t#0 = do_call_toString(0);
         |          cat(s__0, t#0);
-        |          t#1 = do_bind_toString(0)();
+        |          t#1 = do_call_toString(0);
         |          cat(s__0, t#1, s__0);
-        |          t#2 = do_bind_toString(0)();
+        |          t#2 = do_call_toString(0);
         |          cat(s__0, s__0, t#2, s__0);
         |          return__1 = void
         |      })
@@ -613,7 +627,7 @@ class GenerateCodeStageTest {
         |          if (isNull(a__0)) {
         |            t#1 = "null"
         |          } else {
-        |            t#0 = do_bind_toString(notNull(a__0))();
+        |            t#0 = do_call_toString(notNull(a__0));
         |            t#1 = t#0
         |          };
         |          if (!isNull(a__0)) {
@@ -623,7 +637,7 @@ class GenerateCodeStageTest {
         |          } else {
         |            t#3 = -1
         |          };
-        |          t#2 = do_bind_toString(t#3)();
+        |          t#2 = do_call_toString(t#3);
         |          return__1 = cat(s__0, t#1, t#2)
         |      })
         |
@@ -885,7 +899,7 @@ class GenerateCodeStageTest {
             |      console#0 = getConsole();
             |      @fn let hi__0;
             |      hi__0 = (@stay fn hi(name__0 /* aka name */: String) /* return__1 */: Void {
-            |          do_bind_log(console#0)(name__0);
+            |          do_call_log(console#0, name__0);
             |          return__1 = void
             |      });
             |      hi__0(\nom, "Alice")
@@ -1075,8 +1089,8 @@ class GenerateCodeStageTest {
             |      @method(\p) @setter @visibility(\public) @fn @stay @fromType(C__0) let nym`set.p__1`;
             |      nym`set.p__1` = (@stay fn nym`set.p`(@impliedThis(C__0) this__0: C__0, newValue__0 /* aka newValue */: Int32) /* return__1 */: Void {
             |          var t#0;
-            |          t#0 = do_bind_toString(newValue__0)(10);
-            |          do_bind_log(console#0)(cat("Assigned ", t#0));
+            |          t#0 = do_call_toString(newValue__0, 10);
+            |          do_call_log(console#0, cat("Assigned ", t#0));
             |          return__1 = void
             |      });
             |      @fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) let constructor__0;
@@ -1129,7 +1143,7 @@ class GenerateCodeStageTest {
             body: ```
                 @fn @reach(\none) let funny__0: (fn (Int32): String);
                 funny__0 = (@stay fn funny(n__0 /* aka n */) /* return__0 */{
-                    return__0 = do_bind_toString(n__0)()
+                    return__0 = do_call_toString(n__0)
                 })
 
                 ```
@@ -1546,7 +1560,7 @@ class GenerateCodeStageTest {
             |    console#0 = getConsole();
             |    @fn let b__0, @fn c__0;
             |    b__0 = (@stay fn b /* return__0 */: Void {
-            |        do_bind_log(console#0)("hi");
+            |        do_call_log(console#0, "hi");
             |        return__0 = void
             |    });
             |    let a__0;
@@ -1557,7 +1571,7 @@ class GenerateCodeStageTest {
             |        return__1 = void
             |    });
             |    @reach(\none) let e__0;
-            |    do_bind_get(a__0)(0);
+            |    do_call_get(a__0, 0);
             |    c__0(void);
             |    e__0 = void;
             |    c__0(void)
@@ -1657,7 +1671,7 @@ class GenerateCodeStageTest {
             |{
             |  generateCode: {
             |    body: ```
-            |      do_bind_log(getConsole())("Logged")
+            |      do_call_log(getConsole(), "Logged")
             |
             |      ```
             |  },
@@ -1747,7 +1761,7 @@ class GenerateCodeStageTest {
             |          };
             |          @visibility(\public) @fn let h__0 = fn h(@impliedThis(C__0) this__1: C__0, i__3 /* aka i */: Int) /* return__3 */: (Int) {
             |            fn__3: do {
-            |              2 * f__0(i__3) * fp__0(i__3) * do_ibind_g(type (C__0), this(C__0))(i__3) * do_ibind_g(type (C__0), this(C__0))(i__3)
+            |              2 * f__0(i__3) * fp__0(i__3) * do_icall_g(type (C__0), this(C__0), i__3) * do_icall_g(type (C__0), this(C__0), i__3)
             |            }
             |          };
             |          @fn @static @visibility(\public) let g2__0 = fn g2(i__4 /* aka i */: Int) /* return__4 */: (Int) {
@@ -1774,7 +1788,7 @@ class GenerateCodeStageTest {
             |      });
             |      g3__0 = fn g3(i__6 /* aka i */: Int) /* return__7 */: (Int) {
             |        fn__6: do {
-            |          2 * do_bind_f(C__0)(i__6) * do_bind_g(new C__0())(i__6) * do_get_a(C__0) * do_get_ap(C__0)
+            |          2 * do_call_f(C__0, i__6) * do_call_g(new C__0(), i__6) * do_get_a(C__0) * do_get_ap(C__0)
             |        }
             |      };
             |
@@ -1813,12 +1827,12 @@ class GenerateCodeStageTest {
             |        }
             |      };
             |      @visibility(\public) @fn @stay @fromType(C__0) let h__0;
-            |      h__0 = fn h(@impliedThis(C__0) this__1: C__0, i__3 /* aka i */: Int32) /* return__3 */: Int32 {
-            |        void;
-            |        fn__3: do {
-            |          return__3 = 2 *(fn f)(i__3) *(fn fp)(i__3) * do_ibind_g(type (C__0), this__1)(i__3) * do_ibind_g(type (C__0), this__1)(i__3)
-            |        }
-            |      };
+            |      h__0 = (@stay fn h(@impliedThis(C__0) this__1: C__0, i__3 /* aka i */: Int32) /* return__3 */: Int32 {
+            |          void;
+            |          fn__3: do {
+            |            return__3 = 2 *(fn f)(i__3) *(fn fp)(i__3) * do_icall_g(type (C__0), this__1, i__3) * do_icall_g(type (C__0), this__1, i__3)
+            |          }
+            |      });
             |      @fn @static @visibility(\public) @stay @fromType(C__0) let g2__0;
             |      g2__0 = fn g2(i__4 /* aka i */: Int32) /* return__4 */: Int32 {
             |        void;
@@ -1840,12 +1854,12 @@ class GenerateCodeStageTest {
             |          setp(b__0, this__2, t#1);
             |          return__6 = void
             |      });
-            |      g3__0 = fn g3(i__6 /* aka i */: Int32) /* return__7 */: Int32 {
-            |        void;
-            |        fn__6: do {
-            |          return__7 = 2 * getStatic(C__0, \f)(i__6) * do_bind_g(new C__0())(i__6) * getStatic(C__0, \a) * getStatic(C__0, \ap)
-            |        }
-            |      }
+            |      g3__0 = (@stay fn g3(i__6 /* aka i */: Int32) /* return__7 */: Int32 {
+            |          void;
+            |          fn__6: do {
+            |            return__7 = 2 * getStatic(C__0, \f)(i__6) * do_call_g(new C__0(), i__6) * getStatic(C__0, \a) * getStatic(C__0, \ap)
+            |          }
+            |      })
             |
             |      ```
             |  },
@@ -1876,7 +1890,7 @@ class GenerateCodeStageTest {
             |      });
             |      @visibility(\public) @fn @stay @fromType(C__0) let h__0;
             |      h__0 = (@stay fn h(@impliedThis(C__0) this__1: C__0, i__3 /* aka i */: Int32) /* return__3 */: Int32 {
-            |          return__3 = 2 *(fn f)(i__3) *(fn fp)(i__3) * do_ibind_g(type (C__0), this__1)(i__3) * do_ibind_g(type (C__0), this__1)(i__3)
+            |          return__3 = 2 *(fn f)(i__3) *(fn fp)(i__3) * do_icall_g(type (C__0), this__1, i__3) * do_icall_g(type (C__0), this__1, i__3)
             |      });
             |      @fn @static @visibility(\public) @stay @fromType(C__0) let g2__0;
             |      g2__0 = (@stay fn g2(i__4 /* aka i */: Int32) /* return__4 */: Int32 {
@@ -1895,7 +1909,7 @@ class GenerateCodeStageTest {
             |          return__6 = void
             |      });
             |      g3__0 = (@stay fn g3(i__6 /* aka i */: Int32) /* return__7 */: Int32 {
-            |          return__7 = 2 * getStatic(C__0, \f)(i__6) * do_bind_g(new C__0())(i__6) * getStatic(C__0, \a) * getStatic(C__0, \ap)
+            |          return__7 = 2 * getStatic(C__0, \f)(i__6) * do_call_g(new C__0(), i__6) * getStatic(C__0, \a) * getStatic(C__0, \ap)
             |      })
             |
             |      ```
@@ -1997,7 +2011,7 @@ class GenerateCodeStageTest {
             |        @reach(\none) let unreachableInt__0;
             |        unreachableInt__0 = 2;
             |        conditionallyExportReachable__0 = (@stay fn conditionallyExportReachable /* return__0 */: Void {
-            |            do_bind_log(console#0)("");
+            |            do_call_log(console#0, "");
             |            return__0 = void
             |        });
             |        `test//`.exportedFunction = (@stay fn exportedFunction(b__0 /* aka b */: Boolean) /* return__1 */: Void {
@@ -2007,24 +2021,24 @@ class GenerateCodeStageTest {
             |            return__1 = void
             |        });
             |        transitivelyTestReachable__0 = (@stay fn transitivelyTestReachable /* return__2 */: Void {
-            |            do_bind_log(console#0)("");
+            |            do_call_log(console#0, "");
             |            return__2 = void
             |        });
             |        exportAndTestReachable__0 = (@stay fn exportAndTestReachable /* return__3 */: Void {
-            |            do_bind_log(console#0)("");
+            |            do_call_log(console#0, "");
             |            return__3 = void
             |        });
             |        transitivelyInitReachable__0 = (@stay fn transitivelyInitReachable /* return__4 */: Void {
-            |            do_bind_log(console#0)("");
+            |            do_call_log(console#0, "");
             |            return__4 = void
             |        });
             |        initReachable__0 = (@stay fn initReachable /* return__5 */: Void {
             |            transitivelyInitReachable__0();
-            |            do_bind_log(console#0)("");
+            |            do_call_log(console#0, "");
             |            return__5 = void
             |        });
             |        unreachableFunction__0 = (@stay fn unreachableFunction /* return__6 */: Void {
-            |            do_bind_log(console#0)("");
+            |            do_call_log(console#0, "");
             |            return__6 = void
             |        });
             |        @fn @method(\constructor) @visibility(\public) @stay @fromType(UsedOnlyAsPropertyType__0) let constructor__0;
@@ -2161,14 +2175,14 @@ class GenerateCodeStageTest {
             |      fn__0: do {
             |        let generator__0: SafeGenerator<Empty>;
             |        generator__0 = factory__0();${
-            "" // Since it's a SafeGenerator, no error checking around do_bind_next(...)()
+            "" // Since it's a SafeGenerator, no error checking around do_call_next(...)
         }
-            |        do_bind_next(generator__0)();
-            |        do_bind_log(console#0)(",");
-            |        do_bind_next(generator__0)();
-            |        do_bind_log(console#0)(",");
-            |        do_bind_next(generator__0)();
-            |        do_bind_log(console#0)(".");
+            |        do_call_next(generator__0);
+            |        do_call_log(console#0, ",");
+            |        do_call_next(generator__0);
+            |        do_call_log(console#0, ",");
+            |        do_call_next(generator__0);
+            |        do_call_log(console#0, ".");
             |        return__1 = void
             |      }
             |    };
@@ -2176,13 +2190,13 @@ class GenerateCodeStageTest {
             "" // Adapt call specialized to adaptGeneratorFnSafe
         }
             |        return__2 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__3 */: (GeneratorResult<Empty>) implements GeneratorFn {
-            |            do_bind_log(console#0)("First");
+            |            do_call_log(console#0, "First");
             |            yield();
-            |            do_bind_log(console#0)("Second");
+            |            do_call_log(console#0, "Second");
             |            yield();
-            |            do_bind_log(console#0)("Third");
+            |            do_call_log(console#0, "Third");
             |            yield();
-            |            do_bind_log(console#0)("Fourth");
+            |            do_call_log(console#0, "Fourth");
             |            return__3 = core.doneResult<Empty>()
             |        })
             |    });
@@ -2243,14 +2257,14 @@ class GenerateCodeStageTest {
             |      fn__0: do {
             |        let generator__0: SafeGenerator<Empty>;
             |        generator__0 = factory__0();
-            |## Since it's a SafeGenerator, no error checking around do_bind_next(...)()
-            |        do_bind_next(generator__0)();
-            |        do_bind_log(console#0)("Ran once");
-            |        do_bind_next(generator__0)();
-            |        do_bind_log(console#0)("Ran twice");
-            |        do_bind_next(generator__0)();
-            |        do_bind_log(console#0)("Ran thrice");
-            |        do_bind_close(generator__0)();
+            |## Since it's a SafeGenerator, no error checking around do_call_next(...)
+            |        do_call_next(generator__0);
+            |        do_call_log(console#0, "Ran once");
+            |        do_call_next(generator__0);
+            |        do_call_log(console#0, "Ran twice");
+            |        do_call_next(generator__0);
+            |        do_call_log(console#0, "Ran thrice");
+            |        do_call_close(generator__0);
             |        return__1 = void
             |      }
             |    };
@@ -2261,9 +2275,9 @@ class GenerateCodeStageTest {
             |## The interpreter needs to distinguish a legit return result with the result from a yield.
             |            void;
             |            while (true) {
-            |              do_bind_log(console#0)("Pausing");
+            |              do_call_log(console#0, "Pausing");
             |              yield();
-            |              do_bind_log(console#0)("Resuming");
+            |              do_call_log(console#0, "Resuming");
             |            }
             |        })
             |    });
@@ -2377,7 +2391,7 @@ class GenerateCodeStageTest {
             |      fn__0 = (@stay fn /* return__0 */{
             |          let fn__1;
             |          fn__1 = (@wrappedGeneratorFn fn /* return__1 */: (GeneratorResult<Empty>) implements GeneratorFn {
-            |              do_bind_complete(pb__0)("Hello, World!");
+            |              do_call_complete(pb__0, "Hello, World!");
             |              return__1 = (fn doneResult)<Empty>()
             |          });
             |          return__0 = adaptGeneratorFnSafe(fn__1)
@@ -2387,7 +2401,7 @@ class GenerateCodeStageTest {
             |      if (fail#0) {
             |        bubble()
             |      };
-            |      do_bind_log(t#0)(t#1)
+            |      do_call_log(t#0, t#1)
             |
             |      ```
             |  }
@@ -3062,13 +3076,13 @@ class GenerateCodeStageTest {
             |              bubble()
             |            }
             |          } else if (index__0 == 1) {
-            |            return__1 = hs(fail#1, do_bind_get(nums__0)(index__0));
+            |            return__1 = hs(fail#1, do_call_get(nums__0, index__0));
             |            if (fail#1) {
             |              bubble()
             |            }
             |          } else {
             |            orelse#0: {
-            |              t#0 = hs(fail#2, do_bind_get(nums__0)(index__0));
+            |              t#0 = hs(fail#2, do_call_get(nums__0, index__0));
             |              if (fail#2) {
             |                break orelse#0;
             |              };
@@ -3131,14 +3145,14 @@ class GenerateCodeStageTest {
             |          var j__0;
             |          j__0 = do_get_end(s__0);
             |          while(i__0 < j__0, fn {
-            |              j__0 = do_bind_prev(s__0)(j__0);
-            |              if(do_bind_get(s__0)(i__0) != do_bind_get(s__0)(j__0), fn {
+            |              j__0 = do_call_prev(s__0, j__0);
+            |              if(do_call_get(s__0, i__0) != do_call_get(s__0, j__0), fn {
             |                  do {
             |                    return__0 = false;
             |                    break(\label, fn__0)
             |                  }
             |              });
-            |              i__0 = do_bind_next(s__0)(i__0);
+            |              i__0 = do_call_next(s__0, i__0);
             |          });
             |          do {
             |            return__0 = true;
@@ -3146,34 +3160,34 @@ class GenerateCodeStageTest {
             |          }
             |        }
             |      };
-            |      (do_bind_isPalindrome[stringIsPalindrome__0])("step on no pets")()
+            |      (do_call_isPalindrome[stringIsPalindrome__0])("step on no pets")
             |
             |      ```
             |  },
             |  type: {
             |    body: ```
             |      let return__1, @fn @extension("isPalindrome") stringIsPalindrome__0;
-            |      stringIsPalindrome__0 = fn stringIsPalindrome(s__0 /* aka s */: String) /* return__0 */: Boolean {
-            |        var t#0, t#1, t#2;
-            |        fn__0: do {
-            |          var i__0;
-            |          i__0 = getStatic(String, \begin);
-            |          var j__0;
-            |          t#0 = do_get_end(s__0);
-            |          j__0 = t#0;
-            |          while (i__0 < j__0) {
-            |            t#1 = do_bind_prev(s__0)(j__0);
-            |            j__0 = t#1;
-            |            if (do_bind_get(s__0)(i__0) != do_bind_get(s__0)(j__0)) {
-            |              return__0 = false;
-            |              break fn__0;
+            |      stringIsPalindrome__0 = (@stay fn stringIsPalindrome(s__0 /* aka s */: String) /* return__0 */: Boolean {
+            |          var t#0, t#1, t#2;
+            |          fn__0: do {
+            |            var i__0;
+            |            i__0 = getStatic(String, \begin);
+            |            var j__0;
+            |            t#0 = do_get_end(s__0);
+            |            j__0 = t#0;
+            |            while (i__0 < j__0) {
+            |              t#1 = do_call_prev(s__0, j__0);
+            |              j__0 = t#1;
+            |              if (do_call_get(s__0, i__0) != do_call_get(s__0, j__0)) {
+            |                return__0 = false;
+            |                break fn__0;
+            |              };
+            |              t#2 = do_call_next(s__0, i__0);
+            |              i__0 = t#2
             |            };
-            |            t#2 = do_bind_next(s__0)(i__0);
-            |            i__0 = t#2
-            |          };
-            |          return__0 = true
-            |        }
-            |      };
+            |            return__0 = true
+            |          }
+            |      });
             |      return__1 = stringIsPalindrome__0("step on no pets");${
             "" // The do_call_isPalindrome got rewritten to the direct function reference
         }
@@ -3339,14 +3353,14 @@ class GenerateCodeStageTest {
             |            let accumulator#0: StringBuilder;
             |            accumulator#0 = new StringBuilder ();
             |            do {
-            |              do_bind_append(accumulator#0)("Hello, World");
+            |              do_call_append(accumulator#0, "Hello, World");
             |              for((let guest of guests), fn {
-            |                  do_bind_append(accumulator#0)(", and ");
-            |                  do_bind_append(accumulator#0)(str(guest));
+            |                  do_call_append(accumulator#0, ", and ");
+            |                  do_call_append(accumulator#0, str(guest));
             |              });
-            |              do_bind_append(accumulator#0)("!");
+            |              do_call_append(accumulator#0, "!");
             |            };
-            |            do_bind_toString(accumulator#0)()
+            |            do_call_toString(accumulator#0)
             |          }
             |
             |          ```
@@ -3444,7 +3458,8 @@ class GenerateCodeStageTest {
         input = """
             |export let Act = fn (i: Int): Void;
             |export let hi(i: Int, act: Act?): Void {
-            |  if (i != 0 && act != null) {
+            |  if (i == 0 || act != null) {
+            |    // `||` means act could be null here.
             |    act(i);
             |  }
             |}
@@ -3452,7 +3467,7 @@ class GenerateCodeStageTest {
         want = """
             |{
             |  run: "void: Void",
-            |  errors: ["Expected function type, but got Invalid!"],
+            |  errors: ["Expected function type, but got (fn (Int32): Void)?!"],
             |}
         """.trimMargin(),
     )
@@ -3486,7 +3501,7 @@ class GenerateCodeStageTest {
             |      d__0 = 4;
             |      @imported(\(`test//nums/`.e)) @reach(\none) let e__0;
             |      e__0 = 5;
-            |      do_bind_log(getConsole())(do_bind_toString(15)())
+            |      do_call_log(getConsole(), do_call_toString(15))
             |
             |      ```
             |  }
@@ -3534,12 +3549,12 @@ class GenerateCodeStageTest {
             |                if (isNull(actual#0)) {
             |                  t#2 = "null"
             |                } else {
-            |                  t#1 = do_bind_toString(notNull(actual#0))();
+            |                  t#1 = do_call_toString(notNull(actual#0));
             |                  t#2 = t#1
             |                };
             |                return__1 = cat("expected c0.optionalString == (", "", ") not (", t#2, ")")
             |            });
-            |            do_bind_assert(test#0)(t#0, fn__0);
+            |            do_call_assert(test#0, t#0, fn__0);
             |            return__0 = void
             |        })
             |
@@ -3587,7 +3602,7 @@ class GenerateCodeStageTest {
             |        if (isNull(subject#0)) {
             |          null
             |        } else {
-            |          do_bind_toString(notNull(subject#0))()
+            |          do_call_toString(notNull(subject#0))
             |        }
             |      }
             |      ?? "NULL"
@@ -3616,7 +3631,7 @@ class GenerateCodeStageTest {
             |      if (isNull(t#4)) {
             |        t#5 = null
             |      } else {
-            |        t#2 = do_bind_toString(notNull(t#4))();
+            |        t#2 = do_call_toString(notNull(t#4));
             |        t#5 = t#2
             |      };
             |      if (!isNull(t#5)) {
@@ -3646,15 +3661,14 @@ class GenerateCodeStageTest {
             |    body: ```
             |      @fn @reach(\none) let maybeLength__0;
             |      maybeLength__0 = (@stay fn maybeLength(a__0 /* aka a */: String?) /* return__0 */: (Int32?) {
-            |          var t#0;
+            |          var t#0, t#1;
             |          if (isNull(a__0)) {
             |            return__0 = null
             |          } else {
             |## In this branch, a is aliased to a#0 and is known to be not null.
-            |            let a#0;
-            |            a#0 = notNull(a__0);
-            |            t#0 = do_get_end(a#0);
-            |            return__0 = do_bind_countBetween(a#0)(getStatic(String, \begin), t#0)
+            |            t#1 = notNull(a__0);
+            |            t#0 = do_get_end(t#1);
+            |            return__0 = do_call_countBetween(t#1, getStatic(String, \begin), t#0)
             |          }
             |      })
             |
@@ -3705,25 +3719,25 @@ class GenerateCodeStageTest {
             |      t#0 = getConsole();
             |      let ib__0;
             |      ib__0 = new IntBox(-1);
-            |      do_bind_log(t#0)(cat("ib.i = ", do_bind_toString(do_get_i(ib__0))()));
+            |      do_call_log(t#0, cat("ib.i = ", do_call_toString(do_get_i(ib__0))));
             |      let t#1;
             |      t#1 = ib__0;
             |## set-i of get-i pattern
             |## TODO: this might be a good test case for improving temporary elimination.
             |      do_set_i(t#1, do_get_i(t#1) + 11);
-            |      do_bind_log(t#0)(cat("ib.i = ", do_bind_toString(do_get_i(ib__0))()));
+            |      do_call_log(t#0, cat("ib.i = ", do_call_toString(do_get_i(ib__0))));
             |      let t#2;
             |      t#2 = ib__0;
             |      do_set_i(t#2, do_get_i(t#2) * 9);
-            |      do_bind_log(t#0)(cat("ib.i = ", do_bind_toString(do_get_i(ib__0))()));
+            |      do_call_log(t#0, cat("ib.i = ", do_call_toString(do_get_i(ib__0))));
             |      let t#3;
             |      t#3 = ib__0;
             |      do_set_i(t#3, do_get_i(t#3) - 6);
-            |      do_bind_log(t#0)(cat("ib.i = ", do_bind_toString(do_get_i(ib__0))()));
+            |      do_call_log(t#0, cat("ib.i = ", do_call_toString(do_get_i(ib__0))));
             |      let t#4;
             |      t#4 = ib__0;
             |      do_set_i(t#4, do_get_i(t#4) / 2);
-            |      do_bind_log(t#0)(cat("ib.i = ", do_bind_toString(do_get_i(ib__0))()))
+            |      do_call_log(t#0, cat("ib.i = ", do_call_toString(do_get_i(ib__0))))
             |
             |      ```
             |  },
@@ -3760,21 +3774,21 @@ class GenerateCodeStageTest {
             |      let console#0 = doPure(fn: Console {
             |          getConsole()
             |      }), ls__0 = new ListBuilder<Int>();
-            |      do_bind_add(ls__0)(0);
-            |      do_bind_add(ls__0)(3);
+            |      do_call_add(ls__0, 0);
+            |      do_call_add(ls__0, 3);
             |      do {
             |        let t#0;
             |        t#0 = ls__0;
             |## Here's a call to .set of a call to .get
-            |        do_bind_set(t#0)(0, do_bind_get(t#0)(0) + 10)
+            |        do_call_set(t#0, 0, do_call_get(t#0, 0) + 10)
             |      };
             |      do {
             |        let t#1;
             |        t#1 = ls__0;
-            |        do_bind_set(t#1)(1, do_bind_get(t#1)(1) * 2)
+            |        do_call_set(t#1, 1, do_call_get(t#1, 1) * 2)
             |      };
-            |      do_bind_log(console#0)(cat("ls = [", str(do_bind_join(do_bind_toList(ls__0)())(", ", fn (i__0 /* aka i */: Int) /* return__1 */: (String) {
-            |                do_bind_toString(i__0)(10)
+            |      do_call_log(console#0, cat("ls = [", str(do_call_join(do_call_toList(ls__0), ", ", fn (i__0 /* aka i */: Int) /* return__1 */: (String) {
+            |                do_call_toString(i__0, 10)
             |          })), "]"));
             |
             |      ```
@@ -3936,14 +3950,14 @@ class GenerateCodeStageTest {
             |            sbNow__0 = sbOrNull__0;
             |            let sb__0;
             |            sb__0 = sbNow__0;
-            |            do_bind_append(sb__0)(cat(do_bind_toString(i__0)()));
+            |            do_call_append(sb__0, cat(do_call_toString(i__0)));
             |            sbOrNull__0 = sb__0
             |          };
             |          let finalSb__0;
             |          finalSb__0 = sbOrNull__0;
-            |          return__1 = do_bind_toString(finalSb__0)()
+            |          return__1 = do_call_toString(finalSb__0)
             |      });
-            |      return__0 = f__0(4)
+            |      return__0 = (fn f)(4)
             |
             |      ```
             |  },
@@ -3971,9 +3985,9 @@ class GenerateCodeStageTest {
             |      f__0 = (@stay fn f(i__0 /* aka i */: StringIndexOption) /* return__0 */: Void {
             |          var t#0, t#1;
             |## str has erased to a .toString() call here
-            |          t#0 = do_bind_toString(is(i__0, StringIndex))();
-            |          t#1 = do_bind_toString(is(i__0, NoStringIndex))();
-            |          do_bind_log(console#0)(cat("Yes ", t#0, ", no ", t#1));
+            |          t#0 = do_call_toString(is(i__0, StringIndex));
+            |          t#1 = do_call_toString(is(i__0, NoStringIndex));
+            |          do_call_log(console#0, cat("Yes ", t#0, ", no ", t#1));
             |          return__0 = void
             |      });
             |      f__0(getStatic(String, \begin))

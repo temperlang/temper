@@ -122,7 +122,7 @@ class CleanupTemporariesTest {
                 |    t4#0 = t3#0;
                 |    toLogOrNotToLog__0 = t4#0;
                 |    if (toLogOrNotToLog__0) {
-                |      do_bind_log(console#0)("k")
+                |      do_call_log(console#0, "k")
                 |    }
                 |
                 |    ```,
@@ -172,7 +172,7 @@ class CleanupTemporariesTest {
                 |    let toLogOrNotToLog__0;
                 |    toLogOrNotToLog__0 = randomBool();
                 |    if (toLogOrNotToLog__0) {
-                |      do_bind_log(t#0)("k")
+                |      do_call_log(t#0, "k")
                 |    }
                 |
                 |    ```,
@@ -224,10 +224,10 @@ class CleanupTemporariesTest {
                 |    var t1#0;
                 |    t1#0 = randomBool();
                 |    if (t1#0) {
-                |      do_bind_log(t#0)("j")
+                |      do_call_log(t#0, "j")
                 |    };
                 |    if (t1#0) {
-                |      do_bind_log(t#0)("k")
+                |      do_call_log(t#0, "k")
                 |    };
                 |    return__0 = void
                 |
@@ -272,7 +272,7 @@ class CleanupTemporariesTest {
                 |      t#3 = 2
                 |    };
                 |    x__2 = t#3;
-                |    t#6 = do_bind_toString(x__2)();
+                |    t#6 = do_call_toString(x__2);
                 |    t#7 = t#6;
                 |    t#8 = t#7;
                 |    return__9 = t#8
@@ -354,7 +354,7 @@ class CleanupTemporariesTest {
                 |    } else {
                 |      x__2 = 2
                 |    };
-                |    return__9 = do_bind_toString(x__2)();
+                |    return__9 = do_call_toString(x__2);
                 |
                 |    ```,
                 |}
@@ -511,14 +511,14 @@ class CleanupTemporariesTest {
                 |        return__1 = getConsole();
                 |    });
                 |    @fn let f__0;
-                |    f__0 = fn f /* return__2 */: Void {
-                |      fn__0: do {
-                |        if (randomBool()) {
-                |          do_bind_log(console#0)("Random");
-                |        };
-                |        return__2 = void
-                |      }
-                |    };
+                |    f__0 = (@stay fn f /* return__2 */: Void {
+                |        fn__0: do {
+                |          if (randomBool()) {
+                |            do_call_log(console#0, "Random");
+                |          };
+                |          return__2 = void
+                |        }
+                |    });
                 |    f__0();
                 |    return__0 = void
                 |
@@ -671,7 +671,7 @@ class CleanupTemporariesTest {
                 |    if (randomBool()) {
                 |      x__0 = "bar"
                 |    };
-                |    do_bind_log(t#0)(x__0);
+                |    do_call_log(t#0, x__0);
                 |
                 |    ```,
                 |}
@@ -713,7 +713,7 @@ class CleanupTemporariesTest {
                 |      t#1 = "bar"
                 |    };
                 |    `test//`.x = t#1;
-                |    do_bind_log(t#0)(`test//`.x);
+                |    do_call_log(t#0, `test//`.x);
                 |    return__0 = void
                 |
                 |    ```,
@@ -743,9 +743,9 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeAfter: ```
-                |    do_bind_log(doPure(@stay fn /* return__0 */: Console {
+                |    do_call_log(doPure(@stay fn /* return__0 */: Console {
                 |          return__0 = getConsole();
-                |    }))(do_bind_toString(2)())
+                |      }), do_call_toString(2))
                 |
                 |    ```,
                 |}
@@ -792,14 +792,14 @@ class CleanupTemporariesTest {
                 |        return__1 = getConsole();
                 |    });
                 |    @fn let f__0;
-                |    f__0 = fn f(a__0 /* aka a */: Int32, b__0 /* aka b */: Int32) /* return__2 */: Void {
-                |      var t#1;
-                |      fn__0: do {
-                |        t#1 = do_bind_toString(a__0 + b__0)();
-                |        do_bind_log(console#0)(t#1);
-                |        return__2 = void
-                |      }
-                |    };
+                |    f__0 = (@stay fn f(a__0 /* aka a */: Int32, b__0 /* aka b */: Int32) /* return__2 */: Void {
+                |        var t#1;
+                |        fn__0: do {
+                |          t#1 = do_call_toString(a__0 + b__0);
+                |          do_call_log(console#0, t#1);
+                |          return__2 = void
+                |        }
+                |    });
                 |    @fn let incr__0;
                 |    var x__0;
                 |    x__0 = 0;
@@ -854,9 +854,9 @@ class CleanupTemporariesTest {
                 |    var y__0, t#1;
                 |    y__0 = 1;
                 |    t#1 = 2;
-                |    do_bind_log(t#0)(do_bind_toString(y__0)());
+                |    do_call_log(t#0, do_call_toString(y__0));
                 |    y__0 = t#1;
-                |    do_bind_log(t#0)(do_bind_toString(y__0)());
+                |    do_call_log(t#0, do_call_toString(y__0));
                 |
                 |    ```,
                 |}
@@ -904,7 +904,7 @@ class CleanupTemporariesTest {
                 |      }
                 |    };
                 |    x__0 = t#1;
-                |    do_bind_log(t#0)(do_bind_toString(x__0)());
+                |    do_call_log(t#0, do_call_toString(x__0));
                 |    return__0 = void
                 |
                 |    ```,
@@ -1329,12 +1329,12 @@ class CleanupTemporariesTest {
                 |      if (fail#3) {
                 |        break orelse#1;
                 |      };
-                |      t#2 = do_bind_toString(t#1)();
+                |      t#2 = do_call_toString(t#1);
                 |      t#3 = t#2
                 |    } orelse {
                 |      t#3 = "Bubble"
                 |    };
-                |    t#4 = do_bind_log(console#0)(t#3);
+                |    t#4 = do_call_log(console#0, t#3);
                 |    t#4
                 |
                 |    ```,
@@ -1350,12 +1350,12 @@ class CleanupTemporariesTest {
                 |      if (fail#3) {
                 |        break orelse#1;
                 |      };
-                |      t#2 = do_bind_toString(t#1)();
+                |      t#2 = do_call_toString(t#1);
                 |      t#3 = t#2
                 |    } orelse {
                 |      t#3 = "Bubble"
                 |    };
-                |    do_bind_log(t#0)(t#3);
+                |    do_call_log(t#0, t#3);
                 |
                 |    ```
                 |}
@@ -1592,9 +1592,9 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeAfter: ```
                 |    label__0: do {
-                |      do_bind_log(doPure(@stay fn /* return__0 */: Console {
+                |      do_call_log(doPure(@stay fn /* return__0 */: Console {
                 |            return__0 = getConsole();
-                |      }))("foo")
+                |        }), "foo")
                 |    }
                 |
                 |    ```
@@ -1635,8 +1635,8 @@ class CleanupTemporariesTest {
                 |      postfixReturn#0 = i__0;
                 |      i__0 = i__0 + 1;
                 |      t#1 = postfixReturn#0;
-                |      t#2 = do_bind_toString(t#1)();
-                |      do_bind_log(console#0)(t#2)
+                |      t#2 = do_call_toString(t#1);
+                |      do_call_log(console#0, t#2)
                 |    }
                 |
                 |    ```,
@@ -1651,7 +1651,7 @@ class CleanupTemporariesTest {
                 |      let postfixReturn#0;
                 |      postfixReturn#0 = i__0;
                 |      i__0 = i__0 + 1;
-                |      do_bind_log(t#0)(do_bind_toString(postfixReturn#0)())
+                |      do_call_log(t#0, do_call_toString(postfixReturn#0))
                 |    }
                 |
                 |    ```,
@@ -1694,8 +1694,8 @@ class CleanupTemporariesTest {
                 |      postfixReturn#0 = i__0;
                 |      i__0 = i__0 + 1;
                 |      t#1 = postfixReturn#0;
-                |      t#2 = do_bind_toString(t#1)();
-                |      do_bind_log(console#0)(t#2)
+                |      t#2 = do_call_toString(t#1);
+                |      do_call_log(console#0, t#2)
                 |    };
                 |    return__0 = void
                 |
@@ -1712,7 +1712,7 @@ class CleanupTemporariesTest {
                 |      let postfixReturn#0;
                 |      postfixReturn#0 = i__0;
                 |      i__0 = i__0 + 1;
-                |      do_bind_log(t#0)(do_bind_toString(postfixReturn#0)())
+                |      do_call_log(t#0, do_call_toString(postfixReturn#0))
                 |    };
                 |    return__0 = void
                 |
@@ -1814,9 +1814,9 @@ class CleanupTemporariesTest {
                 |    @stay @imported(\(`test//other/`.f)) @fn let localName__0;
                 |    localName__0 = (fn f);
                 |##  This is not a dead store
-                |    do_bind_log(doPure(@stay fn /* return__0 */: Console {
+                |    do_call_log(doPure(@stay fn /* return__0 */: Console {
                 |          return__0 = getConsole();
-                |    }))(do_bind_aString((fn f)())());
+                |      }), do_call_aString((fn f)()));
                 |
                 |    ```,
                 |  "consoleOutput": ```
@@ -2081,7 +2081,7 @@ class CleanupTemporariesTest {
                 |if (fail#16) {
                 |  bubble()
                 |};
-                |do_bind_log(t#18)(getStatic(IntUtil__0, \plusOne)(t#19));
+                |do_call_log(t#18, getStatic(IntUtil__0, \plusOne)(t#19));
                 |
             """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
             r.pseudoCodeAfter,

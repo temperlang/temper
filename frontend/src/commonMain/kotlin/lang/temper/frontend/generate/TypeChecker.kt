@@ -18,6 +18,7 @@ import lang.temper.interp.New
 import lang.temper.interp.forEachActual
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
+import lang.temper.log.Positioned
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
@@ -261,8 +262,10 @@ internal class TypeChecker(
         // for now as well as anything else that might slip through in the future.
         val returnType = (t.typeInferences?.type as? FunctionType)?.returnType
         val returnDecl = t.parts?.returnDecl
-        val returnDeclType = returnDecl?.parts?.name?.typeInferences?.type
-        checkSubType(returnDecl?.pos, returnType, returnDeclType)
+        if (returnDecl != null) {
+            val returnDeclType = returnDecl.parts?.name?.typeInferences?.type
+            checkSubType(returnDecl, returnType, returnDeclType)
+        }
         if (returnType?.isBubbly == false) {
             checkAgainstBubbles(t)
         }
@@ -341,7 +344,7 @@ internal class TypeChecker(
         val rightType = rightTree.typeInferences?.type
         // TODO: We probably want to enforce that we have either a left or a right type from the
         // checker, but baby steps.
-        checkSubType(t.pos, leftType, rightType)
+        checkSubType(t, leftType, rightType)
         // And make sure we don't use void as a value. Focus on actual void, not just void-like for now.
         if (rightType?.isVoid == true) {
             // We can assign voids only to simple names that are temporaries or appropriate return decls.
@@ -356,13 +359,12 @@ internal class TypeChecker(
         }
     }
 
-    /** @param pos must be non-null if the other params are. */
-    private fun checkSubType(pos: Position?, leftType: StaticType?, rightType: StaticType?) {
+    private fun checkSubType(src: Positioned, leftType: StaticType?, rightType: StaticType?) {
         if (leftType != null && rightType != null && !typeContext.isSubType(rightType, leftType)) {
             logSink.log(
                 level = Log.Error,
                 template = MessageTemplate.ExpectedSubType,
-                pos = pos!!,
+                pos = src.pos,
                 values = listOf(leftType, rightType),
             )
         }

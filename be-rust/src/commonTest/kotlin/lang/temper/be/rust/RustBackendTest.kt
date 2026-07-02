@@ -96,14 +96,11 @@ class RustBackendTest {
             |            pub (crate) fn init() -> temper_core::Result<()> {
             |                static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |                INIT_ONCE.get_or_init(| |{
+            |                        let stringifyValue__0: std::sync::Arc<dyn Fn (i32) -> std::sync::Arc<String> + std::marker::Send + std::marker::Sync> = std::sync::Arc::new(crate::bar::stringify.clone());
             |                        println!("{}", "Foo");
-            |                        STRINGIFY_VALUE_HERE.set(std::sync::Arc::new(stringifyHere__0.clone())).unwrap_or_else(| _ | panic!());
+            |                        let stringifyValueHere__0: std::sync::Arc<dyn Fn (i32) -> std::sync::Arc<String> + std::marker::Send + std::marker::Sync> = std::sync::Arc::new(stringifyHere__0.clone());
             |                        Ok(())
             |                }).clone()
-            |            }
-            |            static STRINGIFY_VALUE_HERE: std::sync::OnceLock<std::sync::Arc<dyn Fn (i32) -> std::sync::Arc<String> + std::marker::Send + std::marker::Sync>> = std::sync::OnceLock::new();
-            |            fn stringify_value_here() -> std::sync::Arc<dyn Fn (i32) -> std::sync::Arc<String> + std::marker::Send + std::marker::Sync> {
-            |                ( * STRINGIFY_VALUE_HERE.get().unwrap()).clone()
             |            }
             |            fn stringifyHere__0(i__0: i32) -> std::sync::Arc<String> {
             |                return temper_core::int_to_string(i__0, None);
@@ -111,13 +108,13 @@ class RustBackendTest {
             |            pub fn hi(nums__0: impl temper_core::ToListed<i32>) -> std::sync::Arc<String> {
             |                let nums__0 = nums__0.to_listed();
             |                let a__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & crate::bar::stringify.clone());
-            |                let b__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & ( * crate::bar::stringify_value().clone()));
+            |                let b__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & crate::bar::stringify.clone());
             |                let c__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & stringifyHere__0.clone());
-            |                let d__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & ( * stringify_value_here().clone()));
+            |                let d__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & stringifyHere__0.clone());
             |                return std::sync::Arc::new(format!("{}{}{}{}", a__0, b__0.clone(), c__0.clone(), d__0.clone()));
             |            }
-            |            pub fn make_talk_here(talker__1: crate::bar::Talker) {
-            |                talker__1.talk();
+            |            pub fn make_talk_here(talker__0: crate::bar::Talker) {
+            |                talker__0.talk();
             |            }
             |
             |            ```
@@ -173,8 +170,8 @@ class RustBackendTest {
             |              pub fn stringify(i__1: i32) -> std::sync::Arc<String> {
             |                  return temper_core::int_to_string(i__1, None);
             |              }
-            |              pub fn make_talk(talker__0: Talker) {
-            |                  talker__0.talk();
+            |              pub fn make_talk(talker__1: Talker) {
+            |                  talker__1.talk();
             |              }
             |
             |              ```
@@ -2768,6 +2765,115 @@ class RustBackendTest {
             """.trimMargin(),
         )
     }
+
+    @Test
+    fun decodeHexTest() = assertGenerateWanted(
+        temper = """
+            |let decodeHexUnsigned(
+            |  sourceText: String, start: StringIndex, limit: StringIndex
+            |): Int {
+            |  var n = 0;
+            |  var i = start;
+            |  while (i.compareTo(limit) < 0) {
+            |    let cp = sourceText[i];
+            |    let digit = if (char'0' <= cp && cp <= char'0') {
+            |      cp - char'0'
+            |    } else if (char'A' <= cp && cp <= char'F') {
+            |      cp - char'A' + 10
+            |    } else if (char'a' <= cp && cp <= char'f') {
+            |      cp - char'a' + 10
+            |    } else {
+            |      return -1;
+            |    }
+            |    n = (n * 16) + digit;
+            |    i = sourceText.next(i);
+            |  }
+            |  n
+            |}
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            Ok(())
+            |    }).clone()
+            |}
+            |fn decodeHexUnsigned__0(sourceText__0: impl temper_core::ToArcString, start__0: usize, limit__0: usize) -> i32 {
+            |    let sourceText__0 = sourceText__0.to_arc_string();
+            |    let return__0: i32;
+            |    let mut t___0: usize;
+            |    let mut t___1: bool;
+            |    let mut t___2: bool;
+            |    let mut t___3: bool;
+            |    let mut t___4: i32;
+            |    'fn__0: {
+            |        let mut n__0: i32 = 0;
+            |        let mut i__0: usize = start__0;
+            |        'loop___0: loop {
+            |            if ! (Some(Some(i__0).cmp( & Some(limit__0)) as i32) < Some(0)) {
+            |                break;
+            |            }
+            |            let cp__0: i32 = temper_core::string::get( & sourceText__0, i__0);
+            |            if Some(48) <= Some(cp__0) {
+            |                t___1 = Some(cp__0) <= Some(48);
+            |            } else {
+            |                t___1 = false;
+            |            }
+            |            if t___1 {
+            |                t___4 = cp__0.wrapping_sub(48);
+            |            } else {
+            |                if Some(65) <= Some(cp__0) {
+            |                    t___2 = Some(cp__0) <= Some(70);
+            |                } else {
+            |                    t___2 = false;
+            |                }
+            |                if t___2 {
+            |                    t___4 = cp__0.wrapping_sub(65).wrapping_add(10);
+            |                } else {
+            |                    if Some(97) <= Some(cp__0) {
+            |                        t___3 = Some(cp__0) <= Some(102);
+            |                    } else {
+            |                        t___3 = false;
+            |                    }
+            |                    if t___3 {
+            |                        t___4 = cp__0.wrapping_sub(97).wrapping_add(10);
+            |                    } else {
+            |                        return__0 = -1;
+            |                        break 'fn__0;
+            |                    }
+            |                }
+            |            }
+            |            let digit__0: i32 = t___4;
+            |            n__0 = n__0.wrapping_mul(16).wrapping_add(digit__0);
+            |            t___0 = temper_core::string::next( & sourceText__0, i__0);
+            |            i__0 = t___0;
+            |        }
+            |        return__0 = n__0;
+            |    }
+            |    return return__0;
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun stringIndexOptionCompareToStringIndexMinimal() = assertGenerateWanted(
+        temper = """
+            |export let notEmpty(start: StringIndex, limit: StringIndex): Boolean {
+            |  start.compareTo(limit) < 0
+            |}
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            Ok(())
+            |    }).clone()
+            |}
+            |pub fn not_empty(start__0: usize, limit__0: usize) -> bool {
+            |    return Some(Some(start__0).cmp( & Some(limit__0)) as i32) < Some(0);
+            |}
+        """.trimMargin(),
+    )
 }
 
 private fun assertGenerateWanted(

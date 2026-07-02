@@ -2098,7 +2098,7 @@ Unlike in some other languages, curly brackets (`{...}`) are **required** around
 ```temper
 for (var i = 0; i < 3; ++i)
   console.log(i.toString()) // Curly brackets missing
-// ❌ Expected function type, but got Invalid!, No type for subject of .toString!, Expected function type, but got Invalid!
+// ❌ Expected function type, but got Function!, No type for subject of .toString!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/stmt/simple-for-loop/snippet.md/1 -->
@@ -2313,7 +2313,7 @@ You can't do that in Temper; always put `{`...`}` around the bodies.
 
 ```temper
 if (true) console.log("Runs"); else console.log("Does not run");
-// ❌ Expected a TopLevel here!, Expected function type, but got Invalid!
+// ❌ Expected a TopLevel here!, Expected function type, but got Function!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/if/snippet.md/4 -->
@@ -2869,7 +2869,7 @@ Unlike in some other languages, curly brackets (`{...}`) are **required** around
 var i = 0;
 while (i < 3)
   console.log((i++).toString()) // Curly brackets missing
-// ❌ Expected function type, but got Invalid!
+// ❌ Expected function type, but got Function!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/while/snippet.md/1 -->

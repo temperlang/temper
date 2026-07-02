@@ -12,7 +12,7 @@ import lang.temper.name.Symbol
 import lang.temper.type.Abstractness
 import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
-import lang.temper.type.ExternalBind
+import lang.temper.type.ExternalCall
 import lang.temper.type.MkType
 import lang.temper.type.NominalType
 import lang.temper.type.TypeFormal
@@ -40,10 +40,8 @@ import lang.temper.value.StaySink
 import lang.temper.value.StaylessMacroValue
 import lang.temper.value.TBoolean
 import lang.temper.value.TClass
-import lang.temper.value.TFunction
 import lang.temper.value.Tree
 import lang.temper.value.Value
-import lang.temper.value.and
 import lang.temper.value.functionContained
 import lang.temper.value.unpackPositionedOr
 
@@ -202,7 +200,7 @@ object GeneratorStepperFn : CallableValue, StaylessMacroValue {
                 override fun invoke(macroEnv: MacroEnvironment, interpMode: InterpMode): PartialResult =
                     if (interpMode == InterpMode.Full) {
                         val nextCallHelper = DotHelper(
-                            ExternalBind,
+                            ExternalCall,
                             DotMember(Symbol("next")),
                             emptyList(),
                         )
@@ -212,20 +210,12 @@ object GeneratorStepperFn : CallableValue, StaylessMacroValue {
                                 V(generator)
                             }
                         }
-                        val boundMethod = macroEnv.dispatchCallTo(
+                        macroEnv.dispatchCallTo(
                             callTree,
                             Value(nextCallHelper),
                             callTree.children.subListToEnd(1),
                             interpMode,
                         )
-                        boundMethod.and { boundMethodValue ->
-                            (TFunction.unpackOrNull(boundMethodValue) as? CallableValue)
-                                ?.invoke(ActualValues.Empty, cb, interpMode)
-                                ?: cb.fail(
-                                    MessageTemplate.ExpectedValueOfType,
-                                    values = listOf(TFunction, boundMethodValue),
-                                )
-                        }
                     } else {
                         NotYet
                     }

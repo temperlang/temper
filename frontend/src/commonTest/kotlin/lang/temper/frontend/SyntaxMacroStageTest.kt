@@ -875,6 +875,7 @@ class SyntaxMacroStageTest {
             |}
             |x
         """.trimMargin(),
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
         stage = Stage.SyntaxMacro,
         want = """
             |{
@@ -882,7 +883,7 @@ class SyntaxMacroStageTest {
             |    body:
             |    ```
             |    let x__0 = f();
-            |    do_bind_forEach(x__0)(fn (x__1) {
+            |    do_call_forEach(x__0, fn (x__1) {
             |        x__1
             |    });
             |    x__0
@@ -1811,7 +1812,7 @@ class SyntaxMacroStageTest {
             |## magnitude has its doc string
             |            @fn let magnitude__0 = (@docString((["magnitude is the distance of this point from the origin.", "magnitude is the distance of this point from the origin.\n\nIt is always >= 0.", "test/test.temper"])) fn magnitude(@impliedThis(Point__0) this__0: Point__0) /* return__0 */: (Float64) {
             |                fn__0: do {
-            |                  do_bind_sqrt(do_iget_x(type (Point__0), this(Point__0)) * do_iget_x(type (Point__0), this(Point__0)) + do_iget_y(type (Point__0), this(Point__0)) * do_iget_y(type (Point__0), this(Point__0)))()
+            |                  do_call_sqrt(do_iget_x(type (Point__0), this(Point__0)) * do_iget_x(type (Point__0), this(Point__0)) + do_iget_y(type (Point__0), this(Point__0)) * do_iget_y(type (Point__0), this(Point__0)))
             |                }
             |            });
             |            @visibility(\public) let constructor__0 = fn constructor(@impliedThis(Point__0) this__1: Point__0, x__1 /* aka x */: Float64, y__1 /* aka y */: Float64) /* return__1 */: Void {
@@ -1963,8 +1964,8 @@ class SyntaxMacroStageTest {
             |        let console#0 = doPure(fn: Console {
             |            getConsole()
             |        }), console__0 = getConsole("myConsole");
-            |        do_bind_log(console__0)("Hi!");
-            |        do_bind_log(console#0)("Bye!");
+            |        do_call_log(console__0, "Hi!");
+            |        do_call_log(console#0, "Bye!");
             |
             |        ```
             |  }
@@ -2016,13 +2017,13 @@ class SyntaxMacroStageTest {
             |              if (isNull(subject#1)) {
             |                null
             |              } else {
-            |                do_bind_countBetween(notNull(subject#1))(do_get_begin(String), do_get_end(do_get_string(a__0)))
+            |                do_call_countBetween(notNull(subject#1), do_get_begin(String), do_get_end(do_get_string(a__0)))
             |              }
             |            };
             |            if (isNull(subject#0)) {
             |              null
             |            } else {
-            |              do_bind_max(notNull(subject#0))(min__0)
+            |              do_call_max(notNull(subject#0), min__0)
             |            }
             |          }
             |        }
@@ -2087,7 +2088,7 @@ class SyntaxMacroStageTest {
             |              if (isNull(c__0)) {
             |                null
             |              } else {
-            |                do_bind_method(notNull(c__0))()
+            |                do_call_method(notNull(c__0))
             |              }
             |          });
             |          g__0({
@@ -2096,7 +2097,7 @@ class SyntaxMacroStageTest {
             |              if (isNull(subject#1)) {
             |                null
             |              } else {
-            |                do_bind_method(notNull(subject#1))()
+            |                do_call_method(notNull(subject#1))
             |              }
             |          });
             |        }
@@ -2126,8 +2127,8 @@ class SyntaxMacroStageTest {
             |        do (fn {
             |            let console__0 = getConsole("myConsole");
             |        });
-            |        do_bind_log(console#0)("Hi!");
-            |        do_bind_log(console#0)("Bye!");
+            |        do_call_log(console#0, "Hi!");
+            |        do_call_log(console#0, "Bye!");
             |
             |        ```
             |  }

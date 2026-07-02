@@ -29,8 +29,6 @@ import lang.temper.name.SourceName
 import lang.temper.name.StableTemperName
 import lang.temper.name.Symbol
 import lang.temper.name.Temporary
-import lang.temper.type.BindMemberAccessor
-import lang.temper.type.DotHelper
 import lang.temper.type.StaticType
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.isVoidLike
@@ -1528,18 +1526,12 @@ private fun mayReorderOver(t: Tree, readsAndWrites: ReadsAndWrites): Boolean = w
     is StayLeaf -> true
     is CallTree -> {
         // conservatively may not, but allow for some patterns:
-        // - do_bind_methodName(subject) where subject can be reordered over
         // - nym`<>`(callee, TypeActuals) where callee can be reordered over
+        // - read of a static is just a stable name
         val callee = t.childOrNull(0)?.functionContained
         when (callee) {
             BuiltinFuns.angleFn if t.size >= 2 -> mayReorderOver(t.child(1), readsAndWrites)
             is GetStaticOp -> true
-            is DotHelper if callee.memberAccessor is BindMemberAccessor -> {
-                val subject = t.childOrNull(
-                    callee.memberAccessor.enclosingTypeIndexOrNegativeOne + 2,
-                )
-                subject != null && mayReorderOver(subject, readsAndWrites)
-            }
             else -> false
         }
     }

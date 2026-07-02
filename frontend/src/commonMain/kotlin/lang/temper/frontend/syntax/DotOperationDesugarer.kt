@@ -23,11 +23,11 @@ import lang.temper.name.Temporary
 import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
 import lang.temper.type.ExtensionResolution
-import lang.temper.type.ExternalBind
+import lang.temper.type.ExternalCall
 import lang.temper.type.ExternalGet
 import lang.temper.type.ExternalSet
 import lang.temper.type.InstanceExtensionResolution
-import lang.temper.type.InternalBind
+import lang.temper.type.InternalCall
 import lang.temper.type.InternalGet
 import lang.temper.type.InternalSet
 import lang.temper.type.Member
@@ -536,24 +536,22 @@ private fun desugarDotOperation(
             replacer = {
                 val call = edgeToReplace.target as CallTree
                 Call(call.pos) {
-                    Call(listOf(subjectPos, nameTree.pos).spanningPosition(subjectPos)) {
-                        plantHandler(
-                            nameTree.pos,
-                            if (enclosingTypeShape != null) {
-                                InternalBind
-                            } else {
-                                ExternalBind
-                            },
-                            dotName,
-                            extensions,
-                        )
-                        if (enclosingTypeTree != null) {
-                            // internal calls need the enclosing type at
-                            // InternalCall.enclosingTypeIndexOrNegativeOne
-                            V(enclosingTypeTree.pos, enclosingTypeValue!!)
-                        }
-                        Replant(freeTarget(subjectEdge))
+                    plantHandler(
+                        nameTree.pos,
+                        if (enclosingTypeShape != null) {
+                            InternalCall
+                        } else {
+                            ExternalCall
+                        },
+                        dotName,
+                        extensions,
+                    )
+                    if (enclosingTypeTree != null) {
+                        // internal calls need the enclosing type at
+                        // InternalCall.enclosingTypeIndexOrNegativeOne
+                        V(enclosingTypeTree.pos, enclosingTypeValue!!)
                     }
+                    Replant(freeTarget(subjectEdge))
                     // `this.f(x) -> (Call this.f x) so arg 0 is at position 1
                     call.edges.subListToEnd(1).forEach {
                         Replant(freeTarget(it))

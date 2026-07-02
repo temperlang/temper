@@ -776,34 +776,6 @@ class InterpreterTest {
         }
     }
 
-    private fun assertResult(
-        expectedJson: String,
-        input: String,
-        expectedFailLog: String? = null,
-    ) = assertResult(
-        expectedJson,
-        inputText = input,
-        expectedFailLog = expectedFailLog,
-    ) { logSink, context ->
-        // Lex the input
-        val lexer = Lexer(context.loc, logSink, input)
-
-        // Build a parse tree
-        val comments = mutableListOf<CstComment>()
-        val cst = parse(lexer, logSink, comments)
-
-        // Build an AST.
-        val ast = buildTree(
-            cstParts = flatten(cst),
-            storedCommentTokens = StoredCommentTokens(comments),
-            logSink = logSink,
-            documentContext = context,
-        )
-
-        // Pre-process the AST to do just enough to get basic language features working.
-        preprocess(ast)
-    }
-
     @Test
     fun declMetadataVisitedDuringPartialInterp() {
         val logSink = ListBackedLogSink()
@@ -860,6 +832,34 @@ class InterpreterTest {
         }
 
         assertEquals(emptyList(), untagged)
+    }
+
+    private fun assertResult(
+        expectedJson: String,
+        input: String,
+        expectedFailLog: String? = null,
+    ) = assertResult(
+        expectedJson,
+        inputText = input,
+        expectedFailLog = expectedFailLog,
+    ) { logSink, context ->
+        // Lex the input
+        val lexer = Lexer(context.loc, logSink, input)
+
+        // Build a parse tree
+        val comments = mutableListOf<CstComment>()
+        val cst = parse(lexer, logSink, comments)
+
+        // Build an AST.
+        val ast = buildTree(
+            cstParts = flatten(cst),
+            storedCommentTokens = StoredCommentTokens(comments),
+            logSink = logSink,
+            documentContext = context,
+        )
+
+        // Pre-process the AST to do just enough to get basic language features working.
+        preprocess(ast)
     }
 
     private fun assertResult(

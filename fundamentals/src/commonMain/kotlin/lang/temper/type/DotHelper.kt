@@ -4,8 +4,6 @@ import lang.temper.common.console
 import lang.temper.env.BindingNamingContext
 import lang.temper.env.InterpMode
 import lang.temper.format.OutToks
-import lang.temper.format.OutputToken
-import lang.temper.format.OutputTokenType
 import lang.temper.format.TokenSerializable
 import lang.temper.format.TokenSink
 import lang.temper.log.MessageTemplate
@@ -18,18 +16,15 @@ import lang.temper.value.BuiltinStatelessMacroValue
 import lang.temper.value.CallableValue
 import lang.temper.value.Fail
 import lang.temper.value.InternalFeatureKeys
-import lang.temper.value.InterpreterCallback
 import lang.temper.value.MacroEnvironment
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
 import lang.temper.value.SpecialFunction
-import lang.temper.value.StaySink
 import lang.temper.value.TClass
 import lang.temper.value.TFunction
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
-import lang.temper.value.and
 import lang.temper.value.staticBuiltinName
 import lang.temper.value.typeShapeAtLeafOrNull
 
@@ -61,10 +56,10 @@ data class StaticExtensionResolution(
  *
  * - `subject.adjective = expr` : property set via [ExternalSet] and [InternalSet]
  * - `subject.adjective` : property read via [ExternalGet] and [InternalGet]
- * - `subject.verb(args)` : method call via [ExternalBind] and [InternalBind]
+ * - `subject.verb(args)` : method call via [ExternalCall] and [InternalCall]
  * - `subject.verb` : read of a bound method via [ExternalGet] and [InternalGet]
- * - `subject.adjective(args)` : call to a function stored in a property via [ExternalBind] and
- *   [InternalBind]
+ * - `subject.adjective(args)` : call to a function stored in a property via [ExternalCall] and
+ *   [InternalCall] but rewritten statically by [lang.temper.frontend.maybeAdjustDotHelper]
  *
  * It also allows
  */
@@ -124,16 +119,16 @@ class DotHelper(
         }
         val args = macroEnv.args
         val sizeWanted = when (memberAccessor) {
-            ExternalGet -> 1 // (this)
-            InternalGet -> 2 // (containingTypeShape, this)
-            ExternalSet -> 2 // (this, newValue)
+            ExternalGet -> arityOne // (this)
+            InternalGet -> arityTwo // (containingTypeShape, this)
+            ExternalSet -> arityTwo // (this, newValue)
             InternalSet ->
                 @Suppress("MagicNumber") // arity
-                3 // (containingTypeShape, this, newValue)
-            ExternalBind -> 1 // (this)
-            InternalBind -> 2 // (containingTypeShape, this)
+                arityThree // (containingTypeShape, this, newValue)
+            ExternalCall -> arityOneOrMore // (this, arg0, arg1, ...)
+            InternalCall -> arityTwoOrMore // (containingTypeShape, this, arg0, arg1)
         }
-        if (args.size != sizeWanted) {
+        if (args.size !in sizeWanted) {
             return macroEnv.fail(MessageTemplate.ArityMismatch, values = listOf(sizeWanted))
         }
         val subjectIndex = memberAccessor.firstArgumentIndex
@@ -261,36 +256,17 @@ class DotHelper(
 
                 dispatchCallTo(helperShape)
             }
-            ExternalBind, InternalBind ->
+            ExternalCall, InternalCall ->
                 when (val method = accessibleMembers.firstOrNull()) {
                     null -> inaccessible()
-                    is MethodShape -> {
-                        if (method.methodKind == MethodKind.Normal) {
-                            lookupMemberDefinition(method).and { methodValue ->
-                                if (methodValue.typeTag != TFunction) {
-                                    macroEnv.fail(
-                                        MessageTemplate.ExpectedValueOfType,
-                                        values = listOf(TFunction, methodValue),
-                                    )
-                                } else {
-                                    val callable = TFunction.unpack(methodValue) // typeTag checked above
-                                    if (callable is CallableValue) {
-                                        Value(BoundMethod(method, callable, subject))
-                                    } else {
-                                        macroEnv.fail(
-                                            MessageTemplate.CannotInvokeMacroAsFunction,
-                                        )
-                                    }
-                                }
-                            }
-                        } else {
-                            // TODO: handle call of functions from getter as in
-                            //     obj.f()
-                            // where (obj.f) is a use of a getter than gets a function.
-                            Fail
-                        }
-                    }
-                    else -> TODO("Call of function stored in property")
+                    is MethodShape if (method.methodKind == MethodKind.Normal) ->
+                        dispatchCallTo(method)
+                    else ->
+                        // TODO: handle call of functions from getter as in
+                        //     obj.f()
+                        // where (obj.f) is a use of a getter than gets a function.
+                        // Currently, maybeAdjustDotHelper handles this but perhaps late.
+                        Fail
                 }
         }
     }
@@ -302,12 +278,7 @@ class DotHelper(
         AccessibleFilter(accessingTypeShape.membersMatching(member, member is OperatorMember), null)
 
     override val callMayFailPerSe: Boolean
-        get() = when (memberAccessor) {
-            is BindMemberAccessor -> false // Just a curry operator
-            // getters and setters can bubble
-            is GetMemberAccessor -> true
-            is SetMemberAccessor -> true
-        }
+        get() = true
 
     override fun toString() = "DotHelper(${this.memberAccessor.prefix}, ${this.member})"
 }
@@ -359,34 +330,10 @@ private fun lookupMemberDefinition(
     return methodDefinition?.value ?: NotYet
 }
 
-private class BoundMethod(
-    private val methodShape: MethodShape,
-    private val method: CallableValue,
-    private val subject: Value<*>,
-) : CallableValue, TokenSerializable {
-    override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
-        val allArgs = ActualValues.cat(ActualValues.from(subject), args)
-        return method.invoke(allArgs, cb, interpMode)
-    }
+private val arityOne = 1..1
+private val arityTwo = 2..2
 
-    override val sigs: List<Signature2>? get() = method.sigs?.map { sig ->
-        sig.copy(requiredInputTypes = sig.requiredInputTypes.drop(1), hasThisFormal = false)
-    }
-
-    override fun addStays(s: StaySink) {
-        // Not stable
-    }
-
-    override fun toString(): String = "BoundMethod(${subject}.${methodShape.name})"
-
-    override fun renderTo(tokenSink: TokenSink) {
-        tokenSink.emit(OutputToken("ƒ", OutputTokenType.Word))
-        tokenSink.emit(OutToks.dot)
-        tokenSink.emit(OutputToken("bind", OutputTokenType.Name))
-        tokenSink.emit(OutToks.leftParen)
-        tokenSink.emit(methodShape.enclosingType.name.toToken(inOperatorPosition = false))
-        tokenSink.emit(OutToks.dot)
-        tokenSink.emit(methodShape.name.toToken(inOperatorPosition = false))
-        tokenSink.emit(OutToks.rightParen)
-    }
-}
+@Suppress("MagicNumber") // Three is what's written on the tin.  (The magic tin)
+private val arityThree = 3..3
+private val arityOneOrMore = 1..Int.MAX_VALUE
+private val arityTwoOrMore = 2..Int.MAX_VALUE

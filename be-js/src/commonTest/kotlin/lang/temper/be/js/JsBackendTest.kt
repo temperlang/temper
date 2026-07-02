@@ -1897,12 +1897,13 @@ class JsBackendTest {
             |          export function maybeLength(a_0) {
             |            let return_0;
             |            let t_3;
+            |            let t_4;
             |            if (a_0 == null) {
             |              return_0 = null;
             |            } else {
-            |              const a_1 = a_0;
-            |              t_3 = a_1.length;
-            |              return_0 = stringCountBetween_0(a_1, 0, t_3);
+            |              t_4 = a_0;
+            |              t_3 = t_4.length;
+            |              return_0 = stringCountBetween_0(t_4, 0, t_3);
             |            }
             |            return return_0;
             |          };
