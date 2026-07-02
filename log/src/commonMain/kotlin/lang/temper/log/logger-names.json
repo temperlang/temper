@@ -68,6 +68,8 @@
     "frontend.typeStage.afterExplicitResults",
     "frontend.typeStage.type",
     "frontend.typeStage.afterTyper",
+    "frontend.typeStage.replaceVoidishPanics",
+    "frontend.typeStage.afterReplaceVoidishPanics",
     "frontend.typeStage.useBeforeInit",
     "frontend.typeStage.afterUseBeforeInit",
     "frontend.typeStage.reorderArgs",

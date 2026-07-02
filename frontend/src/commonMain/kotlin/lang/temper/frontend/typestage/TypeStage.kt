@@ -162,7 +162,11 @@ internal class TypeStage(
         }
 
         // With type info, we can finalize `else` values.
-        replaceVoidishPanics(root)
+        Debug.Frontend.TypeStage.ReplaceVoidishPanics(configKey)
+            .benchmarkIf(BENCHMARK, "ReplaceVoidishPanics") {
+                replaceVoidishPanics(root)
+            }
+        Debug.Frontend.TypeStage.AfterReplaceVoidishPanics.snapshot(configKey, AstSnapshotKey, root)
 
         if (genre != Genre.Documentation) {
             Debug.Frontend.TypeStage.UseBeforeInit(configKey)
