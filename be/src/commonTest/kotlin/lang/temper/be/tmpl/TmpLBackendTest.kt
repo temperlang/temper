@@ -31,9 +31,6 @@ import lang.temper.fs.NullSystemAccess
 import lang.temper.fs.OutDir
 import lang.temper.fs.OutputRoot
 import lang.temper.fs.fileTreeStructure
-import lang.temper.interp.connectedDecoratorBindings
-import lang.temper.interp.connectedDecoratorName
-import lang.temper.interp.vConnectedDecorator
 import lang.temper.lexer.Genre
 import lang.temper.library.LibraryConfiguration
 import lang.temper.library.LibraryConfigurations
@@ -2229,18 +2226,8 @@ class TmpLBackendTest {
             ),
             want = want,
             supportNetwork = supportNetwork,
-            customizeModule = allowConnectedDecoratorInTestInput,
         )
     }
-
-    private val allowConnectedDecoratorInTestInput =
-        ModuleCustomizeHook { module, isNew ->
-            if (isNew) {
-                module.addEnvironmentBindings(
-                    mapOf(connectedDecoratorName to vConnectedDecorator),
-                )
-            }
-        }
 
     @Test
     fun noStaticMethodConnected() = runStaticConnectedMethodTest(
@@ -2395,7 +2382,6 @@ class TmpLBackendTest {
 
     @Test
     fun virtualInterfaceMethodsNotConnected() = assertGeneratedCode(
-        customizeModule = allowConnectedDecoratorInTestInput,
         supportNetwork = defaultTestSupportNetwork.copy(
             isConnected = { connectedKey ->
                 when (connectedKey) {
@@ -3572,11 +3558,6 @@ class TmpLBackendTest {
 
     @Test
     fun disconnectedMethod() = assertGeneratedCode(
-        customizeModule = { module, isNew ->
-            if (isNew) {
-                module.addEnvironmentBindings(connectedDecoratorBindings)
-            }
-        },
         inputJsonPathToContent = $$"""
             |{
             |  foo: {

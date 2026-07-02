@@ -25,12 +25,6 @@ internal val connectedDecorator = MetadataDecorator(
 }
 
 val vConnectedDecorator = Value(connectedDecorator)
-val connectedDecoratorName = BuiltinName(connectedDecorator.name)
-
-val connectedDecoratorBindings = mapOf(
-    connectedDecoratorName to vConnectedDecorator,
-    connectedDecoratorName.baseName to vConnectedDecorator,
-)
 
 private fun findConnectedDecoratorInsertions(args: MacroActuals, symbolKey: Symbol): List<Pair<Tree, Int>> {
     val result = findDefaultDecoratorInsertions(args, symbolKey).toMutableList()

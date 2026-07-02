@@ -8,8 +8,6 @@ import lang.temper.common.temperEscaper
 import lang.temper.common.testCodeLocation
 import lang.temper.env.InterpMode
 import lang.temper.interp.MetadataDecorator
-import lang.temper.interp.connectedDecoratorName
-import lang.temper.interp.vConnectedDecorator
 import lang.temper.lexer.MarkdownLanguageConfig
 import lang.temper.lexer.StandaloneLanguageConfig
 import lang.temper.log.MessageTemplate
@@ -2689,9 +2687,6 @@ class GenerateCodeStageTest {
         // its subtypes, so the static expression type matters when casting.
         stage = Stage.Run,
         provisionModule = { module, _ ->
-            module.addEnvironmentBindings(
-                mapOf(connectedDecoratorName to vConnectedDecorator),
-            )
             module.deliverContent(
                 ModuleSource(
                     filePath = testCodeLocation,
