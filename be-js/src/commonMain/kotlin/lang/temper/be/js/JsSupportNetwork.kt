@@ -26,6 +26,7 @@ import lang.temper.common.AtomicCounter
 import lang.temper.common.OpenOrClosed
 import lang.temper.common.asciiTitleCase
 import lang.temper.common.asciiUnTitleCase
+import lang.temper.common.subListToEnd
 import lang.temper.format.CodeFormatter
 import lang.temper.format.OutToks
 import lang.temper.format.OutputToken
@@ -231,87 +232,87 @@ internal object JsSupportNetwork : SupportNetwork {
         genre: Genre,
     ): SupportCode? {
         val factory: Inliner? = when (connectedKey) {
-            "Boolean::toString" -> toStringIdiomExpander
-            "Int32::toFloat64" -> identityIdiomExpander // All ints are also floats.
-            "Int32::toString" -> toStringIdiomExpander
-            "Int32::toInt64" -> bigintExpander
-            "Int64::toString" -> toStringIdiomExpander
-            "List::isEmpty" -> listIsEmptyIdiomExpander
-            "List::forEach" -> listForEachIdiomExpander
-            "List::toList" -> identityIdiomExpander
-            "List::toListBuilder" -> listToListBuilderIdiomExpander
-            "Listed::isEmpty" -> listIsEmptyIdiomExpander
-            "ListBuilder::constructor" -> listBuilderConstructorIdiomExpander
-            "ListBuilder::toListBuilder" -> listToListBuilderIdiomExpander
-            "String::isEmpty" -> stringIsEmptyIdiomExpander
-            "String::toString" -> identityIdiomExpander
-            "Date::constructor" -> { p, args, strict, translator ->
+            "core.type Boolean.toString()" -> toStringIdiomExpander
+            "core.type Int32.toFloat64()" -> identityIdiomExpander // All ints are also floats.
+            "core.type Int32.toString()" -> toStringIdiomExpander
+            "core.type Int32.toInt64()" -> bigintExpander
+            "core.type Int64.toString()" -> toStringIdiomExpander
+            "core.type List.get isEmpty()" -> listIsEmptyIdiomExpander
+            "core.type List.forEach()" -> listForEachIdiomExpander
+            "core.type List.toList()" -> identityIdiomExpander
+            "core.type List.toListBuilder()" -> listToListBuilderIdiomExpander
+            "core.type Listed.get isEmpty()" -> listIsEmptyIdiomExpander
+            "core.type ListBuilder.constructor()" -> listBuilderConstructorIdiomExpander
+            "core.type ListBuilder.toListBuilder()" -> listToListBuilderIdiomExpander
+            "core.type String.get isEmpty()" -> stringIsEmptyIdiomExpander
+            "core.type String.toString()" -> identityIdiomExpander
+            "std/temporal.type Date.constructor()" -> { p, args, strict, translator ->
                 newDateIdiomExpander(p, args, strict = strict, genre = genre, translator = translator)
             }
-            "Date::getYear" -> propertyReadToMethodCall("getUTCFullYear")
-            "Date::getMonth" -> dateGetMonthExpander // Need to add one to index
-            "Date::getDay" -> propertyReadToMethodCall("getUTCDate") // getUTCDay is weekday
-            "Date::getDayOfWeek" -> dateGetDayOfWeekExpander // JS has Sunday as 0, not 7
-            "Date::toString" -> dateToIsoStringExpander
-            "Date::fromIsoString" -> { p, args, strict, _ ->
+            "std/temporal.type Date.year" -> propertyReadToMethodCall("getUTCFullYear")
+            "std/temporal.type Date.month" -> dateGetMonthExpander // Need to add one to index
+            "std/temporal.type Date.day" -> propertyReadToMethodCall("getUTCDate") // getUTCDay is weekday
+            "std/temporal.type Date.get dayOfWeek()" -> dateGetDayOfWeekExpander // JS has Sunday as 0, not 7
+            "std/temporal.type Date.toString()" -> dateToIsoStringExpander
+            "std/temporal.type Date.fromIsoString()" -> { p, args, strict, _ ->
                 dateFromIsoStringExpander(p, args, strict = strict, genre = genre)
             }
-            "Test::bail" -> bailExpander
-            "ignore" -> ignoreIdiomExpander
-            "::getConsole" -> getConsoleExpander
+            "std/testing.type Test.bail()" -> bailExpander
+            "core.ignore()" -> ignoreIdiomExpander
+            "core.getConsole()" -> getConsoleExpander
             // Float64 constants
-            "Float64::e" -> mathProperty("E")
-            "Float64::pi" -> mathProperty("PI")
+            "core.type Float64.e" -> mathProperty("E")
+            "core.type Float64.pi" -> mathProperty("PI")
             // Float64 math
-            "Float64::abs" -> mathCall("abs")
-            "Float64::acos" -> mathCall("acos")
-            "Float64::asin" -> mathCall("asin")
-            "Float64::atan" -> mathCall("atan")
-            "Float64::atan2" -> mathCall("atan2", 2)
-            "Float64::ceil" -> mathCall("ceil")
-            "Float64::cos" -> mathCall("cos")
-            "Float64::cosh" -> mathCall("cosh")
-            "Float64::exp" -> mathCall("exp")
-            "Float64::expm1" -> mathCall("expm1")
-            "Float64::floor" -> mathCall("floor")
-            "Float64::log" -> mathCall("log")
-            "Float64::log10" -> mathCall("log10")
-            "Float64::log1p" -> mathCall("log1p")
-            "Float64::max" -> mathCall("max", 2)
-            "Float64::min" -> mathCall("min", 2)
-            "Float64::round" -> mathCall("round")
-            "Float64::sign" -> mathCall("sign")
-            "Float64::sin" -> mathCall("sin")
-            "Float64::sinh" -> mathCall("sinh")
-            "Float64::sqrt" -> mathCall("sqrt")
-            "Float64::tan" -> mathCall("tan")
-            "Float64::tanh" -> mathCall("tanh")
-            "Int32::max" -> mathCall("max", 2)
-            "Int32::min" -> mathCall("min", 2)
+            "core.type Float64.abs()" -> mathCall("abs")
+            "core.type Float64.acos()" -> mathCall("acos")
+            "core.type Float64.asin()" -> mathCall("asin")
+            "core.type Float64.atan()" -> mathCall("atan")
+            "core.type Float64.atan2()" -> mathCall("atan2", 2)
+            "core.type Float64.ceil()" -> mathCall("ceil")
+            "core.type Float64.cos()" -> mathCall("cos")
+            "core.type Float64.cosh()" -> mathCall("cosh")
+            "core.type Float64.exp()" -> mathCall("exp")
+            "core.type Float64.expm1()" -> mathCall("expm1")
+            "core.type Float64.floor()" -> mathCall("floor")
+            "core.type Float64.log()" -> mathCall("log")
+            "core.type Float64.log10()" -> mathCall("log10")
+            "core.type Float64.log1p()" -> mathCall("log1p")
+            "core.type Float64.max()" -> mathCall("max", 2)
+            "core.type Float64.min()" -> mathCall("min", 2)
+            "core.type Float64.round()" -> mathCall("round")
+            "core.type Float64.sign()" -> mathCall("sign")
+            "core.type Float64.sin()" -> mathCall("sin")
+            "core.type Float64.sinh()" -> mathCall("sinh")
+            "core.type Float64.sqrt()" -> mathCall("sqrt")
+            "core.type Float64.tan()" -> mathCall("tan")
+            "core.type Float64.tanh()" -> mathCall("tanh")
+            "core.type Int32.max()" -> mathCall("max", 2)
+            "core.type Int32.min()" -> mathCall("min", 2)
             // Mapped things
-            "Mapped::length" -> mappedSizeExpander
-            "Mapped::has" -> mappedHasExpander
-            "Mapped::keys" -> mappedKeysExpander
-            "Mapped::values" -> mappedValuesExpander
+            "core.type Mapped.get length()" -> mappedSizeExpander
+            "core.type Mapped.has()" -> mappedHasExpander
+            "core.type Mapped.keys()" -> mappedKeysExpander
+            "core.type Mapped.values()" -> mappedValuesExpander
             // String and StringIndex things
-            "String::begin" -> stringBeginExpander
-            "String::end" -> lengthIdiomExpander
-            "String::hasIndex" -> stringHasIndexExpander
-            "String::slice" -> stringSliceExpander
-            "StringIndexOption::compareTo" -> stringIndexOptionCompareToExpander
-            "StringIndexOption::compareTo::eq" -> stringIndexOptionCompareToExpanderEq
-            "StringIndexOption::compareTo::ge" -> stringIndexOptionCompareToExpanderGe
-            "StringIndexOption::compareTo::gt" -> stringIndexOptionCompareToExpanderGt
-            "StringIndexOption::compareTo::le" -> stringIndexOptionCompareToExpanderLe
-            "StringIndexOption::compareTo::lt" -> stringIndexOptionCompareToExpanderLt
-            "StringIndexOption::compareTo::ne" -> stringIndexOptionCompareToExpanderNe
-            "StringIndex::none" -> stringIndexNoneExpander
-            "StringBuilder::constructor" -> stringBuilderConstructorExpander
-            "StringBuilder::append" -> stringBuilderAppendExpander
-            "StringBuilder::appendBetween" -> stringBuilderAppendBetweenExpander
-            "StringBuilder::clear" -> stringBuilderClearExpander
-            "StringBuilder::end" -> stringBuilderEndExpander
-            "StringBuilder::toString" -> stringBuilderToStringExpander
+            "core.type String.begin" -> stringBeginExpander
+            "core.type String.get end()" -> lengthIdiomExpander
+            "core.type String.hasIndex()" -> stringHasIndexExpander
+            "core.type String.slice()" -> stringSliceExpander
+            "core.type StringIndexOption.compareTo()" -> stringIndexOptionCompareToExpander
+            "core.type StringIndexOption.compareTo()::eq" -> stringIndexOptionCompareToExpanderEq
+            "core.type StringIndexOption.compareTo()::ge" -> stringIndexOptionCompareToExpanderGe
+            "core.type StringIndexOption.compareTo()::gt" -> stringIndexOptionCompareToExpanderGt
+            "core.type StringIndexOption.compareTo()::le" -> stringIndexOptionCompareToExpanderLe
+            "core.type StringIndexOption.compareTo()::lt" -> stringIndexOptionCompareToExpanderLt
+            "core.type StringIndexOption.compareTo()::ne" -> stringIndexOptionCompareToExpanderNe
+            "core.type StringIndex.none" -> stringIndexNoneExpander
+            "core.type StringBuilder.constructor()" -> stringBuilderConstructorExpander
+            "core.type StringBuilder.append()" -> stringBuilderAppendExpander
+            "core.type StringBuilder.appendBetween()" -> stringBuilderAppendBetweenExpander
+            "core.type StringBuilder.clear()" -> stringBuilderClearExpander
+            "core.type StringBuilder.get end()" -> stringBuilderEndExpander
+            "core.type StringBuilder.toString()" -> stringBuilderToStringExpander
             // Ignore others
             else -> null
         }
@@ -344,18 +345,18 @@ internal object JsSupportNetwork : SupportNetwork {
         val bindings = temperType.bindings
         return when (connectedKey) {
             // TODO: Use JS Temporal.PlainDate long term: https://tc39.es/proposal-temporal/docs/plaindate.html
-            "Date" -> JsGlobalReference(ParsedName("Date")) to bindings
-            "Promise" -> JsGlobalReference(ParsedName("Promise")) to bindings
-            "PromiseBuilder" -> JsExternalTypeReference(
+            "std/temporal.type Date" -> JsGlobalReference(ParsedName("Date")) to bindings
+            "core.type Promise" -> JsGlobalReference(ParsedName("Promise")) to bindings
+            "core.type PromiseBuilder" -> JsExternalTypeReference(
                 source = DashedIdentifier.temperCoreLibraryIdentifier,
                 stableName = JsIdentifierName("PromiseBuilder"),
             ) to bindings
             // It might be better if the type were `[string]`, a length:1 array.
             // For StringBuilder, we construct a [""] and then add to element 0.
             // This is the fastest per jsperf.app/join-concat/2
-            "StringBuilder" -> JsGlobalReference(ParsedName("Array")) to
+            "core.type StringBuilder" -> JsGlobalReference(ParsedName("Array")) to
                 listOf(WellKnownTypes.stringType2)
-            "StringIndexOption", "StringIndex", "NoStringIndex",
+            "core.type StringIndexOption", "core.type StringIndex", "core.type NoStringIndex",
             -> JsGlobalReference(ParsedName("number")) to bindings
             else -> null
         }
@@ -389,96 +390,95 @@ internal object JsSupportNetwork : SupportNetwork {
 }
 
 private val supportedAutoConnecteds = setOf(
-    "Float64::near",
-    "Float64::toInt32",
-    "Float64::toInt32Unsafe",
-    "Float64::toInt64",
-    "Float64::toInt64Unsafe",
-    "Float64::toString",
-    "Int64::max",
-    "Int64::min",
-    "Int64::toFloat64",
-    "Int64::toFloat64Unsafe",
-    "Int64::toInt32",
-    "Int64::toInt32Unsafe",
-    "Listed::filter",
-    "Listed::get",
-    "Listed::getOr",
-    "Listed::join",
-    "Listed::map",
-    "Listed::mapDropping",
-    "Listed::reduceFrom",
-    "Listed::slice",
-    "Listed::sorted",
-    "Listed::toList",
-    "ListBuilder::add",
-    "ListBuilder::addAll",
-    "ListBuilder::toList",
-    "ListBuilder::clear",
-    "ListBuilder::removeLast",
-    "ListBuilder::splice",
-    "ListBuilder::reverse",
-    "ListBuilder::set",
-    "Map::constructor",
-    "MapBuilder::constructor",
-    "MapBuilder::remove",
-    "MapBuilder::set",
-    "Pair::constructor",
-    "Mapped::length",
-    "Mapped::get",
-    "Mapped::getOr",
-    "Mapped::has",
-    "Mapped::keys",
-    "Mapped::values",
-    "Mapped::toMap",
-    "Mapped::toMapBuilder",
-    "Mapped::toList",
-    "Mapped::toListWith",
-    "Mapped::toListBuilder",
-    "Mapped::toListBuilderWith",
-    "Mapped::forEach",
-    "DenseBitVector::constructor",
-    "DenseBitVector::get",
-    "DenseBitVector::set",
-    "Deque::constructor",
-    "Deque::add",
-    "Deque::isEmpty",
-    "Deque::removeFirst",
-    "PromiseBuilder",
-    "Regex::compileFormatted",
-    "Regex::compiledFind",
-    "Regex::compiledFound",
-    "Regex::compiledReplace",
-    "Regex::compiledSplit",
-    "RegexFormatter::adjustCodeSet",
-    "RegexFormatter::pushCodeTo",
-    "String::countBetween",
-    "String::fromCodePoint",
-    "String::fromCodePoints",
-    "String::forEach",
-    "String::get",
-    "String::hasAtLeast",
-    "String::next",
-    "String::prev",
-    "String::step",
-    "String::split",
-    "String::toFloat64",
-    "String::toInt32",
-    "String::toInt64",
-    "StringBuilder::appendCodePoint",
+    "core.type Float64.near()",
+    "core.type Float64.toInt32()",
+    "core.type Float64.toInt32Unsafe()",
+    "core.type Float64.toInt64()",
+    "core.type Float64.toInt64Unsafe()",
+    "core.type Float64.toString()",
+    "core.type Int64.max()",
+    "core.type Int64.min()",
+    "core.type Int64.toFloat64()",
+    "core.type Int64.toFloat64Unsafe()",
+    "core.type Int64.toInt32()",
+    "core.type Int64.toInt32Unsafe()",
+    "core.type Listed.filter()",
+    "core.type Listed.get()",
+    "core.type Listed.getOr()",
+    "core.type Listed.join()",
+    "core.type Listed.map()",
+    "core.type Listed.reduceFrom()",
+    "core.type Listed.slice()",
+    "core.type Listed.sorted()",
+    "core.type Listed.toList()",
+    "core.type ListBuilder.add()",
+    "core.type ListBuilder.addAll()",
+    "core.type ListBuilder.toList()",
+    "core.type ListBuilder.clear()",
+    "core.type ListBuilder.removeLast()",
+    "core.type ListBuilder.splice()",
+    "core.type ListBuilder.reverse()",
+    "core.type ListBuilder.set()",
+    "core.type Map.constructor()",
+    "core.type MapBuilder.constructor()",
+    "core.type MapBuilder.remove()",
+    "core.type MapBuilder.set()",
+    "core.type Pair.constructor()",
+    "core.type Mapped.get length()",
+    "core.type Mapped.get()",
+    "core.type Mapped.getOr()",
+    "core.type Mapped.has()",
+    "core.type Mapped.keys()",
+    "core.type Mapped.values()",
+    "core.type Mapped.toMap()",
+    "core.type Mapped.toMapBuilder()",
+    "core.type Mapped.toList()",
+    "core.type Mapped.toListWith()",
+    "core.type Mapped.toListBuilder()",
+    "core.type Mapped.toListBuilderWith()",
+    "core.type Mapped.forEach()",
+    "core.type DenseBitVector.constructor()",
+    "core.type DenseBitVector.get()",
+    "core.type DenseBitVector.set()",
+    "core.type Deque.constructor()",
+    "core.type Deque.add()",
+    "core.type Deque.get isEmpty()",
+    "core.type Deque.removeFirst()",
+    "core.type PromiseBuilder",
+    "std/regex.type RegexFormatter.regexCompileFormatted()",
+    "std/regex.type Regex.compiledFind()",
+    "std/regex.type Regex.compiledFound()",
+    "std/regex.type Regex.compiledReplace()",
+    "std/regex.type Regex.compiledSplit()",
+    "std/regex.type RegexFormatter.adjustCodeSet()",
+    "std/regex.type RegexFormatter.pushCodeTo()",
+    "core.type String.countBetween()",
+    "core.type String.fromCodePoint()",
+    "core.type String.fromCodePoints()",
+    "core.type String.forEach()",
+    "core.type String.get()",
+    "core.type String.hasAtLeast()",
+    "core.type String.next()",
+    "core.type String.prev()",
+    "core.type String.step()",
+    "core.type String.split()",
+    "core.type String.toFloat64()",
+    "core.type String.toInt32()",
+    "core.type String.toInt64()",
+    "core.type StringBuilder.appendCodePoint()",
     // std/net
-    "stdNetSend",
-    "NetResponse",
-    "NetResponse::getStatus",
-    "NetResponse::getContentType",
-    "NetResponse::getBodyContent",
+    "std/net.sendRequest()",
+    "std/net.type NetResponse",
+    "std/net.type NetResponse.get status()",
+    "std/net.type NetResponse.get contentType()",
+    "std/net.type NetResponse.get bodyContent()",
 )
 
 private val supportedMappedConnecteds = mapOf(
-    "Date::today" to "dateToday",
-    "Date::yearsBetween" to "dateYearsBetween",
-    "List::get" to "listedGet",
-    "empty" to "empty",
+    "std/temporal.type Date.today()" to "dateToday",
+    "std/temporal.type Date.yearsBetween()" to "dateYearsBetween",
+    "core.type List.get()" to "listedGet",
+    "core.empty()" to "empty",
 ).mapValues { JsIdentifierName(it.value) }
 
 /** A reference to JavaScript from a separately compiled JavaScript library. */
@@ -614,7 +614,7 @@ private val identityIdiomExpander: Inliner =
 /* [x, y] -> x.has(y) */
 private val mappedHasExpander = { pos: Position, arguments: List<Js.Tree>, _: Boolean, _: JsTranslator? ->
     if (arguments.size != 2) {
-        garbageExpression(pos, "Wrong number of arguments to Mapped::has")
+        garbageExpression(pos, "Wrong number of arguments to core.type Mapped.has()")
     } else {
         val obj = arguments[0] as Js.Expression
         val key = arguments[1] as Js.Expression
@@ -634,7 +634,7 @@ private val mappedHasExpander = { pos: Position, arguments: List<Js.Tree>, _: Bo
 /* [x] -> Object.freeze(Array.prototype.slice.call(x.keys())) */
 private val mappedKeysExpander = { pos: Position, arguments: List<Js.Tree>, _: Boolean, _: JsTranslator? ->
     if (arguments.size != 1) {
-        garbageExpression(pos, "Wrong number of arguments to Mapped::keys")
+        garbageExpression(pos, "Wrong number of arguments to core.type Mapped.keys()")
     } else {
         val obj = arguments[0] as Js.Expression
         Js.CallExpression(
@@ -672,7 +672,7 @@ private val mappedKeysExpander = { pos: Position, arguments: List<Js.Tree>, _: B
 /* [x] -> Object.freeze(Array.prototype.slice.call(x.keys())) */
 private val mappedValuesExpander = { pos: Position, arguments: List<Js.Tree>, _: Boolean, _: JsTranslator? ->
     if (arguments.size != 1) {
-        garbageExpression(pos, "Wrong number of arguments to Mapped::values")
+        garbageExpression(pos, "Wrong number of arguments to core.type Mapped.values()")
     } else {
         val obj = arguments[0] as Js.Expression
         Js.CallExpression(
@@ -843,7 +843,7 @@ private fun newDateIdiomExpander(
         } else {
             val callee = JsUnInlinedExternalFunctionReference(
                 source = DashedIdentifier.temperCoreLibraryIdentifier,
-                stableName = connectedKeyToExportedName("Date::constructor"),
+                stableName = connectedKeyToExportedName("std/temporal.type Date.constructor()"),
             )
             val calleeName = translator!!.requireExternalReference(callee)
             Js.CallExpression(
@@ -904,7 +904,7 @@ private val stringHasIndexExpander =
         val str = arguments.getOrNull(0) as? Js.Expression
         val idx = arguments.getOrNull(1) as? Js.Expression
         if (strict && (arguments.size != 2 || str == null || idx == null)) {
-            garbageExpression(pos, "Wrong arguments for String::hasIndex")
+            garbageExpression(pos, "Wrong arguments for core.type String.hasIndex()")
         } else {
             // We put the length first so that we don't affect order of operations
             val strPos = str?.pos ?: pos.leftEdge
@@ -924,7 +924,7 @@ private val stringHasIndexExpander =
 /** `String.begin` -> `0` */
 private val stringBeginExpander = { pos: Position, arguments: List<Js.Tree>, strict: Boolean, _: JsTranslator? ->
     if (strict && arguments.isNotEmpty()) {
-        garbageExpression(pos, "Wrong arguments for String::begin")
+        garbageExpression(pos, "Wrong arguments for core.type String.begin")
     } else {
         Js.NumericLiteral(pos, 0)
     }
@@ -986,7 +986,7 @@ private val stringSliceExpander =
         val begin = arguments.getOrNull(1) as? Js.Expression
         val end = arguments.getOrNull(2) as? Js.Expression
         if (strict && (arguments.size != SLICE_ARITY || str == null || begin == null || end == null)) {
-            garbageExpression(pos, "Wrong arguments for String::slice")
+            garbageExpression(pos, "Wrong arguments for core.type String.slice()")
         } else {
             val methodPos = str?.pos ?: pos
             Js.CallExpression(
@@ -1011,7 +1011,7 @@ private fun stringIndexOptionCompareToHandler(infixOperatorTokenText: String): I
         val a = arguments.getOrNull(0) as? Js.Expression
         val b = arguments.getOrNull(1) as? Js.Expression
         if (strict && (arguments.size != 2 || a == null || b == null)) {
-            garbageExpression(pos, "Wrong arguments for StringIndex::compareTo")
+            garbageExpression(pos, "Wrong arguments for core.type StringIndex.compareTo()")
         } else {
             val aPos = a?.pos ?: pos.leftEdge
             val bPos = b?.pos ?: pos.rightEdge
@@ -1043,7 +1043,7 @@ private val stringIndexOptionCompareToExpanderNe =
 /** `StringIndex.none` -> `-1` */
 private val stringIndexNoneExpander = { pos: Position, arguments: List<Js.Tree>, strict: Boolean, _: JsTranslator? ->
     if (strict && arguments.isNotEmpty()) {
-        garbageExpression(pos, "Wrong arguments for StringIndex::none")
+        garbageExpression(pos, "Wrong arguments for core.type StringIndex.none")
     } else {
         Js.NumericLiteral(pos, -1)
     }
@@ -1053,7 +1053,7 @@ private val stringIndexNoneExpander = { pos: Position, arguments: List<Js.Tree>,
 private val stringBuilderConstructorExpander: Inliner =
     { pos: Position, args: List<Js.Tree>, strict: Boolean, _ ->
         if (strict && args.isNotEmpty()) {
-            garbageExpression(pos, "need 0 arguments for StringBuilder::constructor")
+            garbageExpression(pos, "need 0 arguments for core.type StringBuilder.constructor()")
         } else {
             Js.ArrayExpression(pos, listOf(Js.StringLiteral(pos, "")))
         }
@@ -1065,7 +1065,7 @@ private val stringBuilderAppendExpander: Inliner =
         val stringBuilder = args.getOrNull(0) as? Js.Expression
         val substring = args.getOrNull(1) as? Js.Expression
         if (strict && (args.size != 2 || stringBuilder == null || substring == null)) {
-            garbageExpression(pos, "need 2 arguments for StringBuilder::append")
+            garbageExpression(pos, "need 2 arguments for core.type StringBuilder.append()")
         } else {
             val sbPos = stringBuilder?.pos ?: pos.leftEdge
             val ssPos = substring?.pos ?: pos.rightEdge
@@ -1099,7 +1099,7 @@ private val stringBuilderAppendBetweenExpander: Inliner =
             strict &&
             (args.size != 4 || stringBuilder == null || substring == null || begin == null || end == null)
         ) {
-            garbageExpression(pos, "wrong arguments for StringBuilder::appendBetween")
+            garbageExpression(pos, "wrong arguments for core.type StringBuilder.appendBetween()")
         } else {
             val substringPos = listOfNotNull(substring, begin, end)
                 .spanningPosition(substring?.pos ?: pos)
@@ -1129,7 +1129,7 @@ private val stringBuilderClearExpander: Inliner =
     { pos: Position, args: List<Js.Tree>, strict: Boolean, _ ->
         val stringBuilder = args.getOrNull(0) as? Js.Expression
         if (strict && (args.size != 1 || stringBuilder == null)) {
-            garbageExpression(pos, "need 1 argument for StringBuilder::clear")
+            garbageExpression(pos, "need 1 argument for core.type StringBuilder.clear()")
         } else {
             val sbPos = stringBuilder?.pos ?: pos.leftEdge
             val rPos = pos.rightEdge
@@ -1159,7 +1159,7 @@ internal fun voidExpr(e: Js.Expression) = Js.UnaryExpression(
 private val stringBuilderToStringExpander: Inliner =
     { pos: Position, args: List<Js.Tree>, strict: Boolean, _ ->
         if (strict && args.size != 1) {
-            garbageExpression(pos, "need 1 argument for StringBuilder::toString()")
+            garbageExpression(pos, "need 1 argument for core.type StringBuilder.toString()()")
         } else {
             val stringBuilder = args.getExprSafe(0, pos.leftEdge)
             Js.MemberExpression(
@@ -1175,7 +1175,7 @@ private val stringBuilderToStringExpander: Inliner =
 private val bigintExpander: Inliner =
     { pos: Position, args: List<Js.Tree>, strict: Boolean, _ ->
         if (strict && args.size != 1) {
-            garbageExpression(pos, "need 1 argument for StringBuilder::toString()")
+            garbageExpression(pos, "need 1 argument for core.type StringBuilder.toString()()")
         } else {
             Js.CallExpression(
                 pos,
@@ -1376,7 +1376,7 @@ private val stringIsEmptyIdiomExpander: Inliner =
     { pos: Position, arguments: List<Js.Tree>, strict: Boolean, _ ->
         val argument = arguments.getOrNull(0) as? Js.Expression
         if (strict && (arguments.size != 1 || argument == null)) {
-            garbageExpression(pos, "String::isEmpty needs one argument")
+            garbageExpression(pos, "core.type String.get isEmpty() needs one argument")
         } else {
             Js.UnaryExpression(
                 pos,
@@ -1509,15 +1509,20 @@ private val ignoreIdiomExpander: Inliner =
  * `runtime-support/index.js`.
  */
 internal fun connectedKeyToExportedName(connectedKey: String) = JsIdentifierName(
-    connectedKey.split("::")
+    // Logic here keeps things somewhat matching pre-qname expectations. TODO Update expectations?
+    connectedKey
+        // Split segments and qualifiers, including `::` pseudos.
+        .split(".", "::", " ")
+        // Skip the module part of the qname and also type qualifiers.
+        .subListToEnd(1)
+        .filter { it != "type" }
+        // Make what's left camelCase.
         .mapIndexed { i, segment ->
-            if (i == 0) {
-                segment.asciiUnTitleCase()
-            } else {
-                segment.asciiTitleCase()
-            }
-        }
-        .joinToString(""),
+            when (i) {
+                0 -> segment.asciiUnTitleCase()
+                else -> segment.asciiTitleCase()
+            }.trimEnd('(', ')') // Exclude parens.
+        }.joinToString(""),
 )
 
 private fun runtimeLibraryBackedSupportCode(

@@ -58,7 +58,6 @@ import lang.temper.name.SourceName
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
-import lang.temper.type.BindMemberAccessor
 import lang.temper.type.DotHelper
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
@@ -369,7 +368,7 @@ class TmpLTranslator internal constructor(
                         val name = it.name.name
                         if (name is InternalModularName) {
                             val metadata = sharedNameTables.declarationMetadataForName[name]
-                            val connectedKey = TString.unpackOrNull(metadata?.get(connectedSymbol))
+                            val connectedKey = metadata.connectedKey()
                             if (connectedKey != null) {
                                 val supportCode =
                                     supportNetwork.translateConnectedReference(it.pos, connectedKey, genre)
@@ -780,9 +779,7 @@ class TmpLTranslator internal constructor(
                         val typeShape = pt.typeShape
 
                         // Don't generate code for a type that is connected to a backend specific type
-                        val connectedKey = TString.unpackOrNull(
-                            typeShape.metadata[connectedSymbol]?.firstOrNull(),
-                        )
+                        val connectedKey = typeShape.connectedKey
                         val type = MkType2(typeShape)
                             .actuals(typeShape.typeParameters.map { MkType2(it.definition).get() })
                             .get()
@@ -1359,9 +1356,7 @@ class TmpLTranslator internal constructor(
                 if (name is ExportedName) {
                     val originExporter = (name.origin as? ModuleNamingContext)?.owner
                     val export = originExporter?.exportMatching(name)
-                    val connectedKey = TString.unpackOrNull(
-                        export?.declarationMetadata?.get(connectedSymbol)?.lastOrNull(),
-                    )
+                    val connectedKey = export?.connectedKey
                     supportCode = connectedKey?.let {
                         supportNetwork.translateConnectedReference(pos, connectedKey, genre)
                     }
@@ -1401,20 +1396,14 @@ class TmpLTranslator internal constructor(
                     if (constructors?.size == 1) {
                         val constructor: MethodShape = constructors[0]
                         val decl = constructor.stay?.incoming?.source as? DeclTree
-                        val constructorMetadata = decl?.parts?.metadataSymbolMap
-                        if (constructorMetadata != null) {
-                            val connectedKeyTree = constructorMetadata[connectedSymbol]?.target
-                            if (connectedKeyTree is ValueLeaf) {
-                                val connectedKey = TString.unpackOrNull(connectedKeyTree.content)
-                                if (connectedKey != null) {
-                                    val sig = constructor.descriptor
-                                        ?.let { constructorSig ->
-                                            factorySignatureFromConstructorSignature(constructorSig)
-                                        }
-                                    if (sig != null) {
-                                        return@findConnectedKey connectedKey to sig
-                                    }
+                        val connectedKey = decl?.parts?.connectedKey
+                        if (connectedKey != null) {
+                            val sig = constructor.descriptor
+                                ?.let { constructorSig ->
+                                    factorySignatureFromConstructorSignature(constructorSig)
                                 }
+                            if (sig != null) {
+                                return@findConnectedKey connectedKey to sig
                             }
                         }
                     }
@@ -1698,7 +1687,7 @@ class TmpLTranslator internal constructor(
         // nym`<>` that provide type arguments to the eventual callee.
         val staticMethodCallee = unpackStaticMethodCallee(effectiveCallee)
         if (staticMethodCallee != null) {
-            val connectedKey = staticMethodCallee.member.metadata[connectedSymbol, TString]
+            val connectedKey = staticMethodCallee.member.connectedKey
             if (connectedKey != null) {
                 val supportCode =
                     supportNetwork.translateConnectedReference(tree.pos, connectedKey, genre)
@@ -1763,15 +1752,6 @@ class TmpLTranslator internal constructor(
             translateDotHelperCall(
                 tree,
                 callee = effectiveCallee,
-                outerCallTree = null,
-                typeActuals = typeActuals,
-            )
-        } else if (dotHelperFromCallOrNull(effectiveCallee)?.memberAccessor is BindMemberAccessor) {
-            check(effectiveCallee is CallTree)
-            translateDotHelperCall(
-                effectiveCallee,
-                callee = effectiveCallee.child(0),
-                outerCallTree = tree,
                 typeActuals = typeActuals,
             )
         } else {
@@ -1858,12 +1838,7 @@ class TmpLTranslator internal constructor(
                             // We don't really support constructor overloading today and considering simplifying even
                             // more in the future, so just get the first constructor.
                             val method = typeShape.methods.find { it.methodKind == MethodKind.Constructor }
-                            val connectedKey = method?.let {
-                                val metadata = (it.stay?.incoming?.source as? DeclTree)?.parts?.metadataSymbolMap
-                                val connectedKey = metadata?.get(connectedSymbol)?.target
-                                    ?.valueContained(TString)
-                                connectedKey
-                            }
+                            val connectedKey = (method?.stay?.incoming?.source as? DeclTree)?.parts?.connectedKey
 
                             val connectedConstructor = connectedKey?.let {
                                 supportNetwork.translateConnectedReference(
@@ -1950,11 +1925,7 @@ class TmpLTranslator internal constructor(
                     is ValueLeaf -> fnValue = TFunction.unpackOrNull(effectiveCallee.content)
                     is RightNameLeaf -> {
                         val calleeName = effectiveCallee.content
-                        connectedKey = pool.sharedNameTables.declarationMetadataForName[calleeName]
-                            ?.get(connectedSymbol)
-                            ?.let { it: Value<*> ->
-                                TString.unpackOrNull(it)
-                            }
+                        connectedKey = pool.sharedNameTables.declarationMetadataForName[calleeName].connectedKey()
                     }
                     else -> {}
                 }
@@ -2110,8 +2081,8 @@ class TmpLTranslator internal constructor(
 
         val shape = definition.staticProperties
             .firstOrNull { it.symbol == property }
-        val connectedKey = shape?.metadata?.get(connectedSymbol, TString)
-        val typeIsConnected = definition.metadata[connectedSymbol, TString]
+        val connectedKey = shape?.connectedKey
+        val typeIsConnected = definition.connectedKey
             ?.let { typeConnectedKey ->
                 null != supportNetwork.translatedConnectedType(
                     definition.pos, typeConnectedKey, genre, type,
@@ -2790,20 +2761,17 @@ class TmpLTranslator internal constructor(
         translateDotHelperCall(
             callTree,
             callTree.child(0),
-            null,
             emptyList(),
         )
 
     private fun translateDotHelperCall(
         callTree: CallTree,
         callee: Tree,
-        outerCallTree: CallTree?,
         typeActuals: List<Tree>,
     ): StmtOrExpr {
         val dotTranslation = TranslateDotHelper.translate(
             callTree = callTree,
             callee = callee,
-            outerCallTree = outerCallTree,
             typeActuals = typeActuals,
             translator = this,
         )
@@ -3624,13 +3592,13 @@ private fun genericComparisonHackaround(
     if (leftType.isStringIndexOptionType && rightType.isStringIndexOptionType) {
         // Turn generic comparison operations on StringIndex and StringIndexOption and NoStringIndex into
         when (builtinOperatorId) {
-            BuiltinOperatorId.LtGeneric -> return "StringIndexOption::compareTo::lt"
-            BuiltinOperatorId.LeGeneric -> return "StringIndexOption::compareTo::le"
-            BuiltinOperatorId.GeGeneric -> return "StringIndexOption::compareTo::ge"
-            BuiltinOperatorId.GtGeneric -> return "StringIndexOption::compareTo::gt"
-            BuiltinOperatorId.EqGeneric -> return "StringIndexOption::compareTo::eq"
-            BuiltinOperatorId.NeGeneric -> return "StringIndexOption::compareTo::ne"
-            BuiltinOperatorId.CmpGeneric -> return "StringIndexOption::compareTo"
+            BuiltinOperatorId.LtGeneric -> return "core.type StringIndexOption.compareTo()::lt"
+            BuiltinOperatorId.LeGeneric -> return "core.type StringIndexOption.compareTo()::le"
+            BuiltinOperatorId.GeGeneric -> return "core.type StringIndexOption.compareTo()::ge"
+            BuiltinOperatorId.GtGeneric -> return "core.type StringIndexOption.compareTo()::gt"
+            BuiltinOperatorId.EqGeneric -> return "core.type StringIndexOption.compareTo()::eq"
+            BuiltinOperatorId.NeGeneric -> return "core.type StringIndexOption.compareTo()::ne"
+            BuiltinOperatorId.CmpGeneric -> return "core.type StringIndexOption.compareTo()"
             else -> {}
         }
     }

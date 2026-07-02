@@ -1,5 +1,5 @@
 /**
- * Implements Date::constructor
+ * Implements std/temporal.type Date.constructor()
  * @param {number} year
  * @param {number} month
  * @param {number} day
@@ -17,7 +17,7 @@ export const dateConstructor = (year, month, day) => {
 };
 
 /**
- * Implements Date::today
+ * Implements std/temporal.type Date.today()
  * @returns {Date}
  */
 export const dateToday = () => {
@@ -30,7 +30,7 @@ export const dateToday = () => {
 };
 
 /**
- * Implements Date::yearsBetween
+ * Implements std/temporal.type Date.yearsBetween()
  * @param {Date} start
  * @param {Date} end
  * @returns {number}

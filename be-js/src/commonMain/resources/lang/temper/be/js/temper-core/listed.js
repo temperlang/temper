@@ -1,13 +1,6 @@
 
-// Implements extension method Listed::mapDropping
-import {bubble} from "./core.js";
-
-export const listedMapDropping = () => {
-  throw new Error("TODO List::mapDropping");
-}
-
 /**
- * Implements extension method Listed::map
+ * Implements extension method core.type Listed.map()
  * @template T
  * @template R
  * @param {T[]} ls
@@ -24,7 +17,7 @@ export const listedMap = (ls, transform) => {
 }
 
 /**
- * Implements extension method Listed::reduceFrom
+ * Implements extension method core.type Listed.reduceFrom()
  * @template T, R
  * @param {T[]} ls
  * @param {R} initial
@@ -36,7 +29,7 @@ export const listedReduceFrom = (ls, initial, accumulate) => {
 }
 
 /**
- * Implements extension method Listed::sort
+ * Implements extension method core.type Listed.sort()
  * @template T
  * @param {T[]} ls
  * @param {(lhs: T, rhs: T) => number} compare
@@ -46,7 +39,7 @@ export const listedSorted = (ls, compare) => {
 }
 
 /**
- * Implements extension method Listed::toList
+ * Implements extension method core.type Listed.toList()
  * @template T
  * @param {T[] | Readonly<T[]>} ls
  * @returns {Readonly<T[]>}
@@ -61,7 +54,7 @@ export const listedToList = (ls) => {
 
 
 /**
- * Implements extension method ListBuilder::add
+ * Implements extension method core.type ListBuilder.add()
  * @template T
  * @param {T[]} ls
  * @param {T} newItem
@@ -81,7 +74,7 @@ export const listBuilderAdd = (ls, newItem, at) => {
 }
 
 /**
- * Implements extension method ListBuilder::addAll
+ * Implements extension method core.type ListBuilder.addAll()
  * @template T
  * @param {T[]} ls
  * @param {T[]} newItems
@@ -99,7 +92,7 @@ export const listBuilderAddAll = (ls, newItems, at) => {
 }
 
 /**
- * Implements extension method Listed::filter
+ * Implements extension method core.type Listed.filter()
  * @template T
  * @param {T[]} ls
  * @param {(T) => boolean} predicate
@@ -131,7 +124,7 @@ export const listedFilter = (ls, predicate) => {
 }
 
 /**
- * Implements extension method Listed::get
+ * Implements extension method core.type Listed.get()
  * @template T
  * @param {T[]} ls
  * @param {number} i
@@ -146,7 +139,7 @@ export const listedGet = (ls, i) => {
 }
 
 /**
- * Implements extension method Listed::getOr
+ * Implements extension method core.type Listed.getOr()
  * @template T
  * @param {T[]} ls
  * @param {number} i
@@ -159,7 +152,7 @@ export const listedGetOr = (ls, i, fallback) => {
 }
 
 /**
- * Implements extension method List::isEmpty
+ * Implements extension method core.type List.isEmpty()
  * @template T
  * @param {T[]} ls
  * @returns {boolean}
@@ -169,7 +162,7 @@ export const listIsEmpty = (ls) => {
 }
 
 /**
- * Implements extension method Listed::join
+ * Implements extension method core.type Listed.join()
  * @template T
  * @param {T[]} ls
  * @param {string} separator
@@ -194,13 +187,13 @@ export const listedJoin = (ls, separator, elementStringifier) => {
  * @template T
  * @param {T[]} ls
  */
-// Implements extension method ListBuilder::clear
+// Implements extension method core.type ListBuilder.clear()
 export const listBuilderClear = (ls) => {
   ls.length = 0;
 }
 
 /**
- * Implements extension method ListBuilder::removeLast
+ * Implements extension method core.type ListBuilder.removeLast()
  * @template T
  * @param {T[]} ls
  * @returns {T}
@@ -214,7 +207,7 @@ export const listBuilderRemoveLast = (ls) => {
 }
 
 /**
- * Implements extension method ListBuilder::reverse
+ * Implements extension method core.type ListBuilder.reverse()
  * @template T
  * @param {T[]} ls
  */
@@ -231,7 +224,7 @@ export const listBuilderReverse = (ls) => {
 }
 
 /**
- * Implements extension method ListBuilder::set
+ * Implements extension method core.type ListBuilder.set()
  * @template T
  * @param {T[]} ls
  * @param {number} i
@@ -244,7 +237,7 @@ export const listBuilderSet = (ls, i, newValue) => {
 }
 
 /**
- * Implements extension method ListBuilder::removeLast
+ * Implements extension method core.type ListBuilder.removeLast()
  * @template T
  * @param {T[]} ls
  * @param {number} index
@@ -261,7 +254,7 @@ export const listBuilderSplice = (ls, index, removeCount, newValues) => {
 }
 
 /**
- * Implements extension method ListBuilder::toList
+ * Implements extension method core.type ListBuilder.toList()
  * @template T
  * @param {T[]} ls
  * @returns {Readonly<T[]>}
@@ -271,7 +264,7 @@ export const listBuilderToList = (ls) => {
 }
 
 /**
- * Implements extension method Listed::slice
+ * Implements extension method core.type Listed.slice()
  * @template T
  * @param {T[]} ls
  * @param {number} startInclusive

@@ -34,8 +34,6 @@ import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
-import lang.temper.value.TString
-import lang.temper.value.connectedSymbol
 import lang.temper.be.java.Java as J
 import lang.temper.type.WellKnownTypes as WKT
 
@@ -246,9 +244,7 @@ sealed interface JavaType : TargetLanguageTypeName {
                         WKT.voidTypeDefinition -> Void
                         else -> {
                             // Ask JavaSupportNetwork if it's @connected to a known Java type.
-                            val connectedKey = TString.unpackOrNull(
-                                definition.metadata[connectedSymbol]?.firstOrNull(),
-                            )
+                            val connectedKey = definition.connectedKey
                             val args = principal.bindings.map { JavaTypeArg.fromTypeActual(it, names) }
                             val connectedType: JavaType? = connectedKey?.let {
                                 names.javaLang.supportNetwork.translatedConnectedTypeToJavaType(connectedKey, args)

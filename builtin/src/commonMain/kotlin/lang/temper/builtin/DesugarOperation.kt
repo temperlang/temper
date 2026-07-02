@@ -3,7 +3,6 @@ package lang.temper.builtin
 import lang.temper.env.InterpMode
 import lang.temper.format.TokenSink
 import lang.temper.log.Position
-import lang.temper.log.spanningPosition
 import lang.temper.name.BuiltinName
 import lang.temper.name.ExportedName
 import lang.temper.name.ParsedName
@@ -11,7 +10,7 @@ import lang.temper.name.ParsedNameOrResolvedParsedName
 import lang.temper.name.SourceName
 import lang.temper.name.Temporary
 import lang.temper.type.DotHelper
-import lang.temper.type.ExternalBind
+import lang.temper.type.ExternalCall
 import lang.temper.type.FunctionResolution
 import lang.temper.type.OperatorMember
 import lang.temper.type2.AnySignature
@@ -33,7 +32,6 @@ import lang.temper.value.ValueLeaf
 import lang.temper.value.ValueStability
 import lang.temper.value.and
 import lang.temper.value.freeTarget
-import lang.temper.value.freeTree
 import lang.temper.value.stability
 import lang.temper.value.toPseudoCode
 
@@ -65,11 +63,11 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
         val operands = (1..args.lastIndex).map { args.valueTree(it).incoming!! }
 
         val c = lang.temper.common.console // do not commit
-        val isDefined = when(operator) {
+        val isDefined = when (operator) {
             is ValueLeaf -> true
             is NameLeaf -> {
                 val name = operator.content
-                name.builtinKey == ".."  || // Special in `@(A..B)`
+                name.builtinKey == ".." || // Special in `@(A..B)`
                     env.declarationMetadata(name) != null
             }
             else -> false
@@ -133,7 +131,7 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
             }
             if (call != null && operatorSpecifier != null) {
                 val exts = builtins.map { FunctionResolution(it) }
-                val helper = DotHelper(ExternalBind, OperatorMember(operatorSpecifier), exts)
+                val helper = DotHelper(ExternalCall, OperatorMember(operatorSpecifier), exts)
                 val vHelper = Value(helper)
                 if (interpMode == InterpMode.Partial) {
                     if (isCompoundAssignment) {
@@ -154,13 +152,9 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
                     } else {
                         macroEnv.replaceMacroCallWith {
                             val subject = operands.first()
-                            val bindPos = listOf(operator.pos, subject.target.pos)
-                                .spanningPosition(operator.pos)
                             Call(call.pos) {
-                                Call(bindPos) {
-                                    V(operator.pos, vHelper)
-                                    Replant(freeTarget(subject))
-                                }
+                                V(operator.pos, vHelper)
+                                Replant(freeTarget(subject))
                                 operands.drop(1).forEach {
                                     Replant(freeTarget(it))
                                 }
@@ -175,9 +169,11 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
                 c.log(". helper=$helper, bound=$bound")
                 if (bound is Value<*> && (!isCompoundAssignment || leftName != null)) {
                     val boundTree = ValueLeaf(macroEnv.document, operator.pos, bound)
-                    c.log("applying $bound :: ${bound.stateVector::class}, species=${
-                        TFunction.unpackOrNull(bound)?.functionSpecies
-                    } to ${operandTrees.drop(1).map { it.toPseudoCode() }}")
+                    c.log(
+                        "applying $bound :: ${bound.stateVector::class}, species=${
+                            TFunction.unpackOrNull(bound)?.functionSpecies
+                        } to ${operandTrees.drop(1).map { it.toPseudoCode() }}",
+                    )
                     val result = macroEnv.dispatchCallTo(boundTree, bound, operandTrees.drop(1), interpMode)
                     c.log("-> result=$result")
                     if (isCompoundAssignment && result is Value<*>) {
@@ -235,7 +231,7 @@ fun desugarCompoundOperation(
     //
     //     leftHandOf(left.prop, left.prop + right)
     //
-    // DotOperationDesugarer is an left-hand aware macro, so its
+    // DotOperationDesugarer is a left-hand aware macro, so its
     // first application knows to generate a use of left.prop's setter
     // instead of its getter as for the second use.
     //

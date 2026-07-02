@@ -797,7 +797,7 @@ abstract class TranslatorTests(
                             TmpL.ReturnStatement(
                                 p0,
                                 (
-                                    supportNetwork.translateConnectedReference(p0, "empty", Genre.Library)
+                                    supportNetwork.translateConnectedReference(p0, "core.empty()", Genre.Library)
                                         as? InlineSupportCode<*, *>
                                     )
                                     ?.let {

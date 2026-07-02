@@ -1,19 +1,17 @@
 package lang.temper.be.tmpl
 
 import lang.temper.common.Either
-import lang.temper.common.mapFirst
 import lang.temper.common.subListToEnd
-import lang.temper.frontend.typestage.BindMethodTypeHelper
 import lang.temper.log.Position
 import lang.temper.name.ResolvedName
-import lang.temper.type.BindMemberAccessor
+import lang.temper.type.CallMemberAccessor
 import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
-import lang.temper.type.ExternalBind
+import lang.temper.type.ExternalCall
 import lang.temper.type.ExternalGet
 import lang.temper.type.ExternalSet
 import lang.temper.type.GetMemberAccessor
-import lang.temper.type.InternalBind
+import lang.temper.type.InternalCall
 import lang.temper.type.InternalGet
 import lang.temper.type.InternalMemberAccessor
 import lang.temper.type.InternalSet
@@ -36,17 +34,13 @@ import lang.temper.type2.Nullity
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.TypeParamRef
-import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.hackTryStaticTypeToSig
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
 import lang.temper.value.CallTree
 import lang.temper.value.CallTypeInferences
-import lang.temper.value.MetadataValueMapHelpers.get
-import lang.temper.value.TString
 import lang.temper.value.Tree
-import lang.temper.value.connectedSymbol
 import lang.temper.value.functionContained
 import lang.temper.value.toLispy
 
@@ -78,9 +72,8 @@ internal object TranslateDotHelper {
                     // we need either the getter or the setter.
                     val method = it as? MethodShape
                     val appropriate = when (fn.memberAccessor) {
-                        is GetMemberAccessor, is BindMemberAccessor ->
-                            method?.methodKind != MethodKind.Setter
-
+                        is GetMemberAccessor -> method?.methodKind == MethodKind.Getter
+                        is CallMemberAccessor -> method?.methodKind == MethodKind.Normal
                         is SetMemberAccessor -> method?.methodKind == MethodKind.Setter
                     }
                     if (appropriate) {
@@ -161,12 +154,10 @@ internal object TranslateDotHelper {
     fun translate(
         callTree: CallTree,
         callee: Tree,
-        /** For a call to a bound method, has the non-subject arguments. */
-        outerCallTree: CallTree?,
         typeActuals: List<Tree>,
         translator: TmpLTranslator,
     ): TranslatedDotHelper {
-        val pos = (outerCallTree ?: callTree).pos
+        val pos = callTree.pos
         val calleePos = callee.pos
         val dotHelper = callee.functionContained as DotHelper
         val dotMember = dotHelper.member
@@ -178,7 +169,7 @@ internal object TranslateDotHelper {
             )
         }
 
-        val callType = (outerCallTree ?: callTree).typeOrInvalid
+        val callType = callTree.typeOrInvalid
         val pool = translator.pool
 
         val subjectIndexInCallTree = 1 + dotHelper.memberAccessor.firstArgumentIndex
@@ -191,21 +182,9 @@ internal object TranslateDotHelper {
                 ?.get(it.name as ResolvedName)
         }
 
-        val declaredCalleeType: Signature2?
-        val actualCalleeType: Signature2?
-        if (outerCallTree == null) {
-            declaredCalleeType = hackTryStaticTypeToSig(callTree.typeInferences?.variant)
-            actualCalleeType = hackTryStaticTypeToSig(callTree.childOrNull(0)?.typeInferences?.type)
-        } else if (dotHelper.memberAccessor is BindMemberAccessor) {
-            val innerCallee = callTree.childOrNull(0)
+        val declaredCalleeType: Signature2? = firstMember?.descriptor
+        val actualCalleeType: Signature2? = hackTryStaticTypeToSig(callTree.childOrNull(0)?.typeInferences?.type)
 
-            actualCalleeType = innerCallee?.typeInferences?.type?.let {
-                hackTryStaticTypeToSig(BindMethodTypeHelper.uncurry(it))
-            }
-            declaredCalleeType = firstMember?.descriptor
-        } else {
-            TODO(callTree.toLispy())
-        }
         fun translatedExpr(e: TmpL.Expression) = TranslatedDotHelper(
             Either.Left(e),
             actualCalleeType = actualCalleeType,
@@ -219,24 +198,16 @@ internal object TranslateDotHelper {
             adjustments = adjustments,
         )
 
-        val mergedArgumentList: List<Argument> = buildList {
-            addAll(
-                callTree.children.subListToEnd(subjectIndexInCallTree),
-            )
-            if (outerCallTree != null) {
-                addAll(
-                    outerCallTree.children.subListToEnd(1),
+        val mergedArgumentList: List<Argument> = callTree.children.subListToEnd(subjectIndexInCallTree)
+            .mapIndexed { argIndex, argTree ->
+                Argument(
+                    actualCalleeType = actualCalleeType,
+                    declaredCalleeType = declaredCalleeType,
+                    argIndex = argIndex,
+                    tree = argTree,
+                    adjustments = adjustments,
                 )
             }
-        }.mapIndexed { argIndex, argTree ->
-            Argument(
-                actualCalleeType = actualCalleeType,
-                declaredCalleeType = declaredCalleeType,
-                argIndex = argIndex,
-                tree = argTree,
-                adjustments = adjustments,
-            )
-        }
         val subject = mergedArgumentList[0]
         val otherArgs = mergedArgumentList.subListToEnd(1)
 
@@ -254,17 +225,11 @@ internal object TranslateDotHelper {
                     )
                 }
                 val calleeType = callee.typeOrInvalid
-                val unboundCalleeType = when (dotHelper.memberAccessor) {
-                    is BindMemberAccessor -> hackTryStaticTypeToSig(
-                        BindMethodTypeHelper.uncurry(hackMapNewStyleToOld(calleeType)),
-                    )
-                    // Fine as-is
-                    else -> withType(
-                        calleeType,
-                        fn = { _, sig, _ -> sig },
-                        fallback = { null },
-                    )
-                }.orInvalid
+                val unboundCalleeType = withType(
+                    calleeType,
+                    fn = { _, sig, _ -> sig },
+                    fallback = { null },
+                ).orInvalid
 
                 if (connectedReference is InlineTmpLSupportCode) {
                     return@translate translatedExpr(
@@ -285,8 +250,8 @@ internal object TranslateDotHelper {
                 val callable = TmpL.FnReference(TmpL.Id(calleePos, name), unboundCalleeType)
 
                 return@translate when (connectedMethod.methodKind to dotHelper.memberAccessor) {
-                    MethodKind.Normal to ExternalBind,
-                    MethodKind.Normal to InternalBind,
+                    MethodKind.Normal to ExternalCall,
+                    MethodKind.Normal to InternalCall,
                     MethodKind.Getter to ExternalGet,
                     MethodKind.Getter to InternalGet,
                     MethodKind.Setter to ExternalSet,
@@ -307,7 +272,7 @@ internal object TranslateDotHelper {
             }
         }
         val typeIsConnected = firstMember != null && firstMember.enclosingType.let { typeShape ->
-            val connectedKey = typeShape.metadata[connectedSymbol, TString]
+            val connectedKey = typeShape.connectedKey
             if (connectedKey == null) {
                 false
             } else {
@@ -395,7 +360,7 @@ internal object TranslateDotHelper {
                     ),
                 )
             }
-            is BindMemberAccessor -> if (outerCallTree != null) {
+            is CallMemberAccessor -> {
                 val method = firstMember
                     ?: return garbageTranslatedHelper(
                         pos,
@@ -417,7 +382,7 @@ internal object TranslateDotHelper {
         }
         return translatedExpr(
             translation
-                ?: translator.untranslatableExpr(pos, (outerCallTree ?: callTree).toLispy()),
+                ?: translator.untranslatableExpr(pos, callTree.toLispy()),
         )
     }
 
@@ -462,7 +427,9 @@ internal object TranslateDotHelper {
                     callInferences = callTypeInferences,
                     sig = sig,
                 ),
-                parameters = args.map { it.translate(translator) },
+                parameters = args.map { argument ->
+                    argument.translate(translator)
+                },
                 type = type,
             ),
         )
@@ -473,15 +440,16 @@ internal object TranslateDotHelper {
 
 internal fun connectedKeyForMember(member: MemberShape): String? = when (member) {
     is MethodShape -> connectedKeyForMethod(member)
-    is PropertyShape -> connectedMethodKeyForProperty(member) {
-        GETTER_AFFIX !in it && SETTER_AFFIX !in it
+    is PropertyShape -> when {
+        member.hasSetter || member.getter != null -> null // any hint of accessors means no connection
+        else -> member.connectedKey
     }
-    is VisibleMemberShape -> member.metadata[connectedSymbol, TString]
+    is VisibleMemberShape -> member.connectedKey
     else -> null
 }
 
 private fun connectedKeyForMethod(methodShape: MethodShape): String? {
-    val connectedMethodKey = methodShape.metadata[connectedSymbol, TString]
+    val connectedMethodKey = methodShape.connectedKey
     if (connectedMethodKey != null) {
         return connectedMethodKey
     }
@@ -489,37 +457,23 @@ private fun connectedKeyForMethod(methodShape: MethodShape): String? {
     return when (methodShape.methodKind) {
         MethodKind.Normal -> null
         MethodKind.Getter -> propertyShapeFor(methodShape)?.let { propertyShape ->
-            connectedMethodKeyForProperty(propertyShape) { GETTER_AFFIX in it }
+            when {
+                propertyShape.hasSetter -> null
+                else -> propertyShape.connectedKey // no reliable `hasGetter`
+            }
         }
         MethodKind.Setter -> propertyShapeFor(methodShape)?.let { propertyShape ->
-            connectedMethodKeyForProperty(propertyShape) { SETTER_AFFIX in it }
+            when {
+                propertyShape.hasSetter && propertyShape.getter == null -> propertyShape.connectedKey
+                else -> null
+            }
         }
         MethodKind.Constructor -> null
     }
 }
 
-/**
- * There may be multiple connected keys attached to a property.
- * Return the first one matching filter which lets us use the `::getFoo` key for
- * a getter and the `::setFoo` key for the setter.
- */
-private fun connectedMethodKeyForProperty(
-    propertyShape: PropertyShape,
-    filter: (String) -> Boolean,
-): String? = propertyShape.metadata[connectedSymbol]?.mapFirst { value ->
-    val stringContent = TString.unpackOrNull(value)
-    if (stringContent != null && filter(stringContent)) {
-        stringContent
-    } else {
-        null
-    }
-}
-
 private fun propertyShapeFor(methodShape: MethodShape): PropertyShape? =
     methodShape.enclosingType.properties.firstOrNull { it.symbol == methodShape.symbol }
-
-private const val GETTER_AFFIX = "::get"
-private const val SETTER_AFFIX = "::set"
 
 private fun garbageTranslatedHelper(pos: Position, message: String) =
     TranslateDotHelper.TranslatedDotHelper(

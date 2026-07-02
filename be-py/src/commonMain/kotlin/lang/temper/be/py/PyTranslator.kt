@@ -39,6 +39,7 @@ import lang.temper.name.ResolvedName
 import lang.temper.name.TemperName
 import lang.temper.type.Abstractness
 import lang.temper.type.MethodKind
+import lang.temper.type.MethodShape
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeShape
 import lang.temper.type.Visibility
@@ -371,7 +372,7 @@ class PyTranslator(
         ): List<Py.Stmt> = buildList {
             // TODO: substitute python parameter names for TmpL names
             // See be-java's javadoc(...) helpers.
-            val fnDocumentation = s.documentation?.prettyPleaseHelp()
+            val fnDocumentation = s.documentation.prettyPleaseHelp()
             if (fnDocumentation != null) {
                 add(translateDocString(fnDocumentation, s.pos))
             }
@@ -459,7 +460,7 @@ class PyTranslator(
                             name = pyIdent(member.pos, temperToPython(member.dotName.dotNameText)),
                             args = Py.Arguments(
                                 member.pos,
-                                listOf(
+                                args = listOf(
                                     Py.Arg(member.pos, arg = pyIdent(member.pos, "self")),
                                 ),
                             ),
@@ -976,6 +977,17 @@ class PyTranslator(
         val params = func.parameters
         // Temper semantics allow required after optional, at least for lambda blocks, so track that.
         var anyOptional = false
+        val isConstructor = func is TmpL.Constructor
+        // Manage slash of positional args.
+        var slashAddedIfNeeded = false
+        fun addSlashIfNeeded() {
+            if (!slashAddedIfNeeded && args.isNotEmpty()) {
+                args.add(Py.Arg(params.pos, arg = null, prefix = Py.ArgPrefix.Slash))
+            }
+            // Track either way since we might just skip it if wanted early, such as for rest param at front.
+            slashAddedIfNeeded = true
+        }
+        // Loop params.
         params.forEachFormal { pos, id, type, kind ->
             val name = id.name
             val isOptional = anyOptional || kind == ArgKind.Optional
@@ -1011,6 +1023,14 @@ class PyTranslator(
             } else {
                 pyNames.name(name)
             }.asPyId(id.pos)
+            val prefix = when (kind) {
+                ArgKind.This, ArgKind.Required, ArgKind.Optional -> Py.ArgPrefix.None
+                ArgKind.Rest -> {
+                    // Slash has to go before rest arg.
+                    addSlashIfNeeded()
+                    Py.ArgPrefix.Star
+                }
+            }
             args.add(
                 Py.Arg(
                     pos,
@@ -1027,13 +1047,16 @@ class PyTranslator(
                     } else {
                         null
                     },
-                    prefix = when (kind) {
-                        ArgKind.This, ArgKind.Required, ArgKind.Optional -> Py.ArgPrefix.None
-                        ArgKind.Rest -> Py.ArgPrefix.Star
-                    },
+                    prefix = prefix,
                 ),
             )
+            // For constructors, add slash after the first/self param.
+            if (isConstructor) {
+                addSlashIfNeeded()
+            }
         }
+        // For constructors, we'll have added the slash already, and others have positionals if any.
+        addSlashIfNeeded()
         return Py.Arguments(params.pos, args = args)
     }
 
@@ -1063,7 +1086,10 @@ class PyTranslator(
                     func.pos,
                     name = testName(func.name),
                     // Tests shouldn't have parameters nor need renames.
-                    args = Py.Arguments(func.pos, listOf(Py.Arg(func.pos, arg = pyIdent(func.pos, "self")))),
+                    args = Py.Arguments(
+                        func.pos,
+                        args = listOf(Py.Arg(func.pos, arg = pyIdent(func.pos, "self"))),
+                    ),
                     // But mypy says it can't type the inside if not typed at function sig, so include return type.
                     returns = PyConstant.None.at(func.pos),
                     body = buildList {
@@ -1116,7 +1142,7 @@ class PyTranslator(
         // TODO We also need to have renamed globals for rare cases of conflict with named args.
         // TODO Is the above still a valid concern?
         // TODO Why don't method bodies currently include declareReferences?
-        val documentation = func.documentation?.prettyPleaseHelp()
+        val documentation = func.documentation.prettyPleaseHelp()
         if (documentation != null) {
             add(translateDocString(documentation, func.pos))
         }
@@ -1396,7 +1422,7 @@ class PyTranslator(
 
     internal fun subject(x: TmpL.Subject): Py.Expr = when (x) {
         is TmpL.Expression -> expr(x)
-        is TmpL.TypeName -> translateTypeName(x)
+        is TmpL.TypeSubject -> translateTypeName(x.typeName)
     }
 
     private fun translateCall(x: TmpL.CallExpression): Py.Tree =
@@ -1516,7 +1542,13 @@ class PyTranslator(
     private fun notNullExpr(x: TmpL.Expression): Py.Expr = expr(x)
 
     private fun translateCallable(f: TmpL.Callable): Py.Expr = when (f) {
-        is TmpL.MethodReference -> subject(f.subject).attribute(methodReferenceNameText(f), pos = f.pos)
+        is TmpL.MethodReference -> subject(f.subject).attribute(methodReferenceNameText(f), pos = f.pos).let { ref ->
+            when ((f.method as? MethodShape)?.methodKind) {
+                MethodKind.Getter -> ref.attribute("__get__")
+                MethodKind.Setter -> ref.attribute("__set__")
+                else -> ref
+            }
+        }
         is TmpL.InlineSupportCodeWrapper -> garbageExpr(f.pos, "translateCallable", "$f should have been eliminated")
         is TmpL.FnReference -> name(f.id)
         is TmpL.ConstructorReference -> constructorReference(f)

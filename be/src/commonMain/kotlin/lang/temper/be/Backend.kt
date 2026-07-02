@@ -5,7 +5,6 @@ import lang.temper.be.cli.CliEnv
 import lang.temper.be.cli.RunnerSpecifics
 import lang.temper.be.names.NameSelection
 import lang.temper.be.names.NameSelectionFile
-import lang.temper.be.tmpl.LibraryRootContext
 import lang.temper.be.tmpl.SignatureAdjustments
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
@@ -44,7 +43,6 @@ import lang.temper.log.FileRelatedCodeLocation
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.bannedPathSegmentNames
-import lang.temper.log.dirPath
 import lang.temper.log.filePath
 import lang.temper.log.last
 import lang.temper.log.plus
@@ -647,13 +645,6 @@ abstract class Backend<SELF : Backend<SELF>>(
             )
         }
     }
-
-    /** Locates the temper source files for a library */
-    open fun libraryRootContext(libraryConfiguration: LibraryConfiguration) =
-        LibraryRootContext(
-            inRoot = libraryConfiguration.libraryRoot,
-            outRoot = dirPath(libraryConfiguration.libraryName.text),
-        )
 
     private val allocatedFiles = mutableSetOf<FilePath>()
     protected fun allocateTextFile(

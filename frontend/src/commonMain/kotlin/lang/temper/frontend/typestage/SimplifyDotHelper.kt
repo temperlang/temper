@@ -1,11 +1,8 @@
 package lang.temper.frontend.typestage
 
-import lang.temper.builtin.BuiltinFuns
 import lang.temper.common.Either
 import lang.temper.frontend.maybeAdjustDotHelper
-import lang.temper.interp.convertToErrorNode
 import lang.temper.type.AndType
-import lang.temper.type.BindMemberAccessor
 import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
 import lang.temper.type.ExtensionResolution
@@ -21,7 +18,6 @@ import lang.temper.type.extractAtoms
 import lang.temper.value.CallTree
 import lang.temper.value.Tree
 import lang.temper.value.Value
-import lang.temper.value.functionContained
 import lang.temper.value.toPseudoCode
 
 private typealias VariantResolution = Either<VisibleMemberShape, ExtensionResolution>
@@ -74,7 +70,7 @@ internal fun simplifyDotHelper(
     var lastNonExtensionResolution: VariantResolution? = null
     var lastResolution: VariantResolution? = null
     for (variant in variants.reversed()) {
-        if (variant.first == variantMatch || variant.first == variantMatchRefined) {
+        if (variant.first equivalent variantMatch || variant.first equivalent variantMatchRefined) {
             lastResolution = variant.second
             if (variant.second is Either.Left) {
                 lastNonExtensionResolution = variant.second
@@ -120,52 +116,22 @@ internal fun simplifyDotHelper(
             }
         }
         is Either.Right -> {
-            var inheritsSubject: CallTree? = null
-            var toReplace = calleeEdge
-            // (Call
-            //   (Bind subject \member)
-            //   ...)
-            // ->
-            // (Call
-            //   (RightNameName extensionResolution)
-            //   subject
-            //   ...)
-            //
-            // But also, look through <> so that
+            // Look through <> so that
             //     subject.method<Type, Actuals>(...)
             // ->
             //     (resolution<Type, Actuals>)(subject, ...)
-            if (dotHelper.memberAccessor is BindMemberAccessor) {
-                val callEdge = call.incoming!!
-                toReplace = callEdge
-                inheritsSubject = callEdge.source as? CallTree
-                if (
-                    inheritsSubject?.childOrNull(0)?.functionContained == BuiltinFuns.angleFn
-                ) {
-                    inheritsSubject = inheritsSubject.incoming?.source as? CallTree
-                }
-
-                if (inheritsSubject == null) {
-                    convertToErrorNode(callEdge)
-                    return
-                }
-            }
 
             val extensionResolution = chosenVariantResolution.item
-            val doc = toReplace.target.document
-            toReplace.replace {
+            val doc = calleeEdge.target.document
+            calleeEdge.replace {
                 Replant(extensionResolution.toLeaf(doc, callee.pos))
             }
 
             if (extensionResolution is StaticExtensionResolution) {
                 // Remove the receiver type
                 call.removeChildren(1..1)
-            } else if (inheritsSubject != null) {
-                val subject = call.child(1)
-                call.removeChildren(1..1)
-                inheritsSubject.add(childIndex = 1, newChild = subject)
             }
-            retypeTree(toReplace.target)
+            retypeTree(calleeEdge.target)
             return
         }
     }
@@ -192,3 +158,24 @@ internal fun simplifyDotHelper(
         retypeTree(callEdge.target)
     }
 }
+
+private infix fun StaticType?.equivalent(other: StaticType?): Boolean =
+    if (this is FunctionType && other is FunctionType) {
+        val tvf = this.valueFormals
+        val ovf = other.valueFormals
+        var same = this.returnType == other.returnType &&
+            this.restValuesFormal == other.restValuesFormal &&
+            tvf.size == ovf.size &&
+            this.typeFormals == other.typeFormals
+        if (same) {
+            for ((i, element) in tvf.withIndex()) {
+                if (element.type != ovf[i].type) {
+                    same = false
+                    break
+                }
+            }
+        }
+        same
+    } else {
+        this == other
+    }

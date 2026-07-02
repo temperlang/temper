@@ -11,16 +11,15 @@ import lang.temper.be.names.NameSelection
 import lang.temper.be.py.PyDottedIdentifier.Companion.dotted
 import lang.temper.be.py.helper.MypySpecifics
 import lang.temper.be.py.helper.PythonSpecifics
-import lang.temper.be.tmpl.LibraryRootContext
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
+import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.common.MimeType
 import lang.temper.common.console
 import lang.temper.common.jsonEscaper
 import lang.temper.common.partitionNotNull
 import lang.temper.common.toStringViaBuilder
-import lang.temper.frontend.Module
 import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
 import lang.temper.fs.loadResource
@@ -277,6 +276,7 @@ class PyBackend private constructor(
             tentativeOutputPathFor = {
                 pyPathForModuleLocation(it.loc as ModuleName, pyLibraryNames)
             },
+            withTentative = { injectSuperCallMethods(it) },
         )
     }
 
@@ -356,11 +356,6 @@ class PyBackend private constructor(
     }
 
     override fun selectNames(): List<NameSelection> = pyNames!!.selectedNames()
-
-    override fun libraryRootContext(libraryConfiguration: LibraryConfiguration) = LibraryRootContext(
-        inRoot = libraryConfiguration.libraryRoot,
-        outRoot = safeForImportFilePath(dirPath(libraryConfiguration.libraryName.text)),
-    )
 
     private fun pyPathForModuleLocation(
         moduleName: ModuleName,

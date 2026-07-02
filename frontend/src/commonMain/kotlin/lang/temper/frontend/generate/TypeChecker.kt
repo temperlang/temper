@@ -5,7 +5,6 @@ import lang.temper.ast.VisitCue
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.RttiCheckFunction
 import lang.temper.builtin.SETP_ARITY
-import lang.temper.builtin.isDotBindCall
 import lang.temper.builtin.problems
 import lang.temper.common.Either
 import lang.temper.common.Log
@@ -16,15 +15,15 @@ import lang.temper.frontend.typestage.isConstructor
 import lang.temper.frontend.typestage.logInvalid2BecauseMissingType
 import lang.temper.frontend.typestage.logInvalidBecauseMissingType
 import lang.temper.interp.New
-import lang.temper.interp.forEachActualIncludingThis
+import lang.temper.interp.forEachActual
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
+import lang.temper.log.Positioned
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
 import lang.temper.type.AndType
-import lang.temper.type.BindMemberAccessor
 import lang.temper.type.BubbleType
 import lang.temper.type.DotHelper
 import lang.temper.type.FunctionType
@@ -101,7 +100,7 @@ internal class TypeChecker(
     private val voidReturnDeclNames = mutableSetOf<TemperName>()
 
     fun check(root: BlockTree) {
-        // First make sure we track which things actually can be void.
+        // First, make sure we track which things actually can be void.
         trackVoidReturnDeclNames(root)
         // Now visit everywhere to check compliance.
         fun dig(t: Tree) {
@@ -159,7 +158,7 @@ internal class TypeChecker(
     }
 
     private fun checkBlock(t: BlockTree) {
-        // Conditions should not be a sub-type of Boolean || Bubble because we should have already
+        // Conditions should not be a subtype of Boolean || Bubble because we should have already
         // converted failing subtrees into passing branches with explicit failure variable checks.
         (t.flow as? StructuredFlow)?.let { flow ->
             fun visit(cf: ControlFlow) {
@@ -199,7 +198,8 @@ internal class TypeChecker(
             }
             else -> checkRegularCall(t)
         }
-        // And make sure we don't use Void in calls. Assignment is handled specially, so exclude that in checks here.
+        // And make sure we don't use Void in calls. Assignment is handled as a special case,
+        // so exclude that in checks here.
         // Also avoid preserve calls because it can store whatever args it wants, including void.
         // TODO How to avoid so much special handling for preserve?
         if (!(fn == BuiltinFuns.preserveFn || fn == BuiltinFuns.setLocalFn)) {
@@ -214,7 +214,7 @@ internal class TypeChecker(
     private fun checkDecl(t: DeclTree) {
         val meta = t.parts?.metadataSymbolMap ?: return
         meta[typeDeclSymbol]?.let { typeDeclEdge ->
-            // Working on the type as a whole might reduce lookup effort vs each member decl separately.
+            // Working on the type as a whole might reduce lookup effort vs. each member decl separately.
             val type = typeDeclEdge.target.staticTypeContained ?: return@checkDecl
             val shape = ((type as? NominalType)?.definition as? TypeShape) ?: return@checkDecl
             members@for (member in shape.members) {
@@ -225,7 +225,6 @@ internal class TypeChecker(
                     val visibility = member.visibility
                     for (overridden in member.overriddenMembers ?: emptyList()) {
                         // Check reduced visibility.
-                        // Inequality check should support protected as well as public and private.
                         val baseVisibility = overridden.superTypeMember.visibility
                         if (visibility < baseVisibility) {
                             logSink.log(
@@ -260,14 +259,16 @@ internal class TypeChecker(
         //    fn <T extends Top>(f: fn (): T, g: fn (T): T throws Bubble): T { g(f()) }
         // is not because a branch from g can lead to failure even when f does not.
 
-        // Check returnType vs returnDecl type.
-        // Failure can happen in cases of inferred return type for lambda blocks.
+        // Check returnType vs. returnDecl type.
+        // Failure can happen in cases of an inferred return type for lambda blocks.
         // With some effort, we likely can fix that, but this checks against that
         // for now as well as anything else that might slip through in the future.
         val returnType = (t.typeInferences?.type as? FunctionType)?.returnType
         val returnDecl = t.parts?.returnDecl
-        val returnDeclType = returnDecl?.parts?.name?.typeInferences?.type
-        checkSubType(returnDecl?.pos, returnType, returnDeclType)
+        if (returnDecl != null) {
+            val returnDeclType = returnDecl.parts?.name?.typeInferences?.type
+            checkSubType(returnDecl, returnType, returnDeclType)
+        }
         if (returnType?.isBubbly == false) {
             checkAgainstBubbles(t)
         }
@@ -281,7 +282,7 @@ internal class TypeChecker(
             // Don't go into nested functions, as that's a new scope for bubble allowance.
             sub is FunTree && return@subs VisitCue.SkipOne
             if (sub is CallTree) {
-                // In the end, we only reference bubble when it actually escapes from functions.
+                // In the end, we only reference Bubble when it actually escapes from functions.
                 // And if some logic doesn't allow a branch to execute, we should clean it out before here.
                 // Given the above, we can complain here about any call to bubble.
                 if (sub.child(0).functionContained === BubbleFn) {
@@ -340,13 +341,13 @@ internal class TypeChecker(
             )
             return
         }
-        // TODO: check that right type is a sub-type of left-type.
+        // TODO: check that right type is a subtype of left-type.
         val (_, leftTree, rightTree) = t.children
         val leftType = leftTree.typeInferences?.type
         val rightType = rightTree.typeInferences?.type
         // TODO: We probably want to enforce that we have either a left or a right type from the
         // checker, but baby steps.
-        checkSubType(t.pos, leftType, rightType)
+        checkSubType(t, leftType, rightType)
         // And make sure we don't use void as a value. Focus on actual void, not just void-like for now.
         if (rightType?.isVoid == true) {
             // We can assign voids only to simple names that are temporaries or appropriate return decls.
@@ -361,13 +362,12 @@ internal class TypeChecker(
         }
     }
 
-    /** @param pos must be non-null if the other params are. */
-    private fun checkSubType(pos: Position?, leftType: StaticType?, rightType: StaticType?) {
+    private fun checkSubType(src: Positioned, leftType: StaticType?, rightType: StaticType?) {
         if (leftType != null && rightType != null && !typeContext.isSubType(rightType, leftType)) {
             logSink.log(
                 level = Log.Error,
                 template = MessageTemplate.ExpectedSubType,
-                pos = pos!!,
+                pos = src.pos,
                 values = listOf(leftType, rightType),
             )
         }
@@ -487,12 +487,6 @@ internal class TypeChecker(
                             returnType = bind(calleeType.returnType),
                         )
                     }
-                    if (boundCalleeType.returnType == WellKnownTypes.functionType && isDotBindCall(t)) {
-                        // We use a simple return type of function type when there's a still
-                        // ambiguous dot helper, and instead focus on analysis of the outer
-                        // call.
-                        return
-                    }
 
                     val valueFormals = boundCalleeType.valueFormals
                     val restValuesFormal = boundCalleeType.restValuesFormal
@@ -516,11 +510,13 @@ internal class TypeChecker(
                                     c.log("calleeFn=$calleeFn")
                                     if (calleeFn is DotHelper) {
                                         val memberAccessor = calleeFn.memberAccessor
-                                        c.log("memberAccessor=$memberAccessor, fai=${memberAccessor.firstArgumentIndex}, callee.size=${callee.size}, 2+fai=${2 + memberAccessor.firstArgumentIndex}")
-                                        if (memberAccessor is BindMemberAccessor && callee.size == 2 + memberAccessor.firstArgumentIndex) {
-                                            val thisArg = callee.child(memberAccessor.firstArgumentIndex + 1)
-                                            c.log("thisArg=${thisArg.toPseudoCode()}")
-                                        }
+                                        c.log(
+                                            "memberAccessor=$memberAccessor, fai=${
+                                                memberAccessor.firstArgumentIndex
+                                            }, callee.size=${callee.size}, 2+fai=${
+                                                2 + memberAccessor.firstArgumentIndex
+                                            }",
+                                        )
                                     }
                                 }
                             }
@@ -649,7 +645,7 @@ private data class TypedActual(
 private fun extractTypedActuals(t: CallTree): List<TypedActual>? {
     val actuals = mutableListOf<TypedActual>()
     var problemExtracting = false
-    t.forEachActualIncludingThis { _, symbolChild, child ->
+    t.forEachActual { _, symbolChild, child ->
         val type = child.typeInferences?.type
         if (type != null) {
             val symbol = symbolChild?.symbolContained

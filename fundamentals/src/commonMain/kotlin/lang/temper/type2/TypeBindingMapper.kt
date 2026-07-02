@@ -45,6 +45,23 @@ fun TypeLike.mapType(
     defnMapper: (TypeFormal) -> TypeLike?,
 ): TypeLike = TypeBindingMapper(varMapper, defnMapper).mapTypeLike(this)
 
+fun Descriptor.mapType(m: Map<TypeFormal, Type2>): Descriptor = when (this) {
+    is Type2 -> mapType(m)
+    is Signature2 -> mapType(m)
+}
+
+val DefinedType.bindingMap: Map<TypeFormal, Type2> get() = if (bindings.isEmpty()) {
+    emptyMap()
+} else {
+    buildMap {
+        val formals = definition.formals
+        for ((i, binding) in bindings.withIndex()) {
+            val tf = formals.getOrNull(i) ?: break
+            put(tf, binding)
+        }
+    }
+}
+
 private class TypeBindingMapper(
     private val varMapper: (TypeVar) -> TypeLike?,
     private val defnMapper: (TypeFormal) -> TypeLike?,

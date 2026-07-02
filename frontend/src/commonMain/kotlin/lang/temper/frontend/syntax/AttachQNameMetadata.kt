@@ -21,7 +21,6 @@ import lang.temper.value.DeclTree
 import lang.temper.value.FunTree
 import lang.temper.value.LinearFlow
 import lang.temper.value.MetadataMultimapHelpers.get
-import lang.temper.value.ReifiedType
 import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
@@ -39,13 +38,14 @@ import lang.temper.value.staticPropertySymbol
 import lang.temper.value.typeDeclSymbol
 import lang.temper.value.typeDefinedSymbol
 import lang.temper.value.typeFormalSymbol
+import lang.temper.value.varSymbol
 
 /**
  * Attaches [qNameSymbol] to [QName] metadata to [DeclTree]s.
  */
 internal fun attachQNameMetadata(module: Module, root: BlockTree) {
     val (libraryName, relPath) = when (val loc = module.loc) {
-        is ImplicitsCodeLocation -> implicitsLibraryName to FilePath.emptyPath
+        is ImplicitsCodeLocation -> coreLibraryName to FilePath.emptyPath
         is ModuleName -> {
             val libraryName = module.sharedLocationContext[loc, LibraryNameLocationKey] ?: return
             var relPath = loc.relativePath()
@@ -57,6 +57,7 @@ internal fun attachQNameMetadata(module: Module, root: BlockTree) {
     // Walk tree to allocated QNames and collect them in a map.
     // Later, we disambiguate and store them back.
     val qNameToDecls = mutableMapOf<QName, MutableList<DeclTree>>()
+    val declToFn = mutableMapOf<DeclTree, FunTree>()
     val qNameBuilder = QName.Builder(libraryName, relPath)
     fun visit(t: Tree, inLocalContext: Boolean) {
         val partCount = qNameBuilder.partCount
@@ -100,6 +101,9 @@ internal fun attachQNameMetadata(module: Module, root: BlockTree) {
                     qNameBuilder.part(parsedName, kind)
                     val qName = qNameBuilder.toQName()
                     qNameToDecls.putMultiList(qName, t)
+                    if (initial is FunTree && varSymbol !in metadata) {
+                        declToFn[t] = initial
+                    }
                 } else {
                     // Store existing QNames in case some micro-passes pre-allocate them.
                     val qNameText = metadata[qNameSymbol, TString]
@@ -121,7 +125,7 @@ internal fun attachQNameMetadata(module: Module, root: BlockTree) {
             if (parts != null) {
                 val metadata = parts.metadataSymbolMultimap
                 val typeDefined = metadata[typeDefinedSymbol, TType]
-                val definition = ((typeDefined as? ReifiedType)?.type as? NominalType)?.definition
+                val definition = (typeDefined?.type as? NominalType)?.definition
                 if (definition is TypeShape) {
                     val name = parsedNameFor(definition.name)
                     if (name != null) {
@@ -161,17 +165,24 @@ internal fun attachQNameMetadata(module: Module, root: BlockTree) {
             if (edge != null) {
                 edge.replace { V(edge.target.pos, nameTextValue) }
             } else {
+                val pos = (parts?.name?.pos ?: decl.pos).leftEdge
                 decl.insert(decl.size) {
-                    val pos = (parts?.name?.pos ?: decl.pos).leftEdge
                     V(pos, qNameSymbol)
                     V(pos, nameTextValue)
+                }
+                // Also put qname on const-assigned function trees.
+                declToFn[decl]?.let { fn ->
+                    fn.insert(fn.size - 1) {
+                        V(pos, qNameSymbol)
+                        V(pos, nameTextValue)
+                    }
                 }
             }
         }
     }
 }
 
-val implicitsLibraryName = DashedIdentifier("implicits")
+val coreLibraryName = DashedIdentifier(ImplicitsCodeLocation.diagnostic)
 
 private fun parsedNameFor(name: TemperName?): ParsedName? =
     (name as? ParsedName) ?: (name as? ResolvedParsedName)?.baseName

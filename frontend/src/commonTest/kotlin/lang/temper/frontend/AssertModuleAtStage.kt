@@ -31,7 +31,9 @@ import lang.temper.lexer.StandaloneLanguageConfig
 import lang.temper.log.FilePath
 import lang.temper.log.FilePathSegment
 import lang.temper.log.LogEntry
+import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
+import lang.temper.log.MessageTemplateI
 import lang.temper.log.ParentPseudoFilePathSegment
 import lang.temper.log.Position
 import lang.temper.log.Positioned
@@ -111,6 +113,7 @@ fun assertModuleAtStage(
     moduleResultNeeded: Boolean = false,
     loc: ModuleName? = null,
     stagingFlags: Set<BuiltinName> = emptySet(),
+    stackTracesForErrors: Boolean = false,
     languageConfig: LanguageConfig = StandaloneLanguageConfig,
     logEntryWanted: (LogEntry) -> Boolean = { it.level >= Log.Warn },
 ) = assertModuleAtStage(
@@ -123,6 +126,7 @@ fun assertModuleAtStage(
     moduleResultNeeded = moduleResultNeeded,
     loc = loc,
     stagingFlags = stagingFlags,
+    stackTracesForErrors = stackTracesForErrors,
     logEntryWanted = logEntryWanted,
 ) { module, moduleAdvancer ->
     val chunks = buildList {
@@ -197,6 +201,7 @@ fun assertModuleAtStage(
     nameSimplifying: Boolean = false,
     moduleResultNeeded: Boolean = false,
     stagingFlags: Set<BuiltinName> = emptySet(),
+    stackTracesForErrors: Boolean = false,
     logEntryWanted: (LogEntry) -> Boolean = { it.level >= Log.Warn },
     provisionModule: (Module, ModuleAdvancer) -> Unit,
 ) {
@@ -239,7 +244,13 @@ fun assertModuleAtStage(
     }
 
     val listBackedLogSink = ListBackedLogSink()
-    val projectLogSink = ValueSimplifyingLogSink(listBackedLogSink, nameSimplifying = nameSimplifying)
+    val projectLogSink = ValueSimplifyingLogSink(listBackedLogSink, nameSimplifying = nameSimplifying).let {
+        if (stackTracesForErrors) {
+            DumpStackTracesForThoseErrors(it)
+        } else {
+            it
+        }
+    }
     val moduleConfig = ModuleConfig(moduleCustomizeHook = moduleHook)
     val moduleAdvancer = ModuleAdvancer(projectLogSink, moduleConfig = moduleConfig)
     val moduleLoc = loc ?: testModuleName
@@ -715,3 +726,14 @@ private fun destructureMetadata(sink: PropertySink, metadata: Map<Symbol, List<V
 }
 
 val testLibraryName = DashedIdentifier("test-code")
+
+internal class DumpStackTracesForThoseErrors(private val logSink: LogSink) : LogSink {
+    override val hasFatal: Boolean get() = logSink.hasFatal
+
+    override fun log(level: Log.Level, template: MessageTemplateI, pos: Position, values: List<Any>, fyi: Boolean) {
+        if (level >= Log.Error) {
+            console.trace(template.format(values))
+        }
+        logSink.log(level, template, pos, values, fyi)
+    }
+}

@@ -30,10 +30,10 @@ import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
-import lang.temper.type.BindMemberAccessor
+import lang.temper.type.CallMemberAccessor
 import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
-import lang.temper.type.ExternalBind
+import lang.temper.type.ExternalCall
 import lang.temper.type.ExternalGet
 import lang.temper.type.Member
 import lang.temper.type.MethodKind
@@ -559,10 +559,8 @@ private class AutoescCommon(val root: BlockTree) {
         ) : ValueConstruction {
             override fun plant(p: Planting) {
                 p.Call {
-                    Call {
-                        V(Value(DotHelper(ExternalBind, DotMember(methodName))))
-                        subject.plant(this)
-                    }
+                    V(Value(DotHelper(ExternalCall, DotMember(methodName))))
+                    subject.plant(this)
                 }
             }
         }
@@ -823,79 +821,75 @@ private fun optimizeAutoescaperUse(
         // and remember it as something we need to change.
         if (t is CallTree && t.size >= 2) {
             val callee = t.child(0)
-            if (callee is CallTree && callee.size == 2) {
-                val fn = callee.child(0).functionContained
-                if (fn is DotHelper && fn.memberAccessor is BindMemberAccessor) {
-                    val subject = callee.child(1)
-                    if (subject is RightNameLeaf && subject.content == accumulatorName) {
-                        val (_, classification) = methodClassification(fn.member)
-                        if (classification != null) {
-                            val arg = t.child(1)
-                            val (argToPropagateOver: Value<*>, argPos) = when (classification) {
-                                AppendClassification.AppendSafe ->
-                                    (arg.valueContained ?: return null) to arg.pos
-                                AppendClassification.AppendUnsafe -> TNull.value to arg.pos.leftEdge
-                            }
-
-                            val after = iCtx.interpret(argPos) {
-                                Call {
-                                    V(propagateOver)
-                                    V(contextPropagator)
-                                    V(state)
-                                    V(argPos, argToPropagateOver)
-                                    V(sameStateFn)
-                                    V(vCallout)
-                                }
-                            } as? Value<*> ?: return null
-                            withCallouts { problem, severity ->
-                                problems.add(CalledOutProblem(severity, argPos, problem))
-                            }
-                            val effectValueList = TList.unpackOrNull(after.readField(effectsDotName))
-                                ?: return null
-                            val effects = buildList {
-                                for (effectValue in effectValueList) {
-                                    val shape = (effectValue.typeTag as? TClass)?.typeShape
-                                    when (shape?.name) {
-                                        appendParseEffectName -> {
-                                            val text = TString.unpackOrNull(
-                                                effectValue.readField(textDotName),
-                                            ) ?: return@propagateOverStmt null
-                                            add(AppendEffectDetail(text))
-                                        }
-                                        eventParseEffectName -> {
-                                            val eventValue = effectValue.readField(eventDotName)
-                                                ?: return@propagateOverStmt null
-                                            val eventName = use.common.nameFor(eventValue)
-                                                ?: return@propagateOverStmt null
-                                            add(EventEffectDetail(eventName))
-                                        }
-                                        else -> return@propagateOverStmt null
-                                    }
-                                }
-                            }
-                            effectValues = effectValueList
-                            state = after.readField(iCtx, stateAfterGetter, argPos) ?: return null
-                            val escapers = when (classification) {
-                                AppendClassification.AppendUnsafe -> {
-                                    val escaperValue = iCtx.interpret(ref.pos) {
-                                        Call {
-                                            Call(escaperForDotHelper) {
-                                                V(escaperPicker)
-                                            }
-                                            V(state)
-                                            V(vCallout)
-                                        }
-                                    } as? Value<*> ?: return null
-                                    withCallouts { problem, severity ->
-                                        problems.add(CalledOutProblem(severity, ref.pos, problem))
-                                    }
-
-                                    escaperUnraveler.escapers(escaperValue) ?: return null
-                                }
-                                AppendClassification.AppendSafe -> null
-                            }
-                            toChange.add(ChangeDetail(edge, effects, escapers, classification))
+            val fn = callee.functionContained
+            if (fn is DotHelper && fn.memberAccessor is CallMemberAccessor) {
+                val subject = callee.child(fn.memberAccessor.firstArgumentIndex + 1)
+                if (subject is RightNameLeaf && subject.content == accumulatorName) {
+                    val (_, classification) = methodClassification(fn.member)
+                    if (classification != null) {
+                        val arg = t.child(1)
+                        val (argToPropagateOver: Value<*>, argPos) = when (classification) {
+                            AppendClassification.AppendSafe ->
+                                (arg.valueContained ?: return null) to arg.pos
+                            AppendClassification.AppendUnsafe -> TNull.value to arg.pos.leftEdge
                         }
+
+                        val after = iCtx.interpret(argPos) {
+                            Call {
+                                V(propagateOver)
+                                V(contextPropagator)
+                                V(state)
+                                V(argPos, argToPropagateOver)
+                                V(sameStateFn)
+                                V(vCallout)
+                            }
+                        } as? Value<*> ?: return null
+                        withCallouts { problem, severity ->
+                            problems.add(CalledOutProblem(severity, argPos, problem))
+                        }
+                        val effectValueList = TList.unpackOrNull(after.readField(effectsDotName))
+                            ?: return null
+                        val effects = buildList {
+                            for (effectValue in effectValueList) {
+                                val shape = (effectValue.typeTag as? TClass)?.typeShape
+                                when (shape?.name) {
+                                    appendParseEffectName -> {
+                                        val text = TString.unpackOrNull(
+                                            effectValue.readField(textDotName),
+                                        ) ?: return@propagateOverStmt null
+                                        add(AppendEffectDetail(text))
+                                    }
+                                    eventParseEffectName -> {
+                                        val eventValue = effectValue.readField(eventDotName)
+                                            ?: return@propagateOverStmt null
+                                        val eventName = use.common.nameFor(eventValue)
+                                            ?: return@propagateOverStmt null
+                                        add(EventEffectDetail(eventName))
+                                    }
+                                    else -> return@propagateOverStmt null
+                                }
+                            }
+                        }
+                        effectValues = effectValueList
+                        state = after.readField(iCtx, stateAfterGetter, argPos) ?: return null
+                        val escapers = when (classification) {
+                            AppendClassification.AppendUnsafe -> {
+                                val escaperValue = iCtx.interpret(ref.pos) {
+                                    Call(escaperForDotHelper) {
+                                        V(escaperPicker)
+                                        V(state)
+                                        V(vCallout)
+                                    }
+                                } as? Value<*> ?: return null
+                                withCallouts { problem, severity ->
+                                    problems.add(CalledOutProblem(severity, ref.pos, problem))
+                                }
+
+                                escaperUnraveler.escapers(escaperValue) ?: return null
+                            }
+                            AppendClassification.AppendSafe -> null
+                        }
+                        toChange.add(ChangeDetail(edge, effects, escapers, classification))
                     }
                 }
             }
@@ -1032,10 +1026,8 @@ private fun optimizeAutoescaperUse(
         edge to {
             fun Planting.plantSafeAdjusted(safePs: AppendStmtPositions, safe: String): UnpositionedTreeTemplate<*> =
                 Call(safePs.pos) {
-                    Call(safePs.callee) {
-                        V(safePs.callee, Value(collectorAppendDotHelper))
-                        Rn(safePs.subject, collector)
-                    }
+                    V(safePs.callee, Value(collectorAppendDotHelper))
+                    Rn(safePs.subject, collector)
                     V(safePs.arg, Value(safe, TString))
                 }
             fun Planting.plantEvent(name: TemperName): UnpositionedTreeTemplate<*> =
@@ -1073,12 +1065,10 @@ private fun optimizeAutoescaperUse(
                                 Replant(arg)
                             } else {
                                 Call {
-                                    Call {
-                                        V(Value(applyDotHelper))
-                                        Call(BuiltinFuns.vGets) {
-                                            V(Value(ReifiedType(escapers.first()), TType))
-                                            V(Symbol("instance"))
-                                        }
+                                    V(Value(applyDotHelper))
+                                    Call(BuiltinFuns.vGets) {
+                                        V(Value(ReifiedType(escapers.first()), TType))
+                                        V(Symbol("instance"))
                                     }
                                     escapeArg(escapers.subListToEnd(1))
                                 }
@@ -1284,10 +1274,10 @@ private data class ChangeDetail(
 
 private val stateAfterGetter = DotHelper(ExternalGet, DotMember(Symbol("stateAfter")))
 private val effectsDotName = Symbol("effects")
-private val escaperForDotHelper = DotHelper(ExternalBind, DotMember(Symbol("escaperFor")))
-private val appendSafeDotHelper = DotHelper(ExternalBind, appendSafeDotName)
-private val appendDotHelper = DotHelper(ExternalBind, appendDotName)
-private val applyDotHelper = DotHelper(ExternalBind, DotMember(Symbol("apply")))
+private val escaperForDotHelper = DotHelper(ExternalCall, DotMember(Symbol("escaperFor")))
+private val appendSafeDotHelper = DotHelper(ExternalCall, appendSafeDotName)
+private val appendDotHelper = DotHelper(ExternalCall, appendDotName)
+private val applyDotHelper = DotHelper(ExternalCall, DotMember(Symbol("apply")))
 private val enactDotName = Symbol("enact")
 private val eventDotName = Symbol("event")
 private val textDotName = Symbol("text")

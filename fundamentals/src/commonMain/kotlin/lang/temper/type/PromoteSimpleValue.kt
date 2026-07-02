@@ -38,4 +38,3 @@ fun promoteSimpleValue(value: Value<*>): Value<InstancePropertyRecord>? {
         tClass,
     )
 }
-

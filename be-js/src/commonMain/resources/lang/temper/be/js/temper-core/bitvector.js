@@ -74,7 +74,7 @@ export class DenseBitVector {
 };
 
 /**
- * Implements extension method DenseBitVector::constructor
+ * Implements extension method core.type DenseBitVector.constructor()
  * @param {number} capacity
  * @returns {DenseBitVector}
  */
@@ -83,7 +83,7 @@ export const denseBitVectorConstructor = (capacity) => {
 };
 
 /**
- * Implements extension method DenseBitVector::get
+ * Implements extension method core.type DenseBitVector.get()
  * @param {DenseBitVector} denseBitVector
  * @param {number} index
  * @returns {boolean}
@@ -93,7 +93,7 @@ export const denseBitVectorGet = (denseBitVector, index) => {
 };
 
 /**
- * Implements extension method DenseBitVector::set
+ * Implements extension method core.type DenseBitVector.set()
  * @param {DenseBitVector} denseBitVector
  * @param {number} index
  * @param {boolean} newBitValue

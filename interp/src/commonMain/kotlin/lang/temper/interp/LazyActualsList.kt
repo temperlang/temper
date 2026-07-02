@@ -4,8 +4,6 @@ import lang.temper.common.toStringViaBuilder
 import lang.temper.env.Environment
 import lang.temper.env.InterpMode
 import lang.temper.name.Symbol
-import lang.temper.type.BindMemberAccessor
-import lang.temper.type.DotHelper
 import lang.temper.value.CallTree
 import lang.temper.value.ComputedActuals
 import lang.temper.value.FunTree
@@ -18,7 +16,6 @@ import lang.temper.value.Tree
 import lang.temper.value.TypeTag
 import lang.temper.value.ValueLeaf
 import lang.temper.value.firstArgumentIndex
-import lang.temper.value.functionContained
 import lang.temper.value.valueContained
 
 /**
@@ -174,25 +171,5 @@ inline fun CallTree.forEachActual(handle: (index: Int, symbol: ValueLeaf?, value
     // This still allocates a `Children` facade but that should be all.
     children.forEachActual(firstArgumentIndex) { _, actualIndex, symbol, value ->
         handle(actualIndex, symbol, value)
-    }
-}
-
-fun CallTree.forEachActualIncludingThis(handle: (index: Int, symbol: ValueLeaf?, value: Tree) -> Unit) {
-    var thisOffset = 0
-    val callee = children.getOrNull(0)
-    if (callee is CallTree) { // Extract this from a bind DotHelper
-        val calleeFn = callee.child(0).functionContained
-        if (calleeFn is DotHelper) {
-            val memberAccessor = calleeFn.memberAccessor
-            if (memberAccessor is BindMemberAccessor && callee.size == 2 + memberAccessor.firstArgumentIndex) {
-                val thisArg = callee.child(memberAccessor.firstArgumentIndex + 1)
-                handle(0, null, thisArg)
-                thisOffset += 1
-            }
-        }
-    }
-
-    children.forEachActual(firstArgumentIndex) { _, actualIndex, symbol, value ->
-        handle(actualIndex + thisOffset, symbol, value)
     }
 }

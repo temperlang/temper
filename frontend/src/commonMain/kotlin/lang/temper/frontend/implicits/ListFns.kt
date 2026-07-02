@@ -25,50 +25,50 @@ import kotlin.math.max
 import kotlin.math.min
 
 internal object ListFns {
-    object Length : SigFnBuilder("List::length") {
+    object Length : SigFnBuilder("core.type List.get length()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(TList.unpackContent(args[0]).size, TInt)
         }
     }
 
-    object Get : SigFnBuilder("List::get") {
+    object Get : SigFnBuilder("core.type List.get()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val ls = TList.unpackContent(args[0])
             val i = TInt.unpackOrFail(args, 1, cb, interpMode) { return@invoke it }
-            if (i < 0 || i > Int.MAX_VALUE) {
+            if (i < 0) {
                 throw Panic()
             }
-            return ls.getOrNull(i.toInt()) ?: Fail
+            return ls.getOrNull(i) ?: Fail
         }
     }
 
-    object GetOr : SigFnBuilder("List::getOr") {
+    object GetOr : SigFnBuilder("core.type List.getOr()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val ls = TList.unpackContent(args[0])
             val i = TInt.unpackOrFail(args, 1, cb, interpMode) { return@invoke it }
             val fallback = args[2]
-            return if (i < 0 || i > Int.MAX_VALUE.toLong()) {
+            return if (i < 0) {
                 fallback
             } else {
-                ls.getOrNull(i.toInt()) ?: fallback
+                ls.getOrNull(i) ?: fallback
             }
         }
     }
 
-    object Slice : SigFnBuilder("List::slice") {
+    object Slice : SigFnBuilder("core.type List.slice()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val ls = TList.unpackContent(args[0])
             val startInclusive = TInt.unpackOrFail(args, 1, cb, interpMode) { return@invoke it }
             val endExclusive = TInt.unpackOrFail(args, 2, cb, interpMode) { return@invoke it }
             val size = ls.size
-            val startInclusiveAdjusted = min(max(0, startInclusive.toInt()), size)
-            val endExclusiveAdjusted = min(max(endExclusive.toInt(), startInclusiveAdjusted), size)
+            val startInclusiveAdjusted = min(max(0, startInclusive), size)
+            val endExclusiveAdjusted = min(max(endExclusive, startInclusiveAdjusted), size)
             val slice = (startInclusiveAdjusted until endExclusiveAdjusted).map { ls[it] }
             return Value(slice, TList)
         }
     }
 
-    object Map : SigFnBuilder("List::map") {
+    object Map : SigFnBuilder("core.type List.map()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val ls = TList.unpackContent(args[0])
             val f = TFunction.unpackOrFail(args, 1, cb, interpMode) { return@invoke it }
@@ -85,24 +85,7 @@ internal object ListFns {
         }
     }
 
-    object MapDropping : SigFnBuilder("List::mapDropping") {
-        override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
-            val ls = TList.unpackContent(args[0])
-            val f = TFunction.unpackOrFail(args, 1, cb, interpMode) { return@invoke it }
-            if (f !is CallableValue) {
-                return Fail
-            }
-            val elements = ls.mapNotNull {
-                when (val result = f.invoke(ActualValues.from(it), cb, interpMode)) {
-                    is Fail, NotYet -> null
-                    is Value<*> -> result
-                }
-            }
-            return Value(elements, TList)
-        }
-    }
-
-    object Filter : SigFnBuilder("List::filter") {
+    object Filter : SigFnBuilder("core.type List.filter()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val ls = TList.unpackContent(args[0])
             val f = TFunction.unpackOrFail(args, 1, cb, interpMode) { return@invoke it }
@@ -113,7 +96,7 @@ internal object ListFns {
         }
     }
 
-    object Join : SigFnBuilder("List::join") {
+    object Join : SigFnBuilder("core.type List.join()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val ls = TList.unpackContent(args[0])
             val sep = TString.unpackOrFail(args, 1, cb, interpMode) { return@invoke it }
@@ -125,7 +108,7 @@ internal object ListFns {
         }
     }
 
-    object Sorted : SigFnBuilder("Listed::sorted") {
+    object Sorted : SigFnBuilder("core.type Listed.sorted()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val elements = TList.unpackContent(args[0]).toMutableList()
             return sort(args, cb, interpMode, elements) ?: Value(elements.toList(), TList)
@@ -134,7 +117,7 @@ internal object ListFns {
 }
 
 internal object ListBuilderFns {
-    object Add : SigFnBuilder("ListBuilder::add", impure = true) {
+    object Add : SigFnBuilder("core.type ListBuilder.add()", impure = true) {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val ls = TListBuilder.unpackContent(args[0])
             val value = args[1]
@@ -144,7 +127,7 @@ internal object ListBuilderFns {
         }
     }
 
-    object Constructor : SigFnBuilder("ListBuilder::constructor") {
+    object Constructor : SigFnBuilder("core.type ListBuilder.constructor()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val content = Value(mutableListOf(), TListBuilder)
             val thisValue = args[0]
@@ -161,7 +144,7 @@ internal object ListBuilderFns {
         }
     }
 
-    object AddAll : SigFnBuilder("ListBuilder::addAll", impure = true) {
+    object AddAll : SigFnBuilder("core.type ListBuilder.addAll()", impure = true) {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val ls = TListBuilder.unpackContent(args[0])
             val extra = TList.unpackContent(args[1])
@@ -171,14 +154,14 @@ internal object ListBuilderFns {
         }
     }
 
-    object Clear : SigFnBuilder("ListBuilder::clear", impure = true) {
+    object Clear : SigFnBuilder("core.type ListBuilder.clear()", impure = true) {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             TListBuilder.unpackContent(args[0]).clear()
             return void
         }
     }
 
-    object RemoveLast : SigFnBuilder("ListBuilder::removeLast", impure = true) {
+    object RemoveLast : SigFnBuilder("core.type ListBuilder.removeLast()", impure = true) {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val ls = TListBuilder.unpackContent(args[0])
             return when (ls.isEmpty()) {
@@ -188,35 +171,34 @@ internal object ListBuilderFns {
         }
     }
 
-    object Set : SigFnBuilder("ListBuilder::set", impure = true) {
+    object Set : SigFnBuilder("core.type ListBuilder.set()", impure = true) {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val ls = TListBuilder.unpackContent(args[0])
             val i = TInt.unpackOrFail(args, 1, cb, interpMode) { return@invoke it }
-            val index = i.toInt()
-            val newValue = args[2]
+            val index = i
             if (index in ls.indices) {
-                ls[index] = newValue
+                ls[index] = args[2]
             }
             return void
         }
     }
 
-    object Sort : SigFnBuilder("ListBuilder::sort") {
+    object Sort : SigFnBuilder("core.type ListBuilder.sort()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val elements = TListBuilder.unpackContent(args[0])
             return sort(args, cb, interpMode, elements) ?: Value(elements, TListBuilder)
         }
     }
 
-    object Splice : SigFnBuilder("ListBuilder::splice", impure = true) {
+    object Splice : SigFnBuilder("core.type ListBuilder.splice()", impure = true) {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val ls = TListBuilder.unpackContent(args[0])
             val index = TInt.unpackWithNullDefault(args, 1, 0, cb, interpMode) {
                 return@invoke it
-            }.toInt().coerceIn(0, ls.size)
+            }.coerceIn(0, ls.size)
             val removeEnd = TInt.unpackWithNullDefault(args, 2, ls.size, cb, interpMode) {
                 return@invoke it
-            }.toInt().coerceIn(0, ls.size - index) + index
+            }.coerceIn(0, ls.size - index) + index
 
             @Suppress("MagicNumber")
             val newValues = when (val arg = args[3]) {
@@ -233,7 +215,7 @@ internal object ListBuilderFns {
         }
     }
 
-    object Reverse : SigFnBuilder("ListBuilder::reverse", impure = true) {
+    object Reverse : SigFnBuilder("core.type ListBuilder.reverse()", impure = true) {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val ls = TListBuilder.unpackContent(args[0])
             val size = ls.size
@@ -249,7 +231,7 @@ internal object ListBuilderFns {
         }
     }
 
-    object ToList : SigFnBuilder("ListBuilder::toList") {
+    object ToList : SigFnBuilder("core.type ListBuilder.toList()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val ls = TList.unpackContent(args[0])
             return Value(ls.toList(), TList)
@@ -275,7 +257,7 @@ private fun sort(
                     failure = result
                     error("failure")
                 }
-                is Value<*> -> TInt.unpackOrNull(result)?.toInt() ?: run {
+                is Value<*> -> TInt.unpackOrNull(result) ?: run {
                     failure = cb.fail(
                         MessageTemplate.ExpectedValueOfType,
                         pos = args.pos(0) ?: cb.pos,
@@ -297,7 +279,7 @@ private inline fun unpackSizeBounded(
     interpMode: InterpMode,
     onWrongResult: (PartialResult) -> Nothing,
 ): Int {
-    val value = TInt.unpackWithNullDefault(args, index, ls.size, cb, interpMode, onWrongResult).toInt()
+    val value = TInt.unpackWithNullDefault(args, index, ls.size, cb, interpMode, onWrongResult)
     return when (value >= 0 && value <= ls.size) {
         true -> value
         false -> onWrongResult(Fail)

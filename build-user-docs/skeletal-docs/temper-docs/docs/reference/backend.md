@@ -1,3 +1,7 @@
+---
+title: Writing a New Backend
+---
+
 # So you want to write a Temper backend
 
 ## Notice
@@ -117,14 +121,14 @@ modules can be under these directories. For example:
 - be-data/
 - ...
 - external/
-  - my-other-project/
-    - be-mylang/
-      - build.gradle
-      - ...
-    - be-myotherlang/
-      - build.gradle
-      - ...
-  - my-yet-other-project/
+    - my-other-project/
+        - be-mylang/
+            - build.gradle
+            - ...
+        - be-myotherlang/
+            - build.gradle
+            - ...
+    - my-yet-other-project/
 - ...
 - settings.gradle
 

@@ -404,6 +404,12 @@ class SimplifyNames(private val top: J.TopLevelClassDeclaration) {
             scanTypeArguments(e.typeArgs)
         }
 
+        is J.SuperMethodInvocationExpr -> {
+            importType(e.type)
+            scanArgs(e.args)
+            scanTypeArguments(e.typeArgs)
+        }
+
         is J.StaticMethodReferenceExpr -> importType(e.type)
         is J.StaticFieldAccessExpr -> importType(e.type)
 

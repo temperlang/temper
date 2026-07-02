@@ -6,6 +6,7 @@ import lang.temper.cst.CstLeaf
 import lang.temper.cst.InnerOperatorStackElement
 import lang.temper.cst.LeafOperatorStackElement
 import lang.temper.cst.OperatorStackElement
+import lang.temper.cst.needsCloseBracket
 import lang.temper.lexer.Operator
 import lang.temper.lexer.TemperToken
 import lang.temper.lexer.TokenType
@@ -15,6 +16,8 @@ import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.log.Positioned
+import java.util.Optional
+import kotlin.jvm.optionals.getOrNull
 import kotlin.math.max
 import kotlin.math.min
 
@@ -69,15 +72,25 @@ private class StackElement(
 /**
  * A stack of partially parsed operators parsed by an operator precedence parser.
  *
- * This allows
- * - adding an operand to an operator on the stack
- * - closing/committing an operator that has been completed
- * - folding the top of the stack into a newly recognized infix operator as its left operand
+ * This allows a number of simple operations useful for OPP:
+ * - Adding an operand to an operator on the stack.
+ * - Closing/committing a completed operator.
+ * - Folding the top of the stack into a newly recognized infix operator as its left operand.
+ *
+ * For example, parsing `a + b` invovles these discrete steps:
+ *
+ * 1. Push a leaf `a` onto the stack.
+ * 2. Fold `a` into a new `+` element as its left operand.
+ * 3. Push a leaf `b` onto the stack.
+ * 4. Commit the stack which involves these steps:
+ *    1. Remove the `b` leaf from the stack and adds it to the `+` element.
+ *    2. Remove the `+` element from the stack and adds it to the root element.
  *
  * See [TreeBuilder] for how these work together to build a tree.
  */
 internal class OperatorStack(val codeLocation: CodeLocation, private val logSink: LogSink) {
     private val stack = mutableListOf<StackElement>()
+    private var innerMostBracketKnown: Optional<OperatorStackElement>? = null
 
     init {
         val rootElement = StackElement(Operator.Root, codeLocation)
@@ -90,14 +103,38 @@ internal class OperatorStack(val codeLocation: CodeLocation, private val logSink
     val size: Int get() = stack.size
     val indices get() = stack.indices
     fun last(): PositionedOperatorStackElement = stack.last()
-    val lastIndex: Int get() = stack.size - 1
+    val lastIndex: Int get() = stack.lastIndex
+
+    val innermostBracket: OperatorStackElement? get() {
+        var preComputed = innerMostBracketKnown
+        if (preComputed != null) {
+            // Maybe we know it, but it's closed.
+            val el = preComputed.getOrNull()
+            if (el != null && !needsCloseBracket(el)) {
+                preComputed = null
+                innerMostBracketKnown = null
+            }
+        }
+        if (preComputed == null) {
+            var i = stack.size
+            while (--i >= 0) {
+                val el = stack[i]
+                if (el.operator.isBracket && needsCloseBracket(el)) {
+                    preComputed = Optional.of(el)
+                    innerMostBracketKnown = preComputed
+                    break
+                }
+            }
+        }
+        return preComputed?.getOrNull()
+    }
 
     /**
      * Truncate the stack by folding elements into their parents.
      * We do this lazily so that we can handle infix operations by
      * inserting them into the stack.
      *
-     * After a call to commitTo(n) the length of the stack will be n.
+     * After a call to `commitTo(depth)` the length of the stack will be [depth].
      */
     fun commitTo(depth: Int) {
         var n = stack.size
@@ -107,7 +144,6 @@ internal class OperatorStack(val codeLocation: CodeLocation, private val logSink
                 break
             }
             val childIndex = n - 1
-            // Not actually detached, but we take care to notify the listener
             val child = stack[childIndex]
             child.isTop = false
             stack[parentIndex].add(child)
@@ -117,6 +153,7 @@ internal class OperatorStack(val codeLocation: CodeLocation, private val logSink
         }
         stack.subList(n, stack.size).clear()
         stack[n - 1].isTop = true
+        innerMostBracketKnown = null
     }
 
     /** Pushes a new operator onto the stack that initially has zero operands. */
@@ -132,6 +169,9 @@ internal class OperatorStack(val codeLocation: CodeLocation, private val logSink
         stack.add(newTop)
         oldTop.isTop = false
         newTop.isTop = true
+        if (operator.isBracket) {
+            innerMostBracketKnown = Optional.of(newTop)
+        }
     }
 
     /**
@@ -151,11 +191,15 @@ internal class OperatorStack(val codeLocation: CodeLocation, private val logSink
             val siblingsToAdopt = siblingsOfOldTop.subList(nSiblings - nToAdopt, nSiblings)
             newTop.children.addAll(siblingsToAdopt)
             siblingsToAdopt.clear()
+            innerMostBracketKnown = null
         }
         newTop.add(oldTop)
         stack[lastIndex] = newTop
         newTop.isTop = true
         oldTop.isTop = false
+        if (operator.isBracket) {
+            innerMostBracketKnown = Optional.of(newTop)
+        }
     }
 
     /** Adds the token to the top operator as an operand. */
@@ -169,7 +213,7 @@ internal class OperatorStack(val codeLocation: CodeLocation, private val logSink
      * Parsing is followed by a post-processing step which may result in
      * messages logged to [logSink] to:
      *
-     * - remove incidental white-space from string literals including that
+     * - remove incidental white-space from string literals, including that
      *   at the end of lines of multi-line strings and the indentation leading
      *   up to the close quote.
      * - remove empty interpolations which serve as a meta-character disabling
@@ -180,6 +224,7 @@ internal class OperatorStack(val codeLocation: CodeLocation, private val logSink
         val root = stack.removeAt(0)
         checkElementComplete(root)
         root.isTop = false
+        innerMostBracketKnown = null
 
         val el = if (root.children.size == 1) {
             (root.children[0] as? StackElement) ?: root

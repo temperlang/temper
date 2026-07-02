@@ -30,8 +30,7 @@ data class UntypedCall(
      */
     val destination: CallTree,
     /**
-     * The trees from which the input bounds were arrived.
-     * If we've unwrapped a do_bind_... call, then the inputTrees are uncurried from multiple calls
+     * The trees from which the input bounds were derived.
      */
     val inputTrees: List<Tree>,
 ) {

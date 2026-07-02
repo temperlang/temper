@@ -13,8 +13,8 @@ data class ResourceDescriptor(
     private val basePath: FilePath,
     /** the relative path for this resource to be loaded into */
     val rsrcPath: FilePath,
-    /** the encoding for the resource text */
-    val charset: KCharset,
+    /** the encoding for the resource text, null for binary */
+    val charset: KCharset?,
 ) {
     init {
         require(basePath.isDir) { "Resource base must be a directory" }
@@ -29,8 +29,8 @@ data class ResourceDescriptor(
     /** a url that loads the resource */
     fun url(): Url = loader.url(loadPath)!!
 
-    /** load the contents of the resource as text */
-    fun load(): String = loader.load(loadPath, charset)!!
+    /** load the contents of the resource as text, failing on null charset */
+    fun load(): String = loader.load(loadPath, charset!!)!!
 
     /** load the contents of the resource as a byte array */
     fun loadBinary(): ByteArray = loader.loadBinary(loadPath)!!
@@ -46,7 +46,7 @@ fun Any.declareResources(
     base: FilePath,
     /** relative to the base path, and relative to the destination */
     vararg rsrcs: FilePath,
-    charset: KCharset = KCharsets.utf8,
+    charset: KCharset? = KCharsets.utf8,
 ): List<ResourceDescriptor> {
     return declareResources(base, rsrcs.toList(), charset)
 }
@@ -61,7 +61,7 @@ fun Any.declareResources(
     base: FilePath,
     /** relative to the base path, and relative to the destination */
     rsrcs: List<FilePath>,
-    charset: KCharset = KCharsets.utf8,
+    charset: KCharset? = KCharsets.utf8,
 ): List<ResourceDescriptor> {
     val loader = this::class.loader()
     return rsrcs.map { rsrc ->

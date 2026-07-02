@@ -6,6 +6,7 @@ import lang.temper.be.MetadataKey
 import lang.temper.be.cli.RunnerSpecifics
 import lang.temper.be.names.NameSelection
 import lang.temper.be.storeDescriptorsForDeclarations
+import lang.temper.be.tmpl.SuperCallConfig
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
@@ -35,7 +36,6 @@ import lang.temper.name.LanguageLabel
 import lang.temper.name.ModuleName
 import lang.temper.name.Symbol
 import lang.temper.name.rootModuleName
-import lang.temper.type.MethodKind
 
 /**
  * <!-- snippet: backend/csharp -->
@@ -143,23 +143,11 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
             libraryConfigurations,
             dependencyResolver,
             tentativeOutputPathFor = ::tentativeOutputPathFor,
-            withTentative = {
+            withTentative = { tentativeTmpL ->
                 injectSuperCallMethods(
-                    it,
-                    injectInto = { decl ->
-                        // For default interface methods, you can't use them directly on classes unless you redefine them.
-                        // But this only applies to classes, not sub-interfaces.
-                        decl.kind != TmpL.TypeDeclarationKind.Interface
-                    },
-                    chooseSuperName = { methodKind, name ->
-                        // Currently this will need to translate from camel to pascal again later, sadly.
-                        when (methodKind) {
-                            MethodKind.Normal -> "${name}Default"
-                            MethodKind.Getter -> "get${name.camelToPascal()}Default"
-                            MethodKind.Setter -> "set${name.camelToPascal()}Default"
-                            MethodKind.Constructor -> error("unexpected")
-                        }
-                    },
+                    tentativeTmpL,
+                    // We always need these in C# classes, even when there's not ambiguity in other languages.
+                    configSuperCall = { _, _ -> SuperCallConfig(skipThis = false) },
                 )
             },
         ).also {

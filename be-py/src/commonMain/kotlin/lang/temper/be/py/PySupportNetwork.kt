@@ -161,7 +161,7 @@ internal object PySupportNetwork : SupportNetwork {
         genre: Genre,
     ): SupportCode? = pyConnections[connectedKey]
         ?: when (connectedKey) {
-            "Console::log" -> when (genre) {
+            "core.type Console.log()" -> when (genre) {
                 Genre.Documentation -> DocConsoleLogInliner
                 else -> null
             }
@@ -174,11 +174,11 @@ internal object PySupportNetwork : SupportNetwork {
         genre: Genre,
         temperType: Type2,
     ): Pair<TargetLanguageTypeName, List<Type2>>? = when (connectedKey) {
-        "Date" -> DateType to null
-        "Promise", "PromiseBuilder" -> ConcurrentFuturesFuture to null
+        "std/temporal.type Date" -> DateType to null
+        "core.type Promise", "core.type PromiseBuilder" -> ConcurrentFuturesFuture to null
         // Method 4 of https://waymoot.org/home/python_string/ is the most
         // performant that is generally useful, so we connect StringBuilder to list[str].
-        "StringBuilder" -> ListType to listOf<Type2>(WellKnownTypes.stringType2)
+        "core.type StringBuilder" -> ListType to listOf<Type2>(WellKnownTypes.stringType2)
         else -> null
     }?.let { (name: PyConnectedType, typeArgs: List<Type2>?) ->
         name to (typeArgs ?: (temperType as? DefinedNonNullType)?.bindings ?: emptyList())
@@ -379,11 +379,11 @@ val DictType = PySeparateCode("dict", SYS_BUILTINS)
 val MappingProxyType = PySeparateCode("MappingProxyType", SYS_TYPES)
 val DateConstructor = PySeparateCode("date", DATE_TIME)
 val DateType = PyConnectedType("date", DATE_TIME)
-val DateGetDay = inlineAttribute("Date::getDay", PyIdentifierName("day"))
-val DateGetMonth = inlineAttribute("Date::getMonth", PyIdentifierName("month"))
-val DateGetYear = inlineAttribute("Date::getYear", PyIdentifierName("year"))
+val DateGetDay = inlineAttribute("std/temporal.type Date.day", PyIdentifierName("day"))
+val DateGetMonth = inlineAttribute("std/temporal.type Date.month", PyIdentifierName("month"))
+val DateGetYear = inlineAttribute("std/temporal.type Date.year", PyIdentifierName("year"))
 val DateGetDayOfWeek = PyInlineSupportCode(
-    "Date::getDayOfWeek",
+    "std/temporal.type Date.get dayOfWeek()",
     arity = 1,
     needsSelf = true,
 ) { pos, arg ->
@@ -443,7 +443,7 @@ val IntMax = PySeparateCode("max", SYS_BUILTINS)
 val IntMin = PySeparateCode("min", SYS_BUILTINS)
 val SymbolType = PySeparateCode("Symbol", RUNTIME)
 val StringBuilderConstructor = PyInlineSupportCode(
-    "StringBuilder::constructor",
+    "core.type StringBuilder.constructor()",
     arity = 0,
     needsSelf = false,
 ) { pos, _ ->
@@ -451,14 +451,14 @@ val StringBuilderConstructor = PyInlineSupportCode(
     Py.ListExpr(pos, listOf(Py.Str(pos, "")))
 }
 val StringBuilderAppend = PyInlineSupportCode(
-    "StringBuilder::append",
+    "core.type StringBuilder.append()",
     arity = 2,
     needsSelf = true,
 ) { pos, args ->
     args[0].method("append", args[1], pos = pos)
 }
 val StringBuilderAppendBetween = PyInlineSupportCode(
-    "StringBuilder::appendBetween",
+    "core.type StringBuilder.appendBetween()",
     arity = 4..4,
     needsSelf = true,
     translatorFactory = { pos, args, t ->
@@ -479,7 +479,7 @@ val StringBuilderAppendBetween = PyInlineSupportCode(
 )
 
 val StringBuilderAppendCodePoint = PyInlineSupportCode(
-    "StringBuilder::appendCodePoint",
+    "core.type StringBuilder.appendCodePoint()",
     arity = 2..2,
     needsSelf = true,
     translatorFactory = { pos, args, t ->
@@ -499,7 +499,7 @@ val StringBuilderAppendCodePoint = PyInlineSupportCode(
     },
 )
 val StringBuilderClear = PyInlineSupportCode(
-    "StringBuilder::clear",
+    "core.type StringBuilder.clear()",
     arity = 1,
     needsSelf = true,
 ) { pos, args ->
@@ -507,7 +507,7 @@ val StringBuilderClear = PyInlineSupportCode(
 }
 val StringBuilderEnd = PySeparateCode("string_builder_end", RUNTIME)
 val StringBuilderToString = PyInlineSupportCode(
-    "StringBuilder::toString",
+    "core.type StringBuilder.toString()",
     arity = 1,
     needsSelf = true,
 ) { pos, args ->
@@ -515,7 +515,7 @@ val StringBuilderToString = PyInlineSupportCode(
     Py.Str(pos.leftEdge, "").method("join", args[0])
 }
 val StringIndexNone = PyInlineSupportCode(
-    "StringIndex::none",
+    "core.type StringIndex.none",
     arity = 0,
 ) { pos, _ ->
     Py.Num(pos, -1)
@@ -534,13 +534,19 @@ private fun stringIndexOptionComparer(
         Py.BinExpr(pos, a, op, b)
     }
 
-val StringIndexOptionCompareTo = stringIndexOptionComparer("StringIndexOption::compareTo", BinaryOpEnum.Sub)
-val StringIndexOptionCompareToEq = stringIndexOptionComparer("StringIndexOption::compareTo::eq", BinaryOpEnum.Eq)
-val StringIndexOptionCompareToGe = stringIndexOptionComparer("StringIndexOption::compareTo::ge", BinaryOpEnum.GtEq)
-val StringIndexOptionCompareToGt = stringIndexOptionComparer("StringIndexOption::compareTo::gt", BinaryOpEnum.Gt)
-val StringIndexOptionCompareToLe = stringIndexOptionComparer("StringIndexOption::compareTo::le", BinaryOpEnum.LtEq)
-val StringIndexOptionCompareToLt = stringIndexOptionComparer("StringIndexOption::compareTo::lt", BinaryOpEnum.Lt)
-val StringIndexOptionCompareToNe = stringIndexOptionComparer("StringIndexOption::compareTo::ne", BinaryOpEnum.NotEq)
+val StringIndexOptionCompareTo = stringIndexOptionComparer("core.type StringIndexOption.compareTo()", BinaryOpEnum.Sub)
+val StringIndexOptionCompareToEq =
+    stringIndexOptionComparer("core.type StringIndexOption.compareTo()::eq", BinaryOpEnum.Eq)
+val StringIndexOptionCompareToGe =
+    stringIndexOptionComparer("core.type StringIndexOption.compareTo()::ge", BinaryOpEnum.GtEq)
+val StringIndexOptionCompareToGt =
+    stringIndexOptionComparer("core.type StringIndexOption.compareTo()::gt", BinaryOpEnum.Gt)
+val StringIndexOptionCompareToLe =
+    stringIndexOptionComparer("core.type StringIndexOption.compareTo()::le", BinaryOpEnum.LtEq)
+val StringIndexOptionCompareToLt =
+    stringIndexOptionComparer("core.type StringIndexOption.compareTo()::lt", BinaryOpEnum.Lt)
+val StringIndexOptionCompareToNe =
+    stringIndexOptionComparer("core.type StringIndexOption.compareTo()::ne", BinaryOpEnum.NotEq)
 val RequireStringIndex = PySeparateCode("require_string_index", RUNTIME)
 val RequireNoStringIndex = PySeparateCode("require_no_string_index", RUNTIME)
 
@@ -727,7 +733,7 @@ val StringHasIndex = PyInlineSupportCode("string_has_index", 2..2, needsSelf = t
         i,
     )
 }
-val StringIndexOf = PyInlineSupportCode("String::indexOf", arity = 2..3, needsSelf = true) { pos, args, _ ->
+val StringIndexOf = PyInlineSupportCode("core.type String.indexOf()", arity = 2..3, needsSelf = true) { pos, args, _ ->
     args[0].method("find", args.subListToEnd(1), pos = pos)
 }
 val StringNext = PySeparateCode("string_next", RUNTIME)
@@ -753,7 +759,6 @@ val ListBuilderSet = PySeparateCode("list_builder_set", RUNTIME)
 val ListGetOr = PySeparateCode("list_get_or", RUNTIME)
 val ListJoin = PySeparateCode("list_join", RUNTIME)
 val ListMap = PySeparateCode("list_map", RUNTIME)
-val ListMapDropping = PySeparateCode("list_map_dropping", RUNTIME)
 val ListSlice = PySeparateCode("list_slice", RUNTIME)
 val LenFunction = PySeparateCode("len", SYS_BUILTINS)
 
@@ -763,22 +768,23 @@ val ListedSorted = PySeparateCode("listed_sorted", RUNTIME)
 val ListedToList = PySeparateCode("listed_to_list", RUNTIME)
 
 val ListBuilderAdd = PySeparateCode("list_builder_add", RUNTIME)
-val ListBuilderAddInliner = PyInlineSupportCode("ListBuilder::add", arity = 2..3, needsSelf = true) { pos, args, t ->
-    when (args.size) {
-        // Add at end
-        2 -> args[0].method("append", args[1], pos = pos)
-        // Insert at location
-        3 -> Py.Call(
-            pos,
-            t.request(ListBuilderAdd).asPyName(pos.leftEdge),
-            args.map { Py.CallArg(it) },
-        )
-        else -> garbageExpr(pos, "Wrong number of arguments: $args", null)
+val ListBuilderAddInliner =
+    PyInlineSupportCode("core.type ListBuilder.add()", arity = 2..3, needsSelf = true) { pos, args, t ->
+        when (args.size) {
+            // Add at end
+            2 -> args[0].method("append", args[1], pos = pos)
+            // Insert at location
+            3 -> Py.Call(
+                pos,
+                t.request(ListBuilderAdd).asPyName(pos.leftEdge),
+                args.map { Py.CallArg(it) },
+            )
+            else -> garbageExpr(pos, "Wrong number of arguments: $args", null)
+        }
     }
-}
 val ListBuilderAddAll = PySeparateCode("list_builder_add_all", RUNTIME)
 val ListBuilderRemoveLast = PyInlineSupportCode(
-    "ListBuilder::removeLast",
+    "core.type ListBuilder.removeLast()",
     arity = 1,
     needsSelf = true,
 ) { pos, arg ->
@@ -793,7 +799,7 @@ val MapBuilderConstructor = PyInlineSupportCode("map_builder_constructor", 0) { 
     Py.Dict(pos, emptyList())
 }
 val MapBuilderRemove = PyInlineSupportCode(
-    "MapBuilder::remove",
+    "core.type MapBuilder.remove()",
     arity = 2,
     needsSelf = true,
 ) { pos, arg ->
@@ -803,7 +809,7 @@ val MapBuilderSet = PySeparateCode("map_builder_set", RUNTIME)
 val PairConstructor = PySeparateCode("Pair", RUNTIME)
 val PairType = PySeparateCode("Pair", RUNTIME)
 val MappedType = PySeparateCode("Mapping", RUNTIME)
-val MappedLength = PyInlineSupportCode("Mapped::length", arity = 1, needsSelf = true) { pos, args ->
+val MappedLength = PyInlineSupportCode("core.type Mapped.get length()", arity = 1, needsSelf = true) { pos, args ->
     Py.Call(
         pos,
         func = Py.Name(pos.leftEdge, PyIdentifierName("len")),
@@ -812,18 +818,18 @@ val MappedLength = PyInlineSupportCode("Mapped::length", arity = 1, needsSelf = 
         ),
     )
 }
-val MappedGet = PyInlineSupportCode("Mapped::get", arity = 2, needsSelf = true) { pos, args ->
+val MappedGet = PyInlineSupportCode("core.type Mapped.get()", arity = 2, needsSelf = true) { pos, args ->
     Py.Subscript(
         pos,
         args[0],
         listOf(args[1]),
     )
 }
-val MappedGetOr = PyInlineSupportCode("Mapped::getOr", arity = 3, needsSelf = true) { pos, args ->
+val MappedGetOr = PyInlineSupportCode("core.type Mapped.getOr()", arity = 3, needsSelf = true) { pos, args ->
     args[0].method("get", args[1], args[2], pos = pos)
 }
 val MappedHas = PySeparateCode("mapped_has", RUNTIME)
-val MappedKeys = PyInlineSupportCode("Mapped::keys", arity = 1, needsSelf = true) { pos, args ->
+val MappedKeys = PyInlineSupportCode("core.type Mapped.keys()", arity = 1, needsSelf = true) { pos, args ->
     Py.Call(
         pos,
         func = Py.Name(pos.leftEdge, PyIdentifierName("list")),
@@ -832,7 +838,7 @@ val MappedKeys = PyInlineSupportCode("Mapped::keys", arity = 1, needsSelf = true
         ),
     )
 }
-val MappedValues = PyInlineSupportCode("Mapped::values", arity = 1, needsSelf = true) { pos, args ->
+val MappedValues = PyInlineSupportCode("core.type Mapped.values()", arity = 1, needsSelf = true) { pos, args ->
     Py.Call(
         pos,
         func = Py.Name(pos.leftEdge, PyIdentifierName("list")),
@@ -843,7 +849,7 @@ val MappedValues = PyInlineSupportCode("Mapped::values", arity = 1, needsSelf = 
 }
 val MappedToMap = PySeparateCode("mapped_to_map", RUNTIME)
 val MappedToMapBuilder = PyInlineSupportCode(
-    "Mapped::toMapBuilder",
+    "core.type Mapped.toMapBuilder()",
     arity = 1,
     needsSelf = true,
 ) { pos, args ->
@@ -862,7 +868,7 @@ val MappedToListBuilderWith = PySeparateCode("mapped_to_list_builder_with", RUNT
 val MappedForEach = PySeparateCode("mapped_for_each", RUNTIME)
 
 val DequeConstructor = PySeparateCode("deque", SYS_COLLECTIONS)
-val DequeAdd = PyInlineSupportCode("Deque::add", arity = 2, needsSelf = true) { pos, args ->
+val DequeAdd = PyInlineSupportCode("core.type Deque.add()", arity = 2, needsSelf = true) { pos, args ->
     args[0].method("append", args[1], pos = pos)
 }
 val DequeRemoveFirst = PySeparateCode("deque_remove_first", RUNTIME)
@@ -870,7 +876,7 @@ val DequeRemoveFirst = PySeparateCode("deque_remove_first", RUNTIME)
 val DenseBitVectorConstructor = PySeparateCode("DenseBitVector", RUNTIME)
 val DenseBitVectorSet = PySeparateCode("dense_bit_vector_set", RUNTIME)
 val DenseBitVectorGet = PyInlineSupportCode(
-    "DenseBitVector::get",
+    "core.type DenseBitVector.get()",
     arity = 2,
     needsSelf = true,
 ) { pos, arg ->
@@ -899,7 +905,7 @@ val PromiseBuilderBreakPromise = PySeparateCode("break_promise", RUNTIME)
 val PromiseBuilderComplete = PySeparateCode("complete_promise", RUNTIME)
 val PromiseBuilderConstructor = PySeparateCode("new_unbound_promise", RUNTIME)
 val PromiseBuilderGetPromise = PyInlineSupportCode(
-    "PromiseBuilder::getPromise",
+    "core.type PromiseBuilder.get promise()",
     arity = 1,
     needsSelf = true,
 ) { _, args ->
@@ -912,9 +918,10 @@ val NetResponse = PyConnectedType("NetResponse", RUNTIME)
 
 // docs.python.org/3/library/urllib.request.html#urllib.response.addinfourl.status
 val NetResponseGetStatus =
-    inlineAttribute("NetResponse::getStatus", PyIdentifierName("status"))
-val NetResponseGetContentType = inlineAttribute("NetResponse::getContentType", PyIdentifierName("content_type"))
-val NetResponseGetBodyContent = inlineAttribute("NetResponse::getBodyContent", PyIdentifierName("text"))
+    inlineAttribute("std/net.type NetResponse.get status()", PyIdentifierName("status"))
+val NetResponseGetContentType =
+    inlineAttribute("std/net.type NetResponse.get contentType()", PyIdentifierName("content_type"))
+val NetResponseGetBodyContent = inlineAttribute("std/net.type NetResponse.get bodyContent()", PyIdentifierName("text"))
 val StdNetSend = PySeparateCode("std_net_send", RUNTIME)
 
 val mathInf = PySeparateCode("inf", MATH)
@@ -1057,170 +1064,169 @@ val TypingDict = PySeparateCode("Dict", TYPING)
 val TypingGenerator = PySeparateCode("Generator", TYPING)
 
 private val pyConnections = mapOf(
-    "::getConsole" to GetConsole,
-    "Boolean::toString" to BooleanToString,
-    "Date::constructor" to DateConstructor,
-    "Date::fromIsoString" to DateFromIsoString,
-    "Date::getDay" to DateGetDay,
-    "Date::getDayOfWeek" to DateGetDayOfWeek,
-    "Date::getMonth" to DateGetMonth,
-    "Date::getYear" to DateGetYear,
-    "Date::toString" to DateToString,
-    "Date::today" to DateToday,
-    "Date::yearsBetween" to DateYearsBetween,
-    "DenseBitVector::constructor" to DenseBitVectorConstructor,
-    "DenseBitVector::get" to DenseBitVectorGet,
-    "DenseBitVector::set" to DenseBitVectorSet,
-    "Deque::add" to DequeAdd,
-    "Deque::constructor" to DequeConstructor,
-    "Deque::isEmpty" to GenericIsEmpty,
-    "Deque::removeFirst" to DequeRemoveFirst,
-    "Float64::abs" to Float64Abs,
-    "Float64::acos" to Float64Acos,
-    "Float64::asin" to Float64Asin,
-    "Float64::atan" to Float64Atan,
-    "Float64::atan2" to Float64Atan2,
-    "Float64::ceil" to Float64Ceil,
-    "Float64::cos" to Float64Cos,
-    "Float64::cosh" to Float64Cosh,
-    "Float64::e" to Float64E,
-    "Float64::exp" to Float64Exp,
-    "Float64::expm1" to Float64Expm1,
-    "Float64::floor" to Float64Floor,
-    "Float64::log" to Float64Log,
-    "Float64::log10" to Float64Log10,
-    "Float64::log1p" to Float64Log1p,
-    "Float64::max" to Float64Max,
-    "Float64::min" to Float64Min,
-    "Float64::near" to Float64Near,
-    "Float64::pi" to Float64Pi,
-    "Float64::round" to Float64Round,
-    "Float64::sign" to Float64Sign,
-    "Float64::sin" to Float64Sin,
-    "Float64::sinh" to Float64Sinh,
-    "Float64::sqrt" to Float64Sqrt,
-    "Float64::tan" to Float64Tan,
-    "Float64::tanh" to Float64Tanh,
-    "Float64::toInt32" to Float64ToInt,
-    "Float64::toInt32Unsafe" to Float64ToIntUnsafe,
-    "Float64::toInt64" to Float64ToInt64,
-    "Float64::toInt64Unsafe" to Float64ToInt64Unsafe,
-    "Float64::toString" to Float64ToString,
-    "Generator::next" to BuiltinNext,
-    "Int32::max" to IntMax,
-    "Int32::min" to IntMin,
-    "Int32::toFloat64" to IntToFloat64,
-    "Int32::toInt64" to Identity,
-    "Int32::toString" to IntToString,
-    "Int64::max" to IntMax,
-    "Int64::min" to IntMin,
-    "Int64::toInt32" to Int64ToInt32,
-    "Int64::toInt32Unsafe" to Int64ToInt32Unsafe,
-    "Int64::toFloat64" to Int64ToFloat64,
-    "Int64::toFloat64Unsafe" to IntToFloat64,
-    "Int64::toString" to IntToString,
-    "List::forEach" to ListForEach,
-    "List::get" to ListGet,
-    "List::isEmpty" to GenericIsEmpty,
-    "List::length" to LenFunction,
-    "List::toList" to Identity,
-    "List::toListBuilder" to ListType,
-    "ListBuilder::add" to ListBuilderAddInliner,
-    "ListBuilder::addAll" to ListBuilderAddAll,
-    "ListBuilder::constructor" to ListType,
-    "ListBuilder::length" to LenFunction,
-    "ListBuilder::removeLast" to ListBuilderRemoveLast,
-    "ListBuilder::reverse" to ListBuilderReverse,
-    "ListBuilder::set" to ListBuilderSet,
-    "ListBuilder::sort" to ListBuilderSort,
-    "ListBuilder::splice" to ListBuilderSplice,
-    "ListBuilder::toList" to TupleType,
-    "ListBuilder::toListBuilder" to ListType,
-    "Listed::filter" to ListFilter,
-    "Listed::get" to ListGet,
-    "Listed::getOr" to ListGetOr,
-    "Listed::isEmpty" to GenericIsEmpty,
-    "Listed::join" to ListJoin,
-    "Listed::length" to LenFunction,
-    "Listed::map" to ListMap,
-    "Listed::mapDropping" to ListMapDropping,
-    "Listed::reduce" to ListedReduce,
-    "Listed::reduceFrom" to ListedReduceFrom,
-    "Listed::slice" to ListSlice,
-    "Listed::sorted" to ListedSorted,
-    "Listed::toList" to ListedToList,
-    "Listed::toListBuilder" to ListType,
-    "Map::constructor" to MapConstructor,
-    "MapBuilder::constructor" to MapBuilderConstructor,
-    "MapBuilder::remove" to MapBuilderRemove,
-    "MapBuilder::set" to MapBuilderSet,
-    "Mapped::forEach" to MappedForEach,
-    "Mapped::get" to MappedGet,
-    "Mapped::getOr" to MappedGetOr,
-    "Mapped::has" to MappedHas,
-    "Mapped::keys" to MappedKeys,
-    "Mapped::length" to MappedLength,
-    "Mapped::toList" to MappedToList,
-    "Mapped::toListBuilder" to MappedToListBuilder,
-    "Mapped::toListBuilderWith" to MappedToListBuilderWith,
-    "Mapped::toListWith" to MappedToListWith,
-    "Mapped::toMap" to MappedToMap,
-    "Mapped::toMapBuilder" to MappedToMapBuilder,
-    "Mapped::values" to MappedValues,
-    "NetResponse" to NetResponse,
-    "NetResponse::getStatus" to NetResponseGetStatus,
-    "NetResponse::getContentType" to NetResponseGetContentType,
-    "NetResponse::getBodyContent" to NetResponseGetBodyContent,
-    "Pair::constructor" to PairConstructor,
-    "PromiseBuilder::breakPromise" to PromiseBuilderBreakPromise,
-    "PromiseBuilder::complete" to PromiseBuilderComplete,
-    "PromiseBuilder::constructor" to PromiseBuilderConstructor,
-    "PromiseBuilder::getPromise" to PromiseBuilderGetPromise,
-    "Regex::compileFormatted" to RegexCompileFormatted,
-    "Regex::compiledFind" to RegexCompiledFind,
-    "Regex::compiledFound" to RegexCompiledFound,
-    "Regex::compiledReplace" to RegexCompiledReplace,
-    "Regex::compiledSplit" to RegexCompiledSplit,
-    "RegexFormatter::pushCaptureName" to RegexFormatterPushCaptureName,
-    "RegexFormatter::pushCodeTo" to RegexFormatterPushCodeTo,
-    "SafeGenerator::next" to BuiltinNext,
-    "String::begin" to StringBegin,
-    "String::countBetween" to StringCountBetween,
-    "String::end" to LenFunction,
-    "String::forEach" to StringForEach,
-    "String::fromCodePoint" to StringFromCodePoint,
-    "String::fromCodePoints" to StringFromCodePoints,
-    "String::get" to StringGet,
-    "String::hasAtLeast" to StringHasAtLeast,
-    "String::hasIndex" to StringHasIndex,
-    "String::indexOf" to StringIndexOf,
-    "String::isEmpty" to GenericIsEmpty,
-    "String::next" to StringNext,
-    "String::prev" to StringPrev,
-    "String::slice" to StringSlice,
-    "String::split" to StringSplit,
-    "String::step" to StringStep,
-    "String::toFloat64" to StringToFloat64,
-    "String::toInt32" to StringToInt,
-    "String::toInt64" to StringToInt64,
-    "String::toString" to Identity,
-    "StringBuilder::append" to StringBuilderAppend,
-    "StringBuilder::appendBetween" to StringBuilderAppendBetween,
-    "StringBuilder::appendCodePoint" to StringBuilderAppendCodePoint,
-    "StringBuilder::clear" to StringBuilderClear,
-    "StringBuilder::end" to StringBuilderEnd,
-    "StringBuilder::constructor" to StringBuilderConstructor,
-    "StringBuilder::toString" to StringBuilderToString,
-    "StringIndex::none" to StringIndexNone,
-    "StringIndexOption::compareTo" to StringIndexOptionCompareTo,
-    "StringIndexOption::compareTo::eq" to StringIndexOptionCompareToEq,
-    "StringIndexOption::compareTo::ge" to StringIndexOptionCompareToGe,
-    "StringIndexOption::compareTo::gt" to StringIndexOptionCompareToGt,
-    "StringIndexOption::compareTo::le" to StringIndexOptionCompareToLe,
-    "StringIndexOption::compareTo::lt" to StringIndexOptionCompareToLt,
-    "StringIndexOption::compareTo::ne" to StringIndexOptionCompareToNe,
-    "Test::bail" to BailCall,
-    "empty" to EmptyInliner,
-    "ignore" to Ignore,
-    "stdNetSend" to StdNetSend,
+    "core.getConsole()" to GetConsole,
+    "core.type Boolean.toString()" to BooleanToString,
+    "std/temporal.type Date.constructor()" to DateConstructor,
+    "std/temporal.type Date.fromIsoString()" to DateFromIsoString,
+    "std/temporal.type Date.day" to DateGetDay,
+    "std/temporal.type Date.get dayOfWeek()" to DateGetDayOfWeek,
+    "std/temporal.type Date.month" to DateGetMonth,
+    "std/temporal.type Date.year" to DateGetYear,
+    "std/temporal.type Date.toString()" to DateToString,
+    "std/temporal.type Date.today()" to DateToday,
+    "std/temporal.type Date.yearsBetween()" to DateYearsBetween,
+    "core.type DenseBitVector.constructor()" to DenseBitVectorConstructor,
+    "core.type DenseBitVector.get()" to DenseBitVectorGet,
+    "core.type DenseBitVector.set()" to DenseBitVectorSet,
+    "core.type Deque.add()" to DequeAdd,
+    "core.type Deque.constructor()" to DequeConstructor,
+    "core.type Deque.get isEmpty()" to GenericIsEmpty,
+    "core.type Deque.removeFirst()" to DequeRemoveFirst,
+    "core.type Float64.abs()" to Float64Abs,
+    "core.type Float64.acos()" to Float64Acos,
+    "core.type Float64.asin()" to Float64Asin,
+    "core.type Float64.atan()" to Float64Atan,
+    "core.type Float64.atan2()" to Float64Atan2,
+    "core.type Float64.ceil()" to Float64Ceil,
+    "core.type Float64.cos()" to Float64Cos,
+    "core.type Float64.cosh()" to Float64Cosh,
+    "core.type Float64.e" to Float64E,
+    "core.type Float64.exp()" to Float64Exp,
+    "core.type Float64.expm1()" to Float64Expm1,
+    "core.type Float64.floor()" to Float64Floor,
+    "core.type Float64.log()" to Float64Log,
+    "core.type Float64.log10()" to Float64Log10,
+    "core.type Float64.log1p()" to Float64Log1p,
+    "core.type Float64.max()" to Float64Max,
+    "core.type Float64.min()" to Float64Min,
+    "core.type Float64.near()" to Float64Near,
+    "core.type Float64.pi" to Float64Pi,
+    "core.type Float64.round()" to Float64Round,
+    "core.type Float64.sign()" to Float64Sign,
+    "core.type Float64.sin()" to Float64Sin,
+    "core.type Float64.sinh()" to Float64Sinh,
+    "core.type Float64.sqrt()" to Float64Sqrt,
+    "core.type Float64.tan()" to Float64Tan,
+    "core.type Float64.tanh()" to Float64Tanh,
+    "core.type Float64.toInt32()" to Float64ToInt,
+    "core.type Float64.toInt32Unsafe()" to Float64ToIntUnsafe,
+    "core.type Float64.toInt64()" to Float64ToInt64,
+    "core.type Float64.toInt64Unsafe()" to Float64ToInt64Unsafe,
+    "core.type Float64.toString()" to Float64ToString,
+    "core.type Generator.next()" to BuiltinNext,
+    "core.type Int32.max()" to IntMax,
+    "core.type Int32.min()" to IntMin,
+    "core.type Int32.toFloat64()" to IntToFloat64,
+    "core.type Int32.toInt64()" to Identity,
+    "core.type Int32.toString()" to IntToString,
+    "core.type Int64.max()" to IntMax,
+    "core.type Int64.min()" to IntMin,
+    "core.type Int64.toInt32()" to Int64ToInt32,
+    "core.type Int64.toInt32Unsafe()" to Int64ToInt32Unsafe,
+    "core.type Int64.toFloat64()" to Int64ToFloat64,
+    "core.type Int64.toFloat64Unsafe()" to IntToFloat64,
+    "core.type Int64.toString()" to IntToString,
+    "core.type List.forEach()" to ListForEach,
+    "core.type List.get()" to ListGet,
+    "core.type List.get isEmpty()" to GenericIsEmpty,
+    "core.type List.get length()" to LenFunction,
+    "core.type List.toList()" to Identity,
+    "core.type List.toListBuilder()" to ListType,
+    "core.type ListBuilder.add()" to ListBuilderAddInliner,
+    "core.type ListBuilder.addAll()" to ListBuilderAddAll,
+    "core.type ListBuilder.constructor()" to ListType,
+    "core.type ListBuilder.get length()" to LenFunction,
+    "core.type ListBuilder.removeLast()" to ListBuilderRemoveLast,
+    "core.type ListBuilder.reverse()" to ListBuilderReverse,
+    "core.type ListBuilder.set()" to ListBuilderSet,
+    "core.type ListBuilder.sort()" to ListBuilderSort,
+    "core.type ListBuilder.splice()" to ListBuilderSplice,
+    "core.type ListBuilder.toList()" to TupleType,
+    "core.type ListBuilder.toListBuilder()" to ListType,
+    "core.type Listed.filter()" to ListFilter,
+    "core.type Listed.get()" to ListGet,
+    "core.type Listed.getOr()" to ListGetOr,
+    "core.type Listed.get isEmpty()" to GenericIsEmpty,
+    "core.type Listed.join()" to ListJoin,
+    "core.type Listed.get length()" to LenFunction,
+    "core.type Listed.map()" to ListMap,
+    "core.type Listed.reduce()" to ListedReduce,
+    "core.type Listed.reduceFrom()" to ListedReduceFrom,
+    "core.type Listed.slice()" to ListSlice,
+    "core.type Listed.sorted()" to ListedSorted,
+    "core.type Listed.toList()" to ListedToList,
+    "core.type Listed.toListBuilder()" to ListType,
+    "core.type Map.constructor()" to MapConstructor,
+    "core.type MapBuilder.constructor()" to MapBuilderConstructor,
+    "core.type MapBuilder.remove()" to MapBuilderRemove,
+    "core.type MapBuilder.set()" to MapBuilderSet,
+    "core.type Mapped.forEach()" to MappedForEach,
+    "core.type Mapped.get()" to MappedGet,
+    "core.type Mapped.getOr()" to MappedGetOr,
+    "core.type Mapped.has()" to MappedHas,
+    "core.type Mapped.keys()" to MappedKeys,
+    "core.type Mapped.get length()" to MappedLength,
+    "core.type Mapped.toList()" to MappedToList,
+    "core.type Mapped.toListBuilder()" to MappedToListBuilder,
+    "core.type Mapped.toListBuilderWith()" to MappedToListBuilderWith,
+    "core.type Mapped.toListWith()" to MappedToListWith,
+    "core.type Mapped.toMap()" to MappedToMap,
+    "core.type Mapped.toMapBuilder()" to MappedToMapBuilder,
+    "core.type Mapped.values()" to MappedValues,
+    "std/net.type NetResponse" to NetResponse,
+    "std/net.type NetResponse.get status()" to NetResponseGetStatus,
+    "std/net.type NetResponse.get contentType()" to NetResponseGetContentType,
+    "std/net.type NetResponse.get bodyContent()" to NetResponseGetBodyContent,
+    "core.type Pair.constructor()" to PairConstructor,
+    "core.type PromiseBuilder.breakPromise()" to PromiseBuilderBreakPromise,
+    "core.type PromiseBuilder.complete()" to PromiseBuilderComplete,
+    "core.type PromiseBuilder.constructor()" to PromiseBuilderConstructor,
+    "core.type PromiseBuilder.get promise()" to PromiseBuilderGetPromise,
+    "std/regex.type RegexFormatter.regexCompileFormatted()" to RegexCompileFormatted,
+    "std/regex.type Regex.compiledFind()" to RegexCompiledFind,
+    "std/regex.type Regex.compiledFound()" to RegexCompiledFound,
+    "std/regex.type Regex.compiledReplace()" to RegexCompiledReplace,
+    "std/regex.type Regex.compiledSplit()" to RegexCompiledSplit,
+    "std/regex.type RegexFormatter.pushCaptureName()" to RegexFormatterPushCaptureName,
+    "std/regex.type RegexFormatter.pushCodeTo()" to RegexFormatterPushCodeTo,
+    "core.type SafeGenerator.next()" to BuiltinNext,
+    "core.type String.begin" to StringBegin,
+    "core.type String.countBetween()" to StringCountBetween,
+    "core.type String.get end()" to LenFunction,
+    "core.type String.forEach()" to StringForEach,
+    "core.type String.fromCodePoint()" to StringFromCodePoint,
+    "core.type String.fromCodePoints()" to StringFromCodePoints,
+    "core.type String.get()" to StringGet,
+    "core.type String.hasAtLeast()" to StringHasAtLeast,
+    "core.type String.hasIndex()" to StringHasIndex,
+    "core.type String.indexOf()" to StringIndexOf,
+    "core.type String.get isEmpty()" to GenericIsEmpty,
+    "core.type String.next()" to StringNext,
+    "core.type String.prev()" to StringPrev,
+    "core.type String.slice()" to StringSlice,
+    "core.type String.split()" to StringSplit,
+    "core.type String.step()" to StringStep,
+    "core.type String.toFloat64()" to StringToFloat64,
+    "core.type String.toInt32()" to StringToInt,
+    "core.type String.toInt64()" to StringToInt64,
+    "core.type String.toString()" to Identity,
+    "core.type StringBuilder.append()" to StringBuilderAppend,
+    "core.type StringBuilder.appendBetween()" to StringBuilderAppendBetween,
+    "core.type StringBuilder.appendCodePoint()" to StringBuilderAppendCodePoint,
+    "core.type StringBuilder.clear()" to StringBuilderClear,
+    "core.type StringBuilder.get end()" to StringBuilderEnd,
+    "core.type StringBuilder.constructor()" to StringBuilderConstructor,
+    "core.type StringBuilder.toString()" to StringBuilderToString,
+    "core.type StringIndex.none" to StringIndexNone,
+    "core.type StringIndexOption.compareTo()" to StringIndexOptionCompareTo,
+    "core.type StringIndexOption.compareTo()::eq" to StringIndexOptionCompareToEq,
+    "core.type StringIndexOption.compareTo()::ge" to StringIndexOptionCompareToGe,
+    "core.type StringIndexOption.compareTo()::gt" to StringIndexOptionCompareToGt,
+    "core.type StringIndexOption.compareTo()::le" to StringIndexOptionCompareToLe,
+    "core.type StringIndexOption.compareTo()::lt" to StringIndexOptionCompareToLt,
+    "core.type StringIndexOption.compareTo()::ne" to StringIndexOptionCompareToNe,
+    "std/testing.type Test.bail()" to BailCall,
+    "core.empty()" to EmptyInliner,
+    "core.ignore()" to Ignore,
+    "std/net.sendRequest()" to StdNetSend,
 )

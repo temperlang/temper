@@ -18,7 +18,10 @@ import lang.temper.value.MetadataValueMultimap
 import lang.temper.value.StayLeaf
 import lang.temper.value.StayReferrer
 import lang.temper.value.StaySink
+import lang.temper.value.TString
+import lang.temper.value.connectedSymbol
 import lang.temper.value.fnSymbol
+import lang.temper.value.qNameSymbol
 
 /** A named fragment of a [TypeShape]. */
 sealed class MemberShape(
@@ -52,6 +55,11 @@ sealed class MemberShape(
             null -> MetadataValueMultimap.empty
             else -> MetadataValueMultimapImpl(stay)
         }
+
+    val connectedKey: String? get() = when {
+        connectedSymbol in metadata -> metadata[qNameSymbol]?.lastOrNull()?.let { TString.unpack(it) }
+        else -> null
+    }
 }
 
 /** The shape of a type parameter.  E.g. `T` in `class C<T>`. */
@@ -344,12 +352,14 @@ sealed class MemberAccessor(
     override fun toString(): String = prefix
 }
 
+/** Access to a member from within its definition via a `this` subject. */
 sealed class InternalMemberAccessor(
     prefix: String,
 ) : MemberAccessor(prefix, enclosingTypeIndexOrNegativeOne = 0) {
     override fun prefix(member: VisibleMemberShape) = prefix(DotMember(member.symbol))
 }
 
+/** Access to a member from outside the type's definition. */
 sealed class ExternalMemberAccessor(
     prefix: String,
 ) : MemberAccessor(prefix, enclosingTypeIndexOrNegativeOne = -1) {
@@ -359,13 +369,19 @@ sealed class ExternalMemberAccessor(
     }
 }
 
+/** A member accessor that reads a property value. */
 sealed interface GetMemberAccessor
-sealed interface SetMemberAccessor
-sealed interface BindMemberAccessor
 
+/** A member accessor that sets a property value. */
+sealed interface SetMemberAccessor
+
+/** A member accessor that calls a method. */
+sealed interface CallMemberAccessor
+
+/** Reading a property internally. */
 object InternalGet : InternalMemberAccessor("iget"), GetMemberAccessor
 object InternalSet : InternalMemberAccessor("iset"), SetMemberAccessor
-object InternalBind : InternalMemberAccessor("ibind"), BindMemberAccessor
+object InternalCall : InternalMemberAccessor("icall"), CallMemberAccessor
 object ExternalGet : ExternalMemberAccessor("get"), GetMemberAccessor
 object ExternalSet : ExternalMemberAccessor("set"), SetMemberAccessor
-object ExternalBind : ExternalMemberAccessor("bind"), BindMemberAccessor
+object ExternalCall : ExternalMemberAccessor("call"), CallMemberAccessor

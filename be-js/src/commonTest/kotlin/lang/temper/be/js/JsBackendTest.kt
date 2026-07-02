@@ -332,7 +332,7 @@ class JsBackendTest {
         """.trimMargin()
 
         // The transfer of console from internal is odd but not broken.
-        // It's still unavailable from the public js module.
+        // It's still unavailable from the public JS module.
         val want = """
             |{
             |  "js": {
@@ -1897,12 +1897,13 @@ class JsBackendTest {
             |          export function maybeLength(a_0) {
             |            let return_0;
             |            let t_3;
+            |            let t_4;
             |            if (a_0 == null) {
             |              return_0 = null;
             |            } else {
-            |              const a_1 = a_0;
-            |              t_3 = a_1.length;
-            |              return_0 = stringCountBetween_0(a_1, 0, t_3);
+            |              t_4 = a_0;
+            |              t_3 = t_4.length;
+            |              return_0 = stringCountBetween_0(t_4, 0, t_3);
             |            }
             |            return return_0;
             |          };
@@ -1971,6 +1972,46 @@ class JsBackendTest {
             |      "foo.js.map": "__DO_NOT_CARE__",
             |      $OUTPUT_BOILERPLATE
             |    },
+            |  }
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun castListBuilderToListed() = assertGeneratedCode(
+        inputs = inputFileMapFromJson(
+            """
+                |{
+                |  casty: {
+                |    casty.temper: ```
+                |      let lb = new ListBuilder<String>();
+                |      export let listed = lb as Listed<String>;
+                |      ```
+                |  }
+                |}
+            """.trimMargin(),
+        ),
+        want = """
+            |{
+            |  js: {
+            |    my-test-library: {
+            |      casty.js: {
+            |        content: ```
+            |          import {
+            |            requireIsArray as requireIsArray_0
+            |          } from "@temperlang/core";
+            |          /** @type {Array<string>} */
+            |          const lb_0 = [];
+            |          /** @type {Array<string>} */
+            |          export let listed;
+            |          listed = requireIsArray_0(lb_0);
+            |
+            |          ```,
+            |      },
+            |      casty.js.map: "__DO_NOT_CARE__",
+            |      index.js:     "__DO_NOT_CARE__",
+            |      package.json: "__DO_NOT_CARE__",
+            |    }
             |  }
             |}
         """.trimMargin(),

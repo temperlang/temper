@@ -119,9 +119,10 @@ class CSharpBackendTest {
         assertGenerateWanted(
             temper = $$"""
                 |export interface Sup {
-                |  public grab(map: Mapped<String, Int>): Int throws Bubble { map["hi"] }
-                |  public message(name: String): String;
-                |  public repeat(name: String): String {
+                |  get thing(): String { "thing" }
+                |  grab(map: Mapped<String, Int>): Int throws Bubble { map["hi"] }
+                |  message(name: String): String;
+                |  repeat(name: String): String {
                 |    "${message(name)} ${message(name)}"
                 |  }
                 |}
@@ -140,7 +141,18 @@ class CSharpBackendTest {
                     decls = """
                         |public interface ISup
                         |{
-                        |    protected static int GrabDefault(ISup this__0, G::IReadOnlyDictionary<string, int> map__0)
+                        |    string Thing
+                        |    {
+                        |        get
+                        |        {
+                        |            return GetThingDefault(this);
+                        |        }
+                        |    }
+                        |    protected static string GetThingDefault(ISup this__0)
+                        |    {
+                        |        return "thing";
+                        |    }
+                        |    protected static int GrabDefault(ISup this__1, G::IReadOnlyDictionary<string, int> map__0)
                         |    {
                         |        return map__0["hi"];
                         |    }
@@ -149,9 +161,9 @@ class CSharpBackendTest {
                         |        return GrabDefault(this, map__0);
                         |    }
                         |    string Message(string name__0);
-                        |    protected static string RepeatDefault(ISup this__1, string name__1)
+                        |    protected static string RepeatDefault(ISup this__2, string name__1)
                         |    {
-                        |        return this__1.Message(name__1) + " " + this__1.Message(name__1);
+                        |        return this__2.Message(name__1) + " " + this__2.Message(name__1);
                         |    }
                         |    string Repeat(string name__1)
                         |    {
@@ -180,6 +192,13 @@ class CSharpBackendTest {
                         |    }
                         |    public Sub()
                         |    {
+                        |    }
+                        |    public string Thing
+                        |    {
+                        |        get
+                        |        {
+                        |            return ISup.GetThingDefault(this);
+                        |        }
                         |    }
                         |    public int Grab(G::IReadOnlyDictionary<string, int> map___0)
                         |    {
@@ -431,6 +450,35 @@ class CSharpBackendTest {
                 |{
                 |    builder__0 = new C::OrderedDictionary<string, string>();
                 |    Mapped = C::Mapped.AsReadOnly(builder__0);
+                |}
+            """.trimMargin(),
+        )
+    }
+
+    @Test
+    fun mapBuilderToMap() {
+        assertGeneratedGlobalClass(
+            temper = """
+                |let builder: MapBuilder<String, String> = new MapBuilder<String, String>();
+                |export let map1 = builder.toMap();
+                |let mapped: Mapped<String, String> = builder;
+                |export let map2 = mapped.toMap();
+            """.trimMargin(),
+            usings = """
+                |using G = System.Collections.Generic;
+                |using C = TemperLang.Core;
+            """.trimMargin(),
+            csharp = """
+                |internal static G::IDictionary<string, string> builder__0;
+                |public static G::IReadOnlyDictionary<string, string> Map1;
+                |internal static G::IReadOnlyDictionary<string, string> mapped__0;
+                |public static G::IReadOnlyDictionary<string, string> Map2;
+                |static TestGlobal()
+                |{
+                |    builder__0 = new C::OrderedDictionary<string, string>();
+                |    Map1 = C::Mapped.ToMap(C::Mapped.AsReadOnly(builder__0));
+                |    mapped__0 = C::Mapped.AsReadOnly(builder__0);
+                |    Map2 = C::Mapped.ToMap(mapped__0);
                 |}
             """.trimMargin(),
         )

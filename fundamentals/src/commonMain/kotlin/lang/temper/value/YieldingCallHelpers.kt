@@ -3,7 +3,6 @@ package lang.temper.value
 import lang.temper.lexer.Operator
 import lang.temper.name.BuiltinName
 import lang.temper.name.TemperName
-import lang.temper.type.DotHelper
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -117,6 +116,7 @@ fun Tree?.calleeBuiltinName(): String? {
         else -> (callee.functionContained as? NamedBuiltinFun)?.name
     }
 }
+
 @OptIn(ExperimentalContracts::class)
 fun Tree?.yieldingCallKind(): YieldingFnKind? {
     contract {
@@ -136,6 +136,7 @@ fun isAwaitCall(t: Tree): Boolean {
     }
     return t.yieldingCallKind() == YieldingFnKind.await
 }
+
 @OptIn(ExperimentalContracts::class)
 fun isYieldCall(t: Tree): Boolean {
     contract {

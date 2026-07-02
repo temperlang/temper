@@ -61,7 +61,7 @@ export let example = {
 
         val result = generateCode(
             backendConfig = Backend.Config.production,
-            factory = CppBackend.Cpp11,
+            factory = CppBackend.Cpp,
             inputs = listOf(
                 filePath("something", "something.temper") to temper,
             ),

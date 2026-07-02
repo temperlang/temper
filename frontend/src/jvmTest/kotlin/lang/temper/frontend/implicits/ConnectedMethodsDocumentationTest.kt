@@ -10,11 +10,7 @@ import lang.temper.fs.temperRoot
 import lang.temper.interp.importExport.STANDARD_LIBRARY_NAME
 import lang.temper.log.filePath
 import lang.temper.value.DeclTree
-import lang.temper.value.TString
-import lang.temper.value.connectedSymbol
 import lang.temper.value.importedSymbol
-import lang.temper.value.toPseudoCode
-import lang.temper.value.valueContained
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
@@ -81,17 +77,12 @@ class ConnectedMethodsDocumentationTest {
 private fun extractConnectedMethodKeys(module: Module, connectedMethodKeys: MutableList<String>) {
     TreeVisit
         .startingAt(
-            module.treeForDebug ?: fail("Implicits module broken"),
+            module.treeForDebug ?: fail("Core module broken"),
         )
         .forEachContinuing { t ->
             val metadata = (t as? DeclTree)?.parts?.metadataSymbolMultimap
             if (metadata != null && importedSymbol !in metadata) { // If it's imported, the metadata is inherited
-                val connectedMetadata = metadata[connectedSymbol] ?: emptyList()
-                for (connectedMetadataEdge in connectedMetadata) {
-                    val arg = connectedMetadataEdge.target.valueContained(TString)
-                        ?: fail("Malformed metadata in ${t.toPseudoCode()} at ${t.pos}")
-                    connectedMethodKeys.add(arg)
-                }
+                t.parts?.connectedKey?.also { connectedMethodKeys.add(it) }
             }
         }
         .visitPostOrder()

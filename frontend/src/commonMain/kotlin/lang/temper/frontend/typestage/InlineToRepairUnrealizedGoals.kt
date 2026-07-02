@@ -17,11 +17,11 @@ import lang.temper.name.unusedAnalogueFor
 import lang.temper.type.Abstractness
 import lang.temper.type.AndType
 import lang.temper.type.DotHelper
-import lang.temper.type.ExternalBind
+import lang.temper.type.ExternalCall
 import lang.temper.type.ExternalGet
 import lang.temper.type.ExternalSet
 import lang.temper.type.FunctionType
-import lang.temper.type.InternalBind
+import lang.temper.type.InternalCall
 import lang.temper.type.InternalGet
 import lang.temper.type.InternalMemberAccessor
 import lang.temper.type.InternalSet
@@ -62,6 +62,7 @@ import lang.temper.value.Tree
 import lang.temper.value.TypeInferences
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
+import lang.temper.value.firstArgumentIndex
 import lang.temper.value.freeTree
 import lang.temper.value.functionContained
 import lang.temper.value.inlineUnrealizedGoalSymbol
@@ -196,7 +197,7 @@ private class InlineToRepairUnrealizedGoals(
                 FunArg(
                     // edge indices include callee, but there's also a subject that needs to be curried in,
                     // so we subtract one for the callee and add one back.
-                    argIndex = edgeIndex,
+                    argIndex = edgeIndex - parent.firstArgumentIndex,
                     funTree = f,
                 ),
             )
@@ -652,15 +653,13 @@ private class InlineToRepairUnrealizedGoals(
 
         // Look for a callee with the form (Call (Call DotHelper(ExternalBind) subject))
         val (dotHelper, thisArg) = run findDotHelper@{
-            if (callee is CallTree) {
-                val possibleDotHelper = callee.childOrNull(0)?.functionContained
-                if (possibleDotHelper is DotHelper) {
-                    val thisArg = callee.childOrNull(
-                        possibleDotHelper.memberAccessor.enclosingTypeIndexOrNegativeOne + 2,
-                    )
-                    if (thisArg != null) {
-                        return@findDotHelper possibleDotHelper to thisArg
-                    }
+            val possibleDotHelper = callee.functionContained
+            if (possibleDotHelper is DotHelper) {
+                val thisArg = call.childOrNull(
+                    possibleDotHelper.memberAccessor.enclosingTypeIndexOrNegativeOne + 2,
+                )
+                if (thisArg != null) {
+                    return@findDotHelper possibleDotHelper to thisArg
                 }
             }
             null to null
@@ -669,7 +668,7 @@ private class InlineToRepairUnrealizedGoals(
         // We could try other strategies.  If callee is by name,
         // it would be good to have some way to follow any chain
         // of names back to a named function declaration or exported name.
-        if (dotHelper != null && dotHelper.memberAccessor is ExternalBind) {
+        if (dotHelper != null && dotHelper.memberAccessor is ExternalCall) {
             val thisType = thisArg?.typeInferences?.type ?: return null
             val thisShape = representativeTypeShapeFor(listOf(thisType)) ?: return null
 
@@ -786,7 +785,7 @@ private fun convertMemberUseToExternal(
     val accessor = dotHelper.memberAccessor
     if (accessor !is InternalMemberAccessor) { return }
     val externalAccessor = when (accessor) {
-        InternalBind -> ExternalBind
+        InternalCall -> ExternalCall
         InternalGet -> ExternalGet
         InternalSet -> ExternalSet
     }

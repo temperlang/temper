@@ -1,6 +1,6 @@
 package lang.temper.builtin
 
-import lang.temper.type.BindMemberAccessor
+import lang.temper.type.CallMemberAccessor
 import lang.temper.type.DotHelper
 import lang.temper.type.MemberAccessor
 import lang.temper.value.CallTree
@@ -48,9 +48,9 @@ fun isDotHelperCall(t: Tree): Boolean {
 }
 
 @OptIn(ExperimentalContracts::class)
-fun isDotBindCall(t: Tree): Boolean {
+fun isDotMethodCall(t: Tree): Boolean {
     contract {
         returns(true) implies (t is CallTree)
     }
-    return accessorForCall(t) is BindMemberAccessor
+    return accessorForCall(t) is CallMemberAccessor
 }

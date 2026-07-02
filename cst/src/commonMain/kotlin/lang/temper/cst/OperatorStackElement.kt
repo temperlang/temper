@@ -83,7 +83,7 @@ fun openBracketCount(e: OperatorStackElement, resultIfNegative: Int? = null): In
     val op = e.operator
 
     if (!op.closer) {
-        // This returns a sensible value for non bracket operators, including
+        // This returns a sensible value for non-bracket operators, including
         // infix '<' (less than operator) which needs to be treated differently
         // from angle brackets used in types like `T<X>`.
         return 0

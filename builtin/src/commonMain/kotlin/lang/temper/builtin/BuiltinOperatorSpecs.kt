@@ -36,4 +36,3 @@ fun simpleBuiltinKeyFromCompoundOperator(builtinKey: String?): String? =
     } else {
         null
     }
-

@@ -16,7 +16,7 @@ import lang.temper.name.TemperName
 import lang.temper.stage.Stage
 import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
-import lang.temper.type.ExternalBind
+import lang.temper.type.ExternalCall
 import lang.temper.type.ExternalGet
 import lang.temper.type.InvalidType
 import lang.temper.type.StaticType
@@ -190,10 +190,8 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                     },
                     plantResult = { bufferName ->
                         Call {
-                            Call {
-                                V(Value(DotHelper(ExternalBind, toStringDotName)))
-                                Rn(bufferName)
-                            }
+                            V(Value(DotHelper(ExternalCall, toStringDotName)))
+                            Rn(bufferName)
                         }
                     },
                 )
@@ -366,10 +364,8 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                                     pending.clear()
                                     val pos = toFlush.spanningPosition(toFlush.first().pos)
                                     Call(pos) {
-                                        Call(pos.leftEdge) {
-                                            V(Value(DotHelper(ExternalBind, appendSafeDotName)))
-                                            Rn(accumulator)
-                                        }
+                                        V(Value(DotHelper(ExternalCall, appendSafeDotName)))
+                                        Rn(accumulator)
                                         if (toFlush.size == 1) {
                                             Replant(freeTree(toFlush.first()))
                                         } else {
@@ -389,10 +385,8 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                                     } else if (lastWasInterpolation) {
                                         lastWasInterpolation = false
                                         Call(t.pos) {
-                                            Call(t.pos.leftEdge) {
-                                                V(Value(DotHelper(ExternalBind, appendDotName)))
-                                                Rn(accumulator)
-                                            }
+                                            V(Value(DotHelper(ExternalCall, appendDotName)))
+                                            Rn(accumulator)
                                             Replant(freeTree(t))
                                         }
                                     } else {
@@ -491,10 +485,10 @@ private fun pointAppendsAtAccumulator(funTree: FunTree, isTagged: Boolean) {
         V(Types.vVoid)
     }
 
-    val vAppendDotHelper = Value(DotHelper(ExternalBind, appendDotName))
+    val vAppendDotHelper = Value(DotHelper(ExternalCall, appendDotName))
     val vAppendSafeDotHelper = if (isTagged) {
         // Accumulators have separate append and appendSafe methods
-        Value(DotHelper(ExternalBind, appendSafeDotName))
+        Value(DotHelper(ExternalCall, appendSafeDotName))
     } else {
         // StringBuilders can just use the same one.
         // We also need an implicit `?.toString() ?: "null"`
@@ -556,10 +550,8 @@ private fun pointAppendsAtAccumulator(funTree: FunTree, isTagged: Boolean) {
                                         // acc.appendSafe("...")
                                         val pos = parts.spanningPosition(next.pos)
                                         Call(pos) {
-                                            Call(pos.leftEdge) {
-                                                V(vAppendSafeDotHelper)
-                                                Rn(accumulatorName)
-                                            }
+                                            V(vAppendSafeDotHelper)
+                                            Rn(accumulatorName)
                                             if (parts.size == 1) {
                                                 Replant(parts[0])
                                             } else {
@@ -573,10 +565,8 @@ private fun pointAppendsAtAccumulator(funTree: FunTree, isTagged: Boolean) {
                                 interpolateSymbol -> Edit(t, i..i + 1) {
                                     // acc.append(expr)
                                     Call(next.pos) {
-                                        Call(next.pos.leftEdge) {
-                                            V(vAppendDotHelper)
-                                            Rn(accumulatorName)
-                                        }
+                                        V(vAppendDotHelper)
+                                        Rn(accumulatorName)
                                         if (isTagged) {
                                             Replant(next)
                                         } else {
@@ -778,18 +768,14 @@ internal object CoerceToString : SpecialFunction, BuiltinMacro("str", null) {
 
 private fun Planting.buildToStringCall(subject: Value<*>) =
     Call {
-        Call {
-            V(Value(DotHelper(memberAccessor = ExternalBind, member = toStringDotName)))
-            V(subject)
-        }
+        V(Value(DotHelper(memberAccessor = ExternalCall, member = toStringDotName)))
+        V(subject)
     }
 
 private fun Planting.buildToStringCall(subject: Tree) =
     Call {
-        Call {
-            V(Value(DotHelper(memberAccessor = ExternalBind, member = toStringDotName)))
-            Replant(subject)
-        }
+        V(Value(DotHelper(memberAccessor = ExternalCall, member = toStringDotName)))
+        Replant(subject)
     }
 
 private fun Planting.buildStringifyCall(arg: Tree, argType: StaticType?) {

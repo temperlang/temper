@@ -344,6 +344,7 @@ object WellKnownTypes {
         }
         globalConsoleTypeDefinition extends MkType.nominal(consoleTypeDefinition)
         intTypeDefinition extends mapKeyType
+        int64TypeDefinition extends equatableType
         listTypeDefinition extends MkType.nominal(
             listedTypeDefinition,
             listOf(MkType.nominal(listTypeDefinition.formals[0])),

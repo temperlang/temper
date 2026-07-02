@@ -42,7 +42,6 @@ import lang.temper.name.TemperName
 import lang.temper.stage.Readiness
 import lang.temper.stage.Stage
 import lang.temper.type.AndType
-import lang.temper.type.BindMemberAccessor
 import lang.temper.type.BubbleType
 import lang.temper.type.DotHelper
 import lang.temper.type.MkType
@@ -188,6 +187,11 @@ class Interpreter(
     private var stepCount = 0
     private var goingOutOfStyle = stage == Stage.Run
     private val isProcessingImplicits = nameMaker.namingContext.isImplicits
+
+    /** Helps centralize tracking access to connecteds. */
+    fun connection(qname: String?): ((Signature2) -> Value<*>)? {
+        return connecteds[qname]
+    }
 
     @Suppress("SimplifyBooleanWithConstants")
     private fun beSpammy(spammy: Boolean) =
@@ -949,7 +953,7 @@ class Interpreter(
                     ?: return NotYet
             else -> calleeValue to null
         }
-        val c = if ("bind" in "$calleeValue")lang.temper.common.console else null // do not commit
+        val c = if ("call" in "$calleeValue")lang.temper.common.console else null // do not commit
         c?.log("$stage: dispatchCall f=$f, actuals=$actuals")
 
         if (f !is Value<*>) {
@@ -977,15 +981,15 @@ class Interpreter(
         }
 
         val functionSpecies = fUnpacked.functionSpecies
-        val strategy =
+        val strategy = /* do not commit
             if (
                 im == InterpMode.Partial && fUnpacked is DotHelper &&
-                fUnpacked.memberAccessor is BindMemberAccessor
+                fUnpacked.memberAccessor is CallMemberAccessor
             ) {
                 CallStrategy.CallInMacroEnvForResult
-            } else {
-                callStrategies.getValue(Pair(functionSpecies, im))
-            }
+            } else { */
+            callStrategies.getValue(Pair(functionSpecies, im))
+        // }
         c?.log(". strategy=$strategy")
         if (beSpammy(SPAMMY_DISPATCH)) {
             console.log(
@@ -1848,7 +1852,7 @@ class Interpreter(
             restInputsType = restType?.type2,
             typeFormals = typeFormals.toList(),
         )
-        val connected = connecteds[parts?.connected]?.let { it(signature) }
+        val connected = connection(parts?.connectedKey)?.let { it(signature) }
 
         val superTypes = SuperTypeTree(superTypeSet)
         // We use decomposeFun (I know I said above we wouldn't, but now we've expanded macros) just
@@ -2326,7 +2330,8 @@ class Interpreter(
             require(isOpen)
             try {
                 val detailDoNotCommit = PseudoCodeDetail(resugarDotHelpers = Freq3.Never)
-                val callDoNotCommit = call?.toPseudoCode(detail = detailDoNotCommit) ?: "call to ${callee.toPseudoCode()}"
+                val callDoNotCommit =
+                    call?.toPseudoCode(detail = detailDoNotCommit) ?: "call to ${callee.toPseudoCode()}"
                 val replacementMaker = callSiteReplacementMaker
                 if (replacementMaker != null) {
                     val edgeToReplace: TEdge? = callSiteAncestorToReplace ?: call?.incoming
@@ -2514,7 +2519,9 @@ class Interpreter(
         override val isProcessingImplicits: Boolean
             get() = document.isImplicits
 
-        override fun connection(connectedKey: String): ((Signature2) -> Value<*>)? = connecteds[connectedKey]
+        override fun connection(qname: String): ((Signature2) -> Value<*>)? {
+            return this@Interpreter.connection(qname)
+        }
 
         val ancestorReplaced: TEdge? get() = callSiteAncestorToReplace
     }

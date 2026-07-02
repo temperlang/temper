@@ -24,9 +24,7 @@ import lang.temper.name.OutName
 import lang.temper.name.ParsedName
 import lang.temper.name.name
 import lang.temper.type.WellKnownTypes
-import lang.temper.type2.DefinedNonNullType
 import lang.temper.type2.DefinedType
-import lang.temper.type2.MkType2
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.withType
@@ -523,7 +521,7 @@ private class CmpStrStr(
     }
 }
 
-internal object ConsoleLog : RustInlineSupportCode("Console::log") {
+internal object ConsoleLog : RustInlineSupportCode("core.type Console.log()") {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<Rust.Tree>>,
@@ -546,7 +544,7 @@ internal object ConsoleLog : RustInlineSupportCode("Console::log") {
     }
 }
 
-private object GetConsole : RustInlineSupportCode("::getConsole") {
+private object GetConsole : RustInlineSupportCode("core.getConsole()") {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<Rust.Tree>>,
@@ -667,7 +665,7 @@ private val booleanNegation =
 
 /** Probably need to customize for floats and strings in the future. */
 private object CmpGeneric : MethodCall(
-    listOf("CmpGeneric", "StringIndexOption::compareTo"),
+    listOf("CmpGeneric", "core.type StringIndexOption.compareTo()"),
     "cmp",
     cloneEvenIfFirst = true, // Hack around for this being typed to type awareness. Effectively treat as operator here.
     mapArg = { it.ref() },
@@ -678,19 +676,8 @@ private object CmpGeneric : MethodCall(
         returnType: Type2,
         translator: RustTranslator,
     ): Rust.Expr {
-        // Work around StringIndexOption::compareTo typing if needed.
-        val self = arguments.getOrNull(0)
-        val effectiveArgs = when ((self?.type as? DefinedNonNullType)?.definition) {
-            WellKnownTypes.stringIndexTypeDefinition -> buildList {
-                // Left should be an option, not a string index, but we don't get the function type that way.
-                val optionType = MkType2(WellKnownTypes.stringIndexOptionTypeDefinition).get()
-                add(TypedArg((self.expr as Rust.Expr).wrapSome(), optionType))
-                addAll(arguments.subListToEnd(1))
-            }
-            else -> arguments
-        }
-        // And cast result as i32 for be-rust int expectations.
-        return super.inlineToTree(pos, effectiveArgs, returnType, translator).infix(RustOperator.As, "i32".toId(pos))
+        // Cast result as i32 for temper Int type expectations.
+        return super.inlineToTree(pos, arguments, returnType, translator).infix(RustOperator.As, "i32".toId(pos))
     }
 }
 
@@ -741,24 +728,24 @@ private object PrintCode : RustInlineSupportCode("Print", BuiltinOperatorId.Prin
 
 private val print: SupportCode = PrintCode
 
-private val dateToday = FunctionCall("Date::today", "temper_std::temporal::today")
+private val dateToday = FunctionCall("std/temporal.type Date.today()", "temper_std::temporal::today")
 private val denseBitVectorConstructor =
-    FunctionCall("DenseBitVector::constructor", "temper_core::DenseBitVector::with_capacity")
-private val denseBitVectorGet = MethodCall("DenseBitVector::get", "get")
-private val denseBitVectorSet = MethodCall("DenseBitVector::set", "set")
-private val dequeAdd = FunctionCall("Deque::add", "temper_core::deque::add", hasGeneric = true)
-private val dequeConstructor = FunctionCall("Deque::constructor", "temper_core::deque::new")
-private val dequeIsEmpty = FunctionCall("Deque::isEmpty", "temper_core::deque::is_empty")
-private val dequeRemoveFirst = FunctionCall("Deque::removeFirst", "temper_core::deque::remove_first")
+    FunctionCall("core.type DenseBitVector.constructor()", "temper_core::DenseBitVector::with_capacity")
+private val denseBitVectorGet = MethodCall("core.type DenseBitVector.get()", "get")
+private val denseBitVectorSet = MethodCall("core.type DenseBitVector.set()", "set")
+private val dequeAdd = FunctionCall("core.type Deque.add()", "temper_core::deque::add", hasGeneric = true)
+private val dequeConstructor = FunctionCall("core.type Deque.constructor()", "temper_core::deque::new")
+private val dequeIsEmpty = FunctionCall("core.type Deque.get isEmpty()", "temper_core::deque::is_empty")
+private val dequeRemoveFirst = FunctionCall("core.type Deque.removeFirst()", "temper_core::deque::remove_first")
 private val divFltFlt = FunctionCall("DivFltFlt", "temper_core::float64::div", BuiltinOperatorId.DivFltFlt)
 private object DivIntInt : FunctionCall("DivIntInt", "temper_core::int_div", BuiltinOperatorId.DivIntInt)
 private val divIntIntSafe = MethodCall("DivIntIntSafe", "wrapping_div", BuiltinOperatorId.DivIntIntSafe)
 private object DivIntInt64 : FunctionCall("DivIntInt64", "temper_core::int64_div", BuiltinOperatorId.DivIntInt64)
 
-private object DoneResult : Constant("doneResult") {
+private object DoneResult : Constant("core.doneResult()") {
     override fun value(pos: Position) = "None".toId(pos)
 }
-object Empty : RustInlineSupportCode("empty") {
+object Empty : RustInlineSupportCode("core.empty()") {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<Rust.Tree>>,
@@ -794,31 +781,31 @@ private class EqNeGeneric(
 private val eqGeneric = EqNeGeneric("EqGeneric", BuiltinOperatorId.EqGeneric, RustOperator.Equals)
 private val eqIntInt = Infix("EqIntInt", BuiltinOperatorId.EqIntInt, RustOperator.Equals)
 private val eqStrStr = CmpStrStr("EqStrStr", BuiltinOperatorId.EqStrStr, RustOperator.Equals)
-private val float64Expm1 = MethodCall("Float64::expm1", "exp_m1")
-private val float64Log = MethodCall("Float64::log", "ln")
-private val float64Log1p = MethodCall("Float64::log1p", "ln_1p")
-private val float64Max = FunctionCall("Float64::max", "temper_core::float64::max")
-private val float64Min = FunctionCall("Float64::min", "temper_core::float64::min")
-private val float64Near = FunctionCall("Float64::near", "temper_core::float64::near")
+private val float64Expm1 = MethodCall("core.type Float64.expm1()", "exp_m1")
+private val float64Log = MethodCall("core.type Float64.log()", "ln")
+private val float64Log1p = MethodCall("core.type Float64.log1p()", "ln_1p")
+private val float64Max = FunctionCall("core.type Float64.max()", "temper_core::float64::max")
+private val float64Min = FunctionCall("core.type Float64.min()", "temper_core::float64::min")
+private val float64Near = FunctionCall("core.type Float64.near()", "temper_core::float64::near")
 
-private object Float64E : Constant("Float64::e") {
+private object Float64E : Constant("core.type Float64.e") {
     override fun value(pos: Position) = makePath(pos, "std", "f64", "consts", "E")
 }
 
-private object Float64Pi : Constant("Float64::pi") {
+private object Float64Pi : Constant("core.type Float64.pi") {
     override fun value(pos: Position) = makePath(pos, "std", "f64", "consts", "PI")
 }
 
-private val float64Sign = FunctionCall("Float64::sign", "temper_core::float64::sign")
-internal val float64ToInt = FunctionCall("Float64::toInt32", "temper_core::float64::to_int")
-internal val float64ToInt64 = FunctionCall("Float64::toInt64", "temper_core::float64::to_int64")
-internal val float64ToString = FunctionCall("Float64::toString", "temper_core::float64::to_string")
+private val float64Sign = FunctionCall("core.type Float64.sign()", "temper_core::float64::sign")
+internal val float64ToInt = FunctionCall("core.type Float64.toInt32()", "temper_core::float64::to_int")
+internal val float64ToInt64 = FunctionCall("core.type Float64.toInt64()", "temper_core::float64::to_int64")
+internal val float64ToString = FunctionCall("core.type Float64.toString()", "temper_core::float64::to_string")
 
-private object Float64ToIntUnsafe : Cast("Float64::toInt32Unsafe") {
+private object Float64ToIntUnsafe : Cast("core.type Float64.toInt32Unsafe()") {
     override fun buildType(pos: Position) = "i32".toId(pos)
 }
 
-private object Float64ToInt64Unsafe : Cast("Float64::toInt64Unsafe") {
+private object Float64ToInt64Unsafe : Cast("core.type Float64.toInt64Unsafe()") {
     override fun buildType(pos: Position) = "i64".toId(pos)
 }
 
@@ -830,28 +817,28 @@ private val gtFltFlt = Float64Compare("GtFltFlt", BuiltinOperatorId.GtFltFlt, Ru
 private val gtGeneric = Infix("GtGeneric", BuiltinOperatorId.GtGeneric, RustOperator.GreaterThan)
 private val gtIntInt = Infix("GtIntInt", BuiltinOperatorId.GtIntInt, RustOperator.GreaterThan)
 private val gtStrStr = Infix("GtStrStr", BuiltinOperatorId.GtStrStr, RustOperator.GreaterThan)
-private val ignore = FunctionCall("ignore", "temper_core::ignore")
+private val ignore = FunctionCall("core.ignore()", "temper_core::ignore")
 
-private object IntToFloat64 : Cast("Int32::toFloat64") {
+private object IntToFloat64 : Cast("core.type Int32.toFloat64()") {
     override fun buildType(pos: Position) = "f64".toId(pos)
 }
 
-private object IntToInt64 : Cast("Int32::toInt64") {
+private object IntToInt64 : Cast("core.type Int32.toInt64()") {
     override fun buildType(pos: Position) = "i64".toId(pos)
 }
 
-private object Int64ToFloat64Unsafe : Cast("Int64::toFloat64Unsafe") {
+private object Int64ToFloat64Unsafe : Cast("core.type Int64.toFloat64Unsafe()") {
     override fun buildType(pos: Position) = "f64".toId(pos)
 }
 
-private object Int64ToInt32Unsafe : Cast("Int64::toInt32Unsafe") {
+private object Int64ToInt32Unsafe : Cast("core.type Int64.toInt32Unsafe()") {
     override fun buildType(pos: Position) = "i32".toId(pos)
 }
 
-internal val intToString = FunctionCall("Int32::toString", "temper_core::int_to_string")
-private val int64ToFloat64 = FunctionCall("Int64::toFloat64", "temper_core::int64_to_float64")
-private val int64ToInt32 = FunctionCall("Int64::toInt32", "temper_core::int64_to_int32")
-internal val int64ToString = FunctionCall("Int64::toString", "temper_core::int64_to_string")
+internal val intToString = FunctionCall("core.type Int32.toString()", "temper_core::int_to_string")
+private val int64ToFloat64 = FunctionCall("core.type Int64.toFloat64()", "temper_core::int64_to_float64")
+private val int64ToInt32 = FunctionCall("core.type Int64.toInt32()", "temper_core::int64_to_int32")
+internal val int64ToString = FunctionCall("core.type Int64.toString()", "temper_core::int64_to_string")
 private val isNonNull = MethodCall("IsNonNull", "is_some")
 private val isNull = MethodCall("IsNull", "is_none")
 private val leFltFlt = Float64Compare("LeFltFlt", BuiltinOperatorId.LeFltFlt, RustOperator.LessEquals)
@@ -862,37 +849,44 @@ private val leStrStr = Infix("LeStrStr", BuiltinOperatorId.LeStrStr, RustOperato
 private val listedTypes = listOf("Listed", "List", "ListBuilder")
 
 private val listForEach =
-    FunctionCall("List::forEach", "temper_core::listed::list_for_each", hasGeneric = true, fnIndex = -1)
-private val listBuilderAdd = FunctionCall("ListBuilder::add", "temper_core::listed::add", hasGeneric = true)
-private val listBuilderAddAll = FunctionCall("ListBuilder::addAll", "temper_core::listed::add_all")
-private val listBuilderClear = FunctionCall("ListBuilder::clear", "temper_core::listed::clear")
-private val listBuilderConstructor = FunctionCall("ListBuilder::constructor", "temper_core::listed::new_builder")
-private val listBuilderRemoveLast = FunctionCall("ListBuilder::removeLast", "temper_core::listed::remove_last")
-private val listBuilderReverse = FunctionCall("ListBuilder::reverse", "temper_core::listed::reverse")
-private val listBuilderSet = FunctionCall("ListBuilder::set", "temper_core::listed::set", hasGeneric = true)
-private val listBuilderSort = FunctionCall("ListBuilder::sort", "temper_core::listed::sort", fnIndex = -1)
-private val listBuilderSplice = FunctionCall("ListBuilder::splice", "temper_core::listed::splice", fnIndex = -1)
+    FunctionCall("core.type List.forEach()", "temper_core::listed::list_for_each", hasGeneric = true, fnIndex = -1)
+private val listBuilderAdd = FunctionCall("core.type ListBuilder.add()", "temper_core::listed::add", hasGeneric = true)
+private val listBuilderAddAll = FunctionCall("core.type ListBuilder.addAll()", "temper_core::listed::add_all")
+private val listBuilderClear = FunctionCall("core.type ListBuilder.clear()", "temper_core::listed::clear")
+private val listBuilderConstructor =
+    FunctionCall("core.type ListBuilder.constructor()", "temper_core::listed::new_builder")
+private val listBuilderRemoveLast =
+    FunctionCall("core.type ListBuilder.removeLast()", "temper_core::listed::remove_last")
+private val listBuilderReverse = FunctionCall("core.type ListBuilder.reverse()", "temper_core::listed::reverse")
+private val listBuilderSet = FunctionCall("core.type ListBuilder.set()", "temper_core::listed::set", hasGeneric = true)
+private val listBuilderSort = FunctionCall("core.type ListBuilder.sort()", "temper_core::listed::sort", fnIndex = -1)
+private val listBuilderSplice =
+    FunctionCall("core.type ListBuilder.splice()", "temper_core::listed::splice", fnIndex = -1)
 private val listedFilter =
-    FunctionCall("Listed::filter", "temper_core::listed::filter", hasGeneric = true, fnIndex = -1)
-private val listedGet = FunctionCall(listedTypes.map { "$it::get" }, "$LISTED_TRAIT_NAME::get", hasGeneric = true)
-private val listedGetOr = FunctionCall("Listed::getOr", "$LISTED_TRAIT_NAME::get_or", hasGeneric = true)
+    FunctionCall("core.type Listed.filter()", "temper_core::listed::filter", hasGeneric = true, fnIndex = -1)
+private val listedGet =
+    FunctionCall(listedTypes.map { "core.type $it.get()" }, "$LISTED_TRAIT_NAME::get", hasGeneric = true)
+private val listedGetOr = FunctionCall("core.type Listed.getOr()", "$LISTED_TRAIT_NAME::get_or", hasGeneric = true)
 
 private val listedIsEmpty =
-    FunctionCall(listedTypes.map { "$it::isEmpty" }, "$LISTED_TRAIT_NAME::is_empty", hasGeneric = true)
-private val listedJoin = FunctionCall("Listed::join", "temper_core::listed::join", hasGeneric = true, fnIndex = -1)
-private val listedLength = FunctionCall(listedTypes.map { "$it::length" }, "$LISTED_TRAIT_NAME::len", hasGeneric = true)
-private val listedMap = FunctionCall("Listed::map", "temper_core::listed::map", hasGeneric = true, fnIndex = -1)
+    FunctionCall(listedTypes.map { "core.type $it.get isEmpty()" }, "$LISTED_TRAIT_NAME::is_empty", hasGeneric = true)
+private val listedJoin =
+    FunctionCall("core.type Listed.join()", "temper_core::listed::join", hasGeneric = true, fnIndex = -1)
+private val listedLength =
+    FunctionCall(listedTypes.map { "core.type $it.get length()" }, "$LISTED_TRAIT_NAME::len", hasGeneric = true)
+private val listedMap =
+    FunctionCall("core.type Listed.map()", "temper_core::listed::map", hasGeneric = true, fnIndex = -1)
 private val listedReduce =
-    FunctionCall("Listed::reduce", "temper_core::listed::reduce", hasGeneric = true, fnIndex = -1)
+    FunctionCall("core.type Listed.reduce()", "temper_core::listed::reduce", hasGeneric = true, fnIndex = -1)
 private val listedReduceFrom =
-    FunctionCall("Listed::reduceFrom", "temper_core::listed::reduce_from", hasGeneric = true, fnIndex = -1)
-private val listedSlice = FunctionCall("Listed::slice", "temper_core::listed::slice", hasGeneric = true)
+    FunctionCall("core.type Listed.reduceFrom()", "temper_core::listed::reduce_from", hasGeneric = true, fnIndex = -1)
+private val listedSlice = FunctionCall("core.type Listed.slice()", "temper_core::listed::slice", hasGeneric = true)
 private val listedSorted =
-    FunctionCall("Listed::sorted", "temper_core::listed::sorted", hasGeneric = true, fnIndex = -1)
+    FunctionCall("core.type Listed.sorted()", "temper_core::listed::sorted", hasGeneric = true, fnIndex = -1)
 private val listedToList =
-    FunctionCall(listedTypes.map { "$it::toList" }, "$LISTED_TRAIT_NAME::to_list", hasGeneric = true)
+    FunctionCall(listedTypes.map { "core.type $it.toList()" }, "$LISTED_TRAIT_NAME::to_list", hasGeneric = true)
 private val listedToListBuilder = FunctionCall(
-    connectedNames = listedTypes.map { "$it::toListBuilder" },
+    connectedNames = listedTypes.map { "core.type $it.toListBuilder()" },
     functionName = "$LISTED_TRAIT_NAME::to_list_builder",
     hasGeneric = true,
 )
@@ -918,36 +912,40 @@ private val ltFltFlt = Float64Compare("LtFltFlt", BuiltinOperatorId.LtFltFlt, Ru
 private val ltGeneric = Infix("LtGeneric", BuiltinOperatorId.LtGeneric, RustOperator.LessThan)
 private val ltIntInt = Infix("LtIntInt", BuiltinOperatorId.LtIntInt, RustOperator.LessThan)
 private val ltStrStr = Infix("LtStrStr", BuiltinOperatorId.LtStrStr, RustOperator.LessThan)
-private val mapConstructor = FunctionCall("Map::constructor", "temper_core::Map::new")
-private val mapBuilderClear = FunctionCall("MapBuilder::clear", "temper_core::MapBuilder::clear")
+private val mapConstructor = FunctionCall("core.type Map.constructor()", "temper_core::Map::new")
+private val mapBuilderClear = FunctionCall("core.type MapBuilder.clear()", "temper_core::MapBuilder::clear")
 private val mapBuilderConstructor =
-    FunctionCall("MapBuilder::constructor", "temper_core::MapBuilder::new", hasGeneric = true)
+    FunctionCall("core.type MapBuilder.constructor()", "temper_core::MapBuilder::new", hasGeneric = true)
 
 // Some of these function calls would be prettier as method calls, but we'd have to build more support network
 // infrastructure for MethodCall to match things in FunctionCall, and FunctionCall works for now.
 private val mapBuilderRemove =
-    FunctionCall("MapBuilder::remove", "temper_core::MapBuilder::remove", hasGeneric = true)
-private val mapBuilderSet = FunctionCall("MapBuilder::set", "temper_core::MapBuilder::set", hasGeneric = true)
+    FunctionCall("core.type MapBuilder.remove()", "temper_core::MapBuilder::remove", hasGeneric = true)
+private val mapBuilderSet =
+    FunctionCall("core.type MapBuilder.set()", "temper_core::MapBuilder::set", hasGeneric = true)
 private val mappedForEach =
-    FunctionCall("Mapped::forEach", "temper_core::MappedTrait::for_each", hasGeneric = true, fnIndex = -1)
-private val mappedGet = FunctionCall("Mapped::get", "temper_core::MappedTrait::get", hasGeneric = true)
-private val mappedGetOr = FunctionCall("Mapped::getOr", "temper_core::MappedTrait::get_or", hasGeneric = true)
-private val mappedHas = FunctionCall("Mapped::has", "temper_core::MappedTrait::has", hasGeneric = true)
-private val mappedLength = FunctionCall("Mapped::length", "temper_core::MappedTrait::len")
-private val mappedKeys = FunctionCall("Mapped::keys", "temper_core::MappedTrait::keys")
-private val mappedToList = FunctionCall("Mapped::toList", "temper_core::MappedTrait::to_list")
-private val mappedToListBuilder = FunctionCall("Mapped::toListBuilder", "temper_core::MappedTrait::to_list_builder")
+    FunctionCall("core.type Mapped.forEach()", "temper_core::MappedTrait::for_each", hasGeneric = true, fnIndex = -1)
+private val mappedGet = FunctionCall("core.type Mapped.get()", "temper_core::MappedTrait::get", hasGeneric = true)
+private val mappedGetOr =
+    FunctionCall("core.type Mapped.getOr()", "temper_core::MappedTrait::get_or", hasGeneric = true)
+private val mappedHas = FunctionCall("core.type Mapped.has()", "temper_core::MappedTrait::has", hasGeneric = true)
+private val mappedLength = FunctionCall("core.type Mapped.get length()", "temper_core::MappedTrait::len")
+private val mappedKeys = FunctionCall("core.type Mapped.keys()", "temper_core::MappedTrait::keys")
+private val mappedToList = FunctionCall("core.type Mapped.toList()", "temper_core::MappedTrait::to_list")
+private val mappedToListBuilder =
+    FunctionCall("core.type Mapped.toListBuilder()", "temper_core::MappedTrait::to_list_builder")
 private val mappedToListBuilderWith = FunctionCall(
-    "Mapped::toListBuilderWith",
+    "core.type Mapped.toListBuilderWith()",
     "temper_core::MappedTrait::to_list_builder_with",
     hasGeneric = true,
     fnIndex = -1,
 )
 private val mappedToListWith =
-    FunctionCall("Mapped::toListWith", "temper_core::mapped_to_list_with", hasGeneric = true, fnIndex = -1)
-private val mappedToMap = FunctionCall("Mapped::toMap", "temper_core::MappedTrait::to_map")
-private val mappedToMapBuilder = FunctionCall("Mapped::toMapBuilder", "temper_core::MappedTrait::to_map_builder")
-private val mappedValues = FunctionCall("Mapped::values", "temper_core::MappedTrait::values")
+    FunctionCall("core.type Mapped.toListWith()", "temper_core::mapped_to_list_with", hasGeneric = true, fnIndex = -1)
+private val mappedToMap = FunctionCall("core.type Mapped.toMap()", "temper_core::MappedTrait::to_map")
+private val mappedToMapBuilder =
+    FunctionCall("core.type Mapped.toMapBuilder()", "temper_core::MappedTrait::to_map_builder")
+private val mappedValues = FunctionCall("core.type Mapped.values()", "temper_core::MappedTrait::values")
 private val minusFlt = Prefix("MinusFlt", BuiltinOperatorId.MinusFlt, RustOperator.Minus)
 private val minusFltFlt = Infix("MinusFltFlt", BuiltinOperatorId.MinusFltFlt, RustOperator.Subtraction)
 private val minusInt = MethodCall("MinusInt", "wrapping_neg", BuiltinOperatorId.MinusInt)
@@ -960,10 +958,10 @@ private val neFltFlt = Float64Compare("NeFltFlt", BuiltinOperatorId.NeFltFlt, Ru
 private val neGeneric = EqNeGeneric("NeGeneric", BuiltinOperatorId.NeGeneric, RustOperator.NotEquals)
 private val neIntInt = Infix("NeIntInt", BuiltinOperatorId.NeIntInt, RustOperator.NotEquals)
 private val neStrStr = CmpStrStr("NeStrStr", BuiltinOperatorId.NeStrStr, RustOperator.NotEquals)
-private val netSend = FunctionCall("stdNetSend", "send_request", cloneEvenIfFirst = true)
+private val netSend = FunctionCall("std/net.sendRequest()", "send_request", cloneEvenIfFirst = true)
 
 internal object PairConstructor : RustInlineSupportCode(
-    "Pair::constructor",
+    "core.type Pair.constructor()",
     cloneEvenIfFirst = true,
     hasGeneric = true,
 ) {
@@ -981,7 +979,7 @@ private val panic = FunctionCall("Panic", "panic!", BuiltinOperatorId.Panic)
 private val plusFltFlt = Infix("PlusFltFlt", BuiltinOperatorId.PlusFltFlt, RustOperator.Addition)
 private val plusIntInt = MethodCall("PlusIntInt", "wrapping_add", BuiltinOperatorId.PlusIntInt)
 private val powFltFlt = MethodCall("PowFltFlt", "powf", BuiltinOperatorId.PowFltFlt)
-private val promiseBuilderComplete = MethodCall("PromiseBuilder::complete", "complete", hasGeneric = true)
+private val promiseBuilderComplete = MethodCall("core.type PromiseBuilder.complete()", "complete", hasGeneric = true)
 
 internal object PureVirtualBuiltin : RustInlineSupportCode(pureVirtualBuiltinName.builtinKey) {
     override fun inlineToTree(
@@ -992,14 +990,16 @@ internal object PureVirtualBuiltin : RustInlineSupportCode(pureVirtualBuiltinNam
     ) = Rust.Call(pos, callee = "panic!".toId(pos), args = listOf())
 }
 
-private val regexCompileFormatted = FunctionCall("Regex::compileFormatted", "compile_formatted")
-private val regexCompiledFind = FunctionCall("Regex::compiledFind", "compiled_find")
-private val regexCompiledFound = FunctionCall("Regex::compiledFound", "compiled_found")
-private val regexCompiledReplace = FunctionCall("Regex::compiledReplace", "compiled_replace", fnIndex = 2)
-private val regexCompiledSplit = FunctionCall("Regex::compiledSplit", "compiled_split")
-private val regexFormatterPushCodeTo = FunctionCall("RegexFormatter::pushCodeTo", "push_code_to")
+private val regexCompileFormatted =
+    FunctionCall("std/regex.type RegexFormatter.regexCompileFormatted()", "compile_formatted")
+private val regexCompiledFind = FunctionCall("std/regex.type Regex.compiledFind()", "compiled_find")
+private val regexCompiledFound = FunctionCall("std/regex.type Regex.compiledFound()", "compiled_found")
+private val regexCompiledReplace =
+    FunctionCall("std/regex.type Regex.compiledReplace()", "compiled_replace", fnIndex = 2)
+private val regexCompiledSplit = FunctionCall("std/regex.type Regex.compiledSplit()", "compiled_split")
+private val regexFormatterPushCodeTo = FunctionCall("std/regex.type RegexFormatter.pushCodeTo()", "push_code_to")
 
-internal object SimpleToString : RustInlineSupportCode(listOf("Boolean::toString")) {
+internal object SimpleToString : RustInlineSupportCode(listOf("core.type Boolean.toString()")) {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<Rust.Tree>>,
@@ -1042,30 +1042,32 @@ internal object StrCat : RustInlineSupportCode("StrCat") {
     }
 }
 
-private object StringBegin : Constant("String::begin") {
+private object StringBegin : Constant("core.type String.begin") {
     override fun value(pos: Position) = "0usize".toId(pos)
 }
 
-private val stringCountBetween = FunctionCall("String::countBetween", "temper_core::string::count_between")
-private val stringEnd = MethodCall("String::end", "len")
-private val stringForEach = FunctionCall("String::forEach", "temper_core::string::for_each", fnIndex = -1)
-private val stringFromCodePoint = FunctionCall("String::fromCodePoint", "temper_core::string::from_code_point")
-private val stringFromCodePoints = FunctionCall("String::fromCodePoints", "temper_core::string::from_code_points")
-private val stringGet = FunctionCall("String::get", "temper_core::string::get")
-private val stringHasAtLeast = FunctionCall("String::hasAtLeast", "temper_core::string::has_at_least")
-private val stringHasIndex = FunctionCall("String::hasIndex", "temper_core::string::has_index")
-private val stringIndexOf = FunctionCall("String::indexOf", "temper_core::string::index_of")
-private val stringNext = FunctionCall("String::next", "temper_core::string::next")
-private val stringPrev = FunctionCall("String::prev", "temper_core::string::prev")
-private val stringSlice = FunctionCall("String::slice", "temper_core::string::slice")
-private val stringSplit = FunctionCall("String::split", "temper_core::string::split")
-private val stringStep = FunctionCall("String::step", "temper_core::string::step")
-private val stringToFloat64 = FunctionCall("String::toFloat64", "temper_core::string::to_float64")
-private val stringToInt = FunctionCall("String::toInt32", "temper_core::string::to_int")
-private val stringToInt64 = FunctionCall("String::toInt64", "temper_core::string::to_int64")
-private val stringToString = MethodCall("String::toString", "clone")
+private val stringCountBetween = FunctionCall("core.type String.countBetween()", "temper_core::string::count_between")
+private val stringEnd = MethodCall("core.type String.get end()", "len")
+private val stringForEach = FunctionCall("core.type String.forEach()", "temper_core::string::for_each", fnIndex = -1)
+private val stringFromCodePoint =
+    FunctionCall("core.type String.fromCodePoint()", "temper_core::string::from_code_point")
+private val stringFromCodePoints =
+    FunctionCall("core.type String.fromCodePoints()", "temper_core::string::from_code_points")
+private val stringGet = FunctionCall("core.type String.get()", "temper_core::string::get")
+private val stringHasAtLeast = FunctionCall("core.type String.hasAtLeast()", "temper_core::string::has_at_least")
+private val stringHasIndex = FunctionCall("core.type String.hasIndex()", "temper_core::string::has_index")
+private val stringIndexOf = FunctionCall("core.type String.indexOf()", "temper_core::string::index_of")
+private val stringNext = FunctionCall("core.type String.next()", "temper_core::string::next")
+private val stringPrev = FunctionCall("core.type String.prev()", "temper_core::string::prev")
+private val stringSlice = FunctionCall("core.type String.slice()", "temper_core::string::slice")
+private val stringSplit = FunctionCall("core.type String.split()", "temper_core::string::split")
+private val stringStep = FunctionCall("core.type String.step()", "temper_core::string::step")
+private val stringToFloat64 = FunctionCall("core.type String.toFloat64()", "temper_core::string::to_float64")
+private val stringToInt = FunctionCall("core.type String.toInt32()", "temper_core::string::to_int")
+private val stringToInt64 = FunctionCall("core.type String.toInt64()", "temper_core::string::to_int64")
+private val stringToString = MethodCall("core.type String.toString()", "clone")
 
-internal object StringBuilderConstructor : RustInlineSupportCode("StringBuilder::constructor") {
+internal object StringBuilderConstructor : RustInlineSupportCode("core.type StringBuilder.constructor()") {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<Rust.Tree>>,
@@ -1074,25 +1076,25 @@ internal object StringBuilderConstructor : RustInlineSupportCode("StringBuilder:
     ) = Rust.Call(pos, "String".toId(pos).extendWith("new"), listOf()).wrapLock().wrapArc()
 }
 private val stringBuilderAppend =
-    FunctionCall(baseName = "StringBuilder::append", functionName = "temper_core::string::builder::append")
+    FunctionCall(baseName = "core.type StringBuilder.append()", functionName = "temper_core::string::builder::append")
 private val stringBuilderAppendBetween = FunctionCall(
-    baseName = "StringBuilder::appendBetween",
+    baseName = "core.type StringBuilder.appendBetween()",
     functionName = "temper_core::string::builder::append_between",
 )
 private val stringBuilderAppendCodePoint =
-    FunctionCall("StringBuilder::appendCodePoint", "temper_core::string::builder::append_code_point")
+    FunctionCall("core.type StringBuilder.appendCodePoint()", "temper_core::string::builder::append_code_point")
 private val stringBuilderClear =
-    FunctionCall(baseName = "StringBuilder::clear", functionName = "temper_core::string::builder::clear")
+    FunctionCall(baseName = "core.type StringBuilder.clear()", functionName = "temper_core::string::builder::clear")
 private val stringBuilderEnd =
-    FunctionCall(baseName = "StringBuilder::end", functionName = "temper_core::string::builder::end")
+    FunctionCall(baseName = "core.type StringBuilder.get end()", functionName = "temper_core::string::builder::end")
 private val stringBuilderToString =
-    FunctionCall("StringBuilder::toString", "temper_core::string::builder::to_string")
+    FunctionCall("core.type StringBuilder.toString()", "temper_core::string::builder::to_string")
 
-private object StringIndexNone : Constant("StringIndex::none") {
+private object StringIndexNone : Constant("core.type StringIndex.none") {
     override fun value(pos: Position) = "()".toId(pos)
 }
 
-internal object TestBail : RustInlineSupportCode("Test::bail") {
+internal object TestBail : RustInlineSupportCode("std/testing.type Test.bail()") {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<Rust.Tree>>,
@@ -1109,7 +1111,7 @@ internal object TestBail : RustInlineSupportCode("Test::bail") {
 private val timesFltFlt = Infix("TimesFltFlt", BuiltinOperatorId.TimesFltFlt, RustOperator.Multiplication)
 private val timesIntInt = MethodCall("TimesIntInt", "wrapping_mul", BuiltinOperatorId.TimesIntInt)
 private val valueResultConstructor =
-    FunctionCall("ValueResult::constructor", "Some", cloneEvenIfFirst = true, hasGeneric = true)
+    FunctionCall("core.type ValueResult.constructor()", "Some", cloneEvenIfFirst = true, hasGeneric = true)
 
 private val connectedReferences = listOf(
     CmpGeneric,
@@ -1233,5 +1235,5 @@ private val connectedReferences = listOf(
 private const val FORMAT_MACRO_NAME = "format!"
 
 internal val connectedTypes = mapOf(
-    "StringBuilder" to ConnectedType.StringBuilder,
+    "core.type StringBuilder" to ConnectedType.StringBuilder,
 )

@@ -89,8 +89,9 @@ fun DescriptorChain.idKind(): TmpL.IdKind = when (node) {
 
 /** Determine if this name is internal or is presented to external modules. */
 fun DescriptorChain.idReach(ignoreImport: Boolean = false): TmpL.IdReach = when (val n = this.node) {
+    is TmpL.Formal if parent?.node is TmpL.Constructor -> TmpL.IdReach.External
     is TmpL.FunctionDeclaration -> n.idReach()
-    is TmpL.Import -> if (ignoreImport) TmpL.IdReach.Internal else TmpL.IdReach.External
+    is TmpL.Import if !ignoreImport -> TmpL.IdReach.External
     else -> TmpL.IdReach.Internal
 }
 

@@ -553,7 +553,7 @@ class ReplTest {
         assertPendingContains(
             Regex(
                 """
-                    |        def b\(a: 'a'\) -> 'a':
+                    |        def b\(a: 'a', /\) -> 'a':
                     |            return a
                 """.trimMargin(),
             ),
@@ -636,9 +636,9 @@ class ReplTest {
         repl.processLine("let hi(i: Int): Int { when (i) { 1 -> 1 } }")
         assertPending(
             """
-                |1: t hi(i: Int): Int { when (i) { 1 -> 1 } }
-                |                       ┗━━━━━━━━━━━━━━━━━┛
-                |[interactive#0:1+22-41]@G: Cannot assign to Int32 from Void
+                |1: when (i) { 1 -> 1 } }
+                |                      ⇧
+                |[interactive#0:1+41]@G: Cannot assign to Int32 from Void
                 |interactive#0: void
                 |
             """.trimMargin(),

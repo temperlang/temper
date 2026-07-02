@@ -49,6 +49,8 @@ import lang.temper.name.ResolvedName
 import lang.temper.name.ResolvedParsedName
 import lang.temper.name.SourceName
 import lang.temper.type.Abstractness
+import lang.temper.type.MethodKind
+import lang.temper.type.MethodShape
 import lang.temper.type.TypeShape
 import lang.temper.type.Visibility
 import lang.temper.type.WellKnownTypes
@@ -504,14 +506,53 @@ internal class JsTranslator(
                 is TmpL.MethodReference -> {
                     val obj = when (val subject = fn.subject) {
                         is TmpL.Expression -> translateExpression(subject)
-                        is TmpL.TypeName -> translateTypeName(subject, asExpr = true)
+                        is TmpL.TypeSubject -> {
+                            val typeName = translateTypeName(subject.typeName, asExpr = true)
+                            when (subject) {
+                                is TmpL.SuperSubject -> Js.MemberExpression(
+                                    subject.pos,
+                                    obj = typeName,
+                                    property = Js.Identifier(subject.pos, JsIdentifierName("prototype"), null),
+                                )
+                                is TmpL.TypeName -> typeName
+                            }
+                        }
                     }
                     val methodShape = fn.method
+                    when ((methodShape as? MethodShape)?.methodKind) {
+                        MethodKind.Getter -> "get"
+                        MethodKind.Setter -> "set"
+                        else -> null
+                    }?.let { reflectMethod ->
+                        // Approximately `Reflect.(get|set)(proto, "prop", ...)`.
+                        // TODO Cache top-level `Object.getOwnPropertyDescriptor(proto, "prop")` instead?
+                        return@translateExpression Js.CallExpression(
+                            fn.pos,
+                            callee = Js.MemberExpression(
+                                fn.pos,
+                                obj = Js.Identifier(fn.pos, JsIdentifierName("Reflect"), null),
+                                property = Js.Identifier(fn.pos, JsIdentifierName(reflectMethod), null),
+                            ),
+                            arguments = listOf(
+                                obj,
+                                Js.StringLiteral(fn.pos, fn.methodName.dotNameText),
+                            ) + translateParameters(e.parameters),
+                        )
+                    }
                     val (method, _) = decomposeMemberKey(
                         fn.methodName, methodShape?.let { it.name as ResolvedName },
                         methodShape?.visibility?.toTmpL() ?: TmpL.Visibility.Public,
                     )
-                    val member = Js.MemberExpression(fn.pos, obj, method)
+                    val member = Js.MemberExpression(fn.pos, obj, method).let { member ->
+                        when (fn.subject) {
+                            is TmpL.SuperSubject -> Js.MemberExpression(
+                                fn.pos,
+                                obj = member,
+                                property = Js.Identifier(fn.pos, JsIdentifierName("call"), null),
+                            )
+                            else -> member
+                        }
+                    }
                     Js.CallExpression(e.pos, member, translateParameters(e.parameters))
                 }
             }
@@ -686,11 +727,7 @@ internal class JsTranslator(
                     x: TmpL.Expression,
                 ) = Js.CallExpression(
                     pos,
-                    Js.MemberExpression(
-                        pos,
-                        Js.Identifier(pos, JsIdentifierName("Array"), null),
-                        Js.Identifier(pos, JsIdentifierName("isArray"), null),
-                    ),
+                    Js.Identifier(type.pos, requireExternalReference(requireIsArray), null),
                     listOf(translateExpression(x)),
                 )
             },
@@ -701,8 +738,8 @@ internal class JsTranslator(
         is TmpL.GetProperty -> {
             val (subject, propertyId) = when (val subject = e.subject) {
                 is TmpL.Expression -> translateExpression(subject) to e.property
-                is TmpL.TypeName -> {
-                    val propertyId = when (val def = subject.sourceDefinition) {
+                is TmpL.TypeSubject -> {
+                    val propertyId = when (val def = subject.typeName.sourceDefinition) {
                         is TypeShape -> (e.property as? TmpL.ExternalPropertyId)?.let { external ->
                             def.staticProperties.firstOrNull { prop ->
                                 prop.symbol.text == external.name.dotNameText
@@ -718,7 +755,7 @@ internal class JsTranslator(
                         }
                         else -> null
                     } ?: e.property
-                    translateTypeName(subject, asExpr = true) to propertyId
+                    translateTypeName(subject.typeName, asExpr = true) to propertyId
                 }
             }
             val (property, propertyComputed) = decomposeMemberKey(propertyId)
@@ -776,7 +813,7 @@ internal class JsTranslator(
             ImplicitTypeTag.Int -> op.isInt(pos, type, x)
             ImplicitTypeTag.String -> op.allHaveTypeof(pos, type, JsTypeOf.string, x)
             ImplicitTypeTag.Function -> op.allHaveTypeof(pos, type, JsTypeOf.function, x)
-            ImplicitTypeTag.ListBuilder, ImplicitTypeTag.List ->
+            ImplicitTypeTag.ListBuilder, ImplicitTypeTag.List, ImplicitTypeTag.Listed ->
                 // TODO(tjp, backend): Distinguish on frozen? Disable checks for List(Builder)?
                 op.isArray(pos, type, x)
             else -> {
@@ -854,7 +891,7 @@ internal class JsTranslator(
             Js.ThisExpression(id.pos)
         } else {
             val jsName = JsIdentifierName(name.prefix())
-            return Js.Identifier(
+            Js.Identifier(
                 pos = id.pos,
                 name = jsName,
                 sourceIdentifier = name as? ResolvedParsedName,
@@ -907,7 +944,7 @@ internal class JsTranslator(
                 specifiers = emptyList(),
                 source = null,
             )
-            return topLevelsWithExport.toList()
+            topLevelsWithExport.toList()
         } else {
             topLevels
         }
@@ -1033,7 +1070,7 @@ internal class JsTranslator(
                     // Make sure to capture it via that name.
                     TODO()
                     // Can this actually happen?  What does the `this`
-                    // parameter mean in that case
+                    // parameter mean in that case?
                 }
                 buildList {
                     add(
@@ -1141,18 +1178,7 @@ internal class JsTranslator(
 
         val classDoc = translateDocClassType(d)?.also { before.add(it) }
 
-        val memberNames = mutableSetOf<TmpL.DotName>()
-
         val (elementsPart, otherPart) = d.members.flatMap { m ->
-            when (m) {
-                is TmpL.Getter -> memberNames.add(m.dotName)
-                is TmpL.Setter -> memberNames.add(m.dotName)
-                is TmpL.NormalMethod -> memberNames.add(m.dotName)
-                is TmpL.StaticMethod -> memberNames.add(m.dotName)
-                is TmpL.InstanceProperty -> memberNames.add(m.dotName)
-                is TmpL.StaticProperty -> memberNames.add(m.dotName)
-                is TmpL.Garbage, is TmpL.Constructor -> {}
-            }
             translateClassMember(m, classNameId, classDoc)
         }.partition()
 
@@ -2178,6 +2204,11 @@ internal val bubbleException = JsIdentifierName("Error")
 internal val requireInstanceOf = JsUnInlinedExternalFunctionReference(
     DashedIdentifier.temperCoreLibraryIdentifier,
     JsIdentifierName("requireInstanceOf"),
+)
+
+internal val requireIsArray = JsUnInlinedExternalFunctionReference(
+    DashedIdentifier.temperCoreLibraryIdentifier,
+    JsIdentifierName("requireIsArray"),
 )
 
 internal val requireSame = JsUnInlinedExternalFunctionReference(

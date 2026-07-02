@@ -28,7 +28,7 @@ internal fun TmpL.StaticProperty.adjustedNameText(): String {
 
 internal fun TmpL.Subject.typeDefinition() = when (this) {
     is TmpL.Expression -> type.definition
-    is TmpL.TypeName -> sourceDefinition
+    is TmpL.TypeSubject -> typeName.sourceDefinition
 }
 
 fun PyTranslator.name(name: TmpL.Id): Py.Name = pyNames.name(name).asPyName(name.pos)

@@ -7,7 +7,6 @@
 #include <limits>
 #include <stdint.h>
 #include <stdlib.h>
-#include <type_traits>
 #include "expected.hpp"
 #include "shared.hpp"
 
@@ -101,8 +100,8 @@ T neg(T i) {
 
 template<typename T>
 T ushr(T i, int32_t j) {
-  constexpr int shift_size_mask = (sizeof(T) * CHAR_BIT) - 1;
-  return (T) (((typename std::make_unsigned<T>::type) i) >> (j & shift_size_mask));
+  int shift_size_mask = (sizeof(T) * CHAR_BIT) - 1;
+  return (T) (to_unsigned(i) >> (j & shift_size_mask));
 }
 
 Expected<int32_t> to_int32(int64_t i) {
@@ -110,7 +109,7 @@ Expected<int32_t> to_int32(int64_t i) {
     i < std::numeric_limits<int32_t>::min() ||
     i > std::numeric_limits<int32_t>::max()
   ) {
-    return Unexpected("Int64::toInt32");
+    return Unexpected("core.type Int64.toInt32()");
   }
   return Expected<int32_t>(int32_t(i));
 }
@@ -126,7 +125,7 @@ namespace {
 
 Expected<int64_t> to_int64(const char* s, int32_t base) {
     if (!s || base < 2 || base > 36) {
-      return Unexpected("String::toInt64 bad base");
+      return Unexpected("core.type String.toInt64() bad base");
     }
     uint64_t ubase = uint64_t(base);
     while (std::isspace(*s)) {
@@ -140,7 +139,7 @@ Expected<int64_t> to_int64(const char* s, int32_t base) {
     }
     // Parse.
     if (!*s) {
-      return Unexpected("String::toInt64");
+      return Unexpected("core.type String.toInt64()");
     }
     uint64_t acc = 0;
     uint64_t limit = uint64_half;
@@ -154,7 +153,7 @@ Expected<int64_t> to_int64(const char* s, int32_t base) {
           break;
         }
         if (acc > (limit - d) / ubase) {
-          return Unexpected("String::toInt64 overflow");
+          return Unexpected("core.type String.toInt64() overflow");
         }
         acc = acc * ubase + d;
     }

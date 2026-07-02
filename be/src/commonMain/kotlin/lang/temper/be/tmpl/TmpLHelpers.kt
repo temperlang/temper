@@ -5,7 +5,6 @@ import lang.temper.be.Backend
 import lang.temper.common.RFailure
 import lang.temper.common.RSuccess
 import lang.temper.format.TokenSink
-import lang.temper.frontend.Module
 import lang.temper.frontend.ModuleNamingContext
 import lang.temper.lexer.Genre
 import lang.temper.lexer.withTemperAwareExtension
@@ -14,7 +13,6 @@ import lang.temper.log.CodeLocation
 import lang.temper.log.FilePath
 import lang.temper.log.Position
 import lang.temper.log.filePath
-import lang.temper.name.BuiltinName
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ExportedName
 import lang.temper.name.ImplicitsCodeLocation
@@ -29,7 +27,8 @@ import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
-import lang.temper.type.StaticPropertyShape
+import lang.temper.type.NominalType
+import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
 import lang.temper.type.Visibility
@@ -52,6 +51,7 @@ import lang.temper.value.TNull
 import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.Value
+import lang.temper.value.connectedSymbol
 import lang.temper.value.docStringSymbol
 import lang.temper.value.noneSymbol
 import lang.temper.value.qNameSymbol
@@ -394,6 +394,155 @@ fun TmpL.Tree.referencedNames(): Sequence<ResolvedName> = sequence {
     }
 }
 
+/**
+ * A type member that carries a receiver (`this`): a method, getter, or setter. Bundles the
+ * fields the receiver-oriented analyses (e.g. [mutatingMemberNames] and the C++ backend's
+ * const pass) read, so each works off one shared destructuring instead of repeating the
+ * member `when`. Members without a receiver (constructors, properties, static and garbage
+ * members) yield null from [asReceiverMember] and are skipped by those analyses.
+ */
+class ReceiverMember(
+    val dotName: String,
+    val parameters: TmpL.Parameters,
+    val body: TmpL.BlockStatement?,
+    val overridden: List<TmpL.SuperTypeMethod>,
+    /** A setter always mutates its receiver; methods and getters only if analysis says so. */
+    val isSetter: Boolean,
+    /** A generator member, whose lowered representation can't be const-qualified. */
+    val mayYield: Boolean,
+) {
+    /** The receiver (`this`) parameter's resolved name, or null if the member has no parameters. */
+    val thisName: ResolvedName?
+        get() = parameters.parameters.firstOrNull()?.name?.name
+}
+
+/** This member viewed as a [ReceiverMember] if it has a receiver, else null. */
+fun TmpL.MemberOrGarbage.asReceiverMember(): ReceiverMember? = when (this) {
+    is TmpL.NormalMethod ->
+        ReceiverMember(dotName.dotNameText, parameters, body, overridden, isSetter = false, mayYield = mayYield)
+    is TmpL.Getter ->
+        ReceiverMember(dotName.dotNameText, parameters, body, overridden, isSetter = false, mayYield = false)
+    is TmpL.Setter ->
+        ReceiverMember(dotName.dotNameText, parameters, body, overridden, isSetter = true, mayYield = false)
+    else -> null
+}
+
+/**
+ * Member dotNames (methods, getters, setters) across [modules] whose receiver (`this`)
+ * may be mutated when the member runs — directly (a property write or setter call on
+ * `this`) or transitively (calling another such member on `this`). Setters always
+ * qualify. The result is keyed by dotName, so it is identical for every declaration in an
+ * override slot, which is what lets a backend emit a `const`/readonly qualifier
+ * consistently (C++ requires matching const-ness across a virtual override slot).
+ *
+ * This is a backend-agnostic mutation analysis. It is conservative: it errs toward
+ * "mutates" (descending into nested closures, which share `this`), so a member is marked
+ * non-mutating only when nothing observed could write `this`. A member NOT in the result
+ * provably does not mutate its receiver within the analyzed module set.
+ */
+fun mutatingMemberNames(
+    modules: Iterable<TmpL.Module>,
+    /**
+     * Member dotNames a backend wants treated as non-const for its own reasons (e.g. a
+     * representation that can't be const-qualified). Seeded into the analysis so the
+     * constraint propagates transitively through `this`-calls and override slots.
+     */
+    forcedMutating: Set<String> = emptySet(),
+): Set<String> {
+    val directlyMutates = forcedMutating.toMutableSet()
+    // member dotName -> dotNames it invokes on `this`
+    val callsOnThis = mutableMapOf<String, MutableSet<String>>()
+    // Undirected equivalence between a member's dotName and the dotName(s) it overrides.
+    // Members in the same override slot must agree on const-ness, so mutation propagates
+    // across these edges.
+    val overrideEquiv = mutableMapOf<String, MutableSet<String>>()
+    fun linkOverride(a: String, b: String) {
+        overrideEquiv.getOrPut(a) { mutableSetOf() }.add(b)
+        overrideEquiv.getOrPut(b) { mutableSetOf() }.add(a)
+    }
+
+    fun analyze(name: String, body: TmpL.Tree?, thisName: ResolvedName?) {
+        if (body == null) return
+        // `this` inside a member body is a reference to the member's first (receiver)
+        // parameter, or a `This` node.
+        fun isThisRef(n: TmpL.Tree): Boolean =
+            n is TmpL.This ||
+                (n is TmpL.Reference && thisName != null && n.id.name == thisName)
+        fun walk(node: TmpL.Tree) {
+            when (node) {
+                is TmpL.SetProperty -> {
+                    // `this.field = ...` reassigns a field of the receiver (the only kind
+                    // of mutation a C++ `const` method actually forbids, since the model
+                    // is shared_ptr-shallow). Deep mutation through a field is allowed by
+                    // both Temper-as-modeled and C++ shallow const, so it's not flagged.
+                    if (isThisRef(node.left.subject)) directlyMutates.add(name) else walk(node.left.subject)
+                    walk(node.right)
+                }
+                is TmpL.MethodReference -> {
+                    if (isThisRef(node.subject)) {
+                        callsOnThis.getOrPut(name) { mutableSetOf() }.add(node.methodName.dotNameText)
+                    } else {
+                        walk(node.subject)
+                    }
+                }
+                is TmpL.PropertyReference -> {
+                    // Reading a property of `this` is fine; only recurse when the subject
+                    // is some other expression that might itself use `this` as a value.
+                    if (!isThisRef(node.subject)) walk(node.subject)
+                }
+                else -> {
+                    if (isThisRef(node)) {
+                        // `this` used as a value (call argument, return value, RHS, closure
+                        // capture): a const method cannot hand out a non-const shared_ptr
+                        // to its own receiver, so such a method cannot be const.
+                        directlyMutates.add(name)
+                    } else {
+                        for (kid in node.children) walk(kid)
+                    }
+                }
+            }
+        }
+        walk(body)
+    }
+
+    for (mod in modules) {
+        for (top in mod.topLevels) {
+            if (top !is TmpL.TypeDeclaration) continue
+            for (member in top.members) {
+                val rm = member.asReceiverMember() ?: continue
+                // A setter always mutates its receiver.
+                if (rm.isSetter) directlyMutates.add(rm.dotName)
+                analyze(rm.dotName, rm.body, rm.thisName)
+                for (sup in rm.overridden) {
+                    linkOverride(rm.dotName, sup.name.dotNameText)
+                }
+            }
+        }
+    }
+
+    // Propagate mutation to a fixpoint across both call edges (a member invoking a
+    // mutating member on `this` is mutating) and override-slot edges (any member of a
+    // slot mutating taints the whole slot, keeping const-ness consistent).
+    val mutating = directlyMutates.toMutableSet()
+    var changed = true
+    while (changed) {
+        changed = false
+        for ((caller, callees) in callsOnThis) {
+            if (caller !in mutating && callees.any { it in mutating }) {
+                mutating.add(caller)
+                changed = true
+            }
+        }
+        for ((a, neighbors) in overrideEquiv) {
+            if (a !in mutating && neighbors.any { it in mutating }) {
+                mutating.add(a)
+                changed = true
+            }
+        }
+    }
+    return mutating
+}
+
 /** Find mutable vars declared in this scope that are referenced in functions beneath this node. */
 fun TmpL.Tree.mutableCaptures(): Set<ResolvedName> {
     // Skip this because it's likely already a function, and we want to handle functions below specially, not this one.
@@ -484,26 +633,6 @@ object GetStaticSupport : InlineTmpLSupportCode {
 /** Scan a declaration for a key to look up the relevant value. */
 operator fun TmpL.Declaration.get(key: Symbol) =
     metadata.find { it.key.symbol == key }?.value
-
-/**
- * Modules usually carry the library name, so we can interpret them for the output root.
- * However, in some cases, such as currently for docgen and repl, we don't yet provide
- * library names, so we need to relativize based on the input path.
- */
-class LibraryRootContext(
-    /** The input path to the library root containing Temper source. */
-    val inRoot: FilePath,
-    /** The output path to the library root, based on the library name, that will contain backend code. */
-    val outRoot: FilePath,
-) {
-    fun rootFor(module: TmpL.Module) = rootFor(module.codeLocation.origin)
-    fun rootFor(module: Module) = rootFor(module.namingContext)
-    fun rootFor(origin: NamingContext) = when (origin) {
-        is ModuleNamingContext -> outRoot
-        // This currently can happen at least in docgen and repl.
-        else -> inRoot
-    }
-}
 
 val TmpL.Type.withoutNullOrBubble: TmpL.Type get() = this.withoutAtom {
     it is TmpL.BubbleType ||
@@ -605,8 +734,10 @@ enum class ImplicitTypeTag {
     String,
     List,
     ListBuilder,
+    Listed,
     Map,
     MapBuilder,
+    Mapped,
     Null,
     Void,
     Other,
@@ -629,8 +760,10 @@ val TmpL.NominalType.implicitTypeTag: ImplicitTypeTag get() = when (this.typeNam
     WellKnownTypes.functionTypeDefinition -> ImplicitTypeTag.Function
     WellKnownTypes.intTypeDefinition -> ImplicitTypeTag.Int
     WellKnownTypes.listTypeDefinition -> ImplicitTypeTag.List
+    WellKnownTypes.listedTypeDefinition -> ImplicitTypeTag.Listed
     WellKnownTypes.listBuilderTypeDefinition -> ImplicitTypeTag.ListBuilder
     WellKnownTypes.mapTypeDefinition -> ImplicitTypeTag.Map
+    WellKnownTypes.mappedTypeDefinition -> ImplicitTypeTag.Mapped
     WellKnownTypes.mapBuilderTypeDefinition -> ImplicitTypeTag.MapBuilder
     WellKnownTypes.nullTypeDefinition -> ImplicitTypeTag.Null
     WellKnownTypes.stringTypeDefinition -> ImplicitTypeTag.String
@@ -746,10 +879,20 @@ class TentativeTmpL internal constructor(
     internal val nascentModule: NascentModule,
 )
 
+data class SuperCallConfig(
+    val skipThis: Boolean,
+)
+
 fun <BE : Backend<BE>> Backend<BE>.injectSuperCallMethods(
     tentativeTmpl: TentativeTmpL,
-    injectInto: (TmpL.TypeDeclaration) -> Boolean,
-    chooseSuperName: (MethodKind, String) -> String,
+    injectInto: (TmpL.TypeDeclaration) -> Boolean = { it.kind != TmpL.TypeDeclarationKind.Interface },
+    configSuperCall: (TmpL.TypeDeclaration, TmpL.SuperTypeMethod) -> SuperCallConfig? =
+        configSuperCall@{ type, method ->
+            when {
+                type.hasSplitSupers(method) -> SuperCallConfig(skipThis = false)
+                else -> null
+            }
+        },
 ) {
     val nascentModule = tentativeTmpl.nascentModule
     val translator = tentativeTmpl.tmpLTranslator
@@ -757,7 +900,7 @@ fun <BE : Backend<BE>> Backend<BE>.injectSuperCallMethods(
     val namingContext = nascentModule.codeLocation.origin
     for (topLevel in nascentModule.topLevels) {
         if (topLevel is TmpL.TypeDeclaration && injectInto(topLevel)) {
-            topLevel.injectSuperCallMethods<BE>(translator, supportNetwork, namingContext, chooseSuperName)
+            topLevel.injectSuperCallMethods<BE>(translator, supportNetwork, namingContext, configSuperCall)
         }
     }
 }
@@ -767,7 +910,7 @@ internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
     translator: TmpLTranslator,
     supportNetwork: SupportNetwork,
     namingContext: NamingContext,
-    chooseSuperName: (MethodKind, String) -> String,
+    configSuperCall: (TmpL.TypeDeclaration, TmpL.SuperTypeMethod) -> SuperCallConfig?,
 ) {
     val missingMethods = this.inherited
     // TODO Pass genre into here?
@@ -779,6 +922,8 @@ internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
     val injectedMethods = missingMethods.mapNotNull missingMethods@{ missingMethod ->
         val method = missingMethod.memberOverride.superTypeMember as? MethodShape
             ?: return@missingMethods null
+        method.isPureVirtual &&
+            return@missingMethods null // not needed
         val funType = missingMethod.memberOverride.superTypeMemberTypeInSubTypeContext as? Signature2
             ?: return@missingMethods null
         val nameHints = method.parameterInfo?.names ?: listOf()
@@ -830,31 +975,31 @@ internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
         }.let { TmpL.TypeParameters(pos, it) }
         val overridden: List<TmpL.SuperTypeMethod> = emptyList() // TODO should this point to the super?
         val visibility = TmpL.VisibilityModifier(pos, method.visibility.toTmpL())
+        val superConfig = configSuperCall(this, missingMethod) ?: return@missingMethods null
         val body = TmpL.BlockStatement(
             pos,
             statements = listOf(
                 TmpL.CallExpression(
                     pos,
-                    fn = chooseSuperName(method.methodKind, dotName.dotNameText).let { superName ->
-                        TmpL.MethodReference(
+                    fn = TmpL.MethodReference(
+                        pos,
+                        subject = TmpL.SuperSubject(
                             pos,
-                            subject = TmpL.TemperTypeName(pos, method.enclosingType),
-                            methodName = TmpL.DotName(pos, superName),
-                            method = StaticPropertyShape(
-                                enclosingType = method.enclosingType,
-                                name = BuiltinName(superName), // Expected generated to match this.
-                                stay = null,
-                                symbol = Symbol(superName),
-                                visibility = Visibility.Protected, // TODO Support configuration of this?
-                            ),
-                            type = funType,
-                        )
-                    },
+                            typeName = TmpL.TemperTypeName(pos, method.enclosingType),
+                            subType = typeShape,
+                        ),
+                        methodName = missingMethod.name.deepCopy(),
+                        method = method,
+                        type = funType,
+                    ),
                     parameters = parameters.parameters.zip(funType.requiredInputTypes + funType.optionalInputTypes)
-                        .mapIndexed { index, (parameter, valueFormal) ->
+                        .mapIndexedNotNull { index, (parameter, valueFormal) ->
                             val paramName = parameter.name.deepCopy()
                             when (index) {
-                                0 -> TmpL.This(pos, paramName, valueFormal as DefinedNonNullType)
+                                0 -> when {
+                                    superConfig.skipThis -> null
+                                    else -> TmpL.This(pos, paramName, valueFormal as DefinedNonNullType)
+                                }
                                 else -> TmpL.Reference(paramName, valueFormal)
                             }
                         },
@@ -923,6 +1068,84 @@ internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
     }
     // Combine all.
     this.members += injectedMethods
+}
+
+/**
+ * Return an immediate supertype of [this] that has a path to the inherited method
+ * and which also has no other supertypes in the chain that also implement it.
+ *
+ * The returned type might *not* have the shortest path, if there are multiple.
+ *
+ * TODO Move out of tmpl?
+ */
+fun TypeShape.findImmediateSuperReaching(inherited: MethodShape): NominalType? {
+    val target = inherited.enclosingType
+    fun dig(shape: TypeShape): NominalType? {
+        superTypes@ for (sup in shape.superTypes) {
+            val supShape = sup.definition as? TypeShape ?: continue@superTypes
+            if (supShape == target) {
+                // This sup is the type we're looking for.
+                // Because it's the original enclosing type, it must have the method defined in it.
+                return sup
+            }
+            val found = supShape.methods.any { it.methodKind == inherited.methodKind && it.symbol == inherited.symbol }
+            if (found) {
+                // We found the method, but in the wrong type, so this path is no good.
+                continue@superTypes
+            }
+            if (dig(supShape) != null) {
+                // We found a path up the chain, and they reach it through sup.
+                return sup
+            }
+        }
+        // No path found this way.
+        return null
+    }
+    return dig(this)
+}
+
+fun TmpL.TypeDeclaration.hasSplitSupers(inherited: TmpL.SuperTypeMethod): Boolean {
+    val kind = (inherited.memberOverride.superTypeMember as? MethodShape)?.methodKind ?: return false
+    return typeShape.hasSplitSupers(kind, inherited.name.dotNameText)
+}
+
+/**
+ * Whether different branches in the hierarchy have implementations for the method name given.
+ * The goal is to avoid putting in explicit overrides when not needed.
+ * TODO Move this elsewhere since it has no TmpL in it?
+ */
+fun TypeShape.hasSplitSupers(kind: MethodKind, name: String): Boolean = run {
+    // Findings is entered for any type reached.
+    // True means the method was found *prior* to reaching the named supertype.
+    val findings = mutableMapOf<ResolvedName, Boolean>()
+    fun dig(type: TypeDefinition, foundEarlierOnThisPath: Boolean): Boolean = run {
+        // See what we have here.
+        val method = (type as? TypeShape)?.members?.find { member ->
+            (member as? MethodShape)?.methodKind == kind && member.symbol.text == name
+        } as? MethodShape
+        val foundHere = method?.isPureVirtual == false
+        val foundByHere = foundEarlierOnThisPath || foundHere
+        // Compare findings on this path vs elsewhere.
+        val foundElsewhere = findings[type.name]
+        when (foundElsewhere) {
+            true -> when {
+                foundByHere -> return@dig true // Multiple paths.
+                else -> return@dig false // Just elsewhere, but no need to continue digging.
+            }
+            false -> when {
+                foundByHere -> findings[type.name] = foundEarlierOnThisPath // Dig to maybe flip more true.
+                else -> return@dig false // Neither of us found it, so no new information.
+            }
+            null -> findings[type.name] = foundEarlierOnThisPath // First here, so record either yea or nay.
+        }
+        // Found a reason to keep digging.
+        for (superType in type.superTypes) {
+            dig(superType.definition, foundByHere) && return@dig true
+        }
+        // No split findings on this path.
+        false
+    }
+    dig(this, false)
 }
 
 /** Typically for constructing dependency metadata. */
@@ -1023,4 +1246,9 @@ fun toSigBestEffort(descriptor: Descriptor?) = when (descriptor) {
     null -> null
     is Signature2 -> descriptor
     is Type2 -> withType(descriptor, fn = { _, sig, _ -> sig }, fallback = { null })
+}
+
+fun Map<Symbol, Value<*>>?.connectedKey(): String? = when {
+    this != null && connectedSymbol in this -> this[qNameSymbol]?.let { TString.unpackOrNull(it) }
+    else -> null
 }
