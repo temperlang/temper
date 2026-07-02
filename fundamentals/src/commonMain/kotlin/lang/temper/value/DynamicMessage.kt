@@ -122,7 +122,7 @@ fun unify(
         null
     } else {
         val formalIndexToActualIndex = formalActualPairs.toMap()
-        return UnifiedArguments(
+        UnifiedArguments(
             valueFormals = valueFormals,
             restValuesFormal = restValuesFormal,
             valueActuals = valueActuals,

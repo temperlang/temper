@@ -40,7 +40,7 @@ import kotlin.test.assertFalse
 
 class DefineStageTest {
     @Test
-    fun callToDotBind() = assertModuleAtStage(
+    fun callToMethod() = assertModuleAtStage(
         stage = Stage.Define,
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
         input = """
@@ -300,9 +300,6 @@ class DefineStageTest {
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
         want = """
         {
-          syntaxMacro: {
-            body: "1 + 1\n" // `+` is still an unresolved name at this point
-          },
           define: {
             body: [ "Block", [ [ "Value", "2: Int32" ] ] ]
           }

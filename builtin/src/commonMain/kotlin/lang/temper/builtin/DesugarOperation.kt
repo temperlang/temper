@@ -25,7 +25,6 @@ import lang.temper.value.RightNameLeaf
 import lang.temper.value.SpecialFunction
 import lang.temper.value.StaylessMacroValue
 import lang.temper.value.TEdge
-import lang.temper.value.TFunction
 import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
@@ -151,11 +150,9 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
                         }
                     } else {
                         macroEnv.replaceMacroCallWith {
-                            val subject = operands.first()
                             Call(call.pos) {
                                 V(operator.pos, vHelper)
-                                Replant(freeTarget(subject))
-                                operands.drop(1).forEach {
+                                operands.forEach {
                                     Replant(freeTarget(it))
                                 }
                             }
@@ -163,22 +160,13 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
                     }
                 }
                 val leftName = operands.firstOrNull()?.target as? NameLeaf
-                val helperTree = ValueLeaf(macroEnv.document, operator.pos, vHelper)
-                val operandTrees = operands.map { it.target }
-                val bound = macroEnv.dispatchCallTo(helperTree, vHelper, operandTrees.take(1), interpMode)
-                c.log(". helper=$helper, bound=$bound")
-                if (bound is Value<*> && (!isCompoundAssignment || leftName != null)) {
-                    val boundTree = ValueLeaf(macroEnv.document, operator.pos, bound)
-                    c.log(
-                        "applying $bound :: ${bound.stateVector::class}, species=${
-                            TFunction.unpackOrNull(bound)?.functionSpecies
-                        } to ${operandTrees.drop(1).map { it.toPseudoCode() }}",
-                    )
-                    val result = macroEnv.dispatchCallTo(boundTree, bound, operandTrees.drop(1), interpMode)
-                    c.log("-> result=$result")
+                if (!isCompoundAssignment || leftName != null) {
+                    val helperTree = ValueLeaf(macroEnv.document, operator.pos, vHelper)
+                    val operandTrees = operands.map { it.target }
+                    var result = macroEnv.dispatchCallTo(helperTree, vHelper, operandTrees, interpMode)
                     if (isCompoundAssignment && result is Value<*>) {
                         if (interpMode == InterpMode.Full || result.stability == ValueStability.Stable) {
-                            return env.set(leftName!!.content, result, macroEnv)
+                            result = env.set(leftName!!.content, result, macroEnv)
                                 .and { result }
                         }
                     }

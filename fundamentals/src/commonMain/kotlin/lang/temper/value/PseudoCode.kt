@@ -233,7 +233,7 @@ internal class PseudoTreeBuilder(
 
                 fun findTypeArgs() {
                     if (typeArgs.isEmpty()) {
-                        // Consume type arguments into
+                        // Consume type arguments into the pre-allocated list.
                         while (argListStart + 1 < tree.size) {
                             val childAtArgListStart = tree.child(argListStart)
                             if (childAtArgListStart.symbolContained != typeArgSymbol) {
@@ -268,10 +268,13 @@ internal class PseudoTreeBuilder(
                     buildPseudoTree(tree.child(it))
                 }
 
-                val dotHelper = if (detail.resugarDotHelpers > Freq3.Never) {
-                    calleeTree.functionContained as? DotHelper
-                } else {
-                    null
+                val dotHelper = (calleeTree.functionContained as? DotHelper)?.let { dh ->
+                    when (detail.resugarDotHelpers) {
+                        Freq3.Never -> null
+                        Freq3.Always -> dh
+                        Freq3.Sometimes if (dh.member is OperatorMember) -> dh
+                        Freq3.Sometimes -> null
+                    }
                 }
 
                 if (dotHelper != null) {
@@ -323,13 +326,13 @@ internal class PseudoTreeBuilder(
                         }
                     }
                 } else {
-                    var callee = buildPseudoTree(tree.child(0))
                     var args: List<PseudoTree>? = null
                     // Special case `.` operator since its right operand is a symbol but
                     // should render as a bare name.
+                    var callee: PseudoTree? = null
                     if (
                         tree.size == BINARY_OP_CALL_ARG_COUNT &&
-                        callee isProbablyBuiltinFunNamed "."
+                        calleeTree isProbablyBuiltinFunNamed "."
                     ) {
                         val right = tree.child(2)
                         val rightSymbol = right.symbolContained
@@ -341,7 +344,7 @@ internal class PseudoTreeBuilder(
                         }
                         argListStart = tree.size // all done
                     } else if (
-                        callee isProbablyBuiltinFunNamed "new" &&
+                        calleeTree isProbablyBuiltinFunNamed "new" &&
                         tree.size >= 2 && symbolTextFor(tree.child(1)) == null
                     ) {
                         // Reshuffle
@@ -359,8 +362,8 @@ internal class PseudoTreeBuilder(
                         }
                         if (typeArg != null) {
                             callee = PseudoCall(
-                                listOfNotNull(callee, typeArg).spanningPosition(callee.pos),
-                                callee,
+                                listOfNotNull(calleeTree, typeArg).spanningPosition(calleeTree.pos),
+                                buildPseudoTree(calleeTree),
                                 emptyList(),
                                 listOf(buildPseudoTree(typeArg)),
                             )
@@ -369,16 +372,15 @@ internal class PseudoTreeBuilder(
                     } else if (
                         // desugarOperation(nym`+`, x, y) -> nym`+`(x, y)
                         detail.resugarDotHelpers > Freq3.Never &&
-                        callee.isProbablyBuiltinFunNamed("desugarOperation") &&
+                        calleeTree.isProbablyBuiltinFunNamed("desugarOperation") &&
                         tree.size > 1
                     ) {
-                        callee = buildPseudoTree(tree.child(1))
                         argListStart = 2
                     }
                     findTypeArgs()
                     PseudoCall(
                         pos = pos,
-                        callee = callee,
+                        callee = callee ?: buildPseudoTree(calleeTree),
                         typeArgs = typeArgs.toList(),
                         args = args ?: buildValueArgs(),
                         typeArgsInferred = typeArgsInferred,

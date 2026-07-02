@@ -981,15 +981,7 @@ class Interpreter(
         }
 
         val functionSpecies = fUnpacked.functionSpecies
-        val strategy = /* do not commit
-            if (
-                im == InterpMode.Partial && fUnpacked is DotHelper &&
-                fUnpacked.memberAccessor is CallMemberAccessor
-            ) {
-                CallStrategy.CallInMacroEnvForResult
-            } else { */
-            callStrategies.getValue(Pair(functionSpecies, im))
-        // }
+        val strategy = callStrategies.getValue(Pair(functionSpecies, im))
         c?.log(". strategy=$strategy")
         if (beSpammy(SPAMMY_DISPATCH)) {
             console.log(

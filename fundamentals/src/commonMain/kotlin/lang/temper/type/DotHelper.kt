@@ -1,6 +1,8 @@
 package lang.temper.type
 
+import lang.temper.common.Log
 import lang.temper.common.console
+import lang.temper.common.isEmpty
 import lang.temper.env.BindingNamingContext
 import lang.temper.env.InterpMode
 import lang.temper.format.OutToks
@@ -8,6 +10,7 @@ import lang.temper.format.OutputToken
 import lang.temper.format.OutputTokenType
 import lang.temper.format.TokenSerializable
 import lang.temper.format.TokenSink
+import lang.temper.log.LogEntry
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
@@ -16,6 +19,7 @@ import lang.temper.name.TemperName
 import lang.temper.type2.Signature2
 import lang.temper.value.BuiltinStatelessMacroValue
 import lang.temper.value.CallableValue
+import lang.temper.value.CoverFunction
 import lang.temper.value.Document
 import lang.temper.value.Fail
 import lang.temper.value.LeafTree
@@ -26,6 +30,7 @@ import lang.temper.value.PartialResult
 import lang.temper.value.RightNameLeaf
 import lang.temper.value.SpecialFunction
 import lang.temper.value.TClass
+import lang.temper.value.TFunction
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 import lang.temper.value.staticBuiltinName
@@ -162,7 +167,8 @@ class DotHelper(
             return macroEnv.fail(MessageTemplate.ArityMismatch, values = listOf(sizeWanted))
         }
         val subjectIndex = memberAccessor.firstArgumentIndex
-        var subject: Value<*> = when (val originalSubject = args.evaluate(subjectIndex, interpMode)) {
+        val originalSubject = args.evaluate(subjectIndex, interpMode)
+        var subject: Value<*> = when (originalSubject) {
             NotYet, is Fail -> return originalSubject
             is Value<*> -> originalSubject
         }
@@ -172,18 +178,8 @@ class DotHelper(
             subject = promoteSimpleValue(subject) ?: subject
         }
         val subjectTypeTag = subject.typeTag
-        if (subjectTypeTag !is TClass) {
-            return macroEnv.fail(
-                MessageTemplate.ExpectedValueOfType,
-                pos = args.pos(0),
-                values = listOf("$subjectTypeTag's wrapper class", subject.typeTag),
-            )
-        }
-        val classType: TClass = subjectTypeTag
-        val instancePropertyRecord = classType.unpack(subject)
-        val objProperties = instancePropertyRecord.properties
-
-        val typeShape = classType.typeShape
+        val classType = subjectTypeTag as? TClass
+        val typeShape = classType?.typeShape
 
         val accessingTypeShape = when (memberAccessor) {
             is InternalMemberAccessor -> {
@@ -205,11 +201,10 @@ class DotHelper(
         }
         val argIndex = memberAccessor.firstArgumentIndex + 1 // skip over subject
 
-        val accessibleMembers = accessibleMembers(typeShape)
+        val accessibleMembers = typeShape?.let { accessibleMembers(it) } ?: listOf()
         debug {
             console.log("memberAccessor=$memberAccessor member=$member")
             console.log(". subject=$subject")
-            console.log(". objProperties=$objProperties")
             console.log(". typeShape=$typeShape")
             console.log(". accessingTypeShape=$accessingTypeShape")
             console.log(". argIndex=$argIndex")
@@ -219,11 +214,51 @@ class DotHelper(
             }
         }
         fun inaccessible(): Fail {
-            macroEnv.explain(
-                MessageTemplate.NoAccessibleMember,
-                values = listOf(member, typeShape.name),
-            )
-            return Fail
+            val problem = if (classType == null) {
+                LogEntry(
+                    Log.Error,
+                    MessageTemplate.ExpectedValueOfType,
+                    pos = args.pos(0),
+                    values = listOf("$subjectTypeTag's wrapper class", subject.typeTag),
+                )
+            } else {
+                LogEntry(
+                    Log.Error,
+                    MessageTemplate.NoAccessibleMember,
+                    pos = macroEnv.pos,
+                    values = listOf(member, typeShape?.name ?: subjectTypeTag),
+                )
+            }
+            macroEnv.explain(problem)
+            return Fail(problem)
+        }
+
+        // If we know any resolution has to be via an extension, use a cover function as an
+        // abstraction to solve any overload resolution.
+        // This is important for early collapsing of arithmetic operations.
+        if (accessibleMembers.isEmpty() && extensions.isNotEmpty() && extensions.all { it is FunctionResolution }) {
+            val cover = CoverFunction(extensions.map { (it as FunctionResolution).fn })
+            cover.debugDoNotCommit = true
+            cover.uncover(macroEnv.args, macroEnv, interpMode)?.let { (resolution, args) ->
+                if (args != null) {
+                    val fn = TFunction.unpackOrNull(resolution as? Value<*>)
+                    c.log("uncovered to $fn")
+                    if (fn is CallableValue) {
+                        val actuals = args.toPositionalActuals(macroEnv)
+                        if (actuals != null) {
+                            val result = fn.invoke(actuals, macroEnv, interpMode).also {
+                                c.log("covered extensions -> $it")
+                            }
+                            if (macroEnv.call != null && result is Value<*> && interpMode == InterpMode.Partial && fn.isPure) {
+                                macroEnv.replaceMacroCallWith {
+                                    V(result)
+                                }
+                            }
+                            return result
+                        }
+                    }
+                }
+            }
         }
 
         val doc = macroEnv.document
@@ -273,7 +308,7 @@ class DotHelper(
                         } else {
                             MessageTemplate.NoAccessibleSetter
                         },
-                        values = listOf(member, typeShape.name),
+                        values = listOf(member, typeShape?.name ?: subjectTypeTag),
                     )
                     return Fail
                 }

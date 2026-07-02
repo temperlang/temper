@@ -4,6 +4,7 @@ package lang.temper.frontend
 
 import lang.temper.builtin.PureCallableValue
 import lang.temper.builtin.Types
+import lang.temper.common.Freq3
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.common.testCodeLocation
 import lang.temper.env.InterpMode
@@ -1168,8 +1169,9 @@ class TypeStageTest {
                 ```
                 let return__1, @fn sum2i__0;
                 sum2i__0 = (@stay fn sum2i(x__0 /* aka x */: Int32, y__0 /* aka y */: Int32) /* return__0 */: Int32 {
+                    void;
                     fn__0: do {
-                      return__0 = x__0 + y__0
+                      return__0 = x__0 + y__0;
                     }
                 });
                 return__1 = (fn sum2i)
@@ -1413,7 +1415,7 @@ class TypeStageTest {
                     if (isNull(x__0)) {
                       return__1 = 0
                     } else {
-                      return__1 = notNull(x__0) + 1
+                      return__1 = notNull(x__0) + 1;
                     };
                   }
               });
@@ -1504,8 +1506,8 @@ class TypeStageTest {
                   [ "Block", [
                       [ "Call", [
                           [ "Call", [
-                              [ "Value", "nym`<>`: Function" ],
-                              [ "RightName", "echo" ],
+                               [ "Value", "nym`<>`: Function" ],
+                               [ "RightName", "echo" ],
                                [ "RightName", "Int" ],
                              ]
                            ],
@@ -1970,64 +1972,6 @@ class TypeStageTest {
         },
     )
 
-    @Test
-    fun unaryPlusWashesOutMinimalDoNotCommit() = assertModuleAtStage(
-        stage = Stage.FunctionMacro,
-        input = """
-            |export let fi(i: Int32): Int32 { +i }
-        """.trimMargin(),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
-        want = """
-            |{
-            |  type: {
-            |    body:
-            |      ```
-            |      @fn let `test//`.fi, @fn `test//`.ff, @fn `test//`.fs;
-            |      `test//`.fi = (@stay fn fi(i__0 /* aka i */: Int32) /* return__0 */: Int32 {
-            |          fn__0: do {
-            |            return__0 = identity(i__0)
-            |          }
-            |      });
-            |      `test//`.ff = (@stay fn ff(f__0 /* aka f */: Float64) /* return__1 */: Float64 {
-            |          fn__1: do {
-            |            return__1 = identity(f__0)
-            |          }
-            |      });
-            |      `test//`.fs = (@stay fn fs(s__0 /* aka s */: String) /* return__2 */: String {
-            |          fn__2: do {
-            |            return__2 = +s__0
-            |          }
-            |      })
-            |
-            |      ```
-            |  },
-            |  functionMacro: {
-            |    body:
-            |      ```
-            |      @fn let `test//`.fi, @fn `test//`.ff, @fn `test//`.fs;
-            |      `test//`.fi = (@stay fn fi(i__0 /* aka i */: Int32) /* return__0 */: Int32 {
-            |          fn__0: do {
-            |## Now it's gone
-            |            return__0 = i__0
-            |          }
-            |      });
-            |      `test//`.ff = (@stay fn ff(f__0 /* aka f */: Float64) /* return__1 */: Float64 {
-            |          fn__1: do {
-            |            return__1 = f__0
-            |          }
-            |      });
-            |      `test//`.fs = (@stay fn fs(s__0 /* aka s */: String) /* return__2 */: String {
-            |          fn__2: do {
-            |## This stays here so that TypeChecker can flag it as an error later.
-            |            return__2 = +s__0
-            |          }
-            |      })
-            |
-            |      ```
-            |  }
-            |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
-    )
 
     @Test
     fun unaryPlusWashesOut() = assertModuleAtStage(
@@ -2047,18 +1991,21 @@ class TypeStageTest {
             |      ```
             |      @fn let `test//`.fi, @fn `test//`.ff, @fn `test//`.fs;
             |      `test//`.fi = (@stay fn fi(i__0 /* aka i */: Int32) /* return__0 */: Int32 {
+            |          void;
             |          fn__0: do {
-            |            return__0 = identity(i__0)
+            |            return__0 = identity(i__0);
             |          }
             |      });
             |      `test//`.ff = (@stay fn ff(f__0 /* aka f */: Float64) /* return__1 */: Float64 {
+            |          void;
             |          fn__1: do {
-            |            return__1 = identity(f__0)
+            |            return__1 = identity(f__0);
             |          }
             |      });
             |      `test//`.fs = (@stay fn fs(s__0 /* aka s */: String) /* return__2 */: String {
+            |          void;
             |          fn__2: do {
-            |            return__2 = +s__0
+            |            return__2 = +s__0;
             |          }
             |      })
             |
@@ -2069,20 +2016,23 @@ class TypeStageTest {
             |      ```
             |      @fn let `test//`.fi, @fn `test//`.ff, @fn `test//`.fs;
             |      `test//`.fi = (@stay fn fi(i__0 /* aka i */: Int32) /* return__0 */: Int32 {
+            |          void;
             |          fn__0: do {
             |## Now it's gone
-            |            return__0 = i__0
+            |            return__0 = i__0;
             |          }
             |      });
             |      `test//`.ff = (@stay fn ff(f__0 /* aka f */: Float64) /* return__1 */: Float64 {
+            |          void;
             |          fn__1: do {
-            |            return__1 = f__0
+            |            return__1 = f__0;
             |          }
             |      });
             |      `test//`.fs = (@stay fn fs(s__0 /* aka s */: String) /* return__2 */: String {
+            |          void;
             |          fn__2: do {
             |## This stays here so that TypeChecker can flag it as an error later.
-            |            return__2 = +s__0
+            |            return__2 = +s__0;
             |          }
             |      })
             |
@@ -2464,7 +2414,7 @@ class TypeStageTest {
             |            if (fail#3) {
             |              bubble ⋖ Int32 ⋗()
             |            };
-            |            return__4 = intInt__0 + stringInt__0
+            |            return__4 = intInt__0 + stringInt__0;
             |          }
             |      })
             |

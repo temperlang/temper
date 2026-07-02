@@ -331,11 +331,8 @@ class DisAmbiguateStageTest {
                               ],
                               [ "Block", [
                                   [ "Call", [
-                                      [ "Call", [
-                                          [ "Value", "nym`do_bind__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function" ],
-                                          [ "RightName", "x" ],
-                                        ]
-                                      ],
+                                      [ "Value", "nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function" ],
+                                      [ "RightName", "x" ],
                                       [ "RightName", "y" ]
                                     ]
                                   ]

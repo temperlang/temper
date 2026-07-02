@@ -10,7 +10,7 @@ expect fun failWithCause(messageStr: String, cause: Throwable? = null): Nothing
 
 internal expect fun tryRunDiff(left: String, right: String)
 
-private const val LONG_STR_THRESHOLD = 50_000
+private const val LONG_STR_THRESHOLD = 50_000_000 // do not commit
 private const val EXTRA_CONTENT_LEN = 100
 private const val MIN_LEN_RATIO = 10
 

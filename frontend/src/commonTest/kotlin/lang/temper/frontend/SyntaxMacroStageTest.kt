@@ -77,32 +77,29 @@ class SyntaxMacroStageTest {
                       ]
                     ],
                     [ "Call", [
+                        [ "Value", "nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function" ],
                         [ "Call", [
-                            [ "Value", "nym`do_bind__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function" ],
-                            [ "Call", [
-                                [ "RightName", "do" ],
-                                [ "Fun", [
-                                    [ "Block", [
-                                        [ "Decl", [
-                                            [ "LeftName", "a__1" ],
-                                            [ "Value", [ "init", "Symbol" ] ],
-                                            [ "Value", [ 2, "Int32" ] ],
-                                            [ "Value", "\\QName: Symbol" ],
-                                            [ "Value", "\"test-code.a=\": String" ],
-                                          ]
-                                        ],
-                                        [ "Call", [
-                                            [ "Value", "REM: Function" ],
-                                            [ "Value", ```
-                                              "Why do I feel compelled to write `let ... in` here?\nI wish I knew how to quit you, OCaml!": String
-                                              ``` ],
-                                            [ "Value", "null: Null" ],
-                                            [ "Value", "false: Boolean" ],
-                                          ]
-                                        ],
-                                        [ "RightName", "a__1" ]
+                            [ "RightName", "do" ],
+                            [ "Fun", [
+                                [ "Block", [
+                                    [ "Decl", [
+                                        [ "LeftName", "a__1" ],
+                                        [ "Value", [ "init", "Symbol" ] ],
+                                        [ "Value", [ 2, "Int32" ] ],
+                                        [ "Value", "\\QName: Symbol" ],
+                                        [ "Value", "\"test-code.a=\": String" ],
                                       ]
-                                    ]
+                                    ],
+                                    [ "Call", [
+                                        [ "Value", "REM: Function" ],
+                                        [ "Value", ```
+                                          "Why do I feel compelled to write `let ... in` here?\nI wish I knew how to quit you, OCaml!": String
+                                          ``` ],
+                                        [ "Value", "null: Null" ],
+                                        [ "Value", "false: Boolean" ],
+                                      ]
+                                    ],
+                                    [ "RightName", "a__1" ]
                                   ]
                                 ]
                               ]
@@ -505,11 +502,8 @@ class SyntaxMacroStageTest {
                   ]
                 ],
                 [ "Call", [
-                    [ "Call", [
-                        [ "Value", "nym`do_bind__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function" ],
-                        [ "RightName", "x__0" ],
-                      ],
-                    ],
+                    [ "Value", "nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function" ],
+                    [ "RightName", "x__0" ],
                     [ "RightName", "y__1" ]
                   ]
                 ]
@@ -729,14 +723,11 @@ class SyntaxMacroStageTest {
             |            ]
             |          ],
             |          [ "Call", [
+            |              [ "Value", "nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function" ],
             |              [ "Call", [
-            |                  [ "Value", "nym`do_bind__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function" ],
-            |                  [ "Call", [
-            |                      [ "Value", "do_get_bar: Function" ],
-            |                      [ "RightName", "foo__0" ],
-                |                ]
-                |              ]
-                |            ]
+            |                  [ "Value", "do_get_bar: Function" ],
+            |                  [ "RightName", "foo__0" ],
+            |                ]
             |              ],
             |              [ "RightName", "bar__1" ]
             |            ]
@@ -2350,7 +2341,7 @@ class SyntaxMacroStageTest {
             |    body: ```
             |      nym`@`(var, let x = 1);
             |## That resolves early to an assignment to x with a desugar call with the builtin variants.
-            |      x = (nym`do_bind__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(x)(2);
+            |      x = (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(x, 2);
             |
             |      ```
             |  },
@@ -2358,7 +2349,7 @@ class SyntaxMacroStageTest {
             |    body: ```
             |## `let` macro applied
             |      var x = 1;
-            |      x = (nym`do_bind__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(x)(2);
+            |      x = (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(x, 2);
             |
             |      ```
             |  },
@@ -2366,7 +2357,7 @@ class SyntaxMacroStageTest {
             |    body: ```
             |## Names resolved
             |      var x__0 = 1;
-            |      x__0 = (nym`do_bind__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(x__0)(2);
+            |      x__0 = (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(x__0, 2);
             |
             |      ```
             |  }
