@@ -58,6 +58,7 @@ import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.TVoid
 import lang.temper.value.Value
+import lang.temper.value.connectedSymbol
 import lang.temper.be.java.Java as J
 import lang.temper.value.DependencyCategory as DepCat
 
@@ -456,6 +457,16 @@ class JavaTranslator(
             is TmpL.BoilerplateCodeFoldStart -> J.CommentLine(t.pos, t.markerText)
         }
 
+        private fun connectedBody(fn: TmpL.FunctionDeclaration, result: J.ResultType): J.BlockStatement {
+            val pos = fn.pos
+            return J.StaticMethodInvocationExpr(
+                pos,
+                type = J.QualIdentifier(pos, listOf(J.Identifier(pos, moduleInfo.connectedClassName))),
+                method = names.method(fn.name),
+                args = parameters(fn.parameters).parameters.map { it.name.asNameExpr().asArgument() },
+            ).exprOrReturnStatement(shouldReturn = result !is J.VoidType).asBlock()
+        }
+
         private fun overloads(
             adj: BoxedTypeAdjustments?,
             px: TmpL.Parameters,
@@ -476,7 +487,7 @@ class JavaTranslator(
                 val overloadFormals = withAdjustments(parameters(overloadParameters), adj)
                 val callForwardArgs: List<J.Argument> = originalFormals.parameters.mapIndexed { ix, formal ->
                     if (ix in overloadFormals.parameters.indices) {
-                        formal.name.deepCopy().asNameExpr()
+                        formal.name.asNameExpr()
                     } else {
                         J.NullLiteral(formal.pos)
                     }.asArgument()
@@ -487,11 +498,14 @@ class JavaTranslator(
 
         private fun moduleFunction(t: TmpL.FunctionDeclaration) {
             val autodoc = autodocFor(t)
-            val body = stmt(t.body).asBlock(t.pos).preface(
-                translateMetadata(t.pos.leftEdge, t.metadata),
-            )
             val name = names.moduleFunction(t.name).second.toIdentifier(t.name.pos)
             val result = resultType(names, t.returnType, pos = t.returnType.pos)
+            val body = when {
+                t.metadata.any { it.key.symbol == connectedSymbol } -> connectedBody(t, result)
+                else -> stmt(t.body)
+            }.asBlock(t.pos).preface(
+                translateMetadata(t.pos.leftEdge, t.metadata),
+            )
             val mods = J.MethodModifiers(t.pos, modAccess = access(t.name), modStatic = J.ModStatic.Static)
             val typeParams: J.TypeParameters = typeFormals(t.typeParameters)
             val overloads = overloads(null, t.parameters, body) { args ->
