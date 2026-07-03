@@ -128,8 +128,10 @@ class JavaTranslator(
         private val moduleInit: MutableList<J.BlockLevelStatement> = mutableListOf()
         private val moduleTestDecls: MutableList<J.ClassBodyDeclaration> = mutableListOf()
         private val moduleTestInit: MutableList<J.BlockLevelStatement> = mutableListOf()
-        private var libraryName: DashedIdentifier? = null
         private var processingTestCode = false
+
+        /** Might even stay null for snippets. */
+        private var module: TmpL.Module? = null
 
         private fun activeDecls(decls: MutableList<J.ClassBodyDeclaration>) = when {
             processingTestCode -> moduleTestDecls
@@ -154,7 +156,7 @@ class JavaTranslator(
             )
 
         fun module(module: TmpL.Module): List<J.Program> {
-            libraryName = module.libraryName
+            this.module = module
             val result = module.result
             topLevels@ for (tl in module.topLevels) {
                 try {
@@ -501,7 +503,8 @@ class JavaTranslator(
             val name = names.moduleFunction(t.name).second.toIdentifier(t.name.pos)
             val result = resultType(names, t.returnType, pos = t.returnType.pos)
             val body = when {
-                t.metadata.any { it.key.symbol == connectedSymbol } -> connectedBody(t, result)
+                t.metadata.any { it.key.symbol == connectedSymbol } && module?.isStdLib != true ->
+                    connectedBody(t, result)
                 else -> stmt(t.body)
             }.asBlock(t.pos).preface(
                 translateMetadata(t.pos.leftEdge, t.metadata),
@@ -535,7 +538,7 @@ class JavaTranslator(
 
         private fun moduleTest(t: TmpL.Test) {
             val name = names.moduleFunction(t.name).second.toIdentifier(t.name.pos)
-            dependenciesBuilder?.addTest(libraryName, t, name.outName.outputNameText)
+            dependenciesBuilder?.addTest(module?.libraryName, t, name.outName.outputNameText)
 
             fun wrapTest(testParam: TmpL.Formal?): J.BlockStatement {
                 val nominalType = (testParam?.type?.ot as? TmpL.NominalType)
