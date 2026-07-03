@@ -59,10 +59,28 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
         val env = macroEnv.environment
 
         val operator = args.valueTree(0)
-        val operands = (1..args.lastIndex).map { args.valueTree(it).incoming!! }
+        val operandIndices = (1..args.lastIndex)
+        val nOperands = operandIndices.last - operandIndices.first + 1
+
+        val name = (operator as? NameLeaf)?.content
+        // If we get `+=` then we need to do a lot of work as if it's `+` and
+        // then roll in the assignment part later.
+        val (op, isCompoundAssignment) = run {
+            val nameText = (name as? ParsedNameOrResolvedParsedName)?.asParsedName()?.nameText
+            if (nameText != null && nOperands == 2) {
+                val simpleOp = simpleBuiltinKeyFromCompoundOperator(nameText)
+                if (simpleOp != null) {
+                    simpleOp to true
+                } else {
+                    nameText to false
+                }
+            } else {
+                nameText to false
+            }
+        }
 
         val c = lang.temper.common.console // do not commit
-        val isDefined = when (operator) {
+        val isDefined = !isCompoundAssignment && when (operator) {
             is ValueLeaf -> true
             is NameLeaf -> {
                 val name = operator.content
@@ -71,7 +89,9 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
             }
             else -> false
         }
+
         c.log("$interpMode ${macroEnv.call?.toPseudoCode()}, isDefined=$isDefined")
+        val operands = operandIndices.map { args.valueTree(it).incoming!! }
         if (isDefined) {
             // If the name is defined, use it.
             // (desugarOp nym`+` x y) -> (nym`+` x y)
@@ -90,23 +110,6 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
             }
         }
         // It's not defined, so we need to rewrite it.
-
-        val name = (operator as? NameLeaf)?.content
-        // If we get `+=` then we need to do a lot of work as if it's `+` and
-        // then roll in the assignment part later.
-        val (op, isCompoundAssignment) = run {
-            val nameText = (name as? ParsedNameOrResolvedParsedName)?.asParsedName()?.nameText
-            if (nameText != null && operands.size == 2) {
-                val simpleOp = simpleBuiltinKeyFromCompoundOperator(nameText)
-                if (simpleOp != null) {
-                    simpleOp to true
-                } else {
-                    nameText to false
-                }
-            } else {
-                nameText to false
-            }
-        }
 
         if (op != null) {
             val operatorSpecifier = when (operands.size) {

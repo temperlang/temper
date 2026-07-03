@@ -66,11 +66,11 @@ class GenerateCodeStageTest {
             "generateCode": {
                 "body":
                 ```
-                var t#1, i__0;
+                var t#0, i__0;
                 i__0 = 0;
                 while (i__0 < 3) {
-                  t#1 = i__0 + 1;
-                  i__0 = t#1
+                  t#0 = i__0 + 1;
+                  i__0 = t#0
                 }
 
                 ```

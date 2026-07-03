@@ -2365,4 +2365,137 @@ class SyntaxMacroStageTest {
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
     )
+
+    @Test
+    fun compoundOpsWithGetterAndSetter() = assertModuleAtStage(
+        stage = Stage.SyntaxMacro,
+        pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        input = """
+            |let { C } = import("./c");
+            |do {
+            |  let c = new C();
+            |  c.x += 1;
+            |  c.x *= 2;
+            |  console.log(c.x);
+            |}
+            |
+            |$TEST_INPUT_MODULE_BREAK ./c/c.temper
+            |export class C {
+            |  public get x(): Int32 { 1 }
+            |  public set x(newX: Int32) { /* ignoring it */ }
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  disAmbiguate: {
+            |    body: ```
+            |        @stay @imported(\(`test//c/`.C)) let C = type (C);
+            |        do(fn {
+            |            let c = new C();
+            |            do {
+            |              let t#0;
+            |              t#0 = c;
+            |              leftHandOf(t#0.x, (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(t#0.x, 1))
+            |            };
+            |            do {
+            |              let t#1;
+            |              t#1 = c;
+            |              leftHandOf(t#1.x, t#1.x * 2)
+            |            };
+            |            console.log(c.x);
+            |        })
+            |
+            |        ```,
+            |  },
+            |  syntaxMacro: {
+            |    body: ```
+            |        @stay @imported(\(`test//c/`.C)) let C__0 = type (C), console#0 = doPure(fn: Console {
+            |            getConsole()
+            |        });
+            |        do (fn {
+            |            let c__0 = new C__0();
+            |            do {
+            |              let t#0;
+            |              t#0 = c__0;
+            |              do {
+            |                let t#2;
+            |                do_set_x(t#0, t#2 = (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(do_get_x(t#0), 1));
+            |                t#2
+            |              }
+            |            };
+            |            do {
+            |              let t#1;
+            |              t#1 = c__0;
+            |              do {
+            |                let t#3;
+            |                do_set_x(t#1, t#3 = do_get_x(t#1) * 2);
+            |                t#3
+            |              }
+            |            };
+            |            do_call_log(console#0, do_get_x(c__0));
+            |        })
+            |
+            |        ```,
+            |  },
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun compoundOpsWithIndexedGetAndSet() = assertModuleAtStage(
+        stage = Stage.SyntaxMacro,
+        pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        input = """
+            |export let myList = do {
+            |  let b: ListBuilder<Int32> = [1, 2].toListBuilder();
+            |  b[0] += 1;
+            |  b[1] *= 2;
+            |  b.toList()
+            |};
+        """.trimMargin(),
+        want = """
+            |{
+            |  disAmbiguate: {
+            |    body: ```
+            |        let `test//`.myList = do(fn {
+            |            let b: ListBuilder<Int32> = list(1, 2).toListBuilder();
+            |            do {
+            |              let t#0;
+            |              t#0 = b;
+            |              t#0.set(0, (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(t#0.get(0), 1))
+            |            };
+            |            do {
+            |              let t#1;
+            |              t#1 = b;
+            |              t#1.set(1, t#1.get(1) * 2)
+            |            };
+            |            b.toList()
+            |        });
+            |
+            |        ```,
+            |  },
+            |  syntaxMacro: {
+            |    body: ```
+            |        let `test//`.myList = do (fn {
+            |            let b__0: ListBuilder<Int32> = do_call_toListBuilder(list(1, 2));
+            |            do {
+            |              let t#0;
+            |              t#0 = b__0;
+            |              do_call_set(t#0, 0, (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(do_call_get(t#0, 0), 1))
+            |            };
+            |            do {
+            |              let t#1;
+            |              t#1 = b__0;
+            |              do_call_set(t#1, 1, do_call_get(t#1, 1) * 2)
+            |            };
+            |            do_call_toList(b__0)
+            |        });
+            |
+            |        ```,
+            |  },
+            |}
+        """.trimMargin(),
+    )
 }
