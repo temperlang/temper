@@ -7,6 +7,6 @@ class WorkConnected {
     }
 
     static int prod(Hidden hidden, int j) {
-        return hidden.i * j;
+        return new WorkConnectedSupport().prod(hidden.i, j);
     }
 }
