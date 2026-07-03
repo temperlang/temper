@@ -7,6 +7,10 @@ import lang.temper.name.BuiltinName
 import lang.temper.type.ANY_VALUE_TYPE_NAME_TEXT
 import lang.temper.type.MethodShape
 import lang.temper.type.WellKnownTypes
+import lang.temper.type.promoteSimpleValue
+import lang.temper.value.TClass
+import lang.temper.value.TInt
+import lang.temper.value.Value
 import lang.temper.value.isImplicits
 import lang.temper.value.typeDefinitionAtLeafOrNull
 import kotlin.test.Test
@@ -52,7 +56,7 @@ class ImplicitsModuleTest {
     }
 
     // Once ImplicitsModule is loaded, we can check that some things are true about
-    // well known types.
+    // well-known types.
     @Test
     fun overrideRecognizedBetweenSafeGeneratorAndGenerator() {
         ignore(ImplicitsModule.module)
@@ -75,6 +79,20 @@ class ImplicitsModuleTest {
         assertEquals(
             """(this : Generator<$yieldTypeName>) -> Result<GeneratorResult<$yieldTypeName>, Bubble>""",
             "$contextualizedType",
+        )
+    }
+
+    @Test
+    fun testPromoteSimpleValue() {
+        ImplicitsModule.module
+        // After define the backing classes, we can promote simple values to class instances.
+        // This allows implementing methods in Implicits.temper.
+        val simpleValue = Value(1234, TInt)
+        val promotedValue = promoteSimpleValue(simpleValue)
+        assertEquals(TClass(WellKnownTypes.intTypeDefinition), promotedValue?.typeTag)
+        assertEquals(
+            "{content: 1234}: Int32__0",
+            promotedValue?.toString()?.replace(Regex("__[0-9]+$"), "__0")
         )
     }
 }

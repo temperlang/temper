@@ -4,7 +4,6 @@ package lang.temper.frontend
 
 import lang.temper.builtin.PureCallableValue
 import lang.temper.builtin.Types
-import lang.temper.common.Freq3
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.common.testCodeLocation
 import lang.temper.env.InterpMode
@@ -1972,7 +1971,6 @@ class TypeStageTest {
         },
     )
 
-
     @Test
     fun unaryPlusWashesOut() = assertModuleAtStage(
         stage = Stage.FunctionMacro,
@@ -2341,7 +2339,7 @@ class TypeStageTest {
     )
 
     /**
-     * We currently have some direct overloading support, so this helps fore reviewing that behahior.
+     * We currently have some direct overloading support, so this helps fore reviewing that behavior.
      * TODO Drop support for direct overloading.
      */
     @Test

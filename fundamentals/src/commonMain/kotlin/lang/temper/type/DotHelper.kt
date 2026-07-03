@@ -168,10 +168,7 @@ class DotHelper(
         }
         val subjectIndex = memberAccessor.firstArgumentIndex
         val originalSubject = args.evaluate(subjectIndex, interpMode)
-        var subject: Value<*> = when (originalSubject) {
-            NotYet, is Fail -> return originalSubject
-            is Value<*> -> originalSubject
-        }
+        var subject = originalSubject as? Value<*> ?: return originalSubject
         c.log(". subject=$subject")
         // Promote the subject from a builtin type (like TInt) to the backing class
         if (subject.typeTag !is TClass) {
@@ -251,7 +248,7 @@ class DotHelper(
                             }
                             if (macroEnv.call != null && result is Value<*> && interpMode == InterpMode.Partial && fn.isPure) {
                                 macroEnv.replaceMacroCallWith {
-                                    V(result)
+                                    V(macroEnv.pos, result)
                                 }
                             }
                             return result

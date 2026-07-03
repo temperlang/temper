@@ -2,6 +2,7 @@
 
 package lang.temper.frontend
 
+import lang.temper.common.Freq3
 import lang.temper.common.testCodeLocation
 import lang.temper.interp.MetadataDecorator
 import lang.temper.lexer.Genre
@@ -1153,6 +1154,34 @@ class DisAmbiguateStageTest {
             |      Point
             |
             |      ```
+            |  }
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun incrementInDoBlock() = assertModuleAtStage(
+        stage = Stage.DisAmbiguate,
+        pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        input = """
+            |do {
+            |  var x = 0;
+            |  x += 1;
+            |  console.log(x);
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  disAmbiguate: {
+            |    body: ```
+            |        do(fn {
+            |            var x = 0;
+            |            x = (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(x, 1);
+            |            console.log(x);
+            |        })
+            |
+            |        ```,
             |  }
             |}
         """.trimMargin(),

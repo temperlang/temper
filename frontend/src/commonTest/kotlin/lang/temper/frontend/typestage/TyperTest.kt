@@ -1244,7 +1244,7 @@ class TyperTest {
         wantErrors = listOf(
             // TODO: this message looks like it's referring to a unary operator, but the `+` is actually represented
             // as an application of a bound left & operator to the right.
-            "2+8-9: Actual arguments do not match signature: (Int32) -> Int32 expected [Int32], but got [String]!",
+            "2+4-9: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [String, String]!",
             "2+4-9: Invalid variant: Invalid mentions Invalid",
         ),
     )
@@ -1619,7 +1619,7 @@ class TyperTest {
     @Test
     fun undeclared() = assertTypes(
         """
-        |///     ┏━━━┓           : Top
+        |///     ┏━━━┓           : Invalid
         |    let banjo = avocado as Thing;
         |///             ┗━━━━━┛ : Invalid
         |    let cobra: Commander;
@@ -1631,7 +1631,10 @@ class TyperTest {
             "2+27-32: No declaration for Thing!",
             "2+24-26: Expected function type, but got Function!",
             "4+15-24: No declaration for Commander!",
+            "2+8-13: Type Invalid mentions Invalid",
+            "2+16: Type Invalid mentions Invalid",
             "2+16-23: Type Invalid mentions Invalid",
+            "2+16-32: Type Invalid mentions Invalid",
             "2+27-32: Type Invalid mentions Invalid",
             "4+15-24: Type Invalid mentions Invalid",
         ),
@@ -2075,7 +2078,7 @@ class TyperTest {
         wantErrors: List<String> = emptyList(),
         verbose: Boolean = false,
         nameSimplifying: Boolean = true,
-        skipImplicits: Boolean = true.doNotCommit,
+        skipImplicits: Boolean = false,
     ) {
         val filePath = testCodeLocation
         val source = ModuleSource(
