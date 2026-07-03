@@ -25,13 +25,14 @@ connected code needs to have access to.
 
     @connected
     /* unexported */ let prod(hidden: Hidden, j: Int): Int { panic() }
+
     /* unexported */ class Hidden(public i: Int) {}
 
 A simple test will do. And this can't be inlined by Temper, since Temper the
 Temper implementation can only panic.
 
     console.log("sum(1, 2): ${sum(1, 2)}")
-    console.log("prod(1, 2): ${prod(new Hidden(1), 2)}")
+    console.log("prod(new Hidden(1), 2): ${prod(new Hidden(1), 2)}")
 
 ```log
 sum(1, 2): 3
