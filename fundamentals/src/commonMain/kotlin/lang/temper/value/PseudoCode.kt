@@ -1274,7 +1274,7 @@ internal class PseudoCall(
     val typeArgsInferred: Boolean = false,
 ) : PseudoTree() {
     override fun reduce(): OpTree {
-        // See if we can represent as an infix or binary operator.  If not, use a normal parenthetical
+        // See if we can represent as an unary/binary operator.  If not, use a normal parenthetical
         // call operator.
         val possibleOperatorName = when (callee) {
             is PseudoNameLeaf -> callee.name
@@ -1320,9 +1320,6 @@ internal class PseudoCall(
                             // it's used here.
                             // "<>", angle bracket is handled below
                             NameConstants.While, NameConstants.Angle -> emptyList()
-                            // These show up here as pseudo method.
-                            // The operators are special only in declaration.
-                            Operator.Is.text, Operator.As.text -> emptyList()
                             else -> {
                                 Operator.matching(
                                     builtinKey,
@@ -1336,12 +1333,17 @@ internal class PseudoCall(
                                 Operator.Angle -> Operator.Lt // Angle maps to "<>" not "<"
                                 else -> operator0
                             }
+                            val assoc = when {
+                                operator.isBracket -> TokenAssociation.Bracket
+                                else -> TokenAssociation.Infix
+                            }
+                            val outputToken = OutputToken(nameOutputToken.text, nameOutputToken.type, assoc)
                             return OpInner(
                                 pos,
                                 operator,
                                 listOf(
                                     reduceArg(0),
-                                    Tok(args[0].pos.rightEdge, nameOutputToken),
+                                    Tok(args[0].pos.rightEdge, outputToken),
                                     reduceArg(1),
                                 ),
                             )

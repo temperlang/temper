@@ -21,7 +21,6 @@ import lang.temper.value.PartialResult
 import lang.temper.value.TreeTypeStructureExpectation
 import lang.temper.value.Value
 import lang.temper.value.and
-import lang.temper.value.toPseudoCode
 
 internal class DesugarCompoundAssignmentMacro(
     /** `+` if we're desugaring `+=`. */

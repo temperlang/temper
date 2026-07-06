@@ -1,7 +1,6 @@
 package lang.temper.value
 
 import lang.temper.common.LeftOrRight
-import lang.temper.common.groupAlwaysRunning
 import lang.temper.env.InterpMode
 import lang.temper.format.OutToks
 import lang.temper.format.OutputToken
@@ -20,8 +19,6 @@ class CoverFunction(
     val covered: List<CallableValue>,
     val otherwise: CallableValue? = null,
 ) : CallableValue, TokenSerializable {
-    var debugDoNotCommit: Boolean = false
-
     override val isPure: Boolean = covered.all { it.isPure } &&
         (otherwise !is CallableValue || otherwise.isPure)
 
@@ -34,9 +31,7 @@ class CoverFunction(
         cb: InterpreterCallback,
         interpMode: InterpMode,
     ): Pair<Result, Arguments?>? {
-        val co = if (debugDoNotCommit) lang.temper.common.console else null
         val beforeTypeCheck = cb.failLog.markBeforeRecoverableFailure()
-co.groupAlwaysRunning("uncover") {
         val message = DynamicMessage(args, interpMode)
         var toRun: MacroValue? = otherwise
         var argumentsToUse: Arguments? = null
@@ -55,7 +50,6 @@ co.groupAlwaysRunning("uncover") {
             }
 
             val cSigs = c.sigs
-        co?.log("sigs for $c = $cSigs")
             if (cSigs == null) { // Applicable to all argument lists.
                 toRun = c
                 break
@@ -63,7 +57,6 @@ co.groupAlwaysRunning("uncover") {
             for (cSig in cSigs) {
                 val resolutions = Resolutions(cb)
                 val arguments = unify(message, cSig, resolutions)
-                co?.log("unified with $cSig, resolutios=$resolutions, arguments=$arguments")
                 // Four cases
                 // | arguments | contradiction | do                       |
                 // | --------- | ------------- | ------------------------ |
@@ -93,7 +86,6 @@ co.groupAlwaysRunning("uncover") {
                 Value(toRun) to argumentsToUse
             }
         }
-    }
     }
 
     override fun addStays(s: StaySink) {

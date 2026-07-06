@@ -432,9 +432,9 @@ class DisAmbiguateStageTest {
                 var decl = 0;
                 let cDecl;
                 property0;
-                nym`@public`((property1): (T));
+                nym`@public`((property1) : (T));
                 property2 = initial;
-                ((property3): (T)) = initial;
+                ((property3) : (T)) = initial;
                 method1(fn {
                     123
                 });

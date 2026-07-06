@@ -1,6 +1,5 @@
 package lang.temper.type
 
-import lang.temper.common.groupAlwaysRunning
 import lang.temper.name.ModularName
 import lang.temper.name.ResolvedParsedName
 import lang.temper.value.InstancePropertyRecord

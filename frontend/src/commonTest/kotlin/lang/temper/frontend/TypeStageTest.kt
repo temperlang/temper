@@ -202,24 +202,26 @@ class TypeStageTest {
     )
 
     @Test
-    fun builtinInlined() = assertModuleAtStage(
+    fun bareReferenceToOperator() = assertModuleAtStage(
         input = " nym`+` ",
         moduleResultNeeded = true,
-        stage = Stage.Run,
+        stage = Stage.GenerateCode,
         want = """
         {
-          run: "fn (nym`+` × 6): Function",
           syntaxMacro: {
             body: [ "Block", [ [ "RightName", "+" ] ] ],
           },
-          type: {
+          generateCode: {
             body:
               ```
               let return__0;
-              return__0 = (fn (nym`+` × 6))
+              return__0 = nym`+`
 
               ```
-          }
+          },
+          errors: [
+            "No declaration for nym`+`!",
+          ]
         }
         """,
     )
@@ -275,8 +277,8 @@ class TypeStageTest {
             |        void;
             |        fn__0: do {
             |          var fail#0;
-            |## Above, `as Listed`, here `as(..., Listed<String>)`
-            |          return__0 = hs(fail#0, as(list(), Listed<String>));
+            |## Above, `as Listed`, here `... as Listed<String>`
+            |          return__0 = hs(fail#0, list() as Listed<String>);
             |          if (fail#0) {
             |            bubble()
             |          };
@@ -287,6 +289,7 @@ class TypeStageTest {
             |  }
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
     )
 
     @Test
@@ -423,6 +426,7 @@ class TypeStageTest {
             |## Start inlined forEach
             |    let this__0: List<String>;
             |    this__0 = list("foo");
+            |    var t#0;
             |    let n__0;
             |    n__0 = do_get_length(this__0);
             |    var i__0;
@@ -430,7 +434,8 @@ class TypeStageTest {
             |    while (i__0 < n__0) {
             |      let el__0: String;
             |      el__0 = do_call_get(this__0, i__0);
-            |      i__0 = i__0 + 1;
+            |      t#0 = i__0 + 1;
+            |      i__0 = t#0;
             |## Inlined block lambda
             |      let x__0;
             |      x__0 = el__0;
@@ -467,9 +472,9 @@ class TypeStageTest {
                 |        return__0 = getConsole();
                 |    });
                 |    let this__0: List<String>;
-                |    this__0 = list ⋖ String ⋗("a", "b", "c", "d");${
-                "" // Here we start the inlined callee body.
-            }
+                |    this__0 = list ⋖ String ⋗("a", "b", "c", "d");
+                |## Here we start the inlined callee body.
+                |    var t#0 ⦂ Int32;
                 |    let n__0 ⦂ Int32;
                 |    n__0 = do_get_length(this__0);
                 |    var i__0 ⦂ Int32;
@@ -477,25 +482,22 @@ class TypeStageTest {
                 |    while (i__0 < n__0) {
                 |      let el__0: String;
                 |      el__0 = do_call_get(this__0, i__0);
-                |      i__0 = i__0 + 1;${
-                "" // Here we start the inlined block lambda parameters.
-            }
+                |      t#0 = i__0 + 1;
+                |      i__0 = t#0;
+                |## Here we start the inlined block lambda parameters.
                 |      let x__0 ⦂ String;
-                |      x__0 = el__0;${
-                "" // Here we start the inlined block lambda body.
-                // Note the absence of a void-like return declaration.
-            }
+                |      x__0 = el__0;
+                |## Here we start the inlined block lambda body.
+                |## Note the absence of a void-like return declaration.
                 |      if (x__0 == "c") {
                 |        break;
                 |      };
-                |      do_call_log(console#0, x__0);${
-                "" // Did not inline `return__0 = void`.  Not ok for local vars.
-                // Here's the end of the inlined block lambda.
-            }
-                |    };${
-                "" // Here's the end of the inlined callee body.  No `return__0 = void` here either.
-            }
-
+                |      do_call_log(console#0, x__0);
+                |## Did not inline `return__0 = void`.  Not ok for local vars.
+                |## Here's the end of the inlined block lambda.
+                |    };
+                |## Here's the end of the inlined callee body.  No `return__0 = void` here either.
+                |
                 |    ```
                 |  },
                 |  run: "void: Void",
@@ -505,7 +507,7 @@ class TypeStageTest {
                 |
                 |    ```
                 |}
-            """.trimMargin(),
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
         )
     }
 
@@ -713,16 +715,17 @@ class TypeStageTest {
                 "body":
                 ```
                 let return__0;
-                var t#0, fail#0, x__0: Int32;
+                var t#0, t#1, fail#0, x__0: Int32;
                 x__0 = 10;
                 x__0 = x__0 - 9;
-                x__0 = x__0 + 4;
+                t#0 = x__0 + 4;
+                x__0 = t#0;
                 x__0 = x__0 * 3;
-                t#0 = hs(fail#0, x__0 / 5);
+                t#1 = hs(fail#0, x__0 / 5);
                 if (fail#0) {
                   bubble()
                 };
-                x__0 = t#0;
+                x__0 = t#1;
                 return__0 = x__0;
 
                 ```
@@ -1617,7 +1620,7 @@ class TypeStageTest {
         |    "type": {
         |        "body":
         |        ```
-        |        var t#0;
+        |        var t#0, t#1;
         |        @constructorProperty @visibility(\private) @stay @fromType(Hi__0) let a__0: Int32;
         |        @constructorProperty @visibility(\private) @stay @fromType(Hi__0) let b__0: Int32;
         |        @constructorProperty @visibility(\private) @stay @fromType(Hi__0) let c__0: Int32;
@@ -1650,9 +1653,10 @@ class TypeStageTest {
         |        Hi__0 = type (Hi__0);
         |        var n__0;
         |        n__0 = 1;
-        |        n__0 = n__0 + 1;
-        |        t#0 = n__0;
-        |        new Hi__0(n__0 + 1, null, t#0);
+        |        t#0 = n__0 + 1;
+        |        n__0 = t#0;
+        |        t#1 = n__0;
+        |        new Hi__0(n__0 + 1, null, t#1);
         |
         |        ```
         |    }
@@ -2192,6 +2196,7 @@ class TypeStageTest {
             |          return__4 = getp(radix__0, this__4)
             |      });
             |      `test//`.crazySum = (@stay fn crazySum(intMaker__0 /* aka intMaker */: IntMaker, int__2 /* aka int */: Int64, string__1 /* aka string */: String) /* return__5 */: (Int32 | Bubble) {
+            |          var t#0 ⦂ Int32;
             |          void;
             |          fn__3: do {
             |            var fail#2 ⦂ Boolean, fail#3 ⦂ Boolean;
@@ -2205,7 +2210,8 @@ class TypeStageTest {
             |            if (fail#3) {
             |              bubble ⋖ Int32 ⋗()
             |            };
-            |            return__5 = do_call_int32ToInt(intMaker__0, intInt__0 + stringInt__0);
+            |            t#0 = intInt__0 + stringInt__0;
+            |            return__5 = do_call_int32ToInt(intMaker__0, t#0);
             |          }
             |      })
             |

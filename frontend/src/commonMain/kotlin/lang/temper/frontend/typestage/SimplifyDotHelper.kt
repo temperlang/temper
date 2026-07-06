@@ -1,12 +1,15 @@
 package lang.temper.frontend.typestage
 
 import lang.temper.common.Either
+import lang.temper.common.subListToEnd
 import lang.temper.frontend.maybeAdjustDotHelper
 import lang.temper.type.AndType
 import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
 import lang.temper.type.ExtensionResolution
+import lang.temper.type.FunctionResolution
 import lang.temper.type.FunctionType
+import lang.temper.type.InstanceExtensionResolution
 import lang.temper.type.MkType
 import lang.temper.type.StaticExtensionResolution
 import lang.temper.type.StaticType
@@ -18,7 +21,6 @@ import lang.temper.type.extractAtoms
 import lang.temper.value.CallTree
 import lang.temper.value.Tree
 import lang.temper.value.Value
-import lang.temper.value.toPseudoCode
 
 private typealias VariantResolution = Either<VisibleMemberShape, ExtensionResolution>
 private typealias Variant = Pair<StaticType, VariantResolution>
@@ -33,7 +35,6 @@ internal fun simplifyDotHelper(
     variants: List<Variant>,
     retypeTree: (Tree) -> Unit,
 ) {
-    val c = lang.temper.common.console // do not commit
     val calleeEdge = call.edge(0)
     val callee = calleeEdge.target
     val typeInferences = call.typeInferences
@@ -51,20 +52,6 @@ internal fun simplifyDotHelper(
             else -> null
         }
     }
-    c.group("Simplifying dot helper") {
-        c.group("call") {
-            call.toPseudoCode(c.textOutput)
-        }
-        c.group("variants") {
-            variants.forEach {
-                c.log("- $it")
-            }
-        }
-        c.log("typeInferences=$typeInferences")
-        c.log("variantMatch=${variantMatch}")
-        c.log("variantFunctionType=$variantFunctionType")
-        c.log("variantMatchRefined=$variantMatchRefined")
-    }
 
     // Give preference to members over extensions
     var lastNonExtensionResolution: VariantResolution? = null
@@ -79,7 +66,6 @@ internal fun simplifyDotHelper(
     }
 
     val chosenVariantResolution = lastNonExtensionResolution ?: lastResolution
-    c.log(". chosenVariantResolution=$chosenVariantResolution")
     when (chosenVariantResolution) {
         null,
         is Either.Left,
@@ -123,8 +109,22 @@ internal fun simplifyDotHelper(
 
             val extensionResolution = chosenVariantResolution.item
             val doc = calleeEdge.target.document
+            val extensionCalleeLeaf = when (extensionResolution) {
+                is FunctionResolution -> {
+                    doExtraCoverFunctionVariantRefinement(
+                        extensionResolution.fn,
+                        call.children.subListToEnd(dotHelper.memberAccessor.firstArgumentIndex + 1),
+                    )?.let { refinement ->
+                        FunctionResolution(refinement).toLeaf(doc, callee.pos)
+                    }
+                }
+                is InstanceExtensionResolution,
+                is StaticExtensionResolution,
+                -> null
+            } ?: extensionResolution.toLeaf(doc, callee.pos)
+
             calleeEdge.replace {
-                Replant(extensionResolution.toLeaf(doc, callee.pos))
+                Replant(extensionCalleeLeaf)
             }
 
             if (extensionResolution is StaticExtensionResolution) {

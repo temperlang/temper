@@ -92,7 +92,7 @@ class ImplicitsModuleTest {
         assertEquals(TClass(WellKnownTypes.intTypeDefinition), promotedValue?.typeTag)
         assertEquals(
             "{content: 1234}: Int32__0",
-            promotedValue?.toString()?.replace(Regex("__[0-9]+$"), "__0")
+            promotedValue?.toString()?.replace(Regex("__[0-9]+$"), "__0"),
         )
     }
 }

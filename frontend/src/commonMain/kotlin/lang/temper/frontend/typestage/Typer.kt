@@ -25,6 +25,7 @@ import lang.temper.common.logIf
 import lang.temper.common.putMultiList
 import lang.temper.common.putMultiSet
 import lang.temper.common.removeMatching
+import lang.temper.common.soleElementOrNull
 import lang.temper.common.subListToEnd
 import lang.temper.env.Environment
 import lang.temper.format.logTokens
@@ -824,16 +825,11 @@ internal class Typer(
             tree.childOrNull(0)
         }
 
-        val c = if ("foo" in "${effectiveCallee?.toPseudoCode()}") console else null // do not commit
-        c?.log("typeRegularCall(${tree.toPseudoCode()})")
         val calleeFn = effectiveCallee?.functionContained
         val coverFn = calleeFn as? CoverFunction
-        val dotHelper = calleeFn as? DotHelper
         val calleeFnSigs = calleeFn?.sigs
 
         var inputTrees = tree.children.subListToEnd(tree.firstArgumentIndex)
-
-        c?.log(". dotHelper=$dotHelper\n. typedVariants=$typedVariants")
 
         // Does the context in which the call happens place bounds on the return type?
         // For example, if t is the right hand of the assignment, then we might be able to
@@ -1032,12 +1028,6 @@ internal class Typer(
                 explodeCalleeType(effectiveCalleeType, CalleePriority.Default, ::specialize)
             }
         }.toList()
-
-        c?.group(". calleeVariants") {
-            calleeVariants.forEach {
-                c.log("  - $it")
-            }
-        }
 
         calleeVariants.firstOrNull()?.let { callee ->
             val reordered =
@@ -1508,7 +1498,7 @@ internal class Typer(
 
             // Find the function type variants: the Fs above.
             if (calleeVariants.isEmpty()) {
-                // Don't know how to inter-twine un-typed callees
+                // Don't know how to inter-twine untyped callees
                 return@checkNeedToLateTypeCall LateType2CheckResult.Immediate
             }
 
@@ -2212,7 +2202,7 @@ internal class Typer(
             val fn = callee.functionContained
             if (fn is CoverFunction) {
                 val looseRefinedCalleeType = looseType(refinedCalleeType)
-                val eligibleVariants = buildList {
+                val eligibleVariants = buildList<MacroValue> {
                     for (candidateFunction in fn.covered) {
                         val candidateType = typeForValue(Value(candidateFunction))
                             ?: continue
@@ -2224,7 +2214,17 @@ internal class Typer(
                     if (isEmpty() && fn.otherwise != null) {
                         add(fn.otherwise!!)
                     }
-                    doExtraCoverFunctionVariantRefinement(fn, call, looseRefinedCalleeType, this)
+
+                    soleElementOrNull?.let { soleVariant ->
+                        val replacement = doExtraCoverFunctionVariantRefinement(
+                            soleVariant,
+                            call.children.subListToEnd(call.firstArgumentIndex),
+                        )
+                        if (replacement != null) {
+                            clear()
+                            add(replacement)
+                        }
+                    }
                 }
                 if (DEBUG) {
                     console.log("Eligible variants are in $looseRefinedCalleeType")

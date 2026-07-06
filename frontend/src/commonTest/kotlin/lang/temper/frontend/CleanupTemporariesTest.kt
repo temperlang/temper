@@ -804,23 +804,23 @@ class CleanupTemporariesTest {
                 |    var x__0;
                 |    x__0 = 0;
                 |    incr__0 = fn incr /* return__3 */: Int32 {
+                |      var t#2;
                 |      fn__1: do {
-                |        x__0 = x__0 + 1;
+                |        t#2 = x__0 + 1;
+                |        x__0 = t#2;
                 |        return__3 = x__0
                 |      }
                 |    };
-                |    f__0(incr__0(), x__0);${
-                "" // Ok to inline the first call. It does not cross x__0
-            }
-                |    t#0 = incr__0();${
-                "" // This is not inlined across x__0
-            }
+                |    f__0(incr__0(), x__0);
+                |## Ok to inline the first call. It does not cross x__0
+                |    t#0 = incr__0();
+                |## This is not inlined across x__0
                 |    f__0(x__0, t#0);
                 |    return__0 = void
                 |
                 |    ```,
                 |}
-            """.trimMargin(),
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
             r,
         )
     }
@@ -898,8 +898,10 @@ class CleanupTemporariesTest {
                 |    let x__0;
                 |    t#1 = 0;
                 |    `test//`.f = fn f /* return__2 */: Void {
+                |      var t#2;
                 |      fn__0: do {
-                |        t#1 = t#1 + 1;
+                |        t#2 = t#1 + 1;
+                |        t#1 = t#2;
                 |        return__2 = void
                 |      }
                 |    };
@@ -1046,8 +1048,9 @@ class CleanupTemporariesTest {
                 |  pseudoCodeBefore: ```
                 |    @fn let f__0;
                 |    f__0 = (@stay fn f(@optional(true) a__0 /* aka a */: Int32?, @optional(true) b__0 /* aka b */: Int32?) /* return__0 */: Int32 {
-                |        var t#0, t#1;
+                |        var t#0, t#1, t#2;
                 |        fn__0: do {
+                |          var fail#0;
                 |          let a__1 /* aka a */: Int32;
                 |          if (isNull(a__0)) {
                 |            t#0 = 1
@@ -1066,7 +1069,8 @@ class CleanupTemporariesTest {
                 |            t#1 = b#0
                 |          };
                 |          b__1 = t#1;
-                |          return__0 = a__1 + b__1
+                |          t#2 = a__1 + b__1;
+                |          return__0 = t#2
                 |        }
                 |    })
                 |
@@ -1087,7 +1091,7 @@ class CleanupTemporariesTest {
                 |          } else {
                 |            b__1 = notNull(b__0)
                 |          };
-                |          return__0 = a__1 + b__1
+                |          return__0 = a__1 + b__1;
                 |        }
                 |    })
                 |
@@ -1174,23 +1178,26 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeBefore: ```
                 |      let return__0;
-                |      var t#0, t#1, t#2, t0#3, t1#4, t2#5, t3#6;
-                |      t3#6 = randomInt();
-                |      t#0 = t3#6;
-                |      t2#5 = t#0;
-                |      t#1 = t2#5;
-                |      t1#4 = t#1;
-                |      t#2 = t1#4;
-                |      t0#3 = t#2;
-                |      return__0 = t0#3 + t1#4 + t2#5 + t3#6
+                |      var t#0, t#1, t#2, t#3, t#4, t#5, fail#0, fail#1, fail#2, t0#0, t1#0, t2#0, t3#0;
+                |      t3#0 = randomInt();
+                |      t#0 = t3#0;
+                |      t2#0 = t#0;
+                |      t#1 = t2#0;
+                |      t1#0 = t#1;
+                |      t#2 = t1#0;
+                |      t0#0 = t#2;
+                |      t#3 = t0#0 + t1#0;
+                |      t#4 = t#3 + t2#0;
+                |      t#5 = t#4 + t3#0;
+                |      return__0 = t#5
                 |
                 |      ```,
                 |
                 |  pseudoCodeAfter: ```
                 |      let return__0;
-                |      var t0#3;
-                |      t0#3 = randomInt();
-                |      return__0 = t0#3 + t0#3 + t0#3 + t0#3
+                |      var t0#0;
+                |      t0#0 = randomInt();
+                |      return__0 = t0#0 + t0#0 + t0#0 + t0#0;
                 |
                 |      ```,
                 |}
@@ -1958,13 +1965,16 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeAfter: ```
+                |    var t#0, t#1;
                 |    var t_a#0;
                 |    t_a#0 = randomInt(0, 10);
                 |    var result__0;
                 |    orelse#0: {
-                |      result__0 = 1 + t_a#0
+                |      t#0 = 1 + t_a#0;
+                |      result__0 = t#0
                 |    } orelse {
-                |      result__0 = 2 + t_a#0
+                |      t#1 = 2 + t_a#0;
+                |      result__0 = t#1
                 |    };
                 |    result__0
                 |
@@ -2043,8 +2053,10 @@ class CleanupTemporariesTest {
                 |console.log(IntUtil.plusOne(intOrBubble()))
             """.trimMargin(),
         )
-        assertEquals(
+        assertStructure(
             """
+                |{ pseudoCodeAfter:
+                |```
                 |var t#18, t#19;
                 |var fail#16;
                 |t#18 = doPure(@stay fn /* return__23 */: Console {
@@ -2056,7 +2068,7 @@ class CleanupTemporariesTest {
                 |@fn @static @visibility(\public) @stay @fromType(IntUtil__0) let plusOne__5;
                 |plusOne__5 = (@stay fn plusOne(n__6 /* aka n */: Int32) /* return__24 */{
                 |    fn__7: do {
-                |      return__24 = n__6 + 1
+                |      return__24 = n__6 + 1;
                 |    }
                 |});
                 |@fn @visibility(\public) @stay @fromType(IntUtil__0) let constructor__8;
@@ -2083,8 +2095,10 @@ class CleanupTemporariesTest {
                 |};
                 |do_call_log(t#18, getStatic(IntUtil__0, \plusOne)(t#19));
                 |
+                |```
+                |}
             """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
-            r.pseudoCodeAfter,
+            r,
         )
     }
 

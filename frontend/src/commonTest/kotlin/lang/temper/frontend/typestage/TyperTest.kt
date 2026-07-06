@@ -12,7 +12,6 @@ import lang.temper.common.SnapshotKey
 import lang.temper.common.Snapshotter
 import lang.temper.common.assertStringsEqual
 import lang.temper.common.console
-import lang.temper.common.doNotCommit
 import lang.temper.common.putMultiSet
 import lang.temper.common.structure.Structured
 import lang.temper.common.testCodeLocation
@@ -1037,7 +1036,6 @@ class TyperTest {
         |    (i + 1) + (i * i);
         |/// ┗━━━━━━━━━━━━━━━┛ : Int32
         """.trimMargin(),
-        verbose = true, // do not commit
         skipImplicits = true,
     )
 
@@ -1716,7 +1714,6 @@ class TyperTest {
             |    c.foo("hi");
             |/// ┗━━━━━━━━━┛ : String
         """.trimMargin(),
-        skipImplicits = true.doNotCommit,
     )
 
     @Test

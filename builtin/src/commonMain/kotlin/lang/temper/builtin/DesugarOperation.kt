@@ -32,7 +32,6 @@ import lang.temper.value.ValueStability
 import lang.temper.value.and
 import lang.temper.value.freeTarget
 import lang.temper.value.stability
-import lang.temper.value.toPseudoCode
 
 /**
  * Converts operations into a form that can be easily evaluated.
@@ -79,7 +78,6 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
             }
         }
 
-        val c = lang.temper.common.console // do not commit
         val isDefined = !isCompoundAssignment && when (operator) {
             is ValueLeaf -> true
             is NameLeaf -> {
@@ -90,7 +88,6 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
             else -> false
         }
 
-        c.log("$interpMode ${macroEnv.call?.toPseudoCode()}, isDefined=$isDefined")
         val operands = operandIndices.map { args.valueTree(it).incoming!! }
         if (isDefined) {
             // If the name is defined, use it.
@@ -105,9 +102,7 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
                 callee,
                 operands.map { it.target },
                 interpMode,
-            ).also {
-                c.log("${call?.toPseudoCode()} -> $it")
-            }
+            )
         }
         // It's not defined, so we need to rewrite it.
 
@@ -121,16 +116,6 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
             // so that evaluation of them can work even before Implicits.temper has staged
             // to the point where we can dispatch to methods on well-known types'.
             val builtins = builtinOperatorSpecs[operatorSpecifier] ?: listOf()
-            c.group("DesugarOperation ${macroEnv.stage}") {
-                c.log("op=$op, isCompoundAssignment=$isCompoundAssignment")
-                c.log("operatorSpecifier=$operatorSpecifier")
-                c.group("operands") {
-                    operands.forEach { it.target.toPseudoCode(c.textOutput) }
-                }
-                c.group("builtins") {
-                    builtins.forEach { c.log("$it") }
-                }
-            }
             if (call != null && operatorSpecifier != null) {
                 val exts = builtins.map { FunctionResolution(it) }
                 val helper = DotHelper(ExternalCall, OperatorMember(operatorSpecifier), exts)
@@ -146,9 +131,7 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
                                 // a recursive invocation desugar that.
                                 Rn(operator.pos, ParsedName(op))
                             },
-                        ).also {
-                            c.log("desugarCompound -> $it")
-                        }?.let {
+                        )?.let {
                             macroEnv.replaceMacroCallWith(it)
                         }
                     } else {
@@ -254,7 +237,7 @@ fun desugarCompoundOperation(
     if (leftTree is CallTree) {
         val callee = leftTree.childOrNull(0)
         if (isKnownStable(callee)) {
-            // The callee is stable not an arbitrarily large sub-tree / copyable.
+            // The callee is stable, not an arbitrarily large subtree / copyable.
             // And we won't need to capture it in a temporary.
             return {
                 Block(macroEnv.pos) {

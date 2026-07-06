@@ -7,14 +7,12 @@ import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.GetStaticOp
 import lang.temper.builtin.Types
 import lang.temper.common.EnumRange
-import lang.temper.common.Freq3
 import lang.temper.common.KBitSet
 import lang.temper.common.Log
 import lang.temper.common.TriState
 import lang.temper.common.compatRemoveLast
 import lang.temper.common.compatReversed
 import lang.temper.common.console
-import lang.temper.common.doNotCommit
 import lang.temper.common.ignore
 import lang.temper.common.rangesOfSetBits
 import lang.temper.common.subListToEnd
@@ -43,7 +41,6 @@ import lang.temper.stage.Readiness
 import lang.temper.stage.Stage
 import lang.temper.type.AndType
 import lang.temper.type.BubbleType
-import lang.temper.type.DotHelper
 import lang.temper.type.MkType
 import lang.temper.type.NominalType
 import lang.temper.type.StaticType
@@ -101,7 +98,6 @@ import lang.temper.value.Planting
 import lang.temper.value.PostPass
 import lang.temper.value.PreserveFn
 import lang.temper.value.Promises
-import lang.temper.value.PseudoCodeDetail
 import lang.temper.value.ReifiedType
 import lang.temper.value.Resolutions
 import lang.temper.value.Result
@@ -509,7 +505,7 @@ class Interpreter(
         }
         val mutableEnv = evaluation.envStack.first()
 
-        // In partial evaluation mode, we visit all nodes once.
+        // In partial evaluation mode, we visit each node at least once.
         if (im == InterpMode.Partial) {
             // TODO: for complex flows, order should make sense.
             // TODO: if there is a single terminal node in a structured flow,
@@ -953,8 +949,6 @@ class Interpreter(
                     ?: return NotYet
             else -> calleeValue to null
         }
-        val c = if ("call" in "$calleeValue")lang.temper.common.console else null // do not commit
-        c?.log("$stage: dispatchCall f=$f, actuals=$actuals")
 
         if (f !is Value<*>) {
             return Fail
@@ -982,7 +976,6 @@ class Interpreter(
 
         val functionSpecies = fUnpacked.functionSpecies
         val strategy = callStrategies.getValue(Pair(functionSpecies, im))
-        c?.log(". strategy=$strategy")
         if (beSpammy(SPAMMY_DISPATCH)) {
             console.log(
                 "$stage: Using call strategy $strategy for ($f):${
@@ -1089,7 +1082,6 @@ class Interpreter(
                                 val child = kidEdge.target
                                 val mustRemain = mayEffect(child, isCallee = index == 0) || hasStayLeaf(child)
                                 if (mustRemain) {
-                                    c?.log(". mustRemain ${child.toPseudoCode()} / ${child.toLispy(true)}")
                                     // if it might have an effect, preserve it
                                     replacementsAndBreadcrumbs.add(freeTarget(kidEdge) to kidEdge.breadcrumb)
                                 }
@@ -1138,8 +1130,6 @@ class Interpreter(
             CallStrategy.CallInMacroEnvForResult ->
                 withMacroEnvironment(ast, calleeTree, actuals, cb) {
                     fUnpacked(it, im)
-                }.also { r ->
-                    c?.log("$strategy -> $r")
                 }
             CallStrategy.InterpretChildrenPartially -> {
                 if (ast != null) {
@@ -2266,7 +2256,6 @@ class Interpreter(
         private val env = args.environment
         override val document = callee.document
         private var callSiteReplacementMaker: ((Planting).() -> Unit)? = null
-        private var replacementDebugDoNotCommit: Throwable? = null
         private var callSiteAncestorToReplace: TEdge? = null
         override var awaiter: Promises.Awaiter? = null
             private set
@@ -2321,9 +2310,6 @@ class Interpreter(
         override fun close() {
             require(isOpen)
             try {
-                val detailDoNotCommit = PseudoCodeDetail(resugarDotHelpers = Freq3.Never)
-                val callDoNotCommit =
-                    call?.toPseudoCode(detail = detailDoNotCommit) ?: "call to ${callee.toPseudoCode()}"
                 val replacementMaker = callSiteReplacementMaker
                 if (replacementMaker != null) {
                     val edgeToReplace: TEdge? = callSiteAncestorToReplace ?: call?.incoming
@@ -2331,29 +2317,8 @@ class Interpreter(
                         "Cannot determine edge to replace after call to ${callee.toPseudoCode()} in ${call?.toPseudoCode()}"
                     }
                     val replacedEdgeIndex = edgeToReplace.edgeIndex
-                    val before = edgeToReplace.target.toPseudoCode(detail = detailDoNotCommit) // do not commit
-                    val c = console // do not commit
-                    try {
-                        edgeToReplace.source!!.replace(replacedEdgeIndex..replacedEdgeIndex) {
-                            this.replacementMaker()
-                        }
-                    } catch (ex: IllegalArgumentException) { // do not commit
-                        replacementDebugDoNotCommit?.let { err ->
-                            c.group("CAUSE") {
-                                c.error(err)
-                            }
-                        }
-                        throw ex
-                    }
-                    if (false.doNotCommit) {
-                        c.group("Replacement $callDoNotCommit") {
-                            c.group("Before") {
-                                c.log(before)
-                            }
-                            c.group("After") {
-                                edgeToReplace.target.toPseudoCode(c.textOutput, detail = detailDoNotCommit)
-                            }
-                        }
+                    edgeToReplace.source!!.replace(replacedEdgeIndex..replacedEdgeIndex) {
+                        this.replacementMaker()
                     }
                     // Mark the macro call as complete, for this stage, even if it's relocated.
                     val postReplacementMacroCallEdge = call?.incoming
@@ -2445,14 +2410,12 @@ class Interpreter(
             require(call != null)
             callSiteReplacementMaker = makeReplacement
             callSiteAncestorToReplace = null
-            replacementDebugDoNotCommit = Throwable()
         }
 
         override fun replaceMacroCallAncestorWith(edge: TEdge, makeReplacement: Planting.() -> Unit) {
             require(call != null)
             callSiteReplacementMaker = makeReplacement
             callSiteAncestorToReplace = edge
-            replacementDebugDoNotCommit = Throwable()
         }
 
         override fun replaceMacroCallWithErrorNode() = replaceMacroCallWith {
@@ -2775,7 +2738,6 @@ private fun mayEffect(t: Tree, isCallee: Boolean = false): Boolean = when (t) {
         // TODO Distinguish calling a static method vs calling on the value of a static property?
         // Looks like: (Call (Call (V getStatic) (V String) (V \whatever)) ...)
         is GetStaticOp -> !isCallee
-        is DotHelper -> false
         // Pure function calls that produce unstable values that were stabilized in context should
         // evaporate.
         else -> callee != BuiltinFuns.preserveFn && (

@@ -25,7 +25,6 @@ import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
 import lang.temper.type.AndType
 import lang.temper.type.BubbleType
-import lang.temper.type.DotHelper
 import lang.temper.type.FunctionType
 import lang.temper.type.InvalidType
 import lang.temper.type.MkType
@@ -71,8 +70,6 @@ import lang.temper.value.functionContained
 import lang.temper.value.nameContained
 import lang.temper.value.staticTypeContained
 import lang.temper.value.symbolContained
-import lang.temper.value.toLispy
-import lang.temper.value.toPseudoCode
 import lang.temper.value.typeDeclSymbol
 import lang.temper.value.visibilitySymbol
 
@@ -492,37 +489,6 @@ internal class TypeChecker(
                     val restValuesFormal = boundCalleeType.restValuesFormal
 
                     if (actuals.size !in boundCalleeType.arityRange) {
-                        val c = lang.temper.common.console // do not commit
-                        c.group("Mismatch") {
-                            c.group("Tree") {
-                                t.toPseudoCode(c.textOutput)
-                            }
-                            c.group("actuals #${actuals.size}") {
-                                actuals.forEachIndexed { index, actual ->
-                                    c.log("#$index : $actual")
-                                }
-                            }
-                            c.group("why actuals") {
-                                val callee = t.children.getOrNull(0)
-                                c.log("callee=${callee?.toPseudoCode()}")
-                                if (callee is CallTree) { // Extract this from a bind DotHelper
-                                    val calleeFn = callee.child(0).functionContained
-                                    c.log("calleeFn=$calleeFn")
-                                    if (calleeFn is DotHelper) {
-                                        val memberAccessor = calleeFn.memberAccessor
-                                        c.log(
-                                            "memberAccessor=$memberAccessor, fai=${
-                                                memberAccessor.firstArgumentIndex
-                                            }, callee.size=${callee.size}, 2+fai=${
-                                                2 + memberAccessor.firstArgumentIndex
-                                            }",
-                                        )
-                                    }
-                                }
-                            }
-                            c.log("boundCalleeType=$boundCalleeType")
-                            c.log("arityRange=${boundCalleeType.arityRange}")
-                        }
                         logSink.log(
                             level = Log.Error,
                             template = MessageTemplate.ArityMismatch,
@@ -581,17 +547,6 @@ internal class TypeChecker(
                         )
                     }
                     if (failsValidSubtypeCheck(boundCalleeReturnType, computedType)) {
-                        val c = lang.temper.common.console // do not commit
-                        c.group("ValidSubtype Mismatch") {
-                            c.log("boundCalleeReturnType=$boundCalleeReturnType")
-                            c.log("computed=$computedType")
-                            c.group("t") {
-                                t.toPseudoCode(c.textOutput)
-                            }
-                            c.group("Lispy") {
-                                c.log(t.toLispy())
-                            }
-                        }
                         logSink.log(
                             level = Log.Error,
                             template = MessageTemplate.ExpectedSubType,

@@ -24,6 +24,7 @@ import lang.temper.value.Document
 import lang.temper.value.Fail
 import lang.temper.value.LeafTree
 import lang.temper.value.MacroEnvironment
+import lang.temper.value.MacroValue
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
@@ -36,7 +37,7 @@ import lang.temper.value.ValueLeaf
 import lang.temper.value.staticBuiltinName
 import lang.temper.value.typeShapeAtLeafOrNull
 
-private const val DEBUG = true // do not commit
+private const val DEBUG = false
 private inline fun debug(action: () -> Unit) {
     if (DEBUG) {
         action()
@@ -70,7 +71,7 @@ data class StaticExtensionResolution(
 ) : NameExtensionResolution()
 
 data class FunctionResolution(
-    val fn: CallableValue,
+    val fn: MacroValue,
 ) : ExtensionResolution() {
     override fun toLeaf(document: Document, pos: Position) =
         ValueLeaf(document, pos, Value(fn))
@@ -134,8 +135,6 @@ class DotHelper(
     }
 
     override fun invoke(macroEnv: MacroEnvironment, interpMode: InterpMode): PartialResult {
-        val c = lang.temper.common.console // do not commit
-        c.log("DotHelper.invoke $this")
         if ((interpMode == InterpMode.Partial || extensions.isNotEmpty()) &&
             memberAccessor !is CallMemberAccessor
         ) {
@@ -162,14 +161,12 @@ class DotHelper(
             ExternalCall -> arityOneOrMore // (this, arg0, arg1, ...)
             InternalCall -> arityTwoOrMore // (containingTypeShape, this, arg0, arg1)
         }
-        c.log(". args=$args, sizeWanted=$sizeWanted, n=${args.size}")
         if (args.size !in sizeWanted) {
             return macroEnv.fail(MessageTemplate.ArityMismatch, values = listOf(sizeWanted))
         }
         val subjectIndex = memberAccessor.firstArgumentIndex
         val originalSubject = args.evaluate(subjectIndex, interpMode)
         var subject = originalSubject as? Value<*> ?: return originalSubject
-        c.log(". subject=$subject")
         // Promote the subject from a builtin type (like TInt) to the backing class
         if (subject.typeTag !is TClass) {
             subject = promoteSimpleValue(subject) ?: subject
@@ -233,25 +230,26 @@ class DotHelper(
         // If we know any resolution has to be via an extension, use a cover function as an
         // abstraction to solve any overload resolution.
         // This is important for early collapsing of arithmetic operations.
-        if (accessibleMembers.isEmpty() && extensions.isNotEmpty() && extensions.all { it is FunctionResolution }) {
-            val cover = CoverFunction(extensions.map { (it as FunctionResolution).fn })
-            cover.debugDoNotCommit = true
+        if (
+            accessibleMembers.isEmpty() && extensions.isNotEmpty() &&
+            extensions.all { (it as? FunctionResolution)?.fn is CallableValue }
+        ) {
+            val cover = CoverFunction(extensions.map { (it as FunctionResolution).fn as CallableValue })
             cover.uncover(macroEnv.args, macroEnv, interpMode)?.let { (resolution, args) ->
                 if (args != null) {
                     val fn = TFunction.unpackOrNull(resolution as? Value<*>)
-                    c.log("uncovered to $fn")
                     if (fn is CallableValue) {
                         val actuals = args.toPositionalActuals(macroEnv)
                         if (actuals != null) {
-                            val result = fn.invoke(actuals, macroEnv, interpMode).also {
-                                c.log("covered extensions -> $it")
-                            }
-                            if (macroEnv.call != null && result is Value<*> && interpMode == InterpMode.Partial && fn.isPure) {
+                            val result = fn.invoke(actuals, macroEnv, interpMode)
+                            if (macroEnv.call != null && result is Value<*> && interpMode == InterpMode.Partial &&
+                                fn.isPure
+                            ) {
                                 macroEnv.replaceMacroCallWith {
                                     V(macroEnv.pos, result)
                                 }
                             }
-                            return result
+                            return@invoke result
                         }
                     }
                 }
