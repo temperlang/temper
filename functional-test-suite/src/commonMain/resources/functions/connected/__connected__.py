@@ -4,7 +4,7 @@ def sum(i: int, j: int, bonus: int | None = None) -> int:
     return i + j + bonus
 
 
-def prod(hidden: "_Hidden", j: int) -> int:
+def _prod(hidden: "_Hidden", j: int) -> int:
     from ._support import Support
 
     return Support().prod(hidden.i, j)

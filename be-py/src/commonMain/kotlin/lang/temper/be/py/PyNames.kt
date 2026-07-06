@@ -162,7 +162,13 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
     ): OutName {
         val styledName = styleName(safeIdent(prefix), kind, reach)
         val safeName = when (reach) {
-            TmpL.IdReach.Internal -> concatIfVerbose(styledName, "_$uid") // numeric suffix, won't be a keyword
+            TmpL.IdReach.Internal -> when (kind) {
+                TmpL.IdKind.Type ->
+                    "_$styledName" // won't be keyword if not starting with `_`, which has other issues
+                // Type formals still need suffices for uniqueness right now.
+                TmpL.IdKind.TypeFormal, TmpL.IdKind.Value ->
+                    concatIfVerbose(styledName, "_$uid") // numeric suffix, won't be a keyword
+            }
             TmpL.IdReach.External -> avoidReserved(styledName)
         }
         return OutName(safeName, sourceName = name)
@@ -174,7 +180,7 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
         reach: TmpL.IdReach,
     ): String = when (kind) {
         TmpL.IdKind.Value -> IdentStyle.Camel.convertTo(IdentStyle.Snake, name)
-        TmpL.IdKind.Type -> name // Already matches Temper style for types.
+        TmpL.IdKind.Type, TmpL.IdKind.TypeFormal -> name // Already matches Temper style for types.
     }
 
     /** A name that has not been returned by a previous call to this name generator. */

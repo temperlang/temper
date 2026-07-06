@@ -262,7 +262,7 @@ class PyBackendTest {
         want = """
             |from temper_std.json import parse_json as parse_json_3, JsonAdapter, JsonProducer, JsonSyntaxTree, InterchangeContext, JsonObject
             |from temper_core import cast_by_type as cast_by_type0
-            |class CJsonAdapter_8(JsonAdapter['C']):
+            |class _CJsonAdapter(JsonAdapter['C']):
             |    __slots__ = ()
             |    def encode_to_json(this_21, x_16: 'C', p_17: 'JsonProducer', /) -> 'None':
             |        x_16.encode_to_json(p_17)
@@ -284,7 +284,7 @@ class PyBackendTest {
             |        return C()
             |    @staticmethod
             |    def json_adapter() -> 'JsonAdapter[C]':
-            |        return CJsonAdapter_8()
+            |        return _CJsonAdapter()
             |
         """.trimMargin(),
     )

@@ -989,7 +989,7 @@ LocalFunctionDeclaration;
  */
 YieldingOperator = YieldStatement | AwaitExpression;
 
-enum IdKind = Type | Value;
+enum IdKind = Type | TypeFormal | Value;
 enum IdReach = External | Internal;
 
 enum TypeDeclarationKind = Class | Interface | Enum;
