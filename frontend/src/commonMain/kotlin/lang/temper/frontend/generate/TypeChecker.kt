@@ -67,6 +67,7 @@ import lang.temper.value.Tree
 import lang.temper.value.ValueLeaf
 import lang.temper.value.arityRange
 import lang.temper.value.functionContained
+import lang.temper.value.impliedThisSymbol
 import lang.temper.value.nameContained
 import lang.temper.value.staticTypeContained
 import lang.temper.value.symbolContained
@@ -193,6 +194,7 @@ internal class TypeChecker(
                 checkRegularCall(t)
                 checkRttiCheckAllowed(t, fn as RttiCheckFunction)
             }
+            BuiltinFuns.pureVirtualFn -> checkPureVirtualContext(t)
             else -> checkRegularCall(t)
         }
         // And make sure we don't use Void in calls. Assignment is handled specially, so exclude that in checks here.
@@ -205,6 +207,34 @@ internal class TypeChecker(
                 }
             }
         }
+    }
+
+    private fun checkPureVirtualContext(t: CallTree) {
+        // Find enclosing FunTree. Expected to be exactly 2 up, but loop is flexible.
+        val fn = run fn@{
+            var parent = t.incoming?.source
+            while (parent != null) {
+                if (parent is FunTree) {
+                    return@fn parent
+                }
+                parent = parent.incoming?.source
+            }
+            // Not found, so bail.
+            return@checkPureVirtualContext
+        }
+        // Pure virtual is valid in either connected or instance methods.
+        val parts = fn.parts ?: return
+        parts.connected && return
+        parts.formals.firstOrNull()?.let { firstFormal ->
+            firstFormal.parts?.let { impliedThisSymbol in it.metadataSymbolMap }
+        } == true && return
+        // Invalid pure virtual.
+        logSink.log(
+            level = Log.Error,
+            template = MessageTemplate.FunctionBodyMissing,
+            pos = t.pos,
+            values = listOf(),
+        )
     }
 
     private fun checkDecl(t: DeclTree) {

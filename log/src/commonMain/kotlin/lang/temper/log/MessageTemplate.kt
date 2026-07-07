@@ -220,6 +220,10 @@ enum class MessageTemplate(
         "`this` may only appear inside a type definition",
         CompilationPhase.Interpreter,
     ),
+    FunctionBodyMissing(
+        "Function body required except for virtual methods or connected functions",
+        CompilationPhase.CodeGeneration,
+    ),
     CannotExtend(
         "A class may not extend %s. Only named types and And(`&`) types may be extended",
         CompilationPhase.Interpreter,

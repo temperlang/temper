@@ -17,14 +17,14 @@ for example, overloads sending in `null` for optionals should be automated by
 be-java.
 
     @connected
-    export let sum(i: Int, j: Int, bonus: Int = 0): Int { panic() }
+    export let sum(i: Int, j: Int, bonus: Int = 0): Int;
 
 Try both exported above and unexported below to make sure both work. Again,
 managing this varies by backend. This one also uses an unexported type that
 connected code needs to have access to.
 
     @connected
-    /* unexported */ let prod(hidden: Hidden, j: Int): Int { panic() }
+    /* unexported */ let prod(hidden: Hidden, j: Int): Int;
 
     /* unexported */ class Hidden(public i: Int) {}
 

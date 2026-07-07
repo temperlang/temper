@@ -4042,6 +4042,31 @@ class GenerateCodeStageTest {
             |}
         """.trimMargin(),
     )
+
+    @Test
+    fun missingFunctionBody() = assertModuleAtStage(
+        stage = Stage.GenerateCode,
+        input = """
+            |let hi(): Void;
+        """.trimMargin(),
+        want = """
+            |{
+            |  generateCode: {
+            |    body:
+            |      ```
+            |      @fn @reach(\none) let hi__0;
+            |      hi__0 = (@stay fn hi /* return__0 */: Void {
+            |          pureVirtual()
+            |      })
+            |
+            |      ```
+            |  },
+            |  errors: [
+            |    "Function body required except for virtual methods or connected functions!"
+            |  ],
+            |}
+        """.trimMargin(),
+    )
 }
 
 // Provide an extra binding to a function whose call does not inline so does not trigger any
