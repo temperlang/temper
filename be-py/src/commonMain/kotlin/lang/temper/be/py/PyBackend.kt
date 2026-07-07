@@ -38,6 +38,7 @@ import lang.temper.log.FilePathSegment
 import lang.temper.log.Position
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
+import lang.temper.log.last
 import lang.temper.log.resolveFile
 import lang.temper.log.unknownPos
 import lang.temper.name.BackendId
@@ -302,6 +303,17 @@ class PyBackend private constructor(
         linkModules(topModule)
 
         val outputFileSpecifications = mutableListOf<OutputFileSpecification>()
+        rawBackendFiles@ for (file in rawBackendFiles) {
+            // Special __connected__.py file gets inlined.
+            file.key.last().fullName == "__connected__.py" && continue@rawBackendFiles
+            // Others get copied.
+            // TODO Make sure things get into good places.
+            MetadataFileSpecification(
+                path = file.key,
+                mimeType = mimeType,
+                content = file.value,
+            ).also { outputFileSpecifications.add(it) }
+        }
         if (config.makeMetaDataFile || anyTests) {
             val dependencies = buildList {
                 val importDeps = dependencyNames.map { depName ->

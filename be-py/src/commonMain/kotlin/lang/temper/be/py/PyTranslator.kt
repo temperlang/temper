@@ -1083,9 +1083,11 @@ class PyTranslator(
                         // Expected to be a SourceName for connected functions that aren't exported.
                         val name = func.name.name as SourceName
                         val nameText = pyNames.choosePrettyPrivateSourceName(name, TmpL.IdKind.Value)
+                        // And in Python, void as None is always returnable, so just always return here.
+                        // TODO Anything special for generators?
                         Py.Name(func.pos, PyIdentifierName(nameText)).call(
                             args.args.mapNotNull { it.arg?.asName() }
-                        ).stmt().let { listOf(it) }
+                        ).let { listOf(Py.Return(func.pos, it)) }
                     }
                     // TODO We also need to have renamed globals for rare cases of conflict with named args.
                     else -> translateFunctionBody(renames, func)
