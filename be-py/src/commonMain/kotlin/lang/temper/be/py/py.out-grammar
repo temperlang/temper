@@ -54,7 +54,8 @@ Stmt =
     | Pass
     | Break
     | Continue
-    | CommentLine;
+    | CommentLine
+    | Raw;
 
 /**
  * decorator: `'@' dotted_name [ '(' [args] ')' ] NEWLINE`
@@ -539,3 +540,7 @@ BinaryOp.operatorDefinition = `null`;
 UnaryOp(opEnum%`UnaryOpEnum`, expressionOperatorDefinition%`PyOperatorDefinition`);
 UnaryOp.renderTo = `opEnum.renderTo(tokenSink)`;
 UnaryOp.operatorDefinition = `null`;
+
+/** Used for embedding external raw Python source. */
+Raw(source%`String`);
+Raw.renderTo = `tokenSink.value(source)`;

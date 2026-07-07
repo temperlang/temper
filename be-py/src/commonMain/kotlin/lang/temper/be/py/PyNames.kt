@@ -138,9 +138,9 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
         when (name) {
             is Temporary -> chooseSourceName(name, name.nameHint, name.uid, kind, reach)
             is SourceName -> chooseSourceName(name, name.baseName.nameText, name.uid, kind, reach)
-            is BuiltinName -> OutName(styleName(name.builtinKey, kind, reach), sourceName = name)
+            is BuiltinName -> OutName(styleName(name.builtinKey, kind), sourceName = name)
             is ExportedName -> {
-                val styledName = styleName(toSafePrefix(name), kind, reach)
+                val styledName = styleName(toSafePrefix(name), kind)
                 val safeName = avoidReserved(styledName)
                 OutName(safeName, sourceName = name)
             } // always external
@@ -160,7 +160,7 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
         kind: TmpL.IdKind,
         reach: TmpL.IdReach,
     ): OutName {
-        val styledName = styleName(safeIdent(prefix), kind, reach)
+        val styledName = styleName(safeIdent(prefix), kind)
         val safeName = when (reach) {
             TmpL.IdReach.Internal -> when (kind) {
                 TmpL.IdKind.Type ->
@@ -174,10 +174,15 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
         return OutName(safeName, sourceName = name)
     }
 
+    /** Supports simple `_whatever` naming until we can arrange it more generally on names. */
+    fun choosePrettyPrivateSourceName(name: SourceName, kind: TmpL.IdKind): String {
+        val styledName = styleName(safeIdent(name.baseName.nameText), kind)
+        return "_$styledName"
+    }
+
     private fun styleName(
         name: String,
         kind: TmpL.IdKind,
-        reach: TmpL.IdReach,
     ): String = when (kind) {
         TmpL.IdKind.Value -> IdentStyle.Camel.convertTo(IdentStyle.Snake, name)
         TmpL.IdKind.Type, TmpL.IdKind.TypeFormal -> name // Already matches Temper style for types.

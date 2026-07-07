@@ -38,6 +38,7 @@ import lang.temper.log.FilePathSegment
 import lang.temper.log.Position
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
+import lang.temper.log.resolveFile
 import lang.temper.log.unknownPos
 import lang.temper.name.BackendId
 import lang.temper.name.BackendMeta
@@ -392,7 +393,8 @@ class PyBackend private constructor(
 
         val translations = modules.flatMap { tmpLModule ->
             val trans = this@PyBackend.translator(names, finished.genre)
-            val programs = trans.translate(tmpLModule)
+            val connectedPath = tmpLModule.codeLocation.codeLocation.sourceFile.resolveFile("__connected__.py")
+            val programs = trans.translate(tmpLModule, connectedSource = rawBackendFiles[connectedPath])
             for (program in programs) {
                 val mod = top.setProgram(program)
                 mod.saveSupport(trans, program.dependencyCategory)

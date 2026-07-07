@@ -17,6 +17,7 @@ import lang.temper.be.tmpl.aType
 import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.documentation
 import lang.temper.be.tmpl.isCommonlyImplied
+import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.isYieldingStatement
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapGeneric
@@ -33,9 +34,10 @@ import lang.temper.log.Position
 import lang.temper.log.last
 import lang.temper.log.spanningPosition
 import lang.temper.log.unknownPos
-import lang.temper.name.DashedIdentifier
+import lang.temper.name.ExportedName
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
+import lang.temper.name.SourceName
 import lang.temper.name.TemperName
 import lang.temper.type.Abstractness
 import lang.temper.type.MethodKind
@@ -66,6 +68,7 @@ import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.TVoid
 import lang.temper.value.Value
+import lang.temper.value.connectedSymbol
 import lang.temper.value.impliedThisSymbol
 
 class PyTranslator(
@@ -120,15 +123,16 @@ class PyTranslator(
         }
     }
 
-    private var libraryName: DashedIdentifier? = null
+    private var module: TmpL.Module? = null
 
-    fun translate(t: TmpL.Module): List<Py.Program> {
+    fun translate(t: TmpL.Module, connectedSource: String? = null): List<Py.Program> {
+        module = t
         pyNames.module = t.codeLocation.codeLocation
-        libraryName = t.libraryName
         val result = mutableListOf<Py.Stmt>()
         val tests = mutableListOf<Py.Stmt>()
         val ungroupedImports = mutableListOf<Py.ImportFrom>()
         translateImports(t.imports, ungroupedImports)
+        connectedSource?.also { result.add(Py.Raw(t.pos, it)) }
         t.topLevels.forEach {
             at(it) topLevel@{
                 val dependencyCategory = it.dependencyCategory() ?: return@topLevel
@@ -1061,21 +1065,38 @@ class PyTranslator(
     }
 
     private fun translateFunction(func: TmpL.FunctionDeclaration): List<Py.Stmt> = buildList {
+        // For exported connected functions, just get them entirely from separate code.
+        // For nonexported, until we can reliably make the names a bit prettier call from a forward below.
+        val isConnected = func.metadata.any { it.key.symbol == connectedSymbol } && module?.isStdLib != true
+        if (isConnected && func.name.name is ExportedName) {
+            return@buildList
+        }
+        // We aren't just skipping the function entirely.
         translateFunctionDef(func, this) { decs, args, renames ->
             Py.FunctionDef(
                 pos = func.pos,
                 decoratorList = decs,
                 name = ident(func.name),
                 args = args,
-                // TODO(tjp, names): We also need to have renamed globals for rare cases of conflict with named args.
-                body = translateFunctionBody(renames, func),
+                body = when {
+                    isConnected -> {
+                        // Expected to be a SourceName for connected functions that aren't exported.
+                        val name = func.name.name as SourceName
+                        val nameText = pyNames.choosePrettyPrivateSourceName(name, TmpL.IdKind.Value)
+                        Py.Name(func.pos, PyIdentifierName(nameText)).call(
+                            args.args.mapNotNull { it.arg?.asName() }
+                        ).stmt().let { listOf(it) }
+                    }
+                    // TODO We also need to have renamed globals for rare cases of conflict with named args.
+                    else -> translateFunctionBody(renames, func)
+                },
                 returns = translateAnnotation(func.returnType),
             )
         }.also { add(it) }
     }
 
     private fun translateTest(func: TmpL.Test): List<Py.Stmt> {
-        dependenciesBuilder?.addTest(libraryName, func)
+        dependenciesBuilder?.addTest(module?.libraryName, func)
         // Just make a test class per test block/method for now. TODO Combine all per module into single class?
         val result = Py.ClassDef(
             func.pos,
