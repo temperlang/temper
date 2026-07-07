@@ -642,10 +642,12 @@ class TmpLBackendTest {
                     //// work//do-nothing/ => do-nothing.tmpl
                     let nym`<#1` = builtins.nym`<` /* (Int32?, Int32?) -> Boolean */;
                     let nym`+#2` = builtins.nym`+` /* (Int32, Int32) -> Int32 */;
+                    var t#0: Int32;
                     @QName("test-library/do-nothing.i") var i__0: Int32 = 0;
                     module init {
                       while (nym`<#1`(i__0, 3)) {
-                        i__0 = nym`+#2`(i__0, 1);
+                        t#0 = nym`+#2`(i__0, 1);
+                        i__0 = t#0;
                       }
                     }
 
@@ -2814,6 +2816,7 @@ class TmpLBackendTest {
             |        let fn__0(): SafeGenerator<Empty> {
             |          var caseIndex#0: Int32 = 0;
             |          var t#0: String = "";
+            |          var t#1: Int32 = 0;
             |          @QName("test-library/foo.i=") var i__0: Int32 = 0;
             |## Here's the variable extracted with a zero-value.
             |          let convertedCoroutine#0(generator#0: SafeGenerator<Empty>): GeneratorResult<Empty> {
@@ -2822,15 +2825,16 @@ class TmpLBackendTest {
             |              caseIndex#0 = -1;
             |              when (caseIndexLocal#0) {
             |                0 -> do {
-            |                  var t#1: Int32 = initialI__0();
-            |                  i__0 = t#1;
+            |                  var t#2: Int32 = initialI__0();
+            |                  i__0 = t#2;
             |## The initializer was left in place.
             |                  caseIndex#0 = 1;
             |                }
             |                1 -> do {
             |                  t#0 = "" + i__0;
             |                  ConsoleLog#0(console#0, t#0);
-            |                  i__0 = nym`+#58`(i__0, 1);
+            |                  t#1 = nym`+#58`(i__0, 1);
+            |                  i__0 = t#1;
             |                  caseIndex#0 = 2;
             |                  return ValueResultConstructor#0(Empty#0());
             |                }
@@ -2936,9 +2940,10 @@ class TmpLBackendTest {
             |                j__0 = 2;
             |                @QName("test-library/foo.k=") var k__0: Int32 = 3;
             |                j__0 = nym`+#67`(j__0, 1);
-            |                k__0 = nym`+#67`(k__0, 1);
-            |                var t#1: String = "" + k__0;
-            |                ConsoleLog#0(console#0, t#1);
+            |                var t#1: Int32 = nym`+#67`(k__0, 1);
+            |                k__0 = t#1;
+            |                var t#2: String = "" + k__0;
+            |                ConsoleLog#0(console#0, t#2);
             |                helper__0();
             |                caseIndex#0 = 1;
             |                return ValueResultConstructor#0(Empty#0());

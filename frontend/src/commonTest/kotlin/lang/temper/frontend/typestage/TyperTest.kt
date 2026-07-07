@@ -1624,15 +1624,15 @@ class TyperTest {
         |///     ┗━━━┛ : Top
         """.trimMargin(),
         wantErrors = listOf(
-            "2+27-32: Expected value of type Type not ❎!",
+            "2+27-32: Expected value of type Type not `Thing`!",
             "2+16-23: No declaration for avocado!",
             "2+27-32: No declaration for Thing!",
-            "2+24-26: Expected function type, but got Function!",
             "4+15-24: No declaration for Commander!",
             "2+8-13: Type Invalid mentions Invalid",
             "2+16: Type Invalid mentions Invalid",
             "2+16-23: Type Invalid mentions Invalid",
             "2+16-32: Type Invalid mentions Invalid",
+            "2+24-26: Type Invalid mentions Invalid",
             "2+27-32: Type Invalid mentions Invalid",
             "4+15-24: Type Invalid mentions Invalid",
         ),

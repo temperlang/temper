@@ -834,91 +834,7 @@ internal class Typer(
         // Does the context in which the call happens place bounds on the return type?
         // For example, if t is the right hand of the assignment, then we might be able to
         // get information about the left-hand side.
-        val contextType: Lazy<Type2?> = lazy findContext@{
-            var incoming = tree.incoming
-            while (true) {
-                val ancestor = incoming?.source
-
-                if (ancestor is CallTree) {
-                    if (isHandlerScopeCall(ancestor) && incoming == ancestor.edge(2)) {
-                        // Keep looking upwards
-                        incoming = ancestor.incoming ?: break
-                        continue
-                    } else if (isAssignment(ancestor) && incoming == ancestor.edge(2)) {
-                        // We're the right-hand side.
-                        val left = ancestor.child(1)
-                        if (left is LeftNameLeaf) {
-                            val leftName = left.content as ResolvedName
-                            val deduction = ti.binding(leftName)
-                            if (deduction != null) {
-                                // If we know about that name, great.
-                                return@findContext hackMapOldStyleToNew(deduction)
-                            }
-                        }
-                        // Keep looking upwards.  Assignments can nest.
-                        incoming = ancestor.incoming ?: break
-                        continue
-                    }
-
-                    // A regular call.  If we have already solved its signature, use the
-                    // argument type as a context type.
-                    val decision = ti.decision(ancestor)
-                    val variant = decision?.variant
-                    val sig = variant?.let { hackTryStaticTypeToSig(it) }
-                    if (sig != null) { // TODO: !mentionsInvalid
-                        val edgeIndex = ancestor.edges.indexOf(incoming)
-                        val argIndex = edgeIndex - ancestor.firstArgumentIndex
-                        if (argIndex >= 0) { // is an argument, not the callee
-                            val formal = sig.valueFormalForActual(argIndex)?.type
-                            if (formal != null) {
-                                return@findContext formal.mapType(
-                                    decision.bindings?.mapValues { (_, a) -> hackMapOldStyleToNew(a as StaticType) }
-                                        ?: mapOf(),
-                                )
-                            }
-                        } // TODO: else use the variant as a context type for the callee
-                    }
-                } else if (ancestor is BlockTree) {
-                    // If the parent is a block with a complex flow, and the expression is
-                    // used in a branch condition, the context type is Boolean.
-                    if (incoming in ti.typerPlan.usedAsCondition) {
-                        return@findContext booleanType2
-                    }
-                    if (isNullaryNeverCall(tree)) {
-                        // Bubble and panic calls can appear top level to cause an
-                        // immediate jump out of the containing function or module body.
-                        val blockParent = ancestor.incoming?.source
-                        if (blockParent == null) { // Module root
-                            val moduleResultName = module.outputName
-                            if (moduleResultName != null) {
-                                val moduleResultType = ti.binding(moduleResultName)
-                                if (moduleResultType != null) {
-                                    return@findContext hackMapOldStyleToNew(excludeBubble(moduleResultType))
-                                }
-                            } else {
-                                return@findContext voidType2
-                            }
-                        } else if (blockParent is FunTree) {
-                            val returnType =
-                                blockParent.parts?.returnDecl?.parts?.metadataSymbolMap[typeSymbol]
-                                    ?.reifiedTypeContained
-                            if (returnType != null) {
-                                var returnTypeUnwrapped = returnType.type2
-                                if (returnTypeUnwrapped.definition == WellKnownTypes.resultTypeDefinition) {
-                                    returnTypeUnwrapped =
-                                        returnTypeUnwrapped.bindings.getOrNull(0) ?: invalidType2
-                                }
-                                return@findContext returnTypeUnwrapped
-                            }
-                            // We should really try to tie this to the inferred return type.
-                            return@findContext voidType2
-                        }
-                    }
-                }
-                break
-            }
-            null
-        }
+        val contextType by lazy { findContext(tree) }
 
         val explicitActualTypesAndPositions: List<Pair<StaticType, Position>>? =
             if (effectiveCallee is CallTree && isTypeAngleCall(effectiveCallee)) {
@@ -1044,7 +960,7 @@ internal class Typer(
             isRttiCall = calleeFn is RttiCheckFunction,
             typeActualsAndPositions = explicitActualTypesAndPositions,
             inputTrees = inputTrees,
-            contextType = contextType.value,
+            contextType = contextType,
         )
     }
 
@@ -1059,6 +975,103 @@ internal class Typer(
                 },
             ) to coverFunction.otherwise?.let { typeForFunctionValue(it) }
         }
+
+    /**
+     * Any context in which the call happens that bounds the return type.
+     *
+     * For example, if `tree` is the right hand of the assignment, then we might be able to
+     * use information about the left-hand side to narrow the right-hand side.
+     *
+     *    let x: List<C> = makeAnEmptyList();
+     *
+     * The type parameter *C* might be useful in finding narrow bounds for any type
+     * parameters that *makeAnEmptyList* has.
+     */
+    private fun findContext(tree: CallTree): Type2? {
+        var incoming = tree.incoming
+        while (true) {
+            val ancestor = incoming?.source
+
+            if (ancestor is CallTree) {
+                if (isHandlerScopeCall(ancestor) && incoming == ancestor.edge(2)) {
+                    // Keep looking upwards
+                    incoming = ancestor.incoming ?: break
+                    continue
+                } else if (isAssignment(ancestor) && incoming == ancestor.edge(2)) {
+                    // We're the right-hand side.
+                    val left = ancestor.child(1)
+                    if (left is LeftNameLeaf) {
+                        val leftName = left.content as ResolvedName
+                        val deduction = ti.binding(leftName)
+                        if (deduction != null) {
+                            // If we know about that name, great.
+                            return hackMapOldStyleToNew(deduction)
+                        }
+                    }
+                    // Keep looking upwards.  Assignments can nest.
+                    incoming = ancestor.incoming ?: break
+                    continue
+                }
+
+                // A regular call.  If we have already solved its signature, use the
+                // argument type as a context type.
+                val decision = ti.decision(ancestor)
+                val variant = decision?.variant
+                val sig = variant?.let { hackTryStaticTypeToSig(it) }
+                if (sig != null) { // TODO: !mentionsInvalid
+                    val edgeIndex = ancestor.edges.indexOf(incoming)
+                    val argIndex = edgeIndex - ancestor.firstArgumentIndex
+                    if (argIndex >= 0) { // is an argument, not the callee
+                        val formal = sig.valueFormalForActual(argIndex)?.type
+                        if (formal != null) {
+                            return formal.mapType(
+                                decision.bindings?.mapValues { (_, a) -> hackMapOldStyleToNew(a as StaticType) }
+                                    ?: mapOf(),
+                            )
+                        }
+                    } // TODO: else use the variant as a context type for the callee
+                }
+            } else if (ancestor is BlockTree) {
+                // If the parent is a block with a complex flow, and the expression is
+                // used in a branch condition, the context type is Boolean.
+                if (incoming in ti.typerPlan.usedAsCondition) {
+                    return booleanType2
+                }
+                if (isNullaryNeverCall(tree)) {
+                    // Bubble and panic calls can appear top level to cause an
+                    // immediate jump out of the containing function or module body.
+                    val blockParent = ancestor.incoming?.source
+                    if (blockParent == null) { // Module root
+                        val moduleResultName = module.outputName
+                        if (moduleResultName != null) {
+                            val moduleResultType = ti.binding(moduleResultName)
+                            if (moduleResultType != null) {
+                                return hackMapOldStyleToNew(excludeBubble(moduleResultType))
+                            }
+                        } else {
+                            return voidType2
+                        }
+                    } else if (blockParent is FunTree) {
+                        val returnType =
+                            blockParent.parts?.returnDecl?.parts?.metadataSymbolMap[typeSymbol]
+                                ?.reifiedTypeContained
+                        if (returnType != null) {
+                            var returnTypeUnwrapped = returnType.type2
+                            if (returnTypeUnwrapped.definition == WellKnownTypes.resultTypeDefinition) {
+                                returnTypeUnwrapped =
+                                    returnTypeUnwrapped.bindings.getOrNull(0) ?: invalidType2
+                            }
+                            return returnTypeUnwrapped
+                        }
+                        // We should really try to tie this to the inferred return type.
+                        return voidType2
+                    }
+                }
+            }
+            break
+        }
+        return null
+    }
 
     private fun typeCallByParts2(
         priorProblems: List<TypeReasonElement>,
@@ -1081,7 +1094,9 @@ internal class Typer(
 
         var effectiveTypeActualsAndPositions = typeActualsAndPositions
         val lateTypedParameterIndices = mutableSetOf<Int>()
-        val inputBounds =
+        // Some bounds require type solving, so skip the fast track.
+        var inputBoundsRequireFeedback = false
+        val inputBounds: List<InputBound> = buildList {
             // For each input, we have position metadata which comes in handy when generating
             // diagnostics.
             // We also either know the inferred type, or the result inference variable for the
@@ -1089,78 +1104,85 @@ internal class Typer(
             // If the bound is a value that we cannot pre-type, for example, an empty list or `null`,
             // we need to know which so that we can hand it off to the solver and then, after solving,
             // give it a clear, computed type.
-            mutableListOf<InputBound>()
-        inputTrees.forEachActual { childIndex, _, _, childI ->
-            val lateTypedArgument: LateTypedCall? = ti.lateTypedCallArgument(childI.incoming!!)
-            if (lateTypedArgument != null) {
-                lateTypedParameterIndices.add(childIndex)
-            }
-            var inferredType = ti.decisionType(childI)
-            if (inferredType != null && (inferredType.isNullType || inferredType.isNeverType)) {
-                inferredType = null
-            }
-            inputBounds.add(
-                when {
-                    lateTypedArgument != null -> InputBound.UntypedCallInput(
-                        childI.pos,
-                        lateTypedArgument.passVar,
-                    )
-                    isRttiCall && childIndex == 1 && childI is ValueLeaf && childI.content.typeTag == TType -> {
-                        // If we have a complete target type, express it as a type actual.
-                        // That way we make better intertwining decisions.
-                        // Otherwise, we need an incomplete reification, so that context and input types can
-                        // be used to compute the missing bindings.
-                        val reifiedType = TType.unpack(childI.content)
-                        val targetType = reifiedType.type2
-                        if (targetType.bindings.size >= targetType.definition.formals.size) { // Complete
-                            val inputPos = childI.pos
-                            if (effectiveTypeActualsAndPositions == null) {
-                                effectiveTypeActualsAndPositions = listOf(
-                                    hackMapNewStyleToOld(targetType) to inputPos,
+            inputTrees.forEachActual { childIndex, _, _, childI ->
+                val lateTypedArgument: LateTypedCall? = ti.lateTypedCallArgument(childI.incoming!!)
+                if (lateTypedArgument != null) {
+                    lateTypedParameterIndices.add(childIndex)
+                }
+                var inferredType = ti.decisionType(childI)
+                if (inferredType != null && (inferredType.isNullType || inferredType.isNeverType)) {
+                    inferredType = null
+                }
+                add(
+                    when {
+                        lateTypedArgument != null -> InputBound.UntypedCallInput(
+                            childI.pos,
+                            lateTypedArgument.passVar,
+                        )
+
+                        isRttiCall && childIndex == 1 && childI is ValueLeaf && childI.content.typeTag == TType -> {
+                            // If we have a complete target type, express it as a type actual.
+                            // That way we make better intertwining decisions.
+                            // Otherwise, we need an incomplete reification, so that context and input types can
+                            // be used to compute the missing bindings.
+                            val reifiedType = TType.unpack(childI.content)
+                            val targetType = reifiedType.type2
+                            if (targetType.bindings.size >= targetType.definition.formals.size) { // Complete
+                                val inputPos = childI.pos
+                                if (effectiveTypeActualsAndPositions == null) {
+                                    effectiveTypeActualsAndPositions = listOf(
+                                        hackMapNewStyleToOld(targetType) to inputPos,
+                                    )
+                                }
+                                InputBound.Pretyped(
+                                    MkType2(WellKnownTypes.typeTypeDefinition).position(inputPos).get()
+                                        as PositionedType,
+                                )
+                            } else {
+                                inputBoundsRequireFeedback = true
+                                InputBound.IncompleteReification(
+                                    pos = childI.pos,
+                                    reifiedType = reifiedType,
+                                    typeArgumentIndex = 0,
+                                    typeVar = solverVarNamer.unusedTypeVar("checkedType"),
+                                    reificationEdge = childI.incoming,
+                                    describedValueArgumentIndex = 0,
                                 )
                             }
-                            InputBound.Pretyped(
-                                MkType2(WellKnownTypes.typeTypeDefinition).position(inputPos).get()
-                                    as PositionedType,
+                        }
+
+                        inferredType is AndType && inferredType.members.all { it is FunctionType } ->
+                            InputBound.Pretyped(hackMapOldStyleToNew(functionType, childI.pos) as PositionedType)
+
+                        inferredType != null -> InputBound.Pretyped(
+                            hackMapOldStyleToNew(inferredType, childI.pos) as PositionedType,
+                        )
+
+                        childI is ValueLeaf ->
+                            InputBound.ValueInput(
+                                childI,
+                                solverVarNamer.unusedTypeVar(
+                                    childI.content.typeTag.name.displayName.asciiUnTitleCase(),
+                                ),
                             )
-                        } else {
-                            InputBound.IncompleteReification(
-                                pos = childI.pos,
-                                reifiedType = reifiedType,
-                                typeArgumentIndex = 0,
-                                typeVar = solverVarNamer.unusedTypeVar("checkedType"),
-                                reificationEdge = childI.incoming,
-                                describedValueArgumentIndex = 0,
+
+                        childI is FunTree && childI.parts != null -> {
+                            val parts = childI.parts!!
+                            InputBound.LambdaBound(
+                                childI.pos,
+                                parts.formals.map {
+                                    it.parts?.type?.reifiedTypeContained?.type2
+                                },
+                                parts.returnDecl?.let {
+                                    it.parts?.type?.reifiedTypeContained?.type2
+                                },
                             )
                         }
-                    }
-                    inferredType is AndType && inferredType.members.all { it is FunctionType } ->
-                        InputBound.Pretyped(hackMapOldStyleToNew(functionType, childI.pos) as PositionedType)
-                    inferredType != null -> InputBound.Pretyped(
-                        hackMapOldStyleToNew(inferredType, childI.pos) as PositionedType,
-                    )
-                    childI is ValueLeaf ->
-                        InputBound.ValueInput(
-                            childI,
-                            solverVarNamer.unusedTypeVar(
-                                childI.content.typeTag.name.displayName.asciiUnTitleCase(),
-                            ),
-                        )
-                    childI is FunTree && childI.parts != null -> {
-                        val parts = childI.parts!!
-                        InputBound.LambdaBound(
-                            childI.pos,
-                            parts.formals.map {
-                                it.parts?.type?.reifiedTypeContained?.type2
-                            },
-                            parts.returnDecl?.let {
-                                it.parts?.type?.reifiedTypeContained?.type2
-                            },
-                        )
-                    }
-                    else -> InputBound.Typeless(childI.pos)
-                },
-            )
+
+                        else -> InputBound.Typeless(childI.pos)
+                    },
+                )
+            }
         }
         val hasTrailingBlock = inputTrees.lastOrNull() is FunTree
 
@@ -1229,7 +1251,8 @@ internal class Typer(
         }
         if (
             intertwined.isEmpty() && calleeVariants.size == 1 &&
-            calleeVariants.first().sig.typeFormals.isEmpty()
+            calleeVariants.first().sig.typeFormals.isEmpty() &&
+            !inputBoundsRequireFeedback
         ) {
             // Fast path for simple functions that do not require TypeSolving.
             val variant = calleeVariants.first()
@@ -1843,7 +1866,7 @@ internal class Typer(
                             val superType = it.target.staticTypeContained
                             val problem = when {
                                 superType == null ->
-                                    BecauseUnresolvedTypeReference(it.target.pos)
+                                    BecauseUnresolvedTypeReference(it.target.pos, shortPseudoCode(it.target))
                                 superType !is NominalType ->
                                     BecauseExpectedNamedType(it.target.pos, superType)
                                 superType.definition !is TypeShape ->
@@ -2391,7 +2414,7 @@ internal class Typer(
             BuiltinFuns.getpFn -> typeForGetp(t)
             BuiltinFuns.setpFn -> typeForSetp(t)
             is GetStaticOp -> typeForGets(t, callable)
-            BuiltinFuns.asFn, BuiltinFuns.assertAsFn -> typeForAs(t, callable)
+            is RttiCheckFunction -> typeForRttiCheck(t, callable)
             BuiltinFuns.commaFn -> typeForComma(t)
             is DotHelper -> typeForDotHelper(t, callable)
             else -> null
@@ -2509,7 +2532,10 @@ internal class Typer(
         val symbolArg = t.child(2)
 
         val reifiedType = typeArg.valueContained?.let { asReifiedType(it) }
-            ?: return TypedVariants(listOf(InvalidType), listOf(BecauseUnresolvedTypeReference(typeArg.pos)))
+            ?: return TypedVariants(
+                listOf(InvalidType),
+                listOf(BecauseUnresolvedTypeReference(typeArg.pos, shortPseudoCode(typeArg))),
+            )
         val receiverType = reifiedType.type
         val memberName = symbolArg.symbolContained
             ?: return TypedVariants(listOf(InvalidType), listOf(BecauseMalformedSpecialCall(t.pos, t)))
@@ -2664,45 +2690,32 @@ internal class Typer(
         )
     }
 
-    private fun typeForAs(call: CallTree, callable: MacroValue): TypedVariants {
+    private fun typeForRttiCheck(call: CallTree, callable: RttiCheckFunction): TypedVariants {
         val problems = mutableListOf<TypeReasonElement>()
 
-        var types: List<StaticType> = listOf(functionType)
+        var types: List<StaticType> = callable.sigs?.map { typeFromSignature(it) }
+            ?: listOf(InvalidType)
 
-        val reifiedType = call.childOrNull(2)?.reifiedTypeContained
-        if (reifiedType != null) {
-            val goalType = when {
-                reifiedType.type.hasUnbound() -> {
-                    val inferredType = call.childOrNull(1)?.let { ti.decisionType(it) }
-                    mergeTypeArgs(from = inferredType, into = reifiedType.type)
-                }
-                else -> reifiedType.type
-            }
-            types = listOf(
-                MkType.fn(
-                    typeFormals = emptyList(),
-                    valueFormals = listOf(
-                        anyValueType,
-                        // Type for types.
-                        WellKnownTypes.typeType,
-                    ),
-                    restValuesFormal = null,
-                    returnType = when {
-                        callable.callMayFailPerSe -> MkType.or(goalType, BubbleType)
-                        else -> goalType
-                    },
-                ),
-            )
-        } else {
+        // We just use the signatures for the type as normal.
+        // But we do double check that the right hand argument has resolved to a type value.
+
+        val targetTypeTree = call.childOrNull(2)
+        val reifiedType = targetTypeTree?.reifiedTypeContained
+        if (reifiedType == null) {
             problems.add(
                 BecauseUnresolvedTypeReference(
                     call.childOrNull(2)?.pos ?: call.pos.rightEdge,
+                    shortPseudoCode(targetTypeTree),
                 ),
             )
         }
 
         if (call.size != AS_ARITY) {
             problems.add(BecauseArityMismatch(call.pos, 2))
+        }
+
+        if (problems.isNotEmpty()) {
+            types = listOf(InvalidType)
         }
 
         return TypedVariants(types, problems.toList())
