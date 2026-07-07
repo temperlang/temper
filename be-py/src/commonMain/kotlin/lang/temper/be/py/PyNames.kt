@@ -19,6 +19,7 @@ import lang.temper.name.ModuleName
 import lang.temper.name.OutName
 import lang.temper.name.QName
 import lang.temper.name.ResolvedName
+import lang.temper.name.ResolvedParsedName
 import lang.temper.name.SourceName
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
@@ -175,7 +176,7 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
     }
 
     /** Supports simple `_whatever` naming until we can arrange it more generally on names. */
-    fun choosePrettyPrivateSourceName(name: SourceName, kind: TmpL.IdKind): String {
+    fun choosePrettyPrivateSourceName(name: ResolvedParsedName, kind: TmpL.IdKind): String {
         val styledName = styleName(safeIdent(name.baseName.nameText), kind)
         return "_$styledName"
     }

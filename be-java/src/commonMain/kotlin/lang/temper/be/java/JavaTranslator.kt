@@ -25,7 +25,6 @@ import lang.temper.common.modifiedUtf8LenExceeds
 import lang.temper.log.Position
 import lang.temper.log.spanningPosition
 import lang.temper.log.unknownPos
-import lang.temper.name.DashedIdentifier
 import lang.temper.name.ExportedName
 import lang.temper.name.ModuleName
 import lang.temper.name.OutName

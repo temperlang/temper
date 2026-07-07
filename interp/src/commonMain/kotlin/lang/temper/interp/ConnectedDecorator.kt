@@ -1,6 +1,5 @@
 package lang.temper.interp
 
-import lang.temper.name.BuiltinName
 import lang.temper.name.Symbol
 import lang.temper.value.CallTree
 import lang.temper.value.FunTree

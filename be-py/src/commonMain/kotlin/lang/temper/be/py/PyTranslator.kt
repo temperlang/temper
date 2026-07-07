@@ -34,10 +34,9 @@ import lang.temper.log.Position
 import lang.temper.log.last
 import lang.temper.log.spanningPosition
 import lang.temper.log.unknownPos
-import lang.temper.name.ExportedName
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
-import lang.temper.name.SourceName
+import lang.temper.name.ResolvedParsedName
 import lang.temper.name.TemperName
 import lang.temper.type.Abstractness
 import lang.temper.type.MethodKind
@@ -1065,14 +1064,8 @@ class PyTranslator(
     }
 
     private fun translateFunction(func: TmpL.FunctionDeclaration): List<Py.Stmt> = buildList {
-        // For exported connected functions, just get them entirely from separate code.
-        // For nonexported, until we can reliably make the names a bit prettier call from a forward below.
-        val isConnected = func.metadata.any { it.key.symbol == connectedSymbol } && module?.isStdLib != true
-        if (isConnected && func.name.name is ExportedName) {
-            return@buildList
-        }
-        // We aren't just skipping the function entirely.
         translateFunctionDef(func, this) { decs, args, renames ->
+            val isConnected = func.metadata.any { it.key.symbol == connectedSymbol } && module?.isStdLib != true
             Py.FunctionDef(
                 pos = func.pos,
                 decoratorList = decs,
@@ -1081,12 +1074,12 @@ class PyTranslator(
                 body = when {
                     isConnected -> {
                         // Expected to be a SourceName for connected functions that aren't exported.
-                        val name = func.name.name as SourceName
+                        val name = func.name.name as ResolvedParsedName
                         val nameText = pyNames.choosePrettyPrivateSourceName(name, TmpL.IdKind.Value)
                         // And in Python, void as None is always returnable, so just always return here.
                         // TODO Anything special for generators?
                         Py.Name(func.pos, PyIdentifierName(nameText)).call(
-                            args.args.mapNotNull { it.arg?.asName() }
+                            args.args.mapNotNull { it.arg?.asName() },
                         ).let { listOf(Py.Return(func.pos, it)) }
                     }
                     // TODO We also need to have renamed globals for rare cases of conflict with named args.
