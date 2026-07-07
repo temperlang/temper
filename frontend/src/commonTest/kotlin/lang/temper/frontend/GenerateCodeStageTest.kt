@@ -4056,7 +4056,8 @@ class GenerateCodeStageTest {
             |      ```
             |      @fn @reach(\none) let hi__0;
             |      hi__0 = (@stay fn hi /* return__0 */: Void {
-            |          pureVirtual()
+            |          abstractPanic();
+            |          return__0 = void
             |      })
             |
             |      ```

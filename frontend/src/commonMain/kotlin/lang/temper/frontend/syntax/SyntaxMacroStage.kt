@@ -252,8 +252,7 @@ internal fun rewriteFun(
             call.treeFarm.grow(call.pos.rightEdge) {
                 Fn {
                     Block {
-                        // TODO Rename pureVirtual to abstractPanic or some such?
-                        Call { V(BuiltinFuns.vPureVirtual) }
+                        Call { V(BuiltinFuns.vAbstractPanic) }
                     }
                 }
             }
