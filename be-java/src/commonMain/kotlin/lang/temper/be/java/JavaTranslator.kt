@@ -15,6 +15,7 @@ import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapGeneric
 import lang.temper.be.tmpl.mapGenericIndexed
+import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.toSigBestEffort
 import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.be.tmpl.withoutNull
@@ -458,14 +459,30 @@ class JavaTranslator(
             is TmpL.BoilerplateCodeFoldStart -> J.CommentLine(t.pos, t.markerText)
         }
 
-        private fun connectedBody(fn: TmpL.FunctionDeclaration, result: J.ResultType): J.BlockStatement {
+        private fun connectedBody(fn: TmpL.FunctionDeclaration, result: J.ResultType): J.BlockLevelStatement {
             val pos = fn.pos
-            return J.StaticMethodInvocationExpr(
-                pos,
-                type = J.QualIdentifier(pos, listOf(J.Identifier(pos, moduleInfo.connectedClassName))),
-                method = names.method(fn.name),
-                args = parameters(fn.parameters).parameters.map { it.name.asNameExpr().asArgument() },
-            ).exprOrReturnStatement(shouldReturn = result !is J.VoidType).asBlock()
+            val defaulting = fn.parameterDefaultStatementsInfo()
+            return buildList {
+                for (statement in defaulting.defaultStatements) {
+                    add(stmt(statement))
+                }
+                J.StaticMethodInvocationExpr(
+                    pos,
+                    type = J.QualIdentifier(pos, listOf(J.Identifier(pos, moduleInfo.connectedClassName))),
+                    method = names.method(fn.name),
+                    args = buildList {
+                        for ((tmpl, java) in fn.parameters.parameters.zip(parameters(fn.parameters).parameters)) {
+                            when {
+                                tmpl.optional -> {
+                                    val name = defaulting.parameterMapping.getValue(tmpl.name.name)
+                                    names.lookupRegularLocalNameObj(name).asIdentifier(tmpl.pos)
+                                }
+                                else -> java.name
+                            }.also { add(it.asNameExpr().asArgument()) }
+                        }
+                    },
+                ).exprOrReturnStatement(shouldReturn = result !is J.VoidType).also { add(it) }
+            }.let { J.BlockStatement(pos, it) }
         }
 
         private fun overloads(

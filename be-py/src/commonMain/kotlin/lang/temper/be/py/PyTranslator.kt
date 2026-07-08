@@ -19,9 +19,9 @@ import lang.temper.be.tmpl.documentation
 import lang.temper.be.tmpl.isCommonlyImplied
 import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.isYieldingStatement
-import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapGeneric
+import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.common.buildListMultimap
 import lang.temper.common.isNotEmpty
@@ -1168,7 +1168,6 @@ class PyTranslator(
                                 pos = tmpl.pos,
                                 name = defaulting.parameterMapping.getValue(tmpl.name.name),
                             )
-
                             else -> py.arg?.asName() // where null might be `/`, so unexpected here
                         }?.also { add(it) }
                     }

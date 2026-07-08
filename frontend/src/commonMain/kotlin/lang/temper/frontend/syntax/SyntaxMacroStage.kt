@@ -255,7 +255,7 @@ internal fun rewriteFun(
                         Call { V(BuiltinFuns.vAbstractPanic) }
                     }
                 }
-            }
+            },
         )
     }
 

@@ -256,6 +256,9 @@ fun TmpL.FunctionDeclaration.parameterDefaultStatementsInfo(): DefaultStatements
         }
         var foundCount = 0
         statements@ for (statement in body.statements) {
+            // Add all statements until all the defaulting is done.
+            defaultStatements.add(statement)
+            // See where we are on that defaulting.
             if (statement is TmpL.IfStatement) {
                 statement.test.firstNotNull { tree ->
                     when (tree) {
@@ -265,7 +268,6 @@ fun TmpL.FunctionDeclaration.parameterDefaultStatementsInfo(): DefaultStatements
                 }?.also { found ->
                     val assignment = statement.consequent.firstNotNull { it as? TmpL.Assignment } ?: continue@statements
                     this[found] = assignment.left.name
-                    defaultStatements.add(statement)
                     foundCount += 1
                     foundCount == this@parameterMapping.size && break@statements
                 }
