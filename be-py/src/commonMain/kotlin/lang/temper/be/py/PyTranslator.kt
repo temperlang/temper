@@ -19,6 +19,7 @@ import lang.temper.be.tmpl.documentation
 import lang.temper.be.tmpl.isCommonlyImplied
 import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.isYieldingStatement
+import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapGeneric
 import lang.temper.be.tmpl.typeOrInvalid
@@ -1076,11 +1077,30 @@ class PyTranslator(
                         // Expected to be a SourceName for connected functions that aren't exported.
                         val name = func.name.name as ResolvedParsedName
                         val nameText = pyNames.choosePrettyPrivateSourceName(name, TmpL.IdKind.Value)
-                        // And in Python, void as None is always returnable, so just always return here.
-                        // TODO Anything special for generators?
-                        Py.Name(func.pos, PyIdentifierName(nameText)).call(
-                            args.args.mapNotNull { it.arg?.asName() },
-                        ).let { listOf(Py.Return(func.pos, it)) }
+                        buildList {
+                            addAll(renames)
+                            val defaulting = func.parameterDefaultStatementsInfo()
+                            // Assign default values as needed.
+                            for (statement in defaulting.defaultStatements) {
+                                addAll(translate(statement))
+                            }
+                            // Call the connected function with defaults applied.
+                            Py.Name(func.pos, PyIdentifierName(nameText)).call(
+                                args = buildList {
+                                    for ((tmpl, py) in func.parameters.parameters.zip(args.args)) {
+                                        when {
+                                            tmpl.optional -> name(
+                                                pos = tmpl.pos,
+                                                name = defaulting.parameterMapping.getValue(tmpl.name.name),
+                                            )
+                                            else -> py.arg?.asName() // where null might be `/`, so unexpected here
+                                        }?.also { add(it) }
+                                    }
+                                },
+                                // And in Python, void as None is always returnable, so just always return here.
+                                // TODO Anything special for generators?
+                            ).also { add(Py.Return(func.pos, it)) }
+                        }
                     }
                     // TODO We also need to have renamed globals for rare cases of conflict with named args.
                     else -> translateFunctionBody(renames, func)

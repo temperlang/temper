@@ -1,6 +1,4 @@
-def _sum(i: int, j: int, bonus: int | None = None) -> int:
-    if bonus is None:
-        bonus = 0
+def _sum(i: int, j: int, bonus: int) -> int:
     return i + j + bonus
 
 
