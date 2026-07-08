@@ -1,13 +1,17 @@
 package lang.temper.cli.repl
 
+import lang.temper.common.temperEscaper
 import lang.temper.lexer.Lexer
 import lang.temper.lexer.LexicalDefinitions.Companion.quotedNamePrefix
 import lang.temper.lexer.Operator
 import lang.temper.lexer.OperatorType
 import lang.temper.log.LogSink
+import lang.temper.log.bannedPathSegmentNames
+import lang.temper.log.filePath
 import lang.temper.log.unknownPos
+import lang.temper.name.ParsedName
 
-internal fun adjustInputForRepl(commandText: String): String {
+internal fun adjustInputForRepl(commandText: String, repl: Repl): String {
     if (commandText.trimStart().startsWith(ReplHelpFn.NAME)) {
         // Lex up to 5 tokens to see if we match ["help", "(", something, ")", ";"]
         // with or without the semicolon at the end.
@@ -41,7 +45,19 @@ internal fun adjustInputForRepl(commandText: String): String {
             ) {
                 val before = commandText.substring(0, argToken.pos.left)
                 val after = commandText.substring(argToken.pos.right)
-                return "$before$quotedNamePrefix`$tokenText`$after"
+                val isDefined = ambientNames.value[tokenText]?.terminal == true ||
+                    ParsedName(tokenText) in repl.allExportedBaseNames
+                val adjustedTokenText = if (isDefined) {
+                    "$quotedNamePrefix`$tokenText`"
+                } else if (tokenText !in bannedPathSegmentNames) {
+                    val snippetIdStr = "${filePath("builtin", tokenText)}"
+                    temperEscaper.escape(snippetIdStr)
+                } else {
+                    null
+                }
+                if (adjustedTokenText != null) {
+                    return "$before$adjustedTokenText$after"
+                }
             }
         }
     }

@@ -332,7 +332,7 @@ internal class Repl(
             }
         }
 
-        val commandText = adjustInputForRepl("$pendingInput")
+        val commandText = adjustInputForRepl("$pendingInput", this)
         pendingInput.clear()
 
         sources[chunkIndex] = commandText // Store command so we can generate snippets

@@ -124,7 +124,6 @@ class ReplTest {
         assertPrompt("  ")
         assertPending("")
         repl.processLine(")")
-        @Suppress("SpellCheckingInspection")
         assertPending(
             """
                 |interactive#0: "foo\nbar\nbaz\n"
@@ -453,7 +452,6 @@ class ReplTest {
         )
     }
 
-    @Suppress("SpellCheckingInspection") // Base64 encoding in the source-map
     @Test
     fun translateToJs() {
         repl.processLine("1 + 1")
@@ -916,7 +914,7 @@ class ReplTest {
                 |
             """.trimMargin(),
         )
-        // `y` is still there when we need it though.
+        // `y` is still there when we need it, though.
         repl.processLine("y + 1")
         assertPending("interactive#4: 3\n")
     }
@@ -1067,7 +1065,7 @@ class ReplTest {
         )
         assertPrompt("$ ")
         // One half of a co-recursive function group.
-        // If we stopped at newlines, then we would get an `No declaration for odd` error.
+        // If we stopped at newlines, then we would get a `No declaration for odd` error.
         repl.processLine("let even(n: Int): Boolean { n == 0 || odd(n - 1) }")
         assertPrompt("$ ")
         assertPending("")

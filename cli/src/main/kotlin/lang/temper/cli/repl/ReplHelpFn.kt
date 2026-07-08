@@ -11,10 +11,12 @@ import lang.temper.name.BuiltinName
 import lang.temper.name.TemperName
 import lang.temper.supportedBackends.lookupFactory
 import lang.temper.supportedBackends.supportedBackends
+import lang.temper.type.SimpleHelpful
 import lang.temper.type2.Signature2
 import lang.temper.value.ActualValues
 import lang.temper.value.CallableValue
 import lang.temper.value.Helpful
+import lang.temper.value.HelpfulSnippets
 import lang.temper.value.HelpfullyNamed
 import lang.temper.value.InterpreterCallback
 import lang.temper.value.NamedBuiltinFun
@@ -53,7 +55,7 @@ internal class ReplHelpFn(
         )
     }
     private val topics get() = topicsLazy.value
-    val topicKeys: Iterable<String> get() = topics.stringKeyToHelpful.value.keys
+    val topicKeys: Iterable<String> get() = topics.stringKeyToHelpful.keys
 
     override fun invoke(
         args: ActualValues,
@@ -101,7 +103,7 @@ internal class ReplHelpFn(
             "The help command takes a single argument that is a" +
                 " topic string or a function or type with a doc string. The topics are:",
         )
-        for ((topic, helpObj) in topics.stringKeyToHelpful.value) {
+        for ((topic, helpObj) in topics.stringKeyToHelpful) {
             this.appendLine("    $topic: ${helpObj.briefHelp()}")
         }
     }
@@ -120,7 +122,7 @@ private class Topics(
     private val modules: ModulesExternalToRepl,
 ) {
 
-    val stringKeyToHelpful: Lazy<Map<String, Helpful>> = lazy {
+    val stringKeyToHelpful: Map<String, Helpful> by lazy {
         buildMap {
             for ((n, v) in bindings.entries) {
                 put(
@@ -144,6 +146,12 @@ private class Topics(
                     put("$backendId/$key", helpful)
                 }
             }
+            for (topic in HelpfulSnippets.topics) {
+                val longHelp = HelpfulSnippets.getSnippetText(topic) ?: continue
+                val briefHelpRegex = Regex("""^#*\s*([^\r\n]+)""")
+                val briefHelp = briefHelpRegex.find(longHelp)?.groupValues[1] ?: topic
+                put(topic, SimpleHelpful(briefHelp = briefHelp, longHelp = longHelp, context = topic))
+            }
         }
     }
 
@@ -153,7 +161,7 @@ private class Topics(
         }
 
         // Try a case-insensitive search
-        for ((n, v) in stringKeyToHelpful.value) {
+        for ((n, v) in stringKeyToHelpful) {
             if (name.equals(n, ignoreCase = true)) {
                 return n to v
             }
