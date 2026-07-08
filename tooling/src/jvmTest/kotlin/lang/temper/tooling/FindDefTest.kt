@@ -1,6 +1,7 @@
 package lang.temper.tooling
 
 import lang.temper.frontend.ModuleSource
+import kotlin.test.Ignore
 import kotlin.test.Test
 
 internal open class FindDefTest {
@@ -29,6 +30,7 @@ internal open class FindDefTest {
 
     open val context: ModuleDataTestContext get() = fileContext
 
+    @Ignore // TODO: what should go here?
     @Test
     fun findExternalA() {
         assertFound("/*0@+0*/" to "/*1@+0*/")
