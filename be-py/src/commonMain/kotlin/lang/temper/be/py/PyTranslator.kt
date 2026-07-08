@@ -1073,35 +1073,7 @@ class PyTranslator(
                 name = ident(func.name),
                 args = args,
                 body = when {
-                    isConnected -> {
-                        // Expected to be a SourceName for connected functions that aren't exported.
-                        val name = func.name.name as ResolvedParsedName
-                        val nameText = pyNames.choosePrettyPrivateSourceName(name, TmpL.IdKind.Value)
-                        buildList {
-                            addAll(renames)
-                            val defaulting = func.parameterDefaultStatementsInfo()
-                            // Assign default values as needed.
-                            for (statement in defaulting.defaultStatements) {
-                                addAll(translate(statement))
-                            }
-                            // Call the connected function with defaults applied.
-                            Py.Name(func.pos, PyIdentifierName(nameText)).call(
-                                args = buildList {
-                                    for ((tmpl, py) in func.parameters.parameters.zip(args.args)) {
-                                        when {
-                                            tmpl.optional -> name(
-                                                pos = tmpl.pos,
-                                                name = defaulting.parameterMapping.getValue(tmpl.name.name),
-                                            )
-                                            else -> py.arg?.asName() // where null might be `/`, so unexpected here
-                                        }?.also { add(it) }
-                                    }
-                                },
-                                // And in Python, void as None is always returnable, so just always return here.
-                                // TODO Anything special for generators?
-                            ).also { add(Py.Return(func.pos, it)) }
-                        }
-                    }
+                    isConnected -> translateConnectedBody(renames, func, args)
                     // TODO We also need to have renamed globals for rare cases of conflict with named args.
                     else -> translateFunctionBody(renames, func)
                 },
@@ -1169,6 +1141,42 @@ class PyTranslator(
             ),
         )
         return listOf(result)
+    }
+
+    private fun translateConnectedBody(
+        renames: List<Py.Stmt>,
+        func: TmpL.FunctionDeclaration,
+        args: Py.Arguments,
+    ): List<Py.Stmt> {
+        // Call the connected function, after substituting any default arg values.
+        // Use a pretty but private name for the connected function.
+        val name = func.name.name as ResolvedParsedName
+        val nameText = pyNames.choosePrettyPrivateSourceName(name, TmpL.IdKind.Value)
+        return buildList {
+            addAll(renames)
+            val defaulting = func.parameterDefaultStatementsInfo()
+            // Assign default values as needed.
+            for (statement in defaulting.defaultStatements) {
+                addAll(translate(statement))
+            }
+            // Call the connected function with defaults applied.
+            Py.Name(func.pos, PyIdentifierName(nameText)).call(
+                args = buildList {
+                    for ((tmpl, py) in func.parameters.parameters.zip(args.args)) {
+                        when {
+                            tmpl.optional -> name(
+                                pos = tmpl.pos,
+                                name = defaulting.parameterMapping.getValue(tmpl.name.name),
+                            )
+
+                            else -> py.arg?.asName() // where null might be `/`, so unexpected here
+                        }?.also { add(it) }
+                    }
+                },
+                // And in Python, void as None is always returnable, so just always return here.
+                // TODO Anything special for generators?
+            ).also { add(Py.Return(func.pos, it)) }
+        }
     }
 
     private fun translateFunctionBody(
