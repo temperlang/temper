@@ -1240,8 +1240,6 @@ class TyperTest {
         |    void
         """.trimMargin(),
         wantErrors = listOf(
-            // TODO: this message looks like it's referring to a unary operator, but the `+` is actually represented
-            // as an application of a bound left & operator to the right.
             "2+4-9: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [String, String]!",
             "2+4-9: Invalid variant: Invalid mentions Invalid",
         ),
