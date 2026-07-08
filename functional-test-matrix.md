@@ -26,6 +26,7 @@
 | [ControlFlowLoopReenterable][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowLoops][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [FunctionsAsValues][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [FunctionsConnected][] | ❌<sup>[456][]</sup> | ❌<sup>[198][]</sup> | ❌<sup>[456][]</sup> | ❌<sup>[456][]</sup> | ✅ | ✅ | ❌<sup>[456][]</sup> | ❌<sup>[456][]</sup> | ✅ | ✅ | ❌<sup>[456][]</sup> |
 | [FunctionsConstructorCallbacks][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [FunctionsDefaulting][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [FunctionsLocals][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -72,6 +73,7 @@
 [198]: https://github.com/temperlang/temper/issues/198
 [214]: https://github.com/temperlang/temper/issues/214
 [228]: https://github.com/temperlang/temper/issues/228
+[456]: https://github.com/temperlang/temper/issues/456
 [58]: https://github.com/temperlang/temper/issues/58
 [AlgosFibonacci]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/algos/fibonacci/fibonacci.temper.md
 [AlgosHelloFromClassToTop]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/algos/hello-from-class-to-top/hello-from-class-to-top.temper.md
@@ -97,6 +99,7 @@
 [ControlFlowLoopReenterable]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/loop-reenterable/loop-reenterable.temper.md
 [ControlFlowLoops]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/loops/loops.temper.md
 [FunctionsAsValues]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/functions/as-values/as-values.temper.md
+[FunctionsConnected]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/functions/connected/connected.temper.md
 [FunctionsConstructorCallbacks]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/functions/constructor-callbacks/constructor-callbacks.temper.md
 [FunctionsDefaulting]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/functions/defaulting/defaulting.temper.md
 [FunctionsLocals]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/functions/locals/locals.temper.md

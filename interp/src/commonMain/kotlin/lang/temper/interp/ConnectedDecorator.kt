@@ -12,9 +12,11 @@ import lang.temper.value.symbolContained
 import lang.temper.value.void
 
 /**
- * `@connected methodOrPropertyDefinition...`
- * lets us connect types and type members to native code,
- * where the connection key is defined by the qname.
+ * <!-- snippet: builtin/@connected -->
+ * # `@connected` decorator
+ * Connect types, members, and functions to native code. Each backend defines
+ * specific conventions for connected backend code. Internal backend translation
+ * logic can also key on the QName of connected entities.
  */
 internal val connectedDecorator = MetadataDecorator(
     connectedSymbol,

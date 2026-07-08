@@ -2239,16 +2239,16 @@ class TmpLBackendTest {
             |        //// work//defines/ => defines.tmpl
             |        let GetConsole#0 = builtins.GetConsole;
             |        let console#0: Console = GetConsole#0();
-            |        @QName("test-library/defines.type C") class C / C {
-            |          @QName("test-library/defines.type C.f()") static let f__0(): Void {
+            |        @connected @QName("test-library/defines.type C") class C / C {
+            |          @QName("test-library/defines.type C.f()") @connected static let f__0(): Void {
             |            console#0.log("f");
             |            return;
             |          }
-            |          @QName("test-library/defines.type C.g()") static let g__0(): Void {
+            |          @QName("test-library/defines.type C.g()") @connected static let g__0(): Void {
             |            console#0.log("g");
             |            return;
             |          }
-            |          @QName("test-library/defines.type C.constructor()") constructor__0(this = this__0, @QName("test-library/defines.type C.constructor().(this)") @impliedThis(C) this__0: C) {
+            |          @QName("test-library/defines.type C.constructor()") @connected constructor__0(this = this__0, @QName("test-library/defines.type C.constructor().(this)") @impliedThis(C) this__0: C) {
             |            return;
             |          }
             |        }
@@ -2260,7 +2260,7 @@ class TmpLBackendTest {
             |        //// work//uses/ => uses.tmpl
             |        let {
             |          C
-            |        }: @QName("test-library/defines.type C") type = import ("./defines.tmpl");
+            |        }: @connected @QName("test-library/defines.type C") type = import ("./defines.tmpl");
             |        module init {
             |          C.f();
             |          C.g();
@@ -2288,12 +2288,12 @@ class TmpLBackendTest {
             |        //// work//defines/ => defines.tmpl
             |        let GetConsole#0 = builtins.GetConsole;
             |        let console#0: Console = GetConsole#0();
-            |        @QName("test-library/defines.type C") class C / C {
-            |          @QName("test-library/defines.type C.g()") static let g__0(): Void {
+            |        @connected @QName("test-library/defines.type C") class C / C {
+            |          @QName("test-library/defines.type C.g()") @connected static let g__0(): Void {
             |            console#0.log("g");
             |            return;
             |          }
-            |          @QName("test-library/defines.type C.constructor()") constructor__0(this = this__0, @QName("test-library/defines.type C.constructor().(this)") @impliedThis(C) this__0: C) {
+            |          @QName("test-library/defines.type C.constructor()") @connected constructor__0(this = this__0, @QName("test-library/defines.type C.constructor().(this)") @impliedThis(C) this__0: C) {
             |            return;
             |          }
             |        }
@@ -2305,7 +2305,7 @@ class TmpLBackendTest {
             |        //// work//uses/ => uses.tmpl
             |        let {
             |          C
-            |        }: @QName("test-library/defines.type C") type = import ("./defines.tmpl");
+            |        }: @connected @QName("test-library/defines.type C") type = import ("./defines.tmpl");
             |        let CF#0 = builtins.CF;
             |        module init {
             |          CF#0();
@@ -2339,8 +2339,8 @@ class TmpLBackendTest {
             |        //// work//defines/ => defines.tmpl
             |        let GetConsole#0 = builtins.GetConsole;
             |        let console#0: Console = GetConsole#0();
-            |        @QName("test-library/defines.type C") class C connects C;
-            |        @QName("test-library/defines.type C.g()") let g__0(): Void {
+            |        @connected @QName("test-library/defines.type C") class C connects C;
+            |        @QName("test-library/defines.type C.g()") @connected let g__0(): Void {
             |          console#0.log("g");
             |          return;
             |        }
@@ -2352,7 +2352,7 @@ class TmpLBackendTest {
             |        //// work//uses/ => uses.tmpl
             |        let {
             |          g__0
-            |        }: @QName("test-library/defines.type C.g()") fn () -> Void = import ("./defines.tmpl");
+            |        }: @QName("test-library/defines.type C.g()") @connected fn () -> Void = import ("./defines.tmpl");
             |        let CF#0 = builtins.CF;
             |        module init {
             |          CF#0();
@@ -2428,7 +2428,7 @@ class TmpLBackendTest {
             |        require temper-core;
             |        let InterfaceTypeSupport#0 = InterfaceTypeSupport;
             |        let pureVirtual#0 = builtins.pureVirtual;
-            |        @QName("test-library/foo.type I") interface I connects I;
+            |        @connected @QName("test-library/foo.type I") interface I connects I;
             |
             |        ```
             |    },
@@ -3601,7 +3601,7 @@ class TmpLBackendTest {
             |        let console#0: Console = GetConsole#0();
             |## Here we've got a class connection, but no class declaration because
             |## everything either connected or was pulled out.
-            |        @QName("test-library/foo.type C") class C__0 connects C;
+            |        @connected @QName("test-library/foo.type C") class C__0 connects C;
             |        @QName("test-library/foo.type C.b") let b__0: String = "b";
             |        @QName("test-library/foo.type C.c()") let c__0(@QName("test-library/foo.type C.c().(b)") b__1: Boolean): String {
             |          if (b__1) {
