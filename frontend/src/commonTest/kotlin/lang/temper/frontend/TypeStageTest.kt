@@ -426,7 +426,6 @@ class TypeStageTest {
             |## Start inlined forEach
             |    let this__0: List<String>;
             |    this__0 = list("foo");
-            |    var t#0;
             |    let n__0;
             |    n__0 = do_get_length(this__0);
             |    var i__0;
@@ -434,8 +433,7 @@ class TypeStageTest {
             |    while (i__0 < n__0) {
             |      let el__0: String;
             |      el__0 = do_call_get(this__0, i__0);
-            |      t#0 = i__0 + 1;
-            |      i__0 = t#0;
+            |      i__0 = i__0 + 1;
             |## Inlined block lambda
             |      let x__0;
             |      x__0 = el__0;
@@ -474,7 +472,6 @@ class TypeStageTest {
                 |    let this__0: List<String>;
                 |    this__0 = list ⋖ String ⋗("a", "b", "c", "d");
                 |## Here we start the inlined callee body.
-                |    var t#0 ⦂ Int32;
                 |    let n__0 ⦂ Int32;
                 |    n__0 = do_get_length(this__0);
                 |    var i__0 ⦂ Int32;
@@ -482,8 +479,7 @@ class TypeStageTest {
                 |    while (i__0 < n__0) {
                 |      let el__0: String;
                 |      el__0 = do_call_get(this__0, i__0);
-                |      t#0 = i__0 + 1;
-                |      i__0 = t#0;
+                |      i__0 = i__0 + 1;
                 |## Here we start the inlined block lambda parameters.
                 |      let x__0 ⦂ String;
                 |      x__0 = el__0;
@@ -572,17 +568,16 @@ class TypeStageTest {
             |  type: {
             |    body: ```
             |      let return__0;
-            |      var t#0, t#1, i__0: Int32;
+            |      var i__0: Int32;
             |      i__0 = 0;
             |      outer__0: while (i__0 < 5) {
-            |        t#0 = i__0 + 1;
-            |        i__0 = t#0;
+            |        i__0 = i__0 + 1;
+            |        void;
             |        while (i__0 < 10) {
             |          if (i__0 < 6) {
             |            continue outer__0;
             |          };
-            |          t#1 = i__0 + 10;
-            |          i__0 = t#1
+            |          i__0 = i__0 + 10;
             |        }
             |      };
             |      return__0 = i__0;
@@ -715,17 +710,16 @@ class TypeStageTest {
                 "body":
                 ```
                 let return__0;
-                var t#0, t#1, fail#0, x__0: Int32;
+                var t#0, fail#0, x__0: Int32;
                 x__0 = 10;
                 x__0 = x__0 - 9;
-                t#0 = x__0 + 4;
-                x__0 = t#0;
+                x__0 = x__0 + 4;
                 x__0 = x__0 * 3;
-                t#1 = hs(fail#0, x__0 / 5);
+                t#0 = hs(fail#0, x__0 / 5);
                 if (fail#0) {
                   bubble()
                 };
-                x__0 = t#1;
+                x__0 = t#0;
                 return__0 = x__0;
 
                 ```
@@ -1620,7 +1614,7 @@ class TypeStageTest {
         |    "type": {
         |        "body":
         |        ```
-        |        var t#0, t#1;
+        |        var t#0;
         |        @constructorProperty @visibility(\private) @stay @fromType(Hi__0) let a__0: Int32;
         |        @constructorProperty @visibility(\private) @stay @fromType(Hi__0) let b__0: Int32;
         |        @constructorProperty @visibility(\private) @stay @fromType(Hi__0) let c__0: Int32;
@@ -1630,19 +1624,19 @@ class TypeStageTest {
         |            if (isNull(a__1)) {
         |              a__2 = 1
         |            } else {
-        |              a__2 = notNull(a__1)
+        |              a__2 = notNull(a__1);
         |            };
         |            let b__2 /* aka b */: Int32;
         |            if (isNull(b__1)) {
         |              b__2 = 2
         |            } else {
-        |              b__2 = notNull(b__1)
+        |              b__2 = notNull(b__1);
         |            };
         |            let c__2 /* aka c */: Int32;
         |            if (isNull(c__1)) {
         |              c__2 = 3
         |            } else {
-        |              c__2 = notNull(c__1)
+        |              c__2 = notNull(c__1);
         |            };
         |            setp(a__0, this__0, a__2);
         |            setp(b__0, this__0, b__2);
@@ -1653,10 +1647,9 @@ class TypeStageTest {
         |        Hi__0 = type (Hi__0);
         |        var n__0;
         |        n__0 = 1;
-        |        t#0 = n__0 + 1;
-        |        n__0 = t#0;
-        |        t#1 = n__0;
-        |        new Hi__0(n__0 + 1, null, t#1);
+        |        n__0 = n__0 + 1;
+        |        t#0 = n__0;
+        |        new Hi__0(n__0 + 1, null, t#0);
         |
         |        ```
         |    }
@@ -1907,11 +1900,13 @@ class TypeStageTest {
             |      });
             |      @fn let f__0;
             |      f__0 = (@stay fn f(hi__0 /* aka hi */: String) /* return__1 */: Void {
+            |          var t#0;
             |          void;
             |          fn__0: do {
             |            let s__0: String;
             |            s__0 = cat("Hello, ", str(hi__0), "!");
-            |            do_call_log(console#0, s__0);
+            |            t#0 = s__0;
+            |            do_call_log(console#0, t#0);
             |            do_call_log(console#0, s__0);
             |            return__1 = void
             |          }

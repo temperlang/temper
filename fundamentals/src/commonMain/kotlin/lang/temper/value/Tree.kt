@@ -659,8 +659,18 @@ sealed class NameLeaf(
     pos: Position,
     override val content: TemperName,
 ) : LeafTree(document = document, pos = pos), BasicTypeInferencesTree {
-    fun copyLeft(): LeftNameLeaf = LeftNameLeaf(document, pos, content)
-    fun copyRight(): RightNameLeaf = RightNameLeaf(document, pos, content)
+    fun copyLeft(copyInferences: Boolean = false): LeftNameLeaf = LeftNameLeaf(document, pos, content)
+        .also { copy ->
+            if (copyInferences) {
+                copy.typeInferences = typeInferences
+            }
+        }
+    fun copyRight(copyInferences: Boolean = false): RightNameLeaf = RightNameLeaf(document, pos, content)
+        .also { copy ->
+            if (copyInferences) {
+                copy.typeInferences = typeInferences
+            }
+        }
 
     init {
         @Suppress("LeakingThis") // sealed, so safe by analysis of subtypes.

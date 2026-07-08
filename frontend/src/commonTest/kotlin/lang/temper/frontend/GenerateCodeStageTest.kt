@@ -54,11 +54,10 @@ class GenerateCodeStageTest {
             "type": {
                 "body":
                 ```
-                var t#0, i__0;
+                var i__0;
                 i__0 = 0;
                 while (i__0 < 3) {
-                  t#0 = i__0 + 1;
-                  i__0 = t#0
+                  i__0 = i__0 + 1;
                 }
 
                 ```
@@ -66,11 +65,10 @@ class GenerateCodeStageTest {
             "generateCode": {
                 "body":
                 ```
-                var t#0, i__0;
+                var i__0;
                 i__0 = 0;
                 while (i__0 < 3) {
-                  t#0 = i__0 + 1;
-                  i__0 = t#0
+                  i__0 = i__0 + 1
                 }
 
                 ```
@@ -924,10 +922,10 @@ class GenerateCodeStageTest {
             |  run: "123: Int32",
             |  generateCode: {
             |    body: ```
-            |      let return__0, @reach(\none) a__0, b__0;
+            |      let return__0, a__0, b__0;
             |      b__0 = oneTwoThree();
             |      a__0 = b__0;
-            |      return__0 = b__0
+            |      return__0 = a__0
             |
             |      ```
             |  }
@@ -3066,8 +3064,9 @@ class GenerateCodeStageTest {
             |      other__0 = (@stay fn other(i__0 /* aka i */: Int32) /* return__0 */: (Int32 | Bubble) {
             |          if (i__0 % 2 == 0) {
             |            bubble()
-            |          };
-            |          return__0 = i__0
+            |          } else {
+            |            return__0 = i__0
+            |          }
             |      });
             |      something__0 = (@stay fn something(nums__0 /* aka nums */: Map<Int32, Int32>, index__0 /* aka index */: Int32) /* return__1 */: Int32 {
             |          var t#0, t#1, fail#0, fail#1, fail#2, fail#3;
@@ -3171,22 +3170,19 @@ class GenerateCodeStageTest {
             |    body: ```
             |      let return__1, @fn @extension("isPalindrome") stringIsPalindrome__0;
             |      stringIsPalindrome__0 = (@stay fn stringIsPalindrome(s__0 /* aka s */: String) /* return__0 */: Boolean {
-            |          var t#0, t#1, t#2;
+            |          void;
             |          fn__0: do {
             |            var i__0;
             |            i__0 = getStatic(String, \begin);
             |            var j__0;
-            |            t#0 = do_get_end(s__0);
-            |            j__0 = t#0;
+            |            j__0 = do_get_end(s__0);
             |            while (i__0 < j__0) {
-            |              t#1 = do_call_prev(s__0, j__0);
-            |              j__0 = t#1;
+            |              j__0 = do_call_prev(s__0, j__0);
             |              if (do_call_get(s__0, i__0) != do_call_get(s__0, j__0)) {
             |                return__0 = false;
             |                break fn__0;
             |              };
-            |              t#2 = do_call_next(s__0, i__0);
-            |              i__0 = t#2
+            |              i__0 = do_call_next(s__0, i__0);
             |            };
             |            return__0 = true
             |          }

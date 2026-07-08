@@ -128,20 +128,23 @@ class CleanupTemporariesTest {
                 |    ```,
                 |  allEdits: [
                 |      [
+                |        "Replace(L6: assign to toLogOrNotToLog__0 instead of temporary)",
+                |        "ReplaceRange(L7: assign t4#0 after swapping to assign toLogOrNotToLog__0 first)"
+                |      ],
+                |      [
                 |        "Replace(L9: rename read console#0 to t#0)",
                 |        "Replace(L1: console#0=... -> no-op)",
-                |        "Replace(L6: rename written t4#0 to toLogOrNotToLog__0)",
-                |        "Replace(L7: toLogOrNotToLog__0=... -> no-op)",
+                |        "Replace(L5: rename written t3#0 to toLogOrNotToLog__0)",
+                |        "Replace(L6: toLogOrNotToLog__0=... -> no-op)",
                 |        "Replace(L5: rename read t2#0 to t1#0)",
                 |        "Replace(L4: t2#0=... -> no-op)"
                 |      ],
                 |      [
-                |        "Replace(L5: rename written t3#0 to toLogOrNotToLog__0)",
-                |        "Replace(L6: toLogOrNotToLog__0=... -> no-op)"
-                |      ],
-                |      [
                 |        "Replace(L3: rename written t1#0 to toLogOrNotToLog__0)",
                 |        "Replace(L5: toLogOrNotToLog__0=... -> no-op)"
+                |      ],
+                |      [
+                |        "Replace(L7: simplify dead-store of t4#0)"
                 |      ],
                 |      [
                 |        "Replace(L1: let fail#0 -> no-op)",
@@ -154,12 +157,15 @@ class CleanupTemporariesTest {
                 |      ],
                 |      [],
                 |      [
-                |          "Replace(L1: rename written t#1 to return__0)",
-                |          "Replace(L1: return__0=... -\u003e no-op)"
+                |        "Replace(L1: assign to return__0 instead of temporary)",
+                |        "ReplaceRange(L1: assign t#1 after swapping to assign return__0 first)"
                 |      ],
                 |      [
-                |          "Replace(L1: let t#1 -\u003e no-op)",
-                |          "Replace(L1: let fail#2 -\u003e no-op)"
+                |        "Replace(L1: t#1=... -> no-op)"
+                |      ],
+                |      [
+                |        "Replace(L1: let t#1 -> no-op)",
+                |        "Replace(L1: let fail#2 -> no-op)"
                 |      ],
                 |      []
                 |    ],
@@ -316,23 +322,29 @@ class CleanupTemporariesTest {
                 |  },
                 |
                 |  allEdits: [
-                |    // First round through, we reduce the number of names by
-                |    // eliminating some temporaries.
+                |    // First round through, we roll up a chain of temporaries and
+                |    // assign the `return` var first.
                 |    [
-                |      "Replace(L1: rename written t#8 to return__9)",
-                |      "Replace(L1: return__9=... -> no-op)",
-                |      // Eliminating t#6..t#8 in favour of return__7 over two steps here and next.
-                |      "Replace(L1: rename read t#7 to t#6)",
-                |      "Replace(L11: t#7=... -> no-op)",
-                |      // We prefer eliminating temporaries
-                |      "Replace(L6: rename written t#3 to x__2)",
-                |      "Replace(L8: rename written t#3 to x__2)",
-                |      // We don't need `x__2 = t#3` since t#3 has gone away.
-                |      "Replace(L10: x__2=... -> no-op)",
+                |        "Replace(L11: assign to return__9 instead of temporary)",
+                |        "ReplaceRange(L11: assign t#6 after swapping to assign return__9 first)",
+                |        "ReplaceRange(L1: assign t#7 after swapping to assign return__9 first)",
+                |        "ReplaceRange(L1: assign t#8 after swapping to assign return__9 first)"
+                |    ],
+                |    // Now, quite a few of these temporaries are dangling assignments.
+                |    [
+                |        "Replace(L1: t#8=... -> no-op)",
+                |        // And the twin assignments along different paths to t#3 can both just
+                |        // assign to x instead.
+                |        "Replace(L6: rename written t#3 to x__2)",
+                |        "Replace(L8: rename written t#3 to x__2)",
+                |        "Replace(L10: x__2=... -> no-op)"
+                |    ],
+                |    // Eliminating dangling assignments.
+                |    [
+                |        "Replace(L1: t#7=... -> no-op)"
                 |    ],
                 |    [
-                |      "Replace(L11: rename written t#6 to return__9)",
-                |      "Replace(L1: return__9=... -> no-op)",
+                |        "Replace(L11: t#6=... -> no-op)"
                 |    ],
                 |    // And finally we sweep up some declarations.
                 |    [
@@ -400,13 +412,16 @@ class CleanupTemporariesTest {
                 |    ```,
                 |  allEdits: [
                 |    [
-                |      "Replace(L1: rename written t#4 to return__5)",
-                |      "Replace(L1: return__5=... -> no-op)",
-                |      "Replace(L6: t_a#0=... -> no-op)",
+                |      "Replace(L8: assign to return__5 instead of temporary)",
+                |      "ReplaceRange(L1: assign t#3 after swapping to assign return__5 first)",
+                |      "ReplaceRange(L1: assign t#4 after swapping to assign return__5 first)"
                 |    ],
                 |    [
-                |      "Replace(L8: rename written t#3 to return__5)",
-                |      "Replace(L1: return__5=... -> no-op)",
+                |      "Replace(L1: t#4=... -> no-op)",
+                |      "Replace(L6: t_a#0=... -> no-op)"
+                |    ],
+                |    [
+                |      "Replace(L1: t#3=... -> no-op)"
                 |    ],
                 |    [
                 |      "Replace(L4: simplify dead-store of t_b#2)",
@@ -480,26 +495,29 @@ class CleanupTemporariesTest {
                 |    ],
                 |    [],
                 |    [
-                |        "Replace(L1: rename written t#2 to return__1)",
-                |        "Replace(L1: return__1=... -\u003e no-op)"
+                |      "Replace(L1: assign to return__1 instead of temporary)",
+                |      "ReplaceRange(L1: assign t#2 after swapping to assign return__1 first)"
                 |    ],
                 |    [
-                |        "Replace(L1: let t#2 -\u003e no-op)",
-                |        "Replace(L1: let fail#2 -\u003e no-op)"
+                |      "Replace(L1: t#2=... -> no-op)"
+                |    ],
+                |    [
+                |      "Replace(L1: let t#2 -> no-op)",
+                |      "Replace(L1: let fail#2 -> no-op)"
                 |    ],
                 |    [],
                 |    [
-                |        "SplitAssignment(L3: split void assignment of t#3)"
+                |      "SplitAssignment(L3: split void assignment of t#3)"
                 |    ],
                 |    [
-                |        "Replace(L3: read t#3 -\u003e no-op)"
+                |      "Replace(L3: read t#3 -> no-op)"
                 |    ],
                 |    [
-                |        "Replace(L3: simplify dead-store of t#3)"
+                |      "Replace(L3: simplify dead-store of t#3)"
                 |    ],
                 |    [
-                |        "Replace(L3: let t#3 -\u003e no-op)",
-                |        "Replace(L1: let fail#3 -\u003e no-op)"
+                |      "Replace(L3: let t#3 -> no-op)",
+                |      "Replace(L1: let fail#3 -> no-op)"
                 |    ],
                 |    []
                 |  ],
@@ -572,9 +590,8 @@ class CleanupTemporariesTest {
                 |    var t#0, t#1, fail#0, fail#1;
                 |    @constructorProperty @visibility(\public) @stay @fromType(E__0) let ordinal__0: Int32;
                 |    @constructorProperty @visibility(\public) @stay @fromType(E__0) let name__0: String;
-                |    @visibility(\public) @enumMember @static @stay @fromType(E__0) let A__0;${
-                "" // Here, the initializer for a member got pulled out into a temporary
-            }
+                |    @visibility(\public) @enumMember @static @stay @fromType(E__0) let A__0;
+                |## Here, the initializer for a member got pulled out into a temporary
                 |    t#0 = new E__0(0, "A");
                 |    A__0 = t#0;
                 |    @visibility(\public) @enumMember @static @stay @fromType(E__0) let B__0;
@@ -612,9 +629,8 @@ class CleanupTemporariesTest {
                 |  pseudoCodeAfter: ```
                 |    @constructorProperty @visibility(\public) @stay @fromType(E__0) let ordinal__0: Int32;
                 |    @constructorProperty @visibility(\public) @stay @fromType(E__0) let name__0: String;
-                |    @visibility(\public) @enumMember @static @stay @fromType(E__0) let A__0;${
-                "" // Now the temporaries are directly initialized
-            }
+                |    @visibility(\public) @enumMember @static @stay @fromType(E__0) let A__0;
+                |## Now the temporaries are directly initialized
                 |    A__0 = new E__0(0, "A");
                 |    @visibility(\public) @enumMember @static @stay @fromType(E__0) let B__0;
                 |    B__0 = new E__0(1, "B");
@@ -637,7 +653,7 @@ class CleanupTemporariesTest {
                 |
                 |    ```,
                 |}
-            """.trimMargin(),
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
             r,
         )
     }
@@ -804,10 +820,8 @@ class CleanupTemporariesTest {
                 |    var x__0;
                 |    x__0 = 0;
                 |    incr__0 = fn incr /* return__3 */: Int32 {
-                |      var t#2;
                 |      fn__1: do {
-                |        t#2 = x__0 + 1;
-                |        x__0 = t#2;
+                |        x__0 = x__0 + 1;
                 |        return__3 = x__0
                 |      }
                 |    };
@@ -834,14 +848,13 @@ class CleanupTemporariesTest {
                 |  var t;
                 |  t = 1;
                 |  y = t;
-                |  t = 2;${
-                "" // If we renamed `t` to `y` we would print "2" here instead of "1"
-            }
+                |  t = 2;
+                |## If we renamed `t` to `y` we would print "2" here instead of "1"
                 |  console.log(y.toString());
                 |  y = t;
                 |  console.log(y.toString());
                 |}
-            """.trimMargin(),
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
         )
         assertStructure(
             """
@@ -969,15 +982,14 @@ class CleanupTemporariesTest {
                 |    ```,
                 |  consoleOutput: "",
                 |  pseudoCodeAfter: ```
-                |    let return__0, t#0: Int32;${
-                "" // Cannot eliminate t#0.  It has a declared type.
-            }
+                |    let return__0, t#0: Int32;
+                |## Cannot eliminate t#0.  It has a declared type.
                 |    t#0 = randomBool();
                 |    return__0 = t#0
                 |
                 |    ```,
                 |}
-            """.trimMargin(),
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
             r,
         )
     }
@@ -1083,13 +1095,13 @@ class CleanupTemporariesTest {
                 |          if (isNull(a__0)) {
                 |            a__1 = 1
                 |          } else {
-                |            a__1 = notNull(a__0)
+                |            a__1 = notNull(a__0);
                 |          };
                 |          let b__1 /* aka b */: Int32;
                 |          if (isNull(b__0)) {
                 |            b__1 = 2
                 |          } else {
-                |            b__1 = notNull(b__0)
+                |            b__1 = notNull(b__0);
                 |          };
                 |          return__0 = a__1 + b__1;
                 |        }
@@ -1124,10 +1136,9 @@ class CleanupTemporariesTest {
                 |      var t#0, t#1, t#2, fail#0, x__0: Int32;
                 |      x__0 = 10;
                 |      x__0 = x__0 * 3;
-                |      t#0 = hs(fail#0, x__0 / 5);${
-                "" // This used to have compound assignment `t#0 = (x__0 = x__0 * 3);` but we no longer produce it.
-                // TODO Some other way to conjure one for testing?
-            }
+                |      t#0 = hs(fail#0, x__0 / 5);
+                |## This used to have compound assignment `t#0 = (x__0 = x__0 * 3);` but we no longer produce it.
+                |## TODO Some other way to conjure one for testing?
                 |      if (fail#0) {
                 |        bubble()
                 |      };
@@ -1143,11 +1154,10 @@ class CleanupTemporariesTest {
                 |      var t#0;
                 |      var fail#0, x__0: Int32;
                 |      x__0 = 10;
-                |      x__0 = x__0 * 3;${
-                "" // We don't rewrite the `t#0 =` below currently because
-                // x__0 is a multiply assigned var.  We could fix that by
-                // recognizing that x__0 has one live write.
-            }
+                |      x__0 = x__0 * 3;
+                |## We don't rewrite the `t#0 =` below currently because
+                |## x__0 is a multiply assigned var.  We could fix that by
+                |## recognizing that x__0 has one live write.
                 |      t#0 = hs(fail#0, x__0 / 5);
                 |      if (fail#0) {
                 |        bubble()
@@ -1157,7 +1167,7 @@ class CleanupTemporariesTest {
                 |
                 |      ```
                 |}
-            """.trimMargin(),
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
             r,
         )
     }
@@ -1417,9 +1427,8 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeAfter: ```
                 |    let return__0;
-                |    var x__0;${
-                "" // Fixed that for you, after issuing an error.
-            }
+                |    var x__0;
+                |## Fixed that for you, after issuing an error.
                 |    x__0 = randomBool();
                 |    x__0 = randomBool();
                 |    return__0 = void
@@ -1436,7 +1445,7 @@ class CleanupTemporariesTest {
                 |
                 |    ```
                 |}
-            """.trimMargin(),
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
             r,
         )
     }
@@ -1447,8 +1456,8 @@ class CleanupTemporariesTest {
             """
                 |// `x` and `y` aren't var, but `z` is.
                 |// Optional `w` is here to ensure its handling works fine in context.
-                |let hi(x: Int, y: Int, var z: Int, w: Int = 3): Int {
-                |  // This is already a reassignment and needs recognized as such.
+                |export let hi(x: Int, y: Int, var z: Int, w: Int = 3): Int {
+                |  // This is already a reassignment and needs to be recognized as such.
                 |  x += 1;
                 |  // Multiple reassignments for contrast.
                 |  y += 2;
@@ -1464,21 +1473,21 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeAfter: ```
-                |    @fn let hi__0;
-                |    hi__0 = (@stay fn hi(var x__0 /* aka x */: Int32, var y__0 /* aka y */: Int32, var z__0 /* aka z */: Int32, @optional(true) w__0 /* aka w */: Int32?) /* return__0 */: Int32 {
+                |    @fn let `test//`.hi;
+                |    `test//`.hi = (@stay fn hi(var x__0 /* aka x */: Int32, var y__0 /* aka y */: Int32, var z__0 /* aka z */: Int32, @optional(true) w__0 /* aka w */: Int32?) /* return__0 */: Int32 {
                 |        fn__0: do {
                 |          let w__1 /* aka w */: Int32;
                 |          if (isNull(w__0)) {
                 |            w__1 = 3
                 |          } else {
-                |            w__1 = notNull(w__0)
+                |            w__1 = notNull(w__0);
                 |          };
                 |          x__0 = x__0 + 1;
                 |          y__0 = y__0 + 2;
                 |          y__0 = y__0 + 3;
                 |          z__0 = z__0 + 4;
                 |          z__0 = z__0 + 5;
-                |          return__0 = x__0 + y__0 + z__0 + w__1
+                |          return__0 = x__0 + y__0 + z__0 + w__1;
                 |        }
                 |    })
                 |
@@ -1486,21 +1495,21 @@ class CleanupTemporariesTest {
                 |  consoleOutput: ```
                 |      5: x += 1;
                 |         ┗━━━━┛
-                |      [test/test.temper:5+2-8]@T: x__0 is reassigned after :3+7-13 but is not declared `var` at :3+7-13
-                |      3: let hi(x: Int, y: Int, var z: Int
-                |                ┗━━━━┛
+                |      [test/test.temper:5+2-8]@T: x__0 is reassigned after :3+14-20 but is not declared `var` at :3+14-20
+                |      3: export let hi(x: Int, y: Int, var z: Int
+                |                       ┗━━━━┛
                 |      7: y += 2;
                 |         ┗━━━━┛
-                |      [test/test.temper:7+2-8]@T: y__0 is reassigned after :3+15-21 but is not declared `var` at :3+15-21
-                |      3: let hi(x: Int, y: Int, var z: Int, w: Int
-                |                        ┗━━━━┛
+                |      [test/test.temper:7+2-8]@T: y__0 is reassigned after :3+22-28 but is not declared `var` at :3+22-28
+                |      3: port let hi(x: Int, y: Int, var z: Int, w: Int
+                |                             ┗━━━━┛
                 |      8: y += 3;
                 |         ┗━━━━┛
-                |      [test/test.temper:8+2-8]@T: y__0 is reassigned after :7+2-8 but is not declared `var` at :3+15-21
+                |      [test/test.temper:8+2-8]@T: y__0 is reassigned after :7+2-8 but is not declared `var` at :3+22-28
                 |      7: y += 2;
                 |         ┗━━━━┛
-                |      3: let hi(x: Int, y: Int, var z: Int, w: Int
-                |                        ┗━━━━┛
+                |      3: port let hi(x: Int, y: Int, var z: Int, w: Int
+                |                             ┗━━━━┛
                 |
                 |    ```
                 |}
@@ -1965,16 +1974,13 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeAfter: ```
-                |    var t#0, t#1;
                 |    var t_a#0;
                 |    t_a#0 = randomInt(0, 10);
                 |    var result__0;
                 |    orelse#0: {
-                |      t#0 = 1 + t_a#0;
-                |      result__0 = t#0
+                |      result__0 = 1 + t_a#0;
                 |    } orelse {
-                |      t#1 = 2 + t_a#0;
-                |      result__0 = t#1
+                |      result__0 = 2 + t_a#0;
                 |    };
                 |    result__0
                 |

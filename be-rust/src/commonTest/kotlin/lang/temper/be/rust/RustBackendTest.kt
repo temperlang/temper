@@ -2801,11 +2801,12 @@ class RustBackendTest {
             |fn decodeHexUnsigned__0(sourceText__0: impl temper_core::ToArcString, start__0: usize, limit__0: usize) -> i32 {
             |    let sourceText__0 = sourceText__0.to_arc_string();
             |    let return__0: i32;
-            |    let mut t___0: usize;
+            |    let mut t___0: bool;
             |    let mut t___1: bool;
-            |    let mut t___2: bool;
+            |    let mut t___2: i32;
             |    let mut t___3: bool;
             |    let mut t___4: i32;
+            |    let mut t___5: i32;
             |    'fn__0: {
             |        let mut n__0: i32 = 0;
             |        let mut i__0: usize = start__0;
@@ -2815,20 +2816,21 @@ class RustBackendTest {
             |            }
             |            let cp__0: i32 = temper_core::string::get( & sourceText__0, i__0);
             |            if Some(48) <= Some(cp__0) {
-            |                t___1 = Some(cp__0) <= Some(48);
+            |                t___0 = Some(cp__0) <= Some(48);
             |            } else {
-            |                t___1 = false;
+            |                t___0 = false;
             |            }
-            |            if t___1 {
-            |                t___4 = cp__0.wrapping_sub(48);
+            |            if t___0 {
+            |                t___5 = cp__0.wrapping_sub(48);
             |            } else {
             |                if Some(65) <= Some(cp__0) {
-            |                    t___2 = Some(cp__0) <= Some(70);
+            |                    t___1 = Some(cp__0) <= Some(70);
             |                } else {
-            |                    t___2 = false;
+            |                    t___1 = false;
             |                }
-            |                if t___2 {
-            |                    t___4 = cp__0.wrapping_sub(65).wrapping_add(10);
+            |                if t___1 {
+            |                    t___2 = cp__0.wrapping_sub(65).wrapping_add(10);
+            |                    t___5 = t___2;
             |                } else {
             |                    if Some(97) <= Some(cp__0) {
             |                        t___3 = Some(cp__0) <= Some(102);
@@ -2837,16 +2839,16 @@ class RustBackendTest {
             |                    }
             |                    if t___3 {
             |                        t___4 = cp__0.wrapping_sub(97).wrapping_add(10);
+            |                        t___5 = t___4;
             |                    } else {
             |                        return__0 = -1;
             |                        break 'fn__0;
             |                    }
             |                }
             |            }
-            |            let digit__0: i32 = t___4;
+            |            let digit__0: i32 = t___5;
             |            n__0 = n__0.wrapping_mul(16).wrapping_add(digit__0);
-            |            t___0 = temper_core::string::next( & sourceText__0, i__0);
-            |            i__0 = t___0;
+            |            i__0 = temper_core::string::next( & sourceText__0, i__0);
             |        }
             |        return__0 = n__0;
             |    }

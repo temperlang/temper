@@ -60,7 +60,6 @@ private object Builtins {
         val m = mutableMapOf(
             "++" to Value(DesugarPrefixOperatorMacro("++", BuiltinFuns.plusFn)),
             "--" to Value(DesugarPrefixOperatorMacro("--", BuiltinFuns.minusFn)),
-//            "+" to BuiltinFuns.vPlusFn, // do not commit
             "-" to BuiltinFuns.vMinusFn,
             "*" to Value(BuiltinFuns.timesFn),
             "**" to Value(BuiltinFuns.powFn),
