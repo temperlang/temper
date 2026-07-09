@@ -97,6 +97,19 @@ data class OperatorMember(
         } else {
             OperatorType.Prefix // +_
         }
+
+    companion object {
+        fun from(operator: String, type: OperatorType): OperatorMember = OperatorMember(
+            when (type) {
+                OperatorType.Separator,
+                OperatorType.Infix,
+                -> "_${operator}_"
+                OperatorType.Postfix -> "_${operator}"
+                OperatorType.Prefix -> "${operator}_"
+                OperatorType.Nullary -> operator
+            },
+        )
+    }
 }
 
 fun Member.matches(memberShape: VisibleMemberShape, includeOverloads: Boolean): Boolean {

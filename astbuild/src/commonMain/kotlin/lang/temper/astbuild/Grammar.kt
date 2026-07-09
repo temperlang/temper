@@ -17,6 +17,7 @@ import lang.temper.astbuild.ProductionNames.`(`
 import lang.temper.astbuild.ProductionNames.`)`
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.BuiltinFuns.vPostfixApply
+import lang.temper.builtin.vDesugarOperation
 import lang.temper.builtin.vStringExprMacro
 import lang.temper.common.Either
 import lang.temper.common.LeftOrRight
@@ -1163,6 +1164,7 @@ val grammar = ProductionNames.run {
             (
                 OperatorType.Infix y callTree(
                     `(` y
+                        vDesugarOperation y
                         Expr y
                         name(InfixOp) y shiftLeft y
                         Expr y
@@ -1172,7 +1174,7 @@ val grammar = ProductionNames.run {
         )
     InfixOp `：＝` isOperator(OperatorType.Infix, exclude = stmtContinueOps)
 
-    Prefix `：＝` (OperatorType.Prefix y callTree(`(` y name(PrefixOp) y Expr y `)`))
+    Prefix `：＝` (OperatorType.Prefix y callTree(`(` y vDesugarOperation y name(PrefixOp) y Expr y `)`))
     PrefixOp `：＝` isOperator(OperatorType.Prefix, exclude = setOf(Operator.New, Operator.PreCase))
 
     Postfix `：＝` (

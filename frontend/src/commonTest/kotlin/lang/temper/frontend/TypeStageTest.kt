@@ -202,24 +202,26 @@ class TypeStageTest {
     )
 
     @Test
-    fun builtinInlined() = assertModuleAtStage(
+    fun bareReferenceToOperator() = assertModuleAtStage(
         input = " nym`+` ",
         moduleResultNeeded = true,
-        stage = Stage.Run,
+        stage = Stage.GenerateCode,
         want = """
         {
-          run: "fn (nym`+` × 6): Function",
           syntaxMacro: {
             body: [ "Block", [ [ "RightName", "+" ] ] ],
           },
-          type: {
+          generateCode: {
             body:
               ```
               let return__0;
-              return__0 = (fn (nym`+` × 6))
+              return__0 = nym`+`
 
               ```
-          }
+          },
+          errors: [
+            "No declaration for nym`+`!",
+          ]
         }
         """,
     )
@@ -275,8 +277,8 @@ class TypeStageTest {
             |        void;
             |        fn__0: do {
             |          var fail#0;
-            |## Above, `as Listed`, here `as(..., Listed<String>)`
-            |          return__0 = hs(fail#0, as(list(), Listed<String>));
+            |## Above, `as Listed`, here `... as Listed<String>`
+            |          return__0 = hs(fail#0, list() as Listed<String>);
             |          if (fail#0) {
             |            bubble()
             |          };
@@ -287,6 +289,7 @@ class TypeStageTest {
             |  }
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
     )
 
     @Test
@@ -467,9 +470,8 @@ class TypeStageTest {
                 |        return__0 = getConsole();
                 |    });
                 |    let this__0: List<String>;
-                |    this__0 = list ⋖ String ⋗("a", "b", "c", "d");${
-                "" // Here we start the inlined callee body.
-            }
+                |    this__0 = list ⋖ String ⋗("a", "b", "c", "d");
+                |## Here we start the inlined callee body.
                 |    let n__0 ⦂ Int32;
                 |    n__0 = do_get_length(this__0);
                 |    var i__0 ⦂ Int32;
@@ -477,25 +479,21 @@ class TypeStageTest {
                 |    while (i__0 < n__0) {
                 |      let el__0: String;
                 |      el__0 = do_call_get(this__0, i__0);
-                |      i__0 = i__0 + 1;${
-                "" // Here we start the inlined block lambda parameters.
-            }
+                |      i__0 = i__0 + 1;
+                |## Here we start the inlined block lambda parameters.
                 |      let x__0 ⦂ String;
-                |      x__0 = el__0;${
-                "" // Here we start the inlined block lambda body.
-                // Note the absence of a void-like return declaration.
-            }
+                |      x__0 = el__0;
+                |## Here we start the inlined block lambda body.
+                |## Note the absence of a void-like return declaration.
                 |      if (x__0 == "c") {
                 |        break;
                 |      };
-                |      do_call_log(console#0, x__0);${
-                "" // Did not inline `return__0 = void`.  Not ok for local vars.
-                // Here's the end of the inlined block lambda.
-            }
-                |    };${
-                "" // Here's the end of the inlined callee body.  No `return__0 = void` here either.
-            }
-
+                |      do_call_log(console#0, x__0);
+                |## Did not inline `return__0 = void`.  Not ok for local vars.
+                |## Here's the end of the inlined block lambda.
+                |    };
+                |## Here's the end of the inlined callee body.  No `return__0 = void` here either.
+                |
                 |    ```
                 |  },
                 |  run: "void: Void",
@@ -505,7 +503,7 @@ class TypeStageTest {
                 |
                 |    ```
                 |}
-            """.trimMargin(),
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
         )
     }
 
@@ -563,9 +561,29 @@ class TypeStageTest {
             |}
         """.trimMargin(),
         moduleResultNeeded = true,
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
         want = """
             |{
-            |  run: [5, "Int32"]
+            |  run: [5, "Int32"],
+            |  type: {
+            |    body: ```
+            |      let return__0;
+            |      var i__0: Int32;
+            |      i__0 = 0;
+            |      outer__0: while (i__0 < 5) {
+            |        i__0 = i__0 + 1;
+            |        void;
+            |        while (i__0 < 10) {
+            |          if (i__0 < 6) {
+            |            continue outer__0;
+            |          };
+            |          i__0 = i__0 + 10;
+            |        }
+            |      };
+            |      return__0 = i__0;
+            |
+            |      ```
+            |  }
             |}
         """.trimMargin(),
     )
@@ -1147,8 +1165,9 @@ class TypeStageTest {
                 ```
                 let return__1, @fn sum2i__0;
                 sum2i__0 = (@stay fn sum2i(x__0 /* aka x */: Int32, y__0 /* aka y */: Int32) /* return__0 */: Int32 {
+                    void;
                     fn__0: do {
-                      return__0 = x__0 + y__0
+                      return__0 = x__0 + y__0;
                     }
                 });
                 return__1 = (fn sum2i)
@@ -1392,7 +1411,7 @@ class TypeStageTest {
                     if (isNull(x__0)) {
                       return__1 = 0
                     } else {
-                      return__1 = notNull(x__0) + 1
+                      return__1 = notNull(x__0) + 1;
                     };
                   }
               });
@@ -1483,8 +1502,8 @@ class TypeStageTest {
                   [ "Block", [
                       [ "Call", [
                           [ "Call", [
-                              [ "Value", "nym`<>`: Function" ],
-                              [ "RightName", "echo" ],
+                               [ "Value", "nym`<>`: Function" ],
+                               [ "RightName", "echo" ],
                                [ "RightName", "Int" ],
                              ]
                            ],
@@ -1605,19 +1624,19 @@ class TypeStageTest {
         |            if (isNull(a__1)) {
         |              a__2 = 1
         |            } else {
-        |              a__2 = notNull(a__1)
+        |              a__2 = notNull(a__1);
         |            };
         |            let b__2 /* aka b */: Int32;
         |            if (isNull(b__1)) {
         |              b__2 = 2
         |            } else {
-        |              b__2 = notNull(b__1)
+        |              b__2 = notNull(b__1);
         |            };
         |            let c__2 /* aka c */: Int32;
         |            if (isNull(c__1)) {
         |              c__2 = 3
         |            } else {
-        |              c__2 = notNull(c__1)
+        |              c__2 = notNull(c__1);
         |            };
         |            setp(a__0, this__0, a__2);
         |            setp(b__0, this__0, b__2);
@@ -1881,11 +1900,13 @@ class TypeStageTest {
             |      });
             |      @fn let f__0;
             |      f__0 = (@stay fn f(hi__0 /* aka hi */: String) /* return__1 */: Void {
+            |          var t#0;
             |          void;
             |          fn__0: do {
             |            let s__0: String;
             |            s__0 = cat("Hello, ", str(hi__0), "!");
-            |            do_call_log(console#0, s__0);
+            |            t#0 = s__0;
+            |            do_call_log(console#0, t#0);
             |            do_call_log(console#0, s__0);
             |            return__1 = void
             |          }
@@ -1955,7 +1976,7 @@ class TypeStageTest {
         input = """
             |// For these first two, the unary plus survives to the typer
             |// but is then removed so there's one less thing to translate.
-            |export let fi(i: Int): Int { +i }
+            |export let fi(i: Int32): Int32 { +i }
             |export let ff(f: Float64): Float64 { +f }
             |// This use of `+` is illegal so remains in the tree.
             |export let fs(s: String): String { +s }
@@ -1967,18 +1988,21 @@ class TypeStageTest {
             |      ```
             |      @fn let `test//`.fi, @fn `test//`.ff, @fn `test//`.fs;
             |      `test//`.fi = (@stay fn fi(i__0 /* aka i */: Int32) /* return__0 */: Int32 {
+            |          void;
             |          fn__0: do {
-            |            return__0 = identity(i__0)
+            |            return__0 = identity(i__0);
             |          }
             |      });
             |      `test//`.ff = (@stay fn ff(f__0 /* aka f */: Float64) /* return__1 */: Float64 {
+            |          void;
             |          fn__1: do {
-            |            return__1 = identity(f__0)
+            |            return__1 = identity(f__0);
             |          }
             |      });
             |      `test//`.fs = (@stay fn fs(s__0 /* aka s */: String) /* return__2 */: String {
+            |          void;
             |          fn__2: do {
-            |            return__2 = +s__0
+            |            return__2 = +s__0;
             |          }
             |      })
             |
@@ -1989,20 +2013,23 @@ class TypeStageTest {
             |      ```
             |      @fn let `test//`.fi, @fn `test//`.ff, @fn `test//`.fs;
             |      `test//`.fi = (@stay fn fi(i__0 /* aka i */: Int32) /* return__0 */: Int32 {
+            |          void;
             |          fn__0: do {
             |## Now it's gone
-            |            return__0 = i__0
+            |            return__0 = i__0;
             |          }
             |      });
             |      `test//`.ff = (@stay fn ff(f__0 /* aka f */: Float64) /* return__1 */: Float64 {
+            |          void;
             |          fn__1: do {
-            |            return__1 = f__0
+            |            return__1 = f__0;
             |          }
             |      });
             |      `test//`.fs = (@stay fn fs(s__0 /* aka s */: String) /* return__2 */: String {
+            |          void;
             |          fn__2: do {
             |## This stays here so that TypeChecker can flag it as an error later.
-            |            return__2 = +s__0
+            |            return__2 = +s__0;
             |          }
             |      })
             |
@@ -2164,6 +2191,7 @@ class TypeStageTest {
             |          return__4 = getp(radix__0, this__4)
             |      });
             |      `test//`.crazySum = (@stay fn crazySum(intMaker__0 /* aka intMaker */: IntMaker, int__2 /* aka int */: Int64, string__1 /* aka string */: String) /* return__5 */: (Int32 | Bubble) {
+            |          var t#0 ⦂ Int32;
             |          void;
             |          fn__3: do {
             |            var fail#2 ⦂ Boolean, fail#3 ⦂ Boolean;
@@ -2177,7 +2205,8 @@ class TypeStageTest {
             |            if (fail#3) {
             |              bubble ⋖ Int32 ⋗()
             |            };
-            |            return__5 = do_call_int32ToInt(intMaker__0, intInt__0 + stringInt__0);
+            |            t#0 = intInt__0 + stringInt__0;
+            |            return__5 = do_call_int32ToInt(intMaker__0, t#0);
             |          }
             |      })
             |
@@ -2311,7 +2340,7 @@ class TypeStageTest {
     )
 
     /**
-     * We currently have some direct overloading support, so this helps fore reviewing that behahior.
+     * We currently have some direct overloading support, so this helps fore reviewing that behavior.
      * TODO Drop support for direct overloading.
      */
     @Test
@@ -2384,7 +2413,7 @@ class TypeStageTest {
             |            if (fail#3) {
             |              bubble ⋖ Int32 ⋗()
             |            };
-            |            return__4 = intInt__0 + stringInt__0
+            |            return__4 = intInt__0 + stringInt__0;
             |          }
             |      })
             |

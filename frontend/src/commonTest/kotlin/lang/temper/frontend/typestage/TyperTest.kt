@@ -1036,6 +1036,7 @@ class TyperTest {
         |    (i + 1) + (i * i);
         |/// ┗━━━━━━━━━━━━━━━┛ : Int32
         """.trimMargin(),
+        skipImplicits = true,
     )
 
     @Test
@@ -1614,19 +1615,22 @@ class TyperTest {
     @Test
     fun undeclared() = assertTypes(
         """
-        |///     ┏━━━┓           : Top
+        |///     ┏━━━┓           : Invalid
         |    let banjo = avocado as Thing;
         |///             ┗━━━━━┛ : Invalid
         |    let cobra: Commander;
         |///     ┗━━━┛ : Top
         """.trimMargin(),
         wantErrors = listOf(
-            "2+27-32: Expected value of type Type not ❎!",
+            "2+27-32: Expected value of type Type not `Thing`!",
             "2+16-23: No declaration for avocado!",
             "2+27-32: No declaration for Thing!",
-            "2+24-26: Expected function type, but got Function!",
             "4+15-24: No declaration for Commander!",
+            "2+8-13: Type Invalid mentions Invalid",
+            "2+16: Type Invalid mentions Invalid",
             "2+16-23: Type Invalid mentions Invalid",
+            "2+16-32: Type Invalid mentions Invalid",
+            "2+24-26: Type Invalid mentions Invalid",
             "2+27-32: Type Invalid mentions Invalid",
             "4+15-24: Type Invalid mentions Invalid",
         ),
@@ -1695,18 +1699,18 @@ class TyperTest {
     fun extensionMethodIsAlternative() = assertTypes(
         """
             |    class C {
-            |      public f(i: Int): Int { i }
+            |      public foo(i: Int): Int { i }
             |    }
             |
-            |    @extension("f")
+            |    @extension("foo")
             |    let cf(c: C, s: String): String { s }
             |
             |    let c = new C();
             |
-            |    c.f(1234);
-            |/// ┗━━━━━━━┛ : Int32
-            |    c.f("hi");
-            |/// ┗━━━━━━━┛ : String
+            |    c.foo(1234);
+            |/// ┗━━━━━━━━━┛ : Int32
+            |    c.foo("hi");
+            |/// ┗━━━━━━━━━┛ : String
         """.trimMargin(),
     )
 

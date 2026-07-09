@@ -38,7 +38,7 @@ sealed interface Name : Structured, TokenSerializable {
 
     /**
      * The base name if that exists, matching [toSymbol] if so.
-     * Otherwise, a best effort simple name for display.
+     * Otherwise, a best-effort simple name for display.
      * As with [rawDiagnostic], this value might not be unique.
      * It merely exists for human prettiness.
      */
@@ -87,8 +87,13 @@ sealed interface TemperName : Name {
 /** A [TemperName] that is stable across compiler runs. */
 sealed interface StableTemperName : TemperName
 
+/** A [TemperName] that corresponds to an identifier token in a source text. */
+sealed interface ParsedNameOrResolvedParsedName : TemperName {
+    fun asParsedName(): ParsedName
+}
+
 /** A name parsed from a source text that has yet to be resolved to a declaration. */
-data class ParsedName(val nameText: String) : TemperName {
+data class ParsedName(val nameText: String) : ParsedNameOrResolvedParsedName {
     override val builtinKey get() = nameText
 
     override fun toSymbol() = Symbol(nameText)
@@ -98,19 +103,22 @@ data class ParsedName(val nameText: String) : TemperName {
     override fun toString(): String = nameText
 
     override val rawDiagnostic: String get() = nameText
+
+    override fun asParsedName() = this
 }
 
 /**
- * A name that has been resolved based on scoping rules, and is no longer dependent on identifier
- * text.
+ * A name that has been resolved based on scoping rules and which is no longer dependent
+ * on identifier text.
  */
 sealed interface ResolvedName : TemperName
 
 /**
  * A [resolved name][ResolvedName] that was derived from a [parsed name][ParsedName].
  */
-sealed interface ResolvedParsedName : ResolvedName, SimplifiesInLogMessage {
+sealed interface ResolvedParsedName : ResolvedName, ParsedNameOrResolvedParsedName, SimplifiesInLogMessage {
     val baseName: ParsedName
+    override fun asParsedName() = baseName
 
     override val simplerLoggable get() = baseName
 }

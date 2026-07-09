@@ -1,6 +1,7 @@
 package lang.temper.frontend.typestage
 
 import lang.temper.common.Log
+import lang.temper.common.abbreviate
 import lang.temper.format.OutToks
 import lang.temper.format.OutputToken
 import lang.temper.format.OutputTokenType
@@ -17,8 +18,10 @@ import lang.temper.type.TypeShape
 import lang.temper.type2.TypeReason
 import lang.temper.value.AbstractTypeReasonElement
 import lang.temper.value.CallTree
+import lang.temper.value.Tree
 import lang.temper.value.TypeReasonElement
 import lang.temper.value.toLispy
+import lang.temper.value.toPseudoCode
 
 internal class BecauseNameUndeclared(
     override val pos: Position,
@@ -112,15 +115,15 @@ internal class BecauseIllegalAssignment(
     }
 }
 
-internal class BecauseTypeInfoMissingForName(
+internal class BecauseTypeInfoMissing(
     override val pos: Position,
-    val nameMissingInfo: ResolvedName,
+    val missingInfo: TokenSerializable,
 ) : AbstractTypeReasonElement() {
-    override val name get() = "BecauseTypeInfoMissingForName"
+    override val name get() = "BecauseTypeInfoMissing"
     override val level: Log.Level get() = Log.Error
     override val formatString get() = "Missing type info for %s"
     override val templateFillers: List<TokenSerializable>
-        get() = listOf(nameMissingInfo.toToken(inOperatorPosition = false))
+        get() = listOf(missingInfo)
 }
 
 internal abstract class BecauseNoMemberAccessible(
@@ -169,6 +172,7 @@ internal class BecauseNoSuchMember(
 
 internal class BecauseUnresolvedTypeReference(
     override val pos: Position,
+    val unexpected: TokenSerializable,
 ) : AbstractTypeReasonElement() {
     override val name get() = "BecauseUnresolvedTypeReference"
     override val level: Log.Level get() = Log.Error
@@ -176,6 +180,7 @@ internal class BecauseUnresolvedTypeReference(
     override val templateFillers: List<TokenSerializable>
         get() = listOf(
             OutputToken("Type", OutputTokenType.Word),
+            unexpected,
         )
 }
 
@@ -234,3 +239,9 @@ internal fun becauseRedundantArgument(p: Positioned) = TypeReason(
         listOf(),
     ),
 )
+
+fun shortPseudoCode(tree: Tree?): TokenSerializable {
+    if (tree == null) return OutputToken("missing type", OutputTokenType.Comment)
+    val text = "`${abbreviate(tree.toPseudoCode())}`"
+    return OutputToken(text, OutputTokenType.QuotedValue)
+}

@@ -50,7 +50,7 @@ fun inferBounds(
         }
 
         // Keep a list of type variables for each type parameter
-        // We do not precompute this, because callees can have different counts
+        // We do not precompute this because callees can have different counts
         // of these.
         // Only in the case where we have a reification of a type parameter
         // do we fill this in, and in that case, we know a priori that the callees
@@ -81,7 +81,7 @@ fun inferBounds(
                     is InputBound.LambdaBound -> {
                         // Create an imaginary call of the lambda.
                         // We create callees by looking through each callee and looking for a
-                        // functional interface  input and using that as the basis for the
+                        // functional interface input and using that as the basis for the
                         // imaginary call's callees.
                         val imaginaryCallees = buildList {
                             for (callee in call.calleeVariants) {

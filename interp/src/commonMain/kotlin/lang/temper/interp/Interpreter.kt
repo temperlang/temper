@@ -505,7 +505,7 @@ class Interpreter(
         }
         val mutableEnv = evaluation.envStack.first()
 
-        // In partial evaluation mode, we visit all nodes once.
+        // In partial evaluation mode, we visit each node at least once.
         if (im == InterpMode.Partial) {
             // TODO: for complex flows, order should make sense.
             // TODO: if there is a single terminal node in a structured flow,

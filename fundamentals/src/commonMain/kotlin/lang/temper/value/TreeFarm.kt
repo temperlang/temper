@@ -15,7 +15,7 @@ val linearFlowMaker: FlowMaker = { LinearFlow }
 /**
  * May be invoked with a block-lambda to allow specifying a tree using a simple DSL like
  *
- *      x.treeFarm.grow(pos) { // grow produces a singe tree
+ *      x.treeFarm.grow(pos) { // grow produces a single tree
  *        Block {
  *          Call(fn) {
  *            V(x)             // V is shorthand for value
@@ -66,8 +66,8 @@ class TreeFarm( // TODO: find an excuse to rename this to Overalls
     }
 
     /**
-     * Grow a list of trees.  The block body may include zero or more tree constructing function
-     * calls.
+     * Grow a list of trees.
+     * The block body may include zero or more tree-constructing function calls.
      */
     fun growAll(
         pos: Position,
@@ -332,7 +332,7 @@ abstract class Planting(
         return planted(FunTemplate(rowPlanting.spannedPosition!!, type, rowPlanting.childList))
     }
 
-    /** ln is shorthand for left name: a name used in assignment/write position. */
+    /** ln is shorthand for "left name": a name used in the assignment/write position. */
     fun Ln(name: TemperName, type: StaticType? = null): UnpositionedTreeTemplate<LeftNameLeaf> =
         planted(UnpositionedLeftNameLeafTemplate(type, name))
     fun Ln(pos: Position, name: TemperName, type: StaticType? = null): TreeTemplate<LeftNameLeaf> =
@@ -342,7 +342,7 @@ abstract class Planting(
     fun Ln(pos: Position, type: StaticType? = null, makeName: (NameMaker) -> TemperName) =
         Ln(pos, makeName.invoke(nameMaker), type)
 
-    /** rn is shorthand for right name: a name used in read position. */
+    /** rn is shorthand for "right name": a name used in read position. */
     fun Rn(name: TemperName, type: StaticType? = null): UnpositionedTreeTemplate<RightNameLeaf> =
         planted(UnpositionedRightNameLeafTemplate(type, name))
     fun Rn(pos: Position, name: TemperName, type: StaticType? = null): TreeTemplate<RightNameLeaf> =
@@ -482,7 +482,7 @@ private fun buildTreeList(
 }
 
 /**
- * Something that, given a position, we can derive a tree.
+ * Something from which, given a position, we can derive a tree.
  */
 sealed class UnpositionedTreeTemplate<TREE : Tree> {
     fun toTree(document: Document, pos: Position): TREE = at(pos).toTree(document)

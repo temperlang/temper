@@ -86,8 +86,8 @@ interface FormattingHints {
             return true
         }
 
-        if (preceding.association == TokenAssociation.Infix ||
-            following.association == TokenAssociation.Infix
+        if ((preceding.association == TokenAssociation.Infix && !isAllDots(preceding)) ||
+            (following.association == TokenAssociation.Infix && !isAllDots(following))
         ) {
             return true
         }

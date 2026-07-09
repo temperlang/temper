@@ -433,14 +433,14 @@ class JavaBackendTest {
             """
                 |public static void hi(int n__0) {
                 |    class Local_1 {
-                |        String t_15;
+                |        String t_17;
                 |    }
                 |    final Local_1 local$1 = new Local_1();
                 |    int i__0 = 0;
                 |    while (i__0 < n__0) {
-                |        local$1.t_15 = Integer.toString(i__0);
+                |        local$1.t_17 = Integer.toString(i__0);
                 |        class Local_2 {
-                |            String a__0 = local$1.t_15;
+                |            String a__0 = local$1.t_17;
                 |        }
                 |        final Local_2 local$2 = new Local_2();
                 |        Consumer<String> blah__0 = m__0 -> {
@@ -1792,17 +1792,17 @@ class JavaBackendTest {
         """.trimMargin(),
         want = """
             |public static int doThings(int n__0) {
-            |    int t_7;
-            |    boolean t_8;
+            |    int t_9;
+            |    boolean t_10;
             |    int i__0 = 0;
             |    top__0: while (i__0 < n__0) {
             |        try {
-            |            t_7 = Core.modIntInt(n__0, i__0);
-            |            t_8 = t_7 == 0;
+            |            t_9 = Core.modIntInt(n__0, i__0);
+            |            t_10 = t_9 == 0;
             |        } catch (RuntimeException ignored$1) {
-            |            t_8 = false;
+            |            t_10 = false;
             |        }
-            |        if (t_8) {
+            |        if (t_10) {
             |            break top__0;
             |        }
             |        i__0 = i__0 + 1;
@@ -1897,48 +1897,48 @@ class JavaBackendTest {
         """.trimMargin(),
         want = """
             |public static int doThings(int n__0) {
-            |    int t_9;
+            |    int t_13;
             |    int result__0 = 0;
-            |    label_14: while (result__0 == 0) {
+            |    label_20: while (result__0 == 0) {
             |        outer__0: {
             |            int more__0;
-            |            int escape_12 = 0;
-            |            int more_11;
-            |            escapeLabel_13: try {
+            |            int escape_18 = 0;
+            |            int more_17;
+            |            escapeLabel_19: try {
             |                if (n__0 < 3) {
             |                    throw Core.bubble();
             |                }
             |                int i__0 = 2;
             |                while (i__0 < n__0) {
-            |                    t_9 = Core.modIntInt(n__0, i__0);
-            |                    if (t_9 == 0) {
+            |                    t_13 = Core.modIntInt(n__0, i__0);
+            |                    if (t_13 == 0) {
             |                        break;
             |                    }
             |                    result__0 = result__0 + i__0;
             |                    i__0 = i__0 + 1;
             |                }
             |                if (n__0 > 25) {
-            |                    escape_12 = 1;
-            |                    break escapeLabel_13;
+            |                    escape_18 = 1;
+            |                    break escapeLabel_19;
             |                }
             |                if (n__0 > 20) {
-            |                    escape_12 = 2;
-            |                    break escapeLabel_13;
+            |                    escape_18 = 2;
+            |                    break escapeLabel_19;
             |                }
             |                if (n__0 > 15) {
-            |                    escape_12 = 3;
-            |                    break escapeLabel_13;
+            |                    escape_18 = 3;
+            |                    break escapeLabel_19;
             |                }
             |                if (n__0 > 10) {
-            |                    escape_12 = 2;
-            |                    break escapeLabel_13;
+            |                    escape_18 = 2;
+            |                    break escapeLabel_19;
             |                }
-            |                more_11 = 1;
+            |                more_17 = 1;
             |            } catch (RuntimeException ignored$1) {
-            |                more_11 = 2;
+            |                more_17 = 2;
             |            }
-            |            more__0 = more_11;
-            |            switch (escape_12) {
+            |            more__0 = more_17;
+            |            switch (escape_18) {
             |                case 1:
             |                    {
             |                    continue;
@@ -1949,7 +1949,7 @@ class JavaBackendTest {
             |                }
             |                case 3:
             |                    {
-            |                    break label_14;
+            |                    break label_20;
             |                }
             |                default:
             |                    {
