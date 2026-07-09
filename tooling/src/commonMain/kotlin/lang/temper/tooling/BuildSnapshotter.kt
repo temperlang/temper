@@ -45,7 +45,7 @@ class ServerBuildSnapshotter(
             // Expect the precomputed string object because of our usage.
             stepId === Debug.Frontend.ParseStage.After.loggerName -> {
                 val toolTrees = sources.map { source ->
-                    val toolTreeWithoutComments = convertTree(source.tree!!)
+                    val toolTreeWithoutComments = convertTree(source.tree!!)!!
                     weaveComments(tree = toolTreeWithoutComments, comments = source.comments!!)
                 }
                 debug {
