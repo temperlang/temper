@@ -33,6 +33,7 @@ class GenerateCodeStageTest {
     @Test
     fun simpleDoNothingLoop() = assertModuleAtStage(
         stage = Stage.GenerateCode,
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
         input = """
         // This example is interesting because the infer result pass actually adds two assignments
         // to gather results from terminal expression.
@@ -54,7 +55,7 @@ class GenerateCodeStageTest {
                 var i__0;
                 i__0 = 0;
                 while (i__0 < 3) {
-                  i__0 = i__0 + 1
+                  i__0 = i__0 + 1;
                 }
 
                 ```
@@ -131,18 +132,18 @@ class GenerateCodeStageTest {
             |          return__2 = void
             |      });
             |      `test//`.describeGeometric = (@stay fn describeGeometric(g__0 /* aka g */: Geometric) /* return__3 */: String {
-            |          if (is(g__0, Circle)) {
+            |          if (g__0 is Circle) {
             |            return__3 = "circle"
-            |          } else if (is(g__0, Square)) {
+            |          } else if (g__0 is Square) {
             |            return__3 = "square"
             |          } else {
             |            return__3 = void
             |          }
             |      });
             |      `test//`.describeShape = (@stay fn describeShape(s__0 /* aka s */: Shape) /* return__4 */: String {
-            |          if (is(s__0, Circle)) {
+            |          if (s__0 is Circle) {
             |            return__4 = "circle"
-            |          } else if (is(s__0, Square)) {
+            |          } else if (s__0 is Square) {
             |            return__4 = "square"
             |          } else {
             |            return__4 = panic ⋖ String ⋗()
@@ -919,10 +920,10 @@ class GenerateCodeStageTest {
             |  run: "123: Int32",
             |  generateCode: {
             |    body: ```
-            |      let return__0, @reach(\none) a__0, b__0;
+            |      let return__0, a__0, b__0;
             |      b__0 = oneTwoThree();
             |      a__0 = b__0;
-            |      return__0 = b__0
+            |      return__0 = a__0
             |
             |      ```
             |  }
@@ -960,7 +961,7 @@ class GenerateCodeStageTest {
             |    body: ```
             |      @fn @reach(\none) let some__0;
             |      some__0 = (@stay fn some(maybe__0 /* aka maybe */: StringIndexOption) /* return__0 */: StringIndex {
-            |          if (is(maybe__0, StringIndex)) {
+            |          if (maybe__0 is StringIndex) {
             |            return__0 = assertAs(maybe__0, StringIndex)
             |          } else {
             |            return__0 = getStatic(String, \begin)
@@ -990,7 +991,7 @@ class GenerateCodeStageTest {
             |    body: ```
             |      @fn @reach(\none) let some__0;
             |      some__0 = (@stay fn some(maybe__0 /* aka maybe */: StringIndexOption) /* return__0 */: StringIndex {
-            |          if (is(maybe__0, StringIndex)) {
+            |          if (maybe__0 is StringIndex) {
             |            return__0 = assertAs(maybe__0, StringIndex)
             |          } else {
             |            return__0 = getStatic(String, \begin)
@@ -1801,20 +1802,21 @@ class GenerateCodeStageTest {
             |      @static @visibility(\private) @stay @fromType(C__0) let ap__0: Int32;
             |      ap__0 = 1;
             |      @static @visibility(\public) @stay @fromType(C__0) let a__0: Int32;
-            |      igetStatic(C__0, \ap);
             |      a__0 = 2;
             |      @visibility(\private) @stay @fromType(C__0) let bp__0: Int32;
             |      @visibility(\private) @stay @fromType(C__0) let b__0: Int32;
             |      @fn @static @visibility(\public) @stay @fromType(C__0) let f__0;
             |      f__0 = (@stay fn f(i__0 /* aka i */: Int32) /* return__0 */: Int32 {
+            |          void;
             |          fn__0: do {
-            |            return__0 = i__0 + 2 + igetStatic(C__0, \a) + 1 + igetStatic(C__0, \ap)
+            |            return__0 = i__0 + 2 + igetStatic(C__0, \a) + 1 + igetStatic(C__0, \ap);
             |          }
             |      });
             |      @fn @static @visibility(\private) @stay @fromType(C__0) let fp__0;
             |      fp__0 = (@stay fn fp(i__1 /* aka i */: Int32) /* return__1 */: Int32 {
+            |          void;
             |          fn__1: do {
-            |            return__1 = i__1 + 1
+            |            return__1 = i__1 + 1;
             |          }
             |      });
             |      @visibility(\public) @fn @stay @fromType(C__0) let g__0;
@@ -1828,7 +1830,7 @@ class GenerateCodeStageTest {
             |      h__0 = (@stay fn h(@impliedThis(C__0) this__1: C__0, i__3 /* aka i */: Int32) /* return__3 */: Int32 {
             |          void;
             |          fn__3: do {
-            |            return__3 = 2 *(fn f)(i__3) *(fn fp)(i__3) * do_icall_g(type (C__0), this__1, i__3) * do_icall_g(type (C__0), this__1, i__3)
+            |            return__3 = 2 * (fn f)(i__3) * (fn fp)(i__3) * do_icall_g(type (C__0), this__1, i__3) * do_icall_g(type (C__0), this__1, i__3)
             |          }
             |      });
             |      @fn @static @visibility(\public) @stay @fromType(C__0) let g2__0;
@@ -1841,7 +1843,7 @@ class GenerateCodeStageTest {
             |      @fn @static @visibility(\public) @stay @fromType(C__0) let h2__0;
             |      h2__0 = (@stay fn h2(i__5 /* aka i */: Int32) /* return__5 */: Int32 {
             |          fn__5: do {
-            |            return__5 = 2 *(fn f)(i__5) *(fn fp)(i__5)
+            |            return__5 = 2 * (fn f)(i__5) * (fn fp)(i__5)
             |          }
             |      });
             |      @fn @visibility(\public) @stay @fromType(C__0) let constructor__0;
@@ -1864,41 +1866,40 @@ class GenerateCodeStageTest {
             |  "generateCode": {
             |      "body":
             |      ```
-            |      @typeDecl(C__0) @stay let C__0;
+            |      @typeDecl(C__0) @stay @reach(\none) let C__0;
             |      C__0 = type (C__0);
             |      @fn @reach(\none) let g3__0;
-            |      @static @visibility(\private) @stay @fromType(C__0) let ap__0: Int32;
+            |      @static @visibility(\private) @stay @fromType(C__0) @reach(\none) let ap__0: Int32;
             |      ap__0 = 1;
-            |      @static @visibility(\public) @stay @fromType(C__0) let a__0: Int32;
-            |      igetStatic(C__0, \ap);
+            |      @static @visibility(\public) @stay @fromType(C__0) @reach(\none) let a__0: Int32;
             |      a__0 = 2;
-            |      @visibility(\private) @stay @fromType(C__0) let bp__0: Int32;
-            |      @visibility(\private) @stay @fromType(C__0) let b__0: Int32;
-            |      @fn @static @visibility(\public) @stay @fromType(C__0) let f__0;
+            |      @visibility(\private) @stay @fromType(C__0) @reach(\none) let bp__0: Int32;
+            |      @visibility(\private) @stay @fromType(C__0) @reach(\none) let b__0: Int32;
+            |      @fn @static @visibility(\public) @stay @fromType(C__0) @reach(\none) let f__0;
             |      f__0 = (@stay fn f(i__0 /* aka i */: Int32) /* return__0 */: Int32 {
             |          return__0 = i__0 + 2 + igetStatic(C__0, \a) + 1 + igetStatic(C__0, \ap)
             |      });
-            |      @fn @static @visibility(\private) @stay @fromType(C__0) let fp__0;
+            |      @fn @static @visibility(\private) @stay @fromType(C__0) @reach(\none) let fp__0;
             |      fp__0 = (@stay fn fp(i__1 /* aka i */: Int32) /* return__1 */: Int32 {
             |          return__1 = i__1 + 1
             |      });
-            |      @visibility(\public) @fn @stay @fromType(C__0) let g__0;
+            |      @visibility(\public) @fn @stay @fromType(C__0) @reach(\none) let g__0;
             |      g__0 = (@stay fn g(@impliedThis(C__0) this__0: C__0, i__2 /* aka i */: Int32) /* return__2 */: Int32 {
             |          return__2 = 2 * igetStatic(C__0, \f)(i__2) * igetStatic(C__0, \fp)(i__2) * getp(bp__0, this__0) * getp(b__0, this__0) * getp(bp__0, this__0) * getp(b__0, this__0)
             |      });
-            |      @visibility(\public) @fn @stay @fromType(C__0) let h__0;
+            |      @visibility(\public) @fn @stay @fromType(C__0) @reach(\none) let h__0;
             |      h__0 = (@stay fn h(@impliedThis(C__0) this__1: C__0, i__3 /* aka i */: Int32) /* return__3 */: Int32 {
-            |          return__3 = 2 *(fn f)(i__3) *(fn fp)(i__3) * do_icall_g(type (C__0), this__1, i__3) * do_icall_g(type (C__0), this__1, i__3)
+            |          return__3 = 2 * (fn f)(i__3) * (fn fp)(i__3) * do_icall_g(type (C__0), this__1, i__3) * do_icall_g(type (C__0), this__1, i__3)
             |      });
-            |      @fn @static @visibility(\public) @stay @fromType(C__0) let g2__0;
+            |      @fn @static @visibility(\public) @stay @fromType(C__0) @reach(\none) let g2__0;
             |      g2__0 = (@stay fn g2(i__4 /* aka i */: Int32) /* return__4 */: Int32 {
             |          return__4 = 2 * igetStatic(C__0, \f)(i__4) * igetStatic(C__0, \fp)(i__4)
             |      });
-            |      @fn @static @visibility(\public) @stay @fromType(C__0) let h2__0;
+            |      @fn @static @visibility(\public) @stay @fromType(C__0) @reach(\none) let h2__0;
             |      h2__0 = (@stay fn h2(i__5 /* aka i */: Int32) /* return__5 */: Int32 {
-            |          return__5 = 2 *(fn f)(i__5) *(fn fp)(i__5)
+            |          return__5 = 2 * (fn f)(i__5) * (fn fp)(i__5)
             |      });
-            |      @fn @visibility(\public) @stay @fromType(C__0) let constructor__0;
+            |      @fn @visibility(\public) @stay @fromType(C__0) @reach(\none) let constructor__0;
             |      constructor__0 = (@stay fn constructor(@impliedThis(C__0) this__2: C__0) /* return__6 */: Void {
             |          var t#1;
             |          setp(bp__0, this__2, 1);
@@ -2581,7 +2582,7 @@ class GenerateCodeStageTest {
             |    body: ```
             |      let return__0, @reach(\none) s__0: AnyValue;
             |      s__0 = "str";
-            |      return__0 = is("str", String)
+            |      return__0 = "str" is String
             |
             |      ```
             |  },
@@ -2761,7 +2762,7 @@ class GenerateCodeStageTest {
             |      f__0 = (@stay fn f(i__0 /* aka i */: StringIndexOption?) /* return__0 */: (Int32 | Bubble) {
             |          var t#0;
             |          if (!isNull(i__0)) {
-            |            t#0 = is(i__0, StringIndex)
+            |            t#0 = i__0 is StringIndex
             |          } else {
             |            t#0 = false
             |          };
@@ -2798,7 +2799,7 @@ class GenerateCodeStageTest {
             |      f__0 = (@stay fn f(i__0 /* aka i */: StringIndexOption?) /* return__0 */: (Int32 | Bubble) {
             |          var t#0;
             |          if (!isNull(i__0)) {
-            |            t#0 = is(i__0, StringIndexOption)
+            |            t#0 = i__0 is StringIndexOption
             |          } else {
             |            t#0 = false
             |          };
@@ -2838,7 +2839,7 @@ class GenerateCodeStageTest {
             |            if (isNull(i__0)) {
             |              j__0 = null
             |            } else {
-            |              j__0 = hs(fail#0, as(i__0, StringIndex));
+            |              j__0 = hs(fail#0, i__0 as StringIndex);
             |              if (fail#0) {
             |                break orelse#0;
             |              }
@@ -2883,7 +2884,7 @@ class GenerateCodeStageTest {
             |          if (isNull(i__0)) {
             |            t#0 = true
             |          } else {
-            |            t#0 = is(i__0, StringIndex)
+            |            t#0 = i__0 is StringIndex
             |          };
             |          if (t#0) {
             |            if (isNull(i__0)) {
@@ -2895,14 +2896,14 @@ class GenerateCodeStageTest {
             |            if (isNull(t#3)) {
             |              j__0 = null
             |            } else {
-            |              t#1 = hs(fail#0, as(t#3, StringIndex));
+            |              t#1 = hs(fail#0, t#3 as StringIndex);
             |              if (fail#0) {
             |                bubble()
             |              };
             |              j__0 = t#1
             |            };
             |            if (!isNull(j__0)) {
-            |              t#2 = is(j__0, StringIndex)
+            |              t#2 = j__0 is StringIndex
             |            } else {
             |              t#2 = false
             |            };
@@ -2948,7 +2949,7 @@ class GenerateCodeStageTest {
             |          return__0 = do_get_end(s__0)
             |      });
             |      f__0 = (@stay fn f(s__1 /* aka s */: String) /* return__1 */: Boolean {
-            |          return__1 = is((fn g)(s__1), NoStringIndex)
+            |          return__1 = (fn g)(s__1) is NoStringIndex
             |      })
             |
             |      ```
@@ -3058,8 +3059,9 @@ class GenerateCodeStageTest {
             |      other__0 = (@stay fn other(i__0 /* aka i */: Int32) /* return__0 */: (Int32 | Bubble) {
             |          if (i__0 % 2 == 0) {
             |            bubble()
-            |          };
-            |          return__0 = i__0
+            |          } else {
+            |            return__0 = i__0
+            |          }
             |      });
             |      something__0 = (@stay fn something(nums__0 /* aka nums */: Map<Int32, Int32>, index__0 /* aka index */: Int32) /* return__1 */: Int32 {
             |          var t#0, t#1, fail#0, fail#1, fail#2, fail#3;
@@ -3163,22 +3165,19 @@ class GenerateCodeStageTest {
             |    body: ```
             |      let return__1, @fn @extension("isPalindrome") stringIsPalindrome__0;
             |      stringIsPalindrome__0 = (@stay fn stringIsPalindrome(s__0 /* aka s */: String) /* return__0 */: Boolean {
-            |          var t#0, t#1, t#2;
+            |          void;
             |          fn__0: do {
             |            var i__0;
             |            i__0 = getStatic(String, \begin);
             |            var j__0;
-            |            t#0 = do_get_end(s__0);
-            |            j__0 = t#0;
+            |            j__0 = do_get_end(s__0);
             |            while (i__0 < j__0) {
-            |              t#1 = do_call_prev(s__0, j__0);
-            |              j__0 = t#1;
+            |              j__0 = do_call_prev(s__0, j__0);
             |              if (do_call_get(s__0, i__0) != do_call_get(s__0, j__0)) {
             |                return__0 = false;
             |                break fn__0;
             |              };
-            |              t#2 = do_call_next(s__0, i__0);
-            |              i__0 = t#2
+            |              i__0 = do_call_next(s__0, i__0);
             |            };
             |            return__0 = true
             |          }
@@ -3813,7 +3812,7 @@ class GenerateCodeStageTest {
             |      `test//`.something = (@stay fn something(x__0 /* aka x */: String?) /* return__0 */: (String | Bubble) {
             |          var t#0 ⦂ Boolean;
             |          if (!isNull ⋖ String ⋗(x__0)) {
-            |            t#0 = is(x__0, String)
+            |            t#0 = x__0 is String
             |          } else {
             |            t#0 = false
             |          };
@@ -3980,8 +3979,8 @@ class GenerateCodeStageTest {
             |      f__0 = (@stay fn f(i__0 /* aka i */: StringIndexOption) /* return__0 */: Void {
             |          var t#0, t#1;
             |## str has erased to a .toString() call here
-            |          t#0 = do_call_toString(is(i__0, StringIndex));
-            |          t#1 = do_call_toString(is(i__0, NoStringIndex));
+            |          t#0 = do_call_toString(i__0 is StringIndex);
+            |          t#1 = do_call_toString(i__0 is NoStringIndex);
             |          do_call_log(console#0, cat("Yes ", t#0, ", no ", t#1));
             |          return__0 = void
             |      });

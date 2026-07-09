@@ -1,12 +1,15 @@
 package lang.temper.frontend.typestage
 
 import lang.temper.common.Either
+import lang.temper.common.subListToEnd
 import lang.temper.frontend.maybeAdjustDotHelper
 import lang.temper.type.AndType
 import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
 import lang.temper.type.ExtensionResolution
+import lang.temper.type.FunctionResolution
 import lang.temper.type.FunctionType
+import lang.temper.type.InstanceExtensionResolution
 import lang.temper.type.MkType
 import lang.temper.type.StaticExtensionResolution
 import lang.temper.type.StaticType
@@ -35,7 +38,7 @@ internal fun simplifyDotHelper(
     val calleeEdge = call.edge(0)
     val callee = calleeEdge.target
     val typeInferences = call.typeInferences
-    val variantMatch = typeInferences?.variant ?: return
+    val variantMatch = typeInferences?.variant
     val variantFunctionType = variantMatch as? FunctionType
     val variantMatchRefined = (variantFunctionType?.returnType as? AndType)?.let { andType ->
         when {
@@ -105,8 +108,23 @@ internal fun simplifyDotHelper(
             //     (resolution<Type, Actuals>)(subject, ...)
 
             val extensionResolution = chosenVariantResolution.item
+            val doc = calleeEdge.target.document
+            val extensionCalleeLeaf = when (extensionResolution) {
+                is FunctionResolution -> {
+                    doExtraCoverFunctionVariantRefinement(
+                        extensionResolution.fn,
+                        call.children.subListToEnd(dotHelper.memberAccessor.firstArgumentIndex + 1),
+                    )?.let { refinement ->
+                        FunctionResolution(refinement).toLeaf(doc, callee.pos)
+                    }
+                }
+                is InstanceExtensionResolution,
+                is StaticExtensionResolution,
+                -> null
+            } ?: extensionResolution.toLeaf(doc, callee.pos)
+
             calleeEdge.replace {
-                Rn(callee.pos, extensionResolution.resolution)
+                Replant(extensionCalleeLeaf)
             }
 
             if (extensionResolution is StaticExtensionResolution) {
@@ -118,8 +136,10 @@ internal fun simplifyDotHelper(
         }
     }
 
-    val functionTypes = extractAtoms(variantMatch) { it as? FunctionType }
-    // Supply this types so we can figure out whether a referenced property is backed.
+    val functionTypes = variantMatch?.let {
+        extractAtoms(it) { atom -> atom as? FunctionType }
+    } ?: setOf()
+    // Supply "this" types so we can figure out whether a referenced property is backed.
     val subjectTypeShapes = buildSet {
         fun addTypeShapesFrom(definition: TypeDefinition) {
             when (definition) {

@@ -76,6 +76,7 @@ class BuildTreeTest {
             [ "Call", [
                 [ "RightName", "@" ],
                 [ "Call", [
+                    [ "Value", "desugarOperation: Function" ],
                     [ "RightName", ".." ],
                     [ "RightName", "A" ],
                     [ "RightName", "T" ],
@@ -151,6 +152,7 @@ class BuildTreeTest {
         assertAst(
             """
             [ "Call", [
+                [ "Value", "desugarOperation: Function" ],
                 [ "RightName",  "+" ],
                 [ "Value", [ 1, "Int32" ] ],
                 [ "Value", [ 2, "Int32" ] ]
@@ -166,6 +168,7 @@ class BuildTreeTest {
         assertAst(
             """
             [ "Call", [
+                [ "Value", "desugarOperation: Function" ],
                 [ "RightName",  "+" ],
                 [ "Value", [ 1, "Int32" ] ],
                 [ "Value", [ 2, "Int32" ] ]
@@ -186,6 +189,11 @@ class BuildTreeTest {
               left: 1,
               right: 6, // Exclusive
               children: [
+                {
+                  type: "Value",
+                  left: 1, right: 1,
+                  content: "desugarOperation: Function",
+                },
                 {
                   type: "RightName",
                   left: 3, right: 4,
@@ -222,6 +230,7 @@ class BuildTreeTest {
             startProduction = "Expr",
             wantJson = """
             [ "Call", [
+                [ "Value", "desugarOperation: Function" ],
                 [ "RightName", "++" ],
                 [ "RightName", "x" ],
               ]
@@ -237,9 +246,11 @@ class BuildTreeTest {
             startProduction = "Expr",
             wantJson = """
             [ "Call", [
+                [ "Value", "desugarOperation: Function" ],
                 [ "RightName", "-" ],
                 [ "RightName", "x" ],
                 [ "Call", [
+                    [ "Value", "desugarOperation: Function" ],
                     [ "RightName", "-" ],
                     [ "RightName", "y" ]
                   ]
@@ -255,12 +266,15 @@ class BuildTreeTest {
         input = "x = a + b * c",
         wantJson = """
         [ "Call", [
+            [ "Value", "desugarOperation: Function" ],
             [ "RightName", "=" ],
             [ "RightName", "x" ],
             [ "Call", [
+                [ "Value", "desugarOperation: Function" ],
                 [ "RightName", "+" ],
                 [ "RightName", "a" ],
                 [ "Call", [
+                    [ "Value", "desugarOperation: Function" ],
                     [ "RightName", "*" ],
                     [ "RightName", "b" ],
                     [ "RightName", "c" ]
@@ -293,6 +307,7 @@ class BuildTreeTest {
                         [ "RightName", "baz" ],
                         [ "RightName", "x" ],
                         [ "Call", [
+                            [ "Value", "desugarOperation: Function" ],
                             [ "RightName", "++" ],
                             [ "RightName", "y" ]
                           ]
@@ -333,6 +348,7 @@ class BuildTreeTest {
                         [ "Fun", [
                             [ "Block", [
                                 [ "Call", [
+                                    [ "Value", "desugarOperation: Function" ],
                                     [ "RightName", "++" ],
                                     [ "RightName", "x" ]
                                   ]
@@ -539,6 +555,7 @@ class BuildTreeTest {
             [ "RightName", "for" ],
             [ "Value", [ "__flowInit", "Symbol" ] ],
             [ "Call", [
+                [ "Value", "desugarOperation: Function" ],
                 [ "RightName", "=" ],
                 [ "RightName", "x" ],
                 [ "Value", [ 0, "Int32" ] ]
@@ -546,6 +563,7 @@ class BuildTreeTest {
             ],
             [ "Value", [ "cond", "Symbol" ] ],
             [ "Call", [
+                [ "Value", "desugarOperation: Function" ],
                 [ "RightName", "<" ],
                 [ "RightName", "x" ],
                 [ "Value", [ 10, "Int32" ] ]
@@ -553,6 +571,7 @@ class BuildTreeTest {
             ],
             [ "Value", [ "incr", "Symbol" ] ],
             [ "Call", [
+                [ "Value", "desugarOperation: Function" ],
                 [ "RightName", "++" ],
                 [ "RightName", "x" ],
               ]
@@ -630,9 +649,11 @@ class BuildTreeTest {
         //                 1
         wantJson = """
         [ "Call", [
+            [ "Value", "desugarOperation: Function" ],
             [ "RightName", "+=" ],
             [ "RightName", "x" ],
             [ "Call", [
+                [ "Value", "desugarOperation: Function" ],
                 [ "RightName", "+" ],
                 [ "Call", [
                     [ "Value", "error: Function" ],
@@ -940,6 +961,7 @@ class BuildTreeTest {
                 [ "LeftName", "x" ],
                 [ "Value", [ "type", "Symbol" ] ],
                 [ "Call", [
+                    [ "Value", "desugarOperation: Function" ],
                     [ "RightName", "|" ],
                     [ "Call", [
                         [ "Value", "nym`<>`: Function" ],
@@ -954,8 +976,10 @@ class BuildTreeTest {
                 [ "Value", [ "init", "Symbol" ] ],
                 // a < b && new T()
                 [ "Call", [
+                    [ "Value", "desugarOperation: Function" ],
                     [ "RightName", "&&" ],
                     [ "Call", [
+                        [ "Value", "desugarOperation: Function" ],
                         [ "RightName", "<" ],
                         [ "RightName", "a" ],
                         [ "RightName", "b" ],
@@ -978,6 +1002,7 @@ class BuildTreeTest {
         input = "x = new T<u>(a < b, (c > d))",
         wantJson = """
         [ "Call", [
+            [ "Value", "desugarOperation: Function" ],
             [ "RightName", "=" ],
             [ "RightName", "x" ],
             [ "Call", [
@@ -989,12 +1014,14 @@ class BuildTreeTest {
                   ]
                 ],
                 [ "Call", [
+                    [ "Value", "desugarOperation: Function" ],
                     [ "RightName", "<" ],
                     [ "RightName", "a" ],
                     [ "RightName", "b" ],
                   ]
                 ],
                 [ "Call", [
+                    [ "Value", "desugarOperation: Function" ],
                     [ "RightName", ">" ],
                     [ "RightName", "c" ],
                     [ "RightName", "d" ],
@@ -1073,6 +1100,7 @@ class BuildTreeTest {
             ],
             [ "Value", [ "cond", "Symbol" ] ],
             [ "Call", [
+                [ "Value", "desugarOperation: Function" ],
                 [ "RightName", "<" ],
                 [ "RightName", "i" ],
                 [ "RightName", "n" ],
@@ -1080,6 +1108,7 @@ class BuildTreeTest {
             ],
             [ "Value", [ "incr", "Symbol" ] ],
             [ "Call", [
+                [ "Value", "desugarOperation: Function" ],
                 [ "RightName", "++" ],
                 [ "RightName", "i" ]
               ]
@@ -1107,12 +1136,14 @@ class BuildTreeTest {
             [ "Call", [
                 [ "Value", "nym`,`: Function" ],
                 [ "Call", [
+                    [ "Value", "desugarOperation: Function" ],
                     [ "RightName", "=" ],
                     [ "RightName", "x" ],
                     [ "Value", [ 1, "Int32" ] ],
                   ]
                 ],
                 [ "Call", [
+                    [ "Value", "desugarOperation: Function" ],
                     [ "RightName", "=" ],
                     [ "RightName", "y" ],
                     [ "Value", [ 10, "Int32" ] ],
@@ -1122,6 +1153,7 @@ class BuildTreeTest {
             ],
             [ "Value", [ "cond", "Symbol" ] ],
             [ "Call", [
+                [ "Value", "desugarOperation: Function" ],
                 [ "RightName", "<" ],
                 [ "RightName", "x" ],
                 [ "RightName", "y" ],
@@ -1131,11 +1163,13 @@ class BuildTreeTest {
             [ "Call", [
                 [ "Value", "nym`,`: Function" ],
                 [ "Call", [
+                    [ "Value", "desugarOperation: Function" ],
                     [ "RightName", "++" ],
                     [ "RightName", "x" ]
                   ]
                 ],
                 [ "Call", [
+                    [ "Value", "desugarOperation: Function" ],
                     [ "RightName", "--" ],
                     [ "RightName", "y" ]
                   ]
@@ -1639,6 +1673,7 @@ class BuildTreeTest {
             ],
             [ "Value", [ "outType", "Symbol" ] ],
             [ "Call", [
+                [ "Value", "desugarOperation: Function" ],
                 [ "RightName", "|" ],
                 [ "RightName", "number" ],
                 [ "RightName", "string" ],
@@ -1649,9 +1684,11 @@ class BuildTreeTest {
                     [ "Call", [
                         [ "RightName", "return" ],
                         [ "Call", [
+                            [ "Value", "desugarOperation: Function" ],
                             [ "RightName", "??" ],
                             [ "RightName", "y" ],
                             [ "Call", [
+                                [ "Value", "desugarOperation: Function" ],
                                 [ "RightName", "+" ],
                                 [ "Value", "\"\": String" ],
                                 [ "RightName", "x" ],
@@ -1857,6 +1894,7 @@ class BuildTreeTest {
         startProduction = "Expr",
         wantJson = """
         [ "Call", [
+            [ "Value", "desugarOperation: Function" ],
             [ "RightName", "-" ],
             [ "Value", [ 1, "Int32" ] ]
           ]
@@ -2129,6 +2167,7 @@ class BuildTreeTest {
         input = "5 > 1",
         wantJson = """
         [ "Call", [
+            [ "Value", "desugarOperation: Function" ],
             [ "RightName", ">" ],
             [ "Value", [ 5, "Int32" ] ],
             [ "Value", [ 1, "Int32" ] ]
@@ -2141,6 +2180,7 @@ class BuildTreeTest {
         input = "{ a } > 1",
         wantJson = """
         [ "Call", [
+            [ "Value", "desugarOperation: Function" ],
             [ "RightName", ">" ],
             [ "Call", [
                 [ "RightName", "new" ],
@@ -2160,6 +2200,7 @@ class BuildTreeTest {
         input = "{ a } > { a: 1 }",
         wantJson = """
         [ "Call", [
+            [ "Value", "desugarOperation: Function" ],
             [ "RightName", ">" ],
             [ "Call", [
                 [ "RightName", "new" ],
@@ -2745,10 +2786,15 @@ class BuildTreeTest {
                                                         "right": 92,
                                                         "children": [
                                                             {
+                                                                "type": "Value",
+                                                                "left": 87, "right": 87,
+                                                                "content": "desugarOperation: Function",
+                                                            },
+                                                            {
                                                                 "type": "RightName",
                                                                 "left": 89,
                                                                 "right": 90,
-                                                                "content": "\u003e"
+                                                                "content": ">"
                                                             },
                                                             {
                                                                 "type": "RightName",
@@ -2803,6 +2849,11 @@ class BuildTreeTest {
                                                                                 "right": 121,
                                                                                 "children": [
                                                                                     {
+                                                                                        type: "Value",
+                                                                                        left: 116, right: 116,
+                                                                                        content: "desugarOperation: Function",
+                                                                                    },
+                                                                                    {
                                                                                         "type": "RightName",
                                                                                         "left": 118,
                                                                                         "right": 119,
@@ -2830,6 +2881,11 @@ class BuildTreeTest {
                                                                         "right": 140,
                                                                         "children": [
                                                                             {
+                                                                                "type": "Value",
+                                                                                "left": 135, "right": 135,
+                                                                                "content": "desugarOperation: Function",
+                                                                            },
+                                                                            {
                                                                                 "type": "RightName",
                                                                                 "left": 137,
                                                                                 "right": 138,
@@ -2854,6 +2910,11 @@ class BuildTreeTest {
                                                                         "left": 154,
                                                                         "right": 159,
                                                                         "children": [
+                                                                            {
+                                                                                "type": "Value",
+                                                                                "left": 154, "right": 154,
+                                                                                "content": "desugarOperation: Function",
+                                                                            },
                                                                             {
                                                                                 "type": "RightName",
                                                                                 "left": 156,
@@ -2937,6 +2998,7 @@ class BuildTreeTest {
         input = "do { f() } orelse do { if (x) { g(); } }",
         wantJson = """
         [ "Call", [
+            [ "Value", "desugarOperation: Function" ],
             [ "RightName", "orelse" ],
             [ "Call", [
                 [ "RightName", "do" ],
@@ -2979,6 +3041,7 @@ class BuildTreeTest {
         input = "{ a } orelse { b }",
         wantJson = """
         [ "Call", [
+            [ "Value", "desugarOperation: Function" ],
             [ "RightName", "orelse" ],
             [ "Call", [
                 [ "RightName", "new" ],
@@ -3138,6 +3201,7 @@ class BuildTreeTest {
         [ "Call", [
             [ "RightName", "@" ],
             [ "Call", [
+                [ "Value", "desugarOperation: Function" ],
                 [ "RightName", ".." ],
                 [ "RightName", "S" ],
                 [ "RightName", "T" ],
@@ -3163,6 +3227,7 @@ class BuildTreeTest {
         [ "Call", [
             [ "RightName", "@" ],
             [ "Call", [
+                [ "Value", "desugarOperation: Function" ],
                 [ "RightName", ".." ],
                 [ "RightName", "S" ],
                 [ "RightName", "T" ],
@@ -3188,6 +3253,7 @@ class BuildTreeTest {
         [ "Call", [
             [ "RightName", "@" ],
             [ "Call", [
+                [ "Value", "desugarOperation: Function" ],
                 [ "RightName", ".." ],
                 [ "RightName", "S" ],
                 [ "RightName", "T" ],
@@ -3362,6 +3428,7 @@ class BuildTreeTest {
         input = "[a, b] = f()",
         wantJson = """
         [ "Call", [
+            [ "Value", "desugarOperation: Function" ],
             [ "RightName", "=" ],
             [ "Call", [
                 [ "Value", "list: Function" ],
@@ -4075,9 +4142,11 @@ class BuildTreeTest {
                 [ "LeftName", "unionOfInts" ],
                 [ "Value", "\\init: Symbol" ],
                 [ "Call", [
+                    [ "Value", "desugarOperation: Function" ],
                     [ "RightName", "|" ],
                     [ "Value", "1: Int32" ],
                     [ "Call", [
+                        [ "Value", "desugarOperation: Function" ],
                         [ "RightName", "|" ],
                         [ "Value", "2: Int32" ],
                         [ "Value", "3: Int32" ],
@@ -4091,12 +4160,15 @@ class BuildTreeTest {
                 [ "LeftName", "unionOfTypes" ],
                 [ "Value", "\\init: Symbol" ],
                 [ "Call", [
+                    [ "Value", "desugarOperation: Function" ],
                     [ "RightName", "|" ],
                     [ "RightName", "Never" ],
                     [ "Call", [
+                        [ "Value", "desugarOperation: Function" ],
                         [ "RightName", "|" ],
                         [ "Value", "1: Int32" ],
                         [ "Call", [
+                            [ "Value", "desugarOperation: Function" ],
                             [ "RightName", "|" ],
                             [ "Value", "2: Int32" ],
                             [ "Value", "3: Int32" ],
@@ -4836,6 +4908,7 @@ class BuildTreeTest {
                 ]],
                 [ "Block", [
                     [ "Call", [
+                        [ "Value", "desugarOperation: Function" ],
                         [ "RightName", "+" ],
                         [ "RightName", "x" ],
                         [ "RightName", "x" ],
@@ -4858,6 +4931,7 @@ class BuildTreeTest {
                 [ "Fun", [
                     [ "Block", [
                         [ "Call", [
+                            [ "Value", "desugarOperation: Function" ],
                             [ "RightName", "=" ],
                             [ "RightName", "a" ],
                             [ "RightName", "b" ],
@@ -5114,6 +5188,7 @@ class BuildTreeTest {
             |        [ "RightName", "B" ],
             |        [ "Value", "\\super: Symbol" ],
             |        [ "Call", [
+            |            [ "Value", "desugarOperation: Function" ],
             |            [ "RightName", "&" ],
             |            [ "RightName", "Super1" ],
             |            [ "RightName", "Super2" ],

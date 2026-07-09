@@ -366,6 +366,8 @@ class TyperPlanTest {
             """
             |{
             |    "i__0": ["0"],
+            |    // Don't know yet that `+` doesn't bubble.
+            |    "t#0": ["hs(fail#0, i__0 + 1)"],
             |    "return__0": ["void"]
             |}
             """.trimMargin(),
@@ -590,10 +592,12 @@ class TyperPlanTest {
             |  "g(i)",
             |  "hs(fail, g(i))",
             |  "t + 1",
+            |  "hs(fail, t + 1)",
             |  "fn ...",
             |  "f(1, fn ...)",
             |  "2 * k",
             |  "hs(fail, f(1, fn ...))",
+            |  "bubble()",
             |  "bubble()",
             |  "bubble()",
             |]

@@ -75,10 +75,10 @@ The singleton value `null` which is admitted by any [Postfix `?`](#builtin-%3F) 
 
 `null` may be used to represent an absent value, for example:
 
-- an unspecified, optional input
-- an output that is not usable but not due to an error, for example, when mapping a list of values,
+- An unspecified, optional input
+- An output that is not usable but not due to an error, for example, when mapping a list of values
   but excluding some corresponding elements from the output list
-- a temporary, not computed *yet*, intermediate value
+- A temporary, not computed *yet*, intermediate value
 
 `null` is distinguishable, in translated Temper code, from any other value.
 For example, in the context of the *Int32?* type, *0* is not equal to `null`.
@@ -677,56 +677,6 @@ Given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
 
 <!-- /snippet: builtin/** -->
 
-<!-- snippet: builtin/+ -->
-
-<a name="builtin&#45;&#37;2B" class="snippet-anchor-name"></a>
-
-### `+`
-The builtin `+` operator has six variants:
-- *Infix* with two [*Int32*](types.md#type-Int32)s: signed addition
-- *Prefix* with one [*Int32*](types.md#type-Int32): numeric identity
-- *Infix* with two [*Int64*](types.md#type-Int64)s: signed addition
-- *Prefix* with one [*Int64*](types.md#type-Int64): numeric identity
-- *Infix* with two [*Float64*](types.md#type-Float64)s: signed addition
-- *Prefix* with one [*Float64*](types.md#type-Float64): numeric identity
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/0 -->
-
-```temper
-1   + 2   == 3   &&
-1.0 + 2.0 == 3.0 &&
-+1        == 1   &&
-+1.0      == 1.0
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/0 -->
-
-As explained above, you cannot mix [*Int32*](types.md#type-Int32) and
-[*Float64*](types.md#type-Float64) inputs:
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/1 -->
-
-```temper
-1 + 1.0
-// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/1 -->
-
-`+` does not work on [*String*](types.md#type-String)s.  Use [String interpolation](types.md#syntax-string-interpolation) instead.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/2 -->
-
-```temper
-"foo" + "bar"
-// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [String, String]!
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/2 -->
-
-<!-- /snippet: builtin/%2B -->
-
 <!-- snippet: builtin/- -->
 
 <a name="builtin&#45;&#45;" class="snippet-anchor-name"></a>
@@ -752,7 +702,7 @@ As with `+`, you cannot mix [*Int32*](types.md#type-Int32) and [*Float64*](types
 
 ```temper
 1 + 1.0
-// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!
+// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!, No accessible member infix nym`+` in type Int32!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/1 -->
@@ -1372,6 +1322,58 @@ of the same size with the opposite bits.
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%7E/snippet.md/0 -->
 
 <!-- /snippet: builtin/%7E -->
+
+## Operators
+
+<!-- snippet: builtin/+ -->
+
+<a name="builtin&#45;&#37;2B" class="snippet-anchor-name"></a>
+
+### `+`
+The builtin `+` operator has six variants:
+- *Infix* with two [*Int32*](types.md#type-Int32)s: signed addition
+- *Prefix* with one [*Int32*](types.md#type-Int32): numeric identity
+- *Infix* with two [*Int64*](types.md#type-Int64)s: signed addition
+- *Prefix* with one [*Int64*](types.md#type-Int64): numeric identity
+- *Infix* with two [*Float64*](types.md#type-Float64)s: signed addition
+- *Prefix* with one [*Float64*](types.md#type-Float64): numeric identity
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/0 -->
+
+```temper
+1   + 2   == 3   &&
+1.0 + 2.0 == 3.0 &&
++1        == 1   &&
++1.0      == 1.0
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/0 -->
+
+As explained above, you cannot mix [*Int32*](types.md#type-Int32) and
+[*Float64*](types.md#type-Float64) inputs:
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/1 -->
+
+```temper
+1 + 1.0
+// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!, No accessible member infix nym`+` in type Int32!
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/1 -->
+
+`+` does not work on [*String*](types.md#type-String)s.  Use [String interpolation](types.md#syntax-string-interpolation) instead.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/2 -->
+
+```temper
+"foo" + "bar"
+// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [String, String]!
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/2 -->
+
+<!-- /snippet: builtin/%2B -->
 
 ## Types
 
@@ -3739,7 +3741,7 @@ builder.content.toString() == "Hi 5!"
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/@overload/snippet.md/0 -->
 
 For now, only explicit methods are allowed for overloads.
-Constructors, propertiers, and top-level functions are unsupported.
+Constructors, properties, and top-level functions are unsupported.
 
 No actual function or method with the overload name itself must be
 present.

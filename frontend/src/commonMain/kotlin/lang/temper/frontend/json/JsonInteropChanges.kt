@@ -1,6 +1,7 @@
 package lang.temper.frontend.json
 
 import lang.temper.common.AtomicCounter
+import lang.temper.common.Freq3
 import lang.temper.common.Named
 import lang.temper.common.structure.Hints
 import lang.temper.common.structure.StructureSink
@@ -150,7 +151,7 @@ internal class JsonInteropChanges(
                 }
                 value(
                     toStringViaTokenSinkSuffixDropping(singleLine = false) {
-                        bodyTree.toPseudoCode(it, PseudoCodeDetail.default.copy(resugarDotHelpers = true))
+                        bodyTree.toPseudoCode(it, PseudoCodeDetail.default.copy(resugarDotHelpers = Freq3.Always))
                     }.trimEnd(),
                 )
             }

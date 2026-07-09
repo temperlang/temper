@@ -2,6 +2,7 @@
 
 package lang.temper.frontend
 
+import lang.temper.common.Freq3
 import lang.temper.common.testCodeLocation
 import lang.temper.interp.MetadataDecorator
 import lang.temper.lexer.Genre
@@ -219,6 +220,7 @@ class DisAmbiguateStageTest {
     fun stagingAnnotation() = assertModuleAtStage(
         stage = Stage.DisAmbiguate,
         input = "@(A..S) fn (x) {}",
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
         want = """
         {
           disAmbiguate: {
@@ -330,7 +332,7 @@ class DisAmbiguateStageTest {
                               ],
                               [ "Block", [
                                   [ "Call", [
-                                      [ "RightName", "+" ],
+                                      [ "Value", "nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function" ],
                                       [ "RightName", "x" ],
                                       [ "RightName", "y" ]
                                     ]
@@ -430,9 +432,9 @@ class DisAmbiguateStageTest {
                 var decl = 0;
                 let cDecl;
                 property0;
-                nym`@public`((property1): (T));
+                nym`@public`((property1) : (T));
                 property2 = initial;
-                ((property3): (T)) = initial;
+                ((property3) : (T)) = initial;
                 method1(fn {
                     123
                 });
@@ -1152,6 +1154,34 @@ class DisAmbiguateStageTest {
             |      Point
             |
             |      ```
+            |  }
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun incrementInDoBlock() = assertModuleAtStage(
+        stage = Stage.DisAmbiguate,
+        pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        input = """
+            |do {
+            |  var x = 0;
+            |  x += 1;
+            |  console.log(x);
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  disAmbiguate: {
+            |    body: ```
+            |        do(fn {
+            |            var x = 0;
+            |            x = (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(x, 1);
+            |            console.log(x);
+            |        })
+            |
+            |        ```,
             |  }
             |}
         """.trimMargin(),

@@ -32,7 +32,6 @@ class CoverFunction(
         interpMode: InterpMode,
     ): Pair<Result, Arguments?>? {
         val beforeTypeCheck = cb.failLog.markBeforeRecoverableFailure()
-
         val message = DynamicMessage(args, interpMode)
         var toRun: MacroValue? = otherwise
         var argumentsToUse: Arguments? = null

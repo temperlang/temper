@@ -97,7 +97,7 @@ internal class TypeChecker(
     private val voidReturnDeclNames = mutableSetOf<TemperName>()
 
     fun check(root: BlockTree) {
-        // First make sure we track which things actually can be void.
+        // First, make sure we track which things actually can be void.
         trackVoidReturnDeclNames(root)
         // Now visit everywhere to check compliance.
         fun dig(t: Tree) {
@@ -155,7 +155,7 @@ internal class TypeChecker(
     }
 
     private fun checkBlock(t: BlockTree) {
-        // Conditions should not be a sub-type of Boolean || Bubble because we should have already
+        // Conditions should not be a subtype of Boolean || Bubble because we should have already
         // converted failing subtrees into passing branches with explicit failure variable checks.
         (t.flow as? StructuredFlow)?.let { flow ->
             fun visit(cf: ControlFlow) {
@@ -196,7 +196,8 @@ internal class TypeChecker(
             BuiltinFuns.abstractPanicFn -> checkAbstractPanicContext(t)
             else -> checkRegularCall(t)
         }
-        // And make sure we don't use Void in calls. Assignment is handled specially, so exclude that in checks here.
+        // And make sure we don't use Void in calls. Assignment is handled as a special case,
+        // so exclude that in checks here.
         // Also avoid preserve calls because it can store whatever args it wants, including void.
         // TODO How to avoid so much special handling for preserve?
         if (!(fn == BuiltinFuns.preserveFn || fn == BuiltinFuns.setLocalFn)) {
@@ -237,7 +238,7 @@ internal class TypeChecker(
     private fun checkDecl(t: DeclTree) {
         val meta = t.parts?.metadataSymbolMap ?: return
         meta[typeDeclSymbol]?.let { typeDeclEdge ->
-            // Working on the type as a whole might reduce lookup effort vs each member decl separately.
+            // Working on the type as a whole might reduce lookup effort vs. each member decl separately.
             val type = typeDeclEdge.target.staticTypeContained ?: return@checkDecl
             val shape = ((type as? NominalType)?.definition as? TypeShape) ?: return@checkDecl
             members@for (member in shape.members) {
@@ -248,7 +249,6 @@ internal class TypeChecker(
                     val visibility = member.visibility
                     for (overridden in member.overriddenMembers ?: emptyList()) {
                         // Check reduced visibility.
-                        // Inequality check should support protected as well as public and private.
                         val baseVisibility = overridden.superTypeMember.visibility
                         if (visibility < baseVisibility) {
                             logSink.log(
@@ -283,8 +283,8 @@ internal class TypeChecker(
         //    fn <T extends Top>(f: fn (): T, g: fn (T): T throws Bubble): T { g(f()) }
         // is not because a branch from g can lead to failure even when f does not.
 
-        // Check returnType vs returnDecl type.
-        // Failure can happen in cases of inferred return type for lambda blocks.
+        // Check returnType vs. returnDecl type.
+        // Failure can happen in cases of an inferred return type for lambda blocks.
         // With some effort, we likely can fix that, but this checks against that
         // for now as well as anything else that might slip through in the future.
         val returnType = (t.typeInferences?.type as? FunctionType)?.returnType
@@ -306,7 +306,7 @@ internal class TypeChecker(
             // Don't go into nested functions, as that's a new scope for bubble allowance.
             sub is FunTree && return@subs VisitCue.SkipOne
             if (sub is CallTree) {
-                // In the end, we only reference bubble when it actually escapes from functions.
+                // In the end, we only reference Bubble when it actually escapes from functions.
                 // And if some logic doesn't allow a branch to execute, we should clean it out before here.
                 // Given the above, we can complain here about any call to bubble.
                 if (sub.child(0).functionContained === BubbleFn) {
@@ -365,7 +365,7 @@ internal class TypeChecker(
             )
             return
         }
-        // TODO: check that right type is a sub-type of left-type.
+        // TODO: check that right type is a subtype of left-type.
         val (_, leftTree, rightTree) = t.children
         val leftType = leftTree.typeInferences?.type
         val rightType = rightTree.typeInferences?.type
@@ -511,6 +511,7 @@ internal class TypeChecker(
                             returnType = bind(calleeType.returnType),
                         )
                     }
+
                     val valueFormals = boundCalleeType.valueFormals
                     val restValuesFormal = boundCalleeType.restValuesFormal
 
@@ -616,7 +617,7 @@ internal class TypeChecker(
     }
 }
 
-private class TypedActual(
+private data class TypedActual(
     val symbol: Symbol?,
     val symbolPos: Position?,
     val type: StaticType,
@@ -625,10 +626,15 @@ private class TypedActual(
 
 private fun extractTypedActuals(t: CallTree): List<TypedActual>? {
     val actuals = mutableListOf<TypedActual>()
+    var problemExtracting = false
     t.forEachActual { _, symbolChild, child ->
-        val type = child.typeInferences?.type ?: return@extractTypedActuals null
-        val symbol = symbolChild?.symbolContained
-        actuals.add(TypedActual(symbol = symbol, symbolPos = symbolChild?.pos, type = type, pos = child.pos))
+        val type = child.typeInferences?.type
+        if (type != null) {
+            val symbol = symbolChild?.symbolContained
+            actuals.add(TypedActual(symbol = symbol, symbolPos = symbolChild?.pos, type = type, pos = child.pos))
+        } else {
+            problemExtracting = true
+        }
     }
-    return actuals
+    return if (!problemExtracting) { actuals } else { null }
 }

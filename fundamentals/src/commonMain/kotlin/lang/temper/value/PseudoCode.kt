@@ -2,6 +2,7 @@ package lang.temper.value
 
 import lang.temper.common.Either
 import lang.temper.common.EnumRange
+import lang.temper.common.Freq3
 import lang.temper.common.LeftOrRight
 import lang.temper.common.NoneShortOrLong
 import lang.temper.common.TextOutput
@@ -210,6 +211,15 @@ internal class PseudoTreeBuilder(
                 var typeArgsInferred = false
                 var argListStart = 1 // Index into children where arguments start.
 
+                if ( // desugarOperation(nym`+`, x, y) -> nym`+`(x, y)
+                    detail.resugarDotHelpers > Freq3.Never &&
+                    calleeTree.isProbablyBuiltinFunNamed("desugarOperation") &&
+                    tree.size > 1
+                ) {
+                    calleeTree = tree.child(1)
+                    argListStart = 2
+                }
+
                 if (calleeTree is CallTree && calleeTree.size > 1) {
                     val nestedCallee = calleeTree.child(0)
                     // (nym`<>` actualCallee typeArg0 typeArg1 ...)
@@ -223,7 +233,7 @@ internal class PseudoTreeBuilder(
 
                 fun findTypeArgs() {
                     if (typeArgs.isEmpty()) {
-                        // Consume type arguments into
+                        // Consume type arguments into the pre-allocated list.
                         while (argListStart + 1 < tree.size) {
                             val childAtArgListStart = tree.child(argListStart)
                             if (childAtArgListStart.symbolContained != typeArgSymbol) {
@@ -258,10 +268,13 @@ internal class PseudoTreeBuilder(
                     buildPseudoTree(tree.child(it))
                 }
 
-                val dotHelper = if (detail.resugarDotHelpers) {
-                    calleeTree.functionContained as? DotHelper
-                } else {
-                    null
+                val dotHelper = (calleeTree.functionContained as? DotHelper)?.let { dh ->
+                    when (detail.resugarDotHelpers) {
+                        Freq3.Never -> null
+                        Freq3.Always -> dh
+                        Freq3.Sometimes if (dh.member is OperatorMember) -> dh
+                        Freq3.Sometimes -> null
+                    }
                 }
 
                 if (dotHelper != null) {
@@ -270,19 +283,24 @@ internal class PseudoTreeBuilder(
 
                     argListStart = memberAccessor.firstArgumentIndex + 1 // skip over callee
                     val subject = tree.childOrNull(argListStart) ?: return PseudoError(pos)
-                    argListStart += 1
+                    val afterSubject = argListStart + 1
 
                     val operation = when (val member = dotHelper.member) {
-                        is DotMember -> PseudoCall(
-                            pos = tree.pos,
-                            callee = PseudoNameLeaf(calleePos, dotBuiltinName),
-                            typeArgs = emptyList(),
-                            args = listOf(
-                                buildPseudoTree(subject),
-                                PseudoNameLeaf(calleePos.rightEdge, ParsedName(member.dotName.text)),
-                            ),
-                        )
-                        is OperatorMember -> PseudoNameLeaf(calleePos, BuiltinName(member.operator))
+                        is DotMember -> {
+                            argListStart = afterSubject
+                            PseudoCall(
+                                pos = tree.pos,
+                                callee = PseudoNameLeaf(calleePos, dotBuiltinName),
+                                typeArgs = emptyList(),
+                                args = listOf(
+                                    buildPseudoTree(subject),
+                                    PseudoNameLeaf(calleePos.rightEdge, ParsedName(member.dotName.text)),
+                                ),
+                            )
+                        }
+
+                        is OperatorMember ->
+                            PseudoNameLeaf(calleePos, BuiltinName(member.operator))
                     }
                     when (memberAccessor) {
                         is GetMemberAccessor -> operation
@@ -308,13 +326,13 @@ internal class PseudoTreeBuilder(
                         }
                     }
                 } else {
-                    var callee = buildPseudoTree(calleeTree)
                     var args: List<PseudoTree>? = null
                     // Special case `.` operator since its right operand is a symbol but
                     // should render as a bare name.
+                    var callee: PseudoTree? = null
                     if (
                         tree.size == BINARY_OP_CALL_ARG_COUNT &&
-                        callee isProbablyBuiltinFunNamed "."
+                        calleeTree isProbablyBuiltinFunNamed "."
                     ) {
                         val right = tree.child(2)
                         val rightSymbol = right.symbolContained
@@ -326,7 +344,7 @@ internal class PseudoTreeBuilder(
                         }
                         argListStart = tree.size // all done
                     } else if (
-                        callee isProbablyBuiltinFunNamed "new" &&
+                        calleeTree isProbablyBuiltinFunNamed "new" &&
                         tree.size >= 2 && symbolTextFor(tree.child(1)) == null
                     ) {
                         // Reshuffle
@@ -344,18 +362,25 @@ internal class PseudoTreeBuilder(
                         }
                         if (typeArg != null) {
                             callee = PseudoCall(
-                                listOfNotNull(callee, typeArg).spanningPosition(callee.pos),
-                                callee,
+                                listOfNotNull(calleeTree, typeArg).spanningPosition(calleeTree.pos),
+                                buildPseudoTree(calleeTree),
                                 emptyList(),
                                 listOf(buildPseudoTree(typeArg)),
                             )
                         }
                         argListStart = 2
+                    } else if (
+                        // desugarOperation(nym`+`, x, y) -> nym`+`(x, y)
+                        detail.resugarDotHelpers > Freq3.Never &&
+                        calleeTree.isProbablyBuiltinFunNamed("desugarOperation") &&
+                        tree.size > 1
+                    ) {
+                        argListStart = 2
                     }
                     findTypeArgs()
                     PseudoCall(
                         pos = pos,
-                        callee = callee,
+                        callee = callee ?: buildPseudoTree(calleeTree),
                         typeArgs = typeArgs.toList(),
                         args = args ?: buildValueArgs(),
                         typeArgsInferred = typeArgsInferred,
@@ -515,7 +540,7 @@ internal class PseudoTreeBuilder(
         var restFormal = false
 
         // When printing a declaration that is a formal function parameter, the default expression
-        // goes after an equals sign.  Otherwise, the init expression goes there.
+        // goes after an equal ('=') sign.  Otherwise, the init expression goes there.
         val metadata = dp?.metadataSymbolMultimap ?: emptyMap()
         val annotations = buildAnnotationList(
             tree.pos,
@@ -825,8 +850,8 @@ private class OperatorStackElementSubView(val e: OperatorStackElement) : Operato
  * Returns a tree that allows [t] to nest in its parent.
  * Usually this means parentheses, but sometimes we use a different strategy:
  *
- * - when [t] is a block statement because `(` followed by `{` starts an object property bag, or
- * - when [t] is a comma operation because commas inside parentheses might be a tuple.
+ * - When [t] is a block statement because `(` followed by `{` starts an object property bag, or
+ * - When [t] is a comma operation because commas inside parentheses might be a tuple.
  */
 private fun wrap(t: OpTree): OpTree {
     val pos = t.pos
@@ -1249,7 +1274,7 @@ internal class PseudoCall(
     val typeArgsInferred: Boolean = false,
 ) : PseudoTree() {
     override fun reduce(): OpTree {
-        // See if we can represent as an infix or binary operator.  If not, use a normal parenthetical
+        // See if we can represent as an unary/binary operator.  If not, use a normal parenthetical
         // call operator.
         val possibleOperatorName = when (callee) {
             is PseudoNameLeaf -> callee.name
@@ -1295,9 +1320,6 @@ internal class PseudoCall(
                             // it's used here.
                             // "<>", angle bracket is handled below
                             NameConstants.While, NameConstants.Angle -> emptyList()
-                            // These show up here as pseudo method.
-                            // The operators are special only in declaration.
-                            Operator.Is.text, Operator.As.text -> emptyList()
                             else -> {
                                 Operator.matching(
                                     builtinKey,
@@ -1311,12 +1333,17 @@ internal class PseudoCall(
                                 Operator.Angle -> Operator.Lt // Angle maps to "<>" not "<"
                                 else -> operator0
                             }
+                            val assoc = when {
+                                operator.isBracket -> TokenAssociation.Bracket
+                                else -> TokenAssociation.Infix
+                            }
+                            val outputToken = OutputToken(nameOutputToken.text, nameOutputToken.type, assoc)
                             return OpInner(
                                 pos,
                                 operator,
                                 listOf(
                                     reduceArg(0),
-                                    Tok(args[0].pos.rightEdge, nameOutputToken),
+                                    Tok(args[0].pos.rightEdge, outputToken),
                                     reduceArg(1),
                                 ),
                             )
@@ -2195,7 +2222,7 @@ internal class PseudoLoop(
                 continuingClause = ContinuingClause(OutToks.whileWord, condition, parenthesize = true)
             }
             increment != null -> {
-                // for (;condition;increment) {body}
+                // for (; condition; increment) {body}
                 parenthesized = Either.Right(Triple(null, condition, increment))
                 keyword = OutToks.forWord
                 continuingClause = null
@@ -2361,7 +2388,7 @@ object TemperFormattingHints : FormattingHints {
 
     override fun shouldBreakBefore(token: OutputToken): Boolean {
         if (isInlineSentinel(token)) { return false }
-        // The Temper lexer treats `<` ss an angle bracket when there is no ignorable
+        // The Temper lexer treats `<` as an angle bracket when there is no ignorable
         // token between it and the preceding token, but as an infix less-than
         // token otherwise.
         if (token == OutToks.leftAngle) { return false }

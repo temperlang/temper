@@ -1,5 +1,6 @@
 package lang.temper.builtin
 
+import lang.temper.common.Freq3
 import lang.temper.common.mapFirst
 import lang.temper.env.InterpMode
 import lang.temper.format.SimplifyingTokenSink
@@ -149,7 +150,7 @@ private fun Planting.extractTemporary(nameHint: String, tree: Tree): TemperName 
     return result!!
 }
 
-val simplePseudoCodeDetail = PseudoCodeDetail.default.copy(resugarDotHelpers = true)
+val simplePseudoCodeDetail = PseudoCodeDetail.default.copy(resugarDotHelpers = Freq3.Always)
 private fun Tree.toSimplePseudoCode() = toStringViaTokenSink { tokenSink ->
     // Pseudocode is an easy grab for now.
     // Meanwhile, seems we don't inline expression values until after current expansion.

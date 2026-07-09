@@ -40,7 +40,7 @@ import kotlin.test.assertFalse
 
 class DefineStageTest {
     @Test
-    fun callToDotBind() = assertModuleAtStage(
+    fun callToMethod() = assertModuleAtStage(
         stage = Stage.Define,
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
         input = """
@@ -297,11 +297,9 @@ class DefineStageTest {
     fun constantFolding() = assertModuleAtStage(
         stage = Stage.Define,
         input = "1 + 1",
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
         want = """
         {
-          syntaxMacro: {
-            body: "1 + 1\n" // `+` is still an unresolved name at this point
-          },
           define: {
             body: [ "Block", [ [ "Value", "2: Int32" ] ] ]
           }
@@ -874,7 +872,7 @@ class DefineStageTest {
             |      @fn let `test//`.prod, @fn `test//`.prodWrap;
             |      `test//`.prod = (@stay fn prod(i__0 /* aka i */: Int32, j__0 /* aka j */: Int32?) /* return__0 */: Int32 {
             |          fn__0: do {
-            |            i__0 *{
+            |            i__0 * {
             |              if (j__0 != null) {
             |                j__0
             |              } else {
@@ -2024,7 +2022,7 @@ class DefineStageTest {
             |              if(a__0 == b__0, fn {
             |                  a__0
             |                }, \else_if, fn (f#0) {
-            |                  f#0(is(a__0, B__0), fn {
+            |                  f#0(a__0 is B__0, fn {
             |                      a__0
             |                    }, \else_if, fn (f#1) {
             |                      f#1(a__0 == fancyExpression + 4, fn {
@@ -2034,7 +2032,7 @@ class DefineStageTest {
             |                                true
             |                              }, \else, fn (f#3) {
             |                                f#3(fn {
-            |                                    is(a__0, C)
+            |                                    a__0 is C
             |                                })
             |                            }), fn {
             |                              a__0
@@ -2085,7 +2083,7 @@ class DefineStageTest {
             |        f__0 = fn f(maybe__0 /* aka maybe */: List<Int32>?) /* return__0 */: String {
             |          fn__0: do {
             |            do {
-            |              if(is(maybe__0, List<Int32>), @stay fn {
+            |              if(maybe__0 is List<Int32>, @stay fn {
             |                  "yep"
             |                }, \else, fn (f#0) {
             |                  f#0(@stay fn {
@@ -2130,16 +2128,16 @@ class DefineStageTest {
             |        let b__0;
             |        b__0 = do_get_a(t#0);
             |        void;
-            |        as(1, Int32);
-            |        as(2, Mystery);
-            |        as(3, type (List)<Mystery>);
+            |        1 as Int32;
+            |        2 as Mystery;
+            |        3 as type (List)<Mystery>;
             |        error (list("`(Leaf`", "4", "`Leaf)`", "as"));
             |        do_call_as(5, type (Int32));
             |        do_call_as(6, Mystery);
             |        do_call_as(7);
             |        do_get_as(8);
-            |        as(do_call_get(list(9), 0), Int32);
-            |        as(do_call_toString(10), String);
+            |        do_call_get(list(9), 0) as Int32;
+            |        do_call_toString(10) as String;
             |
             |        ```
             |  },
@@ -2407,7 +2405,7 @@ class DefineStageTest {
             |            do {}
             |        });
             |        Durian__0 extends Apple__0;
-            |        Durian__0 extends([Banana__0, Cherry__0]);
+            |        Durian__0 extends ([Banana__0, Cherry__0]);
             |        @fn @method(\constructor) @visibility(\public) @stay @fromType(Durian__0) let constructor__2;
             |        constructor__2 = (@stay fn constructor(@impliedThis(Durian__0) this__2: Durian__0) /* return__2 */: Void {});
             |        class(\word, \Durian, \concrete, true, @typeDefined(Durian__0) fn {
@@ -3173,10 +3171,10 @@ class DefineStageTest {
             |      @static @visibility(\public) @fn @stay @fromType(Point__0) let decodeFromJson__1;
             |      decodeFromJson__1 = (@stay fn (t__1: JsonSyntaxTree, ic__1: InterchangeContext) /* return__8 */: (Point__0 | Bubble) {
             |          let obj__0;
-            |          obj__0 = as(t__1, JsonObject);
+            |          obj__0 = t__1 as JsonObject;
             |          let x__3: Int32, y__2: Int32;
-            |          x__3 = do_call_asInt32(as(do_call_propertyValueOrBubble(obj__0, "x"), JsonNumeric));
-            |          y__2 = do_call_asInt32(as(do_call_propertyValueOrBubble(obj__0, "y"), JsonNumeric));
+            |          x__3 = do_call_asInt32(do_call_propertyValueOrBubble(obj__0, "x") as JsonNumeric);
+            |          y__2 = do_call_asInt32(do_call_propertyValueOrBubble(obj__0, "y") as JsonNumeric);
             |          new Point__0(x__3, y__2)
             |      });
             |      @static @visibility(\public) @fn @stay @fromType(Point__0) let jsonAdapter__0;

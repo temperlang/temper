@@ -2,6 +2,7 @@ package lang.temper.tooling
 
 import lang.temper.be.Backend
 import lang.temper.builtin.BuiltinFuns
+import lang.temper.builtin.DesugarOperation
 import lang.temper.common.compatRemoveLast
 import lang.temper.common.structure.FormattingStructureSink
 import lang.temper.common.structure.StructureSink
@@ -12,7 +13,6 @@ import lang.temper.frontend.ModuleNamingContext
 import lang.temper.lexer.CommentType
 import lang.temper.library.LibraryConfigurationLocationKey
 import lang.temper.log.Position
-import lang.temper.log.unknownPos
 import lang.temper.name.BuiltinName
 import lang.temper.name.ExportedName
 import lang.temper.name.ModuleName
@@ -206,8 +206,6 @@ enum class RefKind {
     This,
 }
 
-val EmptyToolTree = ToolTree(kind = TreeKind.None, pos = unknownPos)
-
 class ParentPair(val parent: ToolTree?, val tree: ToolTree)
 
 sealed interface Mention {
@@ -284,11 +282,12 @@ fun TreeType.toKind() = when (this) {
     LeafTreeType.Value -> TreeKind.Value
 }
 
-fun convertTree(tree: Tree): ToolTree {
+/** Returns null only for obscure leaves that are never top-level trees. */
+fun convertTree(tree: Tree): ToolTree? {
     return when (tree) {
         is LeafTree -> convertLeaf(tree)
         else -> {
-            var kids = tree.children.map { convertTree(it) }
+            var kids = tree.children.mapNotNull { convertTree(it) }
             val focus = when (tree) {
                 // Asserts calls have at least one kid, which I like to hope is always true.
                 is CallTree -> {
@@ -314,39 +313,41 @@ fun convertTree(tree: Tree): ToolTree {
     }
 }
 
-fun convertLeaf(tree: LeafTree) = when (tree) {
-    is NameLeaf -> {
-        // The text ideally is what is seen in source.
-        val text = when (val nameNode = tree.content) {
-            is BuiltinName -> nameNode.builtinKey
-            is SourceName -> nameNode.baseName.nameText
-            else -> when (val symbol = nameNode.toSymbol()) {
-                null -> nameNode.rawDiagnostic
-                else -> symbol.text
-            }
-        }
-        // And the name ideally is something more unique as needed.
-        when (tree) {
-            is LeftNameLeaf -> ToolTree.def(text = text, name = tree.content.rawDiagnostic, pos = tree.pos)
-            is RightNameLeaf -> ToolTree.ref(text = text, name = tree.content.rawDiagnostic, pos = tree.pos)
-        }
-    }
-    is StayLeaf -> ToolTree(kind = tree.treeType.toKind(), pos = tree.pos)
-    else -> {
-        val value = tree.valueContained
-        when (value?.typeTag) {
-            TSymbol -> ToolTree.sym(name = TSymbol.unpack(value).text, pos = tree.pos)
-            TFunction -> {
-                val fn = TFunction.unpack(value)
-                if (fn == BuiltinFuns.thisPlaceholder) {
-                    val name = (fn as NamedBuiltinFun).name
-                    ToolTree.ref(text = name, name = name, pos = tree.pos, value = RefKind.This)
-                } else {
-                    null
+/** Never returns null for name leaves. */
+fun convertLeaf(tree: LeafTree): ToolTree? {
+    return when (tree) {
+        is NameLeaf -> {
+            // The text ideally is what is seen in source.
+            val text = when (val nameNode = tree.content) {
+                is BuiltinName -> nameNode.builtinKey
+                is SourceName -> nameNode.baseName.nameText
+                else -> when (val symbol = nameNode.toSymbol()) {
+                    null -> nameNode.rawDiagnostic
+                    else -> symbol.text
                 }
             }
-            else -> null
-        } ?: ToolTree(kind = tree.treeType.toKind(), pos = tree.pos, value = value?.stateVector)
+            // And the name ideally is something more unique as needed.
+            when (tree) {
+                is LeftNameLeaf -> ToolTree.def(text = text, name = tree.content.rawDiagnostic, pos = tree.pos)
+                is RightNameLeaf -> ToolTree.ref(text = text, name = tree.content.rawDiagnostic, pos = tree.pos)
+            }
+        }
+        is StayLeaf -> ToolTree(kind = tree.treeType.toKind(), pos = tree.pos)
+        else -> {
+            val value = tree.valueContained
+            when (value?.typeTag) {
+                TSymbol -> ToolTree.sym(name = TSymbol.unpack(value).text, pos = tree.pos)
+                TFunction -> when (val fn = TFunction.unpack(value)) {
+                    BuiltinFuns.thisPlaceholder -> {
+                        val name = (fn as NamedBuiltinFun).name
+                        ToolTree.ref(text = name, name = name, pos = tree.pos, value = RefKind.This)
+                    }
+                    DesugarOperation -> return null // Skip entirely because it confuses position lookup.
+                    else -> null
+                }
+                else -> null
+            } ?: ToolTree(kind = tree.treeType.toKind(), pos = tree.pos, value = value?.stateVector)
+        }
     }
 }
 
@@ -497,7 +498,7 @@ data class Imported(val path: String, val symbol: String)
 fun extractDecls(tree: Tree) = treeToPosMap<ToolTree>(tree) { node, parentValues ->
     when (node) {
         is NameLeaf -> {
-            var leaf = convertLeaf(node)
+            var leaf = convertLeaf(node)!!
             if (leaf.isDef) {
                 when (val parentValue = parentValues.lastOrNull()?.value) {
                     is DeclMeta -> {
@@ -594,7 +595,7 @@ fun correlateTypes(tree: ToolTree, infoMap: Map<Position, List<TypeInfo>>): Tool
     return tree.copy(kids = kids, focus = focus, type = type, value = value)
 }
 
-fun extractTypes(tree: Tree) = treeToPosMap<TypeInfo>(tree) { node, _ ->
+fun extractTypes(tree: Tree) = treeToPosMap(tree) { node, _ ->
     val typeDecl = when (node) {
         is DeclTree -> {
             node.parts?.metadataSymbolMap?.get(typeDeclSymbol)?.target?.staticTypeContained

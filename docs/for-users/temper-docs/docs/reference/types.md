@@ -7277,10 +7277,10 @@ Static types have more nuance than type tags.
 | `List<Int>`  | `List`       |
 | `fn(): Void` | `Function`   |
 
-As you can see, all function values have the same type tag, *Function*, and generic class's
+As you can see, all function values have the same type tag, *Function*, and a generic class's
 corresponding type tag has the type parameters erased.
 
-[^1]: A narrowing cast is from a super-type to a sub-type.  For example, from [*AnyValue*](#type-AnyValue) to `class C`.
+[^1]: A narrowing cast is from a super-type to a subtype.  For example, from [*AnyValue*](#type-AnyValue) to `class C`.
 
 <!-- /snippet: type-tag -->
 

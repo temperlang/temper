@@ -1375,7 +1375,7 @@ class TmpLBackendTest {
     fun localDeclarationsNotEaten() = assertGeneratedCode(
         inputs = inputFileMapFromJson(
             // This example was reduced from the Myers diff functional test code.
-            // The variable `c` was pulled into a synthesized, labeled block, and so was not
+            // The variable `c` was pulled into a synthesized, labeled block; so was not
             // visible to its use in `e`'s initializer.
             """
                 |{
@@ -1405,12 +1405,10 @@ class TmpLBackendTest {
             |                let ConsoleLog#0 = builtins.ConsoleLog;
             |                let console#0: Console = GetConsole#0();
             |                @QName("test-library/example.f()") @reach(\none) let f__0(@QName("test-library/example.f().(d)") d__0: Deque<String | Null>): Void | Bubble {
-            |                  var t#0: String | Null;
             |                  @fail var fail#0: Boolean;
             |                  @QName("test-library/example.f().c=") let c__0: String | Null;
             |                  if (!DequeGetIsEmpty#0(d__0)) {
-            |                    t#0 = DequeRemoveFirst#0(d__0);
-            |                    c__0 = t#0;
+            |                    c__0 = DequeRemoveFirst#0(d__0);
             |                  } else {
             |                    c__0 = null;
             |                  }
@@ -2808,8 +2806,7 @@ class TmpLBackendTest {
             |              caseIndex#0 = -1;
             |              when (caseIndexLocal#0) {
             |                0 -> do {
-            |                  var t#1: Int32 = initialI__0();
-            |                  i__0 = t#1;
+            |                  i__0 = initialI__0();
             |## The initializer was left in place.
             |                  caseIndex#0 = 1;
             |                }

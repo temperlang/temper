@@ -61,16 +61,16 @@ class PyBackendTest {
         want = """
             |from builtins import int as int3, str as str4
             |from temper_core import int64_to_int32 as int64_to_int320, string_to_int32 as string_to_int321, int_add as int_add2
-            |int64_to_int32_35 = int64_to_int320
-            |string_to_int32_36 = string_to_int321
-            |int_add_37 = int_add2
+            |int64_to_int32_37 = int64_to_int320
+            |string_to_int32_38 = string_to_int321
+            |int_add_39 = int_add2
             |class IntMaker:
             |    radix_7: 'int3'
             |    __slots__ = ('radix_7',)
             |    def int64_to_int(this_0, int_9: 'int64_23', /) -> 'int3':
-            |        return int64_to_int32_35(int_9)
+            |        return int64_to_int32_37(int_9)
             |    def string_to_int(this_1, string_12: 'str4', /) -> 'int3':
-            |        return string_to_int32_36(string_12, this_1.radix_7)
+            |        return string_to_int32_38(string_12, this_1.radix_7)
             |    def __init__(this, /, radix: 'int3') -> None:
             |        this.radix_7 = radix
             |    @property
@@ -81,7 +81,7 @@ class PyBackendTest {
             |    int_int_20 = int_maker_16.int64_to_int(int_17)
             |    string_int_21: 'int3'
             |    string_int_21 = int_maker_16.string_to_int(string_18)
-            |    return int_add_37(int_int_20, string_int_21)
+            |    return int_add_39(int_int_20, string_int_21)
             |
         """.trimMargin(),
     )
@@ -141,30 +141,28 @@ class PyBackendTest {
             |}
         """.trimMargin(),
         want = """
-            |from typing import Union as Union3, Dict as Dict4, Sequence as Sequence9
-            |from builtins import str as str5, int as int6, bool as bool7, isinstance as isinstance10, len as len0
-            |from temper_core import LoggingConsole as LoggingConsole8, list_get as list_get1, int_add as int_add2
+            |from builtins import bool as bool3, str as str6, int as int7, isinstance as isinstance10, len as len0
+            |from temper_core import LoggingConsole as LoggingConsole4, list_get as list_get1, int_add as int_add2
+            |from typing import Dict as Dict5, Union as Union8, Sequence as Sequence9
             |len_38 = len0
             |list_get_39 = list_get1
             |int_add_40 = int_add2
-            |t_34: 'Union3[(Dict4[str5, int6]), None]'
-            |t_16: 'bool7'
-            |t_31: 'LoggingConsole8' = LoggingConsole8(__name__)
-            |def f() -> 'Dict4[str5, int6]':
+            |t_16: 'bool3'
+            |t_31: 'LoggingConsole4' = LoggingConsole4(__name__)
+            |def f() -> 'Dict5[str6, int7]':
             |    return {}
-            |m_1: 'Union3[(Dict4[str5, int6]), None]' = None
-            |this_19: 'Sequence9[int6]' = (1, 2, 3)
-            |n_20: 'int6' = len_38(this_19)
-            |i_21: 'int6' = 0
+            |m_1: 'Union8[(Dict5[str6, int7]), None]' = None
+            |this_19: 'Sequence9[int7]' = (1, 2, 3)
+            |n_20: 'int7' = len_38(this_19)
+            |i_21: 'int7' = 0
             |while i_21 < n_20:
-            |    el_22: 'int6' = list_get_39(this_19, i_21)
+            |    el_22: 'int7' = list_get_39(this_19, i_21)
             |    i_21 = int_add_40(i_21, 1)
-            |    e_3: 'int6' = el_22
+            |    e_3: 'int7' = el_22
             |    if e_3 == 2:
-            |        t_34 = {}
-            |        m_1 = t_34
+            |        m_1 = {}
             |if not m_1 is None:
-            |    t_16 = isinstance10(m_1, Dict4)
+            |    t_16 = isinstance10(m_1, Dict5)
             |else:
             |    t_16 = False
             |if t_16:
@@ -231,7 +229,7 @@ class PyBackendTest {
             |from builtins import int as int1
             |from typing import Union as Union2
             |from temper_core import int_add as int_add0
-            |int_add_13 = int_add0
+            |int_add_17 = int_add0
             |def something(i_1: 'int1', j_5: 'Union2[int1, None]' = None, k_7: 'Union2[int1, None]' = None, /) -> 'int1':
             |    _j_5: 'Union2[int1, None]' = j_5
             |    _k_7: 'Union2[int1, None]' = k_7
@@ -245,7 +243,7 @@ class PyBackendTest {
             |        k_3 = 6
             |    else:
             |        k_3 = _k_7
-            |    return int_add_13(int_add_13(i_1, j_2), k_3)
+            |    return int_add_17(int_add_17(i_1, j_2), k_3)
             |
         """.trimMargin(),
     )
@@ -384,20 +382,20 @@ class PyBackendTest {
             |from builtins import int as int2, AttributeError as AttributeError4
             |from typing import Any as Any3, ClassVar as ClassVar5
             |from temper_core import int_sub as int_sub0, int_add as int_add1
-            |int_sub_110 = int_sub0
-            |int_add_111 = int_add1
+            |int_sub_118 = int_sub0
+            |int_add_119 = int_add1
             |class C:
             |    y_26: 'int2'
             |    z_27: 'int2'
             |    __slots__ = ('y_26', 'z_27')
             |    @property
             |    def p(this_0, /) -> 'int2':
-            |        return int_sub_110(this_0.y_26, 1)
+            |        return int_sub_118(this_0.y_26, 1)
             |    def _set_p(this_1, new_p_31: 'int2', /) -> 'None':
-            |        t_90: 'int2' = int_add_111(new_p_31, 1)
-            |        this_1.y_26 = t_90
+            |        t_97: 'int2' = int_add_119(new_p_31, 1)
+            |        this_1.y_26 = t_97
             |    @property
-            |    def q(this_113, /) -> 'Any3':
+            |    def q(this_121, /) -> 'Any3':
             |        raise AttributeError4('q getter unavailable')
             |    @q.setter
             |    def q(this_2, new_q_34: 'int2', /) -> 'None':
@@ -414,12 +412,12 @@ class PyBackendTest {
             |        return this_5.p
             |    def incr(this_6, /) -> 'int2':
             |        return_20: 'int2'
-            |        return_20 = int_add_111(this_6._get_r(), 1)
+            |        return_20 = int_add_119(this_6._get_r(), 1)
             |        this_6._set_p(return_20)
             |        return return_20
             |    def decr_45(this_7, /) -> 'int2':
             |        return_21: 'int2'
-            |        return_21 = int_sub_110(this_7._get_r(), 1)
+            |        return_21 = int_sub_118(this_7._get_r(), 1)
             |        this_7._set_p(return_21)
             |        return return_21
             |    def __init__(this, /) -> None:
@@ -436,10 +434,10 @@ class PyBackendTest {
             |    __slots__ = ()
             |    @staticmethod
             |    def f_49(j_50: 'int2', /) -> 'int2':
-            |        return int_add_111(D._i, j_50)
+            |        return int_add_119(D._i, j_50)
             |    @staticmethod
             |    def g(n_53: 'int2', /) -> 'int2':
-            |        return int_add_111(D.f_49(n_53), n_53)
+            |        return int_add_119(D.f_49(n_53), n_53)
             |    def __init__(this, /) -> None:
             |        pass
             |D._i = 1

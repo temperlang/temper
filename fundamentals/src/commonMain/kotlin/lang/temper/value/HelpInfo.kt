@@ -52,7 +52,7 @@ fun HelpSnippet.toHelpful(context: String): Helpful? =
 
 internal fun SnippetHelpInfo.toHelpful(context: String): Helpful? {
     val key = helpSnippet
-    val snippetText = getSnippetText(key) ?: return null
+    val snippetText = HelpfulSnippets.getSnippetText(key) ?: return null
 
     return SimpleHelpful(
         briefHelp = briefHelp,
@@ -63,7 +63,7 @@ internal fun SnippetHelpInfo.toHelpful(context: String): Helpful? {
 
 const val HELPFUL_SNIPPETS_RESOURCE_PATH = "lang/temper/helpful/helpful-snippets.json"
 
-private val snippets: Lazy<Map<String, String>> = lazy {
+private val snippets: Map<String, String> by lazy {
     val json = Helpful::class.java
         .getResourceAsStream("/$HELPFUL_SNIPPETS_RESOURCE_PATH")?.use { stream ->
             JsonValue.parse(stream.readAllBytes().toString(Charsets.UTF_8))
@@ -75,4 +75,7 @@ private val snippets: Lazy<Map<String, String>> = lazy {
     }
 }
 
-internal fun getSnippetText(key: String): String? = snippets.value[key]
+object HelpfulSnippets {
+    fun getSnippetText(key: String): String? = snippets[key]
+    val topics get() = snippets.keys
+}
