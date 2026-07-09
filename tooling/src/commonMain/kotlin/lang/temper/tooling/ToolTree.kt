@@ -337,18 +337,13 @@ fun convertLeaf(tree: LeafTree): ToolTree? {
             val value = tree.valueContained
             when (value?.typeTag) {
                 TSymbol -> ToolTree.sym(name = TSymbol.unpack(value).text, pos = tree.pos)
-                TFunction -> {
-                    when (val fn = TFunction.unpack(value)) {
-                        BuiltinFuns.thisPlaceholder -> {
-                            val name = (fn as NamedBuiltinFun).name
-                            ToolTree.ref(text = name, name = name, pos = tree.pos, value = RefKind.This)
-                        }
-                        DesugarOperation -> {
-                            // Skip this entirely because it confuses position lookup.
-                            return null
-                        }
-                        else -> null
+                TFunction -> when (val fn = TFunction.unpack(value)) {
+                    BuiltinFuns.thisPlaceholder -> {
+                        val name = (fn as NamedBuiltinFun).name
+                        ToolTree.ref(text = name, name = name, pos = tree.pos, value = RefKind.This)
                     }
+                    DesugarOperation -> return null // Skip entirely because it confuses position lookup.
+                    else -> null
                 }
                 else -> null
             } ?: ToolTree(kind = tree.treeType.toKind(), pos = tree.pos, value = value?.stateVector)
