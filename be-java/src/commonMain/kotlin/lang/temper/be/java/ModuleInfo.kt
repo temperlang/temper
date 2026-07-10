@@ -13,6 +13,10 @@ data class ModuleInfo(
         val classString = lastPart.temperToJavaClass(MODULE_GLOBAL_SUFFIX)
         OutName(classString.assertSafe(), null)
     }
+    val connectedClassName: OutName by lazy {
+        val classString = lastPart.temperToJavaClass(MODULE_CONNECTED_SUFFIX)
+        OutName(classString.assertSafe(), null)
+    }
     fun qualifiedClassName(dependencyCategory: DependencyCategory): QualifiedName =
         packageName.qualify(
             when (dependencyCategory) {

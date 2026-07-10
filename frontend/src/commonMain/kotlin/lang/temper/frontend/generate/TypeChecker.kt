@@ -193,6 +193,7 @@ internal class TypeChecker(
                 checkRegularCall(t)
                 checkRttiCheckAllowed(t, fn as RttiCheckFunction)
             }
+            BuiltinFuns.abstractPanicFn -> checkAbstractPanicContext(t)
             else -> checkRegularCall(t)
         }
         // And make sure we don't use Void in calls. Assignment is handled as a special case,
@@ -206,6 +207,32 @@ internal class TypeChecker(
                 }
             }
         }
+    }
+
+    private fun checkAbstractPanicContext(t: CallTree) {
+        // Find enclosing FunTree. Expected to be exactly 2 up, but loop is flexible.
+        val fn = run fn@{
+            var parent = t.incoming?.source
+            while (parent != null) {
+                if (parent is FunTree) {
+                    return@fn parent
+                }
+                parent = parent.incoming?.source
+            }
+            // Not found, so bail.
+            return@checkAbstractPanicContext
+        }
+        // Abstract panic allowed only for connected functions.
+        // Pure virtual methods use a different function so don't arrive here.
+        val parts = fn.parts ?: return
+        parts.connected && return
+        // Invalid abstract function.
+        logSink.log(
+            level = Log.Error,
+            template = MessageTemplate.FunctionBodyMissing,
+            pos = t.pos,
+            values = listOf(),
+        )
     }
 
     private fun checkDecl(t: DeclTree) {

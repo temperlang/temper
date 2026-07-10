@@ -1456,6 +1456,38 @@ object Py {
         }
     }
 
+    /** Used for embedding external raw Python source. */
+    class Raw(
+        pos: Position,
+        var source: String,
+    ) : BaseTree(pos), Stmt {
+        override val operatorDefinition: PyOperatorDefinition?
+            get() = null
+        override fun renderTo(
+            tokenSink: TokenSink,
+        ) {
+            tokenSink.value(source)
+        }
+        override val codeFormattingTemplate: CodeFormattingTemplate?
+            get() = null
+        override fun deepCopy(): Raw {
+            return Raw(pos, source = this.source)
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is Raw && this.source == other.source
+        }
+        override fun hashCode(): Int {
+            return source.hashCode()
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships()
+        }
+    }
+
     /**
      * decorator: `'@' dotted_name [ '(' [args] ')' ] NEWLINE`
      * PEP-614 / 3.9: '@' named_expr_test NEWLINE

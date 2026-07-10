@@ -142,7 +142,6 @@ import lang.temper.value.Tree
 import lang.temper.value.TypeInferences
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
-import lang.temper.value.connectedSymbol
 import lang.temper.value.consoleParsedName
 import lang.temper.value.factorySignatureFromConstructorSignature
 import lang.temper.value.fnParsedName
@@ -3506,7 +3505,7 @@ private fun translateDeclarationMetadataSeries(
     // Skip metadata that is available via other avenues
     if (keySymbol in typeMemberMetadataSymbols) { return@mapNotNull null }
     when (keySymbol) {
-        connectedSymbol, fromTypeSymbol, fnSymbol,
+        fromTypeSymbol, fnSymbol,
         parameterNameSymbolsListSymbol, resolutionSymbol, returnedFromSymbol,
         ssaSymbol, staticSymbol, typeFormalSymbol,
         typeSymbol, typePlaceholderSymbol,

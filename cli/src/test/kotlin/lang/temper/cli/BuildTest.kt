@@ -372,7 +372,7 @@ class BuildTest {
         topDir.withTextOf("temper.out/py/banana/tests/test_banana.py") { text ->
             assertContains(text, "temper_std.testing")
             assertContains(text, "def test___twiceWorks")
-            assertContains(text, "class Something")
+            assertContains(text, "class _Something")
             assertContains(text, "def halve_value_in")
             assertNotContains(text, "nobody_wants_me")
         }

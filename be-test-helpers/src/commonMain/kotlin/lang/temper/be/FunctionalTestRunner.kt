@@ -294,6 +294,10 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
 
         @Suppress("UNCHECKED_CAST")
         val factory = lookupFactory(backendId) as Backend.Factory<B>
+        val extensions = factory.backendMeta.fileExtensionMap.values.toSet()
+        val rawBackendFiles = test.gatherFiles { filePath ->
+            filePath.lastOrNull()?.extension?.let { it in extensions } == true
+        }
         val backends = partitionedModules.mapValues { (root, lib) ->
             val (libraryConfiguration, modules) = lib
             val (outputDir, keepDir) = outputDirs.getValue(root)
@@ -308,6 +312,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
                     dependencyResolver = NullDependencyResolver,
                     config = config,
                     dependenciesBuilder = dependenciesBuilder,
+                    rawBackendFiles = rawBackendFiles,
                 ),
             )
         }

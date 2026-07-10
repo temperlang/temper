@@ -1,12 +1,12 @@
 package lang.temper.frontend.implicits
 
 import lang.temper.builtin.BuiltinFuns
+import lang.temper.common.ignore
 import lang.temper.env.InterpMode
 import lang.temper.frontend.Module
 import lang.temper.fs.FileClassification
 import lang.temper.fs.FileSystem
 import lang.temper.fs.StitchedFileSystem
-import lang.temper.interp.connectedDecoratorBindings
 import lang.temper.interp.importExport.STANDARD_LIBRARY_NAME
 import lang.temper.lexer.TEMPER_FILE_EXTENSION
 import lang.temper.library.LibraryConfiguration
@@ -23,7 +23,6 @@ import lang.temper.regex.RegexCompiledFoundFn
 import lang.temper.regex.RegexCompiledReplaceFn
 import lang.temper.regex.RegexCompiledSplitFn
 import lang.temper.regex.RegexFormatFn
-import lang.temper.stage.Stage
 import lang.temper.type2.Signature2
 import lang.temper.value.ActualValues
 import lang.temper.value.CallableValue
@@ -58,15 +57,13 @@ fun accessStdWrapped(): FileSystem? {
 }
 
 /**
- * Implicits and std modules get extra privileges, like the privilege to connect to JVM machinery for implicits.
- * Call once before each advance to get the environment updated for privileged processing.
+ * For modules such as core and std modules to get extra privileges. This used
+ * to apply to `@connected` methods, but now that's available in user code, too.
  */
 internal fun considerPrivilegedEnvironmentBindings(module: Module) {
-    when (module.nextStage) {
-        Stage.Lex -> if (module.isEffectivelyImplicits || module.isEffectivelyStd) {
-            module.addEnvironmentBindings(connectedDecoratorBindings)
-        }
-        else -> {}
+    if (module.isEffectivelyImplicits || module.isEffectivelyStd) {
+        // TODO Anything needed here?
+        ignore(module)
     }
 }
 

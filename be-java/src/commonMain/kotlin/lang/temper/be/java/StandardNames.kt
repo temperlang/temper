@@ -12,6 +12,9 @@ const val FALLABCK_MODULE_NAME = "AdHoc"
 /** Given a module at the path `foo.bar-qux`, the class name will be `BarQuxGlobal`. */
 const val MODULE_GLOBAL_SUFFIX = "Global"
 
+/** Given a module at the path `foo.bar-qux`, the class name will be `BarQuxConnected`. */
+const val MODULE_CONNECTED_SUFFIX = "Connected"
+
 /** Given a module at the path `foo.bar-qux`, the class name will be `BarQuxName`. */
 const val MODULE_ENTRY_SUFFIX = "Main"
 

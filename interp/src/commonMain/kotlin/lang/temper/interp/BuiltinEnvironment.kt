@@ -800,6 +800,7 @@ private object Builtins {
              */
             keyPair(jsonNameDecorator),
             keyPair(vFunDecorator),
+            keyPair(vConnectedDecorator),
             keyPair(vImuDecorator),
             keyPair(vPartialImuDecorator),
 

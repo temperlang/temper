@@ -25,6 +25,7 @@ import lang.temper.type2.Nullity
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.withNullity
+import lang.temper.value.AbstractPanic
 import lang.temper.value.ActualValues
 import lang.temper.value.BubbleFn
 import lang.temper.value.BuiltinOperatorId
@@ -1997,6 +1998,7 @@ object BuiltinFuns {
     val getsFn: GetStaticOp = GetStatic
     val igetsFn: GetStaticOp = InternalGetStatic
     val pureVirtualFn: NamedBuiltinFun = PureVirtual
+    val abstractPanicFn: NamedBuiltinFun = AbstractPanic
     val desugarPunFn: MacroValue = DesugarPun
     val coalesceMacro: NamedBuiltinFun = CoalesceMacro
     val whenMacro: NamedBuiltinFun = WhenMacro
@@ -2074,6 +2076,7 @@ object BuiltinFuns {
     val vGets = Value(getsFn)
     val vIGets = Value(igetsFn)
     val vPureVirtual = Value(pureVirtualFn)
+    val vAbstractPanic = Value(abstractPanicFn)
     val vDesugarPun = Value(desugarPunFn)
 
     val vMakeClosRec = Value(makeClosRec)

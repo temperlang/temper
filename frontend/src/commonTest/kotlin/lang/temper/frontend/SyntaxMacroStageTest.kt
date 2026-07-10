@@ -1147,13 +1147,22 @@ class SyntaxMacroStageTest {
     )
 
     @Test
-    fun letFunctionBodyRequired() = assertModuleAtStage(
+    fun letFunctionBodyRequiredButCheckedLater() = assertModuleAtStage(
         stage = Stage.SyntaxMacro,
         input = """let f()""",
         want = """
         {
             "syntaxMacro": {
-                "body": "error (MalformedDeclaration)\n",
+                "body":
+                ```
+                @fn let f__0;
+                f__0 = fn f {
+                  fn__0: do {
+                    abstractPanic()
+                  }
+                };
+
+                ```,
             },
         }
         """,
@@ -1167,7 +1176,7 @@ class SyntaxMacroStageTest {
         want = """
         {
             "syntaxMacro": {
-                "body": "error (MalformedDeclaration)\n",
+                "body": "error (MissingName)\n",
             },
         }
         """,

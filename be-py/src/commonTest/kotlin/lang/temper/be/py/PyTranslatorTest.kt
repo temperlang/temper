@@ -216,7 +216,7 @@ class PyTranslatorTest : TranslatorTests(PyBackend.Python3.backendMeta, PySuppor
             "expressionAssociativityRightPlus" to "a + (b + c)",
             "unexportedClass" to
                 """
-                    |class Thing_7:
+                    |class _Thing:
                     |    prop_name_9: 'str0'
                     |    __slots__ = ('prop_name_9',)
                     |    def __init__(blah: 'str0', /) -> None:

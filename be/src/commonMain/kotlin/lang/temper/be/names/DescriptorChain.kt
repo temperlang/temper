@@ -76,10 +76,11 @@ fun DescriptorChain?.containingFunclike() = ancestors().firstOrNull { it.node is
 /** Determine if this descriptor is for some kind of assignment. */
 fun DescriptorChain.isAssign(): Boolean = node is TmpL.Assignment
 
-/** Determine if this names a value or type. */
+/** Determine if this names a value, type, or type formal. */
 fun DescriptorChain.idKind(): TmpL.IdKind = when (node) {
     is TmpL.FunctionDeclaration -> node.idKind()
-    is TmpL.Type, is TmpL.TypeFormal, is TmpL.TypeDeclaration -> TmpL.IdKind.Type
+    is TmpL.Type, is TmpL.TypeDeclaration -> TmpL.IdKind.Type
+    is TmpL.TypeFormal -> TmpL.IdKind.TypeFormal
     is TmpL.Import -> when (node.sig) {
         is TmpL.ImportedType -> TmpL.IdKind.Type
         else -> TmpL.IdKind.Value

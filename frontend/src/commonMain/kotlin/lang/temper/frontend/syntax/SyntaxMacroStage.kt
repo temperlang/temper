@@ -245,6 +245,20 @@ internal fun rewriteFun(
         else -> true
     }
 
+    // Add a marked panic call if we don't have a fun tree.
+    // We can mark this an error later if there's no connected marker.
+    if (!isTypeExpr && call.lastChild !is FunTree) {
+        call.add(
+            call.treeFarm.grow(call.pos.rightEdge) {
+                Fn {
+                    Block {
+                        Call { V(BuiltinFuns.vAbstractPanic) }
+                    }
+                }
+            },
+        )
+    }
+
     var i = 1 // skip callee
     // Look for the word first.
     if (!isTypeExpr && i + 2 < call.size && call.child(i).symbolContained == wordSymbol) {

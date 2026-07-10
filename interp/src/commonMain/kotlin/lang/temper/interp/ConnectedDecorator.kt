@@ -1,12 +1,9 @@
 package lang.temper.interp
 
-import lang.temper.name.BuiltinName
 import lang.temper.name.Symbol
-import lang.temper.name.TemperName
 import lang.temper.value.CallTree
 import lang.temper.value.FunTree
 import lang.temper.value.MacroActuals
-import lang.temper.value.MacroValue
 import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.connectedSymbol
@@ -15,9 +12,11 @@ import lang.temper.value.symbolContained
 import lang.temper.value.void
 
 /**
- * `@connected methodOrPropertyDefinition...`
- * lets us connect types and type members to native code,
- * where the connection key is defined by the qname.
+ * <!-- snippet: builtin/@connected -->
+ * # `@connected` decorator
+ * Connect types, members, and functions to native code. Each backend defines
+ * specific conventions for connected backend code. Internal backend translation
+ * logic can also key on the QName of connected entities.
  */
 internal val connectedDecorator = MetadataDecorator(
     connectedSymbol,
@@ -27,12 +26,6 @@ internal val connectedDecorator = MetadataDecorator(
 }
 
 val vConnectedDecorator = Value(connectedDecorator)
-val connectedDecoratorName = BuiltinName(connectedDecorator.name)
-
-val connectedDecoratorBindings: Map<TemperName, Value<MacroValue>> = mapOf(
-    connectedDecoratorName to vConnectedDecorator,
-    connectedDecoratorName.baseName to vConnectedDecorator,
-)
 
 private fun findConnectedDecoratorInsertions(args: MacroActuals, symbolKey: Symbol): List<Pair<Tree, Int>> {
     val result = findDefaultDecoratorInsertions(args, symbolKey).toMutableList()

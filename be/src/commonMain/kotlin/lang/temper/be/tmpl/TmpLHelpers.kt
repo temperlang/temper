@@ -222,6 +222,84 @@ fun <T> TmpL.CallExpression.mapParameters(
     }
 }
 
+/** The list of statements handling parameter default values, and the name mapping of optionals. */
+data class DefaultStatementsInfo(
+    val defaultStatements: List<TmpL.Statement>,
+    val parameterMapping: Map<ResolvedName, ResolvedName>,
+)
+
+/**
+ * Return just the statements needed to provide defaults to optional parameters,
+ * along with a list of all effective parameter names, in order, using the new
+ * default-assigned names where applicable.
+ *
+ * If no optionals, just provide an empty statement list with the original
+ * parameter names.
+ */
+fun TmpL.FunctionDeclaration.parameterDefaultStatementsInfo(): DefaultStatementsInfo {
+    // Skip out fast for the presumed common case.
+    parameters.parameters.any { it.optional } || return DefaultStatementsInfo(
+        defaultStatements = listOf(),
+        parameterMapping = mapOf(),
+    )
+    // Build the new list out.
+    // This might be approximately as efficient here as we'd be with extra frontend metadata.
+    // This includes being a lazy decision after we know that a backend wants this info.
+    // Here we expect each optional to have an if statement mentioning it and an assignment inside.
+    val defaultStatements = mutableListOf<TmpL.Statement>()
+    val parameterMapping = buildMap parameterMapping@{
+        parameters@ for (parameter in parameters.parameters) {
+            // Start out with original names, but replace them later.
+            if (parameter.optional) {
+                this[parameter.name.name] = parameter.name.name
+            }
+        }
+        var foundCount = 0
+        statements@ for (statement in body.statements) {
+            // Add all statements until all the defaulting is done.
+            defaultStatements.add(statement)
+            // See where we are on that defaulting.
+            if (statement is TmpL.IfStatement) {
+                statement.test.firstNotNull { tree ->
+                    when (tree) {
+                        is TmpL.Id if tree.name in this@parameterMapping -> tree.name
+                        else -> null
+                    }
+                }?.also { found ->
+                    val assignment = statement.consequent.firstNotNull { it as? TmpL.Assignment } ?: continue@statements
+                    this[found] = assignment.left.name
+                    foundCount += 1
+                    foundCount == this@parameterMapping.size && break@statements
+                }
+            }
+        }
+    }
+    return DefaultStatementsInfo(
+        defaultStatements = defaultStatements,
+        parameterMapping = parameterMapping,
+    )
+}
+
+fun TmpL.Tree.any(predicate: (TmpL.Tree) -> Boolean): Boolean {
+    return firstNotNull { tree ->
+        when {
+            predicate(tree) -> {}
+            else -> null
+        }
+    } != null
+}
+
+fun <R> TmpL.Tree.firstNotNull(transform: (TmpL.Tree) -> R?): R? {
+    fun dig(tree: TmpL.Tree): R? {
+        transform(tree)?.let { return@dig it }
+        for (kid in tree.children) {
+            dig(kid)?.also { return@dig it }
+        }
+        return null
+    }
+    return dig(this)
+}
+
 fun TmpL.CallExpression.adjustedSig(keepThis: Boolean = false): Signature2 {
     val sig = contextualizedSig
     val dropThis = !keepThis && sig.hasThisFormal

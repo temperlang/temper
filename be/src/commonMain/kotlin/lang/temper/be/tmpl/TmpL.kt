@@ -86,6 +86,7 @@ object TmpL {
 
     enum class IdKind : FormattableEnum {
         Type,
+        TypeFormal,
         Value,
     }
 

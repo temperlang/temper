@@ -108,6 +108,7 @@ abstract class Backend<SELF : Backend<SELF>>(
      * libraries in [libraryConfigurations].
      */
     val dependenciesBuilder: Dependencies.Builder<SELF>,
+    val rawBackendFiles: Map<FilePath, String> = mapOf(),
 ) {
     constructor(backendId: BackendId, setup: BackendSetup<SELF>) : this(
         backendId = backendId,
@@ -119,6 +120,7 @@ abstract class Backend<SELF : Backend<SELF>>(
         logSink = setup.logSink,
         config = setup.config,
         dependenciesBuilder = setup.dependenciesBuilder,
+        rawBackendFiles = setup.rawBackendFiles,
     )
 
     val libraryConfigurations = dependenciesBuilder.libraryConfigurations
@@ -894,6 +896,8 @@ data class BackendSetup<BACKEND : Backend<BACKEND>>(
     val logSink: LogSink,
     val dependencyResolver: DependencyResolver,
     val config: Backend.Config,
+    /** Files matching backend extensions from the library source tree. */
+    val rawBackendFiles: Map<FilePath, String> = mapOf(),
 )
 
 private fun sourceMapFile(outputSourceFile: FilePath): FilePath {

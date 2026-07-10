@@ -152,6 +152,14 @@ class JavaBackend private constructor(
             )
             add(result)
         }
+        for (file in rawBackendFiles) {
+            // Just copy raw java files into package dirs.
+            MetadataFileSpecification(
+                path = J.SourceDirectory.MainJava.filePath.resolve(file.key),
+                mimeType = sourceMimeType,
+                content = file.value,
+            ).also { add(it) }
+        }
         // See if we already have a top-level module.
         val rootName = javaLibConfigs.current.libraryRoot.rootModuleName()
         val rootInfo = javaLibConfigs.moduleInfo(rootName)

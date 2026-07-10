@@ -3071,6 +3071,17 @@ do {
 
 <!-- /snippet: builtin/@ -->
 
+<!-- snippet: builtin/@connected -->
+
+<a name="builtin&#45;&#64;connected" class="snippet-anchor-name"></a>
+
+### `@connected` decorator
+Connect types, members, and functions to native code. Each backend defines
+specific conventions for connected backend code. Internal backend translation
+logic can also key on the QName of connected entities.
+
+<!-- /snippet: builtin/@connected -->
+
 <!-- snippet: builtin/@const -->
 
 <a name="builtin&#45;&#64;const" class="snippet-anchor-name"></a>

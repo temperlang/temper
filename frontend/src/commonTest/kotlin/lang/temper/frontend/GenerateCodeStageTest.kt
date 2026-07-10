@@ -8,8 +8,6 @@ import lang.temper.common.temperEscaper
 import lang.temper.common.testCodeLocation
 import lang.temper.env.InterpMode
 import lang.temper.interp.MetadataDecorator
-import lang.temper.interp.connectedDecoratorName
-import lang.temper.interp.vConnectedDecorator
 import lang.temper.lexer.MarkdownLanguageConfig
 import lang.temper.lexer.StandaloneLanguageConfig
 import lang.temper.log.MessageTemplate
@@ -2690,9 +2688,6 @@ class GenerateCodeStageTest {
         // its subtypes, so the static expression type matters when casting.
         stage = Stage.Run,
         provisionModule = { module, _ ->
-            module.addEnvironmentBindings(
-                mapOf(connectedDecoratorName to vConnectedDecorator),
-            )
             module.deliverContent(
                 ModuleSource(
                     filePath = testCodeLocation,
@@ -4043,6 +4038,32 @@ class GenerateCodeStageTest {
             |
             |      ```
             |  }
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun missingFunctionBody() = assertModuleAtStage(
+        stage = Stage.GenerateCode,
+        input = """
+            |let hi(): Void;
+        """.trimMargin(),
+        want = """
+            |{
+            |  generateCode: {
+            |    body:
+            |      ```
+            |      @fn @reach(\none) let hi__0;
+            |      hi__0 = (@stay fn hi /* return__0 */: Void {
+            |          abstractPanic();
+            |          return__0 = void
+            |      })
+            |
+            |      ```
+            |  },
+            |  errors: [
+            |    "Function body required except for virtual methods or connected functions!"
+            |  ],
             |}
         """.trimMargin(),
     )

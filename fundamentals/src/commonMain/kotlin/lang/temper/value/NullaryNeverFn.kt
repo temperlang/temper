@@ -86,7 +86,7 @@ object PanicFn : NullaryNeverFn {
 }
 
 /**
- * Marker for bodies of abstract functions that must be overridden in all concrete subtypes of the
+ * Marker for bodies of abstract methods that must be overridden in all concrete subtypes of the
  * containing type.
  */
 object PureVirtual : NullaryNeverFn {
@@ -104,6 +104,19 @@ object PureVirtual : NullaryNeverFn {
     override val isPure: Boolean = false // Do not try to inline
 
     override val callMayFailPerSe: Boolean = false // Panics are distinct from failure
+}
+
+/**
+ * Marker for bodies of abstract functions that must be connected.
+ */
+object AbstractPanic : NullaryNeverFn {
+    override val name: String = "abstractPanic"
+    override val sigs = nullaryNeverReturnsSigs { it }
+    override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): Result {
+        throw Panic("AbstractPanic invoked @ ${cb.pos}")
+    }
+    override val builtinOperatorId get() = BuiltinOperatorId.Panic
+    override val callMayFailPerSe: Boolean = false
 }
 
 fun Tree?.isPureVirtualBody(): Boolean = when (this) {
