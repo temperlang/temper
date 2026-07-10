@@ -42,7 +42,7 @@ import lang.temper.value.void
 private const val BENCHMARK = false
 
 /**
- * A stage that runs just before module contents is passed to backends.  It makes sure that all the
+ * A stage that runs just before the module content is passed to backends.  It makes sure that all the
  * ducks are in a row; that the TmpL translator will be able to recreate a statement / expression
  * layering without introducing temporaries.
  */

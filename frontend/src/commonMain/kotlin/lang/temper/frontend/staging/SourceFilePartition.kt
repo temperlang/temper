@@ -207,7 +207,7 @@ class SourceFilePartition(
         }
         // Modules need rebuilding in these situations:
         // 1. There is no prior module to reuse, or
-        // 2. their source hashes are not the same as those of the prior module, or
+        // 2. their source hashes are different from those of the prior module, or
         // 3. they had a failed import, and there is a new module (see 1), or
         // 4. one of their dependencies needs rebuilding, transitively.
         // Initialize needsRebuild based on situation 1
@@ -250,7 +250,7 @@ class SourceFilePartition(
                     needsRebuild[moduleName] = true
                 } else if (!moduleName.isPreface) {
                     // There's a new import implicitly if the named module
-                    // has a new preface, but did not previously.
+                    // has a new preface but did not previously.
                     // This may be redundant as there's no way to get this without a
                     // hash change due to the added `;;;` token checked in situation 2.
                     val prefaceLoc = moduleName.copy(isPreface = true)
@@ -296,8 +296,8 @@ class SourceFilePartition(
         }
 
         // Figure out what needs building and what doesn't.
-        // We store these sets for test harnesses to use, but also use them to decide how
-        // to populate the module advancer with library configurations and modules.
+        // We store these sets for test harnesses to use but also use them to decide how
+        // to populate the ModuleAdvancer with library configurations and modules.
         val newLibraryRoots = mutableSetOf<FilePath>()
         val reusedLibraryRoots = mutableSetOf<FilePath>()
         val droppedLibraryRoots = mutableSetOf<FilePath>()
@@ -325,7 +325,7 @@ class SourceFilePartition(
         for (libraryRoot in priorLibraryConfigurations.keys) {
             if (libraryRoot !in plannedLibraryRoots) {
                 // Don't send library roots to the module advancer when all source files
-                // have been deleted which happens for mass deletes and directory renames.
+                // have been deleted, which happens for mass deletes and directory renames.
                 droppedLibraryRoots.add(libraryRoot)
                 notifyLibraryDropped(projectLogSink, libraryRoot)
             } else {
@@ -384,7 +384,6 @@ class SourceFilePartition(
                     loc = moduleName,
                     console = console,
                     continueCondition = makeAContinueCondition(),
-                    mayRun = moduleConfig.mayRun,
                     genre = plan.genre,
                 )
                 module.deliverContent(plan.sources)

@@ -2312,6 +2312,7 @@ class Interpreter(
             try {
                 val replacementMaker = callSiteReplacementMaker
                 if (replacementMaker != null) {
+                    require(stage != Stage.Run) // Run stage should not modify the AST
                     val edgeToReplace: TEdge? = callSiteAncestorToReplace ?: call?.incoming
                     require(edgeToReplace != null) {
                         "Cannot determine edge to replace after call to ${callee.toPseudoCode()} in ${call?.toPseudoCode()}"

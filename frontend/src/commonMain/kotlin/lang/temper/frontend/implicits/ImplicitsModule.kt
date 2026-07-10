@@ -89,7 +89,6 @@ object ImplicitsModule {
             console = moduleConsole,
             continueCondition = NeverStop,
             namingContext = WellKnownTypes.anyValueTypeDefinition.name.origin,
-            mayRun = true, // TODO Remove this option once `console` is a stable value.
         )
 
         module.deliverContent(
@@ -99,7 +98,7 @@ object ImplicitsModule {
                 languageConfig = StandaloneLanguageConfig,
             ),
         )
-        val endStage = Stage.Run // TODO Go back to Stage.GenerateCode once `console` is a stable value.
+        val endStage = Stage.Run
         stageLoop@
         while (module.canAdvance()) {
             val nextStage = module.nextStage!!
@@ -202,12 +201,12 @@ internal class ImplicitsUnavailableException(message: String) : RuntimeException
 private val allImplicitlyImportedNamesLazy = lazy {
     // If this throws because `module` is bootstrapping, lazy will try again later.
     (ImplicitsModule.module.exports ?: emptyList()).associate { export ->
-        BuiltinName(export.name.baseName.nameText) as TemperName to export.value!!
+        BuiltinName(export.name.baseName.nameText) as TemperName to export.valueFromRun!!
     }
 }
 
 /**
- * Not-super-efficient accessor for the list of names implicitly exported
+ * Not-superefficient accessor for the list of names implicitly exported
  */
 val allImplicitlyImportedNames: Map<TemperName, Value<*>>
     get() = try {

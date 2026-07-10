@@ -82,7 +82,7 @@ private val dollarToken = OutputToken("$", OutputTokenType.Punctuation)
  * A REPL (Read Eval Print Loop) that allows a user to interactively enter chunks of Temper input.
  *
  * It groups lines until they form a set of complete tokens that have a closing bracket for every
- * open bracket, and processes each such group as a module run through the runtime emulation stage
+ * opener and processes each such group as a module through the runtime emulation stage
  * to produce a result which is logged.
  *
  * Each module implicitly imports all the exports of each previous module, and each module
@@ -346,7 +346,6 @@ internal class Repl(
             chunkIndex.moduleName,
             console,
             continueCondition,
-            mayRun = true,
             sharedLocationContext = sharedLocationContext,
             // For now, infer general verbosity from log level. TODO Thread detailed verbosity info to this point.
             allowDuplicateLogPositions = console.level <= Log.Fine,
@@ -409,10 +408,10 @@ internal class Repl(
             }
             when (module.stageCompleted) {
                 Stage.DisAmbiguate -> {
-                    // Implicitly export top level declarations so that they are visible to later
+                    // Implicitly export top-level declarations so that they are visible to later
                     // command texts
                     module.hookTree { root -> exportTopLevels(module, root) }
-                    // Wrap in a block after we export tops and before we'd reorder them.
+                    // Wrap in a block after we export tops and before we reorder them.
                     module.hookTree { BlockTree.wrap(it) }
                 }
                 Stage.SyntaxMacro -> {
@@ -485,7 +484,7 @@ internal class Repl(
         lastModule = module
         newExports?.let {
             for (export in it) {
-                if (export.value != null) {
+                if (export.valueFromRun != null) {
                     allExports[export.name.baseName] = export
                 }
             }

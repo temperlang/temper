@@ -37,7 +37,7 @@ import lang.temper.value.wordSymbol
 internal class ExportChecker(val module: Module) {
     private val exportedTypeNames = buildSet exportedTypes@{
         exports@ for (export in module.exports ?: listOf()) {
-            val value = export.value ?: continue@exports
+            val value = export.valueFromStaging ?: continue@exports
             val type = TType.unpackOrNull(value)?.type2 as? NonNullType ?: continue@exports
             add(type.definition.name)
         }
@@ -55,7 +55,7 @@ internal class ExportChecker(val module: Module) {
 
     fun checkExports() {
         exportChecks@ for (export in module.exports ?: return) {
-            val value = export.value
+            val value = export.valueFromStaging
             when (value?.typeTag) {
                 is TType -> TType.unpack(value).type2.let { type ->
                     (type as? NonNullType)?.let { checkTypeDefinition(it.definition) }
@@ -161,8 +161,7 @@ internal class ExportChecker(val module: Module) {
     private fun checkTypeDefinition(def: TypeDefinition) {
         val shape = def as? TypeShape
         // General stay leaf includes constructor.
-        // val pos = shape?.stayLeaf?.pos ?: def.pos
-        // Name alone excludes extends clause, but less likely to be huge or include other types.
+        // Name alone excludes the `extends` clause, but it's less likely to be huge or include other types.
         val pos = (shape?.stayLeaf?.incoming?.source as? DeclTree)?.parts?.name?.pos ?: def.pos
         // Param bounds.
         for (formal in def.formals) {

@@ -174,7 +174,7 @@ class CreateLocalBindingsForImportTest {
      * Some options:
      *
      * - Use the assigned name as a namespace but not as an object, sort of like current `builtins`.
-     * - Reify each module as an objects of an implicit type.
+     * - Reify each module as an object of an implicit type.
      * - Allow some default export as shown here, or maybe defaults just apply to backend generation where
      *   applicable, such as JS.
      */
@@ -330,7 +330,8 @@ private class ExportListBuilder(
             Export(
                 exporter = exporter,
                 name = name,
-                value = value,
+                valueFromStaging = value,
+                valueFromRun = null,
                 typeInferences = typeInferences,
                 declarationMetadata = buildListMultimap {
                     for ((mdKey, mdValue) in declarationMetadata) {
