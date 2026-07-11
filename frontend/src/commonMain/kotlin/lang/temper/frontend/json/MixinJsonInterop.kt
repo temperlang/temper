@@ -116,7 +116,7 @@ internal fun mixinJsonInterop(
     fun lookupStdJsonExport(nameText: String): TypeShape? {
         val baseName = ParsedName(nameText)
         val e = stdJsonModule.exports?.firstOrNull { it.name.baseName == baseName }
-        val ts = (TType.unpackOrNull(e?.value)?.type2 as? DefinedNonNullType)
+        val ts = (TType.unpackOrNull(e?.valueFromStaging)?.type2 as? DefinedNonNullType)
             ?.definition
         if (ts == null) {
             logSink.log(
@@ -399,7 +399,6 @@ private fun stageGeneratedCodeAndFoldIntoModule(
         loc = module.loc,
         console = module.console,
         continueCondition = module.continueCondition,
-        mayRun = false,
         sharedLocationContext = module.sharedLocationContext,
         genre = Genre.Library,
         allowDuplicateLogPositions = module.allowDuplicateLogPositions,

@@ -19,8 +19,8 @@ fun libraryConfigurationFromConfigModule(
         libraryRoot = moduleName.libraryRoot(),
         supportedBackendList = guessLibraryConfiguration?.supportedBackendList ?: emptyList(),
         classifyTemperSource = guessLibraryConfiguration?.classifyTemperSource ?: ::defaultClassifyTemperSource,
-        configExports = module.exports?.filter { it.value != null }?.associate {
-            it.name.baseName.toSymbol() to it.value!!
+        configExports = module.exports?.filter { it.valueFromStaging != null }?.associate {
+            it.name.baseName.toSymbol() to it.valueFromStaging!!
         } ?: emptyMap(),
     )
 }

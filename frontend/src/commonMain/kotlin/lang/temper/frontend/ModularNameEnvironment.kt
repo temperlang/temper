@@ -18,7 +18,7 @@ import lang.temper.value.NotYet
 /**
  * Resolves names of exported or otherwise externally accessible top-level module constructs.
  *
- * Exports are assumed to be available, as are static properties of declared types, and
+ * Exports are assumed to be available, as are static properties of declared types and
  * methods defined on interface types.
  */
 internal class ModularNameEnvironment(
@@ -51,7 +51,7 @@ internal class ModularNameEnvironment(
         if (name is ExportedName) {
             val export = getExport(name)
             if (export != null) {
-                export.value ?: NotYet
+                export.value(cb.stage) ?: NotYet
             } else {
                 // If the module has not reached the export stage, return NotYet.
                 val stage = getModule(name.origin)?.stageCompleted

@@ -20,6 +20,7 @@ import lang.temper.name.ResolvedName
 import lang.temper.name.ResolvedNameMaker
 import lang.temper.name.SourceName
 import lang.temper.name.Symbol
+import lang.temper.stage.Stage
 import lang.temper.type.Abstractness
 import lang.temper.type.NominalType
 import lang.temper.type.StaticType
@@ -27,7 +28,6 @@ import lang.temper.type.TypeShape
 import lang.temper.type.TypeTestHarness
 import lang.temper.value.Document
 import lang.temper.value.DocumentContext
-import lang.temper.value.ReifiedType
 import lang.temper.value.TInt
 import lang.temper.value.TString
 import lang.temper.value.TType
@@ -739,7 +739,7 @@ private val stdJsonForTest = lazy {
             languageConfig = StandaloneLanguageConfig,
         ),
     )
-    advancer.advanceModules()
+    advancer.advanceModules(stopBefore = Stage.Run)
     val stdJsonModule = advancer.getAllModules().first {
         val loc = it.loc
         (
@@ -755,7 +755,7 @@ private val stdJsonForTest = lazy {
     val exports = stdJsonModule.exports!!
     fun typeShapeNamed(exportName: String): TypeShape {
         val export = exports.first { it.name.baseName.nameText == exportName }
-        val exportedType = (TType.unpack(export.value!!) as ReifiedType).type
+        val exportedType = TType.unpack(export.valueFromStaging!!).type
         return (exportedType as NominalType).definition as TypeShape
     }
     JsonInteropDetails.StdJson(

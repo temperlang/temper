@@ -36,7 +36,9 @@ fun libraryNameWithDefault(textContent: String, module: Module?, rootPath: FileP
 fun libraryNameForModule(module: Module?, fallback: () -> DashedIdentifier?): DashedIdentifier {
     // Try the most explicit option first.
     val nameExport = module?.exports?.find { it.name.baseName == LibraryConfiguration.libraryNameParsedName }
-    val explicitName = nameExport?.let { TString.unpackOrNull(it.value) }?.let { DashedIdentifier.from(it) }
+    val explicitName = nameExport
+        ?.let { TString.unpackOrNull(it.valueFromStaging) }
+        ?.let { DashedIdentifier.from(it) }
     if (explicitName != null) { return explicitName }
     // But be willing to guess from other hints so we can proceed.
     // TODO Give an error/warning but proceed for any of the backup strategies?

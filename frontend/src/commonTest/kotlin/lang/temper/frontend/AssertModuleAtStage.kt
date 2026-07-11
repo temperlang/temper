@@ -259,7 +259,6 @@ fun assertModuleAtStage(
         loc = moduleLoc,
         console = console,
         continueCondition = continueCondition,
-        mayRun = true,
         genre = genre,
         allowDuplicateLogPositions = true,
     )

@@ -328,9 +328,26 @@ fun <K, V> partiallyOrder(
     items: Iterable<V>,
     afterMap: Map<K, Collection<V>>,
     depKeyOf: (V) -> K,
-): List<V> {
+): List<V> = buildList {
+    partiallyOrderTo(items, afterMap, this, depKeyOf)
+}
+
+/**
+ * A list containing [items] and values from [afterMap] such that each, v, appears once after all of
+ * [afterMap]\[k].
+ *
+ * If there is a cycle in [afterMap]'s transitive closure it is broken arbitrarily.
+ *
+ * If there is a v in afterMap\[k] such that k is a dep key for an output element, then v will end
+ * up in the partial order regardless of whether v in items.
+ */
+fun <K, V> partiallyOrderTo(
+    items: Iterable<V>,
+    afterMap: Map<K, Collection<V>>,
+    partialOrder: MutableCollection<V>,
+    depKeyOf: (V) -> K,
+) {
     val ordered = mutableSetOf<V>()
-    val partialOrder = mutableListOf<V>()
     fun addToOrdered(v: V) {
         if (v !in ordered) {
             ordered.add(v) // Arbitrarily breaks cycles.
@@ -347,7 +364,6 @@ fun <K, V> partiallyOrder(
     for (v in items) {
         addToOrdered(v)
     }
-    return partialOrder.toList()
 }
 
 fun intersect(a: IntRange, b: IntRange): IntRange {

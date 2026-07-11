@@ -154,7 +154,9 @@ class InterpreterFunctionalTests : FunctionalTestSuiteI {
             test.runAsTest -> {
                 val reportName = ExportedName(mainModule.namingContext, testReportExportName)
                 // Expect these things for any runAsTest funtest.
-                val reportText = TString.unpack(mainModule.exports!!.find { it.name == reportName }!!.value!!)
+                val reportText = TString.unpack(
+                    mainModule.exports!!.find { it.name == reportName }!!.valueFromRun!!,
+                )
                 assertTestingTestFromJunit(
                     test = test,
                     junitOutput = reportText,

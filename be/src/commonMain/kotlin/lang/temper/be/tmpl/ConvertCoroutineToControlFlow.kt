@@ -119,7 +119,7 @@ internal fun convertCoroutineToControlFlow(
         return PreTranslated.TreeWrapper(
             document.treeFarm.grow(pos) {
                 Call(pos.leftEdge, New, type = valueResultCtorSig(type)) {
-                    V(pos.leftEdge, valueResultTypeExport.value!!, WellKnownTypes.typeType)
+                    V(pos.leftEdge, valueResultTypeExport.valueFromStaging!!, WellKnownTypes.typeType)
                     when (yielded) {
                         is Either.Left -> Rn(pos, yielded.item, type = hackMapNewStyleToOld(type))
                         is Either.Right -> V(pos, yielded.item, type = hackMapNewStyleToOld(type))

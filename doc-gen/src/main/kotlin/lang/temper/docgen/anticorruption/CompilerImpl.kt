@@ -35,6 +35,7 @@ import lang.temper.name.BackendId
 import lang.temper.name.LanguageLabel
 import lang.temper.name.ModuleLocation
 import lang.temper.name.ModuleName
+import lang.temper.stage.Stage
 import lang.temper.supportedBackends.lookupFactory
 import lang.temper.supportedBackends.lookupLanguage
 
@@ -89,7 +90,7 @@ class CompilerImpl(
                         languageConfig = StandaloneLanguageConfig,
                     ),
                 )
-                moduleAdvancer.advanceModules()
+                moduleAdvancer.advanceModules(stopBefore = Stage.Run)
                 if (!module.ok) {
                     console.warn { "${libraryConfiguration.libraryName}.$backendId: module failed" }
                     continue@doBackend

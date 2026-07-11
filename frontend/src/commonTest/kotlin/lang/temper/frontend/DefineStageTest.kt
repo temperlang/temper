@@ -2163,7 +2163,6 @@ class DefineStageTest {
                 loc = loc,
                 console = console,
                 continueCondition = { true },
-                mayRun = false,
             )
             fakeStdModule.deliverContent(
                 ModuleSource(
@@ -2782,7 +2781,7 @@ class DefineStageTest {
                     languageConfig = StandaloneLanguageConfig,
                 ),
             )
-            moduleAdvancer.advanceModules()
+            moduleAdvancer.advanceModules(null)
             moduleAdvancer.getAllModules()
         }
         assertStructure(

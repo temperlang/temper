@@ -36,6 +36,7 @@ import lang.temper.log.dirPath
 import lang.temper.name.BackendId
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ModuleName
+import lang.temper.stage.Stage
 import lang.temper.value.TBoolean
 import lang.temper.value.toPseudoCode
 
@@ -169,7 +170,7 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
         }
     }
 
-    advancer.advanceModules()
+    advancer.advanceModules(stopBefore = Stage.Run)
 
     val libraryConfiguration = advancer.getLibraryConfiguration(libraryRoot)!!
     val libraryConfigurationsBundle = LibraryConfigurationsBundle.from(

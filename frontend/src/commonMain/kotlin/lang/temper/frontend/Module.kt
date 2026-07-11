@@ -92,13 +92,6 @@ class Module(
      * [lang.temper.value.Abort].
      */
     continueCondition: ContinueCondition,
-    /**
-     * Whether staging ends with the last stage before [Stage.Run] or whether execution may
-     * proceed to [Stage.Run].
-     * Modules that may be run might have [exports] and other derived information that come from
-     * running instead of being derived from partial interpretation.
-     */
-    val mayRun: Boolean = false,
     sharedLocationContext: SharedLocationContext? = null,
     override val genre: Genre = Genre.Library,
     allowDuplicateLogPositions: Boolean = false,
@@ -145,10 +138,10 @@ class Module(
     init {
         val cc = continueCondition
 
-        // We need questions like canAdvance to be repeatable so don't want to call stateful
+        // We need questions like canAdvance to be repeatable, so don't want to call stateful
         // functions like continueCondition directly.
         // Instead, we wrap it to flip a bit on its first false return.
-        // This has the side effect of also making this.continueCondition monotonic which is nice.
+        // This has the side effect of also making `this.continueCondition` monotonic, which is nice.
         data class ContinueConditionWrapper(val cc: ContinueCondition) : ContinueCondition {
             override fun shouldContinue(): Boolean = when {
                 continueConditionReturnedFalse -> false
@@ -177,7 +170,7 @@ class Module(
     }
 
     /**
-     * Wraps an environment to expose module accessible, but not module mutable bindings.
+     * Wraps an environment to expose module-accessible, but not module-mutable bindings.
      * This is used by [interpretiveDanceStage] to wrap the builtin environment with an environment
      * from the compiler.  For example, a non-preface module will bring preface module declarations
      * into scope.
@@ -203,7 +196,7 @@ class Module(
     }
 
     /**
-     * An outer module which is implicitly imported during [Stage.Import].
+     * An outer module that is implicitly imported during [Stage.Import].
      * This is used to connect a module to its preface.
      * Names exported from the preface are implicitly available to each module instance.
      */
@@ -256,14 +249,14 @@ class Module(
     val runResult get() = _runResult
 
     /**
-     * The name of the variable that will hold the module's result if any.
+     * The name of the variable which will hold the module's result, if any.
      * `null` unless [StagingFlags.moduleResultNeeded] and we have reached [Stage.Type] and
      * run the MakeResultsExplicit pass.
      */
     val outputName get() = _outputName
 
     /**
-     * The stay for a placeholder declaration that holds metadata related to the module as a whole.
+     * The stay for a placeholder declaration which holds metadata related to the module as a whole.
      */
     var topLevelMetadataStay: StayLeaf? = null
         internal set
@@ -309,12 +302,12 @@ class Module(
      *
      * This will eventually be used to:
      * - allow tools like linters to store per-file configuration
-     * - allow versioning the language, by running a one-time tool over all legacy files that adds
+     * - allow versioning the language by running a one-time tool over all legacy files that adds
      *   `{ "Temper": { "languageVersion": "1.0-deprecated" } }`
      * - allow opting legacy files out of error checks added to the compiler after they were written
      *   by running a one-time tool over legacy files
      *
-     * so that when users start from a blank file, they're opting into the newest, strictest
+     * This means that when users start from a blank file, they're opting into the newest, strictest
      * version of the language.
      */
     var appendix: JsonValue? = null
@@ -620,17 +613,14 @@ class Module(
         Stage.Import,
         Stage.DisAmbiguate,
         Stage.SyntaxMacro,
-        ->
-            _tree != null
         Stage.Define,
         Stage.Type,
         Stage.FunctionMacro,
         Stage.Export,
         Stage.Query,
         Stage.GenerateCode,
-        ->
-            _tree != null
-        Stage.Run -> mayRun && _tree != null
+        Stage.Run,
+        -> _tree != null
     }
 
     private fun complete(stage: Stage, failMark: FailLog.FailMark, ok: Boolean, done: () -> Unit) {

@@ -962,11 +962,11 @@ private val marshalToJsonObjectSig = lazy {
     val tt = MkType2(t).get()
     // <T>(JsonAdapter<T>, T) -> JsonObject
     Signature2(
-        returnType2 = TType.unpack(jsonObjectExport.value!!).type2,
+        returnType2 = TType.unpack(jsonObjectExport.valueFromStaging!!).type2,
         hasThisFormal = false,
         requiredInputTypes = listOf(
             MkType2(
-                (TType.unpack(jsonAdapterExport.value!!).type2 as DefinedNonNullType)
+                (TType.unpack(jsonAdapterExport.valueFromStaging!!).type2 as DefinedNonNullType)
                     .definition,
             )
                 .actuals(listOf(tt))

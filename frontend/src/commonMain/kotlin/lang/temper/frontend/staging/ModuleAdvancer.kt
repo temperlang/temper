@@ -10,6 +10,7 @@ import lang.temper.common.buildListMultimap
 import lang.temper.common.compatReversed
 import lang.temper.common.console
 import lang.temper.common.partiallyOrder
+import lang.temper.common.partiallyOrderTo
 import lang.temper.common.putMultiList
 import lang.temper.env.Exporter
 import lang.temper.env.InterpMode
@@ -249,7 +250,6 @@ class ModuleAdvancer(
         loc: ModuleName,
         console: Console,
         continueCondition: ContinueCondition = makeContinueCondition(),
-        mayRun: Boolean = moduleConfig.mayRun,
         allowDuplicateLogPositions: Boolean = false,
         genre: Genre = Genre.Library,
     ): Module {
@@ -258,7 +258,6 @@ class ModuleAdvancer(
             loc = loc,
             console = console,
             continueCondition = continueCondition,
-            mayRun = mayRun,
             sharedLocationContext = sharedLocationContext,
             genre = genre,
             allowDuplicateLogPositions = allowDuplicateLogPositions,
@@ -361,7 +360,7 @@ class ModuleAdvancer(
     fun getAllLibraryConfigurations(): List<LibraryConfiguration> = libraryConfigurations.toList()
     fun getLibraryConfiguration(libraryRoot: FilePath) = libraryConfigurations[libraryRoot]
 
-    fun advanceModules(stopBefore: Stage? = null) = advanceModules { stopBefore }
+    fun advanceModules(stopBefore: Stage?) = advanceModules { stopBefore }
 
     private data class NonLocalLookup(
         val nonLocalImportResolver: ImportResolver,
@@ -401,20 +400,6 @@ class ModuleAdvancer(
          */
         stopBefore: (Module) -> Stage?,
     ) {
-        // If any of the input modules are mayRun, then assume the caller is going
-        // to want to run the std modules and don't reuse the non-may-run modules.
-        val sharedStdModules = if (moduleConfig.mayRun || modules.any { it.mayRun }) {
-            lazy {
-                buildStdModules(
-                    this,
-                    console,
-                    mayRun = true,
-                )
-            }
-        } else {
-            sharedStdModulesMayNotRun
-        }
-
         val nonLocalLookup = NonLocalLookup(nonLocalImportResolver, sharedStdModules)
 
         for (libraryName in requiredLibraries) {
@@ -644,18 +629,52 @@ private class GroupOfModulesToAdvanceTogether(
             }
         }
 
-        val readyToAdvance = ArrayDeque(modules)
+        // We keep a queue of modules to advance and implement additional
+        // checks while looping over it to delay when waiting for imports.
+        val readyToAdvance = ArrayDeque<Module>()
+        // For Stage.Run emulation, we need to queue modules in a specific
+        // order because the run stage can perform side effects.
+        // So we collect modules that are ready to run here, off the queue,
+        // and once everything is ready to enter the run stage, we empty
+        // this set back onto the queue in the right order.
+        var readyToRun: MutableSet<Module>? = mutableSetOf()
+        for (m in modules) {
+            if (m.stageCompleted == stageBeforeRun && !m.isConfigModule) {
+                readyToRun!!.add(m)
+            } else {
+                readyToAdvance.add(m)
+            }
+        }
+
         while (true) {
             val m = readyToAdvance.removeFirstOrNull()
-                ?: if (tryBreakCycle(readyToAdvance)) {
-                    // If nothing was ready because of an import cycle, try again.
-                    continue
-                } else {
-                    break
+                ?: run {
+                    // If nothing was ready because of import cycle(s), break them and try again.
+                    do {
+                        if (!tryBreakCycle(readyToAdvance)) { break }
+                    } while (readyToAdvance.isEmpty())
+
+                    // If all the modules that can advance to the run stage are ready to do so,
+                    // re-enqueue them.
+                    readyToRun?.let { readyToRunFull ->
+                        addInOrder(readyToRunFull, readyToAdvance)
+                        readyToRun = null
+                    }
+
+                    if (readyToAdvance.isNotEmpty()) {
+                        continue // Try again
+                    } else {
+                        break
+                    }
                 }
 
             val stopBeforeForCurrentModule = stopBefore(m)
             val lastStageCompleted = m.stageCompleted
+            val isConfigModule = m.isConfigModule
+            if (lastStageCompleted == stageBeforeRun && readyToRun != null && !isConfigModule) {
+                readyToRun!!.add(m)
+                continue
+            }
             val shouldAdvance = when {
                 !m.canAdvance() -> false // Cannot be advanced
                 countNeeded[m] != 0 -> false // Still waiting on imports
@@ -720,7 +739,7 @@ private class GroupOfModulesToAdvanceTogether(
                     }
                     // If a config module is ready to export, use its exports
                     // to finalize the library configuration.
-                    if (m.isConfigModule) {
+                    if (isConfigModule) {
                         val libraryRoot = (loc as ModuleName).libraryRoot()
                         val oldConfig = advancer.getLibraryConfiguration(libraryRoot)
                         val newConfiguration = libraryConfigurationFromConfigModule(m, oldConfig)
@@ -735,7 +754,7 @@ private class GroupOfModulesToAdvanceTogether(
                 }
 
                 if (m.canAdvance() && countNeeded.getValue(m) == 0) {
-                    val at = if (m.isConfigModule) {
+                    val at = if (isConfigModule) {
                         // Config modules skip the queue so they complete early,
                         // and we can get their export metadata available in
                         // LibraryConfigurations quickly
@@ -935,7 +954,6 @@ private class ImportHandler(
 private fun buildStdModules(
     advancer: ModuleAdvancer,
     console: Console,
-    mayRun: Boolean,
 ): StdModules {
     val tentativeStdLibraryConfiguration = LibraryConfiguration(
         libraryName = DashedIdentifier.temperStandardLibraryIdentifier,
@@ -944,7 +962,7 @@ private fun buildStdModules(
         classifyTemperSource = ::defaultClassifyTemperSource,
     )
     advancer.configureLibrary(tentativeStdLibraryConfiguration)
-    val stdModuleConfig = ModuleConfig.default.copy(mayRun = mayRun)
+    val stdModuleConfig = ModuleConfig.default.copy(mayRun = true)
 
     val fs = accessStdWrapped() ?: throw IOException("Can't access std")
     val snapshot = FilteringFileSystemSnapshot(fs, FileFilterRules.Allow)
@@ -990,14 +1008,7 @@ private fun buildStdModules(
         logSink = advancer.projectLogSink,
         advancer = advancer,
     )
-    val stopBefore = { _: Module ->
-        if (mayRun) {
-            null
-        } else {
-            Stage.Run
-        }
-    }
-    GroupOfModulesToAdvanceTogether(modules, importHandler, advancer, stopBefore = stopBefore)
+    GroupOfModulesToAdvanceTogether(modules, importHandler, advancer, stopBefore = { null })
         .advanceModules()
 
     val stdLibraryConfiguration = // After processing std/config.temper.md
@@ -1055,7 +1066,7 @@ private class ModuleAdvancerContinueConditionImpl : ContinueCondition {
     override fun toString(): String = "ModuleAdvancerContinueConditionImpl(${count[0]})"
 }
 
-private val sharedStdModulesMayNotRun = lazy {
+private val sharedStdModules = lazy {
     val logSink = ConsoleBackedContextualLogSink(
         console,
         null,
@@ -1063,12 +1074,12 @@ private val sharedStdModulesMayNotRun = lazy {
         CustomValueFormatter.Nope,
     )
     val advancer = ModuleAdvancer(logSink)
-    buildStdModules(advancer, console, mayRun = false)
+    buildStdModules(advancer, console)
 }
 
 /** Allows introspective access to std/ modules.  Shared by unit tests.  Do not mutate. */
 fun getSharedStdModules(): List<Module> =
-    sharedStdModulesMayNotRun.value.modulesByFullSpecifier.values.toList()
+    sharedStdModules.value.modulesByFullSpecifier.values.toList()
 
 /** Try to convert a non-local specifier to a local specifier when the importer is in the same library. */
 private fun toLocalSpecifier(
@@ -1241,4 +1252,31 @@ private fun withSnapshotter(
             Debug.Frontend.configure(ck, null)
         }
     }
+}
+
+private val stageBeforeRun = Stage.before(Stage.Run)!!
+
+/** Enqueue in dependency order. */
+private fun addInOrder(modules: Iterable<Module>, out: MutableCollection<Module>) {
+    val afterMap = mutableMapOf<Module, MutableSet<Module>>()
+    for (m in modules) {
+        afterMap[m] = mutableSetOf<Module>()
+    }
+    for (m in modules) {
+        for (ir in m.importRecords) {
+            val afterSet = afterMap.getValue(m)
+            when (ir) {
+                is Importer.BadImportRecord -> {}
+                is Importer.OkImportRecord -> if (ir.isBlockingImport) {
+                    (ir.exporter as? Module)?.let { exportingModule ->
+                        if (exportingModule in afterMap) {
+                            // importers go after exporters
+                            afterSet.add(exportingModule)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    partiallyOrderTo(modules, afterMap, out) { it }
 }

@@ -43,11 +43,11 @@ import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.InterpreterCallback
 import lang.temper.value.InterpreterCallback.NullInterpreterCallback.logSink
-import lang.temper.value.ReifiedType
 import lang.temper.value.RightNameLeaf
 import lang.temper.value.TBoolean
 import lang.temper.value.TClass
 import lang.temper.value.TFunction
+import lang.temper.value.TProblem
 import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
@@ -122,7 +122,7 @@ private fun maybeImportImplicits(
         } catch (ex: ImplicitsUnavailableException) {
             // It's nice to be able to debug problems with implicits via unit tests that do not
             // need implicits to work.
-            // Swallow any trouble getting the implicits module so that those tests can continue,
+            // Swallow any trouble getting the implicits module so that those tests can continue
             // and use a separate unit test to check that the implicits module stages properly.
             ignore(ex)
             null
@@ -237,7 +237,7 @@ private fun maybeImportImplicits(
             adjustedAdditionalImplicitImports.forEach { export ->
                 // If we import names that weren't mentioned, then the REPL session
                 // ends up linking every Module to every Module with a top-level
-                // definition which means that the cost of the ReplTranslateFn
+                // definition, which means that the cost of the ReplTranslateFn
                 // grows with the size of the REPL session.
                 // By only importing those names that could be resolved to, we
                 // limit that growth significantly.
@@ -281,9 +281,9 @@ val Export.optionallyImported: Boolean get() {
     if (optionalImportSymbol !in this.declarationMetadata) {
         return false
     }
-    // Names of instantiable types can be resolved to by property bags, so we
+    // To resolve property bags, we need names of instantiable types, so we
     // do not prune those.
-    val typeShape = this.value?.typeShapeAtLeafOrNull
+    val typeShape = this.valueFromStaging?.typeShapeAtLeafOrNull
     return !(typeShape != null && typeShape.abstractness == Abstractness.Concrete)
 }
 
@@ -324,7 +324,7 @@ private fun adjustAdditionalImplicitImports(imports: List<Export>, root: BlockTr
     }.visitPreOrder()
     requiredModuleNames.isNotEmpty() || return imports
     return imports.map imports@{ import ->
-        val value = import.value ?: return@imports import
+        val value = import.valueFromStaging ?: return@imports import
         val loc = value.loc() ?: return@imports import
         when {
             loc in requiredModuleNames -> import.copy(
@@ -344,8 +344,9 @@ private fun Value<*>.loc(): CodeLocation? {
         // This actually gets the loc of the type, which is good enough for current needs.
         is TClass -> tag.typeShape.pos
         // And we don't actually even need TFunction right now, but I had an example to work from so supported that.
-        is TFunction -> (stateVector as? UserFunction)?.pos
-        is TType -> ((stateVector as? ReifiedType)?.type as? NominalType)?.definition?.pos
+        is TFunction -> (TFunction.unpack(this) as? UserFunction)?.pos
+        is TType -> (TType.unpack(this).type as? NominalType)?.definition?.pos
+        is TProblem -> TProblem.unpack(this).pos
         else -> null
     }?.loc
 }

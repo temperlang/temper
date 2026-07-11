@@ -87,7 +87,7 @@ internal fun translateFlow(
     outputName: TemperName?,
     /**
      * If null, do not do a state machine conversion.
-     * If non-null, the type of the generator produced
+     * If non-null, the type of the generator produced.
      */
     stateMachineConversionType: Type2? = null,
 ): PreTranslated {
@@ -211,7 +211,7 @@ private fun translateAltDocGenFn(
 }
 
 /**
- * We need to delayed translation of subtrees until after we've grouped elements of a block
+ * We need to delay translation of subtrees until after we've grouped elements of a block
  * together so that we can group declarations and their initializers.  If we don't suspend them,
  * then we need to treat declarations of functions as assignments of a function value to a local
  * variable instead of as a local function declaration for some period of time.
@@ -332,7 +332,7 @@ internal sealed class PreTranslated : Positioned {
      * This is its own node type because some parts of the translation
      * need to be recombined into a larger translation, like
      * declarations that are initialized before a yield but also
-     * need to be available after a resume.
+     * need to be available after resuming.
      */
     data class ConvertedCoroutine(
         override val pos: Position,
@@ -989,7 +989,8 @@ private class ControlFlowTranslator(
             var toAdd: PreTranslated? = pt
             if (options.nrbStrategy == BubbleBranchStrategy.CatchBubble) {
                 // hs(..., expr) -> expr
-                toAdd = toAdd?.let { unpackHandlerScopeCall(it) } ?: toAdd
+                @Suppress("UNNECESSARY_NOT_NULL_ASSERTION") // To IDE, it's not; to CLI, it is.
+                toAdd = unpackHandlerScopeCall(toAdd!!) ?: toAdd
                 if (toAdd is PreTranslated.TreeWrapper) {
                     val t = toAdd.tree
                     val declParts = (t as? DeclTree)?.parts
@@ -1636,7 +1637,7 @@ private fun removeReferencesAndAssignmentsToVoid(
                 is CallTree -> {
                     if (isVoidLikeAssignment(tree)) {
                         // If it's a void value reference, drop it entirely.
-                        // Otherwise, just substitute the right hand side.
+                        // Otherwise, just substitute the right-hand side.
                         val right = tree.child(2)
                         val rightWrapper = PreTranslated.TreeWrapper(right)
                         rewriteTreeWrapper(rightWrapper, Unit).first
@@ -1950,7 +1951,7 @@ private val doneResultExportStay = lazy {
     (
         TFunction.unpackOrNull(
             ImplicitsModule.module.exports!!.first { it.name.toSymbol().text == doneResultParsedName.nameText }
-                .value,
+                .valueFromStaging,
         ) as? LongLivedUserFunction
         )?.stayLeaf
 }

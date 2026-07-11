@@ -51,27 +51,25 @@ import org.commonmark.node.Node
 /**
  * Extract and run Temper code blocks.
  *
- * This finds
+ * This finds fenced code blocks:
  *
  *     ```temper
  *     someTemperCode()
  *     ```
  *
- * and rewrites them to
+ * Assuming it worked, that code block is then rewritten to:
  *
  *     ```temper
  *     someTemperCode()
  *     // ✅ void
  *     ```
  *
- * if the code worked, or
+ * If it didn't, we'd have a different trailing comment:
  *
  *     ```temper
  *     someTemperCode()
  *     // ❌ FAIL
  *     ```
- *
- * if it failed.
  *
  * We can express what the snippet should log with `//!outputs` comments.
  *
@@ -84,8 +82,8 @@ import org.commonmark.node.Node
  * If you have an `//!outputs ["array", "of", "lines"]` directive, a newline is implied after each
  * element.
  *
- * If we have no output, and give no hint as to what the code block should produce, this assumes
- * that it produces the value true, so you can assert what code does.
+ * If we have no output and give no hint as to what the code block should produce, this assumes
+ * that it produces the value `true`, so you can assert what code does.
  *
  *     ```temper
  *     1 + 1 == 2
@@ -309,7 +307,7 @@ private class CodeFenceProcessor(
     private val indexOfSnippetInFile: Int,
     private val markdownContent: MarkdownContent,
     /**
-     * In a code fence like
+     * Consider a code fence like the below:
      *
      *     > Markdown quotation
      *     >
@@ -318,8 +316,8 @@ private class CodeFenceProcessor(
      *     > Line 2
      *     > ```
      *
-     * we need to treat `Line 1` and `Line 2` as code content, and treat the newline
-     * as significant but the `>`'s that establish the quotation should not.
+     * We need to treat `Line 1` and `Line 2` as code content, and treat the newline
+     * as significant but the `>`'s that establish the quotation should not be treated as code.
      */
     private val block: FencedCodeBlock,
 ) {
@@ -360,7 +358,7 @@ private class CodeFenceProcessor(
         // Now, find the actual code.
         val allRanges = buildList {
             var start = 0
-            // The first span starts the fence, so get code starting at second.
+            // The first span starts the fence, so get code starting at the second.
             // And presume we've closed all our fences, so end before the last.
             for (index in 1 until block.sourceSpans.size - 1) {
                 val range = markdownContent.range(block.sourceSpans[index])
@@ -450,7 +448,7 @@ private class CodeFenceProcessor(
         val startRange = markdownContent.range(block.sourceSpans.first())
         val endStart = markdownContent.range(block.sourceSpans.last()).first
         val betweenTwoFences = markdownContent.fileContent.slice(
-            // Also skip indent on the end line by backtracking to newline.
+            // Also, skip indent on the end line by backtracking to newline.
             startRange.last + 1..markdownContent.fileContent.lastIndexOf("\n", endStart),
         )
 
@@ -616,15 +614,14 @@ private class CodeFenceProcessor(
                     },
                 ),
             )
-            val module = advancer.createModule(moduleName, runConsole, mayRun = true)
-            @Suppress("AssignedValueIsNeverRead") // Read by moduleCustomizeHook
+            val module = advancer.createModule(moduleName, runConsole)
             moduleToHook = module
             val lexer = makeLexer(formattingLogSink)
             module.deliverContent(lexer, FilePositions.fromSource(from, markdownText))
             module.addEnvironmentBindings(extraBindingsForSnippetCodeModules)
 
             try {
-                advancer.advanceModules()
+                advancer.advanceModules(stopBefore = null)
             } catch (_: Panic) {
                 // Later code will notice that we did not successfully reach Stage.Run
             }

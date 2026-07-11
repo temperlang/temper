@@ -47,6 +47,14 @@ internal fun findExportsAndDeclaredTypes(
     val declaredTypes = mutableSetOf<TypeShape>()
     var topLevelMetadataDecl: DeclTree? = null
 
+    val exportsBefore by lazy {
+        buildMap {
+            for (export in (exporter.exports ?: listOf())) {
+                this[export.name] = export
+            }
+        }
+    }
+
     // If we have exports, try to relate them to type inferences.
     val declInfoForExports = mutableMapOf<ExportedName, DeclInfo>()
     if (exportedNames.isNotEmpty() && stage >= Stage.Type) {
@@ -101,7 +109,24 @@ internal fun findExportsAndDeclaredTypes(
             val pos = env.declarationSite(exportedName) ?: root.pos.leftEdge
             val (typeInferences, declarationMetadata) =
                 declInfoForExports[exportedName] ?: DeclInfo.empty
-            Export(exporter, exportedName, value, typeInferences, declarationMetadata, pos)
+            val valueFromStaging: Value<*>?
+            val valueFromRun: Value<*>?
+            if (stage == Stage.Run) {
+                valueFromRun = value
+                valueFromStaging = exportsBefore[exportedName]?.valueFromStaging
+            } else {
+                valueFromRun = null
+                valueFromStaging = value
+            }
+            Export(
+                exporter = exporter,
+                name = exportedName,
+                valueFromStaging = valueFromStaging,
+                valueFromRun = valueFromRun,
+                typeInferences = typeInferences,
+                declarationMetadata = declarationMetadata,
+                position = pos,
+            )
         },
         declaredTypes.toList(),
         topLevelMetadataDecl?.let { stayFor(it) },
@@ -121,7 +146,7 @@ fun isStableForMetadata(value: Value<*>): Boolean {
     if (value.stability == ValueStability.Stable) { return true }
 
     // Before we can leave values like Pairs as stable, we need to adjust the
-    // interpreter&|typer to allow us to preserve type parameter info, and
+    // interpreter&|typer to allow us to preserve type parameter info and
     // to allow un-inlining values by reconverting values to constructor
     // expressions during TmpL translation.
     // But for metadata we don't need that, and Pairs are used importantly

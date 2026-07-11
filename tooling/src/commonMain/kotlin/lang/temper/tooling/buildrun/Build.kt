@@ -170,7 +170,7 @@ fun doBuild(
             doOneBuild(build)
                 // Once we exit the use block, close flips the switch on the
                 // cancel group, preventing any further interpretation using
-                // those modules continue condition.
+                // those modules' continue condition.
                 .also {
                     beforeClose?.invoke(it)
                 }
@@ -247,8 +247,8 @@ private fun stageLibraries(
 
     val modulesPreBuild = moduleAdvancer.getAllModules()
     // If all the modules were already built, we could reuse everything,
-    // then there's no point in doing translation.
-    // But if there's no modules, then we're trivially reusing everything,
+    // and there's no point in doing translation.
+    // But if there are no modules, then we're trivially reusing everything,
     // but may need to fire up the backends at least once to create output
     // directories and metadata files.
     val priorBuildSuffices = modulesPreBuild.isNotEmpty() &&
@@ -260,8 +260,8 @@ private fun stageLibraries(
     val libraryConfigurationsByRoot = mutableMapOf<FilePath, LibraryConfiguration>()
     moduleAdvancer.getAllLibraryConfigurations().forEach {
         var libraryConfiguration = it
-        // Finalize the library configurations bundle
-        // For example, if `std` was auto-staged it might have an empty backends list.
+        // Finalize the library configurations bundle.
+        // For example, if `std` was auto-staged, it might have an empty backends list.
         if (
             libraryConfiguration.supportedBackendList.isEmpty() &&
             libraryConfiguration.libraryName == DashedIdentifier.temperStandardLibraryIdentifier
@@ -683,7 +683,7 @@ internal val Module.hasTests: Boolean
 
 private data class InterpreterTestResults(
     val ok: Boolean,
-    /** The Junit XML report for each module that does testing. */
+    /** The JUnit XML report for each module that does testing. */
     val resultsByModule: Map<ModuleName, String>,
     val consoleOutput: String,
     val details: DoRunResultDetail,
@@ -781,7 +781,7 @@ private fun runInInterpreter(
             } catch (e: Panic) {
                 interpFailure = e
             } catch (
-                // Uncaught exceptions during tests warrant reporting
+                // Uncaught exceptions during tests warrant reporting.
                 @Suppress("TooGenericExceptionCaught")
                 e: Exception,
             ) {
@@ -791,7 +791,7 @@ private fun runInInterpreter(
             if (isTestedModule(module)) {
                 val reportName = ExportedName(module.namingContext, testReportExportName)
                 val report = TString.unpackOrNull(
-                    module.exports?.find { it.name == reportName }?.value,
+                    module.exports?.find { it.name == reportName }?.valueFromRun,
                 ) ?: interpFailure?.let { throwable ->
                     allOk = false
                     TestSuites(

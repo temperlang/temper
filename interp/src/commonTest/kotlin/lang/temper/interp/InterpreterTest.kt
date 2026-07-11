@@ -650,6 +650,7 @@ class InterpreterTest {
             |};
             |T
         """.trimMargin(),
+        stage = Stage.GenerateCode,
         expectedJson = """
             |{
             |  result: [ "U__1", "Type" ],

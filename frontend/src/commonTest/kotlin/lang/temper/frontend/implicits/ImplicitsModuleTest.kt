@@ -1,10 +1,10 @@
 package lang.temper.frontend.implicits
 
 import lang.temper.common.ignore
+import lang.temper.common.soleElementOrNull
 import lang.temper.interp.EmptyEnvironment
 import lang.temper.lexer.Genre
 import lang.temper.name.BuiltinName
-import lang.temper.type.ANY_VALUE_TYPE_NAME_TEXT
 import lang.temper.type.MethodShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.promoteSimpleValue
@@ -30,12 +30,17 @@ class ImplicitsModuleTest {
 
     @Test
     fun implicitsExportsAnyValue() {
+        val export = ImplicitsModule.module.exports?.filter { it.name.baseName.nameText == "AnyValue" }
+            ?.soleElementOrNull
         assertEquals(
-            true,
-            ImplicitsModule.module.exports?.any {
-                it.name.baseName.nameText == ANY_VALUE_TYPE_NAME_TEXT &&
-                    it.value?.typeDefinitionAtLeafOrNull == WellKnownTypes.anyValueTypeDefinition
-            },
+            listOf(
+                WellKnownTypes.anyValueTypeDefinition,
+                WellKnownTypes.anyValueTypeDefinition,
+            ),
+            listOf(
+                export?.valueFromStaging?.typeDefinitionAtLeafOrNull,
+                export?.valueFromRun?.typeDefinitionAtLeafOrNull,
+            ),
         )
     }
 

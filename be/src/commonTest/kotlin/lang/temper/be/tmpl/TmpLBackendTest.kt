@@ -50,6 +50,7 @@ import lang.temper.name.ParsedName
 import lang.temper.name.PseudoCodeNameRenumberer
 import lang.temper.name.SourceName
 import lang.temper.name.Symbol
+import lang.temper.stage.Stage
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
@@ -2475,7 +2476,7 @@ class TmpLBackendTest {
         """.trimMargin(),
     )
 
-    // Check that inline support code are not doubly called.
+    // Check that inline support codes are not doubly called.
     // There was a problem in the C# and Lua backends where the connection
     // for static methods like `Date.yearsBetween(a, b)` came out as
     // `TemperCore.Temporal.yearsBetween()(a, b)`.
@@ -4309,7 +4310,7 @@ abstract class TestCompiler(
         )
         partitionSourceFilesIntoModules(snapshot, moduleAdvancer, logSink, console, root = projectRoot)
 
-        moduleAdvancer.advanceModules()
+        moduleAdvancer.advanceModules(stopBefore = Stage.Run)
         return moduleAdvancer.getPartitionedModules()
     }
 
