@@ -398,7 +398,9 @@ private class BoolToBoolFun(
         cb: InterpreterCallback,
         interpMode: InterpMode,
     ): Result {
-        val (a) = args.unpackPositioned(1, cb) ?: return Fail
+        val (a) = args.unpackPositionedOr(1, cb) {
+            return@invoke it
+        }
         return Value(
             f(TBoolean.unpack(a)),
             TBoolean,
@@ -699,7 +701,7 @@ private object ListifyFn :
         val elements = mutableListOf<Value<*>>()
         var i = 0
         val n = args.size
-        if (i < n && args.key(0) == typeSymbol) {
+        if (i < n && args.key(i) == typeSymbol) {
             // type=... specifies the element type, not an element.
             i += 1
         }
@@ -885,7 +887,7 @@ object NotNullFn : NamedBuiltinFun, CallableValue {
         val (arg) = args.unpackPositionedOr(1, cb) {
             return@invoke it
         }
-        // We should only insert this function internally when known not to be null, but assert for safety in interp.
+        // We should only insert this function internally when known not to be `null`, but assert for safety in interp.
         // Backends typically can skip this assertion, depending on their semantics.
         check(arg.typeTag != TNull)
         return arg
@@ -926,408 +928,132 @@ object BuiltinFuns {
         null,
     ) { a -> a }
 
-    /**
-     * <!-- snippet: builtin/+ -->
-     * # `+`
-     * The builtin `+` operator has six variants:
-     * - *Infix* with two [snippet/type/Int32]s: signed addition
-     * - *Prefix* with one [snippet/type/Int32]: numeric identity
-     * - *Infix* with two [snippet/type/Int64]s: signed addition
-     * - *Prefix* with one [snippet/type/Int64]: numeric identity
-     * - *Infix* with two [snippet/type/Float64]s: signed addition
-     * - *Prefix* with one [snippet/type/Float64]: numeric identity
-     *
-     * ```temper
-     * 1   + 2   == 3   &&
-     * 1.0 + 2.0 == 3.0 &&
-     * +1        == 1   &&
-     * +1.0      == 1.0
-     * ```
-     *
-     * As explained above, you cannot mix [snippet/type/Int32] and
-     * [snippet/type/Float64] inputs:
-     *
-     * ```temper FAIL
-     * 1 + 1.0
-     * ```
-     *
-     * `+` does not work on [snippet/type/String]s.  Use [snippet/syntax/string/interpolation] instead.
-     *
-     * ```temper FAIL
-     * "foo" + "bar"
-     * ```
-     */
     val plusFn = CoverFunction(
         listOf(plusIntIntFn, plusIntFn, plusLongLongFn, plusLongFn, plusFloatFloatFn, plusFloatFn),
     ).also {
         helpSnippet(it, "Numeric addition", "builtin/%2B")
     }
 
-    /**
-     * <!-- snippet: builtin/- -->
-     * # `-`
-     * The builtin `-` operator has six variants like [snippet/builtin/+].
-     *
-     * ```temper
-     * 3   - 1   == 2   &&
-     * 3.0 - 1.0 == 2.0 &&
-     * -3        <  0   &&
-     * -3.0      <  0.0
-     * ```
-     *
-     * As with `+`, you cannot mix [snippet/type/Int32] and [snippet/type/Float64] inputs:
-     *
-     * ```temper FAIL
-     * 1 + 1.0
-     * ```
-     *
-     * The `-` operator is left-associative:
-     *
-     * ```temper
-     * 1 - 1 - 1 == (1 - 1) - 1 &&
-     * 1 - 1 - 1 == -1
-     * ```
-     *
-     * Since there is a [snippet/builtin/--] operator, `--x` is not a negation of a negation.
-     *
-     * ```temper
-     * var x = 1;
-     * +x == -(-x) &&  // double negation is identity
-     * --x == 0        // but two adjacent `-` means pre-decrement
-     * ```
-     */
+    val minusIntIntFn: CallableValue = IntIntToIntFun(
+        "-",
+        BuiltinOperatorId.MinusIntInt,
+    ) { a, b -> a - b }
+    val minusIntFn: CallableValue = IntToIntFun(
+        "-",
+        BuiltinOperatorId.MinusInt,
+    ) { a -> -a }
+    val minusLongLongFn: CallableValue = LongLongToLongFun(
+        "-",
+        BuiltinOperatorId.MinusIntInt64,
+    ) { a, b -> a - b }
+    val minusLongFn: CallableValue = LongToLongFun(
+        "-",
+        BuiltinOperatorId.MinusInt64,
+    ) { a -> -a }
+    val minusFloatFloatFn: CallableValue = FloatFloatToFloatFun(
+        "-",
+        BuiltinOperatorId.MinusFltFlt,
+    ) { a, b -> a - b }
+    val minusFloatFn: CallableValue = FloatToFloatFun(
+        "-",
+        BuiltinOperatorId.MinusFlt,
+    ) { a -> -a }
+
     val minusFn = CoverFunction(
         listOf(
-            IntIntToIntFun(
-                "-",
-                BuiltinOperatorId.MinusIntInt,
-            ) { a, b -> a - b },
-            IntToIntFun(
-                "-",
-                BuiltinOperatorId.MinusInt,
-            ) { a -> -a },
-            LongLongToLongFun(
-                "-",
-                BuiltinOperatorId.MinusIntInt64,
-            ) { a, b -> a - b },
-            LongToLongFun(
-                "-",
-                BuiltinOperatorId.MinusInt64,
-            ) { a -> -a },
-            FloatFloatToFloatFun(
-                "-",
-                BuiltinOperatorId.MinusFltFlt,
-            ) { a, b -> a - b },
-            FloatToFloatFun(
-                "-",
-                BuiltinOperatorId.MinusFlt,
-            ) { a -> -a },
+            minusIntIntFn,
+            minusLongLongFn,
+            minusFloatFloatFn,
+            minusIntFn,
+            minusLongFn,
+            minusFloatFn,
         ),
     ).also {
         helpSnippet(it, "Numeric subtraction", "builtin/-")
     }
 
-    /**
-     * <!-- snippet: builtin/%2A : operator `*` -->
-     * # Multiplication `*`
-     * Infix `*` allows multiplying numbers.
-     *
-     * Given two [snippet/type/Int32]s it produces an *Int*, given two [snippet/type/Int64]s it
-     * produces an *Int64*, and given two [snippet/type/Float64]s it produces a *Float64*.
-     *
-     * ```temper
-     * 3   * 4   == 12   &&
-     * 3.0 * 4.0 == 12.0
-     * ```
-     */
-    val timesFn = CoverFunction(
-        listOf(
-            IntIntToIntFun("*", BuiltinOperatorId.TimesIntInt) { a, b ->
-                a * b
-            },
-            LongLongToLongFun("*", BuiltinOperatorId.TimesIntInt64) { a, b ->
-                a * b
-            },
-            FloatFloatToFloatFun("*", BuiltinOperatorId.TimesFltFlt) { a, b ->
-                a * b
-            },
-        ),
-    ).also {
-        helpSnippet(it, "Numeric multiplication", "builtin/%2A")
-    }
+    val timesIntIntFn: CallableValue =
+        IntIntToIntFun("*", BuiltinOperatorId.TimesIntInt) { a, b ->
+            a * b
+        }
 
-    /**
-     * <!-- snippet: builtin/%2A%2A : operator `**` -->
-     * # Exponentiation `**`
-     * Infix `**` allows raising one number to the power of another.
-     *
-     * Given two [snippet/type/Float64]s it produces a *Float64*.
-     *
-     * ```temper
-     * 3.0 **  2.0 == 9.0 &&
-     * 4.0 ** -0.5 == 0.5
-     * ```
-     */
-    val powFn = CoverFunction(
-        listOf(
-            FloatFloatToFloatFun("**", BuiltinOperatorId.PowFltFlt) { a, b ->
-                a.pow(b)
-            },
-        ),
-    )
+    val timesLongLongFn: CallableValue =
+        LongLongToLongFun("*", BuiltinOperatorId.TimesIntInt64) { a, b ->
+            a * b
+        }
 
-    /**
-     * <!-- snippet: builtin/& : `&` -->
-     * # Operator `&`
-     * The `&` operator can be applied in two ways:
-     *
-     * - To [snippet/type/Int32]s it acts as a [bitwise operator][snippet/bitwise-and].
-     * - To types it produces an [intersection type][snippet/type/intersection-fn]
-     *
-     * ⎀ bitwise-and
-     *
-     * ⎀ type/intersection-fn
-     * <!-- /snippet -->
-     *
-     * <!-- snippet: bitwise-and -->
-     * # *Int* `&`
-     *
-     * Takes two [snippet/type/Int32]s or two [snippet/type/Int64]s and returns the
-     * integer that has any bit set that is set in both inputs.
-     *
-     * ```temper
-     * // Using binary number syntax
-     * (0b0010101 &
-     *  0b1011011) ==
-     *  0b0010001
-     * ```
-     */
-    val ampFn = CoverFunction(
-        listOf(
-            IntIntToIntFun(
-                "&",
-                BuiltinOperatorId.BitwiseAnd32,
-            ) { a, b -> a and b },
-            LongLongToLongFun(
-                "&",
-                BuiltinOperatorId.BitwiseAnd64,
-            ) { a, b -> a and b },
-            TypeIntersectionFun,
-        ),
-    ).also {
-        helpSnippet(it, "Bitwise and operator", "builtin/&")
-    }
+    val timesFloatFloatFn: CallableValue =
+        FloatFloatToFloatFun("*", BuiltinOperatorId.TimesFltFlt) { a, b ->
+            a * b
+        }
 
-    /**
-     * <!-- snippet: builtin/| : `|` -->
-     * # Operator `|`
-     * The `|` operator performs bitwise union.
-     *
-     * It takes two [snippet/type/Int32]s or two [snippet/type/Int64]s and returns
-     * the integer of the same size that has any bit set that is set in either input.
-     *
-     * ```temper
-     * // Using binary number syntax
-     * (0b0010101 |
-     *  0b1011011) ==
-     *  0b1011111
-     * ```
-     */
-    val barFn = CoverFunction(
-        listOf(
-            IntIntToIntFun(
-                "|",
-                BuiltinOperatorId.BitwiseOr32,
-            ) { a, b -> a or b },
-            LongLongToLongFun(
-                "|",
-                BuiltinOperatorId.BitwiseOr64,
-            ) { a, b -> a or b },
-        ),
-    ).also {
-        helpSnippet(it, "Bitwise or operator", "builtin/|")
-    }
+    val powFloatFloatFn: CallableValue =
+        FloatFloatToFloatFun("**", BuiltinOperatorId.PowFltFlt) { a, b ->
+            a.pow(b)
+        }
 
-    /**
-     * <!-- snippet: builtin/~ : `~` -->
-     * # Operator `~`
-     * The `~` operator negates the bits in an integer.
-     *
-     * Given an [snippet/type/Int32] or [snippet/type/Int64] it returns the integer
-     * of the same size with the opposite bits.
-     *
-     * ```temper
-     * // Using binary number syntax
-     * ~0b0000_0001_0010_0011_0100_0101_0110_0111 ==
-     *  0b1111_1110_1101_1100_1011_1010_1001_1000
-     * ```
-     */
-    val bitInverseFn = CoverFunction(
-        listOf(
-            IntToIntFun(
-                "~",
-                BuiltinOperatorId.BitwiseNegation32,
-            ) { a -> a.inv() },
-            LongToLongFun(
-                "~",
-                BuiltinOperatorId.BitwiseNegation64,
-            ) { a -> a.inv() },
-        ),
-    ).also {
-        helpSnippet(it, "Bitwise inverse operator", "builtin/~")
-    }
+    val ampIntIntFn: CallableValue = IntIntToIntFun(
+        "&",
+        BuiltinOperatorId.BitwiseAnd32,
+    ) { a, b -> a and b }
+    val ampLongLongFn: CallableValue = LongLongToLongFun(
+        "&",
+        BuiltinOperatorId.BitwiseAnd64,
+    ) { a, b -> a and b }
 
-    /**
-     * <!-- snippet: builtin/^ : `^` -->
-     * # Operator `^`
-     * The bitwise-xor (`^`) operator takes two [snippet/type/Int32]s or
-     * two [snippet/type/Int64]s and returns an integer of the same size
-     * that has each bit set when the corresponding bits in the inputs
-     * are different.
-     *
-     * ```temper
-     * // Using binary number syntax
-     * (0b1111_0000_1111_0000_1111_0000_1111_0000 ^
-     *  0b1010_1010_1010_1010_0101_0101_0101_0101) ==
-     *  0b0101_1010_0101_1010_1010_0101_1010_0101
-     * ```
-     */
-    val bitXorFn = CoverFunction(
-        listOf(
-            IntIntToIntFun(
-                "^",
-                BuiltinOperatorId.BitwiseXor32,
-            ) { a, b -> a.xor(b) },
-            LongLongToLongFun(
-                "^",
-                BuiltinOperatorId.BitwiseXor64,
-            ) { a, b -> a.xor(b) },
-        ),
-    ).also {
-        helpSnippet(it, "Bitwise xor operator", "builtin/^")
-    }
+    val barIntIntFn: CallableValue = IntIntToIntFun(
+        "|",
+        BuiltinOperatorId.BitwiseOr32,
+    ) { a, b -> a or b }
+    val barLongLongFn: CallableValue = LongLongToLongFun(
+        "|",
+        BuiltinOperatorId.BitwiseOr64,
+    ) { a, b -> a or b }
 
-    /**
-     * <!-- snippet: builtin/<< : `<<` -->
-     * # Operator `<<`
-     * The left shift (`<<`) operator takes an [snippet/type/Int32] or a
-     * [snippet/type/Int64] to shift and an [snippet/type/Int32] which is
-     * the number of bits to shift by.
-     *
-     * All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
-     * operand are ignored.
-     *
-     * ```temper
-     * // Using binary number syntax
-     * (0b0000_0001_0101 << 3) ==
-     * //        / _/ /
-     * //       / /  /
-     * //      / /  /
-     *  0b0000_1010_1000
-     * ```
-     */
-    val shlFn = CoverFunction(
-        listOf(
-            IntIntToIntFun(
-                "<<",
-                BuiltinOperatorId.BitwiseShl32,
-            ) { a, b -> a.shl(b.and(I32_SHIFT_AMOUNT_MASK)) },
-            LongIntToLongFun(
-                "<<",
-                BuiltinOperatorId.BitwiseShl64,
-            ) { a, b -> a.shl(b.and(I64_SHIFT_AMOUNT_MASK)) },
-        ),
-    ).also {
-        helpSnippet(it, "Shift left operator", "builtin/<<")
-    }
+    val bitInverseIntFn: CallableValue = IntToIntFun(
+        "~",
+        BuiltinOperatorId.BitwiseNegation32,
+    ) { a -> a.inv() }
+    val bitInverseLongFn: CallableValue = LongToLongFun(
+        "~",
+        BuiltinOperatorId.BitwiseNegation64,
+    ) { a -> a.inv() }
 
-    /**
-     * <!-- snippet: builtin/>> : `>>` -->
-     * # Operator `>>`
-     * The right shift (`>>`) operator takes an [snippet/type/Int32] or a
-     * [snippet/type/Int64] to shift and an [snippet/type/Int32] which is
-     * the number of bits to shift by.
-     *
-     * All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
-     * operand are ignored.
-     *
-     * ```temper
-     * // Using binary number syntax
-     * (0b0000_1010_1010 >> 3) ==
-     * //       \ \_ \ \
-     * //        \  \ \ *
-     * //         \  \ \
-     *  0b0000_0001_0101
-     * ```
-     *
-     * Unlike the [snippet/builtin/>>>] operator, this operator is sign extending.
-     * When shifting right by *n* bits, the *n* highest bits in the output are copied
-     * from the most-significant bit in the input.
-     *
-     * ```temper
-     * (0x8000_0000_0000_0000 >> 2) ==
-     * // |\
-     * // |/\
-     *  0xE000_0000_0000_0000
-     * ```
-     */
-    val shrFn = CoverFunction(
-        listOf(
-            IntIntToIntFun(
-                ">>",
-                BuiltinOperatorId.BitwiseShr32,
-            ) { a, b -> a.shr(b.and(I32_SHIFT_AMOUNT_MASK)) },
-            LongIntToLongFun(
-                ">>",
-                BuiltinOperatorId.BitwiseShr64,
-            ) { a, b -> a.shr(b.and(I64_SHIFT_AMOUNT_MASK)) },
-        ),
-    ).also {
-        helpSnippet(it, "Shift right (sign extending) operator", "builtin/>>")
-    }
+    val bitXorIntIntFn: CallableValue = IntIntToIntFun(
+        "^",
+        BuiltinOperatorId.BitwiseXor32,
+    ) { a, b -> a.xor(b) }
+    val bitXorLongLongFn: CallableValue = LongLongToLongFun(
+        "^",
+        BuiltinOperatorId.BitwiseXor64,
+    ) { a, b -> a.xor(b) }
 
-    /**
-     * <!-- snippet: builtin/>>> : `>>>` -->
-     * # Operator `>>>`
-     * The right shift (`>>>`) operator takes an [snippet/type/Int32] or a
-     * [snippet/type/Int64] to shift and an [snippet/type/Int32] which is
-     * the number of bits to shift by.
-     *
-     * All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
-     * operand are ignored.
-     *
-     * ```temper
-     * // Using binary number syntax
-     * (0b0000_1010_1010 >>> 3) ==
-     * //       \ \_ \ \
-     * //        \  \ \ *
-     * //         \  \ \
-     *  0b0000_0001_0101
-     * ```
-     *
-     * Unlike the [snippet/builtin/>>] operator, this operator is zero extending.
-     * When shifting right by *n* bits, the *n* highest bits in the output are copied
-     * from the most-significant bit in the input.
-     *
-     * ```temper
-     * (0x8000_0000_0000_0000 >>> 2) ==
-     *  0x2000_0000_0000_0000
-     * ```
-     */
-    val uShrFn = CoverFunction(
-        listOf(
-            IntIntToIntFun(
-                ">>>",
-                BuiltinOperatorId.BitwiseShrUnsigned32,
-            ) { a, b -> a.ushr(b.and(I32_SHIFT_AMOUNT_MASK)) },
-            LongIntToLongFun(
-                ">>>",
-                BuiltinOperatorId.BitwiseShrUnsigned64,
-            ) { a, b -> a.ushr(b.and(I64_SHIFT_AMOUNT_MASK)) },
-        ),
-    ).also {
-        helpSnippet(it, "Shift right (zero extending) operator", "builtin/>>>")
-    }
+    val shlIntIntFn: CallableValue = IntIntToIntFun(
+        "<<",
+        BuiltinOperatorId.BitwiseShl32,
+    ) { a, b -> a.shl(b.and(I32_SHIFT_AMOUNT_MASK)) }
+    val shlLongLongFn: CallableValue = LongIntToLongFun(
+        "<<",
+        BuiltinOperatorId.BitwiseShl64,
+    ) { a, b -> a.shl(b.and(I64_SHIFT_AMOUNT_MASK)) }
+
+    val shrIntIntFn: CallableValue = IntIntToIntFun(
+        ">>",
+        BuiltinOperatorId.BitwiseShr32,
+    ) { a, b -> a.shr(b.and(I32_SHIFT_AMOUNT_MASK)) }
+    val shrLongLongFn: CallableValue = LongIntToLongFun(
+        ">>",
+        BuiltinOperatorId.BitwiseShr64,
+    ) { a, b -> a.shr(b.and(I64_SHIFT_AMOUNT_MASK)) }
+
+    val uShrIntIntFn: CallableValue = IntIntToIntFun(
+        ">>>",
+        BuiltinOperatorId.BitwiseShrUnsigned32,
+    ) { a, b -> a.ushr(b.and(I32_SHIFT_AMOUNT_MASK)) }
+    val uShrLongIntFn: CallableValue = LongIntToLongFun(
+        ">>>",
+        BuiltinOperatorId.BitwiseShrUnsigned64,
+    ) { a, b -> a.ushr(b.and(I64_SHIFT_AMOUNT_MASK)) }
 
     /**
      * <!-- snippet: builtin/! -->
@@ -1336,14 +1062,14 @@ object BuiltinFuns {
      *
      * `!`[snippet/builtin/false] is [snippet/builtin/true] and vice versa.
      */
-    val notFn = CoverFunction(
-        listOf(
-            BoolToBoolFun(
-                "!",
-                BuiltinOperatorId.BooleanNegation,
-            ) { a -> !a },
-        ),
-    )
+    val notFn: CallableValue = BoolToBoolFun(
+        "!",
+        BuiltinOperatorId.BooleanNegation,
+    ) { a -> !a }
+        .also {
+            helpSnippet(it, "Boolean inverse", "builtin/!")
+        }
+
     val desugarLogicalAndFn: MacroValue = DesugarLogicalAnd
     val desugarLogicalOrFn: MacroValue = DesugarLogicalOr
 
@@ -1380,68 +1106,22 @@ object BuiltinFuns {
         },
     ) { a, b -> a / b }
 
-    /**
-     * <!-- snippet: builtin/%2F : operator `/` -->
-     * # Division `/`
-     * Infix `/` allows dividing numbers.
-     *
-     * Given two [snippet/type/Int32]s it produces an *Int*, given two [snippet/type/Int64]s it
-     * produces an *Int64*, and given two [snippet/type/Float64]s it produces a *Float64*.
-     *
-     * ```temper
-     * 12   / 3   == 4    &&
-     * 12.0 / 3.0 == 4.0
-     * ```
-     *
-     * Integer division [rounds towards zero].
-     *
-     * ```temper
-     *  7   / 2   ==  3   &&
-     * -7   / 2   == -3   &&
-     *  7.0 / 2.0 ==  3.5 &&
-     * -7.0 / 2.0 == -3.5
-     * ```
-     *
-     * Division by zero has [snippet/type/Bubble].
-     *
-     * ```temper
-     * (1 / 0) orelse console.log("div by zero");
-     * //!outputs "div by zero"
-     * ```
-     *
-     * Float64 division by zero is a *Bubble* too.
-     *
-     * ```temper
-     * console.log("${ (0.0 /  0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
-     * console.log("${ (1.0 /  0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
-     * console.log("${ (1.0 / -0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
-     * ```
-     *
-     * [IEEE-754]: https://en.wikipedia.org/wiki/IEEE_754
-     * [rounds towards zero]: https://en.wikipedia.org/wiki/Rounding#Rounding_toward_zero
-     */
-    val divFn = CoverFunction(
-        listOf(
-            divIntIntFn,
-            divLongLongFn,
-            FloatFloatToFloatFun(
-                "/",
-                BuiltinOperatorId.DivFltFlt,
-                fail = { _, divisor, cb ->
-                    // Floating 0/0 is normally silently via NaN in most languages.
-                    // We can provide a NaN producing division operator, but it seems that, where a
-                    // language provides non-return-value failure affordances, default operators
-                    // should use them consistently.
-                    when (divisor) {
-                        0.0 -> cb.fail(MessageTemplate.DivByZero)
-                        else -> null
-                    }
-                },
-            ) { a, b ->
-                a / b
-            },
-        ),
-    )
+    val divFloatFloatFn: CallableValue = FloatFloatToFloatFun(
+        "/",
+        BuiltinOperatorId.DivFltFlt,
+        fail = { _, divisor, cb ->
+            // Floating 0/0 is normally silently via NaN in most languages.
+            // We can provide a NaN producing division operator, but it seems that, where a
+            // language provides non-return-value failure affordances, default operators
+            // should use them consistently.
+            when (divisor) {
+                0.0 -> cb.fail(MessageTemplate.DivByZero)
+                else -> null
+            }
+        },
+    ) { a, b ->
+        a / b
+    }
 
     /** A specialization of the integer division where we know that the divisor is non-zero. */
     val divIntIntSafeFn: CallableValue = IntIntToIntFun(
@@ -1483,51 +1163,22 @@ object BuiltinFuns {
         },
     ) { a, b -> a % b }
 
-    /**
-     * <!-- snippet: builtin/%25 : operator `%` -->
-     * # Remainder `%`
-     * Given two [snippet/type/Int32]s it produces an *Int*,
-     * given two [snippet/type/Int64]s it produces an *Int64*,
-     * and given two [snippet/type/Float64]s it produces a *Float64*.
-     *
-     * ```temper
-     * 13   % 3   == 1    &&
-     * 13.0 % 3.0 == 1.0
-     * ```
-     *
-     * Division by Zero [bubbles][snippet/type/Bubble]
-     * ```temper
-     * (1 % 0) orelse console.log("mod by zero");
-     * //!outputs "mod by zero"
-     * ```
-     * ```temper
-     * (1.0 % 0.0) orelse console.log("mod by zero");
-     * //!outputs "mod by zero"
-     * ```
-     *
-     */
-    val modFn = CoverFunction(
-        listOf(
-            modIntIntFn,
-            modLongLongFn,
-            FloatFloatToFloatFun(
-                "%",
-                BuiltinOperatorId.ModFltFlt,
-                fail = { _, divisor, cb ->
-                    // Floating 0/0 is normally silently via NaN in most languages.
-                    // We can provide a NaN producing division operator, but it seems that, where a
-                    // language provides non-return-value failure affordances, default operators
-                    // should use them consistently.
-                    when (divisor) {
-                        0.0 -> cb.fail(MessageTemplate.DivByZero)
-                        else -> null
-                    }
-                },
-            ) { a, b ->
-                a % b
-            },
-        ),
-    )
+    val modFloatFloatFn: CallableValue = FloatFloatToFloatFun(
+        "%",
+        BuiltinOperatorId.ModFltFlt,
+        fail = { _, divisor, cb ->
+            // Floating 0/0 is normally silently via NaN in most languages.
+            // We can provide a NaN producing division operator, but it seems that, where a
+            // language provides non-return-value failure affordances, default operators
+            // should use them consistently.
+            when (divisor) {
+                0.0 -> cb.fail(MessageTemplate.DivByZero)
+                else -> null
+            }
+        },
+    ) { a, b ->
+        a % b
+    }
 
     /**
      * A specialization of the integer division where we know that the divisor
@@ -1555,7 +1206,7 @@ object BuiltinFuns {
 
     /**
      * <!-- snippet: builtin/< -->
-     * # `<`
+     * # Operator `<`, less-than
      * `a < b` is [snippet/builtin/true] when *a* orders before *b*, and is a compile-time error
      * if the two are not mutually comparable.
      *
@@ -2033,15 +1684,6 @@ object BuiltinFuns {
     val vVoidishPanic = Value(voidishPanic)
     val vCmp = Value(cmpFn)
     val vCommaFn = Value(commaFn)
-    val vMinusFn = Value(minusFn)
-    val vPlusFn = Value(plusFn)
-    val vAmpFn = Value(ampFn)
-    val vBarFn = Value(barFn)
-    val vBitInverseFn = Value(bitInverseFn)
-    val vBitXorFn = Value(bitXorFn)
-    val vShlFn = Value(shlFn)
-    val vShrFn = Value(shrFn)
-    val vUShrFn = Value(uShrFn)
     val vNotFn = Value(notFn)
     val vDesugarLogicalAndFn = Value(desugarLogicalAndFn)
     val vDesugarLogicalOrFn = Value(desugarLogicalOrFn)

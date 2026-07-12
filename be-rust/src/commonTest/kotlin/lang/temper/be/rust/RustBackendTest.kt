@@ -235,12 +235,11 @@ class RustBackendTest {
                 |temper_core::impl_any_value_trait!(A, []);
                 |fn fn__0() -> temper_core::SafeGenerator<()> {
                 |    let mut caseIndex___0: std::sync::Arc<std::sync::RwLock<i32>> = std::sync::Arc::new(std::sync::RwLock::new(0));
-                |    let mut t___0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>> = std::sync::Arc::new(std::sync::RwLock::new(std::sync::Arc::new("".to_string())));
-                |    let mut t___1: std::sync::Arc<std::sync::RwLock<Option<A>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
-                |    let mut t___2: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>> = std::sync::Arc::new(std::sync::RwLock::new(std::sync::Arc::new("".to_string())));
+                |    let mut t___0: std::sync::Arc<std::sync::RwLock<Option<A>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
+                |    let mut t___1: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>> = std::sync::Arc::new(std::sync::RwLock::new(std::sync::Arc::new("".to_string())));
                 |    #[derive(Clone)]
                 |    struct ClosureGroup___0 {
-                |        caseIndex___0: std::sync::Arc<std::sync::RwLock<i32>>, t___1: std::sync::Arc<std::sync::RwLock<Option<A>>>, t___2: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>>, t___0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>>
+                |        caseIndex___0: std::sync::Arc<std::sync::RwLock<i32>>, t___0: std::sync::Arc<std::sync::RwLock<Option<A>>>, t___1: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>>
                 |    }
                 |    impl ClosureGroup___0 {
                 |        fn convertedCoroutine___0(& self, generator___0: temper_core::SafeGenerator<()>) -> Option<()> {
@@ -263,7 +262,7 @@ class RustBackendTest {
                 |                        match p().clone().get() {
                 |                            Ok(x) => {
                 |                                {
-                |                                    * self.t___1.write().unwrap() = Some(x);
+                |                                    * self.t___0.write().unwrap() = Some(x);
                 |                                }
                 |                                {
                 |                                    * self.caseIndex___0.write().unwrap() = 3;
@@ -276,7 +275,7 @@ class RustBackendTest {
                 |                    },
                 |                    2 => {
                 |                        {
-                |                            * self.t___2.write().unwrap() = std::sync::Arc::new("".to_string());
+                |                            * self.t___1.write().unwrap() = std::sync::Arc::new("".to_string());
                 |                        }
                 |                        {
                 |                            * self.caseIndex___0.write().unwrap() = 4;
@@ -284,17 +283,14 @@ class RustBackendTest {
                 |                    },
                 |                    3 => {
                 |                        {
-                |                            * self.t___0.write().unwrap() = temper_core::read_locked( & self.t___1).clone().unwrap().a();
-                |                        }
-                |                        {
-                |                            * self.t___2.write().unwrap() = temper_core::read_locked( & self.t___0).clone();
+                |                            * self.t___1.write().unwrap() = temper_core::read_locked( & self.t___0).clone().unwrap().a();
                 |                        }
                 |                        {
                 |                            * self.caseIndex___0.write().unwrap() = 4;
                 |                        }
                 |                    },
                 |                    4 => {
-                |                        println!("{}", temper_core::read_locked( & self.t___2).clone());
+                |                        println!("{}", temper_core::read_locked( & self.t___1).clone());
                 |                        return None;
                 |                    },
                 |                    _ => {
@@ -305,7 +301,7 @@ class RustBackendTest {
                 |        }
                 |    }
                 |    let closure_group = ClosureGroup___0 {
-                |        caseIndex___0: caseIndex___0.clone(), t___1: t___1.clone(), t___2: t___2.clone(), t___0: t___0.clone()
+                |        caseIndex___0: caseIndex___0.clone(), t___0: t___0.clone(), t___1: t___1.clone()
                 |    };
                 |    let convertedCoroutine___0 = {
                 |        let closure_group = closure_group.clone();
@@ -444,11 +440,9 @@ class RustBackendTest {
             |    }).clone()
             |}
             |pub fn hi(n__0: i32) {
-            |    let mut t___0: std::sync::Arc<String>;
             |    let mut i__0: i32 = 0;
             |    'loop___0: while Some(i__0) < Some(n__0) {
-            |        t___0 = temper_core::int_to_string(i__0, None);
-            |        let mut a__0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>> = std::sync::Arc::new(std::sync::RwLock::new(std::sync::Arc::new(format!("{}", t___0))));
+            |        let mut a__0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>> = std::sync::Arc::new(std::sync::RwLock::new(std::sync::Arc::new(format!("{}", i__0))));
             |        #[derive(Clone)]
             |        struct ClosureGroup___0 {
             |            a__0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>>
@@ -2803,10 +2797,8 @@ class RustBackendTest {
             |    let return__0: i32;
             |    let mut t___0: bool;
             |    let mut t___1: bool;
-            |    let mut t___2: i32;
-            |    let mut t___3: bool;
-            |    let mut t___4: i32;
-            |    let mut t___5: i32;
+            |    let mut t___2: bool;
+            |    let mut t___3: i32;
             |    'fn__0: {
             |        let mut n__0: i32 = 0;
             |        let mut i__0: usize = start__0;
@@ -2821,7 +2813,7 @@ class RustBackendTest {
             |                t___0 = false;
             |            }
             |            if t___0 {
-            |                t___5 = cp__0.wrapping_sub(48);
+            |                t___3 = cp__0.wrapping_sub(48);
             |            } else {
             |                if Some(65) <= Some(cp__0) {
             |                    t___1 = Some(cp__0) <= Some(70);
@@ -2829,24 +2821,22 @@ class RustBackendTest {
             |                    t___1 = false;
             |                }
             |                if t___1 {
-            |                    t___2 = cp__0.wrapping_sub(65).wrapping_add(10);
-            |                    t___5 = t___2;
+            |                    t___3 = cp__0.wrapping_sub(65).wrapping_add(10);
             |                } else {
             |                    if Some(97) <= Some(cp__0) {
-            |                        t___3 = Some(cp__0) <= Some(102);
+            |                        t___2 = Some(cp__0) <= Some(102);
             |                    } else {
-            |                        t___3 = false;
+            |                        t___2 = false;
             |                    }
-            |                    if t___3 {
-            |                        t___4 = cp__0.wrapping_sub(97).wrapping_add(10);
-            |                        t___5 = t___4;
+            |                    if t___2 {
+            |                        t___3 = cp__0.wrapping_sub(97).wrapping_add(10);
             |                    } else {
             |                        return__0 = -1;
             |                        break 'fn__0;
             |                    }
             |                }
             |            }
-            |            let digit__0: i32 = t___5;
+            |            let digit__0: i32 = t___3;
             |            n__0 = n__0.wrapping_mul(16).wrapping_add(digit__0);
             |            i__0 = temper_core::string::next( & sourceText__0, i__0);
             |        }

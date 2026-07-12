@@ -4,6 +4,7 @@ import lang.temper.ast.TreeVisit
 import lang.temper.ast.VisitCue
 import lang.temper.builtin.AwaitFn
 import lang.temper.builtin.BuiltinFuns
+import lang.temper.builtin.BuiltinLogicalOperators
 import lang.temper.builtin.YieldFn
 import lang.temper.common.LeftOrRight
 import lang.temper.common.Log
@@ -669,7 +670,7 @@ class Weaver private constructor(
                         val body = rc.body
                         val doc = outerBlock.document
                         val innerRemapped = remapControlFlow(pulledBlock, outerBlock)
-                        rc.condition.invertLogicalExpr(outerBlock)
+                        rc.condition.invertLogicalExpr(outerBlock, BuiltinLogicalOperators)
                         val breakUnlessCondition = ControlFlow.If(
                             rc.condition.pos,
                             rc.condition,

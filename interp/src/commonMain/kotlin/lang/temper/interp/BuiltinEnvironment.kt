@@ -60,11 +60,6 @@ private object Builtins {
         val m = mutableMapOf(
             "++" to Value(DesugarPrefixOperatorMacro("++", BuiltinFuns.plusFn)),
             "--" to Value(DesugarPrefixOperatorMacro("--", BuiltinFuns.minusFn)),
-            "-" to BuiltinFuns.vMinusFn,
-            "*" to Value(BuiltinFuns.timesFn),
-            "**" to Value(BuiltinFuns.powFn),
-            "/" to Value(BuiltinFuns.divFn),
-            "%" to Value(BuiltinFuns.modFn),
 
             "<" to Value(BuiltinFuns.lessThanFn),
             ">" to Value(BuiltinFuns.greaterThanFn),
@@ -76,15 +71,8 @@ private object Builtins {
 
             "=" to BuiltinFuns.vSetLocalFn,
 
-            keyPair(BuiltinFuns.vAmpFn),
-            keyPair(BuiltinFuns.vBarFn),
             keyPair(BuiltinFuns.vNotFn),
             keyPair(BuiltinFuns.vOrNullFn),
-            keyPair(BuiltinFuns.vBitInverseFn),
-            keyPair(BuiltinFuns.vBitXorFn),
-            keyPair(BuiltinFuns.vShlFn),
-            keyPair(BuiltinFuns.vShrFn),
-            keyPair(BuiltinFuns.vUShrFn),
             keyPair(BuiltinFuns.vThrowsFn),
 
             "[]" to BuiltinFuns.vSquareBracketFn,
@@ -235,22 +223,21 @@ private object Builtins {
              * there is no need for an `else` clause.
              *
              * !!! note "Backwards compatibility note"
-             *     If you add a sub-type to an existing sealed type, this may break code that
-             *     uses the old version of the sealed type with a [snippet/builtin/when] or
-             *     which otherwise embeds an "is none of those subtypes, therefore is this subtype"
-             *     assumption.
+             *     Adding a subtype to an existing sealed type may break code that
+             *     uses the old version of the sealed type. [snippet/builtin/when] expressions
+             *     are at risk, but so is other code that assumes
+             *     "none of those subtypes, therefore, this subtype."
              *
              * Backends should translate user-defined sealed types to [sum type]s
              * where available, and may insert tagged union tag field where needed.
              *
              * [sum type]: https://en.wikipedia.org/wiki/Tagged_union
-             * [tagged union]: https://en.wikipedia.org/wiki/Tagged_union
              */
             keyPair(MetadataDecorator(sealedTypeSymbol, "@sealed") { void }),
             /**
              * <!-- snippet: builtin/@static -->
              * # `@static` decorator
-             * `@static` may decorate a type members, and indicates that the member is associated
+             * `@static` may decorate type members, and indicates that the member is associated
              * with the containing type, not with any instance of that type.
              *
              * It is a [legacy decorator][snippet/legacy-decorator], so the `static` keyword
@@ -914,14 +901,15 @@ internal class BuiltinEnvironment(
     }
 }
 
-private fun <T : MacroValue> keyPair(v: Value<T>): Pair<String, Value<T>> {
-    fun nameOf(f: MacroValue): String = when (f) {
-        is NamedBuiltinFun -> f.name
-        is CoverFunction -> nameOf(f.covered.first()).also { name ->
-            check(f.covered.all { nameOf(it) == name })
-        }
-        else -> error("$f")
+private fun nameOf(f: MacroValue): String = when (f) {
+    is NamedBuiltinFun -> f.name
+    is CoverFunction -> nameOf(f.covered.first()).also { name ->
+        check(f.covered.all { nameOf(it) == name })
     }
+    else -> error("$f")
+}
+
+private fun <T : MacroValue> keyPair(v: Value<T>): Pair<String, Value<T>> {
     return nameOf(TFunction.unpack(v)) to v
 }
 

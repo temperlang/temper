@@ -382,20 +382,20 @@ class PyBackendTest {
             |from builtins import int as int2, AttributeError as AttributeError4
             |from typing import Any as Any3, ClassVar as ClassVar5
             |from temper_core import int_sub as int_sub0, int_add as int_add1
-            |int_sub_118 = int_sub0
-            |int_add_119 = int_add1
+            |int_sub_122 = int_sub0
+            |int_add_123 = int_add1
             |class C:
             |    y_26: 'int2'
             |    z_27: 'int2'
             |    __slots__ = ('y_26', 'z_27')
             |    @property
             |    def p(this_0, /) -> 'int2':
-            |        return int_sub_118(this_0.y_26, 1)
+            |        return int_sub_122(this_0.y_26, 1)
             |    def _set_p(this_1, new_p_31: 'int2', /) -> 'None':
-            |        t_97: 'int2' = int_add_119(new_p_31, 1)
-            |        this_1.y_26 = t_97
+            |        t_100: 'int2' = int_add_123(new_p_31, 1)
+            |        this_1.y_26 = t_100
             |    @property
-            |    def q(this_121, /) -> 'Any3':
+            |    def q(this_125, /) -> 'Any3':
             |        raise AttributeError4('q getter unavailable')
             |    @q.setter
             |    def q(this_2, new_q_34: 'int2', /) -> 'None':
@@ -412,12 +412,12 @@ class PyBackendTest {
             |        return this_5.p
             |    def incr(this_6, /) -> 'int2':
             |        return_20: 'int2'
-            |        return_20 = int_add_119(this_6._get_r(), 1)
+            |        return_20 = int_add_123(this_6._get_r(), 1)
             |        this_6._set_p(return_20)
             |        return return_20
             |    def decr_45(this_7, /) -> 'int2':
             |        return_21: 'int2'
-            |        return_21 = int_sub_118(this_7._get_r(), 1)
+            |        return_21 = int_sub_122(this_7._get_r(), 1)
             |        this_7._set_p(return_21)
             |        return return_21
             |    def __init__(this, /) -> None:
@@ -434,10 +434,10 @@ class PyBackendTest {
             |    __slots__ = ()
             |    @staticmethod
             |    def f_49(j_50: 'int2', /) -> 'int2':
-            |        return int_add_119(D._i, j_50)
+            |        return int_add_123(D._i, j_50)
             |    @staticmethod
             |    def g(n_53: 'int2', /) -> 'int2':
-            |        return int_add_119(D.f_49(n_53), n_53)
+            |        return int_add_123(D.f_49(n_53), n_53)
             |    def __init__(this, /) -> None:
             |        pass
             |D._i = 1
@@ -679,8 +679,7 @@ class PyBackendTest {
             |                            body_4 = 'missing'
             |                        t_59 = r_3.content_type
             |                        if not t_59 is None:
-            |                            subject_hash7_11: 'str6' = t_59
-            |                            t_36 = subject_hash7_11
+            |                            t_36 = t_59
             |                        else:
             |                            t_36 = 'unknown'
             |                        console_5.log(str_cat_73('Got ', body_4, ' / ', t_36))

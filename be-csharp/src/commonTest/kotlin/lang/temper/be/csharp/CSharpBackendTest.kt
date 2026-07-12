@@ -1241,8 +1241,7 @@ class CSharpBackendTest {
                     |        string ? t__0 = C::Optional.OrNull<string>(new Identity<string>().Identity_(C::Optional.Of<string>(s__0)));
                     |        if (!(t__0 == null))
                     |        {
-                    |            string t___1 = t__0!;
-                    |            t___0 = t___1;
+                    |            t___0 = t__0!;
                     |        }
                     |        else
                     |        {

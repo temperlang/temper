@@ -433,21 +433,19 @@ class JavaBackendTest {
             """
                 |public static void hi(int n__0) {
                 |    class Local_1 {
-                |        String t_17;
+                |        int i__0 = 0;
                 |    }
                 |    final Local_1 local$1 = new Local_1();
-                |    int i__0 = 0;
-                |    while (i__0 < n__0) {
-                |        local$1.t_17 = Integer.toString(i__0);
+                |    while (local$1.i__0 < n__0) {
                 |        class Local_2 {
-                |            String a__0 = local$1.t_17;
+                |            String a__0 = java.lang.Integer.toString(local$1.i__0);
                 |        }
                 |        final Local_2 local$2 = new Local_2();
                 |        Consumer<String> blah__0 = m__0 -> {
                 |            local$2.a__0 = m__0;
                 |        };
                 |        blah__0.accept("hi");
-                |        i__0 = i__0 + 1;
+                |        local$1.i__0 = local$1.i__0 + 1;
                 |    }
                 |}
             """.javaMethod("import java.util.function.Consumer;"),
@@ -2229,13 +2227,13 @@ class JavaBackendTest {
             |    IntBinaryOperator fn__0 = (a__0, b__0) -> a__0 - b__0;
             |    Core.listSortInt(builder__0, fn__0);
             |    IntBinaryOperator fn__1 = (a__1, b__1) -> a__1 - b__1;
-            |    List<Integer> t_61 = Core.listSortedInt(ints__0, fn__1);
+            |    List<Integer> t_65 = Core.listSortedInt(ints__0, fn__1);
             |    IntFunction<String> fn__2 = a__2 -> Integer.toString(a__2);
-            |    String t_63 = Core.listJoinInt(t_61, ", ", fn__2);
-            |    console_10.log(t_63);
+            |    String t_67 = Core.listJoinInt(t_65, ", ", fn__2);
+            |    console_10.log(t_67);
             |    IntFunction<String> fn__3 = a__3 -> Integer.toString(a__3);
-            |    String t_66 = Core.listJoinInt(builder__0, ", ", fn__3);
-            |    console_10.log(t_66);
+            |    String t_70 = Core.listJoinInt(builder__0, ", ", fn__3);
+            |    console_10.log(t_70);
             |}
             |static {
             |    console_10 = Core.getConsole(Logger.getLogger("my_test_library.test"));

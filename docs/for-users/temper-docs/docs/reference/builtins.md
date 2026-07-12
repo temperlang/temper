@@ -513,296 +513,11 @@ The prefix `!` operator performs [*Boolean*](types.md#type-Boolean) inverse.
 
 <!-- /snippet: builtin/!= -->
 
-<!-- snippet: builtin/%25 : operator `%` -->
-
-<a name="builtin&#45;&#37;25" class="snippet-anchor-name"></a>
-
-### Remainder `%`
-Given two [*Int32*](types.md#type-Int32)s it produces an *Int*,
-given two [*Int64*](types.md#type-Int64)s it produces an *Int64*,
-and given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/0 -->
-
-```temper
-13   % 3   == 1    &&
-13.0 % 3.0 == 1.0
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/0 -->
-
-Division by Zero [bubbles](types.md#type-Bubble)
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/1 -->
-
-```temper
-(1 % 0) orelse console.log("mod by zero");
-//!outputs "mod by zero"
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/1 -->
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/2 -->
-
-```temper
-(1.0 % 0.0) orelse console.log("mod by zero");
-//!outputs "mod by zero"
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/2 -->
-
-<!-- /snippet: builtin/%25 -->
-
-<!-- snippet: builtin/& : `&` -->
-
-<a name="builtin&#45;&amp;" class="snippet-anchor-name"></a>
-
-### Operator `&`
-The `&` operator can be applied in two ways:
-
-- To [*Int32*](types.md#type-Int32)s it acts as a [bitwise operator](#bitwise-and).
-- To types it produces an [intersection type](#type-intersection-fn)
-
-<!-- snippet: bitwise-and -->
-
-<a name="bitwise&#45;and" class="snippet-anchor-name"></a>
-
-#### *Int* `&`
-
-Takes two [*Int32*](types.md#type-Int32)s or two [*Int64*](types.md#type-Int64)s and returns the
-integer that has any bit set that is set in both inputs.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/bitwise-and/snippet.md/0 -->
-
-```temper
-// Using binary number syntax
-(0b0010101 &
- 0b1011011) ==
- 0b0010001
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/bitwise-and/snippet.md/0 -->
-
-<!-- /snippet: bitwise-and -->
-
-<!-- snippet: type/intersection-fn : type `&` -->
-
-<a name="type&#45;intersection&#45;fn" class="snippet-anchor-name"></a>
-
-#### Intersection type bound `&`
-
-When the `&` operator is applied to types instead of numbers, it constructs
-an intersection type bound.
-
-An intersection type bound specifies that the bounded type is a sub-type of each of its members.
-So a value of a type that `extends I & J` declares a type can be assigned to a type `I` **and** can be assigned a declaration with type `J`.
-See also [snippet/type/relationships](types.md#type-relationships).
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/type/intersection-fn/snippet.md/0 -->
-
-```temper
-interface A {
-  a(): Void {}
-}
-interface B {
-  b(): Void {}
-}
-
-class C extends A & B {}
-
-let c: C = new C();
-let a: A = c;
-let b: B = c;
-
-let f<T extends A & B>(t: T): Void {
-  let a: A = t;
-  let b: B = t;
-  a.a();
-  b.b();
-}
-f<C>(c);
-// ✅ null
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/type/intersection-fn/snippet.md/0 -->
-
-<!-- /snippet: type/intersection-fn -->
-
-<!-- /snippet: builtin/& -->
-
-<!-- snippet: builtin/%2A : operator `*` -->
-
-<a name="builtin&#45;&#42;" class="snippet-anchor-name"></a>
-
-### Multiplication `*`
-Infix `*` allows multiplying numbers.
-
-Given two [*Int32*](types.md#type-Int32)s it produces an *Int*, given two [*Int64*](types.md#type-Int64)s it
-produces an *Int64*, and given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2a/snippet.md/0 -->
-
-```temper
-3   * 4   == 12   &&
-3.0 * 4.0 == 12.0
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2a/snippet.md/0 -->
-
-<!-- /snippet: builtin/* -->
-
-<!-- snippet: builtin/%2A%2A : operator `**` -->
-
-<a name="builtin&#45;&#42;&#42;" class="snippet-anchor-name"></a>
-
-### Exponentiation `**`
-Infix `**` allows raising one number to the power of another.
-
-Given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2a$2a/snippet.md/0 -->
-
-```temper
-3.0 **  2.0 == 9.0 &&
-4.0 ** -0.5 == 0.5
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2a$2a/snippet.md/0 -->
-
-<!-- /snippet: builtin/** -->
-
-<!-- snippet: builtin/- -->
-
-<a name="builtin&#45;&#45;" class="snippet-anchor-name"></a>
-
-### `-`
-The builtin `-` operator has six variants like [`+`](#builtin-%2B).
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/0 -->
-
-```temper
-3   - 1   == 2   &&
-3.0 - 1.0 == 2.0 &&
--3        <  0   &&
--3.0      <  0.0
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/0 -->
-
-As with `+`, you cannot mix [*Int32*](types.md#type-Int32) and [*Float64*](types.md#type-Float64) inputs:
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/1 -->
-
-```temper
-1 + 1.0
-// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!, No accessible member infix nym`+` in type Int32!
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/1 -->
-
-The `-` operator is left-associative:
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/2 -->
-
-```temper
-1 - 1 - 1 == (1 - 1) - 1 &&
-1 - 1 - 1 == -1
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/2 -->
-
-Since there is a [`--` operator](#builtin---) operator, `--x` is not a negation of a negation.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/3 -->
-
-```temper
-var x = 1;
-+x == -(-x) &&  // double negation is identity
---x == 0        // but two adjacent `-` means pre-decrement
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/3 -->
-
-<!-- /snippet: builtin/- -->
-
-<!-- snippet: builtin/%2F : operator `/` -->
-
-<a name="builtin&#45;&#37;2F" class="snippet-anchor-name"></a>
-
-### Division `/`
-Infix `/` allows dividing numbers.
-
-Given two [*Int32*](types.md#type-Int32)s it produces an *Int*, given two [*Int64*](types.md#type-Int64)s it
-produces an *Int64*, and given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/0 -->
-
-```temper
-12   / 3   == 4    &&
-12.0 / 3.0 == 4.0
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/0 -->
-
-Integer division [rounds towards zero].
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/1 -->
-
-```temper
- 7   / 2   ==  3   &&
--7   / 2   == -3   &&
- 7.0 / 2.0 ==  3.5 &&
--7.0 / 2.0 == -3.5
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/1 -->
-
-Division by zero has [*Bubble*](types.md#type-Bubble).
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/2 -->
-
-```temper
-(1 / 0) orelse console.log("div by zero");
-//!outputs "div by zero"
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/2 -->
-
-Float64 division by zero is a *Bubble* too.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/3 -->
-
-```temper
-console.log("${ (0.0 /  0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
-console.log("${ (1.0 /  0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
-console.log("${ (1.0 / -0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/3 -->
-
-[IEEE-754]: https://en.wikipedia.org/wiki/IEEE_754
-[rounds towards zero]: https://en.wikipedia.org/wiki/Rounding#Rounding_toward_zero
-
-<!-- /snippet: builtin/%2F -->
-
 <!-- snippet: builtin/< -->
 
 <a name="builtin&#45;&lt;" class="snippet-anchor-name"></a>
 
-### `<`
+### Operator `<`, less-than
 `a < b` is [*true*](#builtin-true) when *a* orders before *b*, and is a compile-time error
 if the two are not mutually comparable.
 
@@ -895,34 +610,6 @@ To avoid confusion, just put spaces around all your infix operators.
 <!-- /snippet: syntax/less-than-space-sensitivity -->
 
 <!-- /snippet: builtin/< -->
-
-<!-- snippet: builtin/<< : `<<` -->
-
-<a name="builtin&#45;&lt;&lt;" class="snippet-anchor-name"></a>
-
-### Operator `<<`
-The left shift (`<<`) operator takes an [*Int32*](types.md#type-Int32) or a
-[*Int64*](types.md#type-Int64) to shift and an [*Int32*](types.md#type-Int32) which is
-the number of bits to shift by.
-
-All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
-operand are ignored.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3c$3c/snippet.md/0 -->
-
-```temper
-// Using binary number syntax
-(0b0000_0001_0101 << 3) ==
-//        / _/ /
-//       / /  /
-//      / /  /
- 0b0000_1010_1000
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3c$3c/snippet.md/0 -->
-
-<!-- /snippet: builtin/<< -->
 
 <!-- snippet: builtin/<= -->
 
@@ -1117,92 +804,6 @@ especially the [General Comparison Caveats](#general-comparison-caveats).
 
 <!-- /snippet: builtin/>= -->
 
-<!-- snippet: builtin/>> : `>>` -->
-
-<a name="builtin&#45;&gt;&gt;" class="snippet-anchor-name"></a>
-
-### Operator `>>`
-The right shift (`>>`) operator takes an [*Int32*](types.md#type-Int32) or a
-[*Int64*](types.md#type-Int64) to shift and an [*Int32*](types.md#type-Int32) which is
-the number of bits to shift by.
-
-All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
-operand are ignored.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e/snippet.md/0 -->
-
-```temper
-// Using binary number syntax
-(0b0000_1010_1010 >> 3) ==
-//       \ \_ \ \
-//        \  \ \ *
-//         \  \ \
- 0b0000_0001_0101
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e/snippet.md/0 -->
-
-Unlike the [`>>>`](#builtin->>>) operator, this operator is sign extending.
-When shifting right by *n* bits, the *n* highest bits in the output are copied
-from the most-significant bit in the input.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e/snippet.md/1 -->
-
-```temper
-(0x8000_0000_0000_0000 >> 2) ==
-// |\
-// |/\
- 0xE000_0000_0000_0000
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e/snippet.md/1 -->
-
-<!-- /snippet: builtin/>> -->
-
-<!-- snippet: builtin/>>> : `>>>` -->
-
-<a name="builtin&#45;&gt;&gt;&gt;" class="snippet-anchor-name"></a>
-
-### Operator `>>>`
-The right shift (`>>>`) operator takes an [*Int32*](types.md#type-Int32) or a
-[*Int64*](types.md#type-Int64) to shift and an [*Int32*](types.md#type-Int32) which is
-the number of bits to shift by.
-
-All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
-operand are ignored.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e$3e/snippet.md/0 -->
-
-```temper
-// Using binary number syntax
-(0b0000_1010_1010 >>> 3) ==
-//       \ \_ \ \
-//        \  \ \ *
-//         \  \ \
- 0b0000_0001_0101
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e$3e/snippet.md/0 -->
-
-Unlike the [`>>`](#builtin->>) operator, this operator is zero extending.
-When shifting right by *n* bits, the *n* highest bits in the output are copied
-from the most-significant bit in the input.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e$3e/snippet.md/1 -->
-
-```temper
-(0x8000_0000_0000_0000 >>> 2) ==
- 0x2000_0000_0000_0000
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e$3e/snippet.md/1 -->
-
-<!-- /snippet: builtin/>>> -->
-
 <!-- snippet: builtin/%3F -->
 
 <a name="builtin&#45;&#37;3F" class="snippet-anchor-name"></a>
@@ -1252,78 +853,171 @@ console.log(firstEven?.toString() ?? "so odd"); //!outputs "2"
 
 <!-- /snippet: builtin/%3F -->
 
-<!-- snippet: builtin/^ : `^` -->
-
-<a name="builtin&#45;&#94;" class="snippet-anchor-name"></a>
-
-### Operator `^`
-The bitwise-xor (`^`) operator takes two [*Int32*](types.md#type-Int32)s or
-two [*Int64*](types.md#type-Int64)s and returns an integer of the same size
-that has each bit set when the corresponding bits in the inputs
-are different.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/^/snippet.md/0 -->
-
-```temper
-// Using binary number syntax
-(0b1111_0000_1111_0000_1111_0000_1111_0000 ^
- 0b1010_1010_1010_1010_0101_0101_0101_0101) ==
- 0b0101_1010_0101_1010_1010_0101_1010_0101
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/^/snippet.md/0 -->
-
-<!-- /snippet: builtin/^ -->
-
-<!-- snippet: builtin/| : `|` -->
-
-<a name="builtin&#45;&#124;" class="snippet-anchor-name"></a>
-
-### Operator `|`
-The `|` operator performs bitwise union.
-
-It takes two [*Int32*](types.md#type-Int32)s or two [*Int64*](types.md#type-Int64)s and returns
-the integer of the same size that has any bit set that is set in either input.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$7c/snippet.md/0 -->
-
-```temper
-// Using binary number syntax
-(0b0010101 |
- 0b1011011) ==
- 0b1011111
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$7c/snippet.md/0 -->
-
-<!-- /snippet: builtin/| -->
-
-<!-- snippet: builtin/~ : `~` -->
-
-<a name="builtin&#45;&#37;7E" class="snippet-anchor-name"></a>
-
-### Operator `~`
-The `~` operator negates the bits in an integer.
-
-Given an [*Int32*](types.md#type-Int32) or [*Int64*](types.md#type-Int64) it returns the integer
-of the same size with the opposite bits.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%7E/snippet.md/0 -->
-
-```temper
-// Using binary number syntax
-~0b0000_0001_0010_0011_0100_0101_0110_0111 ==
- 0b1111_1110_1101_1100_1011_1010_1001_1000
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%7E/snippet.md/0 -->
-
-<!-- /snippet: builtin/%7E -->
-
 ## Operators
+
+<!-- snippet: builtin/%25 : operator `%` -->
+
+<a name="builtin&#45;&#37;25" class="snippet-anchor-name"></a>
+
+### Remainder `%`
+Given two [*Int32*](types.md#type-Int32)s it produces an *Int*,
+given two [*Int64*](types.md#type-Int64)s it produces an *Int64*,
+and given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/0 -->
+
+```temper
+13   % 3   == 1    &&
+13.0 % 3.0 == 1.0
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/0 -->
+
+Modulus by Zero [bubbles](types.md#type-Bubble)
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/1 -->
+
+```temper
+(1 % 0) orelse console.log("mod by zero");
+//!outputs "mod by zero"
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/1 -->
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/2 -->
+
+```temper
+(1.0 % 0.0) orelse console.log("mod by zero");
+//!outputs "mod by zero"
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/2 -->
+
+<!-- /snippet: builtin/%25 -->
+
+<!-- snippet: builtin/& : `&` -->
+
+<a name="builtin&#45;&amp;" class="snippet-anchor-name"></a>
+
+### Operator `&`, bitwise and
+The `&` operator can be applied in two ways:
+
+- To [*Int32*](types.md#type-Int32)s it acts as a [bitwise operator](#bitwise-and).
+- To types it produces an [intersection type](#type-intersection-fn)
+
+<!-- snippet: bitwise-and -->
+
+<a name="bitwise&#45;and" class="snippet-anchor-name"></a>
+
+#### *Int* `&`
+
+Takes two [*Int32*](types.md#type-Int32)s or two [*Int64*](types.md#type-Int64)s and returns the
+integer that has any bit set that is set in both inputs.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/bitwise-and/snippet.md/0 -->
+
+```temper
+// Using binary number syntax
+(0b0010101 &
+ 0b1011011) ==
+ 0b0010001
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/bitwise-and/snippet.md/0 -->
+
+<!-- /snippet: bitwise-and -->
+
+<!-- snippet: type/intersection-fn : type `&` -->
+
+<a name="type&#45;intersection&#45;fn" class="snippet-anchor-name"></a>
+
+#### Intersection type bound `&`
+
+When the `&` operator is applied to types instead of numbers, it constructs
+an intersection type bound.
+
+An intersection type bound specifies that the bounded type is a sub-type of each of its members.
+So a value of a type that `extends I & J` declares a type can be assigned to a type `I` **and** can be assigned a declaration with type `J`.
+See also [snippet/type/relationships](types.md#type-relationships).
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/type/intersection-fn/snippet.md/0 -->
+
+```temper
+interface A {
+  a(): Void {}
+}
+interface B {
+  b(): Void {}
+}
+
+class C extends A & B {}
+
+let c: C = new C();
+let a: A = c;
+let b: B = c;
+
+let f<T extends A & B>(t: T): Void {
+  let a: A = t;
+  let b: B = t;
+  a.a();
+  b.b();
+}
+f<C>(c);
+// ✅ null
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/type/intersection-fn/snippet.md/0 -->
+
+<!-- /snippet: type/intersection-fn -->
+
+<!-- /snippet: builtin/& -->
+
+<!-- snippet: builtin/%2A : operator `*` -->
+
+<a name="builtin&#45;&#42;" class="snippet-anchor-name"></a>
+
+### Multiplication `*`
+Infix `*` allows multiplying numbers.
+
+Given two [*Int32*](types.md#type-Int32)s it produces an *Int*, given two [*Int64*](types.md#type-Int64)s it
+produces an *Int64*, and given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2a/snippet.md/0 -->
+
+```temper
+3   * 4   == 12   &&
+3.0 * 4.0 == 12.0
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2a/snippet.md/0 -->
+
+<!-- /snippet: builtin/* -->
+
+<!-- snippet: builtin/%2A%2A : operator `**` -->
+
+<a name="builtin&#45;&#42;&#42;" class="snippet-anchor-name"></a>
+
+### Exponentiation `**`
+Infix `**` allows raising one number to the power of another.
+
+Given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2a$2a/snippet.md/0 -->
+
+```temper
+3.0 **  2.0 == 9.0 &&
+4.0 ** -0.5 == 0.5
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2a$2a/snippet.md/0 -->
+
+<!-- /snippet: builtin/** -->
 
 <!-- snippet: builtin/+ -->
 
@@ -1374,6 +1068,312 @@ As explained above, you cannot mix [*Int32*](types.md#type-Int32) and
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/2 -->
 
 <!-- /snippet: builtin/%2B -->
+
+<!-- snippet: builtin/- -->
+
+<a name="builtin&#45;&#45;" class="snippet-anchor-name"></a>
+
+### `-`
+The builtin `-` operator has six variants like [`+`](#builtin-%2B).
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/0 -->
+
+```temper
+3   - 1   == 2   &&
+3.0 - 1.0 == 2.0 &&
+-3        <  0   &&
+-3.0      <  0.0
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/0 -->
+
+As with `+`, you cannot mix [*Int32*](types.md#type-Int32) and [*Float64*](types.md#type-Float64) inputs:
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/1 -->
+
+```temper
+1 + 1.0
+// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!, No accessible member infix nym`+` in type Int32!
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/1 -->
+
+The `-` operator is left-associative:
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/2 -->
+
+```temper
+1 - 1 - 1 == (1 - 1) - 1 &&
+1 - 1 - 1 == -1
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/2 -->
+
+Since there is a [`--` operator](#builtin---) operator, `--x` is not a negation of a negation.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/3 -->
+
+```temper
+var x = 1;
++x == -(-x) &&  // double negation is identity
+--x == 0        // but two adjacent `-` means pre-decrement
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/3 -->
+
+<!-- /snippet: builtin/- -->
+
+<!-- snippet: builtin/%2F : operator `/` -->
+
+<a name="builtin&#45;&#37;2F" class="snippet-anchor-name"></a>
+
+### Division `/`
+Infix `/` allows dividing numbers.
+
+Given two [*Int32*](types.md#type-Int32)s it produces an *Int*, given two [*Int64*](types.md#type-Int64)s it
+produces an *Int64*, and given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/0 -->
+
+```temper
+12   / 3   == 4    &&
+12.0 / 3.0 == 4.0
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/0 -->
+
+Integer division [rounds towards zero].
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/1 -->
+
+```temper
+ 7   / 2   ==  3   &&
+-7   / 2   == -3   &&
+ 7.0 / 2.0 ==  3.5 &&
+-7.0 / 2.0 == -3.5
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/1 -->
+
+Division by zero has [*Bubble*](types.md#type-Bubble).
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/2 -->
+
+```temper
+(1 / 0) orelse console.log("div by zero");
+//!outputs "div by zero"
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/2 -->
+
+Float64 division by zero is a *Bubble* too.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/3 -->
+
+```temper
+console.log("${ (0.0 /  0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
+console.log("${ (1.0 /  0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
+console.log("${ (1.0 / -0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/3 -->
+
+[IEEE-754]: https://en.wikipedia.org/wiki/IEEE_754
+[rounds towards zero]: https://en.wikipedia.org/wiki/Rounding#Rounding_toward_zero
+
+<!-- /snippet: builtin/%2F -->
+
+<!-- snippet: builtin/<< : `<<` -->
+
+<a name="builtin&#45;&lt;&lt;" class="snippet-anchor-name"></a>
+
+### Operator `<<`, shift left
+The left shift (`<<`) operator takes an [*Int32*](types.md#type-Int32) or a
+[*Int64*](types.md#type-Int64) to shift and an [*Int32*](types.md#type-Int32) which is
+the number of bits to shift by.
+
+All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
+operand are ignored.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3c$3c/snippet.md/0 -->
+
+```temper
+// Using binary number syntax
+(0b0000_0001_0101 << 3) ==
+//        / _/ /
+//       / /  /
+//      / /  /
+ 0b0000_1010_1000
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3c$3c/snippet.md/0 -->
+
+<!-- /snippet: builtin/<< -->
+
+<!-- snippet: builtin/>> : `>>` -->
+
+<a name="builtin&#45;&gt;&gt;" class="snippet-anchor-name"></a>
+
+### Operator `>>`, shift right
+The right shift (`>>`) operator takes an [*Int32*](types.md#type-Int32) or a
+[*Int64*](types.md#type-Int64) to shift and an [*Int32*](types.md#type-Int32) which is
+the number of bits to shift by.
+
+All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
+operand are ignored.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e/snippet.md/0 -->
+
+```temper
+// Using binary number syntax
+(0b0000_1010_1010 >> 3) ==
+//       \ \_ \ \
+//        \  \ \ *
+//         \  \ \
+ 0b0000_0001_0101
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e/snippet.md/0 -->
+
+Unlike the [`>>>`](#builtin->>>) operator, this operator is sign extending.
+When shifting right by *n* bits, the *n* highest bits in the output are copied
+from the most-significant bit in the input.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e/snippet.md/1 -->
+
+```temper
+(0x8000_0000_0000_0000 >> 2) ==
+// |\
+// |/\
+ 0xE000_0000_0000_0000
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e/snippet.md/1 -->
+
+<!-- /snippet: builtin/>> -->
+
+<!-- snippet: builtin/>>> : `>>>` -->
+
+<a name="builtin&#45;&gt;&gt;&gt;" class="snippet-anchor-name"></a>
+
+### Operator `>>>`, shift right (zero extending)
+The right shift (`>>>`) operator takes an [*Int32*](types.md#type-Int32) or a
+[*Int64*](types.md#type-Int64) to shift and an [*Int32*](types.md#type-Int32) which is
+the number of bits to shift by.
+
+All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
+operand are ignored.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e$3e/snippet.md/0 -->
+
+```temper
+// Using binary number syntax
+(0b0000_1010_1010 >>> 3) ==
+//       \ \_ \ \
+//        \  \ \ *
+//         \  \ \
+ 0b0000_0001_0101
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e$3e/snippet.md/0 -->
+
+Unlike the [`>>`](#builtin->>) operator, this operator is zero extending.
+When shifting right by *n* bits, the *n* highest bits in the output are copied
+from the most-significant bit in the input.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e$3e/snippet.md/1 -->
+
+```temper
+(0x8000_0000_0000_0000 >>> 2) ==
+ 0x2000_0000_0000_0000
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e$3e/snippet.md/1 -->
+
+<!-- /snippet: builtin/>>> -->
+
+<!-- snippet: builtin/^ : `^` -->
+
+<a name="builtin&#45;&#94;" class="snippet-anchor-name"></a>
+
+### Operator `^`, bitwise-xor
+The bitwise-xor (`^`) operator takes two [*Int32*](types.md#type-Int32)s or
+two [*Int64*](types.md#type-Int64)s and returns an integer of the same size
+that has each bit set when the corresponding bits in the inputs
+are different.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/^/snippet.md/0 -->
+
+```temper
+// Using binary number syntax
+(0b1111_0000_1111_0000_1111_0000_1111_0000 ^
+ 0b1010_1010_1010_1010_0101_0101_0101_0101) ==
+ 0b0101_1010_0101_1010_1010_0101_1010_0101
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/^/snippet.md/0 -->
+
+<!-- /snippet: builtin/^ -->
+
+<!-- snippet: builtin/| : `|` -->
+
+<a name="builtin&#45;&#124;" class="snippet-anchor-name"></a>
+
+### Operator `|`, bitwise or
+The `|` operator performs bitwise union.
+
+It takes two [*Int32*](types.md#type-Int32)s or two [*Int64*](types.md#type-Int64)s and returns
+the integer of the same size that has any bit set that is set in either input.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$7c/snippet.md/0 -->
+
+```temper
+// Using binary number syntax
+(0b0010101 |
+ 0b1011011) ==
+ 0b1011111
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$7c/snippet.md/0 -->
+
+<!-- /snippet: builtin/| -->
+
+<!-- snippet: builtin/~ : `~` -->
+
+<a name="builtin&#45;&#37;7E" class="snippet-anchor-name"></a>
+
+### Operator `~`, bitwise inverse
+The `~` operator negates the bits in an integer.
+
+Given an [*Int32*](types.md#type-Int32) or [*Int64*](types.md#type-Int64) it returns the integer
+of the same size with the opposite bits.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%7E/snippet.md/0 -->
+
+```temper
+// Using binary number syntax
+~0b0000_0001_0010_0011_0100_0101_0110_0111 ==
+ 0b1111_1110_1101_1100_1011_1010_1001_1000
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%7E/snippet.md/0 -->
+
+<!-- /snippet: builtin/%7E -->
 
 ## Types
 
@@ -3843,16 +3843,15 @@ there is an [`is`](#builtin-is) clause for each known subtype,
 there is no need for an `else` clause.
 
 !!! note "Backwards compatibility note"
-    If you add a sub-type to an existing sealed type, this may break code that
-    uses the old version of the sealed type with a [`when`](#builtin-when) or
-    which otherwise embeds an "is none of those subtypes, therefore is this subtype"
-    assumption.
+    Adding a subtype to an existing sealed type may break code that
+    uses the old version of the sealed type. [`when`](#builtin-when) expressions
+    are at risk, but so is other code that assumes
+    "none of those subtypes, therefore, this subtype."
 
 Backends should translate user-defined sealed types to [sum type]s
 where available, and may insert tagged union tag field where needed.
 
 [sum type]: https://en.wikipedia.org/wiki/Tagged_union
-[tagged union]: https://en.wikipedia.org/wiki/Tagged_union
 
 <!-- /snippet: builtin/@sealed -->
 
@@ -3861,7 +3860,7 @@ where available, and may insert tagged union tag field where needed.
 <a name="builtin&#45;&#64;static" class="snippet-anchor-name"></a>
 
 ### `@static` decorator
-`@static` may decorate a type members, and indicates that the member is associated
+`@static` may decorate type members, and indicates that the member is associated
 with the containing type, not with any instance of that type.
 
 It is a [legacy decorator](#legacy-decorator), so the `static` keyword

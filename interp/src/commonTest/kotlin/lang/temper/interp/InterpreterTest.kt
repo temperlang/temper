@@ -176,7 +176,7 @@ class InterpreterTest {
                     }
                     """,
                     input = """${lSign}0.0 / ${rSign}0.0""",
-                    // Presumably we shouldn't have these type errors, but we do at present.
+                    // Presumably, we shouldn't have these type errors, but we do at present.
                     expectedFailLog = """
                     f.t:1+0-11: Interpreting
                         ${lSign}0.0 / ${rSign}0.0
@@ -902,7 +902,7 @@ class InterpreterTest {
             continueCondition,
         )
 
-        // Wrapping an AST in a block solves lots of problems; e.g. macro calls always have an
+        // Wrapping an AST in a block solves lots of problems; e.g., macro calls always have an
         // incoming edge to hold their expansion.  The compiler does this so that we don't miss
         // coverage by not wrapping.
         val root = BlockTree.wrap(ast)
@@ -1009,7 +1009,7 @@ class InterpreterTest {
     }
 
     private fun makeContinueCondition(): ContinueCondition {
-        // Take fewer than 10000 steps.
+        // Take fewer than 10_000 steps.
         var thousandsLeft = 10
         return ContinueCondition {
             if (thousandsLeft > 0) {

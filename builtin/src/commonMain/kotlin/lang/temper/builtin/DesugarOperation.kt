@@ -116,7 +116,7 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
             // so that evaluation of them can work even before Implicits.temper has staged
             // to the point where we can dispatch to methods on well-known types'.
             val builtins = builtinOperatorSpecs[operatorSpecifier] ?: listOf()
-            if (call != null && operatorSpecifier != null) {
+            if (call?.incoming != null && operatorSpecifier != null) {
                 val exts = builtins.map { FunctionResolution(it) }
                 val helper = DotHelper(ExternalCall, OperatorMember(operatorSpecifier), exts)
                 val vHelper = Value(helper)

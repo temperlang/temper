@@ -802,17 +802,16 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeAfter: ```
                 |    let return__0;
-                |    var t#0;
                 |    let console#0;
                 |    console#0 = doPure(@stay fn /* return__1 */: Console {
                 |        return__1 = getConsole();
                 |    });
                 |    @fn let f__0;
                 |    f__0 = (@stay fn f(a__0 /* aka a */: Int32, b__0 /* aka b */: Int32) /* return__2 */: Void {
-                |        var t#1;
+                |        var t#0;
                 |        fn__0: do {
-                |          t#1 = do_call_toString(a__0 + b__0);
-                |          do_call_log(console#0, t#1);
+                |          t#0 = do_call_toString(a__0 + b__0);
+                |          do_call_log(console#0, t#0);
                 |          return__2 = void
                 |        }
                 |    });
@@ -825,11 +824,12 @@ class CleanupTemporariesTest {
                 |        return__3 = x__0
                 |      }
                 |    };
+                |    var t#1;
                 |    f__0(incr__0(), x__0);
                 |## Ok to inline the first call. It does not cross x__0
-                |    t#0 = incr__0();
+                |    t#1 = incr__0();
                 |## This is not inlined across x__0
-                |    f__0(x__0, t#0);
+                |    f__0(x__0, t#1);
                 |    return__0 = void
                 |
                 |    ```,
@@ -911,10 +911,8 @@ class CleanupTemporariesTest {
                 |    let x__0;
                 |    t#1 = 0;
                 |    `test//`.f = fn f /* return__2 */: Void {
-                |      var t#2;
                 |      fn__0: do {
-                |        t#2 = t#1 + 1;
-                |        t#1 = t#2;
+                |        t#1 = t#1 + 1;
                 |        return__2 = void
                 |      }
                 |    };
@@ -1133,36 +1131,37 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeBefore: ```
                 |      let return__0;
-                |      var t#0, t#1, t#2, fail#0, x__0: Int32;
+                |      var t#0, t#1, t#2, t#3, fail#0, fail#1, x__0: Int32;
                 |      x__0 = 10;
-                |      x__0 = x__0 * 3;
-                |      t#0 = hs(fail#0, x__0 / 5);
+                |      t#0 = x__0 * 3;
+                |      x__0 = t#0;
+                |      t#1 = hs(fail#1, x__0 / 5);
                 |## This used to have compound assignment `t#0 = (x__0 = x__0 * 3);` but we no longer produce it.
                 |## TODO Some other way to conjure one for testing?
-                |      if (fail#0) {
+                |      if (fail#1) {
                 |        bubble()
                 |      };
-                |      x__0 = t#0;
-                |      t#1 = x__0;
-                |      t#2 = t#1;
-                |      return__0 = t#2
+                |      x__0 = t#1;
+                |      t#2 = x__0;
+                |      t#3 = t#2;
+                |      return__0 = t#3
                 |
                 |      ```,
                 |
                 |  pseudoCodeAfter: ```
                 |      let return__0;
-                |      var t#0;
-                |      var fail#0, x__0: Int32;
+                |      var t#1;
+                |      var fail#1, x__0: Int32;
                 |      x__0 = 10;
                 |      x__0 = x__0 * 3;
                 |## We don't rewrite the `t#0 =` below currently because
                 |## x__0 is a multiply assigned var.  We could fix that by
                 |## recognizing that x__0 has one live write.
-                |      t#0 = hs(fail#0, x__0 / 5);
-                |      if (fail#0) {
+                |      t#1 = hs(fail#1, x__0 / 5);
+                |      if (fail#1) {
                 |        bubble()
                 |      };
-                |      x__0 = t#0;
+                |      x__0 = t#1;
                 |      return__0 = x__0;
                 |
                 |      ```
@@ -1357,7 +1356,8 @@ class CleanupTemporariesTest {
                 |    ```,
                 |
                 |  pseudoCodeAfter: ```
-                |    var t#0, t#1, t#2, t#3;
+                |    var t#0, t#1;
+                |    var t#3;
                 |    var fail#3;
                 |    t#0 = doPure(@stay fn /* return__0 */: Console {
                 |        return__0 = getConsole();
@@ -1367,8 +1367,7 @@ class CleanupTemporariesTest {
                 |      if (fail#3) {
                 |        break orelse#1;
                 |      };
-                |      t#2 = do_call_toString(t#1);
-                |      t#3 = t#2
+                |      t#3 = do_call_toString(t#1)
                 |    } orelse {
                 |      t#3 = "Bubble"
                 |    };

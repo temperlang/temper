@@ -2410,7 +2410,7 @@ class SyntaxMacroStageTest {
             |            do {
             |              let t#1;
             |              t#1 = c;
-            |              leftHandOf(t#1.x, t#1.x * 2)
+            |              leftHandOf(t#1.x, (nym`do_call__*_`[TimesIntInt, TimesIntInt64, TimesFltFlt])(t#1.x, 2))
             |            };
             |            console.log(c.x);
             |        })
@@ -2438,7 +2438,7 @@ class SyntaxMacroStageTest {
             |              t#1 = c__0;
             |              do {
             |                let t#3;
-            |                do_set_x(t#1, t#3 = do_get_x(t#1) * 2);
+            |                do_set_x(t#1, t#3 = (nym`do_call__*_`[TimesIntInt, TimesIntInt64, TimesFltFlt])(do_get_x(t#1), 2));
             |                t#3
             |              }
             |            };
@@ -2478,7 +2478,7 @@ class SyntaxMacroStageTest {
             |            do {
             |              let t#1;
             |              t#1 = b;
-            |              t#1.set(1, t#1.get(1) * 2)
+            |              t#1.set(1, (nym`do_call__*_`[TimesIntInt, TimesIntInt64, TimesFltFlt])(t#1.get(1), 2))
             |            };
             |            b.toList()
             |        });
@@ -2497,7 +2497,7 @@ class SyntaxMacroStageTest {
             |            do {
             |              let t#1;
             |              t#1 = b__0;
-            |              do_call_set(t#1, 1, do_call_get(t#1, 1) * 2)
+            |              do_call_set(t#1, 1, (nym`do_call__*_`[TimesIntInt, TimesIntInt64, TimesFltFlt])(do_call_get(t#1, 1), 2))
             |            };
             |            do_call_toList(b__0)
             |        });
@@ -2506,5 +2506,30 @@ class SyntaxMacroStageTest {
             |  },
             |}
         """.trimMargin(),
+    )
+
+    @Test
+    fun nestedArithmetic() = assertModuleAtStage(
+        input = """
+            |export let negStr(x: Int32): String {
+            |  (-1 * x).toString()
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  syntaxMacro: {
+            |    body: ```
+            |        @fn let `test//`.negStr;
+            |        `test//`.negStr = fn negStr(x__0 /* aka x */: Int32) /* return__0 */: (String) {
+            |          fn__0: do {
+            |            do_call_toString(-1 * x__0)
+            |          }
+            |        };
+            |
+            |        ```
+            |  }
+            |}
+        """.trimMargin(),
+        stage = Stage.SyntaxMacro,
     )
 }
