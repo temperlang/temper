@@ -1,6 +1,7 @@
 package lang.temper.frontend
 
 import lang.temper.ast.TreeVisit
+import lang.temper.builtin.BuiltinLogicalOperators
 import lang.temper.value.BlockTree
 import lang.temper.value.LinearFlow
 import lang.temper.value.StructuredFlow
@@ -32,6 +33,7 @@ internal fun simplifyFlow(
                         flow = flow,
                         assumeAllJumpsResolved = assumeAllJumpsResolved,
                         assumeResultsCaptured = assumeResultsCaptured,
+                        logicalOperators = BuiltinLogicalOperators,
                     )
                 }
             }

@@ -10,10 +10,17 @@ import lang.temper.name.BuiltinName
 import lang.temper.type.MkType
 import lang.temper.type.WellKnownTypes
 
+/** The operators are defined in BuiltinFuns, so not accessible from this file :( */
+interface LogicalOperators {
+    fun notFn(doc: Document, pos: Position): LeafTree
+    fun andFn(doc: Document, pos: Position): LeafTree
+    fun orFn(doc: Document, pos: Position): LeafTree
+}
+
 /**
  * Replaces a block child with an expression that is the logical inverse of it.
  */
-fun BlockChildReference.invertLogicalExpr(parentBlock: BlockTree) {
+fun BlockChildReference.invertLogicalExpr(parentBlock: BlockTree, operators: LogicalOperators) {
     val doc = parentBlock.document
     val edge = parentBlock.dereference(this) ?: return
     val negation = LogicalAlgebra.not(logicalAlgebraFrom(edge.target))
@@ -47,12 +54,12 @@ fun BlockChildReference.invertLogicalExpr(parentBlock: BlockTree) {
         }
 
         override fun and(x: Position, operands: List<Tree>): Tree =
-            binaryChain(x, operands, andBuiltinName)
+            binaryChain(x, operands, operators::andFn)
 
         override fun or(x: Position, operands: List<Tree>): Tree =
-            binaryChain(x, operands, orBuiltinName)
+            binaryChain(x, operands, operators::orFn)
 
-        private fun binaryChain(pos: Position, operands: List<Tree>, operator: BuiltinName): Tree {
+        private fun binaryChain(pos: Position, operands: List<Tree>, operator: (Document, Position) -> LeafTree): Tree {
             check(operands.isNotEmpty())
             // Logical expressions are right associative, so the below are equivalent
             //
@@ -65,8 +72,9 @@ fun BlockChildReference.invertLogicalExpr(parentBlock: BlockTree) {
             while (i > 0) {
                 i -= 1
                 val next = freeTree(operands[i])
-                val operatorTree = RightNameLeaf(doc, t.pos.leftEdge, operator)
-                operatorTree.typeInferences = BasicTypeInferences(twoBoolsToBoolType, emptyList())
+                val operatorTree = operator(doc, t.pos.leftEdge)
+                (operatorTree as BasicTypeInferencesTree).typeInferences =
+                    BasicTypeInferences(twoBoolsToBoolType, emptyList())
                 val children = listOf(
                     operatorTree,
                     next,
@@ -89,8 +97,8 @@ fun BlockChildReference.invertLogicalExpr(parentBlock: BlockTree) {
         }
 
         override fun not(x: Position, operand: Tree): Tree {
-            val notFn = RightNameLeaf(doc, x.leftEdge, notBuiltinName)
-            notFn.typeInferences = BasicTypeInferences(oneBoolToBoolType, emptyList())
+            val notFn = operators.notFn(doc, x.leftEdge)
+            (notFn as BasicTypeInferencesTree).typeInferences = BasicTypeInferences(oneBoolToBoolType, emptyList())
             val call = CallTree(
                 doc,
                 x,
@@ -161,7 +169,3 @@ private fun logicalAlgebraFrom(
     }
     return Term(tree.pos, tree)
 }
-
-private val notBuiltinName = BuiltinName("!")
-private val andBuiltinName = BuiltinName("&&")
-private val orBuiltinName = BuiltinName("||")

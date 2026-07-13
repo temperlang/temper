@@ -1,6 +1,7 @@
 package lang.temper.value
 
 import lang.temper.builtin.BuiltinFuns
+import lang.temper.builtin.BuiltinLogicalOperators
 import lang.temper.common.LeftOrRight
 import lang.temper.common.assertStringsEqual
 import lang.temper.common.compatRemoveLast
@@ -57,6 +58,7 @@ class ControlFlowFuzzTest {
             block.flow as StructuredFlow,
             assumeAllJumpsResolved = false,
             assumeResultsCaptured = false,
+            logicalOperators = BuiltinLogicalOperators,
         )
         val simpleBlock = block.copy() as BlockTree
         simplifyStructuredBlock(
@@ -64,6 +66,7 @@ class ControlFlowFuzzTest {
             block.flow as StructuredFlow,
             assumeAllJumpsResolved = false,
             assumeResultsCaptured = true,
+            logicalOperators = BuiltinLogicalOperators,
         )
         val simplerBlock = block.copy() as BlockTree
         simplifyStructuredBlock(
@@ -71,6 +74,7 @@ class ControlFlowFuzzTest {
             block.flow as StructuredFlow,
             assumeResultsCaptured = true,
             assumeAllJumpsResolved = true,
+            logicalOperators = BuiltinLogicalOperators,
         )
         val simplestBlock = block.copy() as BlockTree
 

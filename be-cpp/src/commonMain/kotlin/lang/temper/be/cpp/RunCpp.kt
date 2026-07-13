@@ -60,7 +60,8 @@ fun runCpp(
 }
 
 object GppCommand : VersionedTool {
-    override val cliNames = listOf("g++")
+    override val cliNames = listOf("g++-16", "g++-15", "g++-14", "g++")
+    // On MacOS, g++ is an alias for clang, but the numbered ones are legit
 
     // `-dumpversion` prints just the version (e.g. "11.4.0"); older g++ may print only the
     // major number, so checkVersion normalizes to a full `major.minor.patch` before parsing.

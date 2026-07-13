@@ -99,7 +99,7 @@ internal object SetLocalFn : SpecialFunction, NamedBuiltinFun {
             args.keyTree(1) == null &&
             isDotGetCall(leftTree)
         ) {
-            // This completes work by SquareFn when rewriting `x[key] = newValue`.
+            // This completes work started by SquareFn when rewriting `x[key] = newValue`.
             // That macro leaves `x.get(key)`.  Here, we want to change that to `x.set(key)` and
             // to add the value tree to the end.
             val getLookup = leftTree.child(0) as CallTree

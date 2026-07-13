@@ -176,6 +176,7 @@ fun simplifyControlFlow(
      * results are stored in output variables.
      */
     assumeResultsCaptured: Boolean,
+    logicalOperators: LogicalOperators,
 ): StructuredFlow {
     val nameMaker = block.document.nameMaker
 
@@ -264,7 +265,7 @@ fun simplifyControlFlow(
                     var newThenClause = tTrimmed.simpler as ControlFlow.StmtBlock
                     var newElseClause = eTrimmed.simpler as ControlFlow.StmtBlock
                     if (newThenClause.isEmptyBlock() && !newElseClause.isEmptyBlock()) {
-                        cf.condition.invertLogicalExpr(block)
+                        cf.condition.invertLogicalExpr(block, logicalOperators)
                         val swap = newThenClause
                         newThenClause = newElseClause
                         newElseClause = swap
@@ -572,7 +573,7 @@ fun simplifyControlFlow(
                         checkPosition = LeftOrRight.Left
                         // `break` if the condition is false
                         // `if (!condition) { break }`
-                        condition.invertLogicalExpr(block)
+                        condition.invertLogicalExpr(block, logicalOperators)
                         if (bodyContinues || bodyFlows != Freq3.Never) {
                             conditionCheckAtEnd = ControlFlow.If(
                                 condition.pos,
@@ -907,12 +908,14 @@ fun simplifyStructuredBlock(
     flow: StructuredFlow,
     assumeAllJumpsResolved: Boolean,
     assumeResultsCaptured: Boolean,
+    logicalOperators: LogicalOperators,
 ) {
     val newFlow = simplifyControlFlow(
         block,
         flow.controlFlow,
         assumeAllJumpsResolved = assumeAllJumpsResolved,
         assumeResultsCaptured = assumeResultsCaptured,
+        logicalOperators = logicalOperators,
     )
     block.replaceFlow(newFlow)
 

@@ -1241,6 +1241,7 @@ class TypeStageTest {
             |      let return__2, @fn `test//`.multi, @fn `test//`.post;
             |      `test//`.multi = (@stay fn multi(a__0 /* aka a */: Int32?, b__0 /* aka b */: Int32?) /* return__0 */: Int32 {
             |          var t#0;
+            |          void;
             |          fn__0: do {
             |            if (!isNull(a__0)) {
             |              t#0 = !isNull(b__0)
@@ -1249,18 +1250,20 @@ class TypeStageTest {
             |            };
             |            if (t#0) {
             |              return__0 = a__0 * b__0;
+            |              void;
             |              break fn__0;
             |            };
             |            return__0 = 0
             |          }
             |      });
             |      `test//`.post = (@stay fn post(a__1 /* aka a */: Int32?) /* return__1 */: Int32 {
+            |          void;
             |          fn__1: do {
             |            if (isNull(a__1)) {
             |              return__1 = 0;
             |              break fn__1;
             |            };
-            |            return__1 = 2 * a__1
+            |            return__1 = 2 * a__1;
             |          }
             |      });
             |      return__2 = void
@@ -1766,7 +1769,7 @@ class TypeStageTest {
             |            let n__0;
             |            n__0 = new ListBuilder<Int32>();
             |            return__1 = do_call_map(n__0, @stay fn (it__0 /* aka it */) /* return__2 */: Int32 {
-            |                return__2 = 2 * it__0
+            |                return__2 = 2 * it__0;
             |            });
             |          }
             |      })

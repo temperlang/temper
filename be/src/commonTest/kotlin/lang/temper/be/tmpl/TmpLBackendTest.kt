@@ -1961,7 +1961,7 @@ class TmpLBackendTest {
                                 V(typeSymbol)
                                 V(Types.vFloat64)
                                 V(initSymbol)
-                                Call(BuiltinFuns.divFn) {
+                                Call(BuiltinFuns.divFloatFloatFn) {
                                     V(Value(0.0, TFloat64))
                                     V(Value(0.0, TFloat64))
                                 }

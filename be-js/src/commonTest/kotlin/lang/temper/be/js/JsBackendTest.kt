@@ -1808,8 +1808,7 @@ class JsBackendTest {
             |                  }
             |                  t_0 = netResponseGetContentType_0(r_0);
             |                  if (!(t_0 == null)) {
-            |                    const subjectHash7_0 = t_0;
-            |                    t_2 = subjectHash7_0;
+            |                    t_2 = t_0;
             |                  } else {
             |                    t_2 = "unknown";
             |                  }
@@ -1867,8 +1866,7 @@ class JsBackendTest {
             |          export function prod(i_0, j_0) {
             |            let t_0;
             |            if (!(j_0 == null)) {
-            |              const j_1 = j_0;
-            |              t_0 = j_1;
+            |              t_0 = j_0;
             |            } else {
             |              t_0 = 1;
             |            }
@@ -1883,8 +1881,7 @@ class JsBackendTest {
             |            let t_1;
             |            let t_2 = listedGet_0(j_2, 0);
             |            if (!(t_2 == null)) {
-            |              const subjectHash11_0 = t_2;
-            |              t_1 = subjectHash11_0;
+            |              t_1 = t_2;
             |            } else {
             |              t_1 = 1;
             |            }
@@ -1897,13 +1894,11 @@ class JsBackendTest {
             |          export function maybeLength(a_0) {
             |            let return_0;
             |            let t_3;
-            |            let t_4;
             |            if (a_0 == null) {
             |              return_0 = null;
             |            } else {
-            |              t_4 = a_0;
-            |              t_3 = t_4.length;
-            |              return_0 = stringCountBetween_0(t_4, 0, t_3);
+            |              t_3 = a_0;
+            |              return_0 = stringCountBetween_0(t_3, 0, t_3.length);
             |            }
             |            return return_0;
             |          };

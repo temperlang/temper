@@ -49,6 +49,7 @@ import lang.temper.value.MaximalPath
 import lang.temper.value.NameLeaf
 import lang.temper.value.Planting
 import lang.temper.value.PseudoCodeDetail
+import lang.temper.value.RightNameLeaf
 import lang.temper.value.StayLeaf
 import lang.temper.value.TBoolean
 import lang.temper.value.TEdge
@@ -72,7 +73,7 @@ import lang.temper.value.void
 
 private const val DEBUG = false
 
-@Suppress("SimplifyBooleanWithConstants", "KotlinConstantConditions")
+@Suppress("SimplifyBooleanWithConstants")
 private inline val Document.debugging get() = DEBUG && !this.isImplicits
 private inline fun Document.debug(message: () -> Any?) {
     if (debugging) {
@@ -308,7 +309,7 @@ internal class CleanupTemporaries private constructor(
                         }
 
                         // Now we have a range of assignments in chainStart..i
-                        // First, take the start of the chain, and assign the name to it.
+                        // First, take the start of the chain and assign the name to it.
                         val initalAssignmentEdge = elements[chainStart].edge!!
                         val namedName = secondLeft.content
                         val temporaryLeaves = (chainStart..<i).map {
@@ -351,7 +352,7 @@ internal class CleanupTemporaries private constructor(
         val editListBuilder = this
 
         // If there is a name x such that all reads of it are in writes to y, and there are no other
-        // writes to y, then we can either replace x with y.
+        // writes to y, then we can replace x with y.
         //
         //     x = 1;
         //     ...
@@ -401,7 +402,7 @@ internal class CleanupTemporaries private constructor(
         //   in which `x` and `y` are defined.
         //
         // For each such pair, we'll choose to eliminate either `x` or `y` or abort:
-        // - if `x` and `y` are both required name (see elsewhere), eliminate neither, else
+        // - if `x` and `y` are both required names (see elsewhere), eliminate neither, else
         // - if `x` is a required name, and `y` is not, eliminate `y`, else
         // - if `y` is a required name, and `x` is not, eliminate `x`, else
         // - if `x` is a Temporary and `y` is not, eliminate `x`, else
@@ -1179,10 +1180,8 @@ internal class CleanupTemporaries private constructor(
                     edgeToReplace.replace(edit.createReplacement)
                 }
 
-                is ReplaceRange -> {
-                    val createReplacement = edit.createReplacement
+                is ReplaceRange ->
                     edit.parent.replace(edit.range, edit.createReplacement)
-                }
 
                 is AddMetadata -> {
                     val decl = edit.decl
@@ -1648,7 +1647,8 @@ private fun mayReorderOver(t: Tree, readsAndWrites: ReadsAndWrites): Boolean = w
     }
     is EscTree -> false // conservatively
     is BlockTree -> t.children.all { mayReorderOver(it, readsAndWrites) }
-    is NameLeaf -> when (val nameAtLeaf = t.content) {
+    is LeftNameLeaf -> true
+    is RightNameLeaf -> when (val nameAtLeaf = t.content) {
         is StableTemperName -> true
         else -> { // If it's effectively const, its value can't be changed by reordering
             val decl = readsAndWrites.declarations[nameAtLeaf]?.soleElementOrNull

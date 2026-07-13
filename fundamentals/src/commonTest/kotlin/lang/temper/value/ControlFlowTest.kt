@@ -1,6 +1,7 @@
 package lang.temper.value
 
 import lang.temper.builtin.BuiltinFuns
+import lang.temper.builtin.BuiltinLogicalOperators
 import lang.temper.common.LeftOrRight
 import lang.temper.common.ListBackedLogSink
 import lang.temper.common.Log
@@ -528,7 +529,7 @@ class ControlFlowTest {
                             Stmt {
                                 Call(BuiltinFuns.setLocalFn) {
                                     Ln(total)
-                                    Call(BuiltinFuns.timesFn) {
+                                    Call(BuiltinFuns.timesIntIntFn) {
                                         Rn(total)
                                         Rn(a)
                                     }
@@ -1604,6 +1605,7 @@ class ControlFlowTest {
             block.flow as StructuredFlow,
             assumeAllJumpsResolved = false,
             assumeResultsCaptured = true,
+            logicalOperators = BuiltinLogicalOperators,
         )
         val simpler = snapshotBlock()
 
@@ -1612,6 +1614,7 @@ class ControlFlowTest {
             block.flow as StructuredFlow,
             assumeAllJumpsResolved = true,
             assumeResultsCaptured = true,
+            logicalOperators = BuiltinLogicalOperators,
         )
         val simplest = snapshotBlock()
 
@@ -1648,6 +1651,7 @@ class ControlFlowTest {
                         (block.flow as StructuredFlow).controlFlow,
                         assumeAllJumpsResolved = assume,
                         assumeResultsCaptured = false,
+                        logicalOperators = BuiltinLogicalOperators,
                     ),
                 )
             }

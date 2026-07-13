@@ -83,7 +83,7 @@ class CppBackendTest {
             |        content: ```
             |          #include <temper-core/core.hpp>
             |          namespace my_test_library {
-            |            int32_t t_10;
+            |            int32_t t_16;
             |            temper::core::Expected<int32_t> why(int32_t i) {
             |              int32_t return_;
             |              temper::core::Expected<int32_t> fail_5 = temper::core::div_checked(-2147483647 - 1, i);
@@ -104,11 +104,11 @@ class CppBackendTest {
             |            namespace {
             |              struct _Init1 {
             |                _Init1() {
-            |                  temper::core::Expected<int32_t> fail_6 = why(temper::core::neg(one));
-            |                  if( ! fail_6.has_value()) {
-            |                    throw std::logic_error(fail_6.error());
+            |                  temper::core::Expected<int32_t> fail_7 = why(temper::core::neg(one));
+            |                  if( ! fail_7.has_value()) {
+            |                    throw std::logic_error(fail_7.error());
             |                  }
-            |                  that = * fail_6;
+            |                  that = * fail_7;
             |                }
             |              };
             |              _Init1 _init1;
@@ -119,16 +119,16 @@ class CppBackendTest {
             |                _Init2() {
             |                  {
             |                    {
-            |                      temper::core::Expected<int32_t> fail_7 = why(temper::core::mul(0, one));
-            |                      if( ! fail_7.has_value())goto orelse_4;
-            |                      t_10 = * fail_7;
-            |                      other = t_10;
-            |                      goto ok_12;
+            |                      temper::core::Expected<int32_t> fail_9 = why(temper::core::mul(0, one));
+            |                      if( ! fail_9.has_value())goto orelse_4;
+            |                      t_16 = * fail_9;
+            |                      other = t_16;
+            |                      goto ok_18;
             |                    }
             |                    orelse_4 : {}
             |                    other = 0;
             |                  }
-            |                  ok_12 : {}
+            |                  ok_18 : {}
             |                }
             |              };
             |              _Init2 _init2;

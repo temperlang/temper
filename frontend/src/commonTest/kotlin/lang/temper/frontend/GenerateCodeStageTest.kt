@@ -622,22 +622,19 @@ class GenerateCodeStageTest {
         |      ```
         |      @fn @reach(\none) let f__0;
         |      f__0 = (@stay fn f(s__0 /* aka s */: String, a__0 /* aka a */: Int32?) /* return__1 */: String {
-        |          var t#0, t#1, t#2, t#3;
+        |          var t#0, t#1, t#2;
         |          if (isNull(a__0)) {
-        |            t#1 = "null"
+        |            t#0 = "null"
         |          } else {
-        |            t#0 = do_call_toString(notNull(a__0));
-        |            t#1 = t#0
+        |            t#0 = do_call_toString(notNull(a__0))
         |          };
         |          if (!isNull(a__0)) {
-        |            let a#0;
-        |            a#0 = notNull(a__0);
-        |            t#3 = a#0
+        |            t#2 = notNull(a__0)
         |          } else {
-        |            t#3 = -1
+        |            t#2 = -1
         |          };
-        |          t#2 = do_call_toString(t#3);
-        |          return__1 = cat(s__0, t#1, t#2)
+        |          t#1 = do_call_toString(t#2);
+        |          return__1 = cat(s__0, t#0, t#1)
         |      })
         |
         |      ```
@@ -1823,27 +1820,28 @@ class GenerateCodeStageTest {
             |      g__0 = fn g(@impliedThis(C__0) this__0: C__0, i__2 /* aka i */: Int32) /* return__2 */: Int32 {
             |        void;
             |        fn__2: do {
-            |          return__2 = 2 * igetStatic(C__0, \f)(i__2) * igetStatic(C__0, \fp)(i__2) * getp(bp__0, this__0) * getp(b__0, this__0) * getp(bp__0, this__0) * getp(b__0, this__0)
+            |          return__2 = 2 * igetStatic(C__0, \f)(i__2) * igetStatic(C__0, \fp)(i__2) * getp(bp__0, this__0) * getp(b__0, this__0) * getp(bp__0, this__0) * getp(b__0, this__0);
             |        }
             |      };
             |      @visibility(\public) @fn @stay @fromType(C__0) let h__0;
             |      h__0 = (@stay fn h(@impliedThis(C__0) this__1: C__0, i__3 /* aka i */: Int32) /* return__3 */: Int32 {
             |          void;
             |          fn__3: do {
-            |            return__3 = 2 * (fn f)(i__3) * (fn fp)(i__3) * do_icall_g(type (C__0), this__1, i__3) * do_icall_g(type (C__0), this__1, i__3)
+            |            return__3 = 2 * (fn f)(i__3) * (fn fp)(i__3) * do_icall_g(type (C__0), this__1, i__3) * do_icall_g(type (C__0), this__1, i__3);
             |          }
             |      });
             |      @fn @static @visibility(\public) @stay @fromType(C__0) let g2__0;
             |      g2__0 = fn g2(i__4 /* aka i */: Int32) /* return__4 */: Int32 {
             |        void;
             |        fn__4: do {
-            |          return__4 = 2 * igetStatic(C__0, \f)(i__4) * igetStatic(C__0, \fp)(i__4)
+            |          return__4 = 2 * igetStatic(C__0, \f)(i__4) * igetStatic(C__0, \fp)(i__4);
             |        }
             |      };
             |      @fn @static @visibility(\public) @stay @fromType(C__0) let h2__0;
             |      h2__0 = (@stay fn h2(i__5 /* aka i */: Int32) /* return__5 */: Int32 {
+            |          void;
             |          fn__5: do {
-            |            return__5 = 2 * (fn f)(i__5) * (fn fp)(i__5)
+            |            return__5 = 2 * (fn f)(i__5) * (fn fp)(i__5);
             |          }
             |      });
             |      @fn @visibility(\public) @stay @fromType(C__0) let constructor__0;
@@ -1857,7 +1855,7 @@ class GenerateCodeStageTest {
             |      g3__0 = (@stay fn g3(i__6 /* aka i */: Int32) /* return__7 */: Int32 {
             |          void;
             |          fn__6: do {
-            |            return__7 = 2 * getStatic(C__0, \f)(i__6) * do_call_g(new C__0(), i__6) * getStatic(C__0, \a) * getStatic(C__0, \ap)
+            |            return__7 = 2 * getStatic(C__0, \f)(i__6) * do_call_g(new C__0(), i__6) * getStatic(C__0, \a) * getStatic(C__0, \ap);
             |          }
             |      })
             |
@@ -3538,15 +3536,14 @@ class GenerateCodeStageTest {
             |## Here's a block that computes the failure message if the predicate is false.
             |            let fn__0;
             |            fn__0 = (@stay fn /* return__1 */{
-            |                var t#1, t#2;
+            |                var t#1;
             |## Here we're picking a string representation of the actual expression result
             |                if (isNull(actual#0)) {
-            |                  t#2 = "null"
+            |                  t#1 = "null"
             |                } else {
-            |                  t#1 = do_call_toString(notNull(actual#0));
-            |                  t#2 = t#1
+            |                  t#1 = do_call_toString(notNull(actual#0))
             |                };
-            |                return__1 = cat("expected c0.optionalString == (", "", ") not (", t#2, ")")
+            |                return__1 = cat("expected c0.optionalString == (", "", ") not (", t#1, ")")
             |            });
             |            do_call_assert(test#0, t#0, fn__0);
             |            return__0 = void
@@ -3605,31 +3602,27 @@ class GenerateCodeStageTest {
             |  },
             |  generateCode: {
             |    body: ```
-            |      var t#0, t#1, t#2;
             |      let return__0;
-            |      var t#3, t#4, t#5;
+            |      var t#0, t#1, t#2;
             |      @stay @imported(\(`test//a/`.a)) let a__0;
             |      a__0 = `test//a/`.a;
             |      if (isNull(a__0)) {
-            |        t#3 = null
+            |        t#0 = null
             |      } else {
-            |        t#0 = do_get_string(notNull(a__0));
-            |        t#3 = t#0
+            |        t#0 = do_get_string(notNull(a__0))
             |      };
-            |      if (isNull(t#3)) {
-            |        t#4 = null
+            |      if (isNull(t#0)) {
+            |        t#1 = null
             |      } else {
-            |        t#1 = do_get_isEmpty(notNull(t#3));
-            |        t#4 = t#1
+            |        t#1 = do_get_isEmpty(notNull(t#0))
             |      };
-            |      if (isNull(t#4)) {
-            |        t#5 = null
+            |      if (isNull(t#1)) {
+            |        t#2 = null
             |      } else {
-            |        t#2 = do_call_toString(notNull(t#4));
-            |        t#5 = t#2
+            |        t#2 = do_call_toString(notNull(t#1))
             |      };
-            |      if (!isNull(t#5)) {
-            |        return__0 = notNull(t#5)
+            |      if (!isNull(t#2)) {
+            |        return__0 = notNull(t#2)
             |      } else {
             |        return__0 = "NULL"
             |      }
@@ -3655,14 +3648,13 @@ class GenerateCodeStageTest {
             |    body: ```
             |      @fn @reach(\none) let maybeLength__0;
             |      maybeLength__0 = (@stay fn maybeLength(a__0 /* aka a */: String?) /* return__0 */: (Int32?) {
-            |          var t#0, t#1;
+            |          var t#0;
             |          if (isNull(a__0)) {
             |            return__0 = null
             |          } else {
             |## In this branch, a is aliased to a#0 and is known to be not null.
-            |            t#1 = notNull(a__0);
-            |            t#0 = do_get_end(t#1);
-            |            return__0 = do_call_countBetween(t#1, getStatic(String, \begin), t#0)
+            |            t#0 = notNull(a__0);
+            |            return__0 = do_call_countBetween(t#0, getStatic(String, \begin), do_get_end(t#0))
             |          }
             |      })
             |

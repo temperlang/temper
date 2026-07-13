@@ -1308,14 +1308,14 @@ class DefineStageTest {
                     Call {
                         Rn(BuiltinName("doNotCall"))
                         // This call should not be inlined as it's escaped
-                        Call(BuiltinFuns.vPlusFn) {
+                        Call(BuiltinFuns.plusIntIntFn) {
                             V(Value(1, TInt))
                             V(Value(1, TInt))
                         }
                         Call {
                             Rn(unholeBuiltinName)
                             // This call is in a hole so should be inlined
-                            Call(BuiltinFuns.vPlusFn) {
+                            Call(BuiltinFuns.plusIntIntFn) {
                                 V(Value(1, TInt))
                                 V(Value(1, TInt))
                             }
