@@ -54,6 +54,7 @@ object Py {
 
     class Program(
         pos: Position,
+        connected: Connected? = null,
         body: Iterable<Stmt>,
         var dependencyCategory: DependencyCategory,
         var genre: Genre,
@@ -64,43 +65,83 @@ object Py {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() = sharedCodeFormattingTemplate0
         override val formatElementCount
-            get() = 1
+            get() = 2
         override fun formatElement(
             index: Int,
         ): IndexableFormattableTreeElement {
             return when (index) {
-                0 -> FormattableTreeGroup(this.body)
+                0 -> this.connected ?: FormattableTreeGroup.empty
+                1 -> FormattableTreeGroup(this.body)
                 else -> throw IndexOutOfBoundsException("$index")
             }
         }
+        private var _connected: Connected?
+        var connected: Connected?
+            get() = _connected
+            set(newValue) { _connected = updateTreeConnection(_connected, newValue) }
         private val _body: MutableList<Stmt> = mutableListOf()
         var body: List<Stmt>
             get() = _body
             set(newValue) { updateTreeConnections(_body, newValue) }
         override fun deepCopy(): Program {
-            return Program(pos, body = this.body.deepCopy(), dependencyCategory = this.dependencyCategory, genre = this.genre, outputPath = this.outputPath)
+            return Program(pos, connected = this.connected?.deepCopy(), body = this.body.deepCopy(), dependencyCategory = this.dependencyCategory, genre = this.genre, outputPath = this.outputPath)
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is Program && this.body == other.body && this.dependencyCategory == other.dependencyCategory && this.genre == other.genre && this.outputPath == other.outputPath
+            return other is Program && this.connected == other.connected && this.body == other.body && this.dependencyCategory == other.dependencyCategory && this.genre == other.genre && this.outputPath == other.outputPath
         }
         override fun hashCode(): Int {
-            var hc = body.hashCode()
+            var hc = (connected?.hashCode() ?: 0)
+            hc = 31 * hc + body.hashCode()
             hc = 31 * hc + dependencyCategory.hashCode()
             hc = 31 * hc + genre.hashCode()
             hc = 31 * hc + outputPath.hashCode()
             return hc
         }
         init {
+            this._connected = updateTreeConnection(null, connected)
             updateTreeConnections(this._body, body)
         }
         companion object {
             private val cmr = ChildMemberRelationships(
+                { n -> (n as Program).connected },
                 { n -> (n as Program).body },
             )
+        }
+    }
+
+    /** For embedding external raw `@connected` Python source. */
+    class Connected(
+        pos: Position,
+        var source: String,
+    ) : BaseTree(pos) {
+        override val operatorDefinition: PyOperatorDefinition?
+            get() = null
+        override fun renderTo(
+            tokenSink: TokenSink,
+        ) {
+            tokenSink.value(source)
+        }
+        override val codeFormattingTemplate: CodeFormattingTemplate?
+            get() = null
+        override fun deepCopy(): Connected {
+            return Connected(pos, source = this.source)
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is Connected && this.source == other.source
+        }
+        override fun hashCode(): Int {
+            return source.hashCode()
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships()
         }
     }
 
@@ -1450,38 +1491,6 @@ object Py {
         init {
             // No newlines in line comments.
             require(!pyLineTerminator.matches(commentText)) { commentText }
-        }
-        companion object {
-            private val cmr = ChildMemberRelationships()
-        }
-    }
-
-    /** Used for embedding external raw Python source. */
-    class Raw(
-        pos: Position,
-        var source: String,
-    ) : BaseTree(pos), Stmt {
-        override val operatorDefinition: PyOperatorDefinition?
-            get() = null
-        override fun renderTo(
-            tokenSink: TokenSink,
-        ) {
-            tokenSink.value(source)
-        }
-        override val codeFormattingTemplate: CodeFormattingTemplate?
-            get() = null
-        override fun deepCopy(): Raw {
-            return Raw(pos, source = this.source)
-        }
-        override val childMemberRelationships
-            get() = cmr
-        override fun equals(
-            other: Any?,
-        ): Boolean {
-            return other is Raw && this.source == other.source
-        }
-        override fun hashCode(): Int {
-            return source.hashCode()
         }
         companion object {
             private val cmr = ChildMemberRelationships()
@@ -3801,11 +3810,16 @@ object Py {
         }
     }
 
-    /** `{{0*}}` */
+    /** `{{0}} {{1*}}` */
     private val sharedCodeFormattingTemplate0 =
-        CodeFormattingTemplate.GroupSubstitution(
-            0,
-            CodeFormattingTemplate.empty,
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.GroupSubstitution(
+                    1,
+                    CodeFormattingTemplate.empty,
+                ),
+            ),
         )
 
     /** `{{0*}} async def {{1}} ( {{2}} ) -> {{3}} : \n `SpecialTokens.indent` {{4*}} pass \n `SpecialTokens.dedent`` */

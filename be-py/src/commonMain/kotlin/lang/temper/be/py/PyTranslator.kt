@@ -132,7 +132,6 @@ class PyTranslator(
         val tests = mutableListOf<Py.Stmt>()
         val ungroupedImports = mutableListOf<Py.ImportFrom>()
         translateImports(t.imports, ungroupedImports)
-        connectedSource?.also { result.add(Py.Raw(t.pos, it)) }
         t.topLevels.forEach {
             at(it) topLevel@{
                 val dependencyCategory = it.dependencyCategory() ?: return@topLevel
@@ -178,10 +177,11 @@ class PyTranslator(
                 add(
                     Py.Program(
                         t.pos,
-                        result,
-                        DependencyCategory.Production,
-                        defaultGenre,
-                        t.codeLocation.outputPath,
+                        connected = connectedSource?.let { Py.Connected(t.pos, it) },
+                        body = result,
+                        dependencyCategory = DependencyCategory.Production,
+                        genre = defaultGenre,
+                        outputPath = t.codeLocation.outputPath,
                     ),
                 )
             }
@@ -190,10 +190,10 @@ class PyTranslator(
                 add(
                     Py.Program(
                         t.pos,
-                        tests,
-                        DependencyCategory.Test,
-                        Genre.Library,
-                        convertToTestPath(t.codeLocation.outputPath),
+                        body = tests,
+                        dependencyCategory = DependencyCategory.Test,
+                        genre = Genre.Library,
+                        outputPath = convertToTestPath(t.codeLocation.outputPath),
                     ),
                 )
             }
