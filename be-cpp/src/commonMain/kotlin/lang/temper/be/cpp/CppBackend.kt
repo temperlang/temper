@@ -224,10 +224,12 @@ class CppBackend private constructor(
                 fileExtensionMap = mapOf(
                     FileType.Module to lang.ext,
                     FileType.Script to lang.ext,
+                    FileType.Header to HPP_EXT,
                 ),
                 mimeTypeMap = mapOf(
                     FileType.Module to MimeType.cppSource,
                     FileType.Script to MimeType.cppSource,
+                    FileType.Header to MimeType.cppSource,
                 ),
             )
 

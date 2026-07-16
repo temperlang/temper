@@ -85,6 +85,9 @@ enum class FileType {
 
     /** a script or application to run */
     Script,
+
+    /** a header file for pre-declarations */
+    Header,
 }
 
 /** Language labels may be equal to a backend's unique ID, unless multiple backends produce the same language */
