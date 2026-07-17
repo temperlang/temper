@@ -273,6 +273,9 @@ class CppBuilder(
     fun include(name: String): Cpp.Include =
         Cpp.Include(pos, Cpp.Raw(pos, name))
 
+    fun includeLocal(name: String): Cpp.IncludeLocal =
+        Cpp.IncludeLocal(pos, literal(name))
+
     fun thisExpr(): Cpp.ThisExpr = Cpp.ThisExpr(pos)
 
     // helpers
