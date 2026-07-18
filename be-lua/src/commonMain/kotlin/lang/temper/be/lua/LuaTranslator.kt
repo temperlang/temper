@@ -8,7 +8,9 @@ import lang.temper.be.tmpl.TmpLOperator
 import lang.temper.be.tmpl.canBeNull
 import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.implicitTypeTag
+import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.libraryName
+import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.withoutBubbleOrNull
 import lang.temper.common.MimeType
 import lang.temper.common.ParseDouble
@@ -24,8 +26,10 @@ import lang.temper.log.last
 import lang.temper.log.spanningPosition
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ExportedName
+import lang.temper.name.ResolvedParsedName
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
+import lang.temper.type.WellKnownTypes
 import lang.temper.value.DependencyCategory
 import lang.temper.value.TBoolean
 import lang.temper.value.TClass
@@ -45,6 +49,7 @@ import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.TVoid
+import lang.temper.value.connectedSymbol
 
 internal class LuaTranslator(
     val luaNames: LuaNames,
@@ -52,13 +57,25 @@ internal class LuaTranslator(
     val luaLibraryName: String? = null,
     private val shouldWrapFuncs: Boolean = false,
     private val dependenciesBuilder: Dependencies.Builder<LuaBackend>? = null,
+    private val connectedSource: String? = null,
 ) {
     fun translateTopLevel(mod: TmpL.Module): List<Backend.TranslatedFileSpecification> = luaNames.forModule(
         mod.codeLocation.codeLocation,
     ) {
         // Set up.
         fun makeParts(dependencyCategory: DependencyCategory) =
-            ModuleParts(dependencyCategory, luaNames, luaClosureMode, shouldWrapFuncs, dependenciesBuilder)
+            ModuleParts(
+                mod,
+                dependencyCategory,
+                luaNames,
+                luaClosureMode,
+                shouldWrapFuncs,
+                dependenciesBuilder,
+                connectedSource = when (dependencyCategory) {
+                    DependencyCategory.Production -> connectedSource
+                    DependencyCategory.Test -> null // TODO Connected source for test.
+                },
+            )
         val prodModuleParts = makeParts(DependencyCategory.Production)
         val testModuleParts = makeParts(DependencyCategory.Test)
         prodModuleParts.init(mod)
@@ -139,11 +156,13 @@ internal class LuaTranslator(
 }
 
 private class ModuleParts(
+    val mod: TmpL.Module,
     val dependencyCategory: DependencyCategory,
     val luaNames: LuaNames,
     val luaClosureMode: LuaClosureMode = LuaClosureMode.BasicFunction,
     private val shouldWrapFuncs: Boolean = false,
     private val dependenciesBuilder: Dependencies.Builder<LuaBackend>? = null,
+    private val connectedSource: String? = null,
 ) {
     private var breaks = mutableListOf<String?>()
     private var continues = mutableListOf<String?>()
@@ -1786,11 +1805,15 @@ private class ModuleParts(
             stmt.parameters.pos,
             translateParamDecl(stmt.parameters),
         )
-        val body = luaChunk(
-            stmt.body.pos,
-            handleSpecialParams(stmt.parameters) + translateStmt(stmt.body),
-            null,
-        )
+        val body = when {
+            stmt.metadata.any { it.key.symbol == connectedSymbol } && !mod.isStdLib ->
+                translateConnectedBody(stmt, params)
+            else -> luaChunk(
+                stmt.body.pos,
+                handleSpecialParams(stmt.parameters) + translateStmt(stmt.body),
+                null,
+            )
+        }
         var funcExpr: Lua.Expr = Lua.FunctionExpr(pos, params, body)
         if (stmt.mayYield) {
             // Make it a coroutine
@@ -1829,6 +1852,47 @@ private class ModuleParts(
                 ),
             ),
         )
+    }
+
+    private fun translateConnectedBody(
+        stmt: TmpL.ModuleFunctionDeclaration,
+        params: Lua.Params,
+    ): Lua.Chunk {
+        val pos = stmt.pos
+        val defaulting = stmt.parameterDefaultStatementsInfo()
+        var last: Lua.LastStmt? = null
+        val body = buildList {
+            addAll(handleSpecialParams(stmt.parameters))
+            for (statement in defaulting.defaultStatements) {
+                addAll(translateStmt(statement))
+            }
+            when (val name = stmt.name.name) {
+                // Avoid suffices even for ParsedName instances here.
+                is ResolvedParsedName -> name.baseName.nameText
+                else -> name.displayName
+            }.let { "_connected".asName(pos).dot(it) }.call(
+                buildList {
+                    for ((tmpl, lua) in stmt.parameters.parameters.zip(params.params)) {
+                        when {
+                            tmpl.optional -> {
+                                val name = defaulting.parameterMapping.getValue(tmpl.name.name)
+                                Lua.Name(pos, luaNames.name(name))
+                            }
+                            else -> when (lua) {
+                                is Lua.Param -> lua.name.deepCopy()
+                                is Lua.RestExpr -> lua.deepCopy() // TODO Good rest handling or frontend errors.
+                            }
+                        }.also { add(it) }
+                    }
+                }
+            ).also { call ->
+                when ((stmt.returnType.ot as? TmpL.NominalType)?.typeName?.sourceDefinition) {
+                    WellKnownTypes.voidTypeDefinition -> add(Lua.CallStmt(pos, call))
+                    else -> last = Lua.ReturnStmt(pos, Lua.Exprs(pos, listOf(call)))
+                }
+            }
+        }
+        return Lua.Chunk(stmt.pos, body, last)
     }
 
     private fun translateTopLevel(
@@ -2453,6 +2517,9 @@ private class ModuleParts(
             buildList {
                 addAll(imports)
                 addAll(preDecls)
+                if (connectedSource != null) {
+                    add(Lua.Connected(pos, connectedSource))
+                }
                 addAll(globalFuncs)
                 addAll(topLevels)
                 addAll(exports)

@@ -2993,7 +2993,7 @@ class CppTranslator(
                         when {
                             tmpl.optional ->
                                 cpp.name(defaulting.parameterMapping.getValue(tmpl.name.name))
-                            else -> cppName.deepCopy()
+                            else -> cppName
                         }.also { add(it) }
                     }
                 },

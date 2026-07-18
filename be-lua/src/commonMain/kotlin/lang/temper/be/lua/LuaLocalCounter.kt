@@ -108,6 +108,7 @@ class LuaLocalCounter(val cb: (Int) -> Unit) {
     }
 
     private fun countLocalsBy(stmt: Lua.Stmt): Int = when (stmt) {
+        is Lua.Connected -> 1 // Require all in one local.
         is Lua.GotoStmt -> 0
         is Lua.LocalStmt -> stmt.targets.targets.size
         is Lua.LocalDeclStmt -> stmt.targets.targets.size
