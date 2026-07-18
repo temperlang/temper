@@ -64,7 +64,6 @@ import lang.temper.value.VoidishPanicFn
 import lang.temper.value.helpSnippet
 import lang.temper.value.listBuiltinName
 import lang.temper.value.or
-import lang.temper.value.postfixApplyName
 import lang.temper.value.typeSymbol
 import lang.temper.value.unpackOrFail
 import lang.temper.value.unpackPositionedOr
@@ -928,49 +927,35 @@ object BuiltinFuns {
         null,
     ) { a -> a }
 
-    val plusFn = CoverFunction(
-        listOf(plusIntIntFn, plusIntFn, plusLongLongFn, plusLongFn, plusFloatFloatFn, plusFloatFn),
-    ).also {
-        helpSnippet(it, "Numeric addition", "builtin/%2B")
-    }
-
     val minusIntIntFn: CallableValue = IntIntToIntFun(
         "-",
         BuiltinOperatorId.MinusIntInt,
     ) { a, b -> a - b }
+
     val minusIntFn: CallableValue = IntToIntFun(
         "-",
         BuiltinOperatorId.MinusInt,
     ) { a -> -a }
+
     val minusLongLongFn: CallableValue = LongLongToLongFun(
         "-",
         BuiltinOperatorId.MinusIntInt64,
     ) { a, b -> a - b }
+
     val minusLongFn: CallableValue = LongToLongFun(
         "-",
         BuiltinOperatorId.MinusInt64,
     ) { a -> -a }
+
     val minusFloatFloatFn: CallableValue = FloatFloatToFloatFun(
         "-",
         BuiltinOperatorId.MinusFltFlt,
     ) { a, b -> a - b }
+
     val minusFloatFn: CallableValue = FloatToFloatFun(
         "-",
         BuiltinOperatorId.MinusFlt,
     ) { a -> -a }
-
-    val minusFn = CoverFunction(
-        listOf(
-            minusIntIntFn,
-            minusLongLongFn,
-            minusFloatFloatFn,
-            minusIntFn,
-            minusLongFn,
-            minusFloatFn,
-        ),
-    ).also {
-        helpSnippet(it, "Numeric subtraction", "builtin/-")
-    }
 
     val timesIntIntFn: CallableValue =
         IntIntToIntFun("*", BuiltinOperatorId.TimesIntInt) { a, b ->
@@ -996,6 +981,7 @@ object BuiltinFuns {
         "&",
         BuiltinOperatorId.BitwiseAnd32,
     ) { a, b -> a and b }
+
     val ampLongLongFn: CallableValue = LongLongToLongFun(
         "&",
         BuiltinOperatorId.BitwiseAnd64,
@@ -1005,6 +991,7 @@ object BuiltinFuns {
         "|",
         BuiltinOperatorId.BitwiseOr32,
     ) { a, b -> a or b }
+
     val barLongLongFn: CallableValue = LongLongToLongFun(
         "|",
         BuiltinOperatorId.BitwiseOr64,
@@ -1014,6 +1001,7 @@ object BuiltinFuns {
         "~",
         BuiltinOperatorId.BitwiseNegation32,
     ) { a -> a.inv() }
+
     val bitInverseLongFn: CallableValue = LongToLongFun(
         "~",
         BuiltinOperatorId.BitwiseNegation64,
@@ -1023,6 +1011,7 @@ object BuiltinFuns {
         "^",
         BuiltinOperatorId.BitwiseXor32,
     ) { a, b -> a.xor(b) }
+
     val bitXorLongLongFn: CallableValue = LongLongToLongFun(
         "^",
         BuiltinOperatorId.BitwiseXor64,
@@ -1032,6 +1021,7 @@ object BuiltinFuns {
         "<<",
         BuiltinOperatorId.BitwiseShl32,
     ) { a, b -> a.shl(b.and(I32_SHIFT_AMOUNT_MASK)) }
+
     val shlLongLongFn: CallableValue = LongIntToLongFun(
         "<<",
         BuiltinOperatorId.BitwiseShl64,
@@ -1041,6 +1031,7 @@ object BuiltinFuns {
         ">>",
         BuiltinOperatorId.BitwiseShr32,
     ) { a, b -> a.shr(b.and(I32_SHIFT_AMOUNT_MASK)) }
+
     val shrLongLongFn: CallableValue = LongIntToLongFun(
         ">>",
         BuiltinOperatorId.BitwiseShr64,
@@ -1050,6 +1041,7 @@ object BuiltinFuns {
         ">>>",
         BuiltinOperatorId.BitwiseShrUnsigned32,
     ) { a, b -> a.ushr(b.and(I32_SHIFT_AMOUNT_MASK)) }
+
     val uShrLongIntFn: CallableValue = LongIntToLongFun(
         ">>>",
         BuiltinOperatorId.BitwiseShrUnsigned64,
@@ -1705,7 +1697,6 @@ object BuiltinFuns {
     val vTestMacro = Value(testMacro)
     val vDataFileMacro = Value(dataFileMacro)
 
-    val vPostfixApply = Value(DesugarPostfixOperatorMacro(postfixApplyName.builtinKey))
     val vHandlerScope = Value(handlerScope)
     val vAwait = Value(await)
     val vYield = Value(yield)

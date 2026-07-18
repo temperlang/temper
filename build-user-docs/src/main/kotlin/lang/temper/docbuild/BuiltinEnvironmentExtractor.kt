@@ -50,6 +50,8 @@ internal object BuiltinEnvironmentExtractor : SnippetExtractor() {
         val builtinsGrouped = mutableMapOf<BuiltinDocGroup, MutableSet<BuiltinName>>()
         val ungroupedImplicitNames = TypeShapeExtractor.ungroupedSnippets.map { BuiltinName(it.id.parts.last()) }
         val allBuiltinNames = buildList {
+            add(BuiltinName("++"))
+            add(BuiltinName("--"))
             addAll(env.locallyDeclared)
             addAll(ungroupedImplicitNames)
             builtinOperatorSpecs.keys.mapTo(this) { operatorSpecifier ->

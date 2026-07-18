@@ -1404,7 +1404,7 @@ export class DenseBitVector {
   @connected
   public constructor(capacity: builtins.Int) {
     bits = new ListBuilder<builtins.Boolean>();
-    for (var i = 0; i < capacity; ++i) {
+    for (var i = 0; i < capacity; i += 1) {
       bits.add(false);
     }
   }
@@ -1485,6 +1485,14 @@ export class Int32 extends MapKey {
   public max(other: builtins.Int): builtins.Int {
     if (content >= other) { content } else { other }
   }
+
+  /** `this + 1`, the successor value used by [snippet/builtin/++]. */
+  @connected
+  public succ(): builtins.Int32 { content + 1 }
+
+  /** `this - 1`, the predecessor value used by [snippet/builtin/--]. */
+  @connected
+  public pred(): builtins.Int32 { content - 1 }
 }
 
 /**
@@ -1536,6 +1544,14 @@ export class Int64 extends Equatable { // TODO extends MapKey?
   public max(other: builtins.Int64): builtins.Int64 {
     if (content >= other) { content } else { other }
   }
+
+  /** `this + 1I64`, the successor value used by [snippet/builtin/++]. */
+  @connected
+  public succ(): builtins.Int64 { content + 1I64 }
+
+  /** `this - 1I64`, the predecessor value used by [snippet/builtin/--]. */
+  @connected
+  public pred(): builtins.Int64 { content - 1I64 }
 }
 
 /**
@@ -1669,6 +1685,14 @@ export class Float64 extends Equatable {
 
   @connected
   public tanh(): Float64;
+
+  /** `this + 1.0`, the successor value used by [snippet/builtin/++]. */
+  @connected
+  public succ(): builtins.Float64 { content + 1.0 }
+
+  /** `this - 1.0`, the predecessor value used by [snippet/builtin/--]. */
+  @connected
+  public pred(): builtins.Float64 { content - 1.0 }
 }
 
 /**

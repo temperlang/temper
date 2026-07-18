@@ -391,6 +391,54 @@ Supports radix 2 through 36. Doesn't prefix `+` for positive.
 
 <!-- /snippet: type/Int32/method/max -->
 
+<!-- snippet: type/Int32/method/succ -->
+
+<a name="type&#45;Int32&#45;method&#45;succ" class="snippet-anchor-name"></a>
+
+#### `Int32.succ`
+
+<!-- snippet: type/Int32/method/succ/sig -->
+
+<a name="type&#45;Int32&#45;method&#45;succ&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Int32*](#type-Int32)`):` [*Int32*](#type-Int32)
+
+<!-- /snippet: type/Int32/method/succ/sig -->
+
+<!-- snippet: type/Int32/method/succ/commentary -->
+
+<a name="type&#45;Int32&#45;method&#45;succ&#45;commentary" class="snippet-anchor-name"></a>
+
+`this + 1`, the successor value used by [`++` operator: increment](builtins.md#builtin-%2B%2B).
+
+<!-- /snippet: type/Int32/method/succ/commentary -->
+
+<!-- /snippet: type/Int32/method/succ -->
+
+<!-- snippet: type/Int32/method/pred -->
+
+<a name="type&#45;Int32&#45;method&#45;pred" class="snippet-anchor-name"></a>
+
+#### `Int32.pred`
+
+<!-- snippet: type/Int32/method/pred/sig -->
+
+<a name="type&#45;Int32&#45;method&#45;pred&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Int32*](#type-Int32)`):` [*Int32*](#type-Int32)
+
+<!-- /snippet: type/Int32/method/pred/sig -->
+
+<!-- snippet: type/Int32/method/pred/commentary -->
+
+<a name="type&#45;Int32&#45;method&#45;pred&#45;commentary" class="snippet-anchor-name"></a>
+
+`this - 1`, the predecessor value used by [`--` operator: decrement](builtins.md#builtin---).
+
+<!-- /snippet: type/Int32/method/pred/commentary -->
+
+<!-- /snippet: type/Int32/method/pred -->
+
 <!-- /snippet: type/Int32/methods -->
 
 <!-- snippet: type/Int32/statics -->
@@ -660,6 +708,54 @@ Supports radix 2 through 36. Doesn't prefix `+` for positive.
 <!-- /snippet: type/Int64/method/max/commentary -->
 
 <!-- /snippet: type/Int64/method/max -->
+
+<!-- snippet: type/Int64/method/succ -->
+
+<a name="type&#45;Int64&#45;method&#45;succ" class="snippet-anchor-name"></a>
+
+#### `Int64.succ`
+
+<!-- snippet: type/Int64/method/succ/sig -->
+
+<a name="type&#45;Int64&#45;method&#45;succ&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Int64*](#type-Int64)`):` [*Int64*](#type-Int64)
+
+<!-- /snippet: type/Int64/method/succ/sig -->
+
+<!-- snippet: type/Int64/method/succ/commentary -->
+
+<a name="type&#45;Int64&#45;method&#45;succ&#45;commentary" class="snippet-anchor-name"></a>
+
+`this + 1I64`, the successor value used by [`++` operator: increment](builtins.md#builtin-%2B%2B).
+
+<!-- /snippet: type/Int64/method/succ/commentary -->
+
+<!-- /snippet: type/Int64/method/succ -->
+
+<!-- snippet: type/Int64/method/pred -->
+
+<a name="type&#45;Int64&#45;method&#45;pred" class="snippet-anchor-name"></a>
+
+#### `Int64.pred`
+
+<!-- snippet: type/Int64/method/pred/sig -->
+
+<a name="type&#45;Int64&#45;method&#45;pred&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Int64*](#type-Int64)`):` [*Int64*](#type-Int64)
+
+<!-- /snippet: type/Int64/method/pred/sig -->
+
+<!-- snippet: type/Int64/method/pred/commentary -->
+
+<a name="type&#45;Int64&#45;method&#45;pred&#45;commentary" class="snippet-anchor-name"></a>
+
+`this - 1I64`, the predecessor value used by [`--` operator: decrement](builtins.md#builtin---).
+
+<!-- /snippet: type/Int64/method/pred/commentary -->
+
+<!-- /snippet: type/Int64/method/pred -->
 
 <!-- /snippet: type/Int64/methods -->
 
@@ -1513,6 +1609,54 @@ Matches semantics of Python's *math.isclose*.
 <!-- /snippet: type/Float64/method/tanh/commentary -->
 
 <!-- /snippet: type/Float64/method/tanh -->
+
+<!-- snippet: type/Float64/method/succ -->
+
+<a name="type&#45;Float64&#45;method&#45;succ" class="snippet-anchor-name"></a>
+
+#### `Float64.succ`
+
+<!-- snippet: type/Float64/method/succ/sig -->
+
+<a name="type&#45;Float64&#45;method&#45;succ&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Float64*](#type-Float64)`):` [*Float64*](#type-Float64)
+
+<!-- /snippet: type/Float64/method/succ/sig -->
+
+<!-- snippet: type/Float64/method/succ/commentary -->
+
+<a name="type&#45;Float64&#45;method&#45;succ&#45;commentary" class="snippet-anchor-name"></a>
+
+`this + 1.0`, the successor value used by [`++` operator: increment](builtins.md#builtin-%2B%2B).
+
+<!-- /snippet: type/Float64/method/succ/commentary -->
+
+<!-- /snippet: type/Float64/method/succ -->
+
+<!-- snippet: type/Float64/method/pred -->
+
+<a name="type&#45;Float64&#45;method&#45;pred" class="snippet-anchor-name"></a>
+
+#### `Float64.pred`
+
+<!-- snippet: type/Float64/method/pred/sig -->
+
+<a name="type&#45;Float64&#45;method&#45;pred&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Float64*](#type-Float64)`):` [*Float64*](#type-Float64)
+
+<!-- /snippet: type/Float64/method/pred/sig -->
+
+<!-- snippet: type/Float64/method/pred/commentary -->
+
+<a name="type&#45;Float64&#45;method&#45;pred&#45;commentary" class="snippet-anchor-name"></a>
+
+`this - 1.0`, the predecessor value used by [`--` operator: decrement](builtins.md#builtin---).
+
+<!-- /snippet: type/Float64/method/pred/commentary -->
+
+<!-- /snippet: type/Float64/method/pred -->
 
 <!-- /snippet: type/Float64/methods -->
 

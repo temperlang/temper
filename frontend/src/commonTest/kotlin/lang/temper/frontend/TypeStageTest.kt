@@ -625,9 +625,9 @@ class TypeStageTest {
               do (@stay fn {
                   var x__0: Int32;
                   x__0 = 3;
-                  x__0 = x__0 + 1;
-                  x__0 = x__0 + 1;
-                  x__0 = x__0 - 1;
+                  x__0 = do_call_succ(x__0);
+                  x__0 = do_call_succ(x__0);
+                  x__0 = do_call_pred(x__0);
                   x__0
               })
 
@@ -655,25 +655,25 @@ class TypeStageTest {
                 do {
                   let postfixReturn#0;
                   postfixReturn#0 = x__4;
-                  x__4 = x__4 + 1;
+                  x__4 = do_call_succ(postfixReturn#0);
                   postfixReturn#0
                 };
                 do {
                   let postfixReturn#1;
                   postfixReturn#1 = x__4;
-                  x__4 = x__4 + 1;
+                  x__4 = do_call_succ(postfixReturn#1);
                   postfixReturn#1
                 };
                 do {
                   let postfixReturn#2;
                   postfixReturn#2 = x__4;
-                  x__4 = x__4 - 1;
+                  x__4 = do_call_pred(postfixReturn#2);
                   postfixReturn#2
                 };
                 do {
                   let postfixReturn#3;
                   postfixReturn#3 = x__4;
-                  x__4 = x__4 + 1;
+                  x__4 = do_call_succ(postfixReturn#3);
                   postfixReturn#3
                 }
             })

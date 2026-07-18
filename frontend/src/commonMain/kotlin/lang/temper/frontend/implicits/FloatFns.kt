@@ -35,7 +35,7 @@ import kotlin.math.sqrt
 import kotlin.math.tan
 import kotlin.math.tanh
 
-internal interface FloatFns {
+internal object FloatFns {
     object ToInt : SigFnBuilder("core.type Float64.toInt32()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val double = TFloat64.unpackContent(args[0])
@@ -175,6 +175,12 @@ internal interface FloatFns {
         }
     }
 
+    object Pred : SigFnBuilder("core.type Float64.pred()") {
+        override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
+            return Value(TFloat64.unpackContent(args[0]) - 1.0, TFloat64)
+        }
+    }
+
     object Round : SigFnBuilder("core.type Float64.round()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(round(TFloat64.unpackContent(args[0])), TFloat64)
@@ -202,6 +208,12 @@ internal interface FloatFns {
     object Sqrt : SigFnBuilder("core.type Float64.sqrt()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(sqrt(TFloat64.unpackContent(args[0])), TFloat64)
+        }
+    }
+
+    object Succ : SigFnBuilder("core.type Float64.succ()") {
+        override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
+            return Value(TFloat64.unpackContent(args[0]) + 1.0, TFloat64)
         }
     }
 

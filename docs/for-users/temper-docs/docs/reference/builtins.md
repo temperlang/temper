@@ -1069,6 +1069,41 @@ As explained above, you cannot mix [*Int32*](types.md#type-Int32) and
 
 <!-- /snippet: builtin/%2B -->
 
+<!-- snippet: builtin/++ -->
+
+<a name="builtin&#45;&#37;2B&#37;2B" class="snippet-anchor-name"></a>
+
+### `++` operator: increment
+`++x` reads `x` and assigns the following value back to it.
+
+The value assigned is `x.succ()`.
+Builtin numeric types implement the `.succ()` method to return a value one greater,
+so for numerics `++x` is equivalent to `x += 1`.
+
+`x++` has the same effect as `++x`, but produces the value of `x` before
+assigning its successor, instead of the value after.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B%2B/snippet.md/0 -->
+
+```temper
+var x: Int = 0;
+// when `x` comes after  `++`, produces value after  increment
+console.log((++x).toString()); //!outputs "1"
+// when `x` comes before `++`, produces value before increment
+console.log((x++).toString()); //!outputs "1"
+x == 2
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B%2B/snippet.md/0 -->
+
+The effects of `++x` and `x++` differ from `x = x.succ()`, in that if `x` is a complex expression,
+its parts are only evaluated once.
+For example, in `++listBuilder[f()]`, the function call, `f()`, which computes the index,
+only happens once.
+
+<!-- /snippet: builtin/%2B%2B -->
+
 <!-- snippet: builtin/- -->
 
 <a name="builtin&#45;&#45;" class="snippet-anchor-name"></a>
@@ -1111,7 +1146,7 @@ The `-` operator is left-associative:
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/2 -->
 
-Since there is a [`--` operator](#builtin---) operator, `--x` is not a negation of a negation.
+Since there is a [`--` operator: decrement](#builtin---) operator, `--x` is not a negation of a negation.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/3 -->
 
@@ -1125,6 +1160,40 @@ var x = 1;
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/3 -->
 
 <!-- /snippet: builtin/- -->
+
+<!-- snippet: builtin/-- -->
+
+<a name="builtin&#45;&#45;&#45;" class="snippet-anchor-name"></a>
+
+### `--` operator: decrement
+`--x` reads `x` and assigns the preceding value back to it.
+The value assigned is `x.pred()`.
+Builtin numeric types implement the `.pred()` method to return a value one less,
+so for numerics `--x` is equivalent to `x -= 1`.
+
+`x--` has the same effect as `--x`, but produces the value of `x` before
+assigning its predecessor, instead of the value after.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/--/snippet.md/0 -->
+
+```temper
+var x: Int = 0;
+// when `x` comes after  `--`, produces value after  decrement
+console.log((--x).toString()); //!outputs "-1"
+// when `x` comes before `--`, produces value before decrement
+console.log((x--).toString()); //!outputs "-1"
+x == -2
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/--/snippet.md/0 -->
+
+The effects of `--x` and `x--` differ from `x = x.pred()`, in that if `x` is a complex expression,
+its parts are only evaluated once.
+For example, in `--listBuilder[f()]`, the function call, `f()`, which computes the index,
+only happens once.
+
+<!-- /snippet: builtin/-- -->
 
 <!-- snippet: builtin/%2F : operator `/` -->
 
@@ -2918,64 +2987,6 @@ isTwiceIsh(1, 0); //!outputs "no"
 
 <!-- /snippet: builtin/&& -->
 
-<!-- snippet: builtin/++ -->
-
-<a name="builtin&#45;&#37;2B&#37;2B" class="snippet-anchor-name"></a>
-
-### `++` operator
-`++x` is equivalent to `x += 1`.
-`x++` has the same effect as `++x`, but produces the value of x before incrementing.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B%2B/snippet.md/0 -->
-
-```temper
-var x: Int = 0;
-// when `x` comes after  `++`, produces value after  increment
-console.log((++x).toString()); //!outputs "1"
-// when `x` comes before `++`, produces value before increment
-console.log((x++).toString()); //!outputs "1"
-x == 2
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B%2B/snippet.md/0 -->
-
-The effects of `++x` and `x++` differ from `x = x + 1`, in that if `x` is a complex expression,
-its parts are only evaluated once.
-For example, in `++array[f()]`, the function call, `f()`, which computes the index,
-only happens once.
-
-<!-- /snippet: builtin/%2B%2B -->
-
-<!-- snippet: builtin/-- -->
-
-<a name="builtin&#45;&#45;&#45;" class="snippet-anchor-name"></a>
-
-### `--` operator
-`--x` is equivalent to `x -= 1`.
-`x--` has the same effect as `--x`, but produces the value of x before decrementing.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/--/snippet.md/0 -->
-
-```temper
-var x: Int = 0;
-// when `x` comes after  `--`, produces value after  decrement
-console.log((--x).toString()); //!outputs "-1"
-// when `x` comes before `--`, produces value before decrement
-console.log((x--).toString()); //!outputs "-1"
-x == -2
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/--/snippet.md/0 -->
-
-The effects of `--x` and `x--` differ from `x = x - 1`, in that if `x` is a complex expression,
-its parts are only evaluated once.
-For example, in `--array[f()]`, the function call, `f()`, which computes the index,
-only happens once.
-
-<!-- /snippet: builtin/-- -->
-
 <!-- snippet: builtin/=> -->
 
 <a name="builtin&#45;&#61;&gt;" class="snippet-anchor-name"></a>
@@ -3366,7 +3377,7 @@ console.log("x is ${p.x.toString()}, y is ${p.y.toString()}");
 #### The custom JSON adapter strategy
 
 If a type, whether it's a class or interface type,
-already has encoding and decoding functions then none are
+already has encoding and decoding functions, then none are
 auto-generated.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/builtin/@json/snippet.md/1 -->
@@ -3406,7 +3417,7 @@ IntWrapper.jsonAdapter().encodeToJson(new IntWrapper(123), p);
 #### Sealed interface strategy
 
 For sealed interfaces, we generate adapters that delegate to adapters for
-the appropriate sub-type.
+the appropriate subtype.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/builtin/@json/snippet.md/2 -->
 
@@ -3431,7 +3442,7 @@ let ls: List<Animal> = [new Cat(11), new Dog(111)];
 let p = new JsonTextProducer();
 List.jsonAdapter(Animal.jsonAdapter()).encodeToJson(ls, p);
 p.toJsonString() == "[{\"meowCount\":11},{\"hydrantsSniffed\":111}]"
-// ✅
+// ❌
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/@json/snippet.md/2 -->
@@ -3532,7 +3543,7 @@ FooRequest.jsonAdapter()
 FooRequest.jsonAdapter()
   .decodeFromJson(jsonSyntaxTreeV2, NullInterchangeContext.instance)
   is FooRequestVersion2
-// ✅
+// ❌
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/@jsonExtra/snippet.md/0 -->

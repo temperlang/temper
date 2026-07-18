@@ -70,7 +70,7 @@ internal fun considerPrivilegedEnvironmentBindings(module: Module) {
 /**
  * Finds any existing directory or file first. If missing, finds "whatever.temper" or
  * "whatever.temper.md" when given nonexistent "whatever", if either exists, checked
- * in that order. Also for directories, if no "config.temper.md" is present but a
+ * in that order. Also, for directories, if no "config.temper.md" is present but a
  * subdirectory called "src" is present, provide that dir instead.
  *
  * Although motivated by standard library usage, the feature can be applied generally.
@@ -130,7 +130,7 @@ abstract class SigFnBuilder(val name: String, val impure: Boolean = false) {
         },
     )
 
-    abstract fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult
+    abstract operator fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult
 }
 
 inline fun <V : Any> (TypeTag<V>).unpackWithNullDefault(
@@ -167,11 +167,13 @@ fun builtinLibraryConnecteds() = listOf(
     FloatFns.Log1p,
     FloatFns.Max,
     FloatFns.Min,
+    FloatFns.Pred,
     FloatFns.Round,
     FloatFns.Sign,
     FloatFns.Sin,
     FloatFns.Sinh,
     FloatFns.Sqrt,
+    FloatFns.Succ,
     FloatFns.Tan,
     FloatFns.Tanh,
     FloatFns.ToInt,
@@ -179,9 +181,13 @@ fun builtinLibraryConnecteds() = listOf(
     FloatFns.ToInt64,
     FloatFns.ToInt64Unsafe,
     FloatFns.ToString,
+    IntFns.Pred,
+    IntFns.Succ,
     IntFns.ToFloat64,
     IntFns.ToInt64,
     IntFns.ToString,
+    Int64Fns.Pred,
+    Int64Fns.Succ,
     Int64Fns.ToFloat64,
     Int64Fns.ToFloat64Unsafe,
     Int64Fns.ToInt32,
@@ -265,7 +271,7 @@ fun standardLibraryConnecteds() = builtinLibraryConnecteds() + mapOf(
 const val TEMPER_MD_FILE_EXTENSION = "$TEMPER_FILE_EXTENSION.md"
 private val temperExtensions = listOf(TEMPER_FILE_EXTENSION, TEMPER_MD_FILE_EXTENSION)
 
-internal interface ConsoleFns {
+internal object ConsoleFns {
     object GlobalLog : SigFnBuilder("core.type GlobalConsole.globalLog()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return (BuiltinFuns.print as CallableValue).invoke(ActualValues.from(args[1]), cb, interpMode)
@@ -273,7 +279,19 @@ internal interface ConsoleFns {
     }
 }
 
-internal interface IntFns {
+internal object IntFns {
+    object Pred : SigFnBuilder("core.type Int32.pred()") {
+        override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
+            return Value(TInt.unpackContent(args[0]) - 1, TInt)
+        }
+    }
+
+    object Succ : SigFnBuilder("core.type Int32.succ()") {
+        override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
+            return Value(TInt.unpackContent(args[0]) + 1, TInt)
+        }
+    }
+
     object ToFloat64 : SigFnBuilder("core.type Int32.toFloat64()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(TInt.unpackContent(args[0]).toDouble(), TFloat64)
@@ -296,7 +314,19 @@ internal interface IntFns {
     }
 }
 
-internal interface Int64Fns {
+internal object Int64Fns {
+    object Pred : SigFnBuilder("core.type Int64.pred()") {
+        override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
+            return Value(TInt64.unpackContent(args[0]) - 1L, TInt64)
+        }
+    }
+
+    object Succ : SigFnBuilder("core.type Int64.succ()") {
+        override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
+            return Value(TInt64.unpackContent(args[0]) + 1L, TInt64)
+        }
+    }
+
     object ToFloat64 : SigFnBuilder("core.type Int64.toFloat64()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             val long = TInt64.unpackContent(args[0])
@@ -365,14 +395,14 @@ internal fun <V : Any> TypeTag<V>.unpackContent(value: Value<*>): V {
 }
 
 /**
- * The minimum valid value for `Int.toString(radix)`.  With fewer than 2 numerals, string
+ * The minimum valid value for `Int32.toString(radix)`.  With fewer than 2 numerals, string
  * representations cannot be non-empty (using "0" for 0) allowing systems to distinguish between
  * the absence of an integer input (empty string) and an input.
  */
 const val MIN_INT_RADIX: Int = 2
 
 /**
- * The maximum valid value for `Int.toString(radix)`.  With more than 36, string
+ * The maximum valid value for `Int32.toString(radix)`.  With more than 36, string
  * encoders run out of case-insensitive ASCII alphanumeric numerals.
  */
 const val MAX_INT_RADIX: Int = 36

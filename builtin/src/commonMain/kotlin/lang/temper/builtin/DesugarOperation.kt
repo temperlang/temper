@@ -8,8 +8,10 @@ import lang.temper.name.ExportedName
 import lang.temper.name.ParsedName
 import lang.temper.name.ParsedNameOrResolvedParsedName
 import lang.temper.name.SourceName
+import lang.temper.name.Symbol
 import lang.temper.name.Temporary
 import lang.temper.type.DotHelper
+import lang.temper.type.DotMember
 import lang.temper.type.ExternalCall
 import lang.temper.type.FunctionResolution
 import lang.temper.type.OperatorMember
@@ -26,11 +28,14 @@ import lang.temper.value.SpecialFunction
 import lang.temper.value.StaylessMacroValue
 import lang.temper.value.TEdge
 import lang.temper.value.Tree
+import lang.temper.value.TreeTemplate
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 import lang.temper.value.ValueStability
 import lang.temper.value.and
+import lang.temper.value.dotBuiltinName
 import lang.temper.value.freeTarget
+import lang.temper.value.initSymbol
 import lang.temper.value.stability
 
 /**
@@ -43,6 +48,55 @@ import lang.temper.value.stability
  * this desugars operations to *DotHelper* invocations, allowing operation
  * semantics to be specified by methods or extension-like functions with
  * [lang.temper.value.overloadSymbol] metadata.
+ *
+ * <!-- snippet: builtin/++ -->
+ * # `++` operator: increment
+ * `++x` reads `x` and assigns the following value back to it.
+ *
+ * The value assigned is `x.succ()`.
+ * Builtin numeric types implement the `.succ()` method to return a value one greater,
+ * so for numerics `++x` is equivalent to `x += 1`.
+ *
+ * `x++` has the same effect as `++x`, but produces the value of `x` before
+ * assigning its successor, instead of the value after.
+ *
+ * ```temper true
+ * var x: Int = 0;
+ * // when `x` comes after  `++`, produces value after  increment
+ * console.log((++x).toString()); //!outputs "1"
+ * // when `x` comes before `++`, produces value before increment
+ * console.log((x++).toString()); //!outputs "1"
+ * x == 2
+ * ```
+ *
+ * The effects of `++x` and `x++` differ from `x = x.succ()`, in that if `x` is a complex expression,
+ * its parts are only evaluated once.
+ * For example, in `++listBuilder[f()]`, the function call, `f()`, which computes the index,
+ * only happens once.
+ *
+ * <!-- snippet: builtin/-- -->
+ * # `--` operator: decrement
+ * `--x` reads `x` and assigns the preceding value back to it.
+ * The value assigned is `x.pred()`.
+ * Builtin numeric types implement the `.pred()` method to return a value one less,
+ * so for numerics `--x` is equivalent to `x -= 1`.
+ *
+ * `x--` has the same effect as `--x`, but produces the value of `x` before
+ * assigning its predecessor, instead of the value after.
+ *
+ * ```temper true
+ * var x: Int = 0;
+ * // when `x` comes after  `--`, produces value after  decrement
+ * console.log((--x).toString()); //!outputs "-1"
+ * // when `x` comes before `--`, produces value before decrement
+ * console.log((x--).toString()); //!outputs "-1"
+ * x == -2
+ * ```
+ *
+ * The effects of `--x` and `x--` differ from `x = x.pred()`, in that if `x` is a complex expression,
+ * its parts are only evaluated once.
+ * For example, in `--listBuilder[f()]`, the function call, `f()`, which computes the index,
+ * only happens once.
  */
 object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
     override val name = "desugarOperation"
@@ -62,23 +116,30 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
         val nOperands = operandIndices.last - operandIndices.first + 1
 
         val name = (operator as? NameLeaf)?.content
-        // If we get `+=` then we need to do a lot of work as if it's `+` and
-        // then roll in the assignment part later.
-        val (op, isCompoundAssignment) = run {
-            val nameText = (name as? ParsedNameOrResolvedParsedName)?.asParsedName()?.nameText
-            if (nameText != null && nOperands == 2) {
-                val simpleOp = simpleBuiltinKeyFromCompoundOperator(nameText)
-                if (simpleOp != null) {
-                    simpleOp to true
-                } else {
-                    nameText to false
+        val nameText = (name as? ParsedNameOrResolvedParsedName)?.asParsedName()?.nameText
+        // If we get `+=` or `++`, then we need to do a lot of work as
+        // if it's a simpler operator like `+` and then roll in the assignment part later.
+        val (op, cf: OpClassification) = run classify@{
+            nameText ?: return@classify null to OpClassification.Simple
+            when (nOperands) {
+                2 -> {
+                    val simpleOp = simpleBuiltinKeyFromCompoundOperator(nameText)
+                    if (simpleOp != null) {
+                        return@classify simpleOp to OpClassification.CompoundAssignment
+                    }
                 }
-            } else {
-                nameText to false
+                1 -> when (nameText) {
+                    "--", "_--" -> return@classify "pred" to OpClassification.IncrOrDecr
+                    "++", "_++" -> return@classify "succ" to OpClassification.IncrOrDecr
+                    else -> {}
+                }
+                else -> {}
             }
+
+            nameText to OpClassification.Simple
         }
 
-        val isDefined = !isCompoundAssignment && when (operator) {
+        val isDefined = cf == OpClassification.Simple && when (operator) {
             is ValueLeaf -> true
             is NameLeaf -> {
                 val name = operator.content
@@ -106,35 +167,61 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
         }
         // It's not defined, so we need to rewrite it.
 
-        if (op != null) {
-            val operatorSpecifier = when (operands.size) {
+        if (op == null || call?.incoming == null) { return NotYet }
+
+        val operatorSpecifier = if (cf == OpClassification.IncrOrDecr) {
+            null
+        } else {
+            when (operands.size) {
                 2 -> "_${op}_"
                 1 -> "${op}_"
                 else -> null
             }
-            // We have a lookup list of extensions for basic types like Int32 and String
-            // so that evaluation of them can work even before Implicits.temper has staged
-            // to the point where we can dispatch to methods on well-known types'.
-            val builtins = builtinOperatorSpecs[operatorSpecifier] ?: listOf()
-            if (call?.incoming != null && operatorSpecifier != null) {
-                val exts = builtins.map { FunctionResolution(it) }
-                val helper = DotHelper(ExternalCall, OperatorMember(operatorSpecifier), exts)
-                val vHelper = Value(helper)
-                if (interpMode == InterpMode.Partial) {
-                    if (isCompoundAssignment) {
+        }
+        val member = when {
+            operatorSpecifier != null -> OperatorMember(operatorSpecifier)
+            cf == OpClassification.IncrOrDecr -> DotMember(Symbol(op))
+            else -> null
+        }
+
+        // We have a lookup list of extensions for basic types like Int32 and String
+        // so that evaluation of them can work even before Implicits.temper has staged
+        // to the point where we can dispatch to methods on well-known types'.
+        val builtins = builtinOperatorSpecs[operatorSpecifier] ?: listOf()
+        if (member != null) {
+            val extensions = builtins.map { FunctionResolution(it) }
+            val helper = DotHelper(ExternalCall, member, extensions)
+            val vHelper = Value(helper)
+            if (interpMode == InterpMode.Partial) {
+                when (cf) {
+                    OpClassification.CompoundAssignment, OpClassification.IncrOrDecr -> {
+                        val preCapture = cf == OpClassification.IncrOrDecr && nameText?.startsWith("_") == true
+                        val needsRecursiveDesugar = cf == OpClassification.CompoundAssignment
                         desugarCompoundOperation(
                             macroEnv,
                             operands[0],
-                            operands[1],
-                            plantSimpleOperator = {
-                                // Plant the simpler operator and let
-                                // a recursive invocation desugar that.
-                                Rn(operator.pos, ParsedName(op))
+                            operands.getOrNull(1),
+                            preCapture = preCapture,
+                            plantOperation = { calleePos, plantOperands ->
+                                if (needsRecursiveDesugar) {
+                                    // Plant the simpler operator and let
+                                    // a recursive invocation desugar that.
+                                    V(calleePos.leftEdge, vDesugarOperation)
+                                    Rn(operator.pos, ParsedName(op))
+                                    plantOperands()
+                                } else {
+                                    Call { // .succ() or .pred() method call
+                                        Rn(calleePos.leftEdge, dotBuiltinName)
+                                        plantOperands()
+                                        V(calleePos, Value((helper.member as DotMember).dotName))
+                                    }
+                                }
                             },
                         )?.let {
                             macroEnv.replaceMacroCallWith(it)
                         }
-                    } else {
+                    }
+                    OpClassification.Simple ->
                         macroEnv.replaceMacroCallWith {
                             Call(call.pos) {
                                 V(operator.pos, vHelper)
@@ -143,21 +230,20 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
                                 }
                             }
                         }
+                }
+            }
+            val leftName = operands.firstOrNull()?.target as? NameLeaf
+            if (cf != OpClassification.IncrOrDecr && (cf == OpClassification.Simple || leftName != null)) {
+                val helperTree = ValueLeaf(macroEnv.document, operator.pos, vHelper)
+                val operandTrees = operands.map { it.target }
+                var result = macroEnv.dispatchCallTo(helperTree, vHelper, operandTrees, interpMode)
+                if (cf == OpClassification.CompoundAssignment && result is Value<*>) {
+                    if (interpMode == InterpMode.Full || result.stability == ValueStability.Stable) {
+                        result = env.set(leftName!!.content, result, macroEnv)
+                            .and { result }
                     }
                 }
-                val leftName = operands.firstOrNull()?.target as? NameLeaf
-                if (!isCompoundAssignment || leftName != null) {
-                    val helperTree = ValueLeaf(macroEnv.document, operator.pos, vHelper)
-                    val operandTrees = operands.map { it.target }
-                    var result = macroEnv.dispatchCallTo(helperTree, vHelper, operandTrees, interpMode)
-                    if (isCompoundAssignment && result is Value<*>) {
-                        if (interpMode == InterpMode.Full || result.stability == ValueStability.Stable) {
-                            result = env.set(leftName!!.content, result, macroEnv)
-                                .and { result }
-                        }
-                    }
-                    return result
-                }
+                return result
             }
         }
         return NotYet
@@ -175,22 +261,33 @@ val vDesugarOperation = Value(DesugarOperation)
 fun desugarCompoundOperation(
     macroEnv: MacroEnvironment,
     left: TEdge,
-    right: TEdge,
-    plantSimpleOperator: Planting.(pos: Position) -> Unit,
+    right: TEdge?,
+    preCapture: Boolean = false,
+    plantOperation: Planting.(pos: Position, plantOperands: Planting.() -> Unit) -> Unit,
 ): (Planting.() -> Unit)? {
+    val calleePos = macroEnv.callee.pos
     val leftTree = left.target
     if (leftTree is NameLeaf) {
         // No need to desugar
         return {
-            Call(macroEnv.pos) {
-                V(macroEnv.callee.pos, BuiltinFuns.vSetLocalFn)
-                Replant(leftTree.copyLeft())
-                Call(macroEnv.pos, vDesugarOperation) {
-                    plantSimpleOperator(macroEnv.callee.pos)
-                    Replant(leftTree.copyRight())
-                    Replant(freeTarget(right))
+            fun Planting.simpleDesugar(preCaptured: Temporary?): TreeTemplate<CallTree> =
+                Call(macroEnv.pos) {
+                    V(calleePos, BuiltinFuns.vSetLocalFn)
+                    Replant(leftTree.copyLeft())
+                    Call(macroEnv.pos) {
+                        plantOperation(calleePos) {
+                            if (preCaptured != null) {
+                                Rn(leftTree.pos, preCaptured)
+                            } else {
+                                Replant(leftTree.copyRight())
+                            }
+                            if (right != null) {
+                                Replant(freeTarget(right))
+                            }
+                        }
+                    }
                 }
-            }
+            maybePrecapture(macroEnv, { simpleDesugar(it) }, preCapture) { leftTree.copyRight() }
         }
     }
 
@@ -255,14 +352,23 @@ fun desugarCompoundOperation(
                             }
                         }
                     }
-                    Call(leftTree.pos, LeftHandOfMacro) {
-                        Replant(leftTree.copy())
-                        Call(macroEnv.pos, vDesugarOperation) {
-                            plantSimpleOperator(macroEnv.callee.pos)
-                            Replant(freeTarget(left))
-                            Replant(freeTarget(right))
+                    fun Planting.plantOp(preCaptured: Temporary?): TreeTemplate<CallTree> =
+                        Call(leftTree.pos, LeftHandOfMacro) {
+                            Replant(leftTree.copy())
+                            Call(macroEnv.pos) {
+                                plantOperation(calleePos) {
+                                    if (preCaptured != null) {
+                                        Rn(leftTree.pos, preCaptured)
+                                    } else {
+                                        Replant(freeTarget(left))
+                                    }
+                                    if (right != null) {
+                                        Replant(freeTarget(right))
+                                    }
+                                }
+                            }
                         }
-                    }
+                    maybePrecapture(macroEnv, { plantOp(it) }, preCapture) { freeTarget(left) }
                 }
             }
         }
@@ -279,3 +385,41 @@ fun isKnownStable(t: Tree?) = when (t) {
     }
     else -> false
 }
+
+private enum class OpClassification {
+    /**
+     * Like `+`.
+     */
+    Simple,
+
+    /** Like `+=`.  The simple op is `+` */
+    CompoundAssignment,
+
+    /**
+     * Like `++` or `--`.
+     * The simple op is a method name: `pred` (predecessor) or `succ` (successor).
+     */
+    IncrOrDecr,
+}
+
+private fun Planting.maybePrecapture(
+    macroEnv: MacroEnvironment,
+    /** Plant the operation, but if the operatoion was [pre-read][plantPreRead], into a temporary, use that instead. */
+    plantOperation: Planting.(Temporary?) -> TreeTemplate<CallTree>,
+    preCapture: Boolean,
+    /** If we need to read the result early, plant an expression that does that. */
+    plantPreRead: () -> Tree,
+): TreeTemplate<*> =
+    if (preCapture) {
+        val preCaptureTemporary = macroEnv.nameMaker.unusedTemporaryName("postfixReturn")
+        Block(pos = macroEnv.pos) {
+            Decl(preCaptureTemporary) {
+                V(initSymbol)
+                Replant(plantPreRead())
+            }
+            plantOperation(preCaptureTemporary)
+            Rn(preCaptureTemporary)
+        }
+    } else {
+        plantOperation(null)
+    }

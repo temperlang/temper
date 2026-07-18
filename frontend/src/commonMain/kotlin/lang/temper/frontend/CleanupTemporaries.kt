@@ -1,6 +1,7 @@
 package lang.temper.frontend
 
 import lang.temper.ast.TreeVisit
+import lang.temper.ast.VisitCue
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.GetStaticOp
 import lang.temper.builtin.Types
@@ -8,6 +9,7 @@ import lang.temper.common.Log
 import lang.temper.common.SnapshotKey
 import lang.temper.common.console
 import lang.temper.common.isNotEmpty
+import lang.temper.common.logIf
 import lang.temper.common.mapFirst
 import lang.temper.common.soleElementOrNull
 import lang.temper.common.structure.StructureSink
@@ -109,7 +111,8 @@ internal class CleanupTemporaries private constructor(
     private var requiredNames: Set<ResolvedName> = emptySet()
 
     fun clean(): DataTables {
-        root.document.debug {
+        val doc = root.document
+        doc.debug {
             console.group("Before") {
                 root.toPseudoCode(
                     console.textOutput,
@@ -128,37 +131,70 @@ internal class CleanupTemporaries private constructor(
         var edits: List<Edit>
 
         edits = simplifyVoidAssignments(readsAndWrites)
+        doc.debug {
+            console.logIf(edits.isNotEmpty()) { "edits came from simplifyVoidAssignments" }
+        }
         if (edits.isEmpty()) {
             edits = assignNonTemporariesFirst(readsAndWrites)
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from assignNonTemporariesFirst" }
+            }
         }
         if (edits.isEmpty() && !beforeResultsExplicit) {
             edits = eliminateNoopReads(readsAndWrites)
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from eliminateNoopReads" }
+            }
         }
         if (edits.isEmpty()) {
             edits = collapseWritesToSingleName(readsAndWrites)
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from collapseWritesToSingleName" }
+            }
         }
         if (edits.isEmpty()) {
             edits = eliminateWritesUpstreamOfNothing(readsAndWrites)
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from eliminateWritesUpstreamOfNothing" }
+            }
         }
         if (edits.isEmpty()) {
             edits = collapseWritesLiveOnlyForAnAssignment(readsAndWrites)
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from collapseWritesLiveOnlyForAnAssignment" }
+            }
         }
         if (edits.isEmpty()) {
             edits = inlineAdjacentSingleReadWritePairs(readsAndWrites)
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from inlineAdjacentSingleReadWritePairs" }
+            }
         }
         if (edits.isEmpty()) {
             edits = inlineStaticReads(readsAndWrites)
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from inlineStaticReads" }
+            }
         }
         if (edits.isEmpty()) {
             edits = eliminateUnusedDeclarations(readsAndWrites)
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from eliminateUnusedDeclarations" }
+            }
         }
         if (edits.isEmpty()) {
             val namesThatNeedVar = mayNeedVar.toSet()
             mayNeedVar.clear()
             edits = fixupVarAtEnd(namesThatNeedVar, readsAndWrites)
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from fixupVarAtEnd" }
+            }
         }
         if (edits.isEmpty()) {
             edits = flagProblems()
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from flagProblems" }
+            }
         }
 
         performEdits(edits)
@@ -477,12 +513,32 @@ internal class CleanupTemporaries private constructor(
                 },
                 canRenameYToXExtra = {
                     val readsOfX = readsAndWrites.reads[x] ?: emptyList()
+                    val writesOfX = readsAndWrites.writes[x] ?: emptyList()
                     // no write to `y` is live during a read of `x`.
                     !readsOfX.any { readOfX ->
                         val elementContainingRead = readOfX.containingPathElement
                         elementContainingRead != null &&
                             readsAndWrites.writesLive(y, elementContainingRead).isNotEmpty()
-                    }
+                    } &&
+                        !writesOfX.any { writeOfX ->
+                            val assigned = writeOfX.tree?.childOrNull(2)
+                            var mentionsY = false
+                            if (assigned != null) {
+                                TreeVisit.startingAt(assigned)
+                                    .forEach { t ->
+                                        when (t) {
+                                            is RightNameLeaf if t.content == y -> {
+                                                mentionsY = true
+                                                VisitCue.AllDone
+                                            }
+                                            is FunTree -> VisitCue.SkipOne
+                                            else -> VisitCue.Continue
+                                        }
+                                    }
+                                    .visitPreOrder()
+                            }
+                            mentionsY
+                        }
                 },
             )
             strategy?.let { Triple(x, y, it) }
@@ -559,7 +615,6 @@ internal class CleanupTemporaries private constructor(
                     }
                 }
                 RStrategy.RenameYToX -> {
-                    check(strategy == RStrategy.RenameYToX)
                     // Each read of y changes to x
                     readsAndWrites.reads[y]?.forEach { readOfY ->
                         val readEdge = readOfY.tree!!.incoming!!

@@ -33,46 +33,45 @@ class GenerateCodeStageTest {
     @Test
     fun simpleDoNothingLoop() = assertModuleAtStage(
         stage = Stage.GenerateCode,
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
         input = """
-        // This example is interesting because the infer result pass actually adds two assignments
-        // to gather results from terminal expression.
-        //
-        // This may be a bug, but in the meantime, it leads to a nested assignment of temporaries:
-        // `t#0 = t#1 = hs(fail#2, i < 3)`
-        //
-        // The generate code stage needs to unnest this assignment before the TmpL backend can
-        // translate it.  If the TmpL backend were to try to handle this by creating temporaries,
-        // those would miss type information.
-        var i = 0;
-        while (i < 3) { i += 1; }
-        """.trimIndent(),
+            |// This example is interesting because the infer result pass actually adds two assignments
+            |// to gather results from terminal expression.
+            |//
+            |// This may be a bug, but in the meantime, it leads to a nested assignment of temporaries:
+            |// `t#0 = t#1 = hs(fail#2, i < 3)`
+            |//
+            |// The generate code stage needs to unnest this assignment before the TmpL backend can
+            |// translate it.  If the TmpL backend were to try to handle this by creating temporaries,
+            |// those would miss type information.
+            |var i = 0;
+            |while (i < 3) { ++i; }
+        """.trimMargin(),
         want = """
-        {
-            "type": {
-                "body":
-                ```
-                var i__0;
-                i__0 = 0;
-                while (i__0 < 3) {
-                  i__0 = i__0 + 1;
-                }
-
-                ```
-            },
-            "generateCode": {
-                "body":
-                ```
-                var i__0;
-                i__0 = 0;
-                while (i__0 < 3) {
-                  i__0 = i__0 + 1
-                }
-
-                ```
-            }
-        }
-        """,
+            |{
+            |    "type": {
+            |        "body":
+            |        ```
+            |        var i__0;
+            |        i__0 = 0;
+            |        while (i__0 < 3) {
+            |          i__0 = i__0 + 1;
+            |        }
+            |
+            |        ```
+            |    },
+            |    "generateCode": {
+            |        "body":
+            |        ```
+            |        var i__0;
+            |        i__0 = 0;
+            |        while (i__0 < 3) {
+            |          i__0 = i__0 + 1
+            |        }
+            |
+            |        ```
+            |    }
+            |}
+        """.trimMargin(),
     )
 
     @Test
@@ -2461,7 +2460,7 @@ class GenerateCodeStageTest {
         """.trimMargin(),
         logEntryWanted = {
             it.level >= Log.Warn ||
-                // This is a low level message, but it's specific to these checks.
+                // This is a low-level message, but it's specific to these checks.
                 it.template == MessageTemplate.UnnecessaryRttiCheck
         },
         want = """
