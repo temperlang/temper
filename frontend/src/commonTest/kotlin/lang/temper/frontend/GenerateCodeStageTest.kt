@@ -4008,6 +4008,35 @@ class GenerateCodeStageTest {
     )
 
     @Test
+    fun staticWithUnusedExtension() = assertModuleAtStage(
+        stage = Stage.Run,
+        input = """
+            |@staticExtension(String, "foo")
+            |let strFoo(): Void {
+            |  console.log("string foo");
+            |}
+            |
+            |class C {
+            |  public static foo(): Void {
+            |    console.log("C foo");
+            |  }
+            |}
+            |
+            |C.foo();
+        """.trimMargin(),
+        want = """
+            |{
+            |  run: "void: Void",
+            |
+            |  stdout: ```
+            |    C foo
+            |
+            |    ```,
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun declaringADataFile() = assertModuleAtStage(
         stage = Stage.GenerateCode,
         input = """

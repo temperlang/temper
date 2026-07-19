@@ -63,11 +63,11 @@ internal fun simplifyDotHelper(
     // Give preference to members over extensions
     var lastNonExtensionResolution: VariantResolution? = null
     var lastResolution: VariantResolution? = null
-    for (variant in variants.reversed()) {
-        if (variant.first equivalent variantMatch || variant.first equivalent variantMatchRefined) {
-            lastResolution = variant.second
-            if (variant.second is Either.Left) {
-                lastNonExtensionResolution = variant.second
+    for ((variantType, resolution) in variants.reversed()) {
+        if (variantType equivalent variantMatch || variantType equivalent variantMatchRefined) {
+            lastResolution = resolution
+            if (resolution is Either.Left) {
+                lastNonExtensionResolution = resolution
             }
         }
     }
@@ -156,9 +156,9 @@ internal fun simplifyDotHelper(
             call.insert {
                 V(extraArg)
             }
+            retypeTree(call)
+            return@simplifyDotHelper
         }
-        retypeTree(call)
-        return
     }
 
     val functionTypes = variantMatch?.let {

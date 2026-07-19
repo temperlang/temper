@@ -3442,7 +3442,7 @@ let ls: List<Animal> = [new Cat(11), new Dog(111)];
 let p = new JsonTextProducer();
 List.jsonAdapter(Animal.jsonAdapter()).encodeToJson(ls, p);
 p.toJsonString() == "[{\"meowCount\":11},{\"hydrantsSniffed\":111}]"
-// ❌
+// ✅
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/@json/snippet.md/2 -->
@@ -3543,7 +3543,7 @@ FooRequest.jsonAdapter()
 FooRequest.jsonAdapter()
   .decodeFromJson(jsonSyntaxTreeV2, NullInterchangeContext.instance)
   is FooRequestVersion2
-// ❌
+// ✅
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/@jsonExtra/snippet.md/0 -->

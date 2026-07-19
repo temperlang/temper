@@ -68,7 +68,7 @@ internal fun maybeAdjustDotHelper(
     val edge = t.incoming!! // Safe because t is not a root block
 
     // If this looks like a static member access, we can filter out any non-static extensions
-    var adjusted = true
+    var adjusted = true // TODO: this is never false
     val firstArgIndex = accessor.firstArgumentIndex + 1
     val firstArg = t.childOrNull(firstArgIndex)
     val typeReceiver = firstArg?.reifiedTypeContained?.type2
@@ -85,6 +85,7 @@ internal fun maybeAdjustDotHelper(
                     V(pos, Value(newDotHelper), callee.typeInferences?.type)
                 }
                 adjusted = true
+                return@adjustDotHelper newDotHelper
             }
         }
         dotHelper
