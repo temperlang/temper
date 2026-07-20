@@ -971,7 +971,7 @@ class PseudoCodeTest {
             doc.treeFarm.grow(pos) {
                 Call(DotHelper(ExternalSet, DotMember(Symbol("j")), emptyList())) {
                     Rn(ParsedName("x"))
-                    Call(BuiltinFuns.plusFn) {
+                    Call(BuiltinFuns.plusIntIntFn) {
                         Call(DotHelper(ExternalGet, DotMember(Symbol("i")), emptyList())) {
                             Rn(ParsedName("x"))
                         }

@@ -236,7 +236,7 @@ private class Randomizer(val rng: Random) {
         controlFlowMaker.Stmt {
             Call(BuiltinFuns.setLocalFn) {
                 Ln(varName)
-                Call(BuiltinFuns.plusFn) {
+                Call(BuiltinFuns.plusIntIntFn) {
                     Rn(varName)
                     V(Value(1, TInt))
                 }

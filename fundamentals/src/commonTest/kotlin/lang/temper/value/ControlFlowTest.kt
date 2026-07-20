@@ -451,7 +451,7 @@ class ControlFlowTest {
             Stmt {
                 Decl(limit) {
                     V(initSymbol)
-                    Call(BuiltinFuns.plusFn) {
+                    Call(BuiltinFuns.plusIntIntFn) {
                         Rn(start)
                         V(value(10))
                     }
@@ -487,7 +487,7 @@ class ControlFlowTest {
                 increment = Stmt { // ++i
                     Call(BuiltinFuns.setLocalFn) {
                         Ln(i)
-                        Call(BuiltinFuns.plusFn) {
+                        Call(BuiltinFuns.plusIntIntFn) {
                             Rn(i)
                             V(value(1))
                         }
@@ -551,7 +551,7 @@ class ControlFlowTest {
                                     //     total = total + a;
                                     Call(BuiltinFuns.setLocalFn) {
                                         Ln(total)
-                                        Call(BuiltinFuns.plusFn) {
+                                        Call(BuiltinFuns.plusIntIntFn) {
                                             Rn(total)
                                             Rn(a)
                                         }
@@ -570,7 +570,7 @@ class ControlFlowTest {
                                         Stmt {
                                             Call(BuiltinFuns.setLocalFn) {
                                                 Ln(total)
-                                                Call(BuiltinFuns.minusFn) {
+                                                Call(BuiltinFuns.minusIntIntFn) {
                                                     V(value(0))
                                                     Rn(total)
                                                 }
@@ -587,7 +587,7 @@ class ControlFlowTest {
                         //   total += i;
                         Call(BuiltinFuns.setLocalFn) {
                             Ln(total)
-                            Call(BuiltinFuns.plusFn) {
+                            Call(BuiltinFuns.plusIntIntFn) {
                                 Rn(total)
                                 Rn(i)
                             }
@@ -697,7 +697,7 @@ class ControlFlowTest {
                 increment = Stmt {
                     Call(BuiltinFuns.setLocalFn) {
                         Ln(i)
-                        Call(BuiltinFuns.plusFn) {
+                        Call(BuiltinFuns.plusIntIntFn) {
                             Rn(i)
                             V(value(1))
                         }
@@ -724,7 +724,7 @@ class ControlFlowTest {
                         increment = Stmt {
                             Call(BuiltinFuns.setLocalFn) {
                                 Ln(j)
-                                Call(BuiltinFuns.plusFn) {
+                                Call(BuiltinFuns.plusIntIntFn) {
                                     Rn(j)
                                     V(value(1))
                                 }
@@ -751,7 +751,7 @@ class ControlFlowTest {
                                 increment = Stmt {
                                     Call(BuiltinFuns.setLocalFn) {
                                         Ln(k)
-                                        Call(BuiltinFuns.plusFn) {
+                                        Call(BuiltinFuns.plusIntIntFn) {
                                             Rn(k)
                                             V(value(1))
                                         }
@@ -762,7 +762,7 @@ class ControlFlowTest {
                                     Stmt {
                                         Call(BuiltinFuns.setLocalFn) {
                                             Ln(prime)
-                                            Call(BuiltinFuns.plusFn) {
+                                            Call(BuiltinFuns.plusIntIntFn) {
                                                 Rn(prime)
                                                 V(value(1))
                                             }
@@ -1064,7 +1064,7 @@ class ControlFlowTest {
                 Stmt {
                     Call(BuiltinFuns.setLocalFn) {
                         Ln(i)
-                        Call(BuiltinFuns.plusFn) {
+                        Call(BuiltinFuns.plusIntIntFn) {
                             Rn(i)
                             V(value(1))
                         }
@@ -1147,7 +1147,7 @@ class ControlFlowTest {
                         Stmt {
                             Call(BuiltinFuns.setLocalFn) {
                                 Ln(j)
-                                Call(BuiltinFuns.plusFn) {
+                                Call(BuiltinFuns.plusIntIntFn) {
                                     Rn(j)
                                     V(value(1))
                                 }
@@ -1512,7 +1512,7 @@ class ControlFlowTest {
                     Stmt {
                         Call(BuiltinFuns.setLocalFn) {
                             Ln(a)
-                            Call(BuiltinFuns.plusFn) {
+                            Call(BuiltinFuns.plusIntIntFn) {
                                 Rn(a)
                                 V(value(1))
                             }
@@ -1531,7 +1531,7 @@ class ControlFlowTest {
                         increment = Stmt {
                             Call(BuiltinFuns.setLocalFn) {
                                 Ln(a)
-                                Call(BuiltinFuns.plusFn) {
+                                Call(BuiltinFuns.plusIntIntFn) {
                                     Rn(a)
                                     V(value(1))
                                 }
@@ -1542,7 +1542,7 @@ class ControlFlowTest {
                             Stmt {
                                 Call(BuiltinFuns.setLocalFn) {
                                     Ln(a)
-                                    Call(BuiltinFuns.plusFn) {
+                                    Call(BuiltinFuns.plusIntIntFn) {
                                         Rn(a)
                                         V(value(1))
                                     }
