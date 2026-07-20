@@ -40,7 +40,6 @@ internal object AnnotationExtractor {
         // "\"" : CLOSING_QUOTE
         // ")" : RPAR
 
-        //
         // We scan for HelpSnippet, look back for an `@` and then scan forward to find the parentheses.
         // The last quoted string is the snippet ID.
         var i = 0

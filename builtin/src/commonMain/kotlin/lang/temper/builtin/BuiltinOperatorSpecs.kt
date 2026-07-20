@@ -3,6 +3,7 @@ package lang.temper.builtin
 import lang.temper.lexer.Operator
 import lang.temper.lexer.TokenType
 import lang.temper.value.CallableValue
+import lang.temper.value.helpSnippet
 
 /**
  * Keys match the operator specification format described with [lang.temper.value.operatorSymbol].
@@ -20,14 +21,16 @@ val builtinOperatorSpecs: Map<String, List<CallableValue>> = mapOf(
      * - *Prefix* with one [snippet/type/Float64]: numeric identity
      *
      * ```temper
-     * 1   + 2   == 3   &&
-     * 1.0 + 2.0 == 3.0 &&
-     * +1        == 1   &&
-     * +1.0      == 1.0
+     * 1    + 2    == 3    &&
+     * 1.0  + 2.0  == 3.0  &&
+     * 1I64 + 2I64 == 3I64 &&
+     * +1          == 1    &&
+     * +1.0        == 1.0  &&
+     * +1I64       == 1I64
      * ```
      *
      * As explained above, you cannot mix [snippet/type/Int32] and
-     * [snippet/type/Float64] inputs:
+     * [snippet/type/Float64] inputs nor either with [snippet/type/Int64]:
      *
      * ```temper FAIL
      * 1 + 1.0
@@ -45,7 +48,8 @@ val builtinOperatorSpecs: Map<String, List<CallableValue>> = mapOf(
         BuiltinFuns.plusFloatFn,
     ),
     "_+_" to listOf(
-        BuiltinFuns.plusIntIntFn,
+        BuiltinFuns.plusIntIntFn
+            .also { helpSnippet(it, "addition operator (`+`)", "builtin/+") },
         BuiltinFuns.plusLongLongFn,
         BuiltinFuns.plusFloatFloatFn,
     ),
@@ -89,7 +93,8 @@ val builtinOperatorSpecs: Map<String, List<CallableValue>> = mapOf(
         BuiltinFuns.minusFloatFn,
     ),
     "_-_" to listOf(
-        BuiltinFuns.minusIntIntFn,
+        BuiltinFuns.minusIntIntFn
+            .also { helpSnippet(it, "subtraction operator (`-`)", "builtin/-") },
         BuiltinFuns.minusLongLongFn,
         BuiltinFuns.minusFloatFloatFn,
     ),
@@ -108,7 +113,8 @@ val builtinOperatorSpecs: Map<String, List<CallableValue>> = mapOf(
      * ```
      */
     "_*_" to listOf(
-        BuiltinFuns.timesIntIntFn,
+        BuiltinFuns.timesIntIntFn
+            .also { helpSnippet(it, "multiplication operator (`*`)", "builtin/%2A") },
         BuiltinFuns.timesLongLongFn,
         BuiltinFuns.timesFloatFloatFn,
     ),
@@ -126,7 +132,8 @@ val builtinOperatorSpecs: Map<String, List<CallableValue>> = mapOf(
      * ```
      */
     "_**_" to listOf(
-        BuiltinFuns.powFloatFloatFn,
+        BuiltinFuns.powFloatFloatFn
+            .also { helpSnippet(it, "power operator (`**`)", "builtin/%2A%2A") },
     ),
 
     /**
@@ -170,7 +177,8 @@ val builtinOperatorSpecs: Map<String, List<CallableValue>> = mapOf(
      * [rounds towards zero]: https://en.wikipedia.org/wiki/Rounding#Rounding_toward_zero
      */
     "_/_" to listOf(
-        BuiltinFuns.divIntIntFn,
+        BuiltinFuns.divIntIntFn
+            .also { helpSnippet(it, "division operator (`/`)", "builtin/%2F") },
         BuiltinFuns.divLongLongFn,
         BuiltinFuns.divFloatFloatFn,
     ),
@@ -198,7 +206,8 @@ val builtinOperatorSpecs: Map<String, List<CallableValue>> = mapOf(
      * ```
      */
     "_%_" to listOf(
-        BuiltinFuns.modIntIntFn,
+        BuiltinFuns.modIntIntFn
+            .also { helpSnippet(it, "modulus operator (`%`)", "builtin/%25") },
         BuiltinFuns.modLongLongFn,
         BuiltinFuns.modFloatFloatFn,
     ),
@@ -230,7 +239,8 @@ val builtinOperatorSpecs: Map<String, List<CallableValue>> = mapOf(
      * ```
      */
     "_&_" to listOf(
-        BuiltinFuns.ampIntIntFn,
+        BuiltinFuns.ampIntIntFn
+            .also { helpSnippet(it, "bitwise and (`&`)", "builtin/&") },
         BuiltinFuns.ampLongLongFn,
         TypeIntersectionFun,
     ),
@@ -251,7 +261,8 @@ val builtinOperatorSpecs: Map<String, List<CallableValue>> = mapOf(
      * ```
      */
     "_|_" to listOf(
-        BuiltinFuns.barIntIntFn,
+        BuiltinFuns.barIntIntFn
+            .also { helpSnippet(it, "bitwise or (`|`)", "builtin/|") },
         BuiltinFuns.barLongLongFn,
     ),
 
@@ -270,7 +281,8 @@ val builtinOperatorSpecs: Map<String, List<CallableValue>> = mapOf(
      * ```
      */
     "~_" to listOf(
-        BuiltinFuns.bitInverseIntFn,
+        BuiltinFuns.bitInverseIntFn
+            .also { helpSnippet(it, "bitwise inverse (`~`)", "builtin/~") },
         BuiltinFuns.bitInverseLongFn,
     ),
 
@@ -290,7 +302,8 @@ val builtinOperatorSpecs: Map<String, List<CallableValue>> = mapOf(
      * ```
      */
     "_^_" to listOf(
-        BuiltinFuns.bitXorIntIntFn,
+        BuiltinFuns.bitXorIntIntFn
+            .also { helpSnippet(it, "bitwise xor (`^`)", "builtin/^") },
         BuiltinFuns.bitXorLongLongFn,
     ),
 
@@ -314,7 +327,8 @@ val builtinOperatorSpecs: Map<String, List<CallableValue>> = mapOf(
      * ```
      */
     "_<<_" to listOf(
-        BuiltinFuns.shlIntIntFn,
+        BuiltinFuns.shlIntIntFn
+            .also { helpSnippet(it, "left shift (`<<`)", "builtin/<<") },
         BuiltinFuns.shlLongLongFn,
     ),
 
@@ -349,7 +363,8 @@ val builtinOperatorSpecs: Map<String, List<CallableValue>> = mapOf(
      * ```
      */
     "_>>_" to listOf(
-        BuiltinFuns.shrIntIntFn,
+        BuiltinFuns.shrIntIntFn
+            .also { helpSnippet(it, "right shift (`>>`)", "builtin/>>") },
         BuiltinFuns.shrLongLongFn,
     ),
 
@@ -382,7 +397,8 @@ val builtinOperatorSpecs: Map<String, List<CallableValue>> = mapOf(
      * ```
      */
     "_>>>_" to listOf(
-        BuiltinFuns.uShrIntIntFn,
+        BuiltinFuns.uShrIntIntFn
+            .also { helpSnippet(it, "unsigned right shift (`>>>`)", "builtin/>>>") },
         BuiltinFuns.uShrLongIntFn,
     ),
 )

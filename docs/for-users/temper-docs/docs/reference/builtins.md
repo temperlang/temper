@@ -1035,17 +1035,19 @@ The builtin `+` operator has six variants:
 <!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/0 -->
 
 ```temper
-1   + 2   == 3   &&
-1.0 + 2.0 == 3.0 &&
-+1        == 1   &&
-+1.0      == 1.0
+1    + 2    == 3    &&
+1.0  + 2.0  == 3.0  &&
+1I64 + 2I64 == 3I64 &&
++1          == 1    &&
++1.0        == 1.0  &&
++1I64       == 1I64
 // ✅
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/0 -->
 
 As explained above, you cannot mix [*Int32*](types.md#type-Int32) and
-[*Float64*](types.md#type-Float64) inputs:
+[*Float64*](types.md#type-Float64) inputs nor either with [*Int64*](types.md#type-Int64):
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/1 -->
 
