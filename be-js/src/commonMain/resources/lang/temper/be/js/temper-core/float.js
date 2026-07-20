@@ -4,6 +4,20 @@
 import {bubble, INT32_MAX, INT32_MIN, INT64_MAX, INT64_MIN} from "./core.js";
 
 /**
+ * Successor function.
+ * @param {number} n
+ * @returns {number}
+ */
+export const float64Succ = (x) => x + 1.0;
+
+/**
+ * Predecessor function.
+ * @param {number} n
+ * @returns {number}
+ */
+export const float64Pred = (x) => x - 1.0;
+
+/**
  * Implements extension method core.type Float64.near()
  * @param {number} x
  * @param {number} y
