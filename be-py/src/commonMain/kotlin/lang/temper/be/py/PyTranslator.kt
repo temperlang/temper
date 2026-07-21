@@ -1149,9 +1149,6 @@ class PyTranslator(
         args: Py.Arguments,
     ): List<Py.Stmt> {
         // Call the connected function, after substituting any default arg values.
-        // Use a pretty but private name for the connected function.
-        val name = func.name.name as ResolvedParsedName
-        val nameText = pyNames.choosePrettyPrivateSourceName(name, TmpL.IdKind.Value)
         return buildList {
             addAll(renames)
             val defaulting = func.parameterDefaultStatementsInfo()
@@ -1160,7 +1157,8 @@ class PyTranslator(
                 addAll(translate(statement))
             }
             // Call the connected function with defaults applied.
-            Py.Name(func.pos, PyIdentifierName(nameText)).call(
+            Py.Name(func.pos, PyIdentifierName("_connected")).method(
+                name = pyNames.choosePrettyName(func.name.name as ResolvedParsedName, TmpL.IdKind.Value),
                 args = buildList {
                     for ((tmpl, py) in func.parameters.parameters.zip(args.args)) {
                         when {
