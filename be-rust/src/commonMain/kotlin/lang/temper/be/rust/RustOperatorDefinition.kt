@@ -28,6 +28,7 @@ enum class RustOperatorDefinition(
     // Copied from CSharpOperatorDefinition.
     override fun canNest(inner: OperatorDefinition, childIndex: Int) = when {
         inner !is RustOperatorDefinition -> false
+        this == Relational && inner == As -> false // `as T < ...` interpreted as generic arguments
         ordinal < inner.ordinal -> true
         ordinal > inner.ordinal -> false
         // TODO Does this allow `==` to nest?
