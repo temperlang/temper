@@ -5,7 +5,7 @@ import lang.temper.builtin.Types
 import lang.temper.env.InterpMode
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.Symbol
 import lang.temper.type.NominalType
 import lang.temper.type.TypeFormal
@@ -34,7 +34,7 @@ object AltImpliedResultFn : NamedBuiltinFun, DocGenAltImpliedResultFn, PureCalla
     override val sigs = listOf(
         run {
             val t = TypeFormal(
-                pos = Position(ImplicitsCodeLocation, 0, 0),
+                pos = Position(CoreCodeLocation, 0, 0),
                 name = BuiltinName("$name.T"),
                 symbol = Symbol("T"),
                 variance = Variance.Invariant,

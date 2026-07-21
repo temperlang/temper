@@ -9,7 +9,7 @@ import lang.temper.env.Export
 import lang.temper.format.TextOutputTokenSink
 import lang.temper.format.WrappedTokenSink
 import lang.temper.frontend.ModuleSource
-import lang.temper.frontend.implicits.ImplicitsModule
+import lang.temper.frontend.core.CoreModule
 import lang.temper.interp.EmptyEnvironment
 import lang.temper.interp.builtinOnlyEnvironment
 import lang.temper.lexer.Genre
@@ -21,7 +21,7 @@ import lang.temper.log.FileRelatedCodeLocation
 import lang.temper.log.LogEntry
 import lang.temper.log.UnknownCodeLocation
 import lang.temper.log.unknownPos
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.NameOutputToken
 import lang.temper.type.FunctionType
 import lang.temper.type.MethodKind
@@ -304,7 +304,7 @@ class ModuleData {
 private fun Iterable<Def>.sortCompletions() = sortedWith { a, b ->
     fun locVal(def: Def) = when (def.pos.loc) {
         // Put builtins after local scope.
-        ImplicitsCodeLocation, UnknownCodeLocation -> 1
+        CoreCodeLocation, UnknownCodeLocation -> 1
         else -> 0
     }
     when (val locDiff = locVal(a) - locVal(b)) {
@@ -674,7 +674,7 @@ private val builtinDefs = lazy {
         name to Mention.def(name = name, pos = pos, text = name)
     }
     // Implicits, letting these overwrite core where applicable.
-    val implicits = ImplicitsModule.module.exports?.asSequence()?.map { export ->
+    val implicits = CoreModule.module.exports?.asSequence()?.map { export ->
         val name = export.name.baseName.nameText
         name to Mention.def(name = name, pos = export.position, text = name)
     } ?: emptySequence()

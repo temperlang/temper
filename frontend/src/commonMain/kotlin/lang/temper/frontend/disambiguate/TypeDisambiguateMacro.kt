@@ -940,7 +940,7 @@ internal fun typeDisambiguateMacro(
                                 MessageTemplate.InternalInterpreterError,
                                 formalPos,
                                 listOf(
-                                    "WellKnownTypes $stableFormalName variance out of sync with Implicits.temper",
+                                    "WellKnownTypes $stableFormalName variance out of sync with core.temper",
                                 ),
                             )
                         }

@@ -723,7 +723,7 @@ private val extraEnvironmentBindings: Map<TemperName, Value<*>> = run {
     )
     val t = MkType2(tf).get()
     mapOf(
-        StagingFlags.skipImportImplicits to TBoolean.valueTrue,
+        StagingFlags.skipImportCore to TBoolean.valueTrue,
         StagingFlags.moduleResultNeeded to TBoolean.valueTrue,
         BuiltinName("f") to Value(PlaceholderFunction("f", false, WellKnownTypes.voidType2)),
         BuiltinName("ff") to Value(PlaceholderFunction("ff", true, WellKnownTypes.voidType2)),

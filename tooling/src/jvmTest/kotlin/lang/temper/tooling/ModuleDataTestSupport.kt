@@ -6,7 +6,7 @@ import lang.temper.common.console
 import lang.temper.common.mapFirst
 import lang.temper.frontend.Module
 import lang.temper.frontend.ModuleSource
-import lang.temper.frontend.implicits.builtinEnvironment
+import lang.temper.frontend.core.builtinEnvironment
 import lang.temper.interp.EmptyEnvironment
 import lang.temper.lexer.Genre
 import lang.temper.lexer.MarkdownLanguageConfig

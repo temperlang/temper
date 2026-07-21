@@ -21,7 +21,7 @@ import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.log.Positioned
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ResolvedName
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
@@ -77,7 +77,7 @@ private const val DEBUG = false
 
 private inline fun debug(p: Positioned, f: () -> Any) {
     @Suppress("SimplifyBooleanWithConstants", "KotlinConstantConditions")
-    if (DEBUG && p.pos.loc != ImplicitsCodeLocation) {
+    if (DEBUG && p.pos.loc != CoreCodeLocation) {
         val x = f()
         if (x != Unit) {
             console.log("$x")

@@ -9,7 +9,7 @@ import lang.temper.common.putMultiList
 import lang.temper.common.splitAfter
 import lang.temper.common.toStringViaBuilder
 import lang.temper.format.OutToks
-import lang.temper.frontend.implicits.ImplicitsModule
+import lang.temper.frontend.core.CoreModule
 import lang.temper.lexer.StandaloneLanguageConfig
 import lang.temper.lexer.TemperToken
 import lang.temper.lexer.TokenType
@@ -60,7 +60,7 @@ import kotlin.reflect.KClass
 import kotlin.reflect.cast
 import kotlin.reflect.safeCast
 
-// These classes help us look through Implicits.temper and group comments with
+// These classes help us look through core.temper and group comments with
 // builtin type members.
 private sealed class Documentable : Positioned
 
@@ -169,7 +169,7 @@ private fun extractCommentDeclarationRelationships(
     }
 
     // Add types and members into the mix
-    val module = ImplicitsModule.module
+    val module = CoreModule.module
     val root = module.treeForDebug
     require(root is BlockTree)
 
@@ -272,7 +272,7 @@ private fun extractCommentDeclarationRelationships(
         }
     }
 
-    // Bootstrap types that haven't been fleshed out yet in Implicits.temper, like `Void`
+    // Bootstrap types that haven't been fleshed out yet in core.temper, like `Void`
     WellKnownTypes.allNames.forEach { typeName ->
         val type = WellKnownTypes.withName(typeName)
         if (type != null) {
@@ -323,7 +323,7 @@ private fun extractCommentDeclarationRelationships(
 
 private val implicitsLanguageConfig = StandaloneLanguageConfig
 
-/** From `Implicits.temper`, extracts API documentation for our builtin types. */
+/** From `core.temper`, extracts API documentation for our builtin types. */
 internal object TypeShapeExtractor : SnippetExtractor() {
     private val commentDeclarationRelationships = extractCommentDeclarationRelationships(
         content = TemperContent(
@@ -333,9 +333,9 @@ internal object TypeShapeExtractor : SnippetExtractor() {
                 "commonMain",
                 "resources",
                 "implicits",
-                "Implicits.temper",
+                "core.temper",
             ),
-            "${ImplicitsModule.code}",
+            "${CoreModule.code}",
             implicitsLanguageConfig,
         ),
         extractor = this,
@@ -355,7 +355,7 @@ internal object TypeShapeExtractor : SnippetExtractor() {
         }
         if (
             !"$from".startsWith(
-                "frontend/src/commonMain/resources/implicits/Implicits.",
+                "frontend/src/commonMain/resources/core/core.",
             )
         ) {
             return
@@ -363,7 +363,7 @@ internal object TypeShapeExtractor : SnippetExtractor() {
 
         val derivation = ExtractedBy(this)
 
-        check(content.fileContent == "${ImplicitsModule.code}")
+        check(content.fileContent == "${CoreModule.code}")
 
         val (groupedInfo, containingTypeFor) = commentDeclarationRelationships
 
@@ -1072,6 +1072,6 @@ private fun typeToMarkdownOnto(
 private const val BACKPORT_ERROR_MESSAGE =
     "Cannot back-port changes to the builtin type definitions.  ${
         ""
-    }Maybe edit Implicits.temper or move the changes into a nested $COMMENTARY_ID_SUFFIX snippet."
+    }Maybe edit core.temper or move the changes into a nested $COMMENTARY_ID_SUFFIX snippet."
 
 private val ModularName.asParsedName get() = (this as ResolvedParsedName).baseName

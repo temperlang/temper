@@ -36,17 +36,17 @@ sealed interface ModuleLocation : CodeLocation, Comparable<ModuleLocation>, Toke
 }
 
 /**
- * A code location that should only be used for the Implicits module, the module that is implicitly
+ * A code location that should only be used for the `core` module, the module that is implicitly
  * imported by all other modules.
  */
-object ImplicitsCodeLocation : ModuleLocation {
+object CoreCodeLocation : ModuleLocation {
     override val diagnostic = wordCore.text
     override fun renderTo(tokenSink: TokenSink, context: SharedLocationContext?) {
         tokenSink.emit(wordCore)
     }
 
     override fun compareTo(other: ModuleLocation): Int = when (other) {
-        is ImplicitsCodeLocation -> 0
+        is CoreCodeLocation -> 0
         is ModuleName -> -1
     }
 
@@ -143,7 +143,7 @@ data class ModuleName(
     }
 
     override fun compareTo(other: ModuleLocation): Int = when (other) {
-        is ImplicitsCodeLocation -> 1 // Implicits sorts first
+        is CoreCodeLocation -> 1 // Core sorts first
         is ModuleName -> {
             var delta = sourceFile.compareTo(other.sourceFile)
             if (delta == 0) {

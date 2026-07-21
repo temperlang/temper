@@ -33,7 +33,7 @@ import lang.temper.format.toStringViaTokenSink
 import lang.temper.frontend.Module
 import lang.temper.frontend.ModuleNamingContext
 import lang.temper.frontend.adjustDeclarationMetadataWithSinglyAssignedHints
-import lang.temper.frontend.implicits.ImplicitsModule
+import lang.temper.frontend.core.CoreModule
 import lang.temper.frontend.syntax.isAssignment
 import lang.temper.interp.docgenalts.isPreserveCall
 import lang.temper.interp.forEachActual
@@ -44,7 +44,7 @@ import lang.temper.log.Position
 import lang.temper.log.Positioned
 import lang.temper.name.BuiltinName
 import lang.temper.name.ExportedName
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.InternalModularName
 import lang.temper.name.ModularName
 import lang.temper.name.ResolvedName
@@ -2022,7 +2022,7 @@ internal class Typer(
                     when (valueType) {
                         functionType -> {
                             // Vague type, so give implicits a try for more detail.
-                            val implicits = ImplicitsModule.module.exports!!
+                            val implicits = CoreModule.module.exports!!
                             val found = implicits.firstOrNull {
                                 it.name.baseName.nameText == name.builtinKey
                             }
@@ -3164,7 +3164,7 @@ internal class Typer(
     companion object {
         /** Type formal for the comma function. */
         private val commaT = TypeFormal(
-            pos = Position(ImplicitsCodeLocation, 0, 0),
+            pos = Position(CoreCodeLocation, 0, 0),
             name = BuiltinName("comma.T"),
             symbol = Symbol("T"),
             variance = Variance.Invariant,

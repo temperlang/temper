@@ -20,7 +20,7 @@ import lang.temper.format.TokenSink
 import lang.temper.frontend.Module
 import lang.temper.frontend.ModuleSource
 import lang.temper.frontend.StagingFlags
-import lang.temper.frontend.implicits.ImplicitsModule
+import lang.temper.frontend.core.CoreModule
 import lang.temper.frontend.staging.makeContinueCondition
 import lang.temper.fs.Directories
 import lang.temper.interp.MetadataDecorator
@@ -187,7 +187,7 @@ internal class Repl(
     init {
         // Load early so that user typing is not interrupted by a pause to stage the
         // implicits module.
-        ignore(ImplicitsModule.module)
+        ignore(CoreModule.module)
     }
 
     override fun close() {

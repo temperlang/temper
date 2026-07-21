@@ -11,7 +11,7 @@ import lang.temper.format.OutToks
 import lang.temper.format.OutputToken
 import lang.temper.format.OutputTokenType
 import lang.temper.format.TokenSink
-import lang.temper.frontend.implicits.ImplicitsModule
+import lang.temper.frontend.core.CoreModule
 import lang.temper.interp.LongLivedUserFunction
 import lang.temper.interp.docgenalts.DocGenAltFn
 import lang.temper.interp.docgenalts.DocGenAltIfFn
@@ -23,7 +23,7 @@ import lang.temper.log.Position
 import lang.temper.log.Positioned
 import lang.temper.log.spanningPosition
 import lang.temper.name.ExportedName
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.NameMaker
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedName
@@ -1919,8 +1919,8 @@ internal fun simplifyGeneratorFnReturns(body: PreTranslated, returnName: Resolve
             }
             return if (callee is RightNameLeaf) {
                 val calleeName = callee.content as? ResolvedName
-                // Is it the name of `@export let doneResult = new DoneResult()` from Implicits.temper
-                calleeName is ExportedName && calleeName.origin.loc is ImplicitsCodeLocation &&
+                // Is it the name of `@export let doneResult = new DoneResult()` from core.temper
+                calleeName is ExportedName && calleeName.origin.loc is CoreCodeLocation &&
                     calleeName.baseName == doneResultParsedName
             } else {
                 val fn = callee.functionContained
@@ -1932,7 +1932,7 @@ internal fun simplifyGeneratorFnReturns(body: PreTranslated, returnName: Resolve
     return simpler
 }
 
-private val doneResultParsedName = ParsedName("doneResult") // defined in Implicits.temper
+private val doneResultParsedName = ParsedName("doneResult") // defined in core.temper
 
 private val PreTranslated.isEmptyBlock get() =
     this is PreTranslated.Block && this.unfixedElements.isEmpty()
@@ -1950,7 +1950,7 @@ private fun forEachLeafStmt(
 private val doneResultExportStay = lazy {
     (
         TFunction.unpackOrNull(
-            ImplicitsModule.module.exports!!.first { it.name.toSymbol().text == doneResultParsedName.nameText }
+            CoreModule.module.exports!!.first { it.name.toSymbol().text == doneResultParsedName.nameText }
                 .valueFromStaging,
         ) as? LongLivedUserFunction
         )?.stayLeaf

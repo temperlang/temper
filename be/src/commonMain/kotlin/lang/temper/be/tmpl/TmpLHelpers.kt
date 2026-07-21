@@ -15,7 +15,7 @@ import lang.temper.log.Position
 import lang.temper.log.filePath
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ExportedName
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModuleName
 import lang.temper.name.NamingContext
 import lang.temper.name.ParsedName
@@ -349,7 +349,7 @@ fun standardResolver(name: ResolvedName) = when (name) {
 
 fun CodeLocation.source() = when (this) {
     is ModuleName -> this.sourceFile
-    is ImplicitsCodeLocation -> filePath("implicits.temper")
+    is CoreCodeLocation -> filePath("core.temper")
     else -> null
 }
 

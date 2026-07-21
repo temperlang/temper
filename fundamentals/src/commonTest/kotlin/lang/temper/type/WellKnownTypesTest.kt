@@ -2,7 +2,7 @@ package lang.temper.type
 
 import lang.temper.common.Console
 import lang.temper.common.toStringViaTextOutput
-import lang.temper.frontend.implicits.ImplicitsModule
+import lang.temper.frontend.core.CoreModule
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -11,7 +11,7 @@ class WellKnownTypesTest {
      * Test that supertype relationships before and after ImplicitsModule loaded
      * are the same.
      *
-     * This allows other unit tests to be run even when [ImplicitsModule] fails to initialize
+     * This allows other unit tests to be run even when [CoreModule] fails to initialize
      * helping diagnose breaking changes to typing frontend code.
      */
     @Test
@@ -36,7 +36,7 @@ class WellKnownTypesTest {
             }
         }
         val superTypeRelationshipsBefore = snapshotSuperTypeRelationships()
-        ImplicitsModule.module
+        CoreModule.module
         val superTypeRelationshipsAfter = snapshotSuperTypeRelationships()
         assertEquals(superTypeRelationshipsBefore, superTypeRelationshipsAfter)
     }

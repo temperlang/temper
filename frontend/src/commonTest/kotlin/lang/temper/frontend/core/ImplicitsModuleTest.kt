@@ -1,4 +1,4 @@
-package lang.temper.frontend.implicits
+package lang.temper.frontend.core
 
 import lang.temper.common.ignore
 import lang.temper.common.soleElementOrNull
@@ -11,7 +11,7 @@ import lang.temper.type.promoteSimpleValue
 import lang.temper.value.TClass
 import lang.temper.value.TInt
 import lang.temper.value.Value
-import lang.temper.value.isImplicits
+import lang.temper.value.isCore
 import lang.temper.value.typeDefinitionAtLeafOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -20,17 +20,17 @@ import kotlin.test.assertTrue
 class ImplicitsModuleTest {
     @Test
     fun implicitsModuleReturns() {
-        ImplicitsModule.module // Throws if not available
+        CoreModule.module // Throws if not available
     }
 
     @Test
-    fun isImplicits() {
-        assertTrue(ImplicitsModule.module.namingContext.isImplicits)
+    fun isCore() {
+        assertTrue(CoreModule.module.namingContext.isCore)
     }
 
     @Test
     fun implicitsExportsAnyValue() {
-        val export = ImplicitsModule.module.exports?.filter { it.name.baseName.nameText == "AnyValue" }
+        val export = CoreModule.module.exports?.filter { it.name.baseName.nameText == "AnyValue" }
             ?.soleElementOrNull
         assertEquals(
             listOf(
@@ -53,7 +53,7 @@ class ImplicitsModuleTest {
         // Whether some global is implemented in Implicits or implemented in frontend code is an
         // implementation detail that we ought not foist on users.
         val builtinEnv = builtinEnvironment(EmptyEnvironment, Genre.Library)
-        val unavailableInBuiltin = ImplicitsModule.module.exports?.filter {
+        val unavailableInBuiltin = CoreModule.module.exports?.filter {
             val equivalentBuiltinName = BuiltinName(it.name.baseName.nameText)
             builtinEnv.declarationMetadata(equivalentBuiltinName) == null
         }
@@ -64,7 +64,7 @@ class ImplicitsModuleTest {
     // well-known types.
     @Test
     fun overrideRecognizedBetweenSafeGeneratorAndGenerator() {
-        ignore(ImplicitsModule.module)
+        ignore(CoreModule.module)
 
         fun isNextMethod(m: MethodShape) = m.symbol.text == "next"
 
@@ -89,9 +89,9 @@ class ImplicitsModuleTest {
 
     @Test
     fun testPromoteSimpleValue() {
-        ImplicitsModule.module
+        CoreModule.module
         // After define the backing classes, we can promote simple values to class instances.
-        // This allows implementing methods in Implicits.temper.
+        // This allows implementing methods in core.temper.
         val simpleValue = Value(1234, TInt)
         val promotedValue = promoteSimpleValue(simpleValue)
         assertEquals(TClass(WellKnownTypes.intTypeDefinition), promotedValue?.typeTag)

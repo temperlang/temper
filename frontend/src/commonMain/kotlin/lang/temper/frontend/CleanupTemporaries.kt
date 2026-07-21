@@ -64,7 +64,7 @@ import lang.temper.value.failSymbol
 import lang.temper.value.freeTree
 import lang.temper.value.fromTypeSymbol
 import lang.temper.value.functionContained
-import lang.temper.value.isImplicits
+import lang.temper.value.isCore
 import lang.temper.value.ssaSymbol
 import lang.temper.value.syntheticSymbol
 import lang.temper.value.toPseudoCode
@@ -76,7 +76,7 @@ import lang.temper.value.void
 private const val DEBUG = false
 
 @Suppress("SimplifyBooleanWithConstants")
-private inline val Document.debugging get() = DEBUG && !this.isImplicits
+private inline val Document.debugging get() = DEBUG && !isCore
 private inline fun Document.debug(message: () -> Any?) {
     if (debugging) {
         val o = message()

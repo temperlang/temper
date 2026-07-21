@@ -9,7 +9,7 @@ import lang.temper.common.asciiLowerCase
 import lang.temper.common.putMultiSet
 import lang.temper.common.toStringViaBuilder
 import lang.temper.format.OutputTokenType
-import lang.temper.frontend.implicits.builtinEnvironment
+import lang.temper.frontend.core.builtinEnvironment
 import lang.temper.interp.EmptyEnvironment
 import lang.temper.lexer.Genre
 import lang.temper.log.FilePath

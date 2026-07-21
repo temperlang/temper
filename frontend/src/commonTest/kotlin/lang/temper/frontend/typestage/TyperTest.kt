@@ -2274,7 +2274,7 @@ class TyperTest {
         module.deliverContent(content)
         module.addEnvironmentBindings(extraBindings)
         if (skipImplicits) {
-            module.addEnvironmentBindings(mapOf(StagingFlags.skipImportImplicits to TBoolean.valueTrue))
+            module.addEnvironmentBindings(mapOf(StagingFlags.skipImportCore to TBoolean.valueTrue))
         }
 
         var treeAfterTyper: BlockTree? = null

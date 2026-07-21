@@ -127,7 +127,7 @@ import lang.temper.value.functionContained
 import lang.temper.value.impliedThisSymbol
 import lang.temper.value.infoOr
 import lang.temper.value.initSymbol
-import lang.temper.value.isImplicits
+import lang.temper.value.isCore
 import lang.temper.value.labelSymbol
 import lang.temper.value.matches
 import lang.temper.value.optionalAsTriState
@@ -182,7 +182,7 @@ class Interpreter(
 
     private var stepCount = 0
     private var goingOutOfStyle = stage == Stage.Run
-    private val isProcessingImplicits = nameMaker.namingContext.isImplicits
+    private val isProcessingImplicits = nameMaker.namingContext.isCore
 
     /** Helps centralize tracking access to connecteds. */
     fun connection(qname: String?): ((Signature2) -> Value<*>)? {
@@ -2473,7 +2473,7 @@ class Interpreter(
         }
 
         override val isProcessingImplicits: Boolean
-            get() = document.isImplicits
+            get() = document.isCore
 
         override fun connection(qname: String): ((Signature2) -> Value<*>)? {
             return this@Interpreter.connection(qname)

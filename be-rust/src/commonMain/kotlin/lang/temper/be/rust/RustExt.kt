@@ -13,7 +13,7 @@ import lang.temper.log.dirPath
 import lang.temper.log.last
 import lang.temper.log.resolveFile
 import lang.temper.log.spanningPosition
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModuleName
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
@@ -491,7 +491,7 @@ internal fun Descriptor.isCopy(): Boolean {
         // Plain functions and methods are Copy, but our Arc function values aren't. We distinguish that elsewhere.
         // is FunctionType -> true
         is DefinedNonNullType -> when (type.definition.sourceLocation) {
-            ImplicitsCodeLocation -> when (type.definition) {
+            CoreCodeLocation -> when (type.definition) {
                 // TODO Which others are copy?
                 WellKnownTypes.booleanTypeDefinition,
                 WellKnownTypes.float64TypeDefinition,
@@ -579,7 +579,7 @@ internal fun TmpL.BlockStatement?.isPureVirtual() = isPureVirtual(PureVirtualBui
 
 internal fun TmpL.ModuleLevelDeclaration.isConsole(): Boolean {
     (type.ot as? TmpL.NominalType)?.typeName?.sourceDefinition?.let { typeDefinition ->
-        if (typeDefinition.sourceLocation === ImplicitsCodeLocation) {
+        if (typeDefinition.sourceLocation === CoreCodeLocation) {
             when ((typeDefinition.name as? ResolvedParsedName)?.baseName?.nameText) {
                 "Console", "GlobalConsole" -> return true
                 else -> {}

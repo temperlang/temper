@@ -5,7 +5,7 @@ import lang.temper.common.assertStructure
 import lang.temper.common.newBufferingConsole
 import lang.temper.common.structure.StructureSink
 import lang.temper.common.structure.Structured
-import lang.temper.frontend.implicits.ImplicitsModule
+import lang.temper.frontend.core.CoreModule
 import lang.temper.lexer.StandaloneLanguageConfig
 import lang.temper.lexer.TemperToken
 import lang.temper.lexer.TokenType
@@ -46,7 +46,7 @@ class TypeShapeExtractorTest {
             referenceText = "just running a test",
         ).result!!
 
-        val contentBuffer = StringBuilder(ImplicitsModule.code)
+        val contentBuffer = StringBuilder(CoreModule.code)
         val consoleBuffer = StringBuilder()
         val problemTracker = ProblemTracker(newBufferingConsole(consoleBuffer))
 
@@ -59,7 +59,7 @@ class TypeShapeExtractorTest {
 
         val commentBeforeAnyValue = run {
             val modifiedContent = TemperContent(
-                filePath("modified", "Implicits.temper"),
+                filePath("modified", "core.temper"),
                 "$contentBuffer",
                 StandaloneLanguageConfig,
             )

@@ -289,7 +289,7 @@ class TypeStageTest {
             |  }
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
     )
 
     @Test
@@ -561,7 +561,7 @@ class TypeStageTest {
             |}
         """.trimMargin(),
         moduleResultNeeded = true,
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
         want = """
             |{
             |  run: [5, "Int32"],

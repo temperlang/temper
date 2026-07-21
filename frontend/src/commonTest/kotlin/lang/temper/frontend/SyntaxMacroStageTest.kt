@@ -876,7 +876,7 @@ class SyntaxMacroStageTest {
             |}
             |x
         """.trimMargin(),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
         stage = Stage.SyntaxMacro,
         want = """
             |{
@@ -2372,14 +2372,14 @@ class SyntaxMacroStageTest {
             |  }
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
     )
 
     @Test
     fun compoundOpsWithGetterAndSetter() = assertModuleAtStage(
         stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
         input = """
             |let { C } = import("./c");
             |do {
@@ -2455,7 +2455,7 @@ class SyntaxMacroStageTest {
     fun compoundOpsWithIndexedGetAndSet() = assertModuleAtStage(
         stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
         input = """
             |export let myList = do {
             |  let b: ListBuilder<Int32> = [1, 2].toListBuilder();
@@ -2536,7 +2536,7 @@ class SyntaxMacroStageTest {
     @Test
     fun desugarPrefixOp() = assertModuleAtStage(
         stage = Stage.SyntaxMacro,
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
         input = """
             |export let f(x: Int32): Int32 {
             |  var y = x;
@@ -2591,7 +2591,7 @@ class SyntaxMacroStageTest {
     @Test
     fun desugarPrefixOpWithComplexOperand() = assertModuleAtStage(
         stage = Stage.SyntaxMacro,
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
         input = """
             |export let f(ls: ListBuilder<Int32>, j: Int32): Void {
             |  var i = j;

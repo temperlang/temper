@@ -6,7 +6,7 @@ import lang.temper.env.DeclarationBinding
 import lang.temper.lexer.Genre
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedName
 import lang.temper.name.ResolvedNameMaker
@@ -140,7 +140,7 @@ object WellKnownTypes {
 
     init {
         val namingContext = object : BindingNamingContext(AtomicCounter()) {
-            override val loc = ImplicitsCodeLocation
+            override val loc = CoreCodeLocation
 
             override fun getTopLevelBinding(name: TemperName): DeclarationBinding? =
                 getBindingFromImplicits(name)
@@ -154,7 +154,7 @@ object WellKnownTypes {
         var superType: NominalType? = null
         // This is a default position.  TypeDisambiguateMacro updates it
         // when fleshing out well-known type shapes.
-        val implicitsPos = Position(ImplicitsCodeLocation, 0, 0)
+        val implicitsPos = Position(CoreCodeLocation, 0, 0)
 
         val byName = mutableMapOf<ResolvedName, TypeShape>()
         fun wellKnownTypeShape(

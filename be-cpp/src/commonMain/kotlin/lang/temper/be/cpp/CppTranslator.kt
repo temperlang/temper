@@ -16,7 +16,7 @@ import lang.temper.log.last
 import lang.temper.log.resolveFile
 import lang.temper.name.BuiltinName
 import lang.temper.name.ExportedName
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModularName
 import lang.temper.name.ModuleName
 import lang.temper.name.ResolvedName
@@ -216,7 +216,7 @@ class CppTranslator(
         (typeFormalNames[def] ?: typeFormalNamesByText[typeFormalKey(def)])?.let { return it }
         val loc = def.sourceLocation
         return when (loc) {
-            ImplicitsCodeLocation -> {
+            CoreCodeLocation -> {
                 val defName = def.name
                 when (defName) {
                     is ExportedName -> cpp.name(TEMPER_CORE_NAMESPACE, defName.baseName.builtinKey)
@@ -681,7 +681,7 @@ class CppTranslator(
         }
         (typeFormalNames[def] ?: typeFormalNamesByText[typeFormalKey(def)])?.let { return it }
         val typeName = when (val loc = def.sourceLocation) {
-            ImplicitsCodeLocation -> {
+            CoreCodeLocation -> {
                 val defName = def.name
                 val key = when (defName) {
                     is ExportedName -> defName.baseName.builtinKey
@@ -750,7 +750,7 @@ class CppTranslator(
                     typeFormalName
                 } else {
                     when (val loc = def.sourceLocation) {
-                        ImplicitsCodeLocation -> when (val defName = def.name) {
+                        CoreCodeLocation -> when (val defName = def.name) {
                             is ExportedName -> translateImplicitsType(defName.baseName.builtinKey)
                             is SourceName -> translateImplicitsType(defName.baseName.builtinKey)
                             is Temporary -> translateImplicitsType(defName.nameHint)

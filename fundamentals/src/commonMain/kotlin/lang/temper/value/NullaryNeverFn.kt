@@ -10,7 +10,7 @@ import lang.temper.format.TokenSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.Symbol
 import lang.temper.stage.Stage
 import lang.temper.type.TypeFormal
@@ -201,7 +201,7 @@ private fun NamedBuiltinFun.nullaryNeverReturnsSigs(
 ): List<Signature2> {
     val nameKey = "${name}T"
     val typeFormal = TypeFormal(
-        Position(ImplicitsCodeLocation, 0, 0),
+        Position(CoreCodeLocation, 0, 0),
         BuiltinName(nameKey),
         Symbol(nameKey),
         Variance.Invariant,

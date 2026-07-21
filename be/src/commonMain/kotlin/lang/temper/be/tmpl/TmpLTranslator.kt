@@ -24,7 +24,7 @@ import lang.temper.format.toStringViaTokenSink
 import lang.temper.frontend.AdaptGeneratorFn
 import lang.temper.frontend.Module
 import lang.temper.frontend.ModuleNamingContext
-import lang.temper.frontend.implicits.builtinEnvironment
+import lang.temper.frontend.core.builtinEnvironment
 import lang.temper.frontend.mergedNamingContext
 import lang.temper.interp.EmptyEnvironment
 import lang.temper.interp.LongLivedUserFunction
@@ -112,7 +112,6 @@ import lang.temper.value.LeftNameLeaf
 import lang.temper.value.MacroValue
 import lang.temper.value.MetadataMap
 import lang.temper.value.MetadataMultimap
-import lang.temper.value.MetadataValueMapHelpers.get
 import lang.temper.value.MetadataValueMultimap
 import lang.temper.value.NameLeaf
 import lang.temper.value.NamedBuiltinFun

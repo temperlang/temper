@@ -22,7 +22,7 @@ import lang.temper.format.toStringViaTokenSink
 import lang.temper.log.Position
 import lang.temper.log.Positioned
 import lang.temper.name.BuiltinName
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModularName
 import lang.temper.name.ModuleLocation
 import lang.temper.name.NameMaker
@@ -66,7 +66,7 @@ sealed interface TypeDefinition : StayReferrer, Structured, TokenSerializable, P
     val sourceLocation: ModuleLocation
         get() = when (val name = this.name) {
             is ModularName -> name.origin.loc
-            is BuiltinName -> ImplicitsCodeLocation
+            is BuiltinName -> CoreCodeLocation
         }
 
     /** Likely cheaper to access than [formals]. */

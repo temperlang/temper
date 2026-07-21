@@ -17,7 +17,7 @@ import lang.temper.log.LogEntry
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.snapshot
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ParsedName
 import lang.temper.name.TemperName
 import lang.temper.stage.Stage
@@ -112,7 +112,7 @@ internal class SyntaxMacroStage(
 
 private fun declareModuleConsole(root: BlockTree) {
     root.document.context.genre == Genre.Documentation && return
-    root.pos.loc is ImplicitsCodeLocation && return
+    root.pos.loc is CoreCodeLocation && return
     val consoleRefs = buildList {
         TreeVisit.startingAt(root).forEachContinuing { node ->
             if ((node as? RightNameLeaf)?.content == consoleBuiltinName) {

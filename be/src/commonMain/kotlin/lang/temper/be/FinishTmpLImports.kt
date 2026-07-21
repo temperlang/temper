@@ -15,7 +15,7 @@ import lang.temper.name.ResolvedNameMaker
 import lang.temper.name.ResolvedParsedName
 import lang.temper.name.Temporary
 import lang.temper.value.TType
-import lang.temper.value.isImplicits
+import lang.temper.value.isCore
 
 /**
  * Rewrites [TmpL.Import] directives with signature information, and,
@@ -77,7 +77,7 @@ fun Backend<*>.finishTmpLImports(
                 }
             }
             if (providerIndex !in providers.indices) {
-                if (externalName.origin.isImplicits) {
+                if (externalName.origin.isCore) {
                     // OK.  Implicits is not compiled.  Backends need to map these name to support codes
                     // or have some other strategy for them.
                 } else {

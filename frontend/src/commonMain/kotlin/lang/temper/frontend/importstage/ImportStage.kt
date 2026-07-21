@@ -13,8 +13,8 @@ import lang.temper.frontend.Module
 import lang.temper.frontend.StageOutputs
 import lang.temper.frontend.StagingFlags
 import lang.temper.frontend.flipDeclaredNames
-import lang.temper.frontend.implicits.ImplicitsModule
-import lang.temper.frontend.implicits.ImplicitsUnavailableException
+import lang.temper.frontend.core.CoreModule
+import lang.temper.frontend.core.ImplicitsUnavailableException
 import lang.temper.frontend.interpretiveDanceStage
 import lang.temper.interp.UserFunction
 import lang.temper.interp.importExport.ImportMacro
@@ -33,7 +33,7 @@ import lang.temper.log.resolveDir
 import lang.temper.log.snapshot
 import lang.temper.name.BuiltinName
 import lang.temper.name.ExportedName
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModuleName
 import lang.temper.name.ParsedName
 import lang.temper.stage.Stage
@@ -57,7 +57,7 @@ import lang.temper.value.curliesBuiltinName
 import lang.temper.value.extensionSymbol
 import lang.temper.value.implicitSymbol
 import lang.temper.value.initSymbol
-import lang.temper.value.isImplicits
+import lang.temper.value.isCore
 import lang.temper.value.nameContained
 import lang.temper.value.optionalImportSymbol
 import lang.temper.value.regexLiteralBuiltinName
@@ -106,8 +106,8 @@ private fun maybeImportImplicits(
     root: BlockTree,
     env: Environment,
 ) {
-    val skipImportImplicits = module.isImplicits || TBoolean.unpackOrNull(
-        env[StagingFlags.skipImportImplicits, InterpreterCallback.NullInterpreterCallback]
+    val skipImportImplicits = module.isCore || TBoolean.unpackOrNull(
+        env[StagingFlags.skipImportCore, InterpreterCallback.NullInterpreterCallback]
             as? Value<*>,
     ) == true
 
@@ -118,7 +118,7 @@ private fun maybeImportImplicits(
         emptyList()
     } else {
         try {
-            ImplicitsModule.module.exports
+            CoreModule.module.exports
         } catch (ex: ImplicitsUnavailableException) {
             // It's nice to be able to debug problems with implicits via unit tests that do not
             // need implicits to work.
@@ -130,7 +130,7 @@ private fun maybeImportImplicits(
             logSink.log(
                 level = Log.Fatal,
                 template = MessageTemplate.ImplicitsUnavailable,
-                pos = Position(ImplicitsCodeLocation, 0, 0),
+                pos = Position(CoreCodeLocation, 0, 0),
                 values = emptyList(),
             )
             emptyList()

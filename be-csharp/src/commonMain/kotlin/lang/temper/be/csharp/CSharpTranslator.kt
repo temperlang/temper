@@ -29,7 +29,7 @@ import lang.temper.log.dirPath
 import lang.temper.log.resolveFile
 import lang.temper.name.BuiltinName
 import lang.temper.name.ExportedName
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModuleName
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
@@ -57,7 +57,6 @@ import lang.temper.type2.isVoidLike
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
 import lang.temper.value.DependencyCategory
-import lang.temper.value.MetadataValueMapHelpers.get
 import lang.temper.value.TBoolean
 import lang.temper.value.TClass
 import lang.temper.value.TClosureRecord
@@ -2215,7 +2214,7 @@ internal class CSharpTranslator(
 
         var namespace = listOf<String>()
         return when (val sourceLocation = typeDefinition.sourceLocation) {
-            ImplicitsCodeLocation -> when (val name = typeDefinition.name) {
+            CoreCodeLocation -> when (val name = typeDefinition.name) {
                 // For some reason GlobalConsole isn't an ExportedName.
                 is ResolvedParsedName -> when (name.baseName.nameText) {
                     "Console", "GlobalConsole" -> StandardNames.temperCoreILoggingConsole

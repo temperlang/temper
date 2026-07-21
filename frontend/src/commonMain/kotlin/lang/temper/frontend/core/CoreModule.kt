@@ -1,4 +1,4 @@
-package lang.temper.frontend.implicits
+package lang.temper.frontend.core
 
 import lang.temper.common.AppendingTextOutput
 import lang.temper.common.Console
@@ -21,7 +21,7 @@ import lang.temper.log.Position
 import lang.temper.log.excerpt
 import lang.temper.log.filePath
 import lang.temper.name.BuiltinName
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.TemperName
 import lang.temper.stage.Stage
 import lang.temper.type.WellKnownTypes
@@ -34,7 +34,7 @@ private const val DEBUG = false
 /**
  * Provides common access to a module with core language definitions.
  */
-object ImplicitsModule {
+object CoreModule {
 
     private var singletonPositions: FilePositions? = null
 
@@ -75,14 +75,14 @@ object ImplicitsModule {
             )
         }
 
-        val content = loadResource(this, "implicits/Implicits.temper")
+        val content = loadResource(this, "core/core.temper")
 
         codeSingleton = content
 
-        singletonPositions = FilePositions.fromSource(ImplicitsCodeLocation, content)
+        singletonPositions = FilePositions.fromSource(CoreCodeLocation, content)
 
         val logSink = FailFastLogSink(content)
-        val loc = ImplicitsCodeLocation
+        val loc = CoreCodeLocation
         val module = Module(
             projectLogSink = logSink,
             loc = loc,
@@ -93,7 +93,7 @@ object ImplicitsModule {
 
         module.deliverContent(
             ModuleSource(
-                filePath = filePath("implicits", "Implicits.temper"),
+                filePath = filePath("implicits", "core.temper"),
                 fetchedContent = content,
                 languageConfig = StandaloneLanguageConfig,
             ),
@@ -180,12 +180,12 @@ private class FailFastLogSink(private val code: CharSequence) : LogSink {
             (values.getOrNull(0) as? Stage)?.let { this.stage = it }
         }
         if (level >= Log.Warn) {
-            val posInfo = ImplicitsModule.implicitsFilePositions
+            val posInfo = CoreModule.implicitsFilePositions
             val posStr = posInfo.filePositionAtOffset(pos.left)
             val messageStr = "$stagePrefixString$posStr: ${template.format(values)}"
 
             console.log(messageStr, level)
-            if (pos.loc == ImplicitsCodeLocation) {
+            if (pos.loc == CoreCodeLocation) {
                 excerpt(pos, code, console.textOutput)
             }
             check(level < Log.Error) { "Error boot-strapping implicits.  $messageStr" }
@@ -200,7 +200,7 @@ internal class ImplicitsUnavailableException(message: String) : RuntimeException
 
 private val allImplicitlyImportedNamesLazy = lazy {
     // If this throws because `module` is bootstrapping, lazy will try again later.
-    (ImplicitsModule.module.exports ?: emptyList()).associate { export ->
+    (CoreModule.module.exports ?: emptyList()).associate { export ->
         BuiltinName(export.name.baseName.nameText) as TemperName to export.valueFromRun!!
     }
 }

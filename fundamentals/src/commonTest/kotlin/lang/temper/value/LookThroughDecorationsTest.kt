@@ -2,7 +2,7 @@ package lang.temper.value
 
 import lang.temper.common.TestDocumentContext
 import lang.temper.common.testCodeLocation
-import lang.temper.frontend.implicits.builtinEnvironment
+import lang.temper.frontend.core.builtinEnvironment
 import lang.temper.interp.EmptyEnvironment
 import lang.temper.lexer.Genre
 import lang.temper.log.Position

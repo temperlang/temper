@@ -6,7 +6,7 @@ import lang.temper.common.TextTable
 import lang.temper.common.benchmarkIf
 import lang.temper.frontend.Module
 import lang.temper.frontend.allRootsOfAsBlocks
-import lang.temper.frontend.implicits.ImplicitsModule
+import lang.temper.frontend.core.CoreModule
 import lang.temper.frontend.prefixBlockWith
 import lang.temper.frontend.prefixWith
 import lang.temper.frontend.structureBlock
@@ -33,7 +33,7 @@ import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 import lang.temper.value.freeTarget
 import lang.temper.value.getTerminalExpressions
-import lang.temper.value.isImplicits
+import lang.temper.value.isCore
 import lang.temper.value.isPureVirtualBody
 import lang.temper.value.outTypeSymbol
 import lang.temper.value.reifiedTypeContained
@@ -124,7 +124,7 @@ internal class MakeResultsExplicit private constructor(
         // but we don't want to call the function that produces that while processing
         // the implicits module, so we might have to be a bit more careful about
         // terminal expressions there.
-        val endWithDoneResult = isGeneratorFn && !doc.isImplicits
+        val endWithDoneResult = isGeneratorFn && !doc.isCore
         val returnType = returnTypeTree?.reifiedTypeContained?.type2
         val isValidResultKnown = returnType?.isVoidLike == true || endWithDoneResult
 
@@ -296,7 +296,7 @@ private fun Planting.makeDoneResult(generatorFnParts: FnParts): UnpositionedTree
             }
         }
     }
-    val doneResultName = ExportedName(ImplicitsModule.module.namingContext, ParsedName("doneResult"))
+    val doneResultName = ExportedName(CoreModule.module.namingContext, ParsedName("doneResult"))
     return Call {
         // doneResult<Yielded>()
         if (yielded != null) {

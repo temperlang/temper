@@ -42,7 +42,7 @@ class DefineStageTest {
     @Test
     fun callToMethod() = assertModuleAtStage(
         stage = Stage.Define,
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
         input = """
             |subject.verb(arg)
         """.trimMargin(),
@@ -297,7 +297,7 @@ class DefineStageTest {
     fun constantFolding() = assertModuleAtStage(
         stage = Stage.Define,
         input = "1 + 1",
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
         want = """
         {
           define: {
