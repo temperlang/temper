@@ -1884,7 +1884,7 @@ private class ModuleParts(
                             }
                         }.also { add(it) }
                     }
-                }
+                },
             ).also { call ->
                 when ((stmt.returnType.ot as? TmpL.NominalType)?.typeName?.sourceDefinition) {
                     WellKnownTypes.voidTypeDefinition -> add(Lua.CallStmt(pos, call))
