@@ -727,7 +727,7 @@ Supports radix 2 through 36. Doesn't prefix `+` for positive.
 
 <a name="type&#45;Int64&#45;method&#45;succ&#45;commentary" class="snippet-anchor-name"></a>
 
-`this + 1I64`, the successor value used by [`++` operator: increment](builtins.md#builtin-%2B%2B).
+`this + 1i64`, the successor value used by [`++` operator: increment](builtins.md#builtin-%2B%2B).
 
 <!-- /snippet: type/Int64/method/succ/commentary -->
 
@@ -751,7 +751,7 @@ Supports radix 2 through 36. Doesn't prefix `+` for positive.
 
 <a name="type&#45;Int64&#45;method&#45;pred&#45;commentary" class="snippet-anchor-name"></a>
 
-`this - 1I64`, the predecessor value used by [`--` operator: decrement](builtins.md#builtin---).
+`this - 1i64`, the predecessor value used by [`--` operator: decrement](builtins.md#builtin---).
 
 <!-- /snippet: type/Int64/method/pred/commentary -->
 

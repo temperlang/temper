@@ -23,10 +23,10 @@ val builtinOperatorSpecs: Map<String, List<CallableValue>> = mapOf(
      * ```temper
      * 1    + 2    == 3    &&
      * 1.0  + 2.0  == 3.0  &&
-     * 1I64 + 2I64 == 3I64 &&
+     * 1i64 + 2i64 == 3i64 &&
      * +1          == 1    &&
      * +1.0        == 1.0  &&
-     * +1I64       == 1I64
+     * +1i64       == 1i64
      * ```
      *
      * As explained above, you cannot mix [snippet/type/Int32] and

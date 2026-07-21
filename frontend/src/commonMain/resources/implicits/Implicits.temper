@@ -1545,13 +1545,13 @@ export class Int64 extends Equatable { // TODO extends MapKey?
     if (content >= other) { content } else { other }
   }
 
-  /** `this + 1I64`, the successor value used by [snippet/builtin/++]. */
+  /** `this + 1i64`, the successor value used by [snippet/builtin/++]. */
   @connected
-  public succ(): builtins.Int64 { content + 1I64 }
+  public succ(): builtins.Int64 { content + 1i64 }
 
-  /** `this - 1I64`, the predecessor value used by [snippet/builtin/--]. */
+  /** `this - 1i64`, the predecessor value used by [snippet/builtin/--]. */
   @connected
-  public pred(): builtins.Int64 { content - 1I64 }
+  public pred(): builtins.Int64 { content - 1i64 }
 }
 
 /**
