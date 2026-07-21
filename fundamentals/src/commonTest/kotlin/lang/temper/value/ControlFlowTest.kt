@@ -478,7 +478,7 @@ class ControlFlowTest {
             // for (; i < limit; ++i) { ...
             Loop(
                 condition = Ref { // i < limit
-                    Call(BuiltinFuns.lessThanFn) {
+                    Call(BuiltinFuns.ltIntFn) {
                         Rn(i)
                         Rn(limit)
                     }
@@ -501,7 +501,7 @@ class ControlFlowTest {
                     },
                     If(
                         Ref {
-                            Call(BuiltinFuns.equalsFn) {
+                            Call(BuiltinFuns.eqIntFn) {
                                 Rn(i)
                                 V(value(4))
                             }
@@ -515,7 +515,7 @@ class ControlFlowTest {
                         Stmt {
                             Call(BuiltinFuns.setLocalFn) {
                                 Ln(t0)
-                                Call(BuiltinFuns.equalsFn) {
+                                Call(BuiltinFuns.eqIntFn) {
                                     Rn(i)
                                     V(value(6))
                                 }
@@ -542,7 +542,7 @@ class ControlFlowTest {
                             If(
                                 //   } else if (i == 7) {
                                 Ref {
-                                    Call(BuiltinFuns.equalsFn) {
+                                    Call(BuiltinFuns.eqIntFn) {
                                         Rn(i)
                                         V(value(7))
                                     }
@@ -560,7 +560,7 @@ class ControlFlowTest {
                                 If(
                                     //   } else if (i == a) {
                                     Ref {
-                                        Call(BuiltinFuns.equalsFn) {
+                                        Call(BuiltinFuns.eqIntFn) {
                                             Rn(i)
                                             Rn(a)
                                         }
@@ -689,7 +689,7 @@ class ControlFlowTest {
             While(
                 label = loop1,
                 condition = Ref {
-                    Call(BuiltinFuns.lessThanFn) {
+                    Call(BuiltinFuns.ltIntFn) {
                         Rn(i)
                         V(value(25))
                     }
@@ -716,7 +716,7 @@ class ControlFlowTest {
                     While(
                         label = loop2,
                         condition = Ref {
-                            Call(BuiltinFuns.lessThanFn) {
+                            Call(BuiltinFuns.ltIntFn) {
                                 Rn(j)
                                 V(value(25))
                             }
@@ -743,7 +743,7 @@ class ControlFlowTest {
                             While(
                                 label = loop3,
                                 condition = Ref {
-                                    Call(BuiltinFuns.lessThanFn) {
+                                    Call(BuiltinFuns.ltIntFn) {
                                         Rn(k)
                                         V(value(25))
                                     }
@@ -771,7 +771,7 @@ class ControlFlowTest {
                                     //       if (prime > n) { break loop1 }
                                     If(
                                         Ref {
-                                            Call(BuiltinFuns.greaterThanFn) {
+                                            Call(BuiltinFuns.gtIntFn) {
                                                 Rn(prime)
                                                 Rn(n)
                                             }
@@ -783,14 +783,14 @@ class ControlFlowTest {
                                     //       }
                                     If(
                                         Ref {
-                                            Call(BuiltinFuns.notEqualsFn) {
+                                            Call(BuiltinFuns.neIntFn) {
                                                 Rn(prime)
                                                 V(value(2))
                                             }
                                         },
                                         If(
                                             Ref {
-                                                Call(BuiltinFuns.equalsFn) {
+                                                Call(BuiltinFuns.eqIntFn) {
                                                     Call(BuiltinFuns.modIntIntSafeFn) {
                                                         Rn(prime)
                                                         V(value(2))
@@ -806,14 +806,14 @@ class ControlFlowTest {
                                     //       }
                                     If(
                                         Ref {
-                                            Call(BuiltinFuns.notEqualsFn) {
+                                            Call(BuiltinFuns.neIntFn) {
                                                 Rn(prime)
                                                 V(value(3))
                                             }
                                         },
                                         If(
                                             Ref {
-                                                Call(BuiltinFuns.equalsFn) {
+                                                Call(BuiltinFuns.eqIntFn) {
                                                     Call(BuiltinFuns.modIntIntSafeFn) {
                                                         Rn(prime)
                                                         V(value(3))
@@ -829,14 +829,14 @@ class ControlFlowTest {
                                     //       }
                                     If(
                                         Ref {
-                                            Call(BuiltinFuns.notEqualsFn) {
+                                            Call(BuiltinFuns.neIntFn) {
                                                 Rn(prime)
                                                 V(value(5))
                                             }
                                         },
                                         If(
                                             Ref {
-                                                Call(BuiltinFuns.equalsFn) {
+                                                Call(BuiltinFuns.eqIntFn) {
                                                     Call(BuiltinFuns.modIntIntSafeFn) {
                                                         Rn(prime)
                                                         V(value(5))
@@ -852,14 +852,14 @@ class ControlFlowTest {
                                     //       }
                                     If(
                                         Ref {
-                                            Call(BuiltinFuns.notEqualsFn) {
+                                            Call(BuiltinFuns.neIntFn) {
                                                 Rn(prime)
                                                 V(value(7))
                                             }
                                         },
                                         If(
                                             Ref {
-                                                Call(BuiltinFuns.equalsFn) {
+                                                Call(BuiltinFuns.eqIntFn) {
                                                     Call(BuiltinFuns.modIntIntSafeFn) {
                                                         Rn(prime)
                                                         V(value(7))
@@ -876,7 +876,7 @@ class ControlFlowTest {
                                     //       }
                                     If(
                                         Ref {
-                                            Call(BuiltinFuns.equalsFn) {
+                                            Call(BuiltinFuns.eqIntFn) {
                                                 Rn(n)
                                                 Rn(prime)
                                             }
@@ -1044,7 +1044,7 @@ class ControlFlowTest {
             label = outer,
             //   i__10 < 4;
             condition = Ref {
-                Call(BuiltinFuns.lessThanFn) {
+                Call(BuiltinFuns.ltIntFn) {
                     Rn(i)
                     V(value(4))
                 }
@@ -1124,7 +1124,7 @@ class ControlFlowTest {
                         If(
                             //     if (i__10 <= j__13) {
                             Ref {
-                                Call(BuiltinFuns.lessEqualsFn) {
+                                Call(BuiltinFuns.leIntFn) {
                                     Rn(i)
                                     Rn(j)
                                 }
@@ -1522,7 +1522,7 @@ class ControlFlowTest {
                     While(
                         //     a__21 <= 5;
                         condition = Ref {
-                            Call(BuiltinFuns.lessEqualsFn) {
+                            Call(BuiltinFuns.leIntFn) {
                                 Rn(a)
                                 V(value(5))
                             }
@@ -1562,7 +1562,7 @@ class ControlFlowTest {
                 ),
                 // } while (a__21 <= 8);
                 condition = Ref {
-                    Call(BuiltinFuns.lessEqualsFn) {
+                    Call(BuiltinFuns.leIntFn) {
                         Rn(a)
                         V(value(8))
                     }

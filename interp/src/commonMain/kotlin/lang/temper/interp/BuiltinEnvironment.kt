@@ -62,7 +62,7 @@ private object Builtins {
             ">=" to Value(BuiltinFuns.greaterEqualsFn),
             "==" to Value(BuiltinFuns.equalsFn),
             "!=" to Value(BuiltinFuns.notEqualsFn),
-            "<=>" to BuiltinFuns.vCmp,
+            "<=>" to Value(BuiltinFuns.cmpFn),
 
             "=" to BuiltinFuns.vSetLocalFn,
 

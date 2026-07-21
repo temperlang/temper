@@ -383,7 +383,9 @@ private class MacroActualsView(
         return if (uIndex >= 0) {
             underlying.result(uIndex, interpMode = interpMode, computeInOrder = computeInOrder)
         } else {
-            TODO("Link to a macro environment so we can evaluate the value tree")
+            val (_, newValue) = newValues[index]
+                ?: TODO("Link to a macro environment so we can evaluate the value tree $index, $interpMode")
+            newValue.valueContained ?: Fail
         }
     }
 

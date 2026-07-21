@@ -441,7 +441,7 @@ class RustBackendTest {
             |}
             |pub fn hi(n__0: i32) {
             |    let mut i__0: i32 = 0;
-            |    'loop___0: while Some(i__0) < Some(n__0) {
+            |    'loop___0: while i__0 < n__0 {
             |        let mut a__0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>> = std::sync::Arc::new(std::sync::RwLock::new(std::sync::Arc::new(format!("{}", i__0))));
             |        #[derive(Clone)]
             |        struct ClosureGroup___0 {
@@ -495,7 +495,7 @@ class RustBackendTest {
             |}
             |fn repeat__0(times__0: i32, act__0: std::sync::Arc<dyn Fn (i32) + std::marker::Send + std::marker::Sync>) {
             |    let mut i__0: i32 = 0;
-            |    'loop___0: while Some(i__0) < Some(times__0) {
+            |    'loop___0: while i__0 < times__0 {
             |        act__0(i__0);
             |        i__0 = i__0.wrapping_add(1);
             |    }
@@ -649,6 +649,34 @@ class RustBackendTest {
     )
 
     @Test
+    fun floatComparisons() = assertGenerateWanted(
+        temper = """
+            |export let f(a: Float64, b: Float64): Boolean {
+            |  a != b && a < b + 1.0
+            |}
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            Ok(())
+            |    }).clone()
+            |}
+            |pub fn f(a__0: f64, b__0: f64) -> bool {
+            |    let return__0: bool;
+            |    let mut t___0: f64;
+            |    if temper_core::float64::cmp_option(Some(a__0), Some(b__0)) != 0 {
+            |        t___0 = b__0 + 1.0f64;
+            |        return__0 = temper_core::float64::cmp(a__0, t___0) < 0;
+            |    } else {
+            |        return__0 = false;
+            |    }
+            |    return return__0;
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun funArgWrong() = assertGenerateWanted(
         temper = """
             |@fun interface Handler(): Void;
@@ -759,11 +787,11 @@ class RustBackendTest {
             |        let this__0: temper_core::List<i32> = nums__0.clone();
             |        let n__0: i32 = temper_core::ListedTrait::len( & this__0);
             |        let mut i__0: i32 = 0;
-            |        'loop___0: while Some(i__0) < Some(n__0) {
+            |        'loop___0: while i__0 < n__0 {
             |            let el__0: i32 = temper_core::ListedTrait::get( & this__0, i__0);
             |            i__0 = i__0.wrapping_add(1);
             |            let i__1: i32 = el__0;
-            |            t___0 = Some(i__1) < Some(temper_core::ListedTrait::len( & nums__0));
+            |            t___0 = i__1 < temper_core::ListedTrait::len( & nums__0);
             |            #[derive(Clone)]
             |            struct ClosureGroup___0 {}
             |            impl ClosureGroup___0 {
@@ -1008,7 +1036,7 @@ class RustBackendTest {
                 |pub fn fib(mut i__0: i32) -> i32 {
                 |    let mut a__0: i32 = 0;
                 |    let mut b__0: i32 = 1;
-                |    'loop___0: while Some(i__0) > Some(0) {
+                |    'loop___0: while i__0 > 0 {
                 |        let c__0: i32 = a__0.wrapping_add(b__0);
                 |        a__0 = b__0;
                 |        b__0 = c__0;
@@ -2019,7 +2047,7 @@ class RustBackendTest {
             |    let mut t___0: i32;
             |    'outer__0: loop {
             |        let mut j__0: i32 = 0;
-            |        'loop___0: while Some(j__0) < Some(n__0) {
+            |        'loop___0: while j__0 < n__0 {
             |            continue 'outer__0;
             |        }
             |        break;
@@ -2028,11 +2056,11 @@ class RustBackendTest {
             |    'loop___1: loop {
             |        'continue___0: {
             |            t___0 = temper_core::ListedTrait::len( & nums__0);
-            |            if ! (Some(i__0) < Some(t___0)) {
+            |            if ! (i__0 < t___0) {
             |                break 'loop___1;
             |            }
             |            let mut j__1: i32 = 0;
-            |            'loop___2: while Some(j__1) < Some(n__0) {
+            |            'loop___2: while j__1 < n__0 {
             |                break 'continue___0;
             |            }
             |        }
@@ -2075,7 +2103,7 @@ class RustBackendTest {
                 |}
                 |pub fn part_one(i__0: i32) -> i32 {
                 |    let return__0: i32;
-                |    if Some(i__0) < Some(0) {
+                |    if i__0 < 0 {
                 |        return__0 = part_two(i__0);
                 |    } else {
                 |        return__0 = i__0;
@@ -2803,28 +2831,28 @@ class RustBackendTest {
             |        let mut n__0: i32 = 0;
             |        let mut i__0: usize = start__0;
             |        'loop___0: loop {
-            |            if ! (Some(Some(i__0).cmp( & Some(limit__0)) as i32) < Some(0)) {
+            |            if ! (Some(i__0).cmp( & Some(limit__0)) as i32 < 0) {
             |                break;
             |            }
             |            let cp__0: i32 = temper_core::string::get( & sourceText__0, i__0);
-            |            if Some(48) <= Some(cp__0) {
-            |                t___0 = Some(cp__0) <= Some(48);
+            |            if 48 <= cp__0 {
+            |                t___0 = cp__0 <= 48;
             |            } else {
             |                t___0 = false;
             |            }
             |            if t___0 {
             |                t___3 = cp__0.wrapping_sub(48);
             |            } else {
-            |                if Some(65) <= Some(cp__0) {
-            |                    t___1 = Some(cp__0) <= Some(70);
+            |                if 65 <= cp__0 {
+            |                    t___1 = cp__0 <= 70;
             |                } else {
             |                    t___1 = false;
             |                }
             |                if t___1 {
             |                    t___3 = cp__0.wrapping_sub(65).wrapping_add(10);
             |                } else {
-            |                    if Some(97) <= Some(cp__0) {
-            |                        t___2 = Some(cp__0) <= Some(102);
+            |                    if 97 <= cp__0 {
+            |                        t___2 = cp__0 <= 102;
             |                    } else {
             |                        t___2 = false;
             |                    }
@@ -2862,7 +2890,7 @@ class RustBackendTest {
             |    }).clone()
             |}
             |pub fn not_empty(start__0: usize, limit__0: usize) -> bool {
-            |    return Some(Some(start__0).cmp( & Some(limit__0)) as i32) < Some(0);
+            |    return Some(start__0).cmp( & Some(limit__0)) as i32 < 0;
             |}
         """.trimMargin(),
     )

@@ -234,8 +234,9 @@ class DotHelper(
             accessibleMembers.isEmpty() && extensions.isNotEmpty() &&
             extensions.all { (it as? FunctionResolution)?.fn is CallableValue }
         ) {
-            val cover = CoverFunction(extensions.map { (it as FunctionResolution).fn as CallableValue })
-            cover.uncover(macroEnv.args, macroEnv, interpMode)?.let { (resolution, args) ->
+            val covered = extensions.map { (it as FunctionResolution).fn as CallableValue }
+            val chosen = CoverFunction.uncover(macroEnv.args, macroEnv, interpMode, covered, null)
+            chosen?.let { (resolution, args) ->
                 if (args != null) {
                     val fn = TFunction.unpackOrNull(resolution as? Value<*>)
                     if (fn is CallableValue) {

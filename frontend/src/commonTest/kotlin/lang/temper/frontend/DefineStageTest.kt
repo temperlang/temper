@@ -129,7 +129,7 @@ class DefineStageTest {
               @fn @method(\constructor) @visibility(\public) @stay @fromType(C__1) let constructor__19;
               constructor__19 = fn constructor(@impliedThis(C__1) this__20: C__1, @optional(true) i__1 /* aka i */) /* return__2 */: Void {
                 let i__21 /* aka i */;
-                i__21 = if(i__1 == null, fn {
+                i__21 = if(isNull(i__1), fn {
                     0
                   }, \else, fn (f#0) {
                     f#0(fn {
@@ -873,10 +873,10 @@ class DefineStageTest {
             |      `test//`.prod = (@stay fn prod(i__0 /* aka i */: Int32, j__0 /* aka j */: Int32?) /* return__0 */: Int32 {
             |          fn__0: do {
             |            i__0 * {
-            |              if (j__0 != null) {
-            |                j__0
-            |              } else {
+            |              if (isNull(j__0)) {
             |                1
+            |              } else {
+            |                j__0
             |              }
             |            }
             |          }
@@ -887,10 +887,10 @@ class DefineStageTest {
             |              let subject#0;
             |              subject#0 = do_call_get(j__1, 0);
             |              {
-            |                if (subject#0 != null) {
-            |                  subject#0
-            |                } else {
+            |                if (isNull(subject#0)) {
             |                  1
+            |                } else {
+            |                  subject#0
             |                }
             |              }
             |            }
@@ -923,7 +923,7 @@ class DefineStageTest {
             f__0 = (@stay fn f(@optional(true) i__0 /* aka i */: Int32?) /* return__0 */: Int32 {
                 fn__0: do {
                   let i__1 /* aka i */: Int32;
-                  i__1 = if(i__0 == null, fn {
+                  i__1 = if(isNull(i__0), fn {
                       42
                     }, \else, fn (f#0) {
                       f#0(fn {

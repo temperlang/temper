@@ -941,7 +941,7 @@ class Interpreter(
         val (f, arguments) = when (val cf = TFunction.unpackOrNull(calleeValue)) {
             is CoverFunction ->
                 try {
-                    cf.uncover(actuals, cb, im)
+                    CoverFunction.uncover(actuals, cb, im, cf.covered, cf.otherwise)
                 } catch (panic: Panic) { // TODO: is this necessary?
                     ignore(panic)
                     null

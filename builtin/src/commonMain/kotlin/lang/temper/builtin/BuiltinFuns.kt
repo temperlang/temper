@@ -72,8 +72,8 @@ import lang.temper.value.void
 import kotlin.math.pow
 import lang.temper.type.WellKnownTypes as WKT
 
-private fun fTypeTypeToBoolean(sides: TypeShape): Signature2 {
-    val sidesAll = MkType2(sides).nullity(Nullity.OrNull).get()
+private fun fTypeTypeToBoolean(sides: TypeShape, nullity: Nullity): Signature2 {
+    val sidesAll = MkType2(sides).nullity(nullity).get()
     return Signature2(
         returnType2 = WKT.booleanType2,
         requiredInputTypes = listOf(sidesAll, sidesAll),
@@ -81,10 +81,31 @@ private fun fTypeTypeToBoolean(sides: TypeShape): Signature2 {
     )
 }
 
-private val fIntIntToBoolean = fTypeTypeToBoolean(WKT.intTypeDefinition)
-private val fLongLongToBoolean = fTypeTypeToBoolean(WKT.int64TypeDefinition)
-private val fDoubleDoubleToBoolean = fTypeTypeToBoolean(WKT.float64TypeDefinition)
-private val fStringStringToBoolean = fTypeTypeToBoolean(WKT.stringTypeDefinition)
+private val fIntIntNullableToBoolean = fTypeTypeToBoolean(WKT.intTypeDefinition, Nullity.OrNull)
+private val fLongLongNullableToBoolean = fTypeTypeToBoolean(WKT.int64TypeDefinition, Nullity.OrNull)
+private val fDoubleDoubleNullableToBoolean = fTypeTypeToBoolean(WKT.float64TypeDefinition, Nullity.OrNull)
+private val fStringStringNullableToBoolean = fTypeTypeToBoolean(WKT.stringTypeDefinition, Nullity.OrNull)
+private val fIntIntNonNullToBoolean = fTypeTypeToBoolean(WKT.intTypeDefinition, Nullity.NonNull)
+private val fLongLongNonNullToBoolean = fTypeTypeToBoolean(WKT.int64TypeDefinition, Nullity.NonNull)
+private val fDoubleDoubleNonNullToBoolean = fTypeTypeToBoolean(WKT.float64TypeDefinition, Nullity.NonNull)
+private val fStringStringNonNullToBoolean = fTypeTypeToBoolean(WKT.stringTypeDefinition, Nullity.NonNull)
+
+private fun fIntIntToBoolean(nullity: Nullity) = when (nullity) {
+    Nullity.NonNull -> fIntIntNonNullToBoolean
+    Nullity.OrNull -> fIntIntNullableToBoolean
+}
+private fun fLongLongToBoolean(nullity: Nullity) = when (nullity) {
+    Nullity.NonNull -> fLongLongNonNullToBoolean
+    Nullity.OrNull -> fLongLongNullableToBoolean
+}
+private fun fDoubleDoubleToBoolean(nullity: Nullity) = when (nullity) {
+    Nullity.NonNull -> fDoubleDoubleNonNullToBoolean
+    Nullity.OrNull -> fDoubleDoubleNullableToBoolean
+}
+private fun fStringStringToBoolean(nullity: Nullity) = when (nullity) {
+    Nullity.NonNull -> fStringStringNonNullToBoolean
+    Nullity.OrNull -> fStringStringNullableToBoolean
+}
 
 private val fDoubleDoubleToDouble = Signature2(
     returnType2 = WKT.float64Type2,
@@ -158,8 +179,9 @@ private val longIntToNull = { _: Long, _: Int, _: InterpreterCallback -> null }
 private class IntCompareFun(
     name: String,
     override val builtinOperatorId: BuiltinOperatorId? = null,
+    val nullity: Nullity = Nullity.NonNull,
     val f: (a: Int) -> Result,
-) : BuiltinFun(name, fIntIntToBoolean), PureCallableValue {
+) : BuiltinFun(name, fIntIntToBoolean(nullity)), PureCallableValue {
     override val callMayFailPerSe get() = false
     override fun invoke(
         args: ActualValues,
@@ -174,8 +196,9 @@ private class IntCompareFun(
 private class LongCompareFun(
     name: String,
     override val builtinOperatorId: BuiltinOperatorId? = null,
+    val nullity: Nullity = Nullity.NonNull,
     val f: (a: Int) -> Result,
-) : BuiltinFun(name, fLongLongToBoolean), PureCallableValue {
+) : BuiltinFun(name, fLongLongToBoolean(nullity)), PureCallableValue {
     override val callMayFailPerSe get() = false
     override fun invoke(
         args: ActualValues,
@@ -190,8 +213,9 @@ private class LongCompareFun(
 private class DoubleCompareFun(
     name: String,
     override val builtinOperatorId: BuiltinOperatorId? = null,
+    val nullity: Nullity = Nullity.NonNull,
     val f: (a: Int) -> Result,
-) : BuiltinFun(name, fDoubleDoubleToBoolean), PureCallableValue {
+) : BuiltinFun(name, fDoubleDoubleToBoolean(nullity)), PureCallableValue {
     override val callMayFailPerSe get() = false
     override fun invoke(
         args: ActualValues,
@@ -206,8 +230,9 @@ private class DoubleCompareFun(
 private class StringCompareFun(
     name: String,
     override val builtinOperatorId: BuiltinOperatorId? = null,
+    val nullity: Nullity = Nullity.NonNull,
     val f: (a: Int) -> Result,
-) : BuiltinFun(name, fStringStringToBoolean), PureCallableValue {
+) : BuiltinFun(name, fStringStringToBoolean(nullity)), PureCallableValue {
     override val callMayFailPerSe get() = false
     override fun invoke(
         args: ActualValues,
@@ -229,7 +254,11 @@ private class IntIntToIntFun(
     val f: (a: Int, b: Int) -> Int,
 ) : BuiltinFun(
     name,
-    signature = if (fail === twoIntsToNull) { fIntIntToInt } else { fIntIntToIntOrBubble },
+    signature = if (fail === twoIntsToNull) {
+        fIntIntToInt
+    } else {
+        fIntIntToIntOrBubble
+    },
 ),
     PureCallableValue {
     override val callMayFailPerSe get() = fail !== twoIntsToNull
@@ -1196,6 +1225,40 @@ object BuiltinFuns {
         a % b
     }
 
+    val ltIntFn: CallableValue = IntCompareFun(
+        "<",
+        BuiltinOperatorId.LtIntInt,
+    ) { cmp ->
+        TBoolean.value(cmp < 0)
+    }
+
+    val ltLongFn: CallableValue = LongCompareFun(
+        "<",
+        BuiltinOperatorId.LtIntInt,
+    ) { cmp ->
+        TBoolean.value(cmp < 0)
+    }
+
+    val ltDoubleFn: CallableValue = DoubleCompareFun(
+        "<",
+        BuiltinOperatorId.LtFltFlt,
+    ) { cmp ->
+        TBoolean.value(cmp < 0)
+    }
+
+    val ltStringFn: CallableValue = StringCompareFun(
+        "<",
+        BuiltinOperatorId.LtStrStr,
+    ) { cmp ->
+        TBoolean.value(cmp < 0)
+    }
+
+    val ltGenericFn: CallableValue = ComparisonFunction(
+        "<",
+        BuiltinOperatorId.LtGeneric,
+        WKT.booleanType2,
+    ) { cmp -> TBoolean.value(cmp < 0) }
+
     /**
      * <!-- snippet: builtin/< -->
      * # Operator `<`, less-than
@@ -1273,40 +1336,45 @@ object BuiltinFuns {
      * To avoid confusion, just put spaces around all your infix operators.
      */
     val lessThanFn = CoverFunction(
-        listOf(
-            IntCompareFun(
-                "<",
-                BuiltinOperatorId.LtIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp < 0)
-            },
-            LongCompareFun(
-                "<",
-                BuiltinOperatorId.LtIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp < 0)
-            },
-            DoubleCompareFun(
-                "<",
-                BuiltinOperatorId.LtFltFlt,
-            ) { cmp ->
-                TBoolean.value(cmp < 0)
-            },
-            StringCompareFun(
-                "<",
-                BuiltinOperatorId.LtStrStr,
-            ) { cmp ->
-                TBoolean.value(cmp < 0)
-            },
-        ),
-        otherwise = ComparisonFunction(
-            "<",
-            BuiltinOperatorId.LtGeneric,
-            WKT.booleanType2,
-        ) { d -> TBoolean.value(d < 0) },
+        listOf(ltIntFn, ltLongFn, ltDoubleFn, ltStringFn),
+        ltGenericFn,
     ).also {
         helpSnippet(it, "Less than operator", "builtin/<")
     }
+
+    val leIntFn: CallableValue = IntCompareFun(
+        "<=",
+        BuiltinOperatorId.LeIntInt,
+    ) { cmp ->
+        TBoolean.value(cmp <= 0)
+    }
+
+    val leLongFn: CallableValue = LongCompareFun(
+        "<=",
+        BuiltinOperatorId.LeIntInt,
+    ) { cmp ->
+        TBoolean.value(cmp <= 0)
+    }
+
+    val leDoubleFn: CallableValue = DoubleCompareFun(
+        "<=",
+        BuiltinOperatorId.LeFltFlt,
+    ) { cmp ->
+        TBoolean.value(cmp <= 0)
+    }
+
+    val leStringFn: CallableValue = StringCompareFun(
+        "<=",
+        BuiltinOperatorId.LeStrStr,
+    ) { cmp ->
+        TBoolean.value(cmp <= 0)
+    }
+
+    val leGenericFn: CallableValue = ComparisonFunction(
+        "<=",
+        BuiltinOperatorId.LeGeneric,
+        WKT.booleanType2,
+    ) { d -> TBoolean.value(d <= 0) }
 
     /**
      * <!-- snippet: builtin/<= -->
@@ -1318,40 +1386,45 @@ object BuiltinFuns {
      * especially the [snippet/general-comparison/caveats].
      */
     val lessEqualsFn = CoverFunction(
-        listOf(
-            IntCompareFun(
-                "<=",
-                BuiltinOperatorId.LeIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp <= 0)
-            },
-            LongCompareFun(
-                "<=",
-                BuiltinOperatorId.LeIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp <= 0)
-            },
-            DoubleCompareFun(
-                "<=",
-                BuiltinOperatorId.LeFltFlt,
-            ) { cmp ->
-                TBoolean.value(cmp <= 0)
-            },
-            StringCompareFun(
-                "<=",
-                BuiltinOperatorId.LeStrStr,
-            ) { cmp ->
-                TBoolean.value(cmp <= 0)
-            },
-        ),
-        otherwise = ComparisonFunction(
-            "<=",
-            BuiltinOperatorId.LeGeneric,
-            WKT.booleanType2,
-        ) { d -> TBoolean.value(d <= 0) },
+        listOf(leIntFn, leLongFn, leDoubleFn, leStringFn),
+        leGenericFn,
     ).also {
         helpSnippet(it, "Less than or equals operator", "builtin/<=")
     }
+
+    val gtIntFn: CallableValue = IntCompareFun(
+        ">",
+        BuiltinOperatorId.GtIntInt,
+    ) { cmp ->
+        TBoolean.value(cmp > 0)
+    }
+
+    val gtLongFn: CallableValue = LongCompareFun(
+        ">",
+        BuiltinOperatorId.GtIntInt,
+    ) { cmp ->
+        TBoolean.value(cmp > 0)
+    }
+
+    val gtDoubleFn: CallableValue = DoubleCompareFun(
+        ">",
+        BuiltinOperatorId.GtFltFlt,
+    ) { cmp ->
+        TBoolean.value(cmp > 0)
+    }
+
+    val gtStringFn: CallableValue = StringCompareFun(
+        ">",
+        BuiltinOperatorId.GtStrStr,
+    ) { cmp ->
+        TBoolean.value(cmp > 0)
+    }
+
+    val gtGenericFn: CallableValue = ComparisonFunction(
+        ">",
+        BuiltinOperatorId.GtGeneric,
+        WKT.booleanType2,
+    ) { d -> TBoolean.value(d > 0) }
 
     /**
      * <!-- snippet: builtin/> -->
@@ -1363,40 +1436,45 @@ object BuiltinFuns {
      * especially the [snippet/general-comparison/caveats].
      */
     val greaterThanFn = CoverFunction(
-        listOf(
-            IntCompareFun(
-                ">",
-                BuiltinOperatorId.GtIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp > 0)
-            },
-            LongCompareFun(
-                ">",
-                BuiltinOperatorId.GtIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp > 0)
-            },
-            DoubleCompareFun(
-                ">",
-                BuiltinOperatorId.GtFltFlt,
-            ) { cmp ->
-                TBoolean.value(cmp > 0)
-            },
-            StringCompareFun(
-                ">",
-                BuiltinOperatorId.GtStrStr,
-            ) { cmp ->
-                TBoolean.value(cmp > 0)
-            },
-        ),
-        otherwise = ComparisonFunction(
-            ">",
-            BuiltinOperatorId.GtGeneric,
-            WKT.booleanType2,
-        ) { d -> TBoolean.value(d > 0) },
+        listOf(gtIntFn, gtLongFn, gtDoubleFn, gtStringFn),
+        gtGenericFn,
     ).also {
         helpSnippet(it, "Greater than operator", "builtin/>")
     }
+
+    val geIntFn: CallableValue = IntCompareFun(
+        ">=",
+        BuiltinOperatorId.GeIntInt,
+    ) { cmp ->
+        TBoolean.value(cmp >= 0)
+    }
+
+    val geLongFn: CallableValue = LongCompareFun(
+        ">=",
+        BuiltinOperatorId.GeIntInt,
+    ) { cmp ->
+        TBoolean.value(cmp >= 0)
+    }
+
+    val geDoubleFn: CallableValue = DoubleCompareFun(
+        ">=",
+        BuiltinOperatorId.GeFltFlt,
+    ) { cmp ->
+        TBoolean.value(cmp >= 0)
+    }
+
+    val geStringFn: CallableValue = StringCompareFun(
+        ">=",
+        BuiltinOperatorId.GeStrStr,
+    ) { cmp ->
+        TBoolean.value(cmp >= 0)
+    }
+
+    val geGenericFn: CallableValue = ComparisonFunction(
+        ">=",
+        BuiltinOperatorId.GeGeneric,
+        WKT.booleanType2,
+    ) { d -> TBoolean.value(d >= 0) }
 
     /**
      * <!-- snippet: builtin/>= -->
@@ -1408,40 +1486,49 @@ object BuiltinFuns {
      * especially the [snippet/general-comparison/caveats].
      */
     val greaterEqualsFn = CoverFunction(
-        listOf(
-            IntCompareFun(
-                ">=",
-                BuiltinOperatorId.GeIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp >= 0)
-            },
-            LongCompareFun(
-                ">=",
-                BuiltinOperatorId.GeIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp >= 0)
-            },
-            DoubleCompareFun(
-                ">=",
-                BuiltinOperatorId.GeFltFlt,
-            ) { cmp ->
-                TBoolean.value(cmp >= 0)
-            },
-            StringCompareFun(
-                ">=",
-                BuiltinOperatorId.GeStrStr,
-            ) { cmp ->
-                TBoolean.value(cmp >= 0)
-            },
-        ),
-        otherwise = ComparisonFunction(
-            ">=",
-            BuiltinOperatorId.GeGeneric,
-            WKT.booleanType2,
-        ) { d -> TBoolean.value(d >= 0) },
+        listOf(geIntFn, geLongFn, geDoubleFn, geStringFn),
+        geGenericFn,
     ).also {
         helpSnippet(it, "Greater than or equals operator", "builtin/>=")
     }
+
+    val eqIntFn: CallableValue = IntCompareFun(
+        "==",
+        BuiltinOperatorId.EqIntInt,
+        nullity = Nullity.OrNull,
+    ) { cmp ->
+        TBoolean.value(cmp == 0)
+    }
+
+    val eqLongFn: CallableValue = LongCompareFun(
+        "==",
+        BuiltinOperatorId.EqIntInt,
+        nullity = Nullity.OrNull,
+    ) { cmp ->
+        TBoolean.value(cmp == 0)
+    }
+
+    val eqDoubleFn: CallableValue = DoubleCompareFun(
+        "==",
+        BuiltinOperatorId.EqFltFlt,
+        nullity = Nullity.OrNull,
+    ) { cmp ->
+        TBoolean.value(cmp == 0)
+    }
+
+    val eqStringFn: CallableValue = StringCompareFun(
+        "==",
+        BuiltinOperatorId.EqStrStr,
+        nullity = Nullity.OrNull,
+    ) { cmp ->
+        TBoolean.value(cmp == 0)
+    }
+
+    val eqGenericFn: CallableValue = EqualityFunction(
+        "==",
+        BuiltinOperatorId.EqGeneric,
+        invert = false,
+    )
 
     /**
      * <!-- snippet: builtin/== -->
@@ -1453,40 +1540,49 @@ object BuiltinFuns {
      * [issue#36]: custom equivalence and default equivalence for record classes
      */
     val equalsFn = CoverFunction(
-        listOf(
-            IntCompareFun(
-                "==",
-                BuiltinOperatorId.EqIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp == 0)
-            },
-            LongCompareFun(
-                "==",
-                BuiltinOperatorId.EqIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp == 0)
-            },
-            DoubleCompareFun(
-                "==",
-                BuiltinOperatorId.EqFltFlt,
-            ) { cmp ->
-                TBoolean.value(cmp == 0)
-            },
-            StringCompareFun(
-                "==",
-                BuiltinOperatorId.EqStrStr,
-            ) { cmp ->
-                TBoolean.value(cmp == 0)
-            },
-        ),
-        otherwise = EqualityFunction(
-            "==",
-            BuiltinOperatorId.EqGeneric,
-            invert = false,
-        ),
+        listOf(eqIntFn, eqLongFn, eqDoubleFn, eqStringFn),
+        otherwise = eqGenericFn,
     ).also {
         helpSnippet(it, "Equal to operator", "builtin/==")
     }
+
+    val neIntFn: CallableValue = IntCompareFun(
+        "!=",
+        BuiltinOperatorId.NeIntInt,
+        nullity = Nullity.OrNull,
+    ) { cmp ->
+        TBoolean.value(cmp != 0)
+    }
+
+    val neLongFn: CallableValue = LongCompareFun(
+        "!=",
+        BuiltinOperatorId.NeIntInt,
+        nullity = Nullity.OrNull,
+    ) { cmp ->
+        TBoolean.value(cmp != 0)
+    }
+
+    val neDoubleFn: CallableValue = DoubleCompareFun(
+        "!=",
+        BuiltinOperatorId.NeFltFlt,
+        nullity = Nullity.OrNull,
+    ) { cmp ->
+        TBoolean.value(cmp != 0)
+    }
+
+    val neStringFn: CallableValue = StringCompareFun(
+        "!=",
+        BuiltinOperatorId.NeStrStr,
+        nullity = Nullity.OrNull,
+    ) { cmp ->
+        TBoolean.value(cmp != 0)
+    }
+
+    val neGenericFn: CallableValue = EqualityFunction(
+        "!=",
+        BuiltinOperatorId.NeGeneric,
+        invert = true,
+    )
 
     /**
      * <!-- snippet: builtin/!= -->
@@ -1494,37 +1590,8 @@ object BuiltinFuns {
      * `a != b` is the [snippet/type/Boolean] inverse of [snippet/builtin/==]
      */
     val notEqualsFn = CoverFunction(
-        listOf(
-            IntCompareFun(
-                "!=",
-                BuiltinOperatorId.NeIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp != 0)
-            },
-            LongCompareFun(
-                "!=",
-                BuiltinOperatorId.NeIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp != 0)
-            },
-            DoubleCompareFun(
-                "!=",
-                BuiltinOperatorId.NeFltFlt,
-            ) { cmp ->
-                TBoolean.value(cmp != 0)
-            },
-            StringCompareFun(
-                "!=",
-                BuiltinOperatorId.NeStrStr,
-            ) { cmp ->
-                TBoolean.value(cmp != 0)
-            },
-        ),
-        otherwise = EqualityFunction(
-            "!=",
-            BuiltinOperatorId.NeGeneric,
-            invert = true,
-        ),
+        listOf(neIntFn, neLongFn, neDoubleFn, neStringFn),
+        otherwise = neGenericFn,
     ).also {
         helpSnippet(it, "Not equal to operator", "builtin/!=")
     }
@@ -1611,8 +1678,7 @@ object BuiltinFuns {
      * [surrogate]: https://unicode.org/glossary/#surrogate_code_point
      * [UTF-16]: https://unicode.org/glossary/#UTF_16
      */
-    @Suppress("KDocUnresolvedReference")
-    val cmpFn: NamedBuiltinFun = ComparisonFunction(
+    val cmpFn: CallableValue = ComparisonFunction(
         "<=>",
         BuiltinOperatorId.CmpGeneric,
         WKT.intType2,
@@ -1674,7 +1740,6 @@ object BuiltinFuns {
     val vBubble = Value(bubble)
     val vPanic = Value(panic)
     val vVoidishPanic = Value(voidishPanic)
-    val vCmp = Value(cmpFn)
     val vCommaFn = Value(commaFn)
     val vNotFn = Value(notFn)
     val vDesugarLogicalAndFn = Value(desugarLogicalAndFn)

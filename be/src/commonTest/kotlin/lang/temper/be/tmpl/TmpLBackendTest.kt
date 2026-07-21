@@ -163,7 +163,7 @@ class TmpLBackendTest {
                     "content":
                     ```
                     //// work//for/ => for.tmpl
-                    let nym`<#1` = builtins.nym`<` /* (Int32?, Int32?) -> Boolean */;
+                    let nym`<#1` = builtins.nym`<` /* (Int32, Int32) -> Boolean */;
                     let nym`+#2` = builtins.nym`+` /* (Int32, Int32) -> Int32 */;
                     @QName("test-library/for.x=") var x__0: Int32 = 0;
                     module init {
@@ -383,7 +383,7 @@ class TmpLBackendTest {
                 |            "content":
                 |            ```
                 |            //// work//fib/ => fib.tmpl
-                |            let nym`>#9` = builtins.nym`>` /* (Int32?, Int32?) -> Boolean */;
+                |            let nym`>#9` = builtins.nym`>` /* (Int32, Int32) -> Boolean */;
                 |            let nym`+#10` = builtins.nym`+` /* (Int32, Int32) -> Int32 */;
                 |            let nym`-#11` = builtins.nym`-` /* (Int32, Int32) -> Int32 */;
                 |            @QName("test-library/fib.fib()") let fib__0(@QName("test-library/fib.fib().(i)") var i__0: Int32): Int32 {
@@ -638,7 +638,7 @@ class TmpLBackendTest {
                     "content":
                     ```
                     //// work//do-nothing/ => do-nothing.tmpl
-                    let nym`<#1` = builtins.nym`<` /* (Int32?, Int32?) -> Boolean */;
+                    let nym`<#1` = builtins.nym`<` /* (Int32, Int32) -> Boolean */;
                     let nym`+#2` = builtins.nym`+` /* (Int32, Int32) -> Int32 */;
                     @QName("test-library/do-nothing.i") var i__0: Int32 = 0;
                     module init {
@@ -2076,10 +2076,10 @@ class TmpLBackendTest {
             |      content: ```
             |        //// work//foo/ => foo.tmpl
             |        let GetConsole#0 = builtins.GetConsole;
-            |        let nym`<=#28` = builtins.nym`<=` /* (Int32?, Int32?) -> Boolean */;
+            |        let nym`<=#28` = builtins.nym`<=` /* (Int32, Int32) -> Boolean */;
             |        let ConsoleLog#0 = builtins.ConsoleLog;
             |        let nym`+#30` = builtins.nym`+` /* (Int32, Int32) -> Int32 */;
-            |        let nym`>=#31` = builtins.nym`>=` /* (Int32?, Int32?) -> Boolean */;
+            |        let nym`>=#31` = builtins.nym`>=` /* (Int32, Int32) -> Boolean */;
             |        let console#0: Console = GetConsole#0();
             |        @QName("test-library/foo.f()") @reach(\none) let f__0(): Void {
             |          var t#0: Int32;
@@ -3103,7 +3103,7 @@ class TmpLBackendTest {
             |      content:
             |      ```
             |      //// work//bubble-ordering/ => bubble-ordering.tmpl
-            |      let nym`<=#24` = builtins.nym`<=` /* (Int32?, Int32?) -> Boolean */;
+            |      let nym`<=#24` = builtins.nym`<=` /* (Int32, Int32) -> Boolean */;
             |      @QName("test-library/bubble-ordering.type Apple") class Apple / Apple {
             |        @QName("test-library/bubble-ordering.type Apple.maybe()") let maybe__0(this = this__0, @QName("test-library/bubble-ordering.type Apple.maybe().(this)") @impliedThis(Apple) this__0: Apple): Apple | Bubble {
             |          return /* this */ this__0;
@@ -3148,7 +3148,7 @@ class TmpLBackendTest {
             |      content:
             |      ```
             |      //// work//bubble-ordering/ => bubble-ordering.tmpl
-            |      let nym`<=#24` = builtins.nym`<=` /* (Int32?, Int32?) -> Boolean */;
+            |      let nym`<=#24` = builtins.nym`<=` /* (Int32, Int32) -> Boolean */;
             |      @fail var fail#0: Boolean;
             |      @fail var fail#1: Boolean;
             |      @QName("test-library/bubble-ordering.type Apple") class Apple / Apple {

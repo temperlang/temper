@@ -275,9 +275,13 @@ private class Float64Compare(
         returnType: Type2,
         translator: RustTranslator,
     ): Rust.Expr {
+        val cmpFn = when (operator) {
+            RustOperator.Equals, RustOperator.NotEquals -> "cmp_option"
+            else -> "cmp"
+        }
         return Rust.Call(
             pos,
-            callee = "temper_core".toKeyId(pos).extendWith(listOf("float64", "cmp_option")),
+            callee = "temper_core".toKeyId(pos.leftEdge).extendWith(listOf("float64", cmpFn)),
             args = arguments.map { it.expr as Rust.Expr },
         ).infix(operator, Rust.NumberLiteral(pos, 0L))
     }

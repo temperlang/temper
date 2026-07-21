@@ -9,11 +9,11 @@ import lang.temper.value.MacroEnvironment
 import lang.temper.value.NameLeaf
 import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
-import lang.temper.value.TNull
 import lang.temper.value.TVoid
 import lang.temper.value.Value
 import lang.temper.value.freeTree
 import lang.temper.value.vInitSymbol
+import lang.temper.value.vIsNullFn
 import lang.temper.value.vSsaSymbol
 
 /**
@@ -52,13 +52,12 @@ internal object CoalesceMacro : BuiltinMacro("??", null) {
             IfThenElse(
                 {
                     Call {
-                        V(Value(BuiltinFuns.notEqualsFn))
+                        V(vIsNullFn)
                         Rn(name)
-                        V(TNull.value)
                     }
                 },
-                { Rn(name) },
                 { Replant(freeTree(macroEnv.args.valueTree(1))) },
+                { Rn(name) },
             )
         }
         // Replace the macro call.

@@ -69,9 +69,22 @@ data class LogEntry(
     val fyi: Boolean = false,
 ) : Structured {
     constructor (
+        template: MessageTemplateI,
+        pos: Position,
+        values: List<Any> = listOf(),
+        fyi: Boolean = false,
+    ) : this(
+        level = (template as? LeveledMessageTemplate)?.suggestedLevel ?: Log.Error,
+        template = template,
+        pos = pos,
+        values = values,
+        fyi = fyi,
+    )
+
+    constructor (
         template: LeveledMessageTemplate,
         pos: Position,
-        values: List<Any>,
+        values: List<Any> = listOf(),
         fyi: Boolean = false,
     ) : this(
         level = template.suggestedLevel,

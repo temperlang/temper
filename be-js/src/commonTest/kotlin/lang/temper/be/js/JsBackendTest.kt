@@ -1801,16 +1801,16 @@ class JsBackendTest {
             |                  let body_0;
             |## Similarly for body content.
             |                  t_1 = yield await_0(netResponseGetBodyContent_0(r_0));
-            |                  if (!(t_1 == null)) {
-            |                    body_0 = t_1;
-            |                  } else {
+            |                  if (t_1 == null) {
             |                    body_0 = "missing";
+            |                  } else {
+            |                    body_0 = t_1;
             |                  }
             |                  t_0 = netResponseGetContentType_0(r_0);
-            |                  if (!(t_0 == null)) {
-            |                    t_2 = t_0;
-            |                  } else {
+            |                  if (t_0 == null) {
             |                    t_2 = "unknown";
+            |                  } else {
+            |                    t_2 = t_0;
             |                  }
             |                  console_0.log("Got " + body_0 + " / " + t_2);
             |                }
@@ -1865,10 +1865,10 @@ class JsBackendTest {
             |           */
             |          export function prod(i_0, j_0) {
             |            let t_0;
-            |            if (!(j_0 == null)) {
-            |              t_0 = j_0;
-            |            } else {
+            |            if (j_0 == null) {
             |              t_0 = 1;
+            |            } else {
+            |              t_0 = j_0;
             |            }
             |            return imul_0(i_0, t_0);
             |          };
@@ -1880,10 +1880,10 @@ class JsBackendTest {
             |          export function prodWrap(i_1, j_2) {
             |            let t_1;
             |            let t_2 = listedGet_0(j_2, 0);
-            |            if (!(t_2 == null)) {
-            |              t_1 = t_2;
-            |            } else {
+            |            if (t_2 == null) {
             |              t_1 = 1;
+            |            } else {
+            |              t_1 = t_2;
             |            }
             |            return imul_0(i_1, t_1);
             |          };

@@ -1239,13 +1239,13 @@ class CSharpBackendTest {
                     |    {
                     |        string t___0;
                     |        string ? t__0 = C::Optional.OrNull<string>(new Identity<string>().Identity_(C::Optional.Of<string>(s__0)));
-                    |        if (!(t__0 == null))
+                    |        if (t__0 == null)
                     |        {
-                    |            t___0 = t__0!;
+                    |            t___0 = "not";
                     |        }
                     |        else
                     |        {
-                    |            t___0 = "not";
+                    |            t___0 = t__0!;
                     |        }
                     |        console___0.Log(t___0);
                     |    }
