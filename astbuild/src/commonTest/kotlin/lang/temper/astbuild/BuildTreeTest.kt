@@ -399,8 +399,8 @@ class BuildTreeTest {
             [ "Fun", [
                 [ "Block", [
                     [ "Call", [
-                        [ "Value", "postfixApply: Function" ],
-                        [ "RightName", "++" ],
+                        [ "Value", "desugarOperation: Function" ],
+                        [ "RightName", "_++" ],
                         [ "RightName", "x" ]
                       ]
                     ],
@@ -415,8 +415,8 @@ class BuildTreeTest {
             [ "Fun", [
                 [ "Block", [
                     [ "Call", [
-                        [ "Value", "postfixApply: Function" ],
-                        [ "RightName", "++" ],
+                        [ "Value", "desugarOperation: Function" ],
+                        [ "RightName", "_++" ],
                         [ "RightName", "y" ]
                       ]
                     ],
@@ -430,8 +430,8 @@ class BuildTreeTest {
             [ "Fun", [
                 [ "Block", [
                     [ "Call", [
-                        [ "Value", "postfixApply: Function" ],
-                        [ "RightName", "--" ],
+                        [ "Value", "desugarOperation: Function" ],
+                        [ "RightName", "_--" ],
                         [ "RightName", "z" ]
                       ]
                     ],

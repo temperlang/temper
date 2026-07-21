@@ -1,11 +1,39 @@
 /**
+ * Successor function.
+ * @param {number} n
+ * @returns {number}
+ */
+export const int32Succ = (x) => x + 1;
+
+/**
+ * Predecessor function.
+ * @param {number} n
+ * @returns {number}
+ */
+export const int32Pred = (x) => x - 1;
+
+/**
+ * Successor function.
+ * @param {bigint} n
+ * @returns {bigint}
+ */
+export const int64Succ = (x) => x + 1n;
+
+/**
+ * Predecessor function.
+ * @param {bigint} n
+ * @returns {bigint}
+ */
+export const int64Pred = (x) => x - 1n;
+
+/**
  * Right shift (sign-extending) with Int64 semantics.
  *
  * BigInt shift does not mask the shift amount.
  *
- * @param {BigInt} a
+ * @param {bigint} a
  * @param {number} b
- * @return {BigInt}
+ * @return {bigint}
  */
 export const bitwiseShr64 = (a, b) => {
   b &= 0x3f;
@@ -39,9 +67,9 @@ export const bitwiseShrUnsigned32 = (a, b) => {
  * non-zero amount will yield a non-negative value, but a shift by zero
  * (post right operand masking) does not.
  *
- * @param {BigInt} a
+ * @param {bigint} a
  * @param {number} b
- * @return {BigInt}
+ * @return {bigint}
  */
 export const bitwiseShrUnsigned64 = (a, b) => {
   b &= 0x3f;
@@ -58,9 +86,9 @@ export const bitwiseShrUnsigned64 = (a, b) => {
  * non-zero amount will yield a non-negative value, but a shift by zero
  * (post right operand masking) does not.
  *
- * @param {BigInt} a
+ * @param {bigint} a
  * @param {number} b
- * @return {BigInt}
+ * @return {bigint}
  */
 export const bitwiseShl64 = (a, b) => {
   a = (a & 0xffff_ffff_ffff_ffffn) << globalThis.BigInt(b & 0x3f);

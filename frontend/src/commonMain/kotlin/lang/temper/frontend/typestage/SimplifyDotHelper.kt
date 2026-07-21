@@ -1,12 +1,15 @@
 package lang.temper.frontend.typestage
 
+import lang.temper.builtin.BuiltinFuns
 import lang.temper.common.Either
 import lang.temper.common.subListToEnd
 import lang.temper.frontend.maybeAdjustDotHelper
+import lang.temper.name.Symbol
 import lang.temper.type.AndType
 import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
 import lang.temper.type.ExtensionResolution
+import lang.temper.type.ExternalCall
 import lang.temper.type.FunctionResolution
 import lang.temper.type.FunctionType
 import lang.temper.type.InstanceExtensionResolution
@@ -17,8 +20,12 @@ import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
 import lang.temper.type.VisibleMemberShape
+import lang.temper.type.WellKnownTypes
 import lang.temper.type.extractAtoms
 import lang.temper.value.CallTree
+import lang.temper.value.TFloat64
+import lang.temper.value.TInt
+import lang.temper.value.TInt64
 import lang.temper.value.Tree
 import lang.temper.value.Value
 
@@ -56,11 +63,11 @@ internal fun simplifyDotHelper(
     // Give preference to members over extensions
     var lastNonExtensionResolution: VariantResolution? = null
     var lastResolution: VariantResolution? = null
-    for (variant in variants.reversed()) {
-        if (variant.first equivalent variantMatch || variant.first equivalent variantMatchRefined) {
-            lastResolution = variant.second
-            if (variant.second is Either.Left) {
-                lastNonExtensionResolution = variant.second
+    for ((variantType, resolution) in variants.reversed()) {
+        if (variantType equivalent variantMatch || variantType equivalent variantMatchRefined) {
+            lastResolution = resolution
+            if (resolution is Either.Left) {
+                lastNonExtensionResolution = resolution
             }
         }
     }
@@ -136,6 +143,24 @@ internal fun simplifyDotHelper(
         }
     }
 
+    // Inline some methods on numerics to reduce the method connect burden for backends.
+    // This means `++x` when x has a builtin numeric type ends up as `x = x + 1` which
+    // is more readily translated than `x = x.succ()`.
+    if (call.size == 2 && dotHelper.memberAccessor == ExternalCall) {
+        val subjectType = variantFunctionType?.valueFormals?.getOrNull(0)?.type
+        inlineHelpersForSuccAndPred[subjectType to dotHelper.member]?.let { (newCallee, extraArg) ->
+            val calleeEdge = call.edge(0)
+            calleeEdge.replace { pos ->
+                V(pos, Value(newCallee))
+            }
+            call.insert {
+                V(extraArg)
+            }
+            retypeTree(call)
+            return@simplifyDotHelper
+        }
+    }
+
     val functionTypes = variantMatch?.let {
         extractAtoms(it) { atom -> atom as? FunctionType }
     } ?: setOf()
@@ -179,3 +204,14 @@ private infix fun StaticType?.equivalent(other: StaticType?): Boolean =
     } else {
         this == other
     }
+
+private val succDotMember = DotMember(Symbol("succ")) // `++` desugars to this
+private val predDotMember = DotMember(Symbol("pred")) // `--` desugars to this
+private val inlineHelpersForSuccAndPred = mapOf(
+    (WellKnownTypes.intType2 to succDotMember) to (BuiltinFuns.plusIntIntFn to Value(1, TInt)),
+    (WellKnownTypes.intType2 to predDotMember) to (BuiltinFuns.minusIntIntFn to Value(1, TInt)),
+    (WellKnownTypes.int64Type2 to succDotMember) to (BuiltinFuns.plusLongLongFn to Value(1L, TInt64)),
+    (WellKnownTypes.int64Type2 to predDotMember) to (BuiltinFuns.minusLongLongFn to Value(1L, TInt64)),
+    (WellKnownTypes.float64Type2 to succDotMember) to (BuiltinFuns.plusFloatFloatFn to Value(1.0, TFloat64)),
+    (WellKnownTypes.float64Type2 to predDotMember) to (BuiltinFuns.minusFloatFloatFn to Value(1.0, TFloat64)),
+)

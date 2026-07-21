@@ -623,14 +623,14 @@ class InterpreterTest {
                 }
                 Call(BuiltinFuns.setLocalFn) { // i = i + 1
                     Ln(i)
-                    Call(BuiltinFuns.plusFn) {
+                    Call(BuiltinFuns.plusIntIntFn) {
                         Rn(i)
                         V(Value(1, TInt))
                     }
                 }
                 Call(BuiltinFuns.setLocalFn) { // x = x + i
                     Ln(x)
-                    Call(BuiltinFuns.plusFn) {
+                    Call(BuiltinFuns.plusIntIntFn) {
                         Rn(x)
                         Rn(i)
                     }

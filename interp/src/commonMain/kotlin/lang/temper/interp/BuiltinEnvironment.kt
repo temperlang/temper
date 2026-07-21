@@ -1,7 +1,6 @@
 package lang.temper.interp
 
 import lang.temper.builtin.BuiltinFuns
-import lang.temper.builtin.DesugarPrefixOperatorMacro
 import lang.temper.builtin.Types
 import lang.temper.builtin.simpleBuiltinKeyFromCompoundOperator
 import lang.temper.builtin.vStringCatMacro
@@ -19,7 +18,6 @@ import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.TemperName
 import lang.temper.type.WellKnownTypes
-import lang.temper.value.CallableValue
 import lang.temper.value.CoverFunction
 import lang.temper.value.Fail
 import lang.temper.value.InstancePropertyRecord
@@ -58,9 +56,6 @@ private object Builtins {
     val nameKeyToValue: Map<String, Value<*>>
     init {
         val m = mutableMapOf(
-            "++" to Value(DesugarPrefixOperatorMacro("++", BuiltinFuns.plusFn)),
-            "--" to Value(DesugarPrefixOperatorMacro("--", BuiltinFuns.minusFn)),
-
             "<" to Value(BuiltinFuns.lessThanFn),
             ">" to Value(BuiltinFuns.greaterThanFn),
             "<=" to Value(BuiltinFuns.lessEqualsFn),
@@ -608,7 +603,7 @@ private object Builtins {
              * ## The custom JSON adapter strategy
              *
              * If a type, whether it's a class or interface type,
-             * already has encoding and decoding functions then none are
+             * already has encoding and decoding functions, then none are
              * auto-generated.
              *
              * ```temper
@@ -643,7 +638,7 @@ private object Builtins {
              * ## Sealed interface strategy
              *
              * For sealed interfaces, we generate adapters that delegate to adapters for
-             * the appropriate sub-type.
+             * the appropriate subtype.
              *
              * ```temper
              * let {
@@ -862,22 +857,10 @@ internal class BuiltinEnvironment(
         override val reifiedType: Value<*>? = null
     }
 
-    override fun get(name: TemperName, cb: InterpreterCallback): PartialResult {
-        val builtinKey = name.builtinKey
-        if (builtinKey != null) {
-            val builtin = Builtins.nameKeyToValue[builtinKey]
-            if (builtin != null) { return builtin }
-            val simpleBuiltinKey = simpleBuiltinKeyFromCompoundOperator(builtinKey)
-            if (simpleBuiltinKey != null) {
-                val simpleBuiltin = Builtins.nameKeyToValue[simpleBuiltinKey]
-                val simpleFn = TFunction.unpackOrNull(simpleBuiltin)
-                if (simpleFn is CallableValue) {
-                    return Value(DesugarCompoundAssignmentMacro(builtinKey, simpleFn))
-                }
-            }
-        }
-        return super.get(name, cb)
-    }
+    override fun get(name: TemperName, cb: InterpreterCallback): PartialResult =
+        name.builtinKey?.let { builtinKey ->
+            Builtins.nameKeyToValue[builtinKey]
+        } ?: super.get(name, cb)
 
     override fun declare(
         name: TemperName,
@@ -894,7 +877,7 @@ internal class BuiltinEnvironment(
         }
     }
 
-    // This does not include all possible compound operators but this is advertised as best effort,
+    // This does not include all possible compound operators, but this is advertised as best effort,
     // and I'm lazy.
     override val locallyDeclared: Iterable<TemperName> get() = Builtins.nameKeyToValue.keys.map {
         BuiltinName(it)

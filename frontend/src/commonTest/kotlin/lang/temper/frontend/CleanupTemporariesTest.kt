@@ -1635,12 +1635,12 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeBefore: ```
-                |    var t#0, t#1, t#2, fail#0, fail#1, fail#2;
+                |    var t#0, t#1, t#2, t#3, fail#0, fail#1, fail#2, fail#3;
                 |    let console#0;
                 |    t#0 = doPure(@stay fn /* return__0 */: Console {
-                |        var t#3, fail#3;
-                |        t#3 = getConsole();
-                |        return__0 = t#3
+                |        var t#4, fail#4;
+                |        t#4 = getConsole();
+                |        return__0 = t#4
                 |    });
                 |    console#0 = t#0;
                 |    var i__0;
@@ -1648,25 +1648,26 @@ class CleanupTemporariesTest {
                 |    while (i__0 < 3) {
                 |      let postfixReturn#0;
                 |      postfixReturn#0 = i__0;
-                |      i__0 = i__0 + 1;
-                |      t#1 = postfixReturn#0;
-                |      t#2 = do_call_toString(t#1);
-                |      do_call_log(console#0, t#2)
+                |      t#1 = postfixReturn#0 + 1;
+                |      i__0 = t#1;
+                |      t#2 = postfixReturn#0;
+                |      t#3 = do_call_toString(t#2);
+                |      do_call_log(console#0, t#3)
                 |    }
                 |
                 |    ```,
                 |  pseudoCodeAfter: ```
                 |    var t#0;
+                |    var t#2;
                 |    t#0 = doPure(@stay fn /* return__0 */: Console {
                 |        return__0 = getConsole();
                 |    });
                 |    var i__0;
                 |    i__0 = 0;
                 |    while (i__0 < 3) {
-                |      let postfixReturn#0;
-                |      postfixReturn#0 = i__0;
-                |      i__0 = i__0 + 1;
-                |      do_call_log(t#0, do_call_toString(postfixReturn#0))
+                |      t#2 = i__0;
+                |      i__0 = t#2 + 1;
+                |      do_call_log(t#0, do_call_toString(t#2))
                 |    }
                 |
                 |    ```,
@@ -1694,12 +1695,12 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeBefore: ```
                 |    let return__0;
-                |    var t#0, t#1, t#2, fail#0, fail#1, fail#2;
+                |    var t#0, t#1, t#2, t#3, fail#0, fail#1, fail#2, fail#3;
                 |    let console#0;
                 |    t#0 = doPure(@stay fn /* return__1 */: Console {
-                |        var t#3, fail#3;
-                |        t#3 = getConsole();
-                |        return__1 = t#3
+                |        var t#4, fail#4;
+                |        t#4 = getConsole();
+                |        return__1 = t#4
                 |    });
                 |    console#0 = t#0;
                 |    var i__0;
@@ -1707,10 +1708,11 @@ class CleanupTemporariesTest {
                 |    while (i__0 < 3) {
                 |      let postfixReturn#0;
                 |      postfixReturn#0 = i__0;
-                |      i__0 = i__0 + 1;
-                |      t#1 = postfixReturn#0;
-                |      t#2 = do_call_toString(t#1);
-                |      do_call_log(console#0, t#2)
+                |      t#1 = postfixReturn#0 + 1;
+                |      i__0 = t#1;
+                |      t#2 = postfixReturn#0;
+                |      t#3 = do_call_toString(t#2);
+                |      do_call_log(console#0, t#3)
                 |    };
                 |    return__0 = void
                 |
@@ -1718,16 +1720,16 @@ class CleanupTemporariesTest {
                 |  pseudoCodeAfter: ```
                 |    let return__0;
                 |    var t#0;
+                |    var t#2;
                 |    t#0 = doPure(@stay fn /* return__1 */: Console {
                 |        return__1 = getConsole();
                 |    });
                 |    var i__0;
                 |    i__0 = 0;
                 |    while (i__0 < 3) {
-                |      let postfixReturn#0;
-                |      postfixReturn#0 = i__0;
-                |      i__0 = i__0 + 1;
-                |      do_call_log(t#0, do_call_toString(postfixReturn#0))
+                |      t#2 = i__0;
+                |      i__0 = t#2 + 1;
+                |      do_call_log(t#0, do_call_toString(t#2))
                 |    };
                 |    return__0 = void
                 |
@@ -1986,6 +1988,70 @@ class CleanupTemporariesTest {
                 |    ```
                 |}
             """.trimMargin(),
+            r,
+        )
+    }
+
+    @Test
+    fun looping() {
+        val r = doCleanupTemporaries(
+            input = $$"""
+                |var n = 0;
+                |outer: for (var i = 0; i < 4; i++) {
+                |  var str = "row ${i} =";
+                |  var j = 0;
+                |  while (true) {
+                |    str = "${str} ${n++}";
+                |    if (i <= j) {
+                |      console.log(str);
+                |      continue outer;
+                |    }
+                |    j += 1;
+                |  }
+                |  console.log(str);
+                |}
+            """.trimMargin(),
+        )
+        assertStructure(
+            """
+                |{
+                |  pseudoCodeAfter: ```
+                |    var t#0;
+                |    var t#4;
+                |    var t#6;
+                |    t#0 = doPure(@stay fn /* return__0 */: Console {
+                |        return__0 = getConsole();
+                |    });
+                |    var n__0;
+                |    n__0 = 0;
+                |    var i__0;
+                |    i__0 = 0;
+                |    outer__0: for (;
+                |      i__0 < 4;
+                |      {
+                |        i__0 = i__0 + 1;
+                |    }) {
+                |      var str__0;
+                |      str__0 = cat("row ", str(i__0), " =");
+                |      var j__0;
+                |      j__0 = 0;
+                |      while (true) {
+                |        t#4 = str(str__0);
+                |        t#6 = n__0;
+                |        n__0 = t#6 + 1;
+                |## t#6 needs to be distinct from n where it's stringified here
+                |        str__0 = cat(t#4, " ", str(t#6));
+                |        if (i__0 <= j__0) {
+                |          do_call_log(t#0, str__0);
+                |          continue outer__0;
+                |        };
+                |        j__0 = j__0 + 1;
+                |      }
+                |    }
+                |
+                |    ```
+                |}
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
             r,
         )
     }

@@ -2082,6 +2082,7 @@ class TmpLBackendTest {
             |        let nym`>=#31` = builtins.nym`>=` /* (Int32?, Int32?) -> Boolean */;
             |        let console#0: Console = GetConsole#0();
             |        @QName("test-library/foo.f()") @reach(\none) let f__0(): Void {
+            |          var t#0: Int32;
             |          @QName("test-library/foo.f().data=") var data__0: Int32 = 0;
             |          @QName("test-library/foo.f().x=") var x__0: Int32 = 0;
             |          while (nym`<=#28`(x__0, 1)) {
@@ -2089,9 +2090,9 @@ class TmpLBackendTest {
             |            @QName("test-library/foo.f().y=") var y__0: Int32 = 75;
             |            while (nym`<=#28`(y__0, 77)) {
             |              ConsoleLog#0(console#0, "b");
-            |              let postfixReturn#0: Int32 = data__0;
-            |              data__0 = nym`+#30`(data__0, 1);
-            |              if (nym`>=#31`(postfixReturn#0, 76)) {
+            |              t#0 = data__0;
+            |              data__0 = nym`+#30`(t#0, 1);
+            |              if (nym`>=#31`(t#0, 76)) {
             |                ConsoleLog#0(console#0, "c");
             |                break;
             |              }

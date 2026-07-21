@@ -2532,4 +2532,121 @@ class SyntaxMacroStageTest {
         """.trimMargin(),
         stage = Stage.SyntaxMacro,
     )
+
+    @Test
+    fun desugarPrefixOp() = assertModuleAtStage(
+        stage = Stage.SyntaxMacro,
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        input = """
+            |export let f(x: Int32): Int32 {
+            |  var y = x;
+            |  y--;
+            |  ++y
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  import: {
+            |    body: ```
+            |      nym`@`(export, let(\word, f, do {
+            |            \_complexArg_;
+            |            x;
+            |            \type;
+            |            Int32
+            |          }, \outType, Int32, fn {
+            |            nym`@`(var, let y = x);
+            |            do {
+            |## Name allocated to do pre-capture
+            |              let postfixReturn#0 = y;
+            |## Dot desugaring here in case there are extensions to do succ and pred.
+            |              y = postfixReturn#0.pred();
+            |              postfixReturn#0
+            |            };
+            |            y = y.succ()
+            |      }))
+            |
+            |      ```,
+            |  },
+            |  syntaxMacro: {
+            |    body: ```
+            |      @fn let `test//`.f;
+            |      `test//`.f = fn f(x__0 /* aka x */: Int32) /* return__0 */: (Int32) {
+            |        fn__0: do {
+            |          var y__0 = x__0;
+            |          do {
+            |            let postfixReturn#0 = y__0;
+            |            y__0 = do_call_pred(postfixReturn#0);
+            |            postfixReturn#0
+            |          };
+            |          y__0 = do_call_succ(y__0)
+            |        }
+            |      };
+            |
+            |      ```
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
+    @Test
+    fun desugarPrefixOpWithComplexOperand() = assertModuleAtStage(
+        stage = Stage.SyntaxMacro,
+        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        input = """
+            |export let f(ls: ListBuilder<Int32>, j: Int32): Void {
+            |  var i = j;
+            |  ls[i++]--;
+            |  --ls[ls[++i]];
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  syntaxMacro: {
+            |    body: ```
+            |      @fn let `test//`.f;
+            |      `test//`.f = fn f(ls__0 /* aka ls */: ListBuilder<Int32>, j__0 /* aka j */: Int32) /* return__0 */: (Void) {
+            |        fn__0: do {
+            |          var i__0 = j__0;
+            |## To do `ls[i++]--`, first we need to get the index `i++`.
+            |          do {
+            |            let t#0;
+            |## `t#0` lets us avoid multiple evaluation of `ls`.
+            |            t#0 = ls__0;
+            |            let t#1;
+            |            t#1 = do {
+            |              let postfixReturn#0 = i__0;
+            |              i__0 = do_call_succ(postfixReturn#0);
+            |              postfixReturn#0
+            |            };
+            |## Now, `t#1` has the post-incremented `i`.
+            |            do {
+            |## Reading the array.
+            |              let postfixReturn#1 = do_call_get(t#0, t#1);
+            |## Writing the array.  Same array and element.
+            |              do_call_set(t#0, t#1, do_call_pred(postfixReturn#1));
+            |## The result is what was read from the array beforehand.
+            |              postfixReturn#1
+            |            }
+            |          };
+            |## Not as much to do for pre-increment and pre-decreemnt.
+            |## `--ls[ls[++i]]` is what we're handling here.
+            |##
+            |          do {
+            |            let t#2;
+            |## Again, we get the subject.  The subject is a simple name,
+            |## but if it were `var`, reading it's property could have the
+            |## side-effect of setting it.
+            |            t#2 = ls__0;
+            |            let t#3;
+            |            t#3 = do_call_get(ls__0, i__0 = do_call_succ(i__0));
+            |            do_call_set(t#2, t#3, do_call_pred(do_call_get(t#2, t#3)))
+            |          };
+            |        }
+            |      };
+            |
+            |      ```
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
 }

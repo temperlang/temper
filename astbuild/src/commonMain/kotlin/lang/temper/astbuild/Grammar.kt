@@ -16,7 +16,6 @@ import lang.temper.ast.ValuePart
 import lang.temper.astbuild.ProductionNames.`(`
 import lang.temper.astbuild.ProductionNames.`)`
 import lang.temper.builtin.BuiltinFuns
-import lang.temper.builtin.BuiltinFuns.vPostfixApply
 import lang.temper.builtin.vDesugarOperation
 import lang.temper.builtin.vStringExprMacro
 import lang.temper.common.Either
@@ -1179,16 +1178,14 @@ val grammar = ProductionNames.run {
 
     Postfix `：＝` (
         OperatorType.Postfix y callTree(
-            // For postfix ++ and --, postfixApply is a macro that propagates the desired result.
-            (
-                (setOf(Operator.PostDecr, Operator.PostIncr) y impliedValue(vPostfixApply, Left)) /
-                    epsilon
-                ) y
+            ((Operator.PostQuest y epsilon) / impliedValue(vDesugarOperation)) y
                 // Grab the operand which precedes the operator.  Later we shift the
                 // operator function left over it.
                 `(` y Expr y
                 PostfixOp.rename(
                     mapOf(
+                        Operator.PostDecr.text!! to Either.Left(BuiltinName("_--")),
+                        Operator.PostIncr.text!! to Either.Left(BuiltinName("_++")),
                         Operator.PostBang.text!! to Either.Left(BuiltinName("_!")),
                         Operator.PostQuest.text!! to Either.Left(BuiltinName("?")),
                     ),

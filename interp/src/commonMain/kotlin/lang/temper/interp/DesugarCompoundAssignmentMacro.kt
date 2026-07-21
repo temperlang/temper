@@ -1,6 +1,7 @@
 package lang.temper.interp
 
 import lang.temper.builtin.desugarCompoundOperation
+import lang.temper.builtin.vDesugarOperation
 import lang.temper.env.InterpMode
 import lang.temper.log.MessageTemplate
 import lang.temper.type2.MacroSignature
@@ -49,8 +50,10 @@ internal class DesugarCompoundAssignmentMacro(
         macroEnv.orderChildMacrosEarly(partialCompoundAssignmentFunctionTypes)
         val left = args.valueTree(0).incoming!!
         val right = args.valueTree(1).incoming!!
-        val plantSimpler = desugarCompoundOperation(macroEnv, left, right) { pos ->
+        val plantSimpler = desugarCompoundOperation(macroEnv, left, right) { pos, plantOperands ->
+            V(pos.leftEdge, vDesugarOperation)
             V(pos, Value(simpleOp))
+            plantOperands()
         }
         if (plantSimpler != null) {
             macroEnv.replaceMacroCallWith(plantSimpler)
