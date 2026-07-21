@@ -581,12 +581,6 @@ internal data class InlineLua(
     val factory: (pos: Position, arguments: List<Lua.Expr>) -> Lua.Tree,
 ) : InlineSupportCode<Lua.Tree, LuaTranslator>, NamedSupportCode {
 
-    init {
-        if ("prod" in name) {
-            name.length
-        }
-    }
-
     override val baseName: ParsedName
         get() = ParsedName(name)
 
