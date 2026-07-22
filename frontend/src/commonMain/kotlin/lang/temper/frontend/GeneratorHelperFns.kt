@@ -142,7 +142,7 @@ class AdaptGeneratorFn private constructor(
                     else -> run {
                         val message = "Expectations of property names of ${
                             wrapperType.name
-                        } by $name do not match those in Implicits"
+                        } by $name do not match those in Core"
                         return@invoke cb.fail(MessageTemplate.InternalInterpreterError, cb.pos, listOf(message))
                     }
                 }

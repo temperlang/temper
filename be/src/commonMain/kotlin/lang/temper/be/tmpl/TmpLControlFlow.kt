@@ -1893,7 +1893,7 @@ internal fun simplifyGeneratorFnReturns(body: PreTranslated, returnName: Resolve
                     if (it is PreTranslated.TreeWrapper) {
                         val tree = it.tree
                         !(
-                            // Filter out `return__123 = implicits.doneResult()`
+                            // Filter out `return__123 = core.doneResult()`
                             isAssignmentCall(tree) &&
                                 (tree.child(1) as? LeftNameLeaf)?.content == returnName &&
                                 isDoneResultCall(tree.child(2))

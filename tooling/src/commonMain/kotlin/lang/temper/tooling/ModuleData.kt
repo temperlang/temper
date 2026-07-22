@@ -673,12 +673,12 @@ private val builtinDefs = lazy {
         val pos = env.declarationSite(temperName) ?: unknownPos
         name to Mention.def(name = name, pos = pos, text = name)
     }
-    // Implicits, letting these overwrite core where applicable.
-    val implicits = CoreModule.module.exports?.asSequence()?.map { export ->
+    // Core, letting these overwrite core where applicable.
+    val core = CoreModule.module.exports?.asSequence()?.map { export ->
         val name = export.name.baseName.nameText
         name to Mention.def(name = name, pos = export.position, text = name)
     } ?: emptySequence()
-    (core + implicits).toMap()
+    (core + core).toMap()
 }
 
 internal val builtinWordDefs = lazy {

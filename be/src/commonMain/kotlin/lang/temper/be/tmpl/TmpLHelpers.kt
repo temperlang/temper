@@ -803,7 +803,7 @@ fun TmpL.Type.withoutAtom(predicate: (TmpL.Type) -> Boolean): TmpL.Type = when (
 private fun Iterable<TmpL.DeclarationMetadata>.documentationOf(): OccasionallyHelpful? =
     this.lookupMetaData(docStringSymbol, unpackVal = ::helpfulFromMetadataValue)
 
-/** An enum that allows switching on frequently used types from Implicits ignoring type parameters */
+/** An enum that allows switching on frequently used types from Core ignoring type parameters */
 enum class ImplicitTypeTag {
     Boolean,
     Int,

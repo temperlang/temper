@@ -40,7 +40,7 @@ import kotlin.jvm.Synchronized
  * We need the interpreter machinery to actually define the members, but it's convenient to define
  * builtins separately.
  *
- * These type shapes are filled in by the *Implicits* module.
+ * These type shapes are filled in by the *Core* module.
  */
 object WellKnownTypes {
     private val bySymbol: Map<Symbol, TypeShape>
@@ -143,7 +143,7 @@ object WellKnownTypes {
             override val loc = CoreCodeLocation
 
             override fun getTopLevelBinding(name: TemperName): DeclarationBinding? =
-                getBindingFromImplicits(name)
+                getBindingFromCore(name)
 
             override val topLevelBindingNames: Iterable<TemperName>
                 get() = getBindingNames()
@@ -154,7 +154,7 @@ object WellKnownTypes {
         var superType: NominalType? = null
         // This is a default position.  TypeDisambiguateMacro updates it
         // when fleshing out well-known type shapes.
-        val implicitsPos = Position(CoreCodeLocation, 0, 0)
+        val corePos = Position(CoreCodeLocation, 0, 0)
 
         val byName = mutableMapOf<ResolvedName, TypeShape>()
         fun wellKnownTypeShape(
@@ -164,7 +164,7 @@ object WellKnownTypes {
         ): TypeShape {
             val symbol = name.toSymbol()!!
             val typeShape = TypeShapeImpl(
-                implicitsPos,
+                corePos,
                 symbol,
                 nameMaker,
                 abstractness,
@@ -192,7 +192,7 @@ object WellKnownTypes {
                 TypeParameterShape(
                     this,
                     TypeFormal(
-                        implicitsPos,
+                        corePos,
                         nameMaker.unusedSourceName(ParsedName(text)),
                         Symbol(text),
                         variance,
@@ -391,21 +391,21 @@ object WellKnownTypes {
     val allNames: Set<ResolvedName> get() = this.byName.keys
 }
 
-var implicitsBindings: Map<TemperName, DeclarationBinding> = emptyMap()
-var implicitsBindingNames: Set<TemperName> = emptySet()
+var coreBindings: Map<TemperName, DeclarationBinding> = emptyMap()
+var coreBindingNames: Set<TemperName> = emptySet()
 
-/** Called on initialization of *ImplicitsModule* to initialize support of well-known types */
+/** Called on initialization of *CoreModule* to initialize support of well-known types */
 @Synchronized
-fun initializeBindingsFromImplicits(bindings: Map<TemperName, DeclarationBinding>) {
-    implicitsBindings = bindings
-    implicitsBindingNames = bindings.keys.toSet()
+fun initializeBindingsFromCore(bindings: Map<TemperName, DeclarationBinding>) {
+    coreBindings = bindings
+    coreBindingNames = bindings.keys.toSet()
 }
 
 @Synchronized
-private fun getBindingFromImplicits(name: TemperName): DeclarationBinding? = implicitsBindings[name]
+private fun getBindingFromCore(name: TemperName): DeclarationBinding? = coreBindings[name]
 
 @Synchronized
-private fun getBindingNames() = implicitsBindingNames
+private fun getBindingNames() = coreBindingNames
 
 private infix fun TypeShape.extends(superType: NominalType) {
     check(this is MutableTypeShape)

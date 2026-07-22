@@ -1360,7 +1360,7 @@ class JsBackendTest {
             |      "foo.js": {
             |        content: ```
             |          ((() => {
-            |                throw "howAboutThis not available from implicits";
+            |                throw "howAboutThis not available from core";
             |            })());
             |
             |          ```,
@@ -1371,7 +1371,7 @@ class JsBackendTest {
             |  },
             |  errors: [
             |    "No declaration for howAboutThis!",
-            |    "Cannot translate howAboutThis not available from implicits!",
+            |    "Cannot translate howAboutThis not available from core!",
             |  ]
             |}
         """.trimMargin(),

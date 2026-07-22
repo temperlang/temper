@@ -345,9 +345,9 @@ internal fun typeSyntaxMacro(macroEnv: MacroEnvironment): PartialResult {
                 } else {
                     initExpr = spliceOut(initSymbol)
                     if (initExpr == null) {
-                        // Some wrappers that connect implicits types to Kotlin implementations
+                        // Some wrappers that connect core types to Kotlin implementations
                         // of methods are initialized by bespoke code in DotHelper.
-                        val isAllowedUninitialized = macroEnv.isProcessingImplicits &&
+                        val isAllowedUninitialized = macroEnv.isProcessingCore &&
                             propertyNameSymbol.text == "content"
                         if (!isAllowedUninitialized) {
                             macroEnv.logSink.log(

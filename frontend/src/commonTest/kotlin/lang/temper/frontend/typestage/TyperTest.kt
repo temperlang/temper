@@ -374,7 +374,7 @@ class TyperTest {
             "22+28-31: Type Invalid mentions Invalid",
             "22+28-33: Type Invalid mentions Invalid",
         ),
-        skipImplicits = true,
+        skipCore = true,
     )
 
     @Test
@@ -639,7 +639,7 @@ class TyperTest {
         |/// ┣━━━━━┓        ┃  : C
         |    new C().method()
         """.trimMargin(),
-        skipImplicits = true,
+        skipCore = true,
     )
 
     @Test
@@ -1036,7 +1036,7 @@ class TyperTest {
         |    (i + 1) + (i * i);
         |/// ┗━━━━━━━━━━━━━━━┛ : Int32
         """.trimMargin(),
-        skipImplicits = true,
+        skipCore = true,
     )
 
     @Test
@@ -1956,7 +1956,7 @@ class TyperTest {
             |    new D().a()
             |/// ┗━━━━━━━━━┛ : String
         """.trimMargin(),
-        skipImplicits = true,
+        skipCore = true,
     )
 
     /**
@@ -1983,7 +1983,7 @@ class TyperTest {
             |    new D().a("hi")
             |/// ┗━━━━━━━━━━━━━┛ : String
         """.trimMargin(),
-        skipImplicits = true,
+        skipCore = true,
     )
 
     /**
@@ -2006,7 +2006,7 @@ class TyperTest {
             |    new D().a("hi")
             |/// ┗━━━━━━━━━━━━━┛ : String
         """.trimMargin(),
-        skipImplicits = true,
+        skipCore = true,
         // We resolved types just fine, but parameterized methods in interfaces are still suss.
         wantErrors = listOf(
             "1+20: Illegal type parameter T. Overridable methods don't allow generics!",
@@ -2034,7 +2034,7 @@ class TyperTest {
             |    new D().a()
             |/// ┗━━━━━━━━━┛ : Invalid
         """.trimMargin(),
-        skipImplicits = true,
+        skipCore = true,
         wantErrors = listOf(
             "5+4-15: No callee matches inputs [D] among [(A) -> Void, (C) -> String]!",
             "1+4: Type Invalid mentions Invalid",
@@ -2073,7 +2073,7 @@ class TyperTest {
         wantErrors: List<String> = emptyList(),
         verbose: Boolean = false,
         nameSimplifying: Boolean = true,
-        skipImplicits: Boolean = false,
+        skipCore: Boolean = false,
     ) {
         val filePath = testCodeLocation
         val source = ModuleSource(
@@ -2088,7 +2088,7 @@ class TyperTest {
             content = source,
             verbose = verbose,
             nameSimplifying = nameSimplifying,
-            skipImplicits = skipImplicits,
+            skipCore = skipCore,
         )
 
         val requirementsToInferences = matchRequirementsWithInferences(root, typeRequirements)
@@ -2255,7 +2255,7 @@ class TyperTest {
         content: ModuleSource,
         verbose: Boolean,
         nameSimplifying: Boolean,
-        skipImplicits: Boolean,
+        skipCore: Boolean,
     ): Pair<Tree, List<Pair<Position, String>>> {
         val logSink = ListBackedLogSink()
         val projectLogSink = ValueSimplifyingLogSink(logSink, nameSimplifying = nameSimplifying)
@@ -2273,7 +2273,7 @@ class TyperTest {
         )
         module.deliverContent(content)
         module.addEnvironmentBindings(extraBindings)
-        if (skipImplicits) {
+        if (skipCore) {
             module.addEnvironmentBindings(mapOf(StagingFlags.skipImportCore to TBoolean.valueTrue))
         }
 

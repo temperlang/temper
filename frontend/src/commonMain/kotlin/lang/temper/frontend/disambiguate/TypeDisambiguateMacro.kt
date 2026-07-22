@@ -279,8 +279,8 @@ internal fun typeDisambiguateMacro(
             typeShape = typeDefinedEdge?.target?.typeShapeAtLeafOrNull as? TypeShapeImpl
             isBuildingMixin = typeShape != null
 
-            // If we're building the Implicits module, fill in a well-known type.
-            if (typeShape == null && macroEnv.isProcessingImplicits && typeNameSymbol != null) {
+            // If we're building the Core module, fill in a well-known type.
+            if (typeShape == null && macroEnv.isProcessingCore && typeNameSymbol != null) {
                 val wellKnown = WellKnownTypes.withName(BuiltinName(typeNameSymbol.text))
                 isBuildingWellKnownType = wellKnown != null
                 if (wellKnown is TypeShapeImpl) {
@@ -1064,7 +1064,7 @@ internal fun typeDisambiguateMacro(
             // Don't add AnyValue as a super type to interface AnyValue or to
             // mixins which have their own super-types.
             val extendAnyValue = !isBuildingMixin && (
-                !macroEnv.isProcessingImplicits || typeShape !in extendsAnyValueExempt
+                !macroEnv.isProcessingCore || typeShape !in extendsAnyValueExempt
                 )
             if (extendAnyValue) {
                 add(
@@ -1338,9 +1338,9 @@ private fun checkAgainstVirtualGenericMethod(
     // Class instance methods and static methods are allowed to be generic.
     abstractness == Abstractness.Concrete && return
     isStatic && return
-    // Grandfather in generic interface methods from builtins/core/implicits for now.
+    // Grandfather in generic interface methods from builtins/core/core for now.
     // TODO Stop allowing generic interface methods in builtins.
-    macroEnv.isProcessingImplicits && return
+    macroEnv.isProcessingCore && return
     // Check against type parameters.
     for (index in 0 until memberTree.size) {
         val kid = memberTree.child(index)

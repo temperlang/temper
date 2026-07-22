@@ -589,13 +589,13 @@ class ModuleAdvancerTest {
         }
 
         // Editing core.temper should not break tests.
-        val stdoutNormalized = stdout.trimEnd().replace(implicitsPosition, "[$1+#-#]")
+        val stdoutNormalized = stdout.trimEnd().replace(corePosition, "[$1+#-#]")
         assertEquals(wantedLogOutput.trimEnd(), stdoutNormalized)
         return advancer
     }
 }
 
-private val implicitsPosition = Regex("""^\[(core/core\.temper)\+\d+-\d+]""", RegexOption.MULTILINE)
+private val corePosition = Regex("""^\[(core/core\.temper)\+\d+-\d+]""", RegexOption.MULTILINE)
 
 /** Collapses adjacent "Starting stage ..." messages into one */
 private class LessSpammyLogSink(private val logSink: LogSink) : LogSink {

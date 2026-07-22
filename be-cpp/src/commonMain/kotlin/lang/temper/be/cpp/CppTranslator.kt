@@ -690,7 +690,7 @@ class CppTranslator(
                     is BuiltinName -> null
                 }
                 if (key != null) {
-                    translateImplicitsType(key)
+                    translateCoreType(key)
                 } else {
                     cpp.name(def.name)
                 }
@@ -713,7 +713,7 @@ class CppTranslator(
         return sharedPtr(base)
     }
 
-    private fun translateImplicitsType(builtinKey: String): Cpp.Type = when (builtinKey) {
+    private fun translateCoreType(builtinKey: String): Cpp.Type = when (builtinKey) {
         "AnyValue" -> cpp.name(TEMPER_CORE_NAMESPACE, "AnyValueBase")
         "AnyValueBase" -> cpp.name(TEMPER_CORE_NAMESPACE, "AnyValueBase")
         "Fn" -> cpp.type("$STD_FUNCTION_PREFIX<void()>")
@@ -751,10 +751,10 @@ class CppTranslator(
                 } else {
                     when (val loc = def.sourceLocation) {
                         CoreCodeLocation -> when (val defName = def.name) {
-                            is ExportedName -> translateImplicitsType(defName.baseName.builtinKey)
-                            is SourceName -> translateImplicitsType(defName.baseName.builtinKey)
-                            is Temporary -> translateImplicitsType(defName.nameHint)
-                            is BuiltinName -> translateImplicitsType(defName.builtinKey)
+                            is ExportedName -> translateCoreType(defName.baseName.builtinKey)
+                            is SourceName -> translateCoreType(defName.baseName.builtinKey)
+                            is Temporary -> translateCoreType(defName.nameHint)
+                            is BuiltinName -> translateCoreType(defName.builtinKey)
                         }
                         is ModuleName -> {
                             val rest = cpp.name(def.name)

@@ -182,7 +182,7 @@ class Interpreter(
 
     private var stepCount = 0
     private var goingOutOfStyle = stage == Stage.Run
-    private val isProcessingImplicits = nameMaker.namingContext.isCore
+    private val isProcessingCore = nameMaker.namingContext.isCore
 
     /** Helps centralize tracking access to connecteds. */
     fun connection(qname: String?): ((Signature2) -> Value<*>)? {
@@ -191,7 +191,7 @@ class Interpreter(
 
     @Suppress("SimplifyBooleanWithConstants")
     private fun beSpammy(spammy: Boolean) =
-        spammy && (SPAMMY_INCLUDES_IMPLICITS || !isProcessingImplicits)
+        spammy && (SPAMMY_INCLUDES_IMPLICITS || !isProcessingCore)
 
     fun interpret(ast: Tree, env: Environment, interpMode: InterpMode): PartialResult =
         interpretTree(ast, env, interpMode)
@@ -2472,7 +2472,7 @@ class Interpreter(
             }
         }
 
-        override val isProcessingImplicits: Boolean
+        override val isProcessingCore: Boolean
             get() = document.isCore
 
         override fun connection(qname: String): ((Signature2) -> Value<*>)? {

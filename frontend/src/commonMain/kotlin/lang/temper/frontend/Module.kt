@@ -384,7 +384,7 @@ class Module(
                                 EmptyEnvironment,
                             ),
                             genre = genre,
-                            skipImplicits = loc is CoreCodeLocation ||
+                            skipCore = loc is CoreCodeLocation ||
                                 stableEnvironmentBindings[StagingFlags.skipImportCore] == TBoolean.valueTrue,
                         ),
                     ),
@@ -741,7 +741,7 @@ class Module(
                 CoreCodeLocation -> {
                     when (v) {
                         CodeLocationKey.SourceCodeKey -> v.cast(CoreModule.code)
-                        CodeLocationKey.FilePositionsKey -> v.cast(implicitsFilePositions)
+                        CodeLocationKey.FilePositionsKey -> v.cast(coreFilePositions)
                         else -> null
                     }
                 }
@@ -752,17 +752,17 @@ class Module(
     }
 
     companion object {
-        private val implicitsFilePositions get() = CoreModule.implicitsFilePositions
+        private val coreFilePositions get() = CoreModule.coreFilePositions
     }
 
     /** Whether this module represents Temper core/builtins, including for source editing purposes. */
-    val isEffectivelyImplicits = when (loc) {
-        // Recognize fake implicits, such as when editing them as ordinary files.
+    val isEffectivelyCore = when (loc) {
+        // Recognize fake core, such as when editing them as ordinary files.
         is ModuleName ->
             !loc.isPreface &&
                 sharedLocationContext?.get(loc, LibraryNameLocationKey) ==
                 DashedIdentifier.temperCoreLibraryIdentifier
-        // Recognize real implicits, as provided through specialized machinery.
+        // Recognize real core, as provided through specialized machinery.
         is CoreCodeLocation -> true
     }
 

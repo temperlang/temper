@@ -82,7 +82,7 @@ object New : NamedBuiltinFun, SpecialFunction {
             val callableValue = TFunction.unpackOrNull(
                 (constructor.enclosingType.name.origin as? BindingNamingContext)
                     ?.getTopLevelBinding(constructor.name)?.value
-                    // If the value is being constructed in Implicits based on an
+                    // If the value is being constructed in Core based on an
                     // exported type, look it up locally.
                     // For example, let doneResultSingleton = new DoneResult().
                     ?: macroEnv.environment[constructor.name, macroEnv] as? Value<*>,

@@ -17,9 +17,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class ImplicitsModuleTest {
+class CoreModuleTest {
     @Test
-    fun implicitsModuleReturns() {
+    fun coreModuleReturns() {
         CoreModule.module // Throws if not available
     }
 
@@ -29,7 +29,7 @@ class ImplicitsModuleTest {
     }
 
     @Test
-    fun implicitsExportsAnyValue() {
+    fun coreExportsAnyValue() {
         val export = CoreModule.module.exports?.filter { it.name.baseName.nameText == "AnyValue" }
             ?.soleElementOrNull
         assertEquals(
@@ -45,12 +45,12 @@ class ImplicitsModuleTest {
     }
 
     @Test
-    fun allImplicitsExportsReflectedInBuiltinEnvironment() {
-        // For each name-text x, exported from ImplicitsModule, if a binding for
+    fun allCoreExportsReflectedInBuiltinEnvironment() {
+        // For each name-text x, exported from CoreModule, if a binding for
         // BuiltinName(x) not available via BuiltinEnvironment,
         // then users can't use `builtins.x` to refer to that implicit export.
         //
-        // Whether some global is implemented in Implicits or implemented in frontend code is an
+        // Whether some global is implemented in Core or implemented in frontend code is an
         // implementation detail that we ought not foist on users.
         val builtinEnv = builtinEnvironment(EmptyEnvironment, Genre.Library)
         val unavailableInBuiltin = CoreModule.module.exports?.filter {
@@ -60,7 +60,7 @@ class ImplicitsModuleTest {
         assertEquals(emptyList(), unavailableInBuiltin)
     }
 
-    // Once ImplicitsModule is loaded, we can check that some things are true about
+    // Once CoreModule is loaded, we can check that some things are true about
     // well-known types.
     @Test
     fun overrideRecognizedBetweenSafeGeneratorAndGenerator() {

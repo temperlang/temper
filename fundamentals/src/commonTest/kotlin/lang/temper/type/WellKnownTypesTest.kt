@@ -8,7 +8,7 @@ import kotlin.test.assertEquals
 
 class WellKnownTypesTest {
     /**
-     * Test that supertype relationships before and after ImplicitsModule loaded
+     * Test that supertype relationships before and after CoreModule loaded
      * are the same.
      *
      * This allows other unit tests to be run even when [CoreModule] fails to initialize

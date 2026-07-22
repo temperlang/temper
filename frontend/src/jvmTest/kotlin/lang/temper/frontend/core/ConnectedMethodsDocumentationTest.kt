@@ -37,7 +37,7 @@ class ConnectedMethodsDocumentationTest {
         var adjustedContent = extractKeysAndAdjustContent(
             documentationFile = documentationFile,
             documentationContent = documentationContent,
-            libraryName = "ImplicitsModule",
+            libraryName = "CoreModule",
             modules = listOf(CoreModule.module),
         )
         runAsyncTest {

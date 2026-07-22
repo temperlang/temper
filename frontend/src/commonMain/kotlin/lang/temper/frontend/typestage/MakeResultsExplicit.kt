@@ -120,9 +120,9 @@ internal class MakeResultsExplicit private constructor(
         // keeping track of which names are set before reaching it.
         var needToInitializeOutputNameToSingleton = false
         val isGeneratorFn = rootIsFunctionBody && parent.parts?.mayYield == true
-        // In a generator function, the implicit end result is implicits.doneResult,
+        // In a generator function, the implicit end result is core.doneResult,
         // but we don't want to call the function that produces that while processing
-        // the implicits module, so we might have to be a bit more careful about
+        // the core module, so we might have to be a bit more careful about
         // terminal expressions there.
         val endWithDoneResult = isGeneratorFn && !doc.isCore
         val returnType = returnTypeTree?.reifiedTypeContained?.type2

@@ -310,7 +310,7 @@ enum class MessageTemplate(
         "No symbol for import from %s",
         CompilationPhase.Interpreter,
     ),
-    ImplicitsUnavailable(
+    CoreUnavailable(
         "Implicit imports are unavailable due to an internal compiler error",
         CompilationPhase.Interpreter,
     ),

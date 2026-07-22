@@ -321,7 +321,7 @@ private fun extractCommentDeclarationRelationships(
     )
 }
 
-private val implicitsLanguageConfig = StandaloneLanguageConfig
+private val coreLanguageConfig = StandaloneLanguageConfig
 
 /** From `core.temper`, extracts API documentation for our builtin types. */
 internal object TypeShapeExtractor : SnippetExtractor() {
@@ -332,16 +332,16 @@ internal object TypeShapeExtractor : SnippetExtractor() {
                 "src",
                 "commonMain",
                 "resources",
-                "implicits",
+                "core",
                 "core.temper",
             ),
             "${CoreModule.code}",
-            implicitsLanguageConfig,
+            coreLanguageConfig,
         ),
         extractor = this,
     )
 
-    /** These are top-level builtins defined in implicits. Currently, that's just the global console. */
+    /** These are top-level builtins defined in core. Currently, that's just the global console. */
     val ungroupedSnippets get() = commentDeclarationRelationships.ungroupedSnippets
 
     override fun extractSnippets(
@@ -842,7 +842,7 @@ internal object TypeShapeExtractor : SnippetExtractor() {
      *
      * @return true when update worked
      */
-    private fun updateCommentInImplicits(
+    private fun updateCommentInCore(
         snippet: Snippet,
         newContent: MarkdownContent,
         into: StringBuilder,
@@ -867,11 +867,11 @@ internal object TypeShapeExtractor : SnippetExtractor() {
                         commentedMemberId.shortCanonString(false)
                     }.  Maybe add a comment before its declaration.",
                 )
-                return@updateCommentInImplicits false
+                return@updateCommentInCore false
             }
 
         val commentInInto =
-            TemperContent(snippet.source, "$into", implicitsLanguageConfig).run {
+            TemperContent(snippet.source, "$into", coreLanguageConfig).run {
                 var commentCountDown = comment.commentIndexInFile
                 for (token in lexer()) {
                     if (isDocumentableCommentToken(token)) {
@@ -942,7 +942,7 @@ internal object TypeShapeExtractor : SnippetExtractor() {
         problemTracker: ProblemTracker,
     ): Boolean {
         val problemCountBefore = problemTracker.problemCount
-        val updateWorked = updateCommentInImplicits(snippet, newContent, into, problemTracker)
+        val updateWorked = updateCommentInCore(snippet, newContent, into, problemTracker)
         if (!updateWorked && problemCountBefore == problemTracker.problemCount) {
             problemTracker.error(BACKPORT_ERROR_MESSAGE)
         }

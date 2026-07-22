@@ -1836,7 +1836,7 @@ class RustTranslator(
                     // Method calls typically use refs for self, so no need to clone.
                     is TmpL.Expression -> {
                         callable.method?.enclosingType?.let traitImport@{ owner ->
-                            // TODO Do we need to filter out implicits? So far, no examples of hitting that case.
+                            // TODO Do we need to filter out core? So far, no examples of hitting that case.
                             if (
                                 owner.abstractness == Abstractness.Abstract &&
                                 owner.sourceLocation != module.codeLocation.codeLocation

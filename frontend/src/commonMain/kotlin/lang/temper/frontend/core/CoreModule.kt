@@ -25,7 +25,7 @@ import lang.temper.name.CoreCodeLocation
 import lang.temper.name.TemperName
 import lang.temper.stage.Stage
 import lang.temper.type.WellKnownTypes
-import lang.temper.type.initializeBindingsFromImplicits
+import lang.temper.type.initializeBindingsFromCore
 import lang.temper.value.Value
 import lang.temper.value.toPseudoCode
 
@@ -38,7 +38,7 @@ object CoreModule {
 
     private var singletonPositions: FilePositions? = null
 
-    val implicitsFilePositions: FilePositions @Synchronized get() {
+    val coreFilePositions: FilePositions @Synchronized get() {
         val fp = singletonPositions
         if (fp != null) {
             return fp
@@ -62,7 +62,7 @@ object CoreModule {
 
     fun init() = kotlin.runCatching {
         // Bootstrap allows nested calls on a single thread because allImplicitlyImportedNames, so prevent that.
-        check(!started) { "Attempt to reinit implicits" }
+        check(!started) { "Attempt to reinit core" }
         started = true
 
         // Really starting init now.
@@ -93,7 +93,7 @@ object CoreModule {
 
         module.deliverContent(
             ModuleSource(
-                filePath = filePath("implicits", "core.temper"),
+                filePath = filePath("core", "core.temper"),
                 fetchedContent = content,
                 languageConfig = StandaloneLanguageConfig,
             ),
@@ -127,7 +127,7 @@ object CoreModule {
             }
             val ok = module.ok
             val hasExports = !module.exports.isNullOrEmpty()
-            throw ImplicitsUnavailableException(
+            throw CoreUnavailableException(
                 "Core module stalled at ${module.stageCompleted}, ok=$ok, hasExports=$hasExports",
             )
         }
@@ -139,7 +139,7 @@ object CoreModule {
             }
         }
         val bindingNamingContext = module.namingContext
-        initializeBindingsFromImplicits(
+        initializeBindingsFromCore(
             bindingNamingContext.topLevelBindingNames.mapNotNull { name ->
                 bindingNamingContext.getTopLevelBinding(name)?.let { name to it }
             }.toMap(),
@@ -180,7 +180,7 @@ private class FailFastLogSink(private val code: CharSequence) : LogSink {
             (values.getOrNull(0) as? Stage)?.let { this.stage = it }
         }
         if (level >= Log.Warn) {
-            val posInfo = CoreModule.implicitsFilePositions
+            val posInfo = CoreModule.coreFilePositions
             val posStr = posInfo.filePositionAtOffset(pos.left)
             val messageStr = "$stagePrefixString$posStr: ${template.format(values)}"
 
@@ -188,7 +188,7 @@ private class FailFastLogSink(private val code: CharSequence) : LogSink {
             if (pos.loc == CoreCodeLocation) {
                 excerpt(pos, code, console.textOutput)
             }
-            check(level < Log.Error) { "Error boot-strapping implicits.  $messageStr" }
+            check(level < Log.Error) { "Error boot-strapping core.  $messageStr" }
         }
     }
 
@@ -196,7 +196,7 @@ private class FailFastLogSink(private val code: CharSequence) : LogSink {
         get() = false
 }
 
-internal class ImplicitsUnavailableException(message: String) : RuntimeException(message)
+internal class CoreUnavailableException(message: String) : RuntimeException(message)
 
 private val allImplicitlyImportedNamesLazy = lazy {
     // If this throws because `module` is bootstrapping, lazy will try again later.
@@ -216,15 +216,15 @@ val allImplicitlyImportedNames: Map<TemperName, Value<*>>
         emptyMap()
     }
 
-/** An environment that includes all effective builtins, including implicits. */
+/** An environment that includes all effective builtins, including core. */
 fun builtinEnvironment(
     parent: Environment,
     genre: Genre,
-    skipImplicits: Boolean = false,
+    skipCore: Boolean = false,
 ): Environment {
-    val implicitsBindings = if (skipImplicits) emptyMap() else allImplicitlyImportedNames
-    val implicitsEnvironment = immutableEnvironment(parent, implicitsBindings, isLongLived = true)
-    return builtinOnlyEnvironment(implicitsEnvironment, genre = genre)
+    val coreBindings = if (skipCore) emptyMap() else allImplicitlyImportedNames
+    val coreEnvironment = immutableEnvironment(parent, coreBindings, isLongLived = true)
+    return builtinOnlyEnvironment(coreEnvironment, genre = genre)
 }
 
 private object NeverStop : ContinueCondition {

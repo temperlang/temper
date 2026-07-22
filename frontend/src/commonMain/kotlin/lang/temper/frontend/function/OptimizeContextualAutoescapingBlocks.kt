@@ -169,7 +169,7 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext, l
     // 1. Identify uses of `.accumulated`
     // 2. Filter those to find ones that extend from a type named
     //    ContextualAutoescapingAccumulator.
-    //    This is not part of std or Implicits so we don't have a trusted path to it,
+    //    This is not part of std or Core so we don't have a trusted path to it,
     //    but we use a heuristic to find it
     //    (see TODO above about doing this in a library-specific user-space macro).
     //    Return early if none found which is the case for most modules.

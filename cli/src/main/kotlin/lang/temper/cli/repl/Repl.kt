@@ -186,7 +186,7 @@ internal class Repl(
 
     init {
         // Load early so that user typing is not interrupted by a pause to stage the
-        // implicits module.
+        // core module.
         ignore(CoreModule.module)
     }
 

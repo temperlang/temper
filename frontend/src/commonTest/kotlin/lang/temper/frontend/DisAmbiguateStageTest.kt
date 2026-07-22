@@ -691,7 +691,7 @@ class DisAmbiguateStageTest {
     )
 
     @Test
-    fun everyTypeButImplicitsHasASuperType() {
+    fun everyTypeButCoreHasASuperType() {
         assertModuleAtStage(
             stage = Stage.DisAmbiguate,
             input = "interface I {}",

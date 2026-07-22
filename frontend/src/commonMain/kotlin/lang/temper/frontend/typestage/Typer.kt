@@ -221,7 +221,7 @@ internal class Typer(
     /** An environment used to type builtins. */
     private val env: Environment,
 ) {
-    // Mask global console so that debug trace doesn't spam for ImplicitsModule
+    // Mask global console so that debug trace doesn't spam for CoreModule
     private val console = module.console
 
     private val typeContext = TypeContext()
@@ -2021,9 +2021,9 @@ internal class Typer(
                     val valueType = typeForValue(result)
                     when (valueType) {
                         functionType -> {
-                            // Vague type, so give implicits a try for more detail.
-                            val implicits = CoreModule.module.exports!!
-                            val found = implicits.firstOrNull {
+                            // Vague type, so give core a try for more detail.
+                            val core = CoreModule.module.exports!!
+                            val found = core.firstOrNull {
                                 it.name.baseName.nameText == name.builtinKey
                             }
                             found?.typeInferences?.type

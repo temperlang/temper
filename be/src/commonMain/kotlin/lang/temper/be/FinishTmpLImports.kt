@@ -78,7 +78,7 @@ fun Backend<*>.finishTmpLImports(
             }
             if (providerIndex !in providers.indices) {
                 if (externalName.origin.isCore) {
-                    // OK.  Implicits is not compiled.  Backends need to map these name to support codes
+                    // OK.  Core is not compiled.  Backends need to map these name to support codes
                     // or have some other strategy for them.
                 } else {
                     logSink.log(
