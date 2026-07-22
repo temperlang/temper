@@ -255,7 +255,7 @@ class CStyleFormattingTokenSink(
     }
 
     private fun localLevelIndent(byOneMoreStep: Boolean) {
-        if (formattingHints.localLevelIndents && indentation.size != 0) {
+        if (formattingHints.localLevelIndents && indentation.isNotEmpty()) {
             indentation[indentation.size - 1] = byOneMoreStep
         }
     }

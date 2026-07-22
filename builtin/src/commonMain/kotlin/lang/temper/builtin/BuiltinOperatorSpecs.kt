@@ -8,6 +8,7 @@ import lang.temper.value.helpSnippet
 /**
  * Keys match the operator specification format described with [lang.temper.value.operatorSymbol].
  */
+@Suppress("KDocUnresolvedReference")
 val builtinOperatorSpecs: Map<String, List<CallableValue>> = mapOf(
     /**
      * <!-- snippet: builtin/+ -->

@@ -28,10 +28,13 @@ fun promoteSimpleValue(value: Value<*>): Value<InstancePropertyRecord>? {
             val typeName = typeTag.name.builtinKey
             val typeShape = typeNameToShapeMap[typeName] ?: return@promoteSimpleValue null
             val field = typeShape.properties.firstOrNull { it.abstractness == Abstractness.Concrete }
-                ?: return@promoteSimpleValue null
-            (field to TClass(field.enclosingType)).also {
-                typeTagToContentField[typeTag] = it
+            if (field?.name !is ModularName) {
+                // Field with ParsedName has not been finalized
+                return@promoteSimpleValue null
             }
+            val fieldAndClassTypeTag = field to TClass(field.enclosingType)
+            typeTagToContentField[typeTag] = fieldAndClassTypeTag
+            fieldAndClassTypeTag
         }
     return Value(
         InstancePropertyRecord(mutableMapOf((field.name as ModularName) to value)),

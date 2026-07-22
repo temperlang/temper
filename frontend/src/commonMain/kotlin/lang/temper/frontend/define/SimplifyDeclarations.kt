@@ -32,6 +32,7 @@ import lang.temper.value.lookThroughDecorations
 import lang.temper.value.staticTypeContained
 import lang.temper.value.typeSymbol
 import lang.temper.value.vInitSymbol
+import lang.temper.value.vIsNullFn
 import lang.temper.value.vOptionalSymbol
 import lang.temper.value.valueContained
 import lang.temper.value.varSymbol
@@ -178,9 +179,8 @@ internal class SimplifyDeclarations(val simplifyFunTrees: Boolean = true) {
             Call {
                 Rn(ifBuiltinName)
                 Call {
-                    V(Value(BuiltinFuns.equalsFn))
+                    V(vIsNullFn)
                     Rn(formalName)
-                    V(TNull.value)
                 }
                 Fn { Replant(freeTarget(assignment.edge(2))) }
                 V(elseSymbol)

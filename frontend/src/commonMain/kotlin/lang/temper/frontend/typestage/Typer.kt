@@ -224,6 +224,7 @@ internal class Typer(
     // Mask global console so that debug trace doesn't spam for ImplicitsModule
     private val console = module.console
 
+    private val isProcessingImplicits = module.loc is ImplicitsCodeLocation
     private val typeContext = TypeContext()
     private val typeContext2 = TypeContext2()
     private lateinit var ti: TypingInfo
@@ -603,7 +604,7 @@ internal class Typer(
             for (member in typerPlan.namesToLocalMemberShapes.values) {
                 if (member is VisibleMemberShape && member.overriddenMembers == null) {
                     linkOverrides(member, typeContext2, module.logSink)
-                    @Suppress("SimplifyBooleanWithConstants", "KotlinConstantConditions")
+                    @Suppress("SimplifyBooleanWithConstants")
                     if (DEBUG && !member.overriddenMembers.isNullOrEmpty()) {
                         console.group(
                             "Overridden by ${member.enclosingType.name}.${member.name}: ${member.descriptor}",
@@ -623,13 +624,13 @@ internal class Typer(
 
         for (tree in typerPlan.typeOrder) {
             if (ti.isDecided(tree)) { continue } // Don't redundantly type pre-typed trees
-            @Suppress("SimplifyBooleanWithConstants", "KotlinConstantConditions")
+            @Suppress("SimplifyBooleanWithConstants")
             val subTreeDesc = if (DEBUG && !tree.typingIsSpammyInLogs) {
                 "${tree.treeType.name} `${abbreviate(tree.toPseudoCode())}`"
             } else {
                 null
             }
-            @Suppress("SimplifyBooleanWithConstants", "KotlinConstantConditions")
+            @Suppress("SimplifyBooleanWithConstants")
             console.groupIf(
                 DEBUG && subTreeDesc != null,
                 "Typing $subTreeDesc",
@@ -1557,7 +1558,7 @@ internal class Typer(
                 for (typeFormal in variant.sig.typeFormals) {
                     val typeFormalName = typeFormal.name
                     if (typeFormalName !in typesMentionedInSuppliedInputs) { // 3.a
-                        @Suppress("SimplifyBooleanWithConstants", "KotlinConstantConditions")
+                        @Suppress("SimplifyBooleanWithConstants")
                         console.logIf(DEBUG_LATE_TYPE_CHECK && allCoveredBySpecifiedInputs) {
                             val mentioned = typesMentionedInSuppliedInputs.toMutableSet()
                             mentioned.retainAll(typeFormalNames)
@@ -1567,7 +1568,7 @@ internal class Typer(
                         }
                         allCoveredBySpecifiedInputs = false
                         if (typeFormalName !in typesMentionedInReturnType) { // 3.b
-                            @Suppress("SimplifyBooleanWithConstants", "KotlinConstantConditions")
+                            @Suppress("SimplifyBooleanWithConstants")
                             console.logIf(
                                 DEBUG_LATE_TYPE_CHECK && allCoveredBySpecifiedInputsOrContext,
                             ) {
@@ -1966,7 +1967,9 @@ internal class Typer(
                         // Default to TopType here, but provide errors for definitely missing return types.
                         // Constructors and setters get Void default provided in TypeDisambiguateMacro.
                         if (returnDecl != null && returnDecl.parts?.type == null) {
-                            contradictions.add(BecauseReturnTypeRequired(returnDecl.pos))
+                            contradictions.add(
+                                TypeReason(LogEntry(MessageTemplate.MissingReturnType, returnDecl.pos)),
+                            )
                         }
                         TopType
                     }
@@ -2022,7 +2025,11 @@ internal class Typer(
                     when (valueType) {
                         functionType -> {
                             // Vague type, so give implicits a try for more detail.
-                            val implicits = ImplicitsModule.module.exports!!
+                            val implicits = if (isProcessingImplicits) {
+                                module.exports
+                            } else {
+                                ImplicitsModule.module.exports!!
+                            } ?: listOf()
                             val found = implicits.firstOrNull {
                                 it.name.baseName.nameText == name.builtinKey
                             }
@@ -2697,7 +2704,7 @@ internal class Typer(
             ?: listOf(InvalidType)
 
         // We just use the signatures for the type as normal.
-        // But we do double check that the right hand argument has resolved to a type value.
+        // But we do double-check that the right hand argument has resolved to a type value.
 
         val targetTypeTree = call.childOrNull(2)
         val reifiedType = targetTypeTree?.reifiedTypeContained

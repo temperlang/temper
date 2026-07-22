@@ -91,15 +91,6 @@ internal class BecauseUnresolvedFunctionSignaturePart(
     override val level: Log.Level get() = Log.Info
 }
 
-internal class BecauseReturnTypeRequired(
-    override val pos: Position,
-) : AbstractTypeReasonElement() {
-    override val name get() = "BecauseReturnTypeRequired"
-    override val formatString get() = "Explicit return type required"
-    override val templateFillers: List<TokenSerializable> get() = emptyList()
-    override val level: Log.Level get() = Log.Error
-}
-
 internal class BecauseIllegalAssignment(
     override val pos: Position,
     val leftType: StaticType,
