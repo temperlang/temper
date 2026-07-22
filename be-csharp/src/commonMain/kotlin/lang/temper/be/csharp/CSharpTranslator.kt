@@ -28,8 +28,8 @@ import lang.temper.log.Position
 import lang.temper.log.dirPath
 import lang.temper.log.resolveFile
 import lang.temper.name.BuiltinName
-import lang.temper.name.ExportedName
 import lang.temper.name.CoreCodeLocation
+import lang.temper.name.ExportedName
 import lang.temper.name.ModuleName
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName

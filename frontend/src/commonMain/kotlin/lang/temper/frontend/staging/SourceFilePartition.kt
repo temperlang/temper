@@ -23,8 +23,8 @@ import lang.temper.log.FilePositions
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
-import lang.temper.name.DashedIdentifier
 import lang.temper.name.CoreCodeLocation
+import lang.temper.name.DashedIdentifier
 import lang.temper.name.ModuleName
 import lang.temper.parser.TemperFileSegment
 import lang.temper.parser.segmentTemperFile

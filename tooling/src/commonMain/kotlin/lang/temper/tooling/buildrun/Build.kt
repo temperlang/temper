@@ -58,9 +58,9 @@ import lang.temper.log.MessageTemplateI
 import lang.temper.log.Position
 import lang.temper.log.unknownPos
 import lang.temper.name.BackendId
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ExportedName
-import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModuleLocation
 import lang.temper.name.ModuleName
 import lang.temper.name.interpBackendId

@@ -22,8 +22,8 @@ import lang.temper.interp.emptyValue
 import lang.temper.log.Position
 import lang.temper.log.Positioned
 import lang.temper.log.spanningPosition
-import lang.temper.name.ExportedName
 import lang.temper.name.CoreCodeLocation
+import lang.temper.name.ExportedName
 import lang.temper.name.NameMaker
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedName

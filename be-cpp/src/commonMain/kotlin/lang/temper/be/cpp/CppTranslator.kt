@@ -15,8 +15,8 @@ import lang.temper.log.filePath
 import lang.temper.log.last
 import lang.temper.log.resolveFile
 import lang.temper.name.BuiltinName
-import lang.temper.name.ExportedName
 import lang.temper.name.CoreCodeLocation
+import lang.temper.name.ExportedName
 import lang.temper.name.ModularName
 import lang.temper.name.ModuleName
 import lang.temper.name.ResolvedName

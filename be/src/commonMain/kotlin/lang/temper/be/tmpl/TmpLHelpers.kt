@@ -13,9 +13,9 @@ import lang.temper.log.CodeLocation
 import lang.temper.log.FilePath
 import lang.temper.log.Position
 import lang.temper.log.filePath
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ExportedName
-import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModuleName
 import lang.temper.name.NamingContext
 import lang.temper.name.ParsedName

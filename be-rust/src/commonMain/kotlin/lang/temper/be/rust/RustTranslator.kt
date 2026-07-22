@@ -31,8 +31,8 @@ import lang.temper.log.LogSink
 import lang.temper.log.Position
 import lang.temper.log.last
 import lang.temper.name.BuiltinName
-import lang.temper.name.ExportedName
 import lang.temper.name.CoreCodeLocation
+import lang.temper.name.ExportedName
 import lang.temper.name.ModularName
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName

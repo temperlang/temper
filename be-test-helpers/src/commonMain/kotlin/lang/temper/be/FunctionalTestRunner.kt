@@ -41,8 +41,8 @@ import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.dirPath
 import lang.temper.name.BackendId
-import lang.temper.name.DashedIdentifier
 import lang.temper.name.CoreCodeLocation
+import lang.temper.name.DashedIdentifier
 import lang.temper.name.ModuleLocation
 import lang.temper.name.ModuleName
 import lang.temper.tests.FunctionalTestBase

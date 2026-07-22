@@ -12,9 +12,9 @@ import lang.temper.frontend.AstSnapshotKey
 import lang.temper.frontend.Module
 import lang.temper.frontend.StageOutputs
 import lang.temper.frontend.StagingFlags
-import lang.temper.frontend.flipDeclaredNames
 import lang.temper.frontend.core.CoreModule
 import lang.temper.frontend.core.CoreUnavailableException
+import lang.temper.frontend.flipDeclaredNames
 import lang.temper.frontend.interpretiveDanceStage
 import lang.temper.interp.UserFunction
 import lang.temper.interp.importExport.ImportMacro
@@ -32,8 +32,8 @@ import lang.temper.log.Position
 import lang.temper.log.resolveDir
 import lang.temper.log.snapshot
 import lang.temper.name.BuiltinName
-import lang.temper.name.ExportedName
 import lang.temper.name.CoreCodeLocation
+import lang.temper.name.ExportedName
 import lang.temper.name.ModuleName
 import lang.temper.name.ParsedName
 import lang.temper.stage.Stage

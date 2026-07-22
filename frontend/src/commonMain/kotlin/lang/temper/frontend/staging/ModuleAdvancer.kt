@@ -52,8 +52,8 @@ import lang.temper.log.SharedLocationContext
 import lang.temper.log.UNIX_FILE_SEGMENT_SEPARATOR
 import lang.temper.log.bannedPathSegmentNames
 import lang.temper.log.unknownPos
-import lang.temper.name.DashedIdentifier
 import lang.temper.name.CoreCodeLocation
+import lang.temper.name.DashedIdentifier
 import lang.temper.name.LibraryNameLocationKey
 import lang.temper.name.ModuleLocation
 import lang.temper.name.ModuleName

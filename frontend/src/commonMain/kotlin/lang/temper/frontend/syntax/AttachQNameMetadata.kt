@@ -6,8 +6,8 @@ import lang.temper.common.putMultiList
 import lang.temper.frontend.Module
 import lang.temper.log.FilePath
 import lang.temper.log.MessageTemplate
-import lang.temper.name.DashedIdentifier
 import lang.temper.name.CoreCodeLocation
+import lang.temper.name.DashedIdentifier
 import lang.temper.name.LibraryNameLocationKey
 import lang.temper.name.ModuleName
 import lang.temper.name.ParsedName

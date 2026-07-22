@@ -3,8 +3,8 @@ package lang.temper.frontend.generate
 import lang.temper.ast.TreeVisit
 import lang.temper.ast.VisitCue
 import lang.temper.interp.LongLivedUserFunction
-import lang.temper.name.ExportedName
 import lang.temper.name.CoreCodeLocation
+import lang.temper.name.ExportedName
 import lang.temper.name.SourceName
 import lang.temper.name.TemperName
 import lang.temper.type.TypeShape
