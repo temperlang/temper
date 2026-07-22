@@ -617,7 +617,7 @@ class InterpreterTest {
                     V(initSymbol)
                     V(Value(3, TInt))
                 }
-                Call(BuiltinFuns.lessThanFn) { // i < 10
+                Call(BuiltinFuns.ltIntFn) { // i < 10
                     Rn(i)
                     V(Value(10, TInt))
                 }

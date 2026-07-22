@@ -627,10 +627,10 @@ class GenerateCodeStageTest {
         |          } else {
         |            t#0 = do_call_toString(notNull(a__0))
         |          };
-        |          if (!isNull(a__0)) {
-        |            t#2 = notNull(a__0)
-        |          } else {
+        |          if (isNull(a__0)) {
         |            t#2 = -1
+        |          } else {
+        |            t#2 = notNull(a__0)
         |          };
         |          t#1 = do_call_toString(t#2);
         |          return__1 = cat(s__0, t#0, t#1)
@@ -3620,10 +3620,10 @@ class GenerateCodeStageTest {
             |      } else {
             |        t#2 = do_call_toString(notNull(t#1))
             |      };
-            |      if (!isNull(t#2)) {
-            |        return__0 = notNull(t#2)
-            |      } else {
+            |      if (isNull(t#2)) {
             |        return__0 = "NULL"
+            |      } else {
+            |        return__0 = notNull(t#2)
             |      }
             |
             |      ```

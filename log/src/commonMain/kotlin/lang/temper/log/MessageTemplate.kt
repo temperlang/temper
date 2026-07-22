@@ -128,6 +128,7 @@ enum class MessageTemplate(
         "Type %s must implement %s from %s.  Maybe add `%s`",
         CompilationPhase.Interpreter,
     ),
+    MissingReturnType("Explicit return type required", CompilationPhase.Interpreter),
     TypeCheckRejected("Type %s rejected value %s", CompilationPhase.Interpreter),
     BuiltinEnvironmentIsNotMutable(
         "Cannot declare locals (e.g. %s) in the builtin environment",

@@ -651,6 +651,7 @@ export sealed interface StringIndexOption extends Equatable {
    * that is stable within the language but which may differ across translation targets
    * with different internal string representations.
    */
+  @operator("<=>")
   @connected
   public compareTo(other: StringIndexOption): Int;
 }

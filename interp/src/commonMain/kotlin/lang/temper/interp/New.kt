@@ -21,6 +21,7 @@ import lang.temper.value.TFunction
 import lang.temper.value.TType
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
+import lang.temper.value.cherryPicker
 import lang.temper.value.constructorSymbol
 
 /**
@@ -99,14 +100,28 @@ object New : NamedBuiltinFun, SpecialFunction {
         if (constructorValues.isEmpty()) {
             return macroEnv.fail(MessageTemplate.NotConstructible, values = listOf(type))
         }
-        val constructorUmbrella = CoverFunction(constructorValues.toList())
-        val constructorUmbrellaValue = Value(constructorUmbrella)
 
         // Compile a list of arguments to the constructor, putting thisValue first
         val instancePropertyRecord = InstancePropertyRecord(mutableMapOf())
         val thisValue = Value(instancePropertyRecord, TClass(typeShape))
+        val thisPos = macroEnv.callee.pos.rightEdge
+
+        val variantArgs = args.cherryPicker.let { cherryPicker ->
+            cherryPicker.new(null to ValueLeaf(macroEnv.document, thisPos, thisValue))
+            cherryPicker.add(1 until args.size)
+            cherryPicker.build()
+        }
+        val (chosenCtor, _) = CoverFunction.uncover(
+            variantArgs,
+            macroEnv,
+            interpMode,
+            constructorValues,
+            null,
+        ) ?: return Fail
+        chosenCtor is Value<*> || return Fail
+
         val constructorArgTrees = macroEnv.treeFarm.growAll(macroEnv.pos) {
-            V(macroEnv.callee.pos.rightEdge, thisValue)
+            V(thisPos, thisValue)
             for (i in 1 until args.size) {
                 val keyTree = args.keyTree(i)
                 if (keyTree != null) {
@@ -121,9 +136,9 @@ object New : NamedBuiltinFun, SpecialFunction {
             ValueLeaf(
                 macroEnv.document,
                 args.pos(0),
-                constructorUmbrellaValue,
+                chosenCtor,
             ),
-            constructorUmbrellaValue,
+            chosenCtor,
             constructorArgTrees,
             InterpMode.Full,
         )

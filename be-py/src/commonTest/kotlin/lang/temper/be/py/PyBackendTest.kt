@@ -673,15 +673,15 @@ class PyBackendTest {
             |                    if r_3.status == 200:
             |                        body_4: 'str6'
             |                        t_31 = yield do_await_4(r_3.text)
-            |                        if not t_31 is None:
-            |                            body_4 = t_31
-            |                        else:
+            |                        if t_31 is None:
             |                            body_4 = 'missing'
-            |                        t_59 = r_3.content_type
-            |                        if not t_59 is None:
-            |                            t_36 = t_59
             |                        else:
+            |                            body_4 = t_31
+            |                        t_59 = r_3.content_type
+            |                        if t_59 is None:
             |                            t_36 = 'unknown'
+            |                        else:
+            |                            t_36 = t_59
             |                        console_5.log(str_cat_73('Got ', body_4, ' / ', t_36))
             |                except Exception7:
             |                    console_5.log('failed')

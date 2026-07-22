@@ -189,11 +189,11 @@ fun simplifyControlFlow(
         val value = tree.child(1).valueContained(TBoolean) ?: return null
         // Single boolean operand, so dig more at the function.
         val fn = tree.child(0).functionContained ?: return null
-        fn is CoverFunction && fn.covered.all { covered ->
-            covered is NamedBuiltinFun && covered.builtinOperatorId == BuiltinOperatorId.BooleanNegation
-        } || return null
-        // Yep, got it.
-        return !value
+        return if (isNotOperator(fn)) {
+            !value
+        } else {
+            null
+        }
     }
 
     val loopDepth = DepthCounter()
@@ -969,4 +969,10 @@ private class DepthCounter {
             depth -= 1
         }
     }
+}
+
+private fun isNotOperator(fn: MacroValue): Boolean = when (fn) {
+    is NamedBuiltinFun -> fn.builtinOperatorId == BuiltinOperatorId.BooleanNegation
+    is CoverFunction -> fn.covered.all { isNotOperator(it) }
+    else -> false
 }
