@@ -156,7 +156,7 @@ import lang.temper.value.warnAboutUnresolved
 import lang.temper.value.wordSymbol
 import lang.temper.value.wrappedGeneratorFnSymbol
 
-private const val SPAMMY_INCLUDES_IMPLICITS = false
+private const val SPAMMY_INCLUDES_CORE = false
 private const val SPAMMY_DISPATCH = false
 private const val SPAMMY = false
 
@@ -191,7 +191,7 @@ class Interpreter(
 
     @Suppress("SimplifyBooleanWithConstants")
     private fun beSpammy(spammy: Boolean) =
-        spammy && (SPAMMY_INCLUDES_IMPLICITS || !isProcessingCore)
+        spammy && (SPAMMY_INCLUDES_CORE || !isProcessingCore)
 
     fun interpret(ast: Tree, env: Environment, interpMode: InterpMode): PartialResult =
         interpretTree(ast, env, interpMode)

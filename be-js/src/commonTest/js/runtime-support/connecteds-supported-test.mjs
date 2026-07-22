@@ -13,7 +13,7 @@ import {expect} from 'chai';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const connectedsList = ((content) => {
     const [_, markdownList] =
-        /<!-- start ImplicitsModule-connected -->([\s\S]*)<!-- end ImplicitsModule-connected -->/
+        /<!-- start CoreModule-connected -->([\s\S]*)<!-- end CoreModule-connected -->/
         .exec(content);
     return markdownList
         .split(/[\r\n]+/)
