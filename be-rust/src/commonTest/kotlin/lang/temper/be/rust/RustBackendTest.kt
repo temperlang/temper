@@ -2798,7 +2798,7 @@ class RustBackendTest {
             |  var i = start;
             |  while (i.compareTo(limit) < 0) {
             |    let cp = sourceText[i];
-            |    let digit = if (char'0' <= cp && cp <= char'0') {
+            |    let digit = if (char'0' <= cp && cp <= char'9') {
             |      cp - char'0'
             |    } else if (char'A' <= cp && cp <= char'F') {
             |      cp - char'A' + 10
@@ -2836,7 +2836,7 @@ class RustBackendTest {
             |            }
             |            let cp__0: i32 = temper_core::string::get( & sourceText__0, i__0);
             |            if 48 <= cp__0 {
-            |                t___0 = cp__0 <= 48;
+            |                t___0 = cp__0 <= 57;
             |            } else {
             |                t___0 = false;
             |            }
