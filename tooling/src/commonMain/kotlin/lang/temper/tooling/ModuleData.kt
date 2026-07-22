@@ -668,17 +668,17 @@ private fun gatherDefs(
 private val builtinDefs = lazy {
     val env = builtinOnlyEnvironment(EmptyEnvironment, Genre.Library)
     // Core builtins.
-    val core = env.locallyDeclared.asSequence().mapNotNull builtinNames@{ temperName ->
+    val builtins = env.locallyDeclared.asSequence().mapNotNull builtinNames@{ temperName ->
         val name = temperName.builtinKey ?: return@builtinNames null
         val pos = env.declarationSite(temperName) ?: unknownPos
         name to Mention.def(name = name, pos = pos, text = name)
     }
-    // Core, letting these overwrite core where applicable.
+    // Core module, letting these overwrite builtins where applicable.
     val core = CoreModule.module.exports?.asSequence()?.map { export ->
         val name = export.name.baseName.nameText
         name to Mention.def(name = name, pos = export.position, text = name)
     } ?: emptySequence()
-    (core + core).toMap()
+    (builtins + core).toMap()
 }
 
 internal val builtinWordDefs = lazy {
