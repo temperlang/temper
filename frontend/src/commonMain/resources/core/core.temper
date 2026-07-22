@@ -243,7 +243,7 @@ export let doneResult<YIELD extends AnyValue>(): DoneResult<YIELD> { new DoneRes
 class GeneratorFnWrapper<@out YIELD extends AnyValue>
 extends Generator<YIELD> {
   private let generatorFn: fn (): GeneratorResult<YIELD> throws Bubble;
-  private var _done: Boolean = false;
+  private var _done: builtins.Boolean = false;
 
   public constructor(generatorFn: fn (): GeneratorResult<YIELD> throws Bubble) {
     this.generatorFn = generatorFn;
@@ -262,7 +262,7 @@ extends Generator<YIELD> {
     return result;
   }
 
-  public get done(): Boolean { this._done }
+  public get done(): builtins.Boolean { this._done }
 
   public close(): Void {
     // TODO: trigger bubble at pause point in generatorFn
@@ -275,7 +275,7 @@ extends Generator<YIELD> {
 class SafeGeneratorFnWrapper<@out YIELD extends AnyValue>
 extends SafeGenerator<YIELD> {
   private let generatorFn: fn (): GeneratorResult<YIELD>;
-  private var _done: Boolean = false;
+  private var _done: builtins.Boolean = false;
 
   public constructor(generatorFn: fn (): GeneratorResult<YIELD>) {
     this.generatorFn = generatorFn;
@@ -294,7 +294,7 @@ extends SafeGenerator<YIELD> {
     return result;
   }
 
-  public get done(): Boolean { this._done }
+  public get done(): builtins.Boolean { this._done }
 
   public close(): Void {
     // TODO: trigger bubble at pause point in generatorFn
@@ -376,11 +376,15 @@ export class String extends MapKey {
    * except for the surrogate range 0xD800 through 0xDFFF.
    */
   @connected
-  public static fromCodePoint(codePoint: Int): String throws Bubble;
+  public static fromCodePoint(
+    codePoint: builtins.Int,
+  ): builtins.String throws Bubble;
 
   /** Convert the list of code points to a string if they're valid. */
   @connected
-  public static fromCodePoints(codePoints: Listed<Int>): String throws Bubble;
+  public static fromCodePoints(
+    codePoints: Listed<builtins.Int>,
+  ): builtins.String throws Bubble;
 
   /** True iff this string has no code-points. */
   @connected
@@ -390,7 +394,7 @@ export class String extends MapKey {
    * A string index that works for the start of any string.
    */
   @connected
-  public static let begin: StringIndex;
+  public static let begin: builtins.StringIndex;
 
   /**
    * The index at the end of this string, just past the last character if any.
@@ -404,7 +408,7 @@ export class String extends MapKey {
    * ```
    */
   @connected
-  public get end(): StringIndex;
+  public get end(): builtins.StringIndex;
 
   /**
    * The integer value of the codepoint at the given index or panics if there is no such value.
@@ -420,7 +424,7 @@ export class String extends MapKey {
    * ```
    */
   @connected
-  public get(index: StringIndex): Int;
+  public get(index: builtins.StringIndex): builtins.Int;
 
   /**
    * True when index points to a character in this string.  False if it is out of bounds.
@@ -430,16 +434,16 @@ export class String extends MapKey {
    * ```
    */
   @connected
-  public hasIndex(index: StringIndex): Boolean;
+  public hasIndex(index: builtins.StringIndex): builtins.Boolean;
 
   /**
    * The first index of *target* if found, starting from *start*.
    */
   @connected
   public indexOf(
-    target: String,
-    start: StringIndex = String.begin,
-  ): StringIndexOption {
+    target: builtins.String,
+    start: builtins.StringIndex = String.begin,
+  ): builtins.StringIndexOption {
     // This implementation is inefficient but correct.
     let targetLength = target.countBetween(String.begin, target.end);
     var index = start;
@@ -471,7 +475,7 @@ export class String extends MapKey {
    * ```
    */
   @connected
-  public next(index: StringIndex): StringIndex;
+  public next(index: builtins.StringIndex): builtins.StringIndex;
 
   /**
    * An index for the code-point that preceded the one pointed to by index in this string.
@@ -485,7 +489,7 @@ export class String extends MapKey {
    * ```
    */
   @connected
-  public prev(index: StringIndex): StringIndex;
+  public prev(index: builtins.StringIndex): builtins.StringIndex;
 
   /**
    * An index for *by* steps away from the given *index*, either positive/forward or
@@ -493,7 +497,10 @@ export class String extends MapKey {
    * else *begin* for no such code-point when stepping backward.
    */
   @connected
-  public step(index: StringIndex, by: Int): StringIndex {
+  public step(
+    index: builtins.StringIndex,
+    by: builtins.Int,
+  ): builtins.StringIndex {
     var newIndex = index;
     if (by >= 0) {
       // Forward with next.
@@ -550,7 +557,11 @@ export class String extends MapKey {
    * ```
    */
   @connected
-  public hasAtLeast(begin: StringIndex, end: StringIndex, minCount: Int): Boolean;
+  public hasAtLeast(
+    begin: builtins.StringIndex,
+    end: builtins.StringIndex,
+    minCount: builtins.Int,
+  ): builtins.Boolean;
 
   /**
    * The count of codepoints between *begin* and *end*.
@@ -568,7 +579,10 @@ export class String extends MapKey {
    * ```
    */
   @connected
-  public countBetween(begin: StringIndex, end: StringIndex): Int;
+  public countBetween(
+    begin: builtins.StringIndex,
+    end: builtins.StringIndex,
+  ): builtins.Int;
 
   /**
    * The string containing all and only the code points between the given
@@ -584,7 +598,10 @@ export class String extends MapKey {
    * ```
    */
   @connected
-  public slice(begin: StringIndex, end: StringIndex): String;
+  public slice(
+    begin: builtins.StringIndex,
+    end: builtins.StringIndex,
+  ): builtins.String;
 
   /** Where splitting by "" returns each code point as a separate string. */
   @connected
@@ -607,9 +624,11 @@ export class String extends MapKey {
    * ```
    */
   @connected
-  public forEach(@inlineUnrealizedGoal let body: fn (Int): Void): Void {
+  public forEach(
+    @inlineUnrealizedGoal let body: fn (builtins.Int): Void,
+  ): Void {
     for (var index = String.begin; this.hasIndex(index); index = this.next(index)) {
-      let codePoint: Int = this[index];
+      let codePoint = this[index];
       body(codePoint);
     }
   }
@@ -704,10 +723,10 @@ export class NoStringIndex extends StringIndexOption {
 export class StringIndex extends StringIndexOption {
   /** The singleton [snippet/type/NoStringIndex] value */
   @connected
-  public static let none: NoStringIndex;
+  public static let none: builtins.NoStringIndex;
 
   private offset: builtins.Int;
-  private constructor(offset: Int) { this.offset = offset; }
+  private constructor(offset: builtins.Int) { this.offset = offset; }
 }
 
 /**
@@ -727,16 +746,16 @@ export class StringIndex extends StringIndexOption {
  */
 @connected
 export class StringBuilder {
-  private let substrings: ListBuilder<String>;
+  private let substrings: ListBuilder<builtins.String>;
 
   @connected
   public constructor(): Void {
-    this.substrings = new ListBuilder<String>();
+    this.substrings = new ListBuilder<builtins.String>();
   }
 
   /** You can append a string at the end. */
   @connected
-  public append(substring: String): Void {
+  public append(substring: builtins.String): Void {
     substrings.add(substring);
   }
 
@@ -747,7 +766,7 @@ export class StringBuilder {
    * than making a temporary string from a code point just for appending.
    */
   @connected
-  public appendCodePoint(cp: Int): Void throws Bubble {
+  public appendCodePoint(cp: builtins.Int): Void throws Bubble {
     append(String.fromCodePoint(cp));
   }
 
@@ -757,9 +776,9 @@ export class StringBuilder {
    */
   @connected
   public appendBetween(
-    source: String,
-    begin: StringIndex,
-    end: StringIndex,
+    source: builtins.String,
+    begin: builtins.StringIndex,
+    end: builtins.StringIndex,
   ): Void {
     // TODO Do we expect it's faster to loop code points than to slice a string?
     var limit = end;
@@ -807,7 +826,7 @@ export class StringBuilder {
    * ```
    */
   @connected
-  public get end(): StringIndex {
+  public get end(): builtins.StringIndex {
     let substrings = this.substrings;
     when (substrings.length) {
       0 -> String.begin;
@@ -824,8 +843,8 @@ export class StringBuilder {
   }
 
   @connected
-  public toString(): String {
-    this.substrings.join("") { substring: String => substring }
+  public toString(): builtins.String {
+    this.substrings.join("") { substring: builtins.String => substring }
   }
 }
 
@@ -868,7 +887,7 @@ export let console: Console = doPure { (): Console => new GlobalConsole() };
  * empty string is merely a placeholder.
  */
 @connected
-export let getConsole(name: String = ""): Console { console }
+export let getConsole(name: builtins.String = ""): Console { console }
 
 /**
  * The *Listed* type is an immutable view of a random-access sequence of values.
@@ -973,7 +992,7 @@ export sealed interface Listed<T> {
     reduceFromIndex(initial, 0, accumulate)
   }
 
-  public reduceFromIndex<O>(initial: O, index: Int, accumulate: fn (O, T): O): O {
+  public reduceFromIndex<O>(initial: O, index: builtins.Int, accumulate: fn (O, T): O): O {
     var result = initial;
     for (var i = index; i < length; i += 1) {
       result = accumulate(result, this[i]);
@@ -982,7 +1001,10 @@ export sealed interface Listed<T> {
   }
 
   @connected
-  public join(separator: String, stringify: fn (T): String): String;
+  public join(
+    separator: builtins.String,
+    stringify: fn (T): builtins.String,
+  ): builtins.String;
 
   /**
    * Returns a sorted version of this listed. Uses stable sorting.
