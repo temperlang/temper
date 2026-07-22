@@ -2831,7 +2831,7 @@ class RustBackendTest {
             |        let mut n__0: i32 = 0;
             |        let mut i__0: usize = start__0;
             |        'loop___0: loop {
-            |            if ! (Some(i__0).cmp( & Some(limit__0)) as i32 < 0) {
+            |            if ! ((Some(i__0).cmp( & Some(limit__0)) as i32) < 0) {
             |                break;
             |            }
             |            let cp__0: i32 = temper_core::string::get( & sourceText__0, i__0);
@@ -2890,7 +2890,7 @@ class RustBackendTest {
             |    }).clone()
             |}
             |pub fn not_empty(start__0: usize, limit__0: usize) -> bool {
-            |    return Some(start__0).cmp( & Some(limit__0)) as i32 < 0;
+            |    return (Some(start__0).cmp( & Some(limit__0)) as i32) < 0;
             |}
         """.trimMargin(),
     )
