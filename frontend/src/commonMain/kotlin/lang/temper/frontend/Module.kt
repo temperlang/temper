@@ -761,7 +761,7 @@ class Module(
         is ModuleName ->
             !loc.isPreface &&
                 sharedLocationContext?.get(loc, LibraryNameLocationKey) ==
-                DashedIdentifier.temperImplicitsLibraryIdentifier
+                DashedIdentifier.temperCoreLibraryIdentifier
         // Recognize real implicits, as provided through specialized machinery.
         is CoreCodeLocation -> true
     }

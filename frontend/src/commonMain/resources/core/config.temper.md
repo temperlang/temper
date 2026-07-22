@@ -1,3 +1,6 @@
-# Temper Implicits
+# Temper Core
 
-    export let name = "temper-implicits";
+Core definitions are partially internal to the Temper frontend, but some
+definitions are also defined here in Temper source.
+
+    export let name = "temper-core";

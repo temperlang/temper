@@ -328,9 +328,6 @@ data class DashedIdentifier(
          */
         const val temperCoreLibraryVersion = "0.6.0"
 
-        /** Specifically refers to the implicits library used by Temper code. */
-        val temperImplicitsLibraryIdentifier = DashedIdentifier("temper-implicits")
-
         /** Library that ships with temper but needs to be explicitly imported when used. */
         val temperStandardLibraryIdentifier = DashedIdentifier("std")
     }
