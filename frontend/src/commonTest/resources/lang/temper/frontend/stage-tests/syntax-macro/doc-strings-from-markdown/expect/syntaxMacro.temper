@@ -1,15 +1,15 @@
 ## No "Geometry" for the class doc comment
-  @typeDecl(Point__0) @stay @docString((["Point represents a two-dimensional point.", "Point represents a two-dimensional point.", "test/test.temper"])) let Point__0 = type (Point__0);
+  @typeDecl(Point__0) @stay @docString((["Point represents a two-dimensional point.", "Point represents a two-dimensional point.", "test/test.temper.md"])) let Point__0 = type (Point__0);
   REM("Point represents a two-dimensional point.", true, true);
   class(\word, \Point, \concrete, true, @typeDefined(Point__0) fn {
       Point__0 extends AnyValue;
 ## x's docs don't talk about the factory
-      @docString((["x is the x coordinate.", "x is the x coordinate.", "test/test.temper"])) @constructorProperty @maybeVar @visibility(\public) let x__0: Float64;
-      @docString((["y is the y coordinate.", "y is the y coordinate.", "test/test.temper"])) @constructorProperty @maybeVar @visibility(\public) let y__0: Float64;
+      @docString((["x is the x coordinate.", "x is the x coordinate.", "test/test.temper.md"])) @constructorProperty @maybeVar @visibility(\public) let x__0: Float64;
+      @docString((["y is the y coordinate.", "y is the y coordinate.", "test/test.temper.md"])) @constructorProperty @maybeVar @visibility(\public) let y__0: Float64;
       REM("magnitude is the distance of this point from the origin.", true, true);
       REM("It is always >= 0.", true, true);
 ## magnitude has its doc string
-      @fn let magnitude__0 = (@docString((["magnitude is the distance of this point from the origin.", "magnitude is the distance of this point from the origin.\n\nIt is always >= 0.", "test/test.temper"])) fn magnitude(@impliedThis(Point__0) this__0: Point__0) /* return__0 */: (Float64) {
+      @fn let magnitude__0 = (@docString((["magnitude is the distance of this point from the origin.", "magnitude is the distance of this point from the origin.\n\nIt is always >= 0.", "test/test.temper.md"])) fn magnitude(@impliedThis(Point__0) this__0: Point__0) /* return__0 */: (Float64) {
           fn__0: do {
             do_call_sqrt(do_iget_x(type (Point__0), this(Point__0)) * do_iget_x(type (Point__0), this(Point__0)) + do_iget_y(type (Point__0), this(Point__0)) * do_iget_y(type (Point__0), this(Point__0)))
           }

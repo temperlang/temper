@@ -51,7 +51,7 @@ class FunctionMacroStageTest {
           ```
         }
         """,
-    ) { module, _, _ ->
+    ) { module, _, _, _ ->
         val loc = testCodeLocation
         val doc = Document(module)
         val pos = Position(loc, 0, 0)

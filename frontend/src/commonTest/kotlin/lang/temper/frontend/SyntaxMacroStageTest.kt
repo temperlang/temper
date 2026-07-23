@@ -13,7 +13,6 @@ import lang.temper.interp.MetadataDecorator
 import lang.temper.interp.importExport.STANDARD_LIBRARY_NAME
 import lang.temper.lexer.Genre
 import lang.temper.lexer.MarkdownLanguageConfig
-import lang.temper.lexer.StandaloneLanguageConfig
 import lang.temper.log.Position
 import lang.temper.log.filePath
 import lang.temper.name.BuiltinName
@@ -1247,7 +1246,7 @@ class SyntaxMacroStageTest {
         stageTestDir = StageTestDir("syntax-macro/who-decorates-the-decorators"),
         stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
-        provisionModule = { module, moduleAdvancer, rfl ->
+        provisionModule = { module, moduleAdvancer, td, rfl ->
             // We need some more decorators to stack.  Invent one.
             val vFoo = Value(
                 MetadataDecorator(Symbol("foo"), argumentTypes = listOf(Types.string)) {
@@ -1260,16 +1259,7 @@ class SyntaxMacroStageTest {
                     BuiltinName("@foo") to vFoo,
                 ),
             )
-            provisionModuleForStageTest(
-                input = """
-                    |// Stack many decorators on a declaration and make sure they eliminate themselves.
-                    |interface I {
-                    |  @foo("FOO") public static var thing;
-                    |}
-                """.trimMargin(),
-                StandaloneLanguageConfig,
-                module, moduleAdvancer, rfl,
-            )
+            provisionModuleForStageTest(td, module, moduleAdvancer, rfl)
         },
         want = """
             |{
@@ -1849,17 +1839,17 @@ class SyntaxMacroStageTest {
             |  syntaxMacro: {
             |    body: ```
             |## No "Geometry" for the class doc comment
-            |        @typeDecl(Point__0) @stay @docString((["Point represents a two-dimensional point.", "Point represents a two-dimensional point.", "test/test.temper"])) let Point__0 = type (Point__0);
+            |        @typeDecl(Point__0) @stay @docString((["Point represents a two-dimensional point.", "Point represents a two-dimensional point.", "test/test.temper.md"])) let Point__0 = type (Point__0);
             |        REM("Point represents a two-dimensional point.", true, true);
             |        class(\word, \Point, \concrete, true, @typeDefined(Point__0) fn {
             |            Point__0 extends AnyValue;
             |## x's docs don't talk about the factory
-            |            @docString((["x is the x coordinate.", "x is the x coordinate.", "test/test.temper"])) @constructorProperty @maybeVar @visibility(\public) let x__0: Float64;
-            |            @docString((["y is the y coordinate.", "y is the y coordinate.", "test/test.temper"])) @constructorProperty @maybeVar @visibility(\public) let y__0: Float64;
+            |            @docString((["x is the x coordinate.", "x is the x coordinate.", "test/test.temper.md"])) @constructorProperty @maybeVar @visibility(\public) let x__0: Float64;
+            |            @docString((["y is the y coordinate.", "y is the y coordinate.", "test/test.temper.md"])) @constructorProperty @maybeVar @visibility(\public) let y__0: Float64;
             |            REM("magnitude is the distance of this point from the origin.", true, true);
             |            REM("It is always >= 0.", true, true);
             |## magnitude has its doc string
-            |            @fn let magnitude__0 = (@docString((["magnitude is the distance of this point from the origin.", "magnitude is the distance of this point from the origin.\n\nIt is always >= 0.", "test/test.temper"])) fn magnitude(@impliedThis(Point__0) this__0: Point__0) /* return__0 */: (Float64) {
+            |            @fn let magnitude__0 = (@docString((["magnitude is the distance of this point from the origin.", "magnitude is the distance of this point from the origin.\n\nIt is always >= 0.", "test/test.temper.md"])) fn magnitude(@impliedThis(Point__0) this__0: Point__0) /* return__0 */: (Float64) {
             |                fn__0: do {
             |                  do_call_sqrt(do_iget_x(type (Point__0), this(Point__0)) * do_iget_x(type (Point__0), this(Point__0)) + do_iget_y(type (Point__0), this(Point__0)) * do_iget_y(type (Point__0), this(Point__0)))
             |                }
@@ -2233,7 +2223,7 @@ class SyntaxMacroStageTest {
             |  }
             |}
         """.trimMargin(),
-    ) { module, _, _ ->
+    ) { module, _, _, _ ->
         val document = Document(module)
         val pos = Position(module.loc, 0, 0)
         val i = document.nameMaker.unusedSourceName(ParsedName("i"))

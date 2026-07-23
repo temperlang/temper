@@ -1,6 +1,8 @@
 package lang.temper.testdir
 
 import lang.temper.common.Either
+import lang.temper.log.FilePath
+import lang.temper.log.FilePathSegment
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -31,7 +33,7 @@ fun regenerateFiles(testDirRoot: Url, files: List<Pair<Url, Either<String, ByteA
 
 val defaultSkipFilePattern = Regex("""~$|README.*[.]md$|^[.]""", RegexOption.DOT_MATCHES_ALL)
 
-fun readTestDir(testDirRoot: Url, skipFilePattern: Regex? = defaultSkipFilePattern): TestDir {
+fun readTestDir(testDirRoot: Url, skipFilePattern: Regex? = defaultSkipFilePattern): TestFileBundle {
     // We assume that, when running tests, all the resources are in the
     // same source root which is on the file system.
     // This is not always the case Urls derived via Class.getResource on the JVM,
@@ -39,7 +41,7 @@ fun readTestDir(testDirRoot: Url, skipFilePattern: Regex? = defaultSkipFilePatte
     check(testDirRoot.scheme == "file") { "$testDirRoot" }
 
     val rootPath = testDirRoot.toPath()
-    return TestDir(
+    return TestFileBundle(
         testDirRoot,
         buildMap {
             fun recursivelyReadRegularFilesIntoMap(path: Path) {
@@ -47,9 +49,12 @@ fun readTestDir(testDirRoot: Url, skipFilePattern: Regex? = defaultSkipFilePatte
                     path.isRegularFile() && path.isReadable() -> {
                         val name = "${path.fileName}"
                         if (skipFilePattern?.find(name) == null) {
-                            val url = path.relativeTo(rootPath).toUri()
+                            val relPath = FilePath(
+                                path.relativeTo(rootPath).map { FilePathSegment(it.fileName.toString()) },
+                                isDir = false,
+                            )
                             // Let race conditions with isReadable check just bubble up as IOExceptions
-                            this[url] = Files.readString(path, Charsets.UTF_8)
+                            this[relPath] = Files.readString(path, Charsets.UTF_8)
                         }
                     }
                     path.isDirectory() -> {
@@ -64,9 +69,9 @@ fun readTestDir(testDirRoot: Url, skipFilePattern: Regex? = defaultSkipFilePatte
     )
 }
 
-data class TestDir(
+data class TestFileBundle(
     val testDirRoot: Url,
-    val files: Map<Url, String>,
+    val files: Map<FilePath, String>,
 ) {
     fun isEmpty() = files.isEmpty()
     fun isNotEmpty() = files.isNotEmpty()

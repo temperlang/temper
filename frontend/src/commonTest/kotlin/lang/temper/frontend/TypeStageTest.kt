@@ -6,7 +6,6 @@ import lang.temper.builtin.PureCallableValue
 import lang.temper.builtin.Types
 import lang.temper.env.InterpMode
 import lang.temper.lexer.Genre
-import lang.temper.lexer.StandaloneLanguageConfig
 import lang.temper.name.BuiltinName
 import lang.temper.stage.Stage
 import lang.temper.type.MkType
@@ -1018,22 +1017,11 @@ class TypeStageTest {
     fun yieldsSeparated() = assertModuleAtStage(
         stageTestDir = StageTestDir("type/yields-separated"),
         stage = Stage.Type,
-        provisionModule = { module: Module, moduleAdvancer, rfl ->
+        provisionModule = { module: Module, moduleAdvancer, td, rfl ->
             module.addEnvironmentBindings(
                 mapOf(BuiltinName(ImpureIgnoreFn.name) to Value(ImpureIgnoreFn)),
             )
-            provisionModuleForStageTest(
-                $$"""
-                    |ignore { (): GeneratorResult<Empty> extends GeneratorFn =>
-                    |  while (true) {
-                    |    "${ 123 }";
-                    |    yield;
-                    |  }
-                    |}
-                """.trimMargin(),
-                StandaloneLanguageConfig,
-                module, moduleAdvancer, rfl,
-            )
+            provisionModuleForStageTest(td, module, moduleAdvancer, rfl)
         },
         want = """
         {
@@ -1565,7 +1553,7 @@ class TypeStageTest {
         }
         """.trimIndent(),
         moduleResultNeeded = true,
-    ) { module, moduleAdvancer, rfl ->
+    ) { module, moduleAdvancer, td, rfl ->
         module.addEnvironmentBindings(
             mapOf(
                 BuiltinName("echo") to Value(
@@ -1596,11 +1584,7 @@ class TypeStageTest {
                 ),
             ),
         )
-        provisionModuleForStageTest(
-            "echo<Int>(42)",
-            StandaloneLanguageConfig,
-            module, moduleAdvancer, rfl,
-        )
+        provisionModuleForStageTest(td, module, moduleAdvancer, rfl)
     }
 
     @Test

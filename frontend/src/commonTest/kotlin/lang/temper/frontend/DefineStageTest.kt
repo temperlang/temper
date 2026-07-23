@@ -1315,7 +1315,7 @@ class DefineStageTest {
                 |  }
                 |}
             """.trimMargin(),
-        ) { module, _, _ ->
+        ) { module, _, _, _ ->
             // The idea for escapes is that macros that take escapes can progressively turn
             // CST elements into AST elements and then use some `eval` builtin to unescape the
             // result.
@@ -2239,15 +2239,10 @@ class DefineStageTest {
                 |  }
                 |}
             """.trimMargin(),
-        ) { module, moduleAdvancer, rfl ->
+        ) { module, moduleAdvancer, td, rfl ->
             module.addImplicitImports(fakeStdTestModuleExports)
             provisionModuleForStageTest(
-                input = """
-                    |test("- a test case -") {
-                    |  // do something
-                    |}
-                """.trimMargin(),
-                StandaloneLanguageConfig,
+                td,
                 module,
                 moduleAdvancer,
                 rfl,

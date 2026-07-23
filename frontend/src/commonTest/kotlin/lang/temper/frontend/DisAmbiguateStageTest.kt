@@ -5,7 +5,6 @@ package lang.temper.frontend
 import lang.temper.common.Freq3
 import lang.temper.interp.MetadataDecorator
 import lang.temper.lexer.Genre
-import lang.temper.lexer.StandaloneLanguageConfig
 import lang.temper.log.MessageTemplate
 import lang.temper.name.BuiltinName
 import lang.temper.name.Symbol
@@ -768,9 +767,7 @@ class DisAmbiguateStageTest {
             |          @method(\f) @visibility(\public) let f = fn(\word, f, \typeFormal, do {
             |              @resolution(T__0) @typeFormal(\T) @typeDecl(T__0) let T = type (T__0);
             |              type (T__0)
-            |            }, @impliedThis(C__0) let this__0: C__0, let x /* aka x */: T,${
-            ""
-        } \outType, T, fn {
+            |            }, @impliedThis(C__0) let this__0: C__0, let x /* aka x */: T, \outType, T, fn {
             |              x
             |          });
             |      });
@@ -854,7 +851,7 @@ class DisAmbiguateStageTest {
           }
         }
         """,
-    ) { module, moduleAdvancer, rfl ->
+    ) { module, moduleAdvancer, td, rfl ->
         module.addEnvironmentBindings(
             mapOf(
                 BuiltinName("@foo") to Value(
@@ -863,8 +860,7 @@ class DisAmbiguateStageTest {
             ),
         )
         provisionModuleForStageTest(
-            input = """@foo interface I {}""",
-            StandaloneLanguageConfig,
+            td,
             module, moduleAdvancer,
             rfl,
         )

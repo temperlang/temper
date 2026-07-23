@@ -41,18 +41,14 @@ import lang.temper.fs.Url
 import lang.temper.lexer.Genre
 import lang.temper.lexer.LanguageConfig
 import lang.temper.lexer.StandaloneLanguageConfig
-import lang.temper.log.FilePath
+import lang.temper.lexer.languageConfigForExtension
 import lang.temper.log.FilePath.Companion.join
-import lang.temper.log.FilePathSegment
 import lang.temper.log.LogEntry
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.MessageTemplateI
-import lang.temper.log.ParentPseudoFilePathSegment
 import lang.temper.log.Position
 import lang.temper.log.Positioned
-import lang.temper.log.SameDirPseudoFilePathSegment
-import lang.temper.log.UNIX_FILE_SEGMENT_SEPARATOR
 import lang.temper.name.BuiltinName
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ModuleName
@@ -62,6 +58,7 @@ import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.stage.Stage
 import lang.temper.testdir.RegeneratedFilesList
+import lang.temper.testdir.TestFileBundle
 import lang.temper.testdir.readTestDir
 import lang.temper.testdir.regenerateFiles
 import lang.temper.type.Abstractness
@@ -180,8 +177,8 @@ internal fun assertModuleAtStage(
         stagingFlags = stagingFlags,
         stackTracesForErrors = stackTracesForErrors,
         logEntryWanted = logEntryWanted,
-    ) { module, moduleAdvancer, regeneratedFiles ->
-        provisionModuleForStageTest(input, languageConfig, module, moduleAdvancer, regeneratedFiles)
+    ) { module, moduleAdvancer, testDir, regeneratedFiles ->
+        provisionModuleForStageTest(testDir, module, moduleAdvancer, regeneratedFiles)
     }
 }
 
@@ -202,7 +199,7 @@ internal fun assertModuleAtStage(
     stagingFlags: Set<BuiltinName> = emptySet(),
     stackTracesForErrors: Boolean = false,
     logEntryWanted: (LogEntry) -> Boolean = { it.level >= Log.Warn },
-    provisionModule: (Module, ModuleAdvancer, RegeneratedFilesList?) -> Unit,
+    provisionModule: (Module, ModuleAdvancer, TestFileBundle, RegeneratedFilesList?) -> Unit,
 ) {
     val testDir = readTestDir(stageTestDirFileRoot.resolve(stageTestDir.url))
     val regeneratedFileList: RegeneratedFilesList? =
@@ -280,7 +277,7 @@ internal fun assertModuleAtStage(
     if (allStagingFlags.isNotEmpty()) {
         module.addEnvironmentBindings(allStagingFlags.associateWith { TBoolean.valueTrue })
     }
-    provisionModule(module, moduleAdvancer, regeneratedFileList)
+    provisionModule(module, moduleAdvancer, testDir, regeneratedFileList)
 
     val stopBeforeForMainModule = Stage.after(stage)
     val stopBefore = { m: Module ->
@@ -471,38 +468,17 @@ internal fun assertModuleAtStage(
 }
 
 internal fun provisionModuleForStageTest(
-    input: String,
-    languageConfig: LanguageConfig,
+    testFileBundle: TestFileBundle,
     module: Module,
     moduleAdvancer: ModuleAdvancer,
     regeneratedFilesList: RegeneratedFilesList?,
 ) {
     val chunks = buildList {
-        var path: FilePath = testCodeLocation
-        val contentBuilder = StringBuilder()
-        for (line in input.lines()) {
-            if (line.startsWith(TEST_INPUT_MODULE_BREAK)) {
-                add(path to "$contentBuilder")
-                contentBuilder.clear()
-                var pathStr = line.substring(TEST_INPUT_MODULE_BREAK.length)
-                var isDir = false
-                if (pathStr.endsWith(UNIX_FILE_SEGMENT_SEPARATOR)) {
-                    isDir = true
-                    pathStr = pathStr.dropLast(UNIX_FILE_SEGMENT_SEPARATOR.length)
-                }
-                val relPath = pathStr.trim().split(UNIX_FILE_SEGMENT_SEPARATOR).map {
-                    when (it) {
-                        "." -> SameDirPseudoFilePathSegment
-                        ".." -> ParentPseudoFilePathSegment
-                        else -> FilePathSegment(it)
-                    }
-                }
-                path = testCodeLocation.resolvePseudo(relPath, isDir = isDir) ?: error(line)
-            } else {
-                contentBuilder.append(line).append('\n')
+        for ((relPath, content) in testFileBundle.files) {
+            if (relPath.segments.first().fullName == "work") {
+                add(relPath.copy(segments = relPath.segments.drop(1)) to content)
             }
         }
-        add(path to "$contentBuilder")
     }
 
     val inputsByDir = buildListMultimap {
@@ -524,6 +500,7 @@ internal fun provisionModuleForStageTest(
             moduleAdvancer.createModule(moduleName, module.console)
         }
         for ((filePath, content) in inputs) {
+            val languageConfig = languageConfigForExtension(filePath.segments.lastOrNull()?.extension)
             moduleToProvision.deliverContent(
                 ModuleSource(
                     filePath = filePath,

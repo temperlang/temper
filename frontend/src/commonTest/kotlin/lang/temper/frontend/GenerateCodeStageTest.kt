@@ -7,7 +7,6 @@ import lang.temper.common.temperEscaper
 import lang.temper.env.InterpMode
 import lang.temper.interp.MetadataDecorator
 import lang.temper.lexer.MarkdownLanguageConfig
-import lang.temper.lexer.StandaloneLanguageConfig
 import lang.temper.log.MessageTemplate
 import lang.temper.name.BuiltinName
 import lang.temper.name.Symbol
@@ -946,13 +945,9 @@ class GenerateCodeStageTest {
             |}
         """.trimMargin(),
         moduleResultNeeded = true,
-    ) { module, moduleAdvancer, rfl ->
-        val input = """
-            |let a, b;
-            |a = b = oneTwoThree()
-        """.trimMargin()
+    ) { module, moduleAdvancer, td, rfl ->
         module.addEnvironmentBindings(oneToThreeBindings)
-        provisionModuleForStageTest(input, StandaloneLanguageConfig, module, moduleAdvancer, rfl)
+        provisionModuleForStageTest(td, module, moduleAdvancer, rfl)
     }
 
     @Test
@@ -1064,19 +1059,9 @@ class GenerateCodeStageTest {
         """.trimMargin(),
         moduleResultNeeded = true,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
-    ) { module, moduleAdvancer, rfl ->
-        val input = """
-            |class C(
-            |  private var x: Int = 0,
-            |  private var y: Int = 0,
-            |) {
-            |  public let f(): Int {
-            |    this.x = this.y = oneTwoThree()
-            |  }
-            |}
-        """.trimMargin()
+    ) { module, moduleAdvancer, td, rfl ->
         module.addEnvironmentBindings(oneToThreeBindings)
-        provisionModuleForStageTest(input, StandaloneLanguageConfig, module, moduleAdvancer, rfl)
+        provisionModuleForStageTest(td, module, moduleAdvancer, rfl)
     }
 
     @Test
@@ -1121,19 +1106,10 @@ class GenerateCodeStageTest {
             |}
         """.trimMargin(),
         moduleResultNeeded = true,
-    ) { module, moduleAdvancer, rfl ->
-        val input = $$"""
-            |class C {
-            |  public set p(newValue: Int) {
-            |    console.log("Assigned ${newValue.toString(10)}");
-            |  }
-            |}
-            |let c = new C();
-            |c.p = c.p = oneTwoThree()
-        """.trimMargin()
+    ) { module, moduleAdvancer, td, rfl ->
         module.addEnvironmentBindings(oneToThreeBindings)
         provisionModuleForStageTest(
-            input, StandaloneLanguageConfig,
+            td,
             module, moduleAdvancer, rfl,
         )
     }
@@ -1563,18 +1539,14 @@ class GenerateCodeStageTest {
             |  },
             |}
         """.trimMargin(),
-    ) { module, moduleAdvancer, rfl ->
-        val input = """
-            |@foo interface I {}
-        """.trimMargin()
-
+    ) { module, moduleAdvancer, td, rfl ->
         module.addEnvironmentBindings(
             mapOf(
                 BuiltinName("@foo") to Value(MetadataDecorator(Symbol("foo")) { void }),
             ),
         )
 
-        provisionModuleForStageTest(input, StandaloneLanguageConfig, module, moduleAdvancer, rfl)
+        provisionModuleForStageTest(td, module, moduleAdvancer, rfl)
     }
 
     @Test
