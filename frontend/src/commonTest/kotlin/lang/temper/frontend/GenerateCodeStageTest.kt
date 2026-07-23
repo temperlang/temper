@@ -3,9 +3,7 @@
 package lang.temper.frontend
 
 import lang.temper.common.Log
-import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.common.temperEscaper
-import lang.temper.common.testCodeLocation
 import lang.temper.env.InterpMode
 import lang.temper.interp.MetadataDecorator
 import lang.temper.lexer.MarkdownLanguageConfig
@@ -32,6 +30,7 @@ import kotlin.test.Test
 class GenerateCodeStageTest {
     @Test
     fun simpleDoNothingLoop() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/simple-do-nothing-loop"),
         stage = Stage.GenerateCode,
         input = """
             |// This example is interesting because the infer result pass actually adds two assignments
@@ -76,6 +75,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun sealedWhen() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/sealed-when"),
         stage = Stage.GenerateCode,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
         input = """
@@ -157,11 +157,12 @@ class GenerateCodeStageTest {
             |    "Void expressions cannot be used as values!",
             |  ]
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     @Test
     fun assignmentsToTypedReturnAreChecked() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/assignments-to-typed-return-are-checked"),
         stage = Stage.GenerateCode,
         input = """
         fn f(x): Int { x }
@@ -189,6 +190,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun docCommentInData() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/doc-comment-in-data"),
         stage = Stage.GenerateCode,
         languageConfig = MarkdownLanguageConfig(),
         input = """
@@ -230,6 +232,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun doWhileContinuesToFalseCondition() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/do-while-continues-to-false-condition"),
         input = """
             |do {
             |  console.log("Done once");
@@ -260,6 +263,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun exportedNames() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/exported-names"),
         stage = Stage.Run,
         input = "export let answer = 42; answer",
         moduleResultNeeded = true,
@@ -293,6 +297,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun simpleMethodCall() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/simple-method-call"),
         input = """
             |1.toString()
         """.trimMargin(),
@@ -308,6 +313,7 @@ class GenerateCodeStageTest {
     @Suppress("SpellCheckingInspection") // getprop/setprop
     @Test
     fun getterSettersFinal() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/getter-setters-final"),
         stage = Stage.GenerateCode,
         input = """
         |class C(public var prop: Int) {}
@@ -348,6 +354,7 @@ class GenerateCodeStageTest {
     @Suppress("SpellCheckingInspection") // getprop/setprop
     @Test
     fun getterSettersVarOrNot() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/getter-setters-var-or-not"),
         stage = Stage.GenerateCode,
         input = """
         |export interface I {
@@ -516,6 +523,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun fnType() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/fn-type"),
         stage = Stage.GenerateCode,
         input = """
         |let f: fn (Int): Int = fn (x: Int): Int { x + 1 };
@@ -541,6 +549,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun catsAreNice() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/cats-are-nice"),
         stage = Stage.GenerateCode,
         input = """
         |let f(s: String): Void {
@@ -573,6 +582,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun catsAreRadActually() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/cats-are-rad-actually"),
         stage = Stage.GenerateCode,
         input = $$"""
         |let f(s: String): Void {
@@ -608,6 +618,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun catsPlayWithStringAndNull() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/cats-play-with-string-and-null"),
         stage = Stage.GenerateCode,
         input = $$"""
         |let f(s: String, a: Int?): String {
@@ -645,6 +656,7 @@ class GenerateCodeStageTest {
     /** No cats were harmed in the making of this test. */
     @Test
     fun rawCatsGetCooked() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/raw-cats-get-cooked"),
         stage = Stage.GenerateCode,
         input = $$"""
             |let f(s: String): Void {
@@ -691,6 +703,7 @@ class GenerateCodeStageTest {
     @Ignore // TODO(mikesamuel): Fix typing of generic methods with explicit actuals
     @Test
     fun mapTypeArg() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/map-type-arg"),
         stage = Stage.GenerateCode,
         input = """
             |let ls: List<Int> = [1, 2];
@@ -716,6 +729,7 @@ class GenerateCodeStageTest {
     @Ignore
     @Test
     fun banExportNotAtTopLevel() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/ban-export-not-at-top-level"),
         stage = Stage.GenerateCode,
         input = "let f(x) { export let y = x; }",
         want = """
@@ -728,6 +742,7 @@ class GenerateCodeStageTest {
     @Ignore
     @Test
     fun banExportsThatAreReAssignable() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/ban-exports-that-are-re-assignable"),
         stage = Stage.GenerateCode,
         input = "export var i = 1; i = 2",
         want = """
@@ -740,6 +755,7 @@ class GenerateCodeStageTest {
     @Ignore
     @Test
     fun banExportInLoops() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/ban-export-in-loops"),
         stage = Stage.GenerateCode,
         input = "var i = 0; while (i <= 2) { export let x = i; i += 1 }",
         want = """
@@ -751,6 +767,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun banExportsExposingNonExported() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/ban-exports-exposing-non-exported"),
         stage = Stage.GenerateCode,
         input = """
             |interface Hidden {}
@@ -843,6 +860,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun banMixedExportsJustFunctionType() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/ban-mixed-exports-just-function-type"),
         stage = Stage.GenerateCode,
         input = """
             |class Hidden { }
@@ -878,6 +896,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun unalignedNamedArgs() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/unaligned-named-args"),
         stage = Stage.GenerateCode,
         // TODO This only matters for constructors/factories going forward.
         // TODO And maybe we'll manage those positioned, so this test might be best removed sometime.
@@ -910,6 +929,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun nestedAssignmentInResultPosition() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/nested-assignment-in-result-position"),
         stage = Stage.Run,
         want = """
             |{
@@ -926,21 +946,18 @@ class GenerateCodeStageTest {
             |}
         """.trimMargin(),
         moduleResultNeeded = true,
-    ) { module, _ ->
+    ) { module, moduleAdvancer, rfl ->
         val input = """
             |let a, b;
             |a = b = oneTwoThree()
         """.trimMargin()
-        module.deliverContent(
-            ModuleSource(
-                filePath = testCodeLocation, fetchedContent = input, languageConfig = StandaloneLanguageConfig,
-            ),
-        )
         module.addEnvironmentBindings(oneToThreeBindings)
+        provisionModuleForStageTest(input, StandaloneLanguageConfig, module, moduleAdvancer, rfl)
     }
 
     @Test
     fun autoCastIs() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/auto-cast-is"),
         stage = Stage.GenerateCode,
         input = """
             |let some(maybe: StringIndexOption): StringIndex {
@@ -972,6 +989,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun autoCastWhen() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/auto-cast-when"),
         stage = Stage.GenerateCode,
         input = """
             |let some(maybe: StringIndexOption): StringIndex {
@@ -1002,6 +1020,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun nestedSetpInResultPosition() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/nested-setp-in-result-position"),
         stage = Stage.Run,
         want = """
             |{
@@ -1045,7 +1064,7 @@ class GenerateCodeStageTest {
         """.trimMargin(),
         moduleResultNeeded = true,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
-    ) { module, _ ->
+    ) { module, moduleAdvancer, rfl ->
         val input = """
             |class C(
             |  private var x: Int = 0,
@@ -1056,16 +1075,13 @@ class GenerateCodeStageTest {
             |  }
             |}
         """.trimMargin()
-        module.deliverContent(
-            ModuleSource(
-                filePath = testCodeLocation, fetchedContent = input, languageConfig = StandaloneLanguageConfig,
-            ),
-        )
         module.addEnvironmentBindings(oneToThreeBindings)
+        provisionModuleForStageTest(input, StandaloneLanguageConfig, module, moduleAdvancer, rfl)
     }
 
     @Test
     fun nestedSetterInvocationsInResultPosition() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/nested-setter-invocations-in-result-position"),
         stage = Stage.Run,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
@@ -1105,7 +1121,7 @@ class GenerateCodeStageTest {
             |}
         """.trimMargin(),
         moduleResultNeeded = true,
-    ) { module, _ ->
+    ) { module, moduleAdvancer, rfl ->
         val input = $$"""
             |class C {
             |  public set p(newValue: Int) {
@@ -1115,13 +1131,11 @@ class GenerateCodeStageTest {
             |let c = new C();
             |c.p = c.p = oneTwoThree()
         """.trimMargin()
-        module.deliverContent(
-            ModuleSource(
-                filePath = testCodeLocation, fetchedContent = input,
-                languageConfig = StandaloneLanguageConfig,
-            ),
-        )
         module.addEnvironmentBindings(oneToThreeBindings)
+        provisionModuleForStageTest(
+            input, StandaloneLanguageConfig,
+            module, moduleAdvancer, rfl,
+        )
     }
 
     /**
@@ -1130,6 +1144,7 @@ class GenerateCodeStageTest {
      */
     @Test
     fun assignedFnWithInferredSigTypes() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/assigned-fn-with-inferred-sig-types"),
         stage = Stage.GenerateCode,
         input = """let funny: fn (Int): String = fn (n) { n.toString() };""",
         want = """
@@ -1149,6 +1164,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun booleanTypeError() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/boolean-type-error"),
         stage = Stage.GenerateCode,
         input = "if (1) { 2 } else { 3 }",
         moduleResultNeeded = true,
@@ -1174,6 +1190,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun lotsaLets() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/lotsa-lets"),
         input = """
             |// Issue 1408
             |let x1 = 1;
@@ -1218,6 +1235,7 @@ class GenerateCodeStageTest {
     @Ignore
     @Test
     fun enumConstants() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/enum-constants"),
         stage = Stage.GenerateCode,
         input = """
             |enum E { A, B }
@@ -1235,6 +1253,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun emptyInterface() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/empty-interface"),
         stage = Stage.GenerateCode,
         input = """
             |interface I {}
@@ -1258,6 +1277,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun hideOverrideProperty() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/hide-override-property"),
         stage = Stage.GenerateCode,
         input = """
             |interface I { public x: Int }
@@ -1294,6 +1314,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun hideOverrideMethod() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/hide-override-method"),
         stage = Stage.GenerateCode,
         input = """
             |interface I { public f(): Int; }
@@ -1332,6 +1353,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun hideOverrideMethodGeneric() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/hide-override-method-generic"),
         stage = Stage.GenerateCode,
         input = """
             |interface I<T>          { public    f<A>(x: A, t: T, i: I<T>): T; }
@@ -1383,6 +1405,7 @@ class GenerateCodeStageTest {
      */
     @Test
     fun typeParameterCanExtendConcreteType() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/type-parameter-can-extend-concrete-type"),
         stage = Stage.GenerateCode,
         input = """
             |interface I { public f<S extends String>(s: S): Void; }
@@ -1412,6 +1435,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun returnTypeRequired() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/return-type-required"),
         stage = Stage.GenerateCode,
         input = """
             |let hi() {}
@@ -1435,7 +1459,28 @@ class GenerateCodeStageTest {
     )
 
     @Test
+    fun optionalArgumentPassing() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/optional-argument-passing"),
+        stage = Stage.Run,
+        input = $$"""
+            |let f(a: Int = 0, b: Int = 1): String { "a=${a.toString()}, b=${b.toString()}" };
+            |"${ f(2) }; ${ f(null, 2) }; ${ f(3, 2) }"
+        """.trimMargin(),
+        moduleResultNeeded = true,
+        want = """
+            |{
+            |  stageCompleted: "Run",
+            |  run:
+            |    ```
+            |    "a=2, b=1; a=0, b=2; a=3, b=2": String
+            |    ```
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun returnTypeOptionalForSomeCases() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/return-type-optional-for-some-cases"),
         stage = Stage.GenerateCode,
         input = """
             |class Something {
@@ -1476,6 +1521,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun typeMetadata() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/type-metadata"),
         stage = Stage.GenerateCode,
         want = """
             |{
@@ -1517,26 +1563,23 @@ class GenerateCodeStageTest {
             |  },
             |}
         """.trimMargin(),
-    ) { module, _ ->
+    ) { module, moduleAdvancer, rfl ->
         val input = """
             |@foo interface I {}
         """.trimMargin()
-
-        module.deliverContent(
-            ModuleSource(
-                filePath = testCodeLocation, fetchedContent = input, languageConfig = StandaloneLanguageConfig,
-            ),
-        )
 
         module.addEnvironmentBindings(
             mapOf(
                 BuiltinName("@foo") to Value(MetadataDecorator(Symbol("foo")) { void }),
             ),
         )
+
+        provisionModuleForStageTest(input, StandaloneLanguageConfig, module, moduleAdvancer, rfl)
     }
 
     @Test
     fun voidNotAValue() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/void-not-a-value"),
         stage = Stage.GenerateCode,
         // Implied and explicit void returns should be fine, but others should be errors.
         input = """
@@ -1586,6 +1629,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun voidVsValue() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/void-vs-value"),
         stage = Stage.GenerateCode,
         input = """
             |let trick(): Void { 123 }
@@ -1620,6 +1664,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun impliedLambdaReturnType() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/implied-lambda-return-type"),
         stage = Stage.GenerateCode,
         input = """
             |let f(g: fn (): Int): Int { g() }
@@ -1654,6 +1699,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun deadCode() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/dead-code"),
         stage = Stage.GenerateCode,
         input = """
             |label: do {
@@ -1676,6 +1722,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun staticMethods() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/static-methods"),
         stage = Stage.GenerateCode,
         input = """
             |class C {
@@ -1710,6 +1757,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun staticAccessGoodAndBad() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/static-access-good-and-bad"),
         stage = Stage.GenerateCode,
         input = """
             |class C {
@@ -1926,6 +1974,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun noInstantiateInterface() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/no-instantiate-interface"),
         stage = Stage.GenerateCode,
         input = """
             |interface Apple {}
@@ -1962,6 +2011,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun exportSome() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/export-some"),
         stage = Stage.GenerateCode,
         // Includes examples of different kinds of roots and entities as well as transitive reachability and such.
         // Also includes an example of something reachable from both export and test roots.
@@ -2084,6 +2134,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun initAssignmentReachability() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/init-assignment-reachability"),
         stage = Stage.GenerateCode,
         input = """
             |// We don't eliminate var reassignments, so keep associated declarations.
@@ -2110,6 +2161,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun blockLambdaEndToEnd() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/block-lambda-end-to-end"),
         stage = Stage.Run,
         moduleResultNeeded = true,
         input = """
@@ -2130,6 +2182,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun generatorInterpreted() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/generator-interpreted"),
         stage = Stage.Run,
         input = """
             |do {
@@ -2214,6 +2267,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun generatorInterpretedInLoop() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/generator-interpreted-in-loop"),
         stage = Stage.Run,
         input = """
             |do {
@@ -2292,12 +2346,13 @@ class GenerateCodeStageTest {
             |
             |    ```
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     @Ignore
     @Test
     fun generatorResultsUsed() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/generator-results-used"),
         stage = Stage.Run,
         input = $$"""
             |do {
@@ -2335,6 +2390,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun forOfExample() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/for-of-example"),
         stage = Stage.Run,
         input = """
             |for (let i of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]) {
@@ -2358,6 +2414,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun awaiting() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/awaiting"),
         stage = Stage.Run,
         stagingFlags = setOf(StagingFlags.allowTopLevelAwait),
         input = """
@@ -2407,6 +2464,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun invalidRtti() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/invalid-rtti"),
         stage = Stage.Run,
         // Check that is T and as T only operate
         // on types that can be distinguished at runtime.
@@ -2500,6 +2558,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun invalidRttiTypeArgs() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/invalid-rtti-type-args"),
         stage = Stage.Run,
         input = """
             |interface Sup<T> {}
@@ -2561,6 +2620,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun invalidRttiNotInlined() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/invalid-rtti-not-inlined"),
         stage = Stage.GenerateCode,
         // Check that is T and as T that would be invalid
         // if translated aren't inlined.
@@ -2592,6 +2652,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun upcastOk() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/upcast-ok"),
         stage = Stage.Run,
         // Use Map here because that was the original motivating example, even though it's not vital to the test.
         input = """
@@ -2624,6 +2685,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun castAwayNullWorksAtRuntime() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/cast-away-null-works-at-runtime"),
         stage = Stage.Run,
         input = $$"""
             |let f(x: Float64?): Float64? { (x as Float64) orelse null }
@@ -2639,6 +2701,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun matchWithCharExprCases() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/match-with-char-expr-cases"),
         stage = Stage.GenerateCode,
         input = """
             |let abcStop(i: Int): String {
@@ -2680,38 +2743,31 @@ class GenerateCodeStageTest {
 
     @Test
     fun sealedConnectedCasts() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/sealed-connected-casts"),
         // comments in the cast checker describe why this is the way it is.
         // In short, a sealed, connected type must be able to distinguish
         // its subtypes, so the static expression type matters when casting.
         stage = Stage.Run,
-        provisionModule = { module, _ ->
-            module.deliverContent(
-                ModuleSource(
-                    filePath = testCodeLocation,
-                    fetchedContent = """
-                        |@connected
-                        |export sealed interface S {}
-                        |
-                        |@connected
-                        |class C extends S {}
-                        |@connected
-                        |class D extends S {}
-                        |
-                        |@connected
-                        |interface NS extends S {}
-                        |@connected
-                        |class E extends NS {}
-                        |
-                        |export let f(a: AnyValue, s: S): Void throws Bubble {
-                        |  a as C;  // BAD: C is connected, and AnyValue is not.
-                        |  s as C;  // OK.  C is a sub-type of S
-                        |  s as E;  // BAD. E is a sub-type of S, but only via NS which is not-sealed.
-                        |}
-                    """.trimMargin(),
-                    languageConfig = StandaloneLanguageConfig,
-                ),
-            )
-        },
+        input = """
+            |@connected
+            |export sealed interface S {}
+            |
+            |@connected
+            |class C extends S {}
+            |@connected
+            |class D extends S {}
+            |
+            |@connected
+            |interface NS extends S {}
+            |@connected
+            |class E extends NS {}
+            |
+            |export let f(a: AnyValue, s: S): Void throws Bubble {
+            |  a as C;  // BAD: C is connected, and AnyValue is not.
+            |  s as C;  // OK.  C is a sub-type of S
+            |  s as E;  // BAD. E is a sub-type of S, but only via NS which is not-sealed.
+            |}
+        """.trimMargin(),
         want = """
             |{
             |  run: "void: Void",
@@ -2725,6 +2781,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun stringNullEquality() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/string-null-equality"),
         input = """
             |let f(s: String?): Boolean { s == null }
             |
@@ -2741,6 +2798,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun asAndIsSimplification1() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/as-and-is-simplification1"),
         input = """
             |let f(i: StringIndexOption?): Int throws Bubble {
             |  if (i is StringIndex) {
@@ -2778,6 +2836,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun asAndIsSimplification2() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/as-and-is-simplification2"),
         input = """
             |let f(i: StringIndexOption?): Int throws Bubble {
             |  if (i is StringIndexOption) {
@@ -2815,6 +2874,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun asAndIsSimplification3() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/as-and-is-simplification3"),
         input = """
             |let f(i: StringIndexOption?): Int throws Bubble {
             |  do {
@@ -2855,6 +2915,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun asAndIsSimplification4() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/as-and-is-simplification4"),
         input = """
             |let f(i: StringIndexOption?): Int throws Bubble {
             |  if (i is StringIndex?) {
@@ -2928,6 +2989,7 @@ class GenerateCodeStageTest {
     // Complex expressions caught in temporary
     @Test
     fun asAndIsSimplification5() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/as-and-is-simplification5"),
         input = """
             |let g(s: String): StringIndexOption {
             |  s.end
@@ -2957,6 +3019,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun nullSimplification() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/null-simplification"),
         input = """
             |let f(s: String?): Boolean {
             |  s == null
@@ -2986,6 +3049,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun sneakyBubble() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/sneaky-bubble"),
         stage = Stage.GenerateCode,
         input = """
             |class Something(public let haha: Int?) {}
@@ -3015,6 +3079,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun bubbleOrElseNot() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/bubble-or-else-not"),
         stage = Stage.GenerateCode,
         // Explore bubbles both escaping and captured, both explicit and implicit, both builtin and user functions.
         // Just making sure to explore the space of how we handle things.
@@ -3111,6 +3176,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun extensionMethodUse() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/extension-method-use"),
         stage = Stage.Run,
         moduleResultNeeded = true,
         input = """
@@ -3192,6 +3258,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun jsonAdapterWorks() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/json-adapter-works"),
         stage = Stage.Run,
         moduleResultNeeded = true,
         input = """
@@ -3207,6 +3274,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun jsonAdapterEncodesSealedTypes() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/json-adapter-encodes-sealed-types"),
         stage = Stage.Run,
         moduleResultNeeded = true,
         input = """
@@ -3234,6 +3302,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun jsonAdapterDecodesSealedTypes() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/json-adapter-decodes-sealed-types"),
         stage = Stage.Run,
         moduleResultNeeded = true,
         input = """
@@ -3267,6 +3336,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun nullableJsonField() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/nullable-json-field"),
         stage = Stage.Run,
         moduleResultNeeded = true,
         input = """
@@ -3290,6 +3360,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun jsonInteropForwardsTypeInfoForNullableProps() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/json-interop-forwards-type-info-for-nullable-props"),
         stage = Stage.Run,
         moduleResultNeeded = true,
         input = """
@@ -3308,6 +3379,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun rgxMacro() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/rgx-macro"),
         stage = Stage.Run,
         moduleResultNeeded = true,
         input = """
@@ -3324,6 +3396,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun complexStringExpr() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/complex-string-expr"),
         stage = Stage.Run,
         moduleResultNeeded = true,
         input = $$"""
@@ -3363,6 +3436,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun complexStringExprWithFormattingHole() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/complex-string-expr-with-formatting-hole"),
         stage = Stage.Run,
         moduleResultNeeded = true,
         input = $$"""
@@ -3383,6 +3457,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun complexStringExprWithFormattingHoleAndMore() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/complex-string-expr-with-formatting-hole-and-more"),
         stage = Stage.Run,
         moduleResultNeeded = true,
         input = $$"""
@@ -3414,6 +3489,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun explicitBoundedTypeParametersInInterpreter() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/explicit-bounded-type-parameters-in-interpreter"),
         stage = Stage.Run,
         input = """
             |interface I { x: String }
@@ -3445,6 +3521,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun invalidNonNullCheck() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/invalid-non-null-check"),
         stage = Stage.Run,
         input = """
             |export let Act = fn (i: Int): Void;
@@ -3465,6 +3542,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun multiImport() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/multi-import"),
         input = """
             |let { ... } = import("./nums");
             |
@@ -3502,6 +3580,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun nullInTestingAssert() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/null-in-testing-assert"),
         stage = Stage.GenerateCode,
         input = """
             |let { C } = import("./c");
@@ -3551,11 +3630,12 @@ class GenerateCodeStageTest {
             |        ```
             |  }
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     @Test
     fun longNullChain() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/long-null-chain"),
         stage = Stage.GenerateCode,
         input = """
             |let {a} = import("./a");
@@ -3634,6 +3714,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun nonNullInference() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/non-null-inference"),
         stage = Stage.GenerateCode,
         input = """
             |let maybeLength(a: String?): Int? {
@@ -3660,11 +3741,12 @@ class GenerateCodeStageTest {
             |      ```
             |  }
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     @Test
     fun complexAssignmentOfVarProperty() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/complex-assignment-of-var-property"),
         stage = Stage.Run,
 
         input = $$"""
@@ -3729,11 +3811,12 @@ class GenerateCodeStageTest {
             |
             |  run: "void: Void",
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     @Test
     fun complexAssignmentOfGetExpr() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/complex-assignment-of-get-expr"),
         stage = Stage.Run,
 
         input = $$"""
@@ -3779,11 +3862,12 @@ class GenerateCodeStageTest {
             |      ```
             |  },
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     @Test
     fun whenElseBubble() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/when-else-bubble"),
         stage = Stage.GenerateCode,
         pseudoCodeDetail = PseudoCodeDetail(showInferredTypes = true),
         input = """
@@ -3833,6 +3917,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun veryBigMapConstructor() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/very-big-map-constructor"),
         stage = Stage.Run,
         input = buildString {
             append("export let numbers: Map<String, Int> = new Map<String, Int>([")
@@ -3850,6 +3935,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun doPureRuns() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/do-pure-runs"),
         stage = Stage.Run,
         input = """
             |let { C } = import("./c");
@@ -3881,6 +3967,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun pureVirtualMethodInConcreteClass() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/pure-virtual-method-in-concrete-class"),
         stage = Stage.Run,
         input = """
             |export interface I<T> { f(x: T): Void; }
@@ -3898,6 +3985,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun nullAssignedToNonNullVarDevl() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/null-assigned-to-non-null-var-devl"),
         stage = Stage.GenerateCode,
         moduleResultNeeded = true,
         input = $$"""
@@ -3952,6 +4040,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun stringCoercionOfRttiCheck() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/string-coercion-of-rtti-check"),
         stage = Stage.Run,
         input = $$"""
             |let f(i: StringIndexOption): Void {
@@ -3982,11 +4071,12 @@ class GenerateCodeStageTest {
             |  run: "void: Void",
             |  stdout: "Yes true, no false\n",
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     @Test
     fun isAppliedToParameterizedType() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/is-applied-to-parameterized-type"),
         stage = Stage.Run,
         moduleResultNeeded = true,
         input = """
@@ -4009,6 +4099,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun staticWithUnusedExtension() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/static-with-unused-extension"),
         stage = Stage.Run,
         input = """
             |@staticExtension(String, "foo")
@@ -4038,6 +4129,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun declaringADataFile() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/declaring-a-data-file"),
         stage = Stage.GenerateCode,
         input = """
             |dataFile("hello.txt", "text/plain", ${temperEscaper.escape(
@@ -4064,6 +4156,7 @@ class GenerateCodeStageTest {
 
     @Test
     fun missingFunctionBody() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/missing-function-body"),
         stage = Stage.GenerateCode,
         input = """
             |let hi(): Void;

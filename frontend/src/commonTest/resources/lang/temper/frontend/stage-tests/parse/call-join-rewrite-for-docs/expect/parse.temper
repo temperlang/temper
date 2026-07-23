@@ -1,0 +1,7 @@
+if(a, fn {
+    b
+  }, \else_if, c, fn {
+    d
+  }, \else, fn {
+    e
+})

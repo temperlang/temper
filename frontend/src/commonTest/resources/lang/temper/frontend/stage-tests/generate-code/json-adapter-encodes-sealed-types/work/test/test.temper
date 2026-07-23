@@ -1,0 +1,14 @@
+let {
+  JsonTextProducer,
+  listJsonAdapter,
+} = import("std/json");
+
+@json sealed interface Animal {}
+@json class Cat(public meowCount: Int)       extends Animal {}
+@json class Dog(public hydrantsSniffed: Int) extends Animal {}
+
+let ls: List<Animal> = [new Cat(11), new Dog(111)];
+
+let p = new JsonTextProducer();
+List.jsonAdapter(Animal.jsonAdapter()).encodeToJson(ls, p);
+p.toJsonString()

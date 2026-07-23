@@ -1,0 +1,7 @@
+let { C } = import("./c");
+
+test("to be or not to be null") {
+  let c0 = { optionalString: "" };
+  assert(c0.optionalString == "");
+}
+

@@ -1,0 +1,9 @@
+class What<Thing>(
+  public ints: List<Int>,
+  public things: List<Thing>,
+) {
+  public work(that: Thing): Void {
+    let another: What = this;
+    let more: List = things;
+  }
+}

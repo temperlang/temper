@@ -24,6 +24,7 @@ import kotlin.test.assertTrue
 class FunctionMacroStageTest {
     @Test
     fun compileLogExecutionOrder() = assertModuleAtStage(
+        stageTestDir = StageTestDir("function-macro/compile-log-execution-order"),
         stage = Stage.FunctionMacro,
         want = """
         {
@@ -50,7 +51,7 @@ class FunctionMacroStageTest {
           ```
         }
         """,
-    ) { module, _ ->
+    ) { module, _, _ ->
         val loc = testCodeLocation
         val doc = Document(module)
         val pos = Position(loc, 0, 0)
@@ -123,6 +124,7 @@ class FunctionMacroStageTest {
 
     @Test
     fun multiInitErrorInClass() = assertModuleAtStage(
+        stageTestDir = StageTestDir("function-macro/multi-init-error-in-class"),
         stage = Stage.FunctionMacro,
         input = "class Aha(private hmm: Int) {}; class Boo { let { hmm } = new Aha(1) }",
         manualCheck = { got ->

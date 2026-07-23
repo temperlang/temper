@@ -1,0 +1,11 @@
+@typeDecl(C__0) @stay let C__0 = type (C__0);
+class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
+    C__0 extends AnyValue;
+    @staticProperty(\f) @fn @static @visibility(\public) let f__0 = fn f(i__0 /* aka i */: Int) /* return__0 */: (Int) {
+      fn__0: do {
+        i__0 + 1
+      }
+    };
+    @method(\constructor) @visibility(\public) let constructor__0 = fn constructor(@impliedThis(C__0) this__0: C__0) /* return__1 */: Void {};
+});
+C__0

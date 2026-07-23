@@ -1,0 +1,7 @@
+let f(i: StringIndexOption?): Int throws Bubble {
+  if (i is StringIndexOption) {
+    0
+  } else {
+    1
+  }
+}

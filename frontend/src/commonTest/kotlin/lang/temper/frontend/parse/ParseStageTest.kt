@@ -2,6 +2,7 @@
 
 package lang.temper.frontend.parse
 
+import lang.temper.frontend.StageTestDir
 import lang.temper.frontend.assertModuleAtStage
 import lang.temper.lexer.Genre
 import lang.temper.stage.Stage
@@ -10,6 +11,7 @@ import kotlin.test.Test
 class ParseStageTest {
     @Test
     fun appendix() = assertModuleAtStage(
+        stageTestDir = StageTestDir("parse/appendix"),
         stage = Stage.Parse,
         input = """
         |foo()
@@ -39,6 +41,7 @@ class ParseStageTest {
 
     @Test
     fun badUnicodeScalarValues() = assertModuleAtStage(
+        stageTestDir = StageTestDir("parse/bad-unicode-scalar-values"),
         stage = Stage.Parse,
         // Purposely do some things that might throw off sloppy position estimation.
         // And include regex, even with good escapes, to make sure we handle such.
@@ -108,6 +111,7 @@ class ParseStageTest {
 
     @Test
     fun callJoinRewrite() = assertModuleAtStage(
+        stageTestDir = StageTestDir("parse/call-join-rewrite"),
         stage = Stage.Parse,
         input = """
         |if (a) { b } else if (c) { d } else { e }
@@ -136,6 +140,7 @@ class ParseStageTest {
 
     @Test
     fun callJoinRewriteForDocs() = assertModuleAtStage(
+        stageTestDir = StageTestDir("parse/call-join-rewrite-for-docs"),
         stage = Stage.Parse,
         genre = Genre.Documentation,
         input = """
@@ -161,6 +166,7 @@ class ParseStageTest {
 
     @Test
     fun angleBracketConfusionErrorMessageIsNotSuperTerrible() = assertModuleAtStage(
+        stageTestDir = StageTestDir("parse/angle-bracket-confusion-error-message-is-not-super-terrible"),
         stage = Stage.Run,
         input = """
         |let or(a: Boolean, b: Boolean): Boolean { a || b }
@@ -183,6 +189,7 @@ class ParseStageTest {
 
     @Test
     fun unrepresentableIntegersWarnedOn() = assertModuleAtStage(
+        stageTestDir = StageTestDir("parse/unrepresentable-integers-warned-on"),
         stage = Stage.Parse,
         input = """
             |let a = 2147483648;

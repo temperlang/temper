@@ -1,0 +1,12 @@
+@stay @imported(\(`test//c/`.C)) let C__0 ⦂ Type;
+C__0 = type (C);
+@fn let `test//`.useC ⦂(fn (C): Void);
+`test//`.useC = (@stay fn useC(c__0 /* aka c */: C) /* return__0 */: Void {
+    void;
+    fn__0: do {
+      do_call_fooInt32(c__0, 1);
+      do_call_foolean(c__0, true);
+      do_call_fooString(c__0, "");
+      return__0 = void
+    }
+})

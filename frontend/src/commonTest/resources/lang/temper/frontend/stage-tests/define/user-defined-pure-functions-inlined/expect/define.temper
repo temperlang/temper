@@ -1,0 +1,8 @@
+@fn let factorMinusAdj__1, adj__0;
+adj__0 = 6;
+factorMinusAdj__1 = (@stay fn factorMinusAdj(x__2 /* aka x */: Int32, y__3 /* aka y */: Int32) /* return__0 */: Int32 {
+    fn__4: do {
+      x__2 * y__3 - 6
+    }
+});
+42

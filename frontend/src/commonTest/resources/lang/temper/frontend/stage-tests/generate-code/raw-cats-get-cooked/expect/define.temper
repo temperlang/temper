@@ -1,0 +1,8 @@
+@fn let f__0;
+f__0 = fn f(s__0 /* aka s */: String) /* return__1 */: Void {
+  fn__0: do {
+    cat(s__0);
+    void;
+    cat(what);
+  }
+};

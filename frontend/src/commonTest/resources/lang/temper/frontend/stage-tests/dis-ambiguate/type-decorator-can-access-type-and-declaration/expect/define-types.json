@@ -1,0 +1,44 @@
+{
+    "AnyValue": {
+        "abstract": true
+    },
+    "I": {
+        "name": "I__0",
+        "word": "I",
+        "abstract": true,
+        "metadata": {
+            "TypeDecoratedByFoo": [
+                "void: Void"
+            ]
+        },
+        "supers": [
+            {
+                "module": "core",
+                "abbrev": "AnyValue__0",
+                "uid": 0
+            }
+        ]
+    },
+    "Empty": {
+        "supers": [
+            "AnyValue__0",
+            "Equatable__0"
+        ],
+        "methods": [
+            {
+                "name": "constructor__0",
+                "visibility": "private",
+                "kind": "Constructor",
+                "open": false
+            }
+        ],
+        "metadata": {
+            "connected": [
+                "void: Void"
+            ],
+            "imu": [
+                "void: Void"
+            ]
+        }
+    }
+}

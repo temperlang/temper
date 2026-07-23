@@ -1,0 +1,5 @@
+[
+    "Illegal type parameter A. Overridable methods don't allow generics!",
+    "Illegal type parameter B. Overridable methods don't allow generics!",
+    "Illegal type parameter C. Overridable methods don't allow generics!"
+]

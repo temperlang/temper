@@ -1,0 +1,8 @@
+do (@stay fn {
+    var x__0: Int32;
+    x__0 = 3;
+    x__0 = do_call_succ(x__0);
+    x__0 = do_call_succ(x__0);
+    x__0 = do_call_pred(x__0);
+    x__0
+})

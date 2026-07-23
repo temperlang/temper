@@ -1,0 +1,25 @@
+  var t#0;
+  @stay @imported(\(`test//int-box/`.IntBox)) let IntBox__0;
+  IntBox__0 = type (IntBox);
+  t#0 = getConsole();
+  let ib__0;
+  ib__0 = new IntBox(-1);
+  do_call_log(t#0, cat("ib.i = ", do_call_toString(do_get_i(ib__0))));
+  let t#1;
+  t#1 = ib__0;
+## set-i of get-i pattern
+## TODO: this might be a good test case for improving temporary elimination.
+  do_set_i(t#1, do_get_i(t#1) + 11);
+  do_call_log(t#0, cat("ib.i = ", do_call_toString(do_get_i(ib__0))));
+  let t#2;
+  t#2 = ib__0;
+  do_set_i(t#2, do_get_i(t#2) * 9);
+  do_call_log(t#0, cat("ib.i = ", do_call_toString(do_get_i(ib__0))));
+  let t#3;
+  t#3 = ib__0;
+  do_set_i(t#3, do_get_i(t#3) - 6);
+  do_call_log(t#0, cat("ib.i = ", do_call_toString(do_get_i(ib__0))));
+  let t#4;
+  t#4 = ib__0;
+  do_set_i(t#4, do_get_i(t#4) / 2);
+  do_call_log(t#0, cat("ib.i = ", do_call_toString(do_get_i(ib__0))))

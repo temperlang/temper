@@ -1,0 +1,3 @@
+## `let` macro applied
+  var x = 1;
+  x = (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(x, 2);

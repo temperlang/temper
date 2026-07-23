@@ -1,0 +1,5 @@
+class Something {
+  public constructor() {} // return type implied
+  public get blah() { 5 } // return type required but missing
+  public set blah(x: Int) {} // return type implied
+}

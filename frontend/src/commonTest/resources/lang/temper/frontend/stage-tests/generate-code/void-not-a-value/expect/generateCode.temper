@@ -1,0 +1,19 @@
+let console#0;
+console#0 = getConsole();
+@fn let b__0, @fn c__0;
+b__0 = (@stay fn b /* return__0 */: Void {
+    do_call_log(console#0, "hi");
+    return__0 = void
+});
+let a__0;
+b__0();
+a__0 = list(void);
+c__0 = (@stay fn c(d__0 /* aka d */: Void) /* return__1 */: Void {
+    b__0();
+    return__1 = void
+});
+@reach(\none) let e__0;
+do_call_get(a__0, 0);
+c__0(void);
+e__0 = void;
+c__0(void)

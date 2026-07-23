@@ -1,0 +1,2 @@
+let i(x: Int) { x }
+i("0") orelse console.log("bad");

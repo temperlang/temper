@@ -1,0 +1,16 @@
+do {};
+nym`@export`(nym`@bar`(@typeDecl(C) @hoistLeft(true) @resolution(`test//`.C) @stay let C = type (C)));
+class(\word, C, \concrete, true, @typeDefined(C) fn {
+    C extends AnyValue
+});
+do {};
+nym`@foo`(@typeDecl(D) @hoistLeft(true) @resolution(`test//`.D) @stay let `test//`.D = type (D), 1);
+interface(\word, D, \concrete, false, @typeDefined(D) fn {
+    D extends AnyValue
+});
+do {};
+nym`@foo`(nym`@export`(nym`@bar`(@typeDecl(E) @hoistLeft(true) @resolution(`test//`.E) @stay let E = type (E))));
+class(\word, E, \concrete, true, @typeDefined(E) fn {
+    E extends AnyValue
+});
+E

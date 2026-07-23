@@ -1,0 +1,7 @@
+@fn @reach(\none) let f__0, @fn @reach(\none) g__0;
+f__0 = (@stay fn f(s__0 /* aka s */: String?) /* return__0 */: Boolean {
+    return__0 = isNull(s__0)
+});
+g__0 = (@stay fn g(s__1 /* aka s */: String?) /* return__1 */: Boolean {
+    return__1 = !isNull(s__1)
+})

@@ -1,17 +1,29 @@
 package lang.temper.frontend
 
 import lang.temper.ast.TreeVisit
+import lang.temper.common.Either
 import lang.temper.common.ListBackedLogSink
 import lang.temper.common.Log
 import lang.temper.common.OpenOrClosed
+import lang.temper.common.asciiTitleCase
 import lang.temper.common.asciiUnTitleCase
 import lang.temper.common.assertStructure
 import lang.temper.common.buildListMultimap
 import lang.temper.common.console
+import lang.temper.common.ignore
+import lang.temper.common.indexOfNext
+import lang.temper.common.json.JsonArray
+import lang.temper.common.json.JsonBoolean
+import lang.temper.common.json.JsonDouble
+import lang.temper.common.json.JsonLeaf
+import lang.temper.common.json.JsonLong
+import lang.temper.common.json.JsonNull
 import lang.temper.common.json.JsonObject
+import lang.temper.common.json.JsonString
 import lang.temper.common.json.JsonValue
 import lang.temper.common.json.JsonValueBuilder
 import lang.temper.common.putMultiList
+import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.common.structure.Hints
 import lang.temper.common.structure.PropertySink
 import lang.temper.common.structure.StructureHint
@@ -25,10 +37,12 @@ import lang.temper.format.ValueSimplifyingLogSink
 import lang.temper.frontend.staging.ModuleAdvancer
 import lang.temper.frontend.staging.ModuleConfig
 import lang.temper.frontend.staging.ModuleCustomizeHook
+import lang.temper.fs.Url
 import lang.temper.lexer.Genre
 import lang.temper.lexer.LanguageConfig
 import lang.temper.lexer.StandaloneLanguageConfig
 import lang.temper.log.FilePath
+import lang.temper.log.FilePath.Companion.join
 import lang.temper.log.FilePathSegment
 import lang.temper.log.LogEntry
 import lang.temper.log.LogSink
@@ -47,6 +61,9 @@ import lang.temper.name.ResolvedName
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.stage.Stage
+import lang.temper.testdir.RegeneratedFilesList
+import lang.temper.testdir.readTestDir
+import lang.temper.testdir.regenerateFiles
 import lang.temper.type.Abstractness
 import lang.temper.type.MethodKind
 import lang.temper.type.NominalType
@@ -72,10 +89,43 @@ import lang.temper.value.staySymbol
 const val TEST_INPUT_MODULE_BREAK = "////!module:"
 
 /**
+ * A directory path relative to the directory containing `frontend/commonTest/.../README-stage-tests.md`
+ * that specifies test inputs and outputs.  See that README file for details on the test structure.
+ *
+ * This string is also used to filter test-file regeneration.  If [shouldRegenerateStageTest] returns `true`
+ * for it then [assertModuleAtStage] will write the expected outputs to output files instead of reading
+ * and comparing which allows using `git diff` to understand the consequences of a change to details of
+ * the frontend's intermediate representation.
+ */
+data class StageTestDir(val url: Url) {
+    init {
+        check(!url.isAbsolute && url.path != null && url.authority == null) { "$url" }
+    }
+    constructor(str: String) : this(Url.create(str))
+}
+
+private fun shouldRegenerateStageTest(
+    stageTestDir: StageTestDir,
+    isEmpty: Boolean,
+): Boolean {
+    // ignore() to suppress unused parameter warnings because in git this should just return false.
+    ignore(stageTestDir)
+    ignore(isEmpty)
+
+    return false
+}
+
+/** The URL for reading test resource files. A `file:` URL which allows enumerating resources. */
+internal expect val stageTestDirFileRoot: Url
+
+/** The `file:` URL under which to write changes when regenerating test resource files. */
+internal expect val stageTestDirFileSourceRoot: Url
+
+/**
  * A test harness that advances a module until a specific stage, capturing snapshots of the
  * AST so that we can compare them selectively against a desired output.
  */
-fun assertModuleAtStage(
+internal fun assertModuleAtStage(
     want: String = "",
     /**
      * The temper text that is parsed using [languageConfig].
@@ -102,9 +152,9 @@ fun assertModuleAtStage(
      * ////!module: ./foo/foo.temper
      * export let foo = "FOO";
      * ```
-     *
      */
     input: String,
+    stageTestDir: StageTestDir = StageTestDir("TODO"),
     stage: Stage,
     genre: Genre = Genre.Library,
     pseudoCodeDetail: PseudoCodeDetail = PseudoCodeDetail.default,
@@ -116,74 +166,22 @@ fun assertModuleAtStage(
     stackTracesForErrors: Boolean = false,
     languageConfig: LanguageConfig = StandaloneLanguageConfig,
     logEntryWanted: (LogEntry) -> Boolean = { it.level >= Log.Warn },
-) = assertModuleAtStage(
-    want = want,
-    stage = stage,
-    genre = genre,
-    pseudoCodeDetail = pseudoCodeDetail,
-    manualCheck = manualCheck,
-    nameSimplifying = nameSimplifying,
-    moduleResultNeeded = moduleResultNeeded,
-    loc = loc,
-    stagingFlags = stagingFlags,
-    stackTracesForErrors = stackTracesForErrors,
-    logEntryWanted = logEntryWanted,
-) { module, moduleAdvancer ->
-    val chunks = buildList {
-        var path: FilePath = testCodeLocation
-        val contentBuilder = StringBuilder()
-        for (line in input.lines()) {
-            if (line.startsWith(TEST_INPUT_MODULE_BREAK)) {
-                add(path to "$contentBuilder")
-                contentBuilder.clear()
-                var pathStr = line.substring(TEST_INPUT_MODULE_BREAK.length)
-                var isDir = false
-                if (pathStr.endsWith(UNIX_FILE_SEGMENT_SEPARATOR)) {
-                    isDir = true
-                    pathStr = pathStr.dropLast(UNIX_FILE_SEGMENT_SEPARATOR.length)
-                }
-                val relPath = pathStr.trim().split(UNIX_FILE_SEGMENT_SEPARATOR).map {
-                    when (it) {
-                        "." -> SameDirPseudoFilePathSegment
-                        ".." -> ParentPseudoFilePathSegment
-                        else -> FilePathSegment(it)
-                    }
-                }
-                path = testCodeLocation.resolvePseudo(relPath, isDir = isDir) ?: error(line)
-            } else {
-                contentBuilder.append(line).append('\n')
-            }
-        }
-        add(path to "$contentBuilder")
-    }
-
-    val inputsByDir = buildListMultimap {
-        for ((path, content) in chunks) {
-            val dir = if (path.isDir) {
-                path
-            } else {
-                path.dirName()
-            }
-            putMultiList(dir, path to content)
-        }
-    }
-
-    for ((dir, inputs) in inputsByDir) {
-        val moduleName = testModuleName.copy(sourceFile = dir)
-        val moduleToProvision = if (moduleName == testModuleName) {
-            module
-        } else {
-            moduleAdvancer.createModule(moduleName, module.console)
-        }
-        for ((filePath, content) in inputs) {
-            moduleToProvision.deliverContent(
-                ModuleSource(
-                    filePath = filePath,
-                    fetchedContent = content,
-                    languageConfig = languageConfig,
-                ),
-            )
-        }
+) {
+    assertModuleAtStage(
+        want = want,
+        stageTestDir = stageTestDir,
+        stage = stage,
+        genre = genre,
+        pseudoCodeDetail = pseudoCodeDetail,
+        manualCheck = manualCheck,
+        nameSimplifying = nameSimplifying,
+        moduleResultNeeded = moduleResultNeeded,
+        loc = loc,
+        stagingFlags = stagingFlags,
+        stackTracesForErrors = stackTracesForErrors,
+        logEntryWanted = logEntryWanted,
+    ) { module, moduleAdvancer, regeneratedFiles ->
+        provisionModuleForStageTest(input, languageConfig, module, moduleAdvancer, regeneratedFiles)
     }
 }
 
@@ -191,8 +189,9 @@ fun assertModuleAtStage(
  * A test harness that advances a module until a specific stage, capturing snapshots of the
  * AST so that we can compare them selectively against a desired output.
  */
-fun assertModuleAtStage(
+internal fun assertModuleAtStage(
     want: String = "",
+    stageTestDir: StageTestDir,
     stage: Stage,
     genre: Genre = Genre.Library,
     pseudoCodeDetail: PseudoCodeDetail = PseudoCodeDetail.default,
@@ -203,8 +202,17 @@ fun assertModuleAtStage(
     stagingFlags: Set<BuiltinName> = emptySet(),
     stackTracesForErrors: Boolean = false,
     logEntryWanted: (LogEntry) -> Boolean = { it.level >= Log.Warn },
-    provisionModule: (Module, ModuleAdvancer) -> Unit,
+    provisionModule: (Module, ModuleAdvancer, RegeneratedFilesList?) -> Unit,
 ) {
+    val testDir = readTestDir(stageTestDirFileRoot.resolve(stageTestDir.url))
+    val regeneratedFileList: RegeneratedFilesList? =
+        if (shouldRegenerateStageTest(stageTestDir, isEmpty = testDir.isEmpty())) {
+            console.info("assertModuleAtStage is regenerating test files under ${stageTestDir.url}")
+            mutableListOf()
+        } else {
+            null
+        }
+
     var thousandsOfStepsLeft = 100
     val continueCondition = {
         if (thousandsOfStepsLeft > 0) {
@@ -272,7 +280,7 @@ fun assertModuleAtStage(
     if (allStagingFlags.isNotEmpty()) {
         module.addEnvironmentBindings(allStagingFlags.associateWith { TBoolean.valueTrue })
     }
-    provisionModule(module, moduleAdvancer)
+    provisionModule(module, moduleAdvancer, regeneratedFileList)
 
     val stopBeforeForMainModule = Stage.after(stage)
     val stopBefore = { m: Module ->
@@ -336,12 +344,203 @@ fun assertModuleAtStage(
     if (manualCheck != null) {
         val renumbered = PseudoCodeNameRenumberer.newStructurePostProcessor()(got)
         manualCheck(JsonValueBuilder.build(emptyMap()) { value(renumbered) } as JsonObject)
+    } else if (regeneratedFileList != null) {
+        val wantJson = JsonValue.parse(indentDoubleHash(want), tolerant = true).result as JsonObject
+        fun walk(stage: Stage?, key: String, value: JsonValue) {
+            if (value is JsonLeaf<*>) {
+                when (value) {
+                    is JsonString -> when (key) {
+                        ".body" if stage != null -> {
+                            val stageStr = stage.name.asciiUnTitleCase()
+                            regeneratedFileList.add(
+                                Url("expect/$stageStr.temper") to Either.Left(value.s),
+                            )
+                        }
+                        ".body.code" if stage != null -> {
+                            val stageStr = stage.name.asciiUnTitleCase()
+                            regeneratedFileList.add(
+                                Url("expect/$stageStr.temper") to Either.Left(value.s),
+                            )
+                        }
+                        "" if stage == Stage.Run -> {
+                            regeneratedFileList.add(
+                                Url("expect/run-result.json") to Either.Left(value.toJsonString()),
+                            )
+                        }
+                        ".stdout" if stage == null -> {
+                            regeneratedFileList.add(
+                                Url("expect/stdout.txt") to Either.Left(value.s),
+                            )
+                        }
+                        ".stageCompleted" if stage == null -> {}
+                        else -> TODO("$stage . `$key` got string")
+                    }
+
+                    is JsonBoolean -> when (key) {
+                        else -> TODO("$key got bool")
+                    }
+                    is JsonDouble -> when (key) {
+                        else -> TODO("$key got double")
+                    }
+                    is JsonLong -> when (key) {
+                        else -> TODO("$key got long")
+                    }
+                    JsonNull -> when (key) {
+                        else -> TODO("$key got null")
+                    }
+                }
+            } else if (key == ".appendix" && stage != null) {
+                regeneratedFileList.add(
+                    Url("expect/${stage.name.asciiUnTitleCase()}-appendix.json") to
+                        Either.Left("${value.toJsonString()}\n"),
+                )
+            } else if (key == ".types" && stage != null) {
+                regeneratedFileList.add(
+                    Url("expect/${stage.name.asciiUnTitleCase()}-types.json") to
+                        Either.Left("${value.toJsonString()}\n"),
+                )
+            } else if (value is JsonObject) {
+                when (key) {
+                    ".exports" if (stage != null) -> {
+                        regeneratedFileList.add(
+                            Url("expect/${stage.name.asciiUnTitleCase()}-exports.json") to
+                                Either.Left("${value.toJsonString()}\n"),
+                        )
+                    }
+                    else -> {
+                        for (p in value) {
+                            var nextStage = stage
+                            var keySuffix = ".${p.key}"
+                            if (key == "" && nextStage == null) {
+                                nextStage = try {
+                                    Stage.valueOf(p.key.asciiTitleCase())
+                                } catch (_: IllegalArgumentException) {
+                                    null
+                                }
+                                if (nextStage != null) {
+                                    keySuffix = ""
+                                }
+                            }
+                            val nextKey = "$key$keySuffix"
+                            walk(nextStage, nextKey, p.value)
+                        }
+                    }
+                }
+            } else if (value is JsonArray) {
+                when (key) {
+                    ".body" if stage != null -> {
+                        val relPath = "expect/${stage.name.asciiUnTitleCase()}.lispy"
+                        regeneratedFileList.add(
+                            Url(relPath) to Either.Left("${value.toJsonString()}\n"),
+                        )
+                    }
+                    ".body.tree" if stage != null -> {
+                        val relPath = "expect/${stage.name.asciiUnTitleCase()}.lispy"
+                        regeneratedFileList.add(
+                            Url(relPath) to Either.Left("${value.toJsonString()}\n"),
+                        )
+                    }
+                    ".errors" -> {
+                        regeneratedFileList.add(
+                            Url("expect/errors.json") to Either.Left("${value.toJsonString()}\n"),
+                        )
+                    }
+                    "" if stage == Stage.Run -> {
+                        regeneratedFileList.add(
+                            Url("expect/run-result.json") to Either.Left(value.toJsonString()),
+                        )
+                    }
+                    else -> TODO("$key got array")
+                }
+            } else {
+                TODO("$key $wantJson")
+            }
+        }
+        walk(null, "", wantJson)
     } else {
         assertStructure(
-            expectedJson = want,
+            expectedJson = want.stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
             input = got,
             postProcessor = { s -> PseudoCodeNameRenumberer.newStructurePostProcessor()(s) },
         )
+    }
+
+    regeneratedFileList?.let {
+        regenerateFiles(stageTestDirFileSourceRoot.resolve("${stageTestDir.url}/"), it.toList())
+    }
+}
+
+internal fun provisionModuleForStageTest(
+    input: String,
+    languageConfig: LanguageConfig,
+    module: Module,
+    moduleAdvancer: ModuleAdvancer,
+    regeneratedFilesList: RegeneratedFilesList?,
+) {
+    val chunks = buildList {
+        var path: FilePath = testCodeLocation
+        val contentBuilder = StringBuilder()
+        for (line in input.lines()) {
+            if (line.startsWith(TEST_INPUT_MODULE_BREAK)) {
+                add(path to "$contentBuilder")
+                contentBuilder.clear()
+                var pathStr = line.substring(TEST_INPUT_MODULE_BREAK.length)
+                var isDir = false
+                if (pathStr.endsWith(UNIX_FILE_SEGMENT_SEPARATOR)) {
+                    isDir = true
+                    pathStr = pathStr.dropLast(UNIX_FILE_SEGMENT_SEPARATOR.length)
+                }
+                val relPath = pathStr.trim().split(UNIX_FILE_SEGMENT_SEPARATOR).map {
+                    when (it) {
+                        "." -> SameDirPseudoFilePathSegment
+                        ".." -> ParentPseudoFilePathSegment
+                        else -> FilePathSegment(it)
+                    }
+                }
+                path = testCodeLocation.resolvePseudo(relPath, isDir = isDir) ?: error(line)
+            } else {
+                contentBuilder.append(line).append('\n')
+            }
+        }
+        add(path to "$contentBuilder")
+    }
+
+    val inputsByDir = buildListMultimap {
+        for ((path, content) in chunks) {
+            val dir = if (path.isDir) {
+                path
+            } else {
+                path.dirName()
+            }
+            putMultiList(dir, path to content)
+        }
+    }
+
+    for ((dir, inputs) in inputsByDir) {
+        val moduleName = testModuleName.copy(sourceFile = dir)
+        val moduleToProvision = if (moduleName == testModuleName) {
+            module
+        } else {
+            moduleAdvancer.createModule(moduleName, module.console)
+        }
+        for ((filePath, content) in inputs) {
+            moduleToProvision.deliverContent(
+                ModuleSource(
+                    filePath = filePath,
+                    fetchedContent = content,
+                    languageConfig = languageConfig,
+                ),
+            )
+            if (regeneratedFilesList != null) {
+                var path = dir
+                if (path.isDir) {
+                    val ext = languageConfig.dotExtension?.let { ".temper$it" } ?: ".temper"
+                    path = path.resolve(path.segments.last().withExtension(ext), isDir = false)
+                }
+                val srcUrl = Url(null, null, "work/${path.join()}", null, null)
+                regeneratedFilesList.add(srcUrl to Either.Left(content))
+            }
+        }
     }
 }
 
@@ -734,5 +933,46 @@ internal class DumpStackTracesForThoseErrors(private val logSink: LogSink) : Log
             console.trace(template.format(values))
         }
         logSink.log(level, template, pos, values, fyi)
+    }
+}
+
+private fun indentDoubleHash(json: String): String {
+    val lines = json.lines().toMutableList()
+    var i = 0
+    val n = lines.size
+    var changed = false
+    while (i < n) {
+        val line = lines[i]
+        i += 1
+        val lineTrimmed = line.trim()
+        if (lineTrimmed.endsWith("```")) {
+            val j = lines.indexOfNext(i) {
+                it.trim().startsWith("```")
+            }
+            check(j > i) { "i=$i, j=$j\n$json" }
+            if ((i..<j).any { lines[it].startsWith("##") }) {
+                val indent = lines[j].substring(0, lines[j].indexOf("```"))
+                for (k in i..<j) {
+                    val stringLine = lines[k]
+                    val prefix =
+                        if (stringLine.startsWith("##")) {
+                            indent
+                        } else if (stringLine.isEmpty()) {
+                            ""
+                        } else {
+                            "  "
+                        }
+                    lines[k] = "$prefix$stringLine"
+                    changed = true
+                }
+            }
+            i = j + 1
+        }
+    }
+
+    return if (changed) {
+        lines.joinToString("\n")
+    } else {
+        json
     }
 }

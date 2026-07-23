@@ -1,0 +1,14 @@
+let r1 = /a.b*/;
+let r2 = /a.${b}*/;
+let r3 = /a.b*/g;
+let b = r3;
+let r4 = rgx"a.${b}*";
+let r5 = rgx"a${"."}${b}*${}?";
+let r6 = rgx"a${"."}*";
+let r7 = new Sequence([
+  new CodePoints("a"),
+  Dot,
+  new Repeat(new CodePoints("b"), 0, null),
+]).compiled();
+let s = "[a]";
+let r8 = rgx".${s}.";

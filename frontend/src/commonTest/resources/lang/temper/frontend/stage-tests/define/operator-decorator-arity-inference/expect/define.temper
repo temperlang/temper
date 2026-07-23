@@ -1,0 +1,39 @@
+## mixedAdd has arity 2 so gets an infix operator specifier
+  @fn @operator("_+_") let mixedAdd__0;
+  @typeDecl(C__0) @stay let C__0;
+  C__0 = type (C__0);
+  mixedAdd__0 = fn mixedAdd(a__0 /* aka a */: Int32, b__0 /* aka b */: Boolean) /* return__0 */: Int32 {
+    fn__0: do {
+      if(b__0, fn {
+          a__0 + 1
+        }, \else, fn (f#0) {
+          f#0(fn {
+              a__0
+          })
+      })
+    }
+  };
+  C__0 extends AnyValue;
+## The instance method has an implied `this` so also gets an infix operator specifier
+  @visibility(\public) @fn @operator("_+_") @stay @fromType(C__0) let f__0;
+  f__0 = fn f(@impliedThis(C__0) this__0: C__0, other__0 /* aka other */: C__0) /* return__1 */: C__0 {
+    fn__1: do {
+      this__0
+    }
+  };
+## The static method has no implied `this` so gets a prefix operator specifier
+  @fn @static @visibility(\public) @operator("+_") @stay @fromType(C__0) let unary__0;
+  unary__0 = (@stay fn unary(c__0 /* aka c */: C__0) /* return__2 */: C__0 {
+      fn__2: do {
+        c__0
+      }
+  });
+  @fn @visibility(\public) @stay @fromType(C__0) let constructor__0;
+  constructor__0 = (@stay fn constructor(@impliedThis(C__0) this__1: C__0) /* return__3 */: Void {});
+  class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
+      do {};
+      do {};
+      do {};
+      do {}
+  });
+  type (C__0)

@@ -4,15 +4,10 @@ package lang.temper.frontend
 
 import lang.temper.builtin.PureCallableValue
 import lang.temper.builtin.Types
-import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
-import lang.temper.common.testCodeLocation
 import lang.temper.env.InterpMode
 import lang.temper.lexer.Genre
 import lang.temper.lexer.StandaloneLanguageConfig
-import lang.temper.log.dirPath
-import lang.temper.log.filePath
 import lang.temper.name.BuiltinName
-import lang.temper.name.ModuleName
 import lang.temper.stage.Stage
 import lang.temper.type.MkType
 import lang.temper.type.WellKnownTypes
@@ -33,6 +28,7 @@ import kotlin.test.Test
 class TypeStageTest {
     @Test
     fun emptyFile() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/empty-file"),
         input = "",
         stage = Stage.Type,
         want = """
@@ -49,6 +45,7 @@ class TypeStageTest {
 
     @Test
     fun emptyReplChunk() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/empty-repl-chunk"),
         input = "",
         moduleResultNeeded = true,
         stage = Stage.Type,
@@ -68,6 +65,7 @@ class TypeStageTest {
 
     @Test
     fun ifTransformed() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/if-transformed"),
         input = "if (c) { f() } else { g() }",
         moduleResultNeeded = true,
         stage = Stage.Type,
@@ -91,6 +89,7 @@ class TypeStageTest {
 
     @Test
     fun whileTransformed() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/while-transformed"),
         input = "while (c) { f() }",
         stage = Stage.Type,
         want = """
@@ -111,6 +110,7 @@ class TypeStageTest {
 
     @Test
     fun whileTransformedInReplContext() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/while-transformed-in-repl-context"),
         input = "while (c) { f() }",
         moduleResultNeeded = true,
         stage = Stage.Type,
@@ -133,6 +133,7 @@ class TypeStageTest {
 
     @Test
     fun doWhileTransformed() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/do-while-transformed"),
         input = "do { f() } while (c)",
         moduleResultNeeded = true,
         stage = Stage.Type,
@@ -156,6 +157,7 @@ class TypeStageTest {
 
     @Test
     fun doOnceTransformed() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/do-once-transformed"),
         input = "(do { f() })",
         stage = Stage.Type,
         moduleResultNeeded = true,
@@ -175,6 +177,7 @@ class TypeStageTest {
 
     @Test
     fun nestedFn() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/nested-fn"),
         input = """
             let g() { do { f() } }
             g()
@@ -203,6 +206,7 @@ class TypeStageTest {
 
     @Test
     fun bareReferenceToOperator() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/bare-reference-to-operator"),
         input = " nym`+` ",
         moduleResultNeeded = true,
         stage = Stage.GenerateCode,
@@ -228,6 +232,7 @@ class TypeStageTest {
 
     @Test
     fun minimalForTransformed() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/minimal-for-transformed"),
         input = "for (;;) {}",
         stage = Stage.Type,
         want = """
@@ -245,6 +250,7 @@ class TypeStageTest {
 
     @Test
     fun forWithExpressionParts() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/for-with-expression-parts"),
         input = "for (init; cond; incr) {}",
         stage = Stage.Type,
         want = """
@@ -265,6 +271,7 @@ class TypeStageTest {
 
     @Test
     fun asCheckWithIncompleteTypeCompleted() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/as-check-with-incomplete-type-completed"),
         input = "export let noStrings(): Listed<String> { [] as Listed }",
         stage = Stage.Type,
         want = """
@@ -288,12 +295,13 @@ class TypeStageTest {
             |    ```
             |  }
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
     )
 
     @Test
     fun jumpToLabel() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/jump-to-label"),
         input = "break foo",
         moduleResultNeeded = true,
         stage = Stage.Type,
@@ -329,6 +337,7 @@ class TypeStageTest {
 
     @Test
     fun jumpDefaultLabel() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/jump-default-label"),
         input = "continue",
         moduleResultNeeded = true,
         stage = Stage.Type,
@@ -362,6 +371,7 @@ class TypeStageTest {
 
     @Test
     fun forWithIfsAndJumpsTransformed() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/for-with-ifs-and-jumps-transformed"),
         input = """
           for (init; cond; incr) {
             if (a) {
@@ -399,6 +409,7 @@ class TypeStageTest {
 
     @Test
     fun minimalForOfTransformed() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/minimal-for-of-transformed"),
         input = """for (let x of ["foo"]) { console.log(x) }""",
         stage = Stage.Type,
         want = """
@@ -444,13 +455,13 @@ class TypeStageTest {
             |    ```
             |  }
             |}
-        """.trimMargin()
-            .stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     @Test
     fun breakInForOf() = repeat(2) {
         assertModuleAtStage(
+            stageTestDir = StageTestDir("type/break-in-for-of"),
             input = """
                 |for (let x of ["a", "b", "c", "d"]) {
                 |  if (x == "c") { break }
@@ -503,12 +514,13 @@ class TypeStageTest {
                 |
                 |    ```
                 |}
-            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+            """.trimMargin(),
         )
     }
 
     @Test
     fun breakFromInnerLoopToOuter() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/break-from-inner-loop-to-outer"),
         stage = Stage.Type,
         input = """
             |do {
@@ -544,6 +556,7 @@ class TypeStageTest {
 
     @Test
     fun continueFromInnerLoopToOuter() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/continue-from-inner-loop-to-outer"),
         stage = Stage.Run,
         input = """
             |do {
@@ -590,6 +603,7 @@ class TypeStageTest {
 
     @Test
     fun blockPulledThroughDecl() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/block-pulled-through-decl"),
         input = "let x: int = (do { if (a) { 42 } else { 0 } })",
 
         stage = Stage.Type,
@@ -613,6 +627,7 @@ class TypeStageTest {
 
     @Test
     fun desugarPrefixOperators() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/desugar-prefix-operators"),
         stage = Stage.Run,
         input = "do { var x: Int = 3; ++x; ++x; --x; x }",
         moduleResultNeeded = true,
@@ -639,6 +654,7 @@ class TypeStageTest {
 
     @Test
     fun desugarPostfixOperators() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/desugar-postfix-operators"),
         stage = Stage.Run,
         // The increment from the last one intentionally doesn't show in the result
         input = "do { var x: Int = 3; x++; x++; x--; x++ }",
@@ -686,6 +702,7 @@ class TypeStageTest {
 
     @Test
     fun desugarCompoundAssignments() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/desugar-compound-assignments"),
         stage = Stage.Run,
         input = "do { var x: Int = 10; x -= 9; x += 4; x *= 3; x /= 5; x }",
         //               10       1       5      15       3  3
@@ -731,6 +748,7 @@ class TypeStageTest {
 
     @Test
     fun desugarCompoundAssignmentsComplexRHS() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/desugar-compound-assignments-complex-r-h-s"),
         stage = Stage.Run,
         input = "var x: Int = 10; var y: Int = 1; x += (y + 1); x",
         want = """
@@ -744,6 +762,7 @@ class TypeStageTest {
     @Test
     @Suppress("SpellCheckingInspection") // Fixing "Brahmagupta's" triggers other lint rules
     fun brahmaguptasRevenge() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/brahmaguptas-revenge"),
         stage = Stage.Run,
         input = "(0 / 0) orelse 0",
         moduleResultNeeded = true,
@@ -773,6 +792,7 @@ class TypeStageTest {
 
     @Test
     fun returningUntyped() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/returning-untyped"),
         stage = Stage.Type,
         input = "fn { return 42 }",
         moduleResultNeeded = true,
@@ -819,6 +839,7 @@ class TypeStageTest {
 
     @Test
     fun returningWithReturnTypeMetadata() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/returning-with-return-type-metadata"),
         stage = Stage.Type,
         input = "fn () : Int { return 42 }",
         moduleResultNeeded = true,
@@ -865,6 +886,7 @@ class TypeStageTest {
 
     @Test
     fun returnThatViolatesReturnType() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/return-that-violates-return-type"),
         stage = Stage.GenerateCode,
         input = "fn () : Boolean { return 42 }",
         moduleResultNeeded = true,
@@ -925,6 +947,7 @@ class TypeStageTest {
 
     @Test
     fun deepStringToString() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/deep-string-to-string"),
         stage = Stage.Type,
         // Only one of these toStrings is actually needed.
         input = "fn (i: Int): String { i.toString().toString().toString() }",
@@ -948,6 +971,7 @@ class TypeStageTest {
 
     @Test
     fun fnWithMixedReturnAndImpliedResultPaths() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/fn-with-mixed-return-and-implied-result-paths"),
         stage = Stage.Type,
         input = "fn(b) { if (b) { return 1 } 0 }",
         moduleResultNeeded = true,
@@ -992,24 +1016,23 @@ class TypeStageTest {
 
     @Test
     fun yieldsSeparated() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/yields-separated"),
         stage = Stage.Type,
-        provisionModule = { module: Module, _ ->
-            val input = $$"""
-                |ignore { (): GeneratorResult<Empty> extends GeneratorFn =>
-                |  while (true) {
-                |    "${ 123 }";
-                |    yield;
-                |  }
-                |}
-            """.trimMargin()
+        provisionModule = { module: Module, moduleAdvancer, rfl ->
             module.addEnvironmentBindings(
                 mapOf(BuiltinName(ImpureIgnoreFn.name) to Value(ImpureIgnoreFn)),
             )
-            module.deliverContent(
-                ModuleSource(
-                    filePath = testCodeLocation, fetchedContent = input,
-                    languageConfig = StandaloneLanguageConfig,
-                ),
+            provisionModuleForStageTest(
+                $$"""
+                    |ignore { (): GeneratorResult<Empty> extends GeneratorFn =>
+                    |  while (true) {
+                    |    "${ 123 }";
+                    |    yield;
+                    |  }
+                    |}
+                """.trimMargin(),
+                StandaloneLanguageConfig,
+                module, moduleAdvancer, rfl,
             )
         },
         want = """
@@ -1133,6 +1156,7 @@ class TypeStageTest {
 
     @Test
     fun functionWithArgumentsAndReturnType() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/function-with-arguments-and-return-type"),
         stage = Stage.Type,
         input = """
         fn sum2i(x: Int, y: Int): Int {
@@ -1180,6 +1204,7 @@ class TypeStageTest {
 
     @Test
     fun typeMismatchInCall() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/type-mismatch-in-call"),
         stage = Stage.Type,
         input = """
         |let i(x: Int) { x }
@@ -1214,11 +1239,12 @@ class TypeStageTest {
         |      ```
         |  }
         |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     @Test
     fun ifNotNullMulti() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/if-not-null-multi"),
         stage = Stage.Type,
         // TODO Support auto-not-null on multiple conditions. Or after blocks with early exit. Or ...
         // TODO Meanwhile, this provides some exploration fodder for such work in the future.
@@ -1276,6 +1302,7 @@ class TypeStageTest {
 
     @Test
     fun ifVsNestedIf() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/if-vs-nested-if"),
         stage = Stage.Type,
         input = """
             |export let useIf(i: Int) { if (i < 0) { -1 } else if (i > 0) { 1 } else { 0 } }
@@ -1372,6 +1399,7 @@ class TypeStageTest {
 
     @Test
     fun ifElseResultNeeded() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/if-else-result-needed"),
         stage = Stage.Type,
         input = """
             |if (a == b) { c } else { d }
@@ -1397,6 +1425,7 @@ class TypeStageTest {
 
     @Test
     fun ifIsNullResultNeeded() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/if-is-null-result-needed"),
         stage = Stage.Type,
         input = """
             |export let thing(x: Int?): Int { if (x == null) { 0 } else { x + 1 } }
@@ -1428,6 +1457,7 @@ class TypeStageTest {
 
     @Test
     fun staticAccess() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/static-access"),
         stage = Stage.Run,
         input = """
             |class C { public static let foo = "foo"; }
@@ -1443,6 +1473,7 @@ class TypeStageTest {
 
     @Test
     fun amazingEvaporatingClasses() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/amazing-evaporating-classes"),
         stage = Stage.Type,
         input = """
         interface I {
@@ -1491,6 +1522,7 @@ class TypeStageTest {
 
     @Test
     fun explicitTypeArgumentsRemainInTree() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/explicit-type-arguments-remain-in-tree"),
         stage = Stage.Type,
         want = """
         {
@@ -1533,14 +1565,7 @@ class TypeStageTest {
         }
         """.trimIndent(),
         moduleResultNeeded = true,
-    ) { module, _ ->
-        module.deliverContent(
-            ModuleSource(
-                filePath = testCodeLocation,
-                fetchedContent = "echo<Int>(42)",
-                languageConfig = StandaloneLanguageConfig,
-            ),
-        )
+    ) { module, moduleAdvancer, rfl ->
         module.addEnvironmentBindings(
             mapOf(
                 BuiltinName("echo") to Value(
@@ -1571,10 +1596,16 @@ class TypeStageTest {
                 ),
             ),
         )
+        provisionModuleForStageTest(
+            "echo<Int>(42)",
+            StandaloneLanguageConfig,
+            module, moduleAdvancer, rfl,
+        )
     }
 
     @Test
     fun implicitReturnForDocGenre() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/implicit-return-for-doc-genre"),
         stage = Stage.Type,
         genre = Genre.Documentation,
         input = """
@@ -1605,6 +1636,7 @@ class TypeStageTest {
 
     @Test
     fun skippedAndSwappedArgs() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/skipped-and-swapped-args"),
         stage = Stage.Type,
         // Purposely include named args with side effects to show it's ok because temporaries.
         input = """
@@ -1660,8 +1692,9 @@ class TypeStageTest {
         """.trimMargin(),
     )
 
-    @Test
-    fun deepDefaultMethod() = assertModuleAtStage( // See issue#1305
+    @Test // See issue#1305
+    fun deepDefaultMethod() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/deep-default-method"),
         stage = Stage.Run,
         input = """
             |interface A { public hi(): String { "hello" } }
@@ -1679,6 +1712,7 @@ class TypeStageTest {
 
     @Test
     fun bareReturnVoid() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/bare-return-void"),
         stage = Stage.Type,
         input = """
             |let f(returnEarly: Boolean): Void {
@@ -1716,6 +1750,7 @@ class TypeStageTest {
 
     @Test
     fun makeEmptyExplicitVoid() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/make-empty-explicit-void"),
         stage = Stage.Type,
         input = """
             |let f(): Void {}
@@ -1746,6 +1781,7 @@ class TypeStageTest {
 
     @Test
     fun issue1828MissingReturn() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/issue1828-missing-return"),
         stage = Stage.Type,
         input = """
             |let a(i: List<Int>): List<Int> {
@@ -1782,6 +1818,7 @@ class TypeStageTest {
 
     @Test
     fun extensionHintsResolved() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/extension-hints-resolved"),
         stage = Stage.Type,
         moduleResultNeeded = true,
         input = """
@@ -1830,6 +1867,7 @@ class TypeStageTest {
 
     @Test
     fun staticExtensionHintsResolved() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/static-extension-hints-resolved"),
         stage = Stage.Type,
         moduleResultNeeded = true,
         input = """
@@ -1885,6 +1923,7 @@ class TypeStageTest {
 
     @Test
     fun bindingCalleesNotPulledOut() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/binding-callees-not-pulled-out"),
         input = $$"""
             |let f(hi: String): Void {
             |  let s: String;
@@ -1923,6 +1962,16 @@ class TypeStageTest {
 
     @Test
     fun importedExtensionsUsable() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/imported-extensions-usable"),
+        input = """
+            |let { intHalf } = import("../half");
+            |console.log(84.half().toString());
+            |$TEST_INPUT_MODULE_BREAK ../half/half.temper
+            |@extension("half")
+            |export let intHalf(x: Int): Int {
+            |  x / 2
+            |}
+        """.trimMargin(),
         stage = Stage.Type,
         want = """
             |{
@@ -1938,43 +1987,12 @@ class TypeStageTest {
             |        ```
             |  }
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
-        provisionModule = { module, moduleAdvancer ->
-            val otherModule = moduleAdvancer.createModule(
-                ModuleName(
-                    sourceFile = dirPath("half"),
-                    libraryRootSegmentCount = 1,
-                    isPreface = false,
-                ),
-                module.console,
-            )
-            otherModule.deliverContent(
-                ModuleSource(
-                    filePath = filePath("half", "half.temper"),
-                    fetchedContent = """
-                        |@extension("half")
-                        |export let intHalf(x: Int): Int {
-                        |  x / 2
-                        |}
-                    """.trimMargin(),
-                    languageConfig = StandaloneLanguageConfig,
-                ),
-            )
-            module.deliverContent(
-                ModuleSource(
-                    filePath = testCodeLocation,
-                    fetchedContent = """
-                        |let { intHalf } = import("../half");
-                        |console.log(84.half().toString());
-                    """.trimMargin(),
-                    languageConfig = StandaloneLanguageConfig,
-                ),
-            )
-        },
+        """.trimMargin(),
     )
 
     @Test
     fun unaryPlusWashesOut() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/unary-plus-washes-out"),
         stage = Stage.FunctionMacro,
         input = """
             |// For these first two, the unary plus survives to the typer
@@ -2039,11 +2057,12 @@ class TypeStageTest {
             |      ```
             |  }
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     @Test
     fun orElsePanic() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/or-else-panic"),
         stage = Stage.Type,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
         moduleResultNeeded = true,
@@ -2084,11 +2103,12 @@ class TypeStageTest {
             |      ```
             |  }
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     @Test
     fun taggedString() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/tagged-string"),
         stage = Stage.Type,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
         input = $$"""
@@ -2121,12 +2141,13 @@ class TypeStageTest {
             |      ```
             |  }
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     /** Test overload decorations. */
     @Test
     fun overloadedMethods() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/overloaded-methods"),
         stage = Stage.Type,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
         input = """
@@ -2216,12 +2237,13 @@ class TypeStageTest {
             |      ```
             |  }
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     /** Test overload decorations. */
     @Test
     fun overriddenAndUnoverriddenOverloadedMethods() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/overridden-and-unoverridden-overloaded-methods"),
         stage = Stage.Type,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
         input = $$"""
@@ -2279,11 +2301,12 @@ class TypeStageTest {
             |      ```
             |  }
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     @Test
     fun overloadOnGenerics() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/overload-on-generics"),
         stage = Stage.Type,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
         input = $$"""
@@ -2339,7 +2362,7 @@ class TypeStageTest {
             |      ```
             |  }
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     /**
@@ -2348,6 +2371,7 @@ class TypeStageTest {
      */
     @Test
     fun overloadedMethodsWrong() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/overloaded-methods-wrong"),
         stage = Stage.Type,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
         input = """
@@ -2423,7 +2447,7 @@ class TypeStageTest {
             |      ```
             |  }
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 }
 

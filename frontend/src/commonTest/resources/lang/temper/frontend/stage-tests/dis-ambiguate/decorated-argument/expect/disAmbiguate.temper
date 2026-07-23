@@ -1,0 +1,1 @@
+let(\word, f, nym`@foo`(let x /* aka x */: T, 1), fn {})

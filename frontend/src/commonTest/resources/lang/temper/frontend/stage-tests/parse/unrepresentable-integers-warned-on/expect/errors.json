@@ -1,0 +1,8 @@
+[
+    {
+        "template": "Int32OutOfBounds",
+        "values": [
+            2.147483648e+9
+        ]
+    }
+]

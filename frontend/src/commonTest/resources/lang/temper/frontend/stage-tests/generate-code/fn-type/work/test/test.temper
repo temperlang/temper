@@ -1,0 +1,2 @@
+let f: fn (Int): Int = fn (x: Int): Int { x + 1 };
+f(41)

@@ -1,0 +1,28 @@
+@typeDecl(Anon__0) @stay let t#0 = type (Anon__0);
+class(\concrete, true, @typeDefined(Anon__0) fn {
+    Anon__0 extends AnyValue;
+    @constructorProperty @property(\_x) @maybeVar @visibility(\private) let _x__5;
+    @property(\x) @visibility(\public) var x__6;
+    @method(\x) @getter @fn let nym`get.x__7` = fn nym`get.x`(@impliedThis(Anon__0) this__2: Anon__0) {
+      fn__8: do {
+        do_iget__x(type (Anon__0), this(Anon__0))
+      }
+    };
+    @method(\x) @setter @fn let nym`set.x__9` = fn nym`set.x`(@impliedThis(Anon__0) this__3: Anon__0, newValue__10 /* aka newValue */) /* return__0 */: Void {
+      fn__11: do {
+        do {
+          let t#1;
+          do_iset__x(type (Anon__0), this(Anon__0), t#1 = newValue__10);
+          t#1
+        }
+      }
+    };
+    @method(\constructor) @visibility(\public) let constructor__12 = fn constructor(@impliedThis(Anon__0) this__13: Anon__0, _x__14 /* aka _x */) /* return__1 */: Void {
+      do {
+        let t#2;
+        do_iset__x(type (Anon__0), this(Anon__0), t#2 = _x__14);
+        t#2
+      };
+    };
+});
+type (Anon__0)

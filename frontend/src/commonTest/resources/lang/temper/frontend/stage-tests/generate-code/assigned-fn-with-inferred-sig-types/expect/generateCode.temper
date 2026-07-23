@@ -1,0 +1,4 @@
+@fn @reach(\none) let funny__0: (fn (Int32): String);
+funny__0 = (@stay fn funny(n__0 /* aka n */) /* return__0 */{
+    return__0 = do_call_toString(n__0)
+})

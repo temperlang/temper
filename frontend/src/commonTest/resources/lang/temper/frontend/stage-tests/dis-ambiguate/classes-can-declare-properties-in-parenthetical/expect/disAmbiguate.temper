@@ -1,0 +1,8 @@
+@typeDecl(Point__0) @hoistLeft(true) @resolution(Point__0) @stay let Point = type (Point__0);
+class(\word, Point, \concrete, true, @typeDefined(Point__0) fn {
+    Point__0 extends AntValue;
+    @constructorProperty @maybeVar @visibility(\public) let x /* aka x */: Float64;
+    @constructorProperty @maybeVar @visibility(\public) let y /* aka y */: Float64;
+    @visibility(\public) let distanceFromOrigin: Float64 = (x * x + y * y).sqrt();
+});
+Point

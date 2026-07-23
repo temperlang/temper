@@ -1,0 +1,10 @@
+interface A {}
+class B extends A {}
+class C extends A {}
+// Basic and upcast are fine. No warnings.
+let bVals = new Map([new Pair("a", new B())]);
+let aVals = new Map([new Pair("a", new B() as A)]);
+// Samecast should still get a warning.
+let bbVals = new Map([new Pair("a", new B() as B)]);
+// Upcheck should also get a warning. Here we use a different subtype for clear message distinction.
+let isSub = new C() is A;

@@ -1,0 +1,5 @@
+export let f(x: Int32): Int32 {
+  var y = x;
+  y--;
+  ++y
+}

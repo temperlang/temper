@@ -1,0 +1,8 @@
+@fn let `test//`.f, @fn @reach(\none) g__0, `test//`.hi;
+`test//`.hi = list<Int32>(1, 2, 3);
+g__0 = (@stay fn g(b__0 /* aka b */: Int32) /* return__0 */: Int32 {
+    return__0 = b__0
+});
+`test//`.f = (@stay fn f(a__0 /* aka a */: Int32) /* return__1 */: Int32 {
+    return__1 = 1
+})

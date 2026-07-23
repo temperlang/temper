@@ -1,0 +1,4 @@
+@typeDecl(I__0) @stay @foo @reach(\none) let I__0;
+I__0 = type (I__0);
+@typePlaceholder(I__0) @reach(\none) let typePlaceholder#0: Empty;
+typePlaceholder#0 = {class: Empty__0}

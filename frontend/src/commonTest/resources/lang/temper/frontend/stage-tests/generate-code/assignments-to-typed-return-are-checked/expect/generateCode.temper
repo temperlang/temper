@@ -1,0 +1,5 @@
+let return__4, @fn f__0;
+f__0 = (@stay fn f(x__0 /* aka x */) /* return__1 */: Int32 {
+    return__1 = x__0
+});
+return__4 = (fn f)

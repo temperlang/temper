@@ -1,0 +1,6 @@
+do {};
+nym`@foo`(@typeDecl(I__0) @hoistLeft(true) @resolution(I__0) @stay let I = type (I__0));
+interface(\word, I, \concrete, false, @typeDefined(I__0) fn {
+    I__0 extends AnyValue
+});
+I

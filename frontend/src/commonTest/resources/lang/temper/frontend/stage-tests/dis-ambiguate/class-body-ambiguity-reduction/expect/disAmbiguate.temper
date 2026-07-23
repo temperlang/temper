@@ -1,0 +1,57 @@
+@typeDecl(C__0) @hoistLeft(true) @resolution(C__0) @stay let C = type (C__0);
+class(\word, C, \concrete, true, @typeDefined(C__0) fn {
+    C__0 extends AnyValue;
+    REM("This is a class body", null, false);
+    @property(\decl) var decl = 0;
+    @property(\cDecl) let cDecl;
+    @property(\property0) @maybeVar let property0;
+    @property(\property1) @maybeVar @visibility(\public) let property1: T;
+    @property(\property2) @maybeVar let property2 = initial;
+    @property(\property3) @maybeVar let property3: T = initial;
+    @method(\method1) let method1 = fn(\word, method1, @impliedThis(C__0) let this__1: C__0, fn {
+        123
+    });
+    @method(\method2) let method2 = fn(\word, method2, @impliedThis(C__0) let this__2: C__0, \outType, T, fn {
+        123
+    });
+    @method(\method3) let method3 = fn(\word, method3, @impliedThis(C__0) let this__3: C__0, @default(123) let x /* aka x */: U, fn {
+        123
+    });
+    @method(\method4) let method4 = fn(\word, method4, @impliedThis(C__0) let this__4: C__0, let x /* aka x */: V, fn {
+        123
+    });
+    @method(\p) @getter let nym`get.p` = fn(\word, nym`get.p`, nym`@Foo`(@impliedThis(C__0) let this__5: C__0), \outType, T, fn {
+        property1
+    });
+    @method(\p) @setter let nym`set.p` = fn(\word, nym`set.p`, @impliedThis(C__0) let this__6: C__0, let x /* aka x */, \outType, type (Void), fn {
+        this(C__0).property1 = x
+    });
+});
+do(fn {
+    REM("This is not a class body, and the parts about properties/methods are ALL LIES!", null, false);
+    var decl = 0;
+    let cDecl;
+    property0;
+    nym`@public`((property1) : (T));
+    property2 = initial;
+    ((property3) : (T)) = initial;
+    method1(fn {
+        123
+    });
+    method2(\outType, T, fn {
+        123
+    });
+    method3(error (), fn {
+        123
+    });
+    REM("Error on line 24", null, false);
+    let(\word, method4, let x /* aka x */: V, fn {
+        123
+    });
+    get(\word, p, nym`@Foo`(this()), \outType, T, fn {
+        property1
+    });
+    set(\word, p, x, fn {
+        this().property1 = x
+    })
+})

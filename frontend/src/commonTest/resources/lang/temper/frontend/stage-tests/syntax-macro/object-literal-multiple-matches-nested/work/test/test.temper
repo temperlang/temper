@@ -1,0 +1,5 @@
+class Apple(private hi: Int) {}
+let nest(): Void {
+  class Banana(private hi: Int, public ha: Int = 0) {}
+  { hi: 5 }
+}

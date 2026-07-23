@@ -1,0 +1,34 @@
+## Here are the auto-imports
+  @stay @imported(\(`std//regex/`.Sequence)) let Sequence__0;
+  Sequence__0 = type (Sequence);
+  @imported(\(`std//regex/`.CodePoints)) let CodePoints__0;
+  CodePoints__0 = type (CodePoints);
+  @imported(\(`std//regex/`.Dot)) let Dot__0;
+  Dot__0 = `std//regex/`.Dot;
+  @imported(\(`std//regex/`.Repeat)) let Repeat__0;
+  Repeat__0 = type (Repeat);
+  @imported(\(`std//regex/`.End)) let End__0;
+  End__0 = `std//regex/`.End;
+  let r1__0;
+## Types have been inlined into `new` operators
+  r1__0 = do_call_compiled(new Sequence(list(new CodePoints("a"), Dot__0, new Repeat(new CodePoints("b"), 0, null, false))));
+  let r2__0;
+  r2__0 = do_call_compiled(new Sequence(list(new CodePoints("a"), Dot__0, End__0, new CodePoints("{b"), new Repeat(new CodePoints("}"), 0, null, false))));
+  let r3__0;
+## (/g) unrecognized in rgx(list("(?/g)a.b*"), list());
+  r3__0 = error (UnrecognizedToken);
+  let b__0;
+  b__0 = r3__0;
+  let r4__0;
+## interpolation of b__0 not supported yet in r4 or r5
+  r4__0 = error (UnrecognizedToken);
+  let r5__0;
+  r5__0 = error (UnrecognizedToken);
+  let r6__0;
+  r6__0 = do_call_compiled(new Sequence__0(list(new CodePoints__0("a"), new Repeat__0(new CodePoints__0("."), 0, null, false))));
+  let r7__0;
+  r7__0 = do_call_compiled(new Sequence(list(new CodePoints("a"), Dot, new Repeat(new CodePoints("b"), 0, null))));
+  let s__0;
+  s__0 = "[a]";
+  let r8__0;
+  r8__0 = do_call_compiled(new Sequence__0(list(Dot__0, new CodePoints__0("[a]"), Dot__0)));

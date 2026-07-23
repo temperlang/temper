@@ -1,0 +1,5 @@
+let y = 123;
+when (x) {
+  case f(let y) -> handleIt();
+  else -> fallback();
+}

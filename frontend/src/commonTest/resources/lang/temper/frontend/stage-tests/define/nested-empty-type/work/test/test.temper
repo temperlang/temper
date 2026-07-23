@@ -1,0 +1,4 @@
+let functionThatNestsAType(): Void {
+    interface EmptyHelper {}    // <-- needs a placeholder at the top level
+    // See the comments in TmpLControlFlow and ClosureConvertClasses
+}

@@ -1,0 +1,5 @@
+let a(i: List<Int>): List<Int> {
+  if (i.length == 0) { return [] }; // One explicit return
+  let n = new ListBuilder<Int>();
+  n.map { (it): Int => 2 * it }      // One implied return
+}

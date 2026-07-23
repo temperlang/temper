@@ -1,0 +1,6 @@
+let pb = new PromiseBuilder<String>();
+let p = pb.promise;
+async { (): GeneratorResult<Empty> extends GeneratorFn =>
+  pb.complete("Hello, World!");
+}
+console.log(await p);

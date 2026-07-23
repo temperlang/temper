@@ -1,0 +1,13 @@
+let { theCount } = import("./the-count");
+
+theCount"""
+  "Zero: ${0}
+  "One: ${1}
+  "Two: ${2}
+  "Three: ${3}
+  "F\our: ${4}
+  "Five: ${5}
+  ;
+
+theCount"${6}, ${7}"
+

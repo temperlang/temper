@@ -1,0 +1,8 @@
+  @fn let f__0;
+  void;
+## And the comment just fades away.
+  f__0 = (@docString(...) @stay fn f(x__0 /* aka x */: Int32) /* return__0 */: Int32 {
+      fn__0: do {
+        x__0
+      }
+  });

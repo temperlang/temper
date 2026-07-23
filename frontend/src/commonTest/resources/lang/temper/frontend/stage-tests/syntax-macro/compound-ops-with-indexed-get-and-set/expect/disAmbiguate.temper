@@ -1,0 +1,14 @@
+let `test//`.myList = do(fn {
+    let b: ListBuilder<Int32> = list(1, 2).toListBuilder();
+    do {
+      let t#0;
+      t#0 = b;
+      t#0.set(0, (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(t#0.get(0), 1))
+    };
+    do {
+      let t#1;
+      t#1 = b;
+      t#1.set(1, (nym`do_call__*_`[TimesIntInt, TimesIntInt64, TimesFltFlt])(t#1.get(1), 2))
+    };
+    b.toList()
+});

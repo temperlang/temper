@@ -1,0 +1,1 @@
+export class C(public x: Int, public y: Int = 0, public z: Int = 0) {}

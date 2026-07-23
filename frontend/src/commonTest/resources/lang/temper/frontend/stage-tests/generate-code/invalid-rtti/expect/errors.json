@@ -1,0 +1,15 @@
+[
+    "Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: \u003c[String]\u003e from AnyValue!",
+    "Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: \u003c[Int32]\u003e from AnyValue!",
+    "Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: \u003c[Boolean]\u003e from AnyValue!",
+    "Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: \u003c[String]\u003e from MapKey!",
+    "Type parameters cannot be targeted with is or as runtime type checks: \u003c[T__1]\u003e from AnyValue!",
+    "Unnecessary type check to String from expression with type String which is a subtype",
+    "Unnecessary type check to Boolean from expression with type Boolean which is a subtype",
+    "Unnecessary type check to Int32 from expression with type Int32 which is a subtype",
+    "Runtime type check from String to Int32 can never succeed!",
+    "Runtime type check from Int32 to String can never succeed!",
+    "Runtime type check from Null to Int32 can never succeed!",
+    "Unrelated types cannot be targeted with is or as runtime type checks: \u003c[Float64]\u003e from MapKey!",
+    "Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: \u003c[Int32]\u003e from MapKey!"
+]

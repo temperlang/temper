@@ -1,0 +1,28 @@
+class C { // This is a class body
+  var decl = 0;
+  let cDecl;
+  property0;
+  public property1: T;
+  property2 = initial;
+  property3: T = initial;
+  method1() { 123 }
+  method2(): T { 123 }
+  method3(x: U = 123) { 123 }
+  let method4(x: V) { 123 }
+  get p(@Foo this): T { property1 }
+  set p(x) { this.property1 = x }
+}
+do { // This is not a class body, and the parts about properties/methods are ALL LIES!
+  var decl = 0;
+  let cDecl;
+  property0;
+  public property1: T;
+  property2 = initial;
+  property3: T = initial;
+  method1() { 123 }
+  method2(): T { 123 }
+  method3(x: U = 123) { 123 } // Error on line 24
+  let method4(x: V) { 123 }
+  get p(@Foo this): T { property1 }
+  set p(x) { this.property1 = x }
+}

@@ -1,0 +1,30 @@
+{
+    "AnyValue": {
+        "abstract": true
+    },
+    "C": {
+        "word": "C",
+        "properties": [
+            {
+                "name": "me",
+                "symbol": "me",
+                "abstract": false,
+                "visibility": "private"
+            }
+        ],
+        "methods": [
+            {
+                "name": "constructor",
+                "kind": "Constructor",
+                "visibility": "public",
+                "open": false
+            }
+        ],
+        "supers": [
+            "AnyValue__0"
+        ]
+    },
+    "Void": {
+        "supers": []
+    }
+}

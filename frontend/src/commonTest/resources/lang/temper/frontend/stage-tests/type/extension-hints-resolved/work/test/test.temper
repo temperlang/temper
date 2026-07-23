@@ -1,0 +1,8 @@
+@extension("isZero")
+let isZero(x: Int): Boolean { x == 0 }
+class Zero {
+  public let isZero(): Boolean { true }
+}
+
+0.isZero() && new Zero().isZero()
+

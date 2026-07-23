@@ -1,0 +1,15 @@
+@method(\constructor) @visibility(\public) @fn @stay @fromType(Something__0) @reach(\none) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(Something__0) this__0: Something__0) /* return__0 */: Void {
+    return__0 = void
+});
+@property(\blah) @visibility(\public) @stay @fromType(Something__0) @reach(\none) let blah__0;
+@method(\blah) @getter @visibility(\public) @fn @stay @fromType(Something__0) @reach(\none) let nym`get.blah__1`;
+nym`get.blah__1` = (@stay fn nym`get.blah`(@impliedThis(Something__0) this__1: Something__0) /* return__1 */{
+    return__1 = 5
+});
+@method(\blah) @setter @visibility(\public) @fn @stay @fromType(Something__0) @reach(\none) let nym`set.blah__2`;
+nym`set.blah__2` = (@stay fn nym`set.blah`(@impliedThis(Something__0) this__2: Something__0, x__0 /* aka x */: Int32) /* return__2 */: Void {
+    return__2 = void
+});
+@typeDecl(Something__0) @stay @reach(\none) let Something__0;
+Something__0 = type (Something__0)

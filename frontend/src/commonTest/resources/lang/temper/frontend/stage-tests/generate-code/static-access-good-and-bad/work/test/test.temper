@@ -1,0 +1,13 @@
+class C {
+  private static ap: Int = 1;
+  public static a: Int = ap + C.ap;
+  private bp: Int = 1;
+  private b: Int = bp + 1;
+  public static f(i: Int): Int { i + a + C.a + ap + C.ap }
+  private static fp(i: Int): Int { i + 1 }
+  public g(i: Int): Int { 2 * C.f(i) * C.fp(i) * bp * b * this.bp * this.b }
+  public h(i: Int): Int { 2 * f(i) * fp(i) * g(i) * this.g(i) }
+  public static g2(i: Int): Int { 2 * C.f(i) * C.fp(i) }
+  public static h2(i: Int): Int { 2 * f(i) * fp(i) }
+}
+let g3(i: Int): Int { 2 * C.f(i) * new C().g(i) * C.a * C.ap }

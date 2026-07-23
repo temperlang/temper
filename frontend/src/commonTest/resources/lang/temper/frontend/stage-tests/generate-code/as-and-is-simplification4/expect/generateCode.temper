@@ -1,0 +1,43 @@
+@fn @reach(\none) let f__0;
+f__0 = (@stay fn f(i__0 /* aka i */: StringIndexOption?) /* return__0 */: (Int32 | Bubble) {
+    var t#0, t#1, t#2, t#3, fail#0;
+    if (isNull(i__0)) {
+      t#0 = true
+    } else {
+      t#0 = i__0 is StringIndex
+    };
+    if (t#0) {
+      if (isNull(i__0)) {
+        t#3 = null
+      } else {
+        t#3 = assertAs(i__0, StringIndex)
+      };
+      let j__0;
+      if (isNull(t#3)) {
+        j__0 = null
+      } else {
+        t#1 = hs(fail#0, t#3 as StringIndex);
+        if (fail#0) {
+          bubble()
+        };
+        j__0 = t#1
+      };
+      if (!isNull(j__0)) {
+        t#2 = j__0 is StringIndex
+      } else {
+        t#2 = false
+      };
+      if (t#2) {
+        return__0 = 1
+      } else {
+        return__0 = 2
+      }
+    } else {
+      let n__0;
+      if (!isNull(i__0)) {
+        bubble()
+      };
+      n__0 = null;
+      return__0 = 3
+    }
+})

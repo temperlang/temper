@@ -1,0 +1,5 @@
+class(private _x) {
+  public x;
+  get x() { _x }
+  set x(newValue) { _x = newValue }
+}

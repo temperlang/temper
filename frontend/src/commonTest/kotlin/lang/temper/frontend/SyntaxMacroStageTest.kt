@@ -8,8 +8,6 @@ import lang.temper.common.NoneShortOrLong
 import lang.temper.common.json.JsonArray
 import lang.temper.common.json.JsonObject
 import lang.temper.common.json.JsonString
-import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
-import lang.temper.common.testCodeLocation
 import lang.temper.env.InterpMode
 import lang.temper.interp.MetadataDecorator
 import lang.temper.interp.importExport.STANDARD_LIBRARY_NAME
@@ -40,6 +38,7 @@ import kotlin.test.assertTrue
 class SyntaxMacroStageTest {
     @Test
     fun blockScoping() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/block-scoping"),
         stage = Stage.Run,
         input = """
         let a = 1;
@@ -150,6 +149,7 @@ class SyntaxMacroStageTest {
      */
     @Test
     fun useInLetInitializer() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/use-in-let-initializer"),
         stage = Stage.SyntaxMacro,
         input = """
         let i = 0;
@@ -200,6 +200,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun backReferenceInFormalInitializer() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/back-reference-in-formal-initializer"),
         stage = Stage.SyntaxMacro,
         input = "let f(i = j, j = 42, k = f) {}",
         want = """
@@ -284,6 +285,7 @@ class SyntaxMacroStageTest {
      */
     @Test
     fun letOfFn() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/let-of-fn"),
         stage = Stage.SyntaxMacro,
         input = """
         let f = fn (x) {};
@@ -397,6 +399,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun multiDeclarations() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/multi-declarations"),
         stage = Stage.SyntaxMacro,
         input = "let [a, b is S, c = x]: T = f()",
         moduleResultNeeded = true,
@@ -475,6 +478,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun assignmentsInMultiDeclsResolveProperly() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/assignments-in-multi-decls-resolve-properly"),
         stage = Stage.SyntaxMacro,
         input = "let [x, y] = f(); x + y",
         moduleResultNeeded = true,
@@ -516,6 +520,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun quotedNames() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/quoted-names"),
         stage = Stage.SyntaxMacro,
         input = """
         let nym`x`, y;
@@ -538,6 +543,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun thisThisIsOkButThatThisIsNot() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/this-this-is-ok-but-that-this-is-not"),
         stage = Stage.SyntaxMacro,
         input = """
             |class C { private me = this }
@@ -604,6 +610,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun makingThisUnambiguous() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/making-this-unambiguous"),
         // TODO: IdRenumberer is not used to rewrite inlined values.
         // That affects the rendering of reified types.
         stage = Stage.SyntaxMacro,
@@ -688,6 +695,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun dotsToSymbols() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/dots-to-symbols"),
         stage = Stage.SyntaxMacro,
         input = """
             |let foo = f(), bar;
@@ -743,6 +751,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun getterAndSetterInheritVisibilityFromProperty() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/getter-and-setter-inherit-visibility-from-property"),
         stage = Stage.SyntaxMacro,
         input = """
             |class(private _x) {
@@ -813,6 +822,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun methodWithoutBody() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/method-without-body"),
         stage = Stage.SyntaxMacro,
         input = """
         interface I {
@@ -844,6 +854,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun forLoopExtractsDeclarations() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/for-loop-extracts-declarations"),
         stage = Stage.SyntaxMacro,
         input = "for (var i = 0; i < 3; i += 1) { body; }",
         want = """
@@ -866,6 +877,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun forOfLoopVarAvailableInBody() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/for-of-loop-var-available-in-body"),
         // for...of loop's loop variable is visible only within the body.
         // It is scoped to the body, and to allow it to be visible within the
         // expression right of `of` would lead to confusion.
@@ -897,6 +909,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun forLoopExtractsMultipleDeclarations() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/for-loop-extracts-multiple-declarations"),
         stage = Stage.SyntaxMacro,
         input = "for (var i: Int = 0, x = 3; i < 3; i += 1) { body; }",
         want = """
@@ -919,6 +932,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun forLoopKeepsLabel() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/for-loop-keeps-label"),
         stage = Stage.SyntaxMacro,
         input = "label: for (var i = 0; i < 3; i += 1) { body; }",
         want = """
@@ -943,6 +957,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun forLoopExtractsDeclarationsMinimal() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/for-loop-extracts-declarations-minimal"),
         stage = Stage.SyntaxMacro,
         input = "for(;;) { body; }",
         want = """
@@ -962,6 +977,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun forLoopExtractsDeclarationsJustInit() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/for-loop-extracts-declarations-just-init"),
         stage = Stage.SyntaxMacro,
         input = "for(let i = 0;;) { body; }",
         want = """
@@ -984,6 +1000,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun forLoopLikeExtractsDeclarations() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/for-loop-like-extracts-declarations"),
         stage = Stage.SyntaxMacro,
         input = "foo (let i = 0; i < 3; i += 1) { body; }",
         want = """
@@ -1006,6 +1023,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun namesResolveToExportedNames() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/names-resolve-to-exported-names"),
         stage = Stage.SyntaxMacro,
         input = "export let x = 42; x",
         moduleResultNeeded = true,
@@ -1041,6 +1059,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun genericFn() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/generic-fn"),
         stage = Stage.Run,
         input = """
             |let identity<T extends AnyValue>(x: T): T { x }
@@ -1090,6 +1109,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun fnFormalArgsDoNotCrossScopes() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/fn-formal-args-do-not-cross-scopes"),
         stage = Stage.SyntaxMacro,
         input = """
             |let T = "T";
@@ -1119,6 +1139,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun classFormalArgsDoNotCrossScopes() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/class-formal-args-do-not-cross-scopes"),
         stage = Stage.SyntaxMacro,
         input = """
             |let T = "T";
@@ -1148,6 +1169,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun letFunctionBodyRequiredButCheckedLater() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/let-function-body-required-but-checked-later"),
         stage = Stage.SyntaxMacro,
         input = """let f()""",
         want = """
@@ -1170,6 +1192,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun letFunctionBodyRequiredWithoutName() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/let-function-body-required-without-name"),
         stage = Stage.SyntaxMacro,
         // Earlier, `let()` and `fn()` both hard crashed.
         input = """let()""",
@@ -1184,6 +1207,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun letFunctionNameRequired() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/let-function-name-required"),
         stage = Stage.SyntaxMacro,
         input = """let() {}""",
         want = """
@@ -1197,6 +1221,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun objectPunning() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/object-punning"),
         stage = Stage.SyntaxMacro,
         input = """
             |let x = 1;
@@ -1219,21 +1244,10 @@ class SyntaxMacroStageTest {
 
     @Test
     fun whoDecoratesTheDecorators() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/who-decorates-the-decorators"),
         stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
-        provisionModule = { module, _ ->
-            module.deliverContent(
-                ModuleSource(
-                    filePath = testCodeLocation,
-                    fetchedContent = """
-                        |// Stack many decorators on a declaration and make sure they eliminate themselves.
-                        |interface I {
-                        |  @foo("FOO") public static var thing;
-                        |}
-                    """.trimMargin(),
-                    languageConfig = StandaloneLanguageConfig,
-                ),
-            )
+        provisionModule = { module, moduleAdvancer, rfl ->
             // We need some more decorators to stack.  Invent one.
             val vFoo = Value(
                 MetadataDecorator(Symbol("foo"), argumentTypes = listOf(Types.string)) {
@@ -1245,6 +1259,16 @@ class SyntaxMacroStageTest {
                     ParsedName("@foo") to vFoo,
                     BuiltinName("@foo") to vFoo,
                 ),
+            )
+            provisionModuleForStageTest(
+                input = """
+                    |// Stack many decorators on a declaration and make sure they eliminate themselves.
+                    |interface I {
+                    |  @foo("FOO") public static var thing;
+                    |}
+                """.trimMargin(),
+                StandaloneLanguageConfig,
+                module, moduleAdvancer, rfl,
             )
         },
         want = """
@@ -1334,6 +1358,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun blockLambda() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/block-lambda"),
         stage = Stage.SyntaxMacro,
         input = "f { (arg: ArgType): ReturnType => arg }",
         want = """
@@ -1386,6 +1411,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun mutuallyReferencingInterfaceTypes() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/mutually-referencing-interface-types"),
         stage = Stage.SyntaxMacro,
         input = """
         |interface I { j: J }
@@ -1416,6 +1442,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun mutuallyReferencingClassTypes() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/mutually-referencing-class-types"),
         stage = Stage.SyntaxMacro,
         input = """
         |class C(private d: D?) {}
@@ -1461,6 +1488,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun mutuallyReferencingFunctionDefinition() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/mutually-referencing-function-definition"),
         stage = Stage.SyntaxMacro,
         input = """
         |// These do not converge since neither has a base case, but they demonstrate hoisting.
@@ -1495,6 +1523,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun rewriteConnectedDecorator() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/rewrite-connected-decorator"),
         // Fake std to get access to `@connected`.
         loc = ModuleName(
             sourceFile = filePath(
@@ -1536,6 +1565,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun reorder() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/reorder"),
         stage = Stage.SyntaxMacro,
         input = """
             |    let f(): Int { let i = 4; let g(): Int { i + j }; g() }
@@ -1567,6 +1597,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun genericFunctionInDocs() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/generic-function-in-docs"),
         stage = Stage.SyntaxMacro,
         genre = Genre.Documentation,
         input = "let f<T, U extends T>(x: T): U { x }",
@@ -1590,6 +1621,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun untypedFunArgs() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/untyped-fun-args"),
         stage = Stage.SyntaxMacro,
         genre = Genre.Documentation,
         input = "hi { (x: Int, y): String => x }",
@@ -1609,6 +1641,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun objectLiteralNoMatches() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/object-literal-no-matches"),
         stage = Stage.SyntaxMacro,
         input = """
         |{ hi: 5 }
@@ -1630,6 +1663,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun objectLiteralMultipleMatches() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/object-literal-multiple-matches"),
         stage = Stage.SyntaxMacro,
         input = """
         |class Apple(public hi: Int) {}
@@ -1643,6 +1677,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun staticMethods() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/static-methods"),
         stage = Stage.SyntaxMacro,
         input = """
             |class C {
@@ -1684,6 +1719,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun objectLiteralMultipleMatchesNested() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/object-literal-multiple-matches-nested"),
         stage = Stage.SyntaxMacro,
         // The ObjectLiterals functional test checks non-ambiguous cases for nested scopes, so check an ambiguous case
         // here to prove we still do that.
@@ -1700,16 +1736,17 @@ class SyntaxMacroStageTest {
 
     @Test
     fun objectLiteralOverloads() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/object-literal-overloads"),
         stage = Stage.SyntaxMacro,
         // At time of writing, these overloads fail at later stages but work correctly here.
         // Also, check usage both before and after type definition.
         input = """
-        |{ hi: 5 }
-        |class Thing {
-        |  public constructor(hi: Int) { }
-        |  public constructor(lo: Int) { }
-        |}
-        |{ lo: 5 }
+             |{ hi: 5 }
+             |class Thing {
+             |  public constructor(hi: Int) { }
+             |  public constructor(lo: Int) { }
+             |}
+             |{ lo: 5 }
         """.trimMargin(),
         manualCheck = { got ->
             // Check that we transformed both calls.
@@ -1722,6 +1759,7 @@ class SyntaxMacroStageTest {
     @Suppress("MaxLineLength")
     @Test
     fun storingDocStringWithFn() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/storing-doc-string-with-fn"),
         stage = Stage.Define,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(metadataValueDetail = NoneShortOrLong.Short),
         input = """
@@ -1771,11 +1809,12 @@ class SyntaxMacroStageTest {
             |      ```,
             |  },
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     @Test
     fun docStringsFromMarkdown() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/doc-strings-from-markdown"),
         stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(metadataValueDetail = NoneShortOrLong.Long),
         languageConfig = MarkdownLanguageConfig(),
@@ -1843,11 +1882,12 @@ class SyntaxMacroStageTest {
             |        ```,
             |  },
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     @Test
     fun storingDocStringWithType() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/storing-doc-string-with-type"),
         stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(metadataValueDetail = NoneShortOrLong.Long),
         input = """
@@ -1874,6 +1914,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun storingDocStringWithExportedType() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/storing-doc-string-with-exported-type"),
         stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(metadataValueDetail = NoneShortOrLong.Short),
         input = """
@@ -1900,6 +1941,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun commentsOnSettersAndGetters() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/comments-on-setters-and-getters"),
         stage = Stage.SyntaxMacro,
         input = """
             |class C {
@@ -1961,6 +2003,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun consoleBound() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/console-bound"),
         stage = Stage.SyntaxMacro,
         input = """
             |let console = getConsole("myConsole");
@@ -1985,6 +2028,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun chainNull() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/chain-null"),
         stage = Stage.SyntaxMacro,
         // Note that we currently can't properly infer `a != null` for `a.string.end` yet. TODO Infer such.
         input = """
@@ -2047,6 +2091,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun nullChainingDesugaring() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/null-chaining-desugaring"),
         stage = Stage.SyntaxMacro,
         input = """
             |let { C, g, complexSubject } = import("./c");
@@ -2121,6 +2166,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun consoleUnbound() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/console-unbound"),
         stage = Stage.SyntaxMacro,
         input = """
             |do { let console = getConsole("myConsole"); }
@@ -2148,6 +2194,9 @@ class SyntaxMacroStageTest {
 
     @Test
     fun referencedToPreResolvedPropertyNamesRecognizedAsThisReferences() = assertModuleAtStage(
+        stageTestDir = StageTestDir(
+            "syntax-macro/referenced-to-pre-resolved-property-names-recognized-as-this-references",
+        ),
         stage = Stage.SyntaxMacro,
         // Ensure that when a mixin uses a generated, resolved property name
         // that we infer the `this.` on it.
@@ -2183,8 +2232,8 @@ class SyntaxMacroStageTest {
             |      ```
             |  }
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
-    ) { module, _ ->
+        """.trimMargin(),
+    ) { module, _, _ ->
         val document = Document(module)
         val pos = Position(module.loc, 0, 0)
         val i = document.nameMaker.unusedSourceName(ParsedName("i"))
@@ -2238,6 +2287,7 @@ class SyntaxMacroStageTest {
         val problemLeft = input.indexOf(problemSubstring)
         val problemRight = problemLeft + problemSubstring.length
         assertModuleAtStage(
+            stageTestDir = StageTestDir("syntax-macro/no-property-constructor-properties-in-property-bag"),
             stage = Stage.SyntaxMacro,
             input = input,
             want = """
@@ -2282,6 +2332,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun setterInvocationUsedInExpressionContext() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/setter-invocation-used-in-expression-context"),
         stage = Stage.SyntaxMacro,
         input = """
             |// A chained assignment involving a setter invocation.
@@ -2304,11 +2355,12 @@ class SyntaxMacroStageTest {
             |      ```
             |  }
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     @Test
     fun malformedNumericLiteralErrors() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/malformed-numeric-literal-errors"),
         stage = Stage.SyntaxMacro,
         input = """
             |export let oneTwoThree = 123i6;
@@ -2330,6 +2382,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun desugarCompoundOp() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/desugar-compound-op"),
         stage = Stage.SyntaxMacro,
         input = """
             |var x = 1;
@@ -2371,12 +2424,13 @@ class SyntaxMacroStageTest {
             |      ```
             |  }
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
     )
 
     @Test
     fun compoundOpsWithGetterAndSetter() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/compound-ops-with-getter-and-setter"),
         stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
@@ -2453,6 +2507,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun compoundOpsWithIndexedGetAndSet() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/compound-ops-with-indexed-get-and-set"),
         stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
@@ -2510,6 +2565,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun nestedArithmetic() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/nested-arithmetic"),
         input = """
             |export let negStr(x: Int32): String {
             |  (-1 * x).toString()
@@ -2535,6 +2591,7 @@ class SyntaxMacroStageTest {
 
     @Test
     fun desugarPrefixOp() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/desugar-prefix-op"),
         stage = Stage.SyntaxMacro,
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
         input = """
@@ -2585,11 +2642,12 @@ class SyntaxMacroStageTest {
             |      ```
             |  }
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 
     @Test
     fun desugarPrefixOpWithComplexOperand() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/desugar-prefix-op-with-complex-operand"),
         stage = Stage.SyntaxMacro,
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
         input = """
@@ -2647,6 +2705,6 @@ class SyntaxMacroStageTest {
             |      ```
             |  }
             |}
-        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        """.trimMargin(),
     )
 }

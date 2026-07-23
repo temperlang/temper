@@ -1,0 +1,29 @@
+@fn let `test//`.useIf, @fn `test//`.useIfElse;
+`test//`.useIf = (@stay fn useIf(i__0 /* aka i */: Int32) /* return__0 */{
+    void;
+    fn__0: do {
+      if (i__0 < 0) {
+        return__0 = -1
+      } else if (i__0 > 0) {
+        return__0 = 1
+      } else {
+        return__0 = 0
+      };
+    }
+});
+`test//`.useIfElse = (@stay fn useIfElse(i__1 /* aka i */: Int32) /* return__1 */{
+    void;
+    fn__1: do {
+      if (i__1 < 0) {
+        return__1 = -1
+      } else {
+        if (i__1 > 0) {
+          return__1 = 1
+        } else {
+          return__1 = 0
+        };
+      };
+    }
+});
+let `test//`.a;
+`test//`.a = 1

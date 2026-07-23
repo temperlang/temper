@@ -1,0 +1,15 @@
+@fn let a__0;
+a__0 = (@stay fn a(i__0 /* aka i */: List<Int32>) /* return__1 */: (List<Int32>) {
+    void;
+    fn__0: do {
+      if (do_get_length(i__0) == 0) {
+        return__1 = list();
+        break fn__0;
+      };
+      let n__0;
+      n__0 = new ListBuilder<Int32>();
+      return__1 = do_call_map(n__0, @stay fn (it__0 /* aka it */) /* return__2 */: Int32 {
+          return__2 = 2 * it__0;
+      });
+    }
+})

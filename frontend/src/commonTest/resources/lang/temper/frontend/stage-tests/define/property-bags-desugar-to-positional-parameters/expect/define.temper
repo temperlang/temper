@@ -1,0 +1,14 @@
+  @stay @imported(\(`test//point/`.Point)) let Point__0;
+  Point__0 = type (Point);
+  let `test//`.p;
+## Here's a reworked property bag that we don't muck with, much.
+  `test//`.p = new Point(1, 2);
+  let `test//`.q;
+## This one becomes a do-block because we need to preserve OoO.
+  `test//`.q = do {
+    let y#0;
+    y#0 = do_get_y(`test//`.p);
+    let x#0;
+    x#0 = do_get_x(`test//`.p);
+    new Point(x#0, y#0)
+  };

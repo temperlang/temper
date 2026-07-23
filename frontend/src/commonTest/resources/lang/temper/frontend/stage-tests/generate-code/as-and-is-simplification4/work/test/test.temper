@@ -1,0 +1,13 @@
+let f(i: StringIndexOption?): Int throws Bubble {
+  if (i is StringIndex?) {
+    let j = i as StringIndex?;
+    if (j is StringIndex) {
+      1
+    } else {
+      2
+    }
+  } else {
+    let n = i as Never<StringIndexOption>?;
+    3
+  }
+}

@@ -1,0 +1,16 @@
+let x = 1;
+let x = 2;
+export let e = x;
+let f<F>(x: Int, y: F): Int {
+  let local = x;
+  let helper(z: Int): Int { local + z }
+  helper(1)
+}
+interface I<T> {
+  public x: T;
+  public get y(): Int;
+  public set y(newY: Int): Void;
+  public method(): Void;
+  public static staticMethod<T>(i: I<T>): Void { }
+}
+

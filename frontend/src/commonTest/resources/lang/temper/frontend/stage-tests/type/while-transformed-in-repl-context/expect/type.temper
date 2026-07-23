@@ -1,0 +1,5 @@
+let return__1;
+while (c) {
+  f();
+};
+return__1 = void

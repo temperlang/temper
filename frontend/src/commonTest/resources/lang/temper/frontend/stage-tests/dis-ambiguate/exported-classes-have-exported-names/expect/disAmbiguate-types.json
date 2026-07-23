@@ -1,0 +1,12 @@
+{
+    "C": {
+        "name": {
+            "type": "ExportedName",
+            "module": "test//",
+            "baseName": "C"
+        }
+    },
+    "AnyValue": {
+        "abstract": true
+    }
+}

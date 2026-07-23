@@ -1,0 +1,12 @@
+@constructorProperty @visibility(\public) @stay @fromType(Something__0) @reach(\none) let haha__0: Int32?;
+@fn @visibility(\public) @stay @fromType(Something__0) @reach(\none) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(Something__0) this__0: Something__0, haha__1 /* aka haha */: Int32?) /* return__0 */: Void {
+    setp(haha__0, this__0, haha__1);
+    return__0 = void
+});
+@fn @visibility(\public) @stay @fromType(Something__0) @reach(\none) let gethaha__0;
+gethaha__0 = (@stay fn (@impliedThis(Something__0) this__1: Something__0) /* return__1 */: (Int32?) {
+    return__1 = getp(haha__0, this__1)
+});
+@typeDecl(Something__0) @stay @reach(\none) let Something__0;
+Something__0 = type (Something__0)

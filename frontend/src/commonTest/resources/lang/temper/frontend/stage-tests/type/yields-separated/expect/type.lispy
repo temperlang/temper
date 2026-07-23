@@ -1,0 +1,217 @@
+[
+    "Block",
+    [
+        [
+            "Call",
+            [
+                [
+                    "RightName",
+                    "ignore"
+                ],
+                [
+                    "Fun",
+                    [
+                        [
+                            "Value",
+                            "\\returnDecl: Symbol"
+                        ],
+                        [
+                            "Decl",
+                            [
+                                [
+                                    "LeftName",
+                                    "return__0"
+                                ],
+                                [
+                                    "Value",
+                                    "\\ssa: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "void: Void"
+                                ]
+                            ]
+                        ],
+                        [
+                            "Block",
+                            [
+                                [
+                                    "Call",
+                                    [
+                                        [
+                                            "Value",
+                                            "nym`=`: Function"
+                                        ],
+                                        [
+                                            "LeftName",
+                                            "return__0"
+                                        ],
+                                        [
+                                            "Call",
+                                            [
+                                                [
+                                                    "Value",
+                                                    "adaptGeneratorFnSafe: Function"
+                                                ],
+                                                [
+                                                    "Fun",
+                                                    [
+                                                        [
+                                                            "Value",
+                                                            "\\returnDecl: Symbol"
+                                                        ],
+                                                        [
+                                                            "Decl",
+                                                            [
+                                                                [
+                                                                    "LeftName",
+                                                                    "return__1"
+                                                                ],
+                                                                [
+                                                                    "Value",
+                                                                    "\\type: Symbol"
+                                                                ],
+                                                                [
+                                                                    "Value",
+                                                                    "GeneratorResult\u003cEmpty\u003e: Type"
+                                                                ],
+                                                                [
+                                                                    "Value",
+                                                                    "\\ssa: Symbol"
+                                                                ],
+                                                                [
+                                                                    "Value",
+                                                                    "void: Void"
+                                                                ]
+                                                            ]
+                                                        ],
+                                                        [
+                                                            "Value",
+                                                            "\\super: Symbol"
+                                                        ],
+                                                        [
+                                                            "Value",
+                                                            "GeneratorFn: Type"
+                                                        ],
+                                                        [
+                                                            "Value",
+                                                            "\\wrappedGeneratorFn: Symbol"
+                                                        ],
+                                                        [
+                                                            "Value",
+                                                            "void: Void"
+                                                        ],
+                                                        [
+                                                            "Block",
+                                                            [
+                                                                [
+                                                                    "Call",
+                                                                    [
+                                                                        [
+                                                                            "Value",
+                                                                            "nym`=`: Function"
+                                                                        ],
+                                                                        [
+                                                                            "LeftName",
+                                                                            "return__1"
+                                                                        ],
+                                                                        [
+                                                                            "Call",
+                                                                            [
+                                                                                [
+                                                                                    "Call",
+                                                                                    [
+                                                                                        [
+                                                                                            "Value",
+                                                                                            "nym`\u003c\u003e`: Function"
+                                                                                        ],
+                                                                                        [
+                                                                                            "RightName",
+                                                                                            "core.doneResult"
+                                                                                        ],
+                                                                                        [
+                                                                                            "Value",
+                                                                                            "Empty: Type"
+                                                                                        ]
+                                                                                    ]
+                                                                                ]
+                                                                            ]
+                                                                        ]
+                                                                    ]
+                                                                ],
+                                                                [
+                                                                    "Value",
+                                                                    "void: Void"
+                                                                ],
+                                                                [
+                                                                    "while",
+                                                                    [
+                                                                        "Value",
+                                                                        "true: Boolean"
+                                                                    ],
+                                                                    [
+                                                                        [
+                                                                            "stmt-block",
+                                                                            [
+                                                                                [
+                                                                                    "Call",
+                                                                                    [
+                                                                                        [
+                                                                                            "Value",
+                                                                                            "cat: Function"
+                                                                                        ],
+                                                                                        [
+                                                                                            "Call",
+                                                                                            [
+                                                                                                [
+                                                                                                    "Value",
+                                                                                                    "str: Function"
+                                                                                                ],
+                                                                                                [
+                                                                                                    "Value",
+                                                                                                    "123: Int32"
+                                                                                                ]
+                                                                                            ]
+                                                                                        ]
+                                                                                    ]
+                                                                                ],
+                                                                                [
+                                                                                    "Call",
+                                                                                    [
+                                                                                        [
+                                                                                            "Value",
+                                                                                            "yield: Function"
+                                                                                        ]
+                                                                                    ]
+                                                                                ]
+                                                                            ]
+                                                                        ],
+                                                                        [
+                                                                            "stmt-block",
+                                                                            []
+                                                                        ]
+                                                                    ]
+                                                                ]
+                                                            ],
+                                                            "StructuredFlow"
+                                                        ]
+                                                    ]
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                ]
+                            ],
+                            "StructuredFlow"
+                        ]
+                    ]
+                ]
+            ]
+        ],
+        [
+            "Value",
+            "void: Void"
+        ]
+    ],
+    "StructuredFlow"
+]

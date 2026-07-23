@@ -1,0 +1,4 @@
+let t__2;
+t__2 = type (AnyValue);
+let x__3: AnyValue;
+x__3 = 42;

@@ -1,0 +1,4 @@
+let return__2;
+do {
+  return__2 = f();
+} while (c);

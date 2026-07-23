@@ -1,0 +1,10 @@
+@fn let f__0, @fn g__0;
+f__0 = (@stay fn f /* return__1 */: Void {
+    return__1 = void;
+    fn__0: do {}
+});
+g__0 = (@stay fn g /* return__2 */: Void {
+    fn__1: do {
+      return__2 = void
+    }
+})

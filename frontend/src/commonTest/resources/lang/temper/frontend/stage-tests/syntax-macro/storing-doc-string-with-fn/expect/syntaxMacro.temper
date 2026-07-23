@@ -1,0 +1,7 @@
+@fn let f__0;
+REM("tldr, f(x) = x.\n\nWhen x is an Int.\n\n         ^  _\n         |  /|\n    y =  | /\n    f(x) |/\n      <--0--->\n        /|  x\n       / |\n     |/_ v\n\n(ASCII art is hard)", true, false);
+f__0 = (@docString(...) fn f(x__0 /* aka x */: Int) /* return__0 */: (Int) {
+    fn__0: do {
+      x__0
+    }
+});

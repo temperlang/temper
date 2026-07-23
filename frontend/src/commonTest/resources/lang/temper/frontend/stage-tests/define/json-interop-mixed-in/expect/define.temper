@@ -1,0 +1,95 @@
+## Here are members for the generated JSON adapter class
+  PointJsonAdapter__0 extends JsonAdapter<Point__0>;
+  @visibility(\public) @fn @stay @fromType(PointJsonAdapter__0) let encodeToJson__0;
+  encodeToJson__0 = (@stay fn (@impliedThis(PointJsonAdapter__0) this__0: PointJsonAdapter__0, x__1: Point__0, p__0: JsonProducer) /* return__0 */: Void {
+      do_call_encodeToJson(x__1, p__0)
+  });
+  @visibility(\public) @fn @stay @fromType(PointJsonAdapter__0) let decodeFromJson__0;
+  decodeFromJson__0 = fn (@impliedThis(PointJsonAdapter__0) this__1: PointJsonAdapter__0, t__0: JsonSyntaxTree, ic__0: InterchangeContext) /* return__1 */: (Point__0 | Bubble) {
+    getStatic(Point__0, \decodeFromJson)(t__0, ic__0)
+  };
+## It's got an implied constructor even though that wasn't mentioned in the JsonInteropPass
+  @fn @visibility(\public) @stay @fromType(PointJsonAdapter__0) let constructor__0;
+  constructor__0 = (@stay fn constructor(@impliedThis(PointJsonAdapter__0) this__2: PointJsonAdapter__0) /* return__2 */: Void {});
+  @typeDecl(PointJsonAdapter__0) @stay let PointJsonAdapter__0;
+  PointJsonAdapter__0 = type (PointJsonAdapter__0);
+## Here's the declaration for the non-generated point type
+  @typeDecl(Point__0) @stay @json let Point__0;
+  Point__0 = type (Point__0);
+  class (\word, \PointJsonAdapter, \concrete, true, @typeDefined(PointJsonAdapter__0) fn {
+      do {};
+      do {};
+      do {};
+      do {}
+  });
+  do {};
+## Here's the explicitly declared point class type variable
+  Point__0 extends AnyValue;
+  @constructorProperty @visibility(\public) @stay @fromType(Point__0) let x__0: Int32;
+  @constructorProperty @visibility(\public) @stay @fromType(Point__0) let y__0: Int32;
+  @visibility(\public) @fn @stay @fromType(Point__0) let toString__0;
+  toString__0 = fn toString(@impliedThis(Point__0) this__3: Point__0) /* return__3 */: String {
+    fn__0: do {
+      cat("(", str(getp(x__0, this__3)), ", ", str(getp(y__0, this__3)), ")")
+    }
+  };
+  @fn @visibility(\public) @stay @fromType(Point__0) let constructor__1;
+  constructor__1 = fn constructor(@impliedThis(Point__0) this__4: Point__0, x__2 /* aka x */: Int32, y__1 /* aka y */: Int32) /* return__4 */: Void {
+    do {
+      let t#0;
+      setp(x__0, this__4, t#0 = x__2);
+      t#0
+    };
+    do {
+      let t#1;
+      setp(y__0, this__4, t#1 = y__1);
+      t#1
+    };
+  };
+  @fn @visibility(\public) @stay @fromType(Point__0) let getx__0;
+  getx__0 = fn (@impliedThis(Point__0) this__5: Point__0) /* return__5 */: Int32 {
+    return__5 = getp(x__0, this__5)
+  };
+  @fn @visibility(\public) @stay @fromType(Point__0) let gety__0;
+  gety__0 = fn (@impliedThis(Point__0) this__6: Point__0) /* return__6 */: Int32 {
+    return__6 = getp(y__0, this__6)
+  };
+## Here is the encodeToJson method added to point.
+  @visibility(\public) @fn @stay @fromType(Point__0) let encodeToJson__1;
+  encodeToJson__1 = fn (@impliedThis(Point__0) this__7: Point__0, p__1: JsonProducer) /* return__7 */: Void {
+    do_call_startObject(p__1);
+    do_call_objectKey(p__1, "x");
+## `this` in the generated expression `this.x` got rewritten to `this__7`, after
+## the regular type processing pass adds that implied parameter.
+    do_call_int32Value(p__1, getp(x__0, this__7));
+    do_call_objectKey(p__1, "y");
+    do_call_int32Value(p__1, getp(y__0, this__7));
+    do_call_endObject(p__1);
+  };
+  @static @visibility(\public) @fn @stay @fromType(Point__0) let decodeFromJson__1;
+  decodeFromJson__1 = (@stay fn (t__1: JsonSyntaxTree, ic__1: InterchangeContext) /* return__8 */: (Point__0 | Bubble) {
+      let obj__0;
+      obj__0 = t__1 as JsonObject;
+      let x__3: Int32, y__2: Int32;
+      x__3 = do_call_asInt32(do_call_propertyValueOrBubble(obj__0, "x") as JsonNumeric);
+      y__2 = do_call_asInt32(do_call_propertyValueOrBubble(obj__0, "y") as JsonNumeric);
+      new Point__0(x__3, y__2)
+  });
+  @static @visibility(\public) @fn @stay @fromType(Point__0) let jsonAdapter__0;
+  jsonAdapter__0 = (@stay fn /* return__9 */: (JsonAdapter<Point__0>) {
+      new PointJsonAdapter__0()
+  });
+  class(\word, \Point, \concrete, true, @typeDefined(Point__0) fn {
+      do {};
+      do {};
+      do {};
+      do {};
+      do {};
+      do {};
+      do {};
+      do {};
+      do {};
+      do {}
+  });
+## The terminal expression is not affected.
+  type (Point__0)

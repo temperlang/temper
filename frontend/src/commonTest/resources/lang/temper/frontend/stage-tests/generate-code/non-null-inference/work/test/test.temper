@@ -1,0 +1,4 @@
+let maybeLength(a: String?): Int? {
+  // Because of non-null inference, `a.end` is ok here.
+  a?.countBetween(String.begin, a.end)
+}

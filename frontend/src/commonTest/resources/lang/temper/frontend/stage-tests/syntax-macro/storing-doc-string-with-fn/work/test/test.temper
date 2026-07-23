@@ -1,0 +1,17 @@
+/**
+ * tldr, f(x) = x.
+ *
+ * When x is an Int.
+ *
+ *          ^  _
+ *          |  /|
+ *     y =  | /
+ *     f(x) |/
+ *       <--0--->
+ *         /|  x
+ *        / |
+ *      |/_ v
+ *
+ * (ASCII art is hard)
+ */
+let f(x: Int): Int { x }

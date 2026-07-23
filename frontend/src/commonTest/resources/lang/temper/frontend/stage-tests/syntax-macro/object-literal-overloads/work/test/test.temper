@@ -1,0 +1,6 @@
+{ hi: 5 }
+class Thing {
+  public constructor(hi: Int) { }
+  public constructor(lo: Int) { }
+}
+{ lo: 5 }

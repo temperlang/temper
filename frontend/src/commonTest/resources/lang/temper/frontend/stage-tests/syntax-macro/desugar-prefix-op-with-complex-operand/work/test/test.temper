@@ -1,0 +1,5 @@
+export let f(ls: ListBuilder<Int32>, j: Int32): Void {
+  var i = j;
+  ls[i++]--;
+  --ls[ls[++i]];
+}

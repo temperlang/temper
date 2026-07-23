@@ -1,0 +1,5 @@
+let a = [b()];
+let b(): Void { console.log("hi"); }
+let c(d: Void): Void { b() }
+let e = c(a[0]);
+c(void);

@@ -1,0 +1,7 @@
+export let something(x: String?): String throws Bubble {
+  /** Silly */
+  when (x) {
+    is String -> x;
+    else -> bubble();
+  }
+}

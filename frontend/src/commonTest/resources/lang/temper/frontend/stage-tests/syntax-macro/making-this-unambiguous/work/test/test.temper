@@ -1,0 +1,11 @@
+interface I {
+  x;
+}
+
+let x, y, z;
+
+class C<T>(public y) extends I {
+  private f() {
+    x + y + z // x is inherited, y is locally defined, z is closed over.
+  }
+}

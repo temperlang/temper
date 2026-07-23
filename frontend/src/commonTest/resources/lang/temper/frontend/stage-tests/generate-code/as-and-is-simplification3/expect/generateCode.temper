@@ -1,0 +1,18 @@
+@fn @reach(\none) let f__0;
+f__0 = (@stay fn f(i__0 /* aka i */: StringIndexOption?) /* return__0 */: (Int32 | Bubble) {
+    var fail#0;
+    orelse#0: {
+      let j__0;
+      if (isNull(i__0)) {
+        j__0 = null
+      } else {
+        j__0 = hs(fail#0, i__0 as StringIndex);
+        if (fail#0) {
+          break orelse#0;
+        }
+      };
+      return__0 = 0
+    } orelse {
+      return__0 = 1
+    }
+})

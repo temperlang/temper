@@ -1,0 +1,3 @@
+do { let console = getConsole("myConsole"); }
+console.log("Hi!");
+builtins.console.log("Bye!");

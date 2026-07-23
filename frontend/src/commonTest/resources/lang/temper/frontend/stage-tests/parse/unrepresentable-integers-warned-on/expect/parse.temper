@@ -1,0 +1,5 @@
+let a = -2147483648, b = 2147483647;
+REM("ok", null, false);
+let c = 2147483648;
+REM("ok", null, false);
+let d = -2147483648;

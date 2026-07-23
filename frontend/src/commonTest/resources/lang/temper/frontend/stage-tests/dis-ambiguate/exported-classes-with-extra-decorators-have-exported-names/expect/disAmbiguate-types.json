@@ -1,0 +1,27 @@
+{
+    "AnyValue": {
+        "abstract": true
+    },
+    "C": {
+        "name": {
+            "type": "ExportedName",
+            "module": "test//",
+            "baseName": "C"
+        }
+    },
+    "D": {
+        "name": {
+            "type": "ExportedName",
+            "module": "test//",
+            "baseName": "D"
+        },
+        "abstract": true
+    },
+    "E": {
+        "name": {
+            "type": "ExportedName",
+            "module": "test//",
+            "baseName": "E"
+        }
+    }
+}

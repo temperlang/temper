@@ -1,0 +1,5 @@
+  @stay @imported(\(`test//c/`.C)) let C__0;
+  C__0 = type (C);
+  let `test//`.c;
+## Here's a reworked property bag that we don't muck with, much.
+  `test//`.c = new C(1, null, 2);

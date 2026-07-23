@@ -1,0 +1,28 @@
+let other(i: Int): Int throws Bubble {
+  if (i % 2 == 0) {
+    // Bubble allowed above.
+    bubble()
+  } else {
+    i
+  }
+}
+let something(nums: Map<Int, Int>, index: Int): Int {
+  // No `| Bubble` above, so bubblies should error.
+  if (index < 0) {
+    bubble()
+  } else if (index == 0) {
+    other(index)
+  } else if (index == 1) {
+    nums[index]
+  } else {
+    do {
+      if (index < nums[index]) {
+        index + 1
+      } else if (index > 10) {
+        other(index + 1)
+      } else {
+        bubble()
+      }
+    } orelse index
+  }
+}

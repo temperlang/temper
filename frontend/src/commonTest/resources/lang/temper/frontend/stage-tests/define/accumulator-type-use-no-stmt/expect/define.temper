@@ -1,0 +1,36 @@
+  @stay @imported(\(`test//the-count/`.theCount)) let theCount__0;
+  theCount__0 = type (TheCount__0);
+  do {
+    let accumulator#0;
+## The tag is used to create an accumulator
+    accumulator#0 = new TheCount__0();
+## We inlined the body here.
+    do {
+      do_call_appendSafe(accumulator#0, "Zero: ");
+## Unsafe interpolations become regular appends.
+      do_call_append(accumulator#0, 0);
+      do_call_appendSafe(accumulator#0, "\nOne: ");
+      do_call_append(accumulator#0, 1);
+      do_call_appendSafe(accumulator#0, "\nTwo: ");
+      do_call_append(accumulator#0, 2);
+      do_call_appendSafe(accumulator#0, "\nThree: ");
+      do_call_append(accumulator#0, 3);
+      do_call_appendSafe(accumulator#0, "\nF\\our: ");
+      do_call_append(accumulator#0, 4);
+      do_call_appendSafe(accumulator#0, "\nFive: ");
+      do_call_append(accumulator#0, 5);
+      do_call_appendSafe(accumulator#0, "\n")
+    };
+## We inject a `.accumulated` fetch for the block result
+    do_get_accumulated(accumulator#0)
+  };
+  do {
+    let accumulator#1;
+    accumulator#1 = new TheCount__0();
+    do {
+      do_call_append(accumulator#1, 6);
+      do_call_appendSafe(accumulator#1, ", ");
+      do_call_append(accumulator#1, 7)
+    };
+    do_get_accumulated(accumulator#1)
+  }

@@ -1,0 +1,3 @@
+f(fn (arg__0 /* aka arg */: ArgType) /* return__0 */: (ReturnType) {
+    arg__0
+})

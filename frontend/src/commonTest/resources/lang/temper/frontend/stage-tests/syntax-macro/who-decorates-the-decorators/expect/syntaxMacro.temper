@@ -1,0 +1,7 @@
+@typeDecl(I__0) @stay let I__0 = type (I__0);
+REM("Stack many decorators on a declaration and make sure they eliminate themselves.", null, false);
+interface(\word, \I, \concrete, false, @typeDefined(I__0) fn {
+    I__0 extends AnyValue;
+    @staticProperty(\thing) @static @visibility(\public) @foo("FOO") var thing__0;
+});
+I__0

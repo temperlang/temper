@@ -1,0 +1,5 @@
+label: do {
+  console.log("Logged");
+  break label;
+  console.log("Not logged");
+}

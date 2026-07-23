@@ -1,0 +1,11 @@
+@stay @imported(\(`test//nums/`.a)) @reach(\none) let a__0;
+a__0 = 1;
+@imported(\(`test//nums/`.b)) @reach(\none) let b__0;
+b__0 = 2;
+@imported(\(`test//nums/`.c)) @reach(\none) let c__0;
+c__0 = 3;
+@imported(\(`test//nums/`.d)) @reach(\none) let d__0;
+d__0 = 4;
+@imported(\(`test//nums/`.e)) @reach(\none) let e__0;
+e__0 = 5;
+do_call_log(getConsole(), do_call_toString(15))

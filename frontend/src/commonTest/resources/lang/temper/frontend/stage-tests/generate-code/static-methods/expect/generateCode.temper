@@ -1,0 +1,12 @@
+let return__0;
+@staticProperty(\f) @fn @static @visibility(\public) @stay @fromType(C__0) @reach(\none) let f__0;
+f__0 = (@stay fn f(i__0 /* aka i */: Int32) /* return__1 */: Int32 {
+    return__1 = i__0 + 1
+});
+@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) @reach(\none) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(C__0) this__0: C__0) /* return__2 */: Void {
+    return__2 = void
+});
+@typeDecl(C__0) @stay @reach(\none) let C__0;
+C__0 = type (C__0);
+return__0 = 1

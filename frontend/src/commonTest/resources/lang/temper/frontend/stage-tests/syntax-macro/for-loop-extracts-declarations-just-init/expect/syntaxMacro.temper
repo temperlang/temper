@@ -1,0 +1,6 @@
+do {
+  let i__0 = 0;
+  for(\__flowInit, {class: Empty__0}, fn {
+      body;
+  })
+}

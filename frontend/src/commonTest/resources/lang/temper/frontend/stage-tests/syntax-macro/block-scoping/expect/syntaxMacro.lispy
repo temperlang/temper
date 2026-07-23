@@ -1,0 +1,124 @@
+[
+    "Block",
+    [
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "a__0"
+                ],
+                [
+                    "Value",
+                    [
+                        "init",
+                        "Symbol"
+                    ]
+                ],
+                [
+                    "Value",
+                    [
+                        1,
+                        "Int32"
+                    ]
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.a\u0022: String"
+                ]
+            ]
+        ],
+        [
+            "Call",
+            [
+                [
+                    "Value",
+                    "nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function"
+                ],
+                [
+                    "Call",
+                    [
+                        [
+                            "RightName",
+                            "do"
+                        ],
+                        [
+                            "Fun",
+                            [
+                                [
+                                    "Block",
+                                    [
+                                        [
+                                            "Decl",
+                                            [
+                                                [
+                                                    "LeftName",
+                                                    "a__1"
+                                                ],
+                                                [
+                                                    "Value",
+                                                    [
+                                                        "init",
+                                                        "Symbol"
+                                                    ]
+                                                ],
+                                                [
+                                                    "Value",
+                                                    [
+                                                        2,
+                                                        "Int32"
+                                                    ]
+                                                ],
+                                                [
+                                                    "Value",
+                                                    "\\QName: Symbol"
+                                                ],
+                                                [
+                                                    "Value",
+                                                    "\u0022test-code.a=\u0022: String"
+                                                ]
+                                            ]
+                                        ],
+                                        [
+                                            "Call",
+                                            [
+                                                [
+                                                    "Value",
+                                                    "REM: Function"
+                                                ],
+                                                [
+                                                    "Value",
+                                                    "\u0022Why do I feel compelled to write `let ... in` here?\\nI wish I knew how to quit you, OCaml!\u0022: String"
+                                                ],
+                                                [
+                                                    "Value",
+                                                    "null: Null"
+                                                ],
+                                                [
+                                                    "Value",
+                                                    "false: Boolean"
+                                                ]
+                                            ]
+                                        ],
+                                        [
+                                            "RightName",
+                                            "a__1"
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+                [
+                    "RightName",
+                    "a__0"
+                ]
+            ]
+        ]
+    ]
+]

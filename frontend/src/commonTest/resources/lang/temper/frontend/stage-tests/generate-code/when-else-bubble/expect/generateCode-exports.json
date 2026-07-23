@@ -1,0 +1,7 @@
+{
+    "something": {
+        "stateVector": "fn something",
+        "typeTag": "Function",
+        "abbrev": "fn something: Function"
+    }
+}

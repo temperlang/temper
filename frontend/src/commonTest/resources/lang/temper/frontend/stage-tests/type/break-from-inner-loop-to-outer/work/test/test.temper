@@ -1,0 +1,9 @@
+do {
+  outer: while (true) {
+    while (true) {
+      break outer;
+    }
+    console.log("no");
+  }
+  console.log("yes");
+}

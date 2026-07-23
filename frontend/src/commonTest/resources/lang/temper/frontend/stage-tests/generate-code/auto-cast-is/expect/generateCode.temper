@@ -1,0 +1,8 @@
+@fn @reach(\none) let some__0;
+some__0 = (@stay fn some(maybe__0 /* aka maybe */: StringIndexOption) /* return__0 */: StringIndex {
+    if (maybe__0 is StringIndex) {
+      return__0 = assertAs(maybe__0, StringIndex)
+    } else {
+      return__0 = getStatic(String, \begin)
+    }
+})

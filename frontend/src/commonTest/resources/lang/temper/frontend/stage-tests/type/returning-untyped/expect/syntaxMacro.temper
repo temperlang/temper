@@ -1,0 +1,8 @@
+fn /* return__0 */{
+  fn__1: do {
+    do {
+      return__0 = 42;
+      break(\label, fn__1)
+    }
+  }
+}

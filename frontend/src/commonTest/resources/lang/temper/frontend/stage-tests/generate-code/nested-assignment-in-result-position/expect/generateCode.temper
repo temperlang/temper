@@ -1,0 +1,4 @@
+let return__0, a__0, b__0;
+b__0 = oneTwoThree();
+a__0 = b__0;
+return__0 = a__0

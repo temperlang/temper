@@ -1,0 +1,46 @@
+class UnconnectedUserType {}
+
+let f<T>(
+  a: AnyValue,
+  s: String,
+  son: String?,
+  i: Int,
+  ion: Int?,
+  f: Float64,
+  fon: Float64?,
+  b: Boolean,
+  bon: Boolean?,
+  n: Never<Int>?,
+  k: MapKey,
+): Void throws Bubble {
+  // Illegal.  Multiple other types could connect to target language string type
+  a as String orelse do {};
+  a as Int orelse do {};
+  a as Boolean orelse do {};
+  k as String orelse do {};
+  // Illegal, type formals can't be cast targets.
+  a as T orelse do {};
+  // Does nothing.
+  s as String orelse do {};
+  b as Boolean orelse do {};
+  i as Int orelse do {};
+  bon as Boolean?;
+  n as Never<Int32>? orelse do {};
+  // Ok.  Can always check nullity
+  a as Never<AnyValue>? orelse do {};
+  son as Never<String>? orelse do {};
+  ion as Never<Int32>? orelse do {};
+  fon as Never<Float64>? orelse do {};
+  bon as Never<Boolean>? orelse do {};
+  // Types are statically disjoint
+  s as Int orelse do {};
+  i as String orelse do {};
+  b as Never<Boolean>? orelse do {};
+  n as Int orelse do {};
+  k as Float64 orelse do {};
+  k as Int orelse do {};
+  // ok to unconnected class type.
+  a as UnconnectedUserType orelse do {};
+
+  // TODO: `is` equivalents of some of the above
+}

@@ -1,0 +1,25 @@
+/./;
+/(^|,)\s*/;
+"""
+"wanna${} be pair\: \ud800\udc00
+~so does that have more pos needs?
+;
+"fine\u0020escape${" "}here\u";
+"too big: \u{hi,110000}!\u";
+"space bad: \u{20, 21}";
+"empty: \u{}";
+"fine: \u{20}";
+"also: \u{20,21}";
+"bad order: \u{,20,,21,22}";
+raw"\u{}\u{ }";
+raw"too big: \u{ hi, 110000 }!\u";
+raw"too big: \u{ hi${" there"}, 110000 }!\u";
+raw"hi\u{${" t"}}here";
+"wanna be ${pair} in list:\u{2${}0,d800,dc00}";
+"interpolate after list not in:\u{20}${"hi"}";
+"hi";
+${hi};
+"${"hi"}";
+\{hi};
+"surrogate, not scalar: \ud834!";
+"wanna be pair: \ud800\udc00";

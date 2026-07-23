@@ -1,0 +1,13 @@
+C__0 extends AnyValue;
+@staticProperty(\foo) @static @visibility(\public) @stay @fromType(C__0) let foo__0;
+foo__0 = "FOO";
+@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(C__0) this__0: C__0) /* return__0 */: Void {});
+@typeDecl(C__0) @stay let C__0;
+C__0 = type (C__0);
+class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
+    do {};
+    do {};
+    do {}
+});
+getStatic(C__0, \foo)

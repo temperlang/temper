@@ -1,0 +1,24 @@
+@fn @extension("isPalindrome") let stringIsPalindrome__0;
+stringIsPalindrome__0 = fn stringIsPalindrome(s__0 /* aka s */: String) /* return__0 */: Boolean {
+  fn__0: do {
+    var i__0;
+    i__0 = getStatic(String, \begin);
+    var j__0;
+    j__0 = do_get_end(s__0);
+    while(i__0 < j__0, fn {
+        j__0 = do_call_prev(s__0, j__0);
+        if(do_call_get(s__0, i__0) != do_call_get(s__0, j__0), fn {
+            do {
+              return__0 = false;
+              break(\label, fn__0)
+            }
+        });
+        i__0 = do_call_next(s__0, i__0);
+    });
+    do {
+      return__0 = true;
+      break(\label, fn__0)
+    }
+  }
+};
+(do_call_isPalindrome[stringIsPalindrome__0])("step on no pets")

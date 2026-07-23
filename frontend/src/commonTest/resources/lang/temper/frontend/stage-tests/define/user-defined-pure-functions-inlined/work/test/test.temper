@@ -1,0 +1,3 @@
+let adj = 6;
+let factorMinusAdj(x: Int, y: Int): Int { x * y - adj }
+factorMinusAdj(6, 8)
