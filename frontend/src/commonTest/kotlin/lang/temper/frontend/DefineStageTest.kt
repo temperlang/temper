@@ -41,9 +41,6 @@ class DefineStageTest {
         stageTestDir = StageTestDir("define/call-to-method"),
         stage = Stage.Define,
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
-        input = """
-            |subject.verb(arg)
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -64,19 +61,6 @@ class DefineStageTest {
     fun dotOperationDesugaring() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/dot-operation-desugaring"),
         stage = Stage.Define,
-        input = """
-        interface I {
-          next;
-        }
-        class C(private i = 0) extends I {
-          public f() { i }
-          public get next() { return f() + 1 }
-          private set next(newVal) { this.i = newVal - 1 }
-        }
-        let c = new C();
-        console.log(c.i, c.x, c.x, c.f());
-        c.next = 42
-        """,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
         {
@@ -203,9 +187,6 @@ class DefineStageTest {
     fun charTag() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/char-tag"),
         stage = Stage.Define,
-        input = """
-            |char'-'
-        """.trimMargin(),
         want = """
             |{
             |  import: {
@@ -229,12 +210,6 @@ class DefineStageTest {
     fun internalVersusExternalBackedPropertyAccess() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/internal-versus-external-backed-property-access"),
         stage = Stage.Define,
-        input = """
-        class C(private i) {
-          private f() { i = 1 }
-        }
-        (new C()).i = 2
-        """,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
         {
@@ -298,7 +273,6 @@ class DefineStageTest {
     fun constantFolding() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/constant-folding"),
         stage = Stage.Define,
-        input = "1 + 1",
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
         want = """
         {
@@ -313,7 +287,6 @@ class DefineStageTest {
     fun constantFoldingViaConstExpression() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/constant-folding-via-const-expression"),
         stage = Stage.Define,
-        input = "let one = 1; one + one",
         moduleResultNeeded = true,
         want = """
         {
@@ -365,13 +338,6 @@ class DefineStageTest {
     fun nonConstReferentNotFoldedIntoConstExpression() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/non-const-referent-not-folded-into-const-expression"),
         stage = Stage.Define,
-        input = """
-        var one = 1;
-        if (falseOpaquePredicate) {
-            one = 0;
-        }
-        one + one
-        """.trimIndent(),
         moduleResultNeeded = true,
         want = """
         {
@@ -406,11 +372,6 @@ class DefineStageTest {
     fun userDefinedPureFunctionsInlined() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/user-defined-pure-functions-inlined"),
         stage = Stage.Define,
-        input = """
-        let adj = 6;
-        let factorMinusAdj(x: Int, y: Int): Int { x * y - adj }
-        factorMinusAdj(6, 8)
-        """.trimIndent(),
         moduleResultNeeded = true,
         want = """
         {
@@ -439,12 +400,6 @@ class DefineStageTest {
     fun typeAliasing() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/type-aliasing"),
         stage = Stage.Define,
-        input = """
-        class C {}
-        let alias = C; // Reified types via aliases should be inlined.
-        let o: C;
-        let p: alias;
-        """.trimIndent(),
         want = """
         {
           syntaxMacro: {
@@ -719,20 +674,6 @@ class DefineStageTest {
     fun inheritedReassignability() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/inherited-reassignability"),
         stage = Stage.Define,
-        input = """
-            |interface I {
-            |  var m;
-            |  p;
-            |}
-            |interface J {
-            |  set n() {}
-            |}
-            |interface K extends I, J {
-            |  m; n; o;
-            |  p; q;
-            |  set o() {}
-            |}
-        """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
         {
@@ -797,9 +738,6 @@ class DefineStageTest {
     fun functionalInterfaceAbbreviatedSyntax() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/functional-interface-abbreviated-syntax"),
         stage = Stage.Define,
-        input = """
-            |export @fun interface MyFunction(x: Int): Boolean;
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -831,9 +769,6 @@ class DefineStageTest {
     fun functionalInterfaceGeneric() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/functional-interface-generic"),
         stage = Stage.Define,
-        input = """
-            |export @fun interface MyFunction<T, U>(x: T, y: U): Boolean;
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -870,10 +805,6 @@ class DefineStageTest {
     fun coalesce() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/coalesce"),
         stage = Stage.Define,
-        input = """
-            |export let prod(i: Int, j: Int?): Int { i * (j ?? 1) }
-            |export let prodWrap(i: Int, j: List<Int?>): Int { i * (j[0] ?? 1) }
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -917,11 +848,6 @@ class DefineStageTest {
     fun optionalParametersNotInlined() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/optional-parameters-not-inlined"),
         stage = Stage.Run,
-        input = $$"""
-        let f(i: Int = 42): Int { i };
-        console.log("f( )=${f().toString()}");
-        console.log("f(1)=${f(1).toString()}");
-        """.trimIndent(),
         want = """{
           define: {
             body:
@@ -960,15 +886,6 @@ class DefineStageTest {
     fun conditionallyAssignedConstNotInlined() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/conditionally-assigned-const-not-inlined"),
         stage = Stage.Run,
-        input = $$"""
-        let f(b: Boolean): Int {
-          let i: Int;
-          if (b) { i = -1 } else { i = 1 }
-          i
-        };
-        console.log("f(true )=${f(true)}");
-        console.log("f(false)=${f(false)}");
-        """.trimIndent(),
         want = """{
           define: {
             body:
@@ -1006,26 +923,6 @@ class DefineStageTest {
     fun classesWithDisclosures() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/classes-with-disclosures"),
         stage = Stage.Define,
-        input = """
-            |let f(x) {
-            |  class ClosesOverNothing {}
-            |
-            |  interface ClosesOverX {
-            |    get p() { x }
-            |  }
-            |
-            |  do {
-            |    let y = x + 1;
-            |
-            |    class ClosesOverY extends ClosesOverX {
-            |      public get q() { y }
-            |    }
-            |    new ClosesOverY()
-            |  }
-            |
-            |  new ClosesOverNothing();
-            |}
-        """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
         {
@@ -1120,9 +1017,6 @@ class DefineStageTest {
     fun impliedGettersAndSetters() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/implied-getters-and-setters"),
         stage = Stage.Define,
-        input = """
-            |class C(public var j, public k) extends I {}
-        """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
         {
@@ -1214,9 +1108,6 @@ class DefineStageTest {
     fun propertyOnlyInterface() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/property-only-interface"),
         stage = Stage.Define,
-        input = """
-        |interface I { public p; }
-        """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
         |{
@@ -1243,10 +1134,6 @@ class DefineStageTest {
     fun exportedNamePropagates() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/exported-name-propagates"),
         stage = Stage.Define,
-        input = """
-        |let t = AnyValue;
-        |let x: t = 42;
-        """.trimMargin(),
         want = """
         |{
         |  define: {
@@ -1367,10 +1254,6 @@ class DefineStageTest {
     fun parameterizedConstructorReference() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/parameterized-constructor-reference"),
         stage = Stage.Define,
-        input = """
-            |class C<T> {}
-            |let f<U>(): C<U> {}
-        """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
             |{
@@ -1596,12 +1479,6 @@ class DefineStageTest {
     fun staticRead() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/static-read"),
         stage = Stage.Run,
-        input = """
-            |class C {
-            |    public static foo = "FOO";
-            |}
-            |C.foo
-        """.trimMargin(),
         moduleResultNeeded = true,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
@@ -1650,13 +1527,6 @@ class DefineStageTest {
     fun complexTypeAliases() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/complex-type-aliases"),
         stage = Stage.Define,
-        input = """
-            |let Sn = String?;
-            |let Ds = Deque<Sn>;
-            |let Dn = Ds?;
-            |let s: Sn;
-            |let d: Dn;
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -1747,17 +1617,6 @@ class DefineStageTest {
     fun typeArgsKept() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/type-args-kept"),
         stage = Stage.Define,
-        input = """
-            |class What<Thing>(
-            |  public ints: List<Int>,
-            |  public things: List<Thing>,
-            |) {
-            |  public work(that: Thing): Void {
-            |    let another: What = this;
-            |    let more: List = things;
-            |  }
-            |}
-        """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
             |{
@@ -1879,9 +1738,6 @@ class DefineStageTest {
     fun functionTypesInline() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/function-types-inline"),
         stage = Stage.Type,
-        input = """
-            |let f: fn<T>(List<T>): List<T> = never();
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -1958,12 +1814,6 @@ class DefineStageTest {
     @Test
     fun nestedEmptyType() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/nested-empty-type"),
-        input = """
-            |let functionThatNestsAType(): Void {
-            |    interface EmptyHelper {}    // <-- needs a placeholder at the top level
-            |    // See the comments in TmpLControlFlow and ClosureConvertClasses
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -1995,26 +1845,6 @@ class DefineStageTest {
         stageTestDir = StageTestDir("define/when-block"),
         stage = Stage.Define,
         // Test both valid content and error content together.
-        input = """
-            |interface A { }
-            |class B extends A { }
-            |let b = new B();
-            |let f(a: A): A {
-            |  when (a) {
-            |    b -> a;
-            |    // Comments are fine, but unrelated statements aren't.
-            |    wordYall();
-            |    is B -> a;
-            |    (fancyExpression + 4) -> a;
-            |    4, is C -> a;
-            |    else -> a;
-            |    // Case after default is also bad, as is missing value.
-            |    c ->;
-            |    d -> a;
-            |    e ->
-            |  }
-            |}
-        """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
             |{
@@ -2092,14 +1922,6 @@ class DefineStageTest {
     fun whenGeneric() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/when-generic"),
         stage = Stage.Define,
-        input = """
-            |let f(maybe: List<Int>?): String {
-            |  when (maybe) {
-            |    is List<Int> -> "yep";
-            |    else -> "nope";
-            |  }
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -2129,21 +1951,6 @@ class DefineStageTest {
     fun castingCall() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/casting-call"),
         stage = Stage.Define,
-        input = """
-            |// Prelude on ensuring that it's rename inside property bags.
-            |let { a as b } = c;
-            |// Now on to the casting call.
-            |1 as Int;
-            |2 as Mystery;
-            |3 as List<Mystery>;
-            |4 as;
-            |5.as(Int);
-            |6.as(Mystery);
-            |7.as();
-            |8.as;
-            |[9][0] as Int;
-            |10.toString() as String;
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -2254,15 +2061,6 @@ class DefineStageTest {
     fun badTests() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/bad-tests"),
         stage = Stage.Define,
-        input = """
-            |test();
-            |test("hi");
-            |test("") {}
-            |test(1) {}
-            |test("hi", 2);
-            |test(hi) {}
-            |test("hi") { hi: String => assert(true) { "nope" } }
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -2304,11 +2102,6 @@ class DefineStageTest {
     fun goodTests() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/good-tests"),
         stage = Stage.Define,
-        input = """
-            |test("- does / this : work?") { assert(true) { "or what?" } }
-            |test("does\tthis\nwork") { test => assert(false) { "or that" } }
-            |test("again") { t => assert(true) { "whatever" } }
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -2344,10 +2137,6 @@ class DefineStageTest {
     fun autoAssertMessage() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/auto-assert-message"),
         stage = Stage.Define,
-        input = """
-            |test("hi") { let num = 4; assert(num == 3); }
-            |test("ha") { let condition = false; assert(condition); }
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -2387,12 +2176,6 @@ class DefineStageTest {
     fun classExtendsClass() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/class-extends-class"),
         stage = Stage.Define,
-        input = """
-            |class Apple {}
-            |class Banana {}
-            |interface Cherry {}
-            |class Durian extends Apple, Banana & Cherry {}
-        """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
             |{
@@ -2451,13 +2234,6 @@ class DefineStageTest {
     fun missingVisibilityOnClassMembers() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/missing-visibility-on-class-members"),
         stage = Stage.Define,
-        input = """
-            |class C(p: Int) {
-            |  q: Int = p + 1;
-            |  private r: Int = p - 1;
-            |  f(): Int { r }
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -2530,22 +2306,6 @@ class DefineStageTest {
         // Some tests below:
         // - Interpolated string value next to another interpolation. Also test a disappearing empty hole.
         // - Simple interpolated string value since we can't evaluate regex objects at compile time yet.
-        input = $$"""
-            |let r1 = /a.b*/;
-            |let r2 = /a.${b}*/;
-            |let r3 = /a.b*/g;
-            |let b = r3;
-            |let r4 = rgx"a.${b}*";
-            |let r5 = rgx"a${"."}${b}*${}?";
-            |let r6 = rgx"a${"."}*";
-            |let r7 = new Sequence([
-            |  new CodePoints("a"),
-            |  Dot,
-            |  new Repeat(new CodePoints("b"), 0, null),
-            |]).compiled();
-            |let s = "[a]";
-            |let r8 = rgx".${s}.";
-        """.trimMargin(),
         want = """
             |{
             |  parse: {
@@ -2662,24 +2422,6 @@ class DefineStageTest {
             showTypeMemberMetadata = true,
             showQNames = true,
         ),
-        input = """
-            |let x = 1;
-            |let x = 2;
-            |export let e = x;
-            |let f<F>(x: Int, y: F): Int {
-            |  let local = x;
-            |  let helper(z: Int): Int { local + z }
-            |  helper(1)
-            |}
-            |interface I<T> {
-            |  public x: T;
-            |  public get y(): Int;
-            |  public set y(newY: Int): Void;
-            |  public method(): Void;
-            |  public static staticMethod<T>(i: I<T>): Void { }
-            |}
-            |
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -2898,15 +2640,6 @@ class DefineStageTest {
     fun sealedSubtypesRejectNewTypeParams() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/sealed-subtypes-reject-new-type-params"),
         stage = Stage.Define,
-        input = """
-            |sealed interface Something<T> {}
-            |// Sealed subtypes can't introduce type params.
-            |class Subversive<T, U> extends Something<T> {}
-            |// But we can (must?) keep type params from parent. And check with a changed name, for bonus fun.
-            |interface Simple<V> extends Something<V> {}
-            |// And types further down the line can introduce new type params, since we can't cast to them anyway.
-            |class Satisfying<T, U> extends Simple<T> {}
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -2978,13 +2711,6 @@ class DefineStageTest {
     fun resolutionsStoredWithPostponedCaseCases() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/resolutions-stored-with-postponed-case-cases"),
         stage = Stage.Define,
-        input = """
-            |let y = 123;
-            |when (x) {
-            |  case f(let y) -> handleIt();
-            |  else -> fallback();
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -3011,14 +2737,6 @@ class DefineStageTest {
     fun jsonInteropMixedIn() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/json-interop-mixed-in"),
         stage = Stage.Define,
-        input = $$"""
-            |@json class Point(
-            |  public let x: Int,
-            |  public let y: Int,
-            |) {
-            |  public toString(): String { "(${x}, ${y})" }
-            |}
-        """.trimMargin(),
         // ## lines below are stripped, explanatory comments.
         want = """
             |{
@@ -3234,9 +2952,6 @@ class DefineStageTest {
     fun nullableTypesResolved() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/nullable-types-resolved"),
         stage = Stage.Define,
-        input = """
-            |let intOrNull: Int?;
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -3269,14 +2984,6 @@ class DefineStageTest {
     fun propertyBagsDesugarToPositionalParameters() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/property-bags-desugar-to-positional-parameters"),
         stage = Stage.Define,
-        input = """
-            |let { Point } = import("./point");
-            |export let p = { x: 1, y: 2 };
-            |export let q = { y: p.y, x: p.x };
-            |
-            |$TEST_INPUT_MODULE_BREAK ./point/point.temper
-            |export class Point(public x: Int, public y: Int) {}
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -3306,13 +3013,6 @@ class DefineStageTest {
     fun propertyBagsDesugaringWithOptionalParameters() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/property-bags-desugaring-with-optional-parameters"),
         stage = Stage.Define,
-        input = """
-            |let { C } = import("./c");
-            |export let c = { x: 1, z: 2 }
-            |
-            |$TEST_INPUT_MODULE_BREAK ./c/c.temper
-            |export class C(public x: Int, public y: Int = 0, public z: Int = 0) {}
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -3333,36 +3033,6 @@ class DefineStageTest {
     fun accumulatorTypeUse() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/accumulator-type-use"),
         stage = Stage.Define,
-        input = $$"""
-            |let { theCount } = import("./the-count");
-            |
-            |theCount$${"\"\"\""}
-            |  "Zero: ${0}
-            |  // ↑ Starting at zero, because the Count is not a monster.
-            |  "One: ${1}
-            |  : for (let n of [2, 3, 4]) {
-            |    ~ ${n}
-            |  : }
-            |  "!
-            |  ~Five: ${5}
-            |  ;
-            |
-            |theCount"${6}, ${7}"
-            |
-            |$$TEST_INPUT_MODULE_BREAK ./the-count/the-count.temper
-            |class TheCount {
-            |  public append(i: Int): Void {
-            |    console.log("${i}! Ha Ha Ha!");
-            |  }
-            |  public appendSafe(s: String): Void {}
-            |
-            |  public get accumulated(): Void {
-            |    console.log("I am the Count who loves to count!");
-            |  }
-            |}
-            |
-            |export let theCount = TheCount;
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -3413,34 +3083,6 @@ class DefineStageTest {
     fun accumulatorTypeUseNoStmt() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/accumulator-type-use-no-stmt"),
         stage = Stage.Define,
-        input = $$"""
-            |let { theCount } = import("./the-count");
-            |
-            |theCount$${"\"\"\""}
-            |  "Zero: ${0}
-            |  "One: ${1}
-            |  "Two: ${2}
-            |  "Three: ${3}
-            |  "F\our: ${4}
-            |  "Five: ${5}
-            |  ;
-            |
-            |theCount"${6}, ${7}"
-            |
-            |$$TEST_INPUT_MODULE_BREAK ./the-count/the-count.temper
-            |class TheCount {
-            |  public append(i: Int): Void {
-            |    console.log("${i}! Ha Ha Ha!");
-            |  }
-            |  public appendSafe(s: String): Void {}
-            |
-            |  public get accumulated(): Void {
-            |    console.log("I am the Count who loves to count!");
-            |  }
-            |}
-            |
-            |export let theCount = TheCount;
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -3492,13 +3134,6 @@ class DefineStageTest {
     fun escapeSequenceGrouping() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/escape-sequence-grouping"),
         stage = Stage.Define,
-        input = $$"""
-            |let { html } = import ("./html");
-            |html"<style>body { background: '\<${"/style/"}' }</style>"
-            |$$TEST_INPUT_MODULE_BREAK ./html/html.temper
-            |export class HtmlBuilder {}
-            |export let html = HtmlBuilder;
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -3526,20 +3161,6 @@ class DefineStageTest {
     fun operatorDecoratorArityInference() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/operator-decorator-arity-inference"),
         stage = Stage.Define,
-        input = """
-            |@operator("+")
-            |let mixedAdd(a: Int, b: Boolean): Int {
-            |  if (b) { a + 1 } else { a }
-            |}
-            |
-            |class C {
-            |  @operator("+")
-            |  public f(other: C): C { this }
-            |
-            |  @operator("+")
-            |  public static unary(c: C): C { c }
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  define: {

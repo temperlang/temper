@@ -3,10 +3,8 @@
 package lang.temper.frontend
 
 import lang.temper.common.Log
-import lang.temper.common.temperEscaper
 import lang.temper.env.InterpMode
 import lang.temper.interp.MetadataDecorator
-import lang.temper.lexer.MarkdownLanguageConfig
 import lang.temper.log.MessageTemplate
 import lang.temper.name.BuiltinName
 import lang.temper.name.Symbol
@@ -31,19 +29,6 @@ class GenerateCodeStageTest {
     fun simpleDoNothingLoop() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/simple-do-nothing-loop"),
         stage = Stage.GenerateCode,
-        input = """
-            |// This example is interesting because the infer result pass actually adds two assignments
-            |// to gather results from terminal expression.
-            |//
-            |// This may be a bug, but in the meantime, it leads to a nested assignment of temporaries:
-            |// `t#0 = t#1 = hs(fail#2, i < 3)`
-            |//
-            |// The generate code stage needs to unnest this assignment before the TmpL backend can
-            |// translate it.  If the TmpL backend were to try to handle this by creating temporaries,
-            |// those would miss type information.
-            |var i = 0;
-            |while (i < 3) { ++i; }
-        """.trimMargin(),
         want = """
             |{
             |    "type": {
@@ -77,27 +62,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/sealed-when"),
         stage = Stage.GenerateCode,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
-        input = """
-            |export interface Geometric {}
-            |export class Ray extends Geometric {}
-            |export sealed interface Shape extends Geometric {}
-            |export class Circle() extends Shape {}
-            |export class Square() extends Shape {}
-            |export let describeGeometric(g: Geometric): String {
-            |  when (g) {
-            |    is Circle -> "circle";
-            |    is Square -> "square";
-            |    // defaults to void here because it starts above the sealed type
-            |  }
-            |}
-            |export let describeShape(s: Shape): String {
-            |  when (s) {
-            |    is Circle -> "circle";
-            |    is Square -> "square";
-            |    // defaults to panic here because those are exhaustive for Shape
-            |  }
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -163,9 +127,6 @@ class GenerateCodeStageTest {
     fun assignmentsToTypedReturnAreChecked() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/assignments-to-typed-return-are-checked"),
         stage = Stage.GenerateCode,
-        input = """
-        fn f(x): Int { x }
-        """.trimIndent(),
         moduleResultNeeded = true,
         want = """
         {
@@ -191,21 +152,6 @@ class GenerateCodeStageTest {
     fun docCommentInData() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/doc-comment-in-data"),
         stage = Stage.GenerateCode,
-        languageConfig = MarkdownLanguageConfig(),
-        input = """
-            |    /** Is this a doc comment? */
-            |    export let hi = List.of<Int>(
-            |      1,
-            |
-            |Here is some text, don't you know.
-            |
-            |      2,
-            |      /** How about this? */
-            |      3,
-            |    );
-            |    export let f(/** docs */ a: Int): Int { g(/** here too? */ 1) }
-            |    let g(b: Int): Int { b }
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -232,13 +178,6 @@ class GenerateCodeStageTest {
     @Test
     fun doWhileContinuesToFalseCondition() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/do-while-continues-to-false-condition"),
-        input = """
-            |do {
-            |  console.log("Done once");
-            |  continue;
-            |  console.log("Not done");
-            |} while (false);
-        """.trimMargin(),
         stage = Stage.Run,
         moduleResultNeeded = true,
         want = """
@@ -264,7 +203,6 @@ class GenerateCodeStageTest {
     fun exportedNames() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/exported-names"),
         stage = Stage.Run,
-        input = "export let answer = 42; answer",
         moduleResultNeeded = true,
         want = """{
           run: "42: Int32",
@@ -297,9 +235,6 @@ class GenerateCodeStageTest {
     @Test
     fun simpleMethodCall() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/simple-method-call"),
-        input = """
-            |1.toString()
-        """.trimMargin(),
         stage = Stage.Run,
         moduleResultNeeded = true,
         want = """
@@ -314,9 +249,6 @@ class GenerateCodeStageTest {
     fun getterSettersFinal() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/getter-setters-final"),
         stage = Stage.GenerateCode,
-        input = """
-        |class C(public var prop: Int) {}
-        """.trimMargin(),
         moduleResultNeeded = true,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
@@ -355,58 +287,6 @@ class GenerateCodeStageTest {
     fun getterSettersVarOrNot() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/getter-setters-var-or-not"),
         stage = Stage.GenerateCode,
-        input = """
-        |export interface I {
-        |  public get superGetter(): Int { 10 }
-        |  public set superSetter(i: Int): Void { }
-        |}
-        |export class C extends I {
-        |  public propNotVar: Int;
-        |  public var propVar: Int;
-        |  public constructor() {
-        |    // These are both legal.
-        |    propNotVar = 1;
-        |    propVar = 2;
-        |    // Seeing if explicity `this` is different.
-        |    this.propVar = 3;
-        |    // Check an entirely missing property, which needs explicit this.
-        |    this.wrong = 4;
-        |    // Go both ways on good and bad here. Even in constructor, wrong way should fail.
-        |    // Some of the errors are confusing, but at least we get errors.
-        |    extraGetter = extraSetter;
-        |    extraSetter = extraGetter;
-        |    extraSetter = superGetter;
-        |    superGetter = propNotVar;
-        |    // Check setter defined only in supertype.
-        |    superSetter = propNotVar;
-        |  }
-        |  public update(i: Int): Void {
-        |    // Update of propNotVar illegal.
-        |    propNotVar = i;
-        |    // Assign bad type.
-        |    propVar = "hi";
-        |  }
-        |  public set extraSetter(k: Int): Void {
-        |    propVar = k;
-        |  }
-        |  public get extraGetter(): Int {
-        |    propVar
-        |  }
-        |}
-        |export let alsoUpdate(c: C, j: Int): Void {
-        |  // Again, update of propNotVar illegal.
-        |  c.propNotVar = j;
-        |  c.propVar = j;
-        |  c.propVar = "bye";
-        |  // c.propVar += j; // <-- Generates bad tree code!
-        |  // Check more good and bad.
-        |  c.extraSetter = j;
-        |  c.extraGetter = j;
-        |  c.extraWrong = j;
-        |  // From outside, check setter defined only in supertype.
-        |  c.superSetter = j;
-        |}
-        """.trimMargin(),
         want = """
         |{
         |  generateCode: {
@@ -524,10 +404,6 @@ class GenerateCodeStageTest {
     fun fnType() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/fn-type"),
         stage = Stage.GenerateCode,
-        input = """
-        |let f: fn (Int): Int = fn (x: Int): Int { x + 1 };
-        |f(41)
-        """.trimMargin(),
         moduleResultNeeded = true,
         want = """
         |{
@@ -550,14 +426,6 @@ class GenerateCodeStageTest {
     fun catsAreNice() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/cats-are-nice"),
         stage = Stage.GenerateCode,
-        input = """
-        |let f(s: String): Void {
-        |  cat(s);
-        |  cat(s, s);
-        |  cat(s, s, s);
-        |  cat(s, s, s, s);
-        |}
-        """.trimMargin(),
         want = """
         |{
         |  generateCode: {
@@ -583,14 +451,6 @@ class GenerateCodeStageTest {
     fun catsAreRadActually() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/cats-are-rad-actually"),
         stage = Stage.GenerateCode,
-        input = $$"""
-        |let f(s: String): Void {
-        |  "${0}";
-        |  "${s}${0}";
-        |  "${s}${0}${s}";
-        |  "${s}${s}${0}${s}";
-        |}
-        """.trimMargin(),
         want = """
         |{
         |  generateCode: {
@@ -619,11 +479,6 @@ class GenerateCodeStageTest {
     fun catsPlayWithStringAndNull() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/cats-play-with-string-and-null"),
         stage = Stage.GenerateCode,
-        input = $$"""
-        |let f(s: String, a: Int?): String {
-        |  "${s}${a}${a ?? -1}"
-        |}
-        """.trimMargin(),
         want = """
         |{
         |  generateCode: {
@@ -657,13 +512,6 @@ class GenerateCodeStageTest {
     fun rawCatsGetCooked() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/raw-cats-get-cooked"),
         stage = Stage.GenerateCode,
-        input = $$"""
-            |let f(s: String): Void {
-            |  raw"${s}";
-            |  // Also a call that will fail, so we make sure to test that.
-            |  raw"${what}";
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -704,10 +552,6 @@ class GenerateCodeStageTest {
     fun mapTypeArg() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/map-type-arg"),
         stage = Stage.GenerateCode,
-        input = """
-            |let ls: List<Int> = [1, 2];
-            |ls.map<String> { (x: Int): String => x.toString(10) }
-        """.trimMargin(),
         want = """
             |{
             |  type: {
@@ -730,7 +574,6 @@ class GenerateCodeStageTest {
     fun banExportNotAtTopLevel() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/ban-export-not-at-top-level"),
         stage = Stage.GenerateCode,
-        input = "let f(x) { export let y = x; }",
         want = """
         {
           errors: [ "TODO" ]
@@ -743,7 +586,6 @@ class GenerateCodeStageTest {
     fun banExportsThatAreReAssignable() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/ban-exports-that-are-re-assignable"),
         stage = Stage.GenerateCode,
-        input = "export var i = 1; i = 2",
         want = """
         {
           errors: [ "TODO" ]
@@ -756,7 +598,6 @@ class GenerateCodeStageTest {
     fun banExportInLoops() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/ban-export-in-loops"),
         stage = Stage.GenerateCode,
-        input = "var i = 0; while (i <= 2) { export let x = i; i += 1 }",
         want = """
         {
           errors: [ "TODO" ]
@@ -768,19 +609,6 @@ class GenerateCodeStageTest {
     fun banExportsExposingNonExported() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/ban-exports-exposing-non-exported"),
         stage = Stage.GenerateCode,
-        input = """
-            |interface Hidden {}
-            |export class Exported<HI extends Hidden>(public hi: Hidden) extends Hidden {
-            |  public attempt(): Hidden { hi }
-            |  public attempt2<H extends Hidden>(hmm: H): H { hmm }
-            |  public static subvert(): Map<String, Hidden> { more }
-            |  // This one should be fine, unlike all the others.
-            |  private ha: Hidden = hi;
-            |}
-            |export let consider(hu: Hidden): Hidden? { hu }
-            |export let sneak<H extends Hidden>(he: H): H { he }
-            |export let more = new Map<String, Hidden>([]);
-        """.trimMargin(),
         want = """
             |{
             |    generateCode: {
@@ -861,10 +689,6 @@ class GenerateCodeStageTest {
     fun banMixedExportsJustFunctionType() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/ban-mixed-exports-just-function-type"),
         stage = Stage.GenerateCode,
-        input = """
-            |class Hidden { }
-            |export let sneak(hidden: fn (Hidden): Void): Void { }
-        """.trimMargin(),
         want = """
             |{
             |    generateCode: {
@@ -899,10 +723,6 @@ class GenerateCodeStageTest {
         stage = Stage.GenerateCode,
         // TODO This only matters for constructors/factories going forward.
         // TODO And maybe we'll manage those positioned, so this test might be best removed sometime.
-        input = """
-            |let hi(name: String): Void { console.log(name); }
-            |hi(\nom, "Alice");
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -954,15 +774,6 @@ class GenerateCodeStageTest {
     fun autoCastIs() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/auto-cast-is"),
         stage = Stage.GenerateCode,
-        input = """
-            |let some(maybe: StringIndexOption): StringIndex {
-            |  if (maybe is StringIndex) {
-            |    maybe
-            |  } else {
-            |    String.begin
-            |  }
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -986,14 +797,6 @@ class GenerateCodeStageTest {
     fun autoCastWhen() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/auto-cast-when"),
         stage = Stage.GenerateCode,
-        input = """
-            |let some(maybe: StringIndexOption): StringIndex {
-            |  when (maybe) {
-            |    is StringIndex -> maybe;
-            |    else -> String.begin;
-            |  }
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -1122,7 +925,6 @@ class GenerateCodeStageTest {
     fun assignedFnWithInferredSigTypes() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/assigned-fn-with-inferred-sig-types"),
         stage = Stage.GenerateCode,
-        input = """let funny: fn (Int): String = fn (n) { n.toString() };""",
         want = """
         {
           generateCode: {
@@ -1142,7 +944,6 @@ class GenerateCodeStageTest {
     fun booleanTypeError() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/boolean-type-error"),
         stage = Stage.GenerateCode,
-        input = "if (1) { 2 } else { 3 }",
         moduleResultNeeded = true,
         want = """
             |{
@@ -1167,39 +968,6 @@ class GenerateCodeStageTest {
     @Test
     fun lotsaLets() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/lotsa-lets"),
-        input = """
-            |// Issue 1408
-            |let x1 = 1;
-            |let x2 = 2;
-            |let x3 = 3;
-            |let x4 = 4;
-            |let x5 = 5;
-            |let x6 = 6;
-            |let x7 = 7;
-            |let x8 = 8;
-            |let x9 = 9;
-            |let x10 = 10;
-            |let x11 = 11;
-            |let x12 = 12;
-            |let x13 = 13;
-            |let x14 = 14;
-            |let x15 = 15;
-            |let x16 = 16;
-            |let x17 = 17;
-            |let x18 = 18;
-            |let x19 = 19;
-            |let x20 = 20;
-            |let x21 = 21;
-            |let x22 = 22;
-            |let x23 = 23;
-            |let x24 = 24;
-            |let x25 = 25;
-            |let x26 = 26;
-            |let x27 = 27;
-            |let x28 = 28;
-            |let x29 = 29;
-            |let x30 = 30;
-        """.trimMargin(),
         stage = Stage.Run,
         want = """
             |{
@@ -1213,9 +981,6 @@ class GenerateCodeStageTest {
     fun enumConstants() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/enum-constants"),
         stage = Stage.GenerateCode,
-        input = """
-            |enum E { A, B }
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -1231,9 +996,6 @@ class GenerateCodeStageTest {
     fun emptyInterface() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/empty-interface"),
         stage = Stage.GenerateCode,
-        input = """
-            |interface I {}
-        """.trimMargin(),
         moduleResultNeeded = true,
         want = """
             |{
@@ -1255,10 +1017,6 @@ class GenerateCodeStageTest {
     fun hideOverrideProperty() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/hide-override-property"),
         stage = Stage.GenerateCode,
-        input = """
-            |interface I { public x: Int }
-            |class C(protected x: Int) extends I {}
-        """.trimMargin(),
         moduleResultNeeded = true,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
@@ -1292,10 +1050,6 @@ class GenerateCodeStageTest {
     fun hideOverrideMethod() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/hide-override-method"),
         stage = Stage.GenerateCode,
-        input = """
-            |interface I { public f(): Int; }
-            |class C extends I { protected f(): Int { 1 } }
-        """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
             |{
@@ -1331,10 +1085,6 @@ class GenerateCodeStageTest {
     fun hideOverrideMethodGeneric() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/hide-override-method-generic"),
         stage = Stage.GenerateCode,
-        input = """
-            |interface I<T>          { public    f<A>(x: A, t: T, i: I<T>): T; }
-            |class C<U> extends I<U> { protected f<B>(x: B, u: U, i: I<U>): U { u } }
-        """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
             |{
@@ -1383,9 +1133,6 @@ class GenerateCodeStageTest {
     fun typeParameterCanExtendConcreteType() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/type-parameter-can-extend-concrete-type"),
         stage = Stage.GenerateCode,
-        input = """
-            |interface I { public f<S extends String>(s: S): Void; }
-        """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
             |{
@@ -1413,9 +1160,6 @@ class GenerateCodeStageTest {
     fun returnTypeRequired() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/return-type-required"),
         stage = Stage.GenerateCode,
-        input = """
-            |let hi() {}
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -1438,10 +1182,6 @@ class GenerateCodeStageTest {
     fun optionalArgumentPassing() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/optional-argument-passing"),
         stage = Stage.Run,
-        input = $$"""
-            |let f(a: Int = 0, b: Int = 1): String { "a=${a.toString()}, b=${b.toString()}" };
-            |"${ f(2) }; ${ f(null, 2) }; ${ f(3, 2) }"
-        """.trimMargin(),
         moduleResultNeeded = true,
         want = """
             |{
@@ -1458,13 +1198,6 @@ class GenerateCodeStageTest {
     fun returnTypeOptionalForSomeCases() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/return-type-optional-for-some-cases"),
         stage = Stage.GenerateCode,
-        input = """
-            |class Something {
-            |  public constructor() {} // return type implied
-            |  public get blah() { 5 } // return type required but missing
-            |  public set blah(x: Int) {} // return type implied
-            |}
-        """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
             |{
@@ -1554,13 +1287,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/void-not-a-value"),
         stage = Stage.GenerateCode,
         // Implied and explicit void returns should be fine, but others should be errors.
-        input = """
-            |let a = [b()];
-            |let b(): Void { console.log("hi"); }
-            |let c(d: Void): Void { b() }
-            |let e = c(a[0]);
-            |c(void);
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -1603,11 +1329,6 @@ class GenerateCodeStageTest {
     fun voidVsValue() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/void-vs-value"),
         stage = Stage.GenerateCode,
-        input = """
-            |let trick(): Void { 123 }
-            |let treat(): Int { 456 }
-            |let trail(): Void { 789; }
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -1638,10 +1359,6 @@ class GenerateCodeStageTest {
     fun impliedLambdaReturnType() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/implied-lambda-return-type"),
         stage = Stage.GenerateCode,
-        input = """
-            |let f(g: fn (): Int): Int { g() }
-            |let h(): Void { f { "hi" }; }
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -1673,13 +1390,6 @@ class GenerateCodeStageTest {
     fun deadCode() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/dead-code"),
         stage = Stage.GenerateCode,
-        input = """
-            |label: do {
-            |  console.log("Logged");
-            |  break label;
-            |  console.log("Not logged");
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -1696,12 +1406,6 @@ class GenerateCodeStageTest {
     fun staticMethods() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/static-methods"),
         stage = Stage.GenerateCode,
-        input = """
-            |class C {
-            |  public static let f(i: Int): Int { i + 1 }
-            |}
-            |C.f(0)
-        """.trimMargin(),
         moduleResultNeeded = true,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
@@ -1731,21 +1435,6 @@ class GenerateCodeStageTest {
     fun staticAccessGoodAndBad() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/static-access-good-and-bad"),
         stage = Stage.GenerateCode,
-        input = """
-            |class C {
-            |  private static ap: Int = 1;
-            |  public static a: Int = ap + C.ap;
-            |  private bp: Int = 1;
-            |  private b: Int = bp + 1;
-            |  public static f(i: Int): Int { i + a + C.a + ap + C.ap }
-            |  private static fp(i: Int): Int { i + 1 }
-            |  public g(i: Int): Int { 2 * C.f(i) * C.fp(i) * bp * b * this.bp * this.b }
-            |  public h(i: Int): Int { 2 * f(i) * fp(i) * g(i) * this.g(i) }
-            |  public static g2(i: Int): Int { 2 * C.f(i) * C.fp(i) }
-            |  public static h2(i: Int): Int { 2 * f(i) * fp(i) }
-            |}
-            |let g3(i: Int): Int { 2 * C.f(i) * new C().g(i) * C.a * C.ap }
-        """.trimMargin(),
         want = """
             |{
             |  "syntaxMacro": {
@@ -1948,12 +1637,6 @@ class GenerateCodeStageTest {
     fun noInstantiateInterface() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/no-instantiate-interface"),
         stage = Stage.GenerateCode,
-        input = """
-            |interface Apple {}
-            |class Banana {}
-            |new Apple()
-            |new Banana()
-        """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
             |{
@@ -1987,28 +1670,6 @@ class GenerateCodeStageTest {
         stage = Stage.GenerateCode,
         // Includes examples of different kinds of roots and entities as well as transitive reachability and such.
         // Also includes an example of something reachable from both export and test roots.
-        input = """
-            |export let exportedInt = 1;
-            |let unreachableInt = 2;
-            |export let exportedFunction(b: Boolean): Void { if (b) { conditionallyExportReachable() } }
-            |let conditionallyExportReachable(): Void { console.log("") }
-            |let transitivelyTestReachable(): Void { console.log("") }
-            |let exportAndTestReachable(): Void { console.log("") }
-            |let initReachable(): Void { transitivelyInitReachable(); console.log("") }
-            |let transitivelyInitReachable(): Void { console.log("") }
-            |let unreachableFunction(): Void { console.log("") }
-            |export class ExportedClass(
-            |  private let propertyOfExportedClass: UsedOnlyAsPropertyType
-            |) {
-            |  private let methodOfExportedClass(): Void { exportAndTestReachable() }
-            |}
-            |class TestReachableClass {
-            |  private let methodOfTestReachable(): Void { transitivelyTestReachable(); exportAndTestReachable() }
-            |}
-            |@test("testCase") let testCase(): Void { new TestReachableClass(); }
-            |class UsedOnlyAsPropertyType {}
-            |initReachable();
-        """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
             |{
@@ -2108,13 +1769,6 @@ class GenerateCodeStageTest {
     fun initAssignmentReachability() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/init-assignment-reachability"),
         stage = Stage.GenerateCode,
-        input = """
-            |// We don't eliminate var reassignments, so keep associated declarations.
-            |var hi = 0;
-            |hi = 1;
-            |// Non-var for contrast.
-            |let ha = 2;
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -2136,14 +1790,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/block-lambda-end-to-end"),
         stage = Stage.Run,
         moduleResultNeeded = true,
-        input = """
-            |let callIt(f: fn (x: Int): Int): Int { f(1) }
-            |
-            |callIt { (x: Int): Int extends Function =>
-            |  let y = 41;
-            |  x + y
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  run: "42: Int32"
@@ -2156,31 +1802,6 @@ class GenerateCodeStageTest {
     fun generatorInterpreted() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/generator-interpreted"),
         stage = Stage.Run,
-        input = """
-            |do {
-            |  // Is thrice still a word?
-            |  let runItThrice(factory: fn (): SafeGenerator<Empty>): Void {
-            |    let generator: SafeGenerator<Empty> = factory();
-            |    generator.next();
-            |    console.log(",");
-            |    generator.next();
-            |    console.log(",");
-            |    generator.next();
-            |    console.log(".");
-            |  }
-            |
-            |  runItThrice { (): GeneratorResult<Empty> extends GeneratorFn =>
-            |    console.log("First");
-            |    yield;
-            |    console.log("Second");
-            |    yield;
-            |    console.log("Third");
-            |    yield;
-            |    // Not actually reached by runItThrice
-            |    console.log("Fourth");
-            |  }
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  run: "void: Void",
@@ -2241,29 +1862,6 @@ class GenerateCodeStageTest {
     fun generatorInterpretedInLoop() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/generator-interpreted-in-loop"),
         stage = Stage.Run,
-        input = """
-            |do {
-            |  // Is thrice still a word?
-            |  let runItThrice(factory: fn (): SafeGenerator<Empty>): Void {
-            |    let generator: SafeGenerator<Empty> = factory();
-            |    generator.next();
-            |    console.log("Ran once");
-            |    generator.next();
-            |    console.log("Ran twice");
-            |    generator.next();
-            |    console.log("Ran thrice");
-            |    generator.close();
-            |  }
-            |
-            |  runItThrice { (): GeneratorResult<Empty> extends GeneratorFn =>
-            |    while (true) {
-            |      console.log("Pausing");
-            |      yield;
-            |      console.log("Resuming");
-            |    }
-            |  }
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  run: "void: Void",
@@ -2326,27 +1924,6 @@ class GenerateCodeStageTest {
     fun generatorResultsUsed() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/generator-results-used"),
         stage = Stage.Run,
-        input = $$"""
-            |do {
-            |  let adNauseam(factory: fn (): SafeGenerator<Int>): Void {
-            |    let generator: SafeGenerator<Int> = factory();
-            |    while (true) {
-            |      let x = generator.next();
-            |      when (x) {
-            |        is DoneResult<Int> -> break;
-            |        is ValueResult<Int> -> console.log("Received ${ x.value.toString() }");
-            |      }
-            |    }
-            |    generator.close();
-            |    console.log("Done");
-            |  }
-            |
-            |  adNauseam { (): GeneratorResult<Int> extends GeneratorFn =>
-            |    yield 1;
-            |    yield 2;
-            |  }
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  run: "void: Void",
@@ -2364,13 +1941,6 @@ class GenerateCodeStageTest {
     fun forOfExample() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/for-of-example"),
         stage = Stage.Run,
-        input = """
-            |for (let i of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]) {
-            |  if (i & 1 == 0) { continue }
-            |  if (i == 7) { break }
-            |  console.log(i.toString());
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  run: "void: Void",
@@ -2389,14 +1959,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/awaiting"),
         stage = Stage.Run,
         stagingFlags = setOf(StagingFlags.allowTopLevelAwait),
-        input = """
-            |let pb = new PromiseBuilder<String>();
-            |let p = pb.promise;
-            |async { (): GeneratorResult<Empty> extends GeneratorFn =>
-            |  pb.complete("Hello, World!");
-            |}
-            |console.log(await p);
-        """.trimMargin(),
         want = """
             |{
             |  run: "void: Void",
@@ -2440,54 +2002,6 @@ class GenerateCodeStageTest {
         stage = Stage.Run,
         // Check that is T and as T only operate
         // on types that can be distinguished at runtime.
-        input = """
-            |class UnconnectedUserType {}
-            |
-            |let f<T>(
-            |  a: AnyValue,
-            |  s: String,
-            |  son: String?,
-            |  i: Int,
-            |  ion: Int?,
-            |  f: Float64,
-            |  fon: Float64?,
-            |  b: Boolean,
-            |  bon: Boolean?,
-            |  n: Never<Int>?,
-            |  k: MapKey,
-            |): Void throws Bubble {
-            |  // Illegal.  Multiple other types could connect to target language string type
-            |  a as String orelse do {};
-            |  a as Int orelse do {};
-            |  a as Boolean orelse do {};
-            |  k as String orelse do {};
-            |  // Illegal, type formals can't be cast targets.
-            |  a as T orelse do {};
-            |  // Does nothing.
-            |  s as String orelse do {};
-            |  b as Boolean orelse do {};
-            |  i as Int orelse do {};
-            |  bon as Boolean?;
-            |  n as Never<Int32>? orelse do {};
-            |  // Ok.  Can always check nullity
-            |  a as Never<AnyValue>? orelse do {};
-            |  son as Never<String>? orelse do {};
-            |  ion as Never<Int32>? orelse do {};
-            |  fon as Never<Float64>? orelse do {};
-            |  bon as Never<Boolean>? orelse do {};
-            |  // Types are statically disjoint
-            |  s as Int orelse do {};
-            |  i as String orelse do {};
-            |  b as Never<Boolean>? orelse do {};
-            |  n as Int orelse do {};
-            |  k as Float64 orelse do {};
-            |  k as Int orelse do {};
-            |  // ok to unconnected class type.
-            |  a as UnconnectedUserType orelse do {};
-            |
-            |  // TODO: `is` equivalents of some of the above
-            |}
-        """.trimMargin(),
         logEntryWanted = {
             it.level >= Log.Warn ||
                 // This is a low-level message, but it's specific to these checks.
@@ -2532,50 +2046,6 @@ class GenerateCodeStageTest {
     fun invalidRttiTypeArgs() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/invalid-rtti-type-args"),
         stage = Stage.Run,
-        input = """
-            |interface Sup<T> {}
-            |class Sub<T> extends Sup<T> {}
-            |interface Sup2<T, U> extends Sup<U> {}
-            |class Sub2<T> extends Sup2<T, String> {} // sneak swap the meaning of T
-            |class Sub3<T> extends Sup2<String, T> {} // weaves T through
-            |class Sub4 extends Sup<String> {}
-            |let badCast(value: AnyValue): Sub<String> throws Bubble {
-            |  // Introduces String.
-            |  value as Sub<String>
-            |}
-            |let alsoBad<T>(value: Sup<T>): Sub<String> throws Bubble {
-            |  // Presumes known type arg for T.
-            |  value as Sub<String>
-            |}
-            |let goodCast(value: Sup<String>): Sub<String> throws Bubble {
-            |  // Keeps the known type arg.
-            |  value as Sub<String>
-            |}
-            |let alsoGood<T>(value: Sup<T>): Sub<T> throws Bubble {
-            |  // Also keeps the known type arg, which is also a type param.
-            |  value as Sub<T>
-            |}
-            |let butThisIsBad<T>(value: Sup<T>): Sub2<T> throws Bubble {
-            |  // The T args here aren't actually related. Presumes String as an arg for U.
-            |  value as Sub2<T>
-            |}
-            |let alsoBadBecauseExtra<T, U>(value: Sup<U>): Sup2<T, U> throws Bubble {
-            |  // Introduces T.
-            |  value as Sup2<T, U>
-            |}
-            |let butThisIsGood<U>(value: Sup<U>): Sup2<U, U> throws Bubble {
-            |  // Uses known U for both cases.
-            |  value as Sup2<U, U>
-            |}
-            |let goodDespiteMiddle<T>(value: Sup<T>): Sub3<T> throws Bubble {
-            |  // Invents String for Sup2 T, but that doesn't matter because it's not represented.
-            |  value as Sub3<T>
-            |}
-            |let badNonGeneric<T>(value: Sup<T>): Sub4 throws Bubble {
-            |  // Invents String for Sup T without any generics in Sub4 at all.
-            |  value as Sub4
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  run: "void: Void",
@@ -2596,10 +2066,6 @@ class GenerateCodeStageTest {
         stage = Stage.GenerateCode,
         // Check that is T and as T that would be invalid
         // if translated aren't inlined.
-        input = """
-            |let s: AnyValue = "str";
-            |s is String
-        """.trimMargin(),
         moduleResultNeeded = true,
         logEntryWanted = {
             // UnnecessaryRttiCheck is low level, but relevant inside a REPL.
@@ -2627,18 +2093,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/upcast-ok"),
         stage = Stage.Run,
         // Use Map here because that was the original motivating example, even though it's not vital to the test.
-        input = """
-            |interface A {}
-            |class B extends A {}
-            |class C extends A {}
-            |// Basic and upcast are fine. No warnings.
-            |let bVals = new Map([new Pair("a", new B())]);
-            |let aVals = new Map([new Pair("a", new B() as A)]);
-            |// Samecast should still get a warning.
-            |let bbVals = new Map([new Pair("a", new B() as B)]);
-            |// Upcheck should also get a warning. Here we use a different subtype for clear message distinction.
-            |let isSub = new C() is A;
-        """.trimMargin(),
         logEntryWanted = {
             // UnnecessaryRttiCheck is low level, but relevant inside a REPL.
             it.level >= Log.Warn || it.template == MessageTemplate.UnnecessaryRttiCheck
@@ -2659,10 +2113,6 @@ class GenerateCodeStageTest {
     fun castAwayNullWorksAtRuntime() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/cast-away-null-works-at-runtime"),
         stage = Stage.Run,
-        input = $$"""
-            |let f(x: Float64?): Float64? { (x as Float64) orelse null }
-            |console.log("f(1.0) = ${ f(1.0) }");
-        """.trimMargin(),
         want = """
             |{
             |  run: "void: Void",
@@ -2675,14 +2125,6 @@ class GenerateCodeStageTest {
     fun matchWithCharExprCases() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/match-with-char-expr-cases"),
         stage = Stage.GenerateCode,
-        input = """
-            |let abcStop(i: Int): String {
-            |  when (i) {
-            |    char 'a', char 'b', char 'c' -> "ok";
-            |    else -> "stop";
-            |  }
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -2720,26 +2162,6 @@ class GenerateCodeStageTest {
         // In short, a sealed, connected type must be able to distinguish
         // its subtypes, so the static expression type matters when casting.
         stage = Stage.Run,
-        input = """
-            |@connected
-            |export sealed interface S {}
-            |
-            |@connected
-            |class C extends S {}
-            |@connected
-            |class D extends S {}
-            |
-            |@connected
-            |interface NS extends S {}
-            |@connected
-            |class E extends NS {}
-            |
-            |export let f(a: AnyValue, s: S): Void throws Bubble {
-            |  a as C;  // BAD: C is connected, and AnyValue is not.
-            |  s as C;  // OK.  C is a sub-type of S
-            |  s as E;  // BAD. E is a sub-type of S, but only via NS which is not-sealed.
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  run: "void: Void",
@@ -2754,11 +2176,6 @@ class GenerateCodeStageTest {
     @Test
     fun stringNullEquality() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/string-null-equality"),
-        input = """
-            |let f(s: String?): Boolean { s == null }
-            |
-            |!f("") && f(null)
-        """.trimMargin(),
         stage = Stage.Run,
         moduleResultNeeded = true,
         want = """
@@ -2771,15 +2188,6 @@ class GenerateCodeStageTest {
     @Test
     fun asAndIsSimplification1() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/as-and-is-simplification1"),
-        input = """
-            |let f(i: StringIndexOption?): Int throws Bubble {
-            |  if (i is StringIndex) {
-            |    0
-            |  } else {
-            |    1
-            |  }
-            |}
-        """.trimMargin(),
         stage = Stage.GenerateCode,
         want = """
             |{
@@ -2809,15 +2217,6 @@ class GenerateCodeStageTest {
     @Test
     fun asAndIsSimplification2() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/as-and-is-simplification2"),
-        input = """
-            |let f(i: StringIndexOption?): Int throws Bubble {
-            |  if (i is StringIndexOption) {
-            |    0
-            |  } else {
-            |    1
-            |  }
-            |}
-        """.trimMargin(),
         stage = Stage.GenerateCode,
         want = """
             |{
@@ -2847,14 +2246,6 @@ class GenerateCodeStageTest {
     @Test
     fun asAndIsSimplification3() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/as-and-is-simplification3"),
-        input = """
-            |let f(i: StringIndexOption?): Int throws Bubble {
-            |  do {
-            |    let j = i as StringIndex?;
-            |    0
-            |  } orelse 1
-            |}
-        """.trimMargin(),
         stage = Stage.GenerateCode,
         want = """
             |{
@@ -2888,21 +2279,6 @@ class GenerateCodeStageTest {
     @Test
     fun asAndIsSimplification4() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/as-and-is-simplification4"),
-        input = """
-            |let f(i: StringIndexOption?): Int throws Bubble {
-            |  if (i is StringIndex?) {
-            |    let j = i as StringIndex?;
-            |    if (j is StringIndex) {
-            |      1
-            |    } else {
-            |      2
-            |    }
-            |  } else {
-            |    let n = i as Never<StringIndexOption>?;
-            |    3
-            |  }
-            |}
-        """.trimMargin(),
         stage = Stage.GenerateCode,
         want = """
             |{
@@ -2962,14 +2338,6 @@ class GenerateCodeStageTest {
     @Test
     fun asAndIsSimplification5() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/as-and-is-simplification5"),
-        input = """
-            |let g(s: String): StringIndexOption {
-            |  s.end
-            |}
-            |let f(s: String): Boolean {
-            |  g(s) is NoStringIndex
-            |}
-        """.trimMargin(),
         stage = Stage.GenerateCode,
         want = """
             |{
@@ -2992,14 +2360,6 @@ class GenerateCodeStageTest {
     @Test
     fun nullSimplification() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/null-simplification"),
-        input = """
-            |let f(s: String?): Boolean {
-            |  s == null
-            |}
-            |let g(s: String?): Boolean {
-            |  s != null
-            |}
-        """.trimMargin(),
         stage = Stage.GenerateCode,
         want = """
             |{
@@ -3023,9 +2383,6 @@ class GenerateCodeStageTest {
     fun sneakyBubble() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/sneaky-bubble"),
         stage = Stage.GenerateCode,
-        input = """
-            |class Something(public let haha: Int?) {}
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -3055,36 +2412,6 @@ class GenerateCodeStageTest {
         stage = Stage.GenerateCode,
         // Explore bubbles both escaping and captured, both explicit and implicit, both builtin and user functions.
         // Just making sure to explore the space of how we handle things.
-        input = """
-            |let other(i: Int): Int throws Bubble {
-            |  if (i % 2 == 0) {
-            |    // Bubble allowed above.
-            |    bubble()
-            |  } else {
-            |    i
-            |  }
-            |}
-            |let something(nums: Map<Int, Int>, index: Int): Int {
-            |  // No `| Bubble` above, so bubblies should error.
-            |  if (index < 0) {
-            |    bubble()
-            |  } else if (index == 0) {
-            |    other(index)
-            |  } else if (index == 1) {
-            |    nums[index]
-            |  } else {
-            |    do {
-            |      if (index < nums[index]) {
-            |        index + 1
-            |      } else if (index > 10) {
-            |        other(index + 1)
-            |      } else {
-            |        bubble()
-            |      }
-            |    } orelse index
-            |  }
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -3151,20 +2478,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/extension-method-use"),
         stage = Stage.Run,
         moduleResultNeeded = true,
-        input = """
-            |@extension("isPalindrome")
-            |let stringIsPalindrome(s: String): Boolean {
-            |  var i = String.begin;
-            |  var j = s.end;
-            |  while (i < j) {
-            |    j = s.prev(j);
-            |    if (s[i] != s[j]) { return false }
-            |    i = s.next(i);
-            |  }
-            |  return true
-            |}
-            |"step on no pets".isPalindrome()
-        """.trimMargin(),
         want = """
             |{
             |  define: {
@@ -3233,10 +2546,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/json-adapter-works"),
         stage = Stage.Run,
         moduleResultNeeded = true,
-        input = """
-            |@json class C {}
-            |C.jsonAdapter()
-        """.trimMargin(),
         want = """
             |{
             |  run: "{}: CJsonAdapter__0"
@@ -3249,22 +2558,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/json-adapter-encodes-sealed-types"),
         stage = Stage.Run,
         moduleResultNeeded = true,
-        input = """
-            |let {
-            |  JsonTextProducer,
-            |  listJsonAdapter,
-            |} = import("std/json");
-            |
-            |@json sealed interface Animal {}
-            |@json class Cat(public meowCount: Int)       extends Animal {}
-            |@json class Dog(public hydrantsSniffed: Int) extends Animal {}
-            |
-            |let ls: List<Animal> = [new Cat(11), new Dog(111)];
-            |
-            |let p = new JsonTextProducer();
-            |List.jsonAdapter(Animal.jsonAdapter()).encodeToJson(ls, p);
-            |p.toJsonString()
-        """.trimMargin(),
         want = """
             |{
             |  run: "\"[{\\\"meowCount\\\":11},{\\\"hydrantsSniffed\\\":111}]\": String"
@@ -3277,28 +2570,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/json-adapter-decodes-sealed-types"),
         stage = Stage.Run,
         moduleResultNeeded = true,
-        input = """
-            |let {
-            |  JsonTextProducer,
-            |  listJsonAdapter,
-            |  parseJson,
-            |  NullInterchangeContext,
-            |} = import("std/json");
-            |
-            |@json sealed interface Animal {}
-            |@json class Cat(public meowCount: Int) extends Animal {}
-            |@json class Dog(public hydrantsSniffed: Int) extends Animal {}
-            |
-            |let t = parseJson(
-            |  ${"\"\"\""}
-            |  "[
-            |  "  { "meowCount": 137 },
-            |  "  { "hydrantsSniffed": 1337 }
-            |  "]
-            |);
-            |
-            |List.jsonAdapter(Animal.jsonAdapter()).decodeFromJson(t, NullInterchangeContext.instance)
-        """.trimMargin(),
         want = """
             |{
             |  run: "[{meowCount: 137}, {hydrantsSniffed: 1337}]: List"
@@ -3311,18 +2582,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/nullable-json-field"),
         stage = Stage.Run,
         moduleResultNeeded = true,
-        input = """
-            |let {
-            |  NullInterchangeContext,
-            |  OrNullJsonAdapter,
-            |  booleanJsonAdapter,
-            |  listJsonAdapter,
-            |  parseJson,
-            |} = import("std/json");
-            |let a = List.jsonAdapter(new OrNullJsonAdapter(Boolean.jsonAdapter()));
-            |
-            |a.decodeFromJson(parseJson("[null, false, true]"), NullInterchangeContext.instance)
-        """.trimMargin(),
         want = """
             |{
             |  run: "[null, false, true]: List",
@@ -3335,13 +2594,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/json-interop-forwards-type-info-for-nullable-props"),
         stage = Stage.Run,
         moduleResultNeeded = true,
-        input = """
-            |let { NullInterchangeContext, parseJson } = import("std/json");
-            |
-            |@json class C(public i: Int?) {}
-            |
-            |C.jsonAdapter().decodeFromJson(parseJson('{"i": null}'), NullInterchangeContext.instance)
-        """.trimMargin(),
         want = """
             |{
             |  run: "{i: null}: C__0"
@@ -3354,11 +2606,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/rgx-macro"),
         stage = Stage.Run,
         moduleResultNeeded = true,
-        input = """
-            |let { ... } = import("std/regex");
-            |
-            |rgx"."
-        """.trimMargin(),
         want = """
             |{
             |  run: "{data: {}, compiled: ƒ}: `std/regex/`.Regex"
@@ -3371,15 +2618,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/complex-string-expr"),
         stage = Stage.Run,
         moduleResultNeeded = true,
-        input = $$"""
-            |let guests = ["Hilo, HI", "you in the back in the hat"];
-            |$${"\"\"\""}
-            |~Hello, World
-            |:for (let guest of guests) {
-            |  ~, and ${guest}
-            |:}
-            |~!
-        """.trimMargin(),
         want = """
             |{
             |  import: {
@@ -3411,15 +2649,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/complex-string-expr-with-formatting-hole"),
         stage = Stage.Run,
         moduleResultNeeded = true,
-        input = $$"""
-            |$${"\"\"\""}
-            |~Things: ${}
-            |:for (var i = 1; i < 100; i *= 2) {
-            |  ~${i}, ${}
-            |  // Comment inside loop after content.
-            |:}
-            |~and so on
-        """.trimMargin(),
         want = """
             |{
             |  run: ["Things: 1, 2, 4, 8, 16, 32, 64, and so on", "String"],
@@ -3432,26 +2661,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/complex-string-expr-with-formatting-hole-and-more"),
         stage = Stage.Run,
         moduleResultNeeded = true,
-        input = $$"""
-            |$${"\"\"\""}
-            |:var after = "and such";
-            |:for (var i = 1; i < 100; i *= 2) {
-            |  // Comment inside loop before split content.
-            |  // Second comment.
-            |  :let j = i - 1;
-            |  ~${j + 1}
-            |  :after = "and so on";
-            |  ~,
-            |  :do {
-            |    // And a trailing space inside a nested block.
-            |    ~ ${}
-            |  :}
-            |  // Just some nothings for funsies.
-            |  ~
-            |  ~
-            |:}
-            |~${after}
-        """.trimMargin(),
         want = """
             |{
             |  run: ["1, 2, 4, 8, 16, 32, 64, and so on", "String"],
@@ -3463,26 +2672,6 @@ class GenerateCodeStageTest {
     fun explicitBoundedTypeParametersInInterpreter() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/explicit-bounded-type-parameters-in-interpreter"),
         stage = Stage.Run,
-        input = """
-            |interface I { x: String }
-            |
-            |class C(public x: String) extends I {}
-            |
-            |let least<T extends I>(a: T?, b: T?): T? {
-            |  if (a != null) {
-            |    if (b != null) {
-            |      if (a.x < b.x) { a } else { b }
-            |    } else {
-            |      a
-            |    }
-            |  } else {
-            |    b
-            |  }
-            |}
-            |
-            |let c = least<C>({ x: "foo" }, { x: "bar" });
-            |console.log(c?.x ?? "NULL");
-        """.trimMargin(),
         want = """
             |{
             |  run: "void: Void",
@@ -3495,15 +2684,6 @@ class GenerateCodeStageTest {
     fun invalidNonNullCheck() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/invalid-non-null-check"),
         stage = Stage.Run,
-        input = """
-            |export let Act = fn (i: Int): Void;
-            |export let hi(i: Int, act: Act?): Void {
-            |  if (i == 0 || act != null) {
-            |    // `||` means act could be null here.
-            |    act(i);
-            |  }
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  run: "void: Void",
@@ -3515,18 +2695,6 @@ class GenerateCodeStageTest {
     @Test
     fun multiImport() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/multi-import"),
-        input = """
-            |let { ... } = import("./nums");
-            |
-            |console.log((a + b + c + d + e).toString());
-            |
-            |$TEST_INPUT_MODULE_BREAK ./nums/nums.temper
-            |export let a = 1;
-            |export let b = 2;
-            |export let c = 3;
-            |export let d = 4;
-            |export let e = 5;
-        """.trimMargin(),
         stage = Stage.GenerateCode,
         want = """
             |{
@@ -3554,17 +2722,6 @@ class GenerateCodeStageTest {
     fun nullInTestingAssert() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/null-in-testing-assert"),
         stage = Stage.GenerateCode,
-        input = """
-            |let { C } = import("./c");
-            |
-            |test("to be or not to be null") {
-            |  let c0 = { optionalString: "" };
-            |  assert(c0.optionalString == "");
-            |}
-            |
-            |$TEST_INPUT_MODULE_BREAK ./c/c.temper
-            |export class C(public optionalString: String?) {}
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -3609,15 +2766,6 @@ class GenerateCodeStageTest {
     fun longNullChain() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/long-null-chain"),
         stage = Stage.GenerateCode,
-        input = """
-            |let {a} = import("./a");
-            |a?.string?.isEmpty?.toString() ?? "NULL"
-            |
-            |////!module: ./a/a.temper
-            |export class A(public string: String) {}
-            |
-            |export let a: A? = new A("a");
-        """.trimMargin(),
         moduleResultNeeded = true,
         want = """
             |{
@@ -3688,12 +2836,6 @@ class GenerateCodeStageTest {
     fun nonNullInference() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/non-null-inference"),
         stage = Stage.GenerateCode,
-        input = """
-            |let maybeLength(a: String?): Int? {
-            |  // Because of non-null inference, `a.end` is ok here.
-            |  a?.countBetween(String.begin, a.end)
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -3720,24 +2862,6 @@ class GenerateCodeStageTest {
     fun complexAssignmentOfVarProperty() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/complex-assignment-of-var-property"),
         stage = Stage.Run,
-
-        input = $$"""
-            |let { IntBox } = import("./int-box/");
-            |
-            |let ib = { i: -1 };
-            |console.log("ib.i = ${ib.i}");
-            |ib.i += 11;
-            |console.log("ib.i = ${ib.i}");
-            |ib.i *= 9;
-            |console.log("ib.i = ${ib.i}");
-            |ib.i -= 6;
-            |console.log("ib.i = ${ib.i}");
-            |ib.i /= 2;
-            |console.log("ib.i = ${ib.i}");
-            |
-            |$$TEST_INPUT_MODULE_BREAK ./int-box/int-box.temper
-            |export class IntBox(public var i: Int) {}
-        """.trimMargin(),
 
         want = """
             |{
@@ -3791,16 +2915,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/complex-assignment-of-get-expr"),
         stage = Stage.Run,
 
-        input = $$"""
-            |let ls = new ListBuilder<Int>();
-            |ls.add(0);
-            |ls.add(3);
-            |ls[0] += 10;
-            |ls[1] *= 2;
-            |
-            |console.log("ls = [${ls.toList().join(", ") { (i: Int): String => i.toString(10) }}]");
-        """.trimMargin(),
-
         want = """
             |{
             |  stdout: ```
@@ -3842,15 +2956,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/when-else-bubble"),
         stage = Stage.GenerateCode,
         pseudoCodeDetail = PseudoCodeDetail(showInferredTypes = true),
-        input = """
-            |export let something(x: String?): String throws Bubble {
-            |  /** Silly */
-            |  when (x) {
-            |    is String -> x;
-            |    else -> bubble();
-            |  }
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -3891,13 +2996,6 @@ class GenerateCodeStageTest {
     fun veryBigMapConstructor() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/very-big-map-constructor"),
         stage = Stage.Run,
-        input = buildString {
-            append("export let numbers: Map<String, Int> = new Map<String, Int>([")
-            for (i in 0 until 1000) {
-                append("  new Pair<String, Int>(\"$i\", $i),")
-            }
-            append("]);")
-        },
         want = """
             |{
             |  run: "void: Void",
@@ -3909,16 +3007,6 @@ class GenerateCodeStageTest {
     fun doPureRuns() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/do-pure-runs"),
         stage = Stage.Run,
-        input = """
-            |let { C } = import("./c");
-            |
-            |let c = doPure { (): C => new C() };
-            |
-            |c
-            |
-            |$TEST_INPUT_MODULE_BREAK ./c/c.temper
-            |export class C {}
-        """.trimMargin(),
         moduleResultNeeded = true,
         want = """
             |{
@@ -3941,12 +3029,6 @@ class GenerateCodeStageTest {
     fun pureVirtualMethodInConcreteClass() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/pure-virtual-method-in-concrete-class"),
         stage = Stage.Run,
-        input = """
-            |export interface I<T> { f(x: T): Void; }
-            |export class C extends I<String> {
-            |  // but does not override f()
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  run: "void: Void",
@@ -3960,25 +3042,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/null-assigned-to-non-null-var-devl"),
         stage = Stage.GenerateCode,
         moduleResultNeeded = true,
-        input = $$"""
-            |let f(i: Int32): String {
-            |  var sbOrNull: StringBuilder = null;
-            |  //                         ^ No `?`
-            |  if (i % 2 == 0) {
-            |    let sbNow = sbOrNull;
-            |    let sb = sbNow ?? new StringBuilder();
-            |    sb.append("${i}");
-            |    sbOrNull = sb;
-            |  }
-            |  let finalSb = sbOrNull;
-            |  if (finalSb == null) {
-            |    ""
-            |  } else {
-            |    finalSb.toString()
-            |  }
-            |}
-            |f(4)
-        """.trimMargin(),
         want = """
             |{
             |  errors: [
@@ -4014,13 +3077,6 @@ class GenerateCodeStageTest {
     fun stringCoercionOfRttiCheck() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/string-coercion-of-rtti-check"),
         stage = Stage.Run,
-        input = $$"""
-            |let f(i: StringIndexOption): Void {
-            |  console.log("Yes ${i is StringIndex}, no ${i is NoStringIndex }");
-            |}
-            |
-            |f(String.begin)
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -4051,17 +3107,6 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/is-applied-to-parameterized-type"),
         stage = Stage.Run,
         moduleResultNeeded = true,
-        input = """
-            |sealed interface I<T> {}
-            |class A<T> extends I<T> {}
-            |class B<T> extends I<T> {}
-            |
-            |let f<T>(x: I<T>): Boolean {
-            |  x is A<T>
-            |}
-            |
-            |[f(new A<String>()), f(new B<String>())]
-        """.trimMargin(),
         want = """
             |{
             |  "run": "[true, false]: List"
@@ -4073,20 +3118,6 @@ class GenerateCodeStageTest {
     fun staticWithUnusedExtension() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/static-with-unused-extension"),
         stage = Stage.Run,
-        input = """
-            |@staticExtension(String, "foo")
-            |let strFoo(): Void {
-            |  console.log("string foo");
-            |}
-            |
-            |class C {
-            |  public static foo(): Void {
-            |    console.log("C foo");
-            |  }
-            |}
-            |
-            |C.foo();
-        """.trimMargin(),
         want = """
             |{
             |  run: "void: Void",
@@ -4103,17 +3134,6 @@ class GenerateCodeStageTest {
     fun declaringADataFile() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/declaring-a-data-file"),
         stage = Stage.GenerateCode,
-        input = """
-            |dataFile("hello.txt", "text/plain", ${temperEscaper.escape(
-            buildString {
-                // This string is long to demonstrate that the data doesn't
-                // show up in its entirety in the debug form.
-                append("He")
-                repeat(1000) { append("ll") }
-                append("o, World!")
-            },
-        )});
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {
@@ -4130,9 +3150,6 @@ class GenerateCodeStageTest {
     fun missingFunctionBody() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/missing-function-body"),
         stage = Stage.GenerateCode,
-        input = """
-            |let hi(): Void;
-        """.trimMargin(),
         want = """
             |{
             |  generateCode: {

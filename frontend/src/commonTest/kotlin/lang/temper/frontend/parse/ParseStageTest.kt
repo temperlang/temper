@@ -13,13 +13,6 @@ class ParseStageTest {
     fun appendix() = assertModuleAtStage(
         stageTestDir = StageTestDir("parse/appendix"),
         stage = Stage.Parse,
-        input = """
-        |foo()
-        |;;;
-        |{
-        |  "foo": ["bar", { "baz": -800 }, false]
-        |}
-        """.trimMargin(),
         want = """
         |{
         |  parse: {
@@ -43,35 +36,6 @@ class ParseStageTest {
     fun badUnicodeScalarValues() = assertModuleAtStage(
         stageTestDir = StageTestDir("parse/bad-unicode-scalar-values"),
         stage = Stage.Parse,
-        // Purposely do some things that might throw off sloppy position estimation.
-        // And include regex, even with good escapes, to make sure we handle such.
-        input = $$"""
-            |/./;
-            |/(^|,)\s*/;
-            |$${'"'}""
-            |"wanna${} be pair\: \ud800\udc00
-            |~so does that have more pos needs?
-            |;
-            |"fine\u0020escape${" "}here\u";
-            |"too big: \u{hi,110000}!\u";
-            |"space bad: \u{20, 21}";
-            |"empty: \u{}";
-            |"fine: \u{20}";
-            |"also: \u{20,21}";
-            |"bad order: \u{,20,,21,22}";
-            |raw"\u{}\u{ }";
-            |raw"too big: \u{ hi, 110000 }!\u";
-            |raw"too big: \u{ hi${" there"}, 110000 }!\u";
-            |raw"hi\u{${" t"}}here";
-            |"wanna be ${pair} in list:\u{2${}0,d800,dc00}";
-            |"interpolate after list not in:\u{20}${"hi"}";
-            |"hi";
-            |${hi};
-            |"${"hi"}";
-            |\{hi};
-            |"surrogate, not scalar: \ud834!";
-            |"wanna be pair: \ud800\udc00";
-        """.trimMargin(),
         want = """
             |{
             |  parse: {
@@ -113,9 +77,6 @@ class ParseStageTest {
     fun callJoinRewrite() = assertModuleAtStage(
         stageTestDir = StageTestDir("parse/call-join-rewrite"),
         stage = Stage.Parse,
-        input = """
-        |if (a) { b } else if (c) { d } else { e }
-        """.trimMargin(),
         want = """
         |{
         |  parse: {
@@ -143,9 +104,6 @@ class ParseStageTest {
         stageTestDir = StageTestDir("parse/call-join-rewrite-for-docs"),
         stage = Stage.Parse,
         genre = Genre.Documentation,
-        input = """
-        |if (a) { b } else if (c) { d } else { e }
-        """.trimMargin(),
         want = """
         |{
         |  parse: {
@@ -168,14 +126,6 @@ class ParseStageTest {
     fun angleBracketConfusionErrorMessageIsNotSuperTerrible() = assertModuleAtStage(
         stageTestDir = StageTestDir("parse/angle-bracket-confusion-error-message-is-not-super-terrible"),
         stage = Stage.Run,
-        input = """
-        |let or(a: Boolean, b: Boolean): Boolean { a || b }
-        |let a = 1;
-        |// The below has a use of angle-brackets, not a use
-        |// of less-than and a use of greater-than.
-        |or(a< 2, a > 0);
-        |//  ^---- Missing space causes a parse failure.
-        """.trimMargin(),
         want = """
             |{
             |  stageCompleted: "GenerateCode",
@@ -191,12 +141,6 @@ class ParseStageTest {
     fun unrepresentableIntegersWarnedOn() = assertModuleAtStage(
         stageTestDir = StageTestDir("parse/unrepresentable-integers-warned-on"),
         stage = Stage.Parse,
-        input = """
-            |let a = 2147483648;
-            |let b = 2147483647; // ok
-            |let c = 2147483648i64; // ok
-            |let d = 0x8000_0000; // ok because idioms
-        """.trimMargin(),
         want = """
             |{
             |  stageCompleted: "Parse",

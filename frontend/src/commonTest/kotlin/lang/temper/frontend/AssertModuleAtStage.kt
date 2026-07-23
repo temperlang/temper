@@ -29,7 +29,6 @@ import lang.temper.common.structure.PropertySink
 import lang.temper.common.structure.StructureHint
 import lang.temper.common.structure.StructureSink
 import lang.temper.common.structure.Structured
-import lang.temper.common.testCodeLocation
 import lang.temper.common.testModuleName
 import lang.temper.common.toStringViaBuilder
 import lang.temper.env.Export
@@ -39,8 +38,6 @@ import lang.temper.frontend.staging.ModuleConfig
 import lang.temper.frontend.staging.ModuleCustomizeHook
 import lang.temper.fs.Url
 import lang.temper.lexer.Genre
-import lang.temper.lexer.LanguageConfig
-import lang.temper.lexer.StandaloneLanguageConfig
 import lang.temper.lexer.languageConfigForExtension
 import lang.temper.log.FilePath.Companion.join
 import lang.temper.log.LogEntry
@@ -82,9 +79,6 @@ import lang.temper.value.Value
 import lang.temper.value.staticTypeContained
 import lang.temper.value.staySymbol
 
-/** See input parameter to [assertModuleAtStage] */
-const val TEST_INPUT_MODULE_BREAK = "////!module:"
-
 /**
  * A directory path relative to the directory containing `frontend/commonTest/.../README-stage-tests.md`
  * that specifies test inputs and outputs.  See that README file for details on the test structure.
@@ -124,33 +118,6 @@ internal expect val stageTestDirFileSourceRoot: Url
  */
 internal fun assertModuleAtStage(
     want: String = "",
-    /**
-     * The temper text that is parsed using [languageConfig].
-     *
-     * If the string [TEST_INPUT_MODULE_BREAK] occurs in the text, then this input
-     * will be split up into multiple different modules which may import one another.
-     *
-     * This is useful for defining one main module to test, which is the first chunk,
-     * but having it import other files whose gory details do not show up in [want].
-     *
-     * [TEST_INPUT_MODULE_BREAK] should be followed by a '/' separated path relative
-     * to [testCodeLocation]'s parent directory.
-     * That path will be used to derive the module name for the subsidiary modules.
-     * By directory-module convention, source files will be grouped by the containing
-     * directory.
-     *
-     * For example:
-     *
-     * ```temper inert
-     * let { foo } = import("./foo");
-     * console.log("Main module code goes here");
-     * console.log(foo);
-     *
-     * ////!module: ./foo/foo.temper
-     * export let foo = "FOO";
-     * ```
-     */
-    input: String,
     stageTestDir: StageTestDir = StageTestDir("TODO"),
     stage: Stage,
     genre: Genre = Genre.Library,
@@ -161,7 +128,6 @@ internal fun assertModuleAtStage(
     loc: ModuleName? = null,
     stagingFlags: Set<BuiltinName> = emptySet(),
     stackTracesForErrors: Boolean = false,
-    languageConfig: LanguageConfig = StandaloneLanguageConfig,
     logEntryWanted: (LogEntry) -> Boolean = { it.level >= Log.Warn },
 ) {
     assertModuleAtStage(

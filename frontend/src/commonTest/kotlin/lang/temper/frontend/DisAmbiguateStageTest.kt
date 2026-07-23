@@ -19,10 +19,6 @@ class DisAmbiguateStageTest {
     fun unknownFunctionWithFormalGetsError() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/unknown-function-with-formal-gets-error"),
         stage = Stage.DisAmbiguate,
-        //             ↓↓↓     ↓↓↓↓↓      ↓↓↓
-        input = "foo f(a = 1, b: Int) { g(a = 1, b) }",
-        //       0123456789012345678901234567890123456
-        //                 1         2         3
         want = """
         {
           "disAmbiguate": {
@@ -82,9 +78,6 @@ class DisAmbiguateStageTest {
     fun formalsFormalizedAndActualsActualized() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/formals-formalized-and-actuals-actualized"),
         stage = Stage.DisAmbiguate,
-        input = "let f(a = 1, b: Int) { g(a = 1, b) }",
-        //       0123456789012345678901234567890123456
-        //                 1         2         3
         want = """
         {
           disAmbiguate: {
@@ -139,7 +132,6 @@ class DisAmbiguateStageTest {
     fun formalsAndActualsWithEmbeddedComments() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/formals-and-actuals-with-embedded-comments"),
         stage = Stage.DisAmbiguate,
-        input = "let f(/** docs */ a: Int) { g(/** here too? */ 1) }",
         want = """
             |{
             |  disAmbiguate: {
@@ -184,7 +176,6 @@ class DisAmbiguateStageTest {
     fun annotatedFormal() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/annotated-formal"),
         stage = Stage.DisAmbiguate,
-        input = "fn f(@A @B x) {}",
         want = """
         {
           disAmbiguate: {
@@ -222,7 +213,6 @@ class DisAmbiguateStageTest {
     fun stagingAnnotation() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/staging-annotation"),
         stage = Stage.DisAmbiguate,
-        input = "@(A..S) fn (x) {}",
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
         want = """
         {
@@ -274,18 +264,6 @@ class DisAmbiguateStageTest {
     fun bunchOfStuff() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/bunch-of-stuff"),
         stage = Stage.DisAmbiguate,
-        input = $$"""
-        a + b * c;
-
-        42;
-
-        let x = 1;
-
-        // What is going on here?
-        console.log("foo ${"bar ${"qux ${xyzzy}"}"} baz" );
-
-        // comment
-        """.trimIndent(),
         want = """
         {
           disAmbiguate: {
@@ -307,9 +285,6 @@ class DisAmbiguateStageTest {
     fun blockFormals() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/block-formals"),
         stage = Stage.DisAmbiguate,
-        input = """
-            |f { x: Int, y: Int => x + y }
-        """.trimMargin(),
         want = """
         {
           disAmbiguate: {
@@ -368,36 +343,6 @@ class DisAmbiguateStageTest {
     fun classBodyAmbiguityReduction() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/class-body-ambiguity-reduction"),
         stage = Stage.DisAmbiguate,
-        input = """
-          class C { // This is a class body
-            var decl = 0;
-            let cDecl;
-            property0;
-            public property1: T;
-            property2 = initial;
-            property3: T = initial;
-            method1() { 123 }
-            method2(): T { 123 }
-            method3(x: U = 123) { 123 }
-            let method4(x: V) { 123 }
-            get p(@Foo this): T { property1 }
-            set p(x) { this.property1 = x }
-          }
-          do { // This is not a class body, and the parts about properties/methods are ALL LIES!
-            var decl = 0;
-            let cDecl;
-            property0;
-            public property1: T;
-            property2 = initial;
-            property3: T = initial;
-            method1() { 123 }
-            method2(): T { 123 }
-            method3(x: U = 123) { 123 } // Error on line 24
-            let method4(x: V) { 123 }
-            get p(@Foo this): T { property1 }
-            set p(x) { this.property1 = x }
-          }
-        """.trimIndent(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
         {
@@ -487,9 +432,6 @@ class DisAmbiguateStageTest {
     fun typeFormalsOnClassDeclaration() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/type-formals-on-class-declaration"),
         stage = Stage.DisAmbiguate,
-        input = """
-            |class C<T, U extends D, @out V, @in W> extends A, B {}
-        """.trimMargin(),
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
         want = """
             |{
@@ -534,9 +476,6 @@ class DisAmbiguateStageTest {
         stageTestDir = StageTestDir("dis-ambiguate/generic-fn-with-complex-type-formal"),
         stage = Stage.DisAmbiguate,
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
-        input = """
-            |let f<@in T extends MapKey>(x: T): Void {}
-        """.trimMargin(),
         want = """
             |{
             |  disAmbiguate: {
@@ -559,11 +498,6 @@ class DisAmbiguateStageTest {
         stageTestDir = StageTestDir("dis-ambiguate/more-decorated-type-formals"),
         stage = Stage.DisAmbiguate,
         // No, `@partialImu` doesn't make sense here, but it allows for testing multiple decorators.
-        input = """
-        |class C<@in @imu T> {}
-        |class D<@imu @in T> {}
-        |let f<@imu @partialImu T>(t: T): Void {}
-        """.trimMargin(),
         want = """
         |{
         |  disAmbiguate: {
@@ -597,13 +531,6 @@ class DisAmbiguateStageTest {
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
         // Generic instance methods should be reported. Variety here is just to be sure about internal forms.
         // Static methods in interfaces can be generic if they want.
-        input = """
-            |interface Whatever {
-            |  blather<A>(a: A): A;
-            |  public let bling<B, C extends Whatever>(b: B, c: C): B { b }
-            |  static blot<T>(d: D): D;
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  disAmbiguate: {
@@ -651,7 +578,6 @@ class DisAmbiguateStageTest {
     fun multipleKeywordAnnotationsAllFire() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/multiple-keyword-annotations-all-fire"),
         stage = Stage.DisAmbiguate,
-        input = "public static let x",
         want = """
         {
           disAmbiguate: {
@@ -676,7 +602,6 @@ class DisAmbiguateStageTest {
     fun unrecognizedDecorationsPreservedForLater() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/unrecognized-decorations-preserved-for-later"),
         stage = Stage.DisAmbiguate,
-        input = "@foo @bar let x",
         want = """
         {
           disAmbiguate: {
@@ -690,7 +615,6 @@ class DisAmbiguateStageTest {
     fun decoratedArgument() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/decorated-argument"),
         stage = Stage.DisAmbiguate,
-        input = "let f(@foo(1) x: T) {}",
         want = """
         {
           disAmbiguate: {
@@ -707,7 +631,6 @@ class DisAmbiguateStageTest {
     fun everyTypeButImplicitsHasASuperType() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/every-type-but-implicits-has-a-super-type"),
         stage = Stage.DisAmbiguate,
-        input = "interface I {}",
         want = """
             |{
             |  disAmbiguate: {
@@ -736,7 +659,6 @@ class DisAmbiguateStageTest {
         stage = Stage.DisAmbiguate,
         // annotations on x do not apply to y as would be the case if `@foo var x = 0, y` were
         // to appear as a top-level, not a function formal parameter
-        input = "fn (@foo var x = 0, y) {}",
         want = """
         {
           disAmbiguate: {
@@ -750,11 +672,6 @@ class DisAmbiguateStageTest {
     fun genericMethod() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/generic-method"),
         stage = Stage.DisAmbiguate,
-        input = """
-            |class C {
-            |  public let f<T>(x: T): T { x }
-            |}
-        """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
             |{
@@ -870,9 +787,6 @@ class DisAmbiguateStageTest {
     fun enumDesugaring() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/enum-desugaring"),
         stage = Stage.DisAmbiguate,
-        input = """
-            |enum E { A, B, C }
-        """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
             |{
@@ -899,9 +813,6 @@ class DisAmbiguateStageTest {
     fun squareBracketDesugaring() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/square-bracket-desugaring"),
         stage = Stage.DisAmbiguate,
-        input = """
-            |a[i] = b[j];
-        """.trimMargin(),
         want = """
             |{
             |  disAmbiguate: {
@@ -918,9 +829,6 @@ class DisAmbiguateStageTest {
     fun multiDeclDecoratorApplication() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/multi-decl-decorator-application"),
         stage = Stage.DisAmbiguate,
-        input = """
-            |@foo var x, y;
-        """.trimMargin(),
         want = """
             |{
             |  disAmbiguate: {
@@ -938,7 +846,6 @@ class DisAmbiguateStageTest {
     fun multiInit() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/multi-init"),
         stage = Stage.DisAmbiguate,
-        input = "@foo let { a is S, b, c as d is T }: U = f();",
         want = """
             |{
             |  disAmbiguate: {
@@ -958,7 +865,6 @@ class DisAmbiguateStageTest {
     fun multiInitMultiRenameError() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/multi-init-multi-rename-error"),
         stage = Stage.DisAmbiguate,
-        input = "let { a as b as c as d } = f();",
         want = """
             |{
             |  disAmbiguate: {
@@ -979,7 +885,6 @@ class DisAmbiguateStageTest {
     fun wildcardDestructureError() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/wildcard-destructure-error"),
         stage = Stage.DisAmbiguate,
-        input = "let { ... } = f()",
         want = """
             |{
             |  disAmbiguate: {
@@ -999,7 +904,6 @@ class DisAmbiguateStageTest {
     fun multiInitErrorInClass() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/multi-init-error-in-class"),
         stage = Stage.DisAmbiguate,
-        input = "class Something { let { a, b } = f(); }",
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
             |{
@@ -1026,12 +930,6 @@ class DisAmbiguateStageTest {
         stageTestDir = StageTestDir("dis-ambiguate/comment-in-doc-type-definition"),
         stage = Stage.DisAmbiguate,
         genre = Genre.Documentation,
-        input = """
-            |class C {
-            |  // Comment in type definition
-            |  public x: Int;
-            |}
-        """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
         want = """
             |{
@@ -1055,9 +953,6 @@ class DisAmbiguateStageTest {
     fun exportedClassesHaveExportedNames() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/exported-classes-have-exported-names"),
         stage = Stage.DisAmbiguate,
-        input = """
-            |export class C {}
-        """.trimMargin(),
         want = """
             |{
             |  disAmbiguate: {
@@ -1091,11 +986,6 @@ class DisAmbiguateStageTest {
     fun exportedClassesWithExtraDecoratorsHaveExportedNames() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/exported-classes-with-extra-decorators-have-exported-names"),
         stage = Stage.DisAmbiguate,
-        input = """
-            |              export @bar class     C {}
-            |      @foo(1) export      interface D {}
-            |      @foo()  export @bar class     E {}
-        """.trimMargin(),
         want = """
             |{
             |  disAmbiguate: {
@@ -1154,14 +1044,6 @@ class DisAmbiguateStageTest {
     fun classesCanDeclarePropertiesInParenthetical() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/classes-can-declare-properties-in-parenthetical"),
         stage = Stage.DisAmbiguate,
-        input = """
-            |class Point(
-            |  public let x: Float64,
-            |  public let y: Float64,
-            |) extends AntValue {
-            |  public let distanceFromOrigin: Float64 = (x * x + y * y).sqrt();
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  disAmbiguate: {
@@ -1187,13 +1069,6 @@ class DisAmbiguateStageTest {
         stage = Stage.DisAmbiguate,
         pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
-        input = """
-            |do {
-            |  var x = 0;
-            |  x += 1;
-            |  console.log(x);
-            |}
-        """.trimMargin(),
         want = """
             |{
             |  disAmbiguate: {
