@@ -26,32 +26,7 @@ class FunctionMacroStageTest {
     fun compileLogExecutionOrder() = assertModuleAtStage(
         stageTestDir = StageTestDir("function-macro/compile-log-execution-order"),
         stage = Stage.FunctionMacro,
-        want = """
-        {
-          functionMacro: {
-            body:
-            ```
-            compilelog("1", @F);
-            if (c) {
-              compilelog("2", @F)
-            } else {
-              compilelog("3", @F)
-            };
-            compilelog("4", @F)
-
-            ```
-          },
-          stdout:
-          ```
-          clog:F: 1
-          clog:F: 2
-          clog:F: 3
-          clog:F: 4
-
-          ```
-        }
-        """,
-    ) { module, _, _, _ ->
+    ) { module, _, _ ->
         val loc = testCodeLocation
         val doc = Document(module)
         val pos = Position(loc, 0, 0)
@@ -117,9 +92,7 @@ class FunctionMacroStageTest {
 
         root.replaceFlow(StructuredFlow(controlFlow))
 
-        module.deliverContent(
-            root,
-        )
+        module.deliverContent(root)
     }
 
     @Test

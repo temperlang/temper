@@ -41,6 +41,7 @@ fun readTestDir(testDirRoot: Url, skipFilePattern: Regex? = defaultSkipFilePatte
     check(testDirRoot.scheme == "file") { "$testDirRoot" }
 
     val rootPath = testDirRoot.toPath()
+
     return TestFileBundle(
         testDirRoot,
         buildMap {

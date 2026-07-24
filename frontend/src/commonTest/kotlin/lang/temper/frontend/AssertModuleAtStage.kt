@@ -5,30 +5,27 @@ import lang.temper.common.Either
 import lang.temper.common.ListBackedLogSink
 import lang.temper.common.Log
 import lang.temper.common.OpenOrClosed
-import lang.temper.common.asciiTitleCase
+import lang.temper.common.RFailure
+import lang.temper.common.RResult
+import lang.temper.common.RSuccess
 import lang.temper.common.asciiUnTitleCase
 import lang.temper.common.assertStructure
 import lang.temper.common.buildListMultimap
 import lang.temper.common.console
 import lang.temper.common.ignore
-import lang.temper.common.indexOfNext
-import lang.temper.common.json.JsonArray
-import lang.temper.common.json.JsonBoolean
-import lang.temper.common.json.JsonDouble
-import lang.temper.common.json.JsonLeaf
-import lang.temper.common.json.JsonLong
-import lang.temper.common.json.JsonNull
 import lang.temper.common.json.JsonObject
 import lang.temper.common.json.JsonString
 import lang.temper.common.json.JsonValue
 import lang.temper.common.json.JsonValueBuilder
+import lang.temper.common.json.buildJsonNestedObject
 import lang.temper.common.putMultiList
-import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
+import lang.temper.common.splitLinesPreservingTerminators
 import lang.temper.common.structure.Hints
 import lang.temper.common.structure.PropertySink
 import lang.temper.common.structure.StructureHint
 import lang.temper.common.structure.StructureSink
 import lang.temper.common.structure.Structured
+import lang.temper.common.structure.reconcileStructure
 import lang.temper.common.testModuleName
 import lang.temper.common.toStringViaBuilder
 import lang.temper.env.Export
@@ -39,13 +36,14 @@ import lang.temper.frontend.staging.ModuleCustomizeHook
 import lang.temper.fs.Url
 import lang.temper.lexer.Genre
 import lang.temper.lexer.languageConfigForExtension
-import lang.temper.log.FilePath.Companion.join
+import lang.temper.log.FilePath
 import lang.temper.log.LogEntry
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.MessageTemplateI
 import lang.temper.log.Position
 import lang.temper.log.Positioned
+import lang.temper.log.filePath
 import lang.temper.name.BuiltinName
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ModuleName
@@ -78,6 +76,7 @@ import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.staticTypeContained
 import lang.temper.value.staySymbol
+import kotlin.test.fail
 
 /**
  * A directory path relative to the directory containing `frontend/commonTest/.../README-stage-tests.md`
@@ -117,9 +116,8 @@ internal expect val stageTestDirFileSourceRoot: Url
  * AST so that we can compare them selectively against a desired output.
  */
 internal fun assertModuleAtStage(
-    want: String = "",
-    stageTestDir: StageTestDir = StageTestDir("TODO"),
-    stage: Stage,
+    stageTestDir: StageTestDir,
+    stage: Stage? = null,
     genre: Genre = Genre.Library,
     pseudoCodeDetail: PseudoCodeDetail = PseudoCodeDetail.default,
     manualCheck: ((JsonObject) -> Unit)? = null,
@@ -131,7 +129,6 @@ internal fun assertModuleAtStage(
     logEntryWanted: (LogEntry) -> Boolean = { it.level >= Log.Warn },
 ) {
     assertModuleAtStage(
-        want = want,
         stageTestDir = stageTestDir,
         stage = stage,
         genre = genre,
@@ -143,8 +140,8 @@ internal fun assertModuleAtStage(
         stagingFlags = stagingFlags,
         stackTracesForErrors = stackTracesForErrors,
         logEntryWanted = logEntryWanted,
-    ) { module, moduleAdvancer, testDir, regeneratedFiles ->
-        provisionModuleForStageTest(testDir, module, moduleAdvancer, regeneratedFiles)
+    ) { module, moduleAdvancer, testDir ->
+        provisionModuleForStageTest(testDir, module, moduleAdvancer)
     }
 }
 
@@ -153,9 +150,8 @@ internal fun assertModuleAtStage(
  * AST so that we can compare them selectively against a desired output.
  */
 internal fun assertModuleAtStage(
-    want: String = "",
     stageTestDir: StageTestDir,
-    stage: Stage,
+    stage: Stage? = null,
     genre: Genre = Genre.Library,
     pseudoCodeDetail: PseudoCodeDetail = PseudoCodeDetail.default,
     loc: ModuleName? = null,
@@ -165,7 +161,7 @@ internal fun assertModuleAtStage(
     stagingFlags: Set<BuiltinName> = emptySet(),
     stackTracesForErrors: Boolean = false,
     logEntryWanted: (LogEntry) -> Boolean = { it.level >= Log.Warn },
-    provisionModule: (Module, ModuleAdvancer, TestFileBundle, RegeneratedFilesList?) -> Unit,
+    provisionModule: (Module, ModuleAdvancer, TestFileBundle) -> Unit,
 ) {
     val testDir = readTestDir(stageTestDirFileRoot.resolve(stageTestDir.url))
     val regeneratedFileList: RegeneratedFilesList? =
@@ -186,6 +182,34 @@ internal fun assertModuleAtStage(
         }
     }
 
+    // Figure out which stage we need to advance to.
+    var stageNeeded = stage ?: Stage.Parse
+    // Inspect the expect/... data files to assemble a bundle of JSON to
+    // diff against the got bundle.
+    val wantJson = buildJsonNestedObject {
+        for ((relPath, content) in testDir.files) {
+            if (relPath.segments.firstOrNull()?.fullName != "expect") {
+                // Not relevant to expectations
+                continue
+            }
+            // The file relationship knows how to process the file into requirements in the
+            // "wanted" JSON bundle.
+            val rel = testResourceFileRelationships[Either.Right(relPath)]
+                ?: fail("Unrecognized test data file `${stageTestDir.url}//$relPath`")
+            val relStage = rel.stage
+            if (stage == null && relStage != null && relStage > stageNeeded) {
+                stageNeeded = relStage
+            }
+            when (val jsonResult = rel.converter.fromFileContent(content)) {
+                is RFailure<*> -> throw IllegalArgumentException(
+                    "Malformed test data file `${stageTestDir.url}//$relPath`",
+                    jsonResult.failure,
+                )
+                is RSuccess<*, *> -> property(rel.jsonProperties, jsonResult.result)
+            }
+        }
+    }
+
     val outputsByStage = mutableMapOf<Stage?, StageSnapshot>()
     var exitKind: ExitKind = ExitKind.Normal
     var isTestModule: (Module) -> Boolean = { _ -> false } // reassigned
@@ -193,23 +217,24 @@ internal fun assertModuleAtStage(
         if (isTestModule(module)) {
             val outputTree = module.treeForDebug?.copy(copyInferences = true)
             val stageDone = module.stageCompleted
-            outputsByStage[stageDone] = when (stageDone) {
-                Stage.Parse -> ParseStageSnapshot(
-                    outputTree,
-                    module.appendix,
-                    pseudoCodeDetail,
-                    exitKind,
-                )
+            if (stageDone != Stage.Run) { // Run is handled at the end
+                outputsByStage[stageDone] = when (stageDone) {
+                    Stage.Parse -> ParseStageSnapshot(
+                        outputTree,
+                        module.appendix,
+                        pseudoCodeDetail,
+                        exitKind,
+                    )
 
-                Stage.Run -> RunStageSnapshot(module.runResult, exitKind)
-                else -> TreeStageSnapshot(
-                    outputTree,
-                    outputTree?.typeDefinitions,
-                    module.exports,
-                    module.ok,
-                    pseudoCodeDetail,
-                    exitKind,
-                )
+                    else -> TreeStageSnapshot(
+                        outputTree,
+                        outputTree?.typeDefinitions,
+                        module.exports,
+                        module.ok,
+                        pseudoCodeDetail,
+                        exitKind,
+                    )
+                }
             }
         }
     }
@@ -243,9 +268,9 @@ internal fun assertModuleAtStage(
     if (allStagingFlags.isNotEmpty()) {
         module.addEnvironmentBindings(allStagingFlags.associateWith { TBoolean.valueTrue })
     }
-    provisionModule(module, moduleAdvancer, testDir, regeneratedFileList)
+    provisionModule(module, moduleAdvancer, testDir)
 
-    val stopBeforeForMainModule = Stage.after(stage)
+    val stopBeforeForMainModule = Stage.after(stageNeeded)
     val stopBefore = { m: Module ->
         when {
             stopBeforeForMainModule == null -> null
@@ -271,6 +296,10 @@ internal fun assertModuleAtStage(
         module.failLog.logReasonForFailure()
     }
 
+    if (stageNeeded >= Stage.Run) {
+        outputsByStage[Stage.Run] = RunStageSnapshot(module.runResult, exitKind)
+    }
+
     val stdout = toStringViaBuilder { outputBuffer ->
         listBackedLogSink.allEntries.forEach { logEntry ->
             if (logEntry.template == MessageTemplate.StandardOut) {
@@ -283,15 +312,15 @@ internal fun assertModuleAtStage(
         object : Structured {
             override fun destructure(structureSink: StructureSink) = structureSink.obj {
                 val stageCompleted = module.stageCompleted
-                key("stageCompleted", isDefault = stageCompleted == stage) {
+                key("stageCompleted", isDefault = stageCompleted == stageNeeded) {
                     value(stageCompleted)
                 }
                 val ok = module.ok
-                key("ok", isDefault = ok) { value(ok) }
+                key("ok", Hints.u) { value(ok) }
                 for ((stageRun, parts) in outputsByStage) {
                     key(
                         (stageRun?.name ?: "nullStage").asciiUnTitleCase(),
-                        if (stageRun != stage) { Hints.u } else { Hints.empty },
+                        if (stageRun != stageNeeded) { Hints.u } else { Hints.empty },
                     ) {
                         this.value(parts)
                     }
@@ -304,132 +333,25 @@ internal fun assertModuleAtStage(
         logEntryWanted,
     )
 
-    if (manualCheck != null) {
-        val renumbered = PseudoCodeNameRenumberer.newStructurePostProcessor()(got)
-        manualCheck(JsonValueBuilder.build(emptyMap()) { value(renumbered) } as JsonObject)
-    } else if (regeneratedFileList != null) {
-        val wantJson = JsonValue.parse(indentDoubleHash(want), tolerant = true).result as JsonObject
-        fun walk(stage: Stage?, key: String, value: JsonValue) {
-            if (value is JsonLeaf<*>) {
-                when (value) {
-                    is JsonString -> when (key) {
-                        ".body" if stage != null -> {
-                            val stageStr = stage.name.asciiUnTitleCase()
-                            regeneratedFileList.add(
-                                Url("expect/$stageStr.temper") to Either.Left(value.s),
-                            )
-                        }
-                        ".body.code" if stage != null -> {
-                            val stageStr = stage.name.asciiUnTitleCase()
-                            regeneratedFileList.add(
-                                Url("expect/$stageStr.temper") to Either.Left(value.s),
-                            )
-                        }
-                        "" if stage == Stage.Run -> {
-                            regeneratedFileList.add(
-                                Url("expect/run-result.json") to Either.Left(value.toJsonString()),
-                            )
-                        }
-                        ".stdout" if stage == null -> {
-                            regeneratedFileList.add(
-                                Url("expect/stdout.txt") to Either.Left(value.s),
-                            )
-                        }
-                        ".stageCompleted" if stage == null -> {}
-                        else -> TODO("$stage . `$key` got string")
-                    }
-
-                    is JsonBoolean -> when (key) {
-                        else -> TODO("$key got bool")
-                    }
-                    is JsonDouble -> when (key) {
-                        else -> TODO("$key got double")
-                    }
-                    is JsonLong -> when (key) {
-                        else -> TODO("$key got long")
-                    }
-                    JsonNull -> when (key) {
-                        else -> TODO("$key got null")
-                    }
-                }
-            } else if (key == ".appendix" && stage != null) {
-                regeneratedFileList.add(
-                    Url("expect/${stage.name.asciiUnTitleCase()}-appendix.json") to
-                        Either.Left("${value.toJsonString()}\n"),
-                )
-            } else if (key == ".types" && stage != null) {
-                regeneratedFileList.add(
-                    Url("expect/${stage.name.asciiUnTitleCase()}-types.json") to
-                        Either.Left("${value.toJsonString()}\n"),
-                )
-            } else if (value is JsonObject) {
-                when (key) {
-                    ".exports" if (stage != null) -> {
-                        regeneratedFileList.add(
-                            Url("expect/${stage.name.asciiUnTitleCase()}-exports.json") to
-                                Either.Left("${value.toJsonString()}\n"),
-                        )
-                    }
-                    else -> {
-                        for (p in value) {
-                            var nextStage = stage
-                            var keySuffix = ".${p.key}"
-                            if (key == "" && nextStage == null) {
-                                nextStage = try {
-                                    Stage.valueOf(p.key.asciiTitleCase())
-                                } catch (_: IllegalArgumentException) {
-                                    null
-                                }
-                                if (nextStage != null) {
-                                    keySuffix = ""
-                                }
-                            }
-                            val nextKey = "$key$keySuffix"
-                            walk(nextStage, nextKey, p.value)
-                        }
-                    }
-                }
-            } else if (value is JsonArray) {
-                when (key) {
-                    ".body" if stage != null -> {
-                        val relPath = "expect/${stage.name.asciiUnTitleCase()}.lispy"
-                        regeneratedFileList.add(
-                            Url(relPath) to Either.Left("${value.toJsonString()}\n"),
-                        )
-                    }
-                    ".body.tree" if stage != null -> {
-                        val relPath = "expect/${stage.name.asciiUnTitleCase()}.lispy"
-                        regeneratedFileList.add(
-                            Url(relPath) to Either.Left("${value.toJsonString()}\n"),
-                        )
-                    }
-                    ".errors" -> {
-                        regeneratedFileList.add(
-                            Url("expect/errors.json") to Either.Left("${value.toJsonString()}\n"),
-                        )
-                    }
-                    "" if stage == Stage.Run -> {
-                        regeneratedFileList.add(
-                            Url("expect/run-result.json") to Either.Left(value.toJsonString()),
-                        )
-                    }
-                    else -> TODO("$key got array")
-                }
-            } else {
-                TODO("$key $wantJson")
+    try {
+        if (manualCheck != null) {
+            val renumberer = PseudoCodeNameRenumberer.newStructurePostProcessor()
+            val gotRenumbered = renumberer(got)
+            manualCheck(JsonValueBuilder.build(emptyMap()) { value(gotRenumbered) } as JsonObject)
+        } else {
+            val (wantReconciled, gotReconciled) = reconcileStructure(wantJson, got)
+            assertStructure(
+                PseudoCodeNameRenumberer.newStructurePostProcessor()(wantReconciled),
+                PseudoCodeNameRenumberer.newStructurePostProcessor()(gotReconciled),
+            )
+            if (regeneratedFileList != null) {
+                TODO("$got")
             }
         }
-        walk(null, "", wantJson)
-    } else {
-        assertStructure(
-            expectedJson = want.stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
-            input = got,
-            postProcessor = { s -> PseudoCodeNameRenumberer.newStructurePostProcessor()(s) },
-        )
-    }
-
-    regeneratedFileList?.let {
-        regenerateFiles(stageTestDirFileSourceRoot.resolve("${stageTestDir.url}/"), it.toList())
+    } finally {
+        regeneratedFileList?.let {
+            regenerateFiles(stageTestDirFileSourceRoot.resolve("${stageTestDir.url}/"), it.toList())
+        }
     }
 }
 
@@ -437,7 +359,6 @@ internal fun provisionModuleForStageTest(
     testFileBundle: TestFileBundle,
     module: Module,
     moduleAdvancer: ModuleAdvancer,
-    regeneratedFilesList: RegeneratedFilesList?,
 ) {
     val chunks = buildList {
         for ((relPath, content) in testFileBundle.files) {
@@ -474,15 +395,6 @@ internal fun provisionModuleForStageTest(
                     languageConfig = languageConfig,
                 ),
             )
-            if (regeneratedFilesList != null) {
-                var path = dir
-                if (path.isDir) {
-                    val ext = languageConfig.dotExtension?.let { ".temper$it" } ?: ".temper"
-                    path = path.resolve(path.segments.last().withExtension(ext), isDir = false)
-                }
-                val srcUrl = Url(null, null, "work/${path.join()}", null, null)
-                regeneratedFilesList.add(srcUrl to Either.Left(content))
-            }
         }
     }
 }
@@ -879,43 +791,140 @@ internal class DumpStackTracesForThoseErrors(private val logSink: LogSink) : Log
     }
 }
 
-private fun indentDoubleHash(json: String): String {
-    val lines = json.lines().toMutableList()
-    var i = 0
-    val n = lines.size
-    var changed = false
-    while (i < n) {
-        val line = lines[i]
-        i += 1
-        val lineTrimmed = line.trim()
-        if (lineTrimmed.endsWith("```")) {
-            val j = lines.indexOfNext(i) {
-                it.trim().startsWith("```")
-            }
-            check(j > i) { "i=$i, j=$j\n$json" }
-            if ((i..<j).any { lines[it].startsWith("##") }) {
-                val indent = lines[j].substring(0, lines[j].indexOf("```"))
-                for (k in i..<j) {
-                    val stringLine = lines[k]
-                    val prefix =
-                        if (stringLine.startsWith("##")) {
-                            indent
-                        } else if (stringLine.isEmpty()) {
-                            ""
-                        } else {
-                            "  "
-                        }
-                    lines[k] = "$prefix$stringLine"
-                    changed = true
+/** Converts between test data file content and JSONValues in both directions. */
+private interface DataFileConverter {
+    fun fromFileContent(content: String): RResult<JsonValue, Throwable>
+    fun toFileContent(value: JsonValue): RResult<String, Throwable>
+}
+
+private object FileContentStringConverter : DataFileConverter {
+    override fun fromFileContent(content: String): RResult<JsonValue, Throwable> {
+        var adjustedContent = content
+        // If the file contains ## lines, and the rest are indented, remove the ## comments.
+        val lines = content.splitLinesPreservingTerminators()
+        if (
+            lines.any { it.startsWith("##") } &&
+            lines.all { it.isBlank() || it.startsWith("##") || it.startsWith("  ") }
+        ) {
+            adjustedContent = lines.joinToString("") {
+                when {
+                    it.startsWith("  ") -> it.drop(2)
+                    it.startsWith("##") -> ""
+                    else -> it
                 }
             }
-            i = j + 1
         }
+        return RSuccess(JsonString(adjustedContent))
     }
 
-    return if (changed) {
-        lines.joinToString("\n")
-    } else {
-        json
-    }
+    override fun toFileContent(value: JsonValue): RResult<String, Throwable> =
+        RResult.of(ClassCastException::class) { (value as JsonString).s }
 }
+
+private object ParseJsonTolerantConverter : DataFileConverter {
+    override fun fromFileContent(content: String): RResult<JsonValue, Throwable> =
+        JsonValue.parse(content, tolerant = true)
+
+    override fun toFileContent(value: JsonValue): RResult<String, Throwable> =
+        RSuccess(value.toJsonString(extensions = true))
+}
+
+private data class TestResourceFileRelationship(
+    val stage: Stage?,
+    val jsonProperties: List<String>,
+    val expectFilePath: FilePath,
+    val converter: DataFileConverter,
+)
+
+private val testResourceFileRelationships: Map<Either<List<String>, FilePath>, TestResourceFileRelationship> =
+    buildMap {
+        fun put(rel: TestResourceFileRelationship) {
+            this[Either.Left(rel.jsonProperties)] = rel
+            this[Either.Right(rel.expectFilePath)] = rel
+        }
+        for (stage in Stage.entries) {
+            if (stage >= Stage.Parse && stage < Stage.Run) {
+                val stageLower = stage.name.asciiUnTitleCase()
+
+                // AST forms
+                put(
+                    TestResourceFileRelationship(
+                        stage,
+                        listOf(stageLower, "body", "code"),
+                        filePath("expect", "$stageLower.temper"),
+                        FileContentStringConverter,
+                    ),
+                )
+                put(
+                    TestResourceFileRelationship(
+                        stage,
+                        listOf(stageLower, "body", "tree"),
+                        filePath("expect", "$stageLower.lispy"),
+                        ParseJsonTolerantConverter,
+                    ),
+                )
+
+                // metadata
+                put(
+                    TestResourceFileRelationship(
+                        stage,
+                        listOf(stageLower, "appendix"),
+                        filePath("expect", "$stageLower-appendix.json"),
+                        ParseJsonTolerantConverter,
+                    ),
+                )
+                put(
+                    TestResourceFileRelationship(
+                        stage,
+                        listOf(stageLower, "types"),
+                        filePath("expect", "$stageLower-types.json"),
+                        ParseJsonTolerantConverter,
+                    ),
+                )
+                put(
+                    TestResourceFileRelationship(
+                        stage,
+                        listOf(stageLower, "exports"),
+                        filePath("expect", "$stageLower-exports.json"),
+                        ParseJsonTolerantConverter,
+                    ),
+                )
+            }
+        }
+
+        // Run stage outputs
+        put(
+            TestResourceFileRelationship(
+                Stage.Run,
+                listOf("run"),
+                filePath("expect", "run-result.json"),
+                ParseJsonTolerantConverter,
+            ),
+        )
+        put(
+            TestResourceFileRelationship(
+                Stage.Run,
+                listOf("stdout"),
+                filePath("expect", "stdout.txt"),
+                FileContentStringConverter,
+            ),
+        )
+
+        // Overall outputs
+        put(
+            TestResourceFileRelationship(
+                null,
+                listOf("errors"),
+                filePath("expect", "errors.json"),
+                ParseJsonTolerantConverter,
+            ),
+        )
+        put(
+            TestResourceFileRelationship(
+                null,
+                listOf("stageCompleted"),
+                filePath("expect", "stage-completed.json"),
+                ParseJsonTolerantConverter,
+            ),
+        )
+    }

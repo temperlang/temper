@@ -37,220 +37,18 @@ class SyntaxMacroStageTest {
     @Test
     fun blockScoping() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/block-scoping"),
-        stage = Stage.Run,
         moduleResultNeeded = true,
-        want = """
-        {
-          run: "3: Int32",
-          syntaxMacro: {
-            body: {
-              code:
-                ```
-                let a__0 = 1;
-                do (fn {
-                    let a__1 = 2;
-                    REM("Why do I feel compelled to write `let ... in` here?\nI wish I knew how to quit you, OCaml!", null, false);
-                    a__1
-                }) + a__0
-
-                ```,
-              tree:
-                [ "Block", [
-                    [ "Decl", [
-                        [ "LeftName", "a__0" ],
-                        [ "Value", [ "init", "Symbol" ] ],
-                        [ "Value", [ 1, "Int32" ] ],
-                        [ "Value", "\\QName: Symbol" ],
-                        [ "Value", "\"test-code.a\": String" ],
-                      ]
-                    ],
-                    [ "Call", [
-                        [ "Value", "nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function" ],
-                        [ "Call", [
-                            [ "RightName", "do" ],
-                            [ "Fun", [
-                                [ "Block", [
-                                    [ "Decl", [
-                                        [ "LeftName", "a__1" ],
-                                        [ "Value", [ "init", "Symbol" ] ],
-                                        [ "Value", [ 2, "Int32" ] ],
-                                        [ "Value", "\\QName: Symbol" ],
-                                        [ "Value", "\"test-code.a=\": String" ],
-                                      ]
-                                    ],
-                                    [ "Call", [
-                                        [ "Value", "REM: Function" ],
-                                        [ "Value", ```
-                                          "Why do I feel compelled to write `let ... in` here?\nI wish I knew how to quit you, OCaml!": String
-                                          ``` ],
-                                        [ "Value", "null: Null" ],
-                                        [ "Value", "false: Boolean" ],
-                                      ]
-                                    ],
-                                    [ "RightName", "a__1" ]
-                                  ]
-                                ]
-                              ]
-                            ]
-                          ]
-                        ],
-                        [ "RightName", "a__0" ]
-                      ]
-                    ]
-                  ]
-                ]
-            }
-          }
-        }
-        """,
     )
 
-    /*
-    In Java and Rust,
-    {
-      int i = 0;
-      {
-        int i = i;
-      }
-    }
-    is legal since, the `i` used in the initializer binds in a scope that excludes the name being
-    initialized.  So Java treats every initialization
-        T n = e;
-        // following statements in the same block
-    the same as
-        T temporary = e;
-        {
-          T n = temporary;
-          // following statements in the same block
-        }
-
-    JavaScript has a temporal dead zone though so
-    {
-      let i = 0;
-      {
-        let i = i;
-      }
-    }
-    is illegal since the `i` in the initializer binds to the uninitialized inner `let`.
-
-    The Rust and Kotlin communities' experiences with shadowing starting lexically after
-    initialization show that this feature is widely appreciated.
-     */
     @Test
     fun useInLetInitializer() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/use-in-let-initializer"),
-        stage = Stage.SyntaxMacro,
         moduleResultNeeded = true,
-        want = """
-        {
-          syntaxMacro: {
-            body: [ "Block", [
-                [ "Decl", [
-                    [ "LeftName", "i__0" ],
-                    [ "Value", "\\init: Symbol" ],
-                    [ "Value", "0: Int32" ],
-                    [ "Value", "\\QName: Symbol" ],
-                    [ "Value", "\"test-code.i\": String" ],
-                  ]
-                ],
-                [ "Call", [
-                    [ "RightName", "do" ],
-                    [ "Fun", [ [ "Block", [
-                        [ "Decl", [
-                            [ "LeftName", "i__1" ],
-                            [ "Value", "\\init: Symbol" ],
-                            [ "RightName", "i__0" ],
-                            [ "Value", "\\QName: Symbol" ],
-                            [ "Value", "\"test-code.i=\": String" ],
-                          ]
-                        ],
-                        [ "Call", [
-                            [ "RightName", "f" ],
-                            [ "RightName", "i__1" ],
-                          ]
-                        ],
-                        [ "Value", "void: Void" ],
-                    ] ] ] ]
-                  ]
-                ]
-              ]
-            ]
-          }
-        }
-        """,
     )
 
     @Test
     fun backReferenceInFormalInitializer() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/back-reference-in-formal-initializer"),
-        stage = Stage.SyntaxMacro,
-        want = """
-        {
-          syntaxMacro: {
-            body: [ "Block", [
-                [ "Decl", [
-                    [ "LeftName", "f__0" ],
-                    [ "Value", "\\fn: Symbol" ],
-                    [ "Value", "void: Void" ],
-                    [ "Value", "\\QName: Symbol" ],
-                    [ "Value", "\"test-code.f()\": String" ],
-                  ]
-                ],
-                [ "Call", [
-                    [ "Value", "nym`=`: Function" ],
-                    [ "LeftName", "f__0" ],
-                    [ "Fun", [
-                        [ "Decl", [
-                            [ "LeftName", "i__1" ],
-                            [ "Value", "\\default: Symbol" ],
-                            [ "RightName", "j__2" ],
-                            [ "Value", "\\word: Symbol" ],
-                            [ "Value", "\\i: Symbol" ],
-                            [ "Value", "\\QName: Symbol" ],
-                            [ "Value", "\"test-code.f().(i)\": String" ],
-                          ]
-                        ],
-                        [ "Decl", [
-                            [ "LeftName", "j__2" ],
-                            [ "Value", "\\default: Symbol" ],
-                            [ "Value", "42: Int32" ],
-                            [ "Value", "\\word: Symbol" ],
-                            [ "Value", "\\j: Symbol" ],
-                            [ "Value", "\\QName: Symbol" ],
-                            [ "Value", "\"test-code.f().(j)\": String" ],
-                          ]
-                        ],
-                        [ "Decl", [
-                            [ "LeftName", "k__3" ],
-                            [ "Value", "\\default: Symbol" ],
-                            [ "RightName", "f__0" ],
-                            [ "Value", "\\word: Symbol" ],
-                            [ "Value", "\\k: Symbol" ],
-                            [ "Value", "\\QName: Symbol" ],
-                            [ "Value", "\"test-code.f().(k)\": String" ],
-                          ]
-                        ],
-                        [ "Value", "\\returnedFrom: Symbol" ],
-                        [ "Value", "true: Boolean" ],
-                        [ "Value", "\\word: Symbol" ],
-                        [ "Value", "\\f: Symbol" ],
-                        [ "Value", "\\QName: Symbol" ],
-                        [ "Value", "\"test-code.f()\": String" ],
-                        [ "Block", [
-                            [ "Value", "\\label: Symbol" ],
-                            [ "LeftName", "fn__4" ]
-                          ]
-                        ]
-                      ]
-                    ]
-                  ]
-                ],
-                [ "Value", "void: Void" ]
-              ]
-            ]
-          }
-        }
-        """,
     )
 
     /**
@@ -267,311 +65,30 @@ class SyntaxMacroStageTest {
     @Test
     fun letOfFn() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/let-of-fn"),
-        stage = Stage.SyntaxMacro,
-        want = """
-        {
-          syntaxMacro: {
-            body:
-            [ "Block", [
-                [ "Decl", [
-                    [ "LeftName", "f__0" ],
-                    [ "Value", "\\init: Symbol" ],
-                    [ "Fun", [
-                        [ "Decl", [
-                            [ "LeftName", "x__1" ],
-                            [ "Value", "\\word: Symbol" ],
-                            [ "Value", "\\x: Symbol" ],
-                            [ "Value", "\\QName: Symbol" ],
-                            [ "Value", "\"test-code.f().(x)\": String" ],
-                          ]
-                        ],
-                        [ "Value", "\\returnedFrom: Symbol" ],
-                        [ "Value", "true: Boolean" ],
-                        [ "Value", "\\word: Symbol" ],
-                        [ "Value", "\\f: Symbol" ],
-                        [ "Value", "\\QName: Symbol" ],
-                        [ "Value", "\"test-code.f()\": String" ],
-                        [ "Block", [
-                            [ "Value", "\\label: Symbol" ],
-                            [ "LeftName", "fn__2" ]
-                          ]
-                        ]
-                      ]
-                    ],
-                    [ "Value", "\\fn: Symbol" ],
-                    [ "Value", "void: Void" ],
-                    [ "Value", "\\QName: Symbol" ],
-                    [ "Value", "\"test-code.f()\": String" ],
-                  ]
-                ],
-
-                [ "Decl", [
-                    [ "LeftName", "g__3" ],
-                    [ "Value", "\\init: Symbol" ],
-                    [ "Fun", [
-                        [ "Decl", [
-                            [ "LeftName", "y__4" ],
-                            [ "Value", "\\word: Symbol" ],
-                            [ "Value", "\\y: Symbol" ],
-                            [ "Value", "\\QName: Symbol" ],
-                            [ "Value", "\"test-code.g().(y)\": String" ],
-                          ]
-                        ],
-                        [ "Value", "\\returnedFrom: Symbol" ],
-                        [ "Value", "true: Boolean" ],
-                        [ "Value", "\\word: Symbol" ],
-                        [ "Value", "\\g: Symbol" ],
-                        [ "Value", "\\QName: Symbol" ],
-                        [ "Value", "\"test-code.g()\": String" ],
-                        [ "Block", [
-                            [ "Value", "\\label: Symbol" ],
-                            [ "LeftName", "fn__5" ]
-                          ]
-                        ]
-                      ]
-                    ],
-                    [ "Value", "\\fn: Symbol" ],
-                    [ "Value", "void: Void" ],
-                    [ "Value", "\\QName: Symbol" ],
-                    [ "Value", "\"test-code.g()\": String" ],
-                  ]
-                ],
-
-                [ "Decl", [
-                    [ "LeftName", "h__0" ],
-                    [ "Value", "\\init: Symbol" ],
-                    [ "Fun", [
-                        [ "Decl", [
-                            [ "LeftName", "z__0" ],
-                            [ "Value", "\\word: Symbol" ],
-                            [ "Value", "\\z: Symbol" ],
-                            [ "Value", "\\QName: Symbol" ],
-                            [ "Value", "\"test-code.h().(z)\": String" ],
-                          ]
-                        ],
-                        [ "Value", "\\returnedFrom: Symbol" ],
-                        [ "Value", "true: Boolean" ],
-                        [ "Block", [
-                            [ "Value", "\\label: Symbol" ],
-                            [ "LeftName", "fn__0" ]
-                          ]
-                        ]
-                      ]
-                    ],
-                    [ "Value", "\\var: Symbol" ],
-                    [ "Value", "void: Void" ],
-                    [ "Value", "\\QName: Symbol" ],
-                    [ "Value", "\"test-code.h()\": String" ],
-                  ]
-                ],
-
-                [ "Value", "void: Void" ],
-              ]
-            ]
-          }
-        }
-        """,
     )
 
     @Test
     fun multiDeclarations() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/multi-declarations"),
-        stage = Stage.SyntaxMacro,
         moduleResultNeeded = true,
-        want = """
-        {
-          syntaxMacro: {
-            body:
-            [ "Block", [
-                [ "Block", [
-                    [ "Decl", [
-                        [ "LeftName", "t#0" ],
-                        [ "Value", "\\init: Symbol" ],
-                        [ "RightName", "S" ]
-                      ]
-                    ],
-                    [ "Decl", [
-                        [ "LeftName", "t#1" ],
-                        [ "Value", "\\init: Symbol" ],
-                        [ "RightName", "x" ]
-                      ]
-                    ],
-                    [ "Decl", [
-                        [ "LeftName", "t#2" ],
-                        [ "Value", "\\init: Symbol" ],
-                        [ "RightName", "T" ]
-                      ]
-                    ],
-                    [ "Decl", [
-                        [ "LeftName", "a__3" ],
-                        [ "Value", "\\type: Symbol" ],
-                        [ "RightName", "t#2" ]
-                      ]
-                    ],
-                    [ "Decl", [
-                        [ "LeftName", "b__4" ],
-                        [ "Value", "\\type: Symbol" ],
-                        [ "Call", [
-                            [ "RightName", "&" ],
-                            [ "RightName", "t#0" ],
-                            [ "RightName", "t#2" ]
-                          ]
-                        ]
-                      ]
-                    ],
-                    [ "Decl", [
-                        [ "LeftName", "c__5" ],
-                        [ "Value", "\\type: Symbol" ],
-                        [ "RightName", "t#2" ] ,
-                        [ "Value", "\\init: Symbol" ],
-                        [ "RightName", "t#1" ],
-                      ]
-                    ],
-                    [ "Call", [
-                        [ "Value", "nym`=`: Function" ],
-                        [ "Call", [
-                            [ "Value", "nym`,`: Function" ],
-                            [ "LeftName", "a__3" ],
-                            [ "LeftName", "b__4" ],
-                            [ "LeftName", "c__5" ],
-                          ]
-                        ],
-                        [ "Call", [
-                            [ "RightName", "f" ],
-                          ]
-                        ],
-                      ]
-                    ],
-                  ]
-                ]
-              ]
-            ]
-          }
-        }
-        """,
     )
 
     @Test
     fun assignmentsInMultiDeclsResolveProperly() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/assignments-in-multi-decls-resolve-properly"),
-        stage = Stage.SyntaxMacro,
         moduleResultNeeded = true,
-        want = """
-        {
-          syntaxMacro: {
-            body: [ "Block", [
-                [ "Block", [
-                    [ "Decl", [ [ "LeftName", "x__0" ] ] ],
-                    [ "Decl", [ [ "LeftName", "y__1" ] ] ],
-                    [ "Call", [
-                        [ "Value", "nym`=`: Function" ],
-                        [ "Call", [
-                            [ "Value", "nym`,`: Function" ],
-                            [ "LeftName", "x__0" ],
-                            [ "LeftName", "y__1" ]
-                          ]
-                        ],
-                        [ "Call", [
-                            [ "RightName", "f" ]
-                          ]
-                        ]
-                      ]
-                    ]
-                  ]
-                ],
-                [ "Call", [
-                    [ "Value", "nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function" ],
-                    [ "RightName", "x__0" ],
-                    [ "RightName", "y__1" ]
-                  ]
-                ]
-              ]
-            ]
-          }
-        }
-        """,
     )
 
     @Test
     fun quotedNames() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/quoted-names"),
-        stage = Stage.SyntaxMacro,
         moduleResultNeeded = true,
-        want = """
-        {
-          syntaxMacro: {
-            body:
-            ```
-            let x__0, y__1;
-            f(x__0, y__1, x__0, y__1)
-
-            ```
-          }
-        }
-        """,
     )
 
     @Test
     fun thisThisIsOkButThatThisIsNot() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/this-this-is-ok-but-that-this-is-not"),
-        stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
-        want = """
-            |{
-            |  errors: [
-            |    "`this` may only appear inside a type definition!"
-            |  ],
-            |  disAmbiguate: {
-            |    body:
-            |      ```
-            |      @typeDecl(C__0) @hoistLeft(true) @resolution(C__0) @stay let C = type (C__0);
-            |      class(\word, C, \concrete, true, @typeDefined(C__0) fn {
-            |          C__0 extends AnyValue;
-            |          @property(\me) @maybeVar @visibility(\private) let me = this(C__0);
-            |      });
-            |      let me = this();
-            |
-            |      ```,
-            |    types: {
-            |      C: { word: "C" },
-            |      AnyValue: { abstract: true },
-            |    }
-            |  },
-            |  syntaxMacro: {
-            |    body:
-            |      ```
-            |      @typeDecl(C__0) @stay let C__0 = type (C__0);
-            |      class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
-            |          C__0 extends AnyValue;
-            |          @property(\me) @maybeVar @visibility(\private) let me__3;
-            |          @method(\constructor) @visibility(\public) let constructor__4 = fn constructor(@impliedThis(C__0) this__5: C__0) /* return__0 */: Void {
-            |            do {
-            |              let t#0;
-            |              do_iset_me(type (C__0), this(C__0), t#0 = this(C__0));
-            |              t#0
-            |            };
-            |          };
-            |      });
-            |      let me__7 = error ();
-            |
-            |      ```,
-            |    types: {
-            |      AnyValue: { abstract: true },
-            |      C: {
-            |        word: "C",
-            |        properties: [
-            |          { name: "me", symbol: "me", abstract: false, visibility: "private" },
-            |        ],
-            |        methods: [
-            |          { name: "constructor", kind: "Constructor", visibility: "public", open: false },
-            |        ],
-            |        supers: [ "AnyValue__0" ],
-            |      },
-            |      Void: { supers: [] },
-            |    },
-            |  }
-            |}
-        """.trimMargin(),
     )
 
     @Test
@@ -579,236 +96,30 @@ class SyntaxMacroStageTest {
         stageTestDir = StageTestDir("syntax-macro/making-this-unambiguous"),
         // TODO: IdRenumberer is not used to rewrite inlined values.
         // That affects the rendering of reified types.
-        stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
-        want = """
-            |{
-            |    syntaxMacro: {
-            |        body:
-            |            ```
-            |            @typeDecl(I__0) @stay let I__0 = type (I__0);
-            |            @typeDecl(C__0<T__2>) @stay let C__0 = type (C__0);
-            |            interface(\word, \I, \concrete, false, @typeDefined(I__0) fn {
-            |                I__0 extends AnyValue;
-            |                @property(\x) @maybeVar let x__6;
-            |            });
-            |            let x__7, y__8, z__9;
-            |            class(\word, \C, \concrete, true, @typeDefined(C__0<T__2>) fn {
-            |                @typeFormal(\T) @memberTypeFormal(\T) @typeDefined(T__2) let T__2 = type (T__2);
-            |                C__0<T__2> extends I__0;
-            |                @constructorProperty @property(\y) @maybeVar @visibility(\public) let y__14;
-            |                @method(\f) @visibility(\private) @fn let f__12 = fn f(@impliedThis(C__0<T__2>) this__2: C__0<T__2>) {
-            |                  fn__13: do {
-            |                    do_iget_x(type (C__0<T__2>), this(C__0<T__2>)) + do_iget_y(type (C__0<T__2>), this(C__0<T__2>)) + z__9
-            |                  }
-            |                };
-            |                @method(\constructor) @visibility(\public) let constructor__15 = fn constructor(@impliedThis(C__0<T__2>) this__16: C__0<T__2>, y__17 /* aka y */) /* return__0 */: Void {
-            |                  do {
-            |                    let t#0;
-            |                    do_iset_y(type (C__0<T__2>), this(C__0<T__2>), t#0 = y__17);
-            |                    t#0
-            |                  };
-            |                };
-            |            });
-            |            C__0
-            |
-            |            ```,
-            |        types: {
-            |          AnyValue: { abstract: true },
-            |          C: {
-            |            word: "C",
-            |            typeParameters: [
-            |              { name: "T__2" },
-            |            ],
-            |            supers: ["I__0"],
-            |            properties: [
-            |              { name: "y", symbol: "y", abstract: false, visibility: "public" },
-            |            ],
-            |            methods: [
-            |              { name: "f", symbol: "f", open: false, visibility: "private" },
-            |              { name: "constructor", open: false, visibility: "public",
-            |                kind: "Constructor" },
-            |            ],
-            |          },
-            |          I: {
-            |            word: "I",
-            |            abstract: true,
-            |            properties: [
-            |              { name: "x", symbol: "x", abstract: true, visibility: "public" }, // Not resolved until Syntax stage
-            |            ],
-            |            supers: [ "AnyValue__0" ]
-            |          },
-            |          T: { word: "T" },
-            |          Void: { supers: [] },
-            |        }
-            |    }
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun dotsToSymbols() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/dots-to-symbols"),
-        stage = Stage.SyntaxMacro,
         moduleResultNeeded = true,
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body: {
-            |      code:
-            |        ```
-            |        let foo__0 = f(), bar__1;
-            |        do_get_bar(foo__0) + bar__1;
-            |
-            |        ```,
-            |      tree: [ "Block", [
-            |          [ "Decl", [
-            |              [ "LeftName", "foo__0" ],
-            |              [ "Value", "\\init: Symbol" ],
-            |              [ "Call", [
-            |                  [ "RightName", "f" ]
-            |                ]
-            |              ],
-            |              [ "Value", "\\QName: Symbol" ],
-            |              [ "Value", "\"test-code.foo\": String" ],
-            |            ]
-            |          ],
-            |          [ "Decl", [
-            |              [ "LeftName", "bar__1" ],
-            |              [ "Value", "\\QName: Symbol" ],
-            |              [ "Value", "\"test-code.bar\": String" ],
-            |            ]
-            |          ],
-            |          [ "Call", [
-            |              [ "Value", "nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function" ],
-            |              [ "Call", [
-            |                  [ "Value", "do_get_bar: Function" ],
-            |                  [ "RightName", "foo__0" ],
-            |                ]
-            |              ],
-            |              [ "RightName", "bar__1" ]
-            |            ]
-            |          ],
-            |          [ "Value", "void: Void" ],
-            |        ]
-            |      ]
-            |    }
-            |  }
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun getterAndSetterInheritVisibilityFromProperty() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/getter-and-setter-inherit-visibility-from-property"),
-        stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body:
-            |      ```
-            |      @typeDecl(Anon__0) @stay let t#0 = type (Anon__0);
-            |      class(\concrete, true, @typeDefined(Anon__0) fn {
-            |          Anon__0 extends AnyValue;
-            |          @constructorProperty @property(\_x) @maybeVar @visibility(\private) let _x__5;
-            |          @property(\x) @visibility(\public) var x__6;
-            |          @method(\x) @getter @fn let nym`get.x__7` = fn nym`get.x`(@impliedThis(Anon__0) this__2: Anon__0) {
-            |            fn__8: do {
-            |              do_iget__x(type (Anon__0), this(Anon__0))
-            |            }
-            |          };
-            |          @method(\x) @setter @fn let nym`set.x__9` = fn nym`set.x`(@impliedThis(Anon__0) this__3: Anon__0, newValue__10 /* aka newValue */) /* return__0 */: Void {
-            |            fn__11: do {
-            |              do {
-            |                let t#1;
-            |                do_iset__x(type (Anon__0), this(Anon__0), t#1 = newValue__10);
-            |                t#1
-            |              }
-            |            }
-            |          };
-            |          @method(\constructor) @visibility(\public) let constructor__12 = fn constructor(@impliedThis(Anon__0) this__13: Anon__0, _x__14 /* aka _x */) /* return__1 */: Void {
-            |            do {
-            |              let t#2;
-            |              do_iset__x(type (Anon__0), this(Anon__0), t#2 = _x__14);
-            |              t#2
-            |            };
-            |          };
-            |      });
-            |      type (Anon__0)
-            |
-            |      ```,
-            |    types: {
-            |      Anon: {
-            |        properties: [
-            |          { name: "_x", visibility: "private", abstract: false },
-            |          {
-            |            name: "x", abstract: true, visibility: "public",
-            |            getter: "get.x", setter: "set.x"
-            |          },
-            |        ],
-            |        methods: [
-            |          { name: "get.x", symbol: "x", visibility: "public", open: false, kind: "Getter" },
-            |          { name: "set.x", symbol: "x", visibility: "public", open: false, kind: "Setter" },
-            |          { name: "constructor", "visibility": "public", open: false, kind: "Constructor" },
-            |        ],
-            |        supers: [ "AnyValue__0" ]
-            |      },
-            |      AnyValue: { abstract: true },
-            |      Void: { supers: [] },
-            |    }
-            |  }
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun methodWithoutBody() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/method-without-body"),
-        stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
-        want = """
-        {
-          syntaxMacro: {
-            body:
-              ```
-              @typeDecl(I__0) @stay let I__0 = type (I__0);
-              interface(\word, \I, \concrete, false, @typeDefined(I__0) fn {
-                  I__0 extends AnyValue;
-                  @method(\method) @fn let method__4 = fn method(@impliedThis(I__0) this__1: I__0) {
-                    fn__5: do {
-                      pureVirtual()
-                    }
-                  };
-              });
-              I__0
-
-              ```
-          }
-        }
-        """,
     )
 
     @Test
     fun forLoopExtractsDeclarations() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/for-loop-extracts-declarations"),
-        stage = Stage.SyntaxMacro,
-        want = """
-            {
-                "syntaxMacro": {
-                    "body":
-                    ```
-                    do {
-                      var i__0 = 0;
-                      for(\__flowInit, {class: Empty__0}, \cond, i__0 < 3, \incr, i__0 = i__0 + 1, fn {
-                          body;
-                      })
-                    }
-
-                    ```
-                }
-            }
-        """,
     )
 
     @Test
@@ -818,338 +129,83 @@ class SyntaxMacroStageTest {
         // It is scoped to the body, and to allow it to be visible within the
         // expression right of `of` would lead to confusion.
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
-        stage = Stage.SyntaxMacro,
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body:
-            |    ```
-            |    let x__0 = f();
-            |    do_call_forEach(x__0, fn (x__1) {
-            |        x__1
-            |    });
-            |    x__0
-            |
-            |    ```
-            |  }
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun forLoopExtractsMultipleDeclarations() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/for-loop-extracts-multiple-declarations"),
-        stage = Stage.SyntaxMacro,
-        want = """
-            {
-                "syntaxMacro": {
-                    "body":
-                    ```
-                    do {
-                      var i__0: Int = 0, x__1 = 3;
-                      for(\__flowInit, {class: Empty__0}, \cond, i__0 < 3, \incr, i__0 = i__0 + 1, fn {
-                          body;
-                      })
-                    }
-
-                    ```
-                }
-            }
-        """,
     )
 
     @Test
     fun forLoopKeepsLabel() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/for-loop-keeps-label"),
-        stage = Stage.SyntaxMacro,
-        want = """
-            {
-                "syntaxMacro": {
-                    "body":
-                    ```
-                    do {
-                      var i__0 = 0;
-                      label__0: do {
-                        for(\__flowInit, {class: Empty__0}, \cond, i__0 < 3, \incr, i__0 = i__0 + 1, fn {
-                            body;
-                        })
-                      }
-                    }
-
-                    ```
-                }
-            }
-        """,
     )
 
     @Test
     fun forLoopExtractsDeclarationsMinimal() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/for-loop-extracts-declarations-minimal"),
-        stage = Stage.SyntaxMacro,
-        want = """
-            {
-                "syntaxMacro": {
-                    "body":
-                    ```
-                    for(fn {
-                        body;
-                    })
-
-                    ```
-                }
-            }
-        """,
     )
 
     @Test
     fun forLoopExtractsDeclarationsJustInit() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/for-loop-extracts-declarations-just-init"),
-        stage = Stage.SyntaxMacro,
-        want = """
-            {
-                "syntaxMacro": {
-                    "body":
-                    ```
-                    do {
-                      let i__0 = 0;
-                      for(\__flowInit, {class: Empty__0}, fn {
-                          body;
-                      })
-                    }
-
-                    ```
-                }
-            }
-        """,
     )
 
     @Test
     fun forLoopLikeExtractsDeclarations() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/for-loop-like-extracts-declarations"),
-        stage = Stage.SyntaxMacro,
-        want = """
-            {
-                "syntaxMacro": {
-                    "body":
-                    ```
-                    do {
-                      let i__0 = 0;
-                      foo(\__flowInit, {class: Empty__0}, \cond, i__0 < 3, \incr, i__0 = i__0 + 1, fn {
-                          body;
-                      })
-                    }
-
-                    ```
-                }
-            }
-        """,
     )
 
     @Test
     fun namesResolveToExportedNames() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/names-resolve-to-exported-names"),
-        stage = Stage.SyntaxMacro,
         moduleResultNeeded = true,
-        want = """
-        {
-          syntaxMacro: {
-            body: {
-              code: ```
-              let `test//`.x = 42;
-              `test//`.x
-
-              ```,
-              tree:
-                [ "Block", [
-                    [ "Decl", [
-                        [ "LeftName", { type: "ExportedName", baseName: "x" } ],
-                        [ "Value", "\\init: Symbol" ],
-                        [ "Value", "42: Int32" ],
-                        [ "Value", "\\ssa: Symbol" ],
-                        [ "Value", "void: Void" ],
-                        [ "Value", "\\QName: Symbol" ],
-                        [ "Value", "\"test-code.x\": String" ],
-                      ]
-                    ],
-                    [ "RightName", { type: "ExportedName", baseName: "x" } ]
-                  ]
-                ]
-            }
-          }
-        }
-        """,
     )
 
     @Test
     fun genericFn() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/generic-fn"),
-        stage = Stage.Run,
         moduleResultNeeded = true,
-        want = """
-            |{
-            |  // By the end of the syntax stage, the function has been rewritten to include the
-            |  // formal declarations, including super-type info.
-            |  syntaxMacro: {
-            |    body:
-            |      ```
-            |      @fn let identity__0;
-            |      @typeFormal(\T) @typeDecl(T__0) let T__0 = type (T__0);
-            |      T__0 extends AnyValue;
-            |      identity__0 = fn identity<T__0 extends AnyValue>(x__0 /* aka x */: T__0) /* return__0 */: (T__0) {
-            |        fn__0: do {
-            |          x__0
-            |        }
-            |      };
-            |      identity__0(42)
-            |
-            |      ```,
-            |  },
-            |  // By the end of the define stage, additional processing has happened.
-            |  define: {
-            |    body:
-            |      ```
-            |      @fn let identity__0;
-            |      @typeFormal(\T) @typeDecl(T__0) let T__0;
-            |      T__0 = type (T__0);
-            |      T__0 extends AnyValue;
-            |      identity__0 = (@stay fn identity<T__0 extends AnyValue>(x__0 /* aka x */: T__0) /* return__0 */: T__0 {
-            |          fn__0: do {
-            |            x__0
-            |          }
-            |      });
-            |      42
-            |
-            |      ```,
-            |  },
-            |  run: "42: Int32"
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun fnFormalArgsDoNotCrossScopes() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/fn-formal-args-do-not-cross-scopes"),
-        stage = Stage.SyntaxMacro,
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body:
-            |      ```
-            |      @fn let f__0, T__0 = "T";
-            |      @typeFormal(\T) @typeDecl(T__1) let T__1 = type (T__1);
-            |      T__1 extends AnyValue;
-            |      f__0 = fn f<T__1>(x__0 /* aka x */: T__1) /* return__0 */: (T__1) {
-            |        fn__0: do {
-            |          x__0
-            |        }
-            |      };
-            |      let t__0 = T__0;
-            |
-            |      ```
-            |  }
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun classFormalArgsDoNotCrossScopes() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/class-formal-args-do-not-cross-scopes"),
-        stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body:
-            |      ```
-            |      @typeDecl(I__0<T__0>) @stay let I__0 = type (I__0);
-            |      let T__1 = "T";
-            |      interface(\word, \I, \concrete, false, @typeDefined(I__0<T__0>) fn {
-            |          @typeFormal(\T) @memberTypeFormal(\T) @typeDefined(T__0) let T__0 = type (T__0);
-            |          I__0<T__0> extends AnyValue;
-            |          @property(\t) @maybeVar let t__0: T__0;
-            |      });
-            |      let t__1 = T__1;
-            |
-            |      ```
-            |  }
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun letFunctionBodyRequiredButCheckedLater() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/let-function-body-required-but-checked-later"),
-        stage = Stage.SyntaxMacro,
-        want = """
-        {
-            "syntaxMacro": {
-                "body":
-                ```
-                @fn let f__0;
-                f__0 = fn f {
-                  fn__0: do {
-                    abstractPanic()
-                  }
-                };
-
-                ```,
-            },
-        }
-        """,
     )
 
     @Test
     fun letFunctionBodyRequiredWithoutName() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/let-function-body-required-without-name"),
-        stage = Stage.SyntaxMacro,
         // Earlier, `let()` and `fn()` both hard crashed.
-        want = """
-        {
-            "syntaxMacro": {
-                "body": "error (MissingName)\n",
-            },
-        }
-        """,
     )
 
     @Test
     fun letFunctionNameRequired() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/let-function-name-required"),
-        stage = Stage.SyntaxMacro,
-        want = """
-        {
-            "syntaxMacro": {
-                "body": "error (MissingName)\n",
-            },
-        }
-        """,
     )
 
     @Test
     fun objectPunning() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/object-punning"),
-        stage = Stage.SyntaxMacro,
         moduleResultNeeded = true,
-        want = """
-            |{
-            |    syntaxMacro: {
-            |        "body": ```
-            |            let x__0 = 1;
-            |            new(\x, x__0)
-            |
-            |            ```
-            |    },
-            |    errors: ["No signature matches!"],
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun whoDecoratesTheDecorators() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/who-decorates-the-decorators"),
-        stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
-        provisionModule = { module, moduleAdvancer, td, rfl ->
+        provisionModule = { module, moduleAdvancer, td ->
             // We need some more decorators to stack.  Invent one.
             val vFoo = Value(
                 MetadataDecorator(Symbol("foo"), argumentTypes = listOf(Types.string)) {
@@ -1162,242 +218,30 @@ class SyntaxMacroStageTest {
                     BuiltinName("@foo") to vFoo,
                 ),
             )
-            provisionModuleForStageTest(td, module, moduleAdvancer, rfl)
+            provisionModuleForStageTest(td, module, moduleAdvancer)
         },
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body: {
-            |      code: ```
-            |        @typeDecl(I__0) @stay let I__0 = type (I__0);
-            |        REM("Stack many decorators on a declaration and make sure they eliminate themselves.", null, false);
-            |        interface(\word, \I, \concrete, false, @typeDefined(I__0) fn {
-            |            I__0 extends AnyValue;
-            |            @staticProperty(\thing) @static @visibility(\public)${
-            ""
-        } @foo("FOO") var thing__0;
-            |        });
-            |        I__0
-            |
-            |        ```,
-            |        tree: [ "Block", [
-            |            [ "Decl", [
-            |                [ "LeftName", "I__0" ],
-            |                [ "Value", "\\init: Symbol" ],
-            |                [ "Value", "I__0: Type" ],
-            |                [ "Value", "\\typeDecl: Symbol" ],
-            |                [ "Value", "I__0: Type" ],
-            |                [ "Value", "\\stay: Symbol" ],
-            |                [ "Stay", "kotlin.Unit" ],
-            |                [ "Value", "\\QName: Symbol" ],
-            |                [ "Value", "\"test-code.type I\": String" ],
-            |              ]
-            |            ],
-            |            [ "Call", [
-            |                [ "Value", "REM: Function" ],
-            |                [ "Value",
-            |"\"Stack many decorators on a declaration and make sure they eliminate themselves.\": String"
-            |                ],
-            |                [ "Value", "null: Null" ],
-            |                [ "Value", "false: Boolean" ],
-            |              ]
-            |            ],
-            |            [ "Call", [
-            |                [ "RightName", "interface" ],
-            |                [ "Value", "\\word: Symbol" ],
-            |                [ "Value", "\\I: Symbol" ],
-            |                [ "Value", "\\concrete: Symbol" ],
-            |                [ "Value", "false: Boolean" ],
-            |                [ "Fun", [
-            |                    [ "Value", "\\typeDefined: Symbol" ],
-            |                    [ "Value", "I__0: Type" ],
-            |                    [ "Block", [
-            |                        [ "Call", [
-            |                            [ "Value", "extends: Function" ],
-            |                            [ "Value", "I__0: Type" ],
-            |                            [ "Value", "AnyValue: Type" ],
-            |                          ]
-            |                        ],
-            |                        [ "Decl", [
-            |                            [ "LeftName", "thing__0" ],
-            |                            [ "Value", "\\staticProperty: Symbol" ],
-            |                            [ "Value", "\\thing: Symbol" ],
-            |                            [ "Value", "\\var: Symbol" ],
-            |                            [ "Value", "void: Void" ],
-            |                            [ "Value", "\\static: Symbol" ],
-            |                            [ "Value", "void: Void" ],
-            |                            [ "Value", "\\visibility: Symbol" ],
-            |                            [ "Value", "\\public: Symbol" ],
-            |                            [ "Value", "\\foo: Symbol" ],
-            |                            [ "Value", "\"FOO\": String" ],
-            |                            [ "Value", "\\QName: Symbol" ],
-            |                            [ "Value", "\"test-code.type I.thing\": String" ],
-            |                          ]
-            |                        ],
-            |                      ]
-            |                    ]
-            |                  ]
-            |                ],
-            |              ]
-            |            ],
-            |            [ "RightName", "I__0" ],
-            |          ]
-            |        ]
-            |      }
-            |    }
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun blockLambda() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/block-lambda"),
-        stage = Stage.SyntaxMacro,
-        want = """
-        |{
-        |  syntaxMacro: {
-        |    body: {
-        |      code: ```
-        |      f(fn (arg__0 /* aka arg */: ArgType) /* return__0 */: (ReturnType) {
-        |          arg__0
-        |      })
-        |
-        |      ```,
-        |      tree:
-        |          [ "Block", [
-        |              [ "Call", [
-        |                  [ "RightName", "f" ],
-        |                  [ "Fun", [
-        |                      [ "Decl", [
-        |                          [ "LeftName", "arg__0" ],
-        |                          [ "Value", "\\type: Symbol" ],
-        |                          [ "RightName", "ArgType" ],
-        |                          [ "Value", "\\word: Symbol" ],
-        |                          [ "Value", "\\arg: Symbol" ],
-        |                          [ "Value", "\\QName: Symbol" ],
-        |                          [ "Value", "\"test-code.(arg)\": String" ],
-        |                        ]
-        |                      ],
-        |                      [ "Value", "\\returnDecl: Symbol" ],
-        |                      [ "Decl", [
-        |                          [ "LeftName", "return__0" ],
-        |                          [ "Value", "\\type: Symbol" ],
-        |                          [ "RightName", "ReturnType" ],
-        |                        ]
-        |                      ],
-        |                      [ "Block", [
-        |                          [ "RightName", "arg__0" ],
-        |                        ]
-        |                      ]
-        |                    ]
-        |                  ]
-        |                ]
-        |              ]
-        |            ]
-        |          ]
-        |    }
-        |  }
-        |}
-        """.trimMargin(),
     )
 
     @Test
     fun mutuallyReferencingInterfaceTypes() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/mutually-referencing-interface-types"),
-        stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
-        want = """
-        |{
-        |  syntaxMacro: {
-        |    body: ```
-        |        @typeDecl(I__0) @stay let I__0 = type (I__0);
-        |        @typeDecl(J__0) @stay let J__0 = type (J__0);
-        |        interface(\word, \J, \concrete, false, @typeDefined(J__0) fn {
-        |            J__0 extends AnyValue;
-        |            @property(\i) @maybeVar let i__0: I__0;
-        |        });
-        |        interface(\word, \I, \concrete, false, @typeDefined(I__0) fn {
-        |            I__0 extends AnyValue;
-        |            @property(\j) @maybeVar let j__0: J__0;
-        |        });
-        |        J__0
-        |
-        |        ```
-        |  }
-        |}
-        """.trimMargin(),
     )
 
     @Test
     fun mutuallyReferencingClassTypes() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/mutually-referencing-class-types"),
-        stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
-        want = """
-        |{
-        |  syntaxMacro: {
-        |    body: ```
-        |        @typeDecl(C__0) @stay let C__0 = type (C__0);
-        |        @typeDecl(D__0) @stay let D__0 = type (D__0);
-        |        class(\word, \D, \concrete, true, @typeDefined(D__0) fn {
-        |            D__0 extends AnyValue;
-        |            @constructorProperty @property(\c) @maybeVar @visibility(\private) let c__0: C__0;
-        |            @method(\constructor) @visibility(\public) let constructor__0 = fn constructor(@impliedThis(D__0) this__1: D__0, c__1 /* aka c */: C__0) /* return__1 */: Void {
-        |              do {
-        |                let t#0;
-        |                do_iset_c(type (D__0), this(D__0), t#0 = c__1);
-        |                t#0
-        |              };
-        |            };
-        |        });
-        |        class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
-        |            C__0 extends AnyValue;
-        |            let typeof_d#0 = D__0?;
-        |            @constructorProperty @property(\d) @maybeVar @visibility(\private) let d__0: typeof_d#0;
-        |            @method(\constructor) @visibility(\public) let constructor__1 = fn constructor(@impliedThis(C__0) this__0: C__0, d__1 /* aka d */: typeof_d#0) /* return__0 */: Void {
-        |              do {
-        |                let t#1;
-        |                do_iset_d(type (C__0), this(C__0), t#1 = d__1);
-        |                t#1
-        |              };
-        |            };
-        |        });
-        |        D__0
-        |
-        |        ```
-        |  }
-        |}
-        """.trimMargin(),
     )
 
     @Test
     fun mutuallyReferencingFunctionDefinition() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/mutually-referencing-function-definition"),
-        stage = Stage.SyntaxMacro,
-        want = """
-        |{
-        |  syntaxMacro: {
-        |    body: ```
-        |        @fn let f__0, @fn g__0;
-        |        REM("These do not converge since neither has a base case, but they demonstrate hoisting.", null, false);${
-            // Arbitrary order swap here is ok.
-            ""
-        }
-        |        g__0 = fn g(x__0 /* aka x */) {
-        |          fn__0: do {
-        |            f__0(x__0 - 1)
-        |          }
-        |        };
-        |        f__0 = fn f(x__1 /* aka x */) {
-        |          fn__1: do {
-        |            g__0(x__1 / 2)
-        |          }
-        |        };
-        |
-        |        ```
-        |  }
-        |}
-        """.trimMargin(),
     )
 
     @Test
@@ -1413,115 +257,29 @@ class SyntaxMacroStageTest {
             isPreface = false,
         ),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
-        stage = Stage.SyntaxMacro,
-        want = """
-            |{
-            |    syntaxMacro: {
-            |        body: ```
-            |        @typeDecl(Hi__0) @stay let Hi__0 = type (Hi__0);
-            |        class(\word, \Hi, \concrete, true, @typeDefined(Hi__0) fn {
-            |            Hi__0 extends AnyValue;
-            |            @method(\there) @visibility(\private) @connected @fn let there__0 = (@connected fn there(@impliedThis(Hi__0) this__0: Hi__0) {
-            |                fn__0: do {
-            |                  pureVirtual()
-            |                }
-            |            });
-            |            @method(\constructor) @visibility(\public) let constructor__0 = fn constructor(@impliedThis(Hi__0) this__1: Hi__0) /* return__0 */: Void {};
-            |        });
-            |        Hi__0
-            |
-            |        ```,
-            |    },
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun reorder() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/reorder"),
-        stage = Stage.SyntaxMacro,
-        want = """
-            |{
-            |    syntaxMacro: {
-            |        body: ```
-            |        @fn let f__0, i__0 = 1, j__0 = i__0 + 1;
-            |        f__0 = fn f /* return__0 */: (Int) {
-            |          fn__0: do {
-            |            @fn let g__0, i__1 = 4;
-            |            g__0 = fn g /* return__1 */: (Int) {
-            |              fn__1: do {
-            |                i__1 + j__0
-            |              }
-            |            };
-            |            g__0()
-            |          }
-            |        };
-            |
-            |        ```,
-            |    },
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun genericFunctionInDocs() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/generic-function-in-docs"),
-        stage = Stage.SyntaxMacro,
         genre = Genre.Documentation,
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body: ```
-            |        @fn let f__0;
-            |        @typeFormal(\T) @typeDecl(T__0) @withinDocFold let T__0 = type (T__0);
-            |        @typeFormal(\U) @typeDecl(U__0) @withinDocFold let U__0 = type (U__0);
-            |        U__0 extends T__0;
-            |        f__0 = fn f<T__0 extends AnyValue, U__0 extends T__0>(x__0 /* aka x */: T__0) /* return__0 */: (U__0) {
-            |          x__0
-            |        };
-            |
-            |        ```
-            |  }
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun untypedFunArgs() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/untyped-fun-args"),
-        stage = Stage.SyntaxMacro,
         genre = Genre.Documentation,
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body: ```
-            |        hi(fn (x__0 /* aka x */: Int, y__0 /* aka y */) /* return__0 */: (String) {
-            |            x__0
-            |        })
-            |
-            |        ```
-            |  }
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun objectLiteralNoMatches() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/object-literal-no-matches"),
-        stage = Stage.SyntaxMacro,
         moduleResultNeeded = true,
-        want = """
-        |{
-        |  syntaxMacro: {
-        |    body:
-        |      ```
-        |      new(\hi, 5)
-        |
-        |      ```
-        |  },
-        |  errors: ["No signature matches!"]
-        |}
-        """.trimMargin(),
     )
 
     @Test
@@ -1536,28 +294,7 @@ class SyntaxMacroStageTest {
     @Test
     fun staticMethods() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/static-methods"),
-        stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showTypeMemberMetadata = true),
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body: ```
-            |      @typeDecl(C__0) @stay let C__0 = type (C__0);
-            |      class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
-            |          C__0 extends AnyValue;
-            |          @staticProperty(\f) @fn @static @visibility(\public) let f__0 = fn f(i__0 /* aka i */: Int) /* return__0 */: (Int) {
-            |            fn__0: do {
-            |              i__0 + 1
-            |            }
-            |          };
-            |          @method(\constructor) @visibility(\public) let constructor__0 = fn constructor(@impliedThis(C__0) this__0: C__0) /* return__1 */: Void {};
-            |      });
-            |      C__0
-            |
-            |      ```
-            |  }
-            |}
-        """.trimMargin(),
     )
 
     private fun checkObjectLiteralMultipleMatches(got: JsonObject) {
@@ -1598,177 +335,30 @@ class SyntaxMacroStageTest {
     @Test
     fun storingDocStringWithFn() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/storing-doc-string-with-fn"),
-        stage = Stage.Define,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(metadataValueDetail = NoneShortOrLong.Short),
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body: ```
-            |      @fn let f__0;
-            |      REM("tldr, f(x) = x.\n\nWhen x is an Int.\n\n         ^  _\n         |  /|\n    y =  | /\n    f(x) |/\n      <--0--->\n        /|  x\n       / |\n     |/_ v\n\n(ASCII art is hard)", true, false);
-            |      f__0 = (@docString(...) fn f(x__0 /* aka x */: Int) /* return__0 */: (Int) {
-            |          fn__0: do {
-            |            x__0
-            |          }
-            |      });
-            |
-            |      ```,
-            |  },
-            |  define: {
-            |    body: ```
-            |      @fn let f__0;
-            |      void;
-            |## And the comment just fades away.
-            |      f__0 = (@docString(...) @stay fn f(x__0 /* aka x */: Int32) /* return__0 */: Int32 {
-            |          fn__0: do {
-            |            x__0
-            |          }
-            |      });
-            |
-            |      ```,
-            |  },
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun docStringsFromMarkdown() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/doc-strings-from-markdown"),
-        stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(metadataValueDetail = NoneShortOrLong.Long),
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body: ```
-            |## No "Geometry" for the class doc comment
-            |        @typeDecl(Point__0) @stay @docString((["Point represents a two-dimensional point.", "Point represents a two-dimensional point.", "test/test.temper.md"])) let Point__0 = type (Point__0);
-            |        REM("Point represents a two-dimensional point.", true, true);
-            |        class(\word, \Point, \concrete, true, @typeDefined(Point__0) fn {
-            |            Point__0 extends AnyValue;
-            |## x's docs don't talk about the factory
-            |            @docString((["x is the x coordinate.", "x is the x coordinate.", "test/test.temper.md"])) @constructorProperty @maybeVar @visibility(\public) let x__0: Float64;
-            |            @docString((["y is the y coordinate.", "y is the y coordinate.", "test/test.temper.md"])) @constructorProperty @maybeVar @visibility(\public) let y__0: Float64;
-            |            REM("magnitude is the distance of this point from the origin.", true, true);
-            |            REM("It is always >= 0.", true, true);
-            |## magnitude has its doc string
-            |            @fn let magnitude__0 = (@docString((["magnitude is the distance of this point from the origin.", "magnitude is the distance of this point from the origin.\n\nIt is always >= 0.", "test/test.temper.md"])) fn magnitude(@impliedThis(Point__0) this__0: Point__0) /* return__0 */: (Float64) {
-            |                fn__0: do {
-            |                  do_call_sqrt(do_iget_x(type (Point__0), this(Point__0)) * do_iget_x(type (Point__0), this(Point__0)) + do_iget_y(type (Point__0), this(Point__0)) * do_iget_y(type (Point__0), this(Point__0)))
-            |                }
-            |            });
-            |            @visibility(\public) let constructor__0 = fn constructor(@impliedThis(Point__0) this__1: Point__0, x__1 /* aka x */: Float64, y__1 /* aka y */: Float64) /* return__1 */: Void {
-            |              do {
-            |                let t#0;
-            |                do_iset_x(type (Point__0), this(Point__0), t#0 = x__1);
-            |                t#0
-            |              };
-            |              do {
-            |                let t#1;
-            |                do_iset_y(type (Point__0), this(Point__0), t#1 = y__1);
-            |                t#1
-            |              };
-            |            };
-            |        });
-            |        Point__0
-            |
-            |        ```,
-            |  },
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun storingDocStringWithType() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/storing-doc-string-with-type"),
-        stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(metadataValueDetail = NoneShortOrLong.Long),
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body: ```
-            |      @typeDecl(Foo__0) @stay @docString((["Foo is a pretty cool type", "Foo is a pretty cool type", "test/test.temper"])) let Foo__0 = type (Foo__0);
-            |      REM("Foo is a pretty cool type", true, false);
-            |      class(\word, \Foo, \concrete, true, @typeDefined(Foo__0) fn {
-            |          Foo__0 extends AnyValue;
-            |          @visibility(\public) let constructor__0 = fn constructor(@impliedThis(Foo__0) this__0: Foo__0) /* return__0 */: Void {};
-            |      });
-            |
-            |      ```,
-            |  },
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun storingDocStringWithExportedType() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/storing-doc-string-with-exported-type"),
-        stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail.default.copy(metadataValueDetail = NoneShortOrLong.Short),
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body: ```
-            |      @typeDecl(I) @stay @docString(...) let `test//`.I = type (I);
-            |      do {};
-            |      REM("I am a pretty cool type", true, false);
-            |      interface(\word, \I, \concrete, false, @typeDefined(I) fn {
-            |          I extends AnyValue
-            |      });
-            |
-            |      ```,
-            |  },
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun commentsOnSettersAndGetters() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/comments-on-setters-and-getters"),
-        stage = Stage.SyntaxMacro,
-        want = """
-            |{
-            |  disAmbiguate: {
-            |    body:
-            |      ```
-            |      @typeDecl(C__0) @hoistLeft(true) @resolution(C__0) @stay let C = type (C__0);
-            |      class(\word, C, \concrete, true, @typeDefined(C__0) fn {
-            |          C__0 extends AnyValue;
-            |          REM("Returns 1", true, false);
-            |          @method(\x) @getter @visibility(\public) let nym`get.x` = fn(\word, nym`get.x`, @impliedThis(C__0) let this__0: C__0, \outType, Int, fn {
-            |              1
-            |          });
-            |          REM("You can set it but it'll still be 1.", true, false);
-            |          @method(\x) @setter @visibility(\public) let nym`set.x` = fn(\word, nym`set.x`, @impliedThis(C__0) let this__1: C__0, let newValue /* aka newValue */: Int, \outType, Void, fn {});
-            |      });
-            |      C
-            |
-            |      ```
-            |  },
-            |  syntaxMacro: {
-            |    body:
-            |      ```
-            |      @typeDecl(C__0) @stay let C__0 = type (C__0);
-            |      class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
-            |          C__0 extends AnyValue;
-            |          @property(\x) @visibility(\public) let x__0;
-            |          REM("Returns 1", true, false);
-            |          @method(\x) @getter @visibility(\public) @fn let nym`get.x__1` = (@docString(...) fn nym`get.x`(@impliedThis(C__0) this__0: C__0) /* return__0 */: (Int) {
-            |              fn__0: do {
-            |                1
-            |              }
-            |          });
-            |          REM("You can set it but it'll still be 1.", true, false);
-            |          @method(\x) @setter @visibility(\public) @fn let nym`set.x__2` = (@docString(...) fn nym`set.x`(@impliedThis(C__0) this__1: C__0, newValue__0 /* aka newValue */: Int) /* return__1 */: (Void) {
-            |              fn__1: do {}
-            |          });
-            |          @method(\constructor) @visibility(\public) let constructor__0 = fn constructor(@impliedThis(C__0) this__2: C__0) /* return__2 */: Void {};
-            |      });
-            |      C__0
-            |
-            |      ```
-            |  }
-            |}
-        """.trimMargin(),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(
             metadataValueDetail = NoneShortOrLong.Short,
             showTypeMemberMetadata = true,
@@ -1778,153 +368,22 @@ class SyntaxMacroStageTest {
     @Test
     fun consoleBound() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/console-bound"),
-        stage = Stage.SyntaxMacro,
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body: ```
-            |        let console#0 = doPure(fn: Console {
-            |            getConsole()
-            |        }), console__0 = getConsole("myConsole");
-            |        do_call_log(console__0, "Hi!");
-            |        do_call_log(console#0, "Bye!");
-            |
-            |        ```
-            |  }
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun chainNull() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/chain-null"),
-        stage = Stage.SyntaxMacro,
         // Note that we currently can't properly infer `a != null` for `a.string.end` yet. TODO Infer such.
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body:
-            |      ```
-            |      @typeDecl(StringHolder__0) @stay let StringHolder__0 = type (StringHolder__0);
-            |      @fn let `test//`.maybeLength;
-            |      class(\word, \StringHolder, \concrete, true, @typeDefined(StringHolder__0) fn {
-            |          StringHolder__0 extends AnyValue;
-            |          @constructorProperty @maybeVar @visibility(\public) let string__0: String;
-            |          @visibility(\public) let constructor__0 = fn constructor(@impliedThis(StringHolder__0) this__0: StringHolder__0, string__1 /* aka string */: String) /* return__0 */: Void {
-            |            do {
-            |              let t#0;
-            |              do_iset_string(type (StringHolder__0), this(StringHolder__0), t#0 = string__1);
-            |              t#0
-            |            };
-            |          };
-            |      });
-            |      `test//`.maybeLength = fn maybeLength(a__0 /* aka a */: StringHolder__0?, min__0 /* aka min */: Int) /* return__1 */: (Int?) {
-            |        fn__0: do {
-            |          {
-            |            let subject#0;
-            |            subject#0 = {
-            |              let subject#1;
-            |              subject#1 = {
-            |                if (isNull(a__0)) {
-            |                  null
-            |                } else {
-            |                  do_get_string(notNull(a__0))
-            |                }
-            |              };
-            |              if (isNull(subject#1)) {
-            |                null
-            |              } else {
-            |                do_call_countBetween(notNull(subject#1), do_get_begin(String), do_get_end(do_get_string(a__0)))
-            |              }
-            |            };
-            |            if (isNull(subject#0)) {
-            |              null
-            |            } else {
-            |              do_call_max(notNull(subject#0), min__0)
-            |            }
-            |          }
-            |        }
-            |      };
-            |
-            |      ```
-            |  },
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun nullChainingDesugaring() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/null-chaining-desugaring"),
-        stage = Stage.SyntaxMacro,
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body: ```
-            |      @stay @imported(\(`test//c/`.C)) let C__0 = type (C), @imported(\(`test//c/`.g)) @fn g__0 = `test//c/`.g, @imported(\(`test//c/`.complexSubject)) @fn complexSubject__0 = (fn complexSubject), @fn f__0;
-            |      f__0 = fn f(c__0 /* aka c */: C__0?) /* return__0 */: (Void) {
-            |        fn__0: do {
-            |          g__0({
-            |              if (isNull(c__0)) {
-            |                null
-            |              } else {
-            |                do_get_prop(notNull(c__0))
-            |              }
-            |          });
-            |          g__0({
-            |              let subject#0;
-            |              subject#0 = complexSubject__0(c__0);
-            |              if (isNull(subject#0)) {
-            |                null
-            |              } else {
-            |                do_get_prop(notNull(subject#0))
-            |              }
-            |          });
-            |          g__0({
-            |              if (isNull(c__0)) {
-            |                null
-            |              } else {
-            |                do_call_method(notNull(c__0))
-            |              }
-            |          });
-            |          g__0({
-            |              let subject#1;
-            |              subject#1 = complexSubject__0(c__0);
-            |              if (isNull(subject#1)) {
-            |                null
-            |              } else {
-            |                do_call_method(notNull(subject#1))
-            |              }
-            |          });
-            |        }
-            |      };
-            |
-            |      ```
-            |  }
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun consoleUnbound() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/console-unbound"),
-        stage = Stage.SyntaxMacro,
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body: ```
-            |        let console#0 = doPure(fn: Console {
-            |            getConsole()
-            |        });
-            |        do (fn {
-            |            let console__0 = getConsole("myConsole");
-            |        });
-            |        do_call_log(console#0, "Hi!");
-            |        do_call_log(console#0, "Bye!");
-            |
-            |        ```
-            |  }
-            |}
-        """.trimMargin(),
     )
 
     @Test
@@ -1932,7 +391,6 @@ class SyntaxMacroStageTest {
         stageTestDir = StageTestDir(
             "syntax-macro/referenced-to-pre-resolved-property-names-recognized-as-this-references",
         ),
-        stage = Stage.SyntaxMacro,
         // Ensure that when a mixin uses a generated, resolved property name
         // that we infer the `this.` on it.
         // The generated code looks like the below:
@@ -1942,33 +400,7 @@ class SyntaxMacroStageTest {
         //     i__0
         //   }
         // }
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body: ```
-            |      @typeDecl(C__0) @stay let C__0 = type (C__0);
-            |      class (\word, \C, \concrete, true, @typeDefined(C__0) fn {
-            |          C__0 extends AnyValue;
-            |          @visibility(\public) @constructorProperty @maybeVar let i__0: Int32;
-            |          @visibility(\public) let f__0 = fn (@impliedThis(C__0) this__0: C__0) /* return__0 */: Int32 {
-            |## The resolved i reference here turned into a do_iget_i
-            |            do_iget_i(type (C__0), this(C__0))
-            |          };
-            |          @visibility(\public) let constructor__0 = fn constructor(@impliedThis(C__0) this__1: C__0, i__1 /* aka i */: Int32) /* return__1 */: Void {
-            |            do {
-            |              let t#0;
-            |              do_iset_i(type (C__0), this(C__0), t#0 = i__1);
-            |              t#0
-            |            };
-            |          };
-            |      });
-            |      C__0
-            |
-            |      ```
-            |  }
-            |}
-        """.trimMargin(),
-    ) { module, _, _, _ ->
+    ) { module, _, _ ->
         val document = Document(module)
         val pos = Position(module.loc, 0, 0)
         val i = document.nameMaker.unusedSourceName(ParsedName("i"))
@@ -2008,384 +440,56 @@ class SyntaxMacroStageTest {
 
     @Test
     fun noPropertyConstructorPropertiesInPropertyBag() {
-        val input = """
-            |class C(private x: Int, @noProperty let y: Int) {
-            |  private z: Int = y + 1;
-            |}
-            |
-            |export let cs = [
-            |  { x: 1, y: 2 },
-            |  { x: 1, y: 2, z: 3 }, // ERROR: z not allowed here
-            |]
-        """.trimMargin()
-        val problemSubstring = "{ x: 1, y: 2, z: 3 }"
-        val problemLeft = input.indexOf(problemSubstring)
-        val problemRight = problemLeft + problemSubstring.length
         assertModuleAtStage(
             stageTestDir = StageTestDir("syntax-macro/no-property-constructor-properties-in-property-bag"),
-            stage = Stage.SyntaxMacro,
-            want = """
-                |{
-                |  syntaxMacro: {
-                |    body: ```
-                |          @typeDecl(C__0) @stay let C__0 = type (C__0);
-                |          class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
-                |              C__0 extends AnyValue;
-                |              @constructorProperty @maybeVar @visibility(\private) let x__0: Int;
-                |              do {};
-                |              @maybeVar @visibility(\private) let z__0: Int;
-                |              @visibility(\public) let constructor__0 = fn constructor(@impliedThis(C__0) this__0: C__0, x__1 /* aka x */: Int, @constructorProperty y__0 /* aka y */: Int) /* return__0 */: Void {
-                |                do {
-                |                  let t#0;
-                |                  do_iset_x(type (C__0), this(C__0), t#0 = x__1);
-                |                  t#0
-                |                };
-                |                do {
-                |                  let t#1;
-                |                  do_iset_z(type (C__0), this(C__0), t#1 = y__0 + 1);
-                |                  t#1
-                |                };
-                |              };
-                |          });
-                |          let `test//`.cs = list(new C__0(\x, 1, \y, 2), new(\x, 1, \y, 2, \z, 3));
-                |
-                |          ```
-                |  },
-                |  errors: [
-                |    {
-                |      template: "NoSignatureMatches",
-                |      values: [],
-                |      left: $problemLeft,
-                |      right: $problemRight,
-                |    },
-                |  ],
-                |}
-            """.trimMargin(),
         )
     }
 
     @Test
     fun setterInvocationUsedInExpressionContext() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/setter-invocation-used-in-expression-context"),
-        stage = Stage.SyntaxMacro,
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body: ```
-            |      REM("A chained assignment involving a setter invocation.", null, false);
-            |      x = do {
-            |        let t#0;
-            |## Here we capture the right operand in t#0,
-            |## so the value assigned to x does not depend
-            |## on any setter's return value.
-            |        do_set_p(o, t#0 = f());
-            |        t#0
-            |      }
-            |
-            |      ```
-            |  }
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun malformedNumericLiteralErrors() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/malformed-numeric-literal-errors"),
-        stage = Stage.SyntaxMacro,
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body: ```
-            |      let `test//`.oneTwoThree = error (list("123i6"));
-            |
-            |      ```
-            |  },
-            |  errors: [
-            |    "Malformed number!",
-            |  ]
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun desugarCompoundOp() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/desugar-compound-op"),
-        stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
-        want = """
-            |{
-            |  parse: {
-            |    body: ```
-            |      nym`@`(var, let x = 1);
-            |## Parse produces a desugar call for `+=`
-            |      desugarOperation (nym`+=`, x, 2);
-            |
-            |      ```
-            |  },
-            |  import: {
-            |    body: ```
-            |      nym`@`(var, let x = 1);
-            |## That resolves early to an assignment to x with a desugar call with the builtin variants.
-            |      x = (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(x, 2);
-            |
-            |      ```
-            |  },
-            |  disAmbiguate: {
-            |    body: ```
-            |## `let` macro applied
-            |      var x = 1;
-            |      x = (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(x, 2);
-            |
-            |      ```
-            |  },
-            |  syntaxMacro: {
-            |    body: ```
-            |## Names resolved
-            |      var x__0 = 1;
-            |      x__0 = (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(x__0, 2);
-            |
-            |      ```
-            |  }
-            |}
-        """.trimMargin(),
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
     )
 
     @Test
     fun compoundOpsWithGetterAndSetter() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/compound-ops-with-getter-and-setter"),
-        stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
-        want = """
-            |{
-            |  disAmbiguate: {
-            |    body: ```
-            |        @stay @imported(\(`test//c/`.C)) let C = type (C);
-            |        do(fn {
-            |            let c = new C();
-            |            do {
-            |              let t#0;
-            |              t#0 = c;
-            |              leftHandOf(t#0.x, (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(t#0.x, 1))
-            |            };
-            |            do {
-            |              let t#1;
-            |              t#1 = c;
-            |              leftHandOf(t#1.x, (nym`do_call__*_`[TimesIntInt, TimesIntInt64, TimesFltFlt])(t#1.x, 2))
-            |            };
-            |            console.log(c.x);
-            |        })
-            |
-            |        ```,
-            |  },
-            |  syntaxMacro: {
-            |    body: ```
-            |        @stay @imported(\(`test//c/`.C)) let C__0 = type (C), console#0 = doPure(fn: Console {
-            |            getConsole()
-            |        });
-            |        do (fn {
-            |            let c__0 = new C__0();
-            |            do {
-            |              let t#0;
-            |              t#0 = c__0;
-            |              do {
-            |                let t#2;
-            |                do_set_x(t#0, t#2 = (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(do_get_x(t#0), 1));
-            |                t#2
-            |              }
-            |            };
-            |            do {
-            |              let t#1;
-            |              t#1 = c__0;
-            |              do {
-            |                let t#3;
-            |                do_set_x(t#1, t#3 = (nym`do_call__*_`[TimesIntInt, TimesIntInt64, TimesFltFlt])(do_get_x(t#1), 2));
-            |                t#3
-            |              }
-            |            };
-            |            do_call_log(console#0, do_get_x(c__0));
-            |        })
-            |
-            |        ```,
-            |  },
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun compoundOpsWithIndexedGetAndSet() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/compound-ops-with-indexed-get-and-set"),
-        stage = Stage.SyntaxMacro,
         pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
-        want = """
-            |{
-            |  disAmbiguate: {
-            |    body: ```
-            |        let `test//`.myList = do(fn {
-            |            let b: ListBuilder<Int32> = list(1, 2).toListBuilder();
-            |            do {
-            |              let t#0;
-            |              t#0 = b;
-            |              t#0.set(0, (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(t#0.get(0), 1))
-            |            };
-            |            do {
-            |              let t#1;
-            |              t#1 = b;
-            |              t#1.set(1, (nym`do_call__*_`[TimesIntInt, TimesIntInt64, TimesFltFlt])(t#1.get(1), 2))
-            |            };
-            |            b.toList()
-            |        });
-            |
-            |        ```,
-            |  },
-            |  syntaxMacro: {
-            |    body: ```
-            |        let `test//`.myList = do (fn {
-            |            let b__0: ListBuilder<Int32> = do_call_toListBuilder(list(1, 2));
-            |            do {
-            |              let t#0;
-            |              t#0 = b__0;
-            |              do_call_set(t#0, 0, (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(do_call_get(t#0, 0), 1))
-            |            };
-            |            do {
-            |              let t#1;
-            |              t#1 = b__0;
-            |              do_call_set(t#1, 1, (nym`do_call__*_`[TimesIntInt, TimesIntInt64, TimesFltFlt])(do_call_get(t#1, 1), 2))
-            |            };
-            |            do_call_toList(b__0)
-            |        });
-            |
-            |        ```,
-            |  },
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun nestedArithmetic() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/nested-arithmetic"),
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body: ```
-            |        @fn let `test//`.negStr;
-            |        `test//`.negStr = fn negStr(x__0 /* aka x */: Int32) /* return__0 */: (String) {
-            |          fn__0: do {
-            |            do_call_toString(-1 * x__0)
-            |          }
-            |        };
-            |
-            |        ```
-            |  }
-            |}
-        """.trimMargin(),
-        stage = Stage.SyntaxMacro,
     )
 
     @Test
     fun desugarPrefixOp() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/desugar-prefix-op"),
-        stage = Stage.SyntaxMacro,
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
-        want = """
-            |{
-            |  import: {
-            |    body: ```
-            |      nym`@`(export, let(\word, f, do {
-            |            \_complexArg_;
-            |            x;
-            |            \type;
-            |            Int32
-            |          }, \outType, Int32, fn {
-            |            nym`@`(var, let y = x);
-            |            do {
-            |## Name allocated to do pre-capture
-            |              let postfixReturn#0 = y;
-            |## Dot desugaring here in case there are extensions to do succ and pred.
-            |              y = postfixReturn#0.pred();
-            |              postfixReturn#0
-            |            };
-            |            y = y.succ()
-            |      }))
-            |
-            |      ```,
-            |  },
-            |  syntaxMacro: {
-            |    body: ```
-            |      @fn let `test//`.f;
-            |      `test//`.f = fn f(x__0 /* aka x */: Int32) /* return__0 */: (Int32) {
-            |        fn__0: do {
-            |          var y__0 = x__0;
-            |          do {
-            |            let postfixReturn#0 = y__0;
-            |            y__0 = do_call_pred(postfixReturn#0);
-            |            postfixReturn#0
-            |          };
-            |          y__0 = do_call_succ(y__0)
-            |        }
-            |      };
-            |
-            |      ```
-            |  }
-            |}
-        """.trimMargin(),
     )
 
     @Test
     fun desugarPrefixOpWithComplexOperand() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/desugar-prefix-op-with-complex-operand"),
-        stage = Stage.SyntaxMacro,
         stagingFlags = setOf(StagingFlags.skipImportImplicits),
-        want = """
-            |{
-            |  syntaxMacro: {
-            |    body: ```
-            |      @fn let `test//`.f;
-            |      `test//`.f = fn f(ls__0 /* aka ls */: ListBuilder<Int32>, j__0 /* aka j */: Int32) /* return__0 */: (Void) {
-            |        fn__0: do {
-            |          var i__0 = j__0;
-            |## To do `ls[i++]--`, first we need to get the index `i++`.
-            |          do {
-            |            let t#0;
-            |## `t#0` lets us avoid multiple evaluation of `ls`.
-            |            t#0 = ls__0;
-            |            let t#1;
-            |            t#1 = do {
-            |              let postfixReturn#0 = i__0;
-            |              i__0 = do_call_succ(postfixReturn#0);
-            |              postfixReturn#0
-            |            };
-            |## Now, `t#1` has the post-incremented `i`.
-            |            do {
-            |## Reading the array.
-            |              let postfixReturn#1 = do_call_get(t#0, t#1);
-            |## Writing the array.  Same array and element.
-            |              do_call_set(t#0, t#1, do_call_pred(postfixReturn#1));
-            |## The result is what was read from the array beforehand.
-            |              postfixReturn#1
-            |            }
-            |          };
-            |## Not as much to do for pre-increment and pre-decreemnt.
-            |## `--ls[ls[++i]]` is what we're handling here.
-            |##
-            |          do {
-            |            let t#2;
-            |## Again, we get the subject.  The subject is a simple name,
-            |## but if it were `var`, reading it's property could have the
-            |## side-effect of setting it.
-            |            t#2 = ls__0;
-            |            let t#3;
-            |            t#3 = do_call_get(ls__0, i__0 = do_call_succ(i__0));
-            |            do_call_set(t#2, t#3, do_call_pred(do_call_get(t#2, t#3)))
-            |          };
-            |        }
-            |      };
-            |
-            |      ```
-            |  }
-            |}
-        """.trimMargin(),
     )
 }

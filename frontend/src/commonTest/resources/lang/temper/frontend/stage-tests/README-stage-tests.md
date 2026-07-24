@@ -19,13 +19,14 @@ frontend/src/commonTest/kotlin/lang/temper/frontend/stage-tests/
       README.md               # Ignored
       disAmbiguate.temper     # stage output as temper pseudocode
       disAmbiguate.lispy      # Lispy output
-      disAmbiguate.type.json  # Information about declared types
-      disAmbiguate.meta.json  # JSON snapshot of module metadata
+      disAmbiguate-types.json # Information about declared types
+      disAmbiguate-meta.json  # JSON snapshot of module metadata
+      disAmbiguate-appendix.json # JSON snapshot of module metadata
       # similarly file groups for other stages
       errors.json             # Expected error messages
       stdout.txt              # Expected console output from any run stage
-      run.result.json         # Expected result from the run stage
-      appendix.json           # Module appendix
+      stage-completed.txt     # Max stage completed
+      run-result.json         # Expected result from the run stage
 ```
 
 Any files starting with `README` and ending with `.md` are ignored
