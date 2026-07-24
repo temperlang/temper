@@ -37,6 +37,7 @@ import lang.temper.fs.Url
 import lang.temper.lexer.Genre
 import lang.temper.lexer.languageConfigForExtension
 import lang.temper.log.FilePath
+import lang.temper.log.FilePath.Companion.join
 import lang.temper.log.LogEntry
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
@@ -52,7 +53,6 @@ import lang.temper.name.ResolvedName
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.stage.Stage
-import lang.temper.testdir.RegeneratedFilesList
 import lang.temper.testdir.TestFileBundle
 import lang.temper.testdir.readTestDir
 import lang.temper.testdir.regenerateFiles
@@ -164,13 +164,6 @@ internal fun assertModuleAtStage(
     provisionModule: (Module, ModuleAdvancer, TestFileBundle) -> Unit,
 ) {
     val testDir = readTestDir(stageTestDirFileRoot.resolve(stageTestDir.url))
-    val regeneratedFileList: RegeneratedFilesList? =
-        if (shouldRegenerateStageTest(stageTestDir, isEmpty = testDir.isEmpty())) {
-            console.info("assertModuleAtStage is regenerating test files under ${stageTestDir.url}")
-            mutableListOf()
-        } else {
-            null
-        }
 
     var thousandsOfStepsLeft = 100
     val continueCondition = {
@@ -194,7 +187,7 @@ internal fun assertModuleAtStage(
             }
             // The file relationship knows how to process the file into requirements in the
             // "wanted" JSON bundle.
-            val rel = testResourceFileRelationships[Either.Right(relPath)]
+            val rel = testResourceFileRelationships[relPath]
                 ?: fail("Unrecognized test data file `${stageTestDir.url}//$relPath`")
             val relStage = rel.stage
             if (stage == null && relStage != null && relStage > stageNeeded) {
@@ -333,24 +326,45 @@ internal fun assertModuleAtStage(
         logEntryWanted,
     )
 
-    try {
-        if (manualCheck != null) {
-            val renumberer = PseudoCodeNameRenumberer.newStructurePostProcessor()
-            val gotRenumbered = renumberer(got)
-            manualCheck(JsonValueBuilder.build(emptyMap()) { value(gotRenumbered) } as JsonObject)
-        } else {
-            val (wantReconciled, gotReconciled) = reconcileStructure(wantJson, got)
+    if (manualCheck != null) {
+        val renumberer = PseudoCodeNameRenumberer.newStructurePostProcessor()
+        val gotRenumbered = renumberer(got)
+        manualCheck(JsonValueBuilder.build(emptyMap()) { value(gotRenumbered) } as JsonObject)
+    } else {
+        var passed = false
+        val (wantReconciled, gotReconciled) = reconcileStructure(wantJson, got)
+        try {
             assertStructure(
                 PseudoCodeNameRenumberer.newStructurePostProcessor()(wantReconciled),
                 PseudoCodeNameRenumberer.newStructurePostProcessor()(gotReconciled),
             )
-            if (regeneratedFileList != null) {
-                TODO("$got")
+            passed = true
+        } finally {
+            if (!passed && shouldRegenerateStageTest(stageTestDir, isEmpty = testDir.isEmpty())) {
+                console.info("assertModuleAtStage is regenerating test files under ${stageTestDir.url}")
+                val regeneratedFiles = testDir.files.mapNotNull { (relPath) ->
+                    val gotJson = run {
+                        val b = JsonValueBuilder()
+                        gotReconciled.destructure(b)
+                        b.getRoot()
+                    }
+                    testResourceFileRelationships[relPath]?.let { rel ->
+                        var value: JsonValue? = gotJson
+                        for (prop in rel.jsonProperties) {
+                            value = (value as? JsonObject)?.getOrNull(prop)
+                        }
+                        value?.let {
+                            rel.converter.toFileContent(it).result?.let { content ->
+                                Url(rel.relFilePath.join()) to Either.Left(content)
+                            }
+                        }
+                    }
+                }
+                regenerateFiles(
+                    stageTestDirFileSourceRoot.resolve("${stageTestDir.url}/"),
+                    regeneratedFiles,
+                )
             }
-        }
-    } finally {
-        regeneratedFileList?.let {
-            regenerateFiles(stageTestDirFileSourceRoot.resolve("${stageTestDir.url}/"), it.toList())
         }
     }
 }
@@ -832,15 +846,14 @@ private object ParseJsonTolerantConverter : DataFileConverter {
 private data class TestResourceFileRelationship(
     val stage: Stage?,
     val jsonProperties: List<String>,
-    val expectFilePath: FilePath,
+    val relFilePath: FilePath,
     val converter: DataFileConverter,
 )
 
-private val testResourceFileRelationships: Map<Either<List<String>, FilePath>, TestResourceFileRelationship> =
+private val testResourceFileRelationships: Map<FilePath, TestResourceFileRelationship> =
     buildMap {
         fun put(rel: TestResourceFileRelationship) {
-            this[Either.Left(rel.jsonProperties)] = rel
-            this[Either.Right(rel.expectFilePath)] = rel
+            this[rel.relFilePath] = rel
         }
         for (stage in Stage.entries) {
             if (stage >= Stage.Parse && stage < Stage.Run) {
