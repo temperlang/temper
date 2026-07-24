@@ -17,6 +17,7 @@ class AllStageTestDirsTested {
         // sources mention them.
         val inFileSystem = buildSet {
             val root = stageTestDirFileRoot.toPath()
+
             // Look for directories that have a `work` and/or `expect` sub-directories.
             fun walk(p: Path) {
                 val ls = Files.list(p).toList()
@@ -67,7 +68,7 @@ class AllStageTestDirsTested {
         assertEquals(
             inFileSystem.sorted().joinToString("\n"),
             used.sorted().joinToString("\n"),
-            message = "unused=$unused"
+            message = "unused=$unused",
         )
     }
 }
