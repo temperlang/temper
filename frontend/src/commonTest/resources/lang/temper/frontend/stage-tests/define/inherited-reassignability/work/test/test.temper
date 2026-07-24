@@ -1,0 +1,12 @@
+interface I {
+  var m;
+  p;
+}
+interface J {
+  set n() {}
+}
+interface K extends I, J {
+  m; n; o;
+  p; q;
+  set o() {}
+}

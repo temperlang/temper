@@ -1,0 +1,5 @@
+@staticExtension(Int, "isZero")
+let isZero(x: Int): Boolean { x == 0 }
+
+Int.isZero(0) && isZero(0)
+

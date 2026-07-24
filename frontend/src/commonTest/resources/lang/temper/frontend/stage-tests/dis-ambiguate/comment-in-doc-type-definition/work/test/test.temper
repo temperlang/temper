@@ -1,0 +1,4 @@
+class C {
+  // Comment in type definition
+  public x: Int;
+}

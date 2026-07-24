@@ -1,0 +1,2 @@
+@json class C {}
+C.jsonAdapter()

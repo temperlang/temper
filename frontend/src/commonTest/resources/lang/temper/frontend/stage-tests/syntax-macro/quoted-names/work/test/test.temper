@@ -1,0 +1,2 @@
+let nym`x`, y;
+f(x, y, nym`x`, nym`y`)

@@ -1,0 +1,27 @@
+@typeDecl(What__0<Thing__0>) @stay let What__0 = type (What__0);
+class(\word, \What, \concrete, true, @typeDefined(What__0<Thing__0>) fn {
+    @typeFormal(\Thing) @memberTypeFormal(\Thing) @typeDefined(Thing__0) let Thing__0 = type (Thing__0);
+    What__0<Thing__0> extends AnyValue;
+    let typeof_ints#0 = List<Int>;
+    @constructorProperty @property(\ints) @maybeVar @visibility(\public) let ints__0: typeof_ints#0;
+    let typeof_things#0 = List<Thing__0>;
+    @constructorProperty @property(\things) @maybeVar @visibility(\public) let things__0: typeof_things#0;
+    @method(\work) @visibility(\public) @fn let work__0 = fn work(@impliedThis(What__0<Thing__0>) this__0: What__0<Thing__0>, that__0 /* aka that */: Thing__0) /* return__0 */: (Void) {
+      fn__0: do {
+        let another__0: What__0 = this(What__0<Thing__0>), more__0: List = do_iget_things(type (What__0<Thing__0>), this(What__0<Thing__0>));
+      }
+    };
+    @method(\constructor) @visibility(\public) let constructor__0 = fn constructor(@impliedThis(What__0<Thing__0>) this__1: What__0<Thing__0>, ints__1 /* aka ints */: typeof_ints#0, things__1 /* aka things */: typeof_things#0) /* return__1 */: Void {
+      do {
+        let t#0;
+        do_iset_ints(type (What__0<Thing__0>), this(What__0<Thing__0>), t#0 = ints__1);
+        t#0
+      };
+      do {
+        let t#1;
+        do_iset_things(type (What__0<Thing__0>), this(What__0<Thing__0>), t#1 = things__1);
+        t#1
+      };
+    };
+});
+What__0

@@ -1,0 +1,10 @@
+@fn let identity__0;
+@typeFormal(\T) @typeDecl(T__0) let T__0;
+T__0 = type (T__0);
+T__0 extends AnyValue;
+identity__0 = (@stay fn identity<T__0 extends AnyValue>(x__0 /* aka x */: T__0) /* return__0 */: T__0 {
+    fn__0: do {
+      x__0
+    }
+});
+42

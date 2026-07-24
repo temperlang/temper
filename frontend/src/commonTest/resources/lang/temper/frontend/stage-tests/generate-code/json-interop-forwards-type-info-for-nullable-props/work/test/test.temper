@@ -1,0 +1,5 @@
+let { NullInterchangeContext, parseJson } = import("std/json");
+
+@json class C(public i: Int?) {}
+
+C.jsonAdapter().decodeFromJson(parseJson('{"i": null}'), NullInterchangeContext.instance)

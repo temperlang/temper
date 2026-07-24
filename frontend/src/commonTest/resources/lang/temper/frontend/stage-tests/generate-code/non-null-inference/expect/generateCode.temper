@@ -1,0 +1,11 @@
+  @fn @reach(\none) let maybeLength__0;
+  maybeLength__0 = (@stay fn maybeLength(a__0 /* aka a */: String?) /* return__0 */: (Int32?) {
+      var t#0;
+      if (isNull(a__0)) {
+        return__0 = null
+      } else {
+## In this branch, a is aliased to a#0 and is known to be not null.
+        t#0 = notNull(a__0);
+        return__0 = do_call_countBetween(t#0, getStatic(String, \begin), do_get_end(t#0))
+      }
+  })

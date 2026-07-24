@@ -1,0 +1,6 @@
+@typeDecl(C__0) @hoistLeft(true) @resolution(C__0) @stay let C = type (C__0);
+class(\word, C, \concrete, true, @typeDefined(C__0) fn {
+    C__0 extends AnyValue;
+    @property(\me) @maybeVar @visibility(\private) let me = this(C__0);
+});
+let me = this();

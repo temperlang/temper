@@ -1,0 +1,7 @@
+compilelog("1", @F);
+if (c) {
+  compilelog("2", @F)
+} else {
+  compilelog("3", @F)
+};
+compilelog("4", @F)

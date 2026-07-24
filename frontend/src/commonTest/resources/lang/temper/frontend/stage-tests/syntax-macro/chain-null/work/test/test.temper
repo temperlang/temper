@@ -1,0 +1,4 @@
+class StringHolder(public string: String) {}
+export let maybeLength(a: StringHolder?, min: Int): Int? {
+  a?.string?.countBetween(String.begin, a.string.end)?.max(min)
+}

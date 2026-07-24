@@ -10,6 +10,9 @@ import lang.temper.log.FilePathSegmentOrPseudoSegment
  * match that starts at *pos* in *text*; or -1 if no such match.
  */
 interface LanguageConfig {
+    /** The preferred file extension, with the dot, but excluding any ".temper" */
+    val dotExtension: String?
+
     /**
      * True if the lexer should start in a semilit comment context and look for an exit
      * before the first content tokens.
@@ -49,6 +52,8 @@ interface LanguageConfig {
 }
 
 class MarkdownLanguageConfig : LanguageConfig {
+    override val dotExtension: String get() = ".md"
+
     // March code ranges forward only.
     private var _codeRanges: List<TaggedRange>? = null
     private var codeRangeIndex = 0
@@ -131,6 +136,7 @@ data class TaggedRange(
 expect fun findMarkdownCodeBlocks(text: String): List<TaggedRange>
 
 object StandaloneLanguageConfig : LanguageConfig {
+    override val dotExtension: Nothing? get() = null
     override val isSemilit get() = false
     override fun matchSemilitCommentEntrance(text: CharSequence, pos: Int) = -1
     override fun matchSemilitCommentExit(text: CharSequence, pos: Int) = -1

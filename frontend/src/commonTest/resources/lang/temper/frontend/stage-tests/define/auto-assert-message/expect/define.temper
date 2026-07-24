@@ -1,0 +1,24 @@
+@stay @imported(\(`std//testing/`.Test)) let Test__0;
+Test__0 = type (Test);
+@fn @test("hi") let hi__0;
+hi__0 = fn hi(test#0: Test) /* return__0 */: (Void | Bubble) {
+  let num__0;
+  num__0 = 4;
+  do {
+    let actual#0;
+    actual#0 = 4;
+    let expected#0;
+    expected#0 = 3;
+    do_call_assert(test#0, false, @stay fn {
+        cat("expected num == (", do_call_toString(3), ") not (", do_call_toString(4), ")")
+    })
+  };
+};
+@fn @test("ha") let ha__0;
+ha__0 = fn ha(test#1: Test) /* return__1 */: (Void | Bubble) {
+  let condition__0;
+  condition__0 = false;
+  do_call_assert(test#1, false, @stay fn {
+      "expected condition"
+  });
+};

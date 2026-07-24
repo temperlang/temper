@@ -1,0 +1,42 @@
+interface Sup<T> {}
+class Sub<T> extends Sup<T> {}
+interface Sup2<T, U> extends Sup<U> {}
+class Sub2<T> extends Sup2<T, String> {} // sneak swap the meaning of T
+class Sub3<T> extends Sup2<String, T> {} // weaves T through
+class Sub4 extends Sup<String> {}
+let badCast(value: AnyValue): Sub<String> throws Bubble {
+  // Introduces String.
+  value as Sub<String>
+}
+let alsoBad<T>(value: Sup<T>): Sub<String> throws Bubble {
+  // Presumes known type arg for T.
+  value as Sub<String>
+}
+let goodCast(value: Sup<String>): Sub<String> throws Bubble {
+  // Keeps the known type arg.
+  value as Sub<String>
+}
+let alsoGood<T>(value: Sup<T>): Sub<T> throws Bubble {
+  // Also keeps the known type arg, which is also a type param.
+  value as Sub<T>
+}
+let butThisIsBad<T>(value: Sup<T>): Sub2<T> throws Bubble {
+  // The T args here aren't actually related. Presumes String as an arg for U.
+  value as Sub2<T>
+}
+let alsoBadBecauseExtra<T, U>(value: Sup<U>): Sup2<T, U> throws Bubble {
+  // Introduces T.
+  value as Sup2<T, U>
+}
+let butThisIsGood<U>(value: Sup<U>): Sup2<U, U> throws Bubble {
+  // Uses known U for both cases.
+  value as Sup2<U, U>
+}
+let goodDespiteMiddle<T>(value: Sup<T>): Sub3<T> throws Bubble {
+  // Invents String for Sup2 T, but that doesn't matter because it's not represented.
+  value as Sub3<T>
+}
+let badNonGeneric<T>(value: Sup<T>): Sub4 throws Bubble {
+  // Invents String for Sup T without any generics in Sub4 at all.
+  value as Sub4
+}

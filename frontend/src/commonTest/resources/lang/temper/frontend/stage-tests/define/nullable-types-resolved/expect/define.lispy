@@ -1,0 +1,42 @@
+[
+    "Block",
+    [
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "intOrNull__0"
+                ],
+                [
+                    "Value",
+                    "\\type: Symbol"
+                ],
+                [
+                    "Value",
+                    "Int32?: Type"
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.intOrNull\u0022: String"
+                ],
+                [
+                    "Value",
+                    "\\ssa: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ]
+            ]
+        ],
+        [
+            "Value",
+            "void: Void"
+        ]
+    ]
+]

@@ -1,0 +1,4 @@
+init;
+for (;
+  cond;
+  incr) {}

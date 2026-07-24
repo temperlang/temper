@@ -1,0 +1,9 @@
+{
+    "I": {
+        "name": "I__0",
+        "abstract": true
+    },
+    "AnyValue": {
+        "abstract": true
+    }
+}

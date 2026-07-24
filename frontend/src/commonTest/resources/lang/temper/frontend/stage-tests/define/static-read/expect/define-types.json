@@ -1,0 +1,27 @@
+{
+    "AnyValue": {
+        "abstract": true
+    },
+    "C": {
+        "supers": [
+            "AnyValue__0"
+        ],
+        "methods": [
+            {
+                "name": "constructor__0",
+                "visibility": "public",
+                "kind": "Constructor",
+                "open": false
+            }
+        ],
+        "staticProperties": [
+            {
+                "name": "foo__0",
+                "visibility": "public"
+            }
+        ]
+    },
+    "Void": {
+        "supers": []
+    }
+}

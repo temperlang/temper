@@ -1,0 +1,30 @@
+let return__0;
+@constructorProperty @property(\x) @visibility(\private) @stay @fromType(C__0) var x__0: Int32;
+@constructorProperty @property(\y) @visibility(\private) @stay @fromType(C__0) var y__0: Int32;
+@method(\f) @visibility(\public) @fn @stay @fromType(C__0) let f__0;
+f__0 = (@stay fn f(@impliedThis(C__0) this__0: C__0) /* return__1 */: Int32 {
+    return__1 = oneTwoThree();
+    setp(y__0, this__0, return__1);
+    setp(x__0, this__0, return__1)
+});
+@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(C__0) this__1: C__0, @optional(true) x__1 /* aka x */: Int32?, @optional(true) y__1 /* aka y */: Int32?) /* return__2 */: Void {
+    let x__2 /* aka x */: Int32;
+    if (isNull(x__1)) {
+      x__2 = 0
+    } else {
+      x__2 = notNull(x__1)
+    };
+    let y__2 /* aka y */: Int32;
+    if (isNull(y__1)) {
+      y__2 = 0
+    } else {
+      y__2 = notNull(y__1)
+    };
+    setp(x__0, this__1, x__2);
+    setp(y__0, this__1, y__2);
+    return__2 = void
+});
+@typeDecl(C__0) @stay let C__0;
+C__0 = type (C__0);
+return__0 = type (C__0)

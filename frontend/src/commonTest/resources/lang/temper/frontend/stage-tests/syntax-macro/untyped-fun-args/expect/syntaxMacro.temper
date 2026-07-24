@@ -1,0 +1,3 @@
+hi(fn (x__0 /* aka x */: Int, y__0 /* aka y */) /* return__0 */: (String) {
+    x__0
+})

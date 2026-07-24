@@ -1,0 +1,6 @@
+// For these first two, the unary plus survives to the typer
+// but is then removed so there's one less thing to translate.
+export let fi(i: Int32): Int32 { +i }
+export let ff(f: Float64): Float64 { +f }
+// This use of `+` is illegal so remains in the tree.
+export let fs(s: String): String { +s }

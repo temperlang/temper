@@ -1,0 +1,101 @@
+[
+    "Block",
+    [
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "t__2"
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.t\u0022: String"
+                ],
+                [
+                    "Value",
+                    "\\ssa: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ]
+            ]
+        ],
+        [
+            "Call",
+            [
+                [
+                    "Value",
+                    "nym`=`: Function"
+                ],
+                [
+                    "LeftName",
+                    "t__2"
+                ],
+                [
+                    "Value",
+                    "AnyValue: Type"
+                ]
+            ]
+        ],
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "x__3"
+                ],
+                [
+                    "Value",
+                    "\\type: Symbol"
+                ],
+                [
+                    "Value",
+                    "AnyValue: Type"
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.x\u0022: String"
+                ],
+                [
+                    "Value",
+                    "\\ssa: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ]
+            ]
+        ],
+        [
+            "Call",
+            [
+                [
+                    "Value",
+                    "nym`=`: Function"
+                ],
+                [
+                    "LeftName",
+                    "x__3"
+                ],
+                [
+                    "Value",
+                    "42: Int32"
+                ]
+            ]
+        ],
+        [
+            "Value",
+            "void: Void"
+        ]
+    ]
+]

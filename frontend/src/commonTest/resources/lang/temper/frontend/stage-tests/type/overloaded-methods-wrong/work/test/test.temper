@@ -1,0 +1,10 @@
+export class IntMaker(public radix: Int32) {
+  public toInt(int: Int64): Int32 throws Bubble { int.toInt32() }
+  public toInt(string: String): Int32 throws Bubble { string.toInt32(radix) }
+}
+
+export let crazySum(intMaker: IntMaker, int: Int64, string: String): Int throws Bubble {
+  let intInt = intMaker.toInt(int);
+  let stringInt = intMaker.toInt(string);
+  intInt + stringInt
+}

@@ -1,0 +1,17 @@
+  @typeDecl(C__0) @stay let C__0 = type (C__0);
+  class (\word, \C, \concrete, true, @typeDefined(C__0) fn {
+      C__0 extends AnyValue;
+      @visibility(\public) @constructorProperty @maybeVar let i__0: Int32;
+      @visibility(\public) let f__0 = fn (@impliedThis(C__0) this__0: C__0) /* return__0 */: Int32 {
+## The resolved i reference here turned into a do_iget_i
+        do_iget_i(type (C__0), this(C__0))
+      };
+      @visibility(\public) let constructor__0 = fn constructor(@impliedThis(C__0) this__1: C__0, i__1 /* aka i */: Int32) /* return__1 */: Void {
+        do {
+          let t#0;
+          do_iset_i(type (C__0), this(C__0), t#0 = i__1);
+          t#0
+        };
+      };
+  });
+  C__0

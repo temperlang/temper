@@ -1,0 +1,11 @@
+@typeDecl(C__0) @hoistLeft(true) @resolution(C__0) @stay let C = type (C__0);
+class(\word, C, \concrete, true, @typeDefined(C__0) fn {
+    C__0 extends AnyValue;
+    REM("Returns 1", true, false);
+    @method(\x) @getter @visibility(\public) let nym`get.x` = fn(\word, nym`get.x`, @impliedThis(C__0) let this__0: C__0, \outType, Int, fn {
+        1
+    });
+    REM("You can set it but it'll still be 1.", true, false);
+    @method(\x) @setter @visibility(\public) let nym`set.x` = fn(\word, nym`set.x`, @impliedThis(C__0) let this__1: C__0, let newValue /* aka newValue */: Int, \outType, Void, fn {});
+});
+C

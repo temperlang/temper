@@ -1,0 +1,4 @@
+[
+    "Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: \u003c[C__1]\u003e from AnyValue!",
+    "Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: \u003c[E__4]\u003e from S!"
+]

@@ -1,0 +1,6 @@
+let g(s: String): StringIndexOption {
+  s.end
+}
+let f(s: String): Boolean {
+  g(s) is NoStringIndex
+}

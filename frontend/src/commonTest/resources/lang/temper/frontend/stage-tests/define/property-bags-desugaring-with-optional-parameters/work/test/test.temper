@@ -1,0 +1,3 @@
+let { C } = import("./c");
+export let c = { x: 1, z: 2 }
+

@@ -1,0 +1,1 @@
+class Something(public let haha: Int?) {}

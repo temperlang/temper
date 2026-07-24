@@ -1,0 +1,2 @@
+class C(private d: D?) {}
+class D(private c: C) {}

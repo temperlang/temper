@@ -1,0 +1,25 @@
+//             ↓↓↓     ↓↓↓↓↓      ↓↓↓
+//      "foo f(a = 1, b: Int) { g(a = 1, b) }",
+//       0123456789012345678901234567890123456
+//                 1         2         3
+
+[
+    {
+        "template": "NamedActual",
+        "values": [],
+        "left": 25,
+        "right": 28
+    },
+    {
+        "template": "NamedActual",
+        "values": [],
+        "left": 6,
+        "right": 9
+    },
+    {
+        "template": "MalformedActual",
+        "values": [],
+        "left": 14,
+        "right": 19
+    }
+]

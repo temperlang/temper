@@ -1,0 +1,21 @@
+let console#0;
+console#0 = doPure(@stay fn: Console {
+    getConsole()
+});
+@fn let f__0;
+f__0 = (@stay fn f(@optional(true) i__0 /* aka i */: Int32?) /* return__0 */: Int32 {
+    fn__0: do {
+      let i__1 /* aka i */: Int32;
+      i__1 = if(isNull(i__0), fn {
+          42
+        }, \else, fn (f#0) {
+          f#0(fn {
+              i__0
+          })
+      });
+      void;
+      i__1
+    }
+});
+do_call_log(console#0, cat("f( )=", str(do_call_toString(42))));
+do_call_log(console#0, cat("f(1)=", str(do_call_toString(1))));

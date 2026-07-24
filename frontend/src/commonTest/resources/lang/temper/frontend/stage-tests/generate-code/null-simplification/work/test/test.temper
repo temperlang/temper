@@ -1,0 +1,6 @@
+let f(s: String?): Boolean {
+  s == null
+}
+let g(s: String?): Boolean {
+  s != null
+}

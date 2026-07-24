@@ -1,0 +1,8 @@
+let return__1, @fn sum2i__0;
+sum2i__0 = (@stay fn sum2i(x__0 /* aka x */: Int32, y__0 /* aka y */: Int32) /* return__0 */: Int32 {
+    void;
+    fn__0: do {
+      return__0 = x__0 + y__0;
+    }
+});
+return__1 = (fn sum2i)

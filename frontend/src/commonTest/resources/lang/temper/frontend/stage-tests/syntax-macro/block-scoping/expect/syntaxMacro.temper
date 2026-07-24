@@ -1,0 +1,6 @@
+let a__0 = 1;
+do (fn {
+    let a__1 = 2;
+    REM("Why do I feel compelled to write `let ... in` here?\nI wish I knew how to quit you, OCaml!", null, false);
+    a__1
+}) + a__0

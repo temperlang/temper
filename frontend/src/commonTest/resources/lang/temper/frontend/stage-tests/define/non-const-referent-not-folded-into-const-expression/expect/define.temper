@@ -1,0 +1,6 @@
+var one__0;
+one__0 = 1;
+if(falseOpaquePredicate, fn {
+    one__0 = 0;
+});
+one__0 + one__0

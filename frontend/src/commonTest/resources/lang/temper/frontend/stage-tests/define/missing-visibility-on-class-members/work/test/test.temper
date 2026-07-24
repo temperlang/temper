@@ -1,0 +1,5 @@
+class C(p: Int) {
+  q: Int = p + 1;
+  private r: Int = p - 1;
+  f(): Int { r }
+}

@@ -1,0 +1,10 @@
+ignore(fn /* return__0 */{
+    return__0 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__1 */: (GeneratorResult<Empty>) implements GeneratorFn {
+        return__1 = core.doneResult<Empty>();
+        void;
+        while (true) {
+          cat(str(123));
+          yield()
+        }
+    })
+});

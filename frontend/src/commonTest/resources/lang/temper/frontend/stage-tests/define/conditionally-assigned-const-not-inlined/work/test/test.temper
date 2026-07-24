@@ -1,0 +1,7 @@
+let f(b: Boolean): Int {
+  let i: Int;
+  if (b) { i = -1 } else { i = 1 }
+  i
+};
+console.log("f(true )=${f(true)}");
+console.log("f(false)=${f(false)}");

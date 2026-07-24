@@ -1,0 +1,51 @@
+[
+    "Block",
+    [
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "one__0"
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.one\u0022: String"
+                ],
+                [
+                    "Value",
+                    "\\ssa: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ]
+            ]
+        ],
+        [
+            "Call",
+            [
+                [
+                    "Value",
+                    "nym`=`: Function"
+                ],
+                [
+                    "LeftName",
+                    "one__0"
+                ],
+                [
+                    "Value",
+                    "1: Int32"
+                ]
+            ]
+        ],
+        [
+            "Value",
+            "2: Int32"
+        ]
+    ]
+]

@@ -1,0 +1,6 @@
+let return__0;
+if (a == b) {
+  return__0 = c
+} else {
+  return__0 = d
+};

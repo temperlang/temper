@@ -1,0 +1,15 @@
+@stay @imported(\(`test//c/`.C)) let C = type (C);
+do(fn {
+    let c = new C();
+    do {
+      let t#0;
+      t#0 = c;
+      leftHandOf(t#0.x, (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(t#0.x, 1))
+    };
+    do {
+      let t#1;
+      t#1 = c;
+      leftHandOf(t#1.x, (nym`do_call__*_`[TimesIntInt, TimesIntInt64, TimesFltFlt])(t#1.x, 2))
+    };
+    console.log(c.x);
+})

@@ -1,0 +1,12 @@
+do {
+  @fn let sum2i__0;
+  sum2i__0 = fn sum2i(x__0 /* aka x */: Int, y__0 /* aka y */: Int) /* return__0 */: (Int) {
+    fn__0: do {
+      do {
+        return__0 = x__0 + y__0;
+        break(\label, fn__0)
+      };
+    }
+  };
+  sum2i__0
+}

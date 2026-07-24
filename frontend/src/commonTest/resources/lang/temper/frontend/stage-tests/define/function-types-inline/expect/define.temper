@@ -1,0 +1,6 @@
+let f__0: do {
+  @typeFormal(\T) @typeDecl(T__0) let T__0;
+  T__0 = type (T__0);
+  type (fn<T__0 extends AnyValue>(List<T__0>): List<T__0>)
+};
+f__0 = never();

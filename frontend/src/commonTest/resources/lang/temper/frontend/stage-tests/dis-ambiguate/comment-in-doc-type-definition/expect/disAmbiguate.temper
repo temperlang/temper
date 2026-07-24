@@ -1,0 +1,7 @@
+@typeDecl(C__0) @hoistLeft(true) @resolution(C__0) @stay let C = type (C__0);
+class(\word, C, \concrete, true, @typeDefined(C__0) fn {
+    C__0 extends AnyValue;
+    REM("Comment in type definition", null, false);
+    @property(\x) @maybeVar @visibility(\public) let x: Int;
+});
+identityForDocGen(C)

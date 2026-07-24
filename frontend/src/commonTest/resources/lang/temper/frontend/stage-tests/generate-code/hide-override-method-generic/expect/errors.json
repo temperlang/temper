@@ -1,0 +1,4 @@
+[
+    "Illegal type parameter A. Overridable methods don't allow generics!",
+    "Override has lower visibility than in I__0!"
+]

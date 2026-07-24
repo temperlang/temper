@@ -1,0 +1,1 @@
+class Aha(private hmm: Int) {}; class Boo { let { hmm } = new Aha(1) }

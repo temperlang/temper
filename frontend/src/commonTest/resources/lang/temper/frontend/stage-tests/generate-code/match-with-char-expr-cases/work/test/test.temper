@@ -1,0 +1,6 @@
+let abcStop(i: Int): String {
+  when (i) {
+    char 'a', char 'b', char 'c' -> "ok";
+    else -> "stop";
+  }
+}

@@ -1,0 +1,13 @@
+
+        interface I {
+          next;
+        }
+        class C(private i = 0) extends I {
+          public f() { i }
+          public get next() { return f() + 1 }
+          private set next(newVal) { this.i = newVal - 1 }
+        }
+        let c = new C();
+        console.log(c.i, c.x, c.x, c.f());
+        c.next = 42
+        

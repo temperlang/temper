@@ -1,0 +1,6 @@
+@fn let `test//`.negStr;
+`test//`.negStr = fn negStr(x__0 /* aka x */: Int32) /* return__0 */: (String) {
+  fn__0: do {
+    do_call_toString(-1 * x__0)
+  }
+};

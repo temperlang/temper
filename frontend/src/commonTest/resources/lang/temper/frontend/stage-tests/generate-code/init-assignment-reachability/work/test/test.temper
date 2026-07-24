@@ -1,0 +1,5 @@
+// We don't eliminate var reassignments, so keep associated declarations.
+var hi = 0;
+hi = 1;
+// Non-var for contrast.
+let ha = 2;

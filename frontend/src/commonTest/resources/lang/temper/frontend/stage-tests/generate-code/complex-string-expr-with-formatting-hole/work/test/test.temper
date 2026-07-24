@@ -1,0 +1,7 @@
+"""
+~Things: ${}
+:for (var i = 1; i < 100; i *= 2) {
+  ~${i}, ${}
+  // Comment inside loop after content.
+:}
+~and so on

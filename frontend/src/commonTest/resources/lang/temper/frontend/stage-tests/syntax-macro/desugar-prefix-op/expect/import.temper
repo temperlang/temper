@@ -1,0 +1,16 @@
+  nym`@`(export, let(\word, f, do {
+        \_complexArg_;
+        x;
+        \type;
+        Int32
+      }, \outType, Int32, fn {
+        nym`@`(var, let y = x);
+        do {
+## Name allocated to do pre-capture
+          let postfixReturn#0 = y;
+## Dot desugaring here in case there are extensions to do succ and pred.
+          y = postfixReturn#0.pred();
+          postfixReturn#0
+        };
+        y = y.succ()
+  }))

@@ -1,0 +1,12 @@
+  let console#0;
+  console#0 = getConsole();
+  @fn let f__0;
+  f__0 = (@stay fn f(i__0 /* aka i */: StringIndexOption) /* return__0 */: Void {
+      var t#0, t#1;
+## str has erased to a .toString() call here
+      t#0 = do_call_toString(i__0 is StringIndex);
+      t#1 = do_call_toString(i__0 is NoStringIndex);
+      do_call_log(console#0, cat("Yes ", t#0, ", no ", t#1));
+      return__0 = void
+  });
+  f__0(getStatic(String, \begin))

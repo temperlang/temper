@@ -1,0 +1,6 @@
+let callIt(f: fn (x: Int): Int): Int { f(1) }
+
+callIt { (x: Int): Int extends Function =>
+  let y = 41;
+  x + y
+}

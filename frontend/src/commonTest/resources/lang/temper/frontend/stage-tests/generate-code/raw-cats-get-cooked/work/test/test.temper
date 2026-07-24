@@ -1,0 +1,5 @@
+let f(s: String): Void {
+  raw"${s}";
+  // Also a call that will fail, so we make sure to test that.
+  raw"${what}";
+}

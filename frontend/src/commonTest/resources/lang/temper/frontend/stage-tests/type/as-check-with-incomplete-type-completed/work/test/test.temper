@@ -1,0 +1,1 @@
+export let noStrings(): Listed<String> { [] as Listed }

@@ -1,0 +1,27 @@
+@fn let `test//`.prod, @fn `test//`.prodWrap;
+`test//`.prod = (@stay fn prod(i__0 /* aka i */: Int32, j__0 /* aka j */: Int32?) /* return__0 */: Int32 {
+    fn__0: do {
+      i__0 * {
+        if (isNull(j__0)) {
+          1
+        } else {
+          j__0
+        }
+      }
+    }
+});
+`test//`.prodWrap = (@stay fn prodWrap(i__1 /* aka i */: Int32, j__1 /* aka j */: List<Int32?>) /* return__1 */: Int32 {
+    fn__1: do {
+      i__1 * do {
+        let subject#0;
+        subject#0 = do_call_get(j__1, 0);
+        {
+          if (isNull(subject#0)) {
+            1
+          } else {
+            subject#0
+          }
+        }
+      }
+    }
+});

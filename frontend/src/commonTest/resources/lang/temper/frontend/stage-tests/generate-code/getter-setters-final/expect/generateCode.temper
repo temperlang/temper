@@ -1,0 +1,19 @@
+let return__0;
+@constructorProperty @property(\prop) @visibility(\public) @stay @fromType(C__0) var prop__0: Int32;
+@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(C__0) this__0: C__0, prop__1 /* aka prop */: Int32) /* return__1 */: Void {
+    setp(prop__0, this__0, prop__1);
+    return__1 = void
+});
+@getter @method(\prop) @fn @visibility(\public) @stay @fromType(C__0) let getprop__0;
+getprop__0 = (@stay fn (@impliedThis(C__0) this__1: C__0) /* return__2 */: Int32 {
+    return__2 = getp(prop__0, this__1)
+});
+@setter @method(\prop) @fn @visibility(\public) @stay @fromType(C__0) let setprop__0;
+setprop__0 = (@stay fn (@impliedThis(C__0) this__2: C__0, newProp__0: Int32) /* return__3 */: Void {
+    setp(prop__0, this__2, newProp__0);
+    return__3 = void
+});
+@typeDecl(C__0) @stay let C__0;
+C__0 = type (C__0);
+return__0 = type (C__0)

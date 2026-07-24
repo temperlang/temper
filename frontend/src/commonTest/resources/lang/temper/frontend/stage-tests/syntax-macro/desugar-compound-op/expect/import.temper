@@ -1,0 +1,3 @@
+  nym`@`(var, let x = 1);
+## That resolves early to an assignment to x with a desugar call with the builtin variants.
+  x = (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(x, 2);

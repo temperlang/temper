@@ -1,0 +1,2 @@
+interface I { public f(): Int; }
+class C extends I { protected f(): Int { 1 } }

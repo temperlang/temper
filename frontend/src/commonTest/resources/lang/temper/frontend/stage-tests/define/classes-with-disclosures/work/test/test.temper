@@ -1,0 +1,18 @@
+let f(x) {
+  class ClosesOverNothing {}
+
+  interface ClosesOverX {
+    get p() { x }
+  }
+
+  do {
+    let y = x + 1;
+
+    class ClosesOverY extends ClosesOverX {
+      public get q() { y }
+    }
+    new ClosesOverY()
+  }
+
+  new ClosesOverNothing();
+}

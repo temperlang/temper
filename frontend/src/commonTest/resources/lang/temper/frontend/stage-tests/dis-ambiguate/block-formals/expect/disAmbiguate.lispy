@@ -1,0 +1,91 @@
+[
+    "Block",
+    [
+        [
+            "Call",
+            [
+                [
+                    "RightName",
+                    "f"
+                ],
+                [
+                    "Fun",
+                    [
+                        [
+                            "Decl",
+                            [
+                                [
+                                    "LeftName",
+                                    "x"
+                                ],
+                                [
+                                    "Value",
+                                    "\\type: Symbol"
+                                ],
+                                [
+                                    "RightName",
+                                    "Int"
+                                ],
+                                [
+                                    "Value",
+                                    "\\word: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\\x: Symbol"
+                                ]
+                            ]
+                        ],
+                        [
+                            "Decl",
+                            [
+                                [
+                                    "LeftName",
+                                    "y"
+                                ],
+                                [
+                                    "Value",
+                                    "\\type: Symbol"
+                                ],
+                                [
+                                    "RightName",
+                                    "Int"
+                                ],
+                                [
+                                    "Value",
+                                    "\\word: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\\y: Symbol"
+                                ]
+                            ]
+                        ],
+                        [
+                            "Block",
+                            [
+                                [
+                                    "Call",
+                                    [
+                                        [
+                                            "Value",
+                                            "nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function"
+                                        ],
+                                        [
+                                            "RightName",
+                                            "x"
+                                        ],
+                                        [
+                                            "RightName",
+                                            "y"
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    ]
+]

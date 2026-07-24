@@ -1,0 +1,2 @@
+test("hi") { let num = 4; assert(num == 3); }
+test("ha") { let condition = false; assert(condition); }

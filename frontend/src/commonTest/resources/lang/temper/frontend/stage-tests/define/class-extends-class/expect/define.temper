@@ -1,0 +1,38 @@
+Apple__0 extends AnyValue;
+@fn @method(\constructor) @visibility(\public) @stay @fromType(Apple__0) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(Apple__0) this__0: Apple__0) /* return__0 */: Void {});
+@typeDecl(Apple__0) @stay let Apple__0;
+Apple__0 = type (Apple__0);
+@typeDecl(Banana__0) @stay let Banana__0;
+Banana__0 = type (Banana__0);
+@typeDecl(Cherry__0) @stay let Cherry__0;
+Cherry__0 = type (Cherry__0);
+@typeDecl(Durian__0) @stay let Durian__0;
+Durian__0 = type (Durian__0);
+class(\word, \Apple, \concrete, true, @typeDefined(Apple__0) fn {
+    do {};
+    do {}
+});
+Banana__0 extends AnyValue;
+@fn @method(\constructor) @visibility(\public) @stay @fromType(Banana__0) let constructor__1;
+constructor__1 = (@stay fn constructor(@impliedThis(Banana__0) this__1: Banana__0) /* return__1 */: Void {});
+class(\word, \Banana, \concrete, true, @typeDefined(Banana__0) fn {
+    do {};
+    do {}
+});
+Cherry__0 extends AnyValue;
+@typePlaceholder(Cherry__0) let typePlaceholder#0: Empty;
+typePlaceholder#0 = {class: Empty__0};
+interface(\word, \Cherry, \concrete, false, @typeDefined(Cherry__0) fn {
+    do {}
+});
+Durian__0 extends Apple__0;
+Durian__0 extends ([Banana__0, Cherry__0]);
+@fn @method(\constructor) @visibility(\public) @stay @fromType(Durian__0) let constructor__2;
+constructor__2 = (@stay fn constructor(@impliedThis(Durian__0) this__2: Durian__0) /* return__2 */: Void {});
+class(\word, \Durian, \concrete, true, @typeDefined(Durian__0) fn {
+    do {};
+    do {};
+    do {}
+});
+type (Durian__0)

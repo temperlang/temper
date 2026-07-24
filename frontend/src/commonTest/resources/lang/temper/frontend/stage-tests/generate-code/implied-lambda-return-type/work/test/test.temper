@@ -1,0 +1,2 @@
+let f(g: fn (): Int): Int { g() }
+let h(): Void { f { "hi" }; }

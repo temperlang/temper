@@ -1,0 +1,5 @@
+let f(i: StringIndexOption): Void {
+  console.log("Yes ${i is StringIndex}, no ${i is NoStringIndex }");
+}
+
+f(String.begin)

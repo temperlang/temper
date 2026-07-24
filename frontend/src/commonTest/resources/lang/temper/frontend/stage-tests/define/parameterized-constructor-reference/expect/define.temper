@@ -1,0 +1,18 @@
+@typeDecl(C__0<T__0>) @stay let C__0;
+C__0 = type (C__0);
+@fn let f__0;
+@typeFormal(\T) @memberTypeFormal(\T) @typeDefined(T__0) @fromType(C__0<T__0>) let T__0;
+T__0 = type (T__0);
+C__0<T__0> extends AnyValue;
+@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0<T__0>) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(C__0<T__0>) this__0: C__0<T__0>) /* return__0 */: Void {});
+class(\word, \C, \concrete, true, @typeDefined(C__0<T__0>) fn {
+    do {};
+    do {};
+    do {}
+});
+@typeFormal(\U) @typeDecl(U__0) let U__0;
+U__0 = type (U__0);
+f__0 = (@stay fn f<U__0 extends AnyValue> /* return__1 */: (C__0<U__0>) {
+    fn__0: do {}
+});

@@ -1,0 +1,12 @@
+@staticExtension(String, "foo")
+let strFoo(): Void {
+  console.log("string foo");
+}
+
+class C {
+  public static foo(): Void {
+    console.log("C foo");
+  }
+}
+
+C.foo();

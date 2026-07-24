@@ -1,0 +1,10 @@
+let {
+  NullInterchangeContext,
+  OrNullJsonAdapter,
+  booleanJsonAdapter,
+  listJsonAdapter,
+  parseJson,
+} = import("std/json");
+let a = List.jsonAdapter(new OrNullJsonAdapter(Boolean.jsonAdapter()));
+
+a.decodeFromJson(parseJson("[null, false, true]"), NullInterchangeContext.instance)

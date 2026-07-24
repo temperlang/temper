@@ -1,0 +1,3 @@
+let f(s: String, a: Int?): String {
+  "${s}${a}${a ?? -1}"
+}

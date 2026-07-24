@@ -1,0 +1,1 @@
+fn(b) { if (b) { return 1 } 0 }

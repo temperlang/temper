@@ -1,0 +1,8 @@
+let {C} = import("./c");
+
+export let useC(c: C): Void {
+  c.foo(1);
+  c.foo(true);
+  c.foo("");
+}
+

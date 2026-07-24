@@ -1,0 +1,16 @@
+void;
+let t#0;
+t#0 = c;
+let b__0;
+b__0 = do_get_a(t#0);
+void;
+1 as Int32;
+2 as Mystery;
+3 as type (List)<Mystery>;
+error (list("`(Leaf`", "4", "`Leaf)`", "as"));
+do_call_as(5, type (Int32));
+do_call_as(6, Mystery);
+do_call_as(7);
+do_get_as(8);
+do_call_get(list(9), 0) as Int32;
+do_call_toString(10) as String;

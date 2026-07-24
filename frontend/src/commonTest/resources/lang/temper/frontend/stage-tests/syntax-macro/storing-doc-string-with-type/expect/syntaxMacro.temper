@@ -1,0 +1,6 @@
+@typeDecl(Foo__0) @stay @docString((["Foo is a pretty cool type", "Foo is a pretty cool type", "test/test.temper"])) let Foo__0 = type (Foo__0);
+REM("Foo is a pretty cool type", true, false);
+class(\word, \Foo, \concrete, true, @typeDefined(Foo__0) fn {
+    Foo__0 extends AnyValue;
+    @visibility(\public) let constructor__0 = fn constructor(@impliedThis(Foo__0) this__0: Foo__0) /* return__0 */: Void {};
+});

@@ -1,0 +1,4 @@
+export interface I<T> { f(x: T): Void; }
+export class C extends I<String> {
+  // but does not override f()
+}

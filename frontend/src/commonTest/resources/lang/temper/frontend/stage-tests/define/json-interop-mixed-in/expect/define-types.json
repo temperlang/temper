@@ -1,0 +1,108 @@
+{
+    "AnyValue": "__DO_NOT_CARE__",
+    "Int32": "__DO_NOT_CARE__",
+    "InterchangeContext": "__DO_NOT_CARE__",
+    "JsonAdapter": "__DO_NOT_CARE__",
+    "JsonNumeric": "__DO_NOT_CARE__",
+    "JsonObject": "__DO_NOT_CARE__",
+    "JsonProducer": "__DO_NOT_CARE__",
+    "JsonSyntaxTree": "__DO_NOT_CARE__",
+    "Point": {
+        "supers": [
+            "AnyValue__0"
+        ],
+        "methods": [
+            {
+                "name": "getx__0",
+                "symbol": "x",
+                "visibility": "public",
+                "kind": "Getter",
+                "open": false
+            },
+            {
+                "name": "gety__0",
+                "symbol": "y",
+                "visibility": "public",
+                "kind": "Getter",
+                "open": false
+            },
+            {
+                "name": "toString__0",
+                "visibility": "public",
+                "open": false
+            },
+            {
+                "name": "constructor__1",
+                "visibility": "public",
+                "open": false,
+                "kind": "Constructor"
+            },
+            {
+                "name": "encodeToJson__1",
+                "visibility": "public",
+                "open": false
+            }
+        ],
+        "properties": [
+            {
+                "name": "x__0",
+                "visibility": "public",
+                "abstract": false,
+                "getter": "getx__0"
+            },
+            {
+                "name": "y__0",
+                "visibility": "public",
+                "abstract": false,
+                "getter": "gety__0"
+            }
+        ],
+        "staticProperties": [
+            {
+                "name": "decodeFromJson__1",
+                "visibility": "public"
+            },
+            {
+                "name": "jsonAdapter__0",
+                "visibility": "public"
+            }
+        ],
+        "metadata": {
+            "json": [
+                "void: Void"
+            ],
+            "QName": [
+                "\u0022test-code.type Point\u0022: String"
+            ]
+        }
+    },
+    "PointJsonAdapter": {
+        "supers": [
+            [
+                "Nominal",
+                "std//json/.JsonAdapter",
+                "Point__0"
+            ]
+        ],
+        "methods": [
+            {
+                "name": "encodeToJson__0",
+                "visibility": "public",
+                "open": false
+            },
+            {
+                "name": "decodeFromJson__0",
+                "visibility": "public",
+                "open": false
+            },
+            {
+                "name": "constructor__0",
+                "visibility": "public",
+                "open": false,
+                "kind": "Constructor"
+            }
+        ]
+    },
+    "String": "__DO_NOT_CARE__",
+    "Void": "__DO_NOT_CARE__"
+}

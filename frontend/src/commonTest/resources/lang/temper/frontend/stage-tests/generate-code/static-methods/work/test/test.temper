@@ -1,0 +1,4 @@
+class C {
+  public static let f(i: Int): Int { i + 1 }
+}
+C.f(0)

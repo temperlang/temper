@@ -1,0 +1,11 @@
+@typeDecl(Hi__0) @stay let Hi__0 = type (Hi__0);
+class(\word, \Hi, \concrete, true, @typeDefined(Hi__0) fn {
+    Hi__0 extends AnyValue;
+    @method(\there) @visibility(\private) @connected @fn let there__0 = (@connected fn there(@impliedThis(Hi__0) this__0: Hi__0) {
+        fn__0: do {
+          pureVirtual()
+        }
+    });
+    @method(\constructor) @visibility(\public) let constructor__0 = fn constructor(@impliedThis(Hi__0) this__1: Hi__0) /* return__0 */: Void {};
+});
+Hi__0

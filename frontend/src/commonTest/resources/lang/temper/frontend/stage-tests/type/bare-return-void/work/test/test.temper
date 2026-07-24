@@ -1,0 +1,4 @@
+let f(returnEarly: Boolean): Void {
+  if (returnEarly) { return }
+  console.log("Did not return early");
+}

@@ -1,0 +1,1 @@
+fn (i: Int): String { i.toString().toString().toString() }

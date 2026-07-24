@@ -1,0 +1,3 @@
+let f = fn (x) {};
+let g = fn g(y) {};
+var h = fn (z) {}; // *var* fn should get neither symbol nor qname

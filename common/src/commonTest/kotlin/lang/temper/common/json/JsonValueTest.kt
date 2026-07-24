@@ -80,4 +80,37 @@ class JsonValueTest {
             }
         }
     }
+
+    @Test
+    fun jsonNestedObjectBuilder() {
+        assertEquals(
+            """
+                |{
+                |    "a": {
+                |        "b": {
+                |            "c": null,
+                |            "d": "d"
+                |        },
+                |        "e": 1
+                |    },
+                |    "f": {
+                |        "g": null,
+                |        "h": true
+                |    },
+                |    "i": [
+                |        null,
+                |        null
+                |    ]
+                |}
+            """.trimMargin(),
+            buildJsonNestedObject {
+                property(listOf("a", "b", "c"), JsonNull)
+                property(listOf("a", "e"), JsonLong(1))
+                property(listOf("i"), JsonArray(listOf(JsonNull, JsonNull)))
+                property(listOf("f", "h"), JsonBoolean(true))
+                property(listOf("f", "g"), JsonNull)
+                property(listOf("a", "b", "d"), JsonString("d"))
+            }.toJsonString(),
+        )
+    }
 }

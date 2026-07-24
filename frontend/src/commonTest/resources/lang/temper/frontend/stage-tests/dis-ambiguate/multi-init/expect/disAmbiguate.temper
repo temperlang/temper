@@ -1,0 +1,4 @@
+nym`@foo`(let t#0: U = f());
+nym`@foo`(let a: S = t#0.a);
+nym`@foo`(let b = t#0.b);
+nym`@foo`(let d: T = t#0.c);

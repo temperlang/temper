@@ -1,0 +1,4 @@
+interface A { public hi(): String { "hello" } }
+interface B extends A {}
+class C extends B {}
+new C().hi()

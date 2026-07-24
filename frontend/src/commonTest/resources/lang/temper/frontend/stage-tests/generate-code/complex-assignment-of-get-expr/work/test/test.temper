@@ -1,0 +1,7 @@
+let ls = new ListBuilder<Int>();
+ls.add(0);
+ls.add(3);
+ls[0] += 10;
+ls[1] *= 2;
+
+console.log("ls = [${ls.toList().join(", ") { (i: Int): String => i.toString(10) }}]");

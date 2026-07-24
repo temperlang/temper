@@ -1,0 +1,6 @@
+interface I {
+  method()
+}
+class C(private property) extends I {
+  public method { property }
+}

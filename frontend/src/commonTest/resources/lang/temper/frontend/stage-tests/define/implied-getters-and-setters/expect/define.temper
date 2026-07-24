@@ -1,0 +1,41 @@
+C__0 extends I;
+@constructorProperty @property(\j) @visibility(\public) @stay @fromType(C__0) var j__2;
+@constructorProperty @property(\k) @visibility(\public) @stay @fromType(C__0) let k__3;
+@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) let constructor__4;
+constructor__4 = fn constructor(@impliedThis(C__0) this__5: C__0, j__6 /* aka j */, k__7 /* aka k */) /* return__0 */: Void {
+  do {
+    let t#0;
+    setp(j__2, this__5, t#0 = j__6);
+    t#0
+  };
+  do {
+    let t#1;
+    setp(k__3, this__5, t#1 = k__7);
+    t#1
+  };
+};
+@getter @method(\j) @fn @visibility(\public) @stay @fromType(C__0) let getj__8;
+getj__8 = fn (@impliedThis(C__0) this__9: C__0) /* return__10 */{
+  return__10 = getp(j__2, this__9)
+};
+@setter @method(\j) @fn @visibility(\public) @stay @fromType(C__0) let setj__11;
+setj__11 = fn (@impliedThis(C__0) this__12: C__0, newJ__13) /* return__14 */: Void {
+  setp(j__2, this__12, newJ__13);
+  return__14 = void
+};
+@getter @method(\k) @fn @visibility(\public) @stay @fromType(C__0) let getk__12;
+getk__12 = fn (@impliedThis(C__0) this__13: C__0) /* return__15 */{
+  return__15 = getp(k__3, this__13)
+};
+@typeDecl(C__0) @stay let C__0;
+C__0 = type (C__0);
+class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {}
+});
+type (C__0)

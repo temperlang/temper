@@ -1,0 +1,10 @@
+@typeDecl(E__0) @hoistLeft(true) @resolution(E__0) @stay let E = type (E__0);
+class(\word, E, \concrete, true, @enumType @typeDefined(E__0) fn {
+    E__0 extends AnyValue;
+    @constructorProperty @visibility(\public) @property(\ordinal) let ordinal: Int32;
+    @constructorProperty @visibility(\public) @property(\name) let name: String;
+    @visibility(\public) @enumMember @staticProperty(\A) @static let A = new E(0, "A");
+    @visibility(\public) @enumMember @staticProperty(\B) @static let B = new E(1, "B");
+    @visibility(\public) @enumMember @staticProperty(\C) @static let C = new E(2, "C");
+});
+E

@@ -1,0 +1,5 @@
+do {
+  console.log("Done once");
+  continue;
+  console.log("Not done");
+} while (false);
