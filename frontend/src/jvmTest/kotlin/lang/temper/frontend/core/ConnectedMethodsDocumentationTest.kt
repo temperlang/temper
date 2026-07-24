@@ -1,4 +1,4 @@
-package lang.temper.frontend.implicits
+package lang.temper.frontend.core
 
 import lang.temper.ast.TreeVisit
 import lang.temper.common.console
@@ -37,8 +37,8 @@ class ConnectedMethodsDocumentationTest {
         var adjustedContent = extractKeysAndAdjustContent(
             documentationFile = documentationFile,
             documentationContent = documentationContent,
-            libraryName = "ImplicitsModule",
-            modules = listOf(ImplicitsModule.module),
+            libraryName = "CoreModule",
+            modules = listOf(CoreModule.module),
         )
         runAsyncTest {
             adjustedContent = extractKeysAndAdjustContent(

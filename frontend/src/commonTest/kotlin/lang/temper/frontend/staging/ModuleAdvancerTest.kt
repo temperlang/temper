@@ -414,13 +414,13 @@ class ModuleAdvancerTest {
             |## Note that b/ and c/ proceed a/ since the run stage requires that they
             |## be initialized before a can run functions from them.
             |[work//b/]: Starting stage @R
-            |[implicits/Implicits.temper+#-#]@R: Print: b initialized.
+            |[core/core.temper+#-#]@R: Print: b initialized.
             |[work//c/]: Starting stage @R
-            |[implicits/Implicits.temper+#-#]@R: Print: c initialized.
+            |[core/core.temper+#-#]@R: Print: c initialized.
             |[work//a/]: Starting stage @R
-            |[implicits/Implicits.temper+#-#]@R: Print: c: g() called.
-            |[implicits/Implicits.temper+#-#]@R: Print: b: f() called.
-            |[implicits/Implicits.temper+#-#]@R: Print: a initialized.
+            |[core/core.temper+#-#]@R: Print: c: g() called.
+            |[core/core.temper+#-#]@R: Print: b: f() called.
+            |[core/core.temper+#-#]@R: Print: a initialized.
             |Bye
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
         stopBefore = null,
@@ -588,14 +588,14 @@ class ModuleAdvancerTest {
             logSink.log(Log.Fine, MessageTemplate.AllDone, unknownPos, emptyList())
         }
 
-        // Editing Implicits.temper should not break tests.
-        val stdoutNormalized = stdout.trimEnd().replace(implicitsPosition, "[$1+#-#]")
+        // Editing core.temper should not break tests.
+        val stdoutNormalized = stdout.trimEnd().replace(corePosition, "[$1+#-#]")
         assertEquals(wantedLogOutput.trimEnd(), stdoutNormalized)
         return advancer
     }
 }
 
-private val implicitsPosition = Regex("""^\[(implicits/Implicits\.temper)\+\d+-\d+]""", RegexOption.MULTILINE)
+private val corePosition = Regex("""^\[(core/core\.temper)\+\d+-\d+]""", RegexOption.MULTILINE)
 
 /** Collapses adjacent "Starting stage ..." messages into one */
 private class LessSpammyLogSink(private val logSink: LogSink) : LogSink {

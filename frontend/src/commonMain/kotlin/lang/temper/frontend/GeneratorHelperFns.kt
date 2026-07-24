@@ -6,7 +6,7 @@ import lang.temper.env.InterpMode
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModularName
 import lang.temper.name.Symbol
 import lang.temper.type.Abstractness
@@ -66,7 +66,7 @@ internal object MakeValueResult : NamedBuiltinFun, PureCallableValue {
 
 /**
  * Returns a *Generator* instance given a *GeneratorFn* backed by [WellKnownTypes.generatorFnWrapperTypeDefinition]
- * defined in [lang.temper.frontend.implicits.ImplicitsModule].
+ * defined in [lang.temper.frontend.core.CoreModule].
  */
 class AdaptGeneratorFn private constructor(
     val mayBubble: Boolean,
@@ -142,7 +142,7 @@ class AdaptGeneratorFn private constructor(
                     else -> run {
                         val message = "Expectations of property names of ${
                             wrapperType.name
-                        } by $name do not match those in Implicits"
+                        } by $name do not match those in Core"
                         return@invoke cb.fail(MessageTemplate.InternalInterpreterError, cb.pos, listOf(message))
                     }
                 }
@@ -239,7 +239,7 @@ private fun makeGeneratorSig(
     val counter = WellKnownTypes.voidTypeDefinition.mutationCount
     fun makeTypeFormal(formalName: String, upperBoundsList: List<NominalType>): TypeFormal {
         return TypeFormal(
-            Position(ImplicitsCodeLocation, 0, 0),
+            Position(CoreCodeLocation, 0, 0),
             BuiltinName(formalName),
             Symbol(formalName),
             Variance.Invariant,

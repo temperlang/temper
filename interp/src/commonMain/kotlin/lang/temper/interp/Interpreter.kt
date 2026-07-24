@@ -127,7 +127,7 @@ import lang.temper.value.functionContained
 import lang.temper.value.impliedThisSymbol
 import lang.temper.value.infoOr
 import lang.temper.value.initSymbol
-import lang.temper.value.isImplicits
+import lang.temper.value.isCore
 import lang.temper.value.labelSymbol
 import lang.temper.value.matches
 import lang.temper.value.optionalAsTriState
@@ -156,7 +156,7 @@ import lang.temper.value.warnAboutUnresolved
 import lang.temper.value.wordSymbol
 import lang.temper.value.wrappedGeneratorFnSymbol
 
-private const val SPAMMY_INCLUDES_IMPLICITS = false
+private const val SPAMMY_INCLUDES_CORE = false
 private const val SPAMMY_DISPATCH = false
 private const val SPAMMY = false
 
@@ -182,7 +182,7 @@ class Interpreter(
 
     private var stepCount = 0
     private var goingOutOfStyle = stage == Stage.Run
-    private val isProcessingImplicits = nameMaker.namingContext.isImplicits
+    private val isProcessingCore = nameMaker.namingContext.isCore
 
     /** Helps centralize tracking access to connecteds. */
     fun connection(qname: String?): ((Signature2) -> Value<*>)? {
@@ -191,7 +191,7 @@ class Interpreter(
 
     @Suppress("SimplifyBooleanWithConstants")
     private fun beSpammy(spammy: Boolean) =
-        spammy && (SPAMMY_INCLUDES_IMPLICITS || !isProcessingImplicits)
+        spammy && (SPAMMY_INCLUDES_CORE || !isProcessingCore)
 
     fun interpret(ast: Tree, env: Environment, interpMode: InterpMode): PartialResult =
         interpretTree(ast, env, interpMode)
@@ -2472,8 +2472,8 @@ class Interpreter(
             }
         }
 
-        override val isProcessingImplicits: Boolean
-            get() = document.isImplicits
+        override val isProcessingCore: Boolean
+            get() = document.isCore
 
         override fun connection(qname: String): ((Signature2) -> Value<*>)? {
             return this@Interpreter.connection(qname)

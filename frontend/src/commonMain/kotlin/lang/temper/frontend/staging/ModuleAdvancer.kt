@@ -16,8 +16,8 @@ import lang.temper.env.Exporter
 import lang.temper.env.InterpMode
 import lang.temper.format.ConsoleBackedContextualLogSink
 import lang.temper.frontend.Module
-import lang.temper.frontend.implicits.ImplicitsModule
-import lang.temper.frontend.implicits.accessStdWrapped
+import lang.temper.frontend.core.CoreModule
+import lang.temper.frontend.core.accessStdWrapped
 import lang.temper.fs.FileFilterRules
 import lang.temper.fs.FileSnapshot
 import lang.temper.fs.FileSystemSnapshot
@@ -52,8 +52,8 @@ import lang.temper.log.SharedLocationContext
 import lang.temper.log.UNIX_FILE_SEGMENT_SEPARATOR
 import lang.temper.log.bannedPathSegmentNames
 import lang.temper.log.unknownPos
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.DashedIdentifier
-import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.LibraryNameLocationKey
 import lang.temper.name.ModuleLocation
 import lang.temper.name.ModuleName
@@ -268,7 +268,7 @@ class ModuleAdvancer(
 
     val sharedLocationContext = object : SharedLocationContext {
         private fun getSourceCode(loc: CodeLocation): CharSequence? = when (loc) {
-            ImplicitsCodeLocation -> ImplicitsModule.code
+            CoreCodeLocation -> CoreModule.code
             is FileRelatedCodeLocation -> {
                 val sourceFile = loc.sourceFile
                 contentForSource[sourceFile]?.invoke()?.let { contentResult ->
@@ -978,7 +978,7 @@ private fun buildStdModules(
     val modulesByFullSpecifier = buildMap {
         for (module in modules) {
             when (val loc = module.loc) {
-                is ImplicitsCodeLocation -> error("core is not in std")
+                is CoreCodeLocation -> error("core is not in std")
                 is ModuleName -> {
                     val specifier = buildString {
                         append(tentativeStdLibraryConfiguration.libraryName)
@@ -1123,7 +1123,7 @@ private val Module.isConfigModule: Boolean
             loc.sourceFile.segments.size == loc.libraryRootSegmentCount + 1 -> true
             else -> false
         }
-        is ImplicitsCodeLocation -> false
+        is CoreCodeLocation -> false
     }
 
 private fun checkForImportCycles(

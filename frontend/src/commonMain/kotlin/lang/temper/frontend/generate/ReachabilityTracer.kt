@@ -3,8 +3,8 @@ package lang.temper.frontend.generate
 import lang.temper.ast.TreeVisit
 import lang.temper.ast.VisitCue
 import lang.temper.interp.LongLivedUserFunction
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ExportedName
-import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.SourceName
 import lang.temper.name.TemperName
 import lang.temper.type.TypeShape
@@ -48,8 +48,8 @@ import lang.temper.value.varSymbol
  */
 internal class ReachabilityTracer {
     fun markReachability(root: BlockTree) {
-        if (root.pos.loc == ImplicitsCodeLocation) {
-            // We'll prune implicits manually, so skip the pass here.
+        if (root.pos.loc == CoreCodeLocation) {
+            // We'll prune core manually, so skip the pass here.
             return
         }
         // Gather all (1) maybe unreached declarations, (2) export roots, & (3) test roots.

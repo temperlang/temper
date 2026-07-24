@@ -95,7 +95,7 @@ import lang.temper.value.forwardMaximalPaths
 import lang.temper.value.freeTree
 import lang.temper.value.functionContained
 import lang.temper.value.insertBeforeAll
-import lang.temper.value.isImplicits
+import lang.temper.value.isCore
 import lang.temper.value.makePairValue
 import lang.temper.value.overloadSymbol
 import lang.temper.value.parameterNameSymbols
@@ -163,13 +163,13 @@ private const val DEBUG = false
  */
 internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext, logSink: LogSink) {
     val root = iCtx.root
-    if (root.document.isImplicits) { return } // Can't use libraries like secure-composition.
+    if (root.document.isCore) { return } // Can't use libraries like secure-composition.
 
     // The high-level flow here is:
     // 1. Identify uses of `.accumulated`
     // 2. Filter those to find ones that extend from a type named
     //    ContextualAutoescapingAccumulator.
-    //    This is not part of std or Implicits so we don't have a trusted path to it,
+    //    This is not part of std or Core so we don't have a trusted path to it,
     //    but we use a heuristic to find it
     //    (see TODO above about doing this in a library-specific user-space macro).
     //    Return early if none found which is the case for most modules.

@@ -6,8 +6,8 @@ import lang.temper.common.putMultiList
 import lang.temper.frontend.Module
 import lang.temper.log.FilePath
 import lang.temper.log.MessageTemplate
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.DashedIdentifier
-import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.LibraryNameLocationKey
 import lang.temper.name.ModuleName
 import lang.temper.name.ParsedName
@@ -45,7 +45,7 @@ import lang.temper.value.varSymbol
  */
 internal fun attachQNameMetadata(module: Module, root: BlockTree) {
     val (libraryName, relPath) = when (val loc = module.loc) {
-        is ImplicitsCodeLocation -> coreLibraryName to FilePath.emptyPath
+        is CoreCodeLocation -> coreLibraryName to FilePath.emptyPath
         is ModuleName -> {
             val libraryName = module.sharedLocationContext[loc, LibraryNameLocationKey] ?: return
             var relPath = loc.relativePath()
@@ -182,7 +182,7 @@ internal fun attachQNameMetadata(module: Module, root: BlockTree) {
     }
 }
 
-val coreLibraryName = DashedIdentifier(ImplicitsCodeLocation.diagnostic)
+val coreLibraryName = DashedIdentifier(CoreCodeLocation.diagnostic)
 
 private fun parsedNameFor(name: TemperName?): ParsedName? =
     (name as? ParsedName) ?: (name as? ResolvedParsedName)?.baseName

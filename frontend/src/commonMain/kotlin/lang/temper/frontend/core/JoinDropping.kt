@@ -1,4 +1,4 @@
-package lang.temper.frontend.implicits
+package lang.temper.frontend.core
 
 import lang.temper.common.toStringViaBuilder
 import lang.temper.env.InterpMode

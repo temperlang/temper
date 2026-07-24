@@ -13,9 +13,9 @@ import lang.temper.log.CodeLocation
 import lang.temper.log.FilePath
 import lang.temper.log.Position
 import lang.temper.log.filePath
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ExportedName
-import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.ModuleName
 import lang.temper.name.NamingContext
 import lang.temper.name.ParsedName
@@ -349,7 +349,7 @@ fun standardResolver(name: ResolvedName) = when (name) {
 
 fun CodeLocation.source() = when (this) {
     is ModuleName -> this.sourceFile
-    is ImplicitsCodeLocation -> filePath("implicits.temper")
+    is CoreCodeLocation -> filePath("core.temper")
     else -> null
 }
 
@@ -803,7 +803,7 @@ fun TmpL.Type.withoutAtom(predicate: (TmpL.Type) -> Boolean): TmpL.Type = when (
 private fun Iterable<TmpL.DeclarationMetadata>.documentationOf(): OccasionallyHelpful? =
     this.lookupMetaData(docStringSymbol, unpackVal = ::helpfulFromMetadataValue)
 
-/** An enum that allows switching on frequently used types from Implicits ignoring type parameters */
+/** An enum that allows switching on frequently used types from Core ignoring type parameters */
 enum class ImplicitTypeTag {
     Boolean,
     Int,

@@ -15,8 +15,8 @@ import lang.temper.log.filePath
 import lang.temper.log.last
 import lang.temper.log.resolveFile
 import lang.temper.name.BuiltinName
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ExportedName
-import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.ModularName
 import lang.temper.name.ModuleName
 import lang.temper.name.ResolvedName
@@ -216,7 +216,7 @@ class CppTranslator(
         (typeFormalNames[def] ?: typeFormalNamesByText[typeFormalKey(def)])?.let { return it }
         val loc = def.sourceLocation
         return when (loc) {
-            ImplicitsCodeLocation -> {
+            CoreCodeLocation -> {
                 val defName = def.name
                 when (defName) {
                     is ExportedName -> cpp.name(TEMPER_CORE_NAMESPACE, defName.baseName.builtinKey)
@@ -681,7 +681,7 @@ class CppTranslator(
         }
         (typeFormalNames[def] ?: typeFormalNamesByText[typeFormalKey(def)])?.let { return it }
         val typeName = when (val loc = def.sourceLocation) {
-            ImplicitsCodeLocation -> {
+            CoreCodeLocation -> {
                 val defName = def.name
                 val key = when (defName) {
                     is ExportedName -> defName.baseName.builtinKey
@@ -690,7 +690,7 @@ class CppTranslator(
                     is BuiltinName -> null
                 }
                 if (key != null) {
-                    translateImplicitsType(key)
+                    translateCoreType(key)
                 } else {
                     cpp.name(def.name)
                 }
@@ -713,7 +713,7 @@ class CppTranslator(
         return sharedPtr(base)
     }
 
-    private fun translateImplicitsType(builtinKey: String): Cpp.Type = when (builtinKey) {
+    private fun translateCoreType(builtinKey: String): Cpp.Type = when (builtinKey) {
         "AnyValue" -> cpp.name(TEMPER_CORE_NAMESPACE, "AnyValueBase")
         "AnyValueBase" -> cpp.name(TEMPER_CORE_NAMESPACE, "AnyValueBase")
         "Fn" -> cpp.type("$STD_FUNCTION_PREFIX<void()>")
@@ -750,11 +750,11 @@ class CppTranslator(
                     typeFormalName
                 } else {
                     when (val loc = def.sourceLocation) {
-                        ImplicitsCodeLocation -> when (val defName = def.name) {
-                            is ExportedName -> translateImplicitsType(defName.baseName.builtinKey)
-                            is SourceName -> translateImplicitsType(defName.baseName.builtinKey)
-                            is Temporary -> translateImplicitsType(defName.nameHint)
-                            is BuiltinName -> translateImplicitsType(defName.builtinKey)
+                        CoreCodeLocation -> when (val defName = def.name) {
+                            is ExportedName -> translateCoreType(defName.baseName.builtinKey)
+                            is SourceName -> translateCoreType(defName.baseName.builtinKey)
+                            is Temporary -> translateCoreType(defName.nameHint)
+                            is BuiltinName -> translateCoreType(defName.builtinKey)
                         }
                         is ModuleName -> {
                             val rest = cpp.name(def.name)

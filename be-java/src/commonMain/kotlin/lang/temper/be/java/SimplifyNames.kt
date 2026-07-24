@@ -44,7 +44,7 @@ fun simplifyNames(stmt: J.BlockLevelStatement): J.BlockLevelStatement {
 class SimplifyNames(private val top: J.TopLevelClassDeclaration) {
     private val importables = mutableListOf<Importable>()
     private val topLevel: Scope = Scope()
-    private val implicits = buildList {
+    private val core = buildList {
         add(javaLang)
         val pkgName = top.packageStatement?.packageName ?.let { QualifiedName.fromAst(it) }
         if (pkgName != null) {
@@ -85,7 +85,7 @@ class SimplifyNames(private val top: J.TopLevelClassDeclaration) {
             // It would be nice to get just package names, but we don't track that very well.
             neededNames.add(first.fullName)
             // As we import, we're changing the global scope; foo.bar.Qux rules out importing bar.foo.Qux.
-            // But allow implicits if the one we're already tracking is implicit, as it could be the same thing or
+            // But allow core if the one we're already tracking is implicit, as it could be the same thing or
             // something else we've already worked out.
             val availability = topLevel.availability(first.cat, first.importedName)
             if (availability != null && !(availability == Availability.Implicit && first.implicit)) {
@@ -93,7 +93,7 @@ class SimplifyNames(private val top: J.TopLevelClassDeclaration) {
             }
             // Apparently no conflict.
             topLevel.add(first.cat, first.importedName, first.implicit.implicitToAvailability())
-            if (!implicits.any { first.fullName.isChildOf(it) }) {
+            if (!core.any { first.fullName.isChildOf(it) }) {
                 importBlock.add(first.importStatement(top.pos))
             }
             for (imp in batch) {
@@ -486,7 +486,7 @@ class SimplifyNames(private val top: J.TopLevelClassDeclaration) {
         if (check.fullName.size <= 1) {
             return
         }
-        if (implicits.any { check.fullName.isChildOf(it) }) {
+        if (core.any { check.fullName.isChildOf(it) }) {
             importables.add(check.implicit())
         }
         // Don't import if the imported name is in scope.
@@ -510,7 +510,7 @@ class SimplifyNames(private val top: J.TopLevelClassDeclaration) {
             containsValue(nameIdent.first().outName) -> return
         }
         val check = ReplaceNameExpr(name)
-        if (implicits.any { check.fullName.isChildOf(it) }) {
+        if (core.any { check.fullName.isChildOf(it) }) {
             importables.add(check.implicit())
         }
         // Don't import if the imported name is in scope.
@@ -591,7 +591,7 @@ typealias CatName = Pair<Cat, OutName>
 class Scope(private val outer: Scope? = null) {
 
     /**
-     * Track explicit vs implicit availability to assist knowing when we can simplify implicits.
+     * Track explicit vs implicit availability to assist knowing when we can simplify core.
      * TODO Better would be to track the qualified name of each, but that's a bit trickier at the moment.
      */
     private val entities = mutableMapOf<CatName, Availability>()

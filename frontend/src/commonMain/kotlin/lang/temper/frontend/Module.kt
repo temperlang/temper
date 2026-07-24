@@ -18,15 +18,15 @@ import lang.temper.env.Export
 import lang.temper.env.Exporter
 import lang.temper.format.FilteringLogSink
 import lang.temper.format.FormattingLogSink
+import lang.temper.frontend.core.CoreModule
+import lang.temper.frontend.core.builtinEnvironment
+import lang.temper.frontend.core.considerPrivilegedEnvironmentBindings
+import lang.temper.frontend.core.standardLibraryConnecteds
 import lang.temper.frontend.define.DefineStage
 import lang.temper.frontend.disambiguate.DisAmbiguateStage
 import lang.temper.frontend.export.ExportStage
 import lang.temper.frontend.function.FunctionMacroStage
 import lang.temper.frontend.generate.GenerateCodeStage
-import lang.temper.frontend.implicits.ImplicitsModule
-import lang.temper.frontend.implicits.builtinEnvironment
-import lang.temper.frontend.implicits.considerPrivilegedEnvironmentBindings
-import lang.temper.frontend.implicits.standardLibraryConnecteds
 import lang.temper.frontend.importstage.ImportStage
 import lang.temper.frontend.lex.LexStage
 import lang.temper.frontend.parse.ParseStage
@@ -55,8 +55,8 @@ import lang.temper.log.MessageTemplateI
 import lang.temper.log.Position
 import lang.temper.log.SharedLocationContext
 import lang.temper.log.snapshot
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.DashedIdentifier
-import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.LibraryNameLocationKey
 import lang.temper.name.ModuleLocation
 import lang.temper.name.ModuleName
@@ -384,8 +384,8 @@ class Module(
                                 EmptyEnvironment,
                             ),
                             genre = genre,
-                            skipImplicits = loc is ImplicitsCodeLocation ||
-                                stableEnvironmentBindings[StagingFlags.skipImportImplicits] == TBoolean.valueTrue,
+                            skipCore = loc is CoreCodeLocation ||
+                                stableEnvironmentBindings[StagingFlags.skipImportCore] == TBoolean.valueTrue,
                         ),
                     ),
                 )
@@ -738,10 +738,10 @@ class Module(
                         else -> null
                     }
                 }
-                ImplicitsCodeLocation -> {
+                CoreCodeLocation -> {
                     when (v) {
-                        CodeLocationKey.SourceCodeKey -> v.cast(ImplicitsModule.code)
-                        CodeLocationKey.FilePositionsKey -> v.cast(implicitsFilePositions)
+                        CodeLocationKey.SourceCodeKey -> v.cast(CoreModule.code)
+                        CodeLocationKey.FilePositionsKey -> v.cast(coreFilePositions)
                         else -> null
                     }
                 }
@@ -752,18 +752,18 @@ class Module(
     }
 
     companion object {
-        private val implicitsFilePositions get() = ImplicitsModule.implicitsFilePositions
+        private val coreFilePositions get() = CoreModule.coreFilePositions
     }
 
-    /** Whether this module represents Temper implicits/builtins, including for source editing purposes. */
-    val isEffectivelyImplicits = when (loc) {
-        // Recognize fake implicits, such as when editing them as ordinary files.
+    /** Whether this module represents Temper core/builtins, including for source editing purposes. */
+    val isEffectivelyCore = when (loc) {
+        // Recognize fake core, such as when editing them as ordinary files.
         is ModuleName ->
             !loc.isPreface &&
                 sharedLocationContext?.get(loc, LibraryNameLocationKey) ==
-                DashedIdentifier.temperImplicitsLibraryIdentifier
-        // Recognize real implicits, as provided through specialized machinery.
-        is ImplicitsCodeLocation -> true
+                DashedIdentifier.temperCoreLibraryIdentifier
+        // Recognize real core, as provided through specialized machinery.
+        is CoreCodeLocation -> true
     }
 
     /** Whether this module is from the Temper standard library, including for source editing purposes. */

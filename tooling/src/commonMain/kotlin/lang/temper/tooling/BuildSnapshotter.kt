@@ -10,7 +10,7 @@ import lang.temper.log.Debug
 import lang.temper.log.FilePath
 import lang.temper.log.FilePositions
 import lang.temper.log.LogEntry
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModuleName
 import lang.temper.value.BlockTree
 
@@ -39,7 +39,7 @@ class ServerBuildSnapshotter(
             } else {
                 loc.sourceFile
             }
-            is ImplicitsCodeLocation -> return
+            is CoreCodeLocation -> return
         }
         when {
             // Expect the precomputed string object because of our usage.

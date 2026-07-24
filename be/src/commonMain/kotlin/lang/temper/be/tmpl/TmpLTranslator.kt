@@ -24,7 +24,7 @@ import lang.temper.format.toStringViaTokenSink
 import lang.temper.frontend.AdaptGeneratorFn
 import lang.temper.frontend.Module
 import lang.temper.frontend.ModuleNamingContext
-import lang.temper.frontend.implicits.builtinEnvironment
+import lang.temper.frontend.core.builtinEnvironment
 import lang.temper.frontend.mergedNamingContext
 import lang.temper.interp.EmptyEnvironment
 import lang.temper.interp.LongLivedUserFunction
@@ -112,7 +112,6 @@ import lang.temper.value.LeftNameLeaf
 import lang.temper.value.MacroValue
 import lang.temper.value.MetadataMap
 import lang.temper.value.MetadataMultimap
-import lang.temper.value.MetadataValueMapHelpers.get
 import lang.temper.value.MetadataValueMultimap
 import lang.temper.value.NameLeaf
 import lang.temper.value.NamedBuiltinFun
@@ -319,7 +318,7 @@ class TmpLTranslator internal constructor(
                 )
                 constantPool.translator = translator
                 val nascentModule = translator.translate(
-                    module.loc as ModuleName, // Do not translate implicits
+                    module.loc as ModuleName, // Do not translate core
                     module.dependencyCategory,
                     root,
                     module.outputName,
@@ -1378,8 +1377,8 @@ class TmpLTranslator internal constructor(
             }
             is BuiltinName -> {
                 val pos = tree.pos
-                // Treat imports of implicits separately
-                // BuiltinNames, if not implicits, should have folded to constants or been replaced with error
+                // Treat imports of core separately
+                // BuiltinNames, if not core, should have folded to constants or been replaced with error
                 // nodes for being unresolvable.
                 val value = builtinEnv[name, InterpreterCallback.NullInterpreterCallback] as? Value<*>
 
@@ -1430,7 +1429,7 @@ class TmpLTranslator internal constructor(
     private fun translateBuiltinName(
         pos: Position,
         name: BuiltinName,
-        /** The value exported from implicits */
+        /** The value exported from core */
         value: Value<*>?,
         type: Descriptor,
     ): TmpL.ExpressionOrCallable = when (genre) {
@@ -1468,8 +1467,8 @@ class TmpLTranslator internal constructor(
                     )
                 } else {
                     when (type) {
-                        is Type2 -> untranslatableExpr(pos, "$name not available from implicits")
-                        is Signature2 -> untranslatableCallable(pos, "$name not available from implicits")
+                        is Type2 -> untranslatableExpr(pos, "$name not available from core")
+                        is Signature2 -> untranslatableCallable(pos, "$name not available from core")
                     }
                 }
             }

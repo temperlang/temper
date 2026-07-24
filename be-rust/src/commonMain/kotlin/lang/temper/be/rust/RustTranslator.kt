@@ -31,8 +31,8 @@ import lang.temper.log.LogSink
 import lang.temper.log.Position
 import lang.temper.log.last
 import lang.temper.name.BuiltinName
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ExportedName
-import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.ModularName
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
@@ -1836,7 +1836,7 @@ class RustTranslator(
                     // Method calls typically use refs for self, so no need to clone.
                     is TmpL.Expression -> {
                         callable.method?.enclosingType?.let traitImport@{ owner ->
-                            // TODO Do we need to filter out implicits? So far, no examples of hitting that case.
+                            // TODO Do we need to filter out core? So far, no examples of hitting that case.
                             if (
                                 owner.abstractness == Abstractness.Abstract &&
                                 owner.sourceLocation != module.codeLocation.codeLocation
@@ -3230,7 +3230,7 @@ class RustTranslator(
         }
         // Otherwise look up well-known types or use the user-defined type.
         return when (def.sourceLocation) {
-            ImplicitsCodeLocation -> when (def) {
+            CoreCodeLocation -> when (def) {
                 WellKnownTypes.anyValueTypeDefinition -> OutName(ANY_NAME, def.name)
                 WellKnownTypes.booleanTypeDefinition -> OutName("bool", def.name)
                 WellKnownTypes.denseBitVectorTypeDefinition -> OutName(DENSE_BIT_VECTOR_NAME, def.name)

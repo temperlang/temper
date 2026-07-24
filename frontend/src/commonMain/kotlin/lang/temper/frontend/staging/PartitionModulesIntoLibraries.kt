@@ -5,7 +5,7 @@ import lang.temper.frontend.Module
 import lang.temper.frontend.modulesInDependencyOrder
 import lang.temper.library.LibraryConfiguration
 import lang.temper.log.FilePath
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModuleName
 
 /**
@@ -33,7 +33,7 @@ fun partitionModulesIntoLibraries(
     val orderedModules = modulesInDependencyOrder(modules)
     for (module in orderedModules) {
         when (val loc = module.loc) {
-            is ImplicitsCodeLocation -> {}
+            is CoreCodeLocation -> {}
             is ModuleName -> {
                 modulesByRoot.putMultiList(loc.libraryRoot(), module)
             }

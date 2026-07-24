@@ -1,4 +1,4 @@
-package lang.temper.frontend.implicits
+package lang.temper.frontend.core
 
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.common.ignore
@@ -61,7 +61,7 @@ fun accessStdWrapped(): FileSystem? {
  * to apply to `@connected` methods, but now that's available in user code, too.
  */
 internal fun considerPrivilegedEnvironmentBindings(module: Module) {
-    if (module.isEffectivelyImplicits || module.isEffectivelyStd) {
+    if (module.isEffectivelyCore || module.isEffectivelyStd) {
         // TODO Anything needed here?
         ignore(module)
     }

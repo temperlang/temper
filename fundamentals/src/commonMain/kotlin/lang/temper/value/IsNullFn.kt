@@ -4,7 +4,7 @@ import lang.temper.common.AtomicCounter
 import lang.temper.env.InterpMode
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.Symbol
 import lang.temper.type.TypeFormal
 import lang.temper.type.Variance
@@ -21,7 +21,7 @@ object IsNullFn : NamedBuiltinFun, CallableValue {
     val sig = run {
         val tSymbol = Symbol("isNullT")
         val tf = TypeFormal(
-            Position(ImplicitsCodeLocation, 0, 0),
+            Position(CoreCodeLocation, 0, 0),
             BuiltinName(tSymbol.text),
             tSymbol,
             Variance.Invariant,

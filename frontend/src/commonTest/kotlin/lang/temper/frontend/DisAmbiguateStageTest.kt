@@ -220,7 +220,7 @@ class DisAmbiguateStageTest {
     fun stagingAnnotation() = assertModuleAtStage(
         stage = Stage.DisAmbiguate,
         input = "@(A..S) fn (x) {}",
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
         want = """
         {
           disAmbiguate: {
@@ -483,7 +483,7 @@ class DisAmbiguateStageTest {
         input = """
             |class C<T, U extends D, @out V, @in W> extends A, B {}
         """.trimMargin(),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
         want = """
             |{
             |  disAmbiguate: {
@@ -525,7 +525,7 @@ class DisAmbiguateStageTest {
     @Test
     fun genericFnWithComplexTypeFormal() = assertModuleAtStage(
         stage = Stage.DisAmbiguate,
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
         input = """
             |let f<@in T extends MapKey>(x: T): Void {}
         """.trimMargin(),
@@ -584,7 +584,7 @@ class DisAmbiguateStageTest {
     @Test
     fun genericMethodsDisallowedInInterface() = assertModuleAtStage(
         stage = Stage.DisAmbiguate,
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
         // Generic instance methods should be reported. Variety here is just to be sure about internal forms.
         // Static methods in interfaces can be generic if they want.
         input = """
@@ -691,7 +691,7 @@ class DisAmbiguateStageTest {
     )
 
     @Test
-    fun everyTypeButImplicitsHasASuperType() {
+    fun everyTypeButCoreHasASuperType() {
         assertModuleAtStage(
             stage = Stage.DisAmbiguate,
             input = "interface I {}",
@@ -1163,7 +1163,7 @@ class DisAmbiguateStageTest {
     fun incrementInDoBlock() = assertModuleAtStage(
         stage = Stage.DisAmbiguate,
         pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
         input = """
             |do {
             |  var x = 0;
