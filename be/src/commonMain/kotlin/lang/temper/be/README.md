@@ -23,12 +23,12 @@ example, some backends implement `core.type ListBuilder.sort()` to customize beh
 match Temper semantics, but some backends already have a method called `sort`
 with matching semantics on the backend type used for `ListBuilder`.
 
-### Implicits module connected methods
+### Core module connected methods
 
-The set of *\@connected* methods from Temper's *ImplicitsModule* are:
+The set of *\@connected* methods from Temper's *CoreModule* are:
 
 <!-- The below is kept up-to-date automatically -->
-<!-- start ImplicitsModule-connected -->
+<!-- start CoreModule-connected -->
 - `core.doneResult()`
 - `core.empty()`
 - `core.getConsole()`
@@ -191,7 +191,7 @@ The set of *\@connected* methods from Temper's *ImplicitsModule* are:
 - `core.type StringIndexOption.compareTo()`
 - `core.type ValueResult`
 - `core.type ValueResult.constructor()`
-<!-- end ImplicitsModule-connected -->
+<!-- end CoreModule-connected -->
 
 ### Standard library connected methods
 

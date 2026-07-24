@@ -1,4 +1,4 @@
-package lang.temper.frontend.implicits
+package lang.temper.frontend.core
 
 import lang.temper.fs.FileSystem
 import lang.temper.fs.MemoryFileSystem
@@ -11,7 +11,7 @@ import java.nio.file.Path
 import kotlin.io.path.toPath
 
 actual fun accessStd(): FileSystem? {
-    val classLoader = ImplicitsModule::class.java.classLoader
+    val classLoader = CoreModule::class.java.classLoader
     val stdConfig = classLoader.getResource(STANDARD_LIBRARY_NAME)!!
     fun copyFrom(path: Path) = MemoryFileSystem().also {
         copyRecursive(from = RealFileSystem(path), to = it)

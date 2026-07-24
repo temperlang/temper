@@ -16,13 +16,13 @@ import kotlin.reflect.full.memberProperties
  */
 object StagingFlags {
     /**
-     * Whether import stage should consider exports from the implicits module
-     * when generating a list of implicit imports.
+     * Whether import stage should consider exports from the core module
+     * when generating a list of core imports.
      *
-     * This avoids processing the implicits module so comes in handy for testing
-     * simple modules without requiring that the implicits module stage validly.
+     * This avoids processing the core module so comes in handy for testing
+     * simple modules without requiring that the core module stage validly.
      */
-    val skipImportImplicits = BuiltinName("skip-import-implicits")
+    val skipImportCore = BuiltinName("skip-import-core")
 
     /**
      * If the module comes from a REPL session or a snippet of code in

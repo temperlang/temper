@@ -22,7 +22,7 @@ import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.log.resolveFile
 import lang.temper.name.BackendId
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModuleLocation
 import lang.temper.name.ModuleName
 import java.util.Collections
@@ -141,6 +141,6 @@ private class PublicationHistoryDependencyResolver(
                 null
             }
         }
-        is ImplicitsCodeLocation -> null
+        is CoreCodeLocation -> null
     }
 }

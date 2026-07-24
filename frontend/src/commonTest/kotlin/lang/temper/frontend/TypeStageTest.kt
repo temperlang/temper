@@ -90,7 +90,7 @@ class TypeStageTest {
     @Test
     fun asCheckWithIncompleteTypeCompleted() = assertModuleAtStage(
         stageTestDir = StageTestDir("type/as-check-with-incomplete-type-completed"),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
     )
 
     @Test
@@ -139,13 +139,12 @@ class TypeStageTest {
     fun continueFromInnerLoopToOuter() = assertModuleAtStage(
         stageTestDir = StageTestDir("type/continue-from-inner-loop-to-outer"),
         moduleResultNeeded = true,
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
     )
 
     @Test
     fun blockPulledThroughDecl() = assertModuleAtStage(
         stageTestDir = StageTestDir("type/block-pulled-through-decl"),
-
     )
 
     @Test

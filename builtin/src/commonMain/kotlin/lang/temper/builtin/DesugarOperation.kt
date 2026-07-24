@@ -185,7 +185,7 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
         }
 
         // We have a lookup list of extensions for basic types like Int32 and String
-        // so that evaluation of them can work even before Implicits.temper has staged
+        // so that evaluation of them can work even before core.temper has staged
         // to the point where we can dispatch to methods on well-known types'.
         val builtins = builtinOperatorSpecs[operatorSpecifier] ?: listOf()
         if (member != null) {

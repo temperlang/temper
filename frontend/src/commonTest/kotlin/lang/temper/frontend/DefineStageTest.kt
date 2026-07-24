@@ -38,7 +38,7 @@ class DefineStageTest {
     @Test
     fun callToMethod() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/call-to-method"),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
     )
 
     /**
@@ -66,7 +66,7 @@ class DefineStageTest {
     @Test
     fun constantFolding() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/constant-folding"),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
     )
 
     @Test

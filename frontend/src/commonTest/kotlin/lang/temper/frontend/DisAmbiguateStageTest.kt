@@ -36,7 +36,7 @@ class DisAmbiguateStageTest {
     @Test
     fun stagingAnnotation() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/staging-annotation"),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
     )
 
     @Test
@@ -58,13 +58,13 @@ class DisAmbiguateStageTest {
     @Test
     fun typeFormalsOnClassDeclaration() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/type-formals-on-class-declaration"),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
     )
 
     @Test
     fun genericFnWithComplexTypeFormal() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/generic-fn-with-complex-type-formal"),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
     )
 
     @Test
@@ -76,7 +76,7 @@ class DisAmbiguateStageTest {
     @Test
     fun genericMethodsDisallowedInInterface() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/generic-methods-disallowed-in-interface"),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
         // Generic instance methods should be reported. Variety here is just to be sure about internal forms.
         // Static methods in interfaces can be generic if they want.
     )
@@ -97,8 +97,8 @@ class DisAmbiguateStageTest {
     )
 
     @Test
-    fun everyTypeButImplicitsHasASuperType() = assertModuleAtStage(
-        stageTestDir = StageTestDir("dis-ambiguate/every-type-but-implicits-has-a-super-type"),
+    fun everyTypeButCoreHasASuperType() = assertModuleAtStage(
+        stageTestDir = StageTestDir("dis-ambiguate/every-type-but-core-has-a-super-type"),
     )
 
     @Test
@@ -191,6 +191,6 @@ class DisAmbiguateStageTest {
     fun incrementInDoBlock() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/increment-in-do-block"),
         pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
     )
 }

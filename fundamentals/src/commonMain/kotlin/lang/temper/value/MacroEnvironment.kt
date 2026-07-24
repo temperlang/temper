@@ -167,18 +167,18 @@ interface MacroEnvironment : InterpreterCallback, Positioned, ConfigurationKey.H
     val treeFarm get() = document.treeFarm
 
     /**
-     * Connections for example to connect functions in Implicits to backing Kotlin code
+     * Connections for example to connect functions in Core to backing Kotlin code
      * based on decorations like `@connected`.
      */
     fun connection(qname: String): ((Signature2) -> Value<*>)?
 
     /**
-     * True if the macro call is in the Implicits module.
-     * This lets us avoid some chicken-egg problems when dealing with bootstrapping the Implicits
+     * True if the macro call is in the Core module.
+     * This lets us avoid some chicken-egg problems when dealing with bootstrapping the Core
      * modules, and also lets us do printf-debugging without logging uses of macros in the
-     * Implicits module.
+     * Core module.
      */
-    val isProcessingImplicits: Boolean get() = false
+    val isProcessingCore: Boolean get() = false
 
     override val promises: Promises
 

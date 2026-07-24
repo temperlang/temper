@@ -7,7 +7,7 @@ import lang.temper.library.LibraryConfiguration
 import lang.temper.log.CodeLocation
 import lang.temper.log.FilePath
 import lang.temper.log.plus
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModuleLocation
 import lang.temper.name.ModuleName
 
@@ -134,7 +134,7 @@ class CoCompiledModules private constructor(
             for (module in moduleList) {
                 when (val loc = module.loc) {
                     is ModuleName -> libraryRoots.add(loc.libraryRoot())
-                    is ImplicitsCodeLocation -> Unit
+                    is CoreCodeLocation -> Unit
                 }
             }
             libraryRoots.sortedBy { it }
@@ -154,7 +154,7 @@ class CoCompiledModules private constructor(
             val modulesByLibraryRoot = moduleList.groupBy {
                 when (val loc = it.loc) {
                     is ModuleName -> loc.libraryRoot()
-                    is ImplicitsCodeLocation -> null
+                    is CoreCodeLocation -> null
                 }
             }
 

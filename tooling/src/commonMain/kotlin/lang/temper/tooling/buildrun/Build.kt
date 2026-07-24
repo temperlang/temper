@@ -58,9 +58,9 @@ import lang.temper.log.MessageTemplateI
 import lang.temper.log.Position
 import lang.temper.log.unknownPos
 import lang.temper.name.BackendId
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ExportedName
-import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.ModuleLocation
 import lang.temper.name.ModuleName
 import lang.temper.name.interpBackendId
@@ -365,7 +365,7 @@ fun doOneBuild(build: Build): BuildResult {
         is RFailure, is RThrowable -> object : DependencyResolver {
             override fun resolve(loc: ModuleLocation, backendId: BackendId, logSink: LogSink): JsonValue? {
                 val libraryRoot = when (loc) {
-                    is ImplicitsCodeLocation -> "unknown"
+                    is CoreCodeLocation -> "unknown"
                     is ModuleName -> loc.libraryRoot()
                 }
                 logSink.log(
@@ -724,7 +724,7 @@ private fun runInInterpreter(
 
     fun isTestedModule(module: Module): Boolean = request is RunTestsRequest &&
         when (val loc = module.loc) {
-            is ImplicitsCodeLocation -> false
+            is CoreCodeLocation -> false
             is ModuleName -> when (module.dependencyCategory) {
                 DependencyCategory.Test -> {
                     libraryConfigurationsBundle.byLibraryRoot[loc.libraryRoot()]?.libraryName in

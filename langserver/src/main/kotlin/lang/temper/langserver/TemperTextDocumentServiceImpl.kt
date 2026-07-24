@@ -8,7 +8,7 @@ import lang.temper.common.emptyIntArray
 import lang.temper.common.toStringViaBuilder
 import lang.temper.lexer.languageConfigForExtension
 import lang.temper.log.UnknownCodeLocation
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.tooling.Def
 import lang.temper.tooling.FileState
 import lang.temper.tooling.LiveFileHandler
@@ -222,7 +222,7 @@ internal class TemperTextDocumentServiceImpl(
                         CompletionItem().apply {
                             kind = when (def.pos.loc) {
                                 // These aren't all even pseudo-keywords, but it's some distinction for now.
-                                ImplicitsCodeLocation, UnknownCodeLocation -> CompletionItemKind.Keyword
+                                CoreCodeLocation, UnknownCodeLocation -> CompletionItemKind.Keyword
                                 else -> CompletionItemKind.Variable
                             }
                             label = def.text

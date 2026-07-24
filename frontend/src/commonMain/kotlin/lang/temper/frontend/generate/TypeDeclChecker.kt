@@ -44,14 +44,14 @@ internal class TypeDeclChecker(val module: Module, val logSink: LogSink) {
         }
         walk(typeShape)
 
-        val isProcessingImplicits = module.isEffectivelyImplicits
+        val isProcessingCore = module.isEffectivelyCore
         val isStd = module.isEffectivelyStd
         val allAbstractMethodDescriptors = mutableListOf<MethodDescriptor>()
         for (strictSuperTypeShape in superTypeShapes) {
             val abstractMethods = abstractMethodCache.getOrPut(strictSuperTypeShape) {
                 strictSuperTypeShape.methods.mapNotNull { m ->
-                    if (isProcessingImplicits && connectedSymbol in m.metadata) {
-                        null // Some Implicits methods have no body because they must connect.
+                    if (isProcessingCore && connectedSymbol in m.metadata) {
+                        null // Some Core methods have no body because they must connect.
                     } else if (isStd && m.visibility == Visibility.Private && connectedSymbol in m.metadata) {
                         null // std has some required connections too which are sneakily hidden away
                     } else if (m.methodKind != MethodKind.Constructor && m.isPureVirtual) {

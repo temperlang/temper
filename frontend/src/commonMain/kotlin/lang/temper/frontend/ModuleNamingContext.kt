@@ -5,7 +5,7 @@ import lang.temper.env.Exporter
 import lang.temper.env.ExportingNamingContext
 import lang.temper.log.FilePath
 import lang.temper.log.UNIX_FILE_SEGMENT_SEPARATOR
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.LibraryNameLocationKey
 import lang.temper.name.ModuleName
 import lang.temper.name.NamingContext
@@ -34,7 +34,7 @@ class ModuleNamingContext internal constructor(
                     append('`')
                     append(libraryName.text)
                     when (loc) {
-                        is ImplicitsCodeLocation -> {}
+                        is CoreCodeLocation -> {}
                         is ModuleName ->
                             if (loc.relativePath() != FilePath.emptyPath) {
                                 append(UNIX_FILE_SEGMENT_SEPARATOR)

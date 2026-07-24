@@ -1,4 +1,4 @@
-package lang.temper.frontend.implicits
+package lang.temper.frontend.core
 
 import lang.temper.common.compatRemoveLast
 import lang.temper.env.InterpMode

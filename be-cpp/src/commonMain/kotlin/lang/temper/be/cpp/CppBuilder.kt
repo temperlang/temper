@@ -6,7 +6,7 @@ import lang.temper.common.OCTAL_RADIX
 import lang.temper.log.FilePath
 import lang.temper.log.Position
 import lang.temper.log.unknownPos
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModuleLocation
 import lang.temper.name.ModuleName
 import lang.temper.name.ResolvedName
@@ -518,7 +518,7 @@ class CppBuilder(
     }
 
     fun nameForModule(library: ModuleLocation): Cpp.Name = when (library) {
-        ImplicitsCodeLocation -> name(TEMPER_CORE_NAMESPACE)
+        CoreCodeLocation -> name(TEMPER_CORE_NAMESPACE)
         is ModuleName -> {
             // Use only the library root namespace, not sub-module paths.
             // All modules in a library share the same C++ namespace.

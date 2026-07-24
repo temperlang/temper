@@ -128,7 +128,7 @@ class SyntaxMacroStageTest {
         // for...of loop's loop variable is visible only within the body.
         // It is scoped to the body, and to allow it to be visible within the
         // expression right of `of` would lead to confusion.
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
     )
 
     @Test
@@ -459,21 +459,21 @@ class SyntaxMacroStageTest {
     fun desugarCompoundOp() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/desugar-compound-op"),
         pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
     )
 
     @Test
     fun compoundOpsWithGetterAndSetter() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/compound-ops-with-getter-and-setter"),
         pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
     )
 
     @Test
     fun compoundOpsWithIndexedGetAndSet() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/compound-ops-with-indexed-get-and-set"),
         pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
     )
 
     @Test
@@ -484,12 +484,12 @@ class SyntaxMacroStageTest {
     @Test
     fun desugarPrefixOp() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/desugar-prefix-op"),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
     )
 
     @Test
     fun desugarPrefixOpWithComplexOperand() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/desugar-prefix-op-with-complex-operand"),
-        stagingFlags = setOf(StagingFlags.skipImportImplicits),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
     )
 }
