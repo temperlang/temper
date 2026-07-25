@@ -32,9 +32,7 @@ class JsBackendTest {
             |        "foo.js": {
             |          content:
             |            ```
-            |            /** @type {number} */
-            |            const return_2 = 123;
-            |            export default return_2;
+            |            export {} from "./foo.internal.js";
             |
             |            ```,
             |            mimeType: "text/javascript",
@@ -46,9 +44,31 @@ class JsBackendTest {
             |            file: "js/my-test-library/src/foo.js",
             |            sources: ["src/foo/foo.temper"],
             |            sourcesContent: ["123"],
+            |            names: [],
+            |            // Haven't checked.
+            |            mappings: "AAAG,cAAA,AAAH,oBAAG",
+            |          },
+            |        },
+            |        "foo.internal.js": {
+            |          content:
+            |            ```
+            |            /** @type {number} */
+            |            export const return_2 = 123;
+            |            export default return_2;
+            |
+            |            ```,
+            |            mimeType: "text/javascript",
+            |        },
+            |        "foo.internal.js.map": {
+            |          mimeType: "application/json",
+            |          jsonContent: {
+            |            version: 3,
+            |            file: "js/my-test-library/src/foo.internal.js",
+            |            sources: ["src/foo/foo.temper"],
+            |            sourcesContent: ["123"],
             |            names: ["return"],
             |            // Haven't checked.
-            |            mappings: "AAAA;AAAA,MAAAA,QAAA,MAAG,AAAH;AAAG,eAAAA,QAAA",
+            |            mappings: "AAAA;AAAA,aAAAA,QAAA,MAAG,AAAH;AAAG,eAAAA,QAAA",
             |          },
             |        }
             |      },

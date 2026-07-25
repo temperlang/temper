@@ -5,7 +5,6 @@ import lang.temper.be.Backend
 import lang.temper.be.BackendHelpTopicKey
 import lang.temper.be.BackendHelpTopicKeys
 import lang.temper.be.BackendSetup
-import lang.temper.be.globalPathSegment
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TESTING_BASENAME
 import lang.temper.be.tmpl.TmpL
@@ -17,11 +16,9 @@ import lang.temper.common.MimeType
 import lang.temper.common.json.JsonObject
 import lang.temper.common.json.JsonString
 import lang.temper.common.json.JsonValueBuilder
-import lang.temper.common.putMultiSet
 import lang.temper.common.structure.PropertySink
 import lang.temper.common.structure.StructureParser
 import lang.temper.format.TokenSink
-import lang.temper.frontend.Module
 import lang.temper.fs.declareResources
 import lang.temper.fs.loadResource
 import lang.temper.library.LibraryConfiguration
@@ -41,7 +38,6 @@ import lang.temper.log.SameDirPseudoFilePathSegment
 import lang.temper.log.UNIX_FILE_SEGMENT_SEPARATOR
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
-import lang.temper.log.last
 import lang.temper.log.unknownPos
 import lang.temper.name.BackendId
 import lang.temper.name.BackendMeta
@@ -209,7 +205,7 @@ class JsBackend private constructor(
         var stdTestingPath: FilePath? = null
         val testPaths = mutableSetOf<FilePath>()
 
-        var translations: List<Translation> =
+        val translations: List<Translation> =
             finished.modules.flatMap { tmpLModule ->
                 val (supportCodes) = tmpLModule.findCommonTopLevels()
                 val translator = JsTranslator(
@@ -235,8 +231,6 @@ class JsBackend private constructor(
                 }
             }
         }
-        // Link modules to shared definitions by export and import.
-        translations = linkModules(translations)
 
         val allOutputFiles = if (config.makeMetaDataFile) {
             val dependencyNames = mutableSetOf<DashedIdentifier>()
@@ -408,140 +402,6 @@ class JsBackend private constructor(
         }
     }
 
-    private fun linkModules(translations: List<Translation>): List<Translation> {
-        val declaring = mutableMapOf<JsIdentifierName, MutableSet<FilePath>>()
-        val exportedNames = mutableMapOf<ExportedName, Pair<FilePath, JsIdentifierName>>()
-        // Find declarations.
-        for ((textFile, program) in translations) {
-            for (topLevel in program.topLevel) {
-                val declaredNames = findDeclaredNames(topLevel, exportedNames, textFile)
-                for (declaredName in declaredNames) {
-                    declaring.putMultiSet(declaredName, textFile)
-                }
-            }
-        }
-        // Import into each according to their needs.
-        val importedBySomeOtherFile = mutableMapOf<FilePath, MutableSet<JsIdentifierName>>()
-        for ((path, program) in translations) {
-            val needs = mutableMapOf<FilePath, MutableSet<JsIdentifierName>>()
-            val localNameToExportedName = mutableMapOf<JsIdentifierName, JsIdentifierName>()
-            walkDepthFirst(program) {
-                when (it) {
-                    is Js.Identifier -> {
-                        val name = it.name
-                        val declarers = declaring[name]
-                        if (declarers != null) {
-                            if (path !in declarers) {
-                                val declarer = declarers.first()
-                                needs.putMultiSet(declarer, name)
-                                importedBySomeOtherFile.putMultiSet(declarer, name)
-                            }
-                        } else {
-                            it.sourceIdentifier?.let exported@{ id ->
-                                val export = exportedNames[id] ?: return@exported
-                                if (export.first != path) {
-                                    // This is expected only for split modules such as test extraction.
-                                    // If imported explicitly from another module, we expect to see a local name.
-                                    // The effect of directly importing and using the ExportedName is somewhat the same
-                                    // as if it had been directly in this module in terms of the name we use.
-                                    needs.putMultiSet(export.first, export.second)
-                                    // Keep out of importedBySomeOtherFile because already exported.
-                                }
-                            }
-                        }
-                        VisitCue.Continue
-                    }
-                    is Js.ImportSpecifier ->
-                        // The exported name is not an ID that we need.
-                        // We don't need the local name because we've already got it.
-                        VisitCue.SkipOne
-                    else -> VisitCue.Continue
-                }
-            }
-            val importsNeeded = needs.entries
-            val importPos = program.pos.leftEdge
-            val importDeclarations = importsNeeded.mapNotNull imports@{ (fileToImportFrom, namesToImport) ->
-                val pathParts = if (fileToImportFrom.segments.firstOrNull() == globalPathSegment) {
-                    // Global references are handled through tmpl imports.
-                    return@imports null
-                } else {
-                    // Relative import.
-                    val pathParts = path.relativePathTo(fileToImportFrom).toMutableList()
-                    if (pathParts.getOrNull(0) !in relativeModulePathStarts) {
-                        pathParts.add(index = 0, element = SameDirPseudoFilePathSegment)
-                    }
-                    pathParts
-                }
-                if (fileToImportFrom in importedBySomeOtherFile) {
-                    // An internal version will be generated because someone is using non-publics.
-                    // So just go to internals, whether the specifiers here are internal or not.
-                    // Simplifies the bookkeeping.
-                    pathParts[pathParts.lastIndex] =
-                        (pathParts.last() as FilePathSegment).withExtension(INTERNAL_EXTENSION)
-                }
-                Js.ImportDeclaration(
-                    importPos,
-                    specifiers = listOf(
-                        Js.ImportSpecifiers(
-                            importPos,
-                            namesToImport.sortedBy { it.text }.map {
-                                Js.ImportSpecifier(
-                                    importPos,
-                                    imported = Js.Identifier(
-                                        importPos,
-                                        localNameToExportedName[it] ?: it,
-                                        null,
-                                    ),
-                                    local = Js.Identifier(importPos, it, null),
-                                )
-                            },
-                        ),
-                    ),
-                    source = Js.StringLiteral(
-                        importPos,
-                        // TODO: this is probably not right.  What is the actual rule for escaping
-                        // path segments in the web-platform / Node / Deno worlds?
-                        pathParts.join(separator = UNIX_FILE_SEGMENT_SEPARATOR, isDir = false),
-                    ),
-                )
-            }
-            program.topLevel = importDeclarations + program.topLevel
-        }
-        // Export from each according to their ability.
-        return translations.flatMap { translation ->
-            val program = translation.program
-            val exported = importedBySomeOtherFile[translation.outPath]
-            if (exported?.isNotEmpty() == true) {
-                val exportsInOrder = exported.sortedBy { it.text }
-                val exportPos = program.pos.rightEdge
-                val exportDeclaration = Js.ExportNamedDeclaration(
-                    exportPos,
-                    doc = Js.MaybeJsDocComment(exportPos, null),
-                    declaration = null,
-                    specifiers = exportsInOrder.map { exportedName ->
-                        Js.ExportSpecifier(
-                            exportPos,
-                            local = Js.Identifier(exportPos, exportedName, null),
-                            exported = Js.Identifier(exportPos, exportedName, null),
-                        )
-                    },
-                    source = null,
-                )
-                // Find already exported things to re-export from public face.
-                val exporteds = findTopLevelExportedIds(translation.program)
-                // Add new exports to internal, rename to internal, and add exporting public face.
-                program.topLevel += exportDeclaration
-                val internalOutPath = translation.outPath.withExtension(INTERNAL_EXTENSION)!!
-                listOf(
-                    translation.copy(outPath = internalOutPath),
-                    translation.copy(program = buildPublicFace(exportPos, exporteds, internalOutPath)),
-                )
-            } else {
-                listOf(translation)
-            }
-        }
-    }
-
     override val supportNetwork: SupportNetwork get() = JsSupportNetwork
 
     override fun wrapTokenSink(tokenSink: TokenSink): TokenSink = Companion.wrapTokenSink(tokenSink)
@@ -691,7 +551,7 @@ private data class JsDependencies(
 }
 
 @Suppress("UnusedPrivateMember")
-private fun JsDependencies.withDependency(dep: JsDependency): JsDependencies = //
+private fun JsDependencies.withDependency(dep: JsDependency): JsDependencies =
     JsDependencies(this.runtimeDependencies + dep, this.testDependencies)
 private fun JsDependencies.withTestDependency(dep: JsDependency): JsDependencies =
     JsDependencies(this.runtimeDependencies, this.testDependencies + dep)
@@ -780,49 +640,6 @@ private fun findDeclaredNames(
     is Js.ExportAllDeclaration,
     -> emptyList()
 }
-
-private fun findTopLevelExportedIds(program: Js.Program): List<Js.Identifier> {
-    // And the dig here only goes through top levels rather than arbitrarily deep in the tree.
-    fun digId(tree: Js.Tree): List<Js.Identifier> {
-        // TODO Dig out type aliases in comments?
-        return when (tree) {
-            is Js.ClassDeclaration -> listOf(tree.id)
-            is Js.DocumentedDeclaration -> digId(tree.decl)
-            is Js.ExportNamedDeclaration -> when (val declaration = tree.declaration) {
-                null -> tree.specifiers.map { it.exported }
-                else -> digId(declaration)
-            }
-
-            is Js.FunctionDeclaration -> listOf(tree.id)
-            // Presume we don't generate destructuring for top levels.
-            is Js.VariableDeclaration -> tree.declarations.mapNotNull { it.id as? Js.Identifier }
-            else -> emptyList()
-        }
-    }
-    val exporteds = program.topLevel.flatMap { tree ->
-        val ids = digId(tree)
-        ids.mapNotNull { id ->
-            when (id.sourceIdentifier) {
-                is ExportedName -> id
-                else -> null
-            }
-        }
-    }
-    return exporteds
-}
-
-private fun buildPublicFace(pos: Position, exporteds: List<Js.Identifier>, internalOutPath: FilePath) = Js.Program(
-    pos,
-    listOf(
-        Js.ExportNamedDeclaration(
-            pos,
-            doc = Js.MaybeJsDocComment(pos, null),
-            declaration = null,
-            specifiers = exporteds.map { Js.ExportSpecifier(pos, it.deepCopy(), it.deepCopy()) },
-            source = Js.StringLiteral(pos, "./${internalOutPath.last().fullName}"),
-        ),
-    ),
-)
 
 private fun FilePath.importReadyPath(): String =
     this.segments.importReadyPath(isDir = this.isDir)

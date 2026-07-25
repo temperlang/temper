@@ -31,6 +31,7 @@ import lang.temper.format.CodeFormattingTemplate
 import lang.temper.format.toStringViaTokenSink
 import lang.temper.lexer.Genre
 import lang.temper.lexer.temperAwareBaseName
+import lang.temper.log.FilePath
 import lang.temper.log.FilePath.Companion.join
 import lang.temper.log.FilePath.Companion.toPseudoPath
 import lang.temper.log.FilePathSegment
@@ -137,6 +138,11 @@ internal class JsTranslator(
 
     private var libraryName: DashedIdentifier? = null
 
+    private val importedIds = mutableListOf<JsIdentifierName>()
+    private val exportedIds = mutableListOf<Js.Identifier>()
+    private val importsFromProdToTest = mutableSetOf<JsIdentifierName>()
+    private val prodTopIds = mutableSetOf<ResolvedName>()
+
     fun translate(t: TmpL.Module): List<Translation> = jsNames.forOrigin(t.codeLocation.origin) {
         debug {
             console.log("$t")
@@ -146,17 +152,21 @@ internal class JsTranslator(
         // Build imports before topLevels, or else local import names get mismatched.
         val ungroupedImports = mutableListOf<Js.ImportDeclaration>()
         translateImports(t.imports, ungroupedImports)
-        t.topLevels.forEach topLevels@{
-            val dependencyCategory = effectiveDependencyCategory(it)
-            when (dependencyCategory) {
-                DependencyCategory.Production -> prodModuleParts
-                DependencyCategory.Test -> testModuleParts
-                null -> return@topLevels
-            }.topLevels.addAll(
-                withDependencyMode(dependencyCategory) {
-                    translateTopLevel(it)
-                },
-            )
+        // Translate prod first to gather top-level ids.
+        t.topLevels.forEach topLevels@{ topLevel ->
+            if (effectiveDependencyCategory(topLevel) == DependencyCategory.Production) {
+                withDependencyMode(DependencyCategory.Production) {
+                    translateTopLevel(topLevel)
+                }.also { prodModuleParts.topLevels.addAll(it) }
+            }
+        }
+        // Then translate test so we track imports from prod.
+        t.topLevels.forEach topLevels@{ topLevel ->
+            if (effectiveDependencyCategory(topLevel) == DependencyCategory.Test) {
+                withDependencyMode(DependencyCategory.Test) {
+                    translateTopLevel(topLevel)
+                }.also { testModuleParts.topLevels.addAll(it) }
+            }
         }
 
         val imports = run {
@@ -212,6 +222,18 @@ internal class JsTranslator(
         }
         testModuleParts.explicitImports.addAll(testImports)
 
+        // Also import from prod to test. Technically could be empty, but meh.
+        val publicOutPath = t.codeLocation.outputPath
+        val internalOutPath = publicOutPath.withExtension(JsBackend.INTERNAL_EXTENSION)!!
+        Js.ImportDeclaration(
+            t.pos,
+            importsFromProdToTest.map { idName ->
+                val id = Js.Identifier(t.pos, idName, sourceIdentifier = null)
+                Js.ImportSpecifier(t.pos, id, id.deepCopy())
+            }.let { listOf(Js.ImportSpecifiers(t.pos, it)) },
+            Js.StringLiteral(t.pos, "../${internalOutPath.segments.last()}"),
+        ).also { testModuleParts.explicitImports.add(it) }
+
         val result = t.result
         if (result != null) {
             prodModuleParts.topLevels.add(
@@ -234,24 +256,28 @@ internal class JsTranslator(
 
         buildList {
             if (prodModuleParts.topLevels.isNotEmpty() || !hasTests) {
-                add(
-                    Translation(
-                        t.codeLocation.outputPath,
-                        Js.Program(t.pos, adjustTops(prodModuleParts.topLevels)),
-                        t,
-                        DependencyCategory.Production,
-                    ),
-                )
+                // Internal file with everything exported, for tests and connecteds.
+                Translation(
+                    internalOutPath,
+                    Js.Program(t.pos, adjustTops(prodModuleParts.topLevels)),
+                    t,
+                    DependencyCategory.Production,
+                ).also { add(it) }
+                // Public face with just the actual exports. Add it even if no exports.
+                Translation(
+                    publicOutPath,
+                    buildPublicFace(t.pos, exportedIds, internalOutPath),
+                    t,
+                    DependencyCategory.Production,
+                ).also { add(it) }
             }
             if (hasTests) {
-                add(
-                    Translation(
-                        testPath,
-                        Js.Program(t.pos, adjustTops(testModuleParts.topLevels)),
-                        t,
-                        DependencyCategory.Test,
-                    ),
-                )
+                Translation(
+                    testPath,
+                    Js.Program(t.pos, adjustTops(testModuleParts.topLevels)),
+                    t,
+                    DependencyCategory.Test,
+                ).also { add(it) }
             }
         }
     }
@@ -366,6 +392,7 @@ internal class JsTranslator(
                     continue // We don't need connected type imports
                 }
                 val exportName = JsIdentifierName.escaped(import.externalName.outName!!.outputNameText)
+                importedIds.add(exportName)
                 val imported = Js.Identifier(import.pos, exportName, import.externalName.name)
                 val local = import.localName?.let { translateId(it) as? Js.Identifier }
                 val externalName = import.externalName.name
@@ -864,11 +891,20 @@ internal class JsTranslator(
      *
      * @param useThisStack see [JsNames.withLocalNameForThis].
      */
-    private fun translateId(id: TmpL.Id, useThisStack: Boolean = false): Js.Expression =
-        when (genreTranslating) {
+    private fun translateId(id: TmpL.Id, useThisStack: Boolean = false): Js.Expression {
+        val result = when (genreTranslating) {
             Genre.Library -> translateIdForLibrary(id = id, useThisStack = useThisStack)
             Genre.Documentation -> translateIdForDocumentation(id = id, useThisStack = useThisStack)
         }
+        if (dependencyMode == DependencyCategory.Test && id.name in prodTopIds) {
+            result.simpleId()?.also { resultId ->
+                if (resultId.name !in importedIds) {
+                    importsFromProdToTest.add(resultId.name)
+                }
+            }
+        }
+        return result
+    }
 
     private fun translateIdForLibrary(id: TmpL.Id, useThisStack: Boolean): Js.Expression {
         val name = id.name
@@ -934,20 +970,25 @@ internal class JsTranslator(
             // TODO(mikesamuel): translateEnumType
             TmpL.TypeDeclarationKind.Enum -> translateTypeDeclaration(d, nameText)
         }
-        return if (d.name.name is ExportedName) {
-            val topLevelsWithExport = topLevels.toMutableList()
-            val toExport = topLevelsWithExport[mainDeclIndex] as Js.Declaration
-            topLevelsWithExport[mainDeclIndex] = Js.ExportNamedDeclaration(
-                pos = toExport.pos,
-                doc = Js.MaybeJsDocComment(toExport.pos.leftEdge, doc = null),
-                declaration = toExport,
-                specifiers = emptyList(),
-                source = null,
-            )
-            topLevelsWithExport.toList()
-        } else {
-            topLevels
+        // Export all core top-levels from internal.
+        val topLevelsWithExport = topLevels.toMutableList()
+        val toExport = topLevelsWithExport[mainDeclIndex] as Js.Declaration
+        val toExportId = toExport.simpleId()
+        if (d.name.name is ExportedName) {
+            // But track those which are actually exported for the public module.
+            exportedIds.add(toExportId!!)
         }
+        if (dependencyMode == DependencyCategory.Production) {
+            prodTopIds.add(d.name.name)
+        }
+        topLevelsWithExport[mainDeclIndex] = Js.ExportNamedDeclaration(
+            pos = toExport.pos,
+            doc = Js.MaybeJsDocComment(toExport.pos.leftEdge, doc = null),
+            declaration = toExport,
+            specifiers = emptyList(),
+            source = null,
+        )
+        return topLevelsWithExport.toList()
     }
 
     private fun makeClassBuilder(
@@ -1390,29 +1431,25 @@ internal class JsTranslator(
         originalName: TmpL.Id,
     ): Js.TopLevel {
         val name = originalName.name
-        return if (name is ExportedName && name.comesFrom(jsNames.origin)) {
-            val id = when (declaration) {
-                is Js.ClassDeclaration -> declaration.id
-                is Js.ExceptionDeclaration -> return declaration
-                is Js.FunctionDeclaration -> declaration.id
-                is Js.VariableDeclaration -> {
-                    check(declaration.declarations.size == 1)
-                    declaration.declarations.first().id as Js.Identifier
-                }
-            }
-            id.sourceIdentifier = name // Store so that we can link imports to exports later.
-            Js.ExportNamedDeclaration(
-                declaration.pos,
-                doc = doc,
-                declaration = declaration,
-                specifiers = emptyList(),
-                source = null,
-            )
-        } else if (doc.doc != null) {
-            Js.DocumentedDeclaration(declaration.pos, doc.doc!!, declaration)
-        } else {
-            declaration
+        val id = declaration.simpleId() ?: return declaration
+        // Old comment: Store so that we can link imports to exports later.
+        // TODO Is sourceIdentifier really still in use?
+        id.sourceIdentifier = name
+        if (name is ExportedName && name.comesFrom(jsNames.origin)) {
+            // Only some are exported from the public module.
+            exportedIds.add(id)
         }
+        if (dependencyMode == DependencyCategory.Production) {
+            prodTopIds.add(name)
+        }
+        // But internal exports all.
+        return Js.ExportNamedDeclaration(
+            declaration.pos,
+            doc = doc,
+            declaration = declaration,
+            specifiers = emptyList(),
+            source = null,
+        )
     }
 
     private fun translateBoilerplateCodeFoldBoundary(t: TmpL.BoilerplateCodeFoldBoundary): Js.CommentLine {
@@ -2405,4 +2442,43 @@ private fun findNeededImports(
 private val adaptAwaiter = JsExternalValueReference(
     DashedIdentifier.temperCoreLibraryIdentifier,
     JsIdentifierName("adaptAwaiter"),
+)
+
+/** Returns null if no simple, single id. */
+internal fun Js.Declaration.simpleId(): Js.Identifier? {
+    return when (this) {
+        is Js.ClassDeclaration -> this.id
+        is Js.FunctionDeclaration -> this.id
+        is Js.ExceptionDeclaration -> this.id.simpleId()
+        is Js.VariableDeclaration -> when (declarations.size) {
+            1 -> declarations.first().id.simpleId()
+            else -> null
+        }
+    }
+}
+
+/** Returns null if this isn't a simple, single id. */
+internal fun Js.Expression.simpleId(): Js.Identifier? {
+    return this as? Js.Identifier
+}
+
+/** Returns null if this isn't a simple, single id. */
+internal fun Js.Pattern.simpleId(): Js.Identifier? {
+    return when (this) {
+        is Js.Identifier -> this
+        else -> null
+    }
+}
+
+private fun buildPublicFace(pos: Position, exporteds: List<Js.Identifier>, internalOutPath: FilePath) = Js.Program(
+    pos,
+    listOf(
+        Js.ExportNamedDeclaration(
+            pos,
+            doc = Js.MaybeJsDocComment(pos, null),
+            declaration = null,
+            specifiers = exporteds.map { Js.ExportSpecifier(pos, it.deepCopy(), it.deepCopy()) },
+            source = Js.StringLiteral(pos, "./${internalOutPath.last().fullName}"),
+        ),
+    ),
 )
