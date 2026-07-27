@@ -45,6 +45,7 @@ import lang.temper.log.spanningPosition
 import lang.temper.name.BuiltinName
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ExportedName
+import lang.temper.name.ModularName
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedName
 import lang.temper.name.ResolvedParsedName
@@ -970,25 +971,27 @@ internal class JsTranslator(
             // TODO(mikesamuel): translateEnumType
             TmpL.TypeDeclarationKind.Enum -> translateTypeDeclaration(d, nameText)
         }
-        // Export all core top-levels from internal.
-        val topLevelsWithExport = topLevels.toMutableList()
-        val toExport = topLevelsWithExport[mainDeclIndex] as Js.Declaration
-        val toExportId = toExport.simpleId()
-        if (d.name.name is ExportedName) {
-            // But track those which are actually exported for the public module.
-            exportedIds.add(toExportId!!)
-        }
-        if (dependencyMode == DependencyCategory.Production) {
+        // Export all prod top-levels from internal.
+        return if (dependencyMode == DependencyCategory.Production) {
+            val topLevelsWithExport = topLevels.toMutableList()
+            val toExport = topLevelsWithExport[mainDeclIndex] as Js.Declaration
+            val toExportId = toExport.simpleId()
+            if (d.name.name is ExportedName) {
+                // But track those which are actually exported for the public module.
+                exportedIds.add(toExportId!!)
+            }
             prodTopIds.add(d.name.name)
+            topLevelsWithExport[mainDeclIndex] = Js.ExportNamedDeclaration(
+                pos = toExport.pos,
+                doc = Js.MaybeJsDocComment(toExport.pos.leftEdge, doc = null),
+                declaration = toExport,
+                specifiers = emptyList(),
+                source = null,
+            )
+            topLevelsWithExport.toList()
+        } else {
+            topLevels
         }
-        topLevelsWithExport[mainDeclIndex] = Js.ExportNamedDeclaration(
-            pos = toExport.pos,
-            doc = Js.MaybeJsDocComment(toExport.pos.leftEdge, doc = null),
-            declaration = toExport,
-            specifiers = emptyList(),
-            source = null,
-        )
-        return topLevelsWithExport.toList()
     }
 
     private fun makeClassBuilder(
@@ -1431,25 +1434,33 @@ internal class JsTranslator(
         originalName: TmpL.Id,
     ): Js.TopLevel {
         val name = originalName.name
-        val id = declaration.simpleId() ?: return declaration
-        // Old comment: Store so that we can link imports to exports later.
-        // TODO Is sourceIdentifier really still in use?
-        id.sourceIdentifier = name
-        if (name is ExportedName && name.comesFrom(jsNames.origin)) {
-            // Only some are exported from the public module.
-            exportedIds.add(id)
-        }
-        if (dependencyMode == DependencyCategory.Production) {
+        val id = declaration.simpleId()
+        return if (
+            id != null
+            && dependencyMode == DependencyCategory.Production
+            && name is ModularName
+            && name.comesFrom(jsNames.origin)
+        ) {
+            // TODO Is sourceIdentifier really still in use?
+            id.sourceIdentifier = name // Store so that we can link imports to exports later.
+            if (name is ExportedName && name.comesFrom(jsNames.origin)) {
+                // Only some are exported from the public module.
+                exportedIds.add(id)
+            }
             prodTopIds.add(name)
+            // But internal exports all.
+            Js.ExportNamedDeclaration(
+                declaration.pos,
+                doc = doc,
+                declaration = declaration,
+                specifiers = emptyList(),
+                source = null,
+            )
+        } else if (doc.doc != null) {
+            Js.DocumentedDeclaration(declaration.pos, doc.doc!!, declaration)
+        } else {
+            declaration
         }
-        // But internal exports all.
-        return Js.ExportNamedDeclaration(
-            declaration.pos,
-            doc = doc,
-            declaration = declaration,
-            specifiers = emptyList(),
-            source = null,
-        )
     }
 
     private fun translateBoilerplateCodeFoldBoundary(t: TmpL.BoilerplateCodeFoldBoundary): Js.CommentLine {

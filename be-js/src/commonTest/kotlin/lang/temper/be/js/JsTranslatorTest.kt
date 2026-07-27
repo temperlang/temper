@@ -31,44 +31,75 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
 
     companion object {
         private val testNameToExpectedCode = mapOf(
-            "moduleMinimal" to "",
+            "moduleMinimal" to """
+                |
+                |export {} from "./implement.internal.js";
+            """.trimMargin(),
             "moduleWithImport" to
                 """
                     |import {
                     |  frobnicate as frobnicate_0, lunarWayneshaft as lunarWayneshaft_1
                     |} from "./other.js";
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "moduleWithTopLevel" to
                 """
                     |/** @type {string} */
-                    |const exampleName_0 = "example assigned value";
+                    |export const exampleName_0 = "example assigned value";
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
-            "moduleWithResult" to """export default "example module result";""",
-            "importNoLocalName" to "",
+            "moduleWithResult" to """
+                |export default "example module result";
+                |
+                |export {} from "./implement.internal.js";
+            """.trimMargin(),
+            "importNoLocalName" to """
+                |
+                |export {} from "./implement.internal.js";
+            """.trimMargin(),
             "importOne" to
                 """
                     |import {
                     |  pi as pi_0
                     |} from "./other.js";
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "importThree" to
                 """
                     |import {
                     |  math as math_0, pieCharts as pieCharts_1, magic as magic_2
                     |} from "./other.js";
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
-            "expressionStatement" to "42;",
-            "assignmentToValue" to """maybeValue_0 = false;""",
+            "expressionStatement" to
+                """
+                    |42;
+                    |
+                    |export {} from "./implement.internal.js";
+                """.trimMargin(),
+            "assignmentToValue" to """
+                |maybeValue_0 = false;
+                |
+                |export {} from "./implement.internal.js";
+            """.trimMargin(),
             "blockStatementEmpty" to
                 """
                     |if (true) {
                     |}
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "blockStatementOne" to
                 """
                     |if (true) {
                     |  doThing_0("one");
                     |}
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "blockStatementThree" to
                 """
@@ -77,6 +108,8 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     |  doThing_0("two");
                     |  doThing_0("three");
                     |}
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "blockStatementBreaking" to
                 """
@@ -86,6 +119,8 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     |  break label_0;
                     |  doThing_1("three");
                     |}
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "whileReturnEarly" to
                 """
@@ -102,6 +137,8 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     |  afterLoop_6();
                     |  return 42;
                     |}
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "whileReturnEarlySimple" to
                 """
@@ -113,6 +150,8 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     |  }
                     |  return 42;
                     |}
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "whileBreakEarly" to
                 """
@@ -129,6 +168,8 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     |  afterLoop_6();
                     |  return 42;
                     |}
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "whileBreakEarlySimple" to
                 """
@@ -140,6 +181,8 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     |  }
                     |  return 42;
                     |}
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "whileBreakNested" to
                 """
@@ -160,6 +203,8 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     |  afterOuter_10();
                     |  return 42;
                     |}
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "whileBreakNestedSimple" to
                 """
@@ -173,6 +218,8 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     |  }
                     |  return 42;
                     |}
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "whileContinueSkip" to
                 """
@@ -189,6 +236,8 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     |  afterLoop_6();
                     |  return 42;
                     |}
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "whileContinueSkipSimple" to
                 """
@@ -200,6 +249,8 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     |  }
                     |  return 42;
                     |}
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "whileContinueNested" to
                 """
@@ -220,6 +271,8 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     |  afterOuter_10();
                     |  return 42;
                     |}
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "whileContinueNestedSimple" to
                 """
@@ -233,6 +286,8 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     |  }
                     |  return 42;
                     |}
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "whileNestedBreakContinue" to
                 """
@@ -249,6 +304,8 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     |  }
                     |  return 42;
                     |}
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "exprStatementHse" to
                 """failed_0 = false, "dummy" ||(failed_0 = true, null);""",
@@ -261,7 +318,7 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     |import {
                     |  type as type__9
                     |} from "@temperlang/core";
-                    |class Thing_0 extends type__9() {
+                    |export class Thing_0 extends type__9() {
                     |  /** @param {string} blah_1 */
                     |  constructor(blah_1) {
                     |    super ();
@@ -281,7 +338,9 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     |  }
                     |  /** @type {string} */
                     |  #propName_8;
-                    |}
+                    |};
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "exportedFun" to
                 """
@@ -298,6 +357,10 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     |  return_2 = optionalArg_1;
                     |  return return_2;
                     |};
+                    |
+                    |export {
+                    |  funName
+                    |} from "./implement.internal.js";
                 """.trimMargin(),
             "funLambdaArgs" to
                 """
@@ -308,8 +371,10 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     | * @param {(arg0: string, arg1: string) => X_4} gamma_3
                     | * @returns {string}
                     | */
-                    |function function_0(alpha_1, beta_2, gamma_3) {
-                    |}
+                    |export function function_0(alpha_1, beta_2, gamma_3) {
+                    |};
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "trailingRequiredArgs" to
                 """
@@ -319,14 +384,16 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     | * @param {number} gamma_3
                     | * @returns {number}
                     | */
-                    |function function_0(alpha_1, beta_2, gamma_3) {
+                    |export function function_0(alpha_1, beta_2, gamma_3) {
                     |  let return_4;
                     |  if (true) {
                     |    beta_2 = 77;
                     |  }
                     |  return_4 = alpha_1 + beta_2 + gamma_3;
                     |  return return_4;
-                    |}
+                    |};
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
             "simpleGenerator" to
                 """
@@ -334,10 +401,12 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     |  adaptAwaiter as adaptAwaiter__2
                     |} from "@temperlang/core";
                     |/** @returns {Generator<{}>} */
-                    |const simpleGenerator_0 = adaptAwaiter__2(function* simpleGenerator_0(await_1) {
+                    |export const simpleGenerator_0 = adaptAwaiter__2(function* simpleGenerator_0(await_1) {
                     |    yield null;
                     |    return empty_3;
                     |});
+                    |
+                    |export {} from "./implement.internal.js";
                 """.trimMargin(),
         )
     }

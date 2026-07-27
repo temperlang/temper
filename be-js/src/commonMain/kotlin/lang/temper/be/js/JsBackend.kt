@@ -38,6 +38,7 @@ import lang.temper.log.SameDirPseudoFilePathSegment
 import lang.temper.log.UNIX_FILE_SEGMENT_SEPARATOR
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
+import lang.temper.log.last
 import lang.temper.log.unknownPos
 import lang.temper.name.BackendId
 import lang.temper.name.BackendMeta
@@ -278,9 +279,15 @@ class JsBackend private constructor(
                 it.dependencyCategory == DependencyCategory.Production
             }
             val exports = mutableMapOf<String, FilePath>()
-            // Export all modules.
-            for (translation in exportingTranslations) {
-                exports[translation.outPath.exportPath()] = translation.outPath
+            // Export all public modules.
+            translations@ for (translation in exportingTranslations) {
+                val outPath = translation.outPath
+                val outName = outPath.last().fullName
+                // Skip internal modules.
+                outName.endsWith(INTERNAL_EXTENSION) && continue@translations
+                outName.startsWith("_") && continue@translations
+                // Export others without js extension.
+                exports[outPath.exportPath()] = outPath
             }
             // Also a main to init everything, and just call it "index.js".
             // It's responsible for loading the submodules and re-exporting
@@ -350,11 +357,7 @@ class JsBackend private constructor(
                                     val updatedSpecifiers = imported.specifiers.flatMap { specifier ->
                                         with(specifier.local.name.text) {
                                             when {
-                                                startsWith("test_") -> {
-                                                    itName = DeclarationInfo(specifier.pos, specifier.local)
-                                                    listOf()
-                                                }
-
+                                                startsWith("test_") -> listOf()
                                                 else -> listOf(specifier)
                                             }
                                         }
@@ -533,10 +536,6 @@ internal fun walkDepthFirst(t: Js.Tree, action: (Js.Tree) -> VisitCue): VisitCue
     }
     return VisitCue.Continue
 }
-
-/** An ES-modules file-like module path is one that starts with "/", "./", "../". */
-private val relativeModulePathStarts =
-    setOf(SameDirPseudoFilePathSegment, ParentPseudoFilePathSegment)
 
 private data class JsDependency(
     val name: String,
