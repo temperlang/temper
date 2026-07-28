@@ -226,14 +226,16 @@ internal class JsTranslator(
         // Also import from prod to test. Technically could be empty, but meh.
         val publicOutPath = t.codeLocation.outputPath
         val internalOutPath = publicOutPath.withExtension(JsBackend.INTERNAL_EXTENSION)!!
-        Js.ImportDeclaration(
-            t.pos,
-            importsFromProdToTest.map { idName ->
-                val id = Js.Identifier(t.pos, idName, sourceIdentifier = null)
-                Js.ImportSpecifier(t.pos, id, id.deepCopy())
-            }.let { listOf(Js.ImportSpecifiers(t.pos, it)) },
-            Js.StringLiteral(t.pos, "../${internalOutPath.segments.last()}"),
-        ).also { testModuleParts.explicitImports.add(it) }
+        if (importsFromProdToTest.isNotEmpty()) {
+            Js.ImportDeclaration(
+                t.pos,
+                importsFromProdToTest.map { idName ->
+                    val id = Js.Identifier(t.pos, idName, sourceIdentifier = null)
+                    Js.ImportSpecifier(t.pos, id, id.deepCopy())
+                }.let { listOf(Js.ImportSpecifiers(t.pos, it)) },
+                Js.StringLiteral(t.pos, "../${internalOutPath.segments.last()}"),
+            ).also { testModuleParts.explicitImports.add(it) }
+        }
 
         val result = t.result
         if (result != null) {
@@ -1441,8 +1443,7 @@ internal class JsTranslator(
             && name is ModularName
             && name.comesFrom(jsNames.origin)
         ) {
-            // TODO Is sourceIdentifier really still in use?
-            id.sourceIdentifier = name // Store so that we can link imports to exports later.
+            id.sourceIdentifier = name // Provide the source name for source maps.
             if (name is ExportedName && name.comesFrom(jsNames.origin)) {
                 // Only some are exported from the public module.
                 exportedIds.add(id)

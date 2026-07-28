@@ -43,7 +43,6 @@ import lang.temper.log.unknownPos
 import lang.temper.name.BackendId
 import lang.temper.name.BackendMeta
 import lang.temper.name.DashedIdentifier
-import lang.temper.name.ExportedName
 import lang.temper.name.FileType
 import lang.temper.name.LanguageLabel
 import lang.temper.name.Symbol
@@ -324,85 +323,9 @@ class JsBackend private constructor(
     }
 
     private fun prepareTesting(program: Js.Program, stdTestingRelativePath: String?) {
-        // If we have a relative path to std/testing, it must be because we're not using the standard name.
-        // So default to the optional relative path.
-        // TODO Once we standardize imports for funtests, always just use the global name.
-        val stdTestingPrefix = stdTestingRelativePath ?: run {
-            val std = libraryConfigurations.byLibraryName.getValue(DashedIdentifier.temperStandardLibraryIdentifier)
-            "${std.jsLibraryName()}/$TESTING_BASENAME"
-        }
         this.jsDependencies = this.jsDependencies
             .withTestDependency(JsDependency("mocha", "^10.0.0", null))
             .withTestDependency(JsDependency("mocha-junit-reporter", "^2.0.2", null))
-        // The overall goal is to find code that imports from the std/testing lib, move them to the test
-        // directory and convert the import to something like
-        // const test_17 = it;
-        // import assert  from 'assert';
-        // const assert_35 = assert;
-        // The mixed import style is apparently required.
-        data class DeclarationInfo(val pos: Position, val name: Js.Identifier)
-        program.topLevel = program.topLevel.flatMap { topLevel ->
-            var itName: DeclarationInfo? = null
-            when (topLevel) {
-                is Js.ImportDeclaration ->
-                    // use the prefix to abstract over .temper.md and .md
-                    if (topLevel.source.value.startsWith(stdTestingPrefix)) {
-                        topLevel.specifiers = topLevel.specifiers.flatMap { imported: Js.Imported ->
-                            when (imported) {
-                                is Js.ImportDefaultSpecifier ->
-                                    listOf(imported)
-
-                                is Js.ImportNamespaceSpecifier -> listOf(imported)
-                                is Js.ImportSpecifiers -> {
-                                    val updatedSpecifiers = imported.specifiers.flatMap { specifier ->
-                                        with(specifier.local.name.text) {
-                                            when {
-                                                startsWith("test_") -> listOf()
-                                                else -> listOf(specifier)
-                                            }
-                                        }
-                                    }
-                                    if (updatedSpecifiers.isEmpty()) {
-                                        emptyList()
-                                    } else {
-                                        imported.specifiers = updatedSpecifiers
-                                        listOf(imported)
-                                    }
-                                }
-                            }
-                        }
-                        // Need this to enable the smart cast since otherwise you have a var in a closure
-                        val itInfo = itName
-                        val itTopLevels: List<Js.TopLevel> = if (itInfo != null) {
-                            listOf(
-                                Js.VariableDeclaration(
-                                    itInfo.pos,
-                                    listOf(
-                                        Js.VariableDeclarator(
-                                            itInfo.pos,
-                                            itInfo.name,
-                                            init = Js.Identifier(
-                                                itInfo.pos,
-                                                JsIdentifierName("it"),
-                                                null,
-                                            ),
-                                        ),
-                                    ),
-                                    Js.DeclarationKind.Const,
-                                ),
-                            )
-                        } else {
-                            emptyList()
-                        }
-                        itTopLevels +
-                            if (topLevel.specifiers.isNotEmpty()) listOf(topLevel) else emptyList()
-                    } else {
-                        listOf(topLevel)
-                    }
-
-                else -> listOf(topLevel)
-            }
-        }
     }
 
     override val supportNetwork: SupportNetwork get() = JsSupportNetwork
@@ -587,58 +510,6 @@ private fun loadTemperCorePackageJson(): JsonObject {
 
 /** convention of mocha that all tests are in the test directory */
 internal val testDir = dirPath("test")
-
-private fun findDeclaredNames(
-    topLevel: Js.TopLevel,
-    exportedNames: MutableMap<ExportedName, Pair<FilePath, JsIdentifierName>>,
-    textFile: FilePath,
-): List<JsIdentifierName> = when (topLevel) {
-    is Js.FunctionDeclaration -> listOf(topLevel.id.name)
-    is Js.ClassDeclaration -> listOf(topLevel.id.name)
-    is Js.VariableDeclaration -> {
-        val ids = mutableListOf<JsIdentifierName>()
-        topLevel.declarations.forEach { declaredInPattern(it.id, ids) }
-        ids.toList()
-    }
-
-    is Js.DocumentedDeclaration -> findDeclaredNames(topLevel.decl, exportedNames, textFile)
-
-    is Js.Statement -> emptyList()
-    is Js.ImportDeclaration ->
-        topLevel.specifiers.flatMap { imported ->
-            when (imported) {
-                is Js.ImportSpecifiers -> imported.specifiers.map { it.local.name }
-                is Js.ImportDefaultSpecifier -> emptyList()
-                is Js.ImportNamespaceSpecifier -> emptyList()
-            }
-        }
-
-    is Js.ExportNamedDeclaration -> {
-        val id = when (val declaration = topLevel.declaration) {
-            is Js.ClassDeclaration -> declaration.id
-            is Js.ExceptionDeclaration -> null
-            is Js.FunctionDeclaration -> declaration.id
-            is Js.VariableDeclaration -> declaration.declarations.first().id as? Js.Identifier
-            null -> null
-        }
-        val sourceId = id?.sourceIdentifier
-        val exported = id?.name
-        if (exported == null) {
-            listOf()
-        } else if (sourceId is ExportedName) {
-            // TODO Conjure missing imports to these.
-            check(sourceId !in exportedNames)
-            exportedNames[sourceId] = textFile to exported
-            emptyList()
-        } else {
-            listOf(exported)
-        }
-    }
-
-    is Js.ExportDefaultDeclaration,
-    is Js.ExportAllDeclaration,
-    -> emptyList()
-}
 
 private fun FilePath.importReadyPath(): String =
     this.segments.importReadyPath(isDir = this.isDir)
