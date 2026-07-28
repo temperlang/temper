@@ -154,6 +154,7 @@ internal class JsTranslator(
         }
         module = t
 
+        precachePrettyTypeNames(t)
         // Build imports before topLevels, or else local import names get mismatched.
         val ungroupedImports = mutableListOf<Js.ImportDeclaration>()
         translateImports(t.imports, ungroupedImports)
@@ -296,6 +297,31 @@ internal class JsTranslator(
                     DependencyCategory.Test,
                 ).also { add(it) }
             }
+        }
+    }
+
+    /**
+     * TODO Once we avoid suffices more generally, maybe can remove this.
+     * TODO Our semi-standardized name handling (see java or py) also might can simplify some of this out.
+     */
+    private fun precachePrettyTypeNames(t: TmpL.Module) {
+        // Ensure that exporteds get priority access to pretty names.
+        val exporteds = buildSet {
+            t.topLevels.forEach topLevels@{ topLevel ->
+                topLevel is TmpL.Declaration || return@topLevels
+                val name = topLevel.name.name as? ExportedName ?: return@topLevels
+                add(name.baseName.nameText)
+            }
+        }
+        // Now cache pretty type names where we don't hit exporteds.
+        t.topLevels.forEach topLevels@{ topLevel ->
+            topLevel is TmpL.TypeDeclaration || return@topLevels
+            val name = topLevel.name.name
+            // Exported names are pretty anyway, so don't bother to rename to pretty.
+            name is ExportedName && return@topLevels
+            // And don't try to write over an actual exported.
+            name.prefix() in exporteds && return@topLevels
+            jsNames.jsNameNotThis(topLevel.name.name, cachePretty = true)
         }
     }
 

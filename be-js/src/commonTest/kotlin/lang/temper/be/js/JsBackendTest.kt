@@ -874,7 +874,7 @@ class JsBackendTest {
             |          import {
             |            type as type_0, requireInstanceOf as requireInstanceOf_0, marshalToJsonObject as marshalToJsonObject_0
             |          } from "@temperlang/core";
-            |          export class CJsonAdapter_0 extends type_0() {
+            |          export class CJsonAdapter extends type_0() {
             |            /**
             |             * @param {C} x_0
             |             * @param {JsonProducer_0} p_0
@@ -919,7 +919,7 @@ class JsBackendTest {
             |            }
             |            /** @returns {JsonAdapter_0<C>} */
             |            static jsonAdapter() {
-            |              return new CJsonAdapter_0();
+            |              return new CJsonAdapter();
             |            }
             |            /** @returns {unknown} */
             |            toJSON() {
