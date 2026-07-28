@@ -6,12 +6,10 @@ import lang.temper.be.BackendHelpTopicKey
 import lang.temper.be.BackendHelpTopicKeys
 import lang.temper.be.BackendSetup
 import lang.temper.be.tmpl.SupportNetwork
-import lang.temper.be.tmpl.TESTING_BASENAME
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
 import lang.temper.be.tmpl.findCommonTopLevels
 import lang.temper.be.tmpl.injectSuperCallMethods
-import lang.temper.be.tmpl.matchesStdTesting
 import lang.temper.common.MimeType
 import lang.temper.common.json.JsonObject
 import lang.temper.common.json.JsonString
@@ -33,7 +31,6 @@ import lang.temper.log.FilePath.Companion.join
 import lang.temper.log.FilePathSegment
 import lang.temper.log.FilePathSegmentOrPseudoSegment
 import lang.temper.log.ParentPseudoFilePathSegment
-import lang.temper.log.Position
 import lang.temper.log.SameDirPseudoFilePathSegment
 import lang.temper.log.UNIX_FILE_SEGMENT_SEPARATOR
 import lang.temper.log.dirPath
@@ -202,7 +199,6 @@ class JsBackend private constructor(
         val jsLibraryNames = libraryConfigurations.byLibraryName.mapValues { it.value.jsLibraryName() }
 
         // Prep for test identification.
-        var stdTestingPath: FilePath? = null
         val testPaths = mutableSetOf<FilePath>()
 
         val translations: List<Translation> =
@@ -217,18 +213,10 @@ class JsBackend private constructor(
                 )
                 translator.translate(tmpLModule)
             }
-        // Extract some info.
+        // Extract test paths.
         for (translation in translations) {
-            val codeLocation = translation.tmpLModule.codeLocation.codeLocation
-            when (translation.dependencyCategory) {
-                DependencyCategory.Production -> {
-                    if (matchesStdTesting(codeLocation, libraryConfigurations)) {
-                        stdTestingPath = translation.outPath
-                    }
-                }
-                DependencyCategory.Test -> {
-                    testPaths.add(translation.outPath)
-                }
+            if (translation.dependencyCategory == DependencyCategory.Test) {
+                testPaths.add(translation.outPath)
             }
         }
 
@@ -237,12 +225,9 @@ class JsBackend private constructor(
             val updatedTranslations = translations
                 .map translations@{ (outPath, program, tmpLModule) ->
                     if (outPath in testPaths) {
-                        // Functional tests still uses renamed std imports.
-                        // TODO Remove this if we standardize funtests to same imports as elsewhere.
-                        val stdTestingRelativePath = stdTestingPath?.let {
-                            outPath.relativePathTo(stdTestingPath).joinToString("/")
-                        }
-                        prepareTesting(program, stdTestingRelativePath)
+                        jsDependencies = jsDependencies
+                            .withTestDependency(JsDependency("mocha", "^10.0.0", null))
+                            .withTestDependency(JsDependency("mocha-junit-reporter", "^2.0.2", null))
                     }
 
                     val outFile = TranslatedFileSpecification(
@@ -320,12 +305,6 @@ class JsBackend private constructor(
         deps.addMetadata(from, JsMetadataKey.MainPath, mainFilePath)
 
         return allOutputFiles
-    }
-
-    private fun prepareTesting(program: Js.Program, stdTestingRelativePath: String?) {
-        this.jsDependencies = this.jsDependencies
-            .withTestDependency(JsDependency("mocha", "^10.0.0", null))
-            .withTestDependency(JsDependency("mocha-junit-reporter", "^2.0.2", null))
     }
 
     override val supportNetwork: SupportNetwork get() = JsSupportNetwork
@@ -466,6 +445,7 @@ private data class JsDependency(
     val temperLibraryName: DashedIdentifier?,
 )
 private data class JsDependencies(
+    // We'll associate these by name later, which will collapse any redundancies in the lists.
     val runtimeDependencies: List<JsDependency>,
     val testDependencies: List<JsDependency>,
 ) {
