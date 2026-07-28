@@ -316,28 +316,28 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
             "unexportedClass" to
                 """
                     |import {
-                    |  type as type__9
+                    |  type as type__8
                     |} from "@temperlang/core";
-                    |export class Thing_0 extends type__9() {
-                    |  /** @param {string} blah_1 */
-                    |  constructor(blah_1) {
+                    |export class Thing extends type__8() {
+                    |  /** @param {string} blah_0 */
+                    |  constructor(blah_0) {
                     |    super ();
                     |  }
                     |  /**
-                    |   * @param {string} requiredArg_3
-                    |   * @param {number | null} [optionalArg_4]
+                    |   * @param {string} requiredArg_2
+                    |   * @param {number | null} [optionalArg_3]
                     |   * @returns {number}
                     |   */
-                    |  funName(requiredArg_3, optionalArg_4) {
-                    |    let return_5;
+                    |  funName(requiredArg_2, optionalArg_3) {
+                    |    let return_4;
                     |    if (true) {
-                    |      optionalArg_4 = 1;
+                    |      optionalArg_3 = 1;
                     |    }
-                    |    return_5 = optionalArg_4;
-                    |    return return_5;
+                    |    return_4 = optionalArg_3;
+                    |    return return_4;
                     |  }
                     |  /** @type {string} */
-                    |  #propName_8;
+                    |  #propName_7;
                     |};
                     |
                     |export {} from "./implement.internal.js";
