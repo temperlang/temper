@@ -214,7 +214,7 @@ internal class JsTranslator(
                 t.pos,
                 specifiers = Js.ImportNamespaceSpecifier(
                     t.pos,
-                    Js.Identifier(t.pos, connectedName, null)
+                    Js.Identifier(t.pos, connectedName, null),
                 ).let { listOf(it) },
                 source = Js.StringLiteral(t.pos, "./_connected.js"),
             ).also { prodModuleParts.explicitImports.add(it) }
@@ -1478,10 +1478,10 @@ internal class JsTranslator(
         val name = originalName.name
         val id = declaration.simpleId()
         return if (
-            id != null
-            && dependencyMode == DependencyCategory.Production
-            && name is ModularName
-            && name.comesFrom(jsNames.origin)
+            id != null &&
+            dependencyMode == DependencyCategory.Production &&
+            name is ModularName &&
+            name.comesFrom(jsNames.origin)
         ) {
             id.sourceIdentifier = name // Provide the source name for source maps.
             if (name is ExportedName && name.comesFrom(jsNames.origin)) {
@@ -1571,8 +1571,8 @@ internal class JsTranslator(
                 body = d.body?.let { block ->
                     when (d) {
                         is TmpL.FunctionDeclaration
-                            if d.metadata.any { it.key.symbol == connectedSymbol } && !module!!.isStdLib
-                            -> translateConnectedBody(d, params)
+                        if d.metadata.any { it.key.symbol == connectedSymbol } && !module!!.isStdLib
+                        -> translateConnectedBody(d, params)
                         else -> {
                             // Sometimes pureVirtual methods come out like `myVirtualMethod() { return_1 = null; }`,
                             // which is invalid in strict mode (return_1 is never declared).
