@@ -13,8 +13,10 @@ import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.findDeclaration
 import lang.temper.be.tmpl.implicitTypeTag
+import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapGeneric
+import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.toTmpL
 import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.be.tmpl.withoutBubbleOrNull
@@ -76,6 +78,7 @@ import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.TVoid
+import lang.temper.value.connectedSymbol
 import kotlin.io.path.Path
 
 private const val DEBUG = false
@@ -137,18 +140,19 @@ internal class JsTranslator(
         defaultGenre
     }
 
-    private var libraryName: DashedIdentifier? = null
+    private var module: TmpL.Module? = null
 
     private val importedIds = mutableListOf<JsIdentifierName>()
     private val exportedIds = mutableListOf<Js.Identifier>()
     private val importsFromProdToTest = mutableSetOf<JsIdentifierName>()
     private val prodTopIds = mutableSetOf<ResolvedName>()
+    private var hasConnected = false
 
     fun translate(t: TmpL.Module): List<Translation> = jsNames.forOrigin(t.codeLocation.origin) {
         debug {
             console.log("$t")
         }
-        libraryName = t.libraryName
+        module = t
 
         // Build imports before topLevels, or else local import names get mismatched.
         val ungroupedImports = mutableListOf<Js.ImportDeclaration>()
@@ -204,6 +208,16 @@ internal class JsTranslator(
             }
         val prodImports = filterImports(prodModuleParts.topLevels, imports)
         prodModuleParts.explicitImports.addAll(prodImports)
+        if (hasConnected) {
+            Js.ImportDeclaration(
+                t.pos,
+                specifiers = Js.ImportNamespaceSpecifier(
+                    t.pos,
+                    Js.Identifier(t.pos, connectedName, null)
+                ).let { listOf(it) },
+                source = Js.StringLiteral(t.pos, "./_connected.js"),
+            ).also { prodModuleParts.explicitImports.add(it) }
+        }
 
         // Copy imports to test module as needed, with relative paths adjusted.
         val hasTests = t.moduleMetadata.dependencyCategory == DependencyCategory.Test
@@ -229,11 +243,11 @@ internal class JsTranslator(
         if (importsFromProdToTest.isNotEmpty()) {
             Js.ImportDeclaration(
                 t.pos,
-                importsFromProdToTest.map { idName ->
+                specifiers = importsFromProdToTest.map { idName ->
                     val id = Js.Identifier(t.pos, idName, sourceIdentifier = null)
                     Js.ImportSpecifier(t.pos, id, id.deepCopy())
                 }.let { listOf(Js.ImportSpecifiers(t.pos, it)) },
-                Js.StringLiteral(t.pos, "../${internalOutPath.segments.last()}"),
+                source = Js.StringLiteral(t.pos, "../${internalOutPath.segments.last()}"),
             ).also { testModuleParts.explicitImports.add(it) }
         }
 
@@ -1344,7 +1358,7 @@ internal class JsTranslator(
     }
 
     private fun translateTest(t: TmpL.Test): Js.TopLevel {
-        dependenciesBuilder?.addTest(libraryName, t)
+        dependenciesBuilder?.addTest(module!!.libraryName, t)
         val testName = Js.StringLiteral(t.name.pos, t.rawName)
         // it("test name", function expression);
         return Js.ExpressionStatement(
@@ -1505,70 +1519,77 @@ internal class JsTranslator(
 
         val (fd, maskedThis) = jsNames.withLocalNameForThis(d.parameters.thisName?.name) {
             val leftPos = d.pos.leftEdge
+            val params = buildList {
+                if (generatorNameAllocated != null) {
+                    add(Js.Param(leftPos, Js.Identifier(leftPos, generatorNameAllocated, null)))
+                }
+                d.parameters.parameters.mapNotNullTo(this) { formal ->
+                    // do not translate `this` params
+                    (translateId(formal.name, useThisStack = true) as? Js.Identifier)?.let { identifier ->
+                        Js.Param(formal.pos, identifier)
+                    }
+                }
+                d.parameters.restParameter?.let { restFormal ->
+                    add(
+                        Js.Param(
+                            restFormal.pos,
+                            Js.RestElement(restFormal.pos, translateIdStrict(restFormal.name)),
+                        ),
+                    )
+                }
+            }
             JsFnParts(
                 pos = d.pos,
                 id = name.deepCopy(),
-                params = Js.Formals(
-                    d.parameters.pos,
-                    buildList {
-                        if (generatorNameAllocated != null) {
-                            add(Js.Param(leftPos, Js.Identifier(leftPos, generatorNameAllocated, null)))
-                        }
-                        d.parameters.parameters.mapNotNullTo(this) { formal ->
-                            // do not translate `this` params
-                            (translateId(formal.name, useThisStack = true) as? Js.Identifier)?.let { identifier ->
-                                Js.Param(formal.pos, identifier)
-                            }
-                        }
-                        d.parameters.restParameter?.let { restFormal ->
-                            add(
-                                Js.Param(
-                                    restFormal.pos,
-                                    Js.RestElement(restFormal.pos, translateIdStrict(restFormal.name)),
-                                ),
-                            )
-                        }
-                    },
-                ),
+                params = Js.Formals(d.parameters.pos, params),
                 body = d.body?.let { block ->
-                    // Sometimes pureVirtual methods come out like `myVirtualMethod() { return_1 = null; }`,
-                    // which is invalid in strict mode (return_1 is never declared).
-                    // So this finds those and makes it run the block below,
-                    if (block.statements.size == 1) {
-                        when (val first = block.statements.firstOrNull()) {
-                            is TmpL.Assignment -> when (val maybeReturn = first.left.name) {
-                                is SourceName -> if (maybeReturn.baseName.nameText == "return") {
-                                    return@let null
+                    when (d) {
+                        is TmpL.FunctionDeclaration
+                            if d.metadata.any { it.key.symbol == connectedSymbol } && !module!!.isStdLib
+                            -> translateConnectedBody(d, params)
+                        else -> {
+                            // Sometimes pureVirtual methods come out like `myVirtualMethod() { return_1 = null; }`,
+                            // which is invalid in strict mode (return_1 is never declared).
+                            // So this finds those and makes it run the block below,
+                            if (block.statements.size == 1) {
+                                when (val first = block.statements.firstOrNull()) {
+                                    is TmpL.Assignment -> when (val maybeReturn = first.left.name) {
+                                        is SourceName -> if (maybeReturn.baseName.nameText == "return") {
+                                            return@let null
+                                        }
+
+                                        else -> {}
+                                    }
+
+                                    else -> {}
                                 }
-                                else -> {}
                             }
-                            else -> {}
+
+                            val body = translateBlockStatement(block, prefix = buildNullDefaults(d.parameters))
+
+                            if (d is TmpL.Constructor) {
+                                Js.BlockStatement(
+                                    d.pos,
+                                    buildList {
+                                        add(
+                                            Js.ExpressionStatement(
+                                                d.pos,
+                                                Js.CallExpression(
+                                                    d.pos,
+                                                    Js.Super(d.pos),
+                                                    listOf(),
+                                                ),
+                                            ),
+                                        )
+                                        addAll(
+                                            body.body.map { it.deepCopy() },
+                                        )
+                                    },
+                                )
+                            } else {
+                                body
+                            }
                         }
-                    }
-
-                    val body = translateBlockStatement(block, prefix = buildNullDefaults(d.parameters))
-
-                    if (d is TmpL.Constructor) {
-                        Js.BlockStatement(
-                            d.pos,
-                            buildList {
-                                add(
-                                    Js.ExpressionStatement(
-                                        d.pos,
-                                        Js.CallExpression(
-                                            d.pos,
-                                            Js.Super(d.pos),
-                                            listOf(),
-                                        ),
-                                    ),
-                                )
-                                addAll(
-                                    body.body.map { it.deepCopy() },
-                                )
-                            },
-                        )
-                    } else {
-                        body
                     }
                 } ?: return@withLocalNameForThis null,
                 mayYield = d.mayYield,
@@ -1641,6 +1662,47 @@ internal class JsTranslator(
                 kind = Js.DeclarationKind.Const,
             )
         }
+    }
+
+    private fun translateConnectedBody(
+        d: TmpL.FunctionDeclaration,
+        params: List<Js.Param>,
+    ): Js.BlockStatement {
+        hasConnected = true
+        val pos = d.pos
+        val defaulting = d.parameterDefaultStatementsInfo()
+        return buildList {
+            for (statement in defaulting.defaultStatements) {
+                addAll(translateStatement(statement))
+            }
+            Js.CallExpression(
+                pos,
+                callee = Js.MemberExpression(
+                    pos,
+                    obj = Js.Identifier(pos, connectedName, null),
+                    property = when (val name = d.name.name) {
+                        is ResolvedParsedName -> JsIdentifierName.escaped(name.baseName.nameText)
+                        else -> jsNames.jsNameNotThis(name)
+                    }.let { Js.Identifier(pos, it, d.name.name) },
+                ),
+                arguments = buildList {
+                    for ((tmpl, java) in d.parameters.parameters.zip(params)) {
+                        when {
+                            tmpl.optional -> {
+                                val defaultedName = defaulting.parameterMapping.getValue(tmpl.name.name)
+                                Js.Identifier(pos, jsNames.jsNameNotThis(defaultedName), tmpl.name.name)
+                            }
+                            else -> (java.pattern as? Js.Identifier)?.deepCopy()
+                        }?.also { add(it) }
+                    }
+                },
+            ).let { call ->
+                when {
+                    d.returnType.isVoid -> Js.ExpressionStatement(pos, call)
+                    else -> Js.ReturnStatement(pos, call)
+                }
+            }.also { add(it) }
+        }.let { Js.BlockStatement(pos, it) }
     }
 
     private fun buildNullDefaults(parameters: TmpL.Parameters): List<Js.Statement> = buildList {
@@ -2494,3 +2556,5 @@ private fun buildPublicFace(pos: Position, exporteds: List<Js.Identifier>, inter
         ),
     ),
 )
+
+internal val connectedName = JsIdentifierName("_connected")

@@ -16,6 +16,7 @@ import lang.temper.common.json.JsonString
 import lang.temper.common.json.JsonValueBuilder
 import lang.temper.common.structure.PropertySink
 import lang.temper.common.structure.StructureParser
+import lang.temper.common.subListToEnd
 import lang.temper.format.TokenSink
 import lang.temper.fs.declareResources
 import lang.temper.fs.loadResource
@@ -219,6 +220,14 @@ class JsBackend private constructor(
                 testPaths.add(translation.outPath)
             }
         }
+        // Connected files.
+        val connectedFiles = rawBackendFiles.map { file ->
+            MetadataFileSpecification(
+                path = FilePath(file.key.segments.subListToEnd(1), isDir = false),
+                mimeType = MimeType.javascript,
+                content = file.value,
+            )
+        }
 
         val allOutputFiles = if (config.makeMetaDataFile) {
             val dependencyNames = mutableSetOf<DashedIdentifier>()
@@ -278,18 +287,22 @@ class JsBackend private constructor(
             // the interface of any top-level module.
             exports["."] = mainFilePath
 
-            buildList<OutputFileSpecification> {
+            buildList {
                 addAll(updatedTranslations)
+                addAll(connectedFiles)
                 add(generateMainJsForFileModules(mainFilePath, exportingTranslations))
                 add(generatePackageJson(exports = exports))
             }
         } else {
-            translations.map translations@{ (outPath, program) ->
-                TranslatedFileSpecification(
-                    outPath,
-                    MimeType.javascript,
-                    program,
-                )
+            buildList {
+                for ((outPath, program) in translations) {
+                    TranslatedFileSpecification(
+                        outPath,
+                        MimeType.javascript,
+                        program,
+                    ).also { add(it) }
+                }
+                addAll(connectedFiles)
             }
         }
 
