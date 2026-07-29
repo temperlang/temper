@@ -240,7 +240,10 @@ internal class JsTranslator(
 
         // Also import from prod to test. Technically could be empty, but meh.
         val publicOutPath = t.codeLocation.outputPath
-        val internalOutPath = publicOutPath.withExtension(JsBackend.INTERNAL_EXTENSION)!!
+        val internalOutPath = when (genreTranslating) {
+            Genre.Library -> publicOutPath.withExtension(JsBackend.INTERNAL_EXTENSION)!!
+            Genre.Documentation -> publicOutPath
+        }
         if (importsFromProdToTest.isNotEmpty()) {
             Js.ImportDeclaration(
                 t.pos,
@@ -281,13 +284,15 @@ internal class JsTranslator(
                     t,
                     DependencyCategory.Production,
                 ).also { add(it) }
-                // Public face with just the actual exports. Add it even if no exports.
-                Translation(
-                    publicOutPath,
-                    buildPublicFace(t.pos, exportedIds, internalOutPath),
-                    t,
-                    DependencyCategory.Production,
-                ).also { add(it) }
+                if (genreTranslating == Genre.Library) {
+                    // Public face with just the actual exports. Add it even if no exports.
+                    Translation(
+                        publicOutPath,
+                        buildPublicFace(t.pos, exportedIds, internalOutPath),
+                        t,
+                        DependencyCategory.Production,
+                    ).also { add(it) }
+                }
             }
             if (hasTests) {
                 Translation(
@@ -1014,7 +1019,11 @@ internal class JsTranslator(
             TmpL.TypeDeclarationKind.Enum -> translateTypeDeclaration(d, nameText)
         }
         // Export all prod top-levels from internal.
-        return if (dependencyMode == DependencyCategory.Production) {
+        val exported = when (genreTranslating) {
+            Genre.Library -> dependencyMode == DependencyCategory.Production
+            Genre.Documentation -> d.name.name is ExportedName
+        }
+        return if (exported) {
             val topLevelsWithExport = topLevels.toMutableList()
             val toExport = topLevelsWithExport[mainDeclIndex] as Js.Declaration
             val toExportId = toExport.simpleId()
@@ -1477,12 +1486,11 @@ internal class JsTranslator(
     ): Js.TopLevel {
         val name = originalName.name
         val id = declaration.simpleId()
-        return if (
-            id != null &&
-            dependencyMode == DependencyCategory.Production &&
-            name is ModularName &&
-            name.comesFrom(jsNames.origin)
-        ) {
+        val exported = id != null && name is ModularName && when (genreTranslating) {
+            Genre.Library -> dependencyMode == DependencyCategory.Production
+            Genre.Documentation -> name is ExportedName
+        } && name.comesFrom(jsNames.origin)
+        return if (exported) {
             id.sourceIdentifier = name // Provide the source name for source maps.
             if (name is ExportedName && name.comesFrom(jsNames.origin)) {
                 // Only some are exported from the public module.
