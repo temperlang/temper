@@ -109,6 +109,7 @@ abstract class Backend<SELF : Backend<SELF>>(
      */
     val dependenciesBuilder: Dependencies.Builder<SELF>,
     val rawBackendFiles: Map<FilePath, String> = mapOf(),
+    val adjuster: BackendAdjuster? = null,
 ) {
     constructor(backendId: BackendId, setup: BackendSetup<SELF>) : this(
         backendId = backendId,
@@ -121,6 +122,7 @@ abstract class Backend<SELF : Backend<SELF>>(
         config = setup.config,
         dependenciesBuilder = setup.dependenciesBuilder,
         rawBackendFiles = setup.rawBackendFiles,
+        adjuster = setup.adjuster,
     )
 
     val libraryConfigurations = dependenciesBuilder.libraryConfigurations
@@ -830,6 +832,12 @@ abstract class Backend<SELF : Backend<SELF>>(
          * [module list][BackendSetup.modules].
          */
         fun make(setup: BackendSetup<BACKEND>): Backend<BACKEND>
+
+        /**
+         * Adjuster by backend as wanted. Should only be given for backend ids
+         * in [BackendMeta.requiredBackendIds] for this backend.
+         */
+        fun adjusters(): Map<BackendId, BackendAdjuster> = mapOf()
     }
 
     @Retention(AnnotationRetention.RUNTIME)
@@ -898,7 +906,35 @@ data class BackendSetup<BACKEND : Backend<BACKEND>>(
     val config: Backend.Config,
     /** Files matching backend extensions from the library source tree. */
     val rawBackendFiles: Map<FilePath, String> = mapOf(),
+    val adjuster: BackendAdjuster? = null,
 )
+
+/**
+ * Adjusts, customized, or transforms backend behavior. Might be installed by
+ * one backend on another in some custom Temper configuration.
+ */
+interface BackendAdjuster {
+    /**
+     * Optionally customizes an already translated connected call. On null
+     * return value, use the original.
+     */
+    fun <T: OutTree<*>> adjustConnectedCall(decl: TmpL.FunctionDeclaration, call: T): T? {
+        return null
+    }
+
+    // TODO adjustModuleTree to be called on the final product???
+
+    // TODO addTranslations or addFiles to add more files.
+}
+
+/** Combines two adjusters with [this] as priority. */
+fun BackendAdjuster.orElse(other: BackendAdjuster): BackendAdjuster {
+    return object : BackendAdjuster {
+        override fun <T : OutTree<*>> adjustConnectedCall(decl: TmpL.FunctionDeclaration, call: T): T? {
+            return adjustConnectedCall(decl, call) ?: other.adjustConnectedCall(decl, call)
+        }
+    }
+}
 
 private fun sourceMapFile(outputSourceFile: FilePath): FilePath {
     check(outputSourceFile.isFile)
@@ -937,6 +973,9 @@ data class BackendOrganization(
 
     /** The factory for each backend. */
     val factoriesById: Map<BackendId, Backend.Factory<*>>,
+
+    /** Priority order rather than chain. */
+    val adjusters: Map<BackendId, BackendAdjuster> = mapOf(),
 )
 
 /** Calculate transitive backend organization as needed by the given initially requested [backendIds]. */
@@ -1009,9 +1048,20 @@ fun organizeBackends(
         }
     }
     val backendRequirements = transitiveClosure(backendOrderingFounds).mapValues { setOf(it.key) + it.value }
+    val adjusters = buildMap<BackendId, BackendAdjuster> {
+        for (factory in factoriesById.values) {
+            val adjusters = factory.adjusters()
+            for ((backendId, adjuster) in adjusters) {
+                compute(backendId) { _, previous ->
+                    previous?.let { previous.orElse(adjuster) } ?: adjuster
+                }
+            }
+        }
+    }
     return BackendOrganization(
         backendBuckets = backendBuckets,
         backendRequirements = backendRequirements,
         factoriesById = factoriesById,
+        adjusters = adjusters,
     )
 }

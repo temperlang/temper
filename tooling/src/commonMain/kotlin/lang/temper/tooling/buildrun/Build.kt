@@ -428,6 +428,7 @@ fun doOneBuild(build: Build): BuildResult {
                     logSink = projectLogSink,
                     dependencyResolver = dependencyResolver,
                     config = harness.backendConfig,
+                    adjuster = backendOrganization.adjusters[factory.backendId],
                 ),
             )
         }

@@ -136,7 +136,7 @@ class JavaBackend private constructor(
     private var rootMainClass: QualifiedName? = null
 
     override fun translate(finished: TmpL.ModuleSet) = buildList {
-        JavaTranslator(names, dependenciesBuilder).let { trans ->
+        JavaTranslator(names, dependenciesBuilder, adjuster).let { trans ->
             names.scanNames(finished)
             finished.modules.flatMap { tmpLModule ->
                 trans.translate(tmpLModule)

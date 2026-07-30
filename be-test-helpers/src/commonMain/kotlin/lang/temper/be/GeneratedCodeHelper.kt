@@ -103,6 +103,7 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
                 moduleResultNeeded = moduleResultNeeded,
                 logSink = logSink,
                 outputRoot = outputRoot,
+                adjuster = factory.adjusters()[backendId],
             )
         }
     }
@@ -117,6 +118,7 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
     moduleResultNeeded: Boolean,
     logSink: LogSink,
     outputRoot: OutputRoot,
+    adjuster: BackendAdjuster?,
     activeFactories: Iterable<Backend.Factory<*>> = listOf(factory),
 ) {
     val backendId = factory.backendId
@@ -197,6 +199,7 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
                     logSink,
                     NullDependencyResolver,
                     backendConfig,
+                    adjuster = adjuster,
                 ),
             )
         }

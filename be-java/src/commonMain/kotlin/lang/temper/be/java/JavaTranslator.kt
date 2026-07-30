@@ -2,6 +2,7 @@ package lang.temper.be.java
 
 import lang.temper.ast.deepSlice
 import lang.temper.ast.toLispy
+import lang.temper.be.BackendAdjuster
 import lang.temper.be.Dependencies
 import lang.temper.be.java.JavaOperator.Assign
 import lang.temper.be.tmpl.FnAutodoc
@@ -66,6 +67,7 @@ class JavaTranslator(
     /** a shared instance for consistent name mapping */
     private val topNames: JavaNames,
     private val dependenciesBuilder: Dependencies.Builder<JavaBackend>? = null,
+    private val adjuster: BackendAdjuster? = null,
 ) {
     /** Spin off an instance for a given module */
     private fun forModule(module: ModuleName, programMeta: J.ProgramMeta = J.ProgramMeta(unknownPos)): ModuleScope =
@@ -481,7 +483,9 @@ class JavaTranslator(
                             }.also { add(it.asNameExpr().asArgument()) }
                         }
                     },
-                ).exprOrReturnStatement(shouldReturn = result !is J.VoidType).also { add(it) }
+                ).let { call ->
+                    adjuster?.adjustConnectedCall(fn, call as J.ExpressionStatementExpr) ?: call
+                }.exprOrReturnStatement(shouldReturn = result !is J.VoidType).also { add(it) }
             }.let { J.BlockStatement(pos, it) }
         }
 
