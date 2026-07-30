@@ -11,10 +11,12 @@ import lang.temper.be.tmpl.asReceiverMember
 import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.be.tmpl.mutatingMemberNames
 import lang.temper.common.MimeType
+import lang.temper.common.subListToEnd
 import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
 import lang.temper.log.FilePath
 import lang.temper.log.FilePathSegment
+import lang.temper.log.asFilePath
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
 import lang.temper.log.plus
@@ -131,6 +133,18 @@ class CppBackend private constructor(
             result
         }
 
+        // Connected code.
+        val connectedFiles = buildList {
+            for (file in rawBackendFiles) {
+                MetadataFileSpecification(
+                    // Skip the library name part.
+                    path = file.key.segments.subListToEnd(1).asFilePath(),
+                    mimeType = MimeType.cppSource,
+                    content = file.value,
+                ).also { add(it) }
+            }
+        }
+
         val initPath = filePath(INIT_NAME)
 
         dependenciesBuilder.addMetadata(
@@ -149,7 +163,7 @@ class CppBackend private constructor(
             testNs = testNs,
         )
 
-        return translations + listOf(
+        return translations + connectedFiles + listOf(
             MetadataFileSpecification(
                 path = filePath(MAIN_CPP_FILE),
                 mimeType = MimeType.cppSource,
@@ -224,10 +238,12 @@ class CppBackend private constructor(
                 fileExtensionMap = mapOf(
                     FileType.Module to lang.ext,
                     FileType.Script to lang.ext,
+                    FileType.Header to HPP_EXT,
                 ),
                 mimeTypeMap = mapOf(
                     FileType.Module to MimeType.cppSource,
                     FileType.Script to MimeType.cppSource,
+                    FileType.Header to MimeType.cppSource,
                 ),
             )
 

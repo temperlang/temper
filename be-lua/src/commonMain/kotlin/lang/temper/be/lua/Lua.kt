@@ -723,6 +723,41 @@ object Lua {
         }
     }
 
+    /**
+     * For embedding external raw `@connected` Lua source. Should be placed after
+     * predeclarations and before other top-level statements.
+     */
+    class Connected(
+        pos: Position,
+        var source: String,
+    ) : BaseTree(pos), Stmt {
+        override val operatorDefinition: LuaOperatorDefinition?
+            get() = null
+        override fun renderTo(
+            tokenSink: TokenSink,
+        ) {
+            tokenSink.value(source)
+        }
+        override val codeFormattingTemplate: CodeFormattingTemplate?
+            get() = null
+        override fun deepCopy(): Connected {
+            return Connected(pos, source = this.source)
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is Connected && this.source == other.source
+        }
+        override fun hashCode(): Int {
+            return source.hashCode()
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships()
+        }
+    }
+
     class ReturnStmt(
         pos: Position,
         exprs: Exprs,

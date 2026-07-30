@@ -175,10 +175,9 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
         return OutName(safeName, sourceName = name)
     }
 
-    /** Supports simple `_whatever` naming until we can arrange it more generally on names. */
-    fun choosePrettyPrivateSourceName(name: ResolvedParsedName, kind: TmpL.IdKind): String {
-        val styledName = styleName(safeIdent(name.baseName.nameText), kind)
-        return "_$styledName"
+    /** Provide a pretty name, whether exported or not. */
+    fun choosePrettyName(name: ResolvedParsedName, kind: TmpL.IdKind): String {
+        return avoidReserved(styleName(safeIdent(name.baseName.nameText), kind))
     }
 
     private fun styleName(

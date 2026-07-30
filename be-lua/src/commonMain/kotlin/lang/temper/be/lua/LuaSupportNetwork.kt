@@ -526,18 +526,21 @@ internal object LuaSupportNetwork : SupportNetwork {
         "core.type StringIndexOption.compareTo()::ge" ->
             inlineBinaryOp(connectedKey, BinaryOpEnum.GtEq, LuaOperatorDefinition.Ge)
 
-        else -> temperMethod(
-            connectedKey,
-            connectedKey
-                .split(".", "::")
-                // Skip module name.
-                .subListToEnd(1)
-                .joinToString("_") { part ->
-                    // Skip qualifiers and parens.
-                    part.split(" ").last().trimEnd('(', ')')
-                }
-                .lowercase(),
-        )
+        else if connectedKey.startsWith("core.") || connectedKey.startsWith("std/") ->
+            temperMethod(
+                connectedKey,
+                connectedKey
+                    .split(".", "::")
+                    // Skip module name.
+                    .subListToEnd(1)
+                    .joinToString("_") { part ->
+                        // Skip qualifiers and parens.
+                        part.split(" ").last().trimEnd('(', ')')
+                    }
+                    .lowercase(),
+            )
+
+        else -> null
     }
 
     override fun translatedConnectedType(

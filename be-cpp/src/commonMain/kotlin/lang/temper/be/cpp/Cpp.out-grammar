@@ -12,8 +12,11 @@ Program ::= stmts%Global*"\n" & "\n";
 // top-levels
 Global = StructDecl | FuncDecl | VarDecl | StructDef | DerivedStructDef | TemplateStructDef | TemplateFuncDef | TemplateFuncDecl | TypeDef | FuncDef | VarDef | PreProc | Comment | Namespace;
 
-PreProc = Define | Undef | Pragma | IncludeGuard | Include | IfPreProc;
+PreProc = Define | Undef | Pragma | IncludeGuard | Include | IncludeLocal | IfPreProc;
+// For more on includes, see https://en.cppreference.com/cpp/preprocessor/include#Notes
 Include ::= "#" & "include" & "<" & path%Raw & ">" & "\n";
+/** For string literals, although escapes don't work. */
+IncludeLocal ::= "#" & "include" & path%LiteralExpr & "\n";
 Define ::= "#" & "define" & name%SingleName & value%Expr? & "\n";
 Undef ::= "#" & "undef" & name%SingleName & "\n";
 Pragma ::= "#" & "pragma" & text%Raw & "\n";
