@@ -21,19 +21,32 @@ class BackendTest {
 
     @Test
     fun backendOrganization() {
-        class NeedyBackendFactory(backendId: String, requiredBackendIds: List<BackendId>) : TestBackend.TestFactory() {
+        class NeedyBackendFactory(
+            backendId: String,
+            requiredBackendIds: List<BackendId>,
+            val adjusters: Map<BackendId, BackendAdjuster> = mapOf(),
+        ) : TestBackend.TestFactory() {
             override val backendId: BackendId = BackendId(backendId)
             override val backendMeta = super.backendMeta.copy(
                 backendId = this.backendId,
                 requiredBackendIds = requiredBackendIds,
             )
+            override fun adjusters(): Map<BackendId, BackendAdjuster> {
+                return adjusters
+            }
         }
         val missingBackendId = BackendId("missing")
         val needyFactory = NeedyBackendFactory("needy", listOf(TestBackend.backendId, missingBackendId))
         val needlessFactory = NeedyBackendFactory("needless", listOf())
+        val uselessAdjuster = object : BackendAdjuster {}
         val needierFactory = NeedyBackendFactory(
-            "needier",
-            listOf(needyFactory.backendId, needlessFactory.backendId),
+            backendId = "needier",
+            requiredBackendIds = listOf(needyFactory.backendId, needlessFactory.backendId),
+            adjusters = mapOf(
+                needyFactory.backendId to uselessAdjuster,
+                // We don't directly require this, so we shouldn't be adjusting it.
+                TestBackend.backendId to uselessAdjuster,
+            ),
         )
         val aloofBackend = NeedyBackendFactory("aloof", listOf())
         val requestedAloofFactory = NeedyBackendFactory("requested-aloof", listOf())
@@ -45,14 +58,27 @@ class BackendTest {
             aloofBackend,
             requestedAloofFactory,
         ).associateBy { it.backendId }
-        val missingBackendIds = mutableSetOf<BackendId>()
+        val errors = mutableSetOf<BackendOrganizationError>()
         val organization = organizeBackends(
             backendIds = listOf(needierFactory.backendMeta.backendId, requestedAloofFactory.backendId),
             lookupFactory = { backends[it] },
-            onMissingFactory = { missingBackendIds.add(it) },
+            onError = { err -> errors.add(err) },
         )
-        assertEquals(setOf(missingBackendId), missingBackendIds)
         // Collections maintain order by default, so these should be reliable.
+        assertEquals(
+            setOf(
+                BackendOrganizationError(
+                    kind = BackendOrganizationErrorKind.FactoryNotFound,
+                    backendId = missingBackendId,
+                ),
+                BackendOrganizationError(
+                    kind = BackendOrganizationErrorKind.AdjusterForUnrequiredBackend,
+                    backendId = TestBackend.backendId,
+                    sourceBackendId = needierFactory.backendId,
+                ),
+            ),
+            errors,
+        )
         assertEquals(
             mapOf(
                 needierFactory.backendId to setOf(
@@ -77,6 +103,7 @@ class BackendTest {
             organization.backendBuckets,
         )
         assertEquals(backends.keys - setOf(aloofBackend.backendId), organization.factoriesById.keys)
+        assertEquals(uselessAdjuster, organization.adjusters[needyFactory.backendId])
     }
 
     @Test

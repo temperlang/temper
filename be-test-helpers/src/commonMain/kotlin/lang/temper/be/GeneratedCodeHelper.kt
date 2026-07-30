@@ -90,7 +90,7 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
     val backendOrganization = organizeBackends(
         listOf(factory.backendId),
         lookupFactory = lookupFactory,
-        onMissingFactory = { error(it) },
+        onError = { error(it) },
     )
     for (bucket in backendOrganization.backendBuckets) {
         for (backendId in bucket) {

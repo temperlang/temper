@@ -978,11 +978,33 @@ data class BackendOrganization(
     val adjusters: Map<BackendId, BackendAdjuster> = mapOf(),
 )
 
+data class BackendOrganizationError(
+    val kind: BackendOrganizationErrorKind,
+    val backendId: BackendId,
+    val sourceBackendId: BackendId? = null,
+)
+
+enum class BackendOrganizationErrorKind {
+    /**
+     * A factory was missing for some requested [BackendId], whether in the
+     * initial list or as some listed, transitive requirement of one.
+     */
+    FactoryNotFound,
+
+    /**
+     * Required backends currently are in [BackendMeta.requiredBackendIds],
+     * which really only can express basic metadata, not things like adjusters.
+     * So adjusters are defined on the factory, but they are expected to be
+     * specified only for directly required backends.
+     */
+    AdjusterForUnrequiredBackend,
+}
+
 /** Calculate transitive backend organization as needed by the given initially requested [backendIds]. */
 fun organizeBackends(
     backendIds: Iterable<BackendId>,
     lookupFactory: (BackendId) -> Backend.Factory<*>?,
-    onMissingFactory: (BackendId) -> Unit,
+    onError: (BackendOrganizationError) -> Unit,
 ): BackendOrganization {
     // We need to order how we drive backends.
     // A backend for one target language might require translations for another target language.
@@ -998,7 +1020,10 @@ fun organizeBackends(
         fun factoryFor(backendId: BackendId) = factories.getOrPut(backendId) {
             lookupFactory(backendId).also { factory ->
                 if (factory == null) {
-                    onMissingFactory(backendId)
+                    BackendOrganizationError(
+                        kind = BackendOrganizationErrorKind.FactoryNotFound,
+                        backendId = backendId,
+                    ).also { onError(it) }
                 } else {
                     backendOrdering[backendId] = factory.backendMeta.requiredBackendIds.toSet()
                 }
@@ -1051,7 +1076,15 @@ fun organizeBackends(
     val adjusters = buildMap<BackendId, BackendAdjuster> {
         for (factory in factoriesById.values) {
             val adjusters = factory.adjusters()
+            val requiredBackendIds = factory.backendMeta.requiredBackendIds
             for ((backendId, adjuster) in adjusters) {
+                if (backendId !in requiredBackendIds) {
+                    BackendOrganizationError(
+                        kind = BackendOrganizationErrorKind.AdjusterForUnrequiredBackend,
+                        backendId = backendId,
+                        sourceBackendId = factory.backendId,
+                    ).also { onError(it) }
+                }
                 compute(backendId) { _, previous ->
                     previous?.let { previous.orElse(adjuster) } ?: adjuster
                 }

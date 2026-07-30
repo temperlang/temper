@@ -131,7 +131,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
         val backendOrganization = organizeBackends(
             listOf(backendId),
             lookupFactory = ::lookupFactory,
-            onMissingFactory = { error(it) },
+            onError = { error(it) },
         )
         // TODO Actually build by buckets?
         val outputRoot = OutputRoot(MemoryFileSystem())
