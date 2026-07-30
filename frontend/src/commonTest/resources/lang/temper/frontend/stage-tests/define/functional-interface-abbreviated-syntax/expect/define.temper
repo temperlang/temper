@@ -1,0 +1,15 @@
+  @typeDecl(MyFunction) @stay @functionalInterface let `test//`.MyFunction;
+  `test//`.MyFunction = type (MyFunction);
+  do {};
+  MyFunction extends AnyValue;
+  @fn @stay @fromType(MyFunction) let apply__0;
+## No `this` parameter on functional interface apply methods.
+  apply__0 = fn apply(x__0 /* aka x */: Int32) /* return__0 */: Boolean {
+    fn__0: do {
+      pureVirtual()
+    }
+  };
+  interface(\word, \MyFunction, void, void, void, \concrete, false, @typeDefined(MyFunction) fn {
+      do {};
+      do {}
+  });

@@ -1,0 +1,2 @@
+let f(x: Float64?): Float64? { (x as Float64) orelse null }
+console.log("f(1.0) = ${ f(1.0) }");

@@ -1,0 +1,1 @@
+do_call_log(getConsole(), "Logged")

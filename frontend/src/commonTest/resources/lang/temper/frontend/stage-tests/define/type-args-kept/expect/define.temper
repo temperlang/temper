@@ -1,0 +1,54 @@
+@typeFormal(\Thing) @memberTypeFormal(\Thing) @typeDefined(Thing__0) @fromType(What__0<Thing__0>) let Thing__0;
+Thing__0 = type (Thing__0);
+What__0<Thing__0> extends AnyValue;
+let typeof_ints#0;
+typeof_ints#0 = type (List<Int32>);
+@constructorProperty @property(\ints) @visibility(\public) @stay @fromType(What__0<Thing__0>) let ints__0: List<Int32>;
+let typeof_things#0;
+typeof_things#0 = type (List<Thing__0>);
+@constructorProperty @property(\things) @visibility(\public) @stay @fromType(What__0<Thing__0>) let things__0: List<Thing__0>;
+@method(\work) @visibility(\public) @fn @stay @fromType(What__0<Thing__0>) let work__0;
+work__0 = fn work(@impliedThis(What__0<Thing__0>) this__0: What__0<Thing__0>, that__0 /* aka that */: Thing__0) /* return__0 */: Void {
+  fn__0: do {
+    let another__0: What__0;
+    another__0 = this__0;
+    let more__0: List;
+    more__0 = getp(things__0, this__0);
+  }
+};
+@fn @method(\constructor) @visibility(\public) @stay @fromType(What__0<Thing__0>) let constructor__0;
+constructor__0 = fn constructor(@impliedThis(What__0<Thing__0>) this__1: What__0<Thing__0>, ints__1 /* aka ints */: List<Int32>, things__1 /* aka things */: List<Thing__0>) /* return__1 */: Void {
+  do {
+    let t#0;
+    setp(ints__0, this__1, t#0 = ints__1);
+    t#0
+  };
+  do {
+    let t#1;
+    setp(things__0, this__1, t#1 = things__1);
+    t#1
+  };
+};
+@getter @method(\ints) @fn @visibility(\public) @stay @fromType(What__0<Thing__0>) let getints__0;
+getints__0 = fn (@impliedThis(What__0<Thing__0>) this__2: What__0<Thing__0>) /* return__2 */: (List<Int32>) {
+  return__2 = getp(ints__0, this__2)
+};
+@getter @method(\things) @fn @visibility(\public) @stay @fromType(What__0<Thing__0>) let getthings__0;
+getthings__0 = fn (@impliedThis(What__0<Thing__0>) this__3: What__0<Thing__0>) /* return__3 */: (List<Thing__0>) {
+  return__3 = getp(things__0, this__3)
+};
+@typeDecl(What__0<Thing__0>) @stay let What__0;
+What__0 = type (What__0);
+class(\word, \What, \concrete, true, @typeDefined(What__0<Thing__0>) fn {
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {}
+});
+type (What__0)

@@ -1,0 +1,1 @@
+fn(nym`@foo`(@default(0) var x /* aka x */), let y /* aka y */, fn {})

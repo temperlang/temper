@@ -1,0 +1,8 @@
+@typeDecl(I__0<T__0>) @stay let I__0 = type (I__0);
+let T__1 = "T";
+interface(\word, \I, \concrete, false, @typeDefined(I__0<T__0>) fn {
+    @typeFormal(\T) @memberTypeFormal(\T) @typeDefined(T__0) let T__0 = type (T__0);
+    I__0<T__0> extends AnyValue;
+    @property(\t) @maybeVar let t__0: T__0;
+});
+let t__1 = T__1;

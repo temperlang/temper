@@ -1,0 +1,4 @@
+[
+    "Cannot assign to Void from Int32!",
+    "Expected subtype of Void, but got Int32!"
+]

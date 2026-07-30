@@ -1,0 +1,4 @@
+for (let x of ["a", "b", "c", "d"]) {
+  if (x == "c") { break }
+  console.log(x)
+}

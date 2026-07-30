@@ -1,0 +1,6 @@
+@fn @reach(\none) let f__0;
+f__0 = (@stay fn f(s__0 /* aka s */: String) /* return__1 */: Void {
+    cat(s__0);
+    cat(what);
+    return__1 = void
+})

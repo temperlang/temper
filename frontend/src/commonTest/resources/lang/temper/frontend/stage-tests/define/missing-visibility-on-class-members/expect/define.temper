@@ -1,0 +1,49 @@
+C__0 extends AnyValue;
+@constructorProperty @stay @fromType(C__0) let p__0: Int32;
+@stay @fromType(C__0) let q__0: Int32;
+@visibility(\private) @stay @fromType(C__0) let r__0: Int32;
+@fn @stay @fromType(C__0) let f__0;
+f__0 = fn f(@impliedThis(C__0) this__0: C__0) /* return__0 */: Int32 {
+  fn__0: do {
+    getp(r__0, this__0)
+  }
+};
+@fn @visibility(\public) @stay @fromType(C__0) let constructor__0;
+constructor__0 = fn constructor(@impliedThis(C__0) this__1: C__0, p__1 /* aka p */: Int32) /* return__1 */: Void {
+  do {
+    let t#0;
+    setp(p__0, this__1, t#0 = p__1);
+    t#0
+  };
+  do {
+    let t#1;
+    setp(q__0, this__1, t#1 = p__1 + 1);
+    t#1
+  };
+  do {
+    let t#2;
+    setp(r__0, this__1, t#2 = p__1 - 1);
+    t#2
+  };
+};
+@fn @visibility(\public) @stay @fromType(C__0) let getp__0;
+getp__0 = fn (@impliedThis(C__0) this__2: C__0) /* return__2 */: Int32 {
+  return__2 = getp(p__0, this__2)
+};
+@fn @visibility(\public) @stay @fromType(C__0) let getq__0;
+getq__0 = fn (@impliedThis(C__0) this__3: C__0) /* return__3 */: Int32 {
+  return__3 = getp(q__0, this__3)
+};
+@typeDecl(C__0) @stay let C__0;
+C__0 = type (C__0);
+class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {}
+});
+type (C__0)

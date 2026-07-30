@@ -1,0 +1,5 @@
+let x__0 = f();
+do_call_forEach(x__0, fn (x__1) {
+    x__1
+});
+x__0

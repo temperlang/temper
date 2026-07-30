@@ -1,0 +1,188 @@
+[
+    "Block",
+    [
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "f__0"
+                ],
+                [
+                    "Value",
+                    "\\fn: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.f()\u0022: String"
+                ]
+            ]
+        ],
+        [
+            "Call",
+            [
+                [
+                    "Value",
+                    "nym`=`: Function"
+                ],
+                [
+                    "LeftName",
+                    "f__0"
+                ],
+                [
+                    "Fun",
+                    [
+                        [
+                            "Decl",
+                            [
+                                [
+                                    "LeftName",
+                                    "i__1"
+                                ],
+                                [
+                                    "Value",
+                                    "\\default: Symbol"
+                                ],
+                                [
+                                    "RightName",
+                                    "j__2"
+                                ],
+                                [
+                                    "Value",
+                                    "\\word: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\\i: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\\QName: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\u0022test-code.f().(i)\u0022: String"
+                                ]
+                            ]
+                        ],
+                        [
+                            "Decl",
+                            [
+                                [
+                                    "LeftName",
+                                    "j__2"
+                                ],
+                                [
+                                    "Value",
+                                    "\\default: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "42: Int32"
+                                ],
+                                [
+                                    "Value",
+                                    "\\word: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\\j: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\\QName: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\u0022test-code.f().(j)\u0022: String"
+                                ]
+                            ]
+                        ],
+                        [
+                            "Decl",
+                            [
+                                [
+                                    "LeftName",
+                                    "k__3"
+                                ],
+                                [
+                                    "Value",
+                                    "\\default: Symbol"
+                                ],
+                                [
+                                    "RightName",
+                                    "f__0"
+                                ],
+                                [
+                                    "Value",
+                                    "\\word: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\\k: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\\QName: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\u0022test-code.f().(k)\u0022: String"
+                                ]
+                            ]
+                        ],
+                        [
+                            "Value",
+                            "\\returnedFrom: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "true: Boolean"
+                        ],
+                        [
+                            "Value",
+                            "\\word: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "\\f: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "\\QName: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "\u0022test-code.f()\u0022: String"
+                        ],
+                        [
+                            "Block",
+                            [
+                                [
+                                    "Value",
+                                    "\\label: Symbol"
+                                ],
+                                [
+                                    "LeftName",
+                                    "fn__4"
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ],
+        [
+            "Value",
+            "void: Void"
+        ]
+    ]
+]

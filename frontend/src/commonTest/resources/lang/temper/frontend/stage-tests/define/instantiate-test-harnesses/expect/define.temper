@@ -1,0 +1,12 @@
+@stay @imported(\(`std//testing/`.runTestCases)) @connected let runTestCases__0;
+runTestCases__0 = `std//testing/`.runTestCases;
+@implicit @imported(\(`std//testing/`.Test)) let Test__0;
+Test__0 = type (Test);
+@implicit @imported(\(`std//testing/`.runTestCases)) @fn let runTestCases__1;
+runTestCases__1 = (fn runTestCases);
+@stay @imported(\(`std//testing/`.Test)) let Test__1;
+Test__1 = type (Test);
+@fn @test("- a test case -") let aTestCase__0;
+aTestCase__0 = (@stay fn aTestCase(test#0: Test) /* return__0 */: (Void | Bubble) {});
+@stay let `test//`.temper__testReport;
+`test//`.temper__testReport = runTestCases__0(list(new Pair("- a test case -", aTestCase__0)));

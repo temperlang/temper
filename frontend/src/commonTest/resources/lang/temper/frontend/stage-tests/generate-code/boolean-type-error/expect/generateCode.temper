@@ -1,0 +1,6 @@
+let return__0;
+if (1) {
+  return__0 = 2
+} else {
+  return__0 = 3
+}

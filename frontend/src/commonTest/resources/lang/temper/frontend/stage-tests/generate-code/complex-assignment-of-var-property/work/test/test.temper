@@ -1,0 +1,13 @@
+let { IntBox } = import("./int-box/");
+
+let ib = { i: -1 };
+console.log("ib.i = ${ib.i}");
+ib.i += 11;
+console.log("ib.i = ${ib.i}");
+ib.i *= 9;
+console.log("ib.i = ${ib.i}");
+ib.i -= 6;
+console.log("ib.i = ${ib.i}");
+ib.i /= 2;
+console.log("ib.i = ${ib.i}");
+

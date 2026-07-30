@@ -1,0 +1,5 @@
+let return__0, @fn @reach(\none) f__0: (fn (Int32): Int32);
+f__0 = (@stay fn f(x__0 /* aka x */: Int32) /* return__1 */: Int32 {
+    return__1 = x__0 + 1
+});
+return__0 = 42

@@ -1,0 +1,24 @@
+let return__0;
+var t#0, t#1, t#2;
+@stay @imported(\(`test//a/`.a)) let a__0;
+a__0 = `test//a/`.a;
+if (isNull(a__0)) {
+  t#0 = null
+} else {
+  t#0 = do_get_string(notNull(a__0))
+};
+if (isNull(t#0)) {
+  t#1 = null
+} else {
+  t#1 = do_get_isEmpty(notNull(t#0))
+};
+if (isNull(t#1)) {
+  t#2 = null
+} else {
+  t#2 = do_call_toString(notNull(t#1))
+};
+if (isNull(t#2)) {
+  return__0 = "NULL"
+} else {
+  return__0 = notNull(t#2)
+}

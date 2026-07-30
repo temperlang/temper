@@ -1,0 +1,2 @@
+let `test//`.x = 42;
+`test//`.x

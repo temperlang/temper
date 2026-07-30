@@ -1,0 +1,3 @@
+test("- does / this : work?") { assert(true) { "or what?" } }
+test("does\tthis\nwork") { test => assert(false) { "or that" } }
+test("again") { t => assert(true) { "whatever" } }

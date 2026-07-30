@@ -1,0 +1,25 @@
+@typeDecl(I__0) @stay let I__0 = type (I__0);
+@typeDecl(C__0<T__2>) @stay let C__0 = type (C__0);
+interface(\word, \I, \concrete, false, @typeDefined(I__0) fn {
+    I__0 extends AnyValue;
+    @property(\x) @maybeVar let x__6;
+});
+let x__7, y__8, z__9;
+class(\word, \C, \concrete, true, @typeDefined(C__0<T__2>) fn {
+    @typeFormal(\T) @memberTypeFormal(\T) @typeDefined(T__2) let T__2 = type (T__2);
+    C__0<T__2> extends I__0;
+    @constructorProperty @property(\y) @maybeVar @visibility(\public) let y__14;
+    @method(\f) @visibility(\private) @fn let f__12 = fn f(@impliedThis(C__0<T__2>) this__2: C__0<T__2>) {
+      fn__13: do {
+        do_iget_x(type (C__0<T__2>), this(C__0<T__2>)) + do_iget_y(type (C__0<T__2>), this(C__0<T__2>)) + z__9
+      }
+    };
+    @method(\constructor) @visibility(\public) let constructor__15 = fn constructor(@impliedThis(C__0<T__2>) this__16: C__0<T__2>, y__17 /* aka y */) /* return__0 */: Void {
+      do {
+        let t#0;
+        do_iset_y(type (C__0<T__2>), this(C__0<T__2>), t#0 = y__17);
+        t#0
+      };
+    };
+});
+C__0

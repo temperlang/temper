@@ -1,0 +1,38 @@
+{
+    "C": {
+        "word": "C",
+        "typeParameters": [
+            {
+                "name": "T__1"
+            },
+            {
+                "name": "U__2"
+            },
+            {
+                "name": "V__3"
+            },
+            {
+                "name": "W__4"
+            }
+        ]
+    },
+    "T": {
+        "name": "T__1",
+        "word": "T"
+    },
+    "U": {
+        "name": "U__2",
+        "word": "U",
+        "upperBounds": []
+    },
+    "V": {
+        "name": "V__3",
+        "word": "V",
+        "variance": "Covariant"
+    },
+    "W": {
+        "name": "W__4",
+        "word": "W",
+        "variance": "Contravariant"
+    }
+}

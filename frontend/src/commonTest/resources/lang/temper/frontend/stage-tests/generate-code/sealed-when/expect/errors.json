@@ -1,0 +1,5 @@
+[
+    "Cannot assign to String from Void!",
+    "Expected subtype of String, but got Void!",
+    "Void expressions cannot be used as values!"
+]

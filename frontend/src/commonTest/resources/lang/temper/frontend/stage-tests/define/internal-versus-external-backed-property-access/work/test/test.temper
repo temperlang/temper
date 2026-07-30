@@ -1,0 +1,6 @@
+
+        class C(private i) {
+          private f() { i = 1 }
+        }
+        (new C()).i = 2
+        

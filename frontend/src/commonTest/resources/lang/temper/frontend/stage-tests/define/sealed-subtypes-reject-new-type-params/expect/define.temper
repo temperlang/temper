@@ -1,0 +1,53 @@
+@typeDecl(Something__0<T__0>) @stay @sealedType let Something__0;
+Something__0 = type (Something__0);
+@typeDecl(Subversive__0<T__1, U__0>) @stay let Subversive__0;
+Subversive__0 = type (Subversive__0);
+@typeDecl(Simple__0<V__0>) @stay let Simple__0;
+Simple__0 = type (Simple__0);
+@typeDecl(Satisfying__0<T__2, U__1>) @stay let Satisfying__0;
+Satisfying__0 = type (Satisfying__0);
+do {};
+@typeFormal(\T) @typeDefined(T__0) @fromType(Something__0<T__0>) let T__0;
+T__0 = type (T__0);
+Something__0<T__0> extends AnyValue;
+interface(\word, \Something, \concrete, false, @typeDefined(Something__0<T__0>) fn {
+    do {};
+    do {}
+});
+void;
+@typeFormal(\T) @typeDefined(T__1) @fromType(Subversive__0<T__1, U__0>) let T__1;
+T__1 = type (T__1);
+@typeFormal(\U) @typeDefined(U__0) @fromType(Subversive__0<T__1, U__0>) let U__0;
+U__0 = type (U__0);
+Subversive__0<T__1, U__0> extends Something__0<T__1>;
+@fn @visibility(\public) @stay @fromType(Subversive__0<T__1, U__0>) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(Subversive__0<T__1, U__0>) this__0: Subversive__0<T__1, U__0>) /* return__0 */: Void {});
+class(\word, \Subversive, \concrete, true, @typeDefined(Subversive__0<T__1, U__0>) fn {
+    do {};
+    do {};
+    do {};
+    do {}
+});
+void;
+@typeFormal(\V) @typeDefined(V__0) @fromType(Simple__0<V__0>) let V__0;
+V__0 = type (V__0);
+Simple__0<V__0> extends Something__0<V__0>;
+interface(\word, \Simple, \concrete, false, @typeDefined(Simple__0<V__0>) fn {
+    do {};
+    do {}
+});
+void;
+@typeFormal(\T) @typeDefined(T__2) @fromType(Satisfying__0<T__2, U__1>) let T__2;
+T__2 = type (T__2);
+@typeFormal(\U) @typeDefined(U__1) @fromType(Satisfying__0<T__2, U__1>) let U__1;
+U__1 = type (U__1);
+Satisfying__0<T__2, U__1> extends Simple__0<T__2>;
+@fn @visibility(\public) @stay @fromType(Satisfying__0<T__2, U__1>) let constructor__1;
+constructor__1 = (@stay fn constructor(@impliedThis(Satisfying__0<T__2, U__1>) this__1: Satisfying__0<T__2, U__1>) /* return__1 */: Void {});
+class(\word, \Satisfying, \concrete, true, @typeDefined(Satisfying__0<T__2, U__1>) fn {
+    do {};
+    do {};
+    do {};
+    do {}
+});
+type (Satisfying__0)

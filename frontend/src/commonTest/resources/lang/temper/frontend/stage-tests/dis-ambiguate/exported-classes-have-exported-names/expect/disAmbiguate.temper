@@ -1,0 +1,6 @@
+do {};
+@typeDecl(C) @hoistLeft(true) @resolution(`test//`.C) @stay let `test//`.C = type (C);
+class(\word, C, \concrete, true, @typeDefined(C) fn {
+    C extends AnyValue
+});
+C

@@ -1,0 +1,26 @@
+@typeDecl(C__0) @stay let C__0 = type (C__0);
+@typeDecl(D__0) @stay let D__0 = type (D__0);
+class(\word, \D, \concrete, true, @typeDefined(D__0) fn {
+    D__0 extends AnyValue;
+    @constructorProperty @property(\c) @maybeVar @visibility(\private) let c__0: C__0;
+    @method(\constructor) @visibility(\public) let constructor__0 = fn constructor(@impliedThis(D__0) this__1: D__0, c__1 /* aka c */: C__0) /* return__1 */: Void {
+      do {
+        let t#0;
+        do_iset_c(type (D__0), this(D__0), t#0 = c__1);
+        t#0
+      };
+    };
+});
+class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
+    C__0 extends AnyValue;
+    let typeof_d#0 = D__0?;
+    @constructorProperty @property(\d) @maybeVar @visibility(\private) let d__0: typeof_d#0;
+    @method(\constructor) @visibility(\public) let constructor__1 = fn constructor(@impliedThis(C__0) this__0: C__0, d__1 /* aka d */: typeof_d#0) /* return__0 */: Void {
+      do {
+        let t#1;
+        do_iset_d(type (C__0), this(C__0), t#1 = d__1);
+        t#1
+      };
+    };
+});
+D__0

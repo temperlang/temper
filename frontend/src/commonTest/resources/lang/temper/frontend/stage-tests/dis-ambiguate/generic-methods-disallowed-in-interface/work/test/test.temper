@@ -1,0 +1,5 @@
+interface Whatever {
+  blather<A>(a: A): A;
+  public let bling<B, C extends Whatever>(b: B, c: C): B { b }
+  static blot<T>(d: D): D;
+}

@@ -814,14 +814,14 @@ internal fun destructureTreeMultipleRepresentations(
     ast: Tree,
     pseudoCodeDetail: PseudoCodeDetail,
 ) {
-    sink.key("code", Hints.s) {
+    sink.key("code", Hints.su) {
         val code = ast.toPseudoCode(
             singleLine = false,
             detail = pseudoCodeDetail,
         )
         value(code)
     }
-    sink.key("tree", Hints.s) { value(ast) }
+    sink.key("tree", Hints.su) { value(ast) }
 }
 
 fun Iterable<Module>.mergedNamingContext(mergedLoc: ModuleLocation): NamingContext {

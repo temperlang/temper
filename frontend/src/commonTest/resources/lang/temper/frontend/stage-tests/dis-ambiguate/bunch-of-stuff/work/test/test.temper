@@ -1,0 +1,10 @@
+a + b * c;
+
+42;
+
+let x = 1;
+
+// What is going on here?
+console.log("foo ${"bar ${"qux ${xyzzy}"}"} baz" );
+
+// comment

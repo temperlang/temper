@@ -1,0 +1,1 @@
+class C(public var j, public k) extends I {}

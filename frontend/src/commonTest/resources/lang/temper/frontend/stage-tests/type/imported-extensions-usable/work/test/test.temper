@@ -1,0 +1,2 @@
+let { intHalf } = import("../half");
+console.log(84.half().toString());

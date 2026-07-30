@@ -1,0 +1,7 @@
+sealed interface Something<T> {}
+// Sealed subtypes can't introduce type params.
+class Subversive<T, U> extends Something<T> {}
+// But we can (must?) keep type params from parent. And check with a changed name, for bonus fun.
+interface Simple<V> extends Something<V> {}
+// And types further down the line can introduce new type params, since we can't cast to them anyway.
+class Satisfying<T, U> extends Simple<T> {}

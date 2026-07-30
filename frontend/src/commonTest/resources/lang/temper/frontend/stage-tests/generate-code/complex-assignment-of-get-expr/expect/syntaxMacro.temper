@@ -1,0 +1,19 @@
+  let console#0 = doPure(fn: Console {
+      getConsole()
+  }), ls__0 = new ListBuilder<Int>();
+  do_call_add(ls__0, 0);
+  do_call_add(ls__0, 3);
+  do {
+    let t#0;
+    t#0 = ls__0;
+## Here's a call to .set of a call to .get
+    do_call_set(t#0, 0, do_call_get(t#0, 0) + 10)
+  };
+  do {
+    let t#1;
+    t#1 = ls__0;
+    do_call_set(t#1, 1, do_call_get(t#1, 1) * 2)
+  };
+  do_call_log(console#0, cat("ls = [", str(do_call_join(do_call_toList(ls__0), ", ", fn (i__0 /* aka i */: Int) /* return__1 */: (String) {
+            do_call_toString(i__0, 10)
+      })), "]"));

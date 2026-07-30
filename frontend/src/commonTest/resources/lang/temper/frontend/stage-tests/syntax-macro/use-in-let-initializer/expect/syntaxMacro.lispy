@@ -1,0 +1,91 @@
+[
+    "Block",
+    [
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "i__0"
+                ],
+                [
+                    "Value",
+                    "\\init: Symbol"
+                ],
+                [
+                    "Value",
+                    "0: Int32"
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.i\u0022: String"
+                ]
+            ]
+        ],
+        [
+            "Call",
+            [
+                [
+                    "RightName",
+                    "do"
+                ],
+                [
+                    "Fun",
+                    [
+                        [
+                            "Block",
+                            [
+                                [
+                                    "Decl",
+                                    [
+                                        [
+                                            "LeftName",
+                                            "i__1"
+                                        ],
+                                        [
+                                            "Value",
+                                            "\\init: Symbol"
+                                        ],
+                                        [
+                                            "RightName",
+                                            "i__0"
+                                        ],
+                                        [
+                                            "Value",
+                                            "\\QName: Symbol"
+                                        ],
+                                        [
+                                            "Value",
+                                            "\u0022test-code.i=\u0022: String"
+                                        ]
+                                    ]
+                                ],
+                                [
+                                    "Call",
+                                    [
+                                        [
+                                            "RightName",
+                                            "f"
+                                        ],
+                                        [
+                                            "RightName",
+                                            "i__1"
+                                        ]
+                                    ]
+                                ],
+                                [
+                                    "Value",
+                                    "void: Void"
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    ]
+]

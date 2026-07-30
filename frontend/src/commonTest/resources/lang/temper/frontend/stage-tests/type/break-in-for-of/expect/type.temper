@@ -1,0 +1,28 @@
+  let console#0 ⦂ Console;
+  console#0 = doPure ⋖ Console ⋗(@stay fn /* return__0 */: Console {
+      return__0 = getConsole();
+  });
+  let this__0: List<String>;
+  this__0 = list ⋖ String ⋗("a", "b", "c", "d");
+## Here we start the inlined callee body.
+  let n__0 ⦂ Int32;
+  n__0 = do_get_length(this__0);
+  var i__0 ⦂ Int32;
+  i__0 = 0;
+  while (i__0 < n__0) {
+    let el__0: String;
+    el__0 = do_call_get(this__0, i__0);
+    i__0 = i__0 + 1;
+## Here we start the inlined block lambda parameters.
+    let x__0 ⦂ String;
+    x__0 = el__0;
+## Here we start the inlined block lambda body.
+## Note the absence of a void-like return declaration.
+    if (x__0 == "c") {
+      break;
+    };
+    do_call_log(console#0, x__0);
+## Did not inline `return__0 = void`.  Not ok for local vars.
+## Here's the end of the inlined block lambda.
+  };
+## Here's the end of the inlined callee body.  No `return__0 = void` here either.

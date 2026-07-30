@@ -1,0 +1,6 @@
+let f(s: String): Void {
+  cat(s);
+  cat(s, s);
+  cat(s, s, s);
+  cat(s, s, s, s);
+}

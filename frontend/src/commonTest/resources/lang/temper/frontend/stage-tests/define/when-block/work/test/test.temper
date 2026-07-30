@@ -1,0 +1,18 @@
+interface A { }
+class B extends A { }
+let b = new B();
+let f(a: A): A {
+  when (a) {
+    b -> a;
+    // Comments are fine, but unrelated statements aren't.
+    wordYall();
+    is B -> a;
+    (fancyExpression + 4) -> a;
+    4, is C -> a;
+    else -> a;
+    // Case after default is also bad, as is missing value.
+    c ->;
+    d -> a;
+    e ->
+  }
+}

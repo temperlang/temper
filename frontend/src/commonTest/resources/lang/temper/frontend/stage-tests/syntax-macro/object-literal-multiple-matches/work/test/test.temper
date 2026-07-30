@@ -1,0 +1,3 @@
+class Apple(public hi: Int) {}
+class Banana(public hi: Int) {}
+{ hi: 5 }

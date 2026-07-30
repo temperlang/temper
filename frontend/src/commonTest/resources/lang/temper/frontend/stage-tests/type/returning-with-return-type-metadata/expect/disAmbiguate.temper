@@ -1,0 +1,3 @@
+fn(\outType, Int, fn {
+    return 42
+})

@@ -1,0 +1,3 @@
+let return__0, @reach(\none) s__0: AnyValue;
+s__0 = "str";
+return__0 = "str" is String

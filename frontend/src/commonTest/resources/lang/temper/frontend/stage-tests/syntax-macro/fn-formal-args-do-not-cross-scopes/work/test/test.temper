@@ -1,0 +1,3 @@
+let T = "T";
+let f<T extends AnyValue>(x: T): T { x }
+let t = T;

@@ -29,6 +29,7 @@ import lang.temper.log.FilePath
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
 import lang.temper.log.last
+import lang.temper.log.resolveFile
 import lang.temper.name.BackendId
 import lang.temper.name.BackendMeta
 import lang.temper.name.FileType
@@ -183,6 +184,16 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
                         else -> {}
                     }
                 }
+            }
+            // Connected source.
+            for (file in rawBackendFiles) {
+                // Skip the library name dir and the file name, and keep the middle
+                val subspace = chooseSubspace(file.key.segments).subList(1, file.key.segments.size - 1)
+                MetadataFileSpecification(
+                    path = dirPath(SRC_PROJECT_DIR).resolve(dirPath(subspace)).resolveFile(file.key.segments.last()),
+                    mimeType = mimeType,
+                    content = file.value,
+                ).also { add(it) }
             }
             // Proj.
             val rootNamespaceByName = names.rootNamespaces.associate { it.first.libraryName.text to it.second }

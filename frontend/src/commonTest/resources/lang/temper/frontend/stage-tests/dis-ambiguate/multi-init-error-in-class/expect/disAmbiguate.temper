@@ -1,0 +1,8 @@
+@typeDecl(Something__0) @hoistLeft(true) @resolution(Something__0) @stay let Something = type (Something__0);
+class(\word, Something, \concrete, true, @typeDefined(Something__0) fn {
+    Something__0 extends AnyValue;
+    let t#0 = f();
+    @property(\a) let a = t#0.a;
+    @property(\b) let b = t#0.b;
+});
+Something

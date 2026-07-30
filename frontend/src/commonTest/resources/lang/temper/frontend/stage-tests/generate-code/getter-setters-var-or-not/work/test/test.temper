@@ -1,0 +1,50 @@
+export interface I {
+  public get superGetter(): Int { 10 }
+  public set superSetter(i: Int): Void { }
+}
+export class C extends I {
+  public propNotVar: Int;
+  public var propVar: Int;
+  public constructor() {
+    // These are both legal.
+    propNotVar = 1;
+    propVar = 2;
+    // Seeing if explicity `this` is different.
+    this.propVar = 3;
+    // Check an entirely missing property, which needs explicit this.
+    this.wrong = 4;
+    // Go both ways on good and bad here. Even in constructor, wrong way should fail.
+    // Some of the errors are confusing, but at least we get errors.
+    extraGetter = extraSetter;
+    extraSetter = extraGetter;
+    extraSetter = superGetter;
+    superGetter = propNotVar;
+    // Check setter defined only in supertype.
+    superSetter = propNotVar;
+  }
+  public update(i: Int): Void {
+    // Update of propNotVar illegal.
+    propNotVar = i;
+    // Assign bad type.
+    propVar = "hi";
+  }
+  public set extraSetter(k: Int): Void {
+    propVar = k;
+  }
+  public get extraGetter(): Int {
+    propVar
+  }
+}
+export let alsoUpdate(c: C, j: Int): Void {
+  // Again, update of propNotVar illegal.
+  c.propNotVar = j;
+  c.propVar = j;
+  c.propVar = "bye";
+  // c.propVar += j; // <-- Generates bad tree code!
+  // Check more good and bad.
+  c.extraSetter = j;
+  c.extraGetter = j;
+  c.extraWrong = j;
+  // From outside, check setter defined only in supertype.
+  c.superSetter = j;
+}

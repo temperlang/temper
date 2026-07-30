@@ -1,0 +1,18 @@
+interface I { x: String }
+
+class C(public x: String) extends I {}
+
+let least<T extends I>(a: T?, b: T?): T? {
+  if (a != null) {
+    if (b != null) {
+      if (a.x < b.x) { a } else { b }
+    } else {
+      a
+    }
+  } else {
+    b
+  }
+}
+
+let c = least<C>({ x: "foo" }, { x: "bar" });
+console.log(c?.x ?? "NULL");

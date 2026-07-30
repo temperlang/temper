@@ -1,0 +1,15 @@
+export interface Stringer {
+  @overload("stringify")
+  public stringifyInt32(int: Int32): String;
+
+  @overload("stringify")
+  public stringifyInt32List(ints: Listed<Int32>): String;
+
+  @overload("stringify")
+  public stringifyStringList(string: Listed<String>): String;
+}
+
+// Purposely receive List but use as Listed above.
+export let stringifyLists(stringer: Stringer, int: Int, ints: List<Int>, strings: List<String>): String {
+  "${stringer.stringify(int)}, ${stringer.stringify(ints)}, ${stringer.stringify(strings)}"
+}

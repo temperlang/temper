@@ -1,0 +1,7 @@
+let a = 1;
+(do {
+  let a = 2;
+  // Why do I feel compelled to write `let ... in` here?
+  // I wish I knew how to quit you, OCaml!
+  a
+}) + a

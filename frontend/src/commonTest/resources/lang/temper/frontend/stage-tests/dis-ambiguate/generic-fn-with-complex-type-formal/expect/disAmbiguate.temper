@@ -1,0 +1,5 @@
+let(\word, f, \typeFormal, do {
+    @resolution(T__0) @typeFormal(\T) @typeDecl(T__0) @stay let T = type (T__0);
+    T__0 extends MapKey;
+    type (T__0)
+  }, let x /* aka x */: T, \outType, Void, fn {})

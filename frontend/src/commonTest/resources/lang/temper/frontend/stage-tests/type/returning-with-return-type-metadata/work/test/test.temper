@@ -1,0 +1,1 @@
+fn () : Int { return 42 }

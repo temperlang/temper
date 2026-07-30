@@ -1,0 +1,23 @@
+
+export interface I {
+  @overload("foo")
+  fooInt32(x: Int32): Void { fooString(x.toString()); }
+
+  @overload("foo")
+  foolean(x: Boolean): Void { fooString(x.toString()); }
+
+  @overload("foo")
+  fooString(x: String): Void;
+}
+
+export class C extends I {
+  @overload("foo")
+  public fooInt32(x: Int32): Void { fooString("Int32 $x"); }
+
+  // Does not overload foolean
+
+  // Implements fooString but does not redeclare metadata
+  public fooString(x: String): Void {
+    ;
+  }
+}

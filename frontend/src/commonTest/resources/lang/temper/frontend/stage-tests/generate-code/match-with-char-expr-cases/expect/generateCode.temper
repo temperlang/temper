@@ -1,0 +1,19 @@
+@fn @reach(\none) let abcStop__0;
+abcStop__0 = (@stay fn abcStop(i__0 /* aka i */: Int32) /* return__0 */: String {
+    var t#0, t#1;
+    if (i__0 == 97) {
+      t#1 = true
+    } else {
+      if (i__0 == 98) {
+        t#0 = true
+      } else {
+        t#0 = i__0 == 99
+      };
+      t#1 = t#0
+    };
+    if (t#1) {
+      return__0 = "ok"
+    } else {
+      return__0 = "stop"
+    }
+})

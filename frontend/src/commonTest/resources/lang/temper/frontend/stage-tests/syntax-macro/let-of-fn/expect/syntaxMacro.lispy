@@ -1,0 +1,281 @@
+[
+    "Block",
+    [
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "f__0"
+                ],
+                [
+                    "Value",
+                    "\\init: Symbol"
+                ],
+                [
+                    "Fun",
+                    [
+                        [
+                            "Decl",
+                            [
+                                [
+                                    "LeftName",
+                                    "x__1"
+                                ],
+                                [
+                                    "Value",
+                                    "\\word: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\\x: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\\QName: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\u0022test-code.f().(x)\u0022: String"
+                                ]
+                            ]
+                        ],
+                        [
+                            "Value",
+                            "\\returnedFrom: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "true: Boolean"
+                        ],
+                        [
+                            "Value",
+                            "\\word: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "\\f: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "\\QName: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "\u0022test-code.f()\u0022: String"
+                        ],
+                        [
+                            "Block",
+                            [
+                                [
+                                    "Value",
+                                    "\\label: Symbol"
+                                ],
+                                [
+                                    "LeftName",
+                                    "fn__2"
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+                [
+                    "Value",
+                    "\\fn: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.f()\u0022: String"
+                ]
+            ]
+        ],
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "g__3"
+                ],
+                [
+                    "Value",
+                    "\\init: Symbol"
+                ],
+                [
+                    "Fun",
+                    [
+                        [
+                            "Decl",
+                            [
+                                [
+                                    "LeftName",
+                                    "y__4"
+                                ],
+                                [
+                                    "Value",
+                                    "\\word: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\\y: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\\QName: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\u0022test-code.g().(y)\u0022: String"
+                                ]
+                            ]
+                        ],
+                        [
+                            "Value",
+                            "\\returnedFrom: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "true: Boolean"
+                        ],
+                        [
+                            "Value",
+                            "\\word: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "\\g: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "\\QName: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "\u0022test-code.g()\u0022: String"
+                        ],
+                        [
+                            "Block",
+                            [
+                                [
+                                    "Value",
+                                    "\\label: Symbol"
+                                ],
+                                [
+                                    "LeftName",
+                                    "fn__5"
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+                [
+                    "Value",
+                    "\\fn: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.g()\u0022: String"
+                ]
+            ]
+        ],
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "h__0"
+                ],
+                [
+                    "Value",
+                    "\\init: Symbol"
+                ],
+                [
+                    "Fun",
+                    [
+                        [
+                            "Decl",
+                            [
+                                [
+                                    "LeftName",
+                                    "z__0"
+                                ],
+                                [
+                                    "Value",
+                                    "\\word: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\\z: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\\QName: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\u0022test-code.h().(z)\u0022: String"
+                                ]
+                            ]
+                        ],
+                        [
+                            "Value",
+                            "\\returnedFrom: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "true: Boolean"
+                        ],
+                        [
+                            "Block",
+                            [
+                                [
+                                    "Value",
+                                    "\\label: Symbol"
+                                ],
+                                [
+                                    "LeftName",
+                                    "fn__0"
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+                [
+                    "Value",
+                    "\\var: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.h()\u0022: String"
+                ]
+            ]
+        ],
+        [
+            "Value",
+            "void: Void"
+        ]
+    ]
+]

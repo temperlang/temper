@@ -1,0 +1,44 @@
+@fn @reach(\none) let other__0, @fn @reach(\none) something__0;
+other__0 = (@stay fn other(i__0 /* aka i */: Int32) /* return__0 */: (Int32 | Bubble) {
+    if (i__0 % 2 == 0) {
+      bubble()
+    } else {
+      return__0 = i__0
+    }
+});
+something__0 = (@stay fn something(nums__0 /* aka nums */: Map<Int32, Int32>, index__0 /* aka index */: Int32) /* return__1 */: Int32 {
+    var t#0, t#1, fail#0, fail#1, fail#2, fail#3;
+    if (index__0 < 0) {
+      bubble()
+    } else if (index__0 == 0) {
+      return__1 = hs(fail#0, (fn other)(index__0));
+      if (fail#0) {
+        bubble()
+      }
+    } else if (index__0 == 1) {
+      return__1 = hs(fail#1, do_call_get(nums__0, index__0));
+      if (fail#1) {
+        bubble()
+      }
+    } else {
+      orelse#0: {
+        t#0 = hs(fail#2, do_call_get(nums__0, index__0));
+        if (fail#2) {
+          break orelse#0;
+        };
+        if (index__0 < t#0) {
+          return__1 = index__0 + 1
+        } else if (index__0 > 10) {
+          t#1 = hs(fail#3, (fn other)(index__0 + 1));
+          if (fail#3) {
+            break orelse#0;
+          };
+          return__1 = t#1
+        } else {
+          break orelse#0;
+        }
+      } orelse {
+        return__1 = index__0
+      }
+    }
+})

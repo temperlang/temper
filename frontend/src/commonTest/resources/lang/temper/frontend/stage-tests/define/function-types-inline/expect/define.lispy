@@ -1,0 +1,127 @@
+[
+    "Block",
+    [
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "f__0"
+                ],
+                [
+                    "Value",
+                    "\\type: Symbol"
+                ],
+                [
+                    "Block",
+                    [
+                        [
+                            "Decl",
+                            [
+                                [
+                                    "LeftName",
+                                    "T__0"
+                                ],
+                                [
+                                    "Value",
+                                    "\\typeFormal: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\\T: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\\typeDecl: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "T__0: Type"
+                                ],
+                                [
+                                    "Value",
+                                    "\\QName: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\u0022test-code.f.\u003cT\u003e\u0022: String"
+                                ],
+                                [
+                                    "Value",
+                                    "\\ssa: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "void: Void"
+                                ]
+                            ]
+                        ],
+                        [
+                            "Call",
+                            [
+                                [
+                                    "Value",
+                                    "nym`=`: Function"
+                                ],
+                                [
+                                    "LeftName",
+                                    "T__0"
+                                ],
+                                [
+                                    "Value",
+                                    "T__0: Type"
+                                ]
+                            ]
+                        ],
+                        [
+                            "Value",
+                            "Fn__0\u003cList\u003cT__0\u003e, List\u003cT__0\u003e\u003e: Type"
+                        ]
+                    ]
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.f\u0022: String"
+                ],
+                [
+                    "Value",
+                    "\\ssa: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ]
+            ]
+        ],
+        [
+            "Call",
+            [
+                [
+                    "Value",
+                    "nym`=`: Function"
+                ],
+                [
+                    "LeftName",
+                    "f__0"
+                ],
+                [
+                    "Call",
+                    [
+                        [
+                            "RightName",
+                            "never"
+                        ]
+                    ]
+                ]
+            ]
+        ],
+        [
+            "Value",
+            "void: Void"
+        ]
+    ]
+]

@@ -22,12 +22,20 @@ let imports = """
   "lang.temper.value.DependencyCategory
 ;
 
-Program ::= body%Stmt*"";
+Program ::=
+      // Limit connected scope to top of file for avoiding abuse.
+      connected%Connected?
+    & body%Stmt*"";
 Program(
     dependencyCategory%`DependencyCategory`,
     genre%`Genre`,
     outputPath%`FilePath`,
 );
+Program.connected.default = `null`;
+
+/** For embedding external raw `@connected` Python source. */
+Connected(source%`String`);
+Connected.renderTo = `tokenSink.value(source)`;
 
 Stmt =
       FunctionDef
@@ -54,8 +62,7 @@ Stmt =
     | Pass
     | Break
     | Continue
-    | CommentLine
-    | Raw;
+    | CommentLine;
 
 /**
  * decorator: `'@' dotted_name [ '(' [args] ')' ] NEWLINE`
@@ -540,7 +547,3 @@ BinaryOp.operatorDefinition = `null`;
 UnaryOp(opEnum%`UnaryOpEnum`, expressionOperatorDefinition%`PyOperatorDefinition`);
 UnaryOp.renderTo = `opEnum.renderTo(tokenSink)`;
 UnaryOp.operatorDefinition = `null`;
-
-/** Used for embedding external raw Python source. */
-Raw(source%`String`);
-Raw.renderTo = `tokenSink.value(source)`;

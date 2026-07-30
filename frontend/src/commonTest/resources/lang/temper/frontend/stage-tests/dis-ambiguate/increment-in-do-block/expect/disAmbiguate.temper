@@ -1,0 +1,5 @@
+do(fn {
+    var x = 0;
+    x = (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(x, 1);
+    console.log(x);
+})

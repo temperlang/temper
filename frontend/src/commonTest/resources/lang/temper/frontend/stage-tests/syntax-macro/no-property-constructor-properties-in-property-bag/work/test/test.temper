@@ -1,0 +1,8 @@
+class C(private x: Int, @noProperty let y: Int) {
+  private z: Int = y + 1;
+}
+
+export let cs = [
+  { x: 1, y: 2 },
+  { x: 1, y: 2, z: 3 }, // ERROR: z not allowed here
+]

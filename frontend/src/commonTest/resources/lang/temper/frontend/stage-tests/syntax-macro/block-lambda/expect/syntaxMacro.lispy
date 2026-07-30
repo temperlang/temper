@@ -1,0 +1,82 @@
+[
+    "Block",
+    [
+        [
+            "Call",
+            [
+                [
+                    "RightName",
+                    "f"
+                ],
+                [
+                    "Fun",
+                    [
+                        [
+                            "Decl",
+                            [
+                                [
+                                    "LeftName",
+                                    "arg__0"
+                                ],
+                                [
+                                    "Value",
+                                    "\\type: Symbol"
+                                ],
+                                [
+                                    "RightName",
+                                    "ArgType"
+                                ],
+                                [
+                                    "Value",
+                                    "\\word: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\\arg: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\\QName: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\u0022test-code.(arg)\u0022: String"
+                                ]
+                            ]
+                        ],
+                        [
+                            "Value",
+                            "\\returnDecl: Symbol"
+                        ],
+                        [
+                            "Decl",
+                            [
+                                [
+                                    "LeftName",
+                                    "return__0"
+                                ],
+                                [
+                                    "Value",
+                                    "\\type: Symbol"
+                                ],
+                                [
+                                    "RightName",
+                                    "ReturnType"
+                                ]
+                            ]
+                        ],
+                        [
+                            "Block",
+                            [
+                                [
+                                    "RightName",
+                                    "arg__0"
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    ]
+]

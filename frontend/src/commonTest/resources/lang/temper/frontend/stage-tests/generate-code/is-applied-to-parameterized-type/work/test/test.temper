@@ -1,0 +1,9 @@
+sealed interface I<T> {}
+class A<T> extends I<T> {}
+class B<T> extends I<T> {}
+
+let f<T>(x: I<T>): Boolean {
+  x is A<T>
+}
+
+[f(new A<String>()), f(new B<String>())]

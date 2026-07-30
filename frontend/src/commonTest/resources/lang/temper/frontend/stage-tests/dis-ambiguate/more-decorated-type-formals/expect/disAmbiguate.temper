@@ -1,0 +1,14 @@
+@typeDecl(C__0<T__0>) @hoistLeft(true) @resolution(C__0) @stay let C = type (C__0);
+class(\word, C, \concrete, true, @typeDefined(C__0<T__0>) fn {
+    @typeFormal(\T) @typeDefined(T__0) @resolution(T__0) @stay @variance(-1) @imu let T = type (T__0);
+    C__0<T__0> extends AnyValue
+});
+@typeDecl(D__0<T__1>) @hoistLeft(true) @resolution(D__0) @stay let D = type (D__0);
+class(\word, D, \concrete, true, @typeDefined(D__0<T__1>) fn {
+    @typeFormal(\T) @typeDefined(T__1) @resolution(T__1) @stay @variance(-1) @imu let T = type (T__1);
+    D__0<T__1> extends AnyValue
+});
+let(\word, f, \typeFormal, do {
+    @resolution(T__2) @typeFormal(\T) @typeDecl(T__2) @stay @partialImu @imu let T = type (T__2);
+    type (T__2)
+  }, let t /* aka t */: T, \outType, Void, fn {})

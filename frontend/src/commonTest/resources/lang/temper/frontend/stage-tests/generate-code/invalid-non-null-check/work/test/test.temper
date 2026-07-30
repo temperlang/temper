@@ -1,0 +1,7 @@
+export let Act = fn (i: Int): Void;
+export let hi(i: Int, act: Act?): Void {
+  if (i == 0 || act != null) {
+    // `||` means act could be null here.
+    act(i);
+  }
+}

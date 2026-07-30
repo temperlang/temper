@@ -1,0 +1,12 @@
+@fn let `test//`.f;
+`test//`.f = fn f(x__0 /* aka x */: Int32) /* return__0 */: (Int32) {
+  fn__0: do {
+    var y__0 = x__0;
+    do {
+      let postfixReturn#0 = y__0;
+      y__0 = do_call_pred(postfixReturn#0);
+      postfixReturn#0
+    };
+    y__0 = do_call_succ(y__0)
+  }
+};

@@ -1,0 +1,31 @@
+[
+    "Block",
+    [
+        [
+            "Call",
+            [
+                [
+                    "Call",
+                    [
+                        [
+                            "Value",
+                            "nym`\u003c\u003e`: Function"
+                        ],
+                        [
+                            "RightName",
+                            "echo"
+                        ],
+                        [
+                            "RightName",
+                            "Int"
+                        ]
+                    ]
+                ],
+                [
+                    "Value",
+                    "42: Int32"
+                ]
+            ]
+        ]
+    ]
+]

@@ -1,0 +1,11 @@
+@typeDecl(What__0<Thing__0>) @hoistLeft(true) @resolution(What__0) @stay let What = type (What__0);
+class(\word, What, \concrete, true, @typeDefined(What__0<Thing__0>) fn {
+    @typeFormal(\Thing) @memberTypeFormal(\Thing) @typeDefined(Thing__0) @resolution(Thing__0) let Thing = type (Thing__0);
+    What__0<Thing__0> extends AnyValue;
+    @constructorProperty @property(\ints) @maybeVar @visibility(\public) let ints /* aka ints */: List<Int>;
+    @constructorProperty @property(\things) @maybeVar @visibility(\public) let things /* aka things */: List<Thing>;
+    @method(\work) @visibility(\public) let work = fn(\word, work, @impliedThis(What__0<Thing__0>) let this__0: What__0<Thing__0>, let that /* aka that */: Thing, \outType, Void, fn {
+        let another: What = this(What__0<Thing__0>), more: List = things;
+    });
+});
+What

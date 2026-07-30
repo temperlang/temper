@@ -1,0 +1,3 @@
+export class A(public string: String) {}
+
+export let a: A? = new A("a");

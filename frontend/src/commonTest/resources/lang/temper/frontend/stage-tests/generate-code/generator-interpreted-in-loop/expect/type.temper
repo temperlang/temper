@@ -1,0 +1,34 @@
+  let console#0;
+  console#0 = doPure(@stay fn /* return__0 */: Console {
+      return__0 = getConsole();
+  });
+  @fn let runItThrice__0;
+  runItThrice__0 = fn runItThrice(factory__0 /* aka factory */: (fn (): SafeGenerator<Empty>)) /* return__1 */: Void {
+    void;
+    fn__0: do {
+      let generator__0: SafeGenerator<Empty>;
+      generator__0 = factory__0();
+## Since it's a SafeGenerator, no error checking around do_call_next(...)
+      do_call_next(generator__0);
+      do_call_log(console#0, "Ran once");
+      do_call_next(generator__0);
+      do_call_log(console#0, "Ran twice");
+      do_call_next(generator__0);
+      do_call_log(console#0, "Ran thrice");
+      do_call_close(generator__0);
+      return__1 = void
+    }
+  };
+  runItThrice__0(fn /* return__2 */{
+## Adapt call specialized to adaptGeneratorFnSafe
+      return__2 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__3 */: (GeneratorResult<Empty>) implements GeneratorFn {
+          return__3 = core.doneResult<Empty>();
+## The interpreter needs to distinguish a legit return result with the result from a yield.
+          void;
+          while (true) {
+            do_call_log(console#0, "Pausing");
+            yield();
+            do_call_log(console#0, "Resuming");
+          }
+      })
+  });

@@ -1,0 +1,2 @@
+export class HtmlBuilder {}
+export let html = HtmlBuilder;

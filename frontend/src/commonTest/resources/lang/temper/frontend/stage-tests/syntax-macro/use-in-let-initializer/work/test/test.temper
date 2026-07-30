@@ -1,0 +1,5 @@
+let i = 0;
+do {
+  let i = i;
+  f(i);
+}

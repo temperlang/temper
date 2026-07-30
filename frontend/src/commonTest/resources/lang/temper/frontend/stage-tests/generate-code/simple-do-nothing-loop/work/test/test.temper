@@ -1,0 +1,11 @@
+// This example is interesting because the infer result pass actually adds two assignments
+// to gather results from terminal expression.
+//
+// This may be a bug, but in the meantime, it leads to a nested assignment of temporaries:
+// `t#0 = t#1 = hs(fail#2, i < 3)`
+//
+// The generate code stage needs to unnest this assignment before the TmpL backend can
+// translate it.  If the TmpL backend were to try to handle this by creating temporaries,
+// those would miss type information.
+var i = 0;
+while (i < 3) { ++i; }

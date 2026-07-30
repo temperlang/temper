@@ -1,0 +1,6 @@
+class Point(
+  public let x: Float64,
+  public let y: Float64,
+) extends AntValue {
+  public let distanceFromOrigin: Float64 = (x * x + y * y).sqrt();
+}

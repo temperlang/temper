@@ -1,0 +1,6 @@
+@stay fn (i__0 /* aka i */: Int32) /* return__0 */: String {
+  void;
+  fn__0: do {
+    return__0 = do_call_toString(do_call_toString(do_call_toString(i__0)));
+  }
+}

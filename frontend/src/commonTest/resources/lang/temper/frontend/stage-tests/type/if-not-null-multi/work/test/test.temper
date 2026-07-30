@@ -1,0 +1,8 @@
+export let multi(a: Int?, b: Int?): Int {
+  if (a != null && b != null) { return a * b; }
+  0
+}
+export let post(a: Int?): Int {
+  if (a == null) { return 0; }
+  2 * a
+}

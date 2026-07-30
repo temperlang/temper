@@ -1,0 +1,4 @@
+[
+    "Unnecessary type check to B__0 from expression with type B__0 which is a subtype",
+    "Unnecessary type check to A__0 from expression with type C__2 which is a subtype"
+]

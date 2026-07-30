@@ -1,0 +1,12 @@
+@operator("+")
+let mixedAdd(a: Int, b: Boolean): Int {
+  if (b) { a + 1 } else { a }
+}
+
+class C {
+  @operator("+")
+  public f(other: C): C { this }
+
+  @operator("+")
+  public static unary(c: C): C { c }
+}

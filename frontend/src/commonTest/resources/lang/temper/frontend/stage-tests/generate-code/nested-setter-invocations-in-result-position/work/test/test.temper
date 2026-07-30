@@ -1,0 +1,7 @@
+class C {
+  public set p(newValue: Int) {
+    console.log("Assigned ${newValue.toString(10)}");
+  }
+}
+let c = new C();
+c.p = c.p = oneTwoThree()

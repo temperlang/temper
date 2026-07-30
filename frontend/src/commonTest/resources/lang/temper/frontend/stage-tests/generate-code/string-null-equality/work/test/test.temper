@@ -1,0 +1,3 @@
+let f(s: String?): Boolean { s == null }
+
+!f("") && f(null)

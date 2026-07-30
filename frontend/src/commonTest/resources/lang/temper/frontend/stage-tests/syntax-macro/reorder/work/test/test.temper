@@ -1,0 +1,3 @@
+    let f(): Int { let i = 4; let g(): Int { i + j }; g() }
+    let j = i + 1;
+    let i = 1;

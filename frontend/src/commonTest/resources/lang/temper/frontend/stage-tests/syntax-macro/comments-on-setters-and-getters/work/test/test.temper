@@ -1,0 +1,6 @@
+class C {
+  /** Returns 1 */
+  public get x(): Int { 1 }
+  /** You can set it but it'll still be 1. */
+  public set x(newValue: Int): Void {}
+}

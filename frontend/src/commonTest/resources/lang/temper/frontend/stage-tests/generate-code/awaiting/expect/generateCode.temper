@@ -1,0 +1,21 @@
+var t#0, t#1, fail#0;
+t#0 = getConsole();
+let pb__0;
+pb__0 = new PromiseBuilder<String>();
+let p__0;
+p__0 = do_get_promise(pb__0);
+let fn__0;
+fn__0 = (@stay fn /* return__0 */{
+    let fn__1;
+    fn__1 = (@wrappedGeneratorFn fn /* return__1 */: (GeneratorResult<Empty>) implements GeneratorFn {
+        do_call_complete(pb__0, "Hello, World!");
+        return__1 = (fn doneResult)<Empty>()
+    });
+    return__0 = adaptGeneratorFnSafe(fn__1)
+});
+async(fn__0);
+t#1 = hs(fail#0, await p__0);
+if (fail#0) {
+  bubble()
+};
+do_call_log(t#0, t#1)

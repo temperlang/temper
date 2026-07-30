@@ -1,0 +1,20 @@
+let console#0;
+console#0 = doPure(@stay fn: Console {
+    getConsole()
+});
+@fn let f__1;
+f__1 = fn f(b__2 /* aka b */: Boolean) /* return__0 */: Int32 {
+  fn__3: do {
+    let i__4: Int32;
+    if(b__2, fn {
+        i__4 = -1
+      }, \else, fn (f#0) {
+        f#0(fn {
+            i__4 = 1
+        })
+    });
+    i__4
+  }
+};
+do_call_log(console#0, cat("f(true )=", str(f__1(true))));
+do_call_log(console#0, cat("f(false)=", str(f__1(false))));

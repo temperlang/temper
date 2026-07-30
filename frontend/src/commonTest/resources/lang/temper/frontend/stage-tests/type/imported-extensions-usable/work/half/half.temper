@@ -1,0 +1,4 @@
+@extension("half")
+export let intHalf(x: Int): Int {
+  x / 2
+}

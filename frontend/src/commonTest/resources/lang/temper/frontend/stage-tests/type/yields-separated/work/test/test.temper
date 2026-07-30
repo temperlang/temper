@@ -1,0 +1,6 @@
+ignore { (): GeneratorResult<Empty> extends GeneratorFn =>
+  while (true) {
+    "${ 123 }";
+    yield;
+  }
+}

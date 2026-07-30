@@ -1,0 +1,2 @@
+let ls: List<Int> = [1, 2];
+ls.map<String> { (x: Int): String => x.toString(10) }

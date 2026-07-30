@@ -1,0 +1,1 @@
+export @fun interface MyFunction(x: Int): Boolean;

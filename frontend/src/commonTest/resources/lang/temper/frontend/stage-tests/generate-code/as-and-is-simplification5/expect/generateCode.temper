@@ -1,0 +1,7 @@
+@fn @reach(\none) let g__0, @fn @reach(\none) f__0;
+g__0 = (@stay fn g(s__0 /* aka s */: String) /* return__0 */: StringIndexOption {
+    return__0 = do_get_end(s__0)
+});
+f__0 = (@stay fn f(s__1 /* aka s */: String) /* return__1 */: Boolean {
+    return__1 = (fn g)(s__1) is NoStringIndex
+})

@@ -1,0 +1,12 @@
+class TheCount {
+  public append(i: Int): Void {
+    console.log("${i}! Ha Ha Ha!");
+  }
+  public appendSafe(s: String): Void {}
+
+  public get accumulated(): Void {
+    console.log("I am the Count who loves to count!");
+  }
+}
+
+export let theCount = TheCount;

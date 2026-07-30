@@ -1,0 +1,3 @@
+let T = "T";
+interface I<T> { t: T }
+let t = T;

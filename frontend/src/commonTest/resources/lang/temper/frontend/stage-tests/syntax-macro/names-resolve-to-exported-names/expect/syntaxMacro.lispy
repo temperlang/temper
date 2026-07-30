@@ -1,0 +1,48 @@
+[
+    "Block",
+    [
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    {
+                        "type": "ExportedName",
+                        "baseName": "x"
+                    }
+                ],
+                [
+                    "Value",
+                    "\\init: Symbol"
+                ],
+                [
+                    "Value",
+                    "42: Int32"
+                ],
+                [
+                    "Value",
+                    "\\ssa: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.x\u0022: String"
+                ]
+            ]
+        ],
+        [
+            "RightName",
+            {
+                "type": "ExportedName",
+                "baseName": "x"
+            }
+        ]
+    ]
+]

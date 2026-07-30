@@ -1,0 +1,9 @@
+for (init; cond; incr) {
+  if (a) {
+    f();
+  } else if (b) {
+    break;
+  } else {
+    continue
+  }
+}

@@ -1,0 +1,7 @@
+export let f(): String throws Bubble {
+  bubble()
+}
+
+let x = f() orelse panic();
+
+x

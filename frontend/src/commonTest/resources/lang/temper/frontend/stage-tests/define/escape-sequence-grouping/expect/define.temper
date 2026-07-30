@@ -1,0 +1,12 @@
+@stay @imported(\(`test//html/`.html)) let html__0;
+html__0 = type (HtmlBuilder);
+do {
+  let accumulator#0;
+  accumulator#0 = new HtmlBuilder();
+  do {
+    do_call_appendSafe(accumulator#0, raw "<style>body { background: '\<");
+    do_call_append(accumulator#0, "/style/");
+    do_call_appendSafe(accumulator#0, "' }</style>")
+  };
+  do_get_accumulated(accumulator#0)
+}

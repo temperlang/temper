@@ -1,0 +1,37 @@
+@stay @imported(\(`test//c/`.C)) let C__0 = type (C), @imported(\(`test//c/`.g)) @fn g__0 = `test//c/`.g, @imported(\(`test//c/`.complexSubject)) @fn complexSubject__0 = (fn complexSubject), @fn f__0;
+f__0 = fn f(c__0 /* aka c */: C__0?) /* return__0 */: (Void) {
+  fn__0: do {
+    g__0({
+        if (isNull(c__0)) {
+          null
+        } else {
+          do_get_prop(notNull(c__0))
+        }
+    });
+    g__0({
+        let subject#0;
+        subject#0 = complexSubject__0(c__0);
+        if (isNull(subject#0)) {
+          null
+        } else {
+          do_get_prop(notNull(subject#0))
+        }
+    });
+    g__0({
+        if (isNull(c__0)) {
+          null
+        } else {
+          do_call_method(notNull(c__0))
+        }
+    });
+    g__0({
+        let subject#1;
+        subject#1 = complexSubject__0(c__0);
+        if (isNull(subject#1)) {
+          null
+        } else {
+          do_call_method(notNull(subject#1))
+        }
+    });
+  }
+};

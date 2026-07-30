@@ -1,0 +1,1 @@
+export class Point(public x: Int, public y: Int) {}

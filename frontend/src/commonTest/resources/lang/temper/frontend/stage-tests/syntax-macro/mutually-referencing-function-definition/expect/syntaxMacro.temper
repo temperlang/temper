@@ -1,0 +1,12 @@
+@fn let f__0, @fn g__0;
+REM("These do not converge since neither has a base case, but they demonstrate hoisting.", null, false);
+g__0 = fn g(x__0 /* aka x */) {
+  fn__0: do {
+    f__0(x__0 - 1)
+  }
+};
+f__0 = fn f(x__1 /* aka x */) {
+  fn__1: do {
+    g__0(x__1 / 2)
+  }
+};

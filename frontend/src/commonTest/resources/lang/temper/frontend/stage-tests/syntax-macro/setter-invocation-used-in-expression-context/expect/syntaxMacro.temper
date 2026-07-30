@@ -1,0 +1,9 @@
+  REM("A chained assignment involving a setter invocation.", null, false);
+  x = do {
+    let t#0;
+## Here we capture the right operand in t#0,
+## so the value assigned to x does not depend
+## on any setter's return value.
+    do_set_p(o, t#0 = f());
+    t#0
+  }

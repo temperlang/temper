@@ -1,0 +1,11 @@
+let y__0;
+y__0 = 123;
+do {
+  if(postponedCase(([\f, "(", \let, \y, ")"]), x, \y, y__0), fn {
+      handleIt()
+    }, \else, fn (f#0) {
+      f#0(fn {
+          fallback()
+      })
+  })
+}

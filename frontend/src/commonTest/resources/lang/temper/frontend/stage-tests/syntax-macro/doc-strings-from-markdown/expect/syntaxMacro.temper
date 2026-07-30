@@ -1,0 +1,30 @@
+## No "Geometry" for the class doc comment
+  @typeDecl(Point__0) @stay @docString((["Point represents a two-dimensional point.", "Point represents a two-dimensional point.", "test/test.temper.md"])) let Point__0 = type (Point__0);
+  REM("Point represents a two-dimensional point.", true, true);
+  class(\word, \Point, \concrete, true, @typeDefined(Point__0) fn {
+      Point__0 extends AnyValue;
+## x's docs don't talk about the factory
+      @docString((["x is the x coordinate.", "x is the x coordinate.", "test/test.temper.md"])) @constructorProperty @maybeVar @visibility(\public) let x__0: Float64;
+      @docString((["y is the y coordinate.", "y is the y coordinate.", "test/test.temper.md"])) @constructorProperty @maybeVar @visibility(\public) let y__0: Float64;
+      REM("magnitude is the distance of this point from the origin.", true, true);
+      REM("It is always >= 0.", true, true);
+## magnitude has its doc string
+      @fn let magnitude__0 = (@docString((["magnitude is the distance of this point from the origin.", "magnitude is the distance of this point from the origin.\n\nIt is always >= 0.", "test/test.temper.md"])) fn magnitude(@impliedThis(Point__0) this__0: Point__0) /* return__0 */: (Float64) {
+          fn__0: do {
+            do_call_sqrt(do_iget_x(type (Point__0), this(Point__0)) * do_iget_x(type (Point__0), this(Point__0)) + do_iget_y(type (Point__0), this(Point__0)) * do_iget_y(type (Point__0), this(Point__0)))
+          }
+      });
+      @visibility(\public) let constructor__0 = fn constructor(@impliedThis(Point__0) this__1: Point__0, x__1 /* aka x */: Float64, y__1 /* aka y */: Float64) /* return__1 */: Void {
+        do {
+          let t#0;
+          do_iset_x(type (Point__0), this(Point__0), t#0 = x__1);
+          t#0
+        };
+        do {
+          let t#1;
+          do_iset_y(type (Point__0), this(Point__0), t#1 = y__1);
+          t#1
+        };
+      };
+  });
+  Point__0

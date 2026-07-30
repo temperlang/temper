@@ -1,0 +1,1 @@
+f { (arg: ArgType): ReturnType => arg }
