@@ -160,7 +160,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
                 outputRoot = outputRoot,
                 preparedModules = preparedModules,
                 test = test,
-                adjuster = backendOrganization.adjusters[neededBackendId],
+                adjusterFactory = backendOrganization.adjusterFactories[neededBackendId],
             )
         }
 
@@ -205,7 +205,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
         outputRoot: OutputRoot,
         preparedModules: PreparedFunctionalTest,
         test: FunctionalTestBase,
-        adjuster: BackendAdjuster?,
+        adjusterFactory: BackendAdjusterFactory?,
     ) = run {
         val supportedBackendList = listOf(backendId)
         val functionalTestLibraryConfiguration = LibraryConfiguration(
@@ -315,7 +315,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
                     config = config,
                     dependenciesBuilder = dependenciesBuilder,
                     rawBackendFiles = rawBackendFiles,
-                    adjuster = adjuster,
+                    adjusterFactory = adjusterFactory,
                 ),
             )
         }

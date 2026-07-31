@@ -1,6 +1,7 @@
 package lang.temper.be
 
 import lang.temper.be.tmpl.TestBackend
+import lang.temper.be.tmpl.TmpL
 import lang.temper.lexer.defaultClassifyTemperSource
 import lang.temper.library.LibraryConfiguration
 import lang.temper.log.dirPath
@@ -24,28 +25,31 @@ class BackendTest {
         class NeedyBackendFactory(
             backendId: String,
             requiredBackendIds: List<BackendId>,
-            val adjusters: Map<BackendId, BackendAdjuster> = mapOf(),
+            val adjusterFactories: Map<BackendId, BackendAdjusterFactory> = mapOf(),
         ) : TestBackend.TestFactory() {
             override val backendId: BackendId = BackendId(backendId)
             override val backendMeta = super.backendMeta.copy(
                 backendId = this.backendId,
                 requiredBackendIds = requiredBackendIds,
             )
-            override fun adjusters(): Map<BackendId, BackendAdjuster> {
-                return adjusters
+            override fun adjusterFactories(): Map<BackendId, BackendAdjusterFactory> {
+                return adjusterFactories
             }
         }
         val missingBackendId = BackendId("missing")
         val needyFactory = NeedyBackendFactory("needy", listOf(TestBackend.backendId, missingBackendId))
         val needlessFactory = NeedyBackendFactory("needless", listOf())
         val uselessAdjuster = object : BackendAdjuster {}
+        val uselessAdjusterFactory = object : BackendAdjusterFactory {
+            override fun makeAdjuster(module: TmpL.Module): BackendAdjuster = uselessAdjuster
+        }
         val needierFactory = NeedyBackendFactory(
             backendId = "needier",
             requiredBackendIds = listOf(needyFactory.backendId, needlessFactory.backendId),
-            adjusters = mapOf(
-                needyFactory.backendId to uselessAdjuster,
+            adjusterFactories = mapOf(
+                needyFactory.backendId to uselessAdjusterFactory,
                 // We don't directly require this, so we shouldn't be adjusting it.
-                TestBackend.backendId to uselessAdjuster,
+                TestBackend.backendId to uselessAdjusterFactory,
             ),
         )
         val aloofBackend = NeedyBackendFactory("aloof", listOf())
@@ -103,7 +107,7 @@ class BackendTest {
             organization.backendBuckets,
         )
         assertEquals(backends.keys - setOf(aloofBackend.backendId), organization.factoriesById.keys)
-        assertEquals(uselessAdjuster, organization.adjusters[needyFactory.backendId])
+        assertEquals(uselessAdjusterFactory, organization.adjusterFactories[needyFactory.backendId])
     }
 
     @Test

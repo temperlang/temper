@@ -109,7 +109,7 @@ abstract class Backend<SELF : Backend<SELF>>(
      */
     val dependenciesBuilder: Dependencies.Builder<SELF>,
     val rawBackendFiles: Map<FilePath, String> = mapOf(),
-    val adjuster: BackendAdjuster? = null,
+    val adjusterFactory: BackendAdjusterFactory? = null,
 ) {
     constructor(backendId: BackendId, setup: BackendSetup<SELF>) : this(
         backendId = backendId,
@@ -122,7 +122,7 @@ abstract class Backend<SELF : Backend<SELF>>(
         config = setup.config,
         dependenciesBuilder = setup.dependenciesBuilder,
         rawBackendFiles = setup.rawBackendFiles,
-        adjuster = setup.adjuster,
+        adjusterFactory = setup.adjusterFactory,
     )
 
     val libraryConfigurations = dependenciesBuilder.libraryConfigurations
@@ -837,7 +837,7 @@ abstract class Backend<SELF : Backend<SELF>>(
          * Adjuster by backend as wanted. Should only be given for backend ids
          * in [BackendMeta.requiredBackendIds] for this backend.
          */
-        fun adjusters(): Map<BackendId, BackendAdjuster> = mapOf()
+        fun adjusterFactories(): Map<BackendId, BackendAdjusterFactory> = mapOf()
     }
 
     @Retention(AnnotationRetention.RUNTIME)
@@ -906,8 +906,13 @@ data class BackendSetup<BACKEND : Backend<BACKEND>>(
     val config: Backend.Config,
     /** Files matching backend extensions from the library source tree. */
     val rawBackendFiles: Map<FilePath, String> = mapOf(),
-    val adjuster: BackendAdjuster? = null,
+    val adjusterFactory: BackendAdjusterFactory? = null,
 )
+
+/** Enables module-based lifetimes on individual [BackendAdjuster] instances. */
+interface BackendAdjusterFactory {
+    fun makeAdjuster(module: TmpL.Module): BackendAdjuster
+}
 
 /**
  * Adjusts, customized, or transforms backend behavior. Might be installed by
@@ -917,21 +922,34 @@ interface BackendAdjuster {
     /**
      * Optionally customizes an already translated connected call. On null
      * return value, use the original.
+     *
+     * Adjusters should return null for any [T] they don't know how to handle
+     * although typically this is well-defined for a particular backend.
      */
     fun <T: OutTree<*>> adjustConnectedCall(decl: TmpL.FunctionDeclaration, call: T): T? {
         return null
     }
 
-    // TODO adjustModuleTree to be called on the final product???
-
-    // TODO addTranslations or addFiles to add more files.
+    /**
+     * Return any extra files that should be added to the output translation,
+     * where [T] depends on the backend being adjusted.
+     */
+    fun <T: OutTree<*>> additionalFilesAfterTranslation(): Collection<T> {
+        return listOf()
+    }
 }
 
-/** Combines two adjusters with [this] as priority. */
-fun BackendAdjuster.orElse(other: BackendAdjuster): BackendAdjuster {
-    return object : BackendAdjuster {
-        override fun <T : OutTree<*>> adjustConnectedCall(decl: TmpL.FunctionDeclaration, call: T): T? {
-            return adjustConnectedCall(decl, call) ?: other.adjustConnectedCall(decl, call)
+/** Combines two adjuster factories with [this] as priority. */
+fun BackendAdjusterFactory.orElse(other: BackendAdjusterFactory): BackendAdjusterFactory {
+    return object : BackendAdjusterFactory {
+        override fun makeAdjuster(module: TmpL.Module): BackendAdjuster {
+            val a = this@orElse.makeAdjuster(module)
+            val b = other.makeAdjuster(module)
+            return object : BackendAdjuster {
+                override fun <T : OutTree<*>> adjustConnectedCall(decl: TmpL.FunctionDeclaration, call: T): T? {
+                    return a.adjustConnectedCall(decl, call) ?: b.adjustConnectedCall(decl, call)
+                }
+            }
         }
     }
 }
@@ -975,7 +993,7 @@ data class BackendOrganization(
     val factoriesById: Map<BackendId, Backend.Factory<*>>,
 
     /** Priority order rather than chain. */
-    val adjusters: Map<BackendId, BackendAdjuster> = mapOf(),
+    val adjusterFactories: Map<BackendId, BackendAdjusterFactory> = mapOf(),
 )
 
 data class BackendOrganizationError(
@@ -1073,9 +1091,9 @@ fun organizeBackends(
         }
     }
     val backendRequirements = transitiveClosure(backendOrderingFounds).mapValues { setOf(it.key) + it.value }
-    val adjusters = buildMap<BackendId, BackendAdjuster> {
+    val adjusterFactories = buildMap<BackendId, BackendAdjusterFactory> {
         for (factory in factoriesById.values) {
-            val adjusters = factory.adjusters()
+            val adjusters = factory.adjusterFactories()
             val requiredBackendIds = factory.backendMeta.requiredBackendIds
             for ((backendId, adjuster) in adjusters) {
                 if (backendId !in requiredBackendIds) {
@@ -1095,6 +1113,6 @@ fun organizeBackends(
         backendBuckets = backendBuckets,
         backendRequirements = backendRequirements,
         factoriesById = factoriesById,
-        adjusters = adjusters,
+        adjusterFactories = adjusterFactories,
     )
 }

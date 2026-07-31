@@ -3,6 +3,7 @@ package lang.temper.be.java
 import lang.temper.ast.deepSlice
 import lang.temper.ast.toLispy
 import lang.temper.be.BackendAdjuster
+import lang.temper.be.BackendAdjusterFactory
 import lang.temper.be.Dependencies
 import lang.temper.be.java.JavaOperator.Assign
 import lang.temper.be.tmpl.FnAutodoc
@@ -67,7 +68,7 @@ class JavaTranslator(
     /** a shared instance for consistent name mapping */
     private val topNames: JavaNames,
     private val dependenciesBuilder: Dependencies.Builder<JavaBackend>? = null,
-    private val adjuster: BackendAdjuster? = null,
+    private val adjusterFactory: BackendAdjusterFactory? = null,
 ) {
     /** Spin off an instance for a given module */
     private fun forModule(module: ModuleName, programMeta: J.ProgramMeta = J.ProgramMeta(unknownPos)): ModuleScope =
@@ -134,6 +135,7 @@ class JavaTranslator(
 
         /** Might even stay null for snippets. */
         private var module: TmpL.Module? = null
+        private var adjuster: BackendAdjuster? = null
 
         private fun activeDecls(decls: MutableList<J.ClassBodyDeclaration>) = when {
             processingTestCode -> moduleTestDecls
@@ -159,6 +161,7 @@ class JavaTranslator(
 
         fun module(module: TmpL.Module): List<J.Program> {
             this.module = module
+            adjuster = adjusterFactory?.makeAdjuster(module)
             val result = module.result
             topLevels@ for (tl in module.topLevels) {
                 try {
@@ -238,6 +241,7 @@ class JavaTranslator(
                     addAll(moduleTestDecls)
                 }
             }
+            adjuster?.also { programs.addAll(it.additionalFilesAfterTranslation()) }
             return programs
         }
 
