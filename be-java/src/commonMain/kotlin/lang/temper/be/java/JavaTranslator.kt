@@ -241,7 +241,7 @@ class JavaTranslator(
                     addAll(moduleTestDecls)
                 }
             }
-            adjuster?.also { programs.addAll(it.additionalFilesAfterTranslation()) }
+            adjuster?.adjustFilesAfterTranslation(programs)
             return programs
         }
 

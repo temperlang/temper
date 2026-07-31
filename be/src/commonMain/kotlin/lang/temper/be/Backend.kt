@@ -931,11 +931,12 @@ interface BackendAdjuster {
     }
 
     /**
-     * Return any extra files that should be added to the output translation,
-     * where [T] depends on the backend being adjusted.
+     * Pass any already built files. Most common behavior would be to add more.
+     * The adjust may want to reference existing files and could technically
+     * modify them.
      */
-    fun <T: OutTree<*>> additionalFilesAfterTranslation(): Collection<T> {
-        return listOf()
+    fun <T: OutTree<*>> adjustFilesAfterTranslation(files: MutableList<T>) {
+        // Do nothing by default.
     }
 }
 
