@@ -911,7 +911,7 @@ data class BackendSetup<BACKEND : Backend<BACKEND>>(
 
 /** Enables module-based lifetimes on individual [BackendAdjuster] instances. */
 interface BackendAdjusterFactory {
-    fun makeAdjuster(module: TmpL.Module): BackendAdjuster
+    fun makeAdjuster(module: TmpL.Module, translator: Any): BackendAdjuster
 }
 
 /**
@@ -943,9 +943,9 @@ interface BackendAdjuster {
 /** Combines two adjuster factories with [this] as priority. */
 fun BackendAdjusterFactory.orElse(other: BackendAdjusterFactory): BackendAdjusterFactory {
     return object : BackendAdjusterFactory {
-        override fun makeAdjuster(module: TmpL.Module): BackendAdjuster {
-            val a = this@orElse.makeAdjuster(module)
-            val b = other.makeAdjuster(module)
+        override fun makeAdjuster(module: TmpL.Module, translator: Any): BackendAdjuster {
+            val a = this@orElse.makeAdjuster(module, translator)
+            val b = other.makeAdjuster(module, translator)
             return object : BackendAdjuster {
                 /** Only lets the secondary adjuster apply if the first returns null. */
                 override fun <T : OutTree<*>> adjustConnectedCall(decl: TmpL.FunctionDeclaration, call: T): T? {

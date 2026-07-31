@@ -47,7 +47,7 @@ class BackendTest {
             }
         }
         class TestAdjusterFactory(val adjuster: BackendAdjuster) : BackendAdjusterFactory {
-            override fun makeAdjuster(module: TmpL.Module): BackendAdjuster = adjuster
+            override fun makeAdjuster(module: TmpL.Module, translator: Any): BackendAdjuster = adjuster
         }
         val comboFactory = TestAdjusterFactory(TestAdjusterA())
             .orElse(TestAdjusterFactory(TestAdjusterB()))
@@ -55,7 +55,7 @@ class BackendTest {
         val module = tmpl.module {
             moduleFunction(BuiltinName("hi")) {}
         }
-        val adjuster = comboFactory.makeAdjuster(module)
+        val adjuster = comboFactory.makeAdjuster(module, Unit)
         val function = module.topLevels.first() as TmpL.FunctionDeclaration
         fun adjustCall(name: String): String {
             val id = adjuster.adjustConnectedCall(function, tmpl.makeId(BuiltinName(name)))
@@ -92,7 +92,7 @@ class BackendTest {
         val needlessFactory = NeedyBackendFactory("needless", listOf())
         val uselessAdjuster = object : BackendAdjuster {}
         val uselessAdjusterFactory = object : BackendAdjusterFactory {
-            override fun makeAdjuster(module: TmpL.Module): BackendAdjuster = uselessAdjuster
+            override fun makeAdjuster(module: TmpL.Module, translator: Any): BackendAdjuster = uselessAdjuster
         }
         val needierFactory = NeedyBackendFactory(
             backendId = "needier",
