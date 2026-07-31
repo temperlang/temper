@@ -1,5 +1,6 @@
 package lang.temper.be
 
+import lang.temper.ast.OutTree
 import lang.temper.be.tmpl.TestBackend
 import lang.temper.be.tmpl.TmpL
 import lang.temper.lexer.defaultClassifyTemperSource
@@ -7,18 +8,68 @@ import lang.temper.library.LibraryConfiguration
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
 import lang.temper.name.BackendId
+import lang.temper.name.BuiltinName
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ModuleName
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
 class BackendTest {
-    private val helloWorldLibraryConfig = LibraryConfiguration(
-        libraryName = DashedIdentifier.from("hello-world")!!,
-        libraryRoot = dirPath("a"),
-        supportedBackendList = emptyList(),
-        classifyTemperSource = ::defaultClassifyTemperSource,
-    )
+    @Test
+    fun backendAdjusters() {
+        val tmpl = TmplGenerator(".test")
+        // Define some adjusters and factories.
+        class TestAdjusterA : BackendAdjuster {
+            override fun <T : OutTree<*>> adjustConnectedCall(decl: TmpL.FunctionDeclaration, call: T): T? {
+                // Abusively just treat ids as calls to simplify.
+                call is TmpL.Id || return null
+                return when (call.name.displayName) {
+                    "_" -> {
+                        @Suppress("UNCHECKED_CAST")
+                        return tmpl.makeId(BuiltinName("there")) as T
+                    }
+                    else -> null
+                }
+            }
+            override fun <T : OutTree<*>> adjustFilesAfterTranslation(files: MutableList<T>) {
+                @Suppress("UNCHECKED_CAST")
+                files.add(tmpl.makeId(BuiltinName("a")) as T)
+            }
+        }
+        class TestAdjusterB : BackendAdjuster {
+            override fun <T : OutTree<*>> adjustConnectedCall(decl: TmpL.FunctionDeclaration, call: T): T? {
+                return call
+            }
+            override fun <T : OutTree<*>> adjustFilesAfterTranslation(files: MutableList<T>) {
+                @Suppress("UNCHECKED_CAST")
+                files.add(tmpl.makeId(BuiltinName("b")) as T)
+            }
+        }
+        class TestAdjusterFactory(val adjuster: BackendAdjuster) : BackendAdjusterFactory {
+            override fun makeAdjuster(module: TmpL.Module): BackendAdjuster = adjuster
+        }
+        val comboFactory = TestAdjusterFactory(TestAdjusterA())
+            .orElse(TestAdjusterFactory(TestAdjusterB()))
+        // Work on some tmpl.
+        val module = tmpl.module {
+            moduleFunction(BuiltinName("hi")) {}
+        }
+        val adjuster = comboFactory.makeAdjuster(module)
+        val function = module.topLevels.first() as TmpL.FunctionDeclaration
+        fun adjustCall(name: String): String {
+            val id = adjuster.adjustConnectedCall(function, tmpl.makeId(BuiltinName(name)))
+            return id!!.name.displayName
+        }
+        // The first adjuster only replaces name "_". The second always returns what it's given.
+        assertEquals("there", adjustCall("_"))
+        assertEquals("yall", adjustCall("yall"))
+        // Now see how we finalize, expecting reverse order.
+        assertContentEquals(
+            listOf("b", "a"),
+            buildList<TmpL.Id> { adjuster.adjustFilesAfterTranslation(this) }.map { it.name.displayName },
+        )
+    }
 
     @Test
     fun backendOrganization() {
@@ -163,4 +214,11 @@ class BackendTest {
             Backend.defaultFilePathForSource(helloWorldLibraryConfig, moduleName, ".out"),
         )
     }
+
+    private val helloWorldLibraryConfig = LibraryConfiguration(
+        libraryName = DashedIdentifier.from("hello-world")!!,
+        libraryRoot = dirPath("a"),
+        supportedBackendList = emptyList(),
+        classifyTemperSource = ::defaultClassifyTemperSource,
+    )
 }

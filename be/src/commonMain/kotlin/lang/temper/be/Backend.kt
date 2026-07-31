@@ -947,8 +947,15 @@ fun BackendAdjusterFactory.orElse(other: BackendAdjusterFactory): BackendAdjuste
             val a = this@orElse.makeAdjuster(module)
             val b = other.makeAdjuster(module)
             return object : BackendAdjuster {
+                /** Only lets the secondary adjuster apply if the first returns null. */
                 override fun <T : OutTree<*>> adjustConnectedCall(decl: TmpL.FunctionDeclaration, call: T): T? {
                     return a.adjustConnectedCall(decl, call) ?: b.adjustConnectedCall(decl, call)
+                }
+
+                /** Adjusts in reverse order, so the priority adjuster has the final say. */
+                override fun <T : OutTree<*>> adjustFilesAfterTranslation(files: MutableList<T>) {
+                    b.adjustFilesAfterTranslation(files)
+                    a.adjustFilesAfterTranslation(files)
                 }
             }
         }
