@@ -19,6 +19,7 @@ class BackendTest {
     @Test
     fun backendAdjusters() {
         val tmpl = TmplGenerator(".test")
+
         // Define some adjusters and factories.
         class TestAdjusterA : BackendAdjuster {
             override fun <T : OutTree<*>> adjustConnectedCall(decl: TmpL.FunctionDeclaration, call: T): T? {

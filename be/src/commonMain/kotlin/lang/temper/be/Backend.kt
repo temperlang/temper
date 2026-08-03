@@ -926,7 +926,7 @@ interface BackendAdjuster {
      * Adjusters should return null for any [T] they don't know how to handle
      * although typically this is well-defined for a particular backend.
      */
-    fun <T: OutTree<*>> adjustConnectedCall(decl: TmpL.FunctionDeclaration, call: T): T? {
+    fun <T : OutTree<*>> adjustConnectedCall(decl: TmpL.FunctionDeclaration, call: T): T? {
         return null
     }
 
@@ -935,7 +935,7 @@ interface BackendAdjuster {
      * The adjust may want to reference existing files and could technically
      * modify them.
      */
-    fun <T: OutTree<*>> adjustFilesAfterTranslation(files: MutableList<T>) {
+    fun <T : OutTree<*>> adjustFilesAfterTranslation(files: MutableList<T>) {
         // Do nothing by default.
     }
 }
