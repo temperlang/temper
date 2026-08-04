@@ -1266,7 +1266,7 @@ AssignmentExpr requires `operator.operator.isAssignment()` ;
  * The target of an assignment may be a name, or an accessor.
  * JLS 15.26 TODO add array access
  */
-LeftHandSide = NameExpr | FieldAccessExpr ;
+LeftHandSide = NameExpr | FieldAccessExpr | StaticFieldAccessExpr ;
 
 /**
  * A lambda expression. JLS 15.27

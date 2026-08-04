@@ -5509,7 +5509,7 @@ object Java {
         pos: Position,
         type: QualIdentifier,
         field: Identifier,
-    ) : BaseTree(pos), Expression {
+    ) : BaseTree(pos), Expression, LeftHandSide {
         override val operatorDefinition
             get() = JavaOperatorDefinition.Atom
         override val codeFormattingTemplate: CodeFormattingTemplate
