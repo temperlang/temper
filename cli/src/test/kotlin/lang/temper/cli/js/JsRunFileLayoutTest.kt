@@ -86,18 +86,22 @@ class JsRunFileLayoutTest {
             |  ┣━index.js
             |  ┣━library-a/
             |  ┃ ┣━index.js
+            |  ┃ ┣━library_a.internal.js
             |  ┃ ┣━library_a.js
             |  ┃ ┗━package.json
             |  ┣━library-b/
             |  ┃ ┣━index.js
+            |  ┃ ┣━library_b.internal.js
             |  ┃ ┣━library_b.js
             |  ┃ ┗━package.json
             |  ┣━library-c/
             |  ┃ ┣━index.js
+            |  ┃ ┣━library_c.internal.js
             |  ┃ ┣━library_c.js
             |  ┃ ┗━package.json
             |  ┣━library-d/
             |  ┃ ┣━index.js
+            |  ┃ ┣━library_d.internal.js
             |  ┃ ┣━library_d.js
             |  ┃ ┗━package.json
             |  ┣━node_modules/
@@ -127,26 +131,35 @@ class JsRunFileLayoutTest {
                 |  ┃ ┃ ┃ ┗━tsconfig.json
                 |  ┃ ┃ ┗━std/
                 |  ┃ ┃   ┣━index.js
+                |  ┃ ┃   ┣━json.internal.js
                 |  ┃ ┃   ┣━json.js
+                |  ┃ ┃   ┣━net.internal.js
                 |  ┃ ┃   ┣━net.js
                 |  ┃ ┃   ┣━package.json
+                |  ┃ ┃   ┣━regex.internal.js
                 |  ┃ ┃   ┣━regex.js
+                |  ┃ ┃   ┣━temporal.internal.js
                 |  ┃ ┃   ┣━temporal.js
+                |  ┃ ┃   ┣━testing.internal.js
                 |  ┃ ┃   ┗━testing.js
                 |  ┃ ┣━library-a/
                 |  ┃ ┃ ┣━index.js
+                |  ┃ ┃ ┣━library_a.internal.js
                 |  ┃ ┃ ┣━library_a.js
                 |  ┃ ┃ ┗━package.json
                 |  ┃ ┣━library-b/
                 |  ┃ ┃ ┣━index.js
+                |  ┃ ┃ ┣━library_b.internal.js
                 |  ┃ ┃ ┣━library_b.js
                 |  ┃ ┃ ┗━package.json
                 |  ┃ ┣━library-c/
                 |  ┃ ┃ ┣━index.js
+                |  ┃ ┃ ┣━library_c.internal.js
                 |  ┃ ┃ ┣━library_c.js
                 |  ┃ ┃ ┗━package.json
                 |  ┃ ┗━library-d/
                 |  ┃   ┣━index.js
+                |  ┃   ┣━library_d.internal.js
                 |  ┃   ┣━library_d.js
                 |  ┃   ┗━package.json
             """.trimMargin()
@@ -165,11 +178,16 @@ class JsRunFileLayoutTest {
             |  ┣━package.json
             |  ┣━std/
             |  ┃ ┣━index.js
+            |  ┃ ┣━json.internal.js
             |  ┃ ┣━json.js
+            |  ┃ ┣━net.internal.js
             |  ┃ ┣━net.js
             |  ┃ ┣━package.json
+            |  ┃ ┣━regex.internal.js
             |  ┃ ┣━regex.js
+            |  ┃ ┣━temporal.internal.js
             |  ┃ ┣━temporal.js
+            |  ┃ ┣━testing.internal.js
             |  ┃ ┗━testing.js
             |  ┗━temper-core/
             |    ┣━async.js

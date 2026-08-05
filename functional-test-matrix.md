@@ -26,7 +26,7 @@
 | [ControlFlowLoopReenterable][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowLoops][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [FunctionsAsValues][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [FunctionsConnected][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ❌<sup>[456][]</sup> | ✅ | ✅ | ❌<sup>[456][]</sup> | ✅ | ✅ | ✅ | ✅ |
+| [FunctionsConnected][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ❌<sup>[456][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [FunctionsConstructorCallbacks][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [FunctionsDefaulting][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [FunctionsLocals][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |

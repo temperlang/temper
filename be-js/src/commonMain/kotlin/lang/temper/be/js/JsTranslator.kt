@@ -13,8 +13,10 @@ import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.findDeclaration
 import lang.temper.be.tmpl.implicitTypeTag
+import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapGeneric
+import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.toTmpL
 import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.be.tmpl.withoutBubbleOrNull
@@ -31,6 +33,7 @@ import lang.temper.format.CodeFormattingTemplate
 import lang.temper.format.toStringViaTokenSink
 import lang.temper.lexer.Genre
 import lang.temper.lexer.temperAwareBaseName
+import lang.temper.log.FilePath
 import lang.temper.log.FilePath.Companion.join
 import lang.temper.log.FilePath.Companion.toPseudoPath
 import lang.temper.log.FilePathSegment
@@ -44,6 +47,7 @@ import lang.temper.log.spanningPosition
 import lang.temper.name.BuiltinName
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ExportedName
+import lang.temper.name.ModularName
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedName
 import lang.temper.name.ResolvedParsedName
@@ -74,6 +78,7 @@ import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.TVoid
+import lang.temper.value.connectedSymbol
 import kotlin.io.path.Path
 
 private const val DEBUG = false
@@ -135,28 +140,39 @@ internal class JsTranslator(
         defaultGenre
     }
 
-    private var libraryName: DashedIdentifier? = null
+    private var module: TmpL.Module? = null
+
+    private val importedIds = mutableListOf<JsIdentifierName>()
+    private val exportedIds = mutableListOf<Js.Identifier>()
+    private val importsFromProdToTest = mutableSetOf<JsIdentifierName>()
+    private val prodTopIds = mutableSetOf<ResolvedName>()
+    private var hasConnected = false
 
     fun translate(t: TmpL.Module): List<Translation> = jsNames.forOrigin(t.codeLocation.origin) {
         debug {
             console.log("$t")
         }
-        libraryName = t.libraryName
+        module = t
 
+        precachePrettyTypeNames(t)
         // Build imports before topLevels, or else local import names get mismatched.
         val ungroupedImports = mutableListOf<Js.ImportDeclaration>()
         translateImports(t.imports, ungroupedImports)
-        t.topLevels.forEach topLevels@{
-            val dependencyCategory = effectiveDependencyCategory(it)
-            when (dependencyCategory) {
-                DependencyCategory.Production -> prodModuleParts
-                DependencyCategory.Test -> testModuleParts
-                null -> return@topLevels
-            }.topLevels.addAll(
-                withDependencyMode(dependencyCategory) {
-                    translateTopLevel(it)
-                },
-            )
+        // Translate prod first to gather top-level ids.
+        t.topLevels.forEach topLevels@{ topLevel ->
+            if (effectiveDependencyCategory(topLevel) == DependencyCategory.Production) {
+                withDependencyMode(DependencyCategory.Production) {
+                    translateTopLevel(topLevel)
+                }.also { prodModuleParts.topLevels.addAll(it) }
+            }
+        }
+        // Then translate test so we track imports from prod.
+        t.topLevels.forEach topLevels@{ topLevel ->
+            if (effectiveDependencyCategory(topLevel) == DependencyCategory.Test) {
+                withDependencyMode(DependencyCategory.Test) {
+                    translateTopLevel(topLevel)
+                }.also { testModuleParts.topLevels.addAll(it) }
+            }
         }
 
         val imports = run {
@@ -193,6 +209,16 @@ internal class JsTranslator(
             }
         val prodImports = filterImports(prodModuleParts.topLevels, imports)
         prodModuleParts.explicitImports.addAll(prodImports)
+        if (hasConnected) {
+            Js.ImportDeclaration(
+                t.pos,
+                specifiers = Js.ImportNamespaceSpecifier(
+                    t.pos,
+                    Js.Identifier(t.pos, connectedName, null),
+                ).let { listOf(it) },
+                source = Js.StringLiteral(t.pos, "./_connected.js"),
+            ).also { prodModuleParts.explicitImports.add(it) }
+        }
 
         // Copy imports to test module as needed, with relative paths adjusted.
         val hasTests = t.moduleMetadata.dependencyCategory == DependencyCategory.Test
@@ -211,6 +237,23 @@ internal class JsTranslator(
             false -> emptyList()
         }
         testModuleParts.explicitImports.addAll(testImports)
+
+        // Also import from prod to test. Technically could be empty, but meh.
+        val publicOutPath = t.codeLocation.outputPath
+        val internalOutPath = when (genreTranslating) {
+            Genre.Library -> publicOutPath.withExtension(JsBackend.INTERNAL_EXTENSION)!!
+            Genre.Documentation -> publicOutPath
+        }
+        if (importsFromProdToTest.isNotEmpty()) {
+            Js.ImportDeclaration(
+                t.pos,
+                specifiers = importsFromProdToTest.map { idName ->
+                    val id = Js.Identifier(t.pos, idName, sourceIdentifier = null)
+                    Js.ImportSpecifier(t.pos, id, id.deepCopy())
+                }.let { listOf(Js.ImportSpecifiers(t.pos, it)) },
+                source = Js.StringLiteral(t.pos, "../${internalOutPath.segments.last()}"),
+            ).also { testModuleParts.explicitImports.add(it) }
+        }
 
         val result = t.result
         if (result != null) {
@@ -234,25 +277,56 @@ internal class JsTranslator(
 
         buildList {
             if (prodModuleParts.topLevels.isNotEmpty() || !hasTests) {
-                add(
+                // Internal file with everything exported, for tests and connecteds.
+                Translation(
+                    internalOutPath,
+                    Js.Program(t.pos, adjustTops(prodModuleParts.topLevels)),
+                    t,
+                    DependencyCategory.Production,
+                ).also { add(it) }
+                if (genreTranslating == Genre.Library) {
+                    // Public face with just the actual exports. Add it even if no exports.
                     Translation(
-                        t.codeLocation.outputPath,
-                        Js.Program(t.pos, adjustTops(prodModuleParts.topLevels)),
+                        publicOutPath,
+                        buildPublicFace(t.pos, exportedIds, internalOutPath),
                         t,
                         DependencyCategory.Production,
-                    ),
-                )
+                    ).also { add(it) }
+                }
             }
             if (hasTests) {
-                add(
-                    Translation(
-                        testPath,
-                        Js.Program(t.pos, adjustTops(testModuleParts.topLevels)),
-                        t,
-                        DependencyCategory.Test,
-                    ),
-                )
+                Translation(
+                    testPath,
+                    Js.Program(t.pos, adjustTops(testModuleParts.topLevels)),
+                    t,
+                    DependencyCategory.Test,
+                ).also { add(it) }
             }
+        }
+    }
+
+    /**
+     * TODO Once we avoid suffices more generally, maybe can remove this.
+     * TODO Our semi-standardized name handling (see java or py) also might can simplify some of this out.
+     */
+    private fun precachePrettyTypeNames(t: TmpL.Module) {
+        // Ensure that exporteds get priority access to pretty names.
+        val exporteds = buildSet {
+            t.topLevels.forEach topLevels@{ topLevel ->
+                topLevel is TmpL.Declaration || return@topLevels
+                val name = topLevel.name.name as? ExportedName ?: return@topLevels
+                add(name.baseName.nameText)
+            }
+        }
+        // Now cache pretty type names where we don't hit exporteds.
+        t.topLevels.forEach topLevels@{ topLevel ->
+            topLevel is TmpL.TypeDeclaration || return@topLevels
+            val name = topLevel.name.name
+            // Exported names are pretty anyway, so don't bother to rename to pretty.
+            name is ExportedName && return@topLevels
+            // And don't try to write over an actual exported.
+            name.prefix() in exporteds && return@topLevels
+            jsNames.jsNameNotThis(topLevel.name.name, cachePretty = true)
         }
     }
 
@@ -366,6 +440,7 @@ internal class JsTranslator(
                     continue // We don't need connected type imports
                 }
                 val exportName = JsIdentifierName.escaped(import.externalName.outName!!.outputNameText)
+                importedIds.add(exportName)
                 val imported = Js.Identifier(import.pos, exportName, import.externalName.name)
                 val local = import.localName?.let { translateId(it) as? Js.Identifier }
                 val externalName = import.externalName.name
@@ -864,11 +939,20 @@ internal class JsTranslator(
      *
      * @param useThisStack see [JsNames.withLocalNameForThis].
      */
-    private fun translateId(id: TmpL.Id, useThisStack: Boolean = false): Js.Expression =
-        when (genreTranslating) {
+    private fun translateId(id: TmpL.Id, useThisStack: Boolean = false): Js.Expression {
+        val result = when (genreTranslating) {
             Genre.Library -> translateIdForLibrary(id = id, useThisStack = useThisStack)
             Genre.Documentation -> translateIdForDocumentation(id = id, useThisStack = useThisStack)
         }
+        if (dependencyMode == DependencyCategory.Test && id.name in prodTopIds) {
+            result.simpleId()?.also { resultId ->
+                if (resultId.name !in importedIds) {
+                    importsFromProdToTest.add(resultId.name)
+                }
+            }
+        }
+        return result
+    }
 
     private fun translateIdForLibrary(id: TmpL.Id, useThisStack: Boolean): Js.Expression {
         val name = id.name
@@ -934,9 +1018,20 @@ internal class JsTranslator(
             // TODO(mikesamuel): translateEnumType
             TmpL.TypeDeclarationKind.Enum -> translateTypeDeclaration(d, nameText)
         }
-        return if (d.name.name is ExportedName) {
+        // Export all prod top-levels from internal.
+        val exported = when (genreTranslating) {
+            Genre.Library -> dependencyMode == DependencyCategory.Production
+            Genre.Documentation -> d.name.name is ExportedName
+        }
+        return if (exported) {
             val topLevelsWithExport = topLevels.toMutableList()
             val toExport = topLevelsWithExport[mainDeclIndex] as Js.Declaration
+            val toExportId = toExport.simpleId()
+            if (d.name.name is ExportedName) {
+                // But track those which are actually exported for the public module.
+                exportedIds.add(toExportId!!)
+            }
+            prodTopIds.add(d.name.name)
             topLevelsWithExport[mainDeclIndex] = Js.ExportNamedDeclaration(
                 pos = toExport.pos,
                 doc = Js.MaybeJsDocComment(toExport.pos.leftEdge, doc = null),
@@ -1298,7 +1393,7 @@ internal class JsTranslator(
     }
 
     private fun translateTest(t: TmpL.Test): Js.TopLevel {
-        dependenciesBuilder?.addTest(libraryName, t)
+        dependenciesBuilder?.addTest(module!!.libraryName, t)
         val testName = Js.StringLiteral(t.name.pos, t.rawName)
         // it("test name", function expression);
         return Js.ExpressionStatement(
@@ -1390,17 +1485,19 @@ internal class JsTranslator(
         originalName: TmpL.Id,
     ): Js.TopLevel {
         val name = originalName.name
-        return if (name is ExportedName && name.comesFrom(jsNames.origin)) {
-            val id = when (declaration) {
-                is Js.ClassDeclaration -> declaration.id
-                is Js.ExceptionDeclaration -> return declaration
-                is Js.FunctionDeclaration -> declaration.id
-                is Js.VariableDeclaration -> {
-                    check(declaration.declarations.size == 1)
-                    declaration.declarations.first().id as Js.Identifier
-                }
+        val id = declaration.simpleId()
+        val exported = id != null && name is ModularName && when (genreTranslating) {
+            Genre.Library -> dependencyMode == DependencyCategory.Production
+            Genre.Documentation -> name is ExportedName
+        } && name.comesFrom(jsNames.origin)
+        return if (exported) {
+            id.sourceIdentifier = name // Provide the source name for source maps.
+            if (name is ExportedName && name.comesFrom(jsNames.origin)) {
+                // Only some are exported from the public module.
+                exportedIds.add(id)
             }
-            id.sourceIdentifier = name // Store so that we can link imports to exports later.
+            prodTopIds.add(name)
+            // But internal exports all.
             Js.ExportNamedDeclaration(
                 declaration.pos,
                 doc = doc,
@@ -1456,70 +1553,77 @@ internal class JsTranslator(
 
         val (fd, maskedThis) = jsNames.withLocalNameForThis(d.parameters.thisName?.name) {
             val leftPos = d.pos.leftEdge
+            val params = buildList {
+                if (generatorNameAllocated != null) {
+                    add(Js.Param(leftPos, Js.Identifier(leftPos, generatorNameAllocated, null)))
+                }
+                d.parameters.parameters.mapNotNullTo(this) { formal ->
+                    // do not translate `this` params
+                    (translateId(formal.name, useThisStack = true) as? Js.Identifier)?.let { identifier ->
+                        Js.Param(formal.pos, identifier)
+                    }
+                }
+                d.parameters.restParameter?.let { restFormal ->
+                    add(
+                        Js.Param(
+                            restFormal.pos,
+                            Js.RestElement(restFormal.pos, translateIdStrict(restFormal.name)),
+                        ),
+                    )
+                }
+            }
             JsFnParts(
                 pos = d.pos,
                 id = name.deepCopy(),
-                params = Js.Formals(
-                    d.parameters.pos,
-                    buildList {
-                        if (generatorNameAllocated != null) {
-                            add(Js.Param(leftPos, Js.Identifier(leftPos, generatorNameAllocated, null)))
-                        }
-                        d.parameters.parameters.mapNotNullTo(this) { formal ->
-                            // do not translate `this` params
-                            (translateId(formal.name, useThisStack = true) as? Js.Identifier)?.let { identifier ->
-                                Js.Param(formal.pos, identifier)
-                            }
-                        }
-                        d.parameters.restParameter?.let { restFormal ->
-                            add(
-                                Js.Param(
-                                    restFormal.pos,
-                                    Js.RestElement(restFormal.pos, translateIdStrict(restFormal.name)),
-                                ),
-                            )
-                        }
-                    },
-                ),
+                params = Js.Formals(d.parameters.pos, params),
                 body = d.body?.let { block ->
-                    // Sometimes pureVirtual methods come out like `myVirtualMethod() { return_1 = null; }`,
-                    // which is invalid in strict mode (return_1 is never declared).
-                    // So this finds those and makes it run the block below,
-                    if (block.statements.size == 1) {
-                        when (val first = block.statements.firstOrNull()) {
-                            is TmpL.Assignment -> when (val maybeReturn = first.left.name) {
-                                is SourceName -> if (maybeReturn.baseName.nameText == "return") {
-                                    return@let null
+                    when (d) {
+                        is TmpL.FunctionDeclaration
+                        if d.metadata.any { it.key.symbol == connectedSymbol } && !module!!.isStdLib
+                        -> translateConnectedBody(d, params)
+                        else -> {
+                            // Sometimes pureVirtual methods come out like `myVirtualMethod() { return_1 = null; }`,
+                            // which is invalid in strict mode (return_1 is never declared).
+                            // So this finds those and makes it run the block below,
+                            if (block.statements.size == 1) {
+                                when (val first = block.statements.firstOrNull()) {
+                                    is TmpL.Assignment -> when (val maybeReturn = first.left.name) {
+                                        is SourceName -> if (maybeReturn.baseName.nameText == "return") {
+                                            return@let null
+                                        }
+
+                                        else -> {}
+                                    }
+
+                                    else -> {}
                                 }
-                                else -> {}
                             }
-                            else -> {}
+
+                            val body = translateBlockStatement(block, prefix = buildNullDefaults(d.parameters))
+
+                            if (d is TmpL.Constructor) {
+                                Js.BlockStatement(
+                                    d.pos,
+                                    buildList {
+                                        add(
+                                            Js.ExpressionStatement(
+                                                d.pos,
+                                                Js.CallExpression(
+                                                    d.pos,
+                                                    Js.Super(d.pos),
+                                                    listOf(),
+                                                ),
+                                            ),
+                                        )
+                                        addAll(
+                                            body.body.map { it.deepCopy() },
+                                        )
+                                    },
+                                )
+                            } else {
+                                body
+                            }
                         }
-                    }
-
-                    val body = translateBlockStatement(block, prefix = buildNullDefaults(d.parameters))
-
-                    if (d is TmpL.Constructor) {
-                        Js.BlockStatement(
-                            d.pos,
-                            buildList {
-                                add(
-                                    Js.ExpressionStatement(
-                                        d.pos,
-                                        Js.CallExpression(
-                                            d.pos,
-                                            Js.Super(d.pos),
-                                            listOf(),
-                                        ),
-                                    ),
-                                )
-                                addAll(
-                                    body.body.map { it.deepCopy() },
-                                )
-                            },
-                        )
-                    } else {
-                        body
                     }
                 } ?: return@withLocalNameForThis null,
                 mayYield = d.mayYield,
@@ -1592,6 +1696,47 @@ internal class JsTranslator(
                 kind = Js.DeclarationKind.Const,
             )
         }
+    }
+
+    private fun translateConnectedBody(
+        d: TmpL.FunctionDeclaration,
+        params: List<Js.Param>,
+    ): Js.BlockStatement {
+        hasConnected = true
+        val pos = d.pos
+        val defaulting = d.parameterDefaultStatementsInfo()
+        return buildList {
+            for (statement in defaulting.defaultStatements) {
+                addAll(translateStatement(statement))
+            }
+            Js.CallExpression(
+                pos,
+                callee = Js.MemberExpression(
+                    pos,
+                    obj = Js.Identifier(pos, connectedName, null),
+                    property = when (val name = d.name.name) {
+                        is ResolvedParsedName -> JsIdentifierName.escaped(name.baseName.nameText)
+                        else -> jsNames.jsNameNotThis(name)
+                    }.let { Js.Identifier(pos, it, d.name.name) },
+                ),
+                arguments = buildList {
+                    for ((tmpl, java) in d.parameters.parameters.zip(params)) {
+                        when {
+                            tmpl.optional -> {
+                                val defaultedName = defaulting.parameterMapping.getValue(tmpl.name.name)
+                                Js.Identifier(pos, jsNames.jsNameNotThis(defaultedName), tmpl.name.name)
+                            }
+                            else -> (java.pattern as? Js.Identifier)?.deepCopy()
+                        }?.also { add(it) }
+                    }
+                },
+            ).let { call ->
+                when {
+                    d.returnType.isVoid -> Js.ExpressionStatement(pos, call)
+                    else -> Js.ReturnStatement(pos, call)
+                }
+            }.also { add(it) }
+        }.let { Js.BlockStatement(pos, it) }
     }
 
     private fun buildNullDefaults(parameters: TmpL.Parameters): List<Js.Statement> = buildList {
@@ -2406,3 +2551,44 @@ private val adaptAwaiter = JsExternalValueReference(
     DashedIdentifier.temperCoreLibraryIdentifier,
     JsIdentifierName("adaptAwaiter"),
 )
+
+/** Returns null if no simple, single id. */
+internal fun Js.Declaration.simpleId(): Js.Identifier? {
+    return when (this) {
+        is Js.ClassDeclaration -> this.id
+        is Js.FunctionDeclaration -> this.id
+        is Js.ExceptionDeclaration -> this.id.simpleId()
+        is Js.VariableDeclaration -> when (declarations.size) {
+            1 -> declarations.first().id.simpleId()
+            else -> null
+        }
+    }
+}
+
+/** Returns null if this isn't a simple, single id. */
+internal fun Js.Expression.simpleId(): Js.Identifier? {
+    return this as? Js.Identifier
+}
+
+/** Returns null if this isn't a simple, single id. */
+internal fun Js.Pattern.simpleId(): Js.Identifier? {
+    return when (this) {
+        is Js.Identifier -> this
+        else -> null
+    }
+}
+
+private fun buildPublicFace(pos: Position, exporteds: List<Js.Identifier>, internalOutPath: FilePath) = Js.Program(
+    pos,
+    listOf(
+        Js.ExportNamedDeclaration(
+            pos,
+            doc = Js.MaybeJsDocComment(pos, null),
+            declaration = null,
+            specifiers = exporteds.map { Js.ExportSpecifier(pos, it.deepCopy(), it.deepCopy()) },
+            source = Js.StringLiteral(pos, "./${internalOutPath.last().fullName}"),
+        ),
+    ),
+)
+
+internal val connectedName = JsIdentifierName("_connected")
