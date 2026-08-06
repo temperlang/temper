@@ -1530,7 +1530,7 @@ class CSharpBackendTest {
                     |    }
                     |}
                 """.trimMargin(),
-            filePath("other", "thing", "Helper.cs") to """
+            filePath("other", "thing", "Whatever.cs") to """
                     |namespace MyTestLibrary.Other.Thing
                     |{
                     |    static class Whatever

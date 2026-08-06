@@ -135,10 +135,10 @@ class CppBackend private constructor(
 
         // Connected code.
         val connectedFiles = buildList {
+            val rootSize = libraryConfigurations.currentLibraryConfiguration.libraryRoot.segments.size
             for (file in rawBackendFiles) {
                 MetadataFileSpecification(
-                    // Skip the library name part.
-                    path = file.key.segments.subListToEnd(1).asFilePath(),
+                    path = file.key.segments.subListToEnd(rootSize).asFilePath(),
                     mimeType = MimeType.cppSource,
                     content = file.value,
                 ).also { add(it) }

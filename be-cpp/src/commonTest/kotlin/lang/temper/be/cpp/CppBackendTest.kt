@@ -9,6 +9,7 @@ import lang.temper.lexer.Genre
 import lang.temper.log.filePath
 import kotlin.test.Test
 import kotlin.test.assertTrue
+import kotlin.text.trimMargin
 
 @SuppressWarnings("MaxLineLength")
 class CppBackendTest {
@@ -643,6 +644,148 @@ class CppBackendTest {
                 "void set_value(int32_t)",
                 "setBox",
             ),
+        )
+    }
+
+    @Test
+    fun connected() {
+        val connecteds = listOf(
+            filePath("something", "_connected.cpp") to """
+                    |#include "_connected.hpp"
+                    |#include "support.hpp"
+                    |
+                    |namespace work {
+                    |namespace _connected {
+                    |
+                    |std::int32_t sum(std::int32_t i, std::int32_t j, std::int32_t bonus) {
+                    |    return i + j + bonus;
+                    |}
+                    |
+                    |} // namespace _connected
+                    |} // namespace work
+                """.trimMargin(),
+            filePath("something", "_connected.hpp") to """
+                    |#pragma once
+                    |
+                    |#include <cstdint>
+                    |#include <work/init.hpp>
+                    |
+                    |namespace work {
+                    |namespace _connected {
+                    |
+                    |using namespace work;
+                    |
+                    |std::int32_t sum(std::int32_t i, std::int32_t j, std::int32_t bonus);
+                    |
+                    |} // namespace _connected
+                    |} // namespace work
+                """.trimMargin(),
+            filePath("other", "thing", "whatever.cpp") to """
+                    |// Content doesn't really matter here.
+                """.trimMargin(),
+        )
+        assertGeneratedCode(
+            backendConfig = Backend.Config.production,
+            factory = CppBackend.Cpp,
+            inputs = listOf(
+                filePath("something", "fun.temper") to """
+                    |let { prod } = import("./deeper");
+                    |
+                    |@connected
+                    |export let sum(i: Int, j: Int, bonus: Int = 0): Int;
+                    |
+                    |export let inc(i: Int): Int {
+                    |    sum(i, 1)
+                    |}
+                    |
+                    |export let twice(i: Int): Int {
+                    |  prod(i, 2)
+                    |}
+                """.trimMargin(),
+                filePath("something", "deeper", "more-fun.temper") to """
+                    |export let prod(i: Int, j: Int): Int {
+                    |    i * j
+                    |}
+                """.trimMargin(),
+            ) + connecteds,
+            want = """
+                |{
+                |    "cpp": {
+                |        "my-test-library": {
+                |            "something.cpp": {
+                |                content: ```
+                |                  #include <my-test-library/something.hpp>
+                |                  #include "something/_connected.hpp"
+                |                  namespace my_test_library {
+                |                    int32_t sum(int32_t i_4, int32_t j_5, temper::core::NullableParam<int32_t> bonus) {
+                |                      int32_t bonus_6;
+                |                      if(temper::core::is_null(bonus)) {
+                |                        {
+                |                          bonus_6 = 0;
+                |                        }
+                |                      }else {
+                |                        {
+                |                          bonus_6 = temper::core::not_null(bonus);
+                |                        }
+                |                      }
+                |                      return _connected::sum(i_4, j_5, bonus_6);
+                |                    }
+                |                    int32_t sum(int32_t i_4, int32_t j_5) {
+                |                      return sum(i_4, j_5, nullptr);
+                |                    }
+                |                    int32_t inc(int32_t i_8) {
+                |                      return sum(i_8, 1);
+                |                    }
+                |                    int32_t twice(int32_t i_10) {
+                |                      return my_test_library::prod(i_10, 2);
+                |                    }
+                |                    void global_init_something() {
+                |                      static bool initialized = false;
+                |                      if(initialized) {
+                |                        return;
+                |                      }
+                |                      initialized = true;
+                |                      my_test_library::global_init_deeper();
+                |                    }
+                |                  }
+                |
+                |                  ```
+                |            },
+                |            "something.hpp": {
+                |                "content": ```
+                |                  #pragma once
+                |                  #include <temper-core/core.hpp>
+                |                  #include <my-test-library/something/deeper.hpp>
+                |                  namespace my_test_library {
+                |                    int32_t sum(int32_t, int32_t, temper::core::NullableParam<int32_t>);
+                |                    int32_t sum(int32_t, int32_t);
+                |                    int32_t inc(int32_t);
+                |                    int32_t twice(int32_t);
+                |                    void global_init_something();
+                |                  }
+                |
+                |                  ```
+                |            },
+                |            "something": {
+                |                "_connected.cpp": "__DO_NOT_CARE__",
+                |                "_connected.hpp": "__DO_NOT_CARE__",
+                |                "deeper.cpp": "__DO_NOT_CARE__",
+                |                "deeper.hpp": "__DO_NOT_CARE__",
+                |                "deeper.hpp.map": "__DO_NOT_CARE__",
+                |                "deeper.cpp.map": "__DO_NOT_CARE__",
+                |            },
+                |            "something.cpp.map": "__DO_NOT_CARE__",
+                |            "something.hpp.map": "__DO_NOT_CARE__",
+                |            "main.cpp": "__DO_NOT_CARE__",
+                |            "other": {
+                |                "thing": {
+                |                    "whatever.cpp": "__DO_NOT_CARE__",
+                |                },
+                |            },
+                |        },
+                |    },
+                |}
+            """.trimMargin(),
         )
     }
 }
