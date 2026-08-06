@@ -186,9 +186,10 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
                 }
             }
             // Connected source.
+            val rootSize = libraryConfig.libraryRoot.segments.size
             for (file in rawBackendFiles) {
                 // Skip the library name dir and the file name, and keep the middle
-                val subspace = chooseSubspace(file.key.segments).subList(1, file.key.segments.size - 1)
+                val subspace = chooseSubspace(file.key.segments).subList(rootSize, file.key.segments.size - 1)
                 MetadataFileSpecification(
                     path = dirPath(SRC_PROJECT_DIR).resolve(dirPath(subspace)).resolveFile(file.key.segments.last()),
                     mimeType = mimeType,
