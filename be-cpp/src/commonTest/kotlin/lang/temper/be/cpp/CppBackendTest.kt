@@ -649,41 +649,6 @@ class CppBackendTest {
 
     @Test
     fun connected() {
-        val connecteds = listOf(
-            filePath("something", "_connected.cpp") to """
-                    |#include "_connected.hpp"
-                    |#include "support.hpp"
-                    |
-                    |namespace work {
-                    |namespace _connected {
-                    |
-                    |std::int32_t sum(std::int32_t i, std::int32_t j, std::int32_t bonus) {
-                    |    return i + j + bonus;
-                    |}
-                    |
-                    |} // namespace _connected
-                    |} // namespace work
-                """.trimMargin(),
-            filePath("something", "_connected.hpp") to """
-                    |#pragma once
-                    |
-                    |#include <cstdint>
-                    |#include <work/init.hpp>
-                    |
-                    |namespace work {
-                    |namespace _connected {
-                    |
-                    |using namespace work;
-                    |
-                    |std::int32_t sum(std::int32_t i, std::int32_t j, std::int32_t bonus);
-                    |
-                    |} // namespace _connected
-                    |} // namespace work
-                """.trimMargin(),
-            filePath("other", "thing", "whatever.cpp") to """
-                    |// Content doesn't really matter here.
-                """.trimMargin(),
-        )
         assertGeneratedCode(
             backendConfig = Backend.Config.production,
             factory = CppBackend.Cpp,
@@ -707,7 +672,40 @@ class CppBackendTest {
                     |    i * j
                     |}
                 """.trimMargin(),
-            ) + connecteds,
+                filePath("something", "_connected.cpp") to """
+                    |#include "_connected.hpp"
+                    |#include "support.hpp"
+                    |
+                    |namespace work {
+                    |namespace _connected {
+                    |
+                    |std::int32_t sum(std::int32_t i, std::int32_t j, std::int32_t bonus) {
+                    |    return i + j + bonus;
+                    |}
+                    |
+                    |} // namespace _connected
+                    |} // namespace work
+                """.trimMargin(),
+                filePath("something", "_connected.hpp") to """
+                    |#pragma once
+                    |
+                    |#include <cstdint>
+                    |#include <work/init.hpp>
+                    |
+                    |namespace work {
+                    |namespace _connected {
+                    |
+                    |using namespace work;
+                    |
+                    |std::int32_t sum(std::int32_t i, std::int32_t j, std::int32_t bonus);
+                    |
+                    |} // namespace _connected
+                    |} // namespace work
+                """.trimMargin(),
+                filePath("other", "thing", "whatever.cpp") to """
+                    |// Content doesn't really matter here.
+                """.trimMargin(),
+            ),
             want = """
                 |{
                 |    "cpp": {
