@@ -699,6 +699,96 @@ class PyBackendTest {
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
+    @Test
+    fun connected() = assertGeneratedCode(
+        inputs = inputFileMapFromJson(
+            """
+            |{
+            |  foo: {
+            |    foo.temper: ```
+            |      // let { prod } = import("./deeper");
+            |      // export let twice(i: Int): Int {
+            |      //   prod(i, 2)
+            |      // }
+            |
+            |      @connected
+            |      export let sum(i: Int, j: Int, bonus: Int = 0): Int;
+            |      export let inc(i: Int): Int {
+            |          sum(i, 1)
+            |      }
+            |      ```,
+            |    __connected__.py: ```
+            |      class _connected:
+            |          from ._support import Support
+            |
+            |          def sum(i: int, j: int, bonus: int) -> int:
+            |              return i + j + bonus
+            |
+            |      ```,
+            |    _support.py: ```
+            |      class Support:
+            |          pass
+            |      ```,
+            |  },
+            |}
+            """.trimMargin(),
+//            |    deeper: {
+//            |      things.temper: ```
+//            |        export let prod(i: Int, j: Int): Int {
+//            |            i * j
+//            |        }
+//            |        ```,
+//            |    },
+        ),
+        want = """
+            |{
+            |  py: {
+            |    my-test-library: {
+            |      my_test_library: {
+            |        foo: {
+            |          __init__.py: {
+            |            content:
+            |              ```
+            |              class _connected:
+            |                  from ._support import Support
+            |
+            |                  def sum(i: int, j: int, bonus: int) -> int:
+            |                      return i + j + bonus
+            |              from my_test_library.foo.deeper import prod as prod_3
+            |              from builtins import int as int1
+            |              from typing import Union as Union3
+            |              from temper_core import bubble as bubble2
+            |              bubble_17 = bubble2
+            |              def twice(i_4: 'int1', /) -> 'int1':
+            |                  return prod_3(i_4, 2)
+            |              def sum(i_6: 'int1', j_7: 'int1', bonus_12: 'Union3[int1, None]' = None, /) -> 'int1':
+            |                  _bonus_12: 'Union3[int1, None]' = bonus_12
+            |                  return_1: 'int1'
+            |                  bonus_8: 'int1'
+            |                  if _bonus_12 is None:
+            |                      bonus_8 = 0
+            |                  else:
+            |                      bonus_8 = _bonus_12
+            |                  return _connected.sum(i_6, j_7, bonus_8)
+            |              def inc(i_10: 'int1', /) -> 'int1':
+            |                  return sum(i_10, 1)
+            |
+            |              ```,
+            |          },
+            |          _support.py: "__DO_NOT_CARE__",
+            |          deeper.py: "__DO_NOT_CARE__",
+            |          deeper.py.map: "__DO_NOT_CARE__",
+            |          __init__.py.map: "__DO_NOT_CARE__",
+            |        },
+            |        "__init__.py": "__DO_NOT_CARE__",
+            |        "__init__.py.map": "__DO_NOT_CARE__"
+            |      },
+            |    },
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
     private fun assertGeneratedCode(
         inputs: List<Pair<FilePath, String>>,
         want: String,
