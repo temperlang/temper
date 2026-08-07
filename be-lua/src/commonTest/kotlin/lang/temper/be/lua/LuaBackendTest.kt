@@ -2,6 +2,8 @@ package lang.temper.be.lua
 
 import lang.temper.be.Backend
 import lang.temper.be.assertGeneratedCode
+import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
+import lang.temper.log.FilePath
 import lang.temper.log.filePath
 import kotlin.test.Test
 
@@ -364,6 +366,96 @@ class LuaBackendTest {
             |
         """.trimMargin(),
     )
+
+    @Test
+    fun connected() = assertGeneratedLua(
+        inputs = listOf(
+            filePath("something", "something.temper") to """
+                |let { prod } = import("./deeper");
+                |export let twice(i: Int): Int {
+                |  prod(i, 2)
+                |}
+                |
+                |@connected
+                |export let sum(i: Int, j: Int, bonus: Int = 0): Int;
+                |export let inc(i: Int): Int {
+                |    sum(i, 1)
+                |}
+            """.trimMargin(),
+            filePath("something", "deeper", "more-fun.temper") to """
+                |export let prod(i: Int, j: Int): Int {
+                |    i * j
+                |}
+            """.trimMargin(),
+            filePath("something", "_connected.lua") to """
+                |local _connected = {}
+                |do
+                |  -- Show example require in connected code, even if we don't use it here.
+                |  local s = require("my-test-library.something._support")
+                |  function _connected.sum(i, j, bonus)
+                |    return i + j + bonus
+                |  end
+                |end
+                |
+            """.trimMargin(),
+            filePath("something", "_support.lua") to """
+                |-- Content doesn't matter.
+            """.trimMargin(),
+        ),
+        want = """
+            |{
+            |    "lua": {
+            |        "my-test-library": {
+            |            "something.lua": {
+            |                "content": ```
+            |                  local temper = require('temper-core');
+            |                  local prod, twice, sum, inc, exports;
+            |                  prod = temper.import('my-test-library/something/deeper', 'prod');
+            |## Here's where the inlining happens. We need to specify to define `_connected` as only top-level.
+            |                  local _connected = {}
+            |                  do
+            |                    -- Show example require in connected code, even if we don't use it here.
+            |                    local s = require("my-test-library.something._support")
+            |                    function _connected.sum(i, j, bonus)
+            |                      return i + j + bonus
+            |                    end
+            |                  end
+            |                  twice = function(i__0)
+            |                    return prod(i__0, 2);
+            |                  end;
+            |                  sum = function(i__1, j__0, bonus__0)
+            |                    local bonus__1;
+            |                    if temper.is_null(bonus__0) then
+            |                      bonus__1 = 0;
+            |                    else
+            |                      bonus__1 = bonus__0;
+            |                    end
+            |                    return _connected.sum(i__1, j__0, bonus__1);
+            |                  end;
+            |                  inc = function(i__2)
+            |                    return sum(i__2, 1);
+            |                  end;
+            |                  exports = {};
+            |                  exports.twice = twice;
+            |                  exports.sum = sum;
+            |                  exports.inc = inc;
+            |                  return exports;
+            |
+            |                  ```
+            |            },
+            |            "something": {
+            |                "deeper.lua": "__DO_NOT_CARE__",
+            |                "deeper.lua.map": "__DO_NOT_CARE__",
+            |                "_support.lua": "__DO_NOT_CARE__",
+            |            },
+            |            "init.lua": "__DO_NOT_CARE__",
+            |            "something.lua.map": "__DO_NOT_CARE__",
+            |            "my-test-library-dev-1.rockspec": "__DO_NOT_CARE__",
+            |        }
+            |    }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
 }
 
 private fun assertGenerated(
@@ -376,11 +468,8 @@ private fun assertGenerated(
         |$lua
         |```
     """.trimMargin()
-    assertGeneratedCode(
-        backendConfig = Backend.Config.production,
-        factory = LuaBackend.Lua51,
+    assertGeneratedLua(
         inputs = listOf(filePath("something", "something.temper") to temper),
-        moduleResultNeeded = false,
         want = """
             |{
             |    "lua": {
@@ -395,5 +484,17 @@ private fun assertGenerated(
             |    }
             |}
         """.trimMargin(),
+    )
+}
+
+private fun assertGeneratedLua(
+    inputs: List<Pair<FilePath, String>>,
+    want: String,
+) {
+    assertGeneratedCode(
+        backendConfig = Backend.Config.production,
+        factory = LuaBackend.Lua51,
+        inputs = inputs,
+        want = want,
     )
 }

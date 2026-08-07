@@ -97,10 +97,10 @@ class LuaBackend private constructor(
                 // Special _connected.lua file gets inlined.
                 file.key.last().fullName == "_connected.lua" && continue@rawBackendFiles
                 // Others get copied.
-                // TODO Make sure things get into good places.
+                val rootSize = libraryConfigurations.currentLibraryConfiguration.libraryRoot.segments.size
                 MetadataFileSpecification(
                     // Skip the library name part.
-                    path = file.key.segments.subListToEnd(1).asFilePath(),
+                    path = file.key.segments.subListToEnd(rootSize).asFilePath(),
                     mimeType = MimeType.luaSource,
                     content = file.value,
                 ).also { add(it) }
