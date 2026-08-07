@@ -655,16 +655,14 @@ class CppBackendTest {
             inputs = listOf(
                 filePath("something", "fun.temper") to """
                     |let { prod } = import("./deeper");
+                    |export let twice(i: Int): Int {
+                    |  prod(i, 2)
+                    |}
                     |
                     |@connected
                     |export let sum(i: Int, j: Int, bonus: Int = 0): Int;
-                    |
                     |export let inc(i: Int): Int {
                     |    sum(i, 1)
-                    |}
-                    |
-                    |export let twice(i: Int): Int {
-                    |  prod(i, 2)
                     |}
                 """.trimMargin(),
                 filePath("something", "deeper", "more-fun.temper") to """
@@ -674,7 +672,6 @@ class CppBackendTest {
                 """.trimMargin(),
                 filePath("something", "_connected.cpp") to """
                     |#include "_connected.hpp"
-                    |#include "support.hpp"
                     |
                     |namespace work {
                     |namespace _connected {
@@ -690,7 +687,7 @@ class CppBackendTest {
                     |#pragma once
                     |
                     |#include <cstdint>
-                    |#include <work/init.hpp>
+                    |#include <my-test-library/something.hpp>
                     |
                     |namespace work {
                     |namespace _connected {
@@ -715,27 +712,27 @@ class CppBackendTest {
                 |                  #include <my-test-library/something.hpp>
                 |                  #include "something/_connected.hpp"
                 |                  namespace my_test_library {
-                |                    int32_t sum(int32_t i_4, int32_t j_5, temper::core::NullableParam<int32_t> bonus) {
-                |                      int32_t bonus_6;
+                |                    int32_t twice(int32_t i_4) {
+                |                      return my_test_library::prod(i_4, 2);
+                |                    }
+                |                    int32_t sum(int32_t i_6, int32_t j_7, temper::core::NullableParam<int32_t> bonus) {
+                |                      int32_t bonus_8;
                 |                      if(temper::core::is_null(bonus)) {
                 |                        {
-                |                          bonus_6 = 0;
+                |                          bonus_8 = 0;
                 |                        }
                 |                      }else {
                 |                        {
-                |                          bonus_6 = temper::core::not_null(bonus);
+                |                          bonus_8 = temper::core::not_null(bonus);
                 |                        }
                 |                      }
-                |                      return _connected::sum(i_4, j_5, bonus_6);
+                |                      return _connected::sum(i_6, j_7, bonus_8);
                 |                    }
-                |                    int32_t sum(int32_t i_4, int32_t j_5) {
-                |                      return sum(i_4, j_5, nullptr);
+                |                    int32_t sum(int32_t i_6, int32_t j_7) {
+                |                      return sum(i_6, j_7, nullptr);
                 |                    }
-                |                    int32_t inc(int32_t i_8) {
-                |                      return sum(i_8, 1);
-                |                    }
-                |                    int32_t twice(int32_t i_10) {
-                |                      return my_test_library::prod(i_10, 2);
+                |                    int32_t inc(int32_t i_10) {
+                |                      return sum(i_10, 1);
                 |                    }
                 |                    void global_init_something() {
                 |                      static bool initialized = false;
@@ -755,10 +752,10 @@ class CppBackendTest {
                 |                  #include <temper-core/core.hpp>
                 |                  #include <my-test-library/something/deeper.hpp>
                 |                  namespace my_test_library {
+                |                    int32_t twice(int32_t);
                 |                    int32_t sum(int32_t, int32_t, temper::core::NullableParam<int32_t>);
                 |                    int32_t sum(int32_t, int32_t);
                 |                    int32_t inc(int32_t);
-                |                    int32_t twice(int32_t);
                 |                    void global_init_something();
                 |                  }
                 |

@@ -2148,9 +2148,6 @@ class JavaBackendTest {
         inputs = inputFileMapFromJson(
             """
                 |{
-                |  config.temper.md: ```
-                |    # My test library
-                |    ```,
                 |  sub: {
                 |    things.temper: ```
                 |      @connected

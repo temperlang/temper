@@ -2454,6 +2454,132 @@ class JsBackendTest {
             |}
         """.trimMargin(),
     )
+
+    @Test
+    fun connected() = assertGeneratedCode(
+        inputs = inputFileMapFromJson(
+            """
+                |{
+                |  src: {
+                |    foo: {
+                |      blah.temper: ```
+                |        let { prod } = import("./deeper");
+                |        export let twice(i: Int): Int {
+                |          prod(i, 2)
+                |        }
+                |
+                |        @connected
+                |        export let sum(i: Int, j: Int, bonus: Int = 0): Int;
+                |        export let inc(i: Int): Int {
+                |            sum(i, 1)
+                |        }
+                |        ```,
+                |      _connected.js: ```
+                |        import "../foo.internal.js"; // where "../" required here
+                |        export const sum = (i, j, bonus) => {
+                |          return i + j + bonus;
+                |        };
+                |        ```,
+                |      deeper: {
+                |        things.temper: ```
+                |          export let prod(i: Int, j: Int): Int {
+                |              i * j
+                |          }
+                |          ```
+                |      }
+                |    },
+                |    other: {
+                |      thing: {
+                |        whatever.js: "// Content doesn't matter.",
+                |      },
+                |    },
+                |  }
+                |}
+            """.trimMargin(),
+        ),
+        want = """
+            |{
+            |  "js": {
+            |    "my-test-library": {
+            |      "src": {
+            |        "foo.internal.js": {
+            |          "content": ```
+            |            import {
+            |              prod as prod_0
+            |            } from "./foo/deeper.js";
+            |            import * as _connected from "./foo/_connected.js";
+            |            import {
+            |              panic as panic_0
+            |            } from "@temperlang/core";
+            |            /**
+            |             * @param {number} i_0
+            |             * @returns {number}
+            |             */
+            |            export function twice(i_0) {
+            |              return prod_0(i_0, 2);
+            |            };
+            |            /**
+            |             * @param {number} i_1
+            |             * @param {number} j_0
+            |             * @param {number | null} [bonus_0]
+            |             * @returns {number}
+            |             */
+            |            export function sum(i_1, j_0, bonus_0) {
+            |              let bonus_1;
+            |              if (bonus_0 == null) {
+            |                bonus_1 = 0;
+            |              } else {
+            |                bonus_1 = bonus_0;
+            |              }
+            |              return _connected.sum(i_1, j_0, bonus_1);
+            |            };
+            |            /**
+            |             * @param {number} i_2
+            |             * @returns {number}
+            |             */
+            |            export function inc(i_2) {
+            |              return sum(i_2, 1);
+            |            };
+            |
+            |            ```
+            |        },
+            |        "foo.js": "__DO_NOT_CARE__",
+            |        "foo": {
+            |          "_connected.js": "__DO_NOT_CARE__",
+            |          "deeper.js": "__DO_NOT_CARE__",
+            |          "deeper.js.map": "__DO_NOT_CARE__",
+            |          "deeper.internal.js": "__DO_NOT_CARE__",
+            |          "deeper.internal.js.map": "__DO_NOT_CARE__",
+            |        },
+            |        "other": {
+            |          "thing": {
+            |            "whatever.js": "__DO_NOT_CARE__",
+            |          },
+            |        },
+            |        "foo.js.map": "__DO_NOT_CARE__",
+            |        "foo.internal.js.map": "__DO_NOT_CARE__",
+            |      },
+            |      "package.json": {
+            |        jsonContent: {
+            |          "name": "my-test-library",
+            |          "type": "module",
+            |          "exports": {
+            |            // Showing json to emphasize what's exported, which excludes connected.
+            |            "./src/foo/deeper": "./src/foo/deeper.js",
+            |            "./src/foo": "./src/foo.js",
+            |            ".": "./index.js"
+            |          },
+            |          "dependencies": {
+            |            "@temperlang/core": "0.6.0"
+            |          }
+            |        },
+            |      },
+            |      "index.js": "__DO_NOT_CARE__",
+            |    }
+            |  }
+            |}
+        """.trimMargin(),
+    )
 }
 
 private const val OUTPUT_BOILERPLATE = """
