@@ -314,11 +314,13 @@ class PyBackend private constructor(
                 add(FilePathSegment(pyLibraryName.text))
                 addAll(file.key.segments.subListToEnd(rootSize))
             }.asFilePath()
-            MetadataFileSpecification(
-                path = path,
-                mimeType = mimeType,
-                content = file.value,
-            ).also { outputFileSpecifications.add(it) }
+            topModule.setOutputFile(
+                MetadataFileSpecification(
+                    path = path,
+                    mimeType = mimeType,
+                    content = file.value,
+                ),
+            )
         }
         if (config.makeMetaDataFile || anyTests) {
             val dependencies = buildList {
@@ -335,7 +337,7 @@ class PyBackend private constructor(
         }
         topModule.mapNotNullTo(outputFileSpecifications) { mod ->
             if (mod.moduleId != null) {
-                mod.write().toTreeFile()
+                mod.toOutputFile()
             } else {
                 null
             }

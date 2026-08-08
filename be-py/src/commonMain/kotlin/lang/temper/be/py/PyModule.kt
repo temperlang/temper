@@ -10,11 +10,16 @@ import lang.temper.name.OutName
 import lang.temper.value.DependencyCategory
 
 /**
- * A layout data structure that lets us put AST nodes into python modules and figures out the __init__.py for us.
+ * A layout data structure that lets us put AST nodes or explicit file content
+ * into python modules and figures out the __init__.py for us.
  */
 class PyModule(var moduleId: PyDottedIdentifier?) : Iterable<PyModule> {
+    // Only one of program or outputFile is set at most.
     var program: Py.Program? = null
         private set
+    var outputFile: Backend.OutputFileSpecification? = null
+        private set
+
     private val modules: MutableMap<OutName, PyModule> = mutableMapOf()
     val exports: MutableSet<OutName> = mutableSetOf()
     val imports: MutableSet<OutName> = mutableSetOf()
@@ -25,14 +30,26 @@ class PyModule(var moduleId: PyDottedIdentifier?) : Iterable<PyModule> {
         return modules.getOrPut(name) { PyModule(moduleId.dot(name)) }
     }
 
-    /** Intended for a top level module, this sets a program based on its path. */
+    /** Intending `this` for a top level module, set a program based on its path. */
     fun setProgram(program: Py.Program): PyModule {
-        val path = program.outputPath
+        val node = expand(program.outputPath)
+        node.program = program
+        return node
+    }
+
+    /** Intending `this` for a top level module, set a program based on its path. */
+    fun setOutputFile(outputFile: Backend.OutputFileSpecification): PyModule {
+        val node = expand(outputFile.path)
+        node.outputFile = outputFile
+        return node
+    }
+
+    /** Expand out and store nodes for the path, with no associated program. */
+    private fun expand(path: FilePath): PyModule {
         var node = this
         for (seg in path.segments) {
             node = node[safeModuleName(seg.baseName)]
         }
-        node.program = program
         return node
     }
 
@@ -87,8 +104,11 @@ class PyModule(var moduleId: PyDottedIdentifier?) : Iterable<PyModule> {
      *   OutDir(dir/project/bar)
      *   OutRegularFile(dir/project/bar/__init__.py), Py.Program('def bar(): ...')
      * ```
+     *
+     * Or if this module is already associated with an explicit
+     * [Backend.OutputFileSpecification], just provide that instead.
      */
-    fun write(): PyFile {
+    fun toOutputFile(): Backend.OutputFileSpecification {
         val modulePath = moduleId?.absModulePath() ?: FilePath.emptyPath
         val dir = modulePath.dirName()
         val lastPart = modulePath.segments.last()
@@ -100,7 +120,7 @@ class PyModule(var moduleId: PyDottedIdentifier?) : Iterable<PyModule> {
             // Can be represented as a simple name.py module.
             dir + lastPart.withExtension(PyBackend.fileExtension)
         }
-        return PyFile(program, moduleId, file)
+        return outputFile ?: PyFile(program, moduleId, file).toTreeFile()
     }
 
     override fun iterator(): Iterator<PyModule> = dequeIterator { deque ->

@@ -706,11 +706,6 @@ class PyBackendTest {
             |{
             |  foo: {
             |    foo.temper: ```
-            |      // let { prod } = import("./deeper");
-            |      // export let twice(i: Int): Int {
-            |      //   prod(i, 2)
-            |      // }
-            |
             |      @connected
             |      export let sum(i: Int, j: Int, bonus: Int = 0): Int;
             |      export let inc(i: Int): Int {
@@ -725,20 +720,15 @@ class PyBackendTest {
             |              return i + j + bonus
             |
             |      ```,
+            |## Include this bonus file *without* an explicit temper module at the
+            |## same level to prove we still get a dir for the translated module.
             |    _support.py: ```
             |      class Support:
             |          pass
             |      ```,
             |  },
             |}
-            """.trimMargin(),
-//            |    deeper: {
-//            |      things.temper: ```
-//            |        export let prod(i: Int, j: Int): Int {
-//            |            i * j
-//            |        }
-//            |        ```,
-//            |    },
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
         ),
         want = """
             |{
@@ -754,30 +744,25 @@ class PyBackendTest {
             |
             |                  def sum(i: int, j: int, bonus: int) -> int:
             |                      return i + j + bonus
-            |              from my_test_library.foo.deeper import prod as prod_3
             |              from builtins import int as int1
-            |              from typing import Union as Union3
-            |              from temper_core import bubble as bubble2
-            |              bubble_17 = bubble2
-            |              def twice(i_4: 'int1', /) -> 'int1':
-            |                  return prod_3(i_4, 2)
-            |              def sum(i_6: 'int1', j_7: 'int1', bonus_12: 'Union3[int1, None]' = None, /) -> 'int1':
-            |                  _bonus_12: 'Union3[int1, None]' = bonus_12
-            |                  return_1: 'int1'
-            |                  bonus_8: 'int1'
-            |                  if _bonus_12 is None:
-            |                      bonus_8 = 0
+            |              from typing import Union as Union2
+            |              from temper_core import bubble as bubble0
+            |              bubble_12 = bubble0
+            |              def sum(i_2: 'int1', j_3: 'int1', bonus_8: 'Union2[int1, None]' = None, /) -> 'int1':
+            |                  _bonus_8: 'Union2[int1, None]' = bonus_8
+            |                  return_0: 'int1'
+            |                  bonus_4: 'int1'
+            |                  if _bonus_8 is None:
+            |                      bonus_4 = 0
             |                  else:
-            |                      bonus_8 = _bonus_12
-            |                  return _connected.sum(i_6, j_7, bonus_8)
-            |              def inc(i_10: 'int1', /) -> 'int1':
-            |                  return sum(i_10, 1)
+            |                      bonus_4 = _bonus_8
+            |                  return _connected.sum(i_2, j_3, bonus_4)
+            |              def inc(i_6: 'int1', /) -> 'int1':
+            |                  return sum(i_6, 1)
             |
             |              ```,
             |          },
             |          _support.py: "__DO_NOT_CARE__",
-            |          deeper.py: "__DO_NOT_CARE__",
-            |          deeper.py.map: "__DO_NOT_CARE__",
             |          __init__.py.map: "__DO_NOT_CARE__",
             |        },
             |        "__init__.py": "__DO_NOT_CARE__",
