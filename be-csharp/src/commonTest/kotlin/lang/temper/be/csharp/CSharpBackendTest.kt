@@ -1518,7 +1518,7 @@ class CSharpBackendTest {
                     |        }
                     |    }
                     |}
-                """.trimMargin(),
+            """.trimMargin(),
             filePath("test", "Helper.cs") to """
                     |namespace MyTestLibrary.Test
                     |{
@@ -1530,7 +1530,7 @@ class CSharpBackendTest {
                     |        }
                     |    }
                     |}
-                """.trimMargin(),
+            """.trimMargin(),
             filePath("other", "thing", "Whatever.cs") to """
                     |namespace MyTestLibrary.Other.Thing
                     |{
@@ -1539,7 +1539,7 @@ class CSharpBackendTest {
                     |        // Just here for funzies.
                     |    }
                     |}
-                """.trimMargin(),
+            """.trimMargin(),
         )
         assertGenerateWanted(
             inputs = listOf(
@@ -1580,7 +1580,7 @@ class CSharpBackendTest {
                     |        return Sum(i__1, 1);
                     |    }
                     |}
-                """.trimMargin(),
+                    """.trimMargin(),
                 ),
             ),
             outputs = connecteds.map { (filePath, content) ->
