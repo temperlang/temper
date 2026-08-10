@@ -2144,15 +2144,14 @@ class JavaBackendTest {
 
     @Test
     fun connected() = assertGeneratedJavaRaw(
-        // TODO More connected. Less other stuff.
         inputs = inputFileMapFromJson(
+            // Test using a submodule.
             """
                 |{
                 |  sub: {
                 |    things.temper: ```
                 |      @connected
                 |      export let sum(i: Int, j: Int, bonus: Int = 0): Int;
-                |
                 |      export let inc(i: Int): Int {
                 |          sum(i, 1)
                 |      }
@@ -2212,10 +2211,12 @@ class JavaBackendTest {
             |
             |            ```,
             |      },
+            |## Connected code gets copied into same package dir.
             |      "SubConnected.java": "__DO_NOT_CARE__",
             |      "SubMain.java.map": "__DO_NOT_CARE__",
             |      "SubGlobal.java.map": "__DO_NOT_CARE__",
             |  },
+            |## Other raw files also get copied into package dirs by temper module dir.
             |  "other": {
             |      "thing": {
             |          "Whatever.java": "__DO_NOT_CARE__",

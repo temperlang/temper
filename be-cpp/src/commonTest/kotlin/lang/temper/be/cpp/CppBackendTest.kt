@@ -4,6 +4,7 @@ import lang.temper.be.Backend
 import lang.temper.be.assertGeneratedCode
 import lang.temper.be.generateCode
 import lang.temper.common.ListBackedLogSink
+import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.fs.MemoryFileSystem
 import lang.temper.lexer.Genre
 import lang.temper.log.filePath
@@ -653,6 +654,7 @@ class CppBackendTest {
             backendConfig = Backend.Config.production,
             factory = CppBackend.Cpp,
             inputs = listOf(
+                // Test using a submodule.
                 filePath("something", "fun.temper") to """
                     |let { prod } = import("./deeper");
                     |export let twice(i: Int): Int {
@@ -670,6 +672,7 @@ class CppBackendTest {
                     |    i * j
                     |}
                 """.trimMargin(),
+                // Connected code needs explicit cpp and hpp files and explicit namespaces inside.
                 filePath("something", "_connected.cpp") to """
                     |#include "_connected.hpp"
                     |
@@ -707,6 +710,7 @@ class CppBackendTest {
                 |{
                 |    "cpp": {
                 |        "my-test-library": {
+                |## Submodule something gets translated for now as "something.cpp|hpp".
                 |            "something.cpp": {
                 |                content: ```
                 |                  #include <my-test-library/something.hpp>
@@ -761,6 +765,7 @@ class CppBackendTest {
                 |
                 |                  ```
                 |            },
+                |## Other submodule content goes in a "something" subdir but retains the namespace given.
                 |            "something": {
                 |                "_connected.cpp": "__DO_NOT_CARE__",
                 |                "_connected.hpp": "__DO_NOT_CARE__",
@@ -780,7 +785,7 @@ class CppBackendTest {
                 |        },
                 |    },
                 |}
-            """.trimMargin(),
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
         )
     }
 }

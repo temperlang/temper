@@ -2475,7 +2475,8 @@ class JsBackendTest {
                 |        }
                 |        ```,
                 |      _connected.js: ```
-                |        import "../foo.internal.js"; // where "../" required here
+                |        // Importing with "../" required here. See layout later for more.
+                |        import "../foo.internal.js";
                 |        export const sum = (i, j, bonus) => {
                 |          return i + j + bonus;
                 |        };
@@ -2543,7 +2544,12 @@ class JsBackendTest {
             |
             |            ```
             |        },
+            |## As for cpp, we currently put foo(.internal?).js at the upper level.
             |        "foo.js": "__DO_NOT_CARE__",
+            |## And because we don't export internal modules in package.json, we can't
+            |## do a outer-namespaced import of the internal module, so we currently
+            |## have to pay attention to when we need to "../" import things from this
+            |## subdir. Maybe we can always make "foo/index.js" in the future instead.
             |        "foo": {
             |          "_connected.js": "__DO_NOT_CARE__",
             |          "deeper.js": "__DO_NOT_CARE__",
@@ -2578,7 +2584,7 @@ class JsBackendTest {
             |    }
             |  }
             |}
-        """.trimMargin(),
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 }
 

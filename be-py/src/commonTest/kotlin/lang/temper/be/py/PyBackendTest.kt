@@ -704,6 +704,7 @@ class PyBackendTest {
         inputs = inputFileMapFromJson(
             """
             |{
+            |## Test using a submodule.
             |  foo: {
             |    foo.temper: ```
             |      @connected
@@ -713,6 +714,7 @@ class PyBackendTest {
             |      }
             |      ```,
             |    __connected__.py: ```
+            |## All connected code goes into a single `_connected` namespace, using a class here.
             |      class _connected:
             |          from ._support import Support
             |
@@ -739,11 +741,13 @@ class PyBackendTest {
             |          __init__.py: {
             |            content:
             |              ```
+            |## Here's the connected code inlined into the primary module *before* imports.
             |              class _connected:
             |                  from ._support import Support
             |
             |                  def sum(i: int, j: int, bonus: int) -> int:
             |                      return i + j + bonus
+            |## Translated code starts here.
             |              from builtins import int as int1
             |              from typing import Union as Union2
             |              from temper_core import bubble as bubble0
@@ -756,12 +760,14 @@ class PyBackendTest {
             |                      bonus_4 = 0
             |                  else:
             |                      bonus_4 = _bonus_8
+            |## Here's the connected call.
             |                  return _connected.sum(i_2, j_3, bonus_4)
             |              def inc(i_6: 'int1', /) -> 'int1':
             |                  return sum(i_6, 1)
             |
             |              ```,
             |          },
+            |## And here's the support file next to the primary module.
             |          _support.py: "__DO_NOT_CARE__",
             |          __init__.py.map: "__DO_NOT_CARE__",
             |        },

@@ -1506,6 +1506,7 @@ class CSharpBackendTest {
     @Test
     fun connected() = run {
         val connecteds = listOf(
+            // Connected code needs explicit namespaces inside.
             filePath("test", "TestConnected.cs") to """
                     |namespace MyTestLibrary.Test
                     |{
@@ -1542,10 +1543,10 @@ class CSharpBackendTest {
         )
         assertGenerateWanted(
             inputs = listOf(
+                // Test using a submodule.
                 filePath("test", "rand.temper") to """
                     |@connected
                     |export let sum(i: Int, j: Int, bonus: Int = 0): Int;
-                    |
                     |export let inc(i: Int): Int {
                     |    sum(i, 1)
                     |}
@@ -1583,6 +1584,8 @@ class CSharpBackendTest {
                 ),
             ),
             outputs = connecteds.map { (filePath, content) ->
+                // Automatically place files we expect to copy over.
+                // They go in same namespace dirs here as translated code.
                 val segments = buildList {
                     addAll(chooseSubspace(filePath.segments.subList(0, filePath.segments.size - 1)))
                     add(filePath.segments.last().fullName)

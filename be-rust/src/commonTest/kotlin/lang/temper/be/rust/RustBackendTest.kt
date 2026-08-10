@@ -3,6 +3,7 @@ package lang.temper.be.rust
 import lang.temper.be.Backend
 import lang.temper.be.assertGeneratedCode
 import lang.temper.be.inputFileMapFromJson
+import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.log.FilePath
 import lang.temper.log.filePath
 import lang.temper.name.DashedIdentifier
@@ -191,30 +192,29 @@ class RustBackendTest {
         inputs = inputFileMapFromJson(
             """
                 |{
+                |## Test using a submodule.
                 |  sub: {
                 |    things.temper: ```
                 |      @connected
                 |      export let sum(i: Int, j: Int, bonus: Int = 0): Int;
-                |
                 |      export let inc(i: Int): Int {
                 |          sum(i, 1)
                 |      }
                 |      ```,
                 |    _connected.rs: ```
+                |## This submodule declaration in connected code is why we make a subdir later.
+                |      mod whatever;
                 |      pub(crate) fn sum(i: i32, j: i32, bonus: i32) -> i32 {
                 |          i + j + bonus
                 |      }
                 |      ```,
-                |  },
-                |  other: {
-                |    thing: {
-                |      whatever.rs: ```
-                |        // Content doesn't matter.
-                |        ```,
-                |    },
+                |## Include a bonus rust file to show where it ends up relative to connected code.
+                |    whatever.rs: ```
+                |      // Content doesn't matter.
+                |      ```,
                 |  },
                 |}
-            """.trimMargin(),
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
         ),
         want = """
             |{
@@ -255,6 +255,14 @@ class RustBackendTest {
             |
             |              ```
             |          },
+            |          _connected: {
+            |## Raw rust code goes into this subdir so other raw files are below it.
+            |## The original "_connected.rs" gets renamed to "mod.rs", which leaves it
+            |## effectively still just named `_connected`, and "whatever.rs" is now
+            |## `_connected::whatever` relative to anything above.
+            |            mod.rs: "__DO_NOT_CARE__",
+            |            whatever.rs: "__DO_NOT_CARE__",
+            |          },
             |          mod.rs.map: "__DO_NOT_CARE__",
             |        },
             |        $SUPPORT_FILES_DO_NOT_CARE
@@ -262,7 +270,7 @@ class RustBackendTest {
             |    }
             |  }
             |}
-        """.trimMargin(),
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
     @Test
