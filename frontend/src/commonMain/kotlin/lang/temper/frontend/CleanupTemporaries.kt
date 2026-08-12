@@ -201,10 +201,10 @@ internal class CleanupTemporaries private constructor(
         return DataTables(readsAndWrites, edits)
     }
 
-    private val MaximalPath.Element.edge: TEdge? get() = root.dereference(ref)
+    private val MaximalPath.AstElement.edge: TEdge? get() = root.dereference(ref)
 
     /** True when the containing flow element is a reference to `void`. */
-    private val MaximalPath.Element.isNoop: Boolean get() {
+    private val MaximalPath.AstElement.isNoop: Boolean get() {
         val edge = root.dereference(ref) ?: return false
         val tree = edge.target
         return tree is ValueLeaf && tree.content == void
@@ -485,7 +485,7 @@ internal class CleanupTemporaries private constructor(
                     // no write to `x` is live during a read of `y`
                     // that does not have a live write of `y` that also
                     // has that write of `x` live.
-                    val elementsWithReadsOfY = mutableSetOf<MaximalPath.Element>()
+                    val elementsWithReadsOfY = mutableSetOf<MaximalPath.AstElement>()
                     readsOfY.mapNotNullTo(elementsWithReadsOfY) { it.containingPathElement }
                     elementsWithReadsOfY.all { elementContainingReadOfY ->
                         val yLiveForRead = readsAndWrites.writesLive(y, elementContainingReadOfY)
@@ -773,7 +773,6 @@ internal class CleanupTemporaries private constructor(
             val deadForName = mutableListOf<TEdge>()
             for (write in writesOfName) {
                 if (write.writeKind != WriteKind.SimpleAssignment) {
-                    // TODO: can we eliminate hs calls whose fail vars are unchecked
                     continue
                 }
                 // Don't convert invalid code into valid code by eliminating dead writes.
@@ -976,7 +975,7 @@ internal class CleanupTemporaries private constructor(
         // Finally review in reverse order to make it easier to inline a sequence
         // of assignments all at once. That can help in common degenerate cases like
         // 1000s of items going into the same list.
-        val inlinedElements = mutableSetOf<MaximalPath.Element>()
+        val inlinedElements = mutableSetOf<MaximalPath.AstElement>()
         val inlinedReadTrees = mutableSetOf<Tree>()
 
         for (name in readsAndWrites.localNames.asReversed()) {
@@ -1011,7 +1010,7 @@ internal class CleanupTemporaries private constructor(
                 // the read, then we check the tree to find intervening nodes.
                 val targetElement = read.containingPathElement
                 if (targetElement?.pathIndex != writeElement.pathIndex) { continue }
-                val nextElement: MaximalPath.Element? = run {
+                val nextElement: MaximalPath.PathElement? = run {
                     val path = readsAndWrites.paths[writeElement.pathIndex]
                     var elementIndex = path.elements.indexOf(writeElement)
                     while (0 <= elementIndex && elementIndex < path.elements.lastIndex) {
@@ -1086,7 +1085,7 @@ internal class CleanupTemporaries private constructor(
                         Replace(
                             lineNo = lineFor(assigned),
                             description = "inline value assigned to $name at sole read",
-                            edgeToReplace = read.tree.incoming!!,
+                            edgeToReplace = read.tree!!.incoming!!,
                         ) {
                             Replant(freeTree(assigned))
                         },
@@ -1479,8 +1478,7 @@ internal class CleanupTemporaries private constructor(
 fun isNestedFunctionBody(t: Tree): Boolean {
     val incoming = t.incoming
     val parent = incoming?.source
-    if (parent !is FunTree) { return false }
-    return parent.lastChild === t
+    return parent is FunTree && parent.lastChild === t
 }
 
 private fun canMakeVar(declParts: DeclParts, readsAndWrites: ReadsAndWrites): Boolean {
@@ -1546,7 +1544,7 @@ private fun simpleAssignedForRead(read: Read, root: BlockTree): Pair<Tree, Resol
     val parent = edge?.source
     if (parent is CallTree && isAssignment(parent) && edge == parent.edgeOrNull(2)) {
         val ref = read.containingPathElement!!.ref // Since we know tree is non-null
-        if (parent.incoming == root.dereference(ref)) { // is not nested in an hs(...) call
+        if (parent.incoming == root.dereference(ref)) {
             val left = parent.child(1)
             if (left is LeftNameLeaf) {
                 val leftName = left.content as ResolvedName
@@ -1673,7 +1671,6 @@ private fun mustRemainAtStatementLevel(t: Tree): Boolean {
         val fn = t.childOrNull(0)?.functionContained
         when (fn) {
             BuiltinFuns.await,
-            BuiltinFuns.handlerScope,
             BuiltinFuns.setLocalFn,
             BuiltinFuns.setpFn,
             -> return true

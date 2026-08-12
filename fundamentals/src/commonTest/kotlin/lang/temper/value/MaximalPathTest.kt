@@ -439,27 +439,25 @@ class MaximalPathTest {
             |Path#0
             |- ref#0: `var t#3`
             |- ref#1: `var t#4`
-            |- ref#2: `var fail#2`
-            |- ref#3: `t#3 = hs(fail#2, x__0 / y__1)`
-            |if (ref#4?: `fail#2`) -> Path#1
+            |- ref#2: `t#3 = x__0 / y__1`
+            |if (bubbled) -> Path#1
             |else -> Path#2
             |
             |Path#1
-            |- ref#6: `t#4 = -1`
+            |- ref#5: `t#4 = -1`
             |-> Path#3
             |
             |Path#2
-            |- ref#5: `t#4 = t#3`
+            |- ref#4: `t#4 = t#3`
             |-> Path#3
             |
             |Path#3
-            |- ref#7: `t#4`
+            |- ref#6: `t#4`
         """.trimMargin(),
     ) {
         // WeaverTest.divOrElseTest produces output like this:
         val x = doc.nameMaker.unusedSourceName(ParsedName("x"))
         val y = doc.nameMaker.unusedSourceName(ParsedName("y"))
-        val fail1 = doc.nameMaker.unusedTemporaryName("fail")
         val t2 = doc.nameMaker.unusedTemporaryName("t")
         val t3 = doc.nameMaker.unusedTemporaryName("t")
         val orelse0 = label("orelse")
@@ -478,37 +476,21 @@ class MaximalPathTest {
                     V(void)
                 }
             },
-            // [[ var fail#1 ]];
-            Stmt {
-                Decl(fail1) {
-                    V(varSymbol)
-                    V(void)
-                }
-            },
             // orelse#0: do {
             OrElse(
                 onFailLabel = orelse0,
                 orClause = StmtBlock(
-                    // [[ t#2 = hs(fail#1, x / y) ]];
+                    // Use of bubbly version of `/`
+                    // [[ t#2 = x / y ]];
                     Stmt {
                         Call(BuiltinFuns.setLocalFn) {
                             Ln(t2)
-                            Call(BuiltinFuns.handlerScope) {
-                                Ln(fail1)
-                                Call(BuiltinFuns.divIntIntFn) {
-                                    Rn(x)
-                                    Rn(y)
-                                }
+                            Call(BuiltinFuns.divIntIntFn) {
+                                Rn(x)
+                                Rn(y)
                             }
                         }
                     },
-                    // if ([[ fail#1 ]]) {
-                    //   break orelse#0;
-                    // }
-                    If(
-                        Ref { Rn(fail1) },
-                        BreakTo(orelse0),
-                    ),
                     // [[ t#3 = t#2 ]];
                     Stmt {
                         Call(BuiltinFuns.setLocalFn) {
@@ -1285,8 +1267,15 @@ private fun basicBlocksToString(
     }
     append('\n')
 
-    fun appendElement(element: MaximalPath.Element) {
+    fun appendElement(element: MaximalPath.AstElement) {
         appendRef(block, element.ref, isCondition = element.isCondition)
+    }
+
+    fun appendCondition(cond: MaximalPath.PathElement) {
+        when (cond) {
+            MaximalPath.Bubbled -> append("bubbled")
+            is MaximalPath.AstElement -> appendElement(cond)
+        }
     }
 
     pathOrder.forEach { pi ->
@@ -1307,7 +1296,7 @@ private fun basicBlocksToString(
             val condition = it.condition
             if (condition != null) {
                 append("if (")
-                appendElement(condition)
+                appendCondition(condition)
                 append(") ")
             }
             append(

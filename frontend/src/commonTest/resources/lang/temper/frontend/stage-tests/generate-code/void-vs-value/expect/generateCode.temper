@@ -1,10 +1,10 @@
-@fn @reach(\none) let trick__0, @fn @reach(\none) treat__0, @fn @reach(\none) trail__0;
-trick__0 = (@stay fn trick /* return__1 */: Void {
-    return__1 = 123
+@fn @reach(\none) let trick__3, @fn @reach(\none) treat__4, @fn @reach(\none) trail__5;
+trick__3 = (@stay fn trick /* return__0 */: Void {
+    return__0 = void
 });
-treat__0 = (@stay fn treat /* return__2 */: Int32 {
-    return__2 = 456
+treat__4 = (@stay fn treat /* return__1 */: Int32 {
+    return__1 = 456
 });
-trail__0 = (@stay fn trail /* return__3 */: Void {
-    return__3 = void
+trail__5 = (@stay fn trail /* return__2 */: Void {
+    return__2 = void
 })

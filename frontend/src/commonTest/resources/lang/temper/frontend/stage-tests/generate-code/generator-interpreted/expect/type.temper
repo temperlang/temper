@@ -1,31 +1,30 @@
-let console#0;
-console#0 = doPure(@stay fn /* return__0 */: Console {
-    return__0 = getConsole();
+let console#6;
+console#6 = doPure(@stay fn /* return__8 */: Console {
+    return__8 = getConsole();
 });
-@fn let runItThrice__0;
-runItThrice__0 = fn runItThrice(factory__0 /* aka factory */: (fn (): SafeGenerator<Empty>)) /* return__1 */: Void {
-  void;
-  fn__0: do {
-    let generator__0: SafeGenerator<Empty>;
-    generator__0 = factory__0();
-    do_call_next(generator__0);
-    do_call_log(console#0, ",");
-    do_call_next(generator__0);
-    do_call_log(console#0, ",");
-    do_call_next(generator__0);
-    do_call_log(console#0, ".");
-    return__1 = void
+@fn let runItThrice__1;
+runItThrice__1 = fn runItThrice(factory__2 /* aka factory */: (fn (): SafeGenerator<Empty>)) /* return__0 */: Void {
+  fn__3: do {
+    return__0 = void;
+    let generator__4: SafeGenerator<Empty>;
+    generator__4 = factory__2();
+    do_call_next(generator__4);
+    do_call_log(console#6, ",");
+    do_call_next(generator__4);
+    do_call_log(console#6, ",");
+    do_call_next(generator__4);
+    do_call_log(console#6, ".")
   }
 };
-runItThrice__0(fn /* return__2 */{
-    return__2 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__3 */: (GeneratorResult<Empty>) implements GeneratorFn {
-        do_call_log(console#0, "First");
+runItThrice__1(fn /* return__7 */{
+    return__7 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__5 */: (GeneratorResult<Empty>) implements GeneratorFn {
+        do_call_log(console#6, "First");
         yield();
-        do_call_log(console#0, "Second");
+        do_call_log(console#6, "Second");
         yield();
-        do_call_log(console#0, "Third");
+        do_call_log(console#6, "Third");
         yield();
-        do_call_log(console#0, "Fourth");
-        return__3 = core.doneResult<Empty>()
-    })
-});
+        do_call_log(console#6, "Fourth");
+        return__5 = core.doneResult<Empty>();
+    });
+})

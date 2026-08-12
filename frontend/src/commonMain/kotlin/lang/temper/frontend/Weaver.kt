@@ -4,30 +4,22 @@ import lang.temper.ast.TreeVisit
 import lang.temper.ast.VisitCue
 import lang.temper.builtin.AwaitFn
 import lang.temper.builtin.BuiltinFuns
-import lang.temper.builtin.BuiltinLogicalOperators
 import lang.temper.builtin.YieldFn
-import lang.temper.common.LeftOrRight
-import lang.temper.common.Log
-import lang.temper.common.allMapToSameElseNull
 import lang.temper.common.compatReversed
 import lang.temper.common.console
-import lang.temper.common.ignore
 import lang.temper.frontend.syntax.isAssignment
 import lang.temper.frontend.syntax.isLeftHandSide
-import lang.temper.interp.convertToErrorNode
-import lang.temper.log.FilePath
-import lang.temper.log.FilePositions
-import lang.temper.log.LogSink
-import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.log.Positioned
 import lang.temper.name.CoreCodeLocation
+import lang.temper.name.InternalModularName
 import lang.temper.name.ResolvedName
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
 import lang.temper.type.DotHelper
 import lang.temper.type.ExternalSet
 import lang.temper.type.InternalSet
+import lang.temper.type.TypeContext
 import lang.temper.type.WellKnownTypes
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockChildReference
@@ -35,7 +27,6 @@ import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.ControlFlow
 import lang.temper.value.DeclTree
-import lang.temper.value.DefaultJumpSpecifier
 import lang.temper.value.EscTree
 import lang.temper.value.FunTree
 import lang.temper.value.InnerTree
@@ -50,33 +41,26 @@ import lang.temper.value.Planting
 import lang.temper.value.RightNameLeaf
 import lang.temper.value.StayLeaf
 import lang.temper.value.StructuredFlow
-import lang.temper.value.TBoolean
 import lang.temper.value.TEdge
 import lang.temper.value.Tree
 import lang.temper.value.UnpositionedTreeTemplate
-import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 import lang.temper.value.fnParsedName
 import lang.temper.value.freeTarget
 import lang.temper.value.freeTree
 import lang.temper.value.functionContained
-import lang.temper.value.getTerminalExpressions
-import lang.temper.value.initSymbol
-import lang.temper.value.invertLogicalExpr
 import lang.temper.value.isBubbleCall
-import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.matches
 import lang.temper.value.returnsVoidClearly
 import lang.temper.value.toLispy
 import lang.temper.value.toPseudoCode
-import lang.temper.value.vVarSymbol
-import lang.temper.value.valueContained
+import lang.temper.value.varSymbol
 import lang.temper.value.void
 
 private const val DEBUG = false
 
 private inline fun debug(p: Positioned, f: () -> Any) {
-    @Suppress("SimplifyBooleanWithConstants", "KotlinConstantConditions")
+    @Suppress("SimplifyBooleanWithConstants")
     if (DEBUG && p.pos.loc != CoreCodeLocation) {
         val x = f()
         if (x != Unit) {
@@ -102,57 +86,47 @@ private inline fun debug(p: Positioned, f: () -> Any) {
  * Some things that are expressions in Temper can only appear in statement position in other
  * languages including:
  *
- * - local variable declarations
- * - assignments `a = b` in Python (before PEP 0572) and in Golang
+ * - Local variable declarations.
+ * - Assignments `a = b` in Python (before PEP 0572) and in Golang.
  * - `yield`, `return` in C-like languages
- * - error originating operators like `throw` or Temper `bubble()`
- * - error checks or interceptions like `catch` in Java-like languages
- * - some languages, like Python, do not allow function expressions that themselves contain statements
- *   so at least some function expression need to be turned into nested, named functions.
+ * - Error originating operators like `throw` or Temper `bubble()`.
+ * - Error checks or interceptions like `catch` in Java-like languages.
+ * - Some function expressions because some languages only allow constrained functions in
+ *   expression position, for example, Python lambdas cannot contain statements.
  *
  * These also need to be woven as close as possible to the containing module/function body.
  *
  * [![](Weaver.png)](Weaver.png)
  */
 class Weaver private constructor(
-    private val logSink: LogSink,
-    /** For debugging */
-    private val filePositions: Map<FilePath, FilePositions>,
     private val root: BlockTree,
-    private val failureConditionNeedsChecking: (NameLeaf) -> Boolean,
+    /** Whether to run [MagicSecurityDust] */
+    private val sprinkleSecurityDust: Boolean,
     /**
-     * Whether to pull special functions like assignments and uses of handler scope
-     * towards the root.
+     * Whether to pull special functions like assignments towards the root.
      */
     private val pullSpecialsRootward: Boolean,
     /**
      * Whether to pull free function trees into declarations.
      */
     private val nameAllFunctions: Boolean,
+    /**
+     * True if [lang.temper.frontend.typestage.MakeResultsExplicit] has run.
+     * False if we need to capture the block result implicitly so that it can
+     * later use it as the return value.
+     */
+    private val resultsAlreadyCaptured: Boolean,
+    /** All names in the module that might be reassigned within their declaration's live range'. */
+    private val varNames: Set<ResolvedName>,
 ) {
-    private val nameMaker = root.document.nameMaker
-    private val temporariesAllocated = mutableMapOf<ResolvedName, Position>()
+    private val typeContext = TypeContext()
+    private var blockResultCaptures: Map<BlockTree, CaptureResult> = mapOf()
 
     private inline fun debug(f: () -> Any) = debug(root, f)
-
-    private fun allocateName(
-        pos: Position,
-        nameHint: String = Temporary.defaultNameHint,
-    ): Temporary {
-        val name = nameMaker.unusedTemporaryName(nameHint)
-        temporariesAllocated[name] = pos
-        return name
-    }
 
     private fun weave() {
         debug {
             console.group("Weave") {
-                console.log(root.toLispy(multiline = true))
-            }
-        }
-        checkFailureConditions(root)
-        debug {
-            console.group("Failure conditions checked") {
                 console.log(root.toLispy(multiline = true))
             }
         }
@@ -162,43 +136,36 @@ class Weaver private constructor(
                 console.log(root.toLispy(multiline = true))
             }
         }
+        sprinkleSecurityDust(root)
+        debug {
+            console.group("Security sprinkled") {
+                console.log(root.toLispy(multiline = true))
+            }
+        }
         addWeightToStatementLikeExpressions(root)
         debug {
-            console.group("Before pull") {
+            console.group("Statement like expressions weighted") {
+                console.log(root.toLispy(multiline = true))
+            }
+        }
+        captureBlockResultsInTemporaries(root)
+        debug {
+            console.group("Captured block results") {
                 console.log(root.toLispy(multiline = true))
             }
         }
         pullRootwards(root)
         debug {
-            console.group("After pull") {
-                console.log(root.toLispy(multiline = true))
-            }
-        }
-        declareTemporariesAllocated()
-        debug {
-            console.group("After temporaries declared") {
+            console.group("After pullRootwards") {
                 console.log(root.toLispy(multiline = true))
             }
         }
         evaporateBubbles()
-    }
-
-    private fun declareTemporariesAllocated() {
-        val doc = root.document
-        val decls = temporariesAllocated.map { (name, pos) ->
-            DeclTree(
-                doc,
-                pos,
-                listOf(
-                    LeftNameLeaf(doc, pos, name),
-                    // Temporaries declared at root level, but use may be in loop.
-                    ValueLeaf(doc, pos, vVarSymbol),
-                    ValueLeaf(doc, pos, void),
-                ),
-            )
+        debug {
+            console.group("After evaporateBubbles") {
+                console.log(root.toLispy(multiline = true))
+            }
         }
-        temporariesAllocated.clear()
-        prefixBlockWith(decls, root)
     }
 
     /** Look for calls to [BuiltinFuns.bubble] and turn them into [ControlFlow.Break] where possible. */
@@ -226,10 +193,19 @@ class Weaver private constructor(
         chaseBubbles(structureBlock(root).controlFlow, null)
     }
 
+    private fun captureBlockResultsInTemporaries(tree: BlockTree) {
+        val capturer = CaptureBlockResultsInTemporaries(
+            tree, typeContext, varNames,
+            resultsAlreadyCaptured = resultsAlreadyCaptured,
+        )
+        capturer.capture()
+        blockResultCaptures = capturer.capturedBlocks
+    }
+
     /** Walk post-order to pull blocks as close to the root as possible. */
     private fun pullRootwards(tree: Tree) {
         var i = 0
-        // This loop samples size every time and captures nextEdge early so that it's not sensitive
+        // This loop samples size every time and captures `nextEdge` early so that it's not sensitive
         // to nested calls modifying the child count.  When stitching pulled blocks into a block,
         // we end up adding children.
         while (i < tree.size) {
@@ -250,23 +226,24 @@ class Weaver private constructor(
         if (tree is BlockTree) {
             structureBlock(tree)
             if (canMoveRootwards(tree)) {
-                val treeEdge = tree.incoming!! // !! safe since tree != root
+                val treeEdge = tree.incoming!! // !! safe since `tree != root`
                 val parent = treeEdge.source!!
                 val indexInParent = treeEdge.edgeIndex
 
-                val result = if (resultMayBeUsed(tree)) {
-                    when (val blockResult = storeBlockResult(tree)) {
-                        null -> null
-                        is NameForResult ->
-                            RightNameLeaf(tree.document, tree.pos, blockResult.resultName)
-                        is KnownResult ->
-                            ValueLeaf(tree.document, tree.pos, blockResult.value)
-                    }
-                } else {
-                    null
-                }
+                val result = this.blockResultCaptures[tree]
+                    ?: CaptureResult.voidCaptureResult
 
-                treeEdge.replace(result ?: ValueLeaf(tree.document, tree.pos, void))
+                treeEdge.replace(
+                    when (result) {
+                        is NameCaptureResult -> RightNameLeaf(tree.document, tree.pos, result.capturedIn)
+                        is KnownValueCaptureResult -> ValueLeaf(tree.document, tree.pos, result.value)
+                    }.also {
+                        val type = result.type
+                        if (type != null) {
+                            it.typeInferences = BasicTypeInferences(type, listOf())
+                        }
+                    },
+                )
 
                 pullRootwardsBeforeIndex(
                     pulledBlock = tree,
@@ -299,20 +276,6 @@ class Weaver private constructor(
         return true
     }
 
-    private fun resultMayBeUsed(block: BlockTree): Boolean {
-        require(block != root)
-        val incoming = block.incoming
-        return when (val parent = incoming?.source) {
-            is BlockTree -> if (parent.flow is LinearFlow) {
-                parent.edge(parent.size - 1) == incoming
-            } else {
-                // maybe.
-                true
-            }
-            else -> true
-        }
-    }
-
     private fun pullRootwardsBeforeIndex(
         pulledBlock: BlockTree,
         tree: InnerTree,
@@ -324,7 +287,7 @@ class Weaver private constructor(
                 // and connecting the child subsystem to edges around it.
                 // Then we're done.  Since we traverse postOrder, parent will naturally be pulled
                 // rootwards where appropriate.
-                stitchControlFlowsTogether(
+                stitchControlFlowsTogether2(
                     outerBlock = tree,
                     pulledBlock = pulledBlock,
                     edgeIndex = indexInTree,
@@ -340,11 +303,7 @@ class Weaver private constructor(
                 // For function definitions, we checked above in canMoveRootwards that we're
                 // not pulling the body out.
 
-                swapBeforeAndKeepSneaking(
-                    tree = tree,
-                    pulledBlock = pulledBlock,
-                    childIndex = indexInTree,
-                )
+                swapBeforeAndKeepSneaking(tree = tree, pulledBlock = pulledBlock)
             }
             is EscTree -> {
                 // How did we even get here?
@@ -355,47 +314,7 @@ class Weaver private constructor(
     private fun swapBeforeAndKeepSneaking(
         tree: InnerTree,
         pulledBlock: BlockTree,
-        childIndex: Int,
     ) {
-        val document = tree.document
-        val prefix = mutableListOf<Tree>()
-        // Capture siblings to the left in temporaries so that we can ensure that things are
-        // evaluated in order.
-        for (i in 0 until childIndex) {
-            if (shouldExtract(tree, i)) {
-                val edge = tree.edge(i)
-                val sibling = edge.target
-                if (sibling is DeclTree) {
-                    // If we need to swap something before a declaration, just check that any
-                    // declaration types and initial values are pulled out, then forego
-                    // assigning the declaration to a temporary.
-                    val parts = sibling.partsIgnoringName
-                    if (parts != null) {
-                        val typeEdge = parts.type
-                        val initEdge = parts.metadataSymbolMap[initSymbol]
-                        for (declChildEdge in listOf(typeEdge, initEdge)) {
-                            if (
-                                declChildEdge != null &&
-                                shouldExtract(sibling, declChildEdge.edgeIndex)
-                            ) {
-                                val declChild = declChildEdge.target
-                                val pos = declChild.pos
-                                val alias = allocateName(pos)
-                                declChildEdge.replace(RightNameLeaf(document, pos, alias))
-                                prefix.add(assign(alias, declChild))
-                            }
-                        }
-                        continue
-                    }
-                }
-
-                val alias = allocateName(sibling.pos)
-                edge.replace(RightNameLeaf(document, sibling.pos, alias))
-                prefix.add(assign(alias, sibling))
-            }
-        }
-        prefixBlockWith(prefix, pulledBlock)
-
         // Safe because tree is not a block so cannot be root.
         val treeEdge = tree.incoming!!
         val parent = treeEdge.source!!
@@ -408,484 +327,13 @@ class Weaver private constructor(
         )
     }
 
-    private fun shouldExtract(parent: Tree, childIndex: Int): Boolean {
-        val child = parent.child(childIndex)
-        return when {
-            child is StayLeaf -> false
-            child is ValueLeaf -> false
-            child is FunTree -> false
-            child is NameLeaf -> false
-            isLeftHandSide(parent, childIndex) -> false
-            child is CallTree -> {
-                // Some calls are intermediate steps to other calls:
-                // - angle bracket calls associate type parameters with a callee.
-                // These should stay in situ.
-                when (child.childOrNull(0)?.functionContained) {
-                    BuiltinFuns.angleFn -> child.size != 1 || shouldExtract(child, 1)
-                    else -> true
-                }
-            }
-            // We should not extract the name at position 1 after \label in a LinearFlow block,
-            // but this is never called with a BlockTree as a parent.
-            else -> true
-        }
-    }
-
-    /**
-     * Walks back from exit to figure out which expression is used as the block's result and
-     * returns either:
-     * - a temporary that aliases that
-     * - the known result value
-     */
-    private fun storeBlockResult(b: BlockTree): BlockResult? {
-        structureBlock(b)
-        val (ends) = b.getTerminalExpressions(assumeFailureCanHappen = true)
-        // If all the ends assign to the same temporary, great!
-        val knownResult = ends.allMapToSameElseNull {
-            val e = b.dereference(it.ref)
-            val t = e?.target
-            t?.valueContained
-        }
-        val existingName = ends.allMapToSameElseNull {
-            val e = b.dereference(it.ref)
-            if (e != null && isAssignment(e.target)) leftHandSideOf(e.target) else null
-        }
-        return when {
-            // Temporaries tend to be single purpose so we'll not try to pull two things
-            // left that coincidentally assign to the same temporary and clobber one
-            // another.
-            // TODO: We could check whether name as allocated by this pass, but that
-            // would make this pass not idempotent.  Do we care?
-            knownResult != null -> KnownResult(knownResult)
-            existingName is Temporary -> NameForResult(existingName)
-            ends.isNotEmpty() -> {
-                val allocatedName = allocateName(ends.first().pos)
-                for (end in ends) {
-                    var endReference = end.ref
-                    var endEdge = b.dereference(endReference) ?: continue
-                    // Make sure that we don't treat declarations as value producers.
-                    // Declarations need to sink to the bottom, just above blocks.
-                    if (!isValidRightHandSide(endEdge.target)) {
-                        val target = endEdge.target
-                        // Add a void expression after the declaration.
-                        val voidValueIndex = b.size
-                        val voidTree =
-                            ValueLeaf(target.document, target.pos.rightEdge, void)
-                        val voidReference =
-                            BlockChildReference(voidValueIndex, voidTree.pos)
-                        b.add(voidValueIndex, voidTree)
-
-                        // Replace the node that references the declaration with a subsystem
-                        // that has the declaration followed by the expression `void`
-                        end.parent!!.withMutableStmtList { stmtList ->
-                            stmtList.add(ControlFlow.Stmt(voidReference))
-                        }
-
-                        // Now, overwrite endEdge so that the assignment below adds an
-                        // assignment that captures void.
-                        endEdge = b.edge(voidValueIndex)
-                        endReference = voidReference
-                    }
-                    val assignment = assign(
-                        allocatedName,
-                        // This assumes there's only one reference to end, which should be
-                        // the case.
-                        // TODO: maybe add a check for this before we start weaving.
-                        freeTarget(endEdge),
-                    )
-                    val childIndex = b.size
-                    b.add(childIndex, assignment)
-                    endReference.overrideIndex(childIndex)
-                }
-                NameForResult(allocatedName)
-            }
-            else -> // End is never reached.
-                null
-        }
-    }
-
-    private fun assign(name: ResolvedName, expr: Tree): CallTree {
-        val pos = expr.pos
-        return expr.treeFarm.grow {
-            Call(pos) {
-                V(pos.leftEdge, setLocalFnValue)
-                Ln(pos.leftEdge, name)
-                Replant(expr)
-            }
-        }
-    }
-
-    private fun leftHandSideOf(child: Tree): ResolvedName? {
-        if (isAssignment(child)) {
-            val c1 = child.child(1)
-            if (c1 is NameLeaf) {
-                return c1.content as ResolvedName?
-            }
-        }
-        return null
-    }
-
-    private fun stitchControlFlowsTogether(
+    private fun stitchControlFlowsTogether2(
         outerBlock: BlockTree,
         pulledBlock: BlockTree,
         edgeIndex: Int,
     ) {
-        // We can't splice a structured flow into a linear flow, so complicate parent.
-        val outerFlow = structureBlock(outerBlock)
-
-        // Make sure there is at most one BlockChildReference to the pulled block.
-        // Then replace it.
-        var ok = true
-        fun tooManyReferents(old: Positioned, new: Positioned) {
-            // Too many references to child.
-            ok = false
-            logSink.log( // TODO: too many args?
-                level = Log.Error,
-                template = MessageTemplate.MalformedFlow,
-                pos = new.pos,
-                values = listOf(old.pos),
-            )
-        }
-
-        var referringCondition: ControlFlow.Conditional? = null
-        var referringStmt: ControlFlow.Stmt? = null
-        fun scanForEdgeIndex(cf: ControlFlow) {
-            if (cf is ControlFlow.StmtBlock) { // All Stmt nodes are in a StmtBlock
-                for (sub in cf.stmts) {
-                    if (sub is ControlFlow.Stmt) {
-                        if (sub.ref.index == edgeIndex) {
-                            val old = referringStmt
-                            if (old != null) {
-                                tooManyReferents(old, sub)
-                            } else {
-                                referringStmt = sub
-                            }
-                        }
-                    }
-                }
-            } else {
-                if (cf is ControlFlow.Conditional && cf.condition.index == edgeIndex) {
-                    val old = referringCondition
-                    if (old != null) {
-                        tooManyReferents(old, cf)
-                    } else {
-                        referringCondition = cf
-                    }
-                }
-            }
-            for (sub in cf.clauses) {
-                scanForEdgeIndex(sub)
-            }
-        }
-        scanForEdgeIndex(outerFlow.controlFlow)
-
-        if (referringStmt != null && referringCondition != null) {
-            tooManyReferents(referringStmt, referringCondition)
-            referringCondition = null
-        }
-
-        if (!ok) {
-            // All `ok = false` are accompanied by log calls so no need to log here.
-            convertToErrorNode(outerBlock.edge(edgeIndex))
-        }
-
-        val rc = referringCondition
-        val rs = referringStmt
-
-        debug {
-            console.log("\nStitching at $edgeIndex")
-            console.group("Outer: ${ outerBlock.pos.toString(filePositions) }") {
-                outerBlock.toPseudoCode(console.textOutput)
-            }
-            console.group("Pulled: ${ pulledBlock.pos.toString(filePositions) }") {
-                pulledBlock.toPseudoCode(console.textOutput)
-            }
-            console.log(". rs=$rs")
-            console.log(". rc=$rc")
-        }
-
-        when {
-            rc != null -> {
-                // The block was part of something that was used to compute an edge condition.
-                // Make sure that the block just runs before that condition is checked.
-                // The block's result was already extracted into a temporary which should be
-                // incorporated into the condition.
-
-                when (rc) {
-                    is ControlFlow.If -> {
-                        // Insert a blank node before the condition.
-                        //
-                        //     precedingSibling();
-                        //     if (t#1 = BLOCKY_STUFF) { thenClause } else { elseClause }
-                        //
-                        //     ->
-                        //
-                        //     precedingSibling();
-                        //     t#1 = BLOCKY_STUFF;
-                        //     if (t#1) { thenClause } else { elseClause }
-                        val parent = rc.parent as ControlFlow.StmtBlock
-                        val indexInParent = parent.stmts.indexOf(rc)
-                        val innerRemapped = remapControlFlow(pulledBlock, outerBlock)
-                        parent.withMutableStmtList { siblings ->
-                            siblings.addAll(indexInParent, innerRemapped)
-                        }
-                    }
-                    is ControlFlow.Loop -> {
-                        // With loops, we need to insert the extra instructions so that
-                        // they run every time the loop runs, being careful that a `continue`
-                        // runs those instructions instead of just running the condition.
-                        //
-                        //    while (t#1 = BLOCKY_STUFF) {
-                        //      ...; continue; ...
-                        //    }
-                        //
-                        // ->
-                        //
-                        //    while (true) {
-                        //      t#1 = BLOCK_STUFF;
-                        //      if (!t#1) { break }
-                        //      ...; continue; ...
-                        //    }
-                        //
-                        // There, the continue goes to the right place.
-                        // But do...while loops are a bit trickier
-                        //
-                        //    do {
-                        //      ...; continue; ...
-                        //    } while (t#1 = BLOCKY_STUFF);
-                        //
-                        // ->
-                        //
-                        //    do {
-                        //      continue_label: do {
-                        //        ...; break continue_label; ...
-                        //      }
-                        //      t#1 = BLOCKY_STUFF;
-                        //    } while (t#1);
-                        //
-                        // But we don't have a way to convert all possible `continue`s
-                        // in the body to labeled `break`s, so we store the label with
-                        // the loop in case we later need to resolve free `continue`s in
-                        // inlined block lambdas.
-                        val body = rc.body
-                        val doc = outerBlock.document
-                        val innerRemapped = remapControlFlow(pulledBlock, outerBlock)
-                        rc.condition.invertLogicalExpr(outerBlock, BuiltinLogicalOperators)
-                        val breakUnlessCondition = ControlFlow.If(
-                            rc.condition.pos,
-                            rc.condition,
-                            ControlFlow.StmtBlock.wrap(
-                                ControlFlow.Break(rc.condition.pos.rightEdge, DefaultJumpSpecifier),
-                            ),
-                            ControlFlow.StmtBlock(rc.condition.pos.rightEdge, emptyList()),
-                        )
-
-                        val trueValueRef = BlockChildReference(
-                            outerBlock.children.size,
-                            rc.pos.leftEdge,
-                        )
-                        outerBlock.add(
-                            ValueLeaf(doc, trueValueRef.pos, TBoolean.valueTrue),
-                        )
-                        rc.condition = trueValueRef
-
-                        when (rc.checkPosition) {
-                            LeftOrRight.Left -> {
-                                val beforeBody = innerRemapped + listOf(breakUnlessCondition)
-                                // Create an if (condition)
-                                // Insert at front of body.
-                                body.withMutableStmtList { bodyStmts ->
-                                    bodyStmts.addAll(0, beforeBody)
-                                }
-                            }
-                            LeftOrRight.Right -> {
-                                val bodyStmtList = body.stmts
-                                val continueLabel = doc.nameMaker.unusedTemporaryName("continue")
-                                body.withMutableStmtList { bodyStmts ->
-                                    bodyStmts.clear()
-                                    // Wrap the *real* body so that any `continue`s in it
-                                    // go to before the remapped condition.
-                                    bodyStmts.add(
-                                        ControlFlow.Labeled(
-                                            body.pos,
-                                            breakLabel = continueLabel,
-                                            continueLabel = continueLabel,
-                                            stmts = ControlFlow.StmtBlock(body.pos, bodyStmtList),
-                                        ),
-                                    )
-                                    bodyStmts.addAll(innerRemapped)
-                                    bodyStmts.add(breakUnlessCondition)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            rs != null -> {
-                val parent = rs.parent!!
-                val indexInParent = parent.stmts.indexOf(rs)
-                parent.withMutableStmtList { siblings ->
-                    val toReplace = siblings.subList(indexInParent, indexInParent)
-                    toReplace.clear()
-                    toReplace.addAll(
-                        remapControlFlow(pulledBlock, outerBlock),
-                    )
-                }
-            }
-            else -> {
-                // We can legitimately reach here.
-
-                // One possible scenario is
-                //
-                //     0 orelse console.log("unreachable");
-                //
-                // Since the print is only reachable when (0) fails, and
-                // we know that it cannot even without type info, there is
-                // no path to the (0) sub-expressions sub-system to its
-                // failExit.
-
-                // Ignore pulledBlock. trimGarbageSubtrees will clean it up.
-                ignore(pulledBlock)
-            }
-        }
-    }
-
-    private fun remapControlFlow(
-        sourceBlock: BlockTree,
-        destBlock: BlockTree,
-    ): List<ControlFlow> {
-        val sourceFlow = structureBlock(sourceBlock)
-        fun remapRef(ref: BlockChildReference): BlockChildReference {
-            // Move the referenced tree from sourceBlock into destBlock
-            val edge = sourceBlock.dereference(ref)
-            return if (edge != null) {
-                val indexInDest = destBlock.size
-                destBlock.add(freeTarget(edge))
-                BlockChildReference(indexInDest, ref.pos)
-            } else {
-                BlockChildReference(null, ref.pos)
-            }
-        }
-
-        lateinit var remapStmts: (ControlFlow.StmtBlock) -> ControlFlow.StmtBlock
-
-        fun remapOne(cf: ControlFlow): ControlFlow = when (cf) {
-            is ControlFlow.If -> ControlFlow.If(
-                pos = cf.pos,
-                condition = remapRef(cf.condition),
-                thenClause = remapStmts(cf.thenClause),
-                elseClause = remapStmts(cf.elseClause),
-            )
-            is ControlFlow.Loop -> ControlFlow.Loop(
-                pos = cf.pos,
-                label = cf.label,
-                checkPosition = cf.checkPosition,
-                condition = remapRef(cf.condition),
-                body = remapStmts(cf.body),
-                increment = remapStmts(cf.increment),
-            )
-            is ControlFlow.Jump -> cf.deepCopy()
-            is ControlFlow.Labeled -> ControlFlow.Labeled(
-                pos = cf.pos,
-                breakLabel = cf.breakLabel,
-                continueLabel = cf.continueLabel,
-                stmts = remapStmts(cf.stmts),
-            )
-            is ControlFlow.OrElse -> ControlFlow.OrElse(
-                pos = cf.pos,
-                orClause = remapOne(cf.orClause) as ControlFlow.Labeled,
-                elseClause = remapStmts(cf.elseClause),
-            )
-            is ControlFlow.Stmt -> ControlFlow.Stmt(
-                ref = remapRef(cf.ref),
-            )
-            is ControlFlow.StmtBlock -> ControlFlow.StmtBlock(
-                pos = cf.pos,
-                stmts = cf.stmts.map { remapOne(it) },
-            )
-        }
-        remapStmts = { remapOne(it) as ControlFlow.StmtBlock }
-
-        return buildList {
-            sourceFlow.controlFlow.stmts.forEach { stmt ->
-                add(remapOne(stmt))
-            }
-        }
-    }
-
-    private fun checkFailureConditions(tree: Tree) {
-        for (i in tree.indices) {
-            if (ithChildUnderSameRoot(tree, i)) {
-                checkFailureConditions(tree.child(i))
-            }
-        }
-        if (tree !is CallTree) {
-            return
-        }
-        val callee = tree.childOrNull(0)
-        if (callee?.functionContained != BuiltinFuns.handlerScope) {
-            return
-        }
-        // Convert to a block that jumps to fail here.
-        // Doing this here instead of in MagicSecurityDust lets us avoid having to
-        // hoist things out there.
-        val failNameLeaf = tree.childOrNull(1)
-        if (failNameLeaf !is NameLeaf) {
-            return
-        }
-        if (!failureConditionNeedsChecking(failNameLeaf)) {
-            return
-        }
-        val failName = failNameLeaf.content
-
-        val incomingEdge = tree.incoming!! // Safe since root is not a call to hs().
-
-        debug {
-            console.group("Expanding") {
-                console.log(incomingEdge.target.toLispy(multiline = true))
-            }
-        }
-
-        // Insert a check that is, in spirit,
-        //     if (failNameLeaf) bubble()
-        val doc = tree.document
-        val pos = tree.pos
-        val posRight = pos.rightEdge
-
-        val checkControlFlow = ControlFlow.StmtBlock(
-            pos,
-            listOf(
-                ControlFlow.Stmt(
-                    BlockChildReference(0, pos), // See block below for indices
-                ),
-                ControlFlow.If(
-                    pos = posRight,
-                    condition = BlockChildReference(1, posRight),
-                    thenClause = ControlFlow.StmtBlock(
-                        posRight,
-                        listOf(ControlFlow.Stmt(BlockChildReference(2, posRight))),
-                    ),
-                    elseClause = ControlFlow.StmtBlock(posRight, emptyList()),
-                ),
-            ),
-        )
-
-        val replacement = BlockTree(
-            doc,
-            pos,
-            listOf(
-                freeTarget(incomingEdge),
-                RightNameLeaf(doc, posRight, failName),
-                CallTree(
-                    doc,
-                    posRight,
-                    listOf(ValueLeaf(doc, posRight, BuiltinFuns.vBubble)),
-                ),
-            ),
-            StructuredFlow(checkControlFlow),
-        )
-
-        incomingEdge.replace(replacement)
+        Stitcher(outerBlock = outerBlock, pulledBlock = pulledBlock, edgeIndex = edgeIndex)
+            .stitch()
     }
 
     private val flowAnalyzer = FlowAnalyzer()
@@ -901,8 +349,8 @@ class Weaver private constructor(
      *
      * Hoisted declarations and macro calls often evaporate leaving `void` droppings.
      *
-     * Not weaving these blocks unnecessarily, reduces the amount of temporaries, and leaves
-     * reduced or reducible values in place.
+     * Not weaving these blocks unnecessarily reduces the number of temporaries,
+     * and leaves reduced or reducible values in place.
      */
     private fun simplifyBlocks(container: Tree) {
         // Do simplification on children so that we do not try to eliminate the root
@@ -931,6 +379,12 @@ class Weaver private constructor(
         }
     }
 
+    private fun sprinkleSecurityDust(root: BlockTree) {
+        if (!sprinkleSecurityDust) { return }
+        val duster = MagicSecurityDust()
+        duster.sprinkle(root)
+    }
+
     /**
      * Some expressions need to be children of the root or close to.
      *
@@ -949,11 +403,6 @@ class Weaver private constructor(
      *
      * When [pullSpecialsRootward] is true, this method additionally wraps calls to some other
      * special functions in blocks.
-     *
-     * When an assignment appears directly inside a handler scope call, it's the handler scope call
-     * that gets wrapped so that assignments that may fail are moved to the root as a unit.
-     *
-     * `hs(fail, a = b)` -> `{ hs(fail, a = b) }`
      *
      * `a = b` -> `{ a = b }` so that assignments in the middle of expressions, including chained
      * assignments, are effectively in statement position.
@@ -977,7 +426,6 @@ class Weaver private constructor(
      * This has the effect of making sure that all functions are associated with a name.
      */
     private fun addWeightToStatementLikeExpressions(root: Tree) {
-        val doc = root.document
         // Find everything that needs to sink rootwards.  Edges and a replacement maker.
         // Later we'll check whether they're already children of a block and wrap them.
         val heavies = mutableListOf<
@@ -1004,11 +452,11 @@ class Weaver private constructor(
                 if (tree is FunTree && nameAllFunctions) {
                     // If the function definition is already part of an assignment, assume
                     // (unsoundly) that it's initializing a const declaration.
-                    // TODO: do closure conversion to solve this problem generally for backends
+                    // TODO: Do closure conversion to solve this problem generally for backends.
                     // where we do not have first-class, anonymous functions.
                     // If not, introduce a temporary and weigh it down with a block.
                     if (isAssignment(parent) && edge.edgeIndex == 2) {
-                        // ok where it is
+                        // It is ok where it is.
                     } else {
                         heavies.add(
                             edge to {
@@ -1032,28 +480,6 @@ class Weaver private constructor(
                     return@forEachTree visitCue
                 }
 
-                /**
-                 * Helper that captures the right side of an assignment that has a simple
-                 * left-hand side in a temporary so that we can refer to it as the
-                 * result of the created block.
-                 */
-                fun (Planting).captureRightInTemporary(rightEdge: TEdge): Temporary {
-                    val right = rightEdge.target
-                    if (right is RightNameLeaf) {
-                        val rightName = right.content
-                        if (rightName is Temporary) {
-                            return rightName
-                        }
-                    }
-                    val t = allocateName(rightEdge.target.pos)
-                    rightEdge.replace(RightNameLeaf(doc, right.pos, t))
-                    Call(tree.pos.leftEdge, BuiltinFuns.vSetLocalFn) {
-                        Ln(t)
-                        Replant(freeTree(right))
-                    }
-                    return t
-                }
-
                 val callee = tree.childOrNull(0)
                 when (val fn = callee?.functionContained) {
                     YieldFn -> heavies.add(
@@ -1064,50 +490,18 @@ class Weaver private constructor(
                             }
                         },
                     )
-                    BuiltinFuns.handlerScope -> if (pullSpecialsRootward) {
-                        // If the handled expression is an assignment, pull it.
-                        // This relates to the distinction between HandlerScopeStatement
-                        // and HandlerScopeExpression
-                        val handled = tree.childOrNull(2) // tree is (hs failId handled)
-                        if (handled != null && isAssignment(handled)) {
-                            //     hs(fail, left = right)
-                            // ->
-                            //     { t = right; hs(fail, left = t); t }
-                            // which is ok as long as we dive to a path that does not use
-                            // the result unless !fail.
-                            val leftEdge = handled.edge(1)
-                            if (leftEdge.target is LeftNameLeaf) { // Not changing OoO
-                                val rightEdge = handled.edge(2)
-                                heavies.add(
-                                    edge to {
-                                        Block {
-                                            val t = captureRightInTemporary(rightEdge)
-                                            Replant(freeTree(tree))
-                                            Rn(tree.pos.rightEdge, t)
-                                        }
-                                    },
-                                )
-                            }
-                        }
-                    }
                     AwaitFn -> if (pullSpecialsRootward) {
-                        // If it's in a simple assignment or a handler scope (hs) call,
-                        // then it'll sink to where it's needed.
+                        // If it's in a simple assignment, then it'll sink to where it's needed.
                         val alreadySinking = when {
-                            parent is CallTree && isHandlerScopeCall(parent) -> true
                             isAssignment(parent) ->
                                 edge.edgeIndex == 2 && parent?.childOrNull(1) is LeftNameLeaf
                             else -> false
                         }
                         if (!alreadySinking) {
-                            val temporary = allocateName(tree.pos.leftEdge, "t")
                             heavies.add(
                                 edge to {
                                     Block {
-                                        Call(tree.pos, BuiltinFuns.setLocalFn) {
-                                            Ln(temporary)
-                                            Replant(freeTree(tree))
-                                        }
+                                        Replant(freeTree(tree))
                                     }
                                 },
                             )
@@ -1117,9 +511,6 @@ class Weaver private constructor(
                     BuiltinFuns.setpFn,
                     is DotHelper,
                     -> if (pullSpecialsRootward) {
-                        // If the parent is not a handler scope call, pull it.
-                        val parentCallee =
-                            (edge.source as? CallTree)?.child(0)?.valueContained
                         val rightIndex = when (fn) {
                             is DotHelper -> when (val accessor = fn.memberAccessor) {
                                 InternalSet, ExternalSet -> accessor.firstArgumentIndex + 2
@@ -1129,10 +520,7 @@ class Weaver private constructor(
                             BuiltinFuns.setLocalFn -> SET_LOCAL_RIGHT_INDEX
                             else -> error("$fn") // fn matched above
                         }
-                        if (
-                            parentCallee != BuiltinFuns.vHandlerScope &&
-                            rightIndex in tree.indices
-                        ) {
+                        if (rightIndex in tree.indices) {
                             var assignedTemporary: Temporary? = null
                             if (fn == BuiltinFuns.setLocalFn) {
                                 val leftEdge = tree.edge(1)
@@ -1154,16 +542,17 @@ class Weaver private constructor(
                                     },
                                 )
                             } else {
-                                val rightEdge = tree.edge(rightIndex)
                                 //     left = right
                                 // ->
-                                //     { t = right; left = t; t }
+                                //     { left = right }
+
+                                // Eventually, CaptureBlockResultsInTemporaries will turn that into
+                                // something like the below:
+                                //     { let t = right; left = t; t }
                                 heavies.add(
                                     edge to {
                                         Block {
-                                            val t = captureRightInTemporary(rightEdge)
                                             Replant(freeTree(tree))
-                                            Rn(tree.pos.rightEdge, t)
                                         }
                                     },
                                 )
@@ -1198,30 +587,13 @@ class Weaver private constructor(
 
     companion object {
         internal fun weave(
-            module: Module,
-            moduleRoot: BlockTree,
-            pullSpecialsRootward: Boolean,
-            nameAllFunctions: Boolean,
-            failureConditionNeedsChecking: (NameLeaf) -> Boolean =
-                defaultFailureConditionNeedsChecking,
-        ) = weave(
-            logSink = module.logSink,
-            filePositions = module.filePositions,
-            root = moduleRoot,
-            pullSpecialsRootward = pullSpecialsRootward,
-            nameAllFunctions = nameAllFunctions,
-            failureConditionNeedsChecking = failureConditionNeedsChecking,
-        )
-
-        private fun weave(
-            logSink: LogSink,
-            filePositions: Map<FilePath, FilePositions>,
             root: BlockTree,
+            sprinkleSecurityDust: Boolean,
             pullSpecialsRootward: Boolean,
             nameAllFunctions: Boolean,
-            failureConditionNeedsChecking: (NameLeaf) -> Boolean =
-                defaultFailureConditionNeedsChecking,
+            resultsAlreadyCaptured: Boolean = true,
         ) {
+            val varNames = varNamesOf(root)
             debug(root) {
                 console.log("Weaving")
                 root.toPseudoCode(console.textOutput)
@@ -1234,73 +606,29 @@ class Weaver private constructor(
             for (rootBlock in allRoots) {
                 val rootEdge = rootBlock.incoming
                 Weaver(
-                    logSink = logSink,
-                    filePositions = filePositions,
                     root = rootBlock,
+                    sprinkleSecurityDust = sprinkleSecurityDust,
                     pullSpecialsRootward = pullSpecialsRootward,
                     nameAllFunctions = nameAllFunctions,
-                    failureConditionNeedsChecking = failureConditionNeedsChecking,
+                    resultsAlreadyCaptured = resultsAlreadyCaptured,
+                    varNames = varNames,
                 ).weave()
                 require(
                     rootEdge == null ||
                         (rootEdge.target == rootBlock && rootEdge.source != null),
                 )
             }
+
             debug(root) {
                 console.log("Before trim loose threads")
                 root.toPseudoCode(console.textOutput)
             }
-            trimLooseThreads(root)
+            for (rootBlock in allRoots) {
+                trimLooseThreads(rootBlock, resultsAlreadyCaptured = resultsAlreadyCaptured)
+            }
             debug(root) {
                 console.log("After trim loose threads")
                 root.toPseudoCode(console.textOutput)
-            }
-        }
-
-        internal fun reweaveSelected(
-            edges: List<TEdge>,
-            logSink: LogSink,
-            filePositions: Map<FilePath, FilePositions>,
-        ) {
-            val selectRoots = mutableSetOf<BlockTree>()
-            fun isFunctionOrModuleBody(t: Tree): Boolean {
-                val edge = t.incoming ?: return true
-                val parent = edge.source
-                return parent is FunTree && parent.size - 1 == edge.edgeIndex
-            }
-            for (edge in edges) {
-                var t = edge.target
-                while (true) {
-                    if (isFunctionOrModuleBody(t)) {
-                        if (t !is BlockTree) {
-                            t = BlockTree(
-                                t.document,
-                                t.pos,
-                                listOf(freeTree(t)),
-                                LinearFlow,
-                            )
-                            t.incoming!!.replace(t)
-                        }
-                        selectRoots.add(t)
-                        break
-                    }
-                    t = t.incoming!!.source!!
-                }
-            }
-            for (rootBlock in selectRoots) {
-                val rootEdge = rootBlock.incoming
-                Weaver(
-                    logSink = logSink,
-                    filePositions = filePositions,
-                    root = rootBlock,
-                    pullSpecialsRootward = false,
-                    nameAllFunctions = false,
-                    failureConditionNeedsChecking = { false },
-                ).weave()
-                require(
-                    rootEdge == null ||
-                        (rootEdge.target == rootBlock && rootEdge.source != null),
-                )
             }
         }
 
@@ -1312,18 +640,25 @@ class Weaver private constructor(
          *
          * † - available as a band name.
          */
-        private fun trimLooseThreads(tree: Tree) {
-            TreeVisit
-                .startingAt(tree)
-                .forEachContinuing {
-                    if (it is BlockTree) {
-                        when (val flow = it.flow) {
-                            is LinearFlow -> {}
-                            is StructuredFlow -> trimGarbageSubtrees(it, flow)
+        private fun trimLooseThreads(tree: BlockTree, resultsAlreadyCaptured: Boolean) {
+            val flow = structureBlock(tree)
+            trimGarbageSubtrees(tree, flow)
+            if (resultsAlreadyCaptured) {
+                val stmts = flow.controlFlow
+                // We often leave a reference to a result name at the end,
+                // like `result__123 = ...; result__123`.
+                // If the results have already been captured, that's redundant.
+                val last = stmts.stmts.lastOrNull()
+                if (last is ControlFlow.Stmt) {
+                    val edge = tree.dereference(last.ref)
+                    val name = edge?.target as? RightNameLeaf
+                    if (name?.content is InternalModularName) {
+                        edge.replace {
+                            V(name.pos, void, WellKnownTypes.voidType)
                         }
                     }
                 }
-                .visitPreOrder()
+            }
         }
 
         private fun trimGarbageSubtrees(block: BlockTree, flow: StructuredFlow) {
@@ -1348,8 +683,6 @@ class Weaver private constructor(
                 }
             }
         }
-
-        private val defaultFailureConditionNeedsChecking: (NameLeaf) -> Boolean = { true }
     }
 }
 
@@ -1433,19 +766,6 @@ internal fun structureBlock(block: BlockTree): StructuredFlow {
     }
 }
 
-private val setLocalFnValue = BuiltinFuns.vSetLocalFn
-
-internal fun isValidRightHandSide(tree: Tree): Boolean = when (tree) {
-    is BlockTree -> false
-    is CallTree -> true
-    is DeclTree -> false
-    is EscTree -> true
-    is FunTree -> true
-    is NameLeaf -> true
-    is StayLeaf -> false
-    is ValueLeaf -> true
-}
-
 private fun ithChildUnderSameRoot(parent: Tree, i: Int) =
     // Nested roots are handled separately by the companion object's fun weave().
     !(parent is FunTree && i + 1 == parent.size)
@@ -1519,7 +839,7 @@ private val (Tree).isNoopBlock: Boolean
     get() {
         if (this is ValueLeaf && void == this.content) { return true }
         if (this !is BlockTree) { return false }
-        // If a block has no child that is not a noop block, and progresses linearly through them
+        // If a block has no child that is not a noop block, and progresses linearly through them,
         // then 🎶it's-a no-op🎶.
         return when (val flow = this.flow) {
             is LinearFlow -> children.all { it.isNoopBlock }
@@ -1527,7 +847,7 @@ private val (Tree).isNoopBlock: Boolean
         }
     }
 
-private fun (ControlFlow).isNoopBlock(block: BlockTree): Boolean = when (this) {
+internal fun (ControlFlow).isNoopBlock(block: BlockTree): Boolean = when (this) {
     is ControlFlow.Stmt -> block.dereference(ref)?.target?.isNoopBlock == true
     is ControlFlow.StmtBlock -> stmts.all { it.isNoopBlock(block) }
     is ControlFlow.Labeled -> stmts.isNoopBlock(block)
@@ -1539,13 +859,43 @@ private fun (ControlFlow).isNoopBlock(block: BlockTree): Boolean = when (this) {
     -> false
 }
 
-private sealed class BlockResult
-
-/** The blocks result is stored in a temporary variable. */
-private data class NameForResult(val resultName: Temporary) : BlockResult()
-
-/** The blocks result is a known value. */
-private data class KnownResult(val value: Value<*>) : BlockResult()
-
 private const val SET_LOCAL_RIGHT_INDEX = 2 // setLocal, left, right
 private const val SETP_RIGHT_INDEX = 3 // setp, property name, this value, right
+
+internal fun shouldExtractForWeave(parent: Tree, childIndex: Int, varNames: Set<ResolvedName>): Boolean {
+    val child = parent.child(childIndex)
+    return !isLeftHandSide(parent, childIndex) && when (child) {
+        is StayLeaf -> false
+        is ValueLeaf -> false
+        is FunTree -> false
+        // We should not extract the name at position 1 after \label in a LinearFlow block,
+        // but this is never called with a BlockTree as a parent.
+        is RightNameLeaf -> child.content in varNames
+        is LeftNameLeaf -> false
+        is CallTree -> {
+            // Some calls are intermediate steps to other calls:
+            // - angle bracket calls associate type parameters with a callee.
+            // These should stay in situ.
+            when (child.childOrNull(0)?.functionContained) {
+                BuiltinFuns.angleFn -> child.size != 1 || shouldExtractForWeave(child, 1, varNames)
+                else -> true
+            }
+        }
+        is DeclTree, is EscTree -> true
+        is BlockTree -> false // Already marked for extraction.
+    }
+}
+
+private fun varNamesOf(t: Tree) = buildSet {
+    TreeVisit.startingAt(t)
+        .forEachContinuing {
+            val parts = (it as? DeclTree)?.parts
+            if (parts != null) {
+                val name = parts.name.content as? ResolvedName
+                if (name != null && varSymbol in parts.metadataSymbolMultimap) {
+                    add(name)
+                }
+            }
+        }
+        .visitPreOrder()
+}

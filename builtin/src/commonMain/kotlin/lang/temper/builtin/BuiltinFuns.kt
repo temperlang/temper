@@ -33,16 +33,13 @@ import lang.temper.value.CallableValue
 import lang.temper.value.ComparableTypeTag
 import lang.temper.value.CoverFunction
 import lang.temper.value.Fail
-import lang.temper.value.HANDLER_SCOPE_FN_NAME
 import lang.temper.value.HelpSnippet
 import lang.temper.value.InstancePropertyRecord
 import lang.temper.value.InternalFeatureKey
 import lang.temper.value.InterpreterCallback
-import lang.temper.value.LeftNameLeaf
-import lang.temper.value.MacroEnvironment
 import lang.temper.value.MacroValue
 import lang.temper.value.NamedBuiltinFun
-import lang.temper.value.NotYet
+import lang.temper.value.NotFn
 import lang.temper.value.Panic
 import lang.temper.value.PanicFn
 import lang.temper.value.PartialResult
@@ -162,12 +159,6 @@ private val fLongIntToLongOrBubble = fLongIntToLong.copy(
 private val fLongToLong = Signature2(
     returnType2 = WKT.int64Type2,
     requiredInputTypes = listOf(WKT.int64Type2),
-    hasThisFormal = false,
-)
-
-private val fBoolToBool = Signature2(
-    returnType2 = WKT.booleanType2,
-    requiredInputTypes = listOf(WKT.booleanType2),
     hasThisFormal = false,
 )
 
@@ -414,28 +405,6 @@ private class LongToLongFun(
     }
 }
 
-private class BoolToBoolFun(
-    name: String,
-    override val builtinOperatorId: BuiltinOperatorId? = null,
-    val f: (a: Boolean) -> Boolean,
-) : BuiltinFun(name, fBoolToBool), PureCallableValue {
-    override val callMayFailPerSe: Boolean get() = false
-
-    override fun invoke(
-        args: ActualValues,
-        cb: InterpreterCallback,
-        interpMode: InterpMode,
-    ): Result {
-        val (a) = args.unpackPositionedOr(1, cb) {
-            return@invoke it
-        }
-        return Value(
-            f(TBoolean.unpack(a)),
-            TBoolean,
-        )
-    }
-}
-
 private class FloatToFloatFun(
     name: String,
     override val builtinOperatorId: BuiltinOperatorId? = null,
@@ -461,7 +430,8 @@ private class EqualityFunction(
     name: String,
     override val builtinOperatorId: BuiltinOperatorId,
     val invert: Boolean,
-) : BuiltinFun(name, eqSig), PureCallableValue {
+    operandType: Type2,
+) : BuiltinFun(name, eqSig(operandType)), PureCallableValue {
     // TODO: maybe turn != into a late macro that does a != b     ->    !(a == b)
     // to make life easier for backend implementors
 
@@ -481,9 +451,9 @@ private class EqualityFunction(
     }
 
     companion object {
-        private val eqSig = Signature2(
+        private fun eqSig(operandType: Type2) = Signature2(
             returnType2 = WKT.booleanType2,
-            requiredInputTypes = listOf(WKT.anyValueOrNullType2, WKT.anyValueOrNullType2),
+            requiredInputTypes = listOf(operandType, operandType),
             hasThisFormal = false,
         )
     }
@@ -747,94 +717,6 @@ private object ListifyFn :
 }
 
 /**
- * Turns failure into success while capturing failure state in a temporary variable.
- *
- *     pr(t#0, x)
- *
- * performs operation *x* and sets t#0 to `true` if it [Fail]ed.
- * Otherwise, it sets *x* to `false` and produces *x*'s result unchanged.
- *
- * The name stands for "Handled Scope" a subset of a function's code for which we need to handle
- * failure.
- * ["Exception Handling in CLU" by Liskov, Snyder
- * ](https://www.cs.tufts.edu/~nr/cs257/archive/barbara-liskov/exceptions.pdf)
- * coins related terms:
- *
- * > The *handler table* ... contains an entry for each handler in the procedure.
- * > An entry contains the following information:
- * > 1. ...
- * > 2. a pair of values defining the *scope of the handler*, that is, the object code
- * >    corresponding to the statement to which the handler is attached,
- * > 3. ...
- *
- * This corresponds to similar concepts in more recent languages' specifications:
- *
- * > Each method in the Java Virtual Machine may be associated with zero or more exception handlers.
- * > An *exception handler specifies the range of offsets into the Java Virtual Machine code*
- * > implementing the method for which the exception handler is active, describes the type of
- * > exception that the exception handler is able to handle, and specifies the location of the code
- * > that is to handle that exception.
- *
- * See also [lang.temper.frontend.MagicSecurityDust].
- */
-private object HandlerScopeFn : SpecialFunction, NamedBuiltinFun {
-    override val name: String get() = HANDLER_SCOPE_FN_NAME
-    override val sigs: List<Signature2> = run {
-        val (typeFormalT, typeT) = makeTypeFormal(name, "T")
-        listOf(
-            Signature2(
-                returnType2 = typeT,
-                requiredInputTypes = listOf(
-                    typeT, // Expects a left name
-                    typeT,
-                ),
-                hasThisFormal = false,
-                typeFormals = listOf(typeFormalT),
-            ),
-        )
-    }
-
-    override fun invoke(
-        macroEnv: MacroEnvironment,
-        interpMode: InterpMode,
-    ): PartialResult {
-        if (interpMode == InterpMode.Partial) {
-            return Fail
-        }
-        val args = macroEnv.args
-        val failureVariableName = args.rawTreeList[0] as? LeftNameLeaf
-            ?: return Fail
-        val result = args.evaluate(1, interpMode)
-        val failed = when (result) {
-            is Fail -> true
-            NotYet -> return NotYet
-            is Value<*> -> false
-        }
-        when (macroEnv.setLocal(failureVariableName, TBoolean.value(failed))) {
-            is Fail -> {
-                // Bad things happen if we fail to set a failure bit and then continue.
-                macroEnv.explain(
-                    MessageTemplate.CouldNotStoreFailureBit,
-                    macroEnv.pos,
-                    emptyList(),
-                )
-                throw Panic()
-            }
-            is Value<*> -> {}
-        }
-        if (result is Fail) {
-            // Stash this away for later memory.
-            macroEnv.environment.declarationMetadata(failureVariableName.content)?.fail = result
-        }
-        return result.or { void }
-    }
-
-    override val assignsArgumentOne get() = true
-
-    override val callMayFailPerSe: Boolean get() = false
-}
-
-/**
  * A placeholder that may be substituted by backends for functional tests.
  * TODO: replace with `console.log` once we have member access.
  *
@@ -1076,20 +958,7 @@ object BuiltinFuns {
         BuiltinOperatorId.BitwiseShrUnsigned64,
     ) { a, b -> a.ushr(b.and(I64_SHIFT_AMOUNT_MASK)) }
 
-    /**
-     * <!-- snippet: builtin/! -->
-     * # `!`
-     * The prefix `!` operator performs [snippet/type/Boolean] inverse.
-     *
-     * `!`[snippet/builtin/false] is [snippet/builtin/true] and vice versa.
-     */
-    val notFn: CallableValue = BoolToBoolFun(
-        "!",
-        BuiltinOperatorId.BooleanNegation,
-    ) { a -> !a }
-        .also {
-            helpSnippet(it, "Boolean inverse", "builtin/!")
-        }
+    val notFn: CallableValue = NotFn
 
     val desugarLogicalAndFn: MacroValue = DesugarLogicalAnd
     val desugarLogicalOrFn: MacroValue = DesugarLogicalOr
@@ -1528,6 +1397,7 @@ object BuiltinFuns {
         "==",
         BuiltinOperatorId.EqGeneric,
         invert = false,
+        operandType = WKT.anyValueOrNullType2,
     )
 
     /**
@@ -1582,6 +1452,7 @@ object BuiltinFuns {
         "!=",
         BuiltinOperatorId.NeGeneric,
         invert = true,
+        operandType = WKT.anyValueOrNullType2,
     )
 
     /**
@@ -1716,7 +1587,6 @@ object BuiltinFuns {
     val testMacro: NamedBuiltinFun = TestMacro
     val dataFileMacro: NamedBuiltinFun = DataFileMacro
 
-    val handlerScope: MacroValue = HandlerScopeFn
     val bubble: NamedBuiltinFun = BubbleFn
     val panic: NamedBuiltinFun = PanicFn
     val voidishPanic: NamedBuiltinFun = VoidishPanicFn
@@ -1762,7 +1632,6 @@ object BuiltinFuns {
     val vTestMacro = Value(testMacro)
     val vDataFileMacro = Value(dataFileMacro)
 
-    val vHandlerScope = Value(handlerScope)
     val vAwait = Value(await)
     val vYield = Value(yield)
     val vAsync = Value(async)

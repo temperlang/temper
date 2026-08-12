@@ -987,8 +987,8 @@ private fun optimizeAutoescaperUse(
                     // context propagation in another.
                     val stateBeforeCondition = deepValueCopy(autoescState)
                     val stateForFollower = when (val cond = follower.condition) {
-                        null -> stateBeforeCondition
-                        else -> (propagateOverStmt(stateBeforeCondition, cond.ref) ?: return).first
+                        is MaximalPath.Bubbled? -> stateBeforeCondition
+                        is MaximalPath.AstElement -> (propagateOverStmt(stateBeforeCondition, cond.ref) ?: return).first
                     }
                     startStateMap.putMultiSet(key, stateForFollower)
                     val remaining = predecessorCount.getValue(key) - 1

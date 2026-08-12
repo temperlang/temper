@@ -7,7 +7,6 @@ import lang.temper.common.calledFor
 import lang.temper.common.effect
 import lang.temper.frontend.AstSnapshotKey
 import lang.temper.frontend.CleanupTemporaries
-import lang.temper.frontend.MagicSecurityDust
 import lang.temper.frontend.Module
 import lang.temper.frontend.StageOutputs
 import lang.temper.frontend.Weaver
@@ -26,7 +25,6 @@ import lang.temper.log.FailLog
 import lang.temper.log.LogSink
 import lang.temper.log.snapshot
 import lang.temper.name.BuiltinName
-import lang.temper.name.ResolvedName
 import lang.temper.stage.Stage
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
@@ -43,8 +41,8 @@ private const val BENCHMARK = false
 
 /**
  * A stage that runs just before the module content is passed to backends.  It makes sure that all the
- * ducks are in a row; that the TmpL translator will be able to recreate a statement / expression
- * layering without introducing temporaries.
+ * ducks are in a row; that the TmpL translator will be able to recreate statement/expression distinctions
+ * without introducing temporaries.
  */
 class GenerateCodeStage(
     private val module: Module,
@@ -87,26 +85,13 @@ class GenerateCodeStage(
         flipDeclaredNames(root)
 
         if (genre != Genre.Documentation) {
-            // Make failure explicit
-            val newFailures: Set<ResolvedName> =
-                Debug.Frontend.GenerateCodeStage.MagicSecurityDust(configKey)
-                    .benchmarkIf(BENCHMARK, "MagicSecurityDust") {
-                        val magicSecurityDust = MagicSecurityDust()
-                        magicSecurityDust.sprinkle(root) calledFor effect
-                        magicSecurityDust.failureVariables
-                    }
-
-            Debug.Frontend.GenerateCodeStage.AfterSprinkle.snapshot(configKey, AstSnapshotKey, root)
-
             Debug.Frontend.GenerateCodeStage.Weaver(root).benchmarkIf(BENCHMARK, "Weaver") {
                 Weaver.weave(
-                    module,
                     root,
+                    sprinkleSecurityDust = true,
                     pullSpecialsRootward = true,
                     nameAllFunctions = true,
-                    failureConditionNeedsChecking = { nameLeaf ->
-                        nameLeaf.content in newFailures
-                    },
+                    resultsAlreadyCaptured = true,
                 ) calledFor effect
             }
 
@@ -200,12 +185,11 @@ class GenerateCodeStage(
 
 /**
  * True for the tree structures produced by the TreeBuilder for simple strings
- * like
+ * like the below:
  *
  *     "foo"
  *
- * which, because of details of how we process AST parts, actually comes out
- * like
+ * That literal, because of details of how we process AST parts, actually comes out thus:
  *
  *     cat("foo")
  */

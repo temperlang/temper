@@ -61,7 +61,6 @@ import lang.temper.value.Abort
 import lang.temper.value.ActualValues
 import lang.temper.value.Actuals
 import lang.temper.value.AwaitMacroEnvironment
-import lang.temper.value.BINARY_OP_CALL_ARG_COUNT
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockTree
@@ -385,12 +384,8 @@ class Interpreter(
             is FunTree -> interpretFun(ast, env, im)
         }
         if (result is Value<*>) {
-            // Roll back unless it was a result from an operation that might have failed.
-            // In later stages, we turn failure paths into passing paths with boolean tests for
-            // failure.
-            if (result != void || !isFailingCallToHandlerScope(ast, env)) {
-                marker.rollback()
-            }
+            // Roll back the failure marker since it succeeded.
+            marker.rollback()
         }
         return result
     }
@@ -832,7 +827,6 @@ class Interpreter(
                                     AwaitFn.invoke(it, im)
                                 }
                             }
-                            val failVar = yieldingCallDetails.failVar
                             val assignedTo = yieldingCallDetails.assignedTo
                             when (awaitResult) {
                                 is NotYet -> {
@@ -843,16 +837,8 @@ class Interpreter(
                                     bodyOwner.yieldedAt = evaluation
                                     break@eval_loop
                                 }
-                                is Fail -> if (failVar != null) {
-                                    mutableEnv.set(failVar, TBoolean.valueTrue, cb)
-                                } else {
-                                    handleFail(awaitResult)
-                                }
+                                is Fail -> handleFail(awaitResult)
                                 is Value<*> -> {
-                                    if (failVar != null) {
-                                        (mutableEnv.set(failVar, TBoolean.valueFalse, cb) as? Fail)
-                                            ?.let { handleFail(it) }
-                                    }
                                     if (assignedTo != null) {
                                         (mutableEnv.set(assignedTo, awaitResult, cb) as? Fail)
                                             ?.let { handleFail(it) }
@@ -2549,30 +2535,6 @@ private fun calleeName(tree: Tree?): TemperName? {
 private const val CONTINUE_CONDITION_STEP_MASK = 1023
 
 private fun <T : Any> isStable(value: Value<T>) = value.stability == ValueStability.Stable
-
-private fun isFailingCallToHandlerScope(
-    ast: Tree,
-    env: Environment,
-): Boolean {
-    if (ast !is CallTree || ast.size < 2) { return false }
-    val macro = ast.child(0).functionContained ?: return false
-    return when (macro) {
-        BuiltinFuns.handlerScope -> {
-            //     hs(errorName, ...)
-            // assigns true to errorName if it failed.
-            val errorName = ast.child(1) as? NameLeaf ?: return false
-            val passed = env[errorName.content, InterpreterCallback.NullInterpreterCallback]
-            passed == TBoolean.valueTrue
-        }
-        BuiltinFuns.setLocalFn -> {
-            // We assign undefined results to temporaries returned by handler scope calls.
-            // The spurious success of that assignment is not indicative of real success.
-            //     t#123 = hs(fail#124, ...)
-            ast.size == BINARY_OP_CALL_ARG_COUNT && isFailingCallToHandlerScope(ast.child(2), env)
-        }
-        else -> false
-    }
-}
 
 enum class FunctionStability {
     Unstable,

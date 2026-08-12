@@ -1,17 +1,14 @@
-@fn @reach(\none) let abcStop__0;
-abcStop__0 = (@stay fn abcStop(i__0 /* aka i */: Int32) /* return__0 */: String {
-    var t#0, t#1;
-    if (i__0 == 97) {
-      t#1 = true
+@fn @reach(\none) let abcStop__1;
+abcStop__1 = (@stay fn abcStop(i__2 /* aka i */: Int32) /* return__0 */: String {
+    let t#7;
+    if (i__2 == 97) {
+      t#7 = true
+    } else if (i__2 == 98) {
+      t#7 = true
     } else {
-      if (i__0 == 98) {
-        t#0 = true
-      } else {
-        t#0 = i__0 == 99
-      };
-      t#1 = t#0
+      t#7 = i__2 == 99
     };
-    if (t#1) {
+    if (t#7) {
       return__0 = "ok"
     } else {
       return__0 = "stop"

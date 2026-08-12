@@ -35,7 +35,6 @@ enum class YieldingFnKind(
 data class YieldingCallDisassembled(
     val kind: YieldingFnKind,
     val assignedTo: TemperName?,
-    val failVar: TemperName?,
     val yieldingCall: CallTree,
     val outerCall: CallTree,
 )
@@ -46,14 +45,11 @@ fun disassembleYieldingCall(stmt: ControlFlow.Stmt, block: BlockTree): YieldingC
 
 fun disassembleYieldingCall(outerTree: Tree?): YieldingCallDisassembled? {
     if (outerTree !is CallTree) { return null }
-    var tree: Tree? = outerTree // Look through hs/assignment
-    var failVar: TemperName? = null
+    var tree: Tree? = outerTree // Look through assignment
     var assignedTo: TemperName? = null
     while (tree != null) {
         if (isAssignment(tree)) {
             assignedTo = (tree.child(1) as? LeftNameLeaf)?.content
-        } else if (isHandlerScopeCall(tree)) {
-            failVar = (tree.child(1) as? LeftNameLeaf)?.content
         } else {
             break
         }
@@ -64,8 +60,7 @@ fun disassembleYieldingCall(outerTree: Tree?): YieldingCallDisassembled? {
         YieldingCallDisassembled(
             kind = kind,
             assignedTo = assignedTo,
-            failVar = failVar,
-            yieldingCall = tree as CallTree,
+            yieldingCall = tree,
             outerCall = outerTree,
         )
     }
@@ -76,8 +71,8 @@ fun isCallOfFunction(tree: Tree, function: MacroValue): Boolean {
     contract {
         returns(true) implies (tree is CallTree)
     }
-    if (tree !is CallTree || tree.size < 1) { return false }
-    return tree.child(0).functionContained === function
+    return !(tree !is CallTree || tree.size < 1) &&
+        tree.child(0).functionContained === function
 }
 
 @OptIn(ExperimentalContracts::class)
@@ -96,7 +91,7 @@ fun isPanicCall(tree: Tree): Boolean {
     return isCallOfFunction(tree, PanicFn)
 }
 
-fun MaximalPath.Element?.yieldingCallKind(block: BlockTree) = this?.ref?.yieldingCallKind(block)
+fun MaximalPath.AstElement?.yieldingCallKind(block: BlockTree) = this?.ref?.yieldingCallKind(block)
 fun BlockChildReference?.yieldingCallKind(block: BlockTree): YieldingFnKind? {
     if (this == null) { return null }
     return block.dereference(this)?.target?.yieldingCallKind()
@@ -145,18 +140,7 @@ fun isYieldCall(t: Tree): Boolean {
     return t.yieldingCallKind() == YieldingFnKind.yield
 }
 
-private const val HS_ARITY = 3 // Callee, fail var, operation
 private const val ASSIGN_ARITY = 3 // Callee, left, right
-
-const val HANDLER_SCOPE_FN_NAME = "hs"
-
-@OptIn(ExperimentalContracts::class)
-fun isHandlerScopeCall(t: Tree): Boolean {
-    contract {
-        returns(true) implies (t is CallTree)
-    }
-    return t.size == HS_ARITY && t.calleeBuiltinName() == HANDLER_SCOPE_FN_NAME
-}
 
 @OptIn(ExperimentalContracts::class)
 fun isAssignment(t: Tree): Boolean {

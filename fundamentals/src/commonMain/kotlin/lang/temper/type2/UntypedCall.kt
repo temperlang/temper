@@ -3,6 +3,7 @@ package lang.temper.type2
 import lang.temper.log.Position
 import lang.temper.type.StaticType
 import lang.temper.type.TypeFormal
+import lang.temper.type.excludeBubble
 import lang.temper.value.CallTree
 import lang.temper.value.Tree
 import lang.temper.value.TypeReasonElement
@@ -38,4 +39,6 @@ data class UntypedCall(
     var bindings: Map<TypeFormal, StaticType>? = null
     var explanations: List<TypeReasonElement>? = null
     var chosenCallee: Int? = null
+
+    val passType: StaticType? get() = resultType?.let { excludeBubble(it) }
 }

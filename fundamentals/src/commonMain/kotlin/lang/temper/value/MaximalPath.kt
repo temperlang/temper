@@ -42,7 +42,7 @@ data class Follower(
      * The condition under which control jumps to the start of the path at [pathIndex]
      * or `null` if control unconditionally jumps.
      */
-    val condition: MaximalPath.Element?,
+    val condition: MaximalPath.PathElement?,
     /** May be `null` if condition is guaranteed `false`. */
     override val pathIndex: MaximalPathIndex?,
     override val dir: ForwardOrBack,
@@ -104,17 +104,39 @@ data class MaximalPath(
      * The child references executed as part of this path
      * in the context of the flow nodes and edges they come from.
      */
-    val elements: List<Element>,
+    val elements: List<AstElement>,
     /** A position to highlight the path in a log sink message. */
     val diagnosticPosition: Position,
     val preceders: List<Preceder>,
     val followers: List<Follower>,
 ) {
+    /** Can serve as a reason for a transition. */
+    sealed interface PathElement : Positioned {
+        /**
+         * The [MaximalPath.pathIndex] of the path whose [MaximalPath.elements] contains this.
+         */
+        val pathIndex: MaximalPathIndex
+
+        fun toDebugString(root: BlockTree): String
+    }
+
+    /**
+     * Indicates that a transition happens when a failure bubbles up
+     * from one of the path's [AstElement]s.
+     */
+    data class Bubbled(
+        override val pos: Position,
+        override val pathIndex: MaximalPathIndex,
+        val followerIndex: Int,
+    ) : PathElement {
+        override fun toDebugString(root: BlockTree): String = toString()
+    }
+
     /**
      * Bundles the position in the block's CFG with the
      * [BlockChildReference] that may be used to get at the relevant edge.
      */
-    data class Element(
+    data class AstElement(
         val ref: BlockChildReference,
         /**
          * If the block has a structured flow, and the element is not a
@@ -125,20 +147,23 @@ data class MaximalPath(
         /**
          * The [MaximalPath.pathIndex] of the path whose [MaximalPath.elements] contains this.
          */
-        val pathIndex: MaximalPathIndex,
+        override val pathIndex: MaximalPathIndex,
         val isCondition: Boolean,
-    ) : Positioned by ref {
+    ) : PathElement, Positioned by ref {
         override fun equals(other: Any?): Boolean =
-            this === other || (other is Element && this.ref == other.ref)
+            this === other || (other is AstElement && this.ref == other.ref)
 
         override fun hashCode(): Int = this.ref.hashCode()
 
         override fun toString(): String = "MaximalPath.Element($ref @ ${ref.pos} in path$pathIndex)"
+
+        override fun toDebugString(root: BlockTree): String =
+            root.dereference(ref)?.target?.toPseudoCode() ?: "broken ref"
     }
 
-    val elementsAndConditions: Sequence<Element> get() = sequenceOf(
+    val elementsAndConditions: Sequence<AstElement> get() = sequenceOf(
         elements,
-        followers.mapNotNull { it.condition },
+        followers.mapNotNull { it.condition as? AstElement },
     ).flatten()
 }
 
@@ -153,7 +178,7 @@ data class MaximalPaths(
      */
     val exitPathIndices: Set<MaximalPathIndex>,
     /**
-     * Indices of path that exit the control flow graph with a failure.
+     * Indices of paths that exit the control flow graph with a failure.
      */
     val failExitPathIndices: Set<MaximalPathIndex>,
 ) {
@@ -558,16 +583,16 @@ fun forwardMaximalPaths(
         val elements = mutPath.elements.map { e ->
             when (e) {
                 is Either.Left ->
-                    MaximalPath.Element(e.item.ref, e.item, mutPath.index, isCondition = false)
+                    MaximalPath.AstElement(e.item.ref, e.item, mutPath.index, isCondition = false)
                 is Either.Right ->
-                    MaximalPath.Element(e.item.condition, null, mutPath.index, isCondition = true)
+                    MaximalPath.AstElement(e.item.condition, null, mutPath.index, isCondition = true)
             }
         }
         val preceders = mutPath.preceders.toList()
         val followers = mutPath.followers.map { mutFollower ->
             Follower(
                 mutFollower.condition?.let {
-                    MaximalPath.Element(it, null, pathIndex, isCondition = true)
+                    MaximalPath.AstElement(it, null, pathIndex, isCondition = true)
                 },
                 mutFollower.toIndex,
                 mutFollower.dir,
@@ -577,7 +602,7 @@ fun forwardMaximalPaths(
             mutPath.positionHints.mapTo(this) { Either.Left(it) }
             elements.mapTo(this) { Either.Right(it) }
             followers.mapNotNullTo(this) { follower ->
-                follower.condition?.let { Either.Right(it) }
+                (follower.condition as? MaximalPath.AstElement)?.let { Either.Right(it) }
             }
         }
         val diagnosticPosition = diagnosticPositionForPathContents(positioned, root)
@@ -691,7 +716,7 @@ private fun eliminateEmptyTransitions(
                     this[path.index] = MaximalPathIndex(this.size)
                 }
             }
-            // Now, remap eliminated items to the path that they are eventually included into
+            // Now, remap eliminated items to the path that they are eventually included in.
             for ((eliminated, into) in includeInto) {
                 var target = into
                 // Inclusion can be transitive.  A may be included in B which is included in C.
@@ -791,6 +816,10 @@ fun MaximalPaths.debug(console: Console?, root: BlockTree) {
                 fun renderReference(ref: BlockChildReference) =
                     root.dereference(ref)?.target?.toPseudoCode(singleLine = true, detail = detail)
                         ?: "<broken>"
+                fun renderCondition(cond: MaximalPath.PathElement) = when (cond) {
+                    is MaximalPath.Bubbled -> "bubbled"
+                    is MaximalPath.AstElement -> renderReference(cond.ref)
+                }
                 if (path.preceders.isNotEmpty()) {
                     console.log("preceded by ${path.preceders}")
                 }
@@ -813,7 +842,7 @@ fun MaximalPaths.debug(console: Console?, root: BlockTree) {
                                     }
                                     if (f.condition != null) {
                                         append(" when ")
-                                        append(renderReference(f.condition.ref))
+                                        append(renderCondition(f.condition))
                                     }
                                 },
                             )
@@ -869,7 +898,7 @@ fun diagnosticPositionForPathContents(
      * Either zero-width positions that mark start of blocks,
      * or an actual code element.
      */
-    positioned: List<Either<Position, MaximalPath.Element>>,
+    positioned: List<Either<Position, MaximalPath.AstElement>>,
     root: BlockTree,
 ): Position {
     // A lot of positions are synthesized declarations, especially in the entry segment.
@@ -885,7 +914,7 @@ fun diagnosticPositionForPathContents(
     }
 
     var minimalNonsenseGroup = emptyList<Positioned>()
-    for (ng in NonsenseGradient.values().reversed()) {
+    for (ng in NonsenseGradient.entries.reversed()) {
         if (minimalNonsenseGroup.isNotEmpty()) {
             break
         }
@@ -897,7 +926,7 @@ fun diagnosticPositionForPathContents(
 }
 
 private fun positionAndConfidenceForBasicBlockPositionPart(
-    e: Either<Position, MaximalPath.Element>,
+    e: Either<Position, MaximalPath.AstElement>,
     root: BlockTree,
 ): Pair<NonsenseGradient, Positioned> = when (e) {
     is Either.Left -> NonsenseGradient.NotSuss to e.item
@@ -1069,7 +1098,11 @@ fun MaximalPaths.toMermaid(root: BlockTree): String = buildString {
         val fromName = nodeName.getValue(maximalPath.pathIndex)
         maximalPath.followers.forEachIndexed { followerIndex, follower ->
             val desc = follower.condition?.let {
-                root.dereference(it.ref)?.target?.toPseudoCode(detail = detail) ?: "???"
+                when (it) {
+                    is MaximalPath.Bubbled -> "bubbled"
+                    is MaximalPath.AstElement ->
+                        root.dereference(it.ref)?.target?.toPseudoCode(detail = detail) ?: "???"
+                }
             }
             val head: String
             val tail: String

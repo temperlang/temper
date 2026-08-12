@@ -366,8 +366,6 @@ class TyperPlanTest {
             """
             |{
             |    "i__0": ["0"],
-            |    // Don't know yet that `+` doesn't bubble.
-            |    "t#0": ["hs(fail#0, i__0 + 1)"],
             |    "return__0": ["void"]
             |}
             """.trimMargin(),
@@ -409,7 +407,7 @@ class TyperPlanTest {
         val plan = planFor(
             """
             |if (foo()) {
-            |    foo()
+            |  foo()
             |} else {
             |}
             """.trimMargin(),
@@ -418,12 +416,9 @@ class TyperPlanTest {
         assertStructure(
             """
             |{
-            |  "t#0": ["hs(fail#0, foo())"],
-            |  "t#1": ["hs(fail#1, foo())"],
-            |  "t#2": ["void", "t#1"],
-            |  // There should only be one mention of t#2 here even though it's reached via both
-            |  // branches through the `if`.
-            |  "return__1": ["t#2"],
+            |  // There should only be one mention of foo() here.
+            |  // The use of `foo()` in the condition is not an initializer.
+            |  "return__1": ["foo()"],
             |}
             """.trimMargin(),
             plan.initializersAsJson(),
@@ -590,14 +585,10 @@ class TyperPlanTest {
             """
             |[
             |  "g(i)",
-            |  "hs(fail, g(i))",
             |  "t + 1",
-            |  "hs(fail, t + 1)",
             |  "fn ...",
             |  "f(1, fn ...)",
             |  "2 * k",
-            |  "hs(fail, 2 * k)",
-            |  "hs(fail, f(1, fn ...))",
             |  "bubble()",
             |  "bubble()",
             |  "bubble()",
@@ -664,11 +655,7 @@ class TyperPlanTest {
                 |      var fail#6;
                 |      let x__4;
                 |      orelse#5: {
-                |        t#7 = hs(fail#6, do_call_toFloat64(s__2));
-                |        if (fail#6) {
-                |          break orelse#5;
-                |        };
-                |        t#8 = t#7
+                |        t#8 = do_call_toFloat64(s__2);
                 |      } orelse {
                 |## This is not an initializer for t#8
                 |## And this assignment needs to be typed after t#8's initializer
@@ -688,14 +675,11 @@ class TyperPlanTest {
             """
                 |{
                 |    "f__1": [
-                |        "@stay fn f(s__2 /* aka s */: String) /* return__0 */: Boolean {var t#7, t#8; fn__3: do {var fail#6; let x__4; orelse#5: {t#7 = hs(fail#6, do_call_toFloat64(s__2)); if (fail#6) {break orelse#5;}; t#8 = t#7} orelse {t#8 = panic()}; x__4 = t#8; return__0 = x__4 \u003e 0.0}}"
-                |    ],
-                |    "t#7": [
-                |        "hs(fail#6, do_call_toFloat64(s__2))"
+                |        "@stay fn f(s__2 /* aka s */: String) /* return__0 */: Boolean {var t#7, t#8; fn__3: do {var fail#6; let x__4; orelse#5: {t#7 = do_call_toFloat64(s__2); if (fail#6) {break orelse#5;}; t#8 = t#7} orelse {t#8 = panic()}; x__4 = t#8; return__0 = x__4 \u003e 0.0}}"
                 |    ],
                 |    "t#8": [
                 |## No panic()
-                |        "t#7"
+                |        "do_call_toFloat64(s__2)"
                 |    ],
                 |    "x__4": [
                 |        "t#8"
@@ -714,7 +698,6 @@ class TyperPlanTest {
             """
                 |[
                 |  "do_call_toFloat64(s)",
-                |  "hs(fail, do_call_toFloat64(s))",
                 |  "x > 0.0",
                 |  "fn ...",
                 |  "panic()",

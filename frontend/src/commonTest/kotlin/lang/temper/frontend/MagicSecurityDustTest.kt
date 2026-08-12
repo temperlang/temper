@@ -4,23 +4,49 @@ import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.Types
 import lang.temper.common.TestDocumentContext
 import lang.temper.common.assertStringsEqual
+import lang.temper.common.firstOrNullAs
+import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.common.testCodeLocation
 import lang.temper.common.testModuleName
 import lang.temper.log.Position
+import lang.temper.name.BuiltinName
 import lang.temper.name.ParsedName
 import lang.temper.name.PseudoCodeNameRenumberer
+import lang.temper.type.StaticType
+import lang.temper.type.WellKnownTypes
+import lang.temper.type.excludeBubble
+import lang.temper.type2.AnySignature
+import lang.temper.type2.MkType2
+import lang.temper.type2.Signature2
 import lang.temper.value.BlockTree
 import lang.temper.value.BubbleFn
+import lang.temper.value.CallTree
+import lang.temper.value.CallTypeInferences
 import lang.temper.value.Document
+import lang.temper.value.MacroValue
+import lang.temper.value.Planting
+import lang.temper.value.TInt
 import lang.temper.value.Tree
+import lang.temper.value.UnpositionedTreeTemplate
+import lang.temper.value.Value
+import lang.temper.value.ValueLeaf
 import lang.temper.value.returnParsedName
 import lang.temper.value.toPseudoCode
+import lang.temper.value.typeFromSignature
 import lang.temper.value.vLabelSymbol
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class MagicSecurityDustTest {
     private val pos = Position(testCodeLocation, 0, 0)
+    private val intToVoid = typeFromSignature(
+        Signature2(
+            returnType2 = WellKnownTypes.voidType2,
+            hasThisFormal = false,
+            requiredInputTypes = listOf(WellKnownTypes.intType2),
+        ),
+    )
 
     private fun runSprinkleTest(
         test: (doc: Document, sprinkler: MagicSecurityDust) -> Unit,
@@ -33,22 +59,25 @@ class MagicSecurityDustTest {
 
     private fun Document.name(nameText: String) = nameMaker.unusedSourceName(ParsedName(nameText))
 
-    // a = (b + c) / d
+    // a = f((b + c) / d)
     private fun arithmeticExpr(doc: Document) = doc.treeFarm.grow(pos) {
         Call(BuiltinFuns.vSetLocalFn) { // =
             Ln(doc.name("a")) // a
-            Call(BuiltinFuns.divIntIntFn) { // /
-                Call(BuiltinFuns.plusIntIntFn) { // +
-                    Rn(doc.name("b")) // b
-                    Rn(doc.name("c")) // c
+            Call {
+                Rn(BuiltinName("f"), intToVoid)
+                plantCallWithTypeInfo(BuiltinFuns.divIntIntFn) { // /
+                    plantCallWithTypeInfo(BuiltinFuns.plusIntIntFn) { // +
+                        Rn(doc.name("b")) // b
+                        Rn(doc.name("c")) // c
+                    }
+                    Rn(doc.name("d")) // d
                 }
-                Rn(doc.name("d")) // d
             }
         }
     }
 
     @Test
-    fun arithmeticThatMayFailLinearly() = runSprinkleTest { doc, sprinkler ->
+    fun arithmeticThatMayFailInLinearBlock() = runSprinkleTest { doc, sprinkler ->
         val root = doc.treeFarm.grow(pos) {
             Block {
                 Replant(arithmeticExpr(doc))
@@ -59,16 +88,17 @@ class MagicSecurityDustTest {
 
         assertPseudoCode(
             """
-            |var fail#0;
-            |a__0 = hs(fail#0, (b__0 + c__0) / d__0)
-            |
+                |a__0 = f(do {
+                |    (b__0 + c__0) / d__0
+                |})
+                |
             """.trimMargin(),
             root,
         )
     }
 
     @Test
-    fun arithmeticThatMayFailComplexly() = runSprinkleTest { doc, sprinkler ->
+    fun arithmeticThatMayFailInStructuredBlock() = runSprinkleTest { doc, sprinkler ->
         val root = doc.treeFarm.grow(pos) {
             Block {
                 Replant(arithmeticExpr(doc))
@@ -80,9 +110,10 @@ class MagicSecurityDustTest {
 
         assertPseudoCode(
             """
-            |var fail#0;
-            |a__0 = hs(fail#0, (b__0 + c__0) / d__0)
-            |
+                |a__0 = f(do {
+                |    (b__0 + c__0) / d__0
+                |})
+                |
             """.trimMargin(),
             root,
         )
@@ -113,57 +144,132 @@ class MagicSecurityDustTest {
         assertPseudoCode(
             """
                 |fn {
-                |  var fail#0;
                 |  fn__0: do {
-                |    a__0 = hs(fail#0, (b__0 + c__0) / d__0)
+                |    a__0 = f(do {
+                |## The `/` is bedazzled, but the `+` is not.
+                |        (b__0 + c__0) / d__0
+                |    })
                 |  }
                 |}
                 |
-            """.trimMargin(),
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
             root,
         )
     }
 
     @Test
+    fun bubblyCallsInConditions() = runSprinkleTest { doc, _ ->
+        val intToBoolOrBubble = typeFromSignature(
+            Signature2(
+                MkType2(WellKnownTypes.resultTypeDefinition)
+                    .actuals(
+                        listOf(
+                            WellKnownTypes.booleanType2,
+                            WellKnownTypes.bubbleType2,
+                        ),
+                    ).get(),
+                false,
+                listOf(WellKnownTypes.intType2),
+            ),
+        )
+        val block = doc.treeFarm.grow(pos) {
+            Block {
+                If(
+                    {
+                        Call {
+                            Rn(ParsedName("f"), type = intToBoolOrBubble)
+                            V(Value(1, TInt))
+                        }
+                    },
+                    thn = {
+                        Call {
+                            Rn(ParsedName("f"), type = intToBoolOrBubble)
+                            V(Value(2, TInt))
+                        }
+                    },
+                    els = {
+                        Call {
+                            Rn(ParsedName("f"), type = intToBoolOrBubble)
+                            V(Value(3, TInt))
+                        }
+                    },
+                )
+            }
+        }
+        MagicSecurityDust().sprinkle(block)
+
+        assertEquals(
+            """
+                |if (do {
+                |    f(1)
+                |}) {
+                |  f(2)
+                |} else {
+                |  f(3)
+                |}
+                |
+            """.trimMargin(),
+            block.toPseudoCode(singleLine = false),
+        )
+    }
+
+    @Test
     fun kindOfIdempotent() = runSprinkleTest { doc, sprinkler ->
-        // Sprinkling shouldn't sprinkle on hs calls.
-        // This is necessary for us to sprinkle during the type stage, and then again later to
+        // Sprinkling shouldn't sprinkle on calls that have already been
+        // turned into top level statements.
+        // This is necessary for us to sprinkle during the type stage and then again later to
         // capture failures for any constructs inserted later.
         // Examples of later inserted calls include implied assignments to variables that hold
         // function results.
-
         val nameMaker = doc.nameMaker
         val x = nameMaker.unusedSourceName(ParsedName("x"))
         val y = nameMaker.unusedSourceName(ParsedName("y"))
         val z = nameMaker.unusedSourceName(ParsedName("z"))
-        val fail1 = nameMaker.unusedTemporaryName("fail")
-        val fail2 = nameMaker.unusedTemporaryName("fail")
+        val n = nameMaker.unusedSourceName(ParsedName("n"))
+        val f = nameMaker.unusedSourceName(ParsedName("f"))
 
         val root = doc.treeFarm.grow(pos) {
             Block {
-                // First, something that's guarded
-                Call(BuiltinFuns.handlerScope) {
-                    Ln(fail1)
-                    Call(BuiltinFuns.divIntIntFn) {
+                // First, a call that's sprinkled
+                Call(BuiltinFuns.vSetLocalFn) {
+                    Ln(n)
+                    plantCallWithTypeInfo(BuiltinFuns.divIntIntFn) {
                         Rn(x)
                         Rn(y)
                     }
                 }
-                // Then a call that's not
-                Call(BuiltinFuns.divIntIntFn) {
-                    Rn(x)
-                    Rn(y)
-                }
-                // Then a call that's guarded
-                Call(BuiltinFuns.handlerScope) {
-                    Ln(fail2)
-                    Call(BuiltinFuns.divIntIntFn) {
+                // Then a call that is not at the top level.
+                Call {
+                    Rn(f, type = intToVoid)
+                    plantCallWithTypeInfo(BuiltinFuns.divIntIntFn) {
                         Rn(x)
-                        // with a sub-call that's not
-                        Call(BuiltinFuns.divIntIntFn) {
-                            Rn(y)
-                            Rn(z)
-                        }
+                        Rn(y)
+                    }
+                }
+                // Then a nested call that doesn't need sprinkles.
+                Call {
+                    Rn(f, type = intToVoid)
+                    plantCallWithTypeInfo(BuiltinFuns.divIntIntSafeFn) {
+                        Rn(x)
+                        V(Value(2, TInt))
+                    }
+                }
+                // Then a call that's sprinkled
+                plantCallWithTypeInfo(BuiltinFuns.divIntIntFn) {
+                    Rn(x)
+                    // with a sub-call that's not
+                    plantCallWithTypeInfo(BuiltinFuns.divIntIntFn) {
+                        Rn(y)
+                        Rn(z)
+                    }
+                }
+                // Then a call that's sprinkled
+                plantCallWithTypeInfo(BuiltinFuns.divIntIntFn) {
+                    Rn(x)
+                    // with a sub-call that doesn't need sprinkles
+                    plantCallWithTypeInfo(BuiltinFuns.divIntIntSafeFn) {
+                        Rn(y)
+                        V(Value(2, TInt))
                     }
                 }
             }
@@ -174,12 +280,24 @@ class MagicSecurityDustTest {
 
         assertPseudoCode(
             """
-            var fail#5, fail#6;
-            hs(fail#3, x__0 / y__1);
-            hs(fail#5, x__0 / y__1);
-            hs(fail#4, x__0 / hs(fail#6, y__1 / z__2))
-
-            """.trimIndent(),
+                |## This one does not need sprinkles because the only
+                |## call between it and the root is the assignment.
+                |n__0 = x__0 / y__0;
+                |## The operand gets sprinkled because it's passed to f.
+                |f__0(do {
+                |    x__0 / y__0
+                |});
+                |## A safe use of `/` so no sprinkles needed.
+                |f__0(x__0 / 2);
+                |## Nested operation gets a block.
+                |x__0 / do {
+                |  y__0 / z__0
+                |};
+                |## This nested operation is the safe variant of division, so
+                |## it doesn't get a block.
+                |x__0 / y__0 / 2
+                |
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
             root,
         )
     }
@@ -189,9 +307,9 @@ class MagicSecurityDustTest {
         val returnName = doc.nameMaker.unusedSourceName(returnParsedName)
         val root = doc.treeFarm.grow(pos) {
             Block {
-                Call(BuiltinFuns.setLocalFn) {
+                Call(BuiltinFuns.vSetLocalFn) {
                     Ln(returnName)
-                    Call(BubbleFn) {}
+                    plantCallWithTypeInfo(BubbleFn) {}
                 }
             }
         }
@@ -213,11 +331,11 @@ class MagicSecurityDustTest {
         val returnName = doc.nameMaker.unusedSourceName(returnParsedName)
         val root = doc.treeFarm.grow(pos) {
             Block {
-                Call(BuiltinFuns.setLocalFn) {
+                Call(BuiltinFuns.vSetLocalFn) {
                     Ln(returnName)
                     Call {
-                        Call(BuiltinFuns.angleFn) {
-                            V(BuiltinFuns.vBubble)
+                        Call(BuiltinFuns.vAngleFn) {
+                            plantTypedCallee(BubbleFn)
                             V(Types.vInt)
                         }
                     }
@@ -250,4 +368,46 @@ class MagicSecurityDustTest {
             gotNormalized,
         )
     }
+}
+
+internal fun Planting.plantCallWithTypeInfo(
+    callee: MacroValue,
+    typeActuals: List<StaticType> = listOf(),
+    plantArgs: Planting.() -> Any?,
+): UnpositionedTreeTemplate<CallTree> {
+    val nTypeActuals = typeActuals.size
+    val sig: Signature2 = callee.sigs!!.first { it.typeFormals.size == nTypeActuals } as Signature2
+    val type = excludeBubble(sig.returnType.type)
+    val variant = typeFromSignature(sig)
+    val ti = CallTypeInferences(
+        type = type,
+        variant = variant,
+        bindings2 = buildMap {
+            for ((f, a) in (sig.typeFormals zip typeActuals)) {
+                this[f] = a
+            }
+        },
+        explanations = listOf(),
+    )
+    return Call(type = ti) {
+        plantTypedCallee(callee, sig)
+        plantArgs()
+    }
+}
+
+internal fun Planting.plantCallWithTypeInfo(
+    callee: Value<MacroValue>,
+    typeActuals: List<StaticType> = listOf(),
+    plantArgs: Planting.() -> Any?,
+): UnpositionedTreeTemplate<CallTree> =
+    plantCallWithTypeInfo(callee.stateVector, typeActuals = typeActuals, plantArgs = plantArgs)
+
+internal fun Planting.plantTypedCallee(
+    callee: MacroValue,
+    sig: Signature2? = null,
+): UnpositionedTreeTemplate<ValueLeaf> {
+    (sig ?: callee.sigs?.firstOrNullAs<AnySignature, Signature2> { true })?.let { sig ->
+        return@plantTypedCallee V(Value(callee), type = typeFromSignature(sig))
+    }
+    error("No signatures: $callee")
 }

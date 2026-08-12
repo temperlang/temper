@@ -1,24 +1,23 @@
-let return__0;
-var t#0, t#1, t#2;
-@stay @imported(\(`test//a/`.a)) let a__0;
+let return__8, @stay @imported(\(`test//a/`.a)) a__0;
 a__0 = `test//a/`.a;
+let t#13, t#11, t#9;
 if (isNull(a__0)) {
-  t#0 = null
+  t#9 = null
 } else {
-  t#0 = do_get_string(notNull(a__0))
+  t#9 = do_get_string(notNull(a__0))
 };
-if (isNull(t#0)) {
-  t#1 = null
+if (isNull(t#9)) {
+  t#11 = null
 } else {
-  t#1 = do_get_isEmpty(notNull(t#0))
+  t#11 = do_get_isEmpty(notNull(t#9))
 };
-if (isNull(t#1)) {
-  t#2 = null
+if (isNull(t#11)) {
+  t#13 = null
 } else {
-  t#2 = do_call_toString(notNull(t#1))
+  t#13 = do_call_toString(notNull(t#11))
 };
-if (isNull(t#2)) {
-  return__0 = "NULL"
+if (isNull(t#13)) {
+  return__8 = "NULL"
 } else {
-  return__0 = notNull(t#2)
+  return__8 = notNull(t#13)
 }

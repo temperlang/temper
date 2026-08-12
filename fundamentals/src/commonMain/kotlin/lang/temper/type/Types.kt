@@ -842,7 +842,7 @@ fun Type2.mentions(definitionPredicate: (TypeDefinition) -> Boolean): Boolean =
     definitionPredicate(this.definition) || this.bindings.any { it.mentions(definitionPredicate) }
 
 val StaticType.isBooleanLike: Boolean get() = isTypeOrNever(WellKnownTypes.booleanTypeDefinition)
-val StaticType.isVoidLike: Boolean get() = isTypeOrNever(WellKnownTypes.voidTypeDefinition)
+val StaticType.isVoidLike: Boolean get() = excludeBubble(this).isTypeOrNever(WellKnownTypes.voidTypeDefinition)
 
 /** Should eventually become [Type2.isVoidLike] but old style *Never* is too ambiguous */
 val StaticType.isVoidLikeButNotOldStyleNever: Boolean get() = this == WellKnownTypes.voidType

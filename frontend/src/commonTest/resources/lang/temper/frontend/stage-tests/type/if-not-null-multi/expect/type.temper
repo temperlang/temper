@@ -1,29 +1,25 @@
-let return__2, @fn `test//`.multi, @fn `test//`.post;
-`test//`.multi = (@stay fn multi(a__0 /* aka a */: Int32?, b__0 /* aka b */: Int32?) /* return__0 */: Int32 {
-    var t#0;
-    void;
-    fn__0: do {
-      if (!isNull(a__0)) {
-        t#0 = !isNull(b__0)
+let return__9;
+return__9 = void;
+@fn let `test//`.multi, @fn `test//`.post;
+`test//`.multi = (@stay fn multi(a__3 /* aka a */: Int32?, b__4 /* aka b */: Int32?) /* return__1 */: Int32 {
+    fn__5: do {
+      let t#10;
+      if (!isNull(a__3)) {
+        t#10 = !isNull(b__4)
       } else {
-        t#0 = false
+        t#10 = false
       };
-      if (t#0) {
-        return__0 = a__0 * b__0;
-        void;
-        break fn__0;
-      };
-      return__0 = 0
-    }
+      if (t#10) {
+        return__1 = a__3 * b__4
+      }
+    };
 });
-`test//`.post = (@stay fn post(a__1 /* aka a */: Int32?) /* return__1 */: Int32 {
-    void;
-    fn__1: do {
-      if (isNull(a__1)) {
-        return__1 = 0;
-        break fn__1;
+`test//`.post = (@stay fn post(a__6 /* aka a */: Int32?) /* return__2 */: Int32 {
+    fn__7: do {
+      if (isNull(a__6)) {
+        return__2 = 0;
+        break fn__7;
       };
-      return__1 = 2 * a__1;
+      2 * a__6
     }
-});
-return__2 = void
+})

@@ -203,11 +203,10 @@ internal object OrNullFn : BuiltinFun("?", oneTypeToType), PureCallableValue {
  * In the second case, the result is just the function passed in as the significance of the function
  * is apparent during static typing.
  */
-internal object TypeAngleFn : BuiltinFun(NameConstants.Angle, null), PureCallableValue {
-    // This is a static operator which is erased before runtime, so we don't need any
+object TypeAngleFn : BuiltinFun(NameConstants.Angle, null), PureCallableValue {
+    // This is a static operator that is erased before runtime, so we don't need any
     // failure branches specifically for it.
-    // It's super convenient for the Typer to be able to find this around the callee, instead of
-    // being separated from the callee by an `hs` call.
+    // It's super convenient for the Typer to be able to find this around the callee.
     override val callMayFailPerSe: Boolean = false
 
     override fun invoke(
@@ -267,6 +266,8 @@ internal object TypeAngleFn : BuiltinFun(NameConstants.Angle, null), PureCallabl
         return asReifiedType(args[0]) != null
     }
 }
+
+val vTypeAngleFn = Value(TypeAngleFn)
 
 /**
  * <!-- snippet: builtin/throws -->

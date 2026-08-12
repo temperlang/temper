@@ -1,21 +1,25 @@
-  let console#0;
-  console#0 = doPure(@stay fn /* return__0 */: Console {
-      return__0 = getConsole();
+  let console#1;
+  console#1 = doPure(@stay fn /* return__2 */: Console {
+      return__2 = getConsole();
   });
 ## Start inlined forEach
-  let this__0: List<String>;
-  this__0 = list("foo");
-  let n__0;
-  n__0 = do_get_length(this__0);
-  var i__0;
-  i__0 = 0;
-  while (i__0 < n__0) {
-    let el__0: String;
-    el__0 = do_call_get(this__0, i__0);
-    i__0 = i__0 + 1;
+  let this__4: List<String>;
+  this__4 = list("foo");
+  var t#10;
+  let n__6;
+  n__6 = do_get_length(this__4);
+  var i__7;
+  i__7 = 0;
+  var t#8;
+  t#8 = i__7;
+  t#10 = t#8;
+  while (t#10 < n__6) {
+    let el__9: String;
+    el__9 = do_call_get(this__4, i__7);
+    i__7 = i__7 + 1;
 ## Inlined block lambda
     let x__0;
-    x__0 = el__0;
-    do_call_log(console#0, x__0);
+    x__0 = el__9;
+    do_call_log(console#1, x__0);
 ## End of inlined block lambda
   };

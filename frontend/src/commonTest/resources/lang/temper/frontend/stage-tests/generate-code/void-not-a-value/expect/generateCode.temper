@@ -1,19 +1,18 @@
-let console#0;
-console#0 = getConsole();
-@fn let b__0, @fn c__0;
-b__0 = (@stay fn b /* return__0 */: Void {
-    do_call_log(console#0, "hi");
-    return__0 = void
+let console#9;
+console#9 = getConsole();
+@fn let b__2, @fn c__3;
+b__2 = (@stay fn b /* return__0 */: Void {
+    return__0 = void;
+    do_call_log(console#9, "hi")
 });
-let a__0;
-b__0();
-a__0 = list(void);
-c__0 = (@stay fn c(d__0 /* aka d */: Void) /* return__1 */: Void {
-    b__0();
-    return__1 = void
+let a__4;
+b__2();
+a__4 = list(void);
+c__3 = (@stay fn c(d__7 /* aka d */: Void) /* return__1 */: Void {
+    return__1 = void;
+    b__2()
 });
-@reach(\none) let e__0;
-do_call_get(a__0, 0);
-c__0(void);
-e__0 = void;
-c__0(void)
+@reach(\none) let e__5;
+c__3(do_call_get(a__4, 0));
+e__5 = void;
+c__3(void)

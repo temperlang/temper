@@ -540,8 +540,8 @@ class TyperTest {
         |    // nothingPure may sound like a 90s band that was a tad too emo to make it as a
         |    // The Cure cover band, but by using the pure function, panic(), we produce a
         |    // function that is also pure so is recognized early as not able to throw.
-        |    // Since the MagicSecurityDust pass never splits the calls out to insert hs(...) calls
-        |    // and failure branches, we can further test our grouping of co-dependent calls.
+        |    // Since the MagicSecurityDust pass never splits the calls out,
+        |    // we can further test our grouping of co-dependent calls.
         |
         |    let boo: Boolean = panic();
         |
@@ -1022,7 +1022,6 @@ class TyperTest {
         // TODO reminder to put the two halves back together later
         """
         |//                                        The innermost expressions have type String.
-        |//                                        They're wrapped in a hs(...) call.
         |    let f(x: AnyValue): String throws Bubble { x as String }
         |/// ┏━━━━━━━━━━━━━━━━━━┓                       ┗━━━━━━━━━┛   : String | Bubble
         |    f(panic<AnyValue>());

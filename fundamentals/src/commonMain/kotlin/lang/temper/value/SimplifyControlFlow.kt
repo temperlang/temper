@@ -439,7 +439,7 @@ fun simplifyControlFlow(
                     // becomes a labeled statement with just a `break` label:
                     //
                     //     continue#123: do {
-                    //       if (x) { break#123 }
+                    //       if (x) { break continue#123 }
                     //       ...
                     //     }
                     //
@@ -453,8 +453,8 @@ fun simplifyControlFlow(
                     //     ->
                     //
                     //     while (true) {
-                    //       break#123: do {
-                    //         if (x) { break#123 } // does not skip condition check below
+                    //       continue#123: do {
+                    //         if (x) { break continue#123 } // does not skip condition check below
                     //         ...
                     //       }
                     //       if (!cond) { break }

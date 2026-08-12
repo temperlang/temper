@@ -1,16 +1,16 @@
-@fn @reach(\none) let f__0;
-f__0 = (@stay fn f(s__0 /* aka s */: String, a__0 /* aka a */: Int32?) /* return__1 */: String {
-    var t#0, t#1, t#2;
-    if (isNull(a__0)) {
-      t#0 = "null"
+@fn @reach(\none) let f__1;
+f__1 = (@stay fn f(s__2 /* aka s */: String, a__3 /* aka a */: Int32?) /* return__0 */: String {
+    let t#7, a#5;
+    if (isNull(a__3)) {
+      a#5 = -1
     } else {
-      t#0 = do_call_toString(notNull(a__0))
+      let a#5;
+      a#5 = notNull(a__3)
     };
-    if (isNull(a__0)) {
-      t#2 = -1
+    if (isNull(a__3)) {
+      t#7 = "null"
     } else {
-      t#2 = notNull(a__0)
+      t#7 = do_call_toString(notNull(a__3))
     };
-    t#1 = do_call_toString(t#2);
-    return__1 = cat(s__0, t#0, t#1)
+    return__0 = cat(s__2, t#7, do_call_toString(a#5))
 })

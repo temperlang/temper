@@ -1,7 +1,8 @@
-@method(\f) @visibility(\public) @fn @stay @fromType(I__0) @reach(\none) let f__0;
-@typeFormal(\S) @typeDecl(S__0) @reach(\none) let S__0;
-S__0 = type (S__0);
-f__0 = (@stay fn f<S__0 extends String>(@impliedThis(I__0) this__0: I__0, s__0 /* aka s */: S__0) /* return__0 */: Void {
+@method(\f) @visibility(\public) @fn @stay @fromType(I__0) @reach(\none) let f__4;
+@typeFormal(\S) @typeDecl(S__2) @reach(\none) let S__2;
+S__2 = type (S__2);
+f__4 = (@stay fn f<S__2 extends String>(@impliedThis(I__0) this__1: I__0, s__5 /* aka s */: S__2) /* return__3 */: Void {
+    return__3 = void;
     pureVirtual()
 });
 @typeDecl(I__0) @stay @reach(\none) let I__0;

@@ -49,7 +49,6 @@ import lang.temper.name.InternalModularName
 import lang.temper.name.ModularName
 import lang.temper.name.ResolvedName
 import lang.temper.name.Symbol
-import lang.temper.name.TemperName
 import lang.temper.type.AndType
 import lang.temper.type.BubbleType
 import lang.temper.type.CallMemberAccessor
@@ -95,7 +94,6 @@ import lang.temper.type.addTypeNamesMentionedTo
 import lang.temper.type.excludeBubble
 import lang.temper.type.excludeNull
 import lang.temper.type.excludeNullAndBubble
-import lang.temper.type.isBubbly
 import lang.temper.type.isNeverType
 import lang.temper.type.isNullType
 import lang.temper.type.matches
@@ -143,7 +141,6 @@ import lang.temper.value.PseudoCodeDetail
 import lang.temper.value.ReifiedType
 import lang.temper.value.RightNameLeaf
 import lang.temper.value.StayLeaf
-import lang.temper.value.TBoolean
 import lang.temper.value.TEdge
 import lang.temper.value.TNull
 import lang.temper.value.TString
@@ -157,10 +154,8 @@ import lang.temper.value.ValueLeaf
 import lang.temper.value.factorySignatureFromConstructorSignature
 import lang.temper.value.firstArgumentIndex
 import lang.temper.value.fnSymbol
-import lang.temper.value.freeTree
 import lang.temper.value.functionContained
 import lang.temper.value.functionalInterfaceSymbol
-import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.isNewCall
 import lang.temper.value.isNullaryNeverCall
 import lang.temper.value.isPureVirtualBody
@@ -229,9 +224,6 @@ internal class Typer(
     private val typeContext2 = TypeContext2()
     private lateinit var ti: TypingInfo
     private val solverVarNamer = SolverVarNamer.new()
-
-    /** hsT */
-    private val handlerScopeTypeFormal = BuiltinFuns.handlerScope.sigs!![0].typeFormals[0]
 
     // For convenience rather than recreating on demand when needed.
     private val reorderArgsHelper = ReorderArgs(root = module.generatedCode!!) {
@@ -687,7 +679,7 @@ internal class Typer(
         storeDecisionsInTree(root, skipStored = false)
 
         // Replace failure branch condition variables with `false` where type info shows it is safe.
-        rewriteUsingTypeInformation(root, singlyAssigned = typerPlan.singlyAssigned)
+        rewriteUsingTypeInformation(root)
 
         if (DEBUG) {
             console.group("After type check of ${root.pos.loc.diagnostic}") {
@@ -802,8 +794,6 @@ internal class Typer(
     private fun typeCallTree(tree: CallTree) {
         if (isAssignment(tree)) {
             typeAssignmentCall(tree)
-        } else if (isHandlerScopeCall(tree)) {
-            typeHandlerScopeCall(tree)
         } else if (isNotNullCall(tree)) {
             typeNotNullCall(tree)
         } else if (isTypeAngleCall(tree)) {
@@ -994,11 +984,7 @@ internal class Typer(
             val ancestor = incoming?.source
 
             if (ancestor is CallTree) {
-                if (isHandlerScopeCall(ancestor) && incoming == ancestor.edge(2)) {
-                    // Keep looking upwards
-                    incoming = ancestor.incoming ?: break
-                    continue
-                } else if (isAssignment(ancestor) && incoming == ancestor.edge(2)) {
+                if (isAssignment(ancestor) && incoming == ancestor.edge(2)) {
                     // We're the right-hand side.
                     val left = ancestor.child(1)
                     if (left is LeftNameLeaf) {
@@ -1260,7 +1246,7 @@ internal class Typer(
             ti.decide(
                 callTree,
                 Decision(
-                    type = hackMapNewStyleToOld(variant.sig.returnType2),
+                    type = hackMapNewStyleToOld(excludeBubble(variant.sig.returnType2)),
                     variant = variant.functionType,
                     explanations = problems.toList(),
                 ),
@@ -1323,7 +1309,7 @@ internal class Typer(
                 val chosenCallee = call.chosenCallee?.let { i -> call.calleeVariants[i] }
                 val variant = chosenCallee?.functionType
                 val decision = Decision(
-                    type = call.resultType ?: InvalidType,
+                    type = call.passType ?: InvalidType,
                     variant = variant,
                     bindings = call.bindings ?: emptyMap(),
                     explanations = explanations,
@@ -1399,7 +1385,7 @@ internal class Typer(
             }
         }
 
-        // We do nothing for `=` or `hs` calls that wrap late-typed calls.
+        // We do nothing for `=` calls that wrap late-typed calls.
         // Revisit their parents to type those.
         console.groupIf(DEBUG, "Revisiting late-typed calls") {
             for (lateTypedCall in intertwined) {
@@ -1607,43 +1593,6 @@ internal class Typer(
             }
 
             return@checkNeedToLateTypeCall lateType2CheckResult
-        }
-    }
-
-    private fun typeHandlerScopeCall(tree: CallTree) {
-        val failVar = tree.child(1)
-        val operation = tree.child(2)
-        if (failVar is LeftNameLeaf) {
-            val failVarName = failVar.content as ResolvedName
-            if (ti.isUnbound(failVarName)) {
-                ti.bind(failVarName, booleanType)
-            }
-        }
-        val operationType = ti.decisionType(operation)
-        if (operationType != null) {
-            val operationTypeMinusBubble = when (operationType) {
-                InvalidType -> InvalidType
-                else -> excludeBubble(operationType)
-            }
-            ti.decide(
-                tree,
-                Decision(
-                    operationTypeMinusBubble,
-                    variant = MkType.fn(
-                        typeFormals = emptyList(),
-                        valueFormals = listOf(booleanType, operationType),
-                        restValuesFormal = null,
-                        returnType = operationTypeMinusBubble,
-                    ),
-                    bindings = mapOf(
-                        handlerScopeTypeFormal to operationTypeMinusBubble,
-                    ),
-                    explanations = emptyList(),
-                ),
-            )
-        } else {
-            // Inter-twined call.  This tree will have its type fixed up as the inter-twined call
-            // is typed.
         }
     }
 
@@ -2166,7 +2115,7 @@ internal class Typer(
                     // Checking this here means that we don't eliminate failure branches for
                     // guards that we shouldn't.
                     val leftType = ti.decisionType(left)
-                    val rightType = ti.decisionType(right)
+                    val rightType = ti.decisionType(right)?.let { excludeBubble(it) }
                     if (
                         type == null || !type.mentionsInvalid && (
                             leftType == null || rightType == null ||
@@ -2287,27 +2236,23 @@ internal class Typer(
     /**
      * Use type information to do several things:
      *
-     * 1. eliminate hs checks of operations that cannot fail
-     * 2. eliminate unnecessary RTTI checks
-     * 3. remove extensions from DotHelpers that do not use them and
+     * 1. eliminate unnecessary RTTI checks
+     * 2. remove extensions from DotHelpers that do not use them and
      *    replace calls of DotHelpers that do with references to the extension.
      *
      * Each of these steps removes instructions which were auto-inserted earlier.
      *
-     * 1. undoes insertion of hs checks by MagicSecurityDust.sprinkle()
-     * 2. removes redundant checks for `.is` and `.as` pseudo methods exploded
+     * 1. removes redundant checks for `.is` and `.as` pseudo methods exploded
      *    by MagicSecurityDust.  For example, null checks when the source expression
      *    is known not to be null.
-     * 3. removes extensions that are delaying adjusting dot helpers introduced
+     * 2. removes extensions that are delaying adjusting dot helpers introduced
      *    by DotOperationDesugarer in case they're needed
      */
     private fun rewriteUsingTypeInformation(
         root: BlockTree,
-        singlyAssigned: Set<TemperName>,
     ) {
         // `fail#123` variables inserted by [lang.temper.frontend.MagicSecurityDust]
         // which are found to always be false.
-        val cannotFail = mutableSetOf<ResolvedName>()
         val nullOps = mutableListOf<Pair<CallTree, NullOpKind>>()
         val dotHelperCalls = mutableListOf<CallTree>()
 
@@ -2316,50 +2261,7 @@ internal class Typer(
                 // Store information so that we can do type-dependent optimizations after solving
                 // the rest of the tree.
                 if (t !is CallTree) { return@forEachContinuing }
-                if (isHandlerScopeCall(t)) {
-                    val operation = t.child(2)
-                    val operationType = ti.decisionType(operation)
-                    val failVar = t.child(1)
-                    val failVarName = (failVar as? LeftNameLeaf)?.content as? ResolvedName
-                    if (operationType != null && failVarName != null && failVarName in singlyAssigned) {
-                        val decision = ti.decision(t)
-                        // The type might still be invalid, but we don't guarantee semantics on bad types.
-                        // It's ok to avoid coordinated bubble handling in such cases.
-                        // If we do have valid type, though, we need to handle explicit bubbling.
-                        val passes = !operationType.isBubbly
-                        if (DEBUG) {
-                            console.group("Considering fail variable $failVarName") {
-                                console.log("operationType=$operationType passes=$passes")
-                                console.log("type=${decision?.type}")
-                                console.log("explanations=${decision?.explanations}")
-                            }
-                        }
-                        if (passes && decision != null) {
-                            // If the type of f(), above, is disjoint from Bubble,
-                            // then operation cannot fail, so we can note that
-                            //
-                            //     fail#123 = false
-                            //
-                            // and rewrite the hs(...) call to
-                            //
-                            //     f()
-                            val incoming = t.incoming
-                            incoming?.replace {
-                                Replant(freeTree(operation))
-                            }
-                            cannotFail.add(failVarName)
-                            if (DEBUG) {
-                                console.group(
-                                    "Cannot fail $failVarName for $operationType -> ${
-                                        decision.type
-                                    }",
-                                ) {
-                                    operation.toPseudoCode(console.textOutput)
-                                }
-                            }
-                        }
-                    }
-                } else if (isNullCheck(t)) {
+                if (isNullCheck(t)) {
                     nullOps.add(t to NullOpKind.IsNull)
                 } else if (isNotNullCall(t)) {
                     nullOps.add(t to NullOpKind.NotNull)
@@ -2369,24 +2271,6 @@ internal class Typer(
             }
             // Visit deeper first so that mutations do not prevent covering all.
             .visitPostOrder()
-
-        // Rewrite safe fail# variables with false.
-        if (cannotFail.isNotEmpty()) {
-            TreeVisit.startingAt(root)
-                .forEachContinuing {
-                    if (it is RightNameLeaf) {
-                        val name = it.content
-                        // Replace reference to fail#123 with `false` when fail#123 was deduced to
-                        // be so by typeHandlerScopeCall.
-                        if (name in cannotFail && name in singlyAssigned) {
-                            val replacement = ValueLeaf(it.document, it.pos, TBoolean.valueFalse)
-                            replacement.typeInferences = it.typeInferences
-                            it.incoming?.replace(replacement)
-                        }
-                    }
-                }
-                .visitPreOrder()
-        }
 
         for ((nullOpCall, nullOpKind) in nullOps) {
             when (nullOpKind) {
@@ -3239,7 +3123,7 @@ private val Tree.isDirectlyNestedCallParameter: Boolean
         val parent = edge?.source
         return parent is CallTree &&
             edge != parent.edgeOrNull(0) && // Is not the callee
-            !isAssignment(parent) && !isHandlerScopeCall(parent)
+            !isAssignment(parent)
     }
 
 /**

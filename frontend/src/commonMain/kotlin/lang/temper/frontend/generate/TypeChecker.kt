@@ -40,6 +40,7 @@ import lang.temper.type.TypeShape
 import lang.temper.type.VisibleMemberShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.WellKnownTypes.invalidType2
+import lang.temper.type.excludeBubble
 import lang.temper.type.isBooleanLike
 import lang.temper.type.isBubbly
 import lang.temper.type.isVoid
@@ -185,7 +186,6 @@ internal class TypeChecker(
         val fn = t.childOrNull(0)?.functionContained
         when (fn) {
             BuiltinFuns.setLocalFn -> checkAssignment(t)
-            BuiltinFuns.handlerScope -> Unit // TODO
             BuiltinFuns.getpFn, BuiltinFuns.getsFn, BuiltinFuns.igetsFn -> Unit // TODO
             BuiltinFuns.setpFn -> checkSetp(t)
             BuiltinFuns.angleFn -> Unit // Already taken into account
@@ -210,7 +210,7 @@ internal class TypeChecker(
     }
 
     private fun checkAbstractPanicContext(t: CallTree) {
-        // Find enclosing FunTree. Expected to be exactly 2 up, but loop is flexible.
+        // Find enclosing FunTree. Expected to be exactly 2 up, but this loop is flexible.
         val fn = run fn@{
             var parent = t.incoming?.source
             while (parent != null) {
@@ -368,7 +368,7 @@ internal class TypeChecker(
         // TODO: check that right type is a subtype of left-type.
         val (_, leftTree, rightTree) = t.children
         val leftType = leftTree.typeInferences?.type
-        val rightType = rightTree.typeInferences?.type
+        val rightType = rightTree.typeInferences?.type?.let { excludeBubble(it) }
         // TODO: We probably want to enforce that we have either a left or a right type from the
         // checker, but baby steps.
         checkSubType(t, leftType, rightType)
@@ -556,7 +556,7 @@ internal class TypeChecker(
                         }
                     }
                     val computedType = tTypeInferences.type
-                    val boundCalleeReturnType = boundCalleeType.returnType.let {
+                    val boundCalleePassType = excludeBubble(boundCalleeType.returnType).let {
                         // HACK: allow Never-ish compatibility on return type for nullary specials
                         // until we get rid of NeverType entirely.
                         MkType.map(
@@ -573,7 +573,7 @@ internal class TypeChecker(
                             },
                         )
                     }
-                    if (failsValidSubtypeCheck(boundCalleeReturnType, computedType)) {
+                    if (failsValidSubtypeCheck(boundCalleePassType, computedType)) {
                         logSink.log(
                             level = Log.Error,
                             template = MessageTemplate.ExpectedSubType,

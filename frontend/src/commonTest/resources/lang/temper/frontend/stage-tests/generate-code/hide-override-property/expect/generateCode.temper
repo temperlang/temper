@@ -1,13 +1,13 @@
-let return__0;
-@property(\x) @visibility(\public) @stay @fromType(I__0) let x__0: Int32;
+let return__9;
+@property(\x) @visibility(\public) @stay @fromType(I__0) let x__4: Int32;
 @typeDecl(I__0) @stay let I__0;
 I__0 = type (I__0);
-@typeDecl(C__0) @stay let C__0;
-C__0 = type (C__0);
-@constructorProperty @property(\x) @visibility(\protected) @stay @fromType(C__0) let x__1: Int32;
-@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) let constructor__0;
-constructor__0 = (@stay fn constructor(@impliedThis(C__0) this__0: C__0, x__2 /* aka x */: Int32) /* return__1 */: Void {
-    setp(x__1, this__0, x__2);
-    return__1 = void
+@typeDecl(C__1) @stay let C__1;
+C__1 = type (C__1);
+@constructorProperty @property(\x) @visibility(\protected) @stay @fromType(C__1) let x__5: Int32;
+@fn @method(\constructor) @visibility(\public) @stay @fromType(C__1) let constructor__6;
+constructor__6 = (@stay fn constructor(@impliedThis(C__1) this__2: C__1, x__7 /* aka x */: Int32) /* return__3 */: Void {
+    return__3 = void;
+    setp(x__5, this__2, x__7)
 });
-return__0 = type (C__0)
+return__9 = type (C__1)

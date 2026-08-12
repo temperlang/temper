@@ -1,10 +1,8 @@
 let return__3;
-return__3 = (@stay fn (b__0 /* aka b */) /* return__1 */{
-    fn__2: do {
-      if (b__0) {
-        return__1 = 1;
-        break fn__2;
-      };
-      return__1 = 0
+@stay fn (b__1 /* aka b */) /* return__0 */{
+  fn__2: do {
+    if (b__1) {
+      return__0 = 1
     }
-})
+  };
+}

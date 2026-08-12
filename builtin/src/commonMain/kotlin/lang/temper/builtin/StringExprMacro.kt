@@ -32,7 +32,6 @@ import lang.temper.value.CallTree
 import lang.temper.value.Fail
 import lang.temper.value.FunTree
 import lang.temper.value.FunctionSpecies
-import lang.temper.value.IfThenElse
 import lang.temper.value.LinearFlow
 import lang.temper.value.MacroEnvironment
 import lang.temper.value.NameLeaf
@@ -786,25 +785,27 @@ private fun Planting.buildStringifyCall(arg: Tree, argType: StaticType?) {
         Replant(freeTree(arg))
     } else if (argType is InvalidType? || canBeNull(argType)) {
         // if (isNull(arg)) { "null" } else { arg.toString() }
-        fun Planting.plantNullSafeCall(toCheck: Tree, subject: Tree) = IfThenElse(
-            {
-                Call(vIsNullFn) {
-                    Replant(toCheck)
-                }
-            },
-            {
-                V(arg.pos, Value(OutToks.nullWord.text, TString), WellKnownTypes.stringType)
-            },
-            {
-                buildToStringCall(
-                    arg.document.treeFarm.grow(subject.pos) {
-                        Call(BuiltinFuns.vNotNullFn) {
-                            Replant(subject)
-                        }
-                    },
-                )
-            },
-        )
+        fun Planting.plantNullSafeCall(toCheck: Tree, subject: Tree) = Block {
+            If(
+                cond = {
+                    Call(vIsNullFn) {
+                        Replant(toCheck)
+                    }
+                },
+                thn = {
+                    V(arg.pos, Value(OutToks.nullWord.text, TString), WellKnownTypes.stringType)
+                },
+                els = {
+                    buildToStringCall(
+                        arg.document.treeFarm.grow(subject.pos) {
+                            Call(BuiltinFuns.vNotNullFn) {
+                                Replant(subject)
+                            }
+                        },
+                    )
+                },
+            )
+        }
         when (arg) {
             is ValueLeaf, is NameLeaf -> plantNullSafeCall(freeTree(arg), arg.copy())
             else -> Block(arg.pos) {

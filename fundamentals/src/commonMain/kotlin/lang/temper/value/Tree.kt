@@ -1091,6 +1091,7 @@ private fun destructureControlFlow(
                 }
             }
         }
+        controlFlow.pos.positionPropertiesTo(this, Hints.u)
     }
 }
 

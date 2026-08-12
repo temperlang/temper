@@ -1,4 +1,4 @@
-let return__2;
-return__2 = (@stay fn /* return__0 */: Boolean {
-    return__0 = 42
-})
+@reach(\none) let return__2;
+@stay fn /* return__0 */: Boolean {
+  return__0 = 42
+}

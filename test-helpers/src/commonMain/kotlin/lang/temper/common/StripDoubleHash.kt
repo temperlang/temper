@@ -6,8 +6,8 @@ package lang.temper.common
  */
 fun String.stripDoubleHashCommentLinesToPutCommentsInlineBelow() =
     this
-        .split("\n")
+        .splitLinesPreservingTerminators()
         .filter {
             !it.trimStart().startsWith("##")
         }
-        .joinToString("\n")
+        .joinToString("")

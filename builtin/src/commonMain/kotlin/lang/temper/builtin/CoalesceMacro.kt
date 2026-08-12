@@ -4,7 +4,6 @@ import lang.temper.env.InterpMode
 import lang.temper.log.MessageTemplate
 import lang.temper.stage.Stage
 import lang.temper.value.Fail
-import lang.temper.value.IfThenElse
 import lang.temper.value.MacroEnvironment
 import lang.temper.value.NameLeaf
 import lang.temper.value.NotYet
@@ -49,16 +48,18 @@ internal object CoalesceMacro : BuiltinMacro("??", null) {
         val name = subjectAsName?.content ?: macroEnv.nameMaker.unusedTemporaryName("subject")
         // Build the main conditional call.
         val ifStmt = macroEnv.treeFarm.grow(macroEnv.pos) {
-            IfThenElse(
-                {
-                    Call {
-                        V(vIsNullFn)
-                        Rn(name)
-                    }
-                },
-                { Replant(freeTree(macroEnv.args.valueTree(1))) },
-                { Rn(name) },
-            )
+            Block {
+                If(
+                    cond = {
+                        Call {
+                            V(vIsNullFn)
+                            Rn(name)
+                        }
+                    },
+                    thn = { Replant(freeTree(macroEnv.args.valueTree(1))) },
+                    els = { Rn(name) },
+                )
+            }
         }
         // Replace the macro call.
         macroEnv.replaceMacroCallWith {

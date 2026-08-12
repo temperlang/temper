@@ -1,6 +1,6 @@
 let return__2;
-return__2 = (@stay fn /* return__0 */{
-    fn__1: do {
-      return__0 = 42
-    }
-})
+@stay fn /* return__0 */{
+  fn__1: do {
+    return__0 = 42
+  };
+}

@@ -14,6 +14,7 @@ import lang.temper.value.DeclParts
 import lang.temper.value.DeclTree
 import lang.temper.value.FnParts
 import lang.temper.value.FunTree
+import lang.temper.value.IsNullFn
 import lang.temper.value.LinearFlow
 import lang.temper.value.ReifiedType
 import lang.temper.value.TBoolean
@@ -23,16 +24,13 @@ import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 import lang.temper.value.defaultSymbol
-import lang.temper.value.elseSymbol
 import lang.temper.value.fnSymbol
 import lang.temper.value.freeTarget
-import lang.temper.value.ifBuiltinName
 import lang.temper.value.initSymbol
 import lang.temper.value.lookThroughDecorations
 import lang.temper.value.staticTypeContained
 import lang.temper.value.typeSymbol
 import lang.temper.value.vInitSymbol
-import lang.temper.value.vIsNullFn
 import lang.temper.value.vOptionalSymbol
 import lang.temper.value.valueContained
 import lang.temper.value.varSymbol
@@ -176,25 +174,22 @@ internal class SimplifyDeclarations(val simplifyFunTrees: Boolean = true) {
         internal.insert(internal.size) {
             V(vInitSymbol)
             // TODO Could implement a coalesce macro with this content.
-            Call {
-                Rn(ifBuiltinName)
-                Call {
-                    V(vIsNullFn)
-                    Rn(formalName)
-                }
-                Fn { Replant(freeTarget(assignment.edge(2))) }
-                V(elseSymbol)
-                Fn {
-                    val f0 = decl.document.nameMaker.unusedTemporaryName("f")
-                    Decl(f0) {}
-                    Call {
-                        Rn(f0)
-                        Fn {
-                            // This will get autocast to not-null later.
+            Block {
+                If(
+                    cond = {
+                        Call(IsNullFn) {
                             Rn(formalName)
                         }
-                    }
-                }
+                    },
+                    thn = {
+                        Replant(freeTarget(assignment.edge(2)))
+                    },
+                    els = {
+                        Call(BuiltinFuns.notNullFn) {
+                            Rn(formalName)
+                        }
+                    },
+                )
             }
         }
         return internal

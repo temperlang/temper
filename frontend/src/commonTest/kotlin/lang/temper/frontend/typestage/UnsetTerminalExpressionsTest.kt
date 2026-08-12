@@ -5,7 +5,9 @@ import lang.temper.common.LeftOrRight
 import lang.temper.common.TestDocumentContext
 import lang.temper.common.assertStructure
 import lang.temper.common.json.JsonValueBuilder
+import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.common.testCodeLocation
+import lang.temper.frontend.dumpStructureEmbedding
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.ParsedName
@@ -15,6 +17,7 @@ import lang.temper.value.ControlFlow
 import lang.temper.value.Document
 import lang.temper.value.LinearFlow
 import lang.temper.value.Planting
+import lang.temper.value.PseudoCodeDetail
 import lang.temper.value.StructuredFlow
 import lang.temper.value.TBoolean
 import lang.temper.value.TInt
@@ -34,8 +37,8 @@ class UnsetTerminalExpressionsTest {
         """
         |{
         |  terminalExpressions: [],
-        |  reachesExit: true,
-        |  setsName: false
+        |  existingAssignments: [],
+        |  missingTerminators: [""],
         |}
         """.trimMargin(),
     ) {
@@ -48,8 +51,8 @@ class UnsetTerminalExpressionsTest {
         """
         |{
         |  terminalExpressions: ["void"],
-        |  reachesExit: true,
-        |  setsName: false
+        |  existingAssignments: [],
+        |  missingTerminators: []
         |}
         """.trimMargin(),
     ) { growAtom ->
@@ -67,8 +70,8 @@ class UnsetTerminalExpressionsTest {
         """
         |{
         |  terminalExpressions: [],
-        |  reachesExit: true,
-        |  setsName: false
+        |  existingAssignments: [],
+        |  missingTerminators: ["[[ let x ]];"],
         |}
         """.trimMargin(),
     ) { growAtom ->
@@ -81,12 +84,19 @@ class UnsetTerminalExpressionsTest {
 
     // false; let x;
     @Test
-    fun declarationsCanFollowTerminals() = assertTerminals(
+    fun declarationsMaskTerminals() = assertTerminals(
         """
         |{
-        |  terminalExpressions: ["false"],
-        |  reachesExit: true,
-        |  setsName: false
+        |  terminalExpressions: [],
+        |  existingAssignments: [],
+        |  missingTerminators: [
+        |    ```
+        |    {
+        |      [[ false ]];
+        |      [[ let x ]];
+        |    }
+        |    ```,
+        |  ],
         |}
         """.trimMargin(),
     ) { growAtom ->
@@ -113,9 +123,7 @@ class UnsetTerminalExpressionsTest {
     fun twoWayBranch() = assertTerminals(
         """
         |{
-        |  terminalExpressions: ["z", "y"],
-        |  reachesExit: true,
-        |  setsName: false
+        |  terminalExpressions: ["y", "z"],
         |}
         """.trimMargin(),
     ) { growAtom ->
@@ -143,14 +151,16 @@ class UnsetTerminalExpressionsTest {
     // } else {
     //     return_for_test = 1
     // }
-    // if (d) { y } else { z }     // So neither of these are terminal
+    // if (d) { y } else { z }     // So neither is terminal
     @Test
     fun twoWayBranchAfterAssignment() = assertTerminals(
         """
         |{
         |  terminalExpressions: [],
-        |  reachesExit: true,
-        |  setsName: true
+        |  existingAssignments: [
+        |    "return_for_test = 0",
+        |    "return_for_test = 1",
+        |  ],
         |}
         """.trimMargin(),
     ) { growAtom ->
@@ -193,8 +203,7 @@ class UnsetTerminalExpressionsTest {
         """
         |{
         |  terminalExpressions: ["b"],
-        |  reachesExit: true,
-        |  setsName: true
+        |  existingAssignments: ["return_for_test = a"],
         |}
         """.trimMargin(),
     ) { growAtom ->
@@ -224,8 +233,16 @@ class UnsetTerminalExpressionsTest {
         """
         |{
         |  terminalExpressions: [],
-        |  reachesExit: false,
-        |  setsName: false
+        |  existingAssignments: [],
+        |  missingTerminators: [
+        |    ```
+        |    for (;
+        |      [[ true ]];
+        |    ) {
+        |      [[ f() ]];
+        |    }
+        |    ```,
+        |  ],
         |}
         """.trimMargin(),
     ) { growAtom ->
@@ -256,8 +273,9 @@ class UnsetTerminalExpressionsTest {
         """
         |{
         |  terminalExpressions: [],
-        |  reachesExit: false,
-        |  setsName: true
+        |  existingAssignments: [
+        |    "return_for_test = void"
+        |  ],
         |}
         """.trimMargin(),
     ) { growAtom ->
@@ -294,21 +312,28 @@ class UnsetTerminalExpressionsTest {
     //   return_for_test = 0;
     // }
     // if (d) {
-    //   42;
+    //   42
     // }
-    // // This example is odd.  There is an error, because there is no value that can be treated
+    // // This example is odd.  There is an error because there is no value that can be treated
     // // as the result in all cases since (c) and (d) are not obviously disjoint.
-    // // It's not obvious what should be done here, except that there is need for an error message.
+    // // It's not obvious what should be done here, except that there is a need for an error message.
     // // This test merely documents current behavior.
     @Test
     fun incompleteAssignMaybeClobberedOccasionally() = assertTerminals(
         """
         |{
-        |  terminalExpressions: ["42"],
-        |  reachesExit: true,
-        |  setsName: true,
+        |  terminalExpressions: [
+        |## 42 is not a terminal expression because it follows the assignment below.
+        |  ],
+        |  existingAssignments: [
+        |    "return_for_test = 0"
+        |  ],
+        |  missingTerminators: [
+        |## This empty block is the implicit `else` clause from `if (d)`.
+        |    "{}"
+        |  ],
         |}
-        """.trimMargin(),
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     ) { growAtom ->
         ControlFlow.StmtBlock(
             pos,
@@ -369,11 +394,27 @@ class UnsetTerminalExpressionsTest {
                             }
                         }
                     }
-                    key("reachesExit", isDefault = got.reachesExit) {
-                        value(got.reachesExit)
+                    key("existingAssignments", isDefault = got.existingAssignments.isEmpty()) {
+                        arr {
+                            got.existingAssignments.forEach {
+                                value(it.toPseudoCode())
+                            }
+                        }
                     }
-                    key("setsName", isDefault = got.setsName) {
-                        value(got.setsName)
+                    key("missingTerminators", isDefault = got.blocksMissingTerminators.isEmpty()) {
+                        arr {
+                            got.blocksMissingTerminators.forEach { (tree, cf) ->
+                                val description = if (cf == null) {
+                                    tree.toPseudoCode(detail = PseudoCodeDetail(preserveOuterCurlies = true))
+                                } else {
+                                    dumpStructureEmbedding(tree, cf).trimEnd()
+                                }
+                                value(description)
+                            }
+                        }
+                    }
+                    key("terminalsNeedVar", isDefault = !got.terminalsNeedVar) {
+                        value(got.terminalsNeedVar)
                     }
                 }
             },

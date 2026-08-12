@@ -1,12 +1,11 @@
-@fn @reach(\none) let f__0;
-f__0 = (@stay fn f(s__0 /* aka s */: String) /* return__1 */: Void {
-    var t#0, t#1, t#2;
+@fn @reach(\none) let f__1;
+f__1 = (@stay fn f(s__2 /* aka s */: String) /* return__0 */: Void {
+    let t#4, t#5;
+    return__0 = void;
     cat(do_call_toString(0));
-    t#0 = do_call_toString(0);
-    cat(s__0, t#0);
-    t#1 = do_call_toString(0);
-    cat(s__0, t#1, s__0);
-    t#2 = do_call_toString(0);
-    cat(s__0, s__0, t#2, s__0);
-    return__1 = void
+    cat(s__2, do_call_toString(0));
+    t#4 = do_call_toString(0);
+    cat(s__2, t#4, s__2);
+    t#5 = do_call_toString(0);
+    cat(s__2, s__2, t#5, s__2)
 })

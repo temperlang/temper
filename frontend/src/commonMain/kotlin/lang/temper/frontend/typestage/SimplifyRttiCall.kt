@@ -19,7 +19,6 @@ import lang.temper.type2.withType
 import lang.temper.value.BubbleFn
 import lang.temper.value.CallTree
 import lang.temper.value.CallTypeInferences
-import lang.temper.value.IfThenElse
 import lang.temper.value.IsNullFn
 import lang.temper.value.LeafTree
 import lang.temper.value.MacroValue
@@ -198,31 +197,33 @@ internal fun simplifyRttiCall(rttiCall: CallTree, typeContext: TypeContext2) {
             // ->
             //   if (t == null) { null     } else { t as SameOrSubType }
             document.treeFarm.grow(pos) {
-                IfThenElse(
-                    cond = {
-                        Call {
-                            V(expr.pos.leftEdge, vIsNullFn)
-                            Replant(simpleExpr.copy())
-                        }
-                    },
-                    thenClause = {
-                        if (!targetCanBeNull) { // 2, 10
+                Block(pos) {
+                    If(
+                        cond = {
                             Call {
-                                val bubbler = when (rto) {
-                                    RuntimeTypeOperation.As -> BuiltinFuns.vBubble
-                                    RuntimeTypeOperation.AssertAs -> BuiltinFuns.vPanic
-                                    else -> error("unexpected")
-                                }
-                                V(expr.pos.rightEdge, bubbler)
+                                V(expr.pos.leftEdge, vIsNullFn)
+                                Replant(simpleExpr.copy())
                             }
-                        } else {
-                            V(expr.pos.rightEdge, TNull.value)
-                        }
-                    },
-                    elseClause = {
-                        Replant(replacementAssumingNotNull)
-                    },
-                ).at(pos)
+                        },
+                        thn = {
+                            if (!targetCanBeNull) { // 2, 10
+                                Call {
+                                    val bubbler = when (rto) {
+                                        RuntimeTypeOperation.As -> BuiltinFuns.vBubble
+                                        RuntimeTypeOperation.AssertAs -> BuiltinFuns.vPanic
+                                        else -> error("unexpected")
+                                    }
+                                    V(expr.pos.rightEdge, bubbler)
+                                }
+                            } else {
+                                V(expr.pos.rightEdge, TNull.value)
+                            }
+                        },
+                        els = {
+                            Replant(replacementAssumingNotNull)
+                        },
+                    )
+                }
             }
         }
         RuntimeTypeOperation.Is -> {
@@ -247,35 +248,37 @@ internal fun simplifyRttiCall(rttiCall: CallTree, typeContext: TypeContext2) {
                 // it's nice to avoid an extra stage of `&&`/`||` expansion.
                 val exprLeft = expr.pos.leftEdge
                 val exprRight = expr.pos.rightEdge
-                IfThenElse(
-                    cond = {
-                        if (targetCanBeNull) { // `||` case above
-                            Call(exprLeft, IsNullFn) {
-                                Replant(simpleExpr.copy())
-                            }
-                        } else {
-                            Call(exprLeft, BuiltinFuns.notFn) {
+                Block(pos) {
+                    If(
+                        cond = {
+                            if (targetCanBeNull) { // `||` case above
                                 Call(exprLeft, IsNullFn) {
                                     Replant(simpleExpr.copy())
                                 }
+                            } else {
+                                Call(exprLeft, BuiltinFuns.notFn) {
+                                    Call(exprLeft, IsNullFn) {
+                                        Replant(simpleExpr.copy())
+                                    }
+                                }
                             }
-                        }
-                    },
-                    thenClause = {
-                        if (targetCanBeNull) {
-                            V(exprLeft, TBoolean.valueTrue)
-                        } else {
-                            Replant(replacementAssumingNotNull)
-                        }
-                    },
-                    elseClause = {
-                        if (targetCanBeNull) {
-                            Replant(replacementAssumingNotNull)
-                        } else {
-                            V(exprRight, TBoolean.valueFalse)
-                        }
-                    },
-                ).at(pos)
+                        },
+                        thn = {
+                            if (targetCanBeNull) {
+                                V(exprLeft, TBoolean.valueTrue)
+                            } else {
+                                Replant(replacementAssumingNotNull)
+                            }
+                        },
+                        els = {
+                            if (targetCanBeNull) {
+                                Replant(replacementAssumingNotNull)
+                            } else {
+                                V(exprRight, TBoolean.valueFalse)
+                            }
+                        },
+                    )
+                }
             }
         }
     }

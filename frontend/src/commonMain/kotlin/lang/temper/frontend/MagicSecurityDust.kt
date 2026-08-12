@@ -1,42 +1,48 @@
 package lang.temper.frontend
 
 import lang.temper.builtin.BuiltinFuns
-import lang.temper.builtin.BuiltinFuns.handlerScope
 import lang.temper.builtin.isRttiCall
+import lang.temper.builtin.isTypeAngleCall
 import lang.temper.frontend.syntax.isAssignment
 import lang.temper.frontend.syntax.isCommaCall
-import lang.temper.frontend.syntax.isLeftHandSide
 import lang.temper.frontend.typestage.simplifyRttiCall
-import lang.temper.name.Temporary
+import lang.temper.type.AndType
+import lang.temper.type.FunctionType
+import lang.temper.type.StaticType
+import lang.temper.type.WellKnownTypes
+import lang.temper.type.isBubbly
 import lang.temper.type2.TypeContext2
-import lang.temper.value.BINARY_OP_CALL_ARG_COUNT
+import lang.temper.type2.hackMapNewStyleToOld
+import lang.temper.type2.hackMapOldStyleToNew
+import lang.temper.type2.mapType
 import lang.temper.value.BlockTree
 import lang.temper.value.BubbleFn
 import lang.temper.value.CallTree
-import lang.temper.value.DeclTree
-import lang.temper.value.EscTree
+import lang.temper.value.CallTypeInferences
+import lang.temper.value.ControlFlow
 import lang.temper.value.FunTree
-import lang.temper.value.LeftNameLeaf
-import lang.temper.value.NameLeaf
-import lang.temper.value.StayLeaf
+import lang.temper.value.LinearFlow
+import lang.temper.value.PanicFn
+import lang.temper.value.ReifiedType
+import lang.temper.value.StructuredFlow
 import lang.temper.value.TEdge
+import lang.temper.value.TType
 import lang.temper.value.Tree
-import lang.temper.value.ValueLeaf
+import lang.temper.value.Value
 import lang.temper.value.freeTarget
 import lang.temper.value.freeTree
 import lang.temper.value.functionContained
-import lang.temper.value.isHandlerScopeCall
-import lang.temper.value.vFailSymbol
-import lang.temper.value.vVarSymbol
-import lang.temper.value.void
+import lang.temper.value.typeFromSignature
+import kotlin.collections.listOf
 
 /**
- * Sprinkles calls to [handlerScope] where control leaves the current function.
+ * Wraps calls to functions that may fail with blocks so that failing calls become top-level
+ * when weaved.  This uses [type inferences][Tree.typeInferences] so is a no-op until we
+ * have type information in the tree.
  *
- * This allows the [Weaver] to create conditional branches for failure paths, making failure
- * explicit in the control flow graph, and allowing later passes to introduce runtime checks so
- * failure implicit in the semantics of the interpreter is turned into explicit boolean checks
- * that are easily translated by backends into code that consistently handles corner cases.
+ * This allows the [Weaver] to pull the call to the function's or module's root, which eases
+ * translating failure handling, like unpacking *Result* values or inserting `try/catch` statements,
+ * in languages that require statement level constructs which cannot nest inside larger expressions.
  *
  * Terminology is explained in __Cryptography Engineering__:
  *
@@ -44,7 +50,7 @@ import lang.temper.value.void
  * > sprinkle over their hardware or software, and which will imbue those products with the
  * > mythical property of "security."
  *
- * echoing Bruce Schneier:
+ * Echoing Bruce Schneier:
  *
  * > In it, I described a mathematical utopia: ...
  * >
@@ -54,16 +60,6 @@ import lang.temper.value.void
  * failure branches explicit for later passes.
  */
 internal class MagicSecurityDust {
-    /**
-     * Aggregate failure variables allocated across all root blocks.
-     * This is used by the Weaver run during the GenerateCodeStage to avoid generating
-     * redundant branches to fail.
-     *
-     * TODO: Maybe make the weaver smart enough to not insert redundant branches to avoid this
-     * unnecessarily tight coupling.
-     */
-    private val allFailureVariables = mutableSetOf<Temporary>()
-    internal val failureVariables get() = allFailureVariables.toSet()
     private val typeContext = TypeContext2()
 
     fun sprinkle(root: BlockTree) {
@@ -71,49 +67,24 @@ internal class MagicSecurityDust {
         // For each function root,
         // - For each operation, o, that may fail.
         //   - Allocate a temporary, t
-        //   - Wrap that operation in a call to hs(t, o) which sets t to a boolean which is true
-        //     when o failed.
-        //   - Follow that operation with a conditional branch: `if (t) fail()` so that the
-        //     Weaver can collect all failing threads.
+        //   - Wrap that operation in a block.
+        // Weaver can then weave blocks into the module/function body
 
         val sprinkler = Sprinkler(root)
         sprinkler.sprinkle()
     }
 
     private inner class Sprinkler(val root: BlockTree) {
-        val failureVariables = mutableListOf<Temporary>()
-
         fun sprinkle() {
             sprinkleOn(root, root.indices)
-
-            val leftPos = root.pos.leftEdge
-            val doc = root.document
-            allFailureVariables.addAll(failureVariables)
-            prefixBlockWith(
-                failureVariables.map { failureVariable ->
-                    DeclTree(
-                        doc,
-                        leftPos,
-                        listOf(
-                            LeftNameLeaf(doc, leftPos, failureVariable),
-                            // Failure declared at root level, but hs may be called in loop.
-                            ValueLeaf(doc, leftPos, vVarSymbol),
-                            ValueLeaf(doc, leftPos, void),
-                            ValueLeaf(doc, leftPos, vFailSymbol),
-                            ValueLeaf(doc, leftPos, void),
-                        ),
-                    )
-                },
-                root,
-            )
         }
 
         private fun sprinkleOn(edge: TEdge) {
             var tree = edge.target
             // `x = bubble()` -> `bubble()`.
             if (isAssignment(tree)) {
-                val rhs = tree.childOrNull(2)
-                if (rhs != null && isBubbleCallMaybeParameterized(rhs)) {
+                val (_, lhs, rhs) = tree.children
+                if (isBubbleCallMaybeParameterized(rhs)) {
                     // We handle `bubble()` below, but there are a number of cases where
                     // `bubble()` might be assigned to a variable including source code like
                     // the below:
@@ -147,16 +118,47 @@ internal class MagicSecurityDust {
                     //     }
                     //
                     // That can work when the language has type inference that allows it to
-                    // recognize that the declared return type is what is supposed to be thrown
+                    // recognize that the declared return type is what is supposed to be thrown,
                     // but not all languages with `return` path checking allow that for all return
                     // types.  Specifically, when a generic type parameter cannot bind to `void`.
                     //
-                    // Here, we unpack assignments like `x = bubble()` to avoid later putting an
-                    // `hs(...)` wrapper around something that is guaranteed to bubble.
-                    // This simplifies control flow analysis allowing more guaranteed failures
-                    // to turn into simple `break` statements in the non-exception cases, and
+                    // Here, we unpack assignments like `x = bubble()` to avoid later putting a
+                    // `{...}` wrapper around something that is guaranteed to bubble.
+                    // This simplifies control-flow analysis, allowing more guaranteed failures
+                    // to turn into simple `break` statements in the locally handled cases, and
                     // more top-level `throw` statements in the exception case.
-                    edge.replace(freeTree(rhs))
+                    edge.replace {
+                        Block {
+                            Replant(freeTree(rhs))
+                            tree.edge(2).replace {
+                                val ti = lhs.typeInferences?.type?.let { panicCallTypeInferences(it) }
+                                Call(rhs.pos.rightEdge, ti) {
+                                    if (ti != null) {
+                                        Call(BuiltinFuns.vAngleFn) {
+                                            V(BuiltinFuns.vPanic, ti.variant)
+                                            for ((_, t) in ti.bindings2) {
+                                                V(
+                                                    Value(
+                                                        ReifiedType(hackMapOldStyleToNew(t as StaticType)),
+                                                        TType,
+                                                    ),
+                                                    WellKnownTypes.typeType,
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        V(BuiltinFuns.vPanic)
+                                    }
+                                }
+                            }
+                            // Replant the assignment so that simple initialized-before-use checks
+                            // work even if the assigned name is later used somewhere else as in:
+                            //
+                            //     x = bubble();
+                            //     f(x)  // Unreachable but uses `x`.
+                            Replant(freeTree(tree))
+                        }
+                    }
                     return
                 }
             }
@@ -168,13 +170,15 @@ internal class MagicSecurityDust {
             }
 
             if (
-                mayFailPerSe(tree) &&
+                tree is CallTree &&
+                calleeReturnsResult(tree) &&
                 !isBubbleCallMaybeParameterized(tree) &&
                 !isMultiResultProducerHandledElsewhere(tree) &&
                 !isAlreadyHandled(tree)
             ) {
-                bedazzle(edge) // !! safe because mayFailPerSe(root) is false.
+                bedazzle(edge)
             }
+
             if (tree is FunTree) {
                 // Sprinkle the body separately so that failure
                 // variables are scoped to the function.
@@ -214,68 +218,77 @@ internal class MagicSecurityDust {
         }
 
         private fun isAlreadyHandled(tree: Tree): Boolean {
-            // It's already handled if its argument 1 to a call to hs.
+            // It's already handled if it's in its own block.
             val edge = tree.incoming
-            val parent = edge?.source
-            return parent is CallTree &&
-                isHandlerScopeCall(parent) &&
-                edge.edgeIndex == 2
+            when (val parent = edge?.source) {
+                is BlockTree -> return !isCondition(parent, edge)
+                is CallTree if isAssignment(parent) -> {
+                    if (parent.edge(2) == edge) { // Is assigned
+                        val parentEdge = parent.incoming
+                        val grandParent = parentEdge?.source
+                        if (grandParent is BlockTree) {
+                            return !isCondition(grandParent, parentEdge)
+                        }
+                    }
+                }
+
+                else -> {}
+            }
+            return false
         }
 
-        private fun bedazzle(edge: TEdge) {
-            val doc = edge.target.document
-            val failVariable = doc.nameMaker.unusedTemporaryName("fail")
-            failureVariables.add(failVariable)
+        /**
+         * True if edge's is used as a condition in blockTree's flow control.
+         *
+         * Conditions in `if` and `while` statements often have to be simple expressions
+         * in target languages, so any unpacking of result objects into temporaries and
+         * use of further `if`s to test the result needs to be done outside the `if`/`while`
+         * condition expression.
+         *
+         * Above, we require more temporary capture for conditions.
+         */
+        private fun isCondition(blockTree: BlockTree, edge: TEdge): Boolean {
+            val edgeIndices = isConditionCache.getOrPut(blockTree) {
+                buildSet {
+                    when (val flow = blockTree.flow) {
+                        LinearFlow -> {}
+                        is StructuredFlow -> {
+                            fun walk(cf: ControlFlow) {
+                                when (cf) {
+                                    is ControlFlow.Conditional ->
+                                        cf.condition.index?.let { index -> add(index) }
+                                    else -> {}
+                                }
+                                for (clause in cf.clauses) {
+                                    walk(clause)
+                                }
+                            }
+                            walk(flow.controlFlow)
+                        }
+                    }
+                }
+            }
+            return edge.source == blockTree && edge.edgeIndex in edgeIndices
+        }
+        private val isConditionCache = mutableMapOf<BlockTree, Set<Int>>()
 
+        private fun bedazzle(edge: TEdge) {
             edge.replace { p ->
-                Call(p, BuiltinFuns.vHandlerScope) {
-                    Ln(p, failVariable)
+                Block(p) {
                     Replant(freeTarget(edge))
                 }
             }
         }
 
         /** True if `tree` may fail without one of its sub-expressions failing. */
-        private fun mayFailPerSe(tree: Tree): Boolean {
-            if (isLeftHandSide(tree)) {
-                // The assignment may fail, but the left-hand side itself does not.
-                // In complex left-hand sides, like
-                //     array[f()]
-                // sub-expressions like f() may fail, but that is prior to the failure of the whole.
-                return false
+        private fun calleeReturnsResult(tree: CallTree): Boolean {
+            var callee = tree.childOrNull(0) ?: return false // Error nodes panic
+            if (callee is CallTree && isTypeAngleCall(callee)) {
+                callee = callee.child(1)
             }
-            return when (tree) {
-                // May fail if not declared or initialized, but we handle that out of band by
-                // replacing with an error node.
-                is NameLeaf -> false
-                is StayLeaf -> false
-                is ValueLeaf -> false
-                is CallTree -> {
-                    val calleeFn = tree.childOrNull(0)?.functionContained
-                    if (
-                        calleeFn == BuiltinFuns.setLocalFn && tree.size == BINARY_OP_CALL_ARG_COUNT
-                    ) {
-                        // Special case assignment since we know a little by inspection of which
-                        // local variables have types.
-                        val name = tree.child(1) as? LeftNameLeaf
-                        // Technically, an assignment can also fail because it's a second
-                        // assignment to a `const` variable, but that is caught via static
-                        // analysis in later stages.
-                        // It might also fail for bad type, but that's also a static check.
-                        name == null
-                    } else {
-                        calleeFn?.callMayFailPerSe != false
-                    }
-                }
-                // May be malformed but well-formedness should be checked statically.
-                is FunTree,
-                is DeclTree,
-                // Optimistic.  Structured flows may be malformed or have broken references but those
-                // will not survive static checks.
-                is BlockTree,
-                is EscTree,
-                -> false
-            }
+            val calleeType = callee.typeInferences?.type
+                ?: return false // Too soon to say
+            return canBubble(calleeType)
         }
     }
 }
@@ -291,4 +304,22 @@ fun isBubbleCallMaybeParameterized(t: Tree): Boolean {
         }
     }
     return callee?.functionContained is BubbleFn
+}
+
+private fun panicCallTypeInferences(t: StaticType): CallTypeInferences {
+    val sig = PanicFn.sigs[1]
+    val bindings = mapOf(sig.typeFormals[0] to t)
+    val bindings2 = bindings.mapValues { hackMapOldStyleToNew(it.value) }
+    return CallTypeInferences(
+        hackMapNewStyleToOld(sig.returnType2.mapType(bindings2)),
+        typeFromSignature(sig),
+        bindings,
+        listOf(),
+    )
+}
+
+private fun canBubble(calleeType: StaticType): Boolean = when (calleeType) {
+    is AndType -> calleeType.members.any { canBubble(it) }
+    is FunctionType -> calleeType.returnType.isBubbly
+    else -> false
 }

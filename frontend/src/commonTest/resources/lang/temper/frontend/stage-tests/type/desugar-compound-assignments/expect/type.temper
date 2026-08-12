@@ -1,12 +1,8 @@
-let return__0;
-var t#0, fail#0, x__0: Int32;
+let return__1;
+var x__0: Int32;
 x__0 = 10;
 x__0 = x__0 - 9;
 x__0 = x__0 + 4;
 x__0 = x__0 * 3;
-t#0 = hs(fail#0, x__0 / 5);
-if (fail#0) {
-  bubble()
-};
-x__0 = t#0;
-return__0 = x__0;
+x__0 = x__0 / 5;
+return__1 = x__0;

@@ -1,8 +1,7 @@
 let return__2, @fn g__0;
-g__0 = fn g /* return__5 */{
-  void;
-  fn__0: do {
-    return__5 = f();
-  }
+g__0 = fn g /* return__3 */{
+  fn__1: do {
+    return__3 = f()
+  };
 };
 return__2 = g__0();
