@@ -562,7 +562,7 @@ class CppTranslator(
         name: Cpp.SingleName,
         params: List<Cpp.FuncParam> = emptyList(),
         qual: Cpp.MethodQualifier? = null,
-    ): Cpp.FuncDef = cpp.funcDef(null, retType, virtualConvention, name, params, pureVirtualBody(), qual = qual)
+    ): Cpp.FuncDef = cpp.funcDef(null, null, retType, virtualConvention, name, params, pureVirtualBody(), qual = qual)
 
     /**
      * The `const` qualifier for a member (method or getter) that does not mutate its
@@ -2726,6 +2726,7 @@ class CppTranslator(
                                 }
                                 val rawParent = "$parentText<$typeParamStr>"
                                 cpp.funcDef(
+                                    methodDef.attr,
                                     methodDef.mod,
                                     methodDef.ret,
                                     methodDef.convention,
@@ -2803,6 +2804,7 @@ class CppTranslator(
                 val dtorName = "~${cpp.name(topLevel.name).id.text}"
                 add(
                     cpp.funcDef(
+                        null,
                         null,
                         null,
                         cpp.singleName(CppName("virtual", allowKey = true)),

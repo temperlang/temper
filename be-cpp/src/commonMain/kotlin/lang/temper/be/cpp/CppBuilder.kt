@@ -130,6 +130,7 @@ class CppBuilder(
             args = args.deepCopy(),
         )
     fun funcDef(
+        attr: Cpp.SingleName?,
         mod: Cpp.DefMod?,
         ret: Cpp.Type?,
         convention: Cpp.SingleName?,
@@ -140,6 +141,7 @@ class CppBuilder(
     ): Cpp.FuncDef =
         Cpp.FuncDef(
             pos,
+            attr = attr,
             mod = mod,
             ret = ret?.deepCopy(),
             convention = convention?.deepCopy(),
@@ -165,7 +167,7 @@ class CppBuilder(
             body = body.deepCopy(),
         )
     fun funcDef(ret: Cpp.Type?, name: Cpp.Name, args: Iterable<Cpp.FuncParam>, body: Cpp.BlockStmt): Cpp.FuncDef =
-        funcDef(mod = null, ret, convention = null, name, args, body)
+        funcDef(attr = null, mod = null, ret, convention = null, name, args, body)
     fun funcParam(type: Cpp.Type, name: Cpp.SingleName): Cpp.FuncParam =
         Cpp.FuncParam(pos, type.deepCopy(), name.deepCopy())
 
@@ -310,6 +312,7 @@ class CppBuilder(
                 qual = qual,
             ),
             def = funcDef(
+                attr = null,
                 mod = null,
                 retType,
                 convention = convention,

@@ -518,10 +518,10 @@ ConstructorDeclaration requires `parameters.validArity()`;
 ConstructorDeclaration requires `body.constructorBlock()`;
 
 /*
- * Consolidates reciever parameters, formals, and variable arity parameters into MethodParameter.
+ * Consolidates receiver parameters, formals, and variable arity parameters into MethodParameter.
  * Variable arity parameters are required for 'rest' spread and other conveniences.
  *
- * We won't implement reciever parameters unless we need to either:
+ * We won't implement receiver parameters unless we need to either:
  * - annotate `this`
  * - for a nested class to specifically get a reference to its outer class
  */
