@@ -239,12 +239,13 @@ fun simplifyControlFlow(
         is ControlFlow.Stmt -> {
             val tree = block.dereference(cf.ref)?.target
             val isBubble = tree != null && isBubbleCall(tree)
+            val canBubble = isBubble || (tree != null && treeCanBubble(tree))
             val flowsToNext = if (isBubble) {
                 Freq3.Never
             } else {
                 Freq3.Always
             }
-            val bubbles = if (isBubble) {
+            val bubbles = if (canBubble) {
                 Freq3.Always
             } else {
                 Freq3.Never

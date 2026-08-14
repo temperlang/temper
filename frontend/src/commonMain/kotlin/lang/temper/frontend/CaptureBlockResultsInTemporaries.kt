@@ -2,7 +2,7 @@ package lang.temper.frontend
 
 import lang.temper.ast.TreeVisit
 import lang.temper.ast.VisitCue
-import lang.temper.builtin.BuiltinFuns
+import lang.temper.builtin.Assign
 import lang.temper.common.LeftOrRight
 import lang.temper.common.Log
 import lang.temper.log.LogEntry
@@ -18,11 +18,9 @@ import lang.temper.type.excludeBubble
 import lang.temper.type2.MkType2
 import lang.temper.type2.Signature2
 import lang.temper.type2.hackMapNewStyleToOld
-import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockTree
-import lang.temper.value.CallTree
 import lang.temper.value.CallTypeInferences
 import lang.temper.value.ControlFlow
 import lang.temper.value.DeclTree
@@ -42,7 +40,6 @@ import lang.temper.value.TEdge
 import lang.temper.value.TProblem
 import lang.temper.value.Tree
 import lang.temper.value.TreeTemplate
-import lang.temper.value.UnpositionedTreeTemplate
 import lang.temper.value.UnresolvedJumpSpecifier
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
@@ -876,42 +873,6 @@ private data class CaptureDetails(
 
     companion object {
         val empty: CaptureDetails = CaptureDetails(null, listOf(), setOf())
-    }
-}
-
-private fun typeInferencesForAssign(type: StaticType?): CallTypeInferences? {
-    if (type == null) { return null }
-    val type2 = hackMapOldStyleToNew(type)
-    val sig = Signature2(type2, false, listOf(type2, type2))
-    return CallTypeInferences(type, sig, mapOf(), listOf())
-}
-
-@Suppress("FunctionName")
-internal fun Planting.Assign(
-    pos: Position,
-    name: ResolvedName,
-    type: StaticType?,
-    assigned: Planting.() -> UnpositionedTreeTemplate<*>,
-): TreeTemplate<CallTree> {
-    val callType = typeInferencesForAssign(type)
-    return Call(pos, type = callType) {
-        V(BuiltinFuns.vSetLocalFn, type = callType?.variant)
-        Ln(pos.leftEdge, name = name, type = type)
-        assigned()
-    }
-}
-
-@Suppress("FunctionName")
-internal fun Planting.Assign(
-    name: ResolvedName,
-    type: StaticType?,
-    assigned: Planting.() -> UnpositionedTreeTemplate<*>,
-): UnpositionedTreeTemplate<CallTree> {
-    val callType = typeInferencesForAssign(type)
-    return Call(type = callType) {
-        V(BuiltinFuns.vSetLocalFn, type = callType?.variant)
-        Ln(name = name, type = type)
-        assigned()
     }
 }
 

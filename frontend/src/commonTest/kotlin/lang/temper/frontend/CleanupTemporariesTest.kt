@@ -696,8 +696,8 @@ class CleanupTemporariesTest {
                 |    @fn let f__0;
                 |    f__0 = (@stay fn f(a__0 /* aka a */: Int32, b__0 /* aka b */: Int32) /* return__2 */: Void {
                 |        fn__0: do {
-                |          return__2 = void;
-                |          do_call_log(console#0, do_call_toString(a__0 + b__0))
+                |          do_call_log(console#0, do_call_toString(a__0 + b__0));
+                |          return__2 = void
                 |        }
                 |    });
                 |    @fn let incr__0;

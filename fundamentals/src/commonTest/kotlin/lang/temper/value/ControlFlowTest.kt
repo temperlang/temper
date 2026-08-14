@@ -1,5 +1,6 @@
 package lang.temper.value
 
+import lang.temper.builtin.Assign
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.BuiltinLogicalOperators
 import lang.temper.common.LeftOrRight
@@ -27,6 +28,7 @@ import lang.temper.name.ParsedName
 import lang.temper.name.TemperName
 import lang.temper.stage.Stage
 import lang.temper.type.WellKnownTypes
+import lang.temper.type.plantCallWithTypeInfo
 import lang.temper.type2.Signature2
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -1297,6 +1299,45 @@ class ControlFlowTest {
             els = { Stmt("elseClause") },
         )
         Stmt("after")
+    }
+
+    @Test
+    fun bubblyCallInOrClause() = assertSimplified(
+        wantJson = """
+            |{
+            |  simple: ```
+            |    var return__0;
+            |    orElse#1: {
+            |      return__0 = 0 / 0
+            |    } orelse {
+            |      return__0 = 0
+            |    }
+            |    ```,
+            |}
+        """.trimMargin(),
+    ) {
+        val returnName = nameMaker.unusedSourceName(ParsedName("return"))
+        val zero = Value(0, TInt)
+        Decl {
+            Ln(returnName, WellKnownTypes.intType)
+            V(varSymbol)
+            V(void)
+        }
+        OrElse(
+            or = {
+                Assign(returnName, WellKnownTypes.intType) {
+                    plantCallWithTypeInfo(BuiltinFuns.divIntIntFn) {
+                        V(zero, WellKnownTypes.intType)
+                        V(zero, WellKnownTypes.intType)
+                    }
+                }
+            },
+            els = {
+                Assign(returnName, WellKnownTypes.intType) {
+                    V(zero, WellKnownTypes.intType)
+                }
+            },
+        )
     }
 
     @Test

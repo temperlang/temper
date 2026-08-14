@@ -4,7 +4,6 @@ import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.Types
 import lang.temper.common.TestDocumentContext
 import lang.temper.common.assertStringsEqual
-import lang.temper.common.firstOrNullAs
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.common.testCodeLocation
 import lang.temper.common.testModuleName
@@ -12,24 +11,17 @@ import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.ParsedName
 import lang.temper.name.PseudoCodeNameRenumberer
-import lang.temper.type.StaticType
 import lang.temper.type.WellKnownTypes
-import lang.temper.type.excludeBubble
-import lang.temper.type2.AnySignature
+import lang.temper.type.plantCallWithTypeInfo
+import lang.temper.type.plantTypedCallee
 import lang.temper.type2.MkType2
 import lang.temper.type2.Signature2
 import lang.temper.value.BlockTree
 import lang.temper.value.BubbleFn
-import lang.temper.value.CallTree
-import lang.temper.value.CallTypeInferences
 import lang.temper.value.Document
-import lang.temper.value.MacroValue
-import lang.temper.value.Planting
 import lang.temper.value.TInt
 import lang.temper.value.Tree
-import lang.temper.value.UnpositionedTreeTemplate
 import lang.temper.value.Value
-import lang.temper.value.ValueLeaf
 import lang.temper.value.returnParsedName
 import lang.temper.value.toPseudoCode
 import lang.temper.value.typeFromSignature
@@ -372,46 +364,4 @@ class MagicSecurityDustTest {
             gotNormalized,
         )
     }
-}
-
-internal fun Planting.plantCallWithTypeInfo(
-    callee: MacroValue,
-    typeActuals: List<StaticType> = listOf(),
-    plantArgs: Planting.() -> Any?,
-): UnpositionedTreeTemplate<CallTree> {
-    val nTypeActuals = typeActuals.size
-    val sig: Signature2 = callee.sigs!!.first { it.typeFormals.size == nTypeActuals } as Signature2
-    val type = excludeBubble(sig.returnType.type)
-    val variant = typeFromSignature(sig)
-    val ti = CallTypeInferences(
-        type = type,
-        variant = variant,
-        bindings2 = buildMap {
-            for ((f, a) in (sig.typeFormals zip typeActuals)) {
-                this[f] = a
-            }
-        },
-        explanations = listOf(),
-    )
-    return Call(type = ti) {
-        plantTypedCallee(callee, sig)
-        plantArgs()
-    }
-}
-
-internal fun Planting.plantCallWithTypeInfo(
-    callee: Value<MacroValue>,
-    typeActuals: List<StaticType> = listOf(),
-    plantArgs: Planting.() -> Any?,
-): UnpositionedTreeTemplate<CallTree> =
-    plantCallWithTypeInfo(callee.stateVector, typeActuals = typeActuals, plantArgs = plantArgs)
-
-internal fun Planting.plantTypedCallee(
-    callee: MacroValue,
-    sig: Signature2? = null,
-): UnpositionedTreeTemplate<ValueLeaf> {
-    (sig ?: callee.sigs?.firstOrNullAs<AnySignature, Signature2> { true })?.let { sig ->
-        return@plantTypedCallee V(Value(callee), type = typeFromSignature(sig))
-    }
-    error("No signatures: $callee")
 }
