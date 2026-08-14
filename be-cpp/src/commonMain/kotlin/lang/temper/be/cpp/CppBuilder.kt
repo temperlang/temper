@@ -173,10 +173,12 @@ class CppBuilder(
 
     fun varDecl(type: Cpp.Type, name: Cpp.SingleName): Cpp.VarDecl =
         Cpp.VarDecl(pos, type = type.deepCopy(), name = name.deepCopy())
-    fun varDef(mod: Cpp.DefMod?, type: Cpp.Type, name: Cpp.SingleName, init: Cpp.Expr? = null): Cpp.VarDef =
+    fun varDef(mod: Cpp.DefMod?, type: Cpp.Type, name: Cpp.VarDefNamePart, init: Cpp.Expr? = null): Cpp.VarDef =
         Cpp.VarDef(pos, mod, type.deepCopy(), name.deepCopy(), init?.deepCopy())
-    fun varDef(type: Cpp.Type, name: Cpp.SingleName, init: Cpp.Expr? = null): Cpp.VarDef =
+    fun varDef(type: Cpp.Type, name: Cpp.VarDefNamePart, init: Cpp.Expr? = null): Cpp.VarDef =
         varDef(mod = null, type, name, init = init)
+    fun varDefArray(name: Cpp.VarDefNamePart, dim: Int): Cpp.ArrayVarDefDim =
+        Cpp.ArrayVarDefDim(pos, name, literal(dim))
 
     fun const(type: Cpp.Type): Cpp.ConstType =
         Cpp.ConstType(pos, type.deepCopy())

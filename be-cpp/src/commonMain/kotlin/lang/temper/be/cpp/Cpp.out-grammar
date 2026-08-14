@@ -61,8 +61,12 @@ FuncDef.qual.default = `null`;
 FuncParam ::= type%Type & name%SingleName;
 
 VarDecl ::= "extern" & type%Type & name%SingleName & ";";
-VarDef ::= mod%DefMod? & type%Type & name%Name & ("=" & init%Expr || ()) & ";";
+VarDef ::= mod%DefMod? & type%Type & name%VarDefNamePart & ("=" & init%Expr || ()) & ";";
 VarDef.mod.default = `null`;
+
+// TODO Some equivalent for VarDecl when need that.
+VarDefNamePart = Name | ArrayVarDefDim;
+ArrayVarDefDim ::= name%VarDefNamePart & "[" & dim%LiteralExpr? & "]";
 
 TypeDef ::= "typedef" & type%Type & name%SingleName & ";";
 
