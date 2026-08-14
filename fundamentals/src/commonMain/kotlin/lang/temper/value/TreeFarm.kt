@@ -451,10 +451,11 @@ abstract class Planting(
         cond: (Planting).() -> UnpositionedTreeTemplate<*>,
         label: JumpLabel? = null,
         testAt: LeftOrRight = LeftOrRight.Left,
+        increment: (BlockPlanting).() -> Unit = {},
         body: (BlockPlanting).() -> Unit,
     ) {
         Block {
-            While(cond, label, testAt, body)
+            While(cond, label, testAt, increment, body)
         }
     }
 
@@ -464,10 +465,11 @@ abstract class Planting(
         cond: (Planting).() -> UnpositionedTreeTemplate<*>,
         label: JumpLabel? = null,
         testAt: LeftOrRight = LeftOrRight.Left,
+        increment: (BlockPlanting).() -> Unit = {},
         body: (BlockPlanting).() -> Unit,
     ) {
         Block {
-            While(pos, cond, label, testAt, body)
+            While(pos, cond, label, testAt, increment, body)
         }
     }
 
@@ -478,10 +480,11 @@ abstract class Planting(
     open fun Do(
         pos: Position? = null,
         label: JumpLabel? = null,
+        continueLabel: JumpLabel? = null,
         body: (BlockPlanting).() -> Unit,
     ) {
         Block {
-            Do(pos, label, body)
+            Do(pos, label, continueLabel, body)
         }
     }
 
@@ -611,12 +614,14 @@ class BlockPlanting(
         cond: (Planting).() -> UnpositionedTreeTemplate<*>,
         label: JumpLabel?,
         testAt: LeftOrRight,
+        increment: (BlockPlanting).() -> Unit,
         body: (BlockPlanting).() -> Unit,
     ) = While(
         null,
         cond = cond,
         label = label,
         testAt = testAt,
+        increment = increment,
         body = body,
     )
 
@@ -626,6 +631,7 @@ class BlockPlanting(
         cond: (Planting).() -> UnpositionedTreeTemplate<*>,
         label: JumpLabel?,
         testAt: LeftOrRight,
+        increment: (BlockPlanting).() -> Unit,
         body: (BlockPlanting).() -> Unit,
     ) {
         val start = when (testAt) {
@@ -636,6 +642,8 @@ class BlockPlanting(
         plantLabel(pos?.leftEdge, label)
         plantCond(cond)
         body()
+        plantMark(FlowMark(pos?.rightEdge, FlowMarkKind.Else))
+        increment()
         plantMark(FlowMark(pos?.rightEdge, FlowMarkKind.End))
     }
 
@@ -643,9 +651,10 @@ class BlockPlanting(
      * Unlike [Block], doesn't create a new block tree but instead plants a single,
      * possibly labeled, [ControlFlow.StmtBlock] within a larger block tree.
      */
-    override fun Do(pos: Position?, label: JumpLabel?, body: (BlockPlanting).() -> Unit) {
+    override fun Do(pos: Position?, label: JumpLabel?, continueLabel: JumpLabel?, body: (BlockPlanting).() -> Unit) {
         plantMark(FlowMark(pos?.leftEdge, FlowMarkKind.StartBlock))
         plantLabel(pos?.leftEdge, label)
+        plantLabel(pos?.leftEdge, continueLabel, vContinueSymbol)
         body()
         plantMark(FlowMark(pos?.rightEdge, FlowMarkKind.End))
     }
@@ -671,13 +680,13 @@ class BlockPlanting(
     }
 
     /** Plants a pair consumable by [labelFor] */
-    private fun plantLabel(labelPos: Position?, label: JumpLabel?) {
+    private fun plantLabel(labelPos: Position?, label: JumpLabel?, labelSymbol: Value<Symbol> = vLabelSymbol) {
         if (label != null) {
             if (labelPos != null) {
-                V(labelPos, vLabelSymbol)
+                V(labelPos.leftEdge, labelSymbol)
                 Ln(labelPos, label)
             } else {
-                V(vLabelSymbol)
+                V(labelSymbol)
                 Ln(label)
             }
         }
@@ -862,16 +871,17 @@ private class BlockInProgress(left: Position) : ControlFlowInProgress(left) {
     }
 
     override fun complete(right: Position, trees: List<Tree>, doc: Document): ControlFlow {
-        val (label, i) = labelFor(stmts, trees)
+        val (label, i) = labelFor(0, stmts, trees, vLabelSymbol)
+        val (continueLabel, j) = labelFor(i, stmts, trees, vContinueSymbol)
 
         val pos = listOf(left, right).spanningPosition(left)
         val block = ControlFlow.StmtBlock(
             pos,
-            stmts.subList(i, stmts.size).toList(),
+            stmts.subList(j, stmts.size).toList(),
         )
 
         return if (label != null) {
-            ControlFlow.Labeled(pos, label, null, block)
+            ControlFlow.Labeled(pos, label, continueLabel, block)
         } else {
             block
         }
@@ -924,7 +934,7 @@ private class JumpInProgress(left: Position, val kind: BreakOrContinue) : Contro
     }
 
     override fun complete(right: Position, trees: List<Tree>, doc: Document): ControlFlow.Jump {
-        val (label, i) = labelFor(parts, trees)
+        val (label, i) = labelFor(0, parts, trees, vLabelSymbol)
         if (i != parts.size) {
             check(parts.isEmpty()) { "Malformed break or continue: $parts" }
         }
@@ -958,14 +968,20 @@ private fun symbolFor(cf: ControlFlow?, trees: List<Tree>): Symbol? =
  * Either way, if there is a list of statements, the second part is the part
  * to process after any optional label.
  */
-private fun labelFor(cfs: List<ControlFlow>, trees: List<Tree>): Pair<JumpLabel?, Int> {
-    if (cfs.size >= 2) {
-        val (part0, part1) = cfs
-        if (symbolFor(part0, trees) == labelSymbol) {
-            return ((childFor(part1, trees) as NameLeaf).content as JumpLabel) to 2
+private fun labelFor(
+    offset: Int,
+    cfs: List<ControlFlow>,
+    trees: List<Tree>,
+    symbol: Value<Symbol>,
+): Pair<JumpLabel?, Int> {
+    if (cfs.size >= 2 + offset) {
+        val part0 = cfs[offset]
+        val part1 = cfs[offset + 1]
+        if (symbolFor(part0, trees) == symbol.stateVector) {
+            return ((childFor(part1, trees) as NameLeaf).content as JumpLabel) to offset + 2
         }
     }
-    return null to 0
+    return null to offset
 }
 
 private class OrElseInProgress(left: Position) : ElsyControlFlowInProgress(left) {
@@ -982,7 +998,7 @@ private class OrElseInProgress(left: Position) : ElsyControlFlowInProgress(left)
 
     override fun complete(right: Position, trees: List<Tree>, doc: Document): ControlFlow.OrElse {
         var orClauseParts = orClause
-        var (label, afterLabelIndex) = labelFor(orClause, trees)
+        var (label, afterLabelIndex) = labelFor(0, orClause, trees, vLabelSymbol)
         orClauseParts = orClauseParts.subList(afterLabelIndex, orClauseParts.size)
         if (label == null) {
             label = doc.nameMaker.unusedTemporaryName("orElse")
@@ -1001,27 +1017,30 @@ private class OrElseInProgress(left: Position) : ElsyControlFlowInProgress(left)
     }
 }
 
-private class LoopInProgress(left: Position, val testAt: LeftOrRight) : ControlFlowInProgress(left) {
+private class LoopInProgress(left: Position, val testAt: LeftOrRight) : ElsyControlFlowInProgress(left) {
     private var parts = mutableListOf<ControlFlow>()
+    private var incrementParts = mutableListOf<ControlFlow>()
 
     override fun add(cf: ControlFlow) {
-        parts.add(cf)
+        val partsList = if (inElse) { incrementParts } else { parts }
+        partsList.add(cf)
     }
 
     override fun complete(right: Position, trees: List<Tree>, doc: Document): ControlFlow.Loop {
-        val (label, afterLabel) = labelFor(parts, trees)
+        val (label, afterLabel) = labelFor(0, parts, trees, vLabelSymbol)
         var i = afterLabel
         val condition = parts.getOrNull(i) as? ControlFlow.Stmt
             ?: error("No condition in $parts at $i")
         i += 1
         val body = completeStmtBlock(parts.subList(i, parts.size), right)
+        val increment = completeStmtBlock(incrementParts, condition.pos.rightEdge)
         return ControlFlow.Loop(
             pos = listOf(left, right).spanningPosition(left),
             label = label,
             condition = condition.ref,
             checkPosition = testAt,
             body = body,
-            increment = ControlFlow.StmtBlock(right, listOf()),
+            increment = increment,
         )
     }
 }
@@ -1055,6 +1074,8 @@ private enum class FlowMarkKind {
     StartOrElse,
     StartWhile,
     StartDoWhile,
+
+    /** `else` in `if` and `orelse` but also the increment clause in loops. */
     Else,
     End,
 }
@@ -1309,3 +1330,5 @@ private class SingleUseEdgeWrapper(
 
     override fun toTree(document: Document) = edge.target
 }
+
+private val vContinueSymbol = Value(Symbol("__continue__"))

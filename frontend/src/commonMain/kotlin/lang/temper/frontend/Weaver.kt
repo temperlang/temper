@@ -723,7 +723,7 @@ internal fun prefixWith(prefixes: List<Tree>, tree: Tree) {
     }
 }
 
-internal fun structureBlock(block: BlockTree): StructuredFlow {
+fun structureBlock(block: BlockTree): StructuredFlow {
     return when (val bFlow = block.flow) {
         is StructuredFlow -> bFlow
         is LinearFlow -> {

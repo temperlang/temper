@@ -27,6 +27,7 @@ import lang.temper.type.NominalType
 import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
+import lang.temper.value.ConservativeFailure
 import lang.temper.value.DeclTree
 import lang.temper.value.Document
 import lang.temper.value.FunTree
@@ -206,7 +207,7 @@ internal data class ReadsAndWrites(
                 }
             }
 
-            val maximalPaths = forwardMaximalPaths(root, assumeFailureCanHappen = true)
+            val maximalPaths = forwardMaximalPaths(root, ConservativeFailure.AtEndOfOr)
             root.document.debug {
                 maximalPaths.debug(console, root)
             }

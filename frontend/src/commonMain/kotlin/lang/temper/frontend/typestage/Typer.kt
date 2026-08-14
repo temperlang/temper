@@ -10,7 +10,6 @@ import lang.temper.builtin.Types
 import lang.temper.builtin.asReifiedType
 import lang.temper.builtin.isDotHelperCall
 import lang.temper.builtin.isNotNullCall
-import lang.temper.builtin.isTypeAngleCall
 import lang.temper.common.AtomicCounter
 import lang.temper.common.Either
 import lang.temper.common.KBitSet
@@ -159,6 +158,7 @@ import lang.temper.value.functionalInterfaceSymbol
 import lang.temper.value.isNewCall
 import lang.temper.value.isNullaryNeverCall
 import lang.temper.value.isPureVirtualBody
+import lang.temper.value.isTypeAngleCall
 import lang.temper.value.lookThroughDecorations
 import lang.temper.value.nameContained
 import lang.temper.value.optionalSymbol

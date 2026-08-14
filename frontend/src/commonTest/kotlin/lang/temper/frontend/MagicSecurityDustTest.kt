@@ -303,7 +303,7 @@ class MagicSecurityDustTest {
     }
 
     @Test
-    fun returnOfBubbleJustBubbles() = runSprinkleTest { doc, sprinkler ->
+    fun returnOfBubbleDoesNotAssignBubble() = runSprinkleTest { doc, sprinkler ->
         val returnName = doc.nameMaker.unusedSourceName(returnParsedName)
         val root = doc.treeFarm.grow(pos) {
             Block {
@@ -319,8 +319,10 @@ class MagicSecurityDustTest {
 
         assertPseudoCode(
             """
-            |bubble()
-            |
+            |do {
+            |  bubble();
+            |  return__0 = panic()
+            |}
             """.trimMargin(),
             root,
         )
@@ -332,7 +334,7 @@ class MagicSecurityDustTest {
         val root = doc.treeFarm.grow(pos) {
             Block {
                 Call(BuiltinFuns.vSetLocalFn) {
-                    Ln(returnName)
+                    Ln(returnName, WellKnownTypes.intType)
                     Call {
                         Call(BuiltinFuns.vAngleFn) {
                             plantTypedCallee(BubbleFn)
@@ -348,8 +350,10 @@ class MagicSecurityDustTest {
 
         assertPseudoCode(
             """
-            |bubble<Int32>()
-            |
+                |do {
+                |  bubble<Int32>();
+                |  return__0 = panic<Int32>()
+                |}
             """.trimMargin(),
             root,
         )
@@ -360,8 +364,8 @@ class MagicSecurityDustTest {
         tree: Tree,
     ) {
         val got = tree.toPseudoCode(singleLine = false)
-        val wantNormalized = PseudoCodeNameRenumberer.newStringRenumberer()(want)
-        val gotNormalized = PseudoCodeNameRenumberer.newStringRenumberer()(got)
+        val wantNormalized = PseudoCodeNameRenumberer.newStringRenumberer()(want).trimEnd()
+        val gotNormalized = PseudoCodeNameRenumberer.newStringRenumberer()(got).trimEnd()
 
         assertStringsEqual(
             wantNormalized,

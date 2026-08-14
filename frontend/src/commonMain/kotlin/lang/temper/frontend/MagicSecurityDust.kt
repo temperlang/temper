@@ -2,15 +2,11 @@ package lang.temper.frontend
 
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.isRttiCall
-import lang.temper.builtin.isTypeAngleCall
 import lang.temper.frontend.syntax.isAssignment
 import lang.temper.frontend.syntax.isCommaCall
 import lang.temper.frontend.typestage.simplifyRttiCall
-import lang.temper.type.AndType
-import lang.temper.type.FunctionType
 import lang.temper.type.StaticType
 import lang.temper.type.WellKnownTypes
-import lang.temper.type.isBubbly
 import lang.temper.type2.TypeContext2
 import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.type2.hackMapOldStyleToNew
@@ -29,6 +25,7 @@ import lang.temper.value.TEdge
 import lang.temper.value.TType
 import lang.temper.value.Tree
 import lang.temper.value.Value
+import lang.temper.value.calleeReturnsResult
 import lang.temper.value.freeTarget
 import lang.temper.value.freeTree
 import lang.temper.value.functionContained
@@ -131,7 +128,8 @@ internal class MagicSecurityDust {
                         Block {
                             Replant(freeTree(rhs))
                             tree.edge(2).replace {
-                                val ti = lhs.typeInferences?.type?.let { panicCallTypeInferences(it) }
+                                val typeArg = lhs.typeInferences?.type
+                                val ti = typeArg?.let { panicCallTypeInferences(it) }
                                 Call(rhs.pos.rightEdge, ti) {
                                     if (ti != null) {
                                         Call(BuiltinFuns.vAngleFn) {
@@ -279,17 +277,6 @@ internal class MagicSecurityDust {
                 }
             }
         }
-
-        /** True if `tree` may fail without one of its sub-expressions failing. */
-        private fun calleeReturnsResult(tree: CallTree): Boolean {
-            var callee = tree.childOrNull(0) ?: return false // Error nodes panic
-            if (callee is CallTree && isTypeAngleCall(callee)) {
-                callee = callee.child(1)
-            }
-            val calleeType = callee.typeInferences?.type
-                ?: return false // Too soon to say
-            return canBubble(calleeType)
-        }
     }
 }
 
@@ -316,10 +303,4 @@ private fun panicCallTypeInferences(t: StaticType): CallTypeInferences {
         bindings,
         listOf(),
     )
-}
-
-private fun canBubble(calleeType: StaticType): Boolean = when (calleeType) {
-    is AndType -> calleeType.members.any { canBubble(it) }
-    is FunctionType -> calleeType.returnType.isBubbly
-    else -> false
 }

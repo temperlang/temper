@@ -9,7 +9,6 @@ import lang.temper.frontend.allRootsOfAsBlocks
 import lang.temper.frontend.core.CoreModule
 import lang.temper.frontend.prefixBlockWith
 import lang.temper.frontend.prefixWith
-import lang.temper.frontend.structureBlock
 import lang.temper.name.ExportedName
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedName
@@ -34,7 +33,6 @@ import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 import lang.temper.value.freeTarget
 import lang.temper.value.freeTree
-import lang.temper.value.getTerminalExpressions
 import lang.temper.value.isCore
 import lang.temper.value.isPureVirtualBody
 import lang.temper.value.outTypeSymbol
@@ -303,28 +301,15 @@ internal class MakeResultsExplicit private constructor(
         outputName: NameLeaf,
     ) {
         val tree = edge.target
-        if (tree is BlockTree) {
-            structureBlock(tree)
-            val (terminalExpressions) = tree.getTerminalExpressions()
-            for (terminalExpression in terminalExpressions) {
-                val ref = terminalExpression.ref
-                tree.dereference(ref)?.let {
-                    if (!it.target.isPureVirtualBody()) {
-                        addImplicitAssignment(it, outputName)
-                    }
-                }
-            }
+        if (tree is DeclTree || tree.isPureVirtualBody()) {
+            // Just don't.
+            // TODO: explain
         } else {
-            if (tree is DeclTree || tree.isPureVirtualBody()) {
-                // Just don't.
-                // TODO: explain
-            } else {
-                edge.replace { p ->
-                    Call(p) {
-                        V(p.leftEdge, setLocalValue)
-                        Replant(outputName.copyLeft())
-                        Replant(freeTarget(edge))
-                    }
+            edge.replace { p ->
+                Call(p) {
+                    V(p.leftEdge, setLocalValue)
+                    Replant(outputName.copyLeft())
+                    Replant(freeTarget(edge))
                 }
             }
         }

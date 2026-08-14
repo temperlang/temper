@@ -5,12 +5,14 @@ import lang.temper.builtin.BuiltinLogicalOperators
 import lang.temper.common.LeftOrRight
 import lang.temper.common.ListBackedLogSink
 import lang.temper.common.Log
+import lang.temper.common.TestDocumentContext
 import lang.temper.common.assertStructure
 import lang.temper.common.console
 import lang.temper.common.structure.StructureSink
 import lang.temper.common.structure.Structured
 import lang.temper.env.Environment
 import lang.temper.env.InterpMode
+import lang.temper.frontend.structureBlock
 import lang.temper.interp.EmptyEnvironment
 import lang.temper.interp.Interpreter
 import lang.temper.interp.blankEnvironment
@@ -19,6 +21,7 @@ import lang.temper.interp.immutableEnvironment
 import lang.temper.lexer.Genre
 import lang.temper.log.FailLog
 import lang.temper.log.MessageTemplate
+import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.ParsedName
 import lang.temper.name.TemperName
@@ -40,9 +43,7 @@ class ControlFlowTest {
             |    ```,
             |}
         """.trimMargin(),
-    ) {
-        StmtBlock()
-    }
+    ) {}
 
     @Test
     fun dropDeadCode() = assertSimplified(
@@ -70,14 +71,11 @@ class ControlFlowTest {
         """.trimMargin(),
     ) {
         val label = label("label")
-        Labeled(
-            label,
-            StmtBlock(
-                Stmt("one"),
-                BreakTo(label),
-                Stmt("two"),
-            ),
-        )
+        Do(label = label) {
+            Stmt("one")
+            Break(label)
+            Stmt("two")
+        }
     }
 
     @Test
@@ -102,15 +100,13 @@ class ControlFlowTest {
             |}
         """.trimMargin(),
     ) {
-        StmtBlock(
-            Stmt("before"),
-            If(
-                Ref { V(TBoolean.valueFalse) },
-                Stmt("notReached"),
-                Stmt("reached"),
-            ),
-            Stmt("after"),
+        Stmt("before")
+        If(
+            cond = { V(TBoolean.valueFalse) },
+            thn = { Stmt("notReached") },
+            els = { Stmt("reached") },
         )
+        Stmt("after")
     }
 
     @Test
@@ -157,28 +153,31 @@ class ControlFlowTest {
         """.trimMargin(),
     ) {
         val label = label("loop")
-        DoWhile(
+        While(
+            testAt = LeftOrRight.Right,
             label = label,
-            condition = Ref("loop_cond"),
-            increment = Stmt("incr"),
-            body = StmtBlock(
+            cond = { Stmt("loop_cond") },
+            increment = { Stmt("incr") },
+            body = {
                 If(
-                    Ref("should_break"),
-                    StmtBlock(
-                        Stmt("breaking"),
-                        BreakTo(label),
-                    ),
-                    If(
-                        Ref("should_continue"),
-                        StmtBlock(
-                            Stmt("continuing"),
-                            ContinueTo(label),
-                        ),
-                        Stmt("neither"),
-                    ),
-                ),
-                Stmt("after_if"),
-            ),
+                    cond = { Stmt("should_break") },
+                    thn = {
+                        Stmt("breaking")
+                        Break(label)
+                    },
+                    els = {
+                        If(
+                            cond = { Stmt("should_continue") },
+                            thn = {
+                                Stmt("continuing")
+                                Continue(label)
+                            },
+                            els = { Stmt("neither") },
+                        )
+                    },
+                )
+                Stmt("after_if")
+            },
         )
     }
 
@@ -225,26 +224,30 @@ class ControlFlowTest {
         val label = label("loop")
         While(
             label = label,
-            condition = Ref("loop_cond"),
-            increment = Stmt("incr"),
-            body = StmtBlock(
+            cond = { Stmt("loop_cond") },
+            increment = { Stmt("incr") },
+            body = {
                 If(
-                    Ref("should_break"),
-                    StmtBlock(
-                        Stmt("breaking"),
-                        BreakTo(label),
-                    ),
-                    If(
-                        Ref("should_continue"),
-                        StmtBlock(
-                            Stmt("continuing"),
-                            ContinueTo(label),
-                        ),
-                        Stmt("neither"),
-                    ),
-                ),
-                Stmt("after_if"),
-            ),
+                    cond = { Stmt("should_break") },
+                    thn = {
+                        Stmt("breaking")
+                        Break(label)
+                    },
+                    els = {
+                        If(
+                            cond = { Stmt("should_continue") },
+                            thn = {
+                                Stmt("continuing")
+                                Continue(label)
+                            },
+                            els = {
+                                Stmt("neither")
+                            },
+                        )
+                    },
+                )
+                Stmt("after_if")
+            },
         )
     }
 
@@ -281,23 +284,19 @@ class ControlFlowTest {
         """.trimMargin(),
     ) {
         val foo = label("foo")
-        StmtBlock(
-            Labeled(
-                foo,
-                StmtBlock(
-                    If(
-                        Ref("x"),
-                        BreakTo(foo),
-                    ),
-                    Stmt("bar"),
-                    If(
-                        Ref("y"),
-                        BreakTo(foo),
-                        Stmt("last"),
-                    ),
-                ),
-            ),
-        )
+        Do(label = foo) {
+            If(
+                cond = { Stmt("x") },
+                thn = { Break(foo) },
+                els = {},
+            )
+            Stmt("bar")
+            If(
+                cond = { Stmt("y") },
+                thn = { Break(foo) },
+                els = { Stmt("last") },
+            )
+        }
     }
 
     @Test
@@ -305,7 +304,6 @@ class ControlFlowTest {
         cases = listOf(bindings() to ExpectValue(void)),
     ) {
         // do {}
-        StmtBlock()
     }
 
     @Test
@@ -313,10 +311,8 @@ class ControlFlowTest {
         cases = listOf(bindings("x" to value(10)) to ExpectValue(10)),
     ) {
         // do { -1; x }
-        StmtBlock(
-            Stmt { V(value(-1)) },
-            Stmt { Rn(BuiltinName("x")) },
-        )
+        V(value(-1))
+        Rn(BuiltinName("x"))
     }
 
     @Test
@@ -325,13 +321,11 @@ class ControlFlowTest {
     ) {
         // Make sure we don't confuse conditions with terminal expressions
         // do { -1; if (x) {} else {} }
-        StmtBlock(
-            Stmt { V(value(-1)) },
-            If(
-                Ref { Rn(BuiltinName("x")) },
-                StmtBlock(),
-                StmtBlock(),
-            ),
+        V(value(-1))
+        If(
+            cond = { Rn(BuiltinName("x")) },
+            thn = {},
+            els = {},
         )
     }
 
@@ -344,9 +338,9 @@ class ControlFlowTest {
     ) {
         // if (x) { 0 } else { 1 }
         If(
-            Ref { Rn(BuiltinName("x")) },
-            Stmt { V(Value(0, TInt)) },
-            Stmt { V(Value(1, TInt)) },
+            cond = { Rn(BuiltinName("x")) },
+            thn = { V(Value(0, TInt)) },
+            els = { V(Value(1, TInt)) },
         )
     }
 
@@ -359,20 +353,17 @@ class ControlFlowTest {
     ) {
         // label: { if (x) { "bar"; break label }; "foo" }
         val label = label("label")
-        Labeled(
-            label,
-            StmtBlock(
-                If(
-                    Ref { Rn(BuiltinName("x")) },
-                    StmtBlock(
-                        Stmt { V(value("bar")) },
-                        BreakTo(label),
-                    ),
-                    StmtBlock(),
-                ),
-                Stmt { V(value("foo")) },
-            ),
-        )
+        Do(label = label) {
+            If(
+                cond = { Rn(BuiltinName("x")) },
+                thn = {
+                    V(value("bar"))
+                    Break(label)
+                },
+                els = {},
+            )
+            V(value("foo"))
+        }
     }
 
     /**
@@ -439,165 +430,153 @@ class ControlFlowTest {
         bindings("start" to value(5), "a" to value(17)) to ExpectValue(186),
     )
 
-    private fun ControlFlowMaker.makeAccumulatorCode(checkPosition: LeftOrRight): ControlFlow {
+    private fun BlockPlanting.makeAccumulatorCode(checkPosition: LeftOrRight) {
         val start = BuiltinName("start")
         val a = BuiltinName("a")
-        val limit = doc.nameMaker.unusedSourceName(ParsedName("limit"))
-        val total = doc.nameMaker.unusedSourceName(ParsedName("total"))
-        val i = doc.nameMaker.unusedSourceName(ParsedName("i"))
-        val t0 = doc.nameMaker.unusedTemporaryName("t")
-        return StmtBlock(
-            // let limit = start + 10;
-            Stmt {
-                Decl(limit) {
-                    V(initSymbol)
+        val limit = nameMaker.unusedSourceName(ParsedName("limit"))
+        val total = nameMaker.unusedSourceName(ParsedName("total"))
+        val i = nameMaker.unusedSourceName(ParsedName("i"))
+        val t0 = nameMaker.unusedTemporaryName("t")
+        // let limit = start + 10;
+        Decl(limit) {
+            V(initSymbol)
+            Call(BuiltinFuns.plusIntIntFn) {
+                Rn(start)
+                V(value(10))
+            }
+        }
+        // var total = 0;
+        Decl(total) {
+            V(varSymbol)
+            V(void)
+            V(initSymbol)
+            V(value(0))
+        }
+        // var i = start
+        Decl(i) {
+            V(varSymbol)
+            V(void)
+            V(initSymbol)
+            Rn(start)
+        }
+        // for (; i < limit; ++i) { ...
+        While(
+            cond = { // i < limit
+                Call(BuiltinFuns.ltIntFn) {
+                    Rn(i)
+                    Rn(limit)
+                }
+            },
+            testAt = checkPosition,
+            increment = { // ++i
+                Call(BuiltinFuns.setLocalFn) {
+                    Ln(i)
                     Call(BuiltinFuns.plusIntIntFn) {
-                        Rn(start)
-                        V(value(10))
-                    }
-                }
-            },
-            // var total = 0;
-            Stmt {
-                Decl(total) {
-                    V(varSymbol)
-                    V(void)
-                    V(initSymbol)
-                    V(value(0))
-                }
-            },
-            // var i = start
-            Stmt {
-                Decl(i) {
-                    V(varSymbol)
-                    V(void)
-                    V(initSymbol)
-                    Rn(start)
-                }
-            },
-            // for (; i < limit; ++i) { ...
-            Loop(
-                condition = Ref { // i < limit
-                    Call(BuiltinFuns.ltIntFn) {
                         Rn(i)
-                        Rn(limit)
+                        V(value(1))
                     }
-                },
-                checkPosition = checkPosition,
-                increment = Stmt { // ++i
-                    Call(BuiltinFuns.setLocalFn) {
-                        Ln(i)
-                        Call(BuiltinFuns.plusIntIntFn) {
+                }
+            },
+            body = {
+                //   if (i == 4 || i == 6) {
+                // But `||` is not a function, so fake it with an `if`.
+                Decl(t0) {}
+                // if (i == 4) { t#0 = true } else { t#0 =
+                If(
+                    cond = {
+                        Call(BuiltinFuns.eqIntFn) {
                             Rn(i)
-                            V(value(1))
+                            V(value(4))
                         }
-                    }
-                },
-                body = StmtBlock(
-                    //   if (i == 4 || i == 6) {
-                    // But `||` is not a function, so fake it with an `if`.
-                    Stmt { // if (i == 4) { t#0 = true } else { t#0 =
-                        Decl(t0) {}
                     },
-                    If(
-                        Ref {
+                    thn = {
+                        Call(BuiltinFuns.setLocalFn) {
+                            Ln(t0)
+                            V(TBoolean.valueTrue)
+                        }
+                    },
+                    els = {
+                        Call(BuiltinFuns.setLocalFn) {
+                            Ln(t0)
                             Call(BuiltinFuns.eqIntFn) {
                                 Rn(i)
-                                V(value(4))
+                                V(value(6))
                             }
-                        },
-                        Stmt {
-                            Call(BuiltinFuns.setLocalFn) {
-                                Ln(t0)
-                                V(TBoolean.valueTrue)
+                        }
+                    },
+                )
+                If(
+                    cond = { Rn(t0) },
+                    thn = {
+                        //     total = total * a
+                        Call(BuiltinFuns.setLocalFn) {
+                            Ln(total)
+                            Call(BuiltinFuns.timesIntIntFn) {
+                                Rn(total)
+                                Rn(a)
                             }
-                        },
-                        Stmt {
-                            Call(BuiltinFuns.setLocalFn) {
-                                Ln(t0)
+                        }
+                        //     continue;
+                        Continue()
+                    },
+                    els = {
+                        If(
+                            //   } else if (i == 7) {
+                            cond = {
                                 Call(BuiltinFuns.eqIntFn) {
                                     Rn(i)
-                                    V(value(6))
+                                    V(value(7))
                                 }
-                            }
-                        },
-                    ),
-                    If(
-                        Ref { Rn(t0) },
-                        StmtBlock(
-                            //     total = total * a
-                            Stmt {
+                            },
+                            thn = {
+                                //     total = total + a;
                                 Call(BuiltinFuns.setLocalFn) {
                                     Ln(total)
-                                    Call(BuiltinFuns.timesIntIntFn) {
+                                    Call(BuiltinFuns.plusIntIntFn) {
                                         Rn(total)
                                         Rn(a)
                                     }
                                 }
                             },
-                            //     continue;
-                            ContinueTo(null),
-                        ),
-                        StmtBlock(
-                            If(
-                                //   } else if (i == 7) {
-                                Ref {
-                                    Call(BuiltinFuns.eqIntFn) {
-                                        Rn(i)
-                                        V(value(7))
-                                    }
-                                },
-                                Stmt {
-                                    //     total = total + a;
-                                    Call(BuiltinFuns.setLocalFn) {
-                                        Ln(total)
-                                        Call(BuiltinFuns.plusIntIntFn) {
-                                            Rn(total)
-                                            Rn(a)
-                                        }
-                                    }
-                                },
+                            els = {
                                 If(
                                     //   } else if (i == a) {
-                                    Ref {
+                                    cond = {
                                         Call(BuiltinFuns.eqIntFn) {
                                             Rn(i)
                                             Rn(a)
                                         }
                                     },
-                                    StmtBlock(
+                                    thn = {
                                         //     total = -total;
-                                        Stmt {
-                                            Call(BuiltinFuns.setLocalFn) {
-                                                Ln(total)
-                                                Call(BuiltinFuns.minusIntIntFn) {
-                                                    V(value(0))
-                                                    Rn(total)
-                                                }
+                                        Call(BuiltinFuns.setLocalFn) {
+                                            Ln(total)
+                                            Call(BuiltinFuns.minusIntIntFn) {
+                                                V(value(0))
+                                                Rn(total)
                                             }
-                                        },
+                                        }
                                         //     break;
-                                        BreakTo(null),
-                                    ),
-                                ),
-                            ),
-                        ),
-                    ),
-                    Stmt {
-                        //   total += i;
-                        Call(BuiltinFuns.setLocalFn) {
-                            Ln(total)
-                            Call(BuiltinFuns.plusIntIntFn) {
-                                Rn(total)
-                                Rn(i)
-                            }
-                        }
+                                        Break()
+                                    },
+                                    els = {},
+                                )
+                            },
+                        )
                     },
-                ),
-            ),
-            // return total
-            Stmt { Rn(total) },
+                )
+                //   total += i;
+                Call(BuiltinFuns.setLocalFn) {
+                    Ln(total)
+                    Call(BuiltinFuns.plusIntIntFn) {
+                        Rn(total)
+                        Rn(i)
+                    }
+                }
+            },
         )
+        // return total
+        Rn(total)
     }
 
     @Test
@@ -628,15 +607,15 @@ class ControlFlowTest {
         },
     ) {
         OrElse(
-            onFailLabel = null, // surprise me
-            orClause = StmtBlock(
+            or = {
                 If(
-                    Ref { Rn(BuiltinName("bubbles")) },
-                    Stmt { Call(BubbleFn) {} },
-                ),
-                Stmt { V(value("ok")) },
-            ),
-            elseClause = Stmt { V(value("recovered")) },
+                    cond = { Rn(BuiltinName("bubbles")) },
+                    thn = { Call(BubbleFn) {} },
+                    els = {},
+                )
+                V(value("ok"))
+            },
+            els = { V(value("recovered")) },
         )
     }
 
@@ -658,138 +637,127 @@ class ControlFlowTest {
         val loop1 = label("loop1")
         val loop2 = label("loop2")
         val loop3 = label("loop3")
-        StmtBlock(
-            // var matched = false;
-            Stmt {
-                Decl(matched) {
-                    V(varSymbol)
-                    V(void)
-                    V(initSymbol)
-                    V(TBoolean.valueFalse)
+        // var matched = false;
+        Decl(matched) {
+            V(varSymbol)
+            V(void)
+            V(initSymbol)
+            V(TBoolean.valueFalse)
+        }
+        // var prime = 1;
+        Decl(prime) {
+            V(varSymbol)
+            V(void)
+            V(initSymbol)
+            V(value(1))
+        }
+        // loop1: for (var i = 0; i < 25; i++) {
+        Decl(i) {
+            V(varSymbol)
+            V(void)
+            V(initSymbol)
+            V(value(0))
+        }
+        While(
+            label = loop1,
+            cond = {
+                Call(BuiltinFuns.ltIntFn) {
+                    Rn(i)
+                    V(value(25))
                 }
             },
-            // var prime = 1;
-            Stmt {
-                Decl(prime) {
-                    V(varSymbol)
-                    V(void)
-                    V(initSymbol)
-                    V(value(1))
+            increment = {
+                Call(BuiltinFuns.setLocalFn) {
+                    Ln(i)
+                    Call(BuiltinFuns.plusIntIntFn) {
+                        Rn(i)
+                        V(value(1))
+                    }
                 }
             },
-            // loop1: for (var i = 0; i < 25; i++) {
-            Stmt {
-                Decl(i) {
+            body = {
+                //   loop2: for (var j = 0; j < 25; j++) {
+                Decl(j) {
                     V(varSymbol)
                     V(void)
                     V(initSymbol)
                     V(value(0))
                 }
-            },
-            While(
-                label = loop1,
-                condition = Ref {
-                    Call(BuiltinFuns.ltIntFn) {
-                        Rn(i)
-                        V(value(25))
-                    }
-                },
-                increment = Stmt {
-                    Call(BuiltinFuns.setLocalFn) {
-                        Ln(i)
-                        Call(BuiltinFuns.plusIntIntFn) {
-                            Rn(i)
-                            V(value(1))
+                While(
+                    label = loop2,
+                    cond = {
+                        Call(BuiltinFuns.ltIntFn) {
+                            Rn(j)
+                            V(value(25))
                         }
-                    }
-                },
-                body = StmtBlock(
-                    //   loop2: for (var j = 0; j < 25; j++) {
-                    Stmt {
-                        Decl(j) {
+                    },
+                    increment = {
+                        Call(BuiltinFuns.setLocalFn) {
+                            Ln(j)
+                            Call(BuiltinFuns.plusIntIntFn) {
+                                Rn(j)
+                                V(value(1))
+                            }
+                        }
+                    },
+                    body = {
+                        //     loop3: for (var k = 0; k < 25; k++) {
+                        Decl(k) {
                             V(varSymbol)
                             V(void)
                             V(initSymbol)
                             V(value(0))
                         }
-                    },
-                    While(
-                        label = loop2,
-                        condition = Ref {
-                            Call(BuiltinFuns.ltIntFn) {
-                                Rn(j)
-                                V(value(25))
-                            }
-                        },
-                        increment = Stmt {
-                            Call(BuiltinFuns.setLocalFn) {
-                                Ln(j)
-                                Call(BuiltinFuns.plusIntIntFn) {
-                                    Rn(j)
-                                    V(value(1))
-                                }
-                            }
-                        },
-                        body = StmtBlock(
-                            //     loop3: for (var k = 0; k < 25; k++) {
-                            Stmt {
-                                Decl(k) {
-                                    V(varSymbol)
-                                    V(void)
-                                    V(initSymbol)
-                                    V(value(0))
+                        While(
+                            label = loop3,
+                            cond = {
+                                Call(BuiltinFuns.ltIntFn) {
+                                    Rn(k)
+                                    V(value(25))
                                 }
                             },
-                            While(
-                                label = loop3,
-                                condition = Ref {
-                                    Call(BuiltinFuns.ltIntFn) {
+                            increment = {
+                                Call(BuiltinFuns.setLocalFn) {
+                                    Ln(k)
+                                    Call(BuiltinFuns.plusIntIntFn) {
                                         Rn(k)
-                                        V(value(25))
+                                        V(value(1))
                                     }
-                                },
-                                increment = Stmt {
-                                    Call(BuiltinFuns.setLocalFn) {
-                                        Ln(k)
-                                        Call(BuiltinFuns.plusIntIntFn) {
-                                            Rn(k)
-                                            V(value(1))
-                                        }
+                                }
+                            },
+                            body = {
+                                //       prime += 1;
+                                Call(BuiltinFuns.setLocalFn) {
+                                    Ln(prime)
+                                    Call(BuiltinFuns.plusIntIntFn) {
+                                        Rn(prime)
+                                        V(value(1))
                                     }
-                                },
-                                body = StmtBlock(
-                                    //       prime += 1;
-                                    Stmt {
-                                        Call(BuiltinFuns.setLocalFn) {
-                                            Ln(prime)
-                                            Call(BuiltinFuns.plusIntIntFn) {
-                                                Rn(prime)
-                                                V(value(1))
-                                            }
+                                }
+                                //       if (prime > n) { break loop1 }
+                                If(
+                                    cond = {
+                                        Call(BuiltinFuns.gtIntFn) {
+                                            Rn(prime)
+                                            Rn(n)
                                         }
                                     },
-                                    //       if (prime > n) { break loop1 }
-                                    If(
-                                        Ref {
-                                            Call(BuiltinFuns.gtIntFn) {
-                                                Rn(prime)
-                                                Rn(n)
-                                            }
-                                        },
-                                        BreakTo(loop1),
-                                    ),
-                                    //       if (prime != 2 && prime % 2 == 0) {
-                                    //         continue loop1;
-                                    //       }
-                                    If(
-                                        Ref {
-                                            Call(BuiltinFuns.neIntFn) {
-                                                Rn(prime)
-                                                V(value(2))
-                                            }
-                                        },
+                                    thn = { Break(loop1) },
+                                    els = {},
+                                )
+                                //       if (prime != 2 && prime % 2 == 0) {
+                                //         continue loop1;
+                                //       }
+                                If(
+                                    cond = {
+                                        Call(BuiltinFuns.neIntFn) {
+                                            Rn(prime)
+                                            V(value(2))
+                                        }
+                                    },
+                                    thn = {
                                         If(
-                                            Ref {
+                                            cond = {
                                                 Call(BuiltinFuns.eqIntFn) {
                                                     Call(BuiltinFuns.modIntIntSafeFn) {
                                                         Rn(prime)
@@ -798,21 +766,25 @@ class ControlFlowTest {
                                                     V(value(0))
                                                 }
                                             },
-                                            ContinueTo(loop1),
-                                        ),
-                                    ),
-                                    //       if (prime != 3 && prime % 3 == 0) {
-                                    //         continue loop2;
-                                    //       }
-                                    If(
-                                        Ref {
-                                            Call(BuiltinFuns.neIntFn) {
-                                                Rn(prime)
-                                                V(value(3))
-                                            }
-                                        },
+                                            thn = { Continue(loop1) },
+                                            els = {},
+                                        )
+                                    },
+                                    els = {},
+                                )
+                                //       if (prime != 3 && prime % 3 == 0) {
+                                //         continue loop2;
+                                //       }
+                                If(
+                                    cond = {
+                                        Call(BuiltinFuns.neIntFn) {
+                                            Rn(prime)
+                                            V(value(3))
+                                        }
+                                    },
+                                    thn = {
                                         If(
-                                            Ref {
+                                            cond = {
                                                 Call(BuiltinFuns.eqIntFn) {
                                                     Call(BuiltinFuns.modIntIntSafeFn) {
                                                         Rn(prime)
@@ -821,21 +793,25 @@ class ControlFlowTest {
                                                     V(value(0))
                                                 }
                                             },
-                                            ContinueTo(loop2),
-                                        ),
-                                    ),
-                                    //       if (prime != 5 && prime % 5 == 0) {
-                                    //         continue loop3;
-                                    //       }
-                                    If(
-                                        Ref {
-                                            Call(BuiltinFuns.neIntFn) {
-                                                Rn(prime)
-                                                V(value(5))
-                                            }
-                                        },
+                                            thn = { Continue(loop2) },
+                                            els = {},
+                                        )
+                                    },
+                                    els = {},
+                                )
+                                //       if (prime != 5 && prime % 5 == 0) {
+                                //         continue loop3;
+                                //       }
+                                If(
+                                    cond = {
+                                        Call(BuiltinFuns.neIntFn) {
+                                            Rn(prime)
+                                            V(value(5))
+                                        }
+                                    },
+                                    thn = {
                                         If(
-                                            Ref {
+                                            cond = {
                                                 Call(BuiltinFuns.eqIntFn) {
                                                     Call(BuiltinFuns.modIntIntSafeFn) {
                                                         Rn(prime)
@@ -844,21 +820,25 @@ class ControlFlowTest {
                                                     V(value(0))
                                                 }
                                             },
-                                            ContinueTo(loop3),
-                                        ),
-                                    ),
-                                    //       if (prime != 7 && prime % 7 == 0) {
-                                    //         continue;
-                                    //       }
-                                    If(
-                                        Ref {
-                                            Call(BuiltinFuns.neIntFn) {
-                                                Rn(prime)
-                                                V(value(7))
-                                            }
-                                        },
+                                            thn = { Continue(loop3) },
+                                            els = {},
+                                        )
+                                    },
+                                    els = {},
+                                )
+                                //       if (prime != 7 && prime % 7 == 0) {
+                                //         continue;
+                                //       }
+                                If(
+                                    cond = {
+                                        Call(BuiltinFuns.neIntFn) {
+                                            Rn(prime)
+                                            V(value(7))
+                                        }
+                                    },
+                                    thn = {
                                         If(
-                                            Ref {
+                                            cond = {
                                                 Call(BuiltinFuns.eqIntFn) {
                                                     Call(BuiltinFuns.modIntIntSafeFn) {
                                                         Rn(prime)
@@ -867,41 +847,42 @@ class ControlFlowTest {
                                                     V(value(0))
                                                 }
                                             },
-                                            ContinueTo(null),
-                                        ),
-                                    ),
-                                    //       if (n == prime) {
-                                    //         matched = true;
-                                    //         break loop1;
-                                    //       }
-                                    If(
-                                        Ref {
-                                            Call(BuiltinFuns.eqIntFn) {
-                                                Rn(n)
-                                                Rn(prime)
-                                            }
-                                        },
-                                        StmtBlock(
-                                            Stmt {
-                                                Call(BuiltinFuns.setLocalFn) {
-                                                    Ln(matched)
-                                                    V(TBoolean.valueTrue)
-                                                }
-                                            },
-                                            BreakTo(loop1),
-                                        ),
-                                    ),
-                                ),
-                            ),
-                            //     }
-                        ),
-                    ),
-                    //   }
-                ),
-                // }
-            ),
-            Stmt { Rn(matched) },
+                                            thn = { Continue() },
+                                            els = {},
+                                        )
+                                    },
+                                    els = {},
+                                )
+                                //       if (n == prime) {
+                                //         matched = true;
+                                //         break loop1;
+                                //       }
+                                If(
+                                    cond = {
+                                        Call(BuiltinFuns.eqIntFn) {
+                                            Rn(n)
+                                            Rn(prime)
+                                        }
+                                    },
+                                    thn = {
+                                        Call(BuiltinFuns.setLocalFn) {
+                                            Ln(matched)
+                                            V(TBoolean.valueTrue)
+                                        }
+                                        Break(loop1)
+                                    },
+                                    els = {},
+                                )
+                            },
+                        )
+                        //     }
+                    },
+                )
+                //   }
+            },
+            // }
         )
+        Rn(matched)
     }
 
     @Test
@@ -940,15 +921,16 @@ class ControlFlowTest {
         val outerLoopLabel = label("loop")
         While(
             label = outerLoopLabel,
-            condition = Ref("cond"),
-            increment = Stmt("incr"), // The body continues.  Do not eliminate this.
-            body = StmtBlock(
-                Stmt("body"),
+            cond = { Stmt("cond") },
+            increment = { Stmt("incr") }, // The body continues.  Do not eliminate this.
+            body = {
+                Stmt("body")
                 While(
-                    condition = Ref { V(TBoolean.valueTrue) },
-                    body = ContinueTo(outerLoopLabel),
-                ),
-            ),
+                    cond = { V(TBoolean.valueTrue) },
+                ) {
+                    Continue(outerLoopLabel)
+                }
+            },
         )
     }
 
@@ -1034,136 +1016,119 @@ class ControlFlowTest {
         """.trimMargin(),
     ) {
         val outer = label("outer")
-        val i = doc.nameMaker.unusedSourceName(ParsedName("i"))
-        val postfixReturn = doc.nameMaker.unusedTemporaryName("postfixReturn")
-        val t = doc.nameMaker.unusedTemporaryName("t")
-        val str = doc.nameMaker.unusedSourceName(ParsedName("str"))
-        val j = doc.nameMaker.unusedSourceName(ParsedName("j"))
+        val i = nameMaker.unusedSourceName(ParsedName("i"))
+        val postfixReturn = nameMaker.unusedTemporaryName("postfixReturn")
+        val t = nameMaker.unusedTemporaryName("t")
+        val str = nameMaker.unusedSourceName(ParsedName("str"))
+        val j = nameMaker.unusedSourceName(ParsedName("j"))
         // outer__11: for (;
         While(
             label = outer,
             //   i__10 < 4;
-            condition = Ref {
+            cond = {
                 Call(BuiltinFuns.ltIntFn) {
                     Rn(i)
                     V(value(4))
                 }
             },
-            increment = StmtBlock(
+            increment = {
                 //   do {
                 //     let postfixReturn#0;
-                Stmt { Decl(postfixReturn) },
+                Decl(postfixReturn)
                 //     postfixReturn#0 = i__10;
-                Stmt {
-                    Call(BuiltinFuns.setLocalFn) {
-                        Ln(postfixReturn)
-                        Rn(i)
-                    }
-                },
+                Call(BuiltinFuns.setLocalFn) {
+                    Ln(postfixReturn)
+                    Rn(i)
+                }
                 //     i__10 = i__10 + 1;
-                Stmt {
-                    Call(BuiltinFuns.setLocalFn) {
-                        Ln(i)
-                        Call(BuiltinFuns.plusIntIntFn) {
-                            Rn(i)
-                            V(value(1))
-                        }
+                Call(BuiltinFuns.setLocalFn) {
+                    Ln(i)
+                    Call(BuiltinFuns.plusIntIntFn) {
+                        Rn(i)
+                        V(value(1))
                     }
-                },
+                }
                 //     t#31 = postfixReturn#0;
-                Stmt {
-                    Call(BuiltinFuns.setLocalFn) {
-                        Ln(t)
-                        Rn(postfixReturn)
-                    }
-                },
+                Call(BuiltinFuns.setLocalFn) {
+                    Ln(t)
+                    Rn(postfixReturn)
+                }
                 //     t#31
-                Stmt { Rn(t) },
+                Rn(t)
                 //   }) {
-            ),
-            body = StmtBlock(
+            },
+            body = {
                 //   var str__12;
-                Stmt {
-                    Decl(str) {
-                        V(varSymbol)
-                        V(void)
-                    }
-                },
+                Decl(str) {
+                    V(varSymbol)
+                    V(void)
+                }
                 //   str__12 = "row ";
-                Stmt {
-                    Call(BuiltinFuns.setLocalFn) {
-                        Ln(str)
-                        V(value("row "))
-                    }
-                },
+                Call(BuiltinFuns.setLocalFn) {
+                    Ln(str)
+                    V(value("row "))
+                }
                 //   var j__13;
-                Stmt {
-                    Decl(j) {
-                        V(varSymbol)
-                        V(void)
-                    }
-                },
+                Decl(j) {
+                    V(varSymbol)
+                    V(void)
+                }
                 //   j__13 = 0;
-                Stmt {
-                    Call(BuiltinFuns.setLocalFn) {
-                        Ln(j)
-                        V(value(0))
-                    }
-                },
+                Call(BuiltinFuns.setLocalFn) {
+                    Ln(j)
+                    V(value(0))
+                }
                 While(
                     //   while (true) {
-                    condition = Ref { V(TBoolean.valueTrue) },
+                    cond = { V(TBoolean.valueTrue) },
                     //     str__12 = cat(str__12);
-                    body = StmtBlock(
-                        Stmt {
-                            Call(BuiltinFuns.setLocalFn) {
-                                Ln(str)
-                                Call(BuiltinFuns.strCatFn) { Rn(str) }
-                            }
-                        },
+                    body = {
+                        Call(BuiltinFuns.setLocalFn) {
+                            Ln(str)
+                            Call(BuiltinFuns.strCatFn) { Rn(str) }
+                        }
                         If(
                             //     if (i__10 <= j__13) {
-                            Ref {
+                            cond = {
                                 Call(BuiltinFuns.leIntFn) {
                                     Rn(i)
                                     Rn(j)
                                 }
                             },
-                            StmtBlock(
+                            thn = {
                                 //         continue outer__11;
-                                ContinueTo(outer),
+                                Continue(outer)
                                 //         void;
-                                Stmt { V(void) },
+                                V(void)
                                 //         void;
-                                Stmt { V(void) },
-                            ),
+                                V(void)
+                            },
+                            els = {},
                             //     };
-                        ),
+                        )
                         //     void;
-                        Stmt { V(void) },
+                        V(void)
                         //     void;
-                        Stmt { V(void) },
+                        V(void)
                         //     j__13 = j__13 + 1;
-                        Stmt {
-                            Call(BuiltinFuns.setLocalFn) {
-                                Ln(j)
-                                Call(BuiltinFuns.plusIntIntFn) {
-                                    Rn(j)
-                                    V(value(1))
-                                }
+                        Call(BuiltinFuns.setLocalFn) {
+                            Ln(j)
+                            Call(BuiltinFuns.plusIntIntFn) {
+                                Rn(j)
+                                V(value(1))
                             }
-                        },
+                        }
                         //     void;
-                        Stmt { V(void) },
+                        V(void)
                         //   };
-                    ),
-                ),
+                    },
+                )
                 //   void;
-                Stmt { V(void) },
+                V(void)
                 //   void;
-                Stmt { V(void) },
+                V(void)
                 // }
-            ),
+            },
         )
     }
 
@@ -1189,16 +1154,13 @@ class ControlFlowTest {
         """.trimMargin(),
     ) {
         val label = label("l")
-        StmtBlock(
-            While(
-                label = label,
-                condition = Ref { V(TBoolean.valueTrue) },
-                body = StmtBlock(
-                    Stmt { Call(BubbleFn) {} },
-                    BreakTo(label),
-                ),
-                increment = StmtBlock(),
-            ),
+        While(
+            label = label,
+            cond = { V(TBoolean.valueTrue) },
+            body = {
+                Call(BubbleFn) {}
+                Break(label)
+            },
         )
     }
 
@@ -1224,16 +1186,13 @@ class ControlFlowTest {
         """.trimMargin(),
     ) {
         val label = label("l")
-        StmtBlock(
-            While(
-                label = label,
-                condition = Ref { V(TBoolean.valueTrue) },
-                body = StmtBlock(
-                    Stmt("f"),
-                    BreakTo(null),
-                ),
-                increment = StmtBlock(),
-            ),
+        While(
+            label = label,
+            cond = { V(TBoolean.valueTrue) },
+            body = {
+                Stmt("f")
+                Break()
+            },
         )
     }
 
@@ -1267,15 +1226,13 @@ class ControlFlowTest {
             |}
         """.trimMargin(),
     ) {
-        StmtBlock(
-            Stmt("before"),
-            OrElse(
-                label("orelse"),
-                Stmt { Call(BubbleFn) {} },
-                Stmt("elseClause"),
-            ),
-            Stmt("after"),
+        Stmt("before")
+        OrElse(
+            label = label("orelse"),
+            or = { Call(BubbleFn) {} },
+            els = { Stmt("elseClause") },
         )
+        Stmt("after")
     }
 
     @Test
@@ -1296,18 +1253,19 @@ class ControlFlowTest {
             |}
         """.trimMargin(),
     ) {
-        StmtBlock(
-            Stmt("before"),
-            OrElse(
-                label("orelse"),
+        Stmt("before")
+        OrElse(
+            label = label("orelse"),
+            or = {
                 If(
-                    Ref("f"),
-                    Stmt { Call(BubbleFn) {} },
-                ),
-                Stmt("elseClause"),
-            ),
-            Stmt("after"),
+                    cond = { Stmt("f") },
+                    thn = { Call(BubbleFn) {} },
+                    els = {},
+                )
+            },
+            els = { Stmt("elseClause") },
         )
+        Stmt("after")
     }
 
     @Test
@@ -1316,7 +1274,7 @@ class ControlFlowTest {
             |{
             |  simple: ```
             |    label__0: do {
-            |      orelse#1: {
+            |      orElse#1: {
             |        if (false) {
             |          break label__0;
             |        }
@@ -1331,7 +1289,7 @@ class ControlFlowTest {
             |    ```,
             |   simpler: ```
             |    label__0: do {
-            |      orelse#1: {} orelse {
+            |      orElse#1: {} orelse {
             |        break label__0;
             |      };
             |      one();
@@ -1347,25 +1305,23 @@ class ControlFlowTest {
         """.trimMargin(),
     ) {
         val label = label("label")
-        StmtBlock(
-            Labeled(
-                label,
-                StmtBlock(
-                    OrElse(
-                        null,
-                        If(
-                            Ref { V(TBoolean.valueFalse) },
-                            BreakTo(label),
-                        ),
-                        BreakTo(label),
-                    ),
-                    Stmt("one"),
-                    BreakTo(label),
-                    Stmt("two"),
-                ),
-            ),
-            Stmt("three"),
-        )
+        Do(label = label) {
+            OrElse(
+                null,
+                or = {
+                    If(
+                        cond = { V(TBoolean.valueFalse) },
+                        thn = { Break(label) },
+                        els = {},
+                    )
+                },
+                els = { Break(label) },
+            )
+            Stmt("one")
+            Break(label)
+            Stmt("two")
+        }
+        Stmt("three")
     }
 
     @Test
@@ -1385,13 +1341,14 @@ class ControlFlowTest {
         """.trimMargin(),
     ) {
         val label = label("a")
-        DoWhile(
+        While(
+            testAt = LeftOrRight.Right,
             label = label,
-            body = StmtBlock(
-                Stmt("f"),
-                BreakTo(label),
-            ),
-            condition = Ref("g"),
+            body = {
+                Stmt("f")
+                Break(label)
+            },
+            cond = { Stmt("g") },
         )
     }
 
@@ -1420,20 +1377,18 @@ class ControlFlowTest {
         """.trimMargin(),
     ) {
         val label = label("label")
-        Labeled(
-            label,
-            StmtBlock(
-                Stmt("a"),
-                DoWhile(
-                    body = StmtBlock(
-                        Stmt("b"),
-                        BreakTo(label),
-                    ),
-                    condition = Ref("c"),
-                ),
-                Stmt("d"),
-            ),
-        )
+        Do(label = label) {
+            Stmt("a")
+            While(
+                testAt = LeftOrRight.Right,
+                body = {
+                    Stmt("b")
+                    Break(label)
+                },
+                cond = { Stmt("c") },
+            )
+            Stmt("d")
+        }
     }
 
     @Test
@@ -1472,44 +1427,65 @@ class ControlFlowTest {
             |}
         """.trimMargin(),
     ) {
-        DoWhile(
-            body = StmtBlock(
-                Stmt("a"),
+        While(
+            testAt = LeftOrRight.Right,
+            body = {
+                Stmt("a")
                 While(
-                    condition = Ref("b"),
-                    body = If(
-                        Ref("c"),
-                        BreakTo(null),
-                    ),
-                ),
+                    cond = { Stmt("b") },
+                    body = {
+                        If(
+                            cond = { Stmt("c") },
+                            thn = { Break() },
+                            els = {},
+                        )
+                    },
+                )
                 If(
-                    Ref("d"),
-                    BreakTo(null),
-                ),
-                Stmt("e"),
-                BreakTo(null),
-            ),
-            condition = Ref("f"),
+                    cond = { Stmt("d") },
+                    thn = { Break() },
+                    els = {},
+                )
+                Stmt("e")
+                Break()
+            },
+            cond = { Stmt("f") },
         )
     }
 
-    private fun ControlFlowMaker.makeNestedLoopsThatBumpSameCounterExample(): ControlFlow {
-        val a = doc.nameMaker.unusedSourceName(ParsedName("a"))
-        return StmtBlock(
-            // var a__21 = 0;
-            Stmt {
-                Decl(a) {
-                    V(varSymbol)
-                    V(void)
-                    V(initSymbol)
-                    V(value(0))
+    private fun BlockPlanting.makeNestedLoopsThatBumpSameCounterExample() {
+        val a = nameMaker.unusedSourceName(ParsedName("a"))
+
+        // var a__21 = 0;
+        Decl(a) {
+            V(varSymbol)
+            V(void)
+            V(initSymbol)
+            V(value(0))
+        }
+        // do {
+        While(
+            testAt = LeftOrRight.Right,
+            body = {
+                //   a__21 = a__21 + 1;
+                Call(BuiltinFuns.setLocalFn) {
+                    Ln(a)
+                    Call(BuiltinFuns.plusIntIntFn) {
+                        Rn(a)
+                        V(value(1))
+                    }
                 }
-            },
-            // do {
-            DoWhile(
-                body = StmtBlock(
-                    //   a__21 = a__21 + 1;
-                    Stmt {
+                //   for (;
+                While(
+                    //     a__21 <= 5;
+                    cond = {
+                        Call(BuiltinFuns.leIntFn) {
+                            Rn(a)
+                            V(value(5))
+                        }
+                    },
+                    //     a__21 = a__21 + 1) {
+                    increment = {
                         Call(BuiltinFuns.setLocalFn) {
                             Ln(a)
                             Call(BuiltinFuns.plusIntIntFn) {
@@ -1518,56 +1494,30 @@ class ControlFlowTest {
                             }
                         }
                     },
-                    //   for (;
-                    While(
-                        //     a__21 <= 5;
-                        condition = Ref {
-                            Call(BuiltinFuns.leIntFn) {
+                    body = {
+                        //     a__21 = a__21 + 1;
+                        Call(BuiltinFuns.setLocalFn) {
+                            Ln(a)
+                            Call(BuiltinFuns.plusIntIntFn) {
                                 Rn(a)
-                                V(value(5))
+                                V(value(1))
                             }
-                        },
-                        //     a__21 = a__21 + 1) {
-                        increment = Stmt {
-                            Call(BuiltinFuns.setLocalFn) {
-                                Ln(a)
-                                Call(BuiltinFuns.plusIntIntFn) {
-                                    Rn(a)
-                                    V(value(1))
-                                }
-                            }
-                        },
-                        body = StmtBlock(
-                            //     a__21 = a__21 + 1;
-                            Stmt {
-                                Call(BuiltinFuns.setLocalFn) {
-                                    Ln(a)
-                                    Call(BuiltinFuns.plusIntIntFn) {
-                                        Rn(a)
-                                        V(value(1))
-                                    }
-                                }
-                            },
-                            //     println("65")
-                            Stmt {
-                                Call(PrintLnFn) { V(value("65")) }
-                            },
-                        ),
-                        //   };
-                    ),
-                    //   println("66");
-                    Stmt {
-                        Call(PrintLnFn) { V(value("66")) }
+                        }
+                        //     println("65")
+                        Call(PrintLnFn) { V(value("65")) }
                     },
-                ),
-                // } while (a__21 <= 8);
-                condition = Ref {
-                    Call(BuiltinFuns.leIntFn) {
-                        Rn(a)
-                        V(value(8))
-                    }
-                },
-            ),
+                    //   };
+                )
+                //   println("66");
+                Call(PrintLnFn) { V(value("66")) }
+            },
+            // } while (a__21 <= 8);
+            cond = {
+                Call(BuiltinFuns.leIntFn) {
+                    Rn(a)
+                    V(value(8))
+                }
+            },
         )
     }
 
@@ -1591,18 +1541,21 @@ class ControlFlowTest {
 
     private fun assertSimplified(
         wantJson: String,
-        makeControlFlow: ControlFlowMaker.() -> ControlFlow,
+        plantBlockContents: BlockPlanting.() -> Unit,
     ) {
-        val controlFlowMaker = ControlFlowMaker()
-        val controlFlow = controlFlowMaker.makeControlFlow()
-        val block = controlFlowMaker.buildBlockTree(controlFlow)
+        val doc = Document(TestDocumentContext())
+        val block = doc.treeFarm.grow(Position(doc.nameMaker.namingContext.loc, 0, 0)) {
+            Block {
+                plantBlockContents()
+            }
+        }
         fun snapshotBlock(): String =
             block.toPseudoCode(singleLine = false).trimEnd()
 
         val simple = snapshotBlock()
         simplifyStructuredBlock(
             block,
-            block.flow as StructuredFlow,
+            structureBlock(block),
             assumeAllJumpsResolved = false,
             assumeResultsCaptured = true,
             logicalOperators = BuiltinLogicalOperators,
@@ -1611,7 +1564,7 @@ class ControlFlowTest {
 
         simplifyStructuredBlock(
             block,
-            block.flow as StructuredFlow,
+            structureBlock(block),
             assumeAllJumpsResolved = true,
             assumeResultsCaptured = true,
             logicalOperators = BuiltinLogicalOperators,
@@ -1633,22 +1586,25 @@ class ControlFlowTest {
     private fun assertResultsOfInterpretation(
         cases: List<Pair<Map<TemperName, Value<*>>, Expectation>>,
         beforeSimplest: (ControlFlow, BlockTree) -> Unit = { _, _ -> },
-        make: ControlFlowMaker.() -> ControlFlow,
+        plantBlockContents: BlockPlanting.() -> Unit,
     ) {
-        val maker = ControlFlowMaker()
-        val controlFlow = maker.make()
-        val block = maker.buildBlockTree(controlFlow)
+        val doc = Document(TestDocumentContext())
+        val block = doc.treeFarm.grow(Position(doc.nameMaker.namingContext.loc, 0, 0)) {
+            Block {
+                plantBlockContents()
+            }
+        }
         val variants = listOf("simple" to null, "simpler" to false, "simplest" to true)
         for ((variantDesc, assume) in variants) { // Test simplified versions to
             if (assume == true) {
-                beforeSimplest((block.flow as StructuredFlow).controlFlow, block)
+                beforeSimplest(structureBlock(block).controlFlow, block)
             }
             when (assume) {
                 null -> {}
                 else -> block.replaceFlow(
                     simplifyControlFlow(
                         block,
-                        (block.flow as StructuredFlow).controlFlow,
+                        structureBlock(block).controlFlow,
                         assumeAllJumpsResolved = assume,
                         assumeResultsCaptured = false,
                         logicalOperators = BuiltinLogicalOperators,

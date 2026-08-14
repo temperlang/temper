@@ -19,6 +19,7 @@ import lang.temper.type.WellKnownTypes
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
+import lang.temper.value.ConservativeFailure
 import lang.temper.value.DeclTree
 import lang.temper.value.FunTree
 import lang.temper.value.LeftNameLeaf
@@ -640,7 +641,7 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
                 if (tree is BlockTree) {
                     // The minimal set of maximal paths breaks the flow graph into sequences of
                     // subtrees that are executed in order.
-                    val paths = forwardMaximalPaths(tree, assumeFailureCanHappen = true)
+                    val paths = forwardMaximalPaths(tree, ConservativeFailure.AtEndOfOr)
 
                     // Walk the basic block graph again keeping track of which names have
                     // been assigned what possible values.
@@ -650,7 +651,7 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
                     for (pathIndex in pathIndices) {
                         val path = paths[pathIndex]
                         for (pathElement in path.elementsAndConditions) {
-                            if (pathElement.isCondition) {
+                            if (pathElement is MaximalPath.AstElement && pathElement.isCondition) {
                                 val ref = pathElement.ref
                                 tree.dereference(ref)?.let {
                                     usedAsCondition.add(it)

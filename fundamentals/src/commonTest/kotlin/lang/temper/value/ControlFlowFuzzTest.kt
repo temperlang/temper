@@ -3,12 +3,14 @@ package lang.temper.value
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.BuiltinLogicalOperators
 import lang.temper.common.LeftOrRight
+import lang.temper.common.TestDocumentContext
 import lang.temper.common.assertStringsEqual
 import lang.temper.common.compatRemoveLast
 import lang.temper.common.console
 import lang.temper.common.jsonEscaper
 import lang.temper.common.mutSubListToEnd
 import lang.temper.common.withRandomForTest
+import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedName
@@ -49,8 +51,12 @@ class ControlFlowFuzzTest {
 
     fun fuzzOne(rng: Random) {
         val randomizer = Randomizer(rng)
-        val controlFlow = randomizer.randomStmtBlock(0)
-        val block = randomizer.controlFlowMaker.buildBlockTree(controlFlow)
+        val document = Document(TestDocumentContext())
+        val block = document.treeFarm.grow(Position(document.context.namingContext.loc, 0, 0)) {
+            Block {
+                randomizer.randomStmtBlock(this)
+            }
+        }
         val originalBlock = block.copy() as BlockTree
 
         simplifyStructuredBlock(
@@ -137,8 +143,8 @@ class ControlFlowFuzzTest {
 }
 
 private class Randomizer(val rng: Random) {
-    val controlFlowMaker = ControlFlowMaker()
-    val nameMaker = controlFlowMaker.doc.nameMaker
+    val doc = Document(TestDocumentContext())
+    val nameMaker = doc.nameMaker
 
     val countersInScope = mutableListOf<ResolvedName>()
     val jumpTargetsInScope = mutableListOf<JumpTarget>()
@@ -146,7 +152,7 @@ private class Randomizer(val rng: Random) {
 
     var printCounter = 0
 
-    fun randomControlFlow(depth: Int): ControlFlow {
+    fun BlockPlanting.randomControlFlow(depth: Int) {
         // As the depth increases, the likelihood we choose a break/continue/bubble
         // increases and the chance we choose a nesting control flow structure decreases.
         val numNesting = (100 / ((depth + 1) * (depth + 1)))
@@ -163,7 +169,7 @@ private class Randomizer(val rng: Random) {
         val incrementRange = printRange.thenMore(countersInScope.size)
         val rangeMax = incrementRange.last
 
-        return when (rng.nextInt(until = rangeMax + 1)) {
+        when (rng.nextInt(until = rangeMax + 1)) {
             in nestingRange -> randomNesting(depth)
             in transferOutRange -> randomTransferOut()
             in incrementRange -> randomIncrement()
@@ -171,28 +177,24 @@ private class Randomizer(val rng: Random) {
         }
     }
 
-    fun withCounterInScope(action: (ResolvedName) -> ControlFlow): ControlFlow {
+    fun <T> BlockPlanting.withCounterInScope(action: (ResolvedName) -> T): T {
         val nameChar = ('a'.code + (countersInScope.size % 26)).toChar()
         val name = nameMaker.unusedSourceName(ParsedName("$nameChar"))
         countersInScope.add(name)
-        val controlFlow = action(name)
-        countersInScope.compatRemoveLast()
-        return controlFlowMaker.StmtBlock(
-            listOf(
-                controlFlowMaker.Stmt {
-                    Decl(name) {
-                        V(initSymbol)
-                        V(Value(0, TInt))
-                        V(varSymbol)
-                        V(void)
-                    }
-                },
-                controlFlow,
-            ),
-        )
+        Decl(name) {
+            V(initSymbol)
+            V(Value(0, TInt))
+            V(varSymbol)
+            V(void)
+        }
+        try {
+            return action(name)
+        } finally {
+            countersInScope.compatRemoveLast()
+        }
     }
 
-    fun randomNesting(depth: Int) = when (rng.nextInt(5)) {
+    fun BlockPlanting.randomNesting(depth: Int) = when (rng.nextInt(5)) {
         0 -> randomStmtBlock(depth)
         1 -> randomIf(depth)
         2 -> {
@@ -209,170 +211,159 @@ private class Randomizer(val rng: Random) {
         else -> error("unreachable")
     }
 
-    fun randomTransferOut(): ControlFlow {
+    fun BlockPlanting.randomTransferOut() {
         val nJumps = jumpTargetsInScope.size
         val nBubble = orClauseDepth
         val jumpRange = 0 until nJumps
         val bubbleRange = jumpRange.thenMore(nBubble)
         val rangeMax = bubbleRange.last
-        return when (val k = rng.nextInt(max(1, rangeMax))) {
+        when (val k = rng.nextInt(max(1, rangeMax))) {
             in jumpRange -> {
                 val target = jumpTargetsInScope[k - jumpRange.first]
                 val (kind, spec) = target
                 val label = (spec as? NamedJumpSpecifier)?.label
                 when (kind) {
-                    BreakOrContinue.Break -> controlFlowMaker.BreakTo(label)
-                    BreakOrContinue.Continue -> controlFlowMaker.ContinueTo(label)
+                    BreakOrContinue.Break -> Break(label)
+                    BreakOrContinue.Continue -> Continue(label)
                 }
             }
-            else -> controlFlowMaker.Stmt { Call(BubbleFn) {} }
+            else -> Call(BubbleFn) {}
         }
     }
 
-    fun randomIncrement(): ControlFlow.Stmt =
+    fun Planting.randomIncrement() =
         incrementOf(countersInScope[rng.nextInt(countersInScope.size)])
 
-    fun incrementOf(varName: ResolvedName): ControlFlow.Stmt =
-        controlFlowMaker.Stmt {
-            Call(BuiltinFuns.setLocalFn) {
-                Ln(varName)
-                Call(BuiltinFuns.plusIntIntFn) {
-                    Rn(varName)
-                    V(Value(1, TInt))
-                }
+    fun Planting.incrementOf(varName: ResolvedName): UnpositionedTreeTemplate<*> =
+        Call(BuiltinFuns.setLocalFn) {
+            Ln(varName)
+            Call(BuiltinFuns.plusIntIntFn) {
+                Rn(varName)
+                V(Value(1, TInt))
             }
         }
 
-    fun randomPrint(): ControlFlow.Stmt {
+    fun Planting.randomPrint(): UnpositionedTreeTemplate<CallTree> {
         val n = printCounter++
-        return controlFlowMaker.Stmt {
-            Call {
-                Rn(printLnFnName)
-                V(Value("$n", TString))
-            }
+        return Call {
+            Rn(printLnFnName)
+            V(Value("$n", TString))
         }
     }
 
-    fun randomStmtBlock(depth: Int): ControlFlow.StmtBlock {
-        val nStatements = max(1, 16 / ((depth + 1) * (depth + 1)))
-        return controlFlowMaker.StmtBlock(
-            buildList {
-                repeat(nStatements) {
-                    val stmt = randomControlFlow(depth + 1)
-                    if (stmt is ControlFlow.StmtBlock) {
-                        val stmts = stmt.stmts
-                        stmt.withMutableStmtList {
-                            it.clear()
-                        }
-                        addAll(stmts)
-                    } else {
-                        add(stmt)
-                    }
-                }
-            },
-        )
+    fun randomStmtBlock(p: BlockPlanting) {
+        p.run {
+            randomStmtBlock(0)
+        }
     }
 
-    fun randomCondition(): Pair<ResolvedName?, BlockChildReference> {
+    fun BlockPlanting.randomStmtBlock(depth: Int) {
+        val nStatements = max(1, 16 / ((depth + 1) * (depth + 1)))
+        repeat(nStatements) {
+            randomControlFlow(depth + 1)
+        }
+    }
+
+    fun Planting.randomCondition(withLoopVar: (ResolvedName) -> Unit): UnpositionedTreeTemplate<*> {
         // All counters are monotonic, so these kinds of conditions lead to termination
         // where each loop that samples a counter also increments that counter.
         return if (countersInScope.isEmpty()) {
-            null to controlFlowMaker.Ref { V(TBoolean.valueFalse) }
+            V(TBoolean.valueFalse)
         } else {
             val counter = countersInScope[rng.nextInt(countersInScope.size)]
+            withLoopVar(counter)
             val limit = rng.nextInt(0, 10)
-            counter to controlFlowMaker.Ref {
-                Call(BuiltinFuns.lessEqualsFn) {
-                    Rn(counter)
-                    V(Value(limit, TInt))
-                }
+            Call(BuiltinFuns.lessEqualsFn) {
+                Rn(counter)
+                V(Value(limit, TInt))
             }
         }
     }
 
-    fun randomIf(depth: Int): ControlFlow {
-        return controlFlowMaker.If(
-            randomCondition().second,
-            randomStmtBlock(depth),
-            if (rng.nextBoolean()) {
-                randomStmtBlock(depth)
-            } else {
-                controlFlowMaker.StmtBlock()
+    fun BlockPlanting.randomIf(depth: Int) {
+        If(
+            { randomCondition {} },
+            thn = { randomStmtBlock(depth) },
+            els = {
+                if (rng.nextBoolean()) {
+                    randomStmtBlock(depth)
+                }
             },
         )
     }
 
-    fun randomLoop(depth: Int): ControlFlow.Loop {
-        val (loopVar, condition) = randomCondition()
+    fun BlockPlanting.randomLoop(depth: Int) {
         val label = if (rng.nextBoolean()) {
             nameMaker.unusedSourceName(ParsedName("loop"))
         } else {
             null
         }
 
-        val possibleJumps = buildList {
-            val specs = listOfNotNull(
-                label?.let { NamedJumpSpecifier(it) },
-                DefaultJumpSpecifier,
-            )
-            for (kind in BreakOrContinue.entries) {
-                for (spec in specs) {
-                    add(JumpTarget(kind, spec))
-                }
-            }
-        }
-        val nJumpTargetsInScopeBefore = jumpTargetsInScope.size
-        jumpTargetsInScope.addAll(possibleJumps)
-        var body = randomStmtBlock(depth)
-        jumpTargetsInScope.mutSubListToEnd(nJumpTargetsInScopeBefore).clear()
-
-        if (loopVar != null) {
-            val adopted = body.stmts
-            body.withMutableStmtList {
-                it.clear() // release parent pointers
-            }
-            body = ControlFlow.StmtBlock(body.pos, emptyList())
-            body.withMutableStmtList {
-                it.add(incrementOf(loopVar))
-                it.addAll(adopted)
-            }
-        }
         val checkPosition = if (rng.nextBoolean()) {
             LeftOrRight.Left
         } else {
             LeftOrRight.Right
         }
-        val increment = if (
-            countersInScope.isNotEmpty() && checkPosition == LeftOrRight.Left && rng.nextBoolean()
-        ) {
-            randomIncrement()
-        } else {
-            null
-        }
 
-        return controlFlowMaker.Loop(
-            condition = condition,
-            body = body,
+        var loopVar: ResolvedName? = null
+        While(
             label = label,
-            checkPosition = checkPosition,
-            increment = increment,
+            testAt = checkPosition,
+            cond = {
+                randomCondition { loopVar = it }
+            },
+            body = {
+                val possibleJumps = buildList {
+                    val specs = listOfNotNull(
+                        label?.let { NamedJumpSpecifier(it) },
+                        DefaultJumpSpecifier,
+                    )
+                    for (kind in BreakOrContinue.entries) {
+                        for (spec in specs) {
+                            add(JumpTarget(kind, spec))
+                        }
+                    }
+                }
+                val nJumpTargetsInScopeBefore = jumpTargetsInScope.size
+                jumpTargetsInScope.addAll(possibleJumps)
+
+                if (loopVar != null) {
+                    incrementOf(loopVar)
+                }
+                randomStmtBlock(depth)
+                jumpTargetsInScope.mutSubListToEnd(nJumpTargetsInScopeBefore).clear()
+            },
+
+            increment = {
+                if (
+                    countersInScope.isNotEmpty() && checkPosition == LeftOrRight.Left && rng.nextBoolean()
+                ) {
+                    randomIncrement()
+                }
+            },
         )
     }
 
-    fun randomLabeled(depth: Int): ControlFlow {
+    fun BlockPlanting.randomLabeled(depth: Int) {
         val label = nameMaker.unusedSourceName(ParsedName("label"))
-        jumpTargetsInScope.add(JumpTarget(BreakOrContinue.Break, NamedJumpSpecifier(label)))
-        val body = randomStmtBlock(depth)
-        jumpTargetsInScope.compatRemoveLast()
-        return controlFlowMaker.Labeled(label, body)
+        Do(label = label) {
+            jumpTargetsInScope.add(JumpTarget(BreakOrContinue.Break, NamedJumpSpecifier(label)))
+            randomStmtBlock(depth)
+            jumpTargetsInScope.compatRemoveLast()
+        }
     }
 
-    fun randomOrElse(depth: Int): ControlFlow.OrElse {
-        orClauseDepth += 1
-        val orClause = randomStmtBlock(depth)
-        orClauseDepth -= 1
-        val elseClause = randomStmtBlock(depth)
-        return controlFlowMaker.OrElse(null, orClause, elseClause)
+    fun BlockPlanting.randomOrElse(depth: Int) {
+        OrElse(
+            or = {
+                orClauseDepth += 1
+                randomStmtBlock(depth)
+                orClauseDepth -= 1
+            },
+            els = {
+                randomStmtBlock(depth)
+            },
+        )
     }
 }
 

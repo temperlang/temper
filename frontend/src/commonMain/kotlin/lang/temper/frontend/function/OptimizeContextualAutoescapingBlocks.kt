@@ -53,6 +53,7 @@ import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.CallableValue
+import lang.temper.value.ConservativeFailure
 import lang.temper.value.DeclTree
 import lang.temper.value.Fail
 import lang.temper.value.InstancePropertyRecord
@@ -587,9 +588,9 @@ private fun optimizeAutoescaperUse(
 
     val paths = forwardMaximalPaths(
         block,
+        ConservativeFailure.CalleeTypeOnly,
         yieldingCallsEndPaths = false,
         ignoreConstantConditions = true,
-        assumeFailureCanHappen = true,
     )
 
     // Figure out where we need to start traversal.

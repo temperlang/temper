@@ -41,6 +41,7 @@ import lang.temper.value.BlockTree
 import lang.temper.value.BuiltinStatelessMacroValue
 import lang.temper.value.CallTree
 import lang.temper.value.CallTypeInferences
+import lang.temper.value.ConservativeFailure
 import lang.temper.value.ControlFlow
 import lang.temper.value.DeclTree
 import lang.temper.value.FunTree
@@ -129,7 +130,7 @@ internal fun convertCoroutineToControlFlow(
         )
     }
 
-    val maximalPaths = forwardMaximalPaths(tree, yieldingCallsEndPaths = true)
+    val maximalPaths = forwardMaximalPaths(tree, ConservativeFailure.CalleeTypeOnly, yieldingCallsEndPaths = true)
 
     // A. We need two variable declarations, one in the wrapper so that we know,
     //    after resuming, where we're resuming.  Since we're building a big

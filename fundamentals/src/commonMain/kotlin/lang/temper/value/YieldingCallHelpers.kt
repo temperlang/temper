@@ -1,5 +1,6 @@
 package lang.temper.value
 
+import lang.temper.cst.NameConstants
 import lang.temper.lexer.Operator
 import lang.temper.name.BuiltinName
 import lang.temper.name.TemperName
@@ -148,4 +149,12 @@ fun isAssignment(t: Tree): Boolean {
         returns(true) implies (t is CallTree)
     }
     return t.size == ASSIGN_ARITY && t.calleeBuiltinName() == "="
+}
+
+@OptIn(ExperimentalContracts::class)
+fun isTypeAngleCall(t: Tree): Boolean {
+    contract {
+        returns(true) implies (t is CallTree)
+    }
+    return t.size >= 2 && t.calleeBuiltinName() == NameConstants.Angle
 }

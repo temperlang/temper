@@ -1,10 +1,10 @@
 package lang.temper.frontend
 
 import lang.temper.value.BlockTree
+import lang.temper.value.ControlFlow
 import lang.temper.value.LinearFlow
 import lang.temper.value.StructuredFlow
 import lang.temper.value.TEdge
-import lang.temper.value.forwardMaximalPaths
 
 /**
  * The children, in evaluation order, of [block] if execution is simply linear.
@@ -12,15 +12,23 @@ import lang.temper.value.forwardMaximalPaths
  * This is like getting the maximal paths and seeing if there is one basic block that
  * starts at the entry and ends at the exit.
  */
-fun getBlockChildrenInOrderIfLinear(block: BlockTree): List<TEdge>? = when (block.flow) {
+fun getBlockChildrenInOrderIfLinear(block: BlockTree): List<TEdge>? = when (val flow = block.flow) {
     is StructuredFlow -> {
-        val paths = forwardMaximalPaths(block)
-        if (paths.pathIndices.start == paths.pathIndices.endInclusive) {
-            buildList {
-                for (el in paths[paths.entryPathIndex].elementsAndConditions) {
-                    block.dereference(el.ref)?.let { add(it) }
+        val edges = mutableListOf<TEdge>()
+        fun walk(cf: ControlFlow): Boolean {
+            when (cf) {
+                is ControlFlow.StmtBlock -> for (s in cf.stmts) {
+                    if (!walk(s)) { return false }
                 }
+                is ControlFlow.Labeled -> return walk(cf.stmts)
+                is ControlFlow.Stmt ->
+                    edges.add(block.dereference(cf.ref) ?: return false)
+                else -> return false
             }
+            return true
+        }
+        if (walk(flow.controlFlow)) {
+            edges.toList()
         } else {
             null
         }
