@@ -245,10 +245,10 @@ fun simplifyControlFlow(
             } else {
                 Freq3.Always
             }
-            val bubbles = if (canBubble) {
-                Freq3.Always
-            } else {
-                Freq3.Never
+            val bubbles = when {
+                isBubble -> Freq3.Always
+                canBubble -> Freq3.Sometimes
+                else -> Freq3.Never
             }
             SimplifyResult(
                 simpler = cf.deepCopy(), // Will probably have a different parent
