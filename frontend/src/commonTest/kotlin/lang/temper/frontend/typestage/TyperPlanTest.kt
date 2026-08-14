@@ -165,6 +165,7 @@ class TyperPlanTest {
         assertStructure(
             """
             |{
+            |  return__0: ["void"], // Implied
             |  a__0:      ["0"],
             |  b__0:      ["1"],
             |  c__0:      ["c__0"],
@@ -172,11 +173,8 @@ class TyperPlanTest {
             |  e__0:      ["null", "\"foo()\""],
             |  g__0:      ["\"whatever\""],
             |  h__0:      ["\"[]\"", "\"[foo]\""],
-            |  "t#0":     ["2"],
-            |  j__0:      ["t#0"],
-            |  "t#1":     ["t#0"],
-            |  i__0:      ["t#1"],
-            |  return__0: ["void"], // Implied
+            |  j__0:      ["2"],
+            |  i__0:      ["j__0"],
             |}
             """.trimMargin(),
             plan.initializersAsJson(),
@@ -312,8 +310,8 @@ class TyperPlanTest {
         assertStructure(
             """
             |{
-            |  x__0: ["0"],
             |  return__0: ["void"],
+            |  x__0: ["0"],
             |}
             """.trimMargin(),
             plan.initializersAsJson(),
@@ -342,9 +340,9 @@ class TyperPlanTest {
         assertStructure(
             """
             |{
-            |  x__0: ["0", "1"], // TODO Shouldn't have "1" in it!!!
             |  return__0: ["void"],
             |  return__1: ["void"],
+            |  x__0: ["0", "1"], // TODO Shouldn't have "1" in it!!!
             |}
             """.trimMargin(),
             plan.initializersAsJson(),
@@ -365,8 +363,8 @@ class TyperPlanTest {
         assertStructure(
             """
             |{
+            |    "return__0": ["void"],
             |    "i__0": ["0"],
-            |    "return__0": ["void"]
             |}
             """.trimMargin(),
             plan.initializersAsJson(),
@@ -391,10 +389,10 @@ class TyperPlanTest {
         assertStructure(
             """
             |{
-            |  x__0: ["0"],
             |  return__0: ["void"],
-            |  x__1: ["1"],
             |  return__1: ["void"],
+            |  x__0: ["0"],
+            |  x__1: ["1"],
             |}
             """.trimMargin(),
             plan.initializersAsJson(),
@@ -551,18 +549,18 @@ class TyperPlanTest {
             |f__1 = (@stay fn f /* return__0 */: String {
             |    fn__3: do {
             |      return__0 = "from f"
-            |    }
+            |    };
             |});
             |let return__2;
             |return__2 = "lies";
-            |return__4 = "from f"
+            |return__4 = "from f";
             |
             """.trimMargin(),
             plan.root.toPseudoCode(singleLine = false),
         )
         assertEquals(
             listOf(
-                // return__3 is from user code, but is not a return name
+                // return__3 is from user code but is not a return name
                 "return__4",
                 "return__0",
             ),
@@ -585,14 +583,10 @@ class TyperPlanTest {
             """
             |[
             |  "g(i)",
-            |  "t + 1",
+            |  "g(i) + 1",
             |  "fn ...",
             |  "f(1, fn ...)",
             |  "2 * k",
-            |  "bubble()",
-            |  "bubble()",
-            |  "bubble()",
-            |  "bubble()",
             |]
             """.trimMargin(),
             JsonValueBuilder.build(emptyMap()) {
@@ -648,25 +642,29 @@ class TyperPlanTest {
         )
         assertStringsEqual(
             """
-                |let return__9, @fn f__1;
+                |let return__6;
+                |return__6 = void;
+                |@fn let f__1;
                 |f__1 = (@stay fn f(s__2 /* aka s */: String) /* return__0 */: Boolean {
-                |    var t#7, t#8;
                 |    fn__3: do {
-                |      var fail#6;
+                |      var t#7;
                 |      let x__4;
-                |      orelse#5: {
-                |        t#8 = do_call_toFloat64(s__2);
-                |      } orelse {
+                |      {
+                |        let t#8;
+                |        orelse#5: {
+                |          t#7 = do_call_toFloat64(s__2)
+                |        } orelse {
                 |## This is not an initializer for t#8
                 |## And this assignment needs to be typed after t#8's initializer
                 |## so that its context can be used to compute Never<Float64> as a type.
-                |        t#8 = panic()
+                |          t#8 = panic();
+                |          t#7 = t#8
+                |        }
                 |      };
-                |      x__4 = t#8;
+                |      x__4 = t#7;
                 |      return__0 = x__4 > 0.0
-                |    }
+                |    };
                 |});
-                |return__9 = void
                 |
             """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
             plan.root.toPseudoCode(singleLine = false),
@@ -674,25 +672,25 @@ class TyperPlanTest {
         assertStructure(
             """
                 |{
-                |    "f__1": [
-                |        "@stay fn f(s__2 /* aka s */: String) /* return__0 */: Boolean {var t#7, t#8; fn__3: do {var fail#6; let x__4; orelse#5: {t#7 = do_call_toFloat64(s__2); if (fail#6) {break orelse#5;}; t#8 = t#7} orelse {t#8 = panic()}; x__4 = t#8; return__0 = x__4 \u003e 0.0}}"
+                |    "return__6": [
+                |        "void"
                 |    ],
-                |    "t#8": [
+                |    "f__1": [
+                |        "@stay fn f(s__2 /* aka s */: String) /* return__0 */: Boolean {...}"
+                |    ],
+                |    "t#7": [
                 |## No panic()
                 |        "do_call_toFloat64(s__2)"
                 |    ],
                 |    "x__4": [
-                |        "t#8"
+                |        "t#7"
                 |    ],
                 |    "return__0": [
                 |        "x__4 > 0.0"
                 |    ],
-                |    "return__9": [
-                |        "void"
-                |    ]
                 |}
             """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
-            plan.initializersAsJson(),
+            plan.initializersAsJson(expressionDetail = PseudoCodeDetail(elideFunctionBodies = true)),
         )
         assertStructure(
             """
@@ -729,7 +727,7 @@ class TyperPlanTest {
                     stepId: String,
                     state: IR,
                 ) {
-                    if (stepId == Debug.Frontend.TypeStage.AfterExplicitResults.loggerName) {
+                    if (stepId == Debug.Frontend.TypeStage.AfterWeave.loggerName) {
                         AstSnapshotKey.useIfSame(key, state) {
                             typerPlanRoot = it.copy() as BlockTree
                         }
