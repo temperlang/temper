@@ -17,6 +17,7 @@ import lang.temper.type2.Signature2
 object NotFn : NamedBuiltinFun, CallableValue {
     override val name: String = "!"
     override val callMayFailPerSe: Boolean get() = false
+    override val builtinOperatorId = BuiltinOperatorId.BooleanNegation
     override val sigs: List<Signature2> = listOf(
         Signature2(
             returnType2 = WellKnownTypes.booleanType2,

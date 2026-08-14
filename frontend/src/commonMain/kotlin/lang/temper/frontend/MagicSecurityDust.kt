@@ -1,13 +1,10 @@
 package lang.temper.frontend
 
 import lang.temper.builtin.BuiltinFuns
-import lang.temper.builtin.isRttiCall
 import lang.temper.frontend.syntax.isAssignment
 import lang.temper.frontend.syntax.isCommaCall
-import lang.temper.frontend.typestage.simplifyRttiCall
 import lang.temper.type.StaticType
 import lang.temper.type.WellKnownTypes
-import lang.temper.type2.TypeContext2
 import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.mapType
@@ -57,8 +54,6 @@ import kotlin.collections.listOf
  * failure branches explicit for later passes.
  */
 internal class MagicSecurityDust {
-    private val typeContext = TypeContext2()
-
     fun sprinkle(root: BlockTree) {
         // Goal:
         // For each function root,
@@ -77,7 +72,7 @@ internal class MagicSecurityDust {
         }
 
         private fun sprinkleOn(edge: TEdge) {
-            var tree = edge.target
+            val tree = edge.target
             // `x = bubble()` -> `bubble()`.
             if (isAssignment(tree)) {
                 val (_, lhs, rhs) = tree.children
@@ -161,12 +156,6 @@ internal class MagicSecurityDust {
                 }
             }
 
-            if (tree is CallTree && isRttiCall(tree)) {
-                // Expand runtime type checks so that they're properly woven
-                simplifyRttiCall(tree, typeContext)
-                tree = edge.target
-            }
-
             if (
                 tree is CallTree &&
                 calleeReturnsResult(tree) &&
@@ -178,8 +167,6 @@ internal class MagicSecurityDust {
             }
 
             if (tree is FunTree) {
-                // Sprinkle the body separately so that failure
-                // variables are scoped to the function.
                 val bodyIndex = tree.size - 1
                 if (bodyIndex >= 0) {
                     sprinkleOn(tree, 0 until bodyIndex)

@@ -110,6 +110,37 @@ class ControlFlowTest {
     }
 
     @Test
+    fun unreachableIfClauseWithNot() = assertSimplified(
+        wantJson = """
+            |{
+            |  simple: ```
+            |    before();
+            |    if (!true) {
+            |      notReached()
+            |    } else {
+            |      reached()
+            |    };
+            |    after()
+            |    ```,
+            |
+            |  simpler: ```
+            |    before();
+            |    reached();
+            |    after()
+            |    ```
+            |}
+        """.trimMargin(),
+    ) {
+        Stmt("before")
+        If(
+            cond = { Call(NotFn) { V(TBoolean.valueTrue) } },
+            thn = { Stmt("notReached") },
+            els = { Stmt("reached") },
+        )
+        Stmt("after")
+    }
+
+    @Test
     fun eraseDoLoopAndRewriteContinues() = assertSimplified(
         wantJson = """
             |{

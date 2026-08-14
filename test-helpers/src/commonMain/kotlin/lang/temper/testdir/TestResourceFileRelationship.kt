@@ -115,7 +115,9 @@ object FileContentStringConverter : DataFileConverter {
 
                 val newLines = newContent.splitLinesPreservingTerminators().ensureTerminated()
 
-                val patch = Diff.differencesBetween(oldLinesStripped, newLines) { a, b -> a == b }
+                val patch = Diff.differencesBetween(oldLinesStripped, newLines) { a, b ->
+                    linesEqualIgnoringNumericSuffixes(a, b)
+                }
                 val reconstructedLines = mutableListOf<String>()
                 var oldCursor = 0 // indexes into oldLines
                 var newCursor = 0 // indexes into newLines
@@ -215,3 +217,13 @@ private fun List<String>.ensureTerminated(): List<String> = mapIndexedNotNull { 
         else -> "$line\n"
     }
 }
+
+private fun linesEqualIgnoringNumericSuffixes(a: String, b: String): Boolean =
+    normalizeNumericSuffixes(a) == normalizeNumericSuffixes(b)
+
+private val numericSuffixRegex = Regex("""(#|__)\d+\b""")
+
+private fun normalizeNumericSuffixes(s: String): String =
+    s.replace(numericSuffixRegex) {
+        "${it.groupValues[1]}0"
+    }

@@ -49,6 +49,7 @@ import lang.temper.value.TFunction
 import lang.temper.value.TList
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
+import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.ampBuiltinName
 import lang.temper.value.asBuiltinName
@@ -64,6 +65,8 @@ import lang.temper.value.throwsBuiltinName
 import lang.temper.value.typeFormalSymbol
 import lang.temper.value.unpackPositionedOr
 import lang.temper.value.wordSymbol
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 private val oneTypeToType = Signature2(
     returnType2 = WellKnownTypes.typeType2,
@@ -606,7 +609,7 @@ internal object IsFunction : RttiCheckFunction(
     override val callMayFailPerSe get() = false
     override val runtimeTypeOperation = RuntimeTypeOperation.Is
 
-    /** No need to check if something is known subtype. */
+    /** No need to check if something is a known subtype. */
     override val allowUpChecks get() = false
 
     override fun doCheck(x: Value<*>, reifiedType: ReifiedType): PartialResult =
@@ -719,7 +722,7 @@ fun RttiCheckFunction.problems(
         // Disallow introducing new type arguments.
         val introducedActualsTypes = mutableListOf<NominalType>()
 
-        val sealedExprTypeNominals = lazy {
+        val sealedExprTypeNominals by lazy {
             requiredDefinitions(exprTypeNotNull ?: InvalidType)
                 .filter { it.isSealed }.toSet()
         }
@@ -746,7 +749,7 @@ fun RttiCheckFunction.problems(
                         // It's still ok to cast from the static type to the target type if there
                         // exists a path from the static type to the target type via a chain
                         // of sealed interfaces since each sealed interface knows how to
-                        // differentiate their sub-types.
+                        // differentiate their subtypes.
                         //
                         //     @connected sealed interface I {}
                         //     @connected sealed interface J {}
@@ -767,14 +770,14 @@ fun RttiCheckFunction.problems(
                         //     I to E
                         //     J to E
                         if (exprType == null) {
-                            // If we do not know the expression's static type, for example
+                            // If we do not know the expression's static type, for example,
                             // because we're interpreting pre-typed code, then assume this
                             // passes if the target type is a sealed type.
                             distinguishableBySealed = true
                         } else {
-                            // If walking from the sub-type to the super following only sealed
+                            // If walking from the subtype to the supertype following only sealed
                             // super-type edges leads to one of the sealed expr nominals, then we're ok.
-                            val sealedSupers = sealedExprTypeNominals.value
+                            val sealedSupers = sealedExprTypeNominals
                             if (sealedSupers.isNotEmpty()) {
                                 fun connectedBySealedChain(ts: TypeShape): Boolean =
                                     ts in sealedSupers ||
@@ -792,7 +795,7 @@ fun RttiCheckFunction.problems(
                         }
                     }
 
-                    // If it's a known subtype then all matching type args are actually woven through.
+                    // If it's a known subtype, then all matching type args are actually woven through.
                     if (exprTypeNominal != null) {
                         val exprActuals = exprTypeNominal.bindings.toSet()
                         // We expect only invariants in the future, so for easier transition, check only invariants.
@@ -859,6 +862,12 @@ private fun requiredDefinitions(t: StaticType): List<TypeDefinition> = buildList
 }
 
 private const val RTTI_CALL_TREE_SIZE = 3
-fun isRttiCall(t: CallTree) =
-    t.size == RTTI_CALL_TREE_SIZE &&
-        t.childOrNull(0)?.functionContained is RttiCheckFunction
+
+@OptIn(ExperimentalContracts::class)
+fun isRttiCall(t: Tree): Boolean {
+    contract {
+        returns(true) implies (t is CallTree)
+    }
+    return t is CallTree && t.size == RTTI_CALL_TREE_SIZE &&
+        t.child(0).functionContained is RttiCheckFunction
+}

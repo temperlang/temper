@@ -9,8 +9,8 @@ let a__4;
 b__2();
 a__4 = list(void);
 c__3 = (@stay fn c(d__7 /* aka d */: Void) /* return__1 */: Void {
-    return__1 = void;
-    b__2()
+    b__2();
+    return__1 = void
 });
 @reach(\none) let e__5;
 c__3(do_call_get(a__4, 0));

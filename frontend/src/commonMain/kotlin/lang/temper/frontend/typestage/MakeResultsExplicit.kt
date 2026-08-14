@@ -135,7 +135,7 @@ internal class MakeResultsExplicit private constructor(
         val endWithDoneResult = isGeneratorFn && !doc.isCore
         val returnType = returnTypeTree?.reifiedTypeContained?.type2
         // In some cases, we know exactly what the result is; there can be only one.
-        val knownResultBasedOnType = when {
+        var knownResultBasedOnType = when {
             endWithDoneResult -> KnownResult.Done
             returnType?.isVoidLike == true -> KnownResult.Void
             else -> null
@@ -154,13 +154,11 @@ internal class MakeResultsExplicit private constructor(
         val needToInitializeOutputNameToSingleton = when {
             // Just assign the return value at the front of the function's body
             // and simplify any assignments found.
-            knownResultBasedOnType?.isSingleton == true -> {
-                terminalExpressions.existingAssignments.forEach { assignment ->
-                    val edge = assignment.incoming!!
-                    edge.replace {
-                        Replant(freeTree(assignment.child(2)))
-                    }
-                }
+            // We have to check that the assigned values are
+            knownResultBasedOnType == KnownResult.Void &&
+                terminalExpressions.existingAssignments.all { it.child(2).valueContained == void } &&
+                terminalExpressions.unsetTerminalExpressionEdges.all { it.target.valueContained == void } -> {
+                eliminateExistingAssignments(terminalExpressions)
                 true
             }
             // Otherwise, if we don't have terminal expressions, and we don't have assignments,
@@ -176,7 +174,11 @@ internal class MakeResultsExplicit private constructor(
                 knownResultBasedOnType == null &&
                 terminalExpressions.unsetTerminalExpressionEdges.all { it.target.valueContained == void } &&
                 terminalExpressions.existingAssignments.all { it.child(2).valueContained == void }
-            -> true
+            -> {
+                knownResultBasedOnType = KnownResult.Void
+                eliminateExistingAssignments(terminalExpressions)
+                true
+            }
             // In the REPL, it can be the case that we want a result, don't know the desired type, and have
             // a loop at the end.  In that case, just assume that void is the result.
             knownResultBasedOnType == null &&
@@ -362,10 +364,20 @@ private fun Planting.makeDoneResult(generatorFnParts: FnParts): UnpositionedTree
     }
 }
 
-private enum class KnownResult(val isSingleton: Boolean) {
-    Void(true),
-    Done(false), // A yielded result is also valid
+private enum class KnownResult {
+    Void,
+    Done, // A yielded result is also valid
 }
 
 private fun endsWithLoop(cf: ControlFlow.StmtBlock?): Boolean =
     cf?.stmts?.lastOrNull() is ControlFlow.Loop
+
+private fun eliminateExistingAssignments(terminalExpressions: UnsetTerminalExpressions) {
+    terminalExpressions.existingAssignments.forEach { assignment ->
+        val edge = assignment.incoming!!
+        edge.replace {
+            // Just replace it with the right-hand side.
+            Replant(freeTree(assignment.child(2)))
+        }
+    }
+}

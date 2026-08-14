@@ -89,6 +89,7 @@ class GenerateCodeStage(
                 Weaver.weave(
                     root,
                     sprinkleSecurityDust = true,
+                    simplifyRttiCalls = false,
                     pullSpecialsRootward = true,
                     nameAllFunctions = true,
                     resultsAlreadyCaptured = true,

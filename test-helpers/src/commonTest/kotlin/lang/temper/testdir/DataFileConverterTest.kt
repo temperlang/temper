@@ -6,7 +6,7 @@ import kotlin.test.assertEquals
 
 class DataFileConverterTest {
     @Test
-    fun stringContentConverterNoComments() {
+    fun stringContentConverterPreservesComments() {
         val oldFile = """
             |  foo
             |
@@ -69,6 +69,41 @@ class DataFileConverterTest {
                 |## Comment about boo
                 |  baz3
                 |## Comment at end
+                |
+            """.trimMargin(),
+            regenerated,
+        )
+    }
+
+    @Test
+    fun commentsPreservedEvenWhenNumericSuffixesInEveryLineChange() {
+        val oldFile = """
+            |  let x__123 = t#234;
+            |  t#234 += 1;
+            |## Here's a comment
+            |  console.log(x__123);
+            |  console.log(t#234);
+        """.trimMargin()
+
+        val newFile = """
+            |let x__0 = t#1;
+            |t#1 += 1;
+            |console.log(x__0);
+            |console.log(t#1);
+        """.trimMargin()
+
+        val regenerated = FileContentStringConverter.toFileContent(
+            value = JsonString(newFile),
+            oldValue = JsonString(oldFile),
+        ).result
+
+        assertEquals(
+            """
+                |  let x__0 = t#1;
+                |  t#1 += 1;
+                |## Here's a comment
+                |  console.log(x__0);
+                |  console.log(t#1);
                 |
             """.trimMargin(),
             regenerated,

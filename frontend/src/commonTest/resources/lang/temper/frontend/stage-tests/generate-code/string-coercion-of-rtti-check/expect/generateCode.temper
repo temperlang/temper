@@ -1,12 +1,12 @@
-  let console#0;
-  console#0 = getConsole();
-  @fn let f__0;
-  f__0 = (@stay fn f(i__0 /* aka i */: StringIndexOption) /* return__0 */: Void {
-      var t#0, t#1;
+  let console#4;
+  console#4 = getConsole();
+  @fn let f__1;
+  f__1 = (@stay fn f(i__2 /* aka i */: StringIndexOption) /* return__0 */: Void {
 ## str has erased to a .toString() call here
-      t#0 = do_call_toString(i__0 is StringIndex);
-      t#1 = do_call_toString(i__0 is NoStringIndex);
-      do_call_log(console#0, cat("Yes ", t#0, ", no ", t#1));
-      return__0 = void
+      let t#6, t#8;
+      return__0 = void;
+      t#6 = i__2 is StringIndex;
+      t#8 = i__2 is NoStringIndex;
+      do_call_log(console#4, cat("Yes ", do_call_toString(t#6), ", no ", do_call_toString(t#8)))
   });
-  f__0(getStatic(String, \begin))
+  f__1(getStatic(String, \begin))

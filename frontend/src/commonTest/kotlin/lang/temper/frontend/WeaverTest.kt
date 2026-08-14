@@ -1063,6 +1063,7 @@ class WeaverTest {
         Weaver.weave(
             block,
             sprinkleSecurityDust = true,
+            simplifyRttiCalls = true,
             pullSpecialsRootward = true,
             nameAllFunctions = false,
             resultsAlreadyCaptured = runMakeResultsExplicit,

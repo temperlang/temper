@@ -144,7 +144,6 @@ class ControlFlowFuzzTest {
 
 private class Randomizer(val rng: Random) {
     val doc = Document(TestDocumentContext())
-    val nameMaker = doc.nameMaker
 
     val countersInScope = mutableListOf<ResolvedName>()
     val jumpTargetsInScope = mutableListOf<JumpTarget>()
@@ -154,7 +153,7 @@ private class Randomizer(val rng: Random) {
 
     fun BlockPlanting.randomControlFlow(depth: Int) {
         // As the depth increases, the likelihood we choose a break/continue/bubble
-        // increases and the chance we choose a nesting control flow structure decreases.
+        // increases, and the chance we choose a nesting control flow structure decreases.
         val numNesting = (100 / ((depth + 1) * (depth + 1)))
         val numTransferOut = if (jumpTargetsInScope.isEmpty() && orClauseDepth == 0) {
             0
@@ -612,7 +611,7 @@ private class JavaControlFlowConverter(
 }
 
 /**
- * Takes the content of a Java main method, compiles and runs it returning the
+ * Takes the content of a Java main method, compiles, and runs it returning the
  * standard out, and a function that can be called to delete any temp files created.
  */
 expect fun compileAndRunJavaAndGetStdout(javaSourceText: String): Pair<String, () -> Unit>

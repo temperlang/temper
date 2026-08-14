@@ -5,10 +5,12 @@ import lang.temper.ast.VisitCue
 import lang.temper.builtin.AwaitFn
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.YieldFn
+import lang.temper.builtin.isRttiCall
 import lang.temper.common.compatReversed
 import lang.temper.common.console
 import lang.temper.frontend.syntax.isAssignment
 import lang.temper.frontend.syntax.isLeftHandSide
+import lang.temper.frontend.typestage.simplifyRttiCall
 import lang.temper.log.Position
 import lang.temper.log.Positioned
 import lang.temper.name.CoreCodeLocation
@@ -21,6 +23,7 @@ import lang.temper.type.ExternalSet
 import lang.temper.type.InternalSet
 import lang.temper.type.TypeContext
 import lang.temper.type.WellKnownTypes
+import lang.temper.type2.TypeContext2
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockTree
@@ -103,6 +106,11 @@ class Weaver private constructor(
     /** Whether to run [MagicSecurityDust] */
     private val sprinkleSecurityDust: Boolean,
     /**
+     * Whether to split RTTI calls like `as` and `is` into separate `null`
+     * checks and type checks against non-null values.
+     */
+    private val simplifyRttiCalls: Boolean,
+    /**
      * Whether to pull special functions like assignments towards the root.
      */
     private val pullSpecialsRootward: Boolean,
@@ -120,6 +128,7 @@ class Weaver private constructor(
     private val varNames: Set<ResolvedName>,
 ) {
     private val typeContext = TypeContext()
+    private val typeContext2 = TypeContext2()
     private var blockResultCaptures: Map<BlockTree, CaptureResult> = mapOf()
 
     private inline fun debug(f: () -> Any) = debug(root, f)
@@ -139,6 +148,12 @@ class Weaver private constructor(
         sprinkleSecurityDust(root)
         debug {
             console.group("Security sprinkled") {
+                console.log(root.toLispy(multiline = true))
+            }
+        }
+        simplifyRttiCalls(root)
+        debug {
+            console.group("RTTI simplified") {
                 console.log(root.toLispy(multiline = true))
             }
         }
@@ -385,6 +400,27 @@ class Weaver private constructor(
         duster.sprinkle(root)
     }
 
+    private fun simplifyRttiCalls(root: BlockTree) {
+        if (simplifyRttiCalls) {
+            val rttiCalls = mutableListOf<CallTree>()
+            TreeVisit.startingAt(root)
+                .forEach {
+                    if (it is FunTree) {
+                        VisitCue.SkipOne
+                    } else {
+                        if (isRttiCall(it)) {
+                            rttiCalls.add(it)
+                        }
+                        VisitCue.Continue
+                    }
+                }
+                .visitPreOrder()
+            for (rttiCall in rttiCalls) {
+                simplifyRttiCall(rttiCall, typeContext2)
+            }
+        }
+    }
+
     /**
      * Some expressions need to be children of the root or close to.
      *
@@ -591,6 +627,7 @@ class Weaver private constructor(
             sprinkleSecurityDust: Boolean,
             pullSpecialsRootward: Boolean,
             nameAllFunctions: Boolean,
+            simplifyRttiCalls: Boolean,
             resultsAlreadyCaptured: Boolean = true,
         ) {
             val varNames = varNamesOf(root)
@@ -608,6 +645,7 @@ class Weaver private constructor(
                 Weaver(
                     root = rootBlock,
                     sprinkleSecurityDust = sprinkleSecurityDust,
+                    simplifyRttiCalls = simplifyRttiCalls,
                     pullSpecialsRootward = pullSpecialsRootward,
                     nameAllFunctions = nameAllFunctions,
                     resultsAlreadyCaptured = resultsAlreadyCaptured,

@@ -78,6 +78,7 @@ import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.staticTypeContained
 import lang.temper.value.staySymbol
+import lang.temper.value.toPseudoCode
 import kotlin.test.fail
 
 /**
@@ -128,6 +129,8 @@ internal fun assertModuleAtStage(
     loc: ModuleName? = null,
     stagingFlags: Set<BuiltinName> = emptySet(),
     stackTracesForErrors: Boolean = false,
+    /** Set to true to get console spam. */
+    verboseDebug: Boolean = false,
     logEntryWanted: (LogEntry) -> Boolean = { it.level >= Log.Warn },
 ) {
     assertModuleAtStage(
@@ -141,6 +144,7 @@ internal fun assertModuleAtStage(
         loc = loc,
         stagingFlags = stagingFlags,
         stackTracesForErrors = stackTracesForErrors,
+        verboseDebug = verboseDebug,
         logEntryWanted = logEntryWanted,
     ) { module, moduleAdvancer, testDir ->
         provisionModuleForStageTest(testDir, module, moduleAdvancer)
@@ -162,6 +166,7 @@ internal fun assertModuleAtStage(
     moduleResultNeeded: Boolean = false,
     stagingFlags: Set<BuiltinName> = emptySet(),
     stackTracesForErrors: Boolean = false,
+    verboseDebug: Boolean = false,
     logEntryWanted: (LogEntry) -> Boolean = { it.level >= Log.Warn },
     provisionModule: (Module, ModuleAdvancer, TestFileBundle) -> Unit,
 ) {
@@ -213,6 +218,13 @@ internal fun assertModuleAtStage(
     var exitKind: ExitKind = ExitKind.Normal
     var isTestModule: (Module) -> Boolean = { _ -> false } // reassigned
     val moduleHook = ModuleCustomizeHook { module, _ ->
+        if (verboseDebug) {
+            module.treeForDebug?.let { ast ->
+                console.group("${module.loc} ${module.stageCompleted?.toString() ?: "start"}") {
+                    ast.toPseudoCode(console.textOutput)
+                }
+            }
+        }
         if (isTestModule(module)) {
             val outputTree = module.treeForDebug?.copy(copyInferences = true)
             val stageDone = module.stageCompleted
