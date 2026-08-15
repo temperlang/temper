@@ -141,7 +141,7 @@ class CppBuilder(
     ): Cpp.FuncDef =
         Cpp.FuncDef(
             pos,
-            attr = attr,
+            attr = attr?.deepCopy(),
             mod = mod,
             ret = ret?.deepCopy(),
             convention = convention?.deepCopy(),
@@ -178,7 +178,7 @@ class CppBuilder(
     fun varDef(type: Cpp.Type, name: Cpp.VarDefNamePart, init: Cpp.Expr? = null): Cpp.VarDef =
         varDef(mod = null, type, name, init = init)
     fun varDefArray(name: Cpp.VarDefNamePart, dim: Int): Cpp.ArrayVarDefDim =
-        Cpp.ArrayVarDefDim(pos, name, literal(dim))
+        Cpp.ArrayVarDefDim(pos, name.deepCopy(), literal(dim))
 
     fun const(type: Cpp.Type): Cpp.ConstType =
         Cpp.ConstType(pos, type.deepCopy())
