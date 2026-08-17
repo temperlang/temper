@@ -625,6 +625,12 @@ class GenerateCodeStageTest {
     fun missingFunctionBody() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/missing-function-body"),
     )
+
+    @Test
+    fun varGetP() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/var-get-p"),
+        stagingFlags = setOf(StagingFlags.skipImportCore, StagingFlags.moduleResultNeeded),
+    )
 }
 
 // Provide an extra binding to a function whose call does not inline so does not trigger any

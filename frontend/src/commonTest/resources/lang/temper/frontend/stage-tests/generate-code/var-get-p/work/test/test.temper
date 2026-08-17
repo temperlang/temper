@@ -1,0 +1,23 @@
+class C {
+  private var _done: Boolean = false;
+
+  public f(i: Int32): Int32 {
+    if (this._done) { return -1 }
+    this._done = true;
+    if (i == 0) {
+      do {
+        this._done = false
+      }
+    } else {
+      void
+    }
+    return i;
+  }
+
+  public get done(): Boolean { _done }
+}
+
+let c = new C();
+c.f(0);
+c.f(1);
+c.done

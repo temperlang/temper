@@ -171,6 +171,14 @@ enum class MessageTemplate(
     MissingDeclaration("No declaration for %s", CompilationPhase.Interpreter),
     MissingProperty("No property %s declared in type %s", CompilationPhase.Interpreter),
     PropertyNotInitializedInConstructor("Property %s not initialized in constructor", CompilationPhase.Interpreter),
+    ExplicitConstructorIncompatibleWithInput(
+        "Constructor input %s specified but there is already a constructor at %s",
+        CompilationPhase.Interpreter,
+    ),
+    MultipleConstructorsIncompatibleWIthInitializer(
+        "More than one constructor needs to adopt initializer for property %s at %s",
+        CompilationPhase.Interpreter,
+    ),
     CannotSetAbstractProperty("Cannot assign abstract property %s", CompilationPhase.Interpreter),
     CannotInstantiateAbstractType("Cannot instantiate abstract type %s", CompilationPhase.Interpreter),
     MissingType("No type for %s", CompilationPhase.Interpreter),

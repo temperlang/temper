@@ -13,35 +13,37 @@ let `test//`.exportedInt;
 @reach(\none) let unreachableInt__27;
 unreachableInt__27 = 2;
 conditionallyExportReachable__20 = (@stay fn conditionallyExportReachable /* return__5 */: Void {
-    return__5 = void;
-    do_call_log(console#47, "")
+    do_call_log(console#47, "");
+    return__5 = void
 });
 `test//`.exportedFunction = (@stay fn exportedFunction(b__28 /* aka b */: Boolean) /* return__4 */: Void {
-    return__4 = void;
     if (b__28) {
-      conditionallyExportReachable__20()
+      conditionallyExportReachable__20();
+      return__4 = void
+    } else {
+      return__4 = void
     }
 });
 transitivelyTestReachable__21 = (@stay fn transitivelyTestReachable /* return__6 */: Void {
-    return__6 = void;
-    do_call_log(console#47, "")
+    do_call_log(console#47, "");
+    return__6 = void
 });
 exportAndTestReachable__22 = (@stay fn exportAndTestReachable /* return__7 */: Void {
-    return__7 = void;
-    do_call_log(console#47, "")
+    do_call_log(console#47, "");
+    return__7 = void
 });
 transitivelyInitReachable__24 = (@stay fn transitivelyInitReachable /* return__9 */: Void {
-    return__9 = void;
-    do_call_log(console#47, "")
+    do_call_log(console#47, "");
+    return__9 = void
 });
 initReachable__23 = (@stay fn initReachable /* return__8 */: Void {
-    return__8 = void;
     transitivelyInitReachable__24();
-    do_call_log(console#47, "")
+    do_call_log(console#47, "");
+    return__8 = void
 });
 unreachableFunction__25 = (@stay fn unreachableFunction /* return__10 */: Void {
-    return__10 = void;
-    do_call_log(console#47, "")
+    do_call_log(console#47, "");
+    return__10 = void
 });
 @fn @method(\constructor) @visibility(\public) @stay @fromType(UsedOnlyAsPropertyType__3) let constructor__45;
 constructor__45 = (@stay fn constructor(@impliedThis(UsedOnlyAsPropertyType__3) this__18: UsedOnlyAsPropertyType__3) /* return__19 */: Void {
@@ -50,8 +52,8 @@ constructor__45 = (@stay fn constructor(@impliedThis(UsedOnlyAsPropertyType__3) 
 @constructorProperty @property(\propertyOfExportedClass) @visibility(\private) @stay @fromType(ExportedClass) let propertyOfExportedClass__36: UsedOnlyAsPropertyType__3;
 @method(\methodOfExportedClass) @visibility(\private) @fn @stay @fromType(ExportedClass) let methodOfExportedClass__37;
 methodOfExportedClass__37 = (@stay fn methodOfExportedClass(@impliedThis(ExportedClass) this__0: ExportedClass) /* return__13 */: Void {
-    return__13 = void;
-    exportAndTestReachable__22()
+    exportAndTestReachable__22();
+    return__13 = void
 });
 @fn @method(\constructor) @visibility(\public) @stay @fromType(ExportedClass) let constructor__39;
 constructor__39 = (@stay fn constructor(@impliedThis(ExportedClass) this__11: ExportedClass, propertyOfExportedClass__40 /* aka propertyOfExportedClass */: UsedOnlyAsPropertyType__3) /* return__12 */: Void {
@@ -60,9 +62,9 @@ constructor__39 = (@stay fn constructor(@impliedThis(ExportedClass) this__11: Ex
 });
 @method(\methodOfTestReachable) @visibility(\private) @fn @stay @fromType(TestReachableClass__1) @reach(\test) let methodOfTestReachable__41;
 methodOfTestReachable__41 = (@stay fn methodOfTestReachable(@impliedThis(TestReachableClass__1) this__2: TestReachableClass__1) /* return__16 */: Void {
-    return__16 = void;
     transitivelyTestReachable__21();
-    exportAndTestReachable__22()
+    exportAndTestReachable__22();
+    return__16 = void
 });
 @fn @method(\constructor) @visibility(\public) @stay @fromType(TestReachableClass__1) @reach(\test) let constructor__43;
 constructor__43 = (@stay fn constructor(@impliedThis(TestReachableClass__1) this__14: TestReachableClass__1) /* return__15 */: Void {

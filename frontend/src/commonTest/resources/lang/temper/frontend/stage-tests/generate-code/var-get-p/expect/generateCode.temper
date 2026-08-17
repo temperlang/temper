@@ -1,0 +1,33 @@
+let return__20;
+@visibility(\private) @stay @fromType(C__1) var _done__10: Boolean;
+@visibility(\public) @fn @stay @fromType(C__1) let f__11;
+f__11 = (@stay fn f(@impliedThis(C__1) this__2: C__1, i__12 /* aka i */: Int32) /* return__7 */: Int32 {
+    fn__13: do {
+      if (getp(_done__10, this__2)) {
+        return__7 = -1;
+        break fn__13;
+      };
+      setp(_done__10, this__2, true);
+      if (i__12 == 0) {
+        setp(_done__10, this__2, false)
+      };
+      return__7 = i__12
+    }
+});
+@visibility(\public) @stay @fromType(C__1) let done__4;
+@visibility(\public) @fn @stay @fromType(C__1) let nym`get.done__14`;
+nym`get.done__14` = (@stay fn nym`get.done`(@impliedThis(C__1) this__3: C__1) /* return__8 */: Boolean {
+    return__8 = getp(_done__10, this__3)
+});
+@fn @visibility(\public) @stay @fromType(C__1) let constructor__16;
+constructor__16 = (@stay fn constructor(@impliedThis(C__1) this__5: C__1) /* return__6 */: Void {
+    return__6 = void;
+    setp(_done__10, this__5, false)
+});
+@typeDecl(C__1) @stay let C__1;
+C__1 = type (C__1);
+let c__9;
+c__9 = new C__1();
+do_call_f(c__9, 0);
+do_call_f(c__9, 1);
+return__20 = do_get_done(c__9)

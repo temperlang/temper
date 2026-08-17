@@ -1,0 +1,42 @@
+// OK
+class NeedsConstructor(
+  @noProperty i: Int32,
+  public j: Int32 = 1,
+) {
+  public k: Int32 = i + 1;
+
+  // We just generate a constructor for it.
+}
+
+// OK
+class HasConstructorAndInitializedProperty {
+  // This initializer should be pulled into the constructor.
+  private var b: Boolean = false;
+  private let i: Int32;
+  public constructor(i: Int32) {
+    this.i = i;
+  }
+  public f(): Int32 {
+    b = !b;
+    i + (if (b) { 1 } else { 0 })
+  }
+}
+
+class HasTooManyConstructors {
+  // The initializer here would need to be copied into multiple constructors,
+  // but we do not want to copy code that is potentially large, so just ban it.
+  private var b: Boolean = false;
+
+  public constructor() {}
+  public constructor(c: Boolean) {
+    if (c) { this.b = !this.b; }
+  }
+}
+
+// Not clear how to fold parenthesized constructor arguments into an existing
+// constructor.
+class HasConstructorAndParenthesizedArguments(
+  public s: String,
+) {
+  public constructor() {}
+}

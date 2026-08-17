@@ -1,10 +1,14 @@
 @fn @reach(\none) let f__1;
 f__1 = (@stay fn f(i__2 /* aka i */: StringIndexOption?) /* return__0 */: (Int32 | Bubble) {
     let j__4;
-    if (isNull(i__2)) {
-      j__4 = null
-    } else {
-      j__4 = i__2 as StringIndex
-    };
-    return__0 = 0
+    orelse#5: {
+      if (isNull(i__2)) {
+        j__4 = null
+      } else {
+        j__4 = i__2 as StringIndex
+      };
+      return__0 = 0
+    } orelse {
+      return__0 = 1
+    }
 })

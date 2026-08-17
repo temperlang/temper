@@ -492,4 +492,10 @@ class SyntaxMacroStageTest {
         stageTestDir = StageTestDir("syntax-macro/desugar-prefix-op-with-complex-operand"),
         stagingFlags = setOf(StagingFlags.skipImportCore),
     )
+
+    @Test
+    fun constructorsAndPropertyInitialization() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/constructors-and-property-initialization"),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
+    )
 }
