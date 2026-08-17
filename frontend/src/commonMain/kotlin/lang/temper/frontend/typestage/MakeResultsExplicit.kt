@@ -5,17 +5,22 @@ import lang.temper.common.Console
 import lang.temper.common.MultilineOutput
 import lang.temper.common.TextTable
 import lang.temper.common.benchmarkIf
+import lang.temper.frontend.CaptureDigest
+import lang.temper.frontend.CaptureInfo
+import lang.temper.frontend.NameCaptureResult
 import lang.temper.frontend.allRootsOfAsBlocks
 import lang.temper.frontend.core.CoreModule
 import lang.temper.frontend.prefixBlockWith
 import lang.temper.frontend.prefixWith
 import lang.temper.name.ExportedName
+import lang.temper.name.InternalModularName
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedName
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.isVoidLike
 import lang.temper.type2.SuperTypeTree2
 import lang.temper.type2.Type2
+import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.ControlFlow
@@ -79,7 +84,7 @@ private const val DEBUG = false
 internal class MakeResultsExplicit private constructor(
     private val console: Console,
 ) {
-    private fun explicate(root: BlockTree): ResolvedName? {
+    private fun explicate(root: BlockTree): Pair<ResolvedName?, CaptureInfo> {
         val doc = root.document
 
         val incoming = root.incoming
@@ -220,6 +225,7 @@ internal class MakeResultsExplicit private constructor(
             console.log("returnType=${returnTypeTree?.toPseudoCode()}")
         }
 
+        var captureInfo = CaptureInfo.empty
         if (!needToInitializeOutputNameToSingleton) {
             console.benchmarkIf(BENCHMARK, "addImplicitAssignments") {
                 for (terminal in terminalExpressions.unsetTerminalExpressionEdges) {
@@ -240,6 +246,14 @@ internal class MakeResultsExplicit private constructor(
                         V(pos, void)
                     }
                 }
+            }
+            val capturedIn = outputName.content as? InternalModularName
+            if (terminalExpressions.haveUnsetTerminalExpressions.isNotEmpty() && capturedIn != null) {
+                val result = NameCaptureResult(capturedIn, returnType?.let { hackMapNewStyleToOld(it) })
+                val m = terminalExpressions.haveUnsetTerminalExpressions.associate {
+                    it.pos to result
+                }
+                captureInfo = CaptureInfo(listOf(CaptureDigest(m)))
             }
         } else {
             prefixBlockWith(
@@ -295,7 +309,7 @@ internal class MakeResultsExplicit private constructor(
 
         prefixBlockWith(newDeclarations, root)
 
-        return outputName.content as ResolvedName?
+        return (outputName.content as ResolvedName?) to captureInfo
     }
 
     private fun addImplicitAssignment(
@@ -322,15 +336,18 @@ internal class MakeResultsExplicit private constructor(
             console: Console,
             moduleRoot: BlockTree,
             needResultForModuleRoot: Boolean,
-        ): ResolvedName? {
+        ): Pair<ResolvedName?, CaptureInfo> {
             val resultNamesByRoot = mutableMapOf<Tree, ResolvedName?>()
+            val captureResults = mutableListOf<CaptureDigest>()
             for (root in allRootsOfAsBlocks(moduleRoot)) {
                 if (needResultForModuleRoot || root != moduleRoot) {
-                    resultNamesByRoot[root] = MakeResultsExplicit(console)
+                    val (resultName, captureInfo) = MakeResultsExplicit(console)
                         .explicate(root) // I do not think that word means what you think it means.
+                    resultNamesByRoot[root] = resultName
+                    captureResults.addAll(captureInfo.digests)
                 }
             }
-            return resultNamesByRoot[moduleRoot]
+            return resultNamesByRoot[moduleRoot] to CaptureInfo(captureResults.toList())
         }
     }
 }

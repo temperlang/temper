@@ -133,7 +133,7 @@ class Weaver private constructor(
 
     private inline fun debug(f: () -> Any) = debug(root, f)
 
-    private fun weave() {
+    private fun weave(): CaptureDigest {
         debug {
             console.group("Weave") {
                 console.log(root.toLispy(multiline = true))
@@ -181,6 +181,14 @@ class Weaver private constructor(
                 console.log(root.toLispy(multiline = true))
             }
         }
+
+        return CaptureDigest(
+            buildMap {
+                blockResultCaptures.map { (block, result) ->
+                    this[block.pos] = result
+                }
+            },
+        )
     }
 
     /** Look for calls to [BuiltinFuns.bubble] and turn them into [ControlFlow.Break] where possible. */
@@ -629,7 +637,7 @@ class Weaver private constructor(
             nameAllFunctions: Boolean,
             simplifyRttiCalls: Boolean,
             resultsAlreadyCaptured: Boolean = true,
-        ) {
+        ): CaptureInfo {
             val varNames = varNamesOf(root)
             debug(root) {
                 console.log("Weaving")
@@ -640,6 +648,7 @@ class Weaver private constructor(
                 // prevents ancestor mutations from copying edges, effectively orphaning roots that
                 // have yet to be processed.
                 .compatReversed()
+            val infoMaps = mutableListOf<CaptureDigest>()
             for (rootBlock in allRoots) {
                 val rootEdge = rootBlock.incoming
                 Weaver(
@@ -650,7 +659,9 @@ class Weaver private constructor(
                     nameAllFunctions = nameAllFunctions,
                     resultsAlreadyCaptured = resultsAlreadyCaptured,
                     varNames = varNames,
-                ).weave()
+                ).weave().also {
+                    infoMaps.add(it)
+                }
                 require(
                     rootEdge == null ||
                         (rootEdge.target == rootBlock && rootEdge.source != null),
@@ -668,6 +679,7 @@ class Weaver private constructor(
                 console.log("After trim loose threads")
                 root.toPseudoCode(console.textOutput)
             }
+            return CaptureInfo(infoMaps.toList())
         }
 
         /**

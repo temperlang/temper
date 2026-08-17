@@ -21,9 +21,12 @@ import lang.temper.common.toStringViaTextOutput
 import lang.temper.format.ValueSimplifyingLogSink
 import lang.temper.format.toStringViaTokenSink
 import lang.temper.frontend.AstSnapshotKey
+import lang.temper.frontend.CaptureInfo
 import lang.temper.frontend.DebugTreeRepresentation
+import lang.temper.frontend.KnownValueCaptureResult
 import lang.temper.frontend.Module
 import lang.temper.frontend.ModuleSource
+import lang.temper.frontend.NameCaptureResult
 import lang.temper.frontend.RandomBool
 import lang.temper.frontend.RandomInt
 import lang.temper.frontend.StagingFlags
@@ -38,13 +41,18 @@ import lang.temper.log.excerpt
 import lang.temper.log.toReadablePosition
 import lang.temper.name.BuiltinName
 import lang.temper.name.ModuleName
+import lang.temper.name.ResolvedName
 import lang.temper.name.SourceName
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
 import lang.temper.stage.Stage
+import lang.temper.type.BubbleType
 import lang.temper.type.DotHelper
+import lang.temper.type.FunctionType
 import lang.temper.type.InvalidType
+import lang.temper.type.MkType
 import lang.temper.type.StaticType
+import lang.temper.type.isBubbly
 import lang.temper.type.mentionsInvalid
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BasicTypeInferencesTree
@@ -52,6 +60,7 @@ import lang.temper.value.BlockTree
 import lang.temper.value.CallTypeInferences
 import lang.temper.value.CallTypeInferencesTree
 import lang.temper.value.DeclTree
+import lang.temper.value.DocumentContext
 import lang.temper.value.FunTree
 import lang.temper.value.LeftNameLeaf
 import lang.temper.value.NameLeaf
@@ -70,6 +79,7 @@ import lang.temper.value.symbolContained
 import lang.temper.value.thisParsedName
 import lang.temper.value.toLispy
 import lang.temper.value.toPseudoCode
+import lang.temper.value.typeForValue
 import lang.temper.value.typeSymbol
 import lang.temper.value.valueContained
 import lang.temper.value.void
@@ -84,7 +94,6 @@ class TyperTest {
         // By the time the type stage happens, the addition has been collapsed to a constant, so
         // the Typer never sees the individual operands.
         """
-        |/// ┏━┓   ┏━┓ : ???
         |    123 + 456;
         |/// ┗━━━━━━━┛ : Int32
         |
@@ -691,9 +700,9 @@ class TyperTest {
         """.trimMargin(),
     )
 
-    // TODO: Testing whether two function types are sub-types needs to ignore the exact name
+    // TODO: Testing whether two function types are subtypes needs to ignore the exact name
     // part of formals.
-    // `fn <T>(T): T` should be a sub-type of `fn <S>(S): S`
+    // `fn <T>(T): T` should be a subtype of `fn <S>(S): S`
     @Test
     fun functionAssignedToFunctionType() = assertTypes(
         """
@@ -730,7 +739,6 @@ class TyperTest {
         """.trimMargin(),
         wantErrors = listOf(
             "5+4-14: Member b defined in Private not publicly accessible!",
-            "5+4: Type Invalid mentions Invalid",
             "5+4-14: Type Invalid mentions Invalid",
             "5+13-14: Type Invalid mentions Invalid",
         ),
@@ -751,7 +759,6 @@ class TyperTest {
         """.trimMargin(),
         wantErrors = listOf(
             "3+4-17: Member b defined in Something incompatible with usage!",
-            "3+4: Type Invalid mentions Invalid",
             "3+4-17: Type Invalid mentions Invalid",
             "3+14-15: Type Invalid mentions Invalid",
         ),
@@ -768,7 +775,6 @@ class TyperTest {
         """.trimMargin(),
         wantErrors = listOf(
             "3+4-15: No member a in Something!",
-            "3+4: Type Invalid mentions Invalid",
             "3+4-15: Type Invalid mentions Invalid",
             "3+14-15: Type Invalid mentions Invalid",
         ),
@@ -787,7 +793,6 @@ class TyperTest {
             "4+4-21: No member hi in A | AnyValue!",
             "1+4-9: Type Invalid mentions Invalid",
             "1+7-9: Type Invalid mentions Invalid",
-            "4+4: Type Invalid mentions Invalid",
             "4+4-21: Type Invalid mentions Invalid",
             "4+19-21: Type Invalid mentions Invalid",
         ),
@@ -1094,7 +1099,7 @@ class TyperTest {
 
     @Test
     fun neverIsANeverNotAFunction() = assertTypes(
-        // Never is a sub-type of function types
+        // Never is a subtype of function types
         """
         |    let f: fn<T>(List<T>): List<T> = panic();
         |    f<String>([])
@@ -1505,10 +1510,6 @@ class TyperTest {
         |      }
         |    }
         """.trimMargin(),
-        wantErrors = listOf(
-            "3+23-30: Cannot assign to Top from C<AnyValue>!",
-            "3+23-30: Type Invalid mentions Invalid",
-        ),
     )
 
     @Test
@@ -1626,7 +1627,6 @@ class TyperTest {
             "2+27-32: No declaration for Thing!",
             "4+15-24: No declaration for Commander!",
             "2+8-13: Type Invalid mentions Invalid",
-            "2+16: Type Invalid mentions Invalid",
             "2+16-23: Type Invalid mentions Invalid",
             "2+16-32: Type Invalid mentions Invalid",
             "2+24-26: Type Invalid mentions Invalid",
@@ -1945,7 +1945,7 @@ class TyperTest {
         //   \   /
         //     D
         //
-        // A and C both implement a() but since C is reachable first,
+        // A and C both implement `.a()` but since C is reachable first,
         // its implementation unambiguously wins.
         """
             |    interface A { a(): String { "A wins!" } }
@@ -1971,7 +1971,7 @@ class TyperTest {
         //   \   /
         //     D
         //
-        // A and C both implement a() but since C is reachable first,
+        // A and C both implement `.a()` but since C is reachable first,
         // and A<String>'s .a method is equivalent, in the context of D
         // to C's .a method, C's implementation unambiguously wins.
         $$"""
@@ -2023,8 +2023,8 @@ class TyperTest {
         //   \   /
         //     D
         //
-        // A and C both implement a() but their methods have irreconcilable
-        // signatures (Void vs String return type), so an error is reported.
+        // A and C both implement `.a()` but their methods have irreconcilable
+        // signatures (Void vs. String return-type), so an error is reported.
         """
             |    interface A { a(): Void {} }
             |    interface B extends A {}
@@ -2037,7 +2037,6 @@ class TyperTest {
         wantErrors = listOf(
             "5+4-15: No callee matches inputs [D] among [(A) -> Void, (C) -> String]!",
             "1+4: Type Invalid mentions Invalid",
-            "5+4: Type Invalid mentions Invalid",
             "5+4-15: Type Invalid mentions Invalid",
         ),
     )
@@ -2070,7 +2069,15 @@ class TyperTest {
          */
         content: String,
         wantErrors: List<String> = emptyList(),
+        /**
+         * Flip to true when debugging interactively to see snapshots at each stage.
+         */
         verbose: Boolean = false,
+        /**
+         * Flip to true when debugging interactively to get a console dump of the available
+         * type info.
+         */
+        dumpAvailableTypeInfo: Boolean = false,
         nameSimplifying: Boolean = true,
         skipCore: Boolean = false,
     ) {
@@ -2082,15 +2089,27 @@ class TyperTest {
         )
         val typeRequirements = parseTypeRequirementsFromAsciiArtComments(filePath, content)
 
-        val (root, errors) = treeAtTypeStage(
+        val (root, errors, weaveInfo) = treeAtTypeStage(
             loc = testModuleName,
             content = source,
             verbose = verbose,
             nameSimplifying = nameSimplifying,
             skipCore = skipCore,
         )
+        val requirementsByPosition = typeRequirements.associateBy { it.annotatedCode.pos }
 
-        val requirementsToInferences = matchRequirementsWithInferences(root, typeRequirements)
+        val typeInfoByPosition = if (dumpAvailableTypeInfo) {
+            TypeInfoByPosition(root, weaveInfo) { true }
+        } else {
+            TypeInfoByPosition(root, weaveInfo) { pos -> pos in requirementsByPosition }
+        }
+
+        if (dumpAvailableTypeInfo) {
+            dumpAvailableTypeInfoToConsole(typeInfoByPosition, root.document.context, content, console)
+        }
+
+        val requirementsToInferences =
+            matchRequirementsWithInferences(typeRequirements, typeInfoByPosition)
 
         // Rewrite content, replacing type chunks with rendered TypeInferences from the Typer
         val typeColonChunkToRequirements = typeRequirements.groupBy { it.desiredType }
@@ -2246,8 +2265,13 @@ class TyperTest {
     }
 
     /**
-     * Stages a module whose content is [content] through the type stage and returns a
-     * snapshot of the AST post Typer and any error messages encountered.
+     * Stages a module whose content is [content] through the type stage and returns
+     * the following:
+     *
+     * 1. A snapshot of the AST post-Typer,
+     * 2. Error messages encountered.
+     * 3. A map from control flow block positions to the names their results are
+     *    captured in.
      */
     private fun treeAtTypeStage(
         loc: ModuleName,
@@ -2255,7 +2279,7 @@ class TyperTest {
         verbose: Boolean,
         nameSimplifying: Boolean,
         skipCore: Boolean,
-    ): Pair<Tree, List<Pair<Position, String>>> {
+    ): Triple<BlockTree, List<Pair<Position, String>>, CaptureInfo> {
         val logSink = ListBackedLogSink()
         val projectLogSink = ValueSimplifyingLogSink(logSink, nameSimplifying = nameSimplifying)
         var kTicks = 10
@@ -2264,59 +2288,59 @@ class TyperTest {
             kTicks > 0
         }
 
-        val module = Module(
-            projectLogSink,
-            loc,
-            console,
-            continueCondition,
+        var treeAfterTyper: BlockTree? = null
+        var captureInfo = CaptureInfo.empty
+
+        val moduleConsole = Console(
+            console.textOutput,
+            console.level,
+            object : Snapshotter {
+                override fun <IR : Structured> snapshot(key: SnapshotKey<IR>, stepId: String, state: IR) {
+                    if (key == AstSnapshotKey && stepId == Debug.Frontend.TypeStage.AfterTyper.loggerName) {
+                        AstSnapshotKey.useIfSame(key, state) { root ->
+                            val snapshot = root.copy() as BlockTree
+                            fun copyTypeInferences(from: Tree, to: Tree) {
+                                when {
+                                    to is BasicTypeInferencesTree && from is BasicTypeInferencesTree ->
+                                        to.typeInferences = from.typeInferences
+                                    from is NoTypeInferencesTree -> {}
+                                    to is NoTypeInferencesTree -> {}
+                                    to is CallTypeInferencesTree && from is CallTypeInferencesTree ->
+                                        to.typeInferences = from.typeInferences
+                                    to is BasicTypeInferencesTree ->
+                                        to.typeInferences =
+                                            from.typeInferences?.let {
+                                                BasicTypeInferences(it.type, it.explanations)
+                                            }
+                                    else -> error("$to / $from")
+                                }
+                                from.children.zip(to.children).forEach { (f, t) ->
+                                    copyTypeInferences(f, t)
+                                }
+                            }
+                            copyTypeInferences(from = root, to = snapshot)
+                            treeAfterTyper = snapshot
+                        }
+                    } else if (key == CaptureInfo.Key) {
+                        CaptureInfo.Key.useIfSame(key, state) {
+                            captureInfo += it
+                        }
+                    }
+                }
+            },
         )
+
+        val module = Module(projectLogSink, loc, moduleConsole, continueCondition)
         module.deliverContent(content)
         module.addEnvironmentBindings(extraBindings)
         if (skipCore) {
             module.addEnvironmentBindings(mapOf(StagingFlags.skipImportCore to TBoolean.valueTrue))
         }
 
-        var treeAfterTyper: BlockTree? = null
         // Get a snapshot of the tree post typing, and before we remove any
         // unused temporaries that have type information which is not used
         // but which might inform us of how the Typer is doing.
-        Debug.configure(
-            module,
-            Console(
-                console.textOutput,
-                console.level,
-                object : Snapshotter {
-                    override fun <IR : Structured> snapshot(key: SnapshotKey<IR>, stepId: String, state: IR) {
-                        if (key == AstSnapshotKey && stepId == Debug.Frontend.TypeStage.AfterTyper.loggerName) {
-                            AstSnapshotKey.useIfSame(key, state) { root ->
-                                val snapshot = root.copy() as BlockTree
-                                fun copyTypeInferences(from: Tree, to: Tree) {
-                                    when {
-                                        to is BasicTypeInferencesTree && from is BasicTypeInferencesTree ->
-                                            to.typeInferences = from.typeInferences
-                                        from is NoTypeInferencesTree -> {}
-                                        to is NoTypeInferencesTree -> {}
-                                        to is CallTypeInferencesTree && from is CallTypeInferencesTree ->
-                                            to.typeInferences = from.typeInferences
-                                        to is BasicTypeInferencesTree ->
-                                            to.typeInferences =
-                                                from.typeInferences?.let {
-                                                    BasicTypeInferences(it.type, it.explanations)
-                                                }
-                                        else -> error("$to / $from")
-                                    }
-                                    from.children.zip(to.children).forEach { (f, t) ->
-                                        copyTypeInferences(f, t)
-                                    }
-                                }
-                                copyTypeInferences(from = root, to = snapshot)
-                                treeAfterTyper = snapshot
-                            }
-                        }
-                    }
-                },
-            ),
-        )
+        Debug.configure(module, moduleConsole)
         while (module.canAdvance() && (module.nextStage ?: Stage.Run) <= Stage.Type) {
             console.groupIf(verbose, "Stage ${module.nextStage}") {
                 if (verbose) {
@@ -2336,7 +2360,7 @@ class TyperTest {
             }
             fail("Module failed to reach end of type stage")
         }
-        val root = treeAfterTyper ?: module.treeForDebug!!
+        val root = treeAfterTyper!!
 
         // If any part of the tree types to Invalid, call that out via the error message mechanism
         // since we don't proceed all the way to GenerateCode and its checks.
@@ -2345,7 +2369,7 @@ class TyperTest {
             val childOrder = if (t is BlockTree) {
                 blockPartialEvaluationOrder(t)
             } else {
-                0 until t.size
+                t.indices
             }
             childOrder.forEach { i -> findContradictionsAndInvalidType(t.child(i)) }
 
@@ -2399,46 +2423,24 @@ class TyperTest {
             invalidPositions[pos]?.mapTo(errors) { pos to "$it mentions Invalid" }
         }
 
-        return Pair(root, errors.toList())
+        return Triple(root, errors.toList(), captureInfo)
     }
 
     private fun matchRequirementsWithInferences(
-        root: Tree,
-        typeRequirements: List<TypeRequirement>,
+        requirements: List<TypeRequirement>,
+        typeInfoByPosition: TypeInfoByPosition,
     ): Map<TypeRequirement, TypeInferences> {
         // For each requirement, collect candidates and judge them based on
-        val requirementsToInferences =
-            mutableMapOf<TypeRequirement, Pair<NonsenseGradient, TypeInferences>>()
-        val requirementsByPosition = typeRequirements.associateBy { it.annotatedCode.pos }
-        // Walk over the tree with TypeInferences attached and check requirements.
-        TreeVisit.startingAt(root)
-            .forEachContinuing { t ->
-                val sensibleness = when {
-                    !hasInterestingType(t) -> NonsenseGradient.TotalNonsense
-                    isProbablyMadeUp(t) -> NonsenseGradient.ProbableNonsense
-                    isPossiblyMadeUp(t) -> NonsenseGradient.PossibleNonsense
-                    else -> NonsenseGradient.NotSuss
-                }
-                val typeInferences = t.typeInferences
-                if (typeInferences != null) {
-                    val req = requirementsByPosition[t.pos]
-                    if (req != null) {
-                        val previousSensibleness = requirementsToInferences[req]?.first
-                            ?: NonsenseGradient.TotalNonsense
-                        if (sensibleness > previousSensibleness) {
-                            requirementsToInferences[req] = sensibleness to typeInferences
-                        }
-                    }
-                }
-            }
-            // Deeper expressions often have more specific type metadata than wrapping expressions.
-            .visitPostOrder()
-        return requirementsToInferences.mapValues { it.value.second }
+        return requirements.associateWith {
+            (typeInfoByPosition.positionToInference[it.annotatedCode.pos]?.second ?: invalidTypeInferences)
+        }
     }
+
+    private val invalidTypeInferences = BasicTypeInferences(InvalidType, listOf())
 
     /**
      * The tests allow us to find the narrowest node that has a type inferred.
-     * Do a final coherence check that all nodes that should, do have types.
+     * Do a final coherence check that all nodes that should have types do.
      */
     private fun requireInferencesPresent(
         sourceCode: String,
@@ -2536,8 +2538,8 @@ private fun isProbablyMadeUp(t: Tree) =
     (t is NameLeaf && t.content is Temporary) ||
         // Void nodes are often replacements for unreachable or garbage nodes.
         (t.valueContained == void) ||
-        // Assignments to temporaries that fail are captured in the errors list,
-        // so look at the right hand-side to help diagnose partial success.
+        // Assignments to temporaries that fail are captured in the error list,
+        // so look at the right-hand-side to help diagnose partial success.
         (
             t.typeInferences?.type == InvalidType &&
                 isAssignment(t) && (t.child(1) as? LeftNameLeaf)?.content is Temporary
@@ -2594,3 +2596,90 @@ private val extraBindings = mapOf<TemperName, Value<*>>(
     BuiltinName(RandomInt.name) to Value(RandomInt),
     StagingFlags.moduleResultNeeded to TBoolean.valueTrue,
 )
+
+private fun dumpAvailableTypeInfoToConsole(
+    typeInfoByPosition: TypeInfoByPosition,
+    context: DocumentContext,
+    input: String,
+    console: Console,
+) {
+    val positionsSorted = typeInfoByPosition.positionToInference.keys
+        .sortedWith { a, b ->
+            val delta = a.left.compareTo(b.left)
+            if (delta == 0) { a.right.compareTo(b.right) } else { delta }
+        }
+    for (pos in positionsSorted) {
+        val (_, typeInferences) = typeInfoByPosition.positionToInference.getValue(pos)
+        console.group("${context.formatPosition(pos)}: ${typeInferences.type}") {
+            excerpt(pos, input, console.textOutput)
+        }
+    }
+}
+
+private class TypeInfoByPosition(
+    root: BlockTree,
+    captureInfo: CaptureInfo,
+    collectTypeInfoAt: (Position) -> Boolean,
+) {
+    val positionToInference: Map<Position, Pair<NonsenseGradient, TypeInferences>>
+
+    init {
+        val typeForName = mutableMapOf<ResolvedName, StaticType>()
+        val byPosition = mutableMapOf<Position, Pair<NonsenseGradient, TypeInferences>>()
+        // Walk over the tree with TypeInferences attached and check requirements.
+        TreeVisit.startingAt(root)
+            .forEachContinuing { t ->
+                val sensibleness = when {
+                    !hasInterestingType(t) -> NonsenseGradient.TotalNonsense
+                    isProbablyMadeUp(t) -> NonsenseGradient.ProbableNonsense
+                    isPossiblyMadeUp(t) -> NonsenseGradient.PossibleNonsense
+                    else -> NonsenseGradient.NotSuss
+                }
+                var typeInferences = t.typeInferences
+                if (typeInferences != null) {
+                    val pos = t.pos
+                    if (t is DeclTree) {
+                        val declaredNameTree = t.parts?.name
+                        val declaredName = declaredNameTree?.content as? ResolvedName
+                        val nameType = declaredNameTree?.typeInferences?.type
+                        if (declaredName != null && nameType != null) {
+                            typeForName[declaredName] = nameType
+                        }
+                    }
+                    if (typeInferences is CallTypeInferences) {
+                        val calleeType = typeInferences.variant
+                        if (calleeType is FunctionType && calleeType.returnType.isBubbly) {
+                            typeInferences = BasicTypeInferences(
+                                MkType.or(typeInferences.type, BubbleType),
+                                typeInferences.explanations,
+                            )
+                        }
+                    }
+                    if (collectTypeInfoAt(pos)) {
+                        val previousSensibleness = byPosition[pos]?.first
+                            ?: NonsenseGradient.TotalNonsense
+                        if (sensibleness > previousSensibleness) {
+                            byPosition[pos] = sensibleness to typeInferences
+                        }
+                    }
+                }
+            }
+            // Deeper expressions often have more specific type metadata than wrapping expressions.
+            .visitPostOrder()
+
+        for (d in captureInfo.digests) {
+            for ((pos, result) in d.positionToCaptureResult) {
+                val type = result.type
+                    ?: when (result) {
+                        is NameCaptureResult -> typeForName[result.capturedIn]
+                        is KnownValueCaptureResult -> typeForValue(result.value)
+                    }
+                val nonsenseLevel = NonsenseGradient.PossibleNonsense
+                if (type != null && (byPosition[pos]?.first ?: NonsenseGradient.TotalNonsense) < nonsenseLevel) {
+                    byPosition[pos] = nonsenseLevel to BasicTypeInferences(type, listOf())
+                }
+            }
+        }
+        positionToInference = byPosition.toMap()
+    }
+}

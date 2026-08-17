@@ -9,6 +9,7 @@ import lang.temper.common.calledFor
 import lang.temper.common.doIfLogs
 import lang.temper.common.effect
 import lang.temper.frontend.AstSnapshotKey
+import lang.temper.frontend.CaptureInfo
 import lang.temper.frontend.CleanupTemporaries
 import lang.temper.frontend.Module
 import lang.temper.frontend.StageOutputs
@@ -101,7 +102,7 @@ internal class TypeStage(
 
         // Find terminal expressions and introduce explicit assignments to function output
         // variables.
-        val outputName = Debug.Frontend.TypeStage.MakeResultsExplicit(configKey)
+        val (outputName, outputInfo) = Debug.Frontend.TypeStage.MakeResultsExplicit(configKey)
             .benchmarkIf(BENCHMARK, "MakeResultsExplicit") {
                 when (module.genre) {
                     Genre.Library -> MakeResultsExplicit.makeAllResultsExplicit(
@@ -113,11 +114,13 @@ internal class TypeStage(
                     // assignments to the result variable.
                     Genre.Documentation -> {
                         MakeResultsExplicitForDocs(module, root)
-                        null // Documentation fragments do not capture the module result.
+                        null to CaptureInfo.empty // Documentation fragments do not capture the module result.
                     }
                 }
             }
 
+        Debug.Frontend.TypeStage.MakeResultsExplicit
+            .snapshot(configKey, CaptureInfo.Key, outputInfo)
         Debug.Frontend.TypeStage.AfterExplicitResults.snapshot(configKey, AstSnapshotKey, root)
 
         // Genre.Documentation requires statements to start in statement position, and assumes some
@@ -133,7 +136,10 @@ internal class TypeStage(
                     pullSpecialsRootward = true,
                     nameAllFunctions = false,
                     resultsAlreadyCaptured = true,
-                ) calledFor effect
+                )
+            }.also { captureInfo ->
+                Debug.Frontend.TypeStage.AfterWeave
+                    .snapshot(configKey, CaptureInfo.Key, captureInfo)
             }
 
             Debug.Frontend.TypeStage.AfterWeave.snapshot(configKey, AstSnapshotKey, root)

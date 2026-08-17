@@ -32,6 +32,7 @@ internal data class UnsetTerminalExpressions(
      * control flow tends to require conservative assumptions.
      */
     val terminalsNeedVar: Boolean,
+    val haveUnsetTerminalExpressions: List<ControlFlow>,
 )
 
 /**
@@ -65,6 +66,7 @@ private class TerminalExpressionFinder(
     val blocksMissingTerminators = mutableListOf<Pair<BlockTree, ControlFlow.StmtBlock?>>()
     val existingAssignments = mutableListOf<CallTree>()
     var terminalsNeedVar = false
+    val haveUnsetTerminalExpressions = mutableListOf<ControlFlow>()
 
     data class Notes(
         val returnsPrior: Freq3,
@@ -87,6 +89,7 @@ private class TerminalExpressionFinder(
         unsetTerminalExpressionEdges = unsetTerminalExpressionEdges.toList(),
         blocksMissingTerminators = blocksMissingTerminators.toList(),
         terminalsNeedVar = terminalsNeedVar,
+        haveUnsetTerminalExpressions = expandWithAncestors(haveUnsetTerminalExpressions),
     )
 
     private fun walkBlock(t: BlockTree, notes: Notes, inTerminalPosition: Boolean): Notes {
@@ -210,7 +213,14 @@ private class TerminalExpressionFinder(
                 }
             }
             is ControlFlow.Stmt -> {
-                notes = walkRef(t, cf.ref, notes, inTerminalPosition)
+                val ref = cf.ref
+                notes = walkRef(t, ref, notes, inTerminalPosition)
+                if (inTerminalPosition) {
+                    val lastEdge = unsetTerminalExpressionEdges.lastOrNull()
+                    if (lastEdge == t.dereference(ref)) {
+                        haveUnsetTerminalExpressions.add(cf)
+                    }
+                }
             }
             is ControlFlow.StmtBlock -> {
                 val stmts = cf.stmts
@@ -247,3 +257,31 @@ private class TerminalExpressionFinder(
 }
 
 private data class MissingTerminalExpression(val notes: TerminalExpressionFinder.Notes) : RuntimeException()
+
+private fun expandWithAncestors(cfs: Iterable<ControlFlow>): List<ControlFlow> {
+    val all = cfs.toMutableSet()
+    val q = ArrayDeque<ControlFlow>()
+    all.mapNotNullTo(q) { it.parent }
+    while (q.isNotEmpty()) {
+        val cf = q.removeFirst()
+        if (cf in all) { continue }
+        val isCaptured = when (cf) {
+            is ControlFlow.If -> cf.thenClause in all && cf.elseClause in all
+            is ControlFlow.Loop -> false
+            is ControlFlow.Break -> false
+            is ControlFlow.Continue -> false
+            is ControlFlow.Labeled -> cf.stmts in all
+            is ControlFlow.OrElse -> cf.orClause in all && cf.elseClause in all
+            is ControlFlow.Stmt -> false
+            is ControlFlow.StmtBlock -> cf.stmts.isNotEmpty() && cf.stmts.last() in all
+        }
+        if (isCaptured) {
+            all.add(cf)
+            val parent = cf.parent
+            if (parent != null) {
+                q.add(parent)
+            }
+        }
+    }
+    return all.toList()
+}

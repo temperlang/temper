@@ -93,7 +93,7 @@ class GenerateCodeStage(
                     pullSpecialsRootward = true,
                     nameAllFunctions = true,
                     resultsAlreadyCaptured = true,
-                ) calledFor effect
+                )
             }
 
             Debug.Frontend.GenerateCodeStage.AfterWeave.snapshot(configKey, AstSnapshotKey, root)
