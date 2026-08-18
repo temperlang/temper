@@ -940,21 +940,21 @@ class CleanupTemporariesTest {
                 |    @fn let f__0;
                 |    f__0 = (@stay fn f(@optional(true) a__0 /* aka a */: Int32?, @optional(true) b__0 /* aka b */: Int32?) /* return__0 */: Int32 {
                 |        fn__0: do {
-                |          let t#0, t#1, a__1 /* aka a */: Int32, t#2;
+                |          let t#0, t#1, a__1 /* aka a */: Int32;
                 |          if (isNull(a__0)) {
                 |            t#0 = 1
                 |          } else {
-                |            let a#0;
+                |            let t#2, a#0;
                 |            a#0 = notNull(a__0);
                 |            t#2 = a#0;
                 |            t#0 = t#2
                 |          };
                 |          a__1 = t#0;
-                |          let b__1 /* aka b */: Int32, t#3;
+                |          let b__1 /* aka b */: Int32;
                 |          if (isNull(b__0)) {
                 |            t#1 = 2
                 |          } else {
-                |            let b#0;
+                |            let t#3, b#0;
                 |            b#0 = notNull(b__0);
                 |            t#3 = b#0;
                 |            t#1 = t#3
@@ -1203,8 +1203,8 @@ class CleanupTemporariesTest {
                 |    console#0 = doPure(@stay fn /* return__0 */: Console {
                 |        return__0 = getConsole()
                 |    });
-                |    let t#2;
                 |    orelse#1: {
+                |      let t#2;
                 |      t#2 = do_call_toString(0.0 / 0.0);
                 |      t#1 = t#2
                 |    } orelse {

@@ -153,7 +153,7 @@ enum class MessageTemplate(
 
     /**
      * Position is the position of the downstream use.
-     * Second argument is a list of positions of branches that fail to initialize.
+     * The second argument is a list of positions of branches that fail to initialize.
      */
     UseBeforeInitialization("%s is not initialized along branches at %s", CompilationPhase.Interpreter),
     ArityMismatch("Wrong number of arguments.  Expected %d", CompilationPhase.Interpreter),

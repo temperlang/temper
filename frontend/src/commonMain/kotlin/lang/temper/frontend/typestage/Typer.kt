@@ -2094,28 +2094,26 @@ internal class Typer(
                                     ti.decide(
                                         t,
                                         ti.decision(t)?.copy(type = leftType)
-                                            ?: Decision(
-                                                leftType,
-                                                variant = MkType.fn(
-                                                    typeFormals = emptyList(),
-                                                    valueFormals = listOf(leftType, leftType),
-                                                    restValuesFormal = null,
-                                                    returnType = leftType,
-                                                ),
-                                            ),
+                                            ?: assignmentDecision(leftType = leftType),
                                     )
                                 }
                             }
                         }
                     }
 
-                    val type = ti.decisionType(t)
-                    // An assignments type is the type of its right side, but there's also a
-                    // requirement that the right be a sub-type of the left.
+                    // An assignment's type is the type of its right side, but there's also a
+                    // requirement that the right be a subtype of the left.
                     // Checking this here means that we don't eliminate failure branches for
                     // guards that we shouldn't.
                     val leftType = ti.decisionType(left)
                     val rightType = ti.decisionType(right)?.let { excludeBubble(it) }
+                    if (
+                        ti.decisionType(t) == null && leftType != null && rightType != null &&
+                        typeContext.isSubType(rightType, leftType) && !leftType.mentionsInvalid
+                    ) {
+                        ti.decide(t, assignmentDecision(leftType = leftType))
+                    }
+                    val type = ti.decisionType(t)
                     if (
                         type == null || !type.mentionsInvalid && (
                             leftType == null || rightType == null ||
@@ -3061,6 +3059,16 @@ internal class Typer(
             variance = Variance.Invariant,
             mutationCount = AtomicCounter(),
             upperBounds = listOf(anyValueType),
+        )
+
+        private fun assignmentDecision(leftType: StaticType) = Decision(
+            leftType,
+            variant = MkType.fn(
+                typeFormals = emptyList(),
+                valueFormals = listOf(leftType, leftType),
+                restValuesFormal = null,
+                returnType = leftType,
+            ),
         )
     }
 

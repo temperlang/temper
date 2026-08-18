@@ -650,11 +650,12 @@ class TyperPlanTest {
                 |      var t#9;
                 |      let x__4;
                 |      {
-                |        let t#7, t#8;
                 |        orelse#5: {
+                |          let t#7;
                 |          t#7 = do_call_toFloat64(s__2);
                 |          t#9 = t#7
                 |        } orelse {
+                |          let t#8;
                 |## This is not an initializer for t#8
                 |## And this assignment needs to be typed after t#8's initializer
                 |## so that its context can be used to compute Never<Float64> as a type.

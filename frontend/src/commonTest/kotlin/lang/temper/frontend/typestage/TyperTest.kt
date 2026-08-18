@@ -2006,7 +2006,7 @@ class TyperTest {
             |/// ┗━━━━━━━━━━━━━┛ : String
         """.trimMargin(),
         skipCore = true,
-        // We resolved types just fine, but parameterized methods in interfaces are still suss.
+        // We resolved types just fine, but parameterized methods in interfaces are still suspect.
         wantErrors = listOf(
             "1+20: Illegal type parameter T. Overridable methods don't allow generics!",
             "3+20: Illegal type parameter T. Overridable methods don't allow generics!",
@@ -2638,24 +2638,24 @@ private class TypeInfoByPosition(
                 var typeInferences = t.typeInferences
                 if (typeInferences != null) {
                     val pos = t.pos
-                    if (t is DeclTree) {
-                        val declaredNameTree = t.parts?.name
-                        val declaredName = declaredNameTree?.content as? ResolvedName
-                        val nameType = declaredNameTree?.typeInferences?.type
-                        if (declaredName != null && nameType != null) {
-                            typeForName[declaredName] = nameType
-                        }
-                    }
-                    if (typeInferences is CallTypeInferences) {
-                        val calleeType = typeInferences.variant
-                        if (calleeType is FunctionType && calleeType.returnType.isBubbly) {
-                            typeInferences = BasicTypeInferences(
-                                MkType.or(typeInferences.type, BubbleType),
-                                typeInferences.explanations,
-                            )
-                        }
-                    }
                     if (collectTypeInfoAt(pos)) {
+                        if (t is DeclTree) {
+                            val declaredNameTree = t.parts?.name
+                            val declaredName = declaredNameTree?.content as? ResolvedName
+                            val nameType = declaredNameTree?.typeInferences?.type
+                            if (declaredName != null && nameType != null) {
+                                typeForName[declaredName] = nameType
+                            }
+                        }
+                        if (typeInferences is CallTypeInferences) {
+                            val calleeType = typeInferences.variant
+                            if (calleeType is FunctionType && calleeType.returnType.isBubbly) {
+                                typeInferences = BasicTypeInferences(
+                                    MkType.or(typeInferences.type, BubbleType),
+                                    typeInferences.explanations,
+                                )
+                            }
+                        }
                         val previousSensibleness = byPosition[pos]?.first
                             ?: NonsenseGradient.TotalNonsense
                         if (sensibleness > previousSensibleness) {

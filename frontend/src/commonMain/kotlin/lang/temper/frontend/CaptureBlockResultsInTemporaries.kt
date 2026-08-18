@@ -699,6 +699,43 @@ internal class CaptureBlockResultsInTemporaries(
             }
         }
 
+        // If any of the clauses need a temporary that is not part of the joined result,
+        // declare it there.
+        if ((firstResult as? NameCaptureResult)?.capturedIn != (secondResult as? NameCaptureResult)?.capturedIn) {
+            for ((d, sb) in listOf(firstDetails to firstClause, secondDetails to secondClause)) {
+                val result = d.result
+                val name = (result as? NameCaptureResult)?.capturedIn ?: continue
+                if (
+                    d.undeclaredNamed(name) != null &&
+                    name != (joinedResult as? NameCaptureResult)?.capturedIn &&
+                    name != suggestion
+                ) {
+                    val isVar = name in allMightBeReassigned
+                    if (isVar) { allMightBeReassigned.remove(name) }
+                    // Predeclare result.
+                    allUndeclared.removeIf { it.name == name }
+                    sb.withMutableStmtList { mutStmts ->
+                        val blockChildIndex = block.size
+                        block.insert(at = blockChildIndex) {
+                            Decl(sb.pos.leftEdge) {
+                                Ln(sb.pos.leftEdge, name, result.type)
+                                if (isVar) {
+                                    V(vVarSymbol)
+                                    V(void)
+                                }
+                            }
+                        }
+                        mutStmts.add(
+                            0,
+                            ControlFlow.Stmt(
+                                BlockChildReference(blockChildIndex, sb.pos.leftEdge),
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+
         return CaptureDetails(joinedResult, allUndeclared, allMightBeReassigned)
     }
 

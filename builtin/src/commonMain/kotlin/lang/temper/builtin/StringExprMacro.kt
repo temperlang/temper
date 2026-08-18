@@ -206,7 +206,8 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                             if (arg.isStringValueLeaf) {
                                 Replant(arg)
                             } else {
-                                Call(arg.pos, CoerceToString) {
+                                Call(arg.pos) {
+                                    V(arg.pos.leftEdge, vCoerceToString)
                                     Replant(arg)
                                 }
                             }
@@ -569,7 +570,8 @@ private fun pointAppendsAtAccumulator(funTree: FunTree, isTagged: Boolean) {
                                         if (isTagged) {
                                             Replant(next)
                                         } else {
-                                            Call(next.pos, CoerceToString) {
+                                            Call(next.pos) {
+                                                V(next.pos.leftEdge, vCoerceToString)
                                                 Replant(next)
                                             }
                                         }
@@ -764,6 +766,7 @@ internal object CoerceToString : SpecialFunction, BuiltinMacro("str", null) {
         ),
     )
 }
+private val vCoerceToString = Value(CoerceToString)
 
 private fun Planting.buildToStringCall(subject: Value<*>) =
     Call {

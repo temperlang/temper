@@ -1,9 +1,10 @@
 @fn @reach(\none) let abcStop__1;
 abcStop__1 = (@stay fn abcStop(i__2 /* aka i */: Int32) /* return__0 */: String {
-    let t#9, t#8;
+    let t#9;
     if (i__2 == 97) {
       t#9 = true
     } else {
+      let t#8;
       if (i__2 == 98) {
         t#8 = true
       } else {

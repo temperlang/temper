@@ -815,8 +815,8 @@ class WeaverTest {
             |[[ let return__2 ]];
             |[[ let x__0: Int32? ]];
             |[[ var t#4 ]];
-            |[[ let t#3 ]];
             |orElse#1: do {
+            |  [[ let t#3 ]];
             |  if ([[ b(0) ]]) {
             |    [[ t#3 = f(1) ]];
             |  } else {

@@ -13,10 +13,11 @@ f__3 = (@stay fn f(i__4 /* aka i */: StringIndexOption?) /* return__2 */: (Int32
       } else {
         t#13 = assertAs(i__4, StringIndex)
       };
-      let j__6, t#14;
+      let j__6;
       if (isNull(t#13)) {
         j__6 = null
       } else {
+        let t#14;
         t#14 = t#13 as StringIndex;
         j__6 = t#14
       };

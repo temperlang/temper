@@ -176,17 +176,20 @@ internal class SimplifyDeclarations(val simplifyFunTrees: Boolean = true) {
             // TODO Could implement a coalesce macro with this content.
             Block {
                 If(
+                    pos = decl.pos,
                     cond = {
-                        Call(IsNullFn) {
-                            Rn(formalName)
+                        val namePos = dp.name.pos.leftEdge
+                        Call(namePos, IsNullFn) {
+                            Rn(namePos, formalName)
                         }
                     },
                     thn = {
                         Replant(freeTarget(assignment.edge(2)))
                     },
                     els = {
-                        Call(BuiltinFuns.notNullFn) {
-                            Rn(formalName)
+                        val namePos = dp.name.pos.rightEdge
+                        Call(namePos, BuiltinFuns.notNullFn) {
+                            Rn(namePos, formalName)
                         }
                     },
                 )

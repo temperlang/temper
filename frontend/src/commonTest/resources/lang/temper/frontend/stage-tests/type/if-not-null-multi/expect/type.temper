@@ -4,7 +4,6 @@ return__9 = void;
 `test//`.multi = (@stay fn multi(a__3 /* aka a */: Int32?, b__4 /* aka b */: Int32?) /* return__1 */: Int32 {
     fn__5: do {
       let t#11;
-      void;
       if (!isNull(a__3)) {
         t#11 = !isNull(b__4)
       } else {
