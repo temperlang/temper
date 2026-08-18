@@ -5,21 +5,17 @@
   let this__4: List<String>;
   this__4 = list ⋖ String ⋗("a", "b", "c", "d");
 ## Here we start the inlined callee body.
-  var t#10 ⦂ Int32;
   let n__6 ⦂ Int32;
   n__6 = do_get_length(this__4);
   var i__7 ⦂ Int32;
   i__7 = 0;
-  var t#8 ⦂ Int32;
-  t#8 = i__7;
-  t#10 = t#8;
-  while (t#10 < n__6) {
-    let el__9: String;
-    el__9 = do_call_get(this__4, i__7);
+  while (i__7 < n__6) {
+    let el__8: String;
+    el__8 = do_call_get(this__4, i__7);
     i__7 = i__7 + 1;
 ## Here we start the inlined block lambda parameters.
     let x__0 ⦂ String;
-    x__0 = el__9;
+    x__0 = el__8;
 ## Here we start the inlined block lambda body.
 ## Note the absence of a void-like return declaration.
     if (x__0 == "c") {

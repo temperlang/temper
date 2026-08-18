@@ -295,7 +295,6 @@ class WeaverTest {
             |## t#5, t#6, and t#7 are assigned inside the `if`s but used outside so cannot
             |## be declared within.
             |[[ let t#5 ]];
-            |[[ let t#6 ]];
             |[[ let return__3 ]];
             |if ([[ b(1) ]]) {
             |  [[ f(2) ]];
@@ -319,8 +318,7 @@ class WeaverTest {
             |  [[ t#5 = x__0 ]];
             |## Same here, and the assignment `x = y = b(6)` has flattened out.
             |}
-            |[[ t#6 = x__0 == y__1 ]];
-            |[[ return__3 = t#6 == z__2 ]];
+            |[[ return__3 = x__0 == y__1 == z__2 ]];
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
