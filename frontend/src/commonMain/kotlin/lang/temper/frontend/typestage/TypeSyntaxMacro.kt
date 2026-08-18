@@ -552,18 +552,38 @@ private fun findConstructorsAndProperties(
     typeShape: TypeShape,
     macroEnv: MacroEnvironment,
 ): ConstructorsAndProperties {
-    val parts = mutableListOf<ConstructorsAndProperties.PartInfo>()
-
     // First, build a list of the backed property declarations.
     // To do that, we need to know about getters/setters.
-    val declarations = classBody.edges.mapNotNull {
+    val declarations = mutableListOf<Pair<DeclTree, DeclParts>>()
+    classBody.edges.mapNotNullTo(declarations) {
         val t = lookThroughDecorations(it).target
         if (t is DeclTree) {
-            t to (t.parts ?: return@mapNotNull null)
+            t.parts?.let { parts -> t to parts }
         } else {
             null
         }
     }
+
+    // If we're mixing-in a type, there may be constructors that were extracted
+    // out into top-level declarations which also need to be mixe din.
+    val declarationsFoundSoFar = buildSet {
+        declarations.mapTo(this) { it.second.name.content }
+    }
+
+    for (method in typeShape.methods) {
+        if (method.methodKind == MethodKind.Constructor && method.name !in declarationsFoundSoFar) {
+            val stayLeaf = method.stay
+            val parent = stayLeaf?.incoming?.source
+            if (parent is DeclTree) {
+                val parts = parent.parts
+                if (parts != null) {
+                    declarations.add(parent to parts)
+                }
+            }
+        }
+    }
+
+    val parts = mutableListOf<ConstructorsAndProperties.PartInfo>()
     val symbolsWithGettersSetters = mutableSetOf<Symbol>()
     declarations.forEach { (_, declParts) ->
         val metadata = declParts.metadataSymbolMap
