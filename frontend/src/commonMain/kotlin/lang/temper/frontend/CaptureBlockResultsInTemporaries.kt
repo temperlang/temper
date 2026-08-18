@@ -21,6 +21,7 @@ import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockTree
+import lang.temper.value.CallTree
 import lang.temper.value.CallTypeInferences
 import lang.temper.value.ControlFlow
 import lang.temper.value.DeclTree
@@ -31,10 +32,12 @@ import lang.temper.value.FunTree
 import lang.temper.value.InnerTree
 import lang.temper.value.JumpLabel
 import lang.temper.value.LeafTree
+import lang.temper.value.LeftNameLeaf
 import lang.temper.value.NameLeaf
 import lang.temper.value.NamedJumpSpecifier
 import lang.temper.value.Planting
 import lang.temper.value.RightNameLeaf
+import lang.temper.value.StayLeaf
 import lang.temper.value.TBoolean
 import lang.temper.value.TEdge
 import lang.temper.value.TProblem
@@ -253,7 +256,8 @@ internal class CaptureBlockResultsInTemporaries(
                     undeclared.addAll(details.undeclared)
                     mightBeReassigned.addAll(details.mightBeReassigned)
 
-                    if (details.result !is KnownValueCaptureResult?) {
+                    val result = details.result
+                    if (result is NameCaptureResult && details.undeclaredNamed(result.capturedIn) != null) {
                         // Something is being pulled through
                         val siblingCaptureDeclarations =
                             capturePrecedingSiblings(t, siblingCaptureLimit..<childIndex)
@@ -326,11 +330,27 @@ internal class CaptureBlockResultsInTemporaries(
     private fun captureCondition(
         block: BlockTree,
         cf: ControlFlow.Conditional,
-    ): CaptureDetails =
+    ): CaptureDetails {
+        val condEdge = block.dereference(cf.condition)
+            ?: return CaptureDetails.empty
+        val cond = condEdge.target
+        val resultAvailableWithoutCapture = when (cond) {
+            is ValueLeaf, is RightNameLeaf, is CallTree, is FunTree -> true
+            is BlockTree,
+            is DeclTree,
+            is EscTree,
+            is LeftNameLeaf,
+            is StayLeaf,
+            -> false
+        }
+        val resultNeeded = if (resultAvailableWithoutCapture) {
+            ResultNeeded.No
+        } else {
+            ResultNeeded.Yes
+        }
         // Common handling for some corner cases around refs that are not in Stmts.
-        block.dereference(cf.condition)?.let { condEdge ->
-            capture(condEdge.target, ResultNeeded.Yes)
-        } ?: CaptureDetails.empty
+        return capture(cond, resultNeeded)
+    }
 
     private fun capture(
         block: BlockTree,
@@ -367,10 +387,10 @@ internal class CaptureBlockResultsInTemporaries(
                     return capture(block, fixedLoop, rn, suggestion)
                 }
 
-                val condCaptureDetails = captureCondition(block, cf)
+                // There's no need to capture the condition, since if there was,
+                // it would've been incorporated into the loop body above.
 
                 val allUndeclared = mutableListOf<PendingDeclaration>()
-                allUndeclared.addAll(condCaptureDetails.undeclared)
                 for (clause in cf.clauses) {
                     allUndeclared.addAll(capture(block, clause, ResultNeeded.No).undeclared)
                 }

@@ -1,0 +1,16 @@
+@fn let `test//`.forEach;
+`test//`.forEach = fn forEach(strs__1 /* aka strs */: List<String>, body__2 /* aka body */: (fn (String): Void)) /* return__0 */: Void {
+  fn__3: do {
+    return__0 = void;
+    let n__4;
+    n__4 = do_get_length(strs__1);
+    var i__5;
+    i__5 = 0;
+    while (i__5 < n__4) {
+      let el__6: String;
+      el__6 = get(i__5);
+      i__5 = i__5 + 1;
+      body__2(el__6)
+    }
+  };
+}
