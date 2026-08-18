@@ -54,6 +54,17 @@ Hi 🌏!!
 Hi 🌏!!
 ```
 
+## Clear
+
+    builder.clear();  // Now it's empty.
+    builder.append("Back to square zero.");
+
+    console.log(builder.toString());
+
+```log
+Back to square zero.
+```
+
 
 ## StringBuilder property
 

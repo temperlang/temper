@@ -6,12 +6,13 @@ import lang.temper.env.InterpMode
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModularName
 import lang.temper.name.Symbol
 import lang.temper.type.Abstractness
 import lang.temper.type.DotHelper
-import lang.temper.type.ExternalBind
+import lang.temper.type.DotMember
+import lang.temper.type.ExternalCall
 import lang.temper.type.MkType
 import lang.temper.type.NominalType
 import lang.temper.type.TypeFormal
@@ -39,10 +40,8 @@ import lang.temper.value.StaySink
 import lang.temper.value.StaylessMacroValue
 import lang.temper.value.TBoolean
 import lang.temper.value.TClass
-import lang.temper.value.TFunction
 import lang.temper.value.Tree
 import lang.temper.value.Value
-import lang.temper.value.and
 import lang.temper.value.functionContained
 import lang.temper.value.unpackPositionedOr
 
@@ -67,7 +66,7 @@ internal object MakeValueResult : NamedBuiltinFun, PureCallableValue {
 
 /**
  * Returns a *Generator* instance given a *GeneratorFn* backed by [WellKnownTypes.generatorFnWrapperTypeDefinition]
- * defined in [lang.temper.frontend.implicits.ImplicitsModule].
+ * defined in [lang.temper.frontend.core.CoreModule].
  */
 class AdaptGeneratorFn private constructor(
     val mayBubble: Boolean,
@@ -143,7 +142,7 @@ class AdaptGeneratorFn private constructor(
                     else -> run {
                         val message = "Expectations of property names of ${
                             wrapperType.name
-                        } by $name do not match those in Implicits"
+                        } by $name do not match those in Core"
                         return@invoke cb.fail(MessageTemplate.InternalInterpreterError, cb.pos, listOf(message))
                     }
                 }
@@ -201,8 +200,8 @@ object GeneratorStepperFn : CallableValue, StaylessMacroValue {
                 override fun invoke(macroEnv: MacroEnvironment, interpMode: InterpMode): PartialResult =
                     if (interpMode == InterpMode.Full) {
                         val nextCallHelper = DotHelper(
-                            ExternalBind,
-                            Symbol("next"),
+                            ExternalCall,
+                            DotMember(Symbol("next")),
                             emptyList(),
                         )
 
@@ -211,20 +210,12 @@ object GeneratorStepperFn : CallableValue, StaylessMacroValue {
                                 V(generator)
                             }
                         }
-                        val boundMethod = macroEnv.dispatchCallTo(
+                        macroEnv.dispatchCallTo(
                             callTree,
                             Value(nextCallHelper),
                             callTree.children.subListToEnd(1),
                             interpMode,
                         )
-                        boundMethod.and { boundMethodValue ->
-                            (TFunction.unpackOrNull(boundMethodValue) as? CallableValue)
-                                ?.invoke(ActualValues.Empty, cb, interpMode)
-                                ?: cb.fail(
-                                    MessageTemplate.ExpectedValueOfType,
-                                    values = listOf(TFunction, boundMethodValue),
-                                )
-                        }
                     } else {
                         NotYet
                     }
@@ -248,7 +239,7 @@ private fun makeGeneratorSig(
     val counter = WellKnownTypes.voidTypeDefinition.mutationCount
     fun makeTypeFormal(formalName: String, upperBoundsList: List<NominalType>): TypeFormal {
         return TypeFormal(
-            Position(ImplicitsCodeLocation, 0, 0),
+            Position(CoreCodeLocation, 0, 0),
             BuiltinName(formalName),
             Symbol(formalName),
             Variance.Invariant,

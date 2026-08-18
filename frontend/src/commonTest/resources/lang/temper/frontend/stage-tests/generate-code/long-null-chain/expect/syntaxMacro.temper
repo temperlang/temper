@@ -1,0 +1,25 @@
+@stay @imported(\(`test//a/`.a)) let a__0 = `test//a/`.a;
+{
+  let subject#0;
+  subject#0 = {
+    let subject#1;
+    subject#1 = {
+      if (isNull(a__0)) {
+        null
+      } else {
+        do_get_string(notNull(a__0))
+      }
+    };
+    if (isNull(subject#1)) {
+      null
+    } else {
+      do_get_isEmpty(notNull(subject#1))
+    }
+  };
+  if (isNull(subject#0)) {
+    null
+  } else {
+    do_call_toString(notNull(subject#0))
+  }
+}
+?? "NULL"

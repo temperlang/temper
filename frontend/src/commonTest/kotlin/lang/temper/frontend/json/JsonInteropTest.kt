@@ -20,6 +20,7 @@ import lang.temper.name.ResolvedName
 import lang.temper.name.ResolvedNameMaker
 import lang.temper.name.SourceName
 import lang.temper.name.Symbol
+import lang.temper.stage.Stage
 import lang.temper.type.Abstractness
 import lang.temper.type.NominalType
 import lang.temper.type.StaticType
@@ -27,7 +28,6 @@ import lang.temper.type.TypeShape
 import lang.temper.type.TypeTestHarness
 import lang.temper.value.Document
 import lang.temper.value.DocumentContext
-import lang.temper.value.ReifiedType
 import lang.temper.value.TInt
 import lang.temper.value.TString
 import lang.temper.value.TType
@@ -121,9 +121,9 @@ class JsonInteropTest {
             |        static: true,
             |        body: ```
             |          fn (t: JsonSyntaxTree, ic: InterchangeContext): (Point | Bubble) {
-            |            let obj = as(t, JsonObject), x: Int32, y: Int32;
-            |            x = as(obj.propertyValueOrBubble("x"), JsonNumeric).asInt32();
-            |            y = as(obj.propertyValueOrBubble("y"), JsonNumeric).asInt32();
+            |            let obj = t as JsonObject, x: Int32, y: Int32;
+            |            x = (obj.propertyValueOrBubble("x") as JsonNumeric).asInt32();
+            |            y = (obj.propertyValueOrBubble("y") as JsonNumeric).asInt32();
             |            new Point(\x, x, \y, y)
             |          }
             |          ```,
@@ -199,7 +199,7 @@ class JsonInteropTest {
             |        static: true,
             |        body: ```
             |          fn<T>(t: JsonSyntaxTree, ic: InterchangeContext, adapterForT: JsonAdapter<T>): (Box<T> | Bubble) {
-            |            let obj = as(t, JsonObject), content: T;
+            |            let obj = t as JsonObject, content: T;
             |            content = adapterForT.decodeFromJson(obj.propertyValueOrBubble("content"), ic);
             |            new Box<T>(\content, content)
             |          }
@@ -288,7 +288,7 @@ class JsonInteropTest {
             |        static: true,
             |        body: ```
             |          fn (t: JsonSyntaxTree, ic: InterchangeContext): (Strings | Bubble) {
-            |            let obj = as(t, JsonObject), strings: List<String>;
+            |            let obj = t as JsonObject, strings: List<String>;
             |            strings = type (List).jsonAdapter(type (String).jsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("strings"), ic);
             |            new Strings(\strings, strings)
             |          }
@@ -391,7 +391,7 @@ class JsonInteropTest {
             |        body:
             |        ```
             |        fn (t: JsonSyntaxTree, ic: InterchangeContext): (S | Bubble) {
-            |          let obj = as(t, JsonObject), valueForX = obj.propertyValueOrNull("x");
+            |          let obj = t as JsonObject, valueForX = obj.propertyValueOrNull("x");
             |          do {
             |## Here's the decision tree.
             |            if(!isNull(valueForX), fn {
@@ -538,7 +538,7 @@ class JsonInteropTest {
             |## Instances of class A cannot be distinguished from instances of
             |## class B based on their properties, so instead the decoding switches
             |## on the extraProperty("class") because it is known to have distinct
-            |          let obj = as(t, JsonObject), valueForClass = obj.propertyValueOrNull("class");
+            |          let obj = t as JsonObject, valueForClass = obj.propertyValueOrNull("class");
             |          when (valueForClass, fn {
             |              \case_is;
             |              type (JsonString);
@@ -590,8 +590,8 @@ class JsonInteropTest {
             |        fn (t: JsonSyntaxTree, ic: InterchangeContext): (A | Bubble) {
             |## We don't actually care about the known property when decoding.
             |## We could though.
-            |          let obj = as(t, JsonObject), i: Int32;
-            |          i = as(obj.propertyValueOrBubble("i"), JsonNumeric).asInt32();
+            |          let obj = t as JsonObject, i: Int32;
+            |          i = (obj.propertyValueOrBubble("i") as JsonNumeric).asInt32();
             |          new A(\i, i)
             |        }
             |        ```
@@ -620,8 +620,8 @@ class JsonInteropTest {
             |        body:
             |        ```
             |        fn (t: JsonSyntaxTree, ic: InterchangeContext): (B | Bubble) {
-            |          let obj = as(t, JsonObject), i: Int32;
-            |          i = as(obj.propertyValueOrBubble("i"), JsonNumeric).asInt32();
+            |          let obj = t as JsonObject, i: Int32;
+            |          i = (obj.propertyValueOrBubble("i") as JsonNumeric).asInt32();
             |          new B(\i, i)
             |        }
             |        ```
@@ -681,7 +681,7 @@ class JsonInteropTest {
             |        body:
             |        ```
             |        fn (t: JsonSyntaxTree, ic: InterchangeContext): (C | Bubble) {
-            |          let obj = as(t, JsonObject), i: Int32?, c: C?;
+            |          let obj = t as JsonObject, i: Int32?, c: C?;
             |          i = new OrNullJsonAdapter<Int32>(type (Int32).jsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("i"), ic);
             |          c = new OrNullJsonAdapter<C>(type (C).jsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("c"), ic);
             |          new C(\i, i, \c, c)
@@ -739,7 +739,7 @@ private val stdJsonForTest = lazy {
             languageConfig = StandaloneLanguageConfig,
         ),
     )
-    advancer.advanceModules()
+    advancer.advanceModules(stopBefore = Stage.Run)
     val stdJsonModule = advancer.getAllModules().first {
         val loc = it.loc
         (
@@ -755,7 +755,7 @@ private val stdJsonForTest = lazy {
     val exports = stdJsonModule.exports!!
     fun typeShapeNamed(exportName: String): TypeShape {
         val export = exports.first { it.name.baseName.nameText == exportName }
-        val exportedType = (TType.unpack(export.value!!) as ReifiedType).type
+        val exportedType = TType.unpack(export.valueFromStaging!!).type
         return (exportedType as NominalType).definition as TypeShape
     }
     JsonInteropDetails.StdJson(

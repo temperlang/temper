@@ -1,0 +1,14 @@
+@fn let f__0;
+f__0 = fn f(maybe__0 /* aka maybe */: List<Int32>?) /* return__0 */: String {
+  fn__0: do {
+    do {
+      if(maybe__0 is List<Int32>, @stay fn {
+          "yep"
+        }, \else, fn (f#0) {
+          f#0(@stay fn {
+              "nope"
+          })
+      })
+    }
+  }
+};

@@ -7,6 +7,7 @@ import lang.temper.format.TokenAssociation.Prefix
 
 object OutToks {
     val oneSpace = OutputToken(" ", OutputTokenType.Space)
+    val underScore = OutputToken("_", OutputTokenType.Word)
 
     val leftCurly = OutputToken("{", OutputTokenType.Punctuation, Bracket)
     val rightCurly = OutputToken("}", OutputTokenType.Punctuation, Bracket)

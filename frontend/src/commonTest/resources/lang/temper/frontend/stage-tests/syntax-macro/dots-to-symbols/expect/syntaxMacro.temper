@@ -1,0 +1,2 @@
+let foo__0 = f(), bar__1;
+do_get_bar(foo__0) + bar__1;

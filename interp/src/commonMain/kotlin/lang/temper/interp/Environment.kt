@@ -13,7 +13,7 @@ fun blankEnvironment(parent: Environment): ChildEnvironment =
 
 /**
  * An environment that includes only pure builtins.
- * You probably want `builtinEnvironment` with implicits rather than this.
+ * You probably want `builtinEnvironment` with core rather than this.
  * */
 fun builtinOnlyEnvironment(
     parent: Environment,

@@ -57,7 +57,7 @@ interface Specifics {
     }
 }
 
-/** A runner has various methods to run . */
+/** A runner has various methods to run tools in the context of translated libraries. */
 interface RunnerSpecifics : Specifics {
     /** This runs an interpreter with a single source file. If a cliEnv is not provided, one is created. */
     fun runSingleSource(

@@ -8,19 +8,20 @@
         "target": "es2020"
     },
     "files": [
-        "async.js",
-        "bitvector.js",
-        "check-type.js",
-        "core.js",
-        "date.js",
-        "deque.js",
-        "float.js",
-        "index.js",
-        "interface.js",
-        "listed.js",
-        "mapped.js",
-        "pair.js",
-        "regex.js",
-        "string.js"
+      "async.js",
+      "bitvector.js",
+      "check-type.js",
+      "core.js",
+      "date.js",
+      "deque.js",
+      "float.js",
+      "index.js",
+      "int.js",
+      "interface.js",
+      "listed.js",
+      "mapped.js",
+      "pair.js",
+      "regex.js",
+      "string.js"
     ]
 }

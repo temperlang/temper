@@ -1,0 +1,31 @@
+C__0 extends AnyValue;
+@constructorProperty @property(\i) @visibility(\private) @stay @fromType(C__0) let i__4;
+@method(\f) @visibility(\private) @fn @stay @fromType(C__0) let f__5;
+f__5 = fn f(@impliedThis(C__0) this__1: C__0) {
+  fn__6: do {
+    do {
+      setp(i__4, this__1, 1);
+      1
+    }
+  }
+};
+@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) let constructor__7;
+constructor__7 = fn constructor(@impliedThis(C__0) this__8: C__0, i__9 /* aka i */) /* return__0 */: Void {
+  do {
+    let t#0;
+    setp(i__4, this__8, t#0 = i__9);
+    t#0
+  };
+};
+@typeDecl(C__0) @stay let C__0;
+C__0 = type (C__0);
+class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
+    do {};
+    do {};
+    do {};
+    do {}
+});
+do {
+  do_set_i(new C__0(), 2);
+  2
+}

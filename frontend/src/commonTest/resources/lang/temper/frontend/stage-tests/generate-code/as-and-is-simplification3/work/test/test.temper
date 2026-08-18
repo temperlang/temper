@@ -1,0 +1,6 @@
+let f(i: StringIndexOption?): Int throws Bubble {
+  do {
+    let j = i as StringIndex?;
+    0
+  } orelse 1
+}

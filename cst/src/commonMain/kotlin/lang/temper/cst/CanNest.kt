@@ -19,27 +19,60 @@ private fun branch(description: String, output: Boolean): Boolean {
  * Given operators, true when an operator stack consisting of outers
  * can contain the inner operator.
  *
- * @param child a stack element.
- * @param parent the stack element that would contain [child].
+ * @param bracket the innermost bracket operator, or null if none.  This allows fine-grained control
+ *     over the meaning of commas.  Could be the same as parent or grandParent.
  * @param grandParent a stack element that would contain [parent] or null if [parent] is
  *     [root][Operator.Root].
+ * @param parent the stack element that would contain [child].
+ * @param child a stack element.
  */
 fun canNest(
+    bracket: OperatorStackElement?,
     grandParent: OperatorStackElement?,
     parent: OperatorStackElement,
     child: OperatorStackElement,
 ): Boolean {
     console.logIf(DEBUG) {
-        "canNest(${
-            if (grandParent == null) {
-                "<null>"
+        buildString {
+            append("canNest(")
+            if (bracket == null) {
+                append("<null>")
             } else {
-                "${grandParent.operator}+${grandParent.childCount}+${
-                    grandParent.eventualChildCount
-                }"
+                append("bracket=")
+                append(bracket.operator)
+                append("+")
+                append(bracket.childCount)
+                append("+")
+                append(bracket.eventualChildCount)
             }
-        }, ${parent.operator}+${parent.childCount}+${parent.eventualChildCount
-        }, ${child.operator}+${child.childCount})"
+
+            append(", ")
+
+            if (grandParent == null) {
+                append("<null>")
+            } else {
+                append("grandParent=")
+                append(grandParent.operator)
+                append("+")
+                append(grandParent.childCount)
+                append("+")
+                append(grandParent.eventualChildCount)
+            }
+
+            append(", parent=")
+
+            append(parent.operator)
+            append("+")
+            append(parent.childCount)
+            append("+")
+            append(parent.eventualChildCount)
+
+            append(", child=")
+
+            append(child.operator)
+            append("+")
+            append(child.childCount)
+        }
     }
     return when {
         // The root can't nest in anything.
@@ -103,11 +136,11 @@ fun canNest(
             },
         )
 
-        // `extends` with commas is not allowed inside angle brackets or comma lists.
+        // `extends` with commas is not allowed inside angle brackets, even decorated, or in comma lists.
         child.operator in extendsLikeCommaOperators &&
             (
                 parent.operator == Operator.Comma ||
-                    (parent.operator == Operator.Angle && parent.childCount >= 2)
+                    (bracket?.operator == Operator.Angle && bracket.childCount >= 2)
                 ) ->
             branch("ExtendsComma", false)
         // `extends` with commas is not allowed inside a no-comma operator from the same family.
@@ -152,7 +185,6 @@ fun canNest(
         parent.operator == Operator.Curly && child.operator in extendsLikeCommaOperators &&
             parent.childCount == 0 && child.childCount >= 2 ->
             branch("curlies over extends", true)
-        // Similarly, in code like `class C extends Supers {}
         parent.operator in extendsLikeCommaOperators && child.operator == Operator.Curly ->
             branch("extends not over curlies", false)
 

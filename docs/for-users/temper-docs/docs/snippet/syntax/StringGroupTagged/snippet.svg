@@ -1,4 +1,4 @@
-<svg class="railroad-diagram" width="1224.5" height="743" viewBox="0 0 1224.5 743" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>StringGroupTagged &#58;&#61; &#40;Whether escape sequences are expanded is up to the tag&#58; &#34;&#92;u0022&#34; &#40;SourceCharacter &#45; &#40;&#92;&#92;n&#92;&#44; &#92;&#92;r&#92;&#44; &#92;&#92;&#92;&#44; &#92;&#34;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#34;&#92;u0022&#34; &#124; &#34;&#92;u0022&#92;u0022&#92;u0022&#34; &#40;Content line starting with &#96;&#34;&#96;&#58; &#34;LineBreak&#34; indentation &#40;Ignored margin quote&#58; &#34;&#92;u0022&#34;&#41; &#40;&#40;SourceCharacter &#45; &#40;&#92;&#92;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#124; &#34;&#123;&#58;&#34; StatementFragment &#34;&#58;&#125;&#34;&#41;&#41;&#42; &#34;LineBreak&#34;&#41;</title>
+<svg class="railroad-diagram" width="1242.5" height="1329" viewBox="0 0 1242.5 1329" role="img" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><title>StringGroupTagged &#58;&#61; &#40;Whether escape sequences are expanded is up to the tag&#58; &#34;&#92;u0022&#34; &#40;SourceCharacter &#45; &#40;&#92;&#92;n&#92;&#44; &#92;&#92;r&#92;&#44; &#92;&#92;&#92;&#44; &#92;&#34;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#34;&#92;u0022&#34; &#124; &#34;&#96;&#34; &#40;SourceCharacter &#45; &#40;&#92;&#92;n&#92;&#44; &#92;&#92;r&#92;&#44; &#92;&#92;&#92;&#44; &#92;&#96;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#34;&#96;&#34; &#124; &#34;&#92;&#34; &#40;SourceCharacter &#45; &#40;&#92;&#92;n&#92;&#44; &#92;&#92;r&#92;&#44; &#92;&#92;&#92;&#44; &#92;&#92;&#92;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#34;&#92;&#34; &#124; &#34;&#92;u0022&#92;u0022&#92;u0022&#34; &#40;Content line starting with &#96;&#34;&#96;&#58; &#34;LineBreak&#34; indentation &#40;&#40;Ignored margin character&#58; &#34;&#92;u0022&#34; &#124; &#34;&#126;&#34;&#41; &#40;SourceCharacter &#45; &#40;&#92;&#92;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#124; &#34;&#58;&#34; StatementFragment&#41;&#41;&#42; &#34;LineBreak&#34;&#41;</title>
 <style><![CDATA[
 svg.railroad-diagram {
     background-color: hsl(30,20%,95%);
@@ -57,533 +57,962 @@ svg.railroad-diagram g.diagram-text:hover path.diagram-text {
 <path d="M40 64h10"></path>
 <g>
 <path d="M50 64h0"></path>
-<path d="M1174.5 64h0"></path>
-<rect x="50" y="36" width="1124.5" height="687" rx="10" ry="10" class="group-box"></rect>
+<path d="M1192.5 64h0"></path>
+<rect x="50" y="36" width="1142.5" height="1273" rx="10" ry="10" class="group-box"></rect>
 <g>
 <path d="M50 64h0"></path>
-<path d="M1174.5 64h0"></path>
+<path d="M1192.5 64h0"></path>
 <path d="M50 64h20"></path>
 <g>
-<path d="M70 64h273.75"></path>
-<path d="M880.75 64h273.75"></path>
+<path d="M70 64h282.75"></path>
+<path d="M889.75 64h282.75"></path>
 <g class="terminal">
-<path d="M343.75 64h0"></path>
-<path d="M372.25 64h0"></path>
-<rect x="343.75" y="53" width="28.5" height="22" rx="10" ry="10"></rect>
-<text x="358" y="68">"</text>
+<path d="M352.75 64h0"></path>
+<path d="M381.25 64h0"></path>
+<rect x="352.75" y="53" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="367" y="68">"</text>
 </g>
-<path d="M372.25 64h10"></path>
+<path d="M381.25 64h10"></path>
 <g>
-<path d="M382.25 64h0"></path>
-<path d="M842.25 64h0"></path>
-<path d="M382.25 64a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<path d="M391.25 64h0"></path>
+<path d="M851.25 64h0"></path>
+<path d="M391.25 64a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
 <g>
-<path d="M402.25 44h420"></path>
+<path d="M411.25 44h420"></path>
 </g>
-<path d="M822.25 44a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
-<path d="M382.25 64h20"></path>
+<path d="M831.25 44a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M391.25 64h20"></path>
 <g>
-<path d="M402.25 64h0"></path>
-<path d="M822.25 64h0"></path>
-<path d="M402.25 64h10"></path>
+<path d="M411.25 64h0"></path>
+<path d="M831.25 64h0"></path>
+<path d="M411.25 64h10"></path>
 <g>
-<path d="M412.25 64h0"></path>
-<path d="M812.25 64h0"></path>
-<path d="M412.25 64h20"></path>
+<path d="M421.25 64h0"></path>
+<path d="M821.25 64h0"></path>
+<path d="M421.25 64h20"></path>
 <g class="non-terminal">
-<path d="M432.25 64h0"></path>
-<path d="M792.25 64h0"></path>
-<rect x="432.25" y="53" width="360" height="22"></rect>
-<text x="612.25" y="68">SourceCharacter - ('\n', '\r', '\', '"')</text>
+<path d="M441.25 64h0"></path>
+<path d="M801.25 64h0"></path>
+<rect x="441.25" y="53" width="360" height="22"></rect>
+<text x="621.25" y="68">SourceCharacter - ('\n', '\r', '\', '"')</text>
 </g>
-<path d="M792.25 64h20"></path>
-<path d="M412.25 64a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
+<path d="M801.25 64h20"></path>
+<path d="M421.25 64a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
 <g class="non-terminal">
-<path d="M432.25 94h110.5"></path>
-<path d="M681.75 94h110.5"></path>
-<rect x="542.75" y="83" width="139" height="22"></rect>
-<a xlink:href="../EscapeSequence/snippet.svg"><text x="612.25" y="98">EscapeSequence</text>
+<path d="M441.25 94h110.5"></path>
+<path d="M690.75 94h110.5"></path>
+<rect x="551.75" y="83" width="139" height="22"></rect>
+<a xlink:href="../EscapeSequence/snippet.svg"><text x="621.25" y="98">EscapeSequence</text>
 </a>
 </g>
-<path d="M792.25 94a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
-<path d="M412.25 64a10 10 0 0 1 10 10v64a10 10 0 0 0 10 10"></path>
+<path d="M801.25 94a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
+<path d="M421.25 64a10 10 0 0 1 10 10v64a10 10 0 0 0 10 10"></path>
 <g>
-<path d="M432.25 148h20.5"></path>
-<path d="M771.75 148h20.5"></path>
-<rect x="452.75" y="129" width="319" height="38" rx="10" ry="10" class="group-box"></rect>
+<path d="M441.25 148h20.5"></path>
+<path d="M780.75 148h20.5"></path>
+<rect x="461.75" y="129" width="319" height="38" rx="10" ry="10" class="group-box"></rect>
 <g>
-<path d="M452.75 148h10"></path>
-<path d="M761.75 148h10"></path>
+<path d="M461.75 148h10"></path>
+<path d="M770.75 148h10"></path>
 <g class="terminal">
-<path d="M462.75 148h0"></path>
-<path d="M499.75 148h0"></path>
-<rect x="462.75" y="137" width="37" height="22" rx="10" ry="10"></rect>
-<text x="481.25" y="152">\u</text>
+<path d="M471.75 148h0"></path>
+<path d="M508.75 148h0"></path>
+<rect x="471.75" y="137" width="37" height="22" rx="10" ry="10"></rect>
+<text x="490.25" y="152">\u</text>
 </g>
-<path d="M499.75 148h10"></path>
-<path d="M509.75 148h10"></path>
+<path d="M508.75 148h10"></path>
+<path d="M518.75 148h10"></path>
 <g class="non-terminal">
-<path d="M519.75 148h0"></path>
-<path d="M565.25 148h0"></path>
-<rect x="519.75" y="137" width="45.5" height="22"></rect>
-<text x="542.5" y="152">Hex</text>
+<path d="M528.75 148h0"></path>
+<path d="M574.25 148h0"></path>
+<rect x="528.75" y="137" width="45.5" height="22"></rect>
+<text x="551.5" y="152">Hex</text>
 </g>
-<path d="M565.25 148h10"></path>
-<path d="M575.25 148h10"></path>
+<path d="M574.25 148h10"></path>
+<path d="M584.25 148h10"></path>
 <g class="non-terminal">
-<path d="M585.25 148h0"></path>
-<path d="M630.75 148h0"></path>
-<rect x="585.25" y="137" width="45.5" height="22"></rect>
-<text x="608" y="152">Hex</text>
+<path d="M594.25 148h0"></path>
+<path d="M639.75 148h0"></path>
+<rect x="594.25" y="137" width="45.5" height="22"></rect>
+<text x="617" y="152">Hex</text>
 </g>
-<path d="M630.75 148h10"></path>
-<path d="M640.75 148h10"></path>
+<path d="M639.75 148h10"></path>
+<path d="M649.75 148h10"></path>
 <g class="non-terminal">
-<path d="M650.75 148h0"></path>
-<path d="M696.25 148h0"></path>
-<rect x="650.75" y="137" width="45.5" height="22"></rect>
-<text x="673.5" y="152">Hex</text>
+<path d="M659.75 148h0"></path>
+<path d="M705.25 148h0"></path>
+<rect x="659.75" y="137" width="45.5" height="22"></rect>
+<text x="682.5" y="152">Hex</text>
 </g>
-<path d="M696.25 148h10"></path>
-<path d="M706.25 148h10"></path>
+<path d="M705.25 148h10"></path>
+<path d="M715.25 148h10"></path>
 <g class="non-terminal">
-<path d="M716.25 148h0"></path>
-<path d="M761.75 148h0"></path>
-<rect x="716.25" y="137" width="45.5" height="22"></rect>
-<text x="739" y="152">Hex</text>
+<path d="M725.25 148h0"></path>
+<path d="M770.75 148h0"></path>
+<rect x="725.25" y="137" width="45.5" height="22"></rect>
+<text x="748" y="152">Hex</text>
 </g>
 </g>
 <g>
-<path d="M452.75 121h0"></path>
-<path d="M574.75 121h0"></path>
-<a xlink:href="https://unicode.org/glossary/#code_unit"><text x="513.75" y="126" class="comment">UTF-16 Code Unit</text>
-</a>
-</g>
-</g>
-<path d="M792.25 148a10 10 0 0 0 10 -10v-64a10 10 0 0 1 10 -10"></path>
-<path d="M412.25 64a10 10 0 0 1 10 10v126a10 10 0 0 0 10 10"></path>
-<g>
-<path d="M432.25 210h54.75"></path>
-<path d="M737.5 210h54.75"></path>
-<rect x="487" y="191" width="250.5" height="68" rx="10" ry="10" class="group-box"></rect>
-<g>
-<path d="M487 210h10"></path>
-<path d="M727.5 210h10"></path>
-<g class="terminal">
-<path d="M497 210h0"></path>
-<path d="M542.5 210h0"></path>
-<rect x="497" y="199" width="45.5" height="22" rx="10" ry="10"></rect>
-<text x="519.75" y="214">\u{</text>
-</g>
-<path d="M542.5 210h10"></path>
-<path d="M552.5 210h10"></path>
-<g>
-<path d="M562.5 210h0"></path>
-<path d="M679 210h0"></path>
-<path d="M562.5 210h10"></path>
-<g class="non-terminal">
-<path d="M572.5 210h0"></path>
-<path d="M669 210h0"></path>
-<rect x="572.5" y="199" width="96.5" height="22"></rect>
-<text x="620.75" y="214">HexDigits</text>
-</g>
-<path d="M669 210h10"></path>
-<path d="M572.5 210a10 10 0 0 0 -10 10v10a10 10 0 0 0 10 10"></path>
-<g class="terminal">
-<path d="M572.5 240h34"></path>
-<path d="M635 240h34"></path>
-<rect x="606.5" y="229" width="28.5" height="22" rx="10" ry="10"></rect>
-<text x="620.75" y="244">,</text>
-</g>
-<path d="M669 240a10 10 0 0 0 10 -10v-10a10 10 0 0 0 -10 -10"></path>
-</g>
-<path d="M679 210h10"></path>
-<path d="M689 210h10"></path>
-<g class="terminal">
-<path d="M699 210h0"></path>
-<path d="M727.5 210h0"></path>
-<rect x="699" y="199" width="28.5" height="22" rx="10" ry="10"></rect>
-<text x="713.25" y="214">}</text>
-</g>
-</g>
-<g>
-<path d="M487 183h0"></path>
-<path d="M644 183h0"></path>
-<a xlink:href="https://unicode.org/glossary/#unicode_scalar_value"><text x="565.5" y="188" class="comment">Unicode Scalar Values</text>
+<path d="M461.75 121h0"></path>
+<path d="M583.75 121h0"></path>
+<a xlink:href="https://unicode.org/glossary/#code_unit"><text x="522.75" y="126" class="comment">UTF-16 Code Unit</text>
 </a>
 </g>
 </g>
-<path d="M792.25 210a10 10 0 0 0 10 -10v-126a10 10 0 0 1 10 -10"></path>
-<path d="M412.25 64a10 10 0 0 1 10 10v218a10 10 0 0 0 10 10"></path>
+<path d="M801.25 148a10 10 0 0 0 10 -10v-64a10 10 0 0 1 10 -10"></path>
+<path d="M421.25 64a10 10 0 0 1 10 10v126a10 10 0 0 0 10 10"></path>
 <g>
-<path d="M432.25 302h90.25"></path>
-<path d="M702 302h90.25"></path>
-<rect x="522.5" y="283" width="179.5" height="38" rx="10" ry="10" class="group-box"></rect>
+<path d="M441.25 210h54.75"></path>
+<path d="M746.5 210h54.75"></path>
+<rect x="496" y="191" width="250.5" height="68" rx="10" ry="10" class="group-box"></rect>
 <g>
-<path d="M522.5 302h10"></path>
-<path d="M692 302h10"></path>
+<path d="M496 210h10"></path>
+<path d="M736.5 210h10"></path>
 <g class="terminal">
-<path d="M532.5 302h0"></path>
-<path d="M569.5 302h0"></path>
-<rect x="532.5" y="291" width="37" height="22" rx="10" ry="10"></rect>
-<text x="551" y="306">${</text>
+<path d="M506 210h0"></path>
+<path d="M551.5 210h0"></path>
+<rect x="506" y="199" width="45.5" height="22" rx="10" ry="10"></rect>
+<text x="528.75" y="214">\u{</text>
 </g>
-<path d="M569.5 302h10"></path>
-<path d="M579.5 302h10"></path>
+<path d="M551.5 210h10"></path>
+<path d="M561.5 210h10"></path>
+<g>
+<path d="M571.5 210h0"></path>
+<path d="M688 210h0"></path>
+<path d="M571.5 210h10"></path>
 <g class="non-terminal">
-<path d="M589.5 302h0"></path>
-<path d="M643.5 302h0"></path>
-<rect x="589.5" y="291" width="54" height="22"></rect>
-<a xlink:href="../Expr/snippet.svg"><text x="616.5" y="306">Expr</text>
-</a>
+<path d="M581.5 210h0"></path>
+<path d="M678 210h0"></path>
+<rect x="581.5" y="199" width="96.5" height="22"></rect>
+<text x="629.75" y="214">HexDigits</text>
 </g>
-<path d="M643.5 302h10"></path>
-<path d="M653.5 302h10"></path>
+<path d="M678 210h10"></path>
+<path d="M581.5 210a10 10 0 0 0 -10 10v10a10 10 0 0 0 10 10"></path>
 <g class="terminal">
-<path d="M663.5 302h0"></path>
-<path d="M692 302h0"></path>
-<rect x="663.5" y="291" width="28.5" height="22" rx="10" ry="10"></rect>
-<text x="677.75" y="306">}</text>
+<path d="M581.5 240h34"></path>
+<path d="M644 240h34"></path>
+<rect x="615.5" y="229" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="629.75" y="244">,</text>
 </g>
+<path d="M678 240a10 10 0 0 0 10 -10v-10a10 10 0 0 0 -10 -10"></path>
 </g>
-<g>
-<path d="M522.5 275h0"></path>
-<path d="M623.5 275h0"></path>
-<text x="573" y="280" class="comment">Interpolation</text>
-</g>
-</g>
-<path d="M792.25 302a10 10 0 0 0 10 -10v-218a10 10 0 0 1 10 -10"></path>
-</g>
-<path d="M812.25 64h10"></path>
-<path d="M412.25 64a10 10 0 0 0 -10 10v245a10 10 0 0 0 10 10"></path>
-<g>
-<path d="M412.25 329h400"></path>
-</g>
-<path d="M812.25 329a10 10 0 0 0 10 -10v-245a10 10 0 0 0 -10 -10"></path>
-</g>
-<path d="M822.25 64h20"></path>
-</g>
-<path d="M842.25 64h10"></path>
+<path d="M688 210h10"></path>
+<path d="M698 210h10"></path>
 <g class="terminal">
-<path d="M852.25 64h0"></path>
-<path d="M880.75 64h0"></path>
-<rect x="852.25" y="53" width="28.5" height="22" rx="10" ry="10"></rect>
-<text x="866.5" y="68">"</text>
-</g>
-</g>
-<path d="M1154.5 64h20"></path>
-<path d="M50 64a10 10 0 0 1 10 10v320a10 10 0 0 0 10 10"></path>
-<g>
-<path d="M70 404h0"></path>
-<path d="M1154.5 404h0"></path>
-<g class="terminal">
-<path d="M70 404h0"></path>
-<path d="M115.5 404h0"></path>
-<rect x="70" y="393" width="45.5" height="22" rx="10" ry="10"></rect>
-<text x="92.75" y="408">"""</text>
-</g>
-<path d="M115.5 404h10"></path>
-<g>
-<path d="M125.5 404h0"></path>
-<path d="M1048 404h0"></path>
-<path d="M125.5 404a10 10 0 0 0 10 -10v-47a10 10 0 0 1 10 -10"></path>
-<g>
-<path d="M145.5 337h882.5"></path>
-</g>
-<path d="M1028 337a10 10 0 0 1 10 10v47a10 10 0 0 0 10 10"></path>
-<path d="M125.5 404h20"></path>
-<g>
-<path d="M145.5 404h0"></path>
-<path d="M1028 404h0"></path>
-<path d="M145.5 404h10"></path>
-<g>
-<path d="M155.5 404h0"></path>
-<path d="M1018 404h0"></path>
-<rect x="155.5" y="361" width="862.5" height="346" rx="10" ry="10" class="group-box"></rect>
-<g>
-<path d="M155.5 404h10"></path>
-<path d="M1008 404h10"></path>
-<g class="terminal">
-<path d="M165.5 404h0"></path>
-<path d="M262 404h0"></path>
-<rect x="165.5" y="393" width="96.5" height="22" rx="10" ry="10"></rect>
-<text x="213.75" y="408">LineBreak</text>
-</g>
-<path d="M262 404h10"></path>
-<path d="M272 404h10"></path>
-<g>
-<path d="M282 404h0"></path>
-<path d="M369 404h0"></path>
-<text x="325.5" y="409" class="comment">indentation</text>
-</g>
-<path d="M369 404h10"></path>
-<path d="M379 404h10"></path>
-<g>
-<path d="M389 404h0"></path>
-<path d="M539 404h0"></path>
-<rect x="389" y="385" width="150" height="38" rx="10" ry="10" class="group-box"></rect>
-<g class="terminal">
-<path d="M389 404h60.75"></path>
-<path d="M478.25 404h60.75"></path>
-<rect x="449.75" y="393" width="28.5" height="22" rx="10" ry="10"></rect>
-<text x="464" y="408">"</text>
-</g>
-<g>
-<path d="M389 377h0"></path>
-<path d="M539 377h0"></path>
-<text x="464" y="382" class="comment">Ignored margin quote</text>
-</g>
-</g>
-<path d="M539 404h10"></path>
-<g>
-<path d="M549 404h0"></path>
-<path d="M1008 404h0"></path>
-<path d="M549 404h20"></path>
-<g>
-<path d="M569 404h0"></path>
-<path d="M988 404h0"></path>
-<path d="M569 404a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
-<g>
-<path d="M589 384h379"></path>
-</g>
-<path d="M968 384a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
-<path d="M569 404h20"></path>
-<g>
-<path d="M589 404h0"></path>
-<path d="M968 404h0"></path>
-<path d="M589 404h10"></path>
-<g>
-<path d="M599 404h0"></path>
-<path d="M958 404h0"></path>
-<path d="M599 404h20"></path>
-<g class="non-terminal">
-<path d="M619 404h51.75"></path>
-<path d="M886.25 404h51.75"></path>
-<rect x="670.75" y="393" width="215.5" height="22"></rect>
-<text x="778.5" y="408">SourceCharacter - ('\')</text>
-</g>
-<path d="M938 404h20"></path>
-<path d="M599 404a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
-<g class="non-terminal">
-<path d="M619 434h90"></path>
-<path d="M848 434h90"></path>
-<rect x="709" y="423" width="139" height="22"></rect>
-<a xlink:href="../EscapeSequence/snippet.svg"><text x="778.5" y="438">EscapeSequence</text>
-</a>
-</g>
-<path d="M938 434a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
-<path d="M599 404a10 10 0 0 1 10 10v64a10 10 0 0 0 10 10"></path>
-<g>
-<path d="M619 488h0"></path>
-<path d="M938 488h0"></path>
-<rect x="619" y="469" width="319" height="38" rx="10" ry="10" class="group-box"></rect>
-<g>
-<path d="M619 488h10"></path>
-<path d="M928 488h10"></path>
-<g class="terminal">
-<path d="M629 488h0"></path>
-<path d="M666 488h0"></path>
-<rect x="629" y="477" width="37" height="22" rx="10" ry="10"></rect>
-<text x="647.5" y="492">\u</text>
-</g>
-<path d="M666 488h10"></path>
-<path d="M676 488h10"></path>
-<g class="non-terminal">
-<path d="M686 488h0"></path>
-<path d="M731.5 488h0"></path>
-<rect x="686" y="477" width="45.5" height="22"></rect>
-<text x="708.75" y="492">Hex</text>
-</g>
-<path d="M731.5 488h10"></path>
-<path d="M741.5 488h10"></path>
-<g class="non-terminal">
-<path d="M751.5 488h0"></path>
-<path d="M797 488h0"></path>
-<rect x="751.5" y="477" width="45.5" height="22"></rect>
-<text x="774.25" y="492">Hex</text>
-</g>
-<path d="M797 488h10"></path>
-<path d="M807 488h10"></path>
-<g class="non-terminal">
-<path d="M817 488h0"></path>
-<path d="M862.5 488h0"></path>
-<rect x="817" y="477" width="45.5" height="22"></rect>
-<text x="839.75" y="492">Hex</text>
-</g>
-<path d="M862.5 488h10"></path>
-<path d="M872.5 488h10"></path>
-<g class="non-terminal">
-<path d="M882.5 488h0"></path>
-<path d="M928 488h0"></path>
-<rect x="882.5" y="477" width="45.5" height="22"></rect>
-<text x="905.25" y="492">Hex</text>
+<path d="M708 210h0"></path>
+<path d="M736.5 210h0"></path>
+<rect x="708" y="199" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="722.25" y="214">}</text>
 </g>
 </g>
 <g>
-<path d="M619 461h0"></path>
-<path d="M741 461h0"></path>
-<a xlink:href="https://unicode.org/glossary/#code_unit"><text x="680" y="466" class="comment">UTF-16 Code Unit</text>
+<path d="M496 183h0"></path>
+<path d="M653 183h0"></path>
+<a xlink:href="https://unicode.org/glossary/#unicode_scalar_value"><text x="574.5" y="188" class="comment">Unicode Scalar Values</text>
 </a>
 </g>
 </g>
-<path d="M938 488a10 10 0 0 0 10 -10v-64a10 10 0 0 1 10 -10"></path>
-<path d="M599 404a10 10 0 0 1 10 10v126a10 10 0 0 0 10 10"></path>
+<path d="M801.25 210a10 10 0 0 0 10 -10v-126a10 10 0 0 1 10 -10"></path>
+<path d="M421.25 64a10 10 0 0 1 10 10v218a10 10 0 0 0 10 10"></path>
 <g>
-<path d="M619 550h34.25"></path>
-<path d="M903.75 550h34.25"></path>
-<rect x="653.25" y="531" width="250.5" height="68" rx="10" ry="10" class="group-box"></rect>
+<path d="M441.25 302h90.25"></path>
+<path d="M711 302h90.25"></path>
+<rect x="531.5" y="283" width="179.5" height="38" rx="10" ry="10" class="group-box"></rect>
 <g>
-<path d="M653.25 550h10"></path>
-<path d="M893.75 550h10"></path>
+<path d="M531.5 302h10"></path>
+<path d="M701 302h10"></path>
 <g class="terminal">
-<path d="M663.25 550h0"></path>
-<path d="M708.75 550h0"></path>
-<rect x="663.25" y="539" width="45.5" height="22" rx="10" ry="10"></rect>
-<text x="686" y="554">\u{</text>
+<path d="M541.5 302h0"></path>
+<path d="M578.5 302h0"></path>
+<rect x="541.5" y="291" width="37" height="22" rx="10" ry="10"></rect>
+<text x="560" y="306">${</text>
 </g>
-<path d="M708.75 550h10"></path>
-<path d="M718.75 550h10"></path>
-<g>
-<path d="M728.75 550h0"></path>
-<path d="M845.25 550h0"></path>
-<path d="M728.75 550h10"></path>
+<path d="M578.5 302h10"></path>
+<path d="M588.5 302h10"></path>
 <g class="non-terminal">
-<path d="M738.75 550h0"></path>
-<path d="M835.25 550h0"></path>
-<rect x="738.75" y="539" width="96.5" height="22"></rect>
-<text x="787" y="554">HexDigits</text>
+<path d="M598.5 302h0"></path>
+<path d="M652.5 302h0"></path>
+<rect x="598.5" y="291" width="54" height="22"></rect>
+<a xlink:href="../Expr/snippet.svg"><text x="625.5" y="306">Expr</text>
+</a>
 </g>
-<path d="M835.25 550h10"></path>
-<path d="M738.75 550a10 10 0 0 0 -10 10v10a10 10 0 0 0 10 10"></path>
+<path d="M652.5 302h10"></path>
+<path d="M662.5 302h10"></path>
 <g class="terminal">
-<path d="M738.75 580h34"></path>
-<path d="M801.25 580h34"></path>
-<rect x="772.75" y="569" width="28.5" height="22" rx="10" ry="10"></rect>
-<text x="787" y="584">,</text>
-</g>
-<path d="M835.25 580a10 10 0 0 0 10 -10v-10a10 10 0 0 0 -10 -10"></path>
-</g>
-<path d="M845.25 550h10"></path>
-<path d="M855.25 550h10"></path>
-<g class="terminal">
-<path d="M865.25 550h0"></path>
-<path d="M893.75 550h0"></path>
-<rect x="865.25" y="539" width="28.5" height="22" rx="10" ry="10"></rect>
-<text x="879.5" y="554">}</text>
+<path d="M672.5 302h0"></path>
+<path d="M701 302h0"></path>
+<rect x="672.5" y="291" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="686.75" y="306">}</text>
 </g>
 </g>
 <g>
-<path d="M653.25 523h0"></path>
-<path d="M810.25 523h0"></path>
-<a xlink:href="https://unicode.org/glossary/#unicode_scalar_value"><text x="731.75" y="528" class="comment">Unicode Scalar Values</text>
+<path d="M531.5 275h0"></path>
+<path d="M632.5 275h0"></path>
+<text x="582" y="280" class="comment">Interpolation</text>
+</g>
+</g>
+<path d="M801.25 302a10 10 0 0 0 10 -10v-218a10 10 0 0 1 10 -10"></path>
+</g>
+<path d="M821.25 64h10"></path>
+<path d="M421.25 64a10 10 0 0 0 -10 10v245a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M421.25 329h400"></path>
+</g>
+<path d="M821.25 329a10 10 0 0 0 10 -10v-245a10 10 0 0 0 -10 -10"></path>
+</g>
+<path d="M831.25 64h20"></path>
+</g>
+<path d="M851.25 64h10"></path>
+<g class="terminal">
+<path d="M861.25 64h0"></path>
+<path d="M889.75 64h0"></path>
+<rect x="861.25" y="53" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="875.5" y="68">"</text>
+</g>
+</g>
+<path d="M1172.5 64h20"></path>
+<path d="M50 64a10 10 0 0 1 10 10v273a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M70 357h282.75"></path>
+<path d="M889.75 357h282.75"></path>
+<g class="terminal">
+<path d="M352.75 357h0"></path>
+<path d="M381.25 357h0"></path>
+<rect x="352.75" y="346" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="367" y="361">&#96;</text>
+</g>
+<path d="M381.25 357h10"></path>
+<g>
+<path d="M391.25 357h0"></path>
+<path d="M851.25 357h0"></path>
+<path d="M391.25 357a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M411.25 337h420"></path>
+</g>
+<path d="M831.25 337a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M391.25 357h20"></path>
+<g>
+<path d="M411.25 357h0"></path>
+<path d="M831.25 357h0"></path>
+<path d="M411.25 357h10"></path>
+<g>
+<path d="M421.25 357h0"></path>
+<path d="M821.25 357h0"></path>
+<path d="M421.25 357h20"></path>
+<g class="non-terminal">
+<path d="M441.25 357h0"></path>
+<path d="M801.25 357h0"></path>
+<rect x="441.25" y="346" width="360" height="22"></rect>
+<text x="621.25" y="361">SourceCharacter - ('\n', '\r', '\', '&#96;')</text>
+</g>
+<path d="M801.25 357h20"></path>
+<path d="M421.25 357a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
+<g class="non-terminal">
+<path d="M441.25 387h110.5"></path>
+<path d="M690.75 387h110.5"></path>
+<rect x="551.75" y="376" width="139" height="22"></rect>
+<a xlink:href="../EscapeSequence/snippet.svg"><text x="621.25" y="391">EscapeSequence</text>
+</a>
+</g>
+<path d="M801.25 387a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
+<path d="M421.25 357a10 10 0 0 1 10 10v64a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M441.25 441h20.5"></path>
+<path d="M780.75 441h20.5"></path>
+<rect x="461.75" y="422" width="319" height="38" rx="10" ry="10" class="group-box"></rect>
+<g>
+<path d="M461.75 441h10"></path>
+<path d="M770.75 441h10"></path>
+<g class="terminal">
+<path d="M471.75 441h0"></path>
+<path d="M508.75 441h0"></path>
+<rect x="471.75" y="430" width="37" height="22" rx="10" ry="10"></rect>
+<text x="490.25" y="445">\u</text>
+</g>
+<path d="M508.75 441h10"></path>
+<path d="M518.75 441h10"></path>
+<g class="non-terminal">
+<path d="M528.75 441h0"></path>
+<path d="M574.25 441h0"></path>
+<rect x="528.75" y="430" width="45.5" height="22"></rect>
+<text x="551.5" y="445">Hex</text>
+</g>
+<path d="M574.25 441h10"></path>
+<path d="M584.25 441h10"></path>
+<g class="non-terminal">
+<path d="M594.25 441h0"></path>
+<path d="M639.75 441h0"></path>
+<rect x="594.25" y="430" width="45.5" height="22"></rect>
+<text x="617" y="445">Hex</text>
+</g>
+<path d="M639.75 441h10"></path>
+<path d="M649.75 441h10"></path>
+<g class="non-terminal">
+<path d="M659.75 441h0"></path>
+<path d="M705.25 441h0"></path>
+<rect x="659.75" y="430" width="45.5" height="22"></rect>
+<text x="682.5" y="445">Hex</text>
+</g>
+<path d="M705.25 441h10"></path>
+<path d="M715.25 441h10"></path>
+<g class="non-terminal">
+<path d="M725.25 441h0"></path>
+<path d="M770.75 441h0"></path>
+<rect x="725.25" y="430" width="45.5" height="22"></rect>
+<text x="748" y="445">Hex</text>
+</g>
+</g>
+<g>
+<path d="M461.75 414h0"></path>
+<path d="M583.75 414h0"></path>
+<a xlink:href="https://unicode.org/glossary/#code_unit"><text x="522.75" y="419" class="comment">UTF-16 Code Unit</text>
 </a>
 </g>
 </g>
-<path d="M938 550a10 10 0 0 0 10 -10v-126a10 10 0 0 1 10 -10"></path>
-<path d="M599 404a10 10 0 0 1 10 10v218a10 10 0 0 0 10 10"></path>
+<path d="M801.25 441a10 10 0 0 0 10 -10v-64a10 10 0 0 1 10 -10"></path>
+<path d="M421.25 357a10 10 0 0 1 10 10v126a10 10 0 0 0 10 10"></path>
 <g>
-<path d="M619 642h69.75"></path>
-<path d="M868.25 642h69.75"></path>
-<rect x="688.75" y="623" width="179.5" height="38" rx="10" ry="10" class="group-box"></rect>
+<path d="M441.25 503h54.75"></path>
+<path d="M746.5 503h54.75"></path>
+<rect x="496" y="484" width="250.5" height="68" rx="10" ry="10" class="group-box"></rect>
 <g>
-<path d="M688.75 642h10"></path>
-<path d="M858.25 642h10"></path>
+<path d="M496 503h10"></path>
+<path d="M736.5 503h10"></path>
 <g class="terminal">
-<path d="M698.75 642h0"></path>
-<path d="M735.75 642h0"></path>
-<rect x="698.75" y="631" width="37" height="22" rx="10" ry="10"></rect>
-<text x="717.25" y="646">${</text>
+<path d="M506 503h0"></path>
+<path d="M551.5 503h0"></path>
+<rect x="506" y="492" width="45.5" height="22" rx="10" ry="10"></rect>
+<text x="528.75" y="507">\u{</text>
 </g>
-<path d="M735.75 642h10"></path>
-<path d="M745.75 642h10"></path>
+<path d="M551.5 503h10"></path>
+<path d="M561.5 503h10"></path>
+<g>
+<path d="M571.5 503h0"></path>
+<path d="M688 503h0"></path>
+<path d="M571.5 503h10"></path>
 <g class="non-terminal">
-<path d="M755.75 642h0"></path>
-<path d="M809.75 642h0"></path>
-<rect x="755.75" y="631" width="54" height="22"></rect>
-<a xlink:href="../Expr/snippet.svg"><text x="782.75" y="646">Expr</text>
+<path d="M581.5 503h0"></path>
+<path d="M678 503h0"></path>
+<rect x="581.5" y="492" width="96.5" height="22"></rect>
+<text x="629.75" y="507">HexDigits</text>
+</g>
+<path d="M678 503h10"></path>
+<path d="M581.5 503a10 10 0 0 0 -10 10v10a10 10 0 0 0 10 10"></path>
+<g class="terminal">
+<path d="M581.5 533h34"></path>
+<path d="M644 533h34"></path>
+<rect x="615.5" y="522" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="629.75" y="537">,</text>
+</g>
+<path d="M678 533a10 10 0 0 0 10 -10v-10a10 10 0 0 0 -10 -10"></path>
+</g>
+<path d="M688 503h10"></path>
+<path d="M698 503h10"></path>
+<g class="terminal">
+<path d="M708 503h0"></path>
+<path d="M736.5 503h0"></path>
+<rect x="708" y="492" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="722.25" y="507">}</text>
+</g>
+</g>
+<g>
+<path d="M496 476h0"></path>
+<path d="M653 476h0"></path>
+<a xlink:href="https://unicode.org/glossary/#unicode_scalar_value"><text x="574.5" y="481" class="comment">Unicode Scalar Values</text>
 </a>
 </g>
-<path d="M809.75 642h10"></path>
-<path d="M819.75 642h10"></path>
+</g>
+<path d="M801.25 503a10 10 0 0 0 10 -10v-126a10 10 0 0 1 10 -10"></path>
+<path d="M421.25 357a10 10 0 0 1 10 10v218a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M441.25 595h90.25"></path>
+<path d="M711 595h90.25"></path>
+<rect x="531.5" y="576" width="179.5" height="38" rx="10" ry="10" class="group-box"></rect>
+<g>
+<path d="M531.5 595h10"></path>
+<path d="M701 595h10"></path>
 <g class="terminal">
-<path d="M829.75 642h0"></path>
-<path d="M858.25 642h0"></path>
-<rect x="829.75" y="631" width="28.5" height="22" rx="10" ry="10"></rect>
-<text x="844" y="646">}</text>
+<path d="M541.5 595h0"></path>
+<path d="M578.5 595h0"></path>
+<rect x="541.5" y="584" width="37" height="22" rx="10" ry="10"></rect>
+<text x="560" y="599">${</text>
 </g>
-</g>
-<g>
-<path d="M688.75 615h0"></path>
-<path d="M789.75 615h0"></path>
-<text x="739.25" y="620" class="comment">Interpolation</text>
-</g>
-</g>
-<path d="M938 642a10 10 0 0 0 10 -10v-218a10 10 0 0 1 10 -10"></path>
-</g>
-<path d="M958 404h10"></path>
-<path d="M599 404a10 10 0 0 0 -10 10v245a10 10 0 0 0 10 10"></path>
-<g>
-<path d="M599 669h359"></path>
-</g>
-<path d="M958 669a10 10 0 0 0 10 -10v-245a10 10 0 0 0 -10 -10"></path>
-</g>
-<path d="M968 404h20"></path>
-</g>
-<path d="M988 404h20"></path>
-<path d="M549 404a10 10 0 0 1 10 10v264a10 10 0 0 0 10 10"></path>
-<g>
-<path d="M569 688h70.25"></path>
-<path d="M917.75 688h70.25"></path>
-<g class="terminal">
-<path d="M639.25 688h0"></path>
-<path d="M676.25 688h0"></path>
-<rect x="639.25" y="677" width="37" height="22" rx="10" ry="10"></rect>
-<text x="657.75" y="692">{:</text>
-</g>
-<path d="M676.25 688h10"></path>
-<path d="M686.25 688h10"></path>
+<path d="M578.5 595h10"></path>
+<path d="M588.5 595h10"></path>
 <g class="non-terminal">
-<path d="M696.25 688h0"></path>
-<path d="M860.75 688h0"></path>
-<rect x="696.25" y="677" width="164.5" height="22"></rect>
-<text x="778.5" y="692">StatementFragment</text>
+<path d="M598.5 595h0"></path>
+<path d="M652.5 595h0"></path>
+<rect x="598.5" y="584" width="54" height="22"></rect>
+<a xlink:href="../Expr/snippet.svg"><text x="625.5" y="599">Expr</text>
+</a>
 </g>
-<path d="M860.75 688h10"></path>
-<path d="M870.75 688h10"></path>
+<path d="M652.5 595h10"></path>
+<path d="M662.5 595h10"></path>
 <g class="terminal">
-<path d="M880.75 688h0"></path>
-<path d="M917.75 688h0"></path>
-<rect x="880.75" y="677" width="37" height="22" rx="10" ry="10"></rect>
-<text x="899.25" y="692">:}</text>
-</g>
-</g>
-<path d="M988 688a10 10 0 0 0 10 -10v-264a10 10 0 0 1 10 -10"></path>
+<path d="M672.5 595h0"></path>
+<path d="M701 595h0"></path>
+<rect x="672.5" y="584" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="686.75" y="599">}</text>
 </g>
 </g>
 <g>
-<path d="M155.5 353h0"></path>
-<path d="M375.5 353h0"></path>
-<text x="265.5" y="358" class="comment">Content line starting with &#96;"&#96;</text>
+<path d="M531.5 568h0"></path>
+<path d="M632.5 568h0"></path>
+<text x="582" y="573" class="comment">Interpolation</text>
 </g>
 </g>
-<path d="M1018 404h10"></path>
-<path d="M155.5 404a10 10 0 0 0 -10 10v291a10 10 0 0 0 10 10"></path>
+<path d="M801.25 595a10 10 0 0 0 10 -10v-218a10 10 0 0 1 10 -10"></path>
+</g>
+<path d="M821.25 357h10"></path>
+<path d="M421.25 357a10 10 0 0 0 -10 10v245a10 10 0 0 0 10 10"></path>
 <g>
-<path d="M155.5 715h862.5"></path>
+<path d="M421.25 622h400"></path>
 </g>
-<path d="M1018 715a10 10 0 0 0 10 -10v-291a10 10 0 0 0 -10 -10"></path>
+<path d="M821.25 622a10 10 0 0 0 10 -10v-245a10 10 0 0 0 -10 -10"></path>
 </g>
-<path d="M1028 404h20"></path>
+<path d="M831.25 357h20"></path>
 </g>
-<path d="M1048 404h10"></path>
+<path d="M851.25 357h10"></path>
 <g class="terminal">
-<path d="M1058 404h0"></path>
-<path d="M1154.5 404h0"></path>
-<rect x="1058" y="393" width="96.5" height="22" rx="10" ry="10"></rect>
-<text x="1106.25" y="408">LineBreak</text>
+<path d="M861.25 357h0"></path>
+<path d="M889.75 357h0"></path>
+<rect x="861.25" y="346" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="875.5" y="361">&#96;</text>
 </g>
 </g>
-<path d="M1154.5 404a10 10 0 0 0 10 -10v-320a10 10 0 0 1 10 -10"></path>
+<path d="M1172.5 357a10 10 0 0 0 10 -10v-273a10 10 0 0 1 10 -10"></path>
+<path d="M50 64a10 10 0 0 1 10 10v566a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M70 650h278.5"></path>
+<path d="M894 650h278.5"></path>
+<g class="terminal">
+<path d="M348.5 650h0"></path>
+<path d="M377 650h0"></path>
+<rect x="348.5" y="639" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="362.75" y="654">'</text>
+</g>
+<path d="M377 650h10"></path>
+<g>
+<path d="M387 650h0"></path>
+<path d="M855.5 650h0"></path>
+<path d="M387 650a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M407 630h428.5"></path>
+</g>
+<path d="M835.5 630a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M387 650h20"></path>
+<g>
+<path d="M407 650h0"></path>
+<path d="M835.5 650h0"></path>
+<path d="M407 650h10"></path>
+<g>
+<path d="M417 650h0"></path>
+<path d="M825.5 650h0"></path>
+<path d="M417 650h20"></path>
+<g class="non-terminal">
+<path d="M437 650h0"></path>
+<path d="M805.5 650h0"></path>
+<rect x="437" y="639" width="368.5" height="22"></rect>
+<text x="621.25" y="654">SourceCharacter - ('\n', '\r', '\', '\'')</text>
+</g>
+<path d="M805.5 650h20"></path>
+<path d="M417 650a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
+<g class="non-terminal">
+<path d="M437 680h114.75"></path>
+<path d="M690.75 680h114.75"></path>
+<rect x="551.75" y="669" width="139" height="22"></rect>
+<a xlink:href="../EscapeSequence/snippet.svg"><text x="621.25" y="684">EscapeSequence</text>
+</a>
+</g>
+<path d="M805.5 680a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
+<path d="M417 650a10 10 0 0 1 10 10v64a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M437 734h24.75"></path>
+<path d="M780.75 734h24.75"></path>
+<rect x="461.75" y="715" width="319" height="38" rx="10" ry="10" class="group-box"></rect>
+<g>
+<path d="M461.75 734h10"></path>
+<path d="M770.75 734h10"></path>
+<g class="terminal">
+<path d="M471.75 734h0"></path>
+<path d="M508.75 734h0"></path>
+<rect x="471.75" y="723" width="37" height="22" rx="10" ry="10"></rect>
+<text x="490.25" y="738">\u</text>
+</g>
+<path d="M508.75 734h10"></path>
+<path d="M518.75 734h10"></path>
+<g class="non-terminal">
+<path d="M528.75 734h0"></path>
+<path d="M574.25 734h0"></path>
+<rect x="528.75" y="723" width="45.5" height="22"></rect>
+<text x="551.5" y="738">Hex</text>
+</g>
+<path d="M574.25 734h10"></path>
+<path d="M584.25 734h10"></path>
+<g class="non-terminal">
+<path d="M594.25 734h0"></path>
+<path d="M639.75 734h0"></path>
+<rect x="594.25" y="723" width="45.5" height="22"></rect>
+<text x="617" y="738">Hex</text>
+</g>
+<path d="M639.75 734h10"></path>
+<path d="M649.75 734h10"></path>
+<g class="non-terminal">
+<path d="M659.75 734h0"></path>
+<path d="M705.25 734h0"></path>
+<rect x="659.75" y="723" width="45.5" height="22"></rect>
+<text x="682.5" y="738">Hex</text>
+</g>
+<path d="M705.25 734h10"></path>
+<path d="M715.25 734h10"></path>
+<g class="non-terminal">
+<path d="M725.25 734h0"></path>
+<path d="M770.75 734h0"></path>
+<rect x="725.25" y="723" width="45.5" height="22"></rect>
+<text x="748" y="738">Hex</text>
+</g>
+</g>
+<g>
+<path d="M461.75 707h0"></path>
+<path d="M583.75 707h0"></path>
+<a xlink:href="https://unicode.org/glossary/#code_unit"><text x="522.75" y="712" class="comment">UTF-16 Code Unit</text>
+</a>
+</g>
+</g>
+<path d="M805.5 734a10 10 0 0 0 10 -10v-64a10 10 0 0 1 10 -10"></path>
+<path d="M417 650a10 10 0 0 1 10 10v126a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M437 796h59"></path>
+<path d="M746.5 796h59"></path>
+<rect x="496" y="777" width="250.5" height="68" rx="10" ry="10" class="group-box"></rect>
+<g>
+<path d="M496 796h10"></path>
+<path d="M736.5 796h10"></path>
+<g class="terminal">
+<path d="M506 796h0"></path>
+<path d="M551.5 796h0"></path>
+<rect x="506" y="785" width="45.5" height="22" rx="10" ry="10"></rect>
+<text x="528.75" y="800">\u{</text>
+</g>
+<path d="M551.5 796h10"></path>
+<path d="M561.5 796h10"></path>
+<g>
+<path d="M571.5 796h0"></path>
+<path d="M688 796h0"></path>
+<path d="M571.5 796h10"></path>
+<g class="non-terminal">
+<path d="M581.5 796h0"></path>
+<path d="M678 796h0"></path>
+<rect x="581.5" y="785" width="96.5" height="22"></rect>
+<text x="629.75" y="800">HexDigits</text>
+</g>
+<path d="M678 796h10"></path>
+<path d="M581.5 796a10 10 0 0 0 -10 10v10a10 10 0 0 0 10 10"></path>
+<g class="terminal">
+<path d="M581.5 826h34"></path>
+<path d="M644 826h34"></path>
+<rect x="615.5" y="815" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="629.75" y="830">,</text>
+</g>
+<path d="M678 826a10 10 0 0 0 10 -10v-10a10 10 0 0 0 -10 -10"></path>
+</g>
+<path d="M688 796h10"></path>
+<path d="M698 796h10"></path>
+<g class="terminal">
+<path d="M708 796h0"></path>
+<path d="M736.5 796h0"></path>
+<rect x="708" y="785" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="722.25" y="800">}</text>
+</g>
+</g>
+<g>
+<path d="M496 769h0"></path>
+<path d="M653 769h0"></path>
+<a xlink:href="https://unicode.org/glossary/#unicode_scalar_value"><text x="574.5" y="774" class="comment">Unicode Scalar Values</text>
+</a>
+</g>
+</g>
+<path d="M805.5 796a10 10 0 0 0 10 -10v-126a10 10 0 0 1 10 -10"></path>
+<path d="M417 650a10 10 0 0 1 10 10v218a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M437 888h94.5"></path>
+<path d="M711 888h94.5"></path>
+<rect x="531.5" y="869" width="179.5" height="38" rx="10" ry="10" class="group-box"></rect>
+<g>
+<path d="M531.5 888h10"></path>
+<path d="M701 888h10"></path>
+<g class="terminal">
+<path d="M541.5 888h0"></path>
+<path d="M578.5 888h0"></path>
+<rect x="541.5" y="877" width="37" height="22" rx="10" ry="10"></rect>
+<text x="560" y="892">${</text>
+</g>
+<path d="M578.5 888h10"></path>
+<path d="M588.5 888h10"></path>
+<g class="non-terminal">
+<path d="M598.5 888h0"></path>
+<path d="M652.5 888h0"></path>
+<rect x="598.5" y="877" width="54" height="22"></rect>
+<a xlink:href="../Expr/snippet.svg"><text x="625.5" y="892">Expr</text>
+</a>
+</g>
+<path d="M652.5 888h10"></path>
+<path d="M662.5 888h10"></path>
+<g class="terminal">
+<path d="M672.5 888h0"></path>
+<path d="M701 888h0"></path>
+<rect x="672.5" y="877" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="686.75" y="892">}</text>
+</g>
+</g>
+<g>
+<path d="M531.5 861h0"></path>
+<path d="M632.5 861h0"></path>
+<text x="582" y="866" class="comment">Interpolation</text>
+</g>
+</g>
+<path d="M805.5 888a10 10 0 0 0 10 -10v-218a10 10 0 0 1 10 -10"></path>
+</g>
+<path d="M825.5 650h10"></path>
+<path d="M417 650a10 10 0 0 0 -10 10v245a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M417 915h408.5"></path>
+</g>
+<path d="M825.5 915a10 10 0 0 0 10 -10v-245a10 10 0 0 0 -10 -10"></path>
+</g>
+<path d="M835.5 650h20"></path>
+</g>
+<path d="M855.5 650h10"></path>
+<g class="terminal">
+<path d="M865.5 650h0"></path>
+<path d="M894 650h0"></path>
+<rect x="865.5" y="639" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="879.75" y="654">'</text>
+</g>
+</g>
+<path d="M1172.5 650a10 10 0 0 0 10 -10v-566a10 10 0 0 1 10 -10"></path>
+<path d="M50 64a10 10 0 0 1 10 10v906a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M70 990h0"></path>
+<path d="M1172.5 990h0"></path>
+<g class="terminal">
+<path d="M70 990h0"></path>
+<path d="M115.5 990h0"></path>
+<rect x="70" y="979" width="45.5" height="22" rx="10" ry="10"></rect>
+<text x="92.75" y="994">"""</text>
+</g>
+<path d="M115.5 990h10"></path>
+<g>
+<path d="M125.5 990h0"></path>
+<path d="M1066 990h0"></path>
+<path d="M125.5 990a10 10 0 0 0 10 -10v-47a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M145.5 923h900.5"></path>
+</g>
+<path d="M1046 923a10 10 0 0 1 10 10v47a10 10 0 0 0 10 10"></path>
+<path d="M125.5 990h20"></path>
+<g>
+<path d="M145.5 990h0"></path>
+<path d="M1046 990h0"></path>
+<path d="M145.5 990h10"></path>
+<g>
+<path d="M155.5 990h0"></path>
+<path d="M1036 990h0"></path>
+<rect x="155.5" y="947" width="880.5" height="346" rx="10" ry="10" class="group-box"></rect>
+<g>
+<path d="M155.5 990h10"></path>
+<path d="M1026 990h10"></path>
+<g class="terminal">
+<path d="M165.5 990h0"></path>
+<path d="M262 990h0"></path>
+<rect x="165.5" y="979" width="96.5" height="22" rx="10" ry="10"></rect>
+<text x="213.75" y="994">LineBreak</text>
+</g>
+<path d="M262 990h10"></path>
+<path d="M272 990h10"></path>
+<g>
+<path d="M282 990h0"></path>
+<path d="M369 990h0"></path>
+<text x="325.5" y="995" class="comment">indentation</text>
+</g>
+<path d="M369 990h10"></path>
+<g>
+<path d="M379 990h0"></path>
+<path d="M1026 990h0"></path>
+<path d="M379 990h20"></path>
+<g>
+<path d="M399 990h0"></path>
+<path d="M1006 990h0"></path>
+<g>
+<path d="M399 990h0"></path>
+<path d="M577 990h0"></path>
+<rect x="399" y="971" width="178" height="68" rx="10" ry="10" class="group-box"></rect>
+<g>
+<path d="M399 990h54.75"></path>
+<path d="M522.25 990h54.75"></path>
+<path d="M453.75 990h20"></path>
+<g class="terminal">
+<path d="M473.75 990h0"></path>
+<path d="M502.25 990h0"></path>
+<rect x="473.75" y="979" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="488" y="994">"</text>
+</g>
+<path d="M502.25 990h20"></path>
+<path d="M453.75 990a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
+<g class="terminal">
+<path d="M473.75 1020h0"></path>
+<path d="M502.25 1020h0"></path>
+<rect x="473.75" y="1009" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="488" y="1024">~</text>
+</g>
+<path d="M502.25 1020a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
+</g>
+<g>
+<path d="M399 963h0"></path>
+<path d="M577 963h0"></path>
+<text x="488" y="968" class="comment">Ignored margin character</text>
+</g>
+</g>
+<path d="M577 990h10"></path>
+<g>
+<path d="M587 990h0"></path>
+<path d="M1006 990h0"></path>
+<path d="M587 990a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+<g>
+<path d="M607 970h379"></path>
+</g>
+<path d="M986 970a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<path d="M587 990h20"></path>
+<g>
+<path d="M607 990h0"></path>
+<path d="M986 990h0"></path>
+<path d="M607 990h10"></path>
+<g>
+<path d="M617 990h0"></path>
+<path d="M976 990h0"></path>
+<path d="M617 990h20"></path>
+<g class="non-terminal">
+<path d="M637 990h51.75"></path>
+<path d="M904.25 990h51.75"></path>
+<rect x="688.75" y="979" width="215.5" height="22"></rect>
+<text x="796.5" y="994">SourceCharacter - ('\')</text>
+</g>
+<path d="M956 990h20"></path>
+<path d="M617 990a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
+<g class="non-terminal">
+<path d="M637 1020h90"></path>
+<path d="M866 1020h90"></path>
+<rect x="727" y="1009" width="139" height="22"></rect>
+<a xlink:href="../EscapeSequence/snippet.svg"><text x="796.5" y="1024">EscapeSequence</text>
+</a>
+</g>
+<path d="M956 1020a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
+<path d="M617 990a10 10 0 0 1 10 10v64a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M637 1074h0"></path>
+<path d="M956 1074h0"></path>
+<rect x="637" y="1055" width="319" height="38" rx="10" ry="10" class="group-box"></rect>
+<g>
+<path d="M637 1074h10"></path>
+<path d="M946 1074h10"></path>
+<g class="terminal">
+<path d="M647 1074h0"></path>
+<path d="M684 1074h0"></path>
+<rect x="647" y="1063" width="37" height="22" rx="10" ry="10"></rect>
+<text x="665.5" y="1078">\u</text>
+</g>
+<path d="M684 1074h10"></path>
+<path d="M694 1074h10"></path>
+<g class="non-terminal">
+<path d="M704 1074h0"></path>
+<path d="M749.5 1074h0"></path>
+<rect x="704" y="1063" width="45.5" height="22"></rect>
+<text x="726.75" y="1078">Hex</text>
+</g>
+<path d="M749.5 1074h10"></path>
+<path d="M759.5 1074h10"></path>
+<g class="non-terminal">
+<path d="M769.5 1074h0"></path>
+<path d="M815 1074h0"></path>
+<rect x="769.5" y="1063" width="45.5" height="22"></rect>
+<text x="792.25" y="1078">Hex</text>
+</g>
+<path d="M815 1074h10"></path>
+<path d="M825 1074h10"></path>
+<g class="non-terminal">
+<path d="M835 1074h0"></path>
+<path d="M880.5 1074h0"></path>
+<rect x="835" y="1063" width="45.5" height="22"></rect>
+<text x="857.75" y="1078">Hex</text>
+</g>
+<path d="M880.5 1074h10"></path>
+<path d="M890.5 1074h10"></path>
+<g class="non-terminal">
+<path d="M900.5 1074h0"></path>
+<path d="M946 1074h0"></path>
+<rect x="900.5" y="1063" width="45.5" height="22"></rect>
+<text x="923.25" y="1078">Hex</text>
+</g>
+</g>
+<g>
+<path d="M637 1047h0"></path>
+<path d="M759 1047h0"></path>
+<a xlink:href="https://unicode.org/glossary/#code_unit"><text x="698" y="1052" class="comment">UTF-16 Code Unit</text>
+</a>
+</g>
+</g>
+<path d="M956 1074a10 10 0 0 0 10 -10v-64a10 10 0 0 1 10 -10"></path>
+<path d="M617 990a10 10 0 0 1 10 10v126a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M637 1136h34.25"></path>
+<path d="M921.75 1136h34.25"></path>
+<rect x="671.25" y="1117" width="250.5" height="68" rx="10" ry="10" class="group-box"></rect>
+<g>
+<path d="M671.25 1136h10"></path>
+<path d="M911.75 1136h10"></path>
+<g class="terminal">
+<path d="M681.25 1136h0"></path>
+<path d="M726.75 1136h0"></path>
+<rect x="681.25" y="1125" width="45.5" height="22" rx="10" ry="10"></rect>
+<text x="704" y="1140">\u{</text>
+</g>
+<path d="M726.75 1136h10"></path>
+<path d="M736.75 1136h10"></path>
+<g>
+<path d="M746.75 1136h0"></path>
+<path d="M863.25 1136h0"></path>
+<path d="M746.75 1136h10"></path>
+<g class="non-terminal">
+<path d="M756.75 1136h0"></path>
+<path d="M853.25 1136h0"></path>
+<rect x="756.75" y="1125" width="96.5" height="22"></rect>
+<text x="805" y="1140">HexDigits</text>
+</g>
+<path d="M853.25 1136h10"></path>
+<path d="M756.75 1136a10 10 0 0 0 -10 10v10a10 10 0 0 0 10 10"></path>
+<g class="terminal">
+<path d="M756.75 1166h34"></path>
+<path d="M819.25 1166h34"></path>
+<rect x="790.75" y="1155" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="805" y="1170">,</text>
+</g>
+<path d="M853.25 1166a10 10 0 0 0 10 -10v-10a10 10 0 0 0 -10 -10"></path>
+</g>
+<path d="M863.25 1136h10"></path>
+<path d="M873.25 1136h10"></path>
+<g class="terminal">
+<path d="M883.25 1136h0"></path>
+<path d="M911.75 1136h0"></path>
+<rect x="883.25" y="1125" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="897.5" y="1140">}</text>
+</g>
+</g>
+<g>
+<path d="M671.25 1109h0"></path>
+<path d="M828.25 1109h0"></path>
+<a xlink:href="https://unicode.org/glossary/#unicode_scalar_value"><text x="749.75" y="1114" class="comment">Unicode Scalar Values</text>
+</a>
+</g>
+</g>
+<path d="M956 1136a10 10 0 0 0 10 -10v-126a10 10 0 0 1 10 -10"></path>
+<path d="M617 990a10 10 0 0 1 10 10v218a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M637 1228h69.75"></path>
+<path d="M886.25 1228h69.75"></path>
+<rect x="706.75" y="1209" width="179.5" height="38" rx="10" ry="10" class="group-box"></rect>
+<g>
+<path d="M706.75 1228h10"></path>
+<path d="M876.25 1228h10"></path>
+<g class="terminal">
+<path d="M716.75 1228h0"></path>
+<path d="M753.75 1228h0"></path>
+<rect x="716.75" y="1217" width="37" height="22" rx="10" ry="10"></rect>
+<text x="735.25" y="1232">${</text>
+</g>
+<path d="M753.75 1228h10"></path>
+<path d="M763.75 1228h10"></path>
+<g class="non-terminal">
+<path d="M773.75 1228h0"></path>
+<path d="M827.75 1228h0"></path>
+<rect x="773.75" y="1217" width="54" height="22"></rect>
+<a xlink:href="../Expr/snippet.svg"><text x="800.75" y="1232">Expr</text>
+</a>
+</g>
+<path d="M827.75 1228h10"></path>
+<path d="M837.75 1228h10"></path>
+<g class="terminal">
+<path d="M847.75 1228h0"></path>
+<path d="M876.25 1228h0"></path>
+<rect x="847.75" y="1217" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="862" y="1232">}</text>
+</g>
+</g>
+<g>
+<path d="M706.75 1201h0"></path>
+<path d="M807.75 1201h0"></path>
+<text x="757.25" y="1206" class="comment">Interpolation</text>
+</g>
+</g>
+<path d="M956 1228a10 10 0 0 0 10 -10v-218a10 10 0 0 1 10 -10"></path>
+</g>
+<path d="M976 990h10"></path>
+<path d="M617 990a10 10 0 0 0 -10 10v245a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M617 1255h359"></path>
+</g>
+<path d="M976 1255a10 10 0 0 0 10 -10v-245a10 10 0 0 0 -10 -10"></path>
+</g>
+<path d="M986 990h20"></path>
+</g>
+</g>
+<path d="M1006 990h20"></path>
+<path d="M379 990a10 10 0 0 1 10 10v264a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M399 1274h197"></path>
+<path d="M809 1274h197"></path>
+<g class="terminal">
+<path d="M596 1274h0"></path>
+<path d="M624.5 1274h0"></path>
+<rect x="596" y="1263" width="28.5" height="22" rx="10" ry="10"></rect>
+<text x="610.25" y="1278">:</text>
+</g>
+<path d="M624.5 1274h10"></path>
+<path d="M634.5 1274h10"></path>
+<g class="non-terminal">
+<path d="M644.5 1274h0"></path>
+<path d="M809 1274h0"></path>
+<rect x="644.5" y="1263" width="164.5" height="22"></rect>
+<text x="726.75" y="1278">StatementFragment</text>
+</g>
+</g>
+<path d="M1006 1274a10 10 0 0 0 10 -10v-264a10 10 0 0 1 10 -10"></path>
+</g>
+</g>
+<g>
+<path d="M155.5 939h0"></path>
+<path d="M375.5 939h0"></path>
+<text x="265.5" y="944" class="comment">Content line starting with &#96;"&#96;</text>
+</g>
+</g>
+<path d="M1036 990h10"></path>
+<path d="M155.5 990a10 10 0 0 0 -10 10v291a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M155.5 1301h880.5"></path>
+</g>
+<path d="M1036 1301a10 10 0 0 0 10 -10v-291a10 10 0 0 0 -10 -10"></path>
+</g>
+<path d="M1046 990h20"></path>
+</g>
+<path d="M1066 990h10"></path>
+<g class="terminal">
+<path d="M1076 990h0"></path>
+<path d="M1172.5 990h0"></path>
+<rect x="1076" y="979" width="96.5" height="22" rx="10" ry="10"></rect>
+<text x="1124.25" y="994">LineBreak</text>
+</g>
+</g>
+<path d="M1172.5 990a10 10 0 0 0 10 -10v-906a10 10 0 0 1 10 -10"></path>
 </g>
 <g>
 <path d="M50 28h0"></path>
@@ -591,7 +1020,7 @@ svg.railroad-diagram g.diagram-text:hover path.diagram-text {
 <text x="244" y="33" class="comment">Whether escape sequences are expanded is up to the tag</text>
 </g>
 </g>
-<path d="M1174.5 64h10"></path>
-<path d="M 1184.5 64 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+<path d="M1192.5 64h10"></path>
+<path d="M 1202.5 64 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
 </g>
 </svg>

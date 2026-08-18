@@ -1,0 +1,3 @@
+let { ... } = import("std/regex");
+
+rgx"."

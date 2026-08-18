@@ -22,7 +22,7 @@ import lang.temper.format.toStringViaTokenSink
 import lang.temper.log.Position
 import lang.temper.log.Positioned
 import lang.temper.name.BuiltinName
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModularName
 import lang.temper.name.ModuleLocation
 import lang.temper.name.NameMaker
@@ -38,10 +38,12 @@ import lang.temper.value.StayLeaf
 import lang.temper.value.StayReferrer
 import lang.temper.value.StaySink
 import lang.temper.value.TString
+import lang.temper.value.connectedSymbol
 import lang.temper.value.constructorPropertySymbol
 import lang.temper.value.docStringSymbol
 import lang.temper.value.fnSymbol
 import lang.temper.value.fromTypeSymbol
+import lang.temper.value.operatorSymbol
 import lang.temper.value.overloadSymbol
 import lang.temper.value.parameterNameSymbolsListSymbol
 import lang.temper.value.qNameSymbol
@@ -64,14 +66,29 @@ sealed interface TypeDefinition : StayReferrer, Structured, TokenSerializable, P
     val sourceLocation: ModuleLocation
         get() = when (val name = this.name) {
             is ModularName -> name.origin.loc
-            is BuiltinName -> ImplicitsCodeLocation
+            is BuiltinName -> CoreCodeLocation
         }
 
     /** Likely cheaper to access than [formals]. */
     val hasFormals: Boolean
 
-    // TODO: store metadata from type formal definitions here to
-    val metadata: MetadataValueMultimap get() = MetadataValueMultimap.empty
+    /**
+     * A reference to the declaration that specifies this type.
+     */
+    val stayLeaf: StayLeaf?
+
+    /**
+     * Derived from decorators applied to type definitions.
+     */
+    val metadata: MetadataValueMultimap get() = when (val sl = stayLeaf) {
+        null -> MetadataValueMultimap.empty
+        else -> MetadataValueMultimapImpl(sl)
+    }
+
+    val connectedKey: String? get() = when {
+        connectedSymbol in metadata -> metadata[qNameSymbol]?.lastOrNull()?.let { TString.unpack(it) }
+        else -> null
+    }
 
     fun renderName(tokenSink: TokenSink) {
         tokenSink.emit(name.toToken(inOperatorPosition = false))
@@ -155,6 +172,7 @@ sealed interface TypeFormal : TypeDefinition {
             variance: Variance,
             mutationCount: AtomicCounter,
             upperBounds: List<NominalType> = emptyList(),
+            stayLeaf: StayLeaf? = null,
         ): TypeFormal = MutableTypeFormal(
             pos,
             name,
@@ -162,6 +180,7 @@ sealed interface TypeFormal : TypeDefinition {
             variance,
             mutationCount,
             upperBounds,
+            stayLeaf,
         )
     }
 }
@@ -179,12 +198,22 @@ class MutableTypeFormal(
     override var variance: Variance,
     mutationCount: AtomicCounter,
     upperBounds: List<NominalType>,
+    override val stayLeaf: StayLeaf?,
 ) : TypeFormal, LawfulEvilOverlord() {
     override val upperBounds = lawfulEvilListOf<NominalType>(mutationCount)
     init {
         if (upperBounds.isNotEmpty()) {
             this.upperBounds.addAll(upperBounds)
         }
+    }
+
+    override fun addStays(s: StaySink) {
+        this.stayLeaf?.let { stayLeaf ->
+            s.whenUnvisited(this) {
+                s.add(stayLeaf)
+            }
+        }
+        super.addStays(s)
     }
 
     override fun toString() = toStringViaBuilder {
@@ -253,11 +282,6 @@ sealed interface TypeShape : TypeDefinition {
      */
     val abstractness: Abstractness
 
-    /**
-     * A reference to the declaration that specifies this type.
-     */
-    val stayLeaf: StayLeaf?
-
     /** The resolved type expressions in the `extends` clause. */
     override val superTypes: List<NominalType>
 
@@ -290,14 +314,6 @@ sealed interface TypeShape : TypeDefinition {
     val inheritanceDepth: Int
 
     /**
-     * Derived from decorators applied to type definitions.
-     */
-    override val metadata: MetadataValueMultimap get() = when (val sl = stayLeaf) {
-        null -> MetadataValueMultimap.empty
-        else -> MetadataValueMultimapImpl(sl)
-    }
-
-    /**
      * All members (parameters, properties, and methods) defined on the type, not including any
      * inherited from super-types.
      */
@@ -317,10 +333,11 @@ sealed interface TypeShape : TypeDefinition {
     /**
      * All members with the given symbol, including those from the super type, in inheritance order.
      *
-     * @param includeOverloads if false, the default, then only exact symbol matches are included, but
-     *   if true, then also included are normal methods that have matching `@overload("...")` metadata.
+     * @param includeMetadata if false, the default, then only exact symbol matches are included, but
+     *   if true, then also included are normal methods that have matching `@overload("...")` metadata,
+     *   and `@operator("...")` metadata.
      */
-    fun membersMatching(symbol: Symbol, includeOverloads: Boolean = false): Iterable<MemberShape>
+    fun membersMatching(member: Member, includeMetadata: Boolean = false): Iterable<MemberShape>
 
     /**
      * The transitive closure of the type IDs of super types including [name].
@@ -450,11 +467,11 @@ class TypeShapeImpl(
     override val staticProperties = lawfulEvilListOf<StaticPropertyShape>(mutationCount)
     override val formals: List<TypeFormal> = MappingListView(typeParameters) { it.definition }
 
-    override fun membersMatching(symbol: Symbol, includeOverloads: Boolean): Iterable<MemberShape> =
-        getMembersBySymbolMap()[symbol to includeOverloads] ?: emptyList()
+    override fun membersMatching(member: Member, includeMetadata: Boolean): Iterable<MemberShape> =
+        getMembersBySymbolMap()[member to includeMetadata] ?: emptyList()
 
-    private var membersBySymbolMapCached: Pair<Map<Pair<Symbol, Boolean>, List<MemberShape>>, Long>? = null
-    private fun getMembersBySymbolMap(): Map<Pair<Symbol, Boolean>, List<MemberShape>> {
+    private var membersBySymbolMapCached: Pair<Map<Pair<Member, Boolean>, List<MemberShape>>, Long>? = null
+    private fun getMembersBySymbolMap(): Map<Pair<Member, Boolean>, List<MemberShape>> {
         val cached = membersBySymbolMapCached
         val mutCountValue = mutationCount.get()
         if (cached != null && cached.second == mutCountValue) {
@@ -462,7 +479,7 @@ class TypeShapeImpl(
         }
         membersBySymbolMapCached = null
 
-        val map = mutableMapOf<Pair<Symbol, Boolean>, MutableList<MemberShape>>()
+        val map = mutableMapOf<Pair<Member, Boolean>, MutableList<MemberShape>>()
         // Use a queue to walk super-types in depth order.
         val seen = mutableSetOf<TypeShapeImpl>()
         val toWalk = ArrayDeque<TypeShapeImpl>()
@@ -474,25 +491,36 @@ class TypeShapeImpl(
             }
             seen.add(typeShape)
             for (p in typeShape.properties) {
-                map.putMultiList(p.symbol to false, p)
-                map.putMultiList(p.symbol to true, p)
+                val k = DotMember(p.symbol)
+                map.putMultiList(k to false, p)
+                map.putMultiList(k to true, p)
             }
             for (m in typeShape.methods) {
-                map.putMultiList(m.symbol to false, m)
-                map.putMultiList(m.symbol to true, m)
+                val k = DotMember(m.symbol)
+                map.putMultiList(k to false, m)
+                map.putMultiList(k to true, m)
                 if (m.methodKind == MethodKind.Normal) {
                     val overloadMetadata = m.metadata[overloadSymbol] ?: emptyList()
                     for (v in overloadMetadata) {
                         val str = TString.unpackOrNull(v)
                         if (str != null && str != "") {
-                            map.putMultiList(Symbol(str) to true, m)
+                            map.putMultiList(DotMember(Symbol(str)) to true, m)
+                        }
+                    }
+                    val operatorMetadata = m.metadata[operatorSymbol] ?: emptyList()
+                    for (v in operatorMetadata) {
+                        val str = TString.unpackOrNull(v)
+                        if (str != null && str != "") {
+                            val k = OperatorMember(str)
+                            map.putMultiList(k to true, m)
                         }
                     }
                 }
             }
             for (p in typeParameters) {
-                map.putMultiList(p.symbol to false, p)
-                map.putMultiList(p.symbol to true, p)
+                val k = DotMember(p.symbol)
+                map.putMultiList(k to false, p)
+                map.putMultiList(k to true, p)
             }
             // static members are not members of instances so are not in the symbol map, and are not
             // inherited

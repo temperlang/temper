@@ -1,0 +1,2 @@
+class C { public static let foo = "foo"; }
+C.foo == "foo"

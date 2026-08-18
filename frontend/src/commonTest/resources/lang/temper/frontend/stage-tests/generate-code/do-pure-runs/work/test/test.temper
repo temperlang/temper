@@ -1,0 +1,6 @@
+let { C } = import("./c");
+
+let c = doPure { (): C => new C() };
+
+c
+

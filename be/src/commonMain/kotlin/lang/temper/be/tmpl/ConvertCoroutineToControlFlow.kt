@@ -7,13 +7,13 @@ import lang.temper.builtin.BuiltinFuns
 import lang.temper.common.AtomicCounter
 import lang.temper.common.Either
 import lang.temper.env.InterpMode
-import lang.temper.frontend.implicits.ImplicitsModule
+import lang.temper.frontend.core.CoreModule
 import lang.temper.interp.New
 import lang.temper.interp.emptyValue
 import lang.temper.log.Position
 import lang.temper.log.spanningPosition
 import lang.temper.name.BuiltinName
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.NameMaker
 import lang.temper.name.ResolvedName
 import lang.temper.name.Symbol
@@ -90,8 +90,8 @@ internal fun convertCoroutineToControlFlow(
     val document = tree.document
     val lPos = tree.pos.leftEdge
     val rPos = tree.pos.rightEdge
-    val doneResultExport = ImplicitsModule.module.exports!!.first { it.name.baseName.nameText == "doneResult" }
-    val valueResultTypeExport = ImplicitsModule.module.exports!!.first { it.name.baseName.nameText == "ValueResult" }
+    val doneResultExport = CoreModule.module.exports!!.first { it.name.baseName.nameText == "doneResult" }
+    val valueResultTypeExport = CoreModule.module.exports!!.first { it.name.baseName.nameText == "ValueResult" }
     val doneResultType = MkType2(WellKnownTypes.doneResultTypeDefinition).get()
 
     val yieldedTypeActual = typeContext2.superTypeTreeOf(generatorType)[
@@ -119,7 +119,7 @@ internal fun convertCoroutineToControlFlow(
         return PreTranslated.TreeWrapper(
             document.treeFarm.grow(pos) {
                 Call(pos.leftEdge, New, type = valueResultCtorSig(type)) {
-                    V(pos.leftEdge, valueResultTypeExport.value!!, WellKnownTypes.typeType)
+                    V(pos.leftEdge, valueResultTypeExport.valueFromStaging!!, WellKnownTypes.typeType)
                     when (yielded) {
                         is Either.Left -> Rn(pos, yielded.item, type = hackMapNewStyleToOld(type))
                         is Either.Right -> V(pos, yielded.item, type = hackMapNewStyleToOld(type))
@@ -564,8 +564,14 @@ internal fun convertCoroutineToControlFlow(
                 if (declName != null && declName in namesToExtract) {
                     val extractWhole = when (initial) {
                         null -> true
-                        // If it's a simple function or value, pull the whole thing out.
-                        is FunTree, is ValueLeaf -> true
+                        // If it's a named function, pull the whole thing out.
+                        is FunTree -> true
+                        // For simple values, extract just the declaration and leave
+                        // the initializer in the case body.  If the declaration site
+                        // is inside a loop, the assignment needs to re-execute on
+                        // each iteration.  Leaving it in the case is safe even
+                        // outside loops—it just runs once when the case is entered.
+                        is ValueLeaf -> false
                         else -> false
                     }
 
@@ -1038,7 +1044,7 @@ internal fun makeTypeFormalHelper(
 ): Pair<TypeFormal, Type2> {
     val nameKey = "$fnName$nameSuffix"
     val typeFormal = TypeFormal(
-        Position(ImplicitsCodeLocation, 0, 0),
+        Position(CoreCodeLocation, 0, 0),
         BuiltinName(nameKey),
         Symbol(nameKey),
         Variance.Invariant,

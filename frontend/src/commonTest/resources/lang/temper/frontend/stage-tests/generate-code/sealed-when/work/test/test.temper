@@ -1,0 +1,19 @@
+export interface Geometric {}
+export class Ray extends Geometric {}
+export sealed interface Shape extends Geometric {}
+export class Circle() extends Shape {}
+export class Square() extends Shape {}
+export let describeGeometric(g: Geometric): String {
+  when (g) {
+    is Circle -> "circle";
+    is Square -> "square";
+    // defaults to void here because it starts above the sealed type
+  }
+}
+export let describeShape(s: Shape): String {
+  when (s) {
+    is Circle -> "circle";
+    is Square -> "square";
+    // defaults to panic here because those are exhaustive for Shape
+  }
+}

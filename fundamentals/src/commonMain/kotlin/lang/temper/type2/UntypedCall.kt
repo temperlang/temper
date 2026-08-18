@@ -4,6 +4,7 @@ import lang.temper.log.Position
 import lang.temper.type.StaticType
 import lang.temper.type.TypeFormal
 import lang.temper.value.CallTree
+import lang.temper.value.Tree
 import lang.temper.value.TypeReasonElement
 
 /** Information about a call that we can use to resolve type parameter bounds. */
@@ -28,6 +29,10 @@ data class UntypedCall(
      * The tree that should receive inferences.
      */
     val destination: CallTree,
+    /**
+     * The trees from which the input bounds were derived.
+     */
+    val inputTrees: List<Tree>,
 ) {
     var resultType: StaticType? = null
     var bindings: Map<TypeFormal, StaticType>? = null

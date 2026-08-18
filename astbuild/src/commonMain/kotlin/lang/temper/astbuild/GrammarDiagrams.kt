@@ -13,6 +13,22 @@ private val quotedStringGrammarDoc = GrammarDoc.Choice(
                 GrammarDoc.Terminal("\""),
             ),
         ),
+        // `...`
+        GrammarDoc.Sequence(
+            listOf(
+                GrammarDoc.Terminal("`"),
+                stringContentGrammar(sourceCharacterText = "SourceCharacter - ('\\n', '\\r', '\\', '`')"),
+                GrammarDoc.Terminal("`"),
+            ),
+        ),
+        // '...'
+        GrammarDoc.Sequence(
+            listOf(
+                GrammarDoc.Terminal("'"),
+                stringContentGrammar(sourceCharacterText = "SourceCharacter - ('\\n', '\\r', '\\', '\\'')"),
+                GrammarDoc.Terminal("'"),
+            ),
+        ),
         // """...
         GrammarDoc.Sequence(
             listOf(
@@ -23,19 +39,28 @@ private val quotedStringGrammarDoc = GrammarDoc.Choice(
                             listOf(
                                 GrammarDoc.Terminal("LineBreak"),
                                 GrammarDoc.Comment("indentation"),
-                                GrammarDoc.Group(
-                                    GrammarDoc.Terminal("\""),
-                                    GrammarDoc.Comment("Ignored margin quote"),
-                                ),
                                 GrammarDoc.Choice(
                                     0,
                                     listOf(
-                                        stringContentGrammar(sourceCharacterText = "SourceCharacter - ('\\')"),
                                         GrammarDoc.Sequence(
                                             listOf(
-                                                GrammarDoc.Terminal("{:"),
+                                                GrammarDoc.Group(
+                                                    GrammarDoc.Choice(
+                                                        0,
+                                                        listOf(
+                                                            GrammarDoc.Terminal("\""),
+                                                            GrammarDoc.Terminal("~"),
+                                                        ),
+                                                    ),
+                                                    GrammarDoc.Comment("Ignored margin character"),
+                                                ),
+                                                stringContentGrammar(sourceCharacterText = "SourceCharacter - ('\\')"),
+                                            ),
+                                        ),
+                                        GrammarDoc.Sequence(
+                                            listOf(
+                                                GrammarDoc.Terminal(":"),
                                                 GrammarDoc.NonTerminal("StatementFragment"),
-                                                GrammarDoc.Terminal(":}"),
                                             ),
                                         ),
                                     ),

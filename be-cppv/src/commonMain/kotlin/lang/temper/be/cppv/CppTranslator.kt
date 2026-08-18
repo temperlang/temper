@@ -13,7 +13,7 @@ import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapParameters
 import lang.temper.common.subListToEnd
 import lang.temper.log.resolveFile
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ResolvedName
 import lang.temper.name.Temporary
 import lang.temper.type.TypeDefinition
@@ -401,7 +401,7 @@ open class CppTranslator(
     private fun translatePropertyReference(ref: TmpL.PropertyReference): Cpp.Expr = cpp.pos(ref) {
         val subject = when (val subject = ref.subject) {
             is TmpL.Expression -> translateExpression(subject)
-            is TmpL.TypeName -> cpp.literal("TODO: $subject")
+            is TmpL.TypeSubject -> cpp.literal("TODO: $subject")
         }
         val propertyId = translatePropertyId(ref.property)
         cpp.binaryExpr(subject, Cpp.BinaryOp(cpp.pos, BinaryOpEnum.Arrow), propertyId).let { expr ->
@@ -493,7 +493,7 @@ open class CppTranslator(
     ): Cpp.Type = run {
         var const = false
         when (def.sourceLocation) {
-            ImplicitsCodeLocation -> when (def) {
+            CoreCodeLocation -> when (def) {
                 WellKnownTypes.booleanTypeDefinition -> return cpp.singleName(CppName("bool", allowKey = true))
                 WellKnownTypes.intTypeDefinition -> return cpp.singleName("int32_t")
                 WellKnownTypes.int64TypeDefinition -> return cpp.singleName("int64_t")

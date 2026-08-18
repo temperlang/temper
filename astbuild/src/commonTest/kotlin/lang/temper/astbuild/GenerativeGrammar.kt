@@ -144,7 +144,7 @@ internal object GenerativeGrammar {
             "'" y or(
                 "\"" to 1,
                 "`" to 1,
-                "\$" to 1,
+                "$" to 1,
                 "<quoted-char>" to 17,
             ) y "'",
             100,
@@ -171,9 +171,9 @@ internal object GenerativeGrammar {
         "string-qq" matches
             GenerateComplexToken("\"" y any("<dq-char>") y "\"", 25, TokenType.QuotedString)
         "string-qb" matches
-            GenerateComplexToken("\"" y any("<dq-char>") y "\${", 25, TokenType.QuotedString)
+            GenerateComplexToken("\"" y any("<dq-char>") y $$"${", 25, TokenType.QuotedString)
         "string-bb" matches
-            GenerateComplexToken("}" y any("<dq-char>") y "\${", 25, TokenType.QuotedString)
+            GenerateComplexToken("}" y any("<dq-char>") y $$"${", 25, TokenType.QuotedString)
         "string-bq" matches
             GenerateComplexToken("}" y any("<dq-char>") y "\"", 25, TokenType.QuotedString)
 
@@ -207,13 +207,13 @@ internal object GenerativeGrammar {
         "expr-no-rel-ops" matches (ε y "<assign-expr-no-rel-ops>")
 
         "assign-expr" matches or(
-            "<assign-expr>" y or("=", "+=", "-=", "*=", "/=") y
+            "<assign-expr>" y or("=", "+=", "-=", "*=") y
                 or("<hook-expr>" to 10, "<property-bag>" to 1) to 1,
             ε y "<hook-expr>" to 3,
             // multi-assignment
         )
         "assign-expr-no-rel-ops" matches or(
-            "<assign-expr-no-rel-ops>" y or("=", "+=", "-=", "*=", "/=") y
+            "<assign-expr-no-rel-ops>" y or("=", "+=", "-=", "*=") y
                 or("<hook-expr-no-rel-ops>" to 10, "<property-bag>" to 1) to 1,
             ε y "<hook-expr-no-rel-ops>" to 3,
             // multi-assignment
@@ -240,12 +240,12 @@ internal object GenerativeGrammar {
 
         "comparison-expr" matches or(
             "<shift-expr>" y
-                or("==", "!=", ">", "<=", ">=", "===", "!==") y
+                or(infx("=="), infx("!="), gtInfix, infx("<="), infx(">="), infx("==="), infx("!==")) y
                 "<comparison-expr>"
                 to 7,
             // We place a lot of restrictions on how < expressions can appear since
             // uses of `>`, `>>`, `>=`, or `>>=` later affect angle bracket disambiguation.
-            ε y "(" y "<shift-expr>" y "<" y "<plus-expr>" y ")" to 1,
+            ε y "(" y "<shift-expr>" y ltInfix y "<plus-expr>" y ")" to 1,
             ε y "<shift-expr>" to 48,
         )
 
@@ -255,7 +255,7 @@ internal object GenerativeGrammar {
         )
 
         "plus-expr" matches or(
-            "<mult-expr>" y or("+", "-", ">>>") y "<plus-expr>" to 1,
+            "<mult-expr>" y or("+", "-") y "<plus-expr>" to 1,
             ε y "<mult-expr>" to 3,
         )
 
@@ -287,7 +287,6 @@ internal object GenerativeGrammar {
         "bracket-expr" matches or(
             "<atom>" y "<actuals>" to 1,
             "<atom>" y "[" y "<comma-expr>" y "]" to 1,
-//          "<atom>" y "<" y "<comma-expr-no-rel-ops>" y ">" to 1,  // TODO
             "(" y or("<expr>" to 10, "<property-bag>" to 1) y ")" to 1,
             "[" y "<comma-expr>" y "]" to 1,
             ε y "<atom>" to 5,
@@ -365,7 +364,7 @@ internal object GenerativeGrammar {
 
         "type" matches (
             "<id>" y or(
-                "<" y "<type>" y any("," y "<type>") y ">" to 1,
+                ltBracket y "<type>" y any("," y "<type>") y gtBracket to 1,
                 ε to 4,
             )
             )
@@ -454,8 +453,8 @@ private class GenerateOneOf(
     val els: List<GrammarElement>,
     /**
      * The weight given to option els\[i] as the first tried is
-     *     (intervals[i] - intervals[i - 1]) / intervals.last()
-     * where division is floaty and intervals[-1] is zero.
+     *     (intervals\[i] - intervals\[i - 1]) / intervals.last()
+     * where division is floaty and intervals\[-1] is zero.
      */
     val intervals: IntArray = (1..els.size).toList().toIntArray(),
 ) : GrammarElement() {
@@ -591,3 +590,29 @@ private class Lookback(val lastTokenPredicate: (last: String?) -> Boolean) : Gra
 }
 
 private val pseudoPos = Position(testCodeLocation, -1, -1)
+
+private fun infx(tokText: String) = ExactToken(
+    CstToken(
+        TemperToken(pseudoPos, tokText, TokenType.Punctuation, mayBracket = false),
+    ),
+)
+private val ltInfix = ExactToken(
+    CstToken(
+        TemperToken(pseudoPos, "<", TokenType.Punctuation, mayBracket = false),
+    ),
+)
+private val gtInfix = ExactToken(
+    CstToken(
+        TemperToken(pseudoPos, ">", TokenType.Punctuation, mayBracket = false),
+    ),
+)
+private val ltBracket = ExactToken(
+    CstToken(
+        TemperToken(pseudoPos, "<", TokenType.Punctuation, mayBracket = true),
+    ),
+)
+private val gtBracket = ExactToken(
+    CstToken(
+        TemperToken(pseudoPos, ">", TokenType.Punctuation, mayBracket = true),
+    ),
+)

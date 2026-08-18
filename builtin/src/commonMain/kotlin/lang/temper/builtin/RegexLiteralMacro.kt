@@ -9,7 +9,8 @@ import lang.temper.log.Position
 import lang.temper.name.Symbol
 import lang.temper.stage.Stage
 import lang.temper.type.DotHelper
-import lang.temper.type.ExternalBind
+import lang.temper.type.DotMember
+import lang.temper.type.ExternalCall
 import lang.temper.value.CallTree
 import lang.temper.value.Fail
 import lang.temper.value.MacroEnvironment
@@ -146,11 +147,9 @@ internal object RegexLiteralMacro : BuiltinMacro(regexLiteralBuiltinName.builtin
         // Replace the macro call with regex constructor calls.
         val callPos = macroEnv.pos
         macroEnv.replaceMacroCallWith {
-            Call {
-                Call(callPos) {
-                    V(callPos.leftEdge, Value(DotHelper(ExternalBind, Symbol("compiled"))))
-                    buildRegex(regex, macroEnv)
-                }
+            Call(callPos) {
+                V(callPos.leftEdge, Value(DotHelper(ExternalCall, DotMember(Symbol("compiled")))))
+                buildRegex(regex, macroEnv)
             }
         }
         return NotYet

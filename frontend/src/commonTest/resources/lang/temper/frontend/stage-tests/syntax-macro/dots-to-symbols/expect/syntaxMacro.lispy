@@ -1,0 +1,82 @@
+[
+    "Block",
+    [
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "foo__0"
+                ],
+                [
+                    "Value",
+                    "\\init: Symbol"
+                ],
+                [
+                    "Call",
+                    [
+                        [
+                            "RightName",
+                            "f"
+                        ]
+                    ]
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.foo\u0022: String"
+                ]
+            ]
+        ],
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "bar__1"
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.bar\u0022: String"
+                ]
+            ]
+        ],
+        [
+            "Call",
+            [
+                [
+                    "Value",
+                    "nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt]: Function"
+                ],
+                [
+                    "Call",
+                    [
+                        [
+                            "Value",
+                            "do_get_bar: Function"
+                        ],
+                        [
+                            "RightName",
+                            "foo__0"
+                        ]
+                    ]
+                ],
+                [
+                    "RightName",
+                    "bar__1"
+                ]
+            ]
+        ],
+        [
+            "Value",
+            "void: Void"
+        ]
+    ]
+]

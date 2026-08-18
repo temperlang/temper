@@ -1,0 +1,5 @@
+let Sn = String?;
+let Ds = Deque<Sn>;
+let Dn = Ds?;
+let s: Sn;
+let d: Dn;

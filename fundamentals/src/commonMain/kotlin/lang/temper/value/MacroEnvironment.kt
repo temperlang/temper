@@ -11,6 +11,7 @@ import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.log.Positioned
 import lang.temper.name.NameMaker
+import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.type2.AnySignature
 import lang.temper.type2.Signature2
@@ -90,6 +91,8 @@ interface MacroEnvironment : InterpreterCallback, Positioned, ConfigurationKey.H
 
     fun replaceMacroCallWithErrorNode(cause: LogEntry)
 
+    fun addTopLevelMetadata(key: Symbol, value: Value<*>)
+
     /**
      * Schedules a pass that receives the body after [replacements][replaceMacroCallWith] are done.
      * If the same post pass (according to equals/hashCode) is specified multiple times while expanding
@@ -164,18 +167,18 @@ interface MacroEnvironment : InterpreterCallback, Positioned, ConfigurationKey.H
     val treeFarm get() = document.treeFarm
 
     /**
-     * Connections for example to connect functions in Implicits to backing Kotlin code
-     * based on decorations like `@connected("Type::member")`.
+     * Connections for example to connect functions in Core to backing Kotlin code
+     * based on decorations like `@connected`.
      */
-    fun connection(connectedKey: String): ((Signature2) -> Value<*>)?
+    fun connection(qname: String): ((Signature2) -> Value<*>)?
 
     /**
-     * True if the macro call is in the Implicits module.
-     * This lets us avoid some chicken-egg problems when dealing with bootstrapping the Implicits
+     * True if the macro call is in the Core module.
+     * This lets us avoid some chicken-egg problems when dealing with bootstrapping the Core
      * modules, and also lets us do printf-debugging without logging uses of macros in the
-     * Implicits module.
+     * Core module.
      */
-    val isProcessingImplicits: Boolean get() = false
+    val isProcessingCore: Boolean get() = false
 
     override val promises: Promises
 

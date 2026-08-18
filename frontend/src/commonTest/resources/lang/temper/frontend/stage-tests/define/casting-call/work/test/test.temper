@@ -1,0 +1,13 @@
+// Prelude on ensuring that it's rename inside property bags.
+let { a as b } = c;
+// Now on to the casting call.
+1 as Int;
+2 as Mystery;
+3 as List<Mystery>;
+4 as;
+5.as(Int);
+6.as(Mystery);
+7.as();
+8.as;
+[9][0] as Int;
+10.toString() as String;

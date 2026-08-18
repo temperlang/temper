@@ -1,0 +1,47 @@
+I__0 extends AnyValue;
+@property(\m) @stay @fromType(I__0) var m__7;
+@property(\p) @stay @fromType(I__0) let p__8;
+@typeDecl(I__0) @stay let I__0;
+I__0 = type (I__0);
+@typeDecl(J__1) @stay let J__1;
+J__1 = type (J__1);
+@typeDecl(K__2) @stay let K__2;
+K__2 = type (K__2);
+interface(\word, \I, \concrete, false, @typeDefined(I__0) fn {
+    do {};
+    do {};
+    do {}
+});
+J__1 extends AnyValue;
+@property(\n) @visibility(\public) @stay @fromType(J__1) let n__10;
+@method(\n) @setter @fn @stay @fromType(J__1) let nym`set.n__11`;
+nym`set.n__11` = (@stay fn nym`set.n`(@impliedThis(J__1) this__3: J__1) /* return__0 */: Void {
+    fn__12: do {}
+});
+interface(\word, \J, \concrete, false, @typeDefined(J__1) fn {
+    do {};
+    do {};
+    do {}
+});
+K__2 extends I__0;
+K__2 extends J__1;
+@property(\m) @stay @fromType(K__2) var m__14;
+@property(\n) @stay @fromType(K__2) var n__15;
+@property(\o) @stay @fromType(K__2) var o__16;
+@property(\p) @stay @fromType(K__2) let p__17;
+@property(\q) @stay @fromType(K__2) let q__18;
+@method(\o) @setter @fn @stay @fromType(K__2) let nym`set.o__19`;
+nym`set.o__19` = (@stay fn nym`set.o`(@impliedThis(K__2) this__4: K__2) /* return__1 */: Void {
+    fn__20: do {}
+});
+interface(\word, \K, \concrete, false, @typeDefined(K__2) fn {
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {}
+});
+type (K__2)

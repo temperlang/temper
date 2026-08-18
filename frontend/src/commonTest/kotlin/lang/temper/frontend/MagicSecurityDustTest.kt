@@ -37,8 +37,8 @@ class MagicSecurityDustTest {
     private fun arithmeticExpr(doc: Document) = doc.treeFarm.grow(pos) {
         Call(BuiltinFuns.vSetLocalFn) { // =
             Ln(doc.name("a")) // a
-            Call(BuiltinFuns.divFn) { // /
-                Call(BuiltinFuns.vPlusFn) { // +
+            Call(BuiltinFuns.divIntIntFn) { // /
+                Call(BuiltinFuns.plusIntIntFn) { // +
                     Rn(doc.name("b")) // b
                     Rn(doc.name("c")) // c
                 }
@@ -141,26 +141,26 @@ class MagicSecurityDustTest {
 
         val root = doc.treeFarm.grow(pos) {
             Block {
-                // First something that's guarded
+                // First, something that's guarded
                 Call(BuiltinFuns.handlerScope) {
                     Ln(fail1)
-                    Call(BuiltinFuns.divFn) {
+                    Call(BuiltinFuns.divIntIntFn) {
                         Rn(x)
                         Rn(y)
                     }
                 }
                 // Then a call that's not
-                Call(BuiltinFuns.divFn) {
+                Call(BuiltinFuns.divIntIntFn) {
                     Rn(x)
                     Rn(y)
                 }
                 // Then a call that's guarded
                 Call(BuiltinFuns.handlerScope) {
                     Ln(fail2)
-                    Call(BuiltinFuns.divFn) {
+                    Call(BuiltinFuns.divIntIntFn) {
                         Rn(x)
                         // with a sub-call that's not
-                        Call(BuiltinFuns.divFn) {
+                        Call(BuiltinFuns.divIntIntFn) {
                             Rn(y)
                             Rn(z)
                         }

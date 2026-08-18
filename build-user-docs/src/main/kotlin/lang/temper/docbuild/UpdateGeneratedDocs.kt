@@ -246,7 +246,7 @@ fun main(argv: Array<String>) = UserDocFilesAndDirectories.inContext {
                 }
             }
         }
-        val helpfulSnippetsJson = FormattingStructureSink.toJsonString(helpfulSnippets, indent = false)
+        val helpfulSnippetsJson = FormattingStructureSink.toJsonString(helpfulSnippets, indent = true)
         Files.writeString(
             helpfulSnippetsJsonFile,
             "${helpfulSnippetsJson.trimEnd()}\n",

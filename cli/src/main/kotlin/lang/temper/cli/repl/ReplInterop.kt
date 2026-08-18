@@ -169,11 +169,8 @@ internal object ReplInterop {
                             TokenType.RightDelimiter,
                             TokenType.QuotedString,
                             -> OutputTokenType.QuotedValue
-                            TokenType.Space -> if (tokenText == "\"") {
-                                OutputTokenType.OtherValue
-                            } else {
-                                OutputTokenType.Space
-                            }
+                            TokenType.Margin -> OutputTokenType.OtherValue
+                            TokenType.Space -> OutputTokenType.Space
                             TokenType.Word -> if (isProbablyWord(tokenText)) {
                                 OutputTokenType.Word
                             } else {

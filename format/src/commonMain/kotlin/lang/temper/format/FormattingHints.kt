@@ -86,8 +86,8 @@ interface FormattingHints {
             return true
         }
 
-        if (preceding.association == TokenAssociation.Infix ||
-            following.association == TokenAssociation.Infix
+        if ((preceding.association == TokenAssociation.Infix && !isAllDots(preceding)) ||
+            (following.association == TokenAssociation.Infix && !isAllDots(following))
         ) {
             return true
         }
@@ -255,6 +255,7 @@ private val spaceBetween = mapOf<Pair<Any, Any>, Boolean>(
     ("..." to OutputTokenType.Name) to false, // ...Int
     (OutputTokenType.Word to "(") to true, // if (
     (OutputTokenType.Name to "{") to true, // f {
+    (OutputTokenType.NumericValue to "{") to true, // if x == 0 {
     (OutputTokenType.Word to "{") to true, // do {
 )
 

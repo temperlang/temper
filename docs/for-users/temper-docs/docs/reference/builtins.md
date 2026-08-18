@@ -11,7 +11,7 @@ are operators: they are used like mathematical symbols:
 
 - Infix `+` appears between arguments: `:::js a + b`
 - Prefix `-` appears before its sole argument: `:::js -b`
-- Postfix `++` appears afters its argument: `:::js i++`
+- Postfix `++` appears after its argument: `:::js i++`
 
 Other functions are called with parentheses: `:::js f(x)`.
 See also [Call Syntax](syntax.md#syntax-Call).
@@ -75,10 +75,10 @@ The singleton value `null` which is admitted by any [Postfix `?`](#builtin-%3F) 
 
 `null` may be used to represent an absent value, for example:
 
-- an unspecified, optional input
-- an output that is not usable but not due to an error, for example, when mapping a list of values,
+- An unspecified, optional input
+- An output that is not usable but not due to an error, for example, when mapping a list of values
   but excluding some corresponding elements from the output list
-- a temporary, not computed *yet*, intermediate value
+- A temporary, not computed *yet*, intermediate value
 
 `null` is distinguishable, in translated Temper code, from any other value.
 For example, in the context of the *Int32?* type, *0* is not equal to `null`.
@@ -113,9 +113,8 @@ The value `true` of type [*Boolean*](types.md#type-Boolean).
 ### *void*
 The value `void` is the sole value in type [*Void*](types.md#type-Void).
 
-**WARNING**: To interface better across idiomatic void behavior in backends,
-current plans are to make `Void` disjoint from `AnyValue` such that no
-`void` value is usable. See also [issue#38](https://github.com/temperlang/temper/issues/38).
+`Void` is disjoint from `AnyValue` so no `void` value is directly usable.
+See also [issue#38](https://github.com/temperlang/temper/issues/38).
 
 <!-- /snippet: builtin/void -->
 
@@ -428,7 +427,7 @@ Ignore any value.
 <a name="builtin&#45;is" class="snippet-anchor-name"></a>
 
 ### `is`
-The `is` operator allows type-checking.
+The `is` operator allows runtime type-checking.
 
 `x is Type` evaluates to true when `x`'s [type tag](types.md#type-tag)
 is [compatible](types.md#type-compatibility) with `Type`.
@@ -514,348 +513,101 @@ The prefix `!` operator performs [*Boolean*](types.md#type-Boolean) inverse.
 
 <!-- /snippet: builtin/!= -->
 
-<!-- snippet: builtin/%25 : operator `%` -->
-
-<a name="builtin&#45;&#37;25" class="snippet-anchor-name"></a>
-
-### Remainder `%`
-Given two [*Int32*](types.md#type-Int32)s it produces an *Int*
-and given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/0 -->
-
-```temper
-13   % 3   == 1    &&
-13.0 % 3.0 == 1.0
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/0 -->
-
-Division by Zero [bubbles](types.md#type-Bubble)
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/1 -->
-
-```temper
-(1 % 0) orelse console.log("mod by zero");
-//!outputs "mod by zero"
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/1 -->
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/2 -->
-
-```temper
-(1.0 % 0.0) orelse console.log("mod by zero");
-//!outputs "mod by zero"
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/2 -->
-
-<!-- /snippet: builtin/%25 -->
-
-<!-- snippet: builtin/& : `&` -->
-
-<a name="builtin&#45;&amp;" class="snippet-anchor-name"></a>
-
-### Operator `&`
-The `&` operator can be applied in two ways:
-
-- To [*Int32*](types.md#type-Int32)s it acts as a [bitwise operator](#bitwise-and).
-- To types it produces an [intersection type](#type-intersection-fn)
-
-<!-- snippet: bitwise-and -->
-
-<a name="bitwise&#45;and" class="snippet-anchor-name"></a>
-
-#### *Int* `&`
-
-Takes two [*Int32*](types.md#type-Int32)s and returns the *Int* that has any bit set
-that is set in both input.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/bitwise-and/snippet.md/0 -->
-
-```temper
-// Using binary number syntax
-(0b0010101 &
- 0b1011011) ==
- 0b0010001
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/bitwise-and/snippet.md/0 -->
-
-<!-- /snippet: bitwise-and -->
-
-<!-- snippet: type/intersection-fn : type `&` -->
-
-<a name="type&#45;intersection&#45;fn" class="snippet-anchor-name"></a>
-
-#### Intersection type bound `&`
-
-When the `&` operator is applied to types instead of numbers, it constructs
-an intersection type bound.
-
-An intersection type bound specifies that the bounded type is a sub-type of each of its members.
-So a value of a type that `extends I & J` declares a type can be assigned to a type `I` **and** can be assigned a declaration with type `J`.
-See also [snippet/type/relationships](types.md#type-relationships).
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/type/intersection-fn/snippet.md/0 -->
-
-```temper
-interface A {
-  a(): Void {}
-}
-interface B {
-  b(): Void {}
-}
-
-class C extends A & B {}
-
-let c: C = new C();
-let a: A = c;
-let b: B = c;
-
-let f<T extends A & B>(t: T): Void {
-  let a: A = t;
-  let b: B = t;
-  a.a();
-  b.b();
-}
-f<C>(c);
-// ✅ null
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/type/intersection-fn/snippet.md/0 -->
-
-<!-- /snippet: type/intersection-fn -->
-
-<!-- /snippet: builtin/& -->
-
-<!-- snippet: builtin/%2A : operator `*` -->
-
-<a name="builtin&#45;&#42;" class="snippet-anchor-name"></a>
-
-### Multiplication `*`
-Infix `*` allows multiplying numbers.
-
-Given two [*Int32*](types.md#type-Int32)s it produces an *Int* and given two [*Float64*](types.md#type-Float64)s it
-produces a *Float64*.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2a/snippet.md/0 -->
-
-```temper
-3   * 4   == 12   &&
-3.0 * 4.0 == 12.0
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2a/snippet.md/0 -->
-
-<!-- /snippet: builtin/* -->
-
-<!-- snippet: builtin/%2A%2A : operator `**` -->
-
-<a name="builtin&#45;&#42;&#42;" class="snippet-anchor-name"></a>
-
-### Exponentiation `**`
-Infix `**` allows raising one number to the power of another.
-
-Given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2a$2a/snippet.md/0 -->
-
-```temper
-3.0 **  2.0 == 9.0 &&
-4.0 ** -0.5 == 0.5
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2a$2a/snippet.md/0 -->
-
-<!-- /snippet: builtin/** -->
-
-<!-- snippet: builtin/+ -->
-
-<a name="builtin&#45;&#37;2B" class="snippet-anchor-name"></a>
-
-### `+`
-The builtin `+` operator has four variants:
-- *Infix* with two [*Int32*](types.md#type-Int32)s: signed addition
-- *Prefix* with one [*Int32*](types.md#type-Int32): numeric identity
-- *Infix* with two [*Float64*](types.md#type-Float64)s: signed addition
-- *Prefix* with one [*Float64*](types.md#type-Float64): numeric identity
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/0 -->
-
-```temper
-1   + 2   == 3   &&
-1.0 + 2.0 == 3.0 &&
-+1        == 1   &&
-+1.0      == 1.0
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/0 -->
-
-As explained above, you cannot mix [*Int32*](types.md#type-Int32) and
-[*Float64*](types.md#type-Float64) inputs:
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/1 -->
-
-```temper
-1 + 1.0
-// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/1 -->
-
-`+` does not work on [*String*](types.md#type-String)s.  Use [String interpolation](types.md#syntax-string-interpolation) instead.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/2 -->
-
-```temper
-"foo" + "bar"
-// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [String, String]!
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/2 -->
-
-<!-- /snippet: builtin/%2B -->
-
-<!-- snippet: builtin/- -->
-
-<a name="builtin&#45;&#45;" class="snippet-anchor-name"></a>
-
-### `-`
-The builtin `-` operator has four variants like [`+`](#builtin-%2B).
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/0 -->
-
-```temper
-3   - 1   == 2   &&
-3.0 - 1.0 == 2.0 &&
--3        <  0   &&
--3.0      <  0.0
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/0 -->
-
-As with `+`, you cannot mix [*Int32*](types.md#type-Int32) and [*Float64*](types.md#type-Float64) inputs:
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/1 -->
-
-```temper
-1 + 1.0
-// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/1 -->
-
-The `-` operator is left-associative:
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/2 -->
-
-```temper
-1 - 1 - 1 == (1 - 1) - 1 &&
-1 - 1 - 1 == -1
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/2 -->
-
-Since there is a [`--` operator](#builtin---) operator, `--x` is not a negation of a negation.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/3 -->
-
-```temper
-var x = 1;
-+x == -(-x) &&  // double negation is identity
---x == 0        // but two adjacent `-` means pre-decrement
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/3 -->
-
-<!-- /snippet: builtin/- -->
-
-<!-- snippet: builtin/%2F : operator `/` -->
-
-<a name="builtin&#45;&#37;2F" class="snippet-anchor-name"></a>
-
-### Division `/`
-Infix `/` allows dividing numbers.
-
-Given two [*Int32*](types.md#type-Int32)s it produces an *Int* and given two [*Float64*](types.md#type-Float64)s it
-produces a *Float64*.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/0 -->
-
-```temper
-12   / 3   == 4    &&
-12.0 / 3.0 == 4.0
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/0 -->
-
-Integer division [rounds towards zero].
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/1 -->
-
-```temper
- 7   / 2   ==  3   &&
--7   / 2   == -3   &&
- 7.0 / 2.0 ==  3.5 &&
--7.0 / 2.0 == -3.5
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/1 -->
-
-Division by zero has [*Bubble*](types.md#type-Bubble).
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/2 -->
-
-```temper
-(1 / 0) orelse console.log("div by zero");
-//!outputs "div by zero"
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/2 -->
-
-Float64 division by zero is a *Bubble* too.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/3 -->
-
-```temper
-console.log("${ (0.0 /  0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
-console.log("${ (1.0 /  0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
-console.log("${ (1.0 / -0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/3 -->
-
-[IEEE-754]: https://en.wikipedia.org/wiki/IEEE_754
-[rounds towards zero]: https://en.wikipedia.org/wiki/Rounding#Rounding_toward_zero
-
-<!-- /snippet: builtin/%2F -->
-
 <!-- snippet: builtin/< -->
 
 <a name="builtin&#45;&lt;" class="snippet-anchor-name"></a>
 
-### `<`
+### Operator `<`, less-than
 `a < b` is [*true*](#builtin-true) when *a* orders before *b*, and is a compile-time error
 if the two are not mutually comparable.
 
 See the [General comparison algorithm](#general-comparison-algo) for details of how they are compiled and
 especially the [General Comparison Caveats](#general-comparison-caveats).
+
+<!-- snippet: syntax/less-than-space-sensitivity -->
+
+<a name="syntax&#45;less&#45;than&#45;space&#45;sensitivity" class="snippet-anchor-name"></a>
+
+#### Syntactic corner case: `<` ambiguity
+
+Tldr: always put spaces around infix operators like `<`.
+
+The `<` operator means comparison, but in a type expression, it can also be a bracket.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/0 -->
+
+```temper
+console.log(c < d);  // Compare c to d
+
+let x:      C<D>;    // x's type is C parameterized with D
+// ⏸️
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/0 -->
+
+Other languages also have two meanings for `<`.  Temper does not want to enforce a
+hard grammatic distinction between types and expressions, and to avoid workarounds
+like extra turbofish syntax.
+
+In Temper the rule is:
+
+> If a `<` token is not preceded by a space or comment, then it is an angle bracket
+> otherwise it is a comparison operator.
+
+(In Temper, types are upper-case by convention, but we cannot use case as in `C<D>`
+above to disambiguate because Temper assigns no semantic significance to identifier
+case, to better support non-European identifiers which are mostly in (unicameral)
+writing systems.)
+
+For example:
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/1 -->
+
+```temper
+// ┏━━━━ This space makes the difference
+f(a < b, c > d);  // pass two booleans to f
+f(A<B, C>);       // pass one type with two parameters to f (a macro?)
+
+class C<T> {}  // A class declaration with a formal type parameter
+
+// Type argument lists can be spread over multiple lines.
+class C< // No space **before**, so this `<` starts C's type argument list.
+  T
+> {}
+
+class C <T>    // ERROR: trying to compare `class C` to `T` probably won't work
+
+class C  // ERROR: space before '<'
+<T> {}
+// ⏸️
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/1 -->
+
+The rule to determine whether a `>` token is an angle bracket or a comparison
+operator is purely made based on preceding tokens.
+
+> If there are zero preceding `<` bracket tokens without a `>` partner then it
+> is a bracket, otherwise it is an infix operator.
+
+This code doesn't mean much, but the parsing rules are clear.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/2 -->
+
+```temper
+// ┏━━━┓ 3 open `<` brackets
+  A<B<C<D>>>>
+//       ┗┳┛┗━━━━━━━ This fourth one is an infix comparison operator
+//        ┃
+// Make these 3 close `>` brackets
+// ⏸️
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/2 -->
+
+To avoid confusion, just put spaces around all your infix operators.
+
+<!-- /snippet: syntax/less-than-space-sensitivity -->
 
 <!-- /snippet: builtin/< -->
 
@@ -1101,15 +853,561 @@ console.log(firstEven?.toString() ?? "so odd"); //!outputs "2"
 
 <!-- /snippet: builtin/%3F -->
 
+## Operators
+
+<!-- snippet: builtin/%25 : operator `%` -->
+
+<a name="builtin&#45;&#37;25" class="snippet-anchor-name"></a>
+
+### Remainder `%`
+Given two [*Int32*](types.md#type-Int32)s it produces an *Int*,
+given two [*Int64*](types.md#type-Int64)s it produces an *Int64*,
+and given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/0 -->
+
+```temper
+13   % 3   == 1    &&
+13.0 % 3.0 == 1.0
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/0 -->
+
+Modulus by Zero [bubbles](types.md#type-Bubble)
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/1 -->
+
+```temper
+(1 % 0) orelse console.log("mod by zero");
+//!outputs "mod by zero"
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/1 -->
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/2 -->
+
+```temper
+(1.0 % 0.0) orelse console.log("mod by zero");
+//!outputs "mod by zero"
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%25/snippet.md/2 -->
+
+<!-- /snippet: builtin/%25 -->
+
+<!-- snippet: builtin/& : `&` -->
+
+<a name="builtin&#45;&amp;" class="snippet-anchor-name"></a>
+
+### Operator `&`, bitwise and
+The `&` operator can be applied in two ways:
+
+- To [*Int32*](types.md#type-Int32)s it acts as a [bitwise operator](#bitwise-and).
+- To types it produces an [intersection type](#type-intersection-fn)
+
+<!-- snippet: bitwise-and -->
+
+<a name="bitwise&#45;and" class="snippet-anchor-name"></a>
+
+#### *Int* `&`
+
+Takes two [*Int32*](types.md#type-Int32)s or two [*Int64*](types.md#type-Int64)s and returns the
+integer that has any bit set that is set in both inputs.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/bitwise-and/snippet.md/0 -->
+
+```temper
+// Using binary number syntax
+(0b0010101 &
+ 0b1011011) ==
+ 0b0010001
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/bitwise-and/snippet.md/0 -->
+
+<!-- /snippet: bitwise-and -->
+
+<!-- snippet: type/intersection-fn : type `&` -->
+
+<a name="type&#45;intersection&#45;fn" class="snippet-anchor-name"></a>
+
+#### Intersection type bound `&`
+
+When the `&` operator is applied to types instead of numbers, it constructs
+an intersection type bound.
+
+An intersection type bound specifies that the bounded type is a sub-type of each of its members.
+So a value of a type that `extends I & J` declares a type can be assigned to a type `I` **and** can be assigned a declaration with type `J`.
+See also [snippet/type/relationships](types.md#type-relationships).
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/type/intersection-fn/snippet.md/0 -->
+
+```temper
+interface A {
+  a(): Void {}
+}
+interface B {
+  b(): Void {}
+}
+
+class C extends A & B {}
+
+let c: C = new C();
+let a: A = c;
+let b: B = c;
+
+let f<T extends A & B>(t: T): Void {
+  let a: A = t;
+  let b: B = t;
+  a.a();
+  b.b();
+}
+f<C>(c);
+// ✅ null
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/type/intersection-fn/snippet.md/0 -->
+
+<!-- /snippet: type/intersection-fn -->
+
+<!-- /snippet: builtin/& -->
+
+<!-- snippet: builtin/%2A : operator `*` -->
+
+<a name="builtin&#45;&#42;" class="snippet-anchor-name"></a>
+
+### Multiplication `*`
+Infix `*` allows multiplying numbers.
+
+Given two [*Int32*](types.md#type-Int32)s it produces an *Int*, given two [*Int64*](types.md#type-Int64)s it
+produces an *Int64*, and given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2a/snippet.md/0 -->
+
+```temper
+3   * 4   == 12   &&
+3.0 * 4.0 == 12.0
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2a/snippet.md/0 -->
+
+<!-- /snippet: builtin/* -->
+
+<!-- snippet: builtin/%2A%2A : operator `**` -->
+
+<a name="builtin&#45;&#42;&#42;" class="snippet-anchor-name"></a>
+
+### Exponentiation `**`
+Infix `**` allows raising one number to the power of another.
+
+Given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2a$2a/snippet.md/0 -->
+
+```temper
+3.0 **  2.0 == 9.0 &&
+4.0 ** -0.5 == 0.5
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2a$2a/snippet.md/0 -->
+
+<!-- /snippet: builtin/** -->
+
+<!-- snippet: builtin/+ -->
+
+<a name="builtin&#45;&#37;2B" class="snippet-anchor-name"></a>
+
+### `+`
+The builtin `+` operator has six variants:
+- *Infix* with two [*Int32*](types.md#type-Int32)s: signed addition
+- *Prefix* with one [*Int32*](types.md#type-Int32): numeric identity
+- *Infix* with two [*Int64*](types.md#type-Int64)s: signed addition
+- *Prefix* with one [*Int64*](types.md#type-Int64): numeric identity
+- *Infix* with two [*Float64*](types.md#type-Float64)s: signed addition
+- *Prefix* with one [*Float64*](types.md#type-Float64): numeric identity
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/0 -->
+
+```temper
+1    + 2    == 3    &&
+1.0  + 2.0  == 3.0  &&
+1i64 + 2i64 == 3i64 &&
++1          == 1    &&
++1.0        == 1.0  &&
++1i64       == 1i64
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/0 -->
+
+As explained above, you cannot mix [*Int32*](types.md#type-Int32) and
+[*Float64*](types.md#type-Float64) inputs nor either with [*Int64*](types.md#type-Int64):
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/1 -->
+
+```temper
+1 + 1.0
+// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!, No accessible member infix nym`+` in type Int32!
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/1 -->
+
+`+` does not work on [*String*](types.md#type-String)s.  Use [String interpolation](types.md#syntax-string-interpolation) instead.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/2 -->
+
+```temper
+"foo" + "bar"
+// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [String, String]!
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/2 -->
+
+<!-- /snippet: builtin/%2B -->
+
+<!-- snippet: builtin/++ -->
+
+<a name="builtin&#45;&#37;2B&#37;2B" class="snippet-anchor-name"></a>
+
+### `++` operator: increment
+`++x` reads `x` and assigns the following value back to it.
+
+The value assigned is `x.succ()`.
+Builtin numeric types implement the `.succ()` method to return a value one greater,
+so for numerics `++x` is equivalent to `x += 1`.
+
+`x++` has the same effect as `++x`, but produces the value of `x` before
+assigning its successor, instead of the value after.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B%2B/snippet.md/0 -->
+
+```temper
+var x: Int = 0;
+// when `x` comes after  `++`, produces value after  increment
+console.log((++x).toString()); //!outputs "1"
+// when `x` comes before `++`, produces value before increment
+console.log((x++).toString()); //!outputs "1"
+x == 2
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B%2B/snippet.md/0 -->
+
+The effects of `++x` and `x++` differ from `x = x.succ()`, in that if `x` is a complex expression,
+its parts are only evaluated once.
+For example, in `++listBuilder[f()]`, the function call, `f()`, which computes the index,
+only happens once.
+
+<!-- /snippet: builtin/%2B%2B -->
+
+<!-- snippet: builtin/- -->
+
+<a name="builtin&#45;&#45;" class="snippet-anchor-name"></a>
+
+### `-`
+The builtin `-` operator has six variants like [`+`](#builtin-%2B).
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/0 -->
+
+```temper
+3   - 1   == 2   &&
+3.0 - 1.0 == 2.0 &&
+-3        <  0   &&
+-3.0      <  0.0
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/0 -->
+
+As with `+`, you cannot mix [*Int32*](types.md#type-Int32) and [*Float64*](types.md#type-Float64) inputs:
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/1 -->
+
+```temper
+1 + 1.0
+// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!, No accessible member infix nym`+` in type Int32!
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/1 -->
+
+The `-` operator is left-associative:
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/2 -->
+
+```temper
+1 - 1 - 1 == (1 - 1) - 1 &&
+1 - 1 - 1 == -1
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/2 -->
+
+Since there is a [`--` operator: decrement](#builtin---) operator, `--x` is not a negation of a negation.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/3 -->
+
+```temper
+var x = 1;
++x == -(-x) &&  // double negation is identity
+--x == 0        // but two adjacent `-` means pre-decrement
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/3 -->
+
+<!-- /snippet: builtin/- -->
+
+<!-- snippet: builtin/-- -->
+
+<a name="builtin&#45;&#45;&#45;" class="snippet-anchor-name"></a>
+
+### `--` operator: decrement
+`--x` reads `x` and assigns the preceding value back to it.
+The value assigned is `x.pred()`.
+Builtin numeric types implement the `.pred()` method to return a value one less,
+so for numerics `--x` is equivalent to `x -= 1`.
+
+`x--` has the same effect as `--x`, but produces the value of `x` before
+assigning its predecessor, instead of the value after.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/--/snippet.md/0 -->
+
+```temper
+var x: Int = 0;
+// when `x` comes after  `--`, produces value after  decrement
+console.log((--x).toString()); //!outputs "-1"
+// when `x` comes before `--`, produces value before decrement
+console.log((x--).toString()); //!outputs "-1"
+x == -2
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/--/snippet.md/0 -->
+
+The effects of `--x` and `x--` differ from `x = x.pred()`, in that if `x` is a complex expression,
+its parts are only evaluated once.
+For example, in `--listBuilder[f()]`, the function call, `f()`, which computes the index,
+only happens once.
+
+<!-- /snippet: builtin/-- -->
+
+<!-- snippet: builtin/%2F : operator `/` -->
+
+<a name="builtin&#45;&#37;2F" class="snippet-anchor-name"></a>
+
+### Division `/`
+Infix `/` allows dividing numbers.
+
+Given two [*Int32*](types.md#type-Int32)s it produces an *Int*, given two [*Int64*](types.md#type-Int64)s it
+produces an *Int64*, and given two [*Float64*](types.md#type-Float64)s it produces a *Float64*.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/0 -->
+
+```temper
+12   / 3   == 4    &&
+12.0 / 3.0 == 4.0
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/0 -->
+
+Integer division [rounds towards zero].
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/1 -->
+
+```temper
+ 7   / 2   ==  3   &&
+-7   / 2   == -3   &&
+ 7.0 / 2.0 ==  3.5 &&
+-7.0 / 2.0 == -3.5
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/1 -->
+
+Division by zero has [*Bubble*](types.md#type-Bubble).
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/2 -->
+
+```temper
+(1 / 0) orelse console.log("div by zero");
+//!outputs "div by zero"
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/2 -->
+
+Float64 division by zero is a *Bubble* too.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/3 -->
+
+```temper
+console.log("${ (0.0 /  0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
+console.log("${ (1.0 /  0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
+console.log("${ (1.0 / -0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$2f/snippet.md/3 -->
+
+[IEEE-754]: https://en.wikipedia.org/wiki/IEEE_754
+[rounds towards zero]: https://en.wikipedia.org/wiki/Rounding#Rounding_toward_zero
+
+<!-- /snippet: builtin/%2F -->
+
+<!-- snippet: builtin/<< : `<<` -->
+
+<a name="builtin&#45;&lt;&lt;" class="snippet-anchor-name"></a>
+
+### Operator `<<`, shift left
+The left shift (`<<`) operator takes an [*Int32*](types.md#type-Int32) or a
+[*Int64*](types.md#type-Int64) to shift and an [*Int32*](types.md#type-Int32) which is
+the number of bits to shift by.
+
+All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
+operand are ignored.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3c$3c/snippet.md/0 -->
+
+```temper
+// Using binary number syntax
+(0b0000_0001_0101 << 3) ==
+//        / _/ /
+//       / /  /
+//      / /  /
+ 0b0000_1010_1000
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3c$3c/snippet.md/0 -->
+
+<!-- /snippet: builtin/<< -->
+
+<!-- snippet: builtin/>> : `>>` -->
+
+<a name="builtin&#45;&gt;&gt;" class="snippet-anchor-name"></a>
+
+### Operator `>>`, shift right
+The right shift (`>>`) operator takes an [*Int32*](types.md#type-Int32) or a
+[*Int64*](types.md#type-Int64) to shift and an [*Int32*](types.md#type-Int32) which is
+the number of bits to shift by.
+
+All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
+operand are ignored.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e/snippet.md/0 -->
+
+```temper
+// Using binary number syntax
+(0b0000_1010_1010 >> 3) ==
+//       \ \_ \ \
+//        \  \ \ *
+//         \  \ \
+ 0b0000_0001_0101
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e/snippet.md/0 -->
+
+Unlike the [`>>>`](#builtin->>>) operator, this operator is sign extending.
+When shifting right by *n* bits, the *n* highest bits in the output are copied
+from the most-significant bit in the input.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e/snippet.md/1 -->
+
+```temper
+(0x8000_0000_0000_0000 >> 2) ==
+// |\
+// |/\
+ 0xE000_0000_0000_0000
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e/snippet.md/1 -->
+
+<!-- /snippet: builtin/>> -->
+
+<!-- snippet: builtin/>>> : `>>>` -->
+
+<a name="builtin&#45;&gt;&gt;&gt;" class="snippet-anchor-name"></a>
+
+### Operator `>>>`, shift right (zero extending)
+The right shift (`>>>`) operator takes an [*Int32*](types.md#type-Int32) or a
+[*Int64*](types.md#type-Int64) to shift and an [*Int32*](types.md#type-Int32) which is
+the number of bits to shift by.
+
+All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
+operand are ignored.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e$3e/snippet.md/0 -->
+
+```temper
+// Using binary number syntax
+(0b0000_1010_1010 >>> 3) ==
+//       \ \_ \ \
+//        \  \ \ *
+//         \  \ \
+ 0b0000_0001_0101
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e$3e/snippet.md/0 -->
+
+Unlike the [`>>`](#builtin->>) operator, this operator is zero extending.
+When shifting right by *n* bits, the *n* highest bits in the output are copied
+from the most-significant bit in the input.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e$3e/snippet.md/1 -->
+
+```temper
+(0x8000_0000_0000_0000 >>> 2) ==
+ 0x2000_0000_0000_0000
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3e$3e$3e/snippet.md/1 -->
+
+<!-- /snippet: builtin/>>> -->
+
+<!-- snippet: builtin/^ : `^` -->
+
+<a name="builtin&#45;&#94;" class="snippet-anchor-name"></a>
+
+### Operator `^`, bitwise-xor
+The bitwise-xor (`^`) operator takes two [*Int32*](types.md#type-Int32)s or
+two [*Int64*](types.md#type-Int64)s and returns an integer of the same size
+that has each bit set when the corresponding bits in the inputs
+are different.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/^/snippet.md/0 -->
+
+```temper
+// Using binary number syntax
+(0b1111_0000_1111_0000_1111_0000_1111_0000 ^
+ 0b1010_1010_1010_1010_0101_0101_0101_0101) ==
+ 0b0101_1010_0101_1010_1010_0101_1010_0101
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/^/snippet.md/0 -->
+
+<!-- /snippet: builtin/^ -->
+
 <!-- snippet: builtin/| : `|` -->
 
 <a name="builtin&#45;&#124;" class="snippet-anchor-name"></a>
 
-### Operator `|`
+### Operator `|`, bitwise or
 The `|` operator performs bitwise union.
 
-It takes two [*Int32*](types.md#type-Int32)s and returns the *Int32* that has any bit set
-that is set in either input.
+It takes two [*Int32*](types.md#type-Int32)s or two [*Int64*](types.md#type-Int64)s and returns
+the integer of the same size that has any bit set that is set in either input.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$7c/snippet.md/0 -->
 
@@ -1124,6 +1422,29 @@ that is set in either input.
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$7c/snippet.md/0 -->
 
 <!-- /snippet: builtin/| -->
+
+<!-- snippet: builtin/~ : `~` -->
+
+<a name="builtin&#45;&#37;7E" class="snippet-anchor-name"></a>
+
+### Operator `~`, bitwise inverse
+The `~` operator negates the bits in an integer.
+
+Given an [*Int32*](types.md#type-Int32) or [*Int64*](types.md#type-Int64) it returns the integer
+of the same size with the opposite bits.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%7E/snippet.md/0 -->
+
+```temper
+// Using binary number syntax
+~0b0000_0001_0010_0011_0100_0101_0110_0111 ==
+ 0b1111_1110_1101_1100_1011_1010_1001_1000
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%7E/snippet.md/0 -->
+
+<!-- /snippet: builtin/%7E -->
 
 ## Types
 
@@ -1427,7 +1748,7 @@ console.log((value is MyTypeName<AnyValue, AnyValue>).toString()); //!outputs "t
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/class/snippet.md/0 -->
 
 A minimal class declaration may omit many of those elements along with
-the brackets and keyword (like [# `extends` keyword](#builtin-extends)):
+the brackets and [`extends` clause](#typedef-extends):
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/builtin/class/snippet.md/1 -->
 
@@ -1445,6 +1766,9 @@ console.log((m is Minimal).toString()); //!outputs "true"
 Source: [*TypeDefinitionMacro.kt*](https://github.com/temperlang/temper/blob/main/frontend/src/commonMain/kotlin/lang/temper/frontend/TypeDefinitionMacro.kt)
 
 Re parenthetical declarations, see also: [`@noProperty` decorator](#builtin-@noProperty)
+
+Be aware that [`<` space sensitivity](#syntax-less-than-space-sensitivity) requires
+leaving no space between the type name and the start of the `<...>` type parameter list.
 
 <!-- /snippet: builtin/class -->
 
@@ -1511,6 +1835,41 @@ console.log("done"); //!outputs "done"
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/continue/snippet.md/1 -->
 
 <!-- /snippet: builtin/continue -->
+
+<!-- snippet: builtin/dataFile -->
+
+<a name="builtin&#45;dataFile" class="snippet-anchor-name"></a>
+
+### macro `dataFile`
+The `dataFile` macro declares a data file that can be bundled with the library translation.
+It takes three inputs:
+
+- The path to the data file relative to the module directory.
+  For example, if the current module is `my-library//foo` and the path is `bar.json`
+  then in `my-library`, the resource path `foo/bar.json` would allow retrieving the data
+  file in some target-language specific way.
+- The mime-type of the data.
+- The data itself.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/dataFile/snippet.md/0 -->
+
+```temper
+dataFile(
+  "./my-data.json",
+  "application/json",
+  '["My", "data", "goes", "here"]',
+)
+// ✅ null
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/dataFile/snippet.md/0 -->
+
+If the path starts with a `/` then the rest of the path will be resolved
+relative to the library's root directory.
+
+The [Data Backend](target-languages.md#backend-data) writes the data files to the temper output directory.
+
+<!-- /snippet: builtin/dataFile -->
 
 <!-- snippet: builtin/do : `do` -->
 
@@ -1650,7 +2009,7 @@ brackets are treated as statements, not object properties.
 
 <a name="syntax&#45;bag&#45;preceders" class="snippet-anchor-name"></a>
 
-#### Blocks vs bags
+#### Blocks vs. bags
 Putting `do` before curly brackets, `do {⋯}` specifies a block of statements, not a bag of
 key/value properties à la JSON.
 
@@ -1693,7 +2052,7 @@ there can be confusion otherwise.
 <!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/bag-preceders/snippet.md/1 -->
 
 Whether a `{` is followed by properties or statements is made based on the preceding
-non-comment & non-space token.
+non-comment, non-space token.
 
 | Preceding Token Text        | Contains   | Classification                              |
 | --------------------------- | ---------- | ------------------------------------------- |
@@ -1755,66 +2114,6 @@ TODO: Document how Temper enum types relate to types per backend.
 
 <!-- /snippet: builtin/enum -->
 
-<!-- snippet: builtin/extends : # `extends` keyword -->
-
-<a name="builtin&#45;extends" class="snippet-anchor-name"></a>
-
-### *SubType* `extends` *SuperType*
-
-The *extends* keyword expresses that the thing to the left is a subtype of
-the thing to the right.
-
-It's used in two different contexts.
-
-First, when defining types.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/extends/snippet.md/0 -->
-
-```temper
-interface SuperType {}
-class SubType extends SuperType {}
-
-// An instance of a subtype may be assigned to a variable
-// whose type is the supertype.
-let x: SuperType = new SubType();
-// ✅ null
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/extends/snippet.md/0 -->
-
-Second, when declaring a type variable.
-The below defines an upper bound: the type variable may only bind to types
-that are subtypes of the upper bound.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/extends/snippet.md/1 -->
-
-```temper
-let f<T extends Listed<String>>(x: T): T { x }
-// ✅ null
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/extends/snippet.md/1 -->
-
-When more than one super-type is extended, use
-[type intersection](#type-intersection-fn) syntax (`&`).
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/extends/snippet.md/2 -->
-
-```temper
-interface I {}
-interface J {}
-
-class C extends I & J {}
-
-let f<T extends I & J>(x: T): T { x }
-// T extends I and T extends J
-// ✅ null
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/extends/snippet.md/2 -->
-
-<!-- /snippet: builtin/extends -->
-
 <!-- snippet: builtin/fn -->
 
 <a name="builtin&#45;fn" class="snippet-anchor-name"></a>
@@ -1872,7 +2171,7 @@ Unlike in some other languages, curly brackets (`{...}`) are **required** around
 ```temper
 for (var i = 0; i < 3; ++i)
   console.log(i.toString()) // Curly brackets missing
-// ❌ No member toString in MissingType!, No declaration for i!
+// ❌ Expected function type, but got Function!, No type for subject of .toString!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/stmt/simple-for-loop/snippet.md/1 -->
@@ -2087,7 +2386,7 @@ You can't do that in Temper; always put `{`...`}` around the bodies.
 
 ```temper
 if (true) console.log("Runs"); else console.log("Does not run");
-// ❌ Expected a TopLevel here!
+// ❌ Expected a TopLevel here!, Expected function type, but got Function!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/if/snippet.md/4 -->
@@ -2183,11 +2482,71 @@ Defines an abstract `interface` type.
 Interface types may define abstract properties but may not define constructors or backed
 properties.
 Interface's properties may be overridden by backed properties in a [`class`](#builtin-class)
-sub-type.
+subtype.
 
 See also [`class`](#builtin-class) for details and examples of type declaration syntax.
 
 Source: [*TypeDefinitionMacro.kt*](https://github.com/temperlang/temper/blob/main/frontend/src/commonMain/kotlin/lang/temper/frontend/TypeDefinitionMacro.kt)
+
+<!-- snippet: typedef/extends : # `extends` keyword -->
+
+<a name="typedef&#45;extends" class="snippet-anchor-name"></a>
+
+#### *SubType* `extends` *SuperType*
+
+The *extends* keyword expresses that the thing to the left is a subtype of
+the thing to the right.
+
+It's used in two different contexts.
+
+First, when defining types.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/typedef/extends/snippet.md/0 -->
+
+```temper
+interface SuperType {}
+class SubType extends SuperType {}
+
+// An instance of a subtype may be assigned to a variable
+// whose type is the supertype.
+let x: SuperType = new SubType();
+// ✅ null
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/typedef/extends/snippet.md/0 -->
+
+Second, when declaring a type variable.
+The below defines an upper bound: the type variable may only bind to types
+that are subtypes of the upper bound.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/typedef/extends/snippet.md/1 -->
+
+```temper
+let f<T extends Listed<String>>(x: T): T { x }
+// ✅ null
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/typedef/extends/snippet.md/1 -->
+
+When more than one super-type is extended, use
+[type intersection](#type-intersection-fn) syntax (`&`).
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/typedef/extends/snippet.md/2 -->
+
+```temper
+interface I {}
+interface J {}
+
+class C extends I & J {}
+
+let f<T extends I & J>(x: T): T { x }
+// T extends I and T extends J
+// ✅ null
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/typedef/extends/snippet.md/2 -->
+
+<!-- /snippet: typedef/extends -->
 
 <!-- /snippet: builtin/interface -->
 
@@ -2583,7 +2942,7 @@ Unlike in some other languages, curly brackets (`{...}`) are **required** around
 var i = 0;
 while (i < 3)
   console.log((i++).toString()) // Curly brackets missing
-// ❌
+// ❌ Expected function type, but got Function!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/while/snippet.md/1 -->
@@ -2629,64 +2988,6 @@ isTwiceIsh(1, 0); //!outputs "no"
 [logical-and]: https://en.wikipedia.org/wiki/Logical_conjunction#Truth_table
 
 <!-- /snippet: builtin/&& -->
-
-<!-- snippet: builtin/++ -->
-
-<a name="builtin&#45;&#37;2B&#37;2B" class="snippet-anchor-name"></a>
-
-### `++` operator
-`++x` is equivalent to `x += 1`.
-`x++` has the same effect as `++x`, but produces the value of x before incrementing.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/%2B%2B/snippet.md/0 -->
-
-```temper
-var x: Int = 0;
-// when `x` comes after  `++`, produces value after  increment
-console.log((++x).toString()); //!outputs "1"
-// when `x` comes before `++`, produces value before increment
-console.log((x++).toString()); //!outputs "1"
-x == 2
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B%2B/snippet.md/0 -->
-
-The effects of `++x` and `x++` differ from `x = x + 1`, in that if `x` is a complex expression,
-its parts are only evaluated once.
-For example, in `++array[f()]`, the function call, `f()`, which computes the index,
-only happens once.
-
-<!-- /snippet: builtin/%2B%2B -->
-
-<!-- snippet: builtin/-- -->
-
-<a name="builtin&#45;&#45;&#45;" class="snippet-anchor-name"></a>
-
-### `--` operator
-`--x` is equivalent to `x -= 1`.
-`x--` has the same effect as `--x`, but produces the value of x before incrementing.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/--/snippet.md/0 -->
-
-```temper
-var x: Int = 0;
-// when `x` comes after  `--`, produces value after  increment
-console.log((--x).toString()); //!outputs "-1"
-// when `x` comes before `--`, produces value before increment
-console.log((x--).toString()); //!outputs "-1"
-x == -2
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/--/snippet.md/0 -->
-
-The effects of `--x` and `x--` differ from `x = x - 1`, in that if `x` is a complex expression,
-its parts are only evaluated once.
-For example, in `--array[f()]`, the function call, `f()`, which computes the index,
-only happens once.
-
-<!-- /snippet: builtin/-- -->
 
 <!-- snippet: builtin/=> -->
 
@@ -2782,6 +3083,17 @@ do {
 <!-- /snippet: legacy-decorator -->
 
 <!-- /snippet: builtin/@ -->
+
+<!-- snippet: builtin/@connected -->
+
+<a name="builtin&#45;&#64;connected" class="snippet-anchor-name"></a>
+
+### `@connected` decorator
+Connect types, members, and functions to native code. Each backend defines
+specific conventions for connected backend code. Internal backend translation
+logic can also key on the QName of connected entities.
+
+<!-- /snippet: builtin/@connected -->
 
 <!-- snippet: builtin/@const -->
 
@@ -2900,6 +3212,26 @@ For example:
 
 <!-- /snippet: builtin/@fun -->
 
+<!-- snippet: builtin/@imu -->
+
+<a name="builtin&#45;&#64;imu" class="snippet-anchor-name"></a>
+
+### `@imu` decorator
+Marker for types that must be deeply immutable.
+
+<!-- /snippet: builtin/@imu -->
+
+<!-- snippet: builtin/@in -->
+
+<a name="builtin&#45;&#64;in" class="snippet-anchor-name"></a>
+
+### `@in` deprecated variance notation
+`@in` may decorate a type formal declaration to specify covariant (input) variance.
+
+It is going away.
+
+<!-- /snippet: builtin/@in -->
+
 <!-- snippet: builtin/@inlineUnrealizedGoal -->
 
 <a name="builtin&#45;&#64;inlineUnrealizedGoal" class="snippet-anchor-name"></a>
@@ -2908,8 +3240,14 @@ For example:
 `@inlineUnrealizedGoal` may decorate a function parameter declaration.
 
 An *unrealized goal* is a jump like a [`break` statement](#builtin-break), [`continue` statement](#builtin-continue),
-or [`return`](#builtin-return) that crosses from a [block lambda](../snippet/syntax/BlockLambda/snippet.svg)
-into the containing function.
+[`return`](#builtin-return), or [`bubble()`](#builtin-bubble) that crosses from a
+[block lambda](../snippet/syntax/BlockLambda/snippet.svg) into the containing function.
+
+Inlining a call is the act of taking the called function's body and ensuring that names
+and parameters have the same meaning as if it was called.
+
+Inlining the call to `.forEach` below while also inlining uses of the block lambda into
+`f`'s body allows connecting the `return` goals to `f`'s body.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/builtin/@inlineUnrealizedGoal/snippet.md/0 -->
 
@@ -2918,7 +3256,7 @@ let f(ls: List<Int>): Boolean {
   ls.forEach { x => // Here's a block lambda
     if (x == 2) {
       console.log("Found 2!");
-      // This `return` wants to exit `f`
+      // This `return` should exit `f`
       // but is in a different function.
       return true; // UNREALIZED
     }
@@ -2931,23 +3269,52 @@ f([2]) //!outputs "Found 2!"
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/@inlineUnrealizedGoal/snippet.md/0 -->
 
-Inlining a call is the act of taking the called function's body and ensuring that names
-and parameters have the same meaning as if it was called.
+After inlining, that code is equivalent to this where the `.forEach` call has been
+turned into a `while` loop (as specified by `List.forEach`) and the block lambda is now in
+the loop body.
 
-Inlining the call to `.forEach` above while also inlining uses of the block lambda into
-`f`'s body allows connecting unrealized goals to `f`'s body.
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/@inlineUnrealizedGoal/snippet.md/1 -->
+
+```temper
+let f(ls: List<Int>): Boolean {
+  let n = ls.length;
+  var i = 0;
+  while (i < n) {
+    let x = ls[i]; // parameter from block lambda
+    i += 1;
+    // Here's where the block lambda is situated.
+    do {
+      if (x == 2) {
+        console.log("Found 2!");
+        // This `return` wants to exit `f`
+        // but is in a different function.
+        return true; // UNREALIZED
+      }
+    }
+  }
+  false
+}
+f([2]) //!outputs "Found 2!"
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/@inlineUnrealizedGoal/snippet.md/1 -->
 
 It does come with limitations:
 
-- `@inlineUnrealizedGoal` applies to parameters with function type.
+- `@inlineUnrealizedGoal` applies to parameters with a function type.
 - The containing method or function, hereafter the "callee", must not use any
   [`@private` visibility](#builtin-@private) APIs so that uses of them can be moved.
 - The callee must not be an overridable method.
 - The callee must call any decorated parameter at one lexical call site.
-  Inlining a function multiple time can lead to explosions in code size.
+  Inlining a function multiple times can lead to explosions in code size.
 - The callee must not use any decorated parameter as an r-value;
   it may not delegate calling the block lambda.
 - For a decorated parameter to be inlined, it must be a block lambda
+
+Since inlining involves copying code, it is only appropriate when the method
+is a fairly thin wrapper around a single call to the function or functions
+with this decoration.
 
 <!-- /snippet: builtin/@inlineUnrealizedGoal -->
 
@@ -3012,7 +3379,7 @@ console.log("x is ${p.x.toString()}, y is ${p.y.toString()}");
 #### The custom JSON adapter strategy
 
 If a type, whether it's a class or interface type,
-already has encoding and decoding functions then none are
+already has encoding and decoding functions, then none are
 auto-generated.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/builtin/@json/snippet.md/1 -->
@@ -3052,7 +3419,7 @@ IntWrapper.jsonAdapter().encodeToJson(new IntWrapper(123), p);
 #### Sealed interface strategy
 
 For sealed interfaces, we generate adapters that delegate to adapters for
-the appropriate sub-type.
+the appropriate subtype.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/builtin/@json/snippet.md/2 -->
 
@@ -3279,6 +3646,76 @@ console.log(c.y.toString()); //!outputs "2"
 
 <!-- /snippet: builtin/@noProperty -->
 
+<!-- snippet: builtin/@operator -->
+
+<a name="builtin&#45;&#64;operator" class="snippet-anchor-name"></a>
+
+### `@operator` decorator
+The *\@operator* decorator applies to a function or method declaration
+that implements an operator.
+
+For example, maybe you're defining an arbitrary precision integer type,
+*BigInteger*, and its class includes methods that implement arithmetic.
+You could add `@operator` decorators to the methods and then adding two
+*BigIntegers* (and a *BigInteger* and a [*Int32*](types.md#type-Int32)) would
+delegate semantics to that method.
+
+The string argument must be a valid operator text or an [Operator specifier](#operator-specifier).
+If an operator text, then the operator kind is inferred from the decorated function
+or methods arity (2 means infix, 1 means prefix).
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/@operator/snippet.md/0 -->
+
+```temper
+/**
+ * I just need an example of an operator definition.
+ * This mirrors electrical-engineering notation.
+ */
+@operator("+") // Infix plus operator because arity is 2
+let addingTwoBooleans(a: Boolean, b: Boolean): Boolean {
+  a || b
+}
+
+true + false
+// ⏸️
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/@operator/snippet.md/0 -->
+
+This decorator may be applied multiple times.
+
+<!-- snippet: operator-specifier -->
+
+<a name="operator&#45;specifier" class="snippet-anchor-name"></a>
+
+#### Operator specifier
+
+An operator specifier specifies a kind of operator.
+
+The text of the operator surrounded by underscores where operands are allowed.
+This allows for describing these different kinds of operators, as shown below
+where `+` is the sample operator.
+
+- Infix: `_+_`, the operator punctuation (or word) appears between two operands.
+- Prefix: `+_`, the operator appears before its operand, like `-` for negation.
+- Postfix: `_+`, the operator appears after its operand, like `++` for post-increment
+  or superscript `T` for matrix transpose.
+
+<!-- /snippet: operator-specifier -->
+
+<!-- /snippet: builtin/@operator -->
+
+<!-- snippet: builtin/@out -->
+
+<a name="builtin&#45;&#64;out" class="snippet-anchor-name"></a>
+
+### `@out` deprecated variance notation
+`@out` may decorate a type formal declaration to specify covariant (input) variance.
+
+It is going away.
+
+<!-- /snippet: builtin/@out -->
+
 <!-- snippet: builtin/@overload -->
 
 <a name="builtin&#45;&#64;overload" class="snippet-anchor-name"></a>
@@ -3317,7 +3754,7 @@ builder.content.toString() == "Hi 5!"
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/@overload/snippet.md/0 -->
 
 For now, only explicit methods are allowed for overloads.
-Constructors, propertiers, and top-level functions are unsupported.
+Constructors, properties, and top-level functions are unsupported.
 
 No actual function or method with the overload name itself must be
 present.
@@ -3326,6 +3763,16 @@ TODO Should extension methods have the same prohibition?
 Also detail interaction between extension methods and overloads.
 
 <!-- /snippet: builtin/@overload -->
+
+<!-- snippet: builtin/@partialImu -->
+
+<a name="builtin&#45;&#64;partialImu" class="snippet-anchor-name"></a>
+
+### `@partialImu` decorator
+Marker for types that must be deeply immutable when their actual type
+parameters are deeply immutable.
+
+<!-- /snippet: builtin/@partialImu -->
 
 <!-- snippet: builtin/@private -->
 
@@ -3399,7 +3846,7 @@ See also [`@private` visibility](#builtin-@private)
 
 ### `sealed` type modifier
 Marks an interface type as sealed; only types declared in the same source file
-may [extend](#builtin-extends) it.
+may [extend](#typedef-extends) it.
 
 Sealed types are important because the Temper translator can assume there are
 no direct subtypes that it does not know about.
@@ -3409,16 +3856,15 @@ there is an [`is`](#builtin-is) clause for each known subtype,
 there is no need for an `else` clause.
 
 !!! note "Backwards compatibility note"
-    If you add a sub-type to an existing sealed type, this may break code that
-    uses the old version of the sealed type with a [`when`](#builtin-when) or
-    which otherwise embeds an "is none of those subtypes, therefore is this subtype"
-    assumption.
+    Adding a subtype to an existing sealed type may break code that
+    uses the old version of the sealed type. [`when`](#builtin-when) expressions
+    are at risk, but so is other code that assumes
+    "none of those subtypes, therefore, this subtype."
 
 Backends should translate user-defined sealed types to [sum type]s
 where available, and may insert tagged union tag field where needed.
 
 [sum type]: https://en.wikipedia.org/wiki/Tagged_union
-[tagged union]: https://en.wikipedia.org/wiki/Tagged_union
 
 <!-- /snippet: builtin/@sealed -->
 
@@ -3427,7 +3873,7 @@ where available, and may insert tagged union tag field where needed.
 <a name="builtin&#45;&#64;static" class="snippet-anchor-name"></a>
 
 ### `@static` decorator
-`@static` may decorate a type members, and indicates that the member is associated
+`@static` may decorate type members, and indicates that the member is associated
 with the containing type, not with any instance of that type.
 
 It is a [legacy decorator](#legacy-decorator), so the `static` keyword

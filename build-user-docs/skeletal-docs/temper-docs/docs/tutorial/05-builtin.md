@@ -16,7 +16,7 @@ We also diverge here from our example geometric shapes library, though it
 served us well for context to get started.
 
 For the types below, some of them can be found as class or interface definitions
-in the file [temper/**/Implicits.temper] in the Temper source code. The
+in the file [temper/**/core.temper] in the Temper source code. The
 interpreter uses much of the code here, but classes here are also separately
 redefined for each backend.
 
@@ -113,17 +113,17 @@ $ 1 + 2.5
 interactive#0: fail
 $ 1.toFloat64() + 2.5
 interactive#1: 3.5
-$ 1 + (2.5).toInt()
+$ 1 + (2.5).toInt32()
 interactive#2: 3
-$ 1 + Infinity.toInt()
+$ 1 + Infinity.toInt32()
 interactive#3: fail
-$ 1 + NaN.toInt()
+$ 1 + NaN.toInt32()
 interactive#4: fail
 ```
 
-The methods `toFloat64` and `toInt` might fail with `Bubble` depending on the
+The methods `toFloat64` and `toInt32` might fail with `Bubble` depending on the
 size of the values (or NaN) and the backend's `Int` size. Variants
-`toFloat64Unsafe` and `toIntUnsafe` always return a value, but they have
+`toFloat64Unsafe` and `toInt32Unsafe` always return a value, but they have
 backend-dependent behavior outside safe values. The unsafe methods should be
 used only for small values and/or with fuzz testing across backends.
 
@@ -219,21 +219,54 @@ $ raw"\d+\.\d+"
 interactive#0: "\\d+\\.\\d+"
 ```
 
+Triple-quotes like `"""` start a multiline string, then all whitespace and
+comments are ignored, and every line content beginning with any of the following
+continues the string:
+
+- `"` contributes string content automatically followed by a newline
+- `~` contibutes string content without a newline
+- `:` provides full Temper control flow
+- `//` or `/*` starts a comment
+
+If non-whitespace line content starts with any other than above, the string
+ends. This syntax allows control over indentation both inside and outside the
+string content:
+
 ```temper
-$ ("""
+$ console.log(
+    """
     "- An outline
     // Ignored comment.
     "  - With indentation
-    "- Final point
+    "- Another point
+    """
+    "^ And above is just `""` after `"`
   )
-interactive#1: "- An outline\n  - With indentation\n- Final point"
 ```
 
-Triple-quotes like `"""` start a multiline string, then all whitespace and
-comments are ignored, and every line content beginning with `"` continues the
-string. If line content starts with something other than `"`, the string ends.
-This syntax allows control over indentation both inside and outside the string
-content.
+```
+- An outline
+  - With indentation
+- Another point
+""
+^ And above is just `""` after `"`
+
+interactive#1: void
+```
+
+Here's an example with control flow:
+
+```temper
+$ ("""
+    :for (var i = 1; i < 100; i *= 2) {
+      // Use `~` here to avoid trailing newline.
+      // Use empty interpolation to provide trailing whitespace.
+      ~${i}, ${}
+    :}
+    ~and so on
+  )
+interactive#2: "1, 2, 4, 8, 16, 32, 64, and so on"
+```
 
 Temper has character syntax using a string tagged with `char`.
 Character values are simple integer code-point values.
@@ -242,6 +275,9 @@ Character values are simple integer code-point values.
 $ char'👪'
 interactive#3: 128106
 ```
+
+Custom tags can also be defined for builders for domain-specific languages. We
+plan to document this in the future.
 
 ## List types
 
@@ -308,8 +344,8 @@ arbitrarily with values:
 
 - `Mapped` - An interface for read-only access to data, extended by both `Map`
   and `MapBuilder`.
-- `Map` - A class for immutable listed data.
-- `MapBuilder` - A class for mutable building of listed data.
+- `Map` - A class for immutable mapped data.
+- `MapBuilder` - A class for mutable building of mapped data.
 
 As for list types, `Map` and `MapBuilder` use standard backend types where
 available, such as `IReadOnlyDictionary` or `IDictionary` in C#, `Map` in Java
@@ -344,7 +380,7 @@ user-defined key types in the future (see [issue#29]).
 ## Other types
 
 Temper has additional built-in types, but above discussion highlights some of the
-most important ones. Also, some types currently in [temper/**/Implicits.temper],
+most important ones. Also, some types currently in [temper/**/core.temper],
 such as `Deque<T>` and `DenseBitVector` might move to support libraries in the
 future (see [issue#30]).
 

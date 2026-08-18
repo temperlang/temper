@@ -1,0 +1,9 @@
+@fn let f__0, @fn g__0;
+f__0 = (@stay fn f /* return__0 */: (preserve(Void, type (Void))) {});
+g__0 = (@stay fn g(b__0 /* aka b */: preserve(Boolean, type (Boolean))) /* return__1 */: (preserve(Int, type (Int32))) {
+    preserve(if, ifForDocGen)(b__0, do {
+        returnForDocGen(42)
+      }, do {
+        returnForDocGen(0)
+    })
+});

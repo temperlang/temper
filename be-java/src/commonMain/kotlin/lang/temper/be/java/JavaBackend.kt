@@ -3,14 +3,15 @@ package lang.temper.be.java
 import lang.temper.be.Backend
 import lang.temper.be.BackendSetup
 import lang.temper.be.names.NameSelection
-import lang.temper.be.tmpl.LibraryRootContext
+import lang.temper.be.tmpl.SuperCallConfig
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
+import lang.temper.be.tmpl.hasSplitSupers
+import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.common.MimeType
 import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
-import lang.temper.library.LibraryConfiguration
 import lang.temper.library.LibraryConfigurations
 import lang.temper.log.FilePath
 import lang.temper.log.dirPath
@@ -106,6 +107,24 @@ class JavaBackend private constructor(
         libraryConfigurations = libraryConfigurations,
         dependencyResolver = dependencyResolver,
         tentativeOutputPathFor = { allocateTextFile(it, sourceFileExtension) },
+        withTentative = { tentativeTmpL ->
+            injectSuperCallMethods(
+                tentativeTmpL,
+                injectInto = { true },
+                configSuperCall = configSuperCall@{ type, method ->
+                    // Provide Unit for continue or null for unwanted in this `when`.
+                    when {
+                        // For interfaces, always implement to leave the call chain open.
+                        type.kind == TmpL.TypeDeclarationKind.Interface -> {}
+                        // For classes, we need to implement only where split options are available.
+                        type.hasSplitSupers(method) -> {}
+                        else -> return@configSuperCall null
+                    }
+                    // Got a unit, so config the call. Supercalls in Java exclude `this`.
+                    SuperCallConfig(skipThis = true)
+                },
+            )
+        },
     )
 
     private val names: JavaNames =
@@ -133,6 +152,14 @@ class JavaBackend private constructor(
             )
             add(result)
         }
+        for (file in rawBackendFiles) {
+            // Just copy raw java files into package dirs.
+            MetadataFileSpecification(
+                path = J.SourceDirectory.MainJava.filePath.resolve(file.key),
+                mimeType = sourceMimeType,
+                content = file.value,
+            ).also { add(it) }
+        }
         // See if we already have a top-level module.
         val rootName = javaLibConfigs.current.libraryRoot.rootModuleName()
         val rootInfo = javaLibConfigs.moduleInfo(rootName)
@@ -146,12 +173,7 @@ class JavaBackend private constructor(
 
     override fun selectNames(): List<NameSelection> = names.allNames()
 
-    override fun libraryRootContext(libraryConfiguration: LibraryConfiguration) = LibraryRootContext(
-        inRoot = libraryConfiguration.libraryRoot,
-        outRoot = dirPath(libraryConfiguration.libraryName.text.safeIdentifier()),
-    )
-
-    /** Add per module resources. */
+    /** Add per-module resources. */
     override fun preWrite(outputFiles: List<OutputFileSpecification>): List<OutputFileSpecification> {
         val additions = mutableMapOf<FilePath, OutputFileSpecification>()
         val javaMime = factory.backendMeta.mimeTypeMap[FileType.Module]

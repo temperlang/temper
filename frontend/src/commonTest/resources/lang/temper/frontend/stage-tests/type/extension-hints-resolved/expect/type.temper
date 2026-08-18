@@ -1,0 +1,23 @@
+let return__0, @fn @extension("isZero") isZero__0;
+@typeDecl(Zero__0) @stay let Zero__0;
+Zero__0 = type (Zero__0);
+isZero__0 = (@stay fn isZero(x__0 /* aka x */: Int32) /* return__1 */: Boolean {
+    fn__0: do {
+      return__1 = x__0 == 0
+    }
+});
+@visibility(\public) @fn @stay @fromType(Zero__0) let isZero__1;
+isZero__1 = (@stay fn isZero(@impliedThis(Zero__0) this__0: Zero__0) /* return__2 */: Boolean {
+    fn__1: do {
+      return__2 = true
+    }
+});
+@fn @visibility(\public) @stay @fromType(Zero__0) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(Zero__0) this__1: Zero__0) /* return__3 */: Void {
+    return__3 = void
+});
+if (isZero__0(0)) {
+  return__0 = do_call_isZero(new Zero__0());
+} else {
+  return__0 = false
+};

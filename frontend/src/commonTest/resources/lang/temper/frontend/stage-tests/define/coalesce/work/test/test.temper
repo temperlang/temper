@@ -1,0 +1,2 @@
+export let prod(i: Int, j: Int?): Int { i * (j ?? 1) }
+export let prodWrap(i: Int, j: List<Int?>): Int { i * (j[0] ?? 1) }

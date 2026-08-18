@@ -11,10 +11,9 @@ import lang.temper.log.LogEntry
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModularName
 import lang.temper.name.Symbol
-import lang.temper.stage.Stage
 import lang.temper.type.Abstractness
 import lang.temper.type.MkType
 import lang.temper.type.NominalType
@@ -26,6 +25,7 @@ import lang.temper.type2.Nullity
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.withNullity
+import lang.temper.value.AbstractPanic
 import lang.temper.value.ActualValues
 import lang.temper.value.BubbleFn
 import lang.temper.value.BuiltinOperatorId
@@ -60,10 +60,10 @@ import lang.temper.value.TList
 import lang.temper.value.TNull
 import lang.temper.value.TString
 import lang.temper.value.Value
+import lang.temper.value.VoidishPanicFn
 import lang.temper.value.helpSnippet
 import lang.temper.value.listBuiltinName
 import lang.temper.value.or
-import lang.temper.value.postfixApplyName
 import lang.temper.value.typeSymbol
 import lang.temper.value.unpackOrFail
 import lang.temper.value.unpackPositionedOr
@@ -72,8 +72,8 @@ import lang.temper.value.void
 import kotlin.math.pow
 import lang.temper.type.WellKnownTypes as WKT
 
-private fun fTypeTypeToBoolean(sides: TypeShape): Signature2 {
-    val sidesAll = MkType2(sides).nullity(Nullity.OrNull).get()
+private fun fTypeTypeToBoolean(sides: TypeShape, nullity: Nullity): Signature2 {
+    val sidesAll = MkType2(sides).nullity(nullity).get()
     return Signature2(
         returnType2 = WKT.booleanType2,
         requiredInputTypes = listOf(sidesAll, sidesAll),
@@ -81,10 +81,31 @@ private fun fTypeTypeToBoolean(sides: TypeShape): Signature2 {
     )
 }
 
-private val fIntIntToBoolean = fTypeTypeToBoolean(WKT.intTypeDefinition)
-private val fLongLongToBoolean = fTypeTypeToBoolean(WKT.int64TypeDefinition)
-private val fDoubleDoubleToBoolean = fTypeTypeToBoolean(WKT.float64TypeDefinition)
-private val fStringStringToBoolean = fTypeTypeToBoolean(WKT.stringTypeDefinition)
+private val fIntIntNullableToBoolean = fTypeTypeToBoolean(WKT.intTypeDefinition, Nullity.OrNull)
+private val fLongLongNullableToBoolean = fTypeTypeToBoolean(WKT.int64TypeDefinition, Nullity.OrNull)
+private val fDoubleDoubleNullableToBoolean = fTypeTypeToBoolean(WKT.float64TypeDefinition, Nullity.OrNull)
+private val fStringStringNullableToBoolean = fTypeTypeToBoolean(WKT.stringTypeDefinition, Nullity.OrNull)
+private val fIntIntNonNullToBoolean = fTypeTypeToBoolean(WKT.intTypeDefinition, Nullity.NonNull)
+private val fLongLongNonNullToBoolean = fTypeTypeToBoolean(WKT.int64TypeDefinition, Nullity.NonNull)
+private val fDoubleDoubleNonNullToBoolean = fTypeTypeToBoolean(WKT.float64TypeDefinition, Nullity.NonNull)
+private val fStringStringNonNullToBoolean = fTypeTypeToBoolean(WKT.stringTypeDefinition, Nullity.NonNull)
+
+private fun fIntIntToBoolean(nullity: Nullity) = when (nullity) {
+    Nullity.NonNull -> fIntIntNonNullToBoolean
+    Nullity.OrNull -> fIntIntNullableToBoolean
+}
+private fun fLongLongToBoolean(nullity: Nullity) = when (nullity) {
+    Nullity.NonNull -> fLongLongNonNullToBoolean
+    Nullity.OrNull -> fLongLongNullableToBoolean
+}
+private fun fDoubleDoubleToBoolean(nullity: Nullity) = when (nullity) {
+    Nullity.NonNull -> fDoubleDoubleNonNullToBoolean
+    Nullity.OrNull -> fDoubleDoubleNullableToBoolean
+}
+private fun fStringStringToBoolean(nullity: Nullity) = when (nullity) {
+    Nullity.NonNull -> fStringStringNonNullToBoolean
+    Nullity.OrNull -> fStringStringNullableToBoolean
+}
 
 private val fDoubleDoubleToDouble = Signature2(
     returnType2 = WKT.float64Type2,
@@ -124,7 +145,17 @@ private val fLongLongToLong = Signature2(
     hasThisFormal = false,
 )
 
+private val fLongIntToLong = Signature2(
+    returnType2 = WKT.int64Type2,
+    requiredInputTypes = listOf(WKT.int64Type2, WKT.intType2),
+    hasThisFormal = false,
+)
+
 private val fLongLongToLongOrBubble = fLongLongToLong.copy(
+    returnType2 = MkType2.result(WKT.int64Type2, WKT.bubbleType2).get(),
+)
+
+private val fLongIntToLongOrBubble = fLongIntToLong.copy(
     returnType2 = MkType2.result(WKT.int64Type2, WKT.bubbleType2).get(),
 )
 
@@ -143,12 +174,14 @@ private val fBoolToBool = Signature2(
 // These need to be lambdas so that we can compare for reference equality below
 private val twoIntsToNull = { _: Int, _: Int, _: InterpreterCallback -> null }
 private val twoLongsToNull = { _: Long, _: Long, _: InterpreterCallback -> null }
+private val longIntToNull = { _: Long, _: Int, _: InterpreterCallback -> null }
 
 private class IntCompareFun(
     name: String,
     override val builtinOperatorId: BuiltinOperatorId? = null,
+    val nullity: Nullity = Nullity.NonNull,
     val f: (a: Int) -> Result,
-) : BuiltinFun(name, fIntIntToBoolean), PureCallableValue {
+) : BuiltinFun(name, fIntIntToBoolean(nullity)), PureCallableValue {
     override val callMayFailPerSe get() = false
     override fun invoke(
         args: ActualValues,
@@ -163,8 +196,9 @@ private class IntCompareFun(
 private class LongCompareFun(
     name: String,
     override val builtinOperatorId: BuiltinOperatorId? = null,
+    val nullity: Nullity = Nullity.NonNull,
     val f: (a: Int) -> Result,
-) : BuiltinFun(name, fLongLongToBoolean), PureCallableValue {
+) : BuiltinFun(name, fLongLongToBoolean(nullity)), PureCallableValue {
     override val callMayFailPerSe get() = false
     override fun invoke(
         args: ActualValues,
@@ -179,8 +213,9 @@ private class LongCompareFun(
 private class DoubleCompareFun(
     name: String,
     override val builtinOperatorId: BuiltinOperatorId? = null,
+    val nullity: Nullity = Nullity.NonNull,
     val f: (a: Int) -> Result,
-) : BuiltinFun(name, fDoubleDoubleToBoolean), PureCallableValue {
+) : BuiltinFun(name, fDoubleDoubleToBoolean(nullity)), PureCallableValue {
     override val callMayFailPerSe get() = false
     override fun invoke(
         args: ActualValues,
@@ -195,8 +230,9 @@ private class DoubleCompareFun(
 private class StringCompareFun(
     name: String,
     override val builtinOperatorId: BuiltinOperatorId? = null,
+    val nullity: Nullity = Nullity.NonNull,
     val f: (a: Int) -> Result,
-) : BuiltinFun(name, fStringStringToBoolean), PureCallableValue {
+) : BuiltinFun(name, fStringStringToBoolean(nullity)), PureCallableValue {
     override val callMayFailPerSe get() = false
     override fun invoke(
         args: ActualValues,
@@ -218,7 +254,11 @@ private class IntIntToIntFun(
     val f: (a: Int, b: Int) -> Int,
 ) : BuiltinFun(
     name,
-    signature = if (fail === twoIntsToNull) { fIntIntToInt } else { fIntIntToIntOrBubble },
+    signature = if (fail === twoIntsToNull) {
+        fIntIntToInt
+    } else {
+        fIntIntToIntOrBubble
+    },
 ),
     PureCallableValue {
     override val callMayFailPerSe get() = fail !== twoIntsToNull
@@ -261,6 +301,36 @@ private class LongLongToLongFun(
         val (left, right) = args.unpackPositioned(2, cb) ?: return Fail
         val a = TInt64.unpack(left)
         val b = TInt64.unpack(right)
+        return fail(a, b, cb) ?: Value(
+            f(a, b),
+            TInt64,
+        )
+    }
+}
+
+private class LongIntToLongFun(
+    name: String,
+    override val builtinOperatorId: BuiltinOperatorId? = null,
+    /**
+     * [Fail] iff the inputs are invalid for [f], else null.
+     */
+    val fail: (a: Long, b: Int, cb: InterpreterCallback) -> Fail? = longIntToNull,
+    val f: (a: Long, b: Int) -> Long,
+) : BuiltinFun(
+    name,
+    signature = if (fail === longIntToNull) { fLongIntToLong } else { fLongIntToLongOrBubble },
+),
+    PureCallableValue {
+    override val callMayFailPerSe get() = fail !== twoLongsToNull
+
+    override fun invoke(
+        args: ActualValues,
+        cb: InterpreterCallback,
+        interpMode: InterpMode,
+    ): Result {
+        val (left, right) = args.unpackPositioned(2, cb) ?: return Fail
+        val a = TInt64.unpack(left)
+        val b = TInt.unpack(right)
         return fail(a, b, cb) ?: Value(
             f(a, b),
             TInt64,
@@ -356,7 +426,9 @@ private class BoolToBoolFun(
         cb: InterpreterCallback,
         interpMode: InterpMode,
     ): Result {
-        val (a) = args.unpackPositioned(1, cb) ?: return Fail
+        val (a) = args.unpackPositionedOr(1, cb) {
+            return@invoke it
+        }
         return Value(
             f(TBoolean.unpack(a)),
             TBoolean,
@@ -657,7 +729,7 @@ private object ListifyFn :
         val elements = mutableListOf<Value<*>>()
         var i = 0
         val n = args.size
-        if (i < n && args.key(0) == typeSymbol) {
+        if (i < n && args.key(i) == typeSymbol) {
             // type=... specifies the element type, not an element.
             i += 1
         }
@@ -791,7 +863,7 @@ private object PrintFn : BuiltinFun(
         cb: InterpreterCallback,
         interpMode: InterpMode,
     ): Result {
-        if (cb.stage != Stage.Run) { return Fail }
+        if (interpMode != InterpMode.Full) { return Fail }
         val (message) = args.unpackPositioned(1, cb) ?: return Fail
         val text = TString.unpackOrNull(message) ?: run {
             return@invoke cb.fail(MessageTemplate.ExpectedValueOfType, values = listOf(TString, message))
@@ -843,7 +915,7 @@ object NotNullFn : NamedBuiltinFun, CallableValue {
         val (arg) = args.unpackPositionedOr(1, cb) {
             return@invoke it
         }
-        // We should only insert this function internally when known not to be null, but assert for safety in interp.
+        // We should only insert this function internally when known not to be `null`, but assert for safety in interp.
         // Backends typically can skip this assertion, depending on their semantics.
         check(arg.typeTag != TNull)
         return arg
@@ -884,221 +956,125 @@ object BuiltinFuns {
         null,
     ) { a -> a }
 
-    /**
-     * <!-- snippet: builtin/+ -->
-     * # `+`
-     * The builtin `+` operator has four variants:
-     * - *Infix* with two [snippet/type/Int32]s: signed addition
-     * - *Prefix* with one [snippet/type/Int32]: numeric identity
-     * - *Infix* with two [snippet/type/Float64]s: signed addition
-     * - *Prefix* with one [snippet/type/Float64]: numeric identity
-     *
-     * ```temper
-     * 1   + 2   == 3   &&
-     * 1.0 + 2.0 == 3.0 &&
-     * +1        == 1   &&
-     * +1.0      == 1.0
-     * ```
-     *
-     * As explained above, you cannot mix [snippet/type/Int32] and
-     * [snippet/type/Float64] inputs:
-     *
-     * ```temper FAIL
-     * 1 + 1.0
-     * ```
-     *
-     * `+` does not work on [snippet/type/String]s.  Use [snippet/syntax/string/interpolation] instead.
-     *
-     * ```temper FAIL
-     * "foo" + "bar"
-     * ```
-     */
-    val plusFn = CoverFunction(
-        listOf(plusIntIntFn, plusIntFn, plusLongLongFn, plusLongFn, plusFloatFloatFn, plusFloatFn),
-    ).also {
-        helpSnippet(it, "Numeric addition", "builtin/+")
-    }
+    val minusIntIntFn: CallableValue = IntIntToIntFun(
+        "-",
+        BuiltinOperatorId.MinusIntInt,
+    ) { a, b -> a - b }
 
-    /**
-     * <!-- snippet: builtin/- -->
-     * # `-`
-     * The builtin `-` operator has four variants like [snippet/builtin/+].
-     *
-     * ```temper
-     * 3   - 1   == 2   &&
-     * 3.0 - 1.0 == 2.0 &&
-     * -3        <  0   &&
-     * -3.0      <  0.0
-     * ```
-     *
-     * As with `+`, you cannot mix [snippet/type/Int32] and [snippet/type/Float64] inputs:
-     *
-     * ```temper FAIL
-     * 1 + 1.0
-     * ```
-     *
-     * The `-` operator is left-associative:
-     *
-     * ```temper
-     * 1 - 1 - 1 == (1 - 1) - 1 &&
-     * 1 - 1 - 1 == -1
-     * ```
-     *
-     * Since there is a [snippet/builtin/--] operator, `--x` is not a negation of a negation.
-     *
-     * ```temper
-     * var x = 1;
-     * +x == -(-x) &&  // double negation is identity
-     * --x == 0        // but two adjacent `-` means pre-decrement
-     * ```
-     */
-    val minusFn = CoverFunction(
-        listOf(
-            IntIntToIntFun(
-                "-",
-                BuiltinOperatorId.MinusIntInt,
-            ) { a, b -> a - b },
-            IntToIntFun(
-                "-",
-                BuiltinOperatorId.MinusInt,
-            ) { a -> -a },
-            LongLongToLongFun(
-                "-",
-                BuiltinOperatorId.MinusIntInt64,
-            ) { a, b -> a - b },
-            LongToLongFun(
-                "-",
-                BuiltinOperatorId.MinusInt64,
-            ) { a -> -a },
-            FloatFloatToFloatFun(
-                "-",
-                BuiltinOperatorId.MinusFltFlt,
-            ) { a, b -> a - b },
-            FloatToFloatFun(
-                "-",
-                BuiltinOperatorId.MinusFlt,
-            ) { a -> -a },
-        ),
-    ).also {
-        helpSnippet(it, "Numeric subtraction", "builtin/-")
-    }
+    val minusIntFn: CallableValue = IntToIntFun(
+        "-",
+        BuiltinOperatorId.MinusInt,
+    ) { a -> -a }
 
-    /**
-     * <!-- snippet: builtin/%2A : operator `*` -->
-     * # Multiplication `*`
-     * Infix `*` allows multiplying numbers.
-     *
-     * Given two [snippet/type/Int32]s it produces an *Int* and given two [snippet/type/Float64]s it
-     * produces a *Float64*.
-     *
-     * ```temper
-     * 3   * 4   == 12   &&
-     * 3.0 * 4.0 == 12.0
-     * ```
-     */
-    val timesFn = CoverFunction(
-        listOf(
-            IntIntToIntFun("*", BuiltinOperatorId.TimesIntInt) { a, b ->
-                a * b
-            },
-            LongLongToLongFun("*", BuiltinOperatorId.TimesIntInt64) { a, b ->
-                a * b
-            },
-            FloatFloatToFloatFun("*", BuiltinOperatorId.TimesFltFlt) { a, b ->
-                a * b
-            },
-        ),
-    ).also {
-        helpSnippet(it, "Numeric multiplication", "builtin/%2A")
-    }
+    val minusLongLongFn: CallableValue = LongLongToLongFun(
+        "-",
+        BuiltinOperatorId.MinusIntInt64,
+    ) { a, b -> a - b }
 
-    /**
-     * <!-- snippet: builtin/%2A%2A : operator `**` -->
-     * # Exponentiation `**`
-     * Infix `**` allows raising one number to the power of another.
-     *
-     * Given two [snippet/type/Float64]s it produces a *Float64*.
-     *
-     * ```temper
-     * 3.0 **  2.0 == 9.0 &&
-     * 4.0 ** -0.5 == 0.5
-     * ```
-     */
-    val powFn = CoverFunction(
-        listOf(
-            FloatFloatToFloatFun("**", BuiltinOperatorId.PowFltFlt) { a, b ->
-                a.pow(b)
-            },
-        ),
-    )
+    val minusLongFn: CallableValue = LongToLongFun(
+        "-",
+        BuiltinOperatorId.MinusInt64,
+    ) { a -> -a }
 
-    /**
-     * <!-- snippet: builtin/& : `&` -->
-     * # Operator `&`
-     * The `&` operator can be applied in two ways:
-     *
-     * - To [snippet/type/Int32]s it acts as a [bitwise operator][snippet/bitwise-and].
-     * - To types it produces an [intersection type][snippet/type/intersection-fn]
-     *
-     * ⎀ bitwise-and
-     *
-     * ⎀ type/intersection-fn
-     * <!-- /snippet -->
-     *
-     * <!-- snippet: bitwise-and -->
-     * # *Int* `&`
-     *
-     * Takes two [snippet/type/Int32]s and returns the *Int* that has any bit set
-     * that is set in both input.
-     *
-     * ```temper
-     * // Using binary number syntax
-     * (0b0010101 &
-     *  0b1011011) ==
-     *  0b0010001
-     * ```
-     */
-    val ampFn = CoverFunction(
-        listOf(
-            IntIntToIntFun(
-                "&",
-                BuiltinOperatorId.BitwiseAnd,
-            ) { a, b -> a and b },
-            LongLongToLongFun(
-                "&",
-                BuiltinOperatorId.BitwiseAnd,
-            ) { a, b -> a and b },
-            TypeIntersectionFun,
-        ),
-    )
+    val minusFloatFloatFn: CallableValue = FloatFloatToFloatFun(
+        "-",
+        BuiltinOperatorId.MinusFltFlt,
+    ) { a, b -> a - b }
 
-    /**
-     * <!-- snippet: builtin/| : `|` -->
-     * # Operator `|`
-     * The `|` operator performs bitwise union.
-     *
-     * It takes two [snippet/type/Int32]s and returns the *Int32* that has any bit set
-     * that is set in either input.
-     *
-     * ```temper
-     * // Using binary number syntax
-     * (0b0010101 |
-     *  0b1011011) ==
-     *  0b1011111
-     * ```
-     */
-    val barFn = CoverFunction(
-        listOf(
-            IntIntToIntFun(
-                "|",
-                BuiltinOperatorId.BitwiseOr,
-            ) { a, b -> a or b },
-            LongLongToLongFun(
-                "|",
-                BuiltinOperatorId.BitwiseOr,
-            ) { a, b -> a or b },
-        ),
-    )
+    val minusFloatFn: CallableValue = FloatToFloatFun(
+        "-",
+        BuiltinOperatorId.MinusFlt,
+    ) { a -> -a }
+
+    val timesIntIntFn: CallableValue =
+        IntIntToIntFun("*", BuiltinOperatorId.TimesIntInt) { a, b ->
+            a * b
+        }
+
+    val timesLongLongFn: CallableValue =
+        LongLongToLongFun("*", BuiltinOperatorId.TimesIntInt64) { a, b ->
+            a * b
+        }
+
+    val timesFloatFloatFn: CallableValue =
+        FloatFloatToFloatFun("*", BuiltinOperatorId.TimesFltFlt) { a, b ->
+            a * b
+        }
+
+    val powFloatFloatFn: CallableValue =
+        FloatFloatToFloatFun("**", BuiltinOperatorId.PowFltFlt) { a, b ->
+            a.pow(b)
+        }
+
+    val ampIntIntFn: CallableValue = IntIntToIntFun(
+        "&",
+        BuiltinOperatorId.BitwiseAnd32,
+    ) { a, b -> a and b }
+
+    val ampLongLongFn: CallableValue = LongLongToLongFun(
+        "&",
+        BuiltinOperatorId.BitwiseAnd64,
+    ) { a, b -> a and b }
+
+    val barIntIntFn: CallableValue = IntIntToIntFun(
+        "|",
+        BuiltinOperatorId.BitwiseOr32,
+    ) { a, b -> a or b }
+
+    val barLongLongFn: CallableValue = LongLongToLongFun(
+        "|",
+        BuiltinOperatorId.BitwiseOr64,
+    ) { a, b -> a or b }
+
+    val bitInverseIntFn: CallableValue = IntToIntFun(
+        "~",
+        BuiltinOperatorId.BitwiseNegation32,
+    ) { a -> a.inv() }
+
+    val bitInverseLongFn: CallableValue = LongToLongFun(
+        "~",
+        BuiltinOperatorId.BitwiseNegation64,
+    ) { a -> a.inv() }
+
+    val bitXorIntIntFn: CallableValue = IntIntToIntFun(
+        "^",
+        BuiltinOperatorId.BitwiseXor32,
+    ) { a, b -> a.xor(b) }
+
+    val bitXorLongLongFn: CallableValue = LongLongToLongFun(
+        "^",
+        BuiltinOperatorId.BitwiseXor64,
+    ) { a, b -> a.xor(b) }
+
+    val shlIntIntFn: CallableValue = IntIntToIntFun(
+        "<<",
+        BuiltinOperatorId.BitwiseShl32,
+    ) { a, b -> a.shl(b.and(I32_SHIFT_AMOUNT_MASK)) }
+
+    val shlLongLongFn: CallableValue = LongIntToLongFun(
+        "<<",
+        BuiltinOperatorId.BitwiseShl64,
+    ) { a, b -> a.shl(b.and(I64_SHIFT_AMOUNT_MASK)) }
+
+    val shrIntIntFn: CallableValue = IntIntToIntFun(
+        ">>",
+        BuiltinOperatorId.BitwiseShr32,
+    ) { a, b -> a.shr(b.and(I32_SHIFT_AMOUNT_MASK)) }
+
+    val shrLongLongFn: CallableValue = LongIntToLongFun(
+        ">>",
+        BuiltinOperatorId.BitwiseShr64,
+    ) { a, b -> a.shr(b.and(I64_SHIFT_AMOUNT_MASK)) }
+
+    val uShrIntIntFn: CallableValue = IntIntToIntFun(
+        ">>>",
+        BuiltinOperatorId.BitwiseShrUnsigned32,
+    ) { a, b -> a.ushr(b.and(I32_SHIFT_AMOUNT_MASK)) }
+
+    val uShrLongIntFn: CallableValue = LongIntToLongFun(
+        ">>>",
+        BuiltinOperatorId.BitwiseShrUnsigned64,
+    ) { a, b -> a.ushr(b.and(I64_SHIFT_AMOUNT_MASK)) }
 
     /**
      * <!-- snippet: builtin/! -->
@@ -1107,14 +1083,14 @@ object BuiltinFuns {
      *
      * `!`[snippet/builtin/false] is [snippet/builtin/true] and vice versa.
      */
-    val notFn = CoverFunction(
-        listOf(
-            BoolToBoolFun(
-                "!",
-                BuiltinOperatorId.BooleanNegation,
-            ) { a -> !a },
-        ),
-    )
+    val notFn: CallableValue = BoolToBoolFun(
+        "!",
+        BuiltinOperatorId.BooleanNegation,
+    ) { a -> !a }
+        .also {
+            helpSnippet(it, "Boolean inverse", "builtin/!")
+        }
+
     val desugarLogicalAndFn: MacroValue = DesugarLogicalAnd
     val desugarLogicalOrFn: MacroValue = DesugarLogicalOr
 
@@ -1151,68 +1127,22 @@ object BuiltinFuns {
         },
     ) { a, b -> a / b }
 
-    /**
-     * <!-- snippet: builtin/%2F : operator `/` -->
-     * # Division `/`
-     * Infix `/` allows dividing numbers.
-     *
-     * Given two [snippet/type/Int32]s it produces an *Int* and given two [snippet/type/Float64]s it
-     * produces a *Float64*.
-     *
-     * ```temper
-     * 12   / 3   == 4    &&
-     * 12.0 / 3.0 == 4.0
-     * ```
-     *
-     * Integer division [rounds towards zero].
-     *
-     * ```temper
-     *  7   / 2   ==  3   &&
-     * -7   / 2   == -3   &&
-     *  7.0 / 2.0 ==  3.5 &&
-     * -7.0 / 2.0 == -3.5
-     * ```
-     *
-     * Division by zero has [snippet/type/Bubble].
-     *
-     * ```temper
-     * (1 / 0) orelse console.log("div by zero");
-     * //!outputs "div by zero"
-     * ```
-     *
-     * Float64 division by zero is a *Bubble* too.
-     *
-     * ```temper
-     * console.log("${ (0.0 /  0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
-     * console.log("${ (1.0 /  0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
-     * console.log("${ (1.0 / -0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
-     * ```
-     *
-     * [IEEE-754]: https://en.wikipedia.org/wiki/IEEE_754
-     * [rounds towards zero]: https://en.wikipedia.org/wiki/Rounding#Rounding_toward_zero
-     */
-    val divFn = CoverFunction(
-        listOf(
-            divIntIntFn,
-            divLongLongFn,
-            FloatFloatToFloatFun(
-                "/",
-                BuiltinOperatorId.DivFltFlt,
-                fail = { _, divisor, cb ->
-                    // Floating 0/0 is normally silently via NaN in most languages.
-                    // We can provide a NaN producing division operator, but it seems that, where a
-                    // language provides non-return-value failure affordances, default operators
-                    // should use them consistently.
-                    when (divisor) {
-                        0.0 -> cb.fail(MessageTemplate.DivByZero)
-                        else -> null
-                    }
-                },
-            ) { a, b ->
-                a / b
-            },
-        ),
-    )
+    val divFloatFloatFn: CallableValue = FloatFloatToFloatFun(
+        "/",
+        BuiltinOperatorId.DivFltFlt,
+        fail = { _, divisor, cb ->
+            // Floating 0/0 is normally silently via NaN in most languages.
+            // We can provide a NaN producing division operator, but it seems that, where a
+            // language provides non-return-value failure affordances, default operators
+            // should use them consistently.
+            when (divisor) {
+                0.0 -> cb.fail(MessageTemplate.DivByZero)
+                else -> null
+            }
+        },
+    ) { a, b ->
+        a / b
+    }
 
     /** A specialization of the integer division where we know that the divisor is non-zero. */
     val divIntIntSafeFn: CallableValue = IntIntToIntFun(
@@ -1254,50 +1184,22 @@ object BuiltinFuns {
         },
     ) { a, b -> a % b }
 
-    /**
-     * <!-- snippet: builtin/%25 : operator `%` -->
-     * # Remainder `%`
-     * Given two [snippet/type/Int32]s it produces an *Int*
-     * and given two [snippet/type/Float64]s it produces a *Float64*.
-     *
-     * ```temper
-     * 13   % 3   == 1    &&
-     * 13.0 % 3.0 == 1.0
-     * ```
-     *
-     * Division by Zero [bubbles][snippet/type/Bubble]
-     * ```temper
-     * (1 % 0) orelse console.log("mod by zero");
-     * //!outputs "mod by zero"
-     * ```
-     * ```temper
-     * (1.0 % 0.0) orelse console.log("mod by zero");
-     * //!outputs "mod by zero"
-     * ```
-     *
-     */
-    val modFn = CoverFunction(
-        listOf(
-            modIntIntFn,
-            modLongLongFn,
-            FloatFloatToFloatFun(
-                "%",
-                BuiltinOperatorId.ModFltFlt,
-                fail = { _, divisor, cb ->
-                    // Floating 0/0 is normally silently via NaN in most languages.
-                    // We can provide a NaN producing division operator, but it seems that, where a
-                    // language provides non-return-value failure affordances, default operators
-                    // should use them consistently.
-                    when (divisor) {
-                        0.0 -> cb.fail(MessageTemplate.DivByZero)
-                        else -> null
-                    }
-                },
-            ) { a, b ->
-                a % b
-            },
-        ),
-    )
+    val modFloatFloatFn: CallableValue = FloatFloatToFloatFun(
+        "%",
+        BuiltinOperatorId.ModFltFlt,
+        fail = { _, divisor, cb ->
+            // Floating 0/0 is normally silently via NaN in most languages.
+            // We can provide a NaN producing division operator, but it seems that, where a
+            // language provides non-return-value failure affordances, default operators
+            // should use them consistently.
+            when (divisor) {
+                0.0 -> cb.fail(MessageTemplate.DivByZero)
+                else -> null
+            }
+        },
+    ) { a, b ->
+        a % b
+    }
 
     /**
      * A specialization of the integer division where we know that the divisor
@@ -1323,48 +1225,156 @@ object BuiltinFuns {
         a % b
     }
 
+    val ltIntFn: CallableValue = IntCompareFun(
+        "<",
+        BuiltinOperatorId.LtIntInt,
+    ) { cmp ->
+        TBoolean.value(cmp < 0)
+    }
+
+    val ltLongFn: CallableValue = LongCompareFun(
+        "<",
+        BuiltinOperatorId.LtIntInt,
+    ) { cmp ->
+        TBoolean.value(cmp < 0)
+    }
+
+    val ltDoubleFn: CallableValue = DoubleCompareFun(
+        "<",
+        BuiltinOperatorId.LtFltFlt,
+    ) { cmp ->
+        TBoolean.value(cmp < 0)
+    }
+
+    val ltStringFn: CallableValue = StringCompareFun(
+        "<",
+        BuiltinOperatorId.LtStrStr,
+    ) { cmp ->
+        TBoolean.value(cmp < 0)
+    }
+
+    val ltGenericFn: CallableValue = ComparisonFunction(
+        "<",
+        BuiltinOperatorId.LtGeneric,
+        WKT.booleanType2,
+    ) { cmp -> TBoolean.value(cmp < 0) }
+
     /**
      * <!-- snippet: builtin/< -->
-     * # `<`
+     * # Operator `<`, less-than
      * `a < b` is [snippet/builtin/true] when *a* orders before *b*, and is a compile-time error
      * if the two are not mutually comparable.
      *
      * See the [snippet/general-comparison/algo] for details of how they are compiled and
      * especially the [snippet/general-comparison/caveats].
+     *
+     * ⎀ syntax/less-than-space-sensitivity
+     *
+     * <!-- snippet: syntax/less-than-space-sensitivity -->
+     * # Syntactic corner case: `<` ambiguity
+     *
+     * Tldr: always put spaces around infix operators like `<`.
+     *
+     * The `<` operator means comparison, but in a type expression, it can also be a bracket.
+     *
+     * ```temper inert
+     * console.log(c < d);  // Compare c to d
+     *
+     * let x:      C<D>;    // x's type is C parameterized with D
+     * ```
+     *
+     * Other languages also have two meanings for `<`.  Temper does not want to enforce a
+     * hard grammatic distinction between types and expressions, and to avoid workarounds
+     * like extra turbofish syntax.
+     *
+     * In Temper the rule is:
+     *
+     * > If a `<` token is not preceded by a space or comment, then it is an angle bracket
+     * > otherwise it is a comparison operator.
+     *
+     * (In Temper, types are upper-case by convention, but we cannot use case as in `C<D>`
+     * above to disambiguate because Temper assigns no semantic significance to identifier
+     * case, to better support non-European identifiers which are mostly in (unicameral)
+     * writing systems.)
+     *
+     * For example:
+     *
+     * ```temper inert
+     * // ┏━━━━ This space makes the difference
+     * f(a < b, c > d);  // pass two booleans to f
+     * f(A<B, C>);       // pass one type with two parameters to f (a macro?)
+     *
+     * class C<T> {}  // A class declaration with a formal type parameter
+     *
+     * // Type argument lists can be spread over multiple lines.
+     * class C< // No space **before**, so this `<` starts C's type argument list.
+     *   T
+     * > {}
+     *
+     * class C <T>    // ERROR: trying to compare `class C` to `T` probably won't work
+     *
+     * class C  // ERROR: space before '<'
+     * <T> {}
+     * ```
+     *
+     * The rule to determine whether a `>` token is an angle bracket or a comparison
+     * operator is purely made based on preceding tokens.
+     *
+     * > If there are zero preceding `<` bracket tokens without a `>` partner then it
+     * > is a bracket, otherwise it is an infix operator.
+     *
+     * This code doesn't mean much, but the parsing rules are clear.
+     *
+     * ```temper inert
+     * // ┏━━━┓ 3 open `<` brackets
+     *   A<B<C<D>>>>
+     * //       ┗┳┛┗━━━━━━━ This fourth one is an infix comparison operator
+     * //        ┃
+     * // Make these 3 close `>` brackets
+     * ```
+     *
+     * To avoid confusion, just put spaces around all your infix operators.
      */
     val lessThanFn = CoverFunction(
-        listOf(
-            IntCompareFun(
-                "<",
-                BuiltinOperatorId.LtIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp < 0)
-            },
-            LongCompareFun(
-                "<",
-                BuiltinOperatorId.LtIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp < 0)
-            },
-            DoubleCompareFun(
-                "<",
-                BuiltinOperatorId.LtFltFlt,
-            ) { cmp ->
-                TBoolean.value(cmp < 0)
-            },
-            StringCompareFun(
-                "<",
-                BuiltinOperatorId.LtStrStr,
-            ) { cmp ->
-                TBoolean.value(cmp < 0)
-            },
-        ),
-        otherwise = ComparisonFunction(
-            "<",
-            BuiltinOperatorId.LtGeneric,
-            WKT.booleanType2,
-        ) { d -> TBoolean.value(d < 0) },
-    )
+        listOf(ltIntFn, ltLongFn, ltDoubleFn, ltStringFn),
+        ltGenericFn,
+    ).also {
+        helpSnippet(it, "Less than operator", "builtin/<")
+    }
+
+    val leIntFn: CallableValue = IntCompareFun(
+        "<=",
+        BuiltinOperatorId.LeIntInt,
+    ) { cmp ->
+        TBoolean.value(cmp <= 0)
+    }
+
+    val leLongFn: CallableValue = LongCompareFun(
+        "<=",
+        BuiltinOperatorId.LeIntInt,
+    ) { cmp ->
+        TBoolean.value(cmp <= 0)
+    }
+
+    val leDoubleFn: CallableValue = DoubleCompareFun(
+        "<=",
+        BuiltinOperatorId.LeFltFlt,
+    ) { cmp ->
+        TBoolean.value(cmp <= 0)
+    }
+
+    val leStringFn: CallableValue = StringCompareFun(
+        "<=",
+        BuiltinOperatorId.LeStrStr,
+    ) { cmp ->
+        TBoolean.value(cmp <= 0)
+    }
+
+    val leGenericFn: CallableValue = ComparisonFunction(
+        "<=",
+        BuiltinOperatorId.LeGeneric,
+        WKT.booleanType2,
+    ) { d -> TBoolean.value(d <= 0) }
 
     /**
      * <!-- snippet: builtin/<= -->
@@ -1376,38 +1386,45 @@ object BuiltinFuns {
      * especially the [snippet/general-comparison/caveats].
      */
     val lessEqualsFn = CoverFunction(
-        listOf(
-            IntCompareFun(
-                "<=",
-                BuiltinOperatorId.LeIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp <= 0)
-            },
-            LongCompareFun(
-                "<=",
-                BuiltinOperatorId.LeIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp <= 0)
-            },
-            DoubleCompareFun(
-                "<=",
-                BuiltinOperatorId.LeFltFlt,
-            ) { cmp ->
-                TBoolean.value(cmp <= 0)
-            },
-            StringCompareFun(
-                "<=",
-                BuiltinOperatorId.LeStrStr,
-            ) { cmp ->
-                TBoolean.value(cmp <= 0)
-            },
-        ),
-        otherwise = ComparisonFunction(
-            "<=",
-            BuiltinOperatorId.LeGeneric,
-            WKT.booleanType2,
-        ) { d -> TBoolean.value(d <= 0) },
-    )
+        listOf(leIntFn, leLongFn, leDoubleFn, leStringFn),
+        leGenericFn,
+    ).also {
+        helpSnippet(it, "Less than or equals operator", "builtin/<=")
+    }
+
+    val gtIntFn: CallableValue = IntCompareFun(
+        ">",
+        BuiltinOperatorId.GtIntInt,
+    ) { cmp ->
+        TBoolean.value(cmp > 0)
+    }
+
+    val gtLongFn: CallableValue = LongCompareFun(
+        ">",
+        BuiltinOperatorId.GtIntInt,
+    ) { cmp ->
+        TBoolean.value(cmp > 0)
+    }
+
+    val gtDoubleFn: CallableValue = DoubleCompareFun(
+        ">",
+        BuiltinOperatorId.GtFltFlt,
+    ) { cmp ->
+        TBoolean.value(cmp > 0)
+    }
+
+    val gtStringFn: CallableValue = StringCompareFun(
+        ">",
+        BuiltinOperatorId.GtStrStr,
+    ) { cmp ->
+        TBoolean.value(cmp > 0)
+    }
+
+    val gtGenericFn: CallableValue = ComparisonFunction(
+        ">",
+        BuiltinOperatorId.GtGeneric,
+        WKT.booleanType2,
+    ) { d -> TBoolean.value(d > 0) }
 
     /**
      * <!-- snippet: builtin/> -->
@@ -1419,38 +1436,45 @@ object BuiltinFuns {
      * especially the [snippet/general-comparison/caveats].
      */
     val greaterThanFn = CoverFunction(
-        listOf(
-            IntCompareFun(
-                ">",
-                BuiltinOperatorId.GtIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp > 0)
-            },
-            LongCompareFun(
-                ">",
-                BuiltinOperatorId.GtIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp > 0)
-            },
-            DoubleCompareFun(
-                ">",
-                BuiltinOperatorId.GtFltFlt,
-            ) { cmp ->
-                TBoolean.value(cmp > 0)
-            },
-            StringCompareFun(
-                ">",
-                BuiltinOperatorId.GtStrStr,
-            ) { cmp ->
-                TBoolean.value(cmp > 0)
-            },
-        ),
-        otherwise = ComparisonFunction(
-            ">",
-            BuiltinOperatorId.GtGeneric,
-            WKT.booleanType2,
-        ) { d -> TBoolean.value(d > 0) },
-    )
+        listOf(gtIntFn, gtLongFn, gtDoubleFn, gtStringFn),
+        gtGenericFn,
+    ).also {
+        helpSnippet(it, "Greater than operator", "builtin/>")
+    }
+
+    val geIntFn: CallableValue = IntCompareFun(
+        ">=",
+        BuiltinOperatorId.GeIntInt,
+    ) { cmp ->
+        TBoolean.value(cmp >= 0)
+    }
+
+    val geLongFn: CallableValue = LongCompareFun(
+        ">=",
+        BuiltinOperatorId.GeIntInt,
+    ) { cmp ->
+        TBoolean.value(cmp >= 0)
+    }
+
+    val geDoubleFn: CallableValue = DoubleCompareFun(
+        ">=",
+        BuiltinOperatorId.GeFltFlt,
+    ) { cmp ->
+        TBoolean.value(cmp >= 0)
+    }
+
+    val geStringFn: CallableValue = StringCompareFun(
+        ">=",
+        BuiltinOperatorId.GeStrStr,
+    ) { cmp ->
+        TBoolean.value(cmp >= 0)
+    }
+
+    val geGenericFn: CallableValue = ComparisonFunction(
+        ">=",
+        BuiltinOperatorId.GeGeneric,
+        WKT.booleanType2,
+    ) { d -> TBoolean.value(d >= 0) }
 
     /**
      * <!-- snippet: builtin/>= -->
@@ -1462,37 +1486,48 @@ object BuiltinFuns {
      * especially the [snippet/general-comparison/caveats].
      */
     val greaterEqualsFn = CoverFunction(
-        listOf(
-            IntCompareFun(
-                ">=",
-                BuiltinOperatorId.GeIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp >= 0)
-            },
-            LongCompareFun(
-                ">=",
-                BuiltinOperatorId.GeIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp >= 0)
-            },
-            DoubleCompareFun(
-                ">=",
-                BuiltinOperatorId.GeFltFlt,
-            ) { cmp ->
-                TBoolean.value(cmp >= 0)
-            },
-            StringCompareFun(
-                ">=",
-                BuiltinOperatorId.GeStrStr,
-            ) { cmp ->
-                TBoolean.value(cmp >= 0)
-            },
-        ),
-        otherwise = ComparisonFunction(
-            ">=",
-            BuiltinOperatorId.GeGeneric,
-            WKT.booleanType2,
-        ) { d -> TBoolean.value(d >= 0) },
+        listOf(geIntFn, geLongFn, geDoubleFn, geStringFn),
+        geGenericFn,
+    ).also {
+        helpSnippet(it, "Greater than or equals operator", "builtin/>=")
+    }
+
+    val eqIntFn: CallableValue = IntCompareFun(
+        "==",
+        BuiltinOperatorId.EqIntInt,
+        nullity = Nullity.OrNull,
+    ) { cmp ->
+        TBoolean.value(cmp == 0)
+    }
+
+    val eqLongFn: CallableValue = LongCompareFun(
+        "==",
+        BuiltinOperatorId.EqIntInt,
+        nullity = Nullity.OrNull,
+    ) { cmp ->
+        TBoolean.value(cmp == 0)
+    }
+
+    val eqDoubleFn: CallableValue = DoubleCompareFun(
+        "==",
+        BuiltinOperatorId.EqFltFlt,
+        nullity = Nullity.OrNull,
+    ) { cmp ->
+        TBoolean.value(cmp == 0)
+    }
+
+    val eqStringFn: CallableValue = StringCompareFun(
+        "==",
+        BuiltinOperatorId.EqStrStr,
+        nullity = Nullity.OrNull,
+    ) { cmp ->
+        TBoolean.value(cmp == 0)
+    }
+
+    val eqGenericFn: CallableValue = EqualityFunction(
+        "==",
+        BuiltinOperatorId.EqGeneric,
+        invert = false,
     )
 
     /**
@@ -1505,37 +1540,48 @@ object BuiltinFuns {
      * [issue#36]: custom equivalence and default equivalence for record classes
      */
     val equalsFn = CoverFunction(
-        listOf(
-            IntCompareFun(
-                "==",
-                BuiltinOperatorId.EqIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp == 0)
-            },
-            LongCompareFun(
-                "==",
-                BuiltinOperatorId.EqIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp == 0)
-            },
-            DoubleCompareFun(
-                "==",
-                BuiltinOperatorId.EqFltFlt,
-            ) { cmp ->
-                TBoolean.value(cmp == 0)
-            },
-            StringCompareFun(
-                "==",
-                BuiltinOperatorId.EqStrStr,
-            ) { cmp ->
-                TBoolean.value(cmp == 0)
-            },
-        ),
-        otherwise = EqualityFunction(
-            "==",
-            BuiltinOperatorId.EqGeneric,
-            invert = false,
-        ),
+        listOf(eqIntFn, eqLongFn, eqDoubleFn, eqStringFn),
+        otherwise = eqGenericFn,
+    ).also {
+        helpSnippet(it, "Equal to operator", "builtin/==")
+    }
+
+    val neIntFn: CallableValue = IntCompareFun(
+        "!=",
+        BuiltinOperatorId.NeIntInt,
+        nullity = Nullity.OrNull,
+    ) { cmp ->
+        TBoolean.value(cmp != 0)
+    }
+
+    val neLongFn: CallableValue = LongCompareFun(
+        "!=",
+        BuiltinOperatorId.NeIntInt,
+        nullity = Nullity.OrNull,
+    ) { cmp ->
+        TBoolean.value(cmp != 0)
+    }
+
+    val neDoubleFn: CallableValue = DoubleCompareFun(
+        "!=",
+        BuiltinOperatorId.NeFltFlt,
+        nullity = Nullity.OrNull,
+    ) { cmp ->
+        TBoolean.value(cmp != 0)
+    }
+
+    val neStringFn: CallableValue = StringCompareFun(
+        "!=",
+        BuiltinOperatorId.NeStrStr,
+        nullity = Nullity.OrNull,
+    ) { cmp ->
+        TBoolean.value(cmp != 0)
+    }
+
+    val neGenericFn: CallableValue = EqualityFunction(
+        "!=",
+        BuiltinOperatorId.NeGeneric,
+        invert = true,
     )
 
     /**
@@ -1544,38 +1590,11 @@ object BuiltinFuns {
      * `a != b` is the [snippet/type/Boolean] inverse of [snippet/builtin/==]
      */
     val notEqualsFn = CoverFunction(
-        listOf(
-            IntCompareFun(
-                "!=",
-                BuiltinOperatorId.NeIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp != 0)
-            },
-            LongCompareFun(
-                "!=",
-                BuiltinOperatorId.NeIntInt,
-            ) { cmp ->
-                TBoolean.value(cmp != 0)
-            },
-            DoubleCompareFun(
-                "!=",
-                BuiltinOperatorId.NeFltFlt,
-            ) { cmp ->
-                TBoolean.value(cmp != 0)
-            },
-            StringCompareFun(
-                "!=",
-                BuiltinOperatorId.NeStrStr,
-            ) { cmp ->
-                TBoolean.value(cmp != 0)
-            },
-        ),
-        otherwise = EqualityFunction(
-            "!=",
-            BuiltinOperatorId.NeGeneric,
-            invert = true,
-        ),
-    )
+        listOf(neIntFn, neLongFn, neDoubleFn, neStringFn),
+        otherwise = neGenericFn,
+    ).also {
+        helpSnippet(it, "Not equal to operator", "builtin/!=")
+    }
 
     /**
      * <!-- snippet: builtin/<=> -->
@@ -1659,12 +1678,14 @@ object BuiltinFuns {
      * [surrogate]: https://unicode.org/glossary/#surrogate_code_point
      * [UTF-16]: https://unicode.org/glossary/#UTF_16
      */
-    @Suppress("KDocUnresolvedReference")
-    val cmpFn: NamedBuiltinFun = ComparisonFunction(
+    val cmpFn: CallableValue = ComparisonFunction(
         "<=>",
         BuiltinOperatorId.CmpGeneric,
         WKT.intType2,
     ) { d -> Value(d, TInt) }
+        .also {
+            helpSnippet(it, "Comparison operator", "builtin/<=>")
+        }
 
     val strCatFn: NamedBuiltinFun = StrCatFn
     val strRawMacro: NamedBuiltinFun = StrRawMacro
@@ -1686,16 +1707,19 @@ object BuiltinFuns {
     val getsFn: GetStaticOp = GetStatic
     val igetsFn: GetStaticOp = InternalGetStatic
     val pureVirtualFn: NamedBuiltinFun = PureVirtual
+    val abstractPanicFn: NamedBuiltinFun = AbstractPanic
     val desugarPunFn: MacroValue = DesugarPun
     val coalesceMacro: NamedBuiltinFun = CoalesceMacro
     val whenMacro: NamedBuiltinFun = WhenMacro
     val regexLiteralMacro: NamedBuiltinFun = RegexLiteralMacro
     val assertMacro: NamedBuiltinFun = AssertMacro
     val testMacro: NamedBuiltinFun = TestMacro
+    val dataFileMacro: NamedBuiltinFun = DataFileMacro
 
     val handlerScope: MacroValue = HandlerScopeFn
     val bubble: NamedBuiltinFun = BubbleFn
     val panic: NamedBuiltinFun = PanicFn
+    val voidishPanic: NamedBuiltinFun = VoidishPanicFn
 
     val makeClosRec: MacroValue = MakeClosRec
     val getCR: CallableValue = GetCR
@@ -1715,12 +1739,8 @@ object BuiltinFuns {
     val vCharTagFn = Value(charTagFn)
     val vBubble = Value(bubble)
     val vPanic = Value(panic)
-    val vCmp = Value(cmpFn)
+    val vVoidishPanic = Value(voidishPanic)
     val vCommaFn = Value(commaFn)
-    val vMinusFn = Value(minusFn)
-    val vPlusFn = Value(plusFn)
-    val vAmpFn = Value(ampFn)
-    val vBarFn = Value(barFn)
     val vNotFn = Value(notFn)
     val vDesugarLogicalAndFn = Value(desugarLogicalAndFn)
     val vDesugarLogicalOrFn = Value(desugarLogicalOrFn)
@@ -1740,8 +1760,8 @@ object BuiltinFuns {
     val vRegexLiteralMacro = Value(regexLiteralMacro)
     val vAssertMacro = Value(assertMacro)
     val vTestMacro = Value(testMacro)
+    val vDataFileMacro = Value(dataFileMacro)
 
-    val vPostfixApply = Value(DesugarPostfixOperatorMacro(postfixApplyName.builtinKey))
     val vHandlerScope = Value(handlerScope)
     val vAwait = Value(await)
     val vYield = Value(yield)
@@ -1754,6 +1774,7 @@ object BuiltinFuns {
     val vGets = Value(getsFn)
     val vIGets = Value(igetsFn)
     val vPureVirtual = Value(pureVirtualFn)
+    val vAbstractPanic = Value(abstractPanicFn)
     val vDesugarPun = Value(desugarPunFn)
 
     val vMakeClosRec = Value(makeClosRec)
@@ -1778,7 +1799,7 @@ internal fun makeTypeFormal(
         upperBounds.toList()
     }
     val typeFormal = TypeFormal(
-        Position(ImplicitsCodeLocation, 0, 0),
+        Position(CoreCodeLocation, 0, 0),
         BuiltinName(nameKey),
         Symbol(nameKey),
         Variance.Invariant,
@@ -1787,3 +1808,6 @@ internal fun makeTypeFormal(
     )
     return typeFormal to MkType2(typeFormal).get()
 }
+
+internal const val I32_SHIFT_AMOUNT_MASK = 0x1F
+internal const val I64_SHIFT_AMOUNT_MASK = 0x3F

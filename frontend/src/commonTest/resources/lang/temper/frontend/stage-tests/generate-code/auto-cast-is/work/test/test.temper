@@ -1,0 +1,7 @@
+let some(maybe: StringIndexOption): StringIndex {
+  if (maybe is StringIndex) {
+    maybe
+  } else {
+    String.begin
+  }
+}

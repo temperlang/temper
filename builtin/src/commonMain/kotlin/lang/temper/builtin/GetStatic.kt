@@ -23,9 +23,7 @@ import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
 import lang.temper.value.SpecialFunction
 import lang.temper.value.TFunction
-import lang.temper.value.TString
 import lang.temper.value.Value
-import lang.temper.value.connectedSymbol
 import lang.temper.value.getStaticBuiltinName
 import lang.temper.value.internalGetStaticBuiltinName
 import lang.temper.value.symbolContained
@@ -88,8 +86,7 @@ sealed class GetStaticOp : SpecialFunction, NamedBuiltinFun {
         val definingContext = (memberName as? ModularName)?.origin as? BindingNamingContext
         val binding = definingContext?.getTopLevelBinding(memberName)
         if (binding != null && binding.value == null) {
-            val connectedKey = member.metadata[connectedSymbol]
-                ?.lastOrNull()?.let { TString.unpackOrNull(it) }
+            val connectedKey = member.connectedKey
             if (connectedKey != null) {
                 val connectedFnValue = macroEnv.connection(connectedKey)?.let {
                     it(

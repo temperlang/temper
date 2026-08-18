@@ -1,0 +1,3 @@
+              export @bar class     C {}
+      @foo(1) export      interface D {}
+      @foo()  export @bar class     E {}

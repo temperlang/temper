@@ -38,7 +38,7 @@ import lang.temper.value.void
  * As part of generating [MutableTypeShape]s, records a super-type relationship.
  * Calls to this function are generated as part of desugaring `class` and `interface` macro calls.
  *
- * <!-- snippet: builtin/extends : # `extends` keyword -->
+ * <!-- snippet: typedef/extends : # `extends` keyword -->
  * # *SubType* `extends` *SuperType*
  *
  * The *extends* keyword expresses that the thing to the left is a subtype of

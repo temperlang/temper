@@ -1,0 +1,12 @@
+@fn @reach(\none) let f__0, @fn @reach(\none) h__0;
+f__0 = (@stay fn f(g__0 /* aka g */: (fn (): Int32)) /* return__1 */: Int32 {
+    return__1 = g__0()
+});
+h__0 = (@stay fn h /* return__2 */: Void {
+    let fn__0;
+    fn__0 = (@stay fn /* return__3 */{
+        return__3 = "hi"
+    });
+    f__0(fn__0);
+    return__2 = void
+})

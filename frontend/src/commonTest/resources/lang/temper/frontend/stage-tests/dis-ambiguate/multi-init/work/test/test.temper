@@ -1,0 +1,1 @@
+@foo let { a is S, b, c as d is T }: U = f();

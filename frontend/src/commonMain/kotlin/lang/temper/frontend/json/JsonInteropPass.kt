@@ -25,7 +25,8 @@ import lang.temper.name.Temporary
 import lang.temper.name.identifiers.IdentStyle
 import lang.temper.type.Abstractness
 import lang.temper.type.DotHelper
-import lang.temper.type.ExternalBind
+import lang.temper.type.DotMember
+import lang.temper.type.ExternalCall
 import lang.temper.type.ExternalGet
 import lang.temper.type.MkType
 import lang.temper.type.MutableTypeFormal
@@ -263,7 +264,7 @@ private class Subsidiaries(
                 Call {
                     Rn(dotBuiltinName)
                     V(Value(ReifiedType(MkType2(shape).get(), hasExplicitActuals = false)))
-                    V(jsonAdapterDotName)
+                    V(jsonAdapterDotName.dotName)
                 }
                 t.bindings.forEach {
                     // TODO: should we at least detect recursive types
@@ -393,7 +394,7 @@ internal class JsonInteropPass(
                             Call {
                                 Rn(dotBuiltinName)
                                 Rn(x)
-                                V(encodeToJsonDotName)
+                                V(encodeToJsonDotName.dotName)
                             }
                             // TODO: pass type parameters
                             Rn(p)
@@ -428,7 +429,7 @@ internal class JsonInteropPass(
                             Call {
                                 Rn(dotBuiltinName)
                                 V(Value(ReifiedType(MkType2(typeDecl.definition).get())))
-                                V(decodeFromJsonDotName)
+                                V(decodeFromJsonDotName.dotName)
                             }
                             Rn(t)
                             Rn(ic)
@@ -473,7 +474,7 @@ internal class JsonInteropPass(
             JsonInteropChanges.AddedMethod(
                 isStatic = false,
                 visibility = Visibility.Public,
-                name = encodeToJsonDotName,
+                name = encodeToJsonDotName.dotName,
                 body = {
                     val p = nameMaker.unusedSourceName(ParsedName("p"))
                     val subs = Subsidiaries(this@JsonInteropPass, typeDecl.typeFormals)
@@ -488,10 +489,8 @@ internal class JsonInteropPass(
                         V(returnedFromSymbol)
                         V(TBoolean.valueTrue)
                         Block {
-                            Call {
-                                Call(DotHelper(ExternalBind, startObjectDotName)) {
-                                    Rn(p)
-                                }
+                            Call(DotHelper(ExternalCall, startObjectDotName)) {
+                                Rn(p)
                             }
                             properties.forEach { prop ->
                                 if (!prop.shouldEncode) {
@@ -513,10 +512,8 @@ internal class JsonInteropPass(
                                 }
 
                                 fun Planting.plantPropertyKey() {
-                                    Call {
-                                        Call(DotHelper(ExternalBind, objectKeyDotName)) {
-                                            Rn(p)
-                                        }
+                                    Call(DotHelper(ExternalCall, objectKeyDotName)) {
+                                        Rn(p)
                                         V(Value(prop.jsonPropertyKey, TString))
                                     }
                                 }
@@ -541,10 +538,8 @@ internal class JsonInteropPass(
                                     }
                                     if (encodeMethodName != null) {
                                         plantPropertyKey()
-                                        Call {
-                                            Call(DotHelper(ExternalBind, encodeMethodName)) {
-                                                Rn(p)
-                                            }
+                                        Call(DotHelper(ExternalCall, encodeMethodName)) {
+                                            Rn(p)
                                             V(knownValue)
                                         }
                                     }
@@ -572,17 +567,13 @@ internal class JsonInteropPass(
                                     }
                                     if (producerMethodName != null) {
                                         // p.???Value(propertyName)
-                                        Call {
-                                            Call(DotHelper(ExternalBind, producerMethodName)) {
-                                                Rn(p)
-                                            }
+                                        Call(DotHelper(ExternalCall, producerMethodName)) {
+                                            Rn(p)
                                             propertyValueExpr()
                                         }
                                     } else {
-                                        Call {
-                                            Call(DotHelper(ExternalBind, encodeToJsonDotName)) {
-                                                subs.plantAdapterFor(this, type, prop.pos, propertyName)
-                                            }
+                                        Call(DotHelper(ExternalCall, encodeToJsonDotName)) {
+                                            subs.plantAdapterFor(this, type, prop.pos, propertyName)
                                             propertyValueExpr()
                                             Rn(p)
                                         }
@@ -598,10 +589,8 @@ internal class JsonInteropPass(
                                     )
                                 }
                             }
-                            Call {
-                                Call(DotHelper(ExternalBind, endObjectDotName)) {
-                                    Rn(p)
-                                }
+                            Call(DotHelper(ExternalCall, endObjectDotName)) {
+                                Rn(p)
                             }
                             V(void)
                         }
@@ -631,10 +620,8 @@ internal class JsonInteropPass(
                 // Read the JSON property for the named constructor input.
                 // obj.propertyValueOrBubble("prop")
                 fun Planting.propertyTreeExpr() {
-                    Call {
-                        Call(DotHelper(ExternalBind, propertyValueOrBubbleDotName)) {
-                            Rn(objLocal)
-                        }
+                    Call(DotHelper(ExternalCall, propertyValueOrBubbleDotName)) {
+                        Rn(objLocal)
                         V(Value(prop.jsonPropertyKey, TString))
                     }
                 }
@@ -664,21 +651,17 @@ internal class JsonInteropPass(
                             }
                         } else {
                             // (PROPERTY_TREE as ContentType).methodName()
-                            Call {
-                                Call(DotHelper(ExternalBind, methodName)) {
-                                    Call(BuiltinFuns.asFn) {
-                                        propertyTreeExpr()
-                                        V(Value(reifiedVariantType))
-                                    }
+                            Call(DotHelper(ExternalCall, methodName)) {
+                                Call(BuiltinFuns.asFn) {
+                                    propertyTreeExpr()
+                                    V(Value(reifiedVariantType))
                                 }
                             }
                         }
                     } else {
                         // JSON_ADAPTER_EXPR.decodeFromJson(PROPERTY_TREE_EXPR, ic)
-                        Call {
-                            Call(DotHelper(ExternalBind, decodeFromJsonDotName)) {
-                                subs.plantAdapterFor(this, propType, prop.pos, prop.name)
-                            }
+                        Call(DotHelper(ExternalCall, decodeFromJsonDotName)) {
+                            subs.plantAdapterFor(this, propType, prop.pos, prop.name)
                             propertyTreeExpr()
                             Rn(ic)
                         }
@@ -775,7 +758,7 @@ internal class JsonInteropPass(
             JsonInteropChanges.AddedMethod(
                 isStatic = false,
                 visibility = Visibility.Public,
-                name = encodeToJsonDotName,
+                name = encodeToJsonDotName.dotName,
                 body = {
                     val p = nameMaker.unusedSourceName(ParsedName("p"))
                     val x = ParsedName("x")
@@ -802,14 +785,12 @@ internal class JsonInteropPass(
                                         for (t in jsonSubTypes) {
                                             V(caseIsSymbol)
                                             Rn(t.subTypeName)
-                                            Call {
-                                                Call(DotHelper(ExternalBind, encodeToJsonDotName)) {
+                                            Call(DotHelper(ExternalCall, encodeToJsonDotName)) {
+                                                Call {
                                                     Call {
-                                                        Call {
-                                                            Rn(dotBuiltinName)
-                                                            Rn(t.subTypeName)
-                                                            V(jsonAdapterDotName)
-                                                        }
+                                                        Rn(dotBuiltinName)
+                                                        Rn(t.subTypeName)
+                                                        V(jsonAdapterDotName.dotName)
                                                     }
                                                 }
                                                 Rn(x)
@@ -918,14 +899,12 @@ internal class JsonInteropPass(
                             // return ChosenType.jsonAdapter().decodeFromJson(obj, ic)
                             Call {
                                 Rn(returnBuiltinName)
-                                Call {
-                                    Call(DotHelper(ExternalBind, decodeFromJsonDotName)) {
+                                Call(DotHelper(ExternalCall, decodeFromJsonDotName)) {
+                                    Call {
                                         Call {
-                                            Call {
-                                                Rn(dotBuiltinName)
-                                                Rn(case.subTypeName)
-                                                V(jsonAdapterDotName)
-                                            }
+                                            Rn(dotBuiltinName)
+                                            Rn(case.subTypeName)
+                                            V(jsonAdapterDotName.dotName)
                                         }
                                     }
                                     Rn(objLocal)
@@ -955,10 +934,8 @@ internal class JsonInteropPass(
                         )
                         Decl(propertyValueName) {
                             V(initSymbol)
-                            Call {
-                                Call(DotHelper(ExternalBind, propertyValueOrNullDotName)) {
-                                    Rn(objLocal)
-                                }
+                            Call(DotHelper(ExternalCall, propertyValueOrNullDotName)) {
+                                Rn(objLocal)
                                 V(Value(propertyKey, TString))
                             }
                         }
@@ -1087,7 +1064,7 @@ internal class JsonInteropPass(
             JsonInteropChanges.AddedMethod(
                 isStatic = true,
                 visibility = Visibility.Public,
-                name = decodeFromJsonDotName,
+                name = decodeFromJsonDotName.dotName,
                 body = {
                     // Map type parameters on the class to inputs for that type's adapters
                     Fn(extraMethodPos) {
@@ -1184,7 +1161,7 @@ internal class JsonInteropPass(
                     JsonInteropChanges.AddedMethod(
                         isStatic = false,
                         visibility = Visibility.Public,
-                        name = encodeToJsonDotName,
+                        name = encodeToJsonDotName.dotName,
                         body = {
                             val subsidiaries = Subsidiaries(this@JsonInteropPass, typeDecl.typeFormals)
                             enc(extraMethodPos, classAdaptedFormals, subsidiaries)
@@ -1193,7 +1170,7 @@ internal class JsonInteropPass(
                     JsonInteropChanges.AddedMethod(
                         isStatic = false,
                         visibility = Visibility.Public,
-                        name = decodeFromJsonDotName,
+                        name = decodeFromJsonDotName.dotName,
                         body = {
                             val subsidiaries = Subsidiaries(this@JsonInteropPass, typeDecl.typeFormals)
                             dec(extraMethodPos, classAdaptedFormals, subsidiaries)
@@ -1206,7 +1183,7 @@ internal class JsonInteropPass(
         val jsonAdapterMethod = JsonInteropChanges.AddedMethod(
             isStatic = true,
             visibility = Visibility.Public,
-            name = jsonAdapterDotName,
+            name = jsonAdapterDotName.dotName,
             body = {
                 // We need a type formal for this static method.
                 // We need an argument for each subsidiary type adapter.
@@ -1273,24 +1250,24 @@ internal class JsonInteropPass(
     }
 }
 
-val jsonAdapterDotName = Symbol("jsonAdapter")
-val encodeToJsonDotName = Symbol(ENCODE_METHOD_NAME)
-val decodeFromJsonDotName = Symbol(DECODE_METHOD_NAME)
-val startObjectDotName = Symbol("startObject")
-val objectKeyDotName = Symbol("objectKey")
-val endObjectDotName = Symbol("endObject")
-val booleanValueDotName = Symbol("booleanValue")
-val int32ValueDotName = Symbol("int32Value")
-val int64ValueDotName = Symbol("int64Value")
-val float64ValueDotName = Symbol("float64Value")
-val nullValueDotName = Symbol("nullValue")
-val stringValueDotName = Symbol("stringValue")
-val contentDotName = Symbol("content")
-val propertyValueOrBubbleDotName = Symbol("propertyValueOrBubble")
-val propertyValueOrNullDotName = Symbol("propertyValueOrNull")
-val asFloat64DotName = Symbol("asFloat64")
-val asInt32DotName = Symbol("asInt32")
-val asInt64DotName = Symbol("asInt64")
+val jsonAdapterDotName = DotMember(Symbol("jsonAdapter"))
+val encodeToJsonDotName = DotMember(Symbol(ENCODE_METHOD_NAME))
+val decodeFromJsonDotName = DotMember(Symbol(DECODE_METHOD_NAME))
+val startObjectDotName = DotMember(Symbol("startObject"))
+val objectKeyDotName = DotMember(Symbol("objectKey"))
+val endObjectDotName = DotMember(Symbol("endObject"))
+val booleanValueDotName = DotMember(Symbol("booleanValue"))
+val int32ValueDotName = DotMember(Symbol("int32Value"))
+val int64ValueDotName = DotMember(Symbol("int64Value"))
+val float64ValueDotName = DotMember(Symbol("float64Value"))
+val nullValueDotName = DotMember(Symbol("nullValue"))
+val stringValueDotName = DotMember(Symbol("stringValue"))
+val contentDotName = DotMember(Symbol("content"))
+val propertyValueOrBubbleDotName = DotMember(Symbol("propertyValueOrBubble"))
+val propertyValueOrNullDotName = DotMember(Symbol("propertyValueOrNull"))
+val asFloat64DotName = DotMember(Symbol("asFloat64"))
+val asInt32DotName = DotMember(Symbol("asInt32"))
+val asInt64DotName = DotMember(Symbol("asInt64"))
 
 // TODO: Allow a decorator to opt a formal out from adapting
 @Suppress("UnusedReceiverParameter") // We will base this on metadata

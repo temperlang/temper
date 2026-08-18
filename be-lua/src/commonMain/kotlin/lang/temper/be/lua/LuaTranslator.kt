@@ -8,7 +8,9 @@ import lang.temper.be.tmpl.TmpLOperator
 import lang.temper.be.tmpl.canBeNull
 import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.implicitTypeTag
+import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.libraryName
+import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.withoutBubbleOrNull
 import lang.temper.common.MimeType
 import lang.temper.common.ParseDouble
@@ -24,6 +26,10 @@ import lang.temper.log.last
 import lang.temper.log.spanningPosition
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ExportedName
+import lang.temper.name.ResolvedParsedName
+import lang.temper.type.MethodKind
+import lang.temper.type.MethodShape
+import lang.temper.type.WellKnownTypes
 import lang.temper.value.DependencyCategory
 import lang.temper.value.TBoolean
 import lang.temper.value.TClass
@@ -43,6 +49,7 @@ import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.TVoid
+import lang.temper.value.connectedSymbol
 
 internal class LuaTranslator(
     val luaNames: LuaNames,
@@ -50,13 +57,25 @@ internal class LuaTranslator(
     val luaLibraryName: String? = null,
     private val shouldWrapFuncs: Boolean = false,
     private val dependenciesBuilder: Dependencies.Builder<LuaBackend>? = null,
+    private val connectedSource: String? = null,
 ) {
     fun translateTopLevel(mod: TmpL.Module): List<Backend.TranslatedFileSpecification> = luaNames.forModule(
         mod.codeLocation.codeLocation,
     ) {
         // Set up.
         fun makeParts(dependencyCategory: DependencyCategory) =
-            ModuleParts(dependencyCategory, luaNames, luaClosureMode, shouldWrapFuncs, dependenciesBuilder)
+            ModuleParts(
+                mod,
+                dependencyCategory,
+                luaNames,
+                luaClosureMode,
+                shouldWrapFuncs,
+                dependenciesBuilder,
+                connectedSource = when (dependencyCategory) {
+                    DependencyCategory.Production -> connectedSource
+                    DependencyCategory.Test -> null // TODO Connected source for test.
+                },
+            )
         val prodModuleParts = makeParts(DependencyCategory.Production)
         val testModuleParts = makeParts(DependencyCategory.Test)
         prodModuleParts.init(mod)
@@ -137,11 +156,13 @@ internal class LuaTranslator(
 }
 
 private class ModuleParts(
+    val mod: TmpL.Module,
     val dependencyCategory: DependencyCategory,
     val luaNames: LuaNames,
     val luaClosureMode: LuaClosureMode = LuaClosureMode.BasicFunction,
     private val shouldWrapFuncs: Boolean = false,
     private val dependenciesBuilder: Dependencies.Builder<LuaBackend>? = null,
+    private val connectedSource: String? = null,
 ) {
     private var breaks = mutableListOf<String?>()
     private var continues = mutableListOf<String?>()
@@ -214,12 +235,21 @@ private class ModuleParts(
             is TmpL.MethodReference if fn.subject !is TmpL.TypeName -> {
                 val subject = translateSubject(fn.subject)
                 val dotName = fn.methodName.dotNameText
-                Lua.MethodCallExpr(
-                    expr.pos,
-                    subject,
-                    Lua.Name(fn.methodName.pos, safeName(dotName)),
-                    args.value,
-                )
+                when (fn.subject) {
+                    // For super calls, we need to know the method kind.
+                    is TmpL.SuperSubject -> when ((fn.method as? MethodShape)?.methodKind) {
+                        MethodKind.Getter -> "get"
+                        MethodKind.Setter -> "set"
+                        else -> "methods"
+                    }.let { subject.dot(it).dotSafe(dotName).call(args.value) }
+                    // Others are standard method calls.
+                    else -> Lua.MethodCallExpr(
+                        expr.pos,
+                        subject,
+                        Lua.Name(fn.methodName.pos, safeName(dotName)),
+                        args.value,
+                    )
+                }
             }
             is TmpL.GarbageCallable -> translateGarbage(fn)
             is TmpL.FnReference,
@@ -236,10 +266,10 @@ private class ModuleParts(
         is TmpL.Expression ->
             translateExpr(subject)
         // TODO: we need some way to refer to a holder of statics
-        is TmpL.TemperTypeName ->
-            Lua.Name(subject.pos, luaNames.name(subject.typeDefinition.name))
         is TmpL.ConnectedToTypeName ->
             TODO("Handle be-lua's flavour of TargetLanguageTypeName when it has one")
+        is TmpL.TypeSubject ->
+            Lua.Name(subject.pos, luaNames.name(subject.typeName.sourceDefinition.name))
     }
 
     private fun translateExpr(
@@ -273,8 +303,10 @@ private class ModuleParts(
             ImplicitTypeTag.Function -> castFunc("cast_to_function")
             ImplicitTypeTag.List -> castFunc("cast_to_list")
             ImplicitTypeTag.ListBuilder -> castFunc("cast_to_listbuilder")
+            ImplicitTypeTag.Listed -> castFunc("cast_to_listed")
             ImplicitTypeTag.Map -> castFunc("cast_to_map")
             ImplicitTypeTag.MapBuilder -> castFunc("cast_to_mapbuilder")
+            ImplicitTypeTag.Mapped -> castFunc("cast_to_mapped")
             ImplicitTypeTag.Null -> castFunc("cast_to_null")
             ImplicitTypeTag.Other -> {
                 val typeName = (expr.checkedType.ot.withoutBubbleOrNull as TmpL.NominalType)
@@ -328,29 +360,30 @@ private class ModuleParts(
                 Lua.Str(expr.checkedType.pos, typeStr),
             )
 
-        fun hasTag(tag: Lua.Name): Lua.Expr =
+        fun hasTag(tags: List<Lua.Name>): Lua.Expr {
             // temper.instance_of(expr, tag)
-            Lua.FunctionCallExpr(
+            return Lua.FunctionCallExpr(
                 expr.pos,
                 Lua.DotIndexExpr(
-                    expr.pos,
-                    Lua.Name(expr.pos, name("temper")),
-                    Lua.Name(expr.pos, name("instance_of")),
+                    expr.pos.leftEdge,
+                    Lua.Name(expr.pos.leftEdge, name("temper")),
+                    Lua.Name(expr.pos.leftEdge, name("instance_of")),
                 ),
                 Lua.Args(
                     expr.pos,
                     Lua.Exprs(
                         expr.pos,
-                        listOf(
-                            translateExpr(expr.expr),
-                            tag,
-                        ),
+                        listOf(translateExpr(expr.expr)) + tags,
                     ),
                 ),
             )
+        }
 
         fun hasTag(tagText: String) =
-            hasTag(Lua.Name(expr.checkedType.pos, name(tagText)))
+            hasTag(listOf(Lua.Name(expr.checkedType.pos, name(tagText))))
+
+        fun hasTag(tagTextA: String, tagTextB: String) =
+            hasTag(listOf(tagTextA, tagTextB).map { Lua.Name(expr.checkedType.pos, name(it)) })
 
         return when (expr.checkedType.implicitTypeTag) {
             ImplicitTypeTag.Boolean -> typeEq("boolean")
@@ -360,19 +393,16 @@ private class ModuleParts(
             ImplicitTypeTag.Function -> typeEq("function")
             ImplicitTypeTag.List -> hasTag("List")
             ImplicitTypeTag.ListBuilder -> hasTag("ListBuilder")
+            ImplicitTypeTag.Listed -> hasTag("List", "ListBuilder")
             ImplicitTypeTag.Map -> hasTag("Map")
             ImplicitTypeTag.MapBuilder -> hasTag("MapBuilder")
+            ImplicitTypeTag.Mapped -> hasTag("Map", "MapBuilder")
             ImplicitTypeTag.Null -> TODO("should call isNull")
             ImplicitTypeTag.Void -> TODO("cast to Void")
             ImplicitTypeTag.Other -> {
                 val typeName = (expr.checkedType.ot.withoutBubbleOrNull as TmpL.NominalType)
                     .typeName.sourceDefinition.name
-                hasTag(
-                    Lua.Name(
-                        expr.pos,
-                        luaNames.name(typeName),
-                    ),
-                )
+                hasTag(listOf(Lua.Name(expr.checkedType.pos, luaNames.name(typeName))))
             }
         }
     }
@@ -1775,11 +1805,15 @@ private class ModuleParts(
             stmt.parameters.pos,
             translateParamDecl(stmt.parameters),
         )
-        val body = luaChunk(
-            stmt.body.pos,
-            handleSpecialParams(stmt.parameters) + translateStmt(stmt.body),
-            null,
-        )
+        val body = when {
+            stmt.metadata.any { it.key.symbol == connectedSymbol } && !mod.isStdLib ->
+                translateConnectedBody(stmt, params)
+            else -> luaChunk(
+                stmt.body.pos,
+                handleSpecialParams(stmt.parameters) + translateStmt(stmt.body),
+                null,
+            )
+        }
         var funcExpr: Lua.Expr = Lua.FunctionExpr(pos, params, body)
         if (stmt.mayYield) {
             // Make it a coroutine
@@ -1818,6 +1852,47 @@ private class ModuleParts(
                 ),
             ),
         )
+    }
+
+    private fun translateConnectedBody(
+        stmt: TmpL.ModuleFunctionDeclaration,
+        params: Lua.Params,
+    ): Lua.Chunk {
+        val pos = stmt.pos
+        val defaulting = stmt.parameterDefaultStatementsInfo()
+        var last: Lua.LastStmt? = null
+        val body = buildList {
+            addAll(handleSpecialParams(stmt.parameters))
+            for (statement in defaulting.defaultStatements) {
+                addAll(translateStmt(statement))
+            }
+            when (val name = stmt.name.name) {
+                // Avoid suffices even for ParsedName instances here.
+                is ResolvedParsedName -> name.baseName.nameText
+                else -> name.displayName
+            }.let { "_connected".asName(pos).dot(it) }.call(
+                buildList {
+                    for ((tmpl, lua) in stmt.parameters.parameters.zip(params.params)) {
+                        when {
+                            tmpl.optional -> {
+                                val name = defaulting.parameterMapping.getValue(tmpl.name.name)
+                                Lua.Name(pos, luaNames.name(name))
+                            }
+                            else -> when (lua) {
+                                is Lua.Param -> lua.name.deepCopy()
+                                is Lua.RestExpr -> lua.deepCopy() // TODO Good rest handling or frontend errors.
+                            }
+                        }.also { add(it) }
+                    }
+                },
+            ).also { call ->
+                when ((stmt.returnType.ot as? TmpL.NominalType)?.typeName?.sourceDefinition) {
+                    WellKnownTypes.voidTypeDefinition -> add(Lua.CallStmt(pos, call))
+                    else -> last = Lua.ReturnStmt(pos, Lua.Exprs(pos, listOf(call)))
+                }
+            }
+        }
+        return Lua.Chunk(stmt.pos, body, last)
     }
 
     private fun translateTopLevel(
@@ -2442,6 +2517,9 @@ private class ModuleParts(
             buildList {
                 addAll(imports)
                 addAll(preDecls)
+                if (connectedSource != null) {
+                    add(Lua.Connected(pos, connectedSource))
+                }
                 addAll(globalFuncs)
                 addAll(topLevels)
                 addAll(exports)

@@ -1,0 +1,2 @@
+let t = AnyValue;
+let x: t = 42;

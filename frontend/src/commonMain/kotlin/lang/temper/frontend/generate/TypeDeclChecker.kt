@@ -7,6 +7,7 @@ import lang.temper.log.MessageTemplate
 import lang.temper.log.unknownPos
 import lang.temper.name.Symbol
 import lang.temper.type.Abstractness
+import lang.temper.type.DotMember
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
 import lang.temper.type.TypeShape
@@ -52,14 +53,14 @@ internal class TypeDeclChecker(val module: Module, val logSink: LogSink) {
     }
 
     private fun checkAllMethodsOverridden(typeShape: TypeShape, superTypeShapes: Set<TypeShape>) {
-        val isProcessingImplicits = module.isEffectivelyImplicits
+        val isProcessingCore = module.isEffectivelyCore
         val isStd = module.isEffectivelyStd
         val allAbstractMethodDescriptors = mutableListOf<MethodDescriptor>()
         for (strictSuperTypeShape in superTypeShapes) {
             val abstractMethods = abstractMethodCache.getOrPut(strictSuperTypeShape) {
                 strictSuperTypeShape.methods.mapNotNull { m ->
-                    if (isProcessingImplicits && connectedSymbol in m.metadata) {
-                        null // Some Implicits methods have no body because they must connect.
+                    if (isProcessingCore && connectedSymbol in m.metadata) {
+                        null // Some Core methods have no body because they must connect.
                     } else if (isStd && m.visibility == Visibility.Private && connectedSymbol in m.metadata) {
                         null // std has some required connections too which are sneakily hidden away
                     } else if (m.methodKind != MethodKind.Constructor && m.isPureVirtual) {
@@ -127,7 +128,7 @@ internal class TypeDeclChecker(val module: Module, val logSink: LogSink) {
             if (methodKind == MethodKind.Constructor) { continue }
             for (superTypeShape in superTypeShapes) {
                 if (superTypeShape == typeShape) { continue }
-                for (m in superTypeShape.membersMatching(method.symbol)) {
+                for (m in superTypeShape.membersMatching(DotMember(method.symbol))) {
                     if (m is MethodShape && m.visibility != Visibility.Private && m.methodKind == methodKind) {
                         if (method.visibility < m.visibility) {
                             logSink.log(

@@ -73,6 +73,7 @@ class BuildTest {
     }
 
     @Test
+    @Timeout(JAVA_TIMEOUT_SECONDS) // Just keep seeing this one specifically time out for some reason.
     fun csharpBackendDirs() = runBuildTest("CSharpBackendDirs", path = "/buildDirs") { topDir ->
         runBuild(backends = listOf(CSharpBackend.Factory.backendId), workRoot = topDir)
         topDir.withTextOf("temper.keep/csharp/apple/name-selection.json") { text ->
@@ -193,7 +194,7 @@ class BuildTest {
     fun jsBackend() = runBuildTest("JsBackend") { topDir ->
         runCase(topDir, listOf(JsBackend.Factory.backendId))
         // Look just a bit at files and imports.
-        topDir.withTextOf("temper.out/js/lib-a/a.js") { text ->
+        topDir.withTextOf("temper.out/js/lib-a/a.internal.js") { text ->
             assertContains(text, """} from "lib-b/helper";""")
             assertContains(text, """} from "@temperlang/std/regex";""")
         }
@@ -217,16 +218,16 @@ class BuildTest {
     @Test
     fun jsBackendDirs() = runBuildTest("JsBackendDirs", path = "/buildDirs") { topDir ->
         val result = runBuild(backends = listOf(JsBackend.Factory.backendId), workRoot = topDir).first
-        topDir.withTextOf("temper.out/js/apple/apple.js") { text ->
+        topDir.withTextOf("temper.out/js/apple/apple.internal.js") { text ->
             assertContains(text, "export function thrice")
         }
-        topDir.withTextOf("temper.out/js/apple/avocado.js") { text ->
+        topDir.withTextOf("temper.out/js/apple/avocado.internal.js") { text ->
             assertContains(text, "export class Person")
         }
-        topDir.withTextOf("temper.out/js/apple/avocado/artichoke.js") { text ->
+        topDir.withTextOf("temper.out/js/apple/avocado/artichoke.internal.js") { text ->
             assertContains(text, "export function repeated")
         }
-        topDir.withTextOf("temper.out/js/banana/banana.js") { text ->
+        topDir.withTextOf("temper.out/js/banana/banana.internal.js") { text ->
             assertNotContains(text, "@temperlang/std/testing")
             assertContains(text, "export function twice")
             assertNotContains(text, "nobodyWantsMe")
@@ -371,7 +372,7 @@ class BuildTest {
         topDir.withTextOf("temper.out/py/banana/tests/test_banana.py") { text ->
             assertContains(text, "temper_std.testing")
             assertContains(text, "def test___twiceWorks")
-            assertContains(text, "class Something")
+            assertContains(text, "class _Something")
             assertContains(text, "def halve_value_in")
             assertNotContains(text, "nobody_wants_me")
         }

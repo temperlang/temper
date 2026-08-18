@@ -1,0 +1,8 @@
+class C(
+  private var x: Int = 0,
+  private var y: Int = 0,
+) {
+  public let f(): Int {
+    this.x = this.y = oneTwoThree()
+  }
+}

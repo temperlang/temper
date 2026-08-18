@@ -14,17 +14,17 @@ class DocJsTranslatorTest {
 
     @Test
     fun stringConcat() = assertGeneratedDocs(
-        """
+        $$"""
             |export let bar: String;
             |;;;
-            |"foo ${'$'}{ bar }"
+            |"foo ${bar}"
         """.trimMargin(),
-        want = """
+        want = $$"""
             |// #region __BOILERPLATE__ {{{
             |/** @type {string} */
             |export let bar;
             |// #endregion }}}
-            |`foo ${'$'}{ bar }`;
+            |`foo ${ bar }`;
         """.trimMargin(),
     )
 

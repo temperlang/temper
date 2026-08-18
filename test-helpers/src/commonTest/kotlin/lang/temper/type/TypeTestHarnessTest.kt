@@ -102,7 +102,7 @@ class TypeTestHarnessTest {
         )
         assertStringsEqual(
             "fn<IN__0, OUT__1>(IN__0): OUT__1",
-            type("fn <IN, OUT>(IN): OUT").toString(),
+            type("fn<IN, OUT>(IN): OUT").toString(),
         )
         assertStringsEqual(
             "fn (Int32, ...Int32): Int32",

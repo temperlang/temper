@@ -1,0 +1,4 @@
+// Stack many decorators on a declaration and make sure they eliminate themselves.
+interface I {
+  @foo("FOO") public static var thing;
+}

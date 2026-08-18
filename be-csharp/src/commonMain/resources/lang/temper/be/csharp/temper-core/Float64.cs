@@ -73,7 +73,7 @@ namespace TemperLang.Core
             var rel = relTol ?? 1e-9;
             var abs = absTol ?? 0.0;
             var margin = Math.Max(Math.Max(Math.Abs(x), Math.Abs(y)) * rel, abs);
-            return Math.Abs(x - y) < margin;
+            return Math.Abs(x - y) <= margin;
         }
 
         public static double Sign(this double x)
@@ -109,7 +109,7 @@ namespace TemperLang.Core
                 ? double.PositiveInfinity
                 : trimmed == "-Infinity"
                     ? double.NegativeInfinity
-                    : double.Parse(s);
+                    : double.Parse(trimmed);
         }
 
         public static int ToInt(double value)

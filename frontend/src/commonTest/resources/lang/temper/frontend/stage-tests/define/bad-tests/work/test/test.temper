@@ -1,0 +1,7 @@
+test();
+test("hi");
+test("") {}
+test(1) {}
+test("hi", 2);
+test(hi) {}
+test("hi") { hi: String => assert(true) { "nope" } }

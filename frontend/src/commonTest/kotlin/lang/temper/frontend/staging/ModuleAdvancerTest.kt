@@ -350,6 +350,83 @@ class ModuleAdvancerTest {
     )
 
     @Test
+    fun runningHappensInOrder() = assertVerboseLogOutput(
+        """
+            |{
+            |  a: {
+            |    "impl.temper":
+            |        ```
+            |        let { f } = import("../b/");
+            |        let { g } = import("../c/");
+            |        g();
+            |        f();
+            |        console.log("a initialized.");
+            |        ```,
+            |  },
+            |  b: {
+            |    "impl.temper":
+            |        ```
+            |        export let f(): Void { console.log("b: f() called."); }
+            |        console.log("b initialized.");
+            |        ```,
+            |  },
+            |  c: {
+            |    "impl.temper":
+            |        ```
+            |        let { f } = import("../b/");  // Fix import order between b and c
+            |        export let g(): Void { console.log("c: g() called."); }
+            |        console.log("c initialized.");
+            |        ignore(f);
+            |        ```,
+            |  }
+            |}
+        """.trimMargin(),
+        """
+            |[work/]: Library found
+            |[work//a/]: Pre-staging module from [work/a/impl.temper]
+            |[work//b/]: Pre-staging module from [work/b/impl.temper]
+            |[work//c/]: Pre-staging module from [work/c/impl.temper]
+            |[work//a/]: Starting stage @L
+            |[work//b/]: Starting stage @L
+            |[work//c/]: Starting stage @L
+            |[work//a/]: Starting stage @P
+            |[work//b/]: Starting stage @P
+            |[work//c/]: Starting stage @P
+            |[work//a/]: Starting stage @I
+            |[work//b/]: Starting stage @I
+            |[work//c/]: Starting stage @I
+            |## All modules have reached the import stage, but a/ is waiting on b/ and c/
+            |## And b/ is also waiting on c/
+            |[work//b/]: Starting stage @A..X
+            |## Now, b/ has exported which unlocks c/ to proceed.
+            |[work//c/]: Starting stage @A
+            |[work//b/]: Starting stage @Q
+            |[work//c/]: Starting stage @S
+            |[work//b/]: Starting stage @G
+            |[work//c/]: Starting stage @D..X
+            |## Now, b/ and c/ have both exported which unlocks a/ to proceed.
+            |[work//a/]: Starting stage @A
+            |[work//c/]: Starting stage @Q
+            |[work//a/]: Starting stage @S
+            |[work//c/]: Starting stage @G
+            |[work//a/]: Starting stage @D..G
+            |## Now all of them have completed @G, so they can run.
+            |## Note that b/ and c/ proceed a/ since the run stage requires that they
+            |## be initialized before a can run functions from them.
+            |[work//b/]: Starting stage @R
+            |[core/core.temper+#-#]@R: Print: b initialized.
+            |[work//c/]: Starting stage @R
+            |[core/core.temper+#-#]@R: Print: c initialized.
+            |[work//a/]: Starting stage @R
+            |[core/core.temper+#-#]@R: Print: c: g() called.
+            |[core/core.temper+#-#]@R: Print: b: f() called.
+            |[core/core.temper+#-#]@R: Print: a initialized.
+            |Bye
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        stopBefore = null,
+    )
+
+    @Test
     fun importBySelfLibraryNameWorksWhenNameExportedFromConfig() = assertVerboseLogOutput(
         """
             |{
@@ -459,9 +536,11 @@ class ModuleAdvancerTest {
         fileTreeJson: String,
         wantedLogOutput: String,
         level: Log.LevelFilter = Log.Fine,
+        stopBefore: Stage? = Stage.Run,
     ) {
         assertVerboseLogOutputReturnAdvancer(
             fileTreeJson = fileTreeJson, wantedLogOutput = wantedLogOutput, level = level,
+            stopBefore = stopBefore,
         )
     }
 
@@ -469,6 +548,7 @@ class ModuleAdvancerTest {
         fileTreeJson: String,
         wantedLogOutput: String,
         level: Log.LevelFilter = Log.Fine,
+        stopBefore: Stage? = Stage.Run,
     ): ModuleAdvancer {
         val workDir = dirPath("work")
         val fileTreeObj = JsonObject(
@@ -503,15 +583,19 @@ class ModuleAdvancerTest {
                 },
             )
 
-            advancer.advanceModules()
+            advancer.advanceModules(stopBefore = stopBefore)
             // AllDone has effect of flushing log sink
             logSink.log(Log.Fine, MessageTemplate.AllDone, unknownPos, emptyList())
         }
 
-        assertEquals(wantedLogOutput.trimEnd(), stdout.trimEnd())
+        // Editing core.temper should not break tests.
+        val stdoutNormalized = stdout.trimEnd().replace(corePosition, "[$1+#-#]")
+        assertEquals(wantedLogOutput.trimEnd(), stdoutNormalized)
         return advancer
     }
 }
+
+private val corePosition = Regex("""^\[(core/core\.temper)\+\d+-\d+]""", RegexOption.MULTILINE)
 
 /** Collapses adjacent "Starting stage ..." messages into one */
 private class LessSpammyLogSink(private val logSink: LogSink) : LogSink {

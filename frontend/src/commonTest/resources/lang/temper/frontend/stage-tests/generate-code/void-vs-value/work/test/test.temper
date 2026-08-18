@@ -1,0 +1,3 @@
+let trick(): Void { 123 }
+let treat(): Int { 456 }
+let trail(): Void { 789; }

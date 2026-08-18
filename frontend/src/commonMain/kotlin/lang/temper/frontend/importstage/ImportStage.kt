@@ -12,9 +12,9 @@ import lang.temper.frontend.AstSnapshotKey
 import lang.temper.frontend.Module
 import lang.temper.frontend.StageOutputs
 import lang.temper.frontend.StagingFlags
+import lang.temper.frontend.core.CoreModule
+import lang.temper.frontend.core.CoreUnavailableException
 import lang.temper.frontend.flipDeclaredNames
-import lang.temper.frontend.implicits.ImplicitsModule
-import lang.temper.frontend.implicits.ImplicitsUnavailableException
 import lang.temper.frontend.interpretiveDanceStage
 import lang.temper.interp.UserFunction
 import lang.temper.interp.importExport.ImportMacro
@@ -32,8 +32,8 @@ import lang.temper.log.Position
 import lang.temper.log.resolveDir
 import lang.temper.log.snapshot
 import lang.temper.name.BuiltinName
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ExportedName
-import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.ModuleName
 import lang.temper.name.ParsedName
 import lang.temper.stage.Stage
@@ -43,11 +43,11 @@ import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.InterpreterCallback
 import lang.temper.value.InterpreterCallback.NullInterpreterCallback.logSink
-import lang.temper.value.ReifiedType
 import lang.temper.value.RightNameLeaf
 import lang.temper.value.TBoolean
 import lang.temper.value.TClass
 import lang.temper.value.TFunction
+import lang.temper.value.TProblem
 import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
@@ -57,7 +57,7 @@ import lang.temper.value.curliesBuiltinName
 import lang.temper.value.extensionSymbol
 import lang.temper.value.implicitSymbol
 import lang.temper.value.initSymbol
-import lang.temper.value.isImplicits
+import lang.temper.value.isCore
 import lang.temper.value.nameContained
 import lang.temper.value.optionalImportSymbol
 import lang.temper.value.regexLiteralBuiltinName
@@ -86,7 +86,7 @@ internal class ImportStage(
                 logSink = logSink,
                 beforeInterpretation = { root, env ->
                     Debug.Frontend.ImportStage.Before.snapshot(configKey, AstSnapshotKey, root)
-                    maybeImportImplicits(module, additionalImplicitImports, root, env)
+                    maybeImportCore(module, additionalImplicitImports, root, env)
                 },
                 afterInterpretation = { (root), _ ->
                     flipDeclaredNames(root)
@@ -100,37 +100,37 @@ internal class ImportStage(
     }
 }
 
-private fun maybeImportImplicits(
+private fun maybeImportCore(
     module: Module,
     additionalImplicitImports: List<Export>,
     root: BlockTree,
     env: Environment,
 ) {
-    val skipImportImplicits = module.isImplicits || TBoolean.unpackOrNull(
-        env[StagingFlags.skipImportImplicits, InterpreterCallback.NullInterpreterCallback]
+    val skipImportCore = module.isCore || TBoolean.unpackOrNull(
+        env[StagingFlags.skipImportCore, InterpreterCallback.NullInterpreterCallback]
             as? Value<*>,
     ) == true
 
-    val exportsFromImplicits = if (
-        skipImportImplicits
+    val exportsFromCore = if (
+        skipImportCore
     ) {
-        // Do not try to do any implicit imports when bootstrapping the implicits module.
+        // Do not try to do any implicit imports when bootstrapping the core module.
         emptyList()
     } else {
         try {
-            ImplicitsModule.module.exports
-        } catch (ex: ImplicitsUnavailableException) {
-            // It's nice to be able to debug problems with implicits via unit tests that do not
-            // need implicits to work.
-            // Swallow any trouble getting the implicits module so that those tests can continue,
-            // and use a separate unit test to check that the implicits module stages properly.
+            CoreModule.module.exports
+        } catch (ex: CoreUnavailableException) {
+            // It's nice to be able to debug problems with core via unit tests that do not
+            // need core to work.
+            // Swallow any trouble getting the core module so that those tests can continue
+            // and use a separate unit test to check that the core module stages properly.
             ignore(ex)
             null
         } ?: run {
             logSink.log(
                 level = Log.Fatal,
-                template = MessageTemplate.ImplicitsUnavailable,
-                pos = Position(ImplicitsCodeLocation, 0, 0),
+                template = MessageTemplate.CoreUnavailable,
+                pos = Position(CoreCodeLocation, 0, 0),
                 values = emptyList(),
             )
             emptyList()
@@ -145,7 +145,7 @@ private fun maybeImportImplicits(
     val exportMap = buildMap {
         for (
         exports in listOf(
-            exportsFromImplicits,
+            exportsFromCore,
             exportsFromOuter,
         )
         ) {
@@ -174,7 +174,7 @@ private fun maybeImportImplicits(
                     // in the context of std/json extension functions.
                     // TODO: allow a general mechanism for macros to connect to other modules.
                     val callee = node.childOrNull(0)
-                    if (!skipImportImplicits && callee is RightNameLeaf) {
+                    if (!skipImportCore && callee is RightNameLeaf) {
                         when (callee.content.builtinKey) {
                             "@" -> {
                                 val decorator = node.childOrNull(1)
@@ -237,7 +237,7 @@ private fun maybeImportImplicits(
             adjustedAdditionalImplicitImports.forEach { export ->
                 // If we import names that weren't mentioned, then the REPL session
                 // ends up linking every Module to every Module with a top-level
-                // definition which means that the cost of the ReplTranslateFn
+                // definition, which means that the cost of the ReplTranslateFn
                 // grows with the size of the REPL session.
                 // By only importing those names that could be resolved to, we
                 // limit that growth significantly.
@@ -281,9 +281,9 @@ val Export.optionallyImported: Boolean get() {
     if (optionalImportSymbol !in this.declarationMetadata) {
         return false
     }
-    // Names of instantiable types can be resolved to by property bags, so we
+    // To resolve property bags, we need names of instantiable types, so we
     // do not prune those.
-    val typeShape = this.value?.typeShapeAtLeafOrNull
+    val typeShape = this.valueFromStaging?.typeShapeAtLeafOrNull
     return !(typeShape != null && typeShape.abstractness == Abstractness.Concrete)
 }
 
@@ -324,7 +324,7 @@ private fun adjustAdditionalImplicitImports(imports: List<Export>, root: BlockTr
     }.visitPreOrder()
     requiredModuleNames.isNotEmpty() || return imports
     return imports.map imports@{ import ->
-        val value = import.value ?: return@imports import
+        val value = import.valueFromStaging ?: return@imports import
         val loc = value.loc() ?: return@imports import
         when {
             loc in requiredModuleNames -> import.copy(
@@ -344,8 +344,9 @@ private fun Value<*>.loc(): CodeLocation? {
         // This actually gets the loc of the type, which is good enough for current needs.
         is TClass -> tag.typeShape.pos
         // And we don't actually even need TFunction right now, but I had an example to work from so supported that.
-        is TFunction -> (stateVector as? UserFunction)?.pos
-        is TType -> ((stateVector as? ReifiedType)?.type as? NominalType)?.definition?.pos
+        is TFunction -> (TFunction.unpack(this) as? UserFunction)?.pos
+        is TType -> (TType.unpack(this).type as? NominalType)?.definition?.pos
+        is TProblem -> TProblem.unpack(this).pos
         else -> null
     }?.loc
 }

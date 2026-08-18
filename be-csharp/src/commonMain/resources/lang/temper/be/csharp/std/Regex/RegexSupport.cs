@@ -40,7 +40,7 @@ namespace TemperLang.Std.Regex
             RegexRefs regexRefs
         )
         {
-            if (!codeSet.Negated)
+            if (!codeSet.Negated || codeSet.Items.Count == 0)
             {
                 if (
                     codeSet

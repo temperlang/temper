@@ -1,0 +1,8 @@
+let { C } = import("./c");
+do {
+  let c = new C();
+  c.x += 1;
+  c.x *= 2;
+  console.log(c.x);
+}
+

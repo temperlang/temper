@@ -1,0 +1,6 @@
+@typeDecl(I) @stay @docString(...) let `test//`.I = type (I);
+do {};
+REM("I am a pretty cool type", true, false);
+interface(\word, \I, \concrete, false, @typeDefined(I) fn {
+    I extends AnyValue
+});

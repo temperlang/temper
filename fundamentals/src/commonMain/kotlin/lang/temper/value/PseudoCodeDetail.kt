@@ -1,5 +1,6 @@
 package lang.temper.value
 
+import lang.temper.common.Freq3
 import lang.temper.common.NoneShortOrLong
 
 /**
@@ -10,8 +11,8 @@ data class PseudoCodeDetail(
     val showInferredTypes: Boolean = false,
     /** Whether to replace function bodies with `...` */
     val elideFunctionBodies: Boolean = false,
-    /** How much [docStringSymbol] metadata to show. */
-    val docStringDetail: NoneShortOrLong = NoneShortOrLong.None,
+    /** How much [docStringSymbol] and long data file metadata to show. */
+    val metadataValueDetail: NoneShortOrLong = NoneShortOrLong.None,
     /**
      * If false and the top-level tree is a block, skip its curly
      * brackets (`{` and `}`) to present its content as top-levels.
@@ -44,8 +45,15 @@ data class PseudoCodeDetail(
     /**
      * False to leave *DotHelper* calls as `do_get_i(subject)` instead of
      * resugaring them to `subject.i`.
+     *
+     * [Freq3.Never] to never resugar.
+     *
+     * [Freq3.Sometimes] (the default) to resugar infix and prefix operators
+     * which are otherwise unwieldy in output.
+     *
+     * [Freq3.Always] to also resugar property and method accesses.
      */
-    val resugarDotHelpers: Boolean = false,
+    val resugarDotHelpers: Freq3 = Freq3.Sometimes,
     /**
      * True for any tree that should be marked with comments to draw viewers
      * attention.

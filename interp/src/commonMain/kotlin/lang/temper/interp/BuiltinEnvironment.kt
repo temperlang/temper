@@ -1,8 +1,8 @@
 package lang.temper.interp
 
 import lang.temper.builtin.BuiltinFuns
-import lang.temper.builtin.DesugarPrefixOperatorMacro
 import lang.temper.builtin.Types
+import lang.temper.builtin.simpleBuiltinKeyFromCompoundOperator
 import lang.temper.builtin.vStringCatMacro
 import lang.temper.common.TriState
 import lang.temper.env.ChildEnvironment
@@ -14,13 +14,11 @@ import lang.temper.env.ReferentBitSet
 import lang.temper.env.ReferentSource
 import lang.temper.interp.importExport.ExportDecorator
 import lang.temper.interp.importExport.ImportMacro
-import lang.temper.lexer.Operator
-import lang.temper.lexer.TokenType
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.TemperName
 import lang.temper.type.WellKnownTypes
-import lang.temper.value.CallableValue
+import lang.temper.value.CoverFunction
 import lang.temper.value.Fail
 import lang.temper.value.InstancePropertyRecord
 import lang.temper.value.InternalFeatureKeys
@@ -58,30 +56,19 @@ private object Builtins {
     val nameKeyToValue: Map<String, Value<*>>
     init {
         val m = mutableMapOf(
-            "++" to Value(DesugarPrefixOperatorMacro("++", BuiltinFuns.plusFn)),
-            "--" to Value(DesugarPrefixOperatorMacro("--", BuiltinFuns.minusFn)),
-            "+" to BuiltinFuns.vPlusFn,
-            "-" to BuiltinFuns.vMinusFn,
-            "*" to Value(BuiltinFuns.timesFn),
-            "**" to Value(BuiltinFuns.powFn),
-            "/" to Value(BuiltinFuns.divFn),
-            "%" to Value(BuiltinFuns.modFn),
-
             "<" to Value(BuiltinFuns.lessThanFn),
             ">" to Value(BuiltinFuns.greaterThanFn),
             "<=" to Value(BuiltinFuns.lessEqualsFn),
             ">=" to Value(BuiltinFuns.greaterEqualsFn),
             "==" to Value(BuiltinFuns.equalsFn),
             "!=" to Value(BuiltinFuns.notEqualsFn),
-            "<=>" to BuiltinFuns.vCmp,
+            "<=>" to Value(BuiltinFuns.cmpFn),
 
             "=" to BuiltinFuns.vSetLocalFn,
 
-            "&" to BuiltinFuns.vAmpFn,
-            "|" to BuiltinFuns.vBarFn,
-            "!" to BuiltinFuns.vNotFn,
-            "?" to BuiltinFuns.vOrNullFn,
-            "throws" to BuiltinFuns.vThrowsFn,
+            keyPair(BuiltinFuns.vNotFn),
+            keyPair(BuiltinFuns.vOrNullFn),
+            keyPair(BuiltinFuns.vThrowsFn),
 
             "[]" to BuiltinFuns.vSquareBracketFn,
 
@@ -134,14 +121,13 @@ private object Builtins {
             keyPair(BuiltinFuns.vIsFn),
             keyPair(BuiltinFuns.vAsync),
             keyPair(BuiltinFuns.vAwait),
+            keyPair(BuiltinFuns.vDataFileMacro),
             keyPair(BuiltinFuns.vEnumMacro),
             keyPair(BuiltinFuns.vCoalesceMacro),
             keyPair(BuiltinFuns.vWhenMacro),
             keyPair(BuiltinFuns.vRegexLiteralMacro),
             keyPair(BuiltinFuns.vTestMacro),
             keyPair(BuiltinFuns.vYield),
-
-            keyPair(vExtendsFn),
 
             "@" to vApplyDecoratorsMacro,
             /**
@@ -222,7 +208,7 @@ private object Builtins {
              * <!-- snippet: builtin/@sealed : `sealed` type modifier -->
              * # `sealed` type modifier
              * Marks an interface type as sealed; only types declared in the same source file
-             * may [extend][snippet/builtin/extends] it.
+             * may [extend][snippet/typedef/extends] it.
              *
              * Sealed types are important because the Temper translator can assume there are
              * no direct subtypes that it does not know about.
@@ -232,22 +218,21 @@ private object Builtins {
              * there is no need for an `else` clause.
              *
              * !!! note "Backwards compatibility note"
-             *     If you add a sub-type to an existing sealed type, this may break code that
-             *     uses the old version of the sealed type with a [snippet/builtin/when] or
-             *     which otherwise embeds an "is none of those subtypes, therefore is this subtype"
-             *     assumption.
+             *     Adding a subtype to an existing sealed type may break code that
+             *     uses the old version of the sealed type. [snippet/builtin/when] expressions
+             *     are at risk, but so is other code that assumes
+             *     "none of those subtypes, therefore, this subtype."
              *
              * Backends should translate user-defined sealed types to [sum type]s
              * where available, and may insert tagged union tag field where needed.
              *
              * [sum type]: https://en.wikipedia.org/wiki/Tagged_union
-             * [tagged union]: https://en.wikipedia.org/wiki/Tagged_union
              */
             keyPair(MetadataDecorator(sealedTypeSymbol, "@sealed") { void }),
             /**
              * <!-- snippet: builtin/@static -->
              * # `@static` decorator
-             * `@static` may decorate a type members, and indicates that the member is associated
+             * `@static` may decorate type members, and indicates that the member is associated
              * with the containing type, not with any instance of that type.
              *
              * It is a [legacy decorator][snippet/legacy-decorator], so the `static` keyword
@@ -310,6 +295,22 @@ private object Builtins {
              * [snippet/builtin/let] and [`const`][snippet/builtin/@const].
              */
             keyPair(MetadataDecorator(varSymbol, findDecoratorInsertions = ::noDupeInsertions) { void }),
+            /**
+             * <!-- snippet: builtin/@in -->
+             * # `@in` deprecated variance notation
+             * `@in` may decorate a type formal declaration to specify covariant (input) variance.
+             *
+             * It is going away.
+             */
+            keyPair(DoNothingDecorator("@in")),
+            /**
+             * <!-- snippet: builtin/@out -->
+             * # `@out` deprecated variance notation
+             * `@out` may decorate a type formal declaration to specify covariant (input) variance.
+             *
+             * It is going away.
+             */
+            keyPair(DoNothingDecorator("@out")),
             "@export" to Value(ExportDecorator),
             "@test" to vTestDecorator,
 
@@ -349,15 +350,21 @@ private object Builtins {
              * `@inlineUnrealizedGoal` may decorate a function parameter declaration.
              *
              * An *unrealized goal* is a jump like a [snippet/builtin/break], [snippet/builtin/continue],
-             * or [snippet/builtin/return] that crosses from a [block lambda][snippet/syntax/BlockLambda.svg]
-             * into the containing function.
+             * [snippet/builtin/return], or [snippet/builtin/bubble] that crosses from a
+             * [block lambda][snippet/syntax/BlockLambda.svg] into the containing function.
+             *
+             * Inlining a call is the act of taking the called function's body and ensuring that names
+             * and parameters have the same meaning as if it was called.
+             *
+             * Inlining the call to `.forEach` below while also inlining uses of the block lambda into
+             * `f`'s body allows connecting the `return` goals to `f`'s body.
              *
              * ```temper
              * let f(ls: List<Int>): Boolean {
              *   ls.forEach { x => // Here's a block lambda
              *     if (x == 2) {
              *       console.log("Found 2!");
-             *       // This `return` wants to exit `f`
+             *       // This `return` should exit `f`
              *       // but is in a different function.
              *       return true; // UNREALIZED
              *     }
@@ -367,23 +374,47 @@ private object Builtins {
              * f([2]) //!outputs "Found 2!"
              * ```
              *
-             * Inlining a call is the act of taking the called function's body and ensuring that names
-             * and parameters have the same meaning as if it was called.
+             * After inlining, that code is equivalent to this where the `.forEach` call has been
+             * turned into a `while` loop (as specified by `List.forEach`) and the block lambda is now in
+             * the loop body.
              *
-             * Inlining the call to `.forEach` above while also inlining uses of the block lambda into
-             * `f`'s body allows connecting unrealized goals to `f`'s body.
+             * ```temper
+             * let f(ls: List<Int>): Boolean {
+             *   let n = ls.length;
+             *   var i = 0;
+             *   while (i < n) {
+             *     let x = ls[i]; // parameter from block lambda
+             *     i += 1;
+             *     // Here's where the block lambda is situated.
+             *     do {
+             *       if (x == 2) {
+             *         console.log("Found 2!");
+             *         // This `return` wants to exit `f`
+             *         // but is in a different function.
+             *         return true; // UNREALIZED
+             *       }
+             *     }
+             *   }
+             *   false
+             * }
+             * f([2]) //!outputs "Found 2!"
+             * ```
              *
              * It does come with limitations:
              *
-             * - `@inlineUnrealizedGoal` applies to parameters with function type.
+             * - `@inlineUnrealizedGoal` applies to parameters with a function type.
              * - The containing method or function, hereafter the "callee", must not use any
              *   [snippet/builtin/@private] APIs so that uses of them can be moved.
              * - The callee must not be an overridable method.
              * - The callee must call any decorated parameter at one lexical call site.
-             *   Inlining a function multiple time can lead to explosions in code size.
+             *   Inlining a function multiple times can lead to explosions in code size.
              * - The callee must not use any decorated parameter as an r-value;
              *   it may not delegate calling the block lambda.
              * - For a decorated parameter to be inlined, it must be a block lambda
+             *
+             * Since inlining involves copying code, it is only appropriate when the method
+             * is a fairly thin wrapper around a single call to the function or functions
+             * with this decoration.
              */
             keyPair(MetadataDecorator(inlineUnrealizedGoalSymbol) { void }),
 
@@ -418,7 +449,7 @@ private object Builtins {
              * ```
              *
              * For now, only explicit methods are allowed for overloads.
-             * Constructors, propertiers, and top-level functions are unsupported.
+             * Constructors, properties, and top-level functions are unsupported.
              *
              * No actual function or method with the overload name itself must be
              * present.
@@ -431,6 +462,8 @@ private object Builtins {
                     args.valueTree(1).valueContained ?: NotYet
                 },
             ),
+
+            keyPair(operatorImplementationDecorator),
 
             /**
              * <!-- snippet: builtin/@extension -->
@@ -570,7 +603,7 @@ private object Builtins {
              * ## The custom JSON adapter strategy
              *
              * If a type, whether it's a class or interface type,
-             * already has encoding and decoding functions then none are
+             * already has encoding and decoding functions, then none are
              * auto-generated.
              *
              * ```temper
@@ -605,7 +638,7 @@ private object Builtins {
              * ## Sealed interface strategy
              *
              * For sealed interfaces, we generate adapters that delegate to adapters for
-             * the appropriate sub-type.
+             * the appropriate subtype.
              *
              * ```temper
              * let {
@@ -749,6 +782,9 @@ private object Builtins {
              */
             keyPair(jsonNameDecorator),
             keyPair(vFunDecorator),
+            keyPair(vConnectedDecorator),
+            keyPair(vImuDecorator),
+            keyPair(vPartialImuDecorator),
 
             "new" to Value(New),
             keyPair(Value(ImportMacro)),
@@ -821,22 +857,10 @@ internal class BuiltinEnvironment(
         override val reifiedType: Value<*>? = null
     }
 
-    override fun get(name: TemperName, cb: InterpreterCallback): PartialResult {
-        val builtinKey = name.builtinKey
-        if (builtinKey != null) {
-            val builtin = Builtins.nameKeyToValue[builtinKey]
-            if (builtin != null) { return builtin }
-            val simpleBuiltinKey = simpleBuiltinKeyFromCompoundOperator(builtinKey)
-            if (simpleBuiltinKey != null) {
-                val simpleBuiltin = Builtins.nameKeyToValue[simpleBuiltinKey]
-                val simpleFn = TFunction.unpackOrNull(simpleBuiltin)
-                if (simpleFn is CallableValue) {
-                    return Value(DesugarCompoundAssignmentMacro(builtinKey, simpleFn))
-                }
-            }
-        }
-        return super.get(name, cb)
-    }
+    override fun get(name: TemperName, cb: InterpreterCallback): PartialResult =
+        name.builtinKey?.let { builtinKey ->
+            Builtins.nameKeyToValue[builtinKey]
+        } ?: super.get(name, cb)
 
     override fun declare(
         name: TemperName,
@@ -853,26 +877,24 @@ internal class BuiltinEnvironment(
         }
     }
 
-    // This does not include all possible compound operators but this is advertised as best effort,
+    // This does not include all possible compound operators, but this is advertised as best effort,
     // and I'm lazy.
     override val locallyDeclared: Iterable<TemperName> get() = Builtins.nameKeyToValue.keys.map {
         BuiltinName(it)
     }
 }
 
-private fun simpleBuiltinKeyFromCompoundOperator(builtinKey: String?): String? =
-    if (
-        builtinKey != null &&
-        Operator.isProbablyAssignmentOperator(builtinKey, TokenType.Punctuation) &&
-        builtinKey != "="
-    ) {
-        builtinKey.substring(0, builtinKey.length - 1)
-    } else {
-        null
+private fun nameOf(f: MacroValue): String = when (f) {
+    is NamedBuiltinFun -> f.name
+    is CoverFunction -> nameOf(f.covered.first()).also { name ->
+        check(f.covered.all { nameOf(it) == name })
     }
+    else -> error("$f")
+}
 
-private fun <T : MacroValue> keyPair(v: Value<T>): Pair<String, Value<T>> =
-    (TFunction.unpack(v) as NamedBuiltinFun).name to v
+private fun <T : MacroValue> keyPair(v: Value<T>): Pair<String, Value<T>> {
+    return nameOf(TFunction.unpack(v)) to v
+}
 
 private fun keyPair(md: NamedBuiltinFun): Pair<String, Value<MacroValue>> =
     md.name to Value(md)

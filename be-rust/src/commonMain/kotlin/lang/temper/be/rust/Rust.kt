@@ -646,6 +646,7 @@ object Rust {
         pos: Position,
         callee: Expr,
         args: Iterable<Expr>,
+        where: Where? = null,
         var needsParens: Boolean = (callee as? Operation)?.operator?.operator == RustOperator.MemberNotMethod,
     ) : BaseTree(pos), ExprWithoutBlock {
         override val operatorDefinition: RustOperatorDefinition?
@@ -658,13 +659,14 @@ object Rust {
                     sharedCodeFormattingTemplate14
                 }
         override val formatElementCount
-            get() = 2
+            get() = 3
         override fun formatElement(
             index: Int,
         ): IndexableFormattableTreeElement {
             return when (index) {
                 0 -> this.callee
                 1 -> FormattableTreeGroup(this.args)
+                2 -> this.where ?: FormattableTreeGroup.empty
                 else -> throw IndexOutOfBoundsException("$index")
             }
         }
@@ -676,30 +678,82 @@ object Rust {
         var args: List<Expr>
             get() = _args
             set(newValue) { updateTreeConnections(_args, newValue) }
+        private var _where: Where?
+        var where: Where?
+            get() = _where
+            set(newValue) { _where = updateTreeConnection(_where, newValue) }
         override fun deepCopy(): Call {
-            return Call(pos, callee = this.callee.deepCopy(), args = this.args.deepCopy(), needsParens = this.needsParens)
+            return Call(pos, callee = this.callee.deepCopy(), args = this.args.deepCopy(), where = this.where?.deepCopy(), needsParens = this.needsParens)
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is Call && this.callee == other.callee && this.args == other.args && this.needsParens == other.needsParens
+            return other is Call && this.callee == other.callee && this.args == other.args && this.where == other.where && this.needsParens == other.needsParens
         }
         override fun hashCode(): Int {
             var hc = callee.hashCode()
             hc = 31 * hc + args.hashCode()
+            hc = 31 * hc + (where?.hashCode() ?: 0)
             hc = 31 * hc + needsParens.hashCode()
             return hc
         }
         init {
             this._callee = updateTreeConnection(null, callee)
             updateTreeConnections(this._args, args)
+            this._where = updateTreeConnection(null, where)
         }
         companion object {
             private val cmr = ChildMemberRelationships(
                 { n -> (n as Call).callee },
                 { n -> (n as Call).args },
+                { n -> (n as Call).where },
+            )
+        }
+    }
+
+    class Where(
+        pos: Position,
+        whereItems: Iterable<WhereItem>,
+    ) : BaseTree(pos) {
+        override val operatorDefinition: RustOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate15
+        override val formatElementCount
+            get() = 1
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> FormattableTreeGroup(this.whereItems)
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private val _whereItems: MutableList<WhereItem> = mutableListOf()
+        var whereItems: List<WhereItem>
+            get() = _whereItems
+            set(newValue) { updateTreeConnections(_whereItems, newValue) }
+        override fun deepCopy(): Where {
+            return Where(pos, whereItems = this.whereItems.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is Where && this.whereItems == other.whereItems
+        }
+        override fun hashCode(): Int {
+            return whereItems.hashCode()
+        }
+        init {
+            updateTreeConnections(this._whereItems, whereItems)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as Where).whereItems },
             )
         }
     }
@@ -716,13 +770,13 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (move != null && returnType != null) {
-                    sharedCodeFormattingTemplate15
-                } else if (move != null) {
                     sharedCodeFormattingTemplate16
-                } else if (returnType != null) {
+                } else if (move != null) {
                     sharedCodeFormattingTemplate17
-                } else {
+                } else if (returnType != null) {
                     sharedCodeFormattingTemplate18
+                } else {
+                    sharedCodeFormattingTemplate19
                 }
         override val formatElementCount
             get() = 4
@@ -792,7 +846,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate19
+            get() = sharedCodeFormattingTemplate20
         override val formatElementCount
             get() = 0
         override fun deepCopy(): Move {
@@ -822,9 +876,9 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (id != null) {
-                    sharedCodeFormattingTemplate20
-                } else {
                     sharedCodeFormattingTemplate21
+                } else {
+                    sharedCodeFormattingTemplate22
                 }
         override val formatElementCount
             get() = 1
@@ -870,20 +924,27 @@ object Rust {
     class Enum(
         pos: Position,
         id: Id,
+        generics: Iterable<GenericParam> = listOf(),
         items: Iterable<EnumItem>,
     ) : BaseTree(pos), ItemBase {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate22
+            get() =
+                if (generics.isNotEmpty()) {
+                    sharedCodeFormattingTemplate23
+                } else {
+                    sharedCodeFormattingTemplate24
+                }
         override val formatElementCount
-            get() = 2
+            get() = 3
         override fun formatElement(
             index: Int,
         ): IndexableFormattableTreeElement {
             return when (index) {
                 0 -> this.id
-                1 -> FormattableTreeGroup(this.items)
+                1 -> FormattableTreeGroup(this.generics)
+                2 -> FormattableTreeGroup(this.items)
                 else -> throw IndexOutOfBoundsException("$index")
             }
         }
@@ -891,32 +952,39 @@ object Rust {
         var id: Id
             get() = _id
             set(newValue) { _id = updateTreeConnection(_id, newValue) }
+        private val _generics: MutableList<GenericParam> = mutableListOf()
+        var generics: List<GenericParam>
+            get() = _generics
+            set(newValue) { updateTreeConnections(_generics, newValue) }
         private val _items: MutableList<EnumItem> = mutableListOf()
         var items: List<EnumItem>
             get() = _items
             set(newValue) { updateTreeConnections(_items, newValue) }
         override fun deepCopy(): Enum {
-            return Enum(pos, id = this.id.deepCopy(), items = this.items.deepCopy())
+            return Enum(pos, id = this.id.deepCopy(), generics = this.generics.deepCopy(), items = this.items.deepCopy())
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is Enum && this.id == other.id && this.items == other.items
+            return other is Enum && this.id == other.id && this.generics == other.generics && this.items == other.items
         }
         override fun hashCode(): Int {
             var hc = id.hashCode()
+            hc = 31 * hc + generics.hashCode()
             hc = 31 * hc + items.hashCode()
             return hc
         }
         init {
             this._id = updateTreeConnection(null, id)
+            updateTreeConnections(this._generics, generics)
             updateTreeConnections(this._items, items)
         }
         companion object {
             private val cmr = ChildMemberRelationships(
                 { n -> (n as Enum).id },
+                { n -> (n as Enum).generics },
                 { n -> (n as Enum).items },
             )
         }
@@ -934,7 +1002,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate23
+            get() = sharedCodeFormattingTemplate25
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -989,7 +1057,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate14
+            get() = sharedCodeFormattingTemplate26
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -1048,11 +1116,11 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (pub != null && type != null) {
-                    sharedCodeFormattingTemplate24
+                    sharedCodeFormattingTemplate27
                 } else if (pub != null) {
                     sharedCodeFormattingTemplate2
                 } else if (type != null) {
-                    sharedCodeFormattingTemplate25
+                    sharedCodeFormattingTemplate28
                 } else {
                     sharedCodeFormattingTemplate3
                 }
@@ -1135,7 +1203,7 @@ object Rust {
                 } else if (type != null) {
                     sharedCodeFormattingTemplate3
                 } else {
-                    sharedCodeFormattingTemplate26
+                    sharedCodeFormattingTemplate29
                 }
         override val formatElementCount
             get() = 3
@@ -1202,9 +1270,9 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (alternate != null) {
-                    sharedCodeFormattingTemplate27
+                    sharedCodeFormattingTemplate30
                 } else {
-                    sharedCodeFormattingTemplate28
+                    sharedCodeFormattingTemplate31
                 }
         override val formatElementCount
             get() = 3
@@ -1268,7 +1336,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate29
+            get() = sharedCodeFormattingTemplate32
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -1322,7 +1390,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate30
+            get() = sharedCodeFormattingTemplate33
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -1368,7 +1436,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate31
+            get() = sharedCodeFormattingTemplate34
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -1423,7 +1491,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate32
+            get() = sharedCodeFormattingTemplate35
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -1478,7 +1546,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate33
+            get() = sharedCodeFormattingTemplate36
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -1537,7 +1605,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate34
+            get() = sharedCodeFormattingTemplate37
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -1595,13 +1663,13 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (left != null && right != null) {
-                    sharedCodeFormattingTemplate35
+                    sharedCodeFormattingTemplate38
                 } else if (left != null) {
-                    sharedCodeFormattingTemplate34
-                } else if (right != null) {
-                    sharedCodeFormattingTemplate36
-                } else {
                     sharedCodeFormattingTemplate37
+                } else if (right != null) {
+                    sharedCodeFormattingTemplate39
+                } else {
+                    sharedCodeFormattingTemplate40
                 }
         override val formatElementCount
             get() = 3
@@ -1666,9 +1734,9 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (value != null) {
-                    sharedCodeFormattingTemplate38
+                    sharedCodeFormattingTemplate41
                 } else {
-                    sharedCodeFormattingTemplate39
+                    sharedCodeFormattingTemplate42
                 }
         override val formatElementCount
             get() = 1
@@ -1715,7 +1783,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate23
+            get() = sharedCodeFormattingTemplate25
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -1769,7 +1837,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate40
+            get() = sharedCodeFormattingTemplate43
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -1814,7 +1882,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate41
+            get() = sharedCodeFormattingTemplate44
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -1866,37 +1934,37 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (generics.isNotEmpty() && returnType != null && whereItems.isNotEmpty() && block != null) {
-                    sharedCodeFormattingTemplate42
-                } else if (generics.isNotEmpty() && returnType != null && whereItems.isNotEmpty()) {
-                    sharedCodeFormattingTemplate43
-                } else if (generics.isNotEmpty() && returnType != null && block != null) {
-                    sharedCodeFormattingTemplate44
-                } else if (generics.isNotEmpty() && returnType != null) {
                     sharedCodeFormattingTemplate45
-                } else if (generics.isNotEmpty() && whereItems.isNotEmpty() && block != null) {
+                } else if (generics.isNotEmpty() && returnType != null && whereItems.isNotEmpty()) {
                     sharedCodeFormattingTemplate46
-                } else if (generics.isNotEmpty() && whereItems.isNotEmpty()) {
+                } else if (generics.isNotEmpty() && returnType != null && block != null) {
                     sharedCodeFormattingTemplate47
-                } else if (generics.isNotEmpty() && block != null) {
+                } else if (generics.isNotEmpty() && returnType != null) {
                     sharedCodeFormattingTemplate48
-                } else if (generics.isNotEmpty()) {
+                } else if (generics.isNotEmpty() && whereItems.isNotEmpty() && block != null) {
                     sharedCodeFormattingTemplate49
-                } else if (returnType != null && whereItems.isNotEmpty() && block != null) {
+                } else if (generics.isNotEmpty() && whereItems.isNotEmpty()) {
                     sharedCodeFormattingTemplate50
-                } else if (returnType != null && whereItems.isNotEmpty()) {
+                } else if (generics.isNotEmpty() && block != null) {
                     sharedCodeFormattingTemplate51
-                } else if (returnType != null && block != null) {
+                } else if (generics.isNotEmpty()) {
                     sharedCodeFormattingTemplate52
-                } else if (returnType != null) {
+                } else if (returnType != null && whereItems.isNotEmpty() && block != null) {
                     sharedCodeFormattingTemplate53
-                } else if (whereItems.isNotEmpty() && block != null) {
+                } else if (returnType != null && whereItems.isNotEmpty()) {
                     sharedCodeFormattingTemplate54
-                } else if (whereItems.isNotEmpty()) {
+                } else if (returnType != null && block != null) {
                     sharedCodeFormattingTemplate55
-                } else if (block != null) {
+                } else if (returnType != null) {
                     sharedCodeFormattingTemplate56
-                } else {
+                } else if (whereItems.isNotEmpty() && block != null) {
                     sharedCodeFormattingTemplate57
+                } else if (whereItems.isNotEmpty()) {
+                    sharedCodeFormattingTemplate58
+                } else if (block != null) {
+                    sharedCodeFormattingTemplate59
+                } else {
+                    sharedCodeFormattingTemplate60
                 }
         override val formatElementCount
             get() = 6
@@ -1990,9 +2058,9 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (type != null) {
-                    sharedCodeFormattingTemplate58
+                    sharedCodeFormattingTemplate61
                 } else {
-                    sharedCodeFormattingTemplate59
+                    sharedCodeFormattingTemplate62
                 }
         override val formatElementCount
             get() = 2
@@ -2047,7 +2115,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate60
+            get() = sharedCodeFormattingTemplate63
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -2095,9 +2163,9 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (returnsUnit) {
-                    sharedCodeFormattingTemplate61
+                    sharedCodeFormattingTemplate64
                 } else {
-                    sharedCodeFormattingTemplate62
+                    sharedCodeFormattingTemplate65
                 }
         override val formatElementCount
             get() = 2
@@ -2154,7 +2222,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate63
+            get() = sharedCodeFormattingTemplate66
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -2203,13 +2271,13 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (bounds.isNotEmpty() && default != null) {
-                    sharedCodeFormattingTemplate64
+                    sharedCodeFormattingTemplate67
                 } else if (bounds.isNotEmpty()) {
-                    sharedCodeFormattingTemplate65
+                    sharedCodeFormattingTemplate68
                 } else if (default != null) {
-                    sharedCodeFormattingTemplate66
+                    sharedCodeFormattingTemplate69
                 } else {
-                    sharedCodeFormattingTemplate59
+                    sharedCodeFormattingTemplate62
                 }
         override val formatElementCount
             get() = 3
@@ -2273,7 +2341,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate67
+            get() = sharedCodeFormattingTemplate70
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -2330,9 +2398,9 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (mut != null) {
-                    sharedCodeFormattingTemplate34
-                } else {
                     sharedCodeFormattingTemplate37
+                } else {
+                    sharedCodeFormattingTemplate40
                 }
         override val formatElementCount
             get() = 2
@@ -2386,7 +2454,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate68
+            get() = sharedCodeFormattingTemplate71
         override val formatElementCount
             get() = 0
         override fun deepCopy(): IdPatternMut {
@@ -2421,21 +2489,21 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (generics.isNotEmpty() && trait != null && whereItems.isNotEmpty()) {
-                    sharedCodeFormattingTemplate69
-                } else if (generics.isNotEmpty() && trait != null) {
-                    sharedCodeFormattingTemplate70
-                } else if (generics.isNotEmpty() && whereItems.isNotEmpty()) {
-                    sharedCodeFormattingTemplate71
-                } else if (generics.isNotEmpty()) {
                     sharedCodeFormattingTemplate72
-                } else if (trait != null && whereItems.isNotEmpty()) {
+                } else if (generics.isNotEmpty() && trait != null) {
                     sharedCodeFormattingTemplate73
-                } else if (trait != null) {
+                } else if (generics.isNotEmpty() && whereItems.isNotEmpty()) {
                     sharedCodeFormattingTemplate74
-                } else if (whereItems.isNotEmpty()) {
+                } else if (generics.isNotEmpty()) {
                     sharedCodeFormattingTemplate75
-                } else {
+                } else if (trait != null && whereItems.isNotEmpty()) {
                     sharedCodeFormattingTemplate76
+                } else if (trait != null) {
+                    sharedCodeFormattingTemplate77
+                } else if (whereItems.isNotEmpty()) {
+                    sharedCodeFormattingTemplate78
+                } else {
+                    sharedCodeFormattingTemplate79
                 }
         override val formatElementCount
             get() = 6
@@ -2524,9 +2592,9 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (bounds.isNotEmpty()) {
-                    sharedCodeFormattingTemplate77
+                    sharedCodeFormattingTemplate80
                 } else {
-                    sharedCodeFormattingTemplate78
+                    sharedCodeFormattingTemplate81
                 }
         override val formatElementCount
             get() = 1
@@ -2574,9 +2642,9 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (scope != null) {
-                    sharedCodeFormattingTemplate79
+                    sharedCodeFormattingTemplate82
                 } else {
-                    sharedCodeFormattingTemplate80
+                    sharedCodeFormattingTemplate83
                 }
         override val formatElementCount
             get() = 1
@@ -2626,13 +2694,13 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (pub != null && block != null) {
-                    sharedCodeFormattingTemplate81
-                } else if (pub != null) {
-                    sharedCodeFormattingTemplate82
-                } else if (block != null) {
-                    sharedCodeFormattingTemplate83
-                } else {
                     sharedCodeFormattingTemplate84
+                } else if (pub != null) {
+                    sharedCodeFormattingTemplate85
+                } else if (block != null) {
+                    sharedCodeFormattingTemplate86
+                } else {
+                    sharedCodeFormattingTemplate87
                 }
         override val formatElementCount
             get() = 3
@@ -2699,9 +2767,9 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (value != null) {
-                    sharedCodeFormattingTemplate85
+                    sharedCodeFormattingTemplate88
                 } else {
-                    sharedCodeFormattingTemplate86
+                    sharedCodeFormattingTemplate89
                 }
         override val formatElementCount
             get() = 3
@@ -2769,13 +2837,13 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (generics.isNotEmpty() && whereItems.isNotEmpty()) {
-                    sharedCodeFormattingTemplate87
-                } else if (generics.isNotEmpty()) {
-                    sharedCodeFormattingTemplate88
-                } else if (whereItems.isNotEmpty()) {
-                    sharedCodeFormattingTemplate89
-                } else {
                     sharedCodeFormattingTemplate90
+                } else if (generics.isNotEmpty()) {
+                    sharedCodeFormattingTemplate91
+                } else if (whereItems.isNotEmpty()) {
+                    sharedCodeFormattingTemplate92
+                } else {
+                    sharedCodeFormattingTemplate93
                 }
         override val formatElementCount
             get() = 4
@@ -2853,21 +2921,21 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (generics.isNotEmpty() && bounds.isNotEmpty() && whereItems.isNotEmpty()) {
-                    sharedCodeFormattingTemplate91
-                } else if (generics.isNotEmpty() && bounds.isNotEmpty()) {
-                    sharedCodeFormattingTemplate92
-                } else if (generics.isNotEmpty() && whereItems.isNotEmpty()) {
-                    sharedCodeFormattingTemplate93
-                } else if (generics.isNotEmpty()) {
                     sharedCodeFormattingTemplate94
-                } else if (bounds.isNotEmpty() && whereItems.isNotEmpty()) {
+                } else if (generics.isNotEmpty() && bounds.isNotEmpty()) {
                     sharedCodeFormattingTemplate95
-                } else if (bounds.isNotEmpty()) {
+                } else if (generics.isNotEmpty() && whereItems.isNotEmpty()) {
                     sharedCodeFormattingTemplate96
-                } else if (whereItems.isNotEmpty()) {
+                } else if (generics.isNotEmpty()) {
                     sharedCodeFormattingTemplate97
-                } else {
+                } else if (bounds.isNotEmpty() && whereItems.isNotEmpty()) {
                     sharedCodeFormattingTemplate98
+                } else if (bounds.isNotEmpty()) {
+                    sharedCodeFormattingTemplate99
+                } else if (whereItems.isNotEmpty()) {
+                    sharedCodeFormattingTemplate100
+                } else {
+                    sharedCodeFormattingTemplate101
                 }
         override val formatElementCount
             get() = 6
@@ -2959,13 +3027,13 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (generics.isNotEmpty() && whereItems.isNotEmpty()) {
-                    sharedCodeFormattingTemplate99
-                } else if (generics.isNotEmpty()) {
-                    sharedCodeFormattingTemplate100
-                } else if (whereItems.isNotEmpty()) {
-                    sharedCodeFormattingTemplate101
-                } else {
                     sharedCodeFormattingTemplate102
+                } else if (generics.isNotEmpty()) {
+                    sharedCodeFormattingTemplate103
+                } else if (whereItems.isNotEmpty()) {
+                    sharedCodeFormattingTemplate104
+                } else {
+                    sharedCodeFormattingTemplate105
                 }
         override val formatElementCount
             get() = 4
@@ -3040,9 +3108,9 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (generics.isNotEmpty()) {
-                    sharedCodeFormattingTemplate103
+                    sharedCodeFormattingTemplate106
                 } else {
-                    sharedCodeFormattingTemplate104
+                    sharedCodeFormattingTemplate107
                 }
         override val formatElementCount
             get() = 3
@@ -3105,7 +3173,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate105
+            get() = sharedCodeFormattingTemplate108
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -3155,13 +3223,13 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (type != null && value != null) {
-                    sharedCodeFormattingTemplate106
-                } else if (type != null) {
-                    sharedCodeFormattingTemplate107
-                } else if (value != null) {
-                    sharedCodeFormattingTemplate108
-                } else {
                     sharedCodeFormattingTemplate109
+                } else if (type != null) {
+                    sharedCodeFormattingTemplate110
+                } else if (value != null) {
+                    sharedCodeFormattingTemplate111
+                } else {
+                    sharedCodeFormattingTemplate112
                 }
         override val formatElementCount
             get() = 4
@@ -3302,7 +3370,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate110
+            get() = sharedCodeFormattingTemplate113
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -3387,7 +3455,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate111
+            get() = sharedCodeFormattingTemplate114
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -3431,7 +3499,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate112
+            get() = sharedCodeFormattingTemplate115
         override val formatElementCount
             get() = 0
         override fun deepCopy(): Rest {
@@ -3460,7 +3528,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate14
+            get() = sharedCodeFormattingTemplate26
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -3514,7 +3582,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate113
+            get() = sharedCodeFormattingTemplate116
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -3558,7 +3626,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate114
+            get() = sharedCodeFormattingTemplate117
         override val formatElementCount
             get() = 0
         override fun deepCopy(): Semi {
@@ -3590,7 +3658,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate115
+            get() = sharedCodeFormattingTemplate118
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -3638,9 +3706,9 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (expr != null) {
-                    sharedCodeFormattingTemplate58
+                    sharedCodeFormattingTemplate61
                 } else {
-                    sharedCodeFormattingTemplate59
+                    sharedCodeFormattingTemplate62
                 }
         override val formatElementCount
             get() = 2
@@ -3697,9 +3765,9 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (bounds.isNotEmpty()) {
-                    sharedCodeFormattingTemplate116
+                    sharedCodeFormattingTemplate119
                 } else {
-                    sharedCodeFormattingTemplate117
+                    sharedCodeFormattingTemplate120
                 }
         override val formatElementCount
             get() = 1
@@ -3745,7 +3813,7 @@ object Rust {
         override val operatorDefinition: RustOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate40
+            get() = sharedCodeFormattingTemplate43
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -3792,13 +3860,13 @@ object Rust {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (scope == VisibilityScopeOption.Crate) {
-                    sharedCodeFormattingTemplate118
-                } else if (scope == VisibilityScopeOption.Self) {
-                    sharedCodeFormattingTemplate119
-                } else if (scope == VisibilityScopeOption.Super) {
-                    sharedCodeFormattingTemplate120
-                } else {
                     sharedCodeFormattingTemplate121
+                } else if (scope == VisibilityScopeOption.Self) {
+                    sharedCodeFormattingTemplate122
+                } else if (scope == VisibilityScopeOption.Super) {
+                    sharedCodeFormattingTemplate123
+                } else {
+                    sharedCodeFormattingTemplate124
                 }
         override val formatElementCount
             get() = 0
@@ -3978,7 +4046,7 @@ object Rust {
     private val sharedCodeFormattingTemplate12 =
         CodeFormattingTemplate.LiteralToken("break", OutputTokenType.Word)
 
-    /** `( {{0}} ) ( {{1*,}} )` */
+    /** `( {{0}} ) ( {{1*,}} {{2}} )` */
     private val sharedCodeFormattingTemplate13 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -3990,11 +4058,12 @@ object Rust {
                     1,
                     CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
                 ),
+                CodeFormattingTemplate.OneSubstitution(2),
                 CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
             ),
         )
 
-    /** `{{0}} ( {{1*,}} )` */
+    /** `{{0}} ( {{1*,}} {{2}} )` */
     private val sharedCodeFormattingTemplate14 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -4004,12 +4073,25 @@ object Rust {
                     1,
                     CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
                 ),
+                CodeFormattingTemplate.OneSubstitution(2),
                 CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
             ),
         )
 
-    /** `{{0}} | {{1*,}} | -> {{2}} {{3}}` */
+    /** `where {{0*,}}` */
     private val sharedCodeFormattingTemplate15 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("where", OutputTokenType.Word),
+                CodeFormattingTemplate.GroupSubstitution(
+                    0,
+                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
+                ),
+            ),
+        )
+
+    /** `{{0}} | {{1*,}} | -> {{2}} {{3}}` */
+    private val sharedCodeFormattingTemplate16 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4026,7 +4108,7 @@ object Rust {
         )
 
     /** `{{0}} | {{1*,}} | {{3}}` */
-    private val sharedCodeFormattingTemplate16 =
+    private val sharedCodeFormattingTemplate17 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4041,7 +4123,7 @@ object Rust {
         )
 
     /** `| {{1*,}} | -> {{2}} {{3}}` */
-    private val sharedCodeFormattingTemplate17 =
+    private val sharedCodeFormattingTemplate18 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("|", OutputTokenType.Punctuation),
@@ -4057,7 +4139,7 @@ object Rust {
         )
 
     /** `| {{1*,}} | {{3}}` */
-    private val sharedCodeFormattingTemplate18 =
+    private val sharedCodeFormattingTemplate19 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("|", OutputTokenType.Punctuation),
@@ -4071,11 +4153,11 @@ object Rust {
         )
 
     /** `move` */
-    private val sharedCodeFormattingTemplate19 =
+    private val sharedCodeFormattingTemplate20 =
         CodeFormattingTemplate.LiteralToken("move", OutputTokenType.Word)
 
     /** `continue ' {{0}}` */
-    private val sharedCodeFormattingTemplate20 =
+    private val sharedCodeFormattingTemplate21 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("continue", OutputTokenType.Word),
@@ -4085,18 +4167,39 @@ object Rust {
         )
 
     /** `continue` */
-    private val sharedCodeFormattingTemplate21 =
+    private val sharedCodeFormattingTemplate22 =
         CodeFormattingTemplate.LiteralToken("continue", OutputTokenType.Word)
 
-    /** `enum {{0}} \{ {{1*,}} \}` */
-    private val sharedCodeFormattingTemplate22 =
+    /** `enum {{0}} < {{1*,}} > \{ {{2*,}} \}` */
+    private val sharedCodeFormattingTemplate23 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("enum", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken("\u003c", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.GroupSubstitution(
+                    1,
+                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
+                ),
+                CodeFormattingTemplate.LiteralToken("\u003e", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.GroupSubstitution(
+                    2,
+                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
+                ),
+                CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `enum {{0}} \{ {{2*,}} \}` */
+    private val sharedCodeFormattingTemplate24 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("enum", OutputTokenType.Word),
                 CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
-                    1,
+                    2,
                     CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
                 ),
                 CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
@@ -4104,7 +4207,7 @@ object Rust {
         )
 
     /** `{{0}} \{ {{1*,}} \}` */
-    private val sharedCodeFormattingTemplate23 =
+    private val sharedCodeFormattingTemplate25 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4117,8 +4220,22 @@ object Rust {
             ),
         )
 
+    /** `{{0}} ( {{1*,}} )` */
+    private val sharedCodeFormattingTemplate26 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.GroupSubstitution(
+                    1,
+                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
+                ),
+                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+            ),
+        )
+
     /** `{{0*}} {{1}} {{2}} : {{3}}` */
-    private val sharedCodeFormattingTemplate24 =
+    private val sharedCodeFormattingTemplate27 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -4133,7 +4250,7 @@ object Rust {
         )
 
     /** `{{0*}} {{2}} : {{3}}` */
-    private val sharedCodeFormattingTemplate25 =
+    private val sharedCodeFormattingTemplate28 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -4147,14 +4264,14 @@ object Rust {
         )
 
     /** `{{0*}}` */
-    private val sharedCodeFormattingTemplate26 =
+    private val sharedCodeFormattingTemplate29 =
         CodeFormattingTemplate.GroupSubstitution(
             0,
             CodeFormattingTemplate.empty,
         )
 
     /** `if {{0}} {{1}} else {{2}}` */
-    private val sharedCodeFormattingTemplate27 =
+    private val sharedCodeFormattingTemplate30 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("if", OutputTokenType.Word),
@@ -4166,7 +4283,7 @@ object Rust {
         )
 
     /** `if {{0}} {{1}}` */
-    private val sharedCodeFormattingTemplate28 =
+    private val sharedCodeFormattingTemplate31 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("if", OutputTokenType.Word),
@@ -4176,7 +4293,7 @@ object Rust {
         )
 
     /** `' {{0}} : {{1}}` */
-    private val sharedCodeFormattingTemplate29 =
+    private val sharedCodeFormattingTemplate32 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("'", OutputTokenType.Punctuation),
@@ -4187,7 +4304,7 @@ object Rust {
         )
 
     /** `loop {{0}}` */
-    private val sharedCodeFormattingTemplate30 =
+    private val sharedCodeFormattingTemplate33 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("loop", OutputTokenType.Word),
@@ -4196,7 +4313,7 @@ object Rust {
         )
 
     /** `match {{0}} \{ {{1*, \n}} \}` */
-    private val sharedCodeFormattingTemplate31 =
+    private val sharedCodeFormattingTemplate34 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("match", OutputTokenType.Word),
@@ -4216,7 +4333,7 @@ object Rust {
         )
 
     /** `while {{0}} {{1}}` */
-    private val sharedCodeFormattingTemplate32 =
+    private val sharedCodeFormattingTemplate35 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("while", OutputTokenType.Word),
@@ -4226,7 +4343,7 @@ object Rust {
         )
 
     /** `{{0}} [ {{1}} ]` */
-    private val sharedCodeFormattingTemplate33 =
+    private val sharedCodeFormattingTemplate36 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4237,7 +4354,7 @@ object Rust {
         )
 
     /** `{{0}} {{1}}` */
-    private val sharedCodeFormattingTemplate34 =
+    private val sharedCodeFormattingTemplate37 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4246,7 +4363,7 @@ object Rust {
         )
 
     /** `{{0}} {{1}} {{2}}` */
-    private val sharedCodeFormattingTemplate35 =
+    private val sharedCodeFormattingTemplate38 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4256,7 +4373,7 @@ object Rust {
         )
 
     /** `{{1}} {{2}}` */
-    private val sharedCodeFormattingTemplate36 =
+    private val sharedCodeFormattingTemplate39 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(1),
@@ -4265,11 +4382,11 @@ object Rust {
         )
 
     /** `{{1}}` */
-    private val sharedCodeFormattingTemplate37 =
+    private val sharedCodeFormattingTemplate40 =
         CodeFormattingTemplate.OneSubstitution(1)
 
     /** `return {{0}}` */
-    private val sharedCodeFormattingTemplate38 =
+    private val sharedCodeFormattingTemplate41 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("return", OutputTokenType.Word),
@@ -4278,11 +4395,11 @@ object Rust {
         )
 
     /** `return` */
-    private val sharedCodeFormattingTemplate39 =
+    private val sharedCodeFormattingTemplate42 =
         CodeFormattingTemplate.LiteralToken("return", OutputTokenType.Word)
 
     /** `( {{0*,}} )` */
-    private val sharedCodeFormattingTemplate40 =
+    private val sharedCodeFormattingTemplate43 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
@@ -4295,7 +4412,7 @@ object Rust {
         )
 
     /** `{{0}} ;` */
-    private val sharedCodeFormattingTemplate41 =
+    private val sharedCodeFormattingTemplate44 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4304,7 +4421,7 @@ object Rust {
         )
 
     /** `fn {{0}} < {{1*,}} > ( {{2*,}} ) -> {{3}} where {{4*,}} {{5}}` */
-    private val sharedCodeFormattingTemplate42 =
+    private val sharedCodeFormattingTemplate45 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
@@ -4333,7 +4450,7 @@ object Rust {
         )
 
     /** `fn {{0}} < {{1*,}} > ( {{2*,}} ) -> {{3}} where {{4*,}} ;` */
-    private val sharedCodeFormattingTemplate43 =
+    private val sharedCodeFormattingTemplate46 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
@@ -4362,7 +4479,7 @@ object Rust {
         )
 
     /** `fn {{0}} < {{1*,}} > ( {{2*,}} ) -> {{3}} {{5}}` */
-    private val sharedCodeFormattingTemplate44 =
+    private val sharedCodeFormattingTemplate47 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
@@ -4386,7 +4503,7 @@ object Rust {
         )
 
     /** `fn {{0}} < {{1*,}} > ( {{2*,}} ) -> {{3}} ;` */
-    private val sharedCodeFormattingTemplate45 =
+    private val sharedCodeFormattingTemplate48 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
@@ -4410,7 +4527,7 @@ object Rust {
         )
 
     /** `fn {{0}} < {{1*,}} > ( {{2*,}} ) where {{4*,}} {{5}}` */
-    private val sharedCodeFormattingTemplate46 =
+    private val sharedCodeFormattingTemplate49 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
@@ -4437,7 +4554,7 @@ object Rust {
         )
 
     /** `fn {{0}} < {{1*,}} > ( {{2*,}} ) where {{4*,}} ;` */
-    private val sharedCodeFormattingTemplate47 =
+    private val sharedCodeFormattingTemplate50 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
@@ -4464,7 +4581,7 @@ object Rust {
         )
 
     /** `fn {{0}} < {{1*,}} > ( {{2*,}} ) {{5}}` */
-    private val sharedCodeFormattingTemplate48 =
+    private val sharedCodeFormattingTemplate51 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
@@ -4486,7 +4603,7 @@ object Rust {
         )
 
     /** `fn {{0}} < {{1*,}} > ( {{2*,}} ) ;` */
-    private val sharedCodeFormattingTemplate49 =
+    private val sharedCodeFormattingTemplate52 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
@@ -4508,7 +4625,7 @@ object Rust {
         )
 
     /** `fn {{0}} ( {{2*,}} ) -> {{3}} where {{4*,}} {{5}}` */
-    private val sharedCodeFormattingTemplate50 =
+    private val sharedCodeFormattingTemplate53 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
@@ -4531,7 +4648,7 @@ object Rust {
         )
 
     /** `fn {{0}} ( {{2*,}} ) -> {{3}} where {{4*,}} ;` */
-    private val sharedCodeFormattingTemplate51 =
+    private val sharedCodeFormattingTemplate54 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
@@ -4554,7 +4671,7 @@ object Rust {
         )
 
     /** `fn {{0}} ( {{2*,}} ) -> {{3}} {{5}}` */
-    private val sharedCodeFormattingTemplate52 =
+    private val sharedCodeFormattingTemplate55 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
@@ -4572,7 +4689,7 @@ object Rust {
         )
 
     /** `fn {{0}} ( {{2*,}} ) -> {{3}} ;` */
-    private val sharedCodeFormattingTemplate53 =
+    private val sharedCodeFormattingTemplate56 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
@@ -4590,7 +4707,7 @@ object Rust {
         )
 
     /** `fn {{0}} ( {{2*,}} ) where {{4*,}} {{5}}` */
-    private val sharedCodeFormattingTemplate54 =
+    private val sharedCodeFormattingTemplate57 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
@@ -4611,7 +4728,7 @@ object Rust {
         )
 
     /** `fn {{0}} ( {{2*,}} ) where {{4*,}} ;` */
-    private val sharedCodeFormattingTemplate55 =
+    private val sharedCodeFormattingTemplate58 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
@@ -4632,7 +4749,7 @@ object Rust {
         )
 
     /** `fn {{0}} ( {{2*,}} ) {{5}}` */
-    private val sharedCodeFormattingTemplate56 =
+    private val sharedCodeFormattingTemplate59 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
@@ -4648,7 +4765,7 @@ object Rust {
         )
 
     /** `fn {{0}} ( {{2*,}} ) ;` */
-    private val sharedCodeFormattingTemplate57 =
+    private val sharedCodeFormattingTemplate60 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
@@ -4664,7 +4781,7 @@ object Rust {
         )
 
     /** `{{0}} : {{1}}` */
-    private val sharedCodeFormattingTemplate58 =
+    private val sharedCodeFormattingTemplate61 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4674,11 +4791,11 @@ object Rust {
         )
 
     /** `{{0}}` */
-    private val sharedCodeFormattingTemplate59 =
+    private val sharedCodeFormattingTemplate62 =
         CodeFormattingTemplate.OneSubstitution(0)
 
     /** `& {{0}}` */
-    private val sharedCodeFormattingTemplate60 =
+    private val sharedCodeFormattingTemplate63 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("\u0026", OutputTokenType.Punctuation),
@@ -4687,7 +4804,7 @@ object Rust {
         )
 
     /** `Fn ( {{0*,}} )` */
-    private val sharedCodeFormattingTemplate61 =
+    private val sharedCodeFormattingTemplate64 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("Fn", OutputTokenType.Word),
@@ -4701,7 +4818,7 @@ object Rust {
         )
 
     /** `Fn ( {{0*,}} ) -> {{1}}` */
-    private val sharedCodeFormattingTemplate62 =
+    private val sharedCodeFormattingTemplate65 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("Fn", OutputTokenType.Word),
@@ -4717,7 +4834,7 @@ object Rust {
         )
 
     /** `< {{0*,}} >` */
-    private val sharedCodeFormattingTemplate63 =
+    private val sharedCodeFormattingTemplate66 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("\u003c", OutputTokenType.Punctuation, TokenAssociation.Bracket),
@@ -4730,7 +4847,7 @@ object Rust {
         )
 
     /** `{{0}} : {{1*+}} = {{2}}` */
-    private val sharedCodeFormattingTemplate64 =
+    private val sharedCodeFormattingTemplate67 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4745,7 +4862,7 @@ object Rust {
         )
 
     /** `{{0}} : {{1*+}}` */
-    private val sharedCodeFormattingTemplate65 =
+    private val sharedCodeFormattingTemplate68 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4758,7 +4875,7 @@ object Rust {
         )
 
     /** `{{0}} = {{2}}` */
-    private val sharedCodeFormattingTemplate66 =
+    private val sharedCodeFormattingTemplate69 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4768,7 +4885,7 @@ object Rust {
         )
 
     /** `{{0}} < {{1*,}} >` */
-    private val sharedCodeFormattingTemplate67 =
+    private val sharedCodeFormattingTemplate70 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4782,11 +4899,11 @@ object Rust {
         )
 
     /** `mut` */
-    private val sharedCodeFormattingTemplate68 =
+    private val sharedCodeFormattingTemplate71 =
         CodeFormattingTemplate.LiteralToken("mut", OutputTokenType.Word)
 
     /** `impl < {{0*,}} > {{1}} for {{2}} where {{3*,}} \{ {{4*}} {{5*\n}} \}` */
-    private val sharedCodeFormattingTemplate69 =
+    private val sharedCodeFormattingTemplate72 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("impl", OutputTokenType.Word),
@@ -4818,7 +4935,7 @@ object Rust {
         )
 
     /** `impl < {{0*,}} > {{1}} for {{2}} \{ {{4*}} {{5*\n}} \}` */
-    private val sharedCodeFormattingTemplate70 =
+    private val sharedCodeFormattingTemplate73 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("impl", OutputTokenType.Word),
@@ -4845,7 +4962,7 @@ object Rust {
         )
 
     /** `impl < {{0*,}} > {{2}} where {{3*,}} \{ {{4*}} {{5*\n}} \}` */
-    private val sharedCodeFormattingTemplate71 =
+    private val sharedCodeFormattingTemplate74 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("impl", OutputTokenType.Word),
@@ -4875,7 +4992,7 @@ object Rust {
         )
 
     /** `impl < {{0*,}} > {{2}} \{ {{4*}} {{5*\n}} \}` */
-    private val sharedCodeFormattingTemplate72 =
+    private val sharedCodeFormattingTemplate75 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("impl", OutputTokenType.Word),
@@ -4900,7 +5017,7 @@ object Rust {
         )
 
     /** `impl {{1}} for {{2}} where {{3*,}} \{ {{4*}} {{5*\n}} \}` */
-    private val sharedCodeFormattingTemplate73 =
+    private val sharedCodeFormattingTemplate76 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("impl", OutputTokenType.Word),
@@ -4926,7 +5043,7 @@ object Rust {
         )
 
     /** `impl {{1}} for {{2}} \{ {{4*}} {{5*\n}} \}` */
-    private val sharedCodeFormattingTemplate74 =
+    private val sharedCodeFormattingTemplate77 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("impl", OutputTokenType.Word),
@@ -4947,7 +5064,7 @@ object Rust {
         )
 
     /** `impl {{2}} where {{3*,}} \{ {{4*}} {{5*\n}} \}` */
-    private val sharedCodeFormattingTemplate75 =
+    private val sharedCodeFormattingTemplate78 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("impl", OutputTokenType.Word),
@@ -4971,7 +5088,7 @@ object Rust {
         )
 
     /** `impl {{2}} \{ {{4*}} {{5*\n}} \}` */
-    private val sharedCodeFormattingTemplate76 =
+    private val sharedCodeFormattingTemplate79 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("impl", OutputTokenType.Word),
@@ -4990,7 +5107,7 @@ object Rust {
         )
 
     /** `impl {{0*+}}` */
-    private val sharedCodeFormattingTemplate77 =
+    private val sharedCodeFormattingTemplate80 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("impl", OutputTokenType.Word),
@@ -5002,11 +5119,11 @@ object Rust {
         )
 
     /** `impl` */
-    private val sharedCodeFormattingTemplate78 =
+    private val sharedCodeFormattingTemplate81 =
         CodeFormattingTemplate.LiteralToken("impl", OutputTokenType.Word)
 
     /** `pub ( {{0}} )` */
-    private val sharedCodeFormattingTemplate79 =
+    private val sharedCodeFormattingTemplate82 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("pub", OutputTokenType.Word),
@@ -5017,11 +5134,11 @@ object Rust {
         )
 
     /** `pub` */
-    private val sharedCodeFormattingTemplate80 =
+    private val sharedCodeFormattingTemplate83 =
         CodeFormattingTemplate.LiteralToken("pub", OutputTokenType.Word)
 
     /** `{{0}} mod {{1}} {{2}}` */
-    private val sharedCodeFormattingTemplate81 =
+    private val sharedCodeFormattingTemplate84 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -5032,7 +5149,7 @@ object Rust {
         )
 
     /** `{{0}} mod {{1}} ;` */
-    private val sharedCodeFormattingTemplate82 =
+    private val sharedCodeFormattingTemplate85 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -5043,7 +5160,7 @@ object Rust {
         )
 
     /** `mod {{1}} {{2}}` */
-    private val sharedCodeFormattingTemplate83 =
+    private val sharedCodeFormattingTemplate86 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("mod", OutputTokenType.Word),
@@ -5053,7 +5170,7 @@ object Rust {
         )
 
     /** `mod {{1}} ;` */
-    private val sharedCodeFormattingTemplate84 =
+    private val sharedCodeFormattingTemplate87 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("mod", OutputTokenType.Word),
@@ -5063,7 +5180,7 @@ object Rust {
         )
 
     /** `static {{0}} : {{1}} = {{2}} ;` */
-    private val sharedCodeFormattingTemplate85 =
+    private val sharedCodeFormattingTemplate88 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("static", OutputTokenType.Word),
@@ -5077,7 +5194,7 @@ object Rust {
         )
 
     /** `static {{0}} : {{1}} ;` */
-    private val sharedCodeFormattingTemplate86 =
+    private val sharedCodeFormattingTemplate89 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("static", OutputTokenType.Word),
@@ -5089,7 +5206,7 @@ object Rust {
         )
 
     /** `struct {{0}} < {{1*,}} > where {{2*,}} \{ {{3*,}} \}` */
-    private val sharedCodeFormattingTemplate87 =
+    private val sharedCodeFormattingTemplate90 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("struct", OutputTokenType.Word),
@@ -5115,7 +5232,7 @@ object Rust {
         )
 
     /** `struct {{0}} < {{1*,}} > \{ {{3*,}} \}` */
-    private val sharedCodeFormattingTemplate88 =
+    private val sharedCodeFormattingTemplate91 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("struct", OutputTokenType.Word),
@@ -5136,7 +5253,7 @@ object Rust {
         )
 
     /** `struct {{0}} where {{2*,}} \{ {{3*,}} \}` */
-    private val sharedCodeFormattingTemplate89 =
+    private val sharedCodeFormattingTemplate92 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("struct", OutputTokenType.Word),
@@ -5156,7 +5273,7 @@ object Rust {
         )
 
     /** `struct {{0}} \{ {{3*,}} \}` */
-    private val sharedCodeFormattingTemplate90 =
+    private val sharedCodeFormattingTemplate93 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("struct", OutputTokenType.Word),
@@ -5171,7 +5288,7 @@ object Rust {
         )
 
     /** `trait {{0}} < {{1*,}} > : {{2*+}} where {{3*,}} \{ {{4*}} {{5*\n}} \}` */
-    private val sharedCodeFormattingTemplate91 =
+    private val sharedCodeFormattingTemplate94 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("trait", OutputTokenType.Word),
@@ -5206,7 +5323,7 @@ object Rust {
         )
 
     /** `trait {{0}} < {{1*,}} > : {{2*+}} \{ {{4*}} {{5*\n}} \}` */
-    private val sharedCodeFormattingTemplate92 =
+    private val sharedCodeFormattingTemplate95 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("trait", OutputTokenType.Word),
@@ -5236,7 +5353,7 @@ object Rust {
         )
 
     /** `trait {{0}} < {{1*,}} > where {{3*,}} \{ {{4*}} {{5*\n}} \}` */
-    private val sharedCodeFormattingTemplate93 =
+    private val sharedCodeFormattingTemplate96 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("trait", OutputTokenType.Word),
@@ -5266,7 +5383,7 @@ object Rust {
         )
 
     /** `trait {{0}} < {{1*,}} > \{ {{4*}} {{5*\n}} \}` */
-    private val sharedCodeFormattingTemplate94 =
+    private val sharedCodeFormattingTemplate97 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("trait", OutputTokenType.Word),
@@ -5291,7 +5408,7 @@ object Rust {
         )
 
     /** `trait {{0}} : {{2*+}} where {{3*,}} \{ {{4*}} {{5*\n}} \}` */
-    private val sharedCodeFormattingTemplate95 =
+    private val sharedCodeFormattingTemplate98 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("trait", OutputTokenType.Word),
@@ -5320,7 +5437,7 @@ object Rust {
         )
 
     /** `trait {{0}} : {{2*+}} \{ {{4*}} {{5*\n}} \}` */
-    private val sharedCodeFormattingTemplate96 =
+    private val sharedCodeFormattingTemplate99 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("trait", OutputTokenType.Word),
@@ -5344,7 +5461,7 @@ object Rust {
         )
 
     /** `trait {{0}} where {{3*,}} \{ {{4*}} {{5*\n}} \}` */
-    private val sharedCodeFormattingTemplate97 =
+    private val sharedCodeFormattingTemplate100 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("trait", OutputTokenType.Word),
@@ -5368,7 +5485,7 @@ object Rust {
         )
 
     /** `trait {{0}} \{ {{4*}} {{5*\n}} \}` */
-    private val sharedCodeFormattingTemplate98 =
+    private val sharedCodeFormattingTemplate101 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("trait", OutputTokenType.Word),
@@ -5387,7 +5504,7 @@ object Rust {
         )
 
     /** `struct {{0}} < {{1*,}} > ( {{2*,}} ) where {{3*,}} ;` */
-    private val sharedCodeFormattingTemplate99 =
+    private val sharedCodeFormattingTemplate102 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("struct", OutputTokenType.Word),
@@ -5414,7 +5531,7 @@ object Rust {
         )
 
     /** `struct {{0}} < {{1*,}} > ( {{2*,}} ) ;` */
-    private val sharedCodeFormattingTemplate100 =
+    private val sharedCodeFormattingTemplate103 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("struct", OutputTokenType.Word),
@@ -5436,7 +5553,7 @@ object Rust {
         )
 
     /** `struct {{0}} ( {{2*,}} ) where {{3*,}} ;` */
-    private val sharedCodeFormattingTemplate101 =
+    private val sharedCodeFormattingTemplate104 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("struct", OutputTokenType.Word),
@@ -5457,7 +5574,7 @@ object Rust {
         )
 
     /** `struct {{0}} ( {{2*,}} ) ;` */
-    private val sharedCodeFormattingTemplate102 =
+    private val sharedCodeFormattingTemplate105 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("struct", OutputTokenType.Word),
@@ -5473,7 +5590,7 @@ object Rust {
         )
 
     /** `type {{0}} < {{1*,}} > = {{2}} ;` */
-    private val sharedCodeFormattingTemplate103 =
+    private val sharedCodeFormattingTemplate106 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("type", OutputTokenType.Word),
@@ -5491,7 +5608,7 @@ object Rust {
         )
 
     /** `type {{0}} = {{2}} ;` */
-    private val sharedCodeFormattingTemplate104 =
+    private val sharedCodeFormattingTemplate107 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("type", OutputTokenType.Word),
@@ -5503,7 +5620,7 @@ object Rust {
         )
 
     /** `use {{0}} ;` */
-    private val sharedCodeFormattingTemplate105 =
+    private val sharedCodeFormattingTemplate108 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("use", OutputTokenType.Word),
@@ -5513,7 +5630,7 @@ object Rust {
         )
 
     /** `{{0*}} let {{1}} : {{2}} = {{3}} ;` */
-    private val sharedCodeFormattingTemplate106 =
+    private val sharedCodeFormattingTemplate109 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -5531,7 +5648,7 @@ object Rust {
         )
 
     /** `{{0*}} let {{1}} : {{2}} ;` */
-    private val sharedCodeFormattingTemplate107 =
+    private val sharedCodeFormattingTemplate110 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -5547,7 +5664,7 @@ object Rust {
         )
 
     /** `{{0*}} let {{1}} = {{3}} ;` */
-    private val sharedCodeFormattingTemplate108 =
+    private val sharedCodeFormattingTemplate111 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -5563,7 +5680,7 @@ object Rust {
         )
 
     /** `{{0*}} let {{1}} ;` */
-    private val sharedCodeFormattingTemplate109 =
+    private val sharedCodeFormattingTemplate112 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -5577,7 +5694,7 @@ object Rust {
         )
 
     /** `{{0}} => {{1}}` */
-    private val sharedCodeFormattingTemplate110 =
+    private val sharedCodeFormattingTemplate113 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -5587,29 +5704,29 @@ object Rust {
         )
 
     /** `{{0*::}}` */
-    private val sharedCodeFormattingTemplate111 =
+    private val sharedCodeFormattingTemplate114 =
         CodeFormattingTemplate.GroupSubstitution(
             0,
             CodeFormattingTemplate.LiteralToken("::", OutputTokenType.Punctuation),
         )
 
     /** `..` */
-    private val sharedCodeFormattingTemplate112 =
+    private val sharedCodeFormattingTemplate115 =
         CodeFormattingTemplate.LiteralToken("..", OutputTokenType.Punctuation)
 
     /** `{{0*|}}` */
-    private val sharedCodeFormattingTemplate113 =
+    private val sharedCodeFormattingTemplate116 =
         CodeFormattingTemplate.GroupSubstitution(
             0,
             CodeFormattingTemplate.LiteralToken("|", OutputTokenType.Punctuation),
         )
 
     /** `;` */
-    private val sharedCodeFormattingTemplate114 =
+    private val sharedCodeFormattingTemplate117 =
         CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation)
 
     /** `.. {{0}}` */
-    private val sharedCodeFormattingTemplate115 =
+    private val sharedCodeFormattingTemplate118 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("..", OutputTokenType.Punctuation),
@@ -5618,7 +5735,7 @@ object Rust {
         )
 
     /** `dyn {{0*+}}` */
-    private val sharedCodeFormattingTemplate116 =
+    private val sharedCodeFormattingTemplate119 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("dyn", OutputTokenType.Word),
@@ -5630,22 +5747,22 @@ object Rust {
         )
 
     /** `dyn` */
-    private val sharedCodeFormattingTemplate117 =
+    private val sharedCodeFormattingTemplate120 =
         CodeFormattingTemplate.LiteralToken("dyn", OutputTokenType.Word)
 
     /** `crate` */
-    private val sharedCodeFormattingTemplate118 =
+    private val sharedCodeFormattingTemplate121 =
         CodeFormattingTemplate.LiteralToken("crate", OutputTokenType.Word)
 
     /** `self` */
-    private val sharedCodeFormattingTemplate119 =
+    private val sharedCodeFormattingTemplate122 =
         CodeFormattingTemplate.LiteralToken("self", OutputTokenType.Word)
 
     /** `super` */
-    private val sharedCodeFormattingTemplate120 =
+    private val sharedCodeFormattingTemplate123 =
         CodeFormattingTemplate.LiteralToken("super", OutputTokenType.Word)
 
     /** `` */
-    private val sharedCodeFormattingTemplate121 =
+    private val sharedCodeFormattingTemplate124 =
         CodeFormattingTemplate.empty
 }

@@ -14,9 +14,7 @@ import lang.temper.name.TemperName
 import lang.temper.value.BlockTree
 import lang.temper.value.DeclTree
 import lang.temper.value.RightNameLeaf
-import lang.temper.value.TString
 import lang.temper.value.TVoid
-import lang.temper.value.Value
 import lang.temper.value.importedSymbol
 import lang.temper.value.newBuiltinName
 import lang.temper.value.testSymbol
@@ -26,6 +24,7 @@ import lang.temper.value.vInitSymbol
 import lang.temper.value.vSsaSymbol
 import lang.temper.value.vStaySymbol
 import lang.temper.value.valueContained
+import lang.temper.value.void
 
 internal fun addTemperTestInstructionsTo(
     module: Module,
@@ -76,7 +75,7 @@ internal fun addTemperTestInstructionsTo(
             Decl {
                 Ln { nameMaker ->
                     localRunTestCasesName = nameMaker.unusedSourceName(runTestCasesParsedName)
-                    localRunTestCasesName!!
+                    localRunTestCasesName
                 }
                 V(vInitSymbol)
                 Rn(runTestCasesExportedName)
@@ -85,9 +84,9 @@ internal fun addTemperTestInstructionsTo(
                 V(vImportedSymbol)
                 Esc { Rn(runTestCasesExportedName) }
                 V(vConnectedSymbol)
-                V(runTestCasesConnectedValue)
+                V(void)
                 V(vSsaSymbol)
-                V(TVoid.value)
+                V(void)
             }
         }
     }
@@ -128,7 +127,6 @@ internal fun addTemperTestInstructionsTo(
 
 private val pairBuiltinName = BuiltinName("Pair")
 private val runTestCasesParsedName = ParsedName("runTestCases")
-private val runTestCasesConnectedValue = Value("::${runTestCasesParsedName.nameText}", TString)
 private val testClassParsedName = ParsedName("Test")
 
 // Public on purpose.

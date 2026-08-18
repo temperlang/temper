@@ -14,6 +14,7 @@ import lang.temper.log.FilePath
 import lang.temper.log.FilePathSegment
 import lang.temper.log.dirPath
 import lang.temper.name.DashedIdentifier
+import lang.temper.stage.Stage
 import kotlin.test.DefaultAsserter.assertTrue
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -712,7 +713,7 @@ private class SourceFilePartitionTestHarness {
         sourceFilePartition.scan(snapshot, workRootDir)
         sourceFilePartition.addModulesToAdvancer()
 
-        moduleAdvancer.advanceModules()
+        moduleAdvancer.advanceModules(stopBefore = Stage.Run)
         assertStructure(
             jsonPartition,
             projectLogSink.wrapErrorsAround(

@@ -1,0 +1,5 @@
+var one = 1;
+if (falseOpaquePredicate) {
+    one = 0;
+}
+one + one

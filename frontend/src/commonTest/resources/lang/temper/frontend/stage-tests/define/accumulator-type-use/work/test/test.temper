@@ -1,0 +1,15 @@
+let { theCount } = import("./the-count");
+
+theCount"""
+  "Zero: ${0}
+  // ↑ Starting at zero, because the Count is not a monster.
+  "One: ${1}
+  : for (let n of [2, 3, 4]) {
+    ~ ${n}
+  : }
+  "!
+  ~Five: ${5}
+  ;
+
+theCount"${6}, ${7}"
+

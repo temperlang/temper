@@ -31,8 +31,10 @@ import lang.temper.name.TemperName
 import lang.temper.stage.Stage
 import lang.temper.type.Abstractness
 import lang.temper.type.DotHelper
+import lang.temper.type.DotMember
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
+import lang.temper.type.NameExtensionResolution
 import lang.temper.type.NominalType
 import lang.temper.type.StaticType
 import lang.temper.type.TypeShape
@@ -114,7 +116,7 @@ internal fun mixinJsonInterop(
     fun lookupStdJsonExport(nameText: String): TypeShape? {
         val baseName = ParsedName(nameText)
         val e = stdJsonModule.exports?.firstOrNull { it.name.baseName == baseName }
-        val ts = (TType.unpackOrNull(e?.value)?.type2 as? DefinedNonNullType)
+        val ts = (TType.unpackOrNull(e?.valueFromStaging)?.type2 as? DefinedNonNullType)
             ?.definition
         if (ts == null) {
             logSink.log(
@@ -226,7 +228,7 @@ private fun findJsonDecoratedTypeDecls(
     return buildList {
         for (typeShape in nameToTypeShape.values) {
             val jsonDecoration = typeShape.metadata.getEdges(jsonSymbol).firstOrNull()
-            fun methodPresenceOf(dotName: Symbol): JsonInteropDetails.MethodPresence {
+            fun methodPresenceOf(dotName: DotMember): JsonInteropDetails.MethodPresence {
                 val method = typeShape.membersMatching(dotName).firstOrNull {
                     // TODO: look for extension methods in scope
                     it is MethodShape && it.methodKind == MethodKind.Normal &&
@@ -347,7 +349,7 @@ private fun findJsonDecoratedTypeDecls(
             }
             val fromJsonPresence = if (
                 typeShape.staticProperties.any {
-                    it.symbol == decodeFromJsonDotName && it.visibility == Visibility.Public
+                    it.symbol == decodeFromJsonDotName.dotName && it.visibility == Visibility.Public
                 }
             ) {
                 JsonInteropDetails.MethodPresence.Present
@@ -397,7 +399,6 @@ private fun stageGeneratedCodeAndFoldIntoModule(
         loc = module.loc,
         console = module.console,
         continueCondition = module.continueCondition,
-        mayRun = false,
         sharedLocationContext = module.sharedLocationContext,
         genre = Genre.Library,
         allowDuplicateLogPositions = module.allowDuplicateLogPositions,
@@ -508,8 +509,8 @@ private fun stageGeneratedCodeAndFoldIntoModule(
                     val v = t.content
                     when (v.typeTag) {
                         TFunction -> (TFunction.unpack(v) as? DotHelper)?.let { dotHelper ->
-                            dotHelper.extensions.mapTo(atl.namesUsed) {
-                                it.resolution
+                            dotHelper.extensions.mapNotNullTo(atl.namesUsed) {
+                                (it as? NameExtensionResolution)?.resolution
                             }
                         }
                         TType -> TType.unpack(v).let { reifiedType ->
@@ -626,7 +627,7 @@ private fun stageGeneratedCodeAndFoldIntoModule(
         }
     }
 
-    // Incorporate needed supported declarations
+    // Incorporate necessary supported declarations
     while (true) {
         var insertionPointForDecl = 0
         val nUnincorporatedBefore = unincorporated.size

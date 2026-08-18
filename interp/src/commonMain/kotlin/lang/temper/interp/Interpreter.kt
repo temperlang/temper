@@ -62,9 +62,11 @@ import lang.temper.value.ActualValues
 import lang.temper.value.Actuals
 import lang.temper.value.AwaitMacroEnvironment
 import lang.temper.value.BINARY_OP_CALL_ARG_COUNT
+import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
+import lang.temper.value.CallTypeInferences
 import lang.temper.value.CallableValue
 import lang.temper.value.ControlFlow
 import lang.temper.value.CoverFunction
@@ -94,6 +96,7 @@ import lang.temper.value.Panic
 import lang.temper.value.PartialResult
 import lang.temper.value.Planting
 import lang.temper.value.PostPass
+import lang.temper.value.PreserveFn
 import lang.temper.value.Promises
 import lang.temper.value.ReifiedType
 import lang.temper.value.Resolutions
@@ -124,7 +127,7 @@ import lang.temper.value.functionContained
 import lang.temper.value.impliedThisSymbol
 import lang.temper.value.infoOr
 import lang.temper.value.initSymbol
-import lang.temper.value.isImplicits
+import lang.temper.value.isCore
 import lang.temper.value.labelSymbol
 import lang.temper.value.matches
 import lang.temper.value.optionalAsTriState
@@ -137,7 +140,9 @@ import lang.temper.value.stability
 import lang.temper.value.superSymbol
 import lang.temper.value.symbolContained
 import lang.temper.value.toLispy
+import lang.temper.value.toPseudoCode
 import lang.temper.value.typeFormalSymbol
+import lang.temper.value.typeFromSignature
 import lang.temper.value.typeSymbol
 import lang.temper.value.unholeBuiltinName
 import lang.temper.value.unify
@@ -151,7 +156,7 @@ import lang.temper.value.warnAboutUnresolved
 import lang.temper.value.wordSymbol
 import lang.temper.value.wrappedGeneratorFnSymbol
 
-private const val SPAMMY_INCLUDES_IMPLICITS = false
+private const val SPAMMY_INCLUDES_CORE = false
 private const val SPAMMY_DISPATCH = false
 private const val SPAMMY = false
 
@@ -177,11 +182,16 @@ class Interpreter(
 
     private var stepCount = 0
     private var goingOutOfStyle = stage == Stage.Run
-    private val isProcessingImplicits = nameMaker.namingContext.isImplicits
+    private val isProcessingCore = nameMaker.namingContext.isCore
+
+    /** Helps centralize tracking access to connecteds. */
+    fun connection(qname: String?): ((Signature2) -> Value<*>)? {
+        return connecteds[qname]
+    }
 
     @Suppress("SimplifyBooleanWithConstants")
     private fun beSpammy(spammy: Boolean) =
-        spammy && (SPAMMY_INCLUDES_IMPLICITS || !isProcessingImplicits)
+        spammy && (SPAMMY_INCLUDES_CORE || !isProcessingCore)
 
     fun interpret(ast: Tree, env: Environment, interpMode: InterpMode): PartialResult =
         interpretTree(ast, env, interpMode)
@@ -290,7 +300,7 @@ class Interpreter(
     ): PartialResult = interpretTree(ast, env, interpMode, mayWrapEnvironment = mayWrapEnvironment)
 
     /**
-     * All recursive interpret calls MUST happen via this method so that we can keep breadcrumbs
+     * All recursive `interpret` calls MUST happen via this method so that we can keep breadcrumbs
      * and step counters up to date.
      */
     internal fun interpretEdge(
@@ -437,7 +447,7 @@ class Interpreter(
 
         val evaluation: InProgressEvaluation
         if (im == InterpMode.Full && yieldedAt != null) {
-            check(bodyOwner is TransientUserFunction) // yieldedAt is null for other variant
+            check(bodyOwner is TransientUserFunction) // yieldedAt is `null` for the other variant
             evaluation = yieldedAt
             bodyOwner.yieldedAt = null
         } else {
@@ -495,7 +505,7 @@ class Interpreter(
         }
         val mutableEnv = evaluation.envStack.first()
 
-        // In partial evaluation mode, we visit all nodes once.
+        // In partial evaluation mode, we visit each node at least once.
         if (im == InterpMode.Partial) {
             // TODO: for complex flows, order should make sense.
             // TODO: if there is a single terminal node in a structured flow,
@@ -519,7 +529,7 @@ class Interpreter(
                         //     while (true) {}; 42             USE even though never reached.
                         // We can't determine statically if a function call or loop
                         // always/never/sometimes halts, so if we're ever to optimize anything out of
-                        // blocks we just optimistically assume that all terminal nodes are reached
+                        // blocks, we just optimistically assume that all terminal nodes are reached
                         // and that any code that is optimized using this will not run if the preceding
                         // does not halt.
                         fun lookThrough(cf: ControlFlow): Boolean = when (cf) {
@@ -931,7 +941,7 @@ class Interpreter(
         val (f, arguments) = when (val cf = TFunction.unpackOrNull(calleeValue)) {
             is CoverFunction ->
                 try {
-                    cf.uncover(actuals, cb, im)
+                    CoverFunction.uncover(actuals, cb, im, cf.covered, cf.otherwise)
                 } catch (panic: Panic) { // TODO: is this necessary?
                     ignore(panic)
                     null
@@ -1052,6 +1062,7 @@ class Interpreter(
                 }
 
                 // Try to constant fold
+                val typeToInline = ast?.typeInferences?.type
                 val valueToInline = if (shouldAttemptToInline) {
                     result as? Value<*>
                 } else {
@@ -1061,6 +1072,10 @@ class Interpreter(
                     check(edge != null) // Otherwise shouldInline is false
                     // Inline the result of a pure function.
                     val replacementsAndBreadcrumbs = mutableListOf<Pair<Tree, Stage?>>()
+                    val replacementValue = ValueLeaf(ast.document, ast.pos, valueToInline)
+                    if (typeToInline != null) {
+                        replacementValue.typeInferences = BasicTypeInferences(typeToInline, listOf())
+                    }
                     when (replacementPolicy) {
                         ReplacementPolicy.Discard -> {
                             ast.edges.forEachIndexed { index, kidEdge ->
@@ -1071,9 +1086,7 @@ class Interpreter(
                                     replacementsAndBreadcrumbs.add(freeTarget(kidEdge) to kidEdge.breadcrumb)
                                 }
                             }
-                            replacementsAndBreadcrumbs.add(
-                                ValueLeaf(ast.document, ast.pos, valueToInline) to null,
-                            )
+                            replacementsAndBreadcrumbs.add(replacementValue to null)
                         }
                         ReplacementPolicy.Preserve -> {
                             val preserveCall = ast.document.treeFarm.grow {
@@ -1083,6 +1096,15 @@ class Interpreter(
                                 }
                             }
                             preserveCall.edge(1).breadcrumb = stage
+                            if (typeToInline != null) {
+                                val sig = PreserveFn.sig
+                                preserveCall.typeInferences = CallTypeInferences(
+                                    typeToInline,
+                                    typeFromSignature(sig),
+                                    mapOf(sig.typeFormals[0] to typeToInline),
+                                    listOf(),
+                                )
+                            }
                             replacementsAndBreadcrumbs.add(preserveCall to stage)
                         }
                     }
@@ -1812,7 +1834,7 @@ class Interpreter(
             restInputsType = restType?.type2,
             typeFormals = typeFormals.toList(),
         )
-        val connected = connecteds[parts?.connected]?.let { it(signature) }
+        val connected = connection(parts?.connectedKey)?.let { it(signature) }
 
         val superTypes = SuperTypeTree(superTypeSet)
         // We use decomposeFun (I know I said above we wouldn't, but now we've expanded macros) just
@@ -2290,15 +2312,17 @@ class Interpreter(
             try {
                 val replacementMaker = callSiteReplacementMaker
                 if (replacementMaker != null) {
-                    require(call != null)
-                    val macroCallEdge = call.incoming!!
-                    val edgeToReplace: TEdge = callSiteAncestorToReplace ?: macroCallEdge
+                    require(stage != Stage.Run) // Run stage should not modify the AST
+                    val edgeToReplace: TEdge? = callSiteAncestorToReplace ?: call?.incoming
+                    require(edgeToReplace != null) {
+                        "$pos: Cannot determine edge to replace after call to ${callee.toPseudoCode()} in ${call?.toPseudoCode()}"
+                    }
                     val replacedEdgeIndex = edgeToReplace.edgeIndex
                     edgeToReplace.source!!.replace(replacedEdgeIndex..replacedEdgeIndex) {
                         this.replacementMaker()
                     }
                     // Mark the macro call as complete, for this stage, even if it's relocated.
-                    val postReplacementMacroCallEdge = call.incoming
+                    val postReplacementMacroCallEdge = call?.incoming
                     if (postReplacementMacroCallEdge != null) {
                         val bc = postReplacementMacroCallEdge.breadcrumb
                         if (bc == null || bc < stage) {
@@ -2407,6 +2431,18 @@ class Interpreter(
             postPasses!!.add(postPass)
         }
 
+        override fun addTopLevelMetadata(key: Symbol, value: Value<*>) {
+            val feature = TFunction.unpackOrNull(
+                getFeatureImplementation(InternalFeatureKeys.AddTopLevelMetadata.featureKey)
+                    as? Value<*>,
+            ) as? CallableValue
+            feature?.invoke(
+                ActualValues.from(Value(key), value),
+                this,
+                InterpMode.Full,
+            )
+        }
+
         private fun requireName(tree: Tree): TemperName? {
             return if (tree is NameLeaf) {
                 tree.content
@@ -2436,10 +2472,12 @@ class Interpreter(
             }
         }
 
-        override val isProcessingImplicits: Boolean
-            get() = document.isImplicits
+        override val isProcessingCore: Boolean
+            get() = document.isCore
 
-        override fun connection(connectedKey: String): ((Signature2) -> Value<*>)? = connecteds[connectedKey]
+        override fun connection(qname: String): ((Signature2) -> Value<*>)? {
+            return this@Interpreter.connection(qname)
+        }
 
         val ancestorReplaced: TEdge? get() = callSiteAncestorToReplace
     }

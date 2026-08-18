@@ -10,10 +10,12 @@ import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.canBeNull
 import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.isCommonlyImplied
+import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.isYieldingStatement
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapParameters
 import lang.temper.be.tmpl.orInvalid
+import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.toSigBestEffort
 import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.be.tmpl.withoutNullOrBubble
@@ -24,12 +26,13 @@ import lang.temper.lexer.Genre
 import lang.temper.lexer.withTemperAwareExtension
 import lang.temper.library.LibraryConfigurations
 import lang.temper.log.FilePath
+import lang.temper.log.FilePathSegment
 import lang.temper.log.Position
 import lang.temper.log.dirPath
 import lang.temper.log.resolveFile
 import lang.temper.name.BuiltinName
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ExportedName
-import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.ModuleName
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
@@ -39,6 +42,8 @@ import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
+import lang.temper.type.MethodKind
+import lang.temper.type.MethodShape
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
@@ -55,7 +60,6 @@ import lang.temper.type2.isVoidLike
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
 import lang.temper.value.DependencyCategory
-import lang.temper.value.MetadataValueMapHelpers.get
 import lang.temper.value.TBoolean
 import lang.temper.value.TClass
 import lang.temper.value.TClosureRecord
@@ -112,6 +116,8 @@ internal class CSharpTranslator(
         fullNamespace = namespace
         qualifiedGlobalClassName = globalName
     }
+
+    private val connectedClassName = makeConnectedName(fullNamespace)
 
     private var imports: Map<ResolvedName, ExportedName> = module.imports.mapNotNull { imp ->
         imp.localName?.let { it.name to imp.externalName.name as ExportedName }
@@ -253,10 +259,7 @@ internal class CSharpTranslator(
         val modulePath = Backend.defaultFilePathForSource(
             libraryConfiguration, moduleName, "",
         )
-        val subspace = modulePath.segments.map { segment ->
-            segment.withTemperAwareExtension("").fullName.dashToPascal()
-        }
-        return subspace
+        return chooseSubspace(modulePath.segments)
     }
 
     private fun chooseVisibility(decl: TmpL.NameDeclaration) = when (decl.name.name) {
@@ -383,10 +386,14 @@ internal class CSharpTranslator(
 
     private fun makeSafeName(wantedName: String) = "${wantedName}_" // TODO Explore better safety options.
 
-    private fun makeSafeNameMaybe(typeName: String, memberName: String): String {
-        return when (memberName) {
-            typeName -> makeSafeName(memberName)
+    private fun makeSafeNameMaybe(typeName: String, memberName: String, isSuper: Boolean): String {
+        val adjustedName = when {
+            isSuper -> "${memberName}Default"
             else -> memberName
+        }
+        return when (adjustedName) {
+            typeName -> makeSafeName(adjustedName)
+            else -> adjustedName
         }
     }
 
@@ -448,7 +455,11 @@ internal class CSharpTranslator(
             val result = translateType(decl.returnType)
             val (typeParameters, whereConstraints) = translateTypeParameters(decl.typeParameters)
             val parameters = translateParameters(decl.parameters)
-            var body = translateBlockStatement(decl.body, prelude = makeRestAssignment())
+            var body = when {
+                decl.metadata.any { it.key.symbol == connectedSymbol } && !module.isStdLib ->
+                    translateConnectedBody(decl, parameters) // TODO Rest param?
+                else -> translateBlockStatement(decl.body, prelude = makeRestAssignment())
+            }
 
             buildList {
                 if (!decl.mayYield) {
@@ -851,6 +862,40 @@ internal class CSharpTranslator(
         }
     }
 
+    private fun translateConnectedBody(
+        decl: TmpL.FunctionDeclaration,
+        parameters: List<CSharp.MethodParameter>,
+    ): CSharp.BlockStatement {
+        val pos = decl.pos
+        val defaulting = decl.parameterDefaultStatementsInfo()
+        return buildList {
+            for (statement in defaulting.defaultStatements) {
+                addAll(translateStatement(statement))
+            }
+            CSharp.InvocationExpression(
+                pos,
+                expr = CSharp.MemberAccess(
+                    pos,
+                    expr = connectedClassName.toIdentifier(pos) as CSharp.PrimaryExpression,
+                    id = translateId(decl.name, style = NameStyle.PrettyPascal),
+                ),
+                args = buildList {
+                    for ((tmpl, csharp) in decl.parameters.parameters.zip(parameters)) {
+                        when {
+                            tmpl.optional -> translateName(pos, defaulting.parameterMapping.getValue(tmpl.name.name))
+                            else -> csharp.name.deepCopy()
+                        }.also { add(it) }
+                    }
+                },
+            ).also { call ->
+                when {
+                    decl.returnType.isVoidish() -> CSharp.ExpressionStatement(pos, call)
+                    else -> CSharp.ReturnStatement(pos, call)
+                }.also { add(it) }
+            }
+        }.let { CSharp.BlockStatement(pos, it) }
+    }
+
     private fun translateContinueStatement(statement: TmpL.ContinueStatement): CSharp.Statement {
         return when (val label = statement.label) {
             null -> CSharp.ContinueStatement(statement.pos)
@@ -1075,9 +1120,10 @@ internal class CSharpTranslator(
         )
     }
 
-    private fun translateDotName(name: TmpL.DotName, typeName: String): CSharp.Identifier {
+    private fun translateDotName(name: TmpL.DotName, typeName: String, isSuper: Boolean = false): CSharp.Identifier {
         // C# doesn't allow non-constructor member names to match enclosing class names, so uniquify as needed.
-        val safeName = makeSafeNameMaybe(typeName = typeName, memberName = name.dotNameText.camelToPascal())
+        val memberName = name.dotNameText.camelToPascal()
+        val safeName = makeSafeNameMaybe(typeName = typeName, memberName = memberName, isSuper = isSuper)
         return CSharp.Identifier(name.pos, OutName(safeName, null))
     }
 
@@ -1439,9 +1485,16 @@ internal class CSharpTranslator(
         val typeName = (typeDefinition ?: return expr).name.toStyle(NameStyle.PrettyPascal)
         val method = ref.method
             ?: return makeGarbageExpression(ref.pos, "Missing method in $typeName")
+        val memberName = when ((ref.method as? MethodShape)?.methodKind) {
+            // Getters and setters can happen here for now for super calls.
+            MethodKind.Getter -> "Get${method.symbol.text.camelToPascal()}"
+            MethodKind.Setter -> "Set${method.symbol.text.camelToPascal()}"
+            else -> method.name.toStyle(NameStyle.PrettyPascal)
+        }
         val methodName = makeSafeNameMaybe(
             typeName = typeName,
-            memberName = method.name.toStyle(NameStyle.PrettyPascal),
+            memberName = memberName,
+            isSuper = ref.subject is TmpL.SuperSubject,
         )
         return CSharp.MemberAccess(
             ref.pos,
@@ -1521,7 +1574,7 @@ internal class CSharpTranslator(
         val definition = nominalType.definition
 
         // TODO: Shouldn't we have a TmpL.TypeName here?
-        val connectedKey = definition.metadata[connectedSymbol, TString]
+        val connectedKey = definition.connectedKey
         val (typeName: CSharp.UnboundTypeName, bindings: List<Type2>) = connectedKey?.let {
             val connectedType = CSharpSupportNetwork.translatedConnectedType(pos, connectedKey, genre, nominalType)
             connectedType?.let { connectedType.first.toTypeName(pos) to connectedType.second }
@@ -1727,9 +1780,13 @@ internal class CSharpTranslator(
         }
     }
 
-    private fun translatePropertyId(property: TmpL.PropertyId, typeName: String): CSharp.Identifier {
+    private fun translatePropertyId(
+        property: TmpL.PropertyId,
+        typeName: String,
+        isSuper: Boolean = false,
+    ): CSharp.Identifier {
         return when (property) {
-            is TmpL.ExternalPropertyId -> translateDotName(property.name, typeName = typeName)
+            is TmpL.ExternalPropertyId -> translateDotName(property.name, typeName = typeName, isSuper = isSuper)
             is TmpL.InternalPropertyId -> translateId(property.name)
         }
     }
@@ -1755,7 +1812,7 @@ internal class CSharpTranslator(
         return type to CSharp.MemberAccess(
             get.pos,
             expr = expr,
-            id = translatePropertyId(get.property, typeName = typeName),
+            id = translatePropertyId(get.property, typeName = typeName, isSuper = get.subject is TmpL.SuperSubject),
         )
     }
 
@@ -1916,9 +1973,8 @@ internal class CSharpTranslator(
                 val type = subject.type
                 type.definition to translateExpression(subject) as CSharp.PrimaryExpression
             }
-
-            is TmpL.TypeName -> {
-                val (d, t) = translateTypeName(subject)
+            is TmpL.TypeSubject -> {
+                val (d, t) = translateTypeName(subject.typeName)
                 d to (t as CSharp.PrimaryExpression)
             }
         }
@@ -2199,7 +2255,7 @@ internal class CSharpTranslator(
 
         var namespace = listOf<String>()
         return when (val sourceLocation = typeDefinition.sourceLocation) {
-            ImplicitsCodeLocation -> when (val name = typeDefinition.name) {
+            CoreCodeLocation -> when (val name = typeDefinition.name) {
                 // For some reason GlobalConsole isn't an ExportedName.
                 is ResolvedParsedName -> when (name.baseName.nameText) {
                     "Console", "GlobalConsole" -> StandardNames.temperCoreILoggingConsole
@@ -2429,6 +2485,7 @@ private fun makeGarbageExpression(pos: Position, text: String?) = CSharp.Invocat
     args = text?.let { listOf(CSharp.StringLiteral(pos, text)) } ?: listOf(),
 )
 
+internal fun makeConnectedName(fullNamespace: QualifiedName) = "${fullNamespace.last()}Connected"
 internal fun makeGlobalName(fullNamespace: QualifiedName) = "${fullNamespace.last()}Global"
 
 /** This is awkward, but it centralizes common logic that's used in two places. Maybe reorg code better sometime. */
@@ -2475,6 +2532,13 @@ internal fun Type2.isOptionalTypeArg(): Boolean {
     val sawTypeFormal = this is TypeParamRef &&
         !excludeTypeFormalFromOptionalTransform(this.definition)
     return sawNull && sawTypeFormal
+}
+
+/** "foo-bar/baz/" -> ["FooBar", "Baz"] */
+internal fun chooseSubspace(segments: List<FilePathSegment>): List<String> {
+    return segments.map { segment ->
+        segment.withTemperAwareExtension("").fullName.dashToPascal()
+    }
 }
 
 private fun excludeTypeFormalFromOptionalTransform(typeFormal: TypeFormal): Boolean {

@@ -1,0 +1,598 @@
+[
+    "Block",
+    [
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "C__0"
+                ],
+                [
+                    "Value",
+                    "\\typeDecl: Symbol"
+                ],
+                [
+                    "Value",
+                    "C__0\u003cT__0\u003e: Type"
+                ],
+                [
+                    "Value",
+                    "\\stay: Symbol"
+                ],
+                [
+                    "Stay",
+                    "kotlin.Unit"
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.type C\u0022: String"
+                ],
+                [
+                    "Value",
+                    "\\ssa: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ]
+            ]
+        ],
+        [
+            "Call",
+            [
+                [
+                    "Value",
+                    "nym`=`: Function"
+                ],
+                [
+                    "LeftName",
+                    "C__0"
+                ],
+                [
+                    "Value",
+                    "C__0: Type"
+                ]
+            ]
+        ],
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "f__0"
+                ],
+                [
+                    "Value",
+                    "\\fn: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.f()\u0022: String"
+                ],
+                [
+                    "Value",
+                    "\\ssa: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ]
+            ]
+        ],
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "T__0"
+                ],
+                [
+                    "Value",
+                    "\\typeFormal: Symbol"
+                ],
+                [
+                    "Value",
+                    "\\T: Symbol"
+                ],
+                [
+                    "Value",
+                    "\\memberTypeFormal: Symbol"
+                ],
+                [
+                    "Value",
+                    "\\T: Symbol"
+                ],
+                [
+                    "Value",
+                    "\\typeDefined: Symbol"
+                ],
+                [
+                    "Value",
+                    "T__0: Type"
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.type C.\u003cT\u003e\u0022: String"
+                ],
+                [
+                    "Value",
+                    "\\ssa: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ],
+                [
+                    "Value",
+                    "\\fromType: Symbol"
+                ],
+                [
+                    "Value",
+                    "C__0\u003cT__0\u003e: Type"
+                ]
+            ]
+        ],
+        [
+            "Call",
+            [
+                [
+                    "Value",
+                    "nym`=`: Function"
+                ],
+                [
+                    "LeftName",
+                    "T__0"
+                ],
+                [
+                    "Value",
+                    "T__0: Type"
+                ]
+            ]
+        ],
+        [
+            "Call",
+            [
+                [
+                    "Value",
+                    "extends: Function"
+                ],
+                [
+                    "Value",
+                    "C__0\u003cT__0\u003e: Type"
+                ],
+                [
+                    "Value",
+                    "AnyValue: Type"
+                ]
+            ]
+        ],
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "constructor__0"
+                ],
+                [
+                    "Value",
+                    "\\fn: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ],
+                [
+                    "Value",
+                    "\\method: Symbol"
+                ],
+                [
+                    "Value",
+                    "\\constructor: Symbol"
+                ],
+                [
+                    "Value",
+                    "\\visibility: Symbol"
+                ],
+                [
+                    "Value",
+                    "\\public: Symbol"
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.type C.constructor()\u0022: String"
+                ],
+                [
+                    "Value",
+                    "\\ssa: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ],
+                [
+                    "Value",
+                    "\\stay: Symbol"
+                ],
+                [
+                    "Stay"
+                ],
+                [
+                    "Value",
+                    "\\parameterNameSymbolsList: Symbol"
+                ],
+                [
+                    "Value",
+                    "[null]: List"
+                ],
+                [
+                    "Value",
+                    "\\fromType: Symbol"
+                ],
+                [
+                    "Value",
+                    "C__0\u003cT__0\u003e: Type"
+                ]
+            ]
+        ],
+        [
+            "Call",
+            [
+                [
+                    "Value",
+                    "nym`=`: Function"
+                ],
+                [
+                    "LeftName",
+                    "constructor__0"
+                ],
+                [
+                    "Fun",
+                    [
+                        [
+                            "Decl",
+                            [
+                                [
+                                    "LeftName",
+                                    "this__0"
+                                ],
+                                [
+                                    "Value",
+                                    "\\type: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "C__0\u003cT__0\u003e: Type"
+                                ],
+                                [
+                                    "Value",
+                                    "\\impliedThis: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "C__0\u003cT__0\u003e: Type"
+                                ],
+                                [
+                                    "Value",
+                                    "\\QName: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\u0022test-code.type C.constructor().(this)\u0022: String"
+                                ]
+                            ]
+                        ],
+                        [
+                            "Value",
+                            "\\word: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "\\constructor: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "\\returnDecl: Symbol"
+                        ],
+                        [
+                            "Decl",
+                            [
+                                [
+                                    "LeftName",
+                                    "return__0"
+                                ],
+                                [
+                                    "Value",
+                                    "\\type: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "Void: Type"
+                                ],
+                                [
+                                    "Value",
+                                    "\\QName: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\u0022test-code.type C.constructor().return=\u0022: String"
+                                ],
+                                [
+                                    "Value",
+                                    "\\ssa: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "void: Void"
+                                ]
+                            ]
+                        ],
+                        [
+                            "Value",
+                            "\\QName: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "\u0022test-code.type C.constructor()\u0022: String"
+                        ],
+                        [
+                            "Value",
+                            "\\stay: Symbol"
+                        ],
+                        [
+                            "Stay"
+                        ],
+                        [
+                            "Block",
+                            []
+                        ]
+                    ]
+                ]
+            ]
+        ],
+        [
+            "Call",
+            [
+                [
+                    "Value",
+                    "class: Function"
+                ],
+                [
+                    "Value",
+                    "\\word: Symbol"
+                ],
+                [
+                    "Value",
+                    "\\C: Symbol"
+                ],
+                [
+                    "Value",
+                    "\\concrete: Symbol"
+                ],
+                [
+                    "Value",
+                    "true: Boolean"
+                ],
+                [
+                    "Fun",
+                    [
+                        [
+                            "Value",
+                            "\\typeDefined: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "C__0\u003cT__0\u003e: Type"
+                        ],
+                        [
+                            "Block",
+                            [
+                                [
+                                    "Block",
+                                    []
+                                ],
+                                [
+                                    "Block",
+                                    []
+                                ],
+                                [
+                                    "Block",
+                                    []
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ],
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "U__0"
+                ],
+                [
+                    "Value",
+                    "\\typeFormal: Symbol"
+                ],
+                [
+                    "Value",
+                    "\\U: Symbol"
+                ],
+                [
+                    "Value",
+                    "\\typeDecl: Symbol"
+                ],
+                [
+                    "Value",
+                    "U__0: Type"
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.f().\u003cU\u003e\u0022: String"
+                ],
+                [
+                    "Value",
+                    "\\ssa: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ]
+            ]
+        ],
+        [
+            "Call",
+            [
+                [
+                    "Value",
+                    "nym`=`: Function"
+                ],
+                [
+                    "LeftName",
+                    "U__0"
+                ],
+                [
+                    "Value",
+                    "U__0: Type"
+                ]
+            ]
+        ],
+        [
+            "Call",
+            [
+                [
+                    "Value",
+                    "nym`=`: Function"
+                ],
+                [
+                    "LeftName",
+                    "f__0"
+                ],
+                [
+                    "Fun",
+                    [
+                        [
+                            "Value",
+                            "\\returnDecl: Symbol"
+                        ],
+                        [
+                            "Decl",
+                            [
+                                [
+                                    "LeftName",
+                                    "return__1"
+                                ],
+                                [
+                                    "Value",
+                                    "\\type: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "C__0\u003cU__0\u003e: Type"
+                                ],
+                                [
+                                    "Value",
+                                    "\\QName: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "\u0022test-code.f().return=\u0022: String"
+                                ],
+                                [
+                                    "Value",
+                                    "\\ssa: Symbol"
+                                ],
+                                [
+                                    "Value",
+                                    "void: Void"
+                                ]
+                            ]
+                        ],
+                        [
+                            "Value",
+                            "\\returnedFrom: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "true: Boolean"
+                        ],
+                        [
+                            "Value",
+                            "\\word: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "\\f: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "\\typeFormal: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "U__0: Type"
+                        ],
+                        [
+                            "Value",
+                            "\\QName: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "\u0022test-code.f()\u0022: String"
+                        ],
+                        [
+                            "Value",
+                            "\\stay: Symbol"
+                        ],
+                        [
+                            "Stay"
+                        ],
+                        [
+                            "Block",
+                            [
+                                [
+                                    "Value",
+                                    "\\label: Symbol"
+                                ],
+                                [
+                                    "LeftName",
+                                    "fn__0"
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ],
+        [
+            "Value",
+            "void: Void"
+        ]
+    ]
+]

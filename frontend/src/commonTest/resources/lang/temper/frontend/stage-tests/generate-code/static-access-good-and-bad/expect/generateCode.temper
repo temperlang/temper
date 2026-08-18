@@ -1,0 +1,44 @@
+@typeDecl(C__0) @stay @reach(\none) let C__0;
+C__0 = type (C__0);
+@fn @reach(\none) let g3__0;
+@static @visibility(\private) @stay @fromType(C__0) @reach(\none) let ap__0: Int32;
+ap__0 = 1;
+@static @visibility(\public) @stay @fromType(C__0) @reach(\none) let a__0: Int32;
+a__0 = 2;
+@visibility(\private) @stay @fromType(C__0) @reach(\none) let bp__0: Int32;
+@visibility(\private) @stay @fromType(C__0) @reach(\none) let b__0: Int32;
+@fn @static @visibility(\public) @stay @fromType(C__0) @reach(\none) let f__0;
+f__0 = (@stay fn f(i__0 /* aka i */: Int32) /* return__0 */: Int32 {
+    return__0 = i__0 + 2 + igetStatic(C__0, \a) + 1 + igetStatic(C__0, \ap)
+});
+@fn @static @visibility(\private) @stay @fromType(C__0) @reach(\none) let fp__0;
+fp__0 = (@stay fn fp(i__1 /* aka i */: Int32) /* return__1 */: Int32 {
+    return__1 = i__1 + 1
+});
+@visibility(\public) @fn @stay @fromType(C__0) @reach(\none) let g__0;
+g__0 = (@stay fn g(@impliedThis(C__0) this__0: C__0, i__2 /* aka i */: Int32) /* return__2 */: Int32 {
+    return__2 = 2 * igetStatic(C__0, \f)(i__2) * igetStatic(C__0, \fp)(i__2) * getp(bp__0, this__0) * getp(b__0, this__0) * getp(bp__0, this__0) * getp(b__0, this__0)
+});
+@visibility(\public) @fn @stay @fromType(C__0) @reach(\none) let h__0;
+h__0 = (@stay fn h(@impliedThis(C__0) this__1: C__0, i__3 /* aka i */: Int32) /* return__3 */: Int32 {
+    return__3 = 2 * (fn f)(i__3) * (fn fp)(i__3) * do_icall_g(type (C__0), this__1, i__3) * do_icall_g(type (C__0), this__1, i__3)
+});
+@fn @static @visibility(\public) @stay @fromType(C__0) @reach(\none) let g2__0;
+g2__0 = (@stay fn g2(i__4 /* aka i */: Int32) /* return__4 */: Int32 {
+    return__4 = 2 * igetStatic(C__0, \f)(i__4) * igetStatic(C__0, \fp)(i__4)
+});
+@fn @static @visibility(\public) @stay @fromType(C__0) @reach(\none) let h2__0;
+h2__0 = (@stay fn h2(i__5 /* aka i */: Int32) /* return__5 */: Int32 {
+    return__5 = 2 * (fn f)(i__5) * (fn fp)(i__5)
+});
+@fn @visibility(\public) @stay @fromType(C__0) @reach(\none) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(C__0) this__2: C__0) /* return__6 */: Void {
+    var t#1;
+    setp(bp__0, this__2, 1);
+    t#1 = getp(bp__0, this__2) + 1;
+    setp(b__0, this__2, t#1);
+    return__6 = void
+});
+g3__0 = (@stay fn g3(i__6 /* aka i */: Int32) /* return__7 */: Int32 {
+    return__7 = 2 * getStatic(C__0, \f)(i__6) * do_call_g(new C__0(), i__6) * getStatic(C__0, \a) * getStatic(C__0, \ap)
+})

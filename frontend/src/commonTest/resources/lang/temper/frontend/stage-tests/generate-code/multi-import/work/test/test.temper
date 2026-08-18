@@ -1,0 +1,4 @@
+let { ... } = import("./nums");
+
+console.log((a + b + c + d + e).toString());
+

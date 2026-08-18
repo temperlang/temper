@@ -1,0 +1,28 @@
+[
+    "Block",
+    [
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "return__0"
+                ],
+                [
+                    "Value",
+                    "\\ssa: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ]
+            ]
+        ],
+        [
+            "break",
+            "\\foo",
+            []
+        ]
+    ],
+    "StructuredFlow"
+]

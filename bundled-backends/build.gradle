@@ -44,6 +44,7 @@ kotlin {
                 implementation project(':be-cpp')
                 implementation project(':be-cppv')
                 implementation project(':be-csharp')
+                implementation project(':be-data')
                 implementation project(':be-java')
                 implementation project(':be-js')
                 implementation project(':be-lua')

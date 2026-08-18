@@ -433,21 +433,19 @@ class JavaBackendTest {
             """
                 |public static void hi(int n__0) {
                 |    class Local_1 {
-                |        String t_12;
+                |        int i__0 = 0;
                 |    }
                 |    final Local_1 local$1 = new Local_1();
-                |    int i__0 = 0;
-                |    while (i__0 < n__0) {
-                |        local$1.t_12 = Integer.toString(i__0);
+                |    while (local$1.i__0 < n__0) {
                 |        class Local_2 {
-                |            String a__0 = local$1.t_12;
+                |            String a__0 = java.lang.Integer.toString(local$1.i__0);
                 |        }
                 |        final Local_2 local$2 = new Local_2();
                 |        Consumer<String> blah__0 = m__0 -> {
                 |            local$2.a__0 = m__0;
                 |        };
                 |        blah__0.accept("hi");
-                |        i__0 = i__0 + 1;
+                |        local$1.i__0 = local$1.i__0 + 1;
                 |    }
                 |}
             """.javaMethod("import java.util.function.Consumer;"),
@@ -842,6 +840,90 @@ class JavaBackendTest {
     }
 
     @Test
+    fun multipleInheritance() = assertGeneratedJavaRaw(
+        input = """
+            |export interface A { a(): String { "A wins!" } }
+            |export interface B extends A {}
+            |export interface C { a(): String { "C wins!" } }
+            |export class D extends B & C {}
+            |console.log(new D().a());
+        """.trimMargin(),
+        want = """
+            |"pom.xml": "__DO_NOT_CARE__",
+            |"src": {
+            |    "main": {
+            |        "java": {
+            |            "my_test_library": {
+            |                "test": {
+            |                    "TestGlobal.java": "__DO_NOT_CARE__",
+            |                    "TestGlobal.java.map": "__DO_NOT_CARE__",
+            |                    "TestMain.java": "__DO_NOT_CARE__",
+            |                    "TestMain.java.map": "__DO_NOT_CARE__",
+            |                    "A.java": {
+            |                        "content":
+            |                        ```
+            |                        package my_test_library.test;
+            |                        public interface A {
+            |                            default String a() {
+            |                                return "A wins!";
+            |                            }
+            |                        }
+            |
+            |                        ```
+            |                    },
+            |                    "A.java.map": "__DO_NOT_CARE__",
+            |                    "B.java": {
+            |                        "content":
+            |                        ```
+            |                        package my_test_library.test;
+            |                        public interface B extends A {
+            |                            default String a() {
+            |                                return A.super.a();
+            |                            }
+            |                        }
+            |
+            |                        ```
+            |                    },
+            |                    "B.java.map": "__DO_NOT_CARE__",
+            |                    "C.java": {
+            |                        "content":
+            |                        ```
+            |                        package my_test_library.test;
+            |                        public interface C {
+            |                            default String a() {
+            |                                return "C wins!";
+            |                            }
+            |                        }
+            |
+            |                        ```
+            |                    },
+            |                    "C.java.map": "__DO_NOT_CARE__",
+            |                    "D.java": {
+            |                        "content":
+            |                        ```
+            |                        package my_test_library.test;
+            |                        public final class D implements B, C {
+            |                            public D() {
+            |                            }
+            |                            public String a() {
+            |                                return C.super.a();
+            |                            }
+            |                        }
+            |
+            |                        ```
+            |                    },
+            |                    "D.java.map": "__DO_NOT_CARE__"
+            |                },
+            |                "MyTestLibraryGlobal.java": "__DO_NOT_CARE__",
+            |                "MyTestLibraryMain.java": "__DO_NOT_CARE__",
+            |            }
+            |        }
+            |    }
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun coroutineConversion() = assertGeneratedJavaRaw(
         """
             |let f(factory: fn (): SafeGenerator<Empty>): Void {
@@ -883,17 +965,17 @@ class JavaBackendTest {
             |                              }
             |                              static Generator<Optional<? super Object>> fn__0() {
             |                                  class Local_1 {
-            |                                      int caseIndex_38 = 0;
+            |                                      int caseIndex_41 = 0;
             |                                  }
             |                                  final Local_1 local$1 = new Local_1();
-            |                                  Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine_42 = generator_37 -> {
-            |                                      int caseIndexLocal_39 = local$1.caseIndex_38;
-            |                                      local$1.caseIndex_38 = -1;
-            |                                      switch (caseIndexLocal_39) {
+            |                                  Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine_45 = generator_40 -> {
+            |                                      int caseIndexLocal_42 = local$1.caseIndex_41;
+            |                                      local$1.caseIndex_41 = -1;
+            |                                      switch (caseIndexLocal_42) {
             |                                          case 0:
             |                                              {
             |                                              console_5.log("foo");
-            |                                              local$1.caseIndex_38 = 1;
+            |                                              local$1.caseIndex_41 = 1;
             |                                              return new ValueResult<>(Optional.empty());
             |                                          }
             |                                          case 1:
@@ -907,7 +989,7 @@ class JavaBackendTest {
             |                                          }
             |                                      }
             |                                  };
-            |                                  return Core.safeAdaptGeneratorFn(convertedCoroutine_42 :: apply);
+            |                                  return Core.safeAdaptGeneratorFn(convertedCoroutine_45 :: apply);
             |                              }
             |                              static {
             |                                  console_5 = Core.getConsole(Logger.getLogger("my_test_library.test"));
@@ -1246,58 +1328,58 @@ class JavaBackendTest {
             |                  static final CompletableFuture<String> p__0;
             |                  static Generator<Optional<? super Object>> fn__0() {
             |                      class Local_1 {
-            |                          int caseIndex_41 = 0;
-            |                          String t_13 = "";
+            |                          int caseIndex_44 = 0;
             |                          String t_14 = "";
-            |                          boolean fail_11 = false;
+            |                          String t_15 = "";
+            |                          boolean fail_12 = false;
             |                      }
             |                      final Local_1 local$1 = new Local_1();
-            |                      Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine_47 = generator_40 -> {
+            |                      Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine_50 = generator_43 -> {
             |                          while (true) {
-            |                              int caseIndexLocal_42 = local$1.caseIndex_41;
-            |                              local$1.caseIndex_41 = -1;
-            |                              switch (caseIndexLocal_42) {
+            |                              int caseIndexLocal_45 = local$1.caseIndex_44;
+            |                              local$1.caseIndex_44 = -1;
+            |                              switch (caseIndexLocal_45) {
             |                                  case 0:
             |                                      {
-            |                                      local$1.caseIndex_41 = 1;
+            |                                      local$1.caseIndex_44 = 1;
             |                                      p__0.handle((ignored$1, ignored$2) -> {
-            |                                              generator_40.get();
+            |                                              generator_43.get();
             |                                              return null;
             |                                      });
             |                                      return new ValueResult<>(Optional.empty());
             |                                  }
             |                                  case 1:
             |                                      {
-            |                                      local$1.fail_11 = false;
+            |                                      local$1.fail_12 = false;
             |                                      try {
-            |                                          local$1.t_13 = p__0.get();
+            |                                          local$1.t_14 = p__0.get();
             |                                      } catch (InterruptedException ignored$3) {
             |                                          break;
             |                                      } catch (ExecutionException ignored$4) {
-            |                                          local$1.fail_11 = true;
+            |                                          local$1.fail_12 = true;
             |                                      }
-            |                                      if (local$1.fail_11) {
-            |                                          local$1.caseIndex_41 = 2;
+            |                                      if (local$1.fail_12) {
+            |                                          local$1.caseIndex_44 = 2;
             |                                      } else {
-            |                                          local$1.caseIndex_41 = 3;
+            |                                          local$1.caseIndex_44 = 3;
             |                                      }
             |                                      break;
             |                                  }
             |                                  case 2:
             |                                      {
-            |                                      local$1.t_14 = "broken";
-            |                                      local$1.caseIndex_41 = 4;
+            |                                      local$1.t_15 = "broken";
+            |                                      local$1.caseIndex_44 = 4;
             |                                      break;
             |                                  }
             |                                  case 3:
             |                                      {
-            |                                      local$1.t_14 = local$1.t_13;
-            |                                      local$1.caseIndex_41 = 4;
+            |                                      local$1.t_15 = local$1.t_14;
+            |                                      local$1.caseIndex_44 = 4;
             |                                      break;
             |                                  }
             |                                  case 4:
             |                                      {
-            |                                      console_3.log(local$1.t_14);
+            |                                      console_3.log(local$1.t_15);
             |                                      return DoneResult.get();
             |                                  }
             |                                  default:
@@ -1307,7 +1389,7 @@ class JavaBackendTest {
             |                              }
             |                          }
             |                      };
-            |                      return Core.safeAdaptGeneratorFn(convertedCoroutine_47 :: apply);
+            |                      return Core.safeAdaptGeneratorFn(convertedCoroutine_50 :: apply);
             |                  }
             |                  static {
             |                      console_3 = Core.getConsole(Logger.getLogger("my_test_library.test"));
@@ -1451,15 +1533,15 @@ class JavaBackendTest {
             |console.log(sb.toString());
         """.trimMargin(),
         """
-            |static Console t_23;
+            |static Console t_26;
             |static final StringBuilder sb__0;
             |static {
-            |    t_23 = Core.getConsole(Logger.getLogger("my_test_library.test"));
+            |    t_26 = Core.getConsole(Logger.getLogger("my_test_library.test"));
             |    sb__0 = new StringBuilder();
             |    sb__0.append("Hello, ");
             |    sb__0.append("World");
             |    sb__0.append("!");
-            |    t_23.log(sb__0.toString());
+            |    t_26.log(sb__0.toString());
             |}
         """.javaMethod(
             "import temper.core.Core;",
@@ -1620,7 +1702,7 @@ class JavaBackendTest {
             |              public final class TestGlobal {
             |                  private TestGlobal() {
             |                  }
-            |                  static Console t_46;
+            |                  static Console t_49;
             |                  public static<I_T__0 extends my_test_library.test.I> I_T__0 least(I_T__0 i__0, I_T__0 j__0) {
             |                      I_T__0 return__0;
             |                      if (i__0.getX().compareTo(j__0.getX()) < 0) {
@@ -1631,8 +1713,8 @@ class JavaBackendTest {
             |                      return return__0;
             |                  }
             |                  static {
-            |                      t_46 = Core.getConsole(Logger.getLogger("my_test_library.test"));
-            |                      t_46.log(TestGlobal.least(new C("foo"), new C("bar")).getX());
+            |                      t_49 = Core.getConsole(Logger.getLogger("my_test_library.test"));
+            |                      t_49.log(TestGlobal.least(new C("foo"), new C("bar")).getX());
             |                  }
             |              }
             |
@@ -1708,17 +1790,17 @@ class JavaBackendTest {
         """.trimMargin(),
         want = """
             |public static int doThings(int n__0) {
-            |    int t_7;
-            |    boolean t_8;
+            |    int t_9;
+            |    boolean t_10;
             |    int i__0 = 0;
             |    top__0: while (i__0 < n__0) {
             |        try {
-            |            t_7 = Core.modIntInt(n__0, i__0);
-            |            t_8 = t_7 == 0;
+            |            t_9 = Core.modIntInt(n__0, i__0);
+            |            t_10 = t_9 == 0;
             |        } catch (RuntimeException ignored$1) {
-            |            t_8 = false;
+            |            t_10 = false;
             |        }
-            |        if (t_8) {
+            |        if (t_10) {
             |            break top__0;
             |        }
             |        i__0 = i__0 + 1;
@@ -1813,48 +1895,48 @@ class JavaBackendTest {
         """.trimMargin(),
         want = """
             |public static int doThings(int n__0) {
-            |    int t_9;
+            |    int t_13;
             |    int result__0 = 0;
-            |    label_14: while (result__0 == 0) {
+            |    label_20: while (result__0 == 0) {
             |        outer__0: {
             |            int more__0;
-            |            int escape_12 = 0;
-            |            int more_11;
-            |            escapeLabel_13: try {
+            |            int escape_18 = 0;
+            |            int more_17;
+            |            escapeLabel_19: try {
             |                if (n__0 < 3) {
             |                    throw Core.bubble();
             |                }
             |                int i__0 = 2;
             |                while (i__0 < n__0) {
-            |                    t_9 = Core.modIntInt(n__0, i__0);
-            |                    if (t_9 == 0) {
+            |                    t_13 = Core.modIntInt(n__0, i__0);
+            |                    if (t_13 == 0) {
             |                        break;
             |                    }
             |                    result__0 = result__0 + i__0;
             |                    i__0 = i__0 + 1;
             |                }
             |                if (n__0 > 25) {
-            |                    escape_12 = 1;
-            |                    break escapeLabel_13;
+            |                    escape_18 = 1;
+            |                    break escapeLabel_19;
             |                }
             |                if (n__0 > 20) {
-            |                    escape_12 = 2;
-            |                    break escapeLabel_13;
+            |                    escape_18 = 2;
+            |                    break escapeLabel_19;
             |                }
             |                if (n__0 > 15) {
-            |                    escape_12 = 3;
-            |                    break escapeLabel_13;
+            |                    escape_18 = 3;
+            |                    break escapeLabel_19;
             |                }
             |                if (n__0 > 10) {
-            |                    escape_12 = 2;
-            |                    break escapeLabel_13;
+            |                    escape_18 = 2;
+            |                    break escapeLabel_19;
             |                }
-            |                more_11 = 1;
+            |                more_17 = 1;
             |            } catch (RuntimeException ignored$1) {
-            |                more_11 = 2;
+            |                more_17 = 2;
             |            }
-            |            more__0 = more_11;
-            |            switch (escape_12) {
+            |            more__0 = more_17;
+            |            switch (escape_18) {
             |                case 1:
             |                    {
             |                    continue;
@@ -1865,7 +1947,7 @@ class JavaBackendTest {
             |                }
             |                case 3:
             |                    {
-            |                    break label_14;
+            |                    break label_20;
             |                }
             |                default:
             |                    {
@@ -2089,13 +2171,13 @@ class JavaBackendTest {
         """
             |public static int orZero(@Nullable Integer x__0) {
             |    int return__0;
-            |    boolean t_10;
+            |    boolean t_5;
             |    if (x__0 != null) {
-            |        t_10 = x__0 instanceof Integer;
+            |        t_5 = x__0 instanceof Integer;
             |    } else {
-            |        t_10 = false;
+            |        t_5 = false;
             |    }
-            |    if (t_10) {
+            |    if (t_5) {
             |        if (x__0 == null) {
             |            throw Core.bubble();
             |        } else {
@@ -2145,13 +2227,13 @@ class JavaBackendTest {
             |    IntBinaryOperator fn__0 = (a__0, b__0) -> a__0 - b__0;
             |    Core.listSortInt(builder__0, fn__0);
             |    IntBinaryOperator fn__1 = (a__1, b__1) -> a__1 - b__1;
-            |    List<Integer> t_54 = Core.listSortedInt(ints__0, fn__1);
+            |    List<Integer> t_65 = Core.listSortedInt(ints__0, fn__1);
             |    IntFunction<String> fn__2 = a__2 -> Integer.toString(a__2);
-            |    String t_56 = Core.listJoinInt(t_54, ", ", fn__2);
-            |    console_10.log(t_56);
+            |    String t_67 = Core.listJoinInt(t_65, ", ", fn__2);
+            |    console_10.log(t_67);
             |    IntFunction<String> fn__3 = a__3 -> Integer.toString(a__3);
-            |    String t_59 = Core.listJoinInt(builder__0, ", ", fn__3);
-            |    console_10.log(t_59);
+            |    String t_70 = Core.listJoinInt(builder__0, ", ", fn__3);
+            |    console_10.log(t_70);
             |}
             |static {
             |    console_10 = Core.getConsole(Logger.getLogger("my_test_library.test"));

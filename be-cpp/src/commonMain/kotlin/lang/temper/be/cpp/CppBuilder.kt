@@ -2,14 +2,19 @@ package lang.temper.be.cpp
 
 import lang.temper.ast.deepCopy
 import lang.temper.be.tmpl.TmpL
-import lang.temper.common.toHex
+import lang.temper.common.OCTAL_RADIX
 import lang.temper.log.FilePath
 import lang.temper.log.Position
 import lang.temper.log.unknownPos
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModuleLocation
 import lang.temper.name.ModuleName
 import lang.temper.name.ResolvedName
+
+private val cppReservedNamespaces = setOf("std", "chrono", "filesystem")
+
+internal fun safeCppNamespace(name: String): String =
+    if (name in cppReservedNamespaces) "temper_$name" else name
 
 fun Cpp.Expr.withComment(text: String, prefix: Boolean = true): Cpp.Expr = if (prefix) {
     Cpp.PreComment(pos, Cpp.Raw(pos, text), this)
@@ -19,6 +24,7 @@ fun Cpp.Expr.withComment(text: String, prefix: Boolean = true): Cpp.Expr = if (p
 
 class CppBuilder(
     private val cppNames: CppNames,
+    private val libraryRootToOutputDir: Map<FilePath, String> = emptyMap(),
 ) {
     var pos = unknownPos
 
@@ -71,17 +77,55 @@ class CppBuilder(
         Cpp.StructDef(pos, name.deepCopy(), fields.deepCopy())
     fun structField(type: Cpp.Type, name: Cpp.SingleName): Cpp.StructField =
         Cpp.StructField(pos, type.deepCopy(), name.deepCopy())
+    fun derivedStructDef(
+        name: Cpp.SingleName,
+        bases: Iterable<Cpp.BaseSpec>,
+        fields: Iterable<Cpp.StructPart>,
+    ): Cpp.DerivedStructDef =
+        Cpp.DerivedStructDef(pos, name.deepCopy(), bases.deepCopy(), fields.deepCopy())
+    fun baseSpec(virtual: Boolean, base: Cpp.Type): Cpp.BaseSpec =
+        Cpp.BaseSpec(pos, virt = if (virtual) Cpp.VirtualMod.Virtual else null, base = base.deepCopy())
+    fun templateStructDef(
+        typeParams: Iterable<Cpp.FuncParam>,
+        def: Cpp.AnyStructDef,
+    ): Cpp.TemplateStructDef =
+        Cpp.TemplateStructDef(pos, typeParams.deepCopy(), def.deepCopy())
+    fun templateFuncDef(
+        typeParams: Iterable<Cpp.FuncParam>,
+        def: Cpp.FuncDef,
+    ): Cpp.TemplateFuncDef =
+        Cpp.TemplateFuncDef(pos, typeParams.deepCopy(), def.deepCopy())
+    fun templateFuncDecl(
+        typeParams: Iterable<Cpp.FuncParam>,
+        decl: Cpp.FuncDecl,
+    ): Cpp.TemplateFuncDecl =
+        Cpp.TemplateFuncDecl(pos, typeParams.deepCopy(), decl.deepCopy())
 
     fun funcDecl(
         ret: Cpp.Type?,
         convention: Cpp.SingleName?,
         name: Cpp.SingleName,
         args: Iterable<Cpp.Type>,
+        qual: Cpp.MethodQualifier? = null,
     ): Cpp.FuncDecl =
         Cpp.FuncDecl(
             pos,
             ret = ret?.deepCopy(),
             convention = convention?.deepCopy(),
+            name = name.deepCopy(),
+            args = args.deepCopy(),
+            qual = qual,
+        )
+    fun funcDecl(
+        mod: Cpp.DefMod?,
+        ret: Cpp.Type?,
+        name: Cpp.SingleName,
+        args: Iterable<Cpp.Type>,
+    ): Cpp.FuncDecl =
+        Cpp.FuncDecl(
+            pos,
+            mod = mod,
+            ret = ret?.deepCopy(),
             name = name.deepCopy(),
             args = args.deepCopy(),
         )
@@ -92,6 +136,7 @@ class CppBuilder(
         name: Cpp.Name,
         args: Iterable<Cpp.FuncParam>,
         body: Cpp.BlockStmt,
+        qual: Cpp.MethodQualifier? = null,
     ): Cpp.FuncDef =
         Cpp.FuncDef(
             pos,
@@ -100,6 +145,7 @@ class CppBuilder(
             convention = convention?.deepCopy(),
             name = name.deepCopy(),
             args = args.deepCopy(),
+            qual = qual,
             body = body.deepCopy(),
         )
     fun funcDef(
@@ -109,7 +155,15 @@ class CppBuilder(
         args: Iterable<Cpp.FuncParam>,
         body: Cpp.BlockStmt,
     ): Cpp.FuncDef =
-        Cpp.FuncDef(pos, mod, ret?.deepCopy(), convention = null, name.deepCopy(), args.deepCopy(), body.deepCopy())
+        Cpp.FuncDef(
+            pos,
+            mod = mod,
+            ret = ret?.deepCopy(),
+            convention = null,
+            name = name.deepCopy(),
+            args = args.deepCopy(),
+            body = body.deepCopy(),
+        )
     fun funcDef(ret: Cpp.Type?, name: Cpp.Name, args: Iterable<Cpp.FuncParam>, body: Cpp.BlockStmt): Cpp.FuncDef =
         funcDef(mod = null, ret, convention = null, name, args, body)
     fun funcParam(type: Cpp.Type, name: Cpp.SingleName): Cpp.FuncParam =
@@ -146,6 +200,33 @@ class CppBuilder(
         Cpp.ReturnStmt(pos, value?.deepCopy())
     fun throwStmt(value: Cpp.Expr): Cpp.ThrowStmt =
         Cpp.ThrowStmt(pos, value.deepCopy())
+    fun tryCatch(tryBody: Cpp.Stmt, catchBody: Cpp.Stmt): Cpp.TryCatchStmt =
+        Cpp.TryCatchStmt(pos, tryBody.deepCopy(), catchBody.deepCopy())
+    fun breakStmt(): Cpp.BreakStmt =
+        Cpp.BreakStmt(pos)
+    fun switchStmt(subject: Cpp.Expr, cases: Iterable<Cpp.SwitchCase>, defaultBody: Cpp.Stmt): Cpp.SwitchStmt =
+        Cpp.SwitchStmt(pos, subject.deepCopy(), cases.deepCopy(), defaultBody.deepCopy())
+    fun switchCase(labels: Iterable<Cpp.CaseLabel>, body: Cpp.Stmt): Cpp.SwitchCase =
+        Cpp.SwitchCase(pos, labels.deepCopy(), body.deepCopy())
+    fun caseLabel(value: Cpp.Expr): Cpp.CaseLabel =
+        Cpp.CaseLabel(pos, value.deepCopy())
+    fun lambda(
+        captures: Iterable<Cpp.LambdaCapture>,
+        params: Iterable<Cpp.FuncParam>,
+        mutable: Boolean,
+        ret: Cpp.Type,
+        body: Cpp.BlockStmt,
+    ): Cpp.LambdaExpr =
+        Cpp.LambdaExpr(
+            pos,
+            captures.deepCopy(),
+            params.deepCopy(),
+            mut = if (mutable) Cpp.LambdaMod.Mutable else null,
+            ret = ret.deepCopy(),
+            body = body.deepCopy(),
+        )
+    fun lambdaCapture(name: Cpp.SingleName): Cpp.LambdaCapture =
+        Cpp.LambdaCapture(pos, name.deepCopy())
 
     fun indexExpr(base: Cpp.Expr, index: Cpp.Expr): Cpp.IndexExpr =
         Cpp.IndexExpr(pos, base.deepCopy(), index.deepCopy())
@@ -192,6 +273,9 @@ class CppBuilder(
     fun include(name: String): Cpp.Include =
         Cpp.Include(pos, Cpp.Raw(pos, name))
 
+    fun includeLocal(name: String): Cpp.IncludeLocal =
+        Cpp.IncludeLocal(pos, literal(name))
+
     fun thisExpr(): Cpp.ThisExpr = Cpp.ThisExpr(pos)
 
     // helpers
@@ -214,6 +298,7 @@ class CppBuilder(
         argTypes: Iterable<Cpp.Type>,
         argNames: Iterable<Cpp.SingleName>,
         block: Cpp.BlockStmt,
+        qual: Cpp.MethodQualifier? = null,
     ): Func {
         val funcName = when (name) {
             is Cpp.SingleName -> name
@@ -225,6 +310,7 @@ class CppBuilder(
                 convention = convention,
                 funcName,
                 argTypes,
+                qual = qual,
             ),
             def = funcDef(
                 mod = null,
@@ -235,6 +321,7 @@ class CppBuilder(
                     funcParam(it.first, it.second)
                 },
                 block,
+                qual = qual,
             ),
         )
     }
@@ -245,19 +332,30 @@ class CppBuilder(
         argTypes: Iterable<Cpp.Type>,
         argNames: Iterable<Cpp.SingleName>,
         block: Cpp.BlockStmt,
-    ): Func = func(name, retType, convention = null, argTypes = argTypes, argNames = argNames, block = block)
+        qual: Cpp.MethodQualifier? = null,
+    ): Func = func(
+        name,
+        retType,
+        convention = null,
+        argTypes = argTypes,
+        argNames = argNames,
+        block = block,
+        qual = qual,
+    )
 
     fun func(
         name: Cpp.Name,
         retType: Cpp.Type,
         argTypes: Iterable<Pair<Cpp.Type, Cpp.SingleName>>,
         block: Cpp.BlockStmt,
+        qual: Cpp.MethodQualifier? = null,
     ): Func = func(
         name,
         retType,
         argTypes.map { it.first },
         argTypes.map { it.second },
         block,
+        qual = qual,
     )
 
     // shorthand
@@ -286,26 +384,31 @@ class CppBuilder(
     fun literal(value: Number): Cpp.LiteralExpr = literal(raw(value.toString()))
 
     fun literal(value: String): Cpp.LiteralExpr {
-        @Suppress("MagicNumber") // Octal powers.
-        val charList = value.map { char ->
-            // nice escape codes
-            if (escapeCodes.contains(char)) {
-                return@map escapeCodes[char]
+        // Encode the whole string as UTF-8 bytes for correct multi-byte character handling
+        val utf8Bytes = value.toByteArray(Charsets.UTF_8)
+        val sb = StringBuilder()
+        var hasNullByte = false
+        for (b in utf8Bytes) {
+            @Suppress("MagicNumber") // 0xFF mask for unsigned byte conversion
+            val unsigned = b.toInt() and 0xFF
+            if (unsigned == 0) hasNullByte = true
+            val ch = unsigned.toChar()
+            val escaped = escapeCodes[ch]
+            if (escaped != null) {
+                sb.append(escaped)
+            } else if (ch in ' '..'~') {
+                sb.append(ch)
+            } else {
+                sb.append("\\${unsigned.toString(OCTAL_RADIX).padStart(OCTAL_ESCAPE_DIGITS, '0')}")
             }
-
-            // the remaining characters between space and tilde are printable ascii safe for c++ strings
-            if (' ' <= char && char <= '~') {
-                return@map char
-            }
-
-            // TODO: support non-ascii stuff
-            val o1 = ((char.code / 64) % 4).toHex()
-            val o2 = ((char.code / 8) % 8).toHex()
-            val o3 = (char.code % 8).toHex()
-
-            return@map "\\o$o1$o2$o3"
         }
-        return literal(raw("\"${charList.joinToString("")}\""))
+        // Use std::string(data, length) constructor for strings with embedded null bytes
+        // since const char* constructor stops at the first \0
+        return if (hasNullByte) {
+            literal(raw("std::string(\"$sb\", ${utf8Bytes.size})"))
+        } else {
+            literal(raw("\"$sb\""))
+        }
     }
 
     fun name(resolvedName: ResolvedName): Cpp.SingleName = singleName(cppNames.name(resolvedName))
@@ -326,7 +429,10 @@ class CppBuilder(
 
     fun name(vararg parts: String): Cpp.Name = name(parts.filter { it.isNotEmpty() }.toList())
 
-    fun libraryName(text: String): Cpp.SingleName = singleName(cppNames.library(text))
+    fun libraryName(text: String): Cpp.SingleName {
+        val base = cppNames.library(text).text
+        return singleName(CppName(safeCppNamespace(base)))
+    }
 
     fun comment(text: String): Cpp.Comment = comment(raw(text))
 
@@ -342,7 +448,7 @@ class CppBuilder(
         "~" -> Cpp.UnaryOp(pos, UnaryOpEnum.BitNot)
         "*" -> Cpp.UnaryOp(pos, UnaryOpEnum.Deref)
         "&" -> Cpp.UnaryOp(pos, UnaryOpEnum.AddrOf)
-        else -> TODO("unary op: $name")
+        else -> error("unsupported C++ unary operator: $name")
     }
 
     fun binaryOp(name: String): Cpp.BinaryOp = when (name) {
@@ -377,7 +483,7 @@ class CppBuilder(
         "||" -> Cpp.BinaryOp(pos, BinaryOpEnum.Or)
         "." -> Cpp.BinaryOp(pos, BinaryOpEnum.Dot)
         "->" -> Cpp.BinaryOp(pos, BinaryOpEnum.Arrow)
-        else -> TODO("binary op: $name")
+        else -> error("unsupported C++ binary operator: $name")
     }
 
     fun op(op: String, parts: List<Cpp.Expr>): Cpp.Expr {
@@ -399,24 +505,46 @@ class CppBuilder(
     private val libraryNameRegex = Regex("[^a-zA-Z_]+")
 
     fun nameTextForModule(library: ModuleName): String = byLibraryRoot.getOrPut(library.libraryRoot()) {
-        val exist = libraryNameRegex.replace(
-            library.libraryRoot().segments.joinToString("_"),
+        // Use the library name from configuration if available, otherwise fall back
+        // to sanitizing the raw library root path segments.
+        val libRoot = library.libraryRoot()
+        var exist = libraryRootToOutputDir[libRoot]?.let { name ->
+            libraryNameRegex.replace(name, "_")
+        } ?: libraryNameRegex.replace(
+            libRoot.segments.joinToString("_"),
             "_",
         )
-        exist.ifEmpty {
-            "mod_${byLibraryRoot.size}"
+        if (exist.isEmpty()) {
+            exist = "mod_${byLibraryRoot.size}"
         }
+        safeCppNamespace(exist)
     }
 
     fun nameForModule(library: ModuleLocation): Cpp.Name = when (library) {
-        ImplicitsCodeLocation -> name(TEMPER_CORE_NAMESPACE)
+        CoreCodeLocation -> name(TEMPER_CORE_NAMESPACE)
         is ModuleName -> {
+            // Use only the library root namespace, not sub-module paths.
+            // All modules in a library share the same C++ namespace.
             val lib = nameTextForModule(library)
-            val single = library.relativePath().segments.lastOrNull()?.baseName
-            if (single == null) {
-                name(lib)
-            } else {
-                name(lib, single)
+            name(lib)
+        }
+    }
+
+    /** Compute the include path for a module's header file. */
+    fun includePathForModule(library: ModuleName): String {
+        val libRootPath = library.libraryRoot()
+        // Use the library name from configuration if available, otherwise
+        // fall back to joining the raw source path segments.
+        val libRoot = libraryRootToOutputDir[libRootPath]
+            ?: libRootPath.segments.joinToString("/") { it.baseName }
+        val relPath = library.relativePath()
+        return when {
+            relPath.segments.isEmpty() -> "$libRoot/$INIT_NAME$HPP_EXT"
+            else -> {
+                // Preserve subdirectory structure: for a module at backend/x86,
+                // produce "tempercc/backend/x86.hpp" not "tempercc/x86.hpp".
+                val relParts = relPath.segments.joinToString("/") { it.baseName }
+                "$libRoot/$relParts$HPP_EXT"
             }
         }
     }
@@ -436,10 +564,10 @@ class CppBuilder(
         fun readName(): CppName? {
             val match = typeNameRegex.find(remain) ?: return null
             remain = remain.removePrefix(match.value).trimStart()
-            return CppName(match.value)
+            return CppName(match.value, allowKey = true)
         }
 
-        var type: Cpp.Type = singleName(readName()!!)
+        var type: Cpp.Type = singleName(readName() ?: error("invalid C++ type: '$text'"))
 
         fun handleTemplates(): Boolean {
             if (remain.startsWith("<")) {
@@ -495,7 +623,7 @@ class CppBuilder(
         do {
             while (remain.startsWith("::")) {
                 remain = remain.removePrefix("::").trimStart()
-                type = scopedName(type, singleName(readName()!!))
+                type = scopedName(type, singleName(readName() ?: error("expected name after '::' in type: '$text'")))
             }
         } while (handleTemplates())
 
@@ -523,6 +651,9 @@ class CppBuilder(
     }
 
     companion object {
+        /** Width of an octal byte escape (`\NNN`): a byte's max octal value 377 is 3 digits. */
+        private const val OCTAL_ESCAPE_DIGITS = 3
+
         private val escapeCodes = mapOf<Char, String>(
             7.toChar() to "\\a",
             8.toChar() to "\\b",

@@ -87,13 +87,18 @@ internal class JsNames {
         }
     }
 
-    fun jsNameNotThis(name: ResolvedName): JsIdentifierName {
+    fun jsNameNotThis(name: ResolvedName, cachePretty: Boolean = false): JsIdentifierName {
         if (name in monitoredCalls) {
             monitoredCalls[name] = monitoredCalls[name]!! + 1
         }
         return when (name) {
             is ExportedName if name.comesFrom(origin) -> {
                 JsIdentifierName.escaped(name.baseName.nameText)
+            }
+            else if cachePretty -> {
+                JsIdentifierName.escaped(name.prefix()).also {
+                    tmpLNameToJsName[name] = it
+                }
             }
             in localAliases -> localAliases.getValue(name)
             in availableAliases -> {

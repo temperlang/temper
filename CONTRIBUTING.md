@@ -25,12 +25,12 @@ Temper translates to many languages, and some tests exercise these languages.
 Where possible, we try to support older versions of target languages.
 This allows Temper to reach as many use cases as possible.
 
-- **Maven** (>3.2.5) — For Java tests; run `scripts/generate-maven-toolchains-xml` to configure
+- **Maven** (>3.2.5) — For Java tests; run `scripts/generate_maven_toolchains_xml.py` to configure
 - **Java 8** - For Java 8 backend tests
 - **Java 17** - For (more modern) Java backend tests
 - **toolchains.xml** - To tell Maven where Java 8 and 17 are, [docs here][toolchains]
 - **Lua 5.1 or 5.4** — For Lua backend tests
-- **.NET Core 6.0** — For C# backend tests
+- **.NET 6.0** — For C# backend tests
 - **Node.js v18** — For JavaScript backend tests; `nvm install lts-hydrogen`
 - **Python 3.11** — For Python backend tests
 - **Rust 1.71.1** — Including cargo, for Rust backend tests
@@ -83,7 +83,7 @@ The first run downloads dependencies and may take a few minutes.
 # Format Kotlin source files
 ./gradlew ktlintFormat
 
-# Update generated code from .grammar files
+# Update generated code from .out-grammar files
 ./gradlew kcodegen:updateGeneratedCode
 
 # Update generated docs from Temper inline-docs
@@ -108,7 +108,7 @@ Add the environment variable `IS_INTELLIJ_TERMINAL=t` to your run configurations
 | `common/` | Utilities not specific to Temper |
 | `lexer/` | Tokenization |
 | `parser/` | Token stream → CST |
-| `ast/` | CST → AST transformation |
+| `cst/`, `ast/` | CST and AST node definitions |
 | `frontend/` | Module processing |
 | `be/` | Backend machinery |
 | `be-js/`, `be-py/`, etc. | Language-specific backends |

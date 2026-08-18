@@ -6,6 +6,7 @@ import lang.temper.be.MetadataKey
 import lang.temper.be.cli.RunnerSpecifics
 import lang.temper.be.names.NameSelection
 import lang.temper.be.storeDescriptorsForDeclarations
+import lang.temper.be.tmpl.SuperCallConfig
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
@@ -28,6 +29,7 @@ import lang.temper.log.FilePath
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
 import lang.temper.log.last
+import lang.temper.log.resolveFile
 import lang.temper.name.BackendId
 import lang.temper.name.BackendMeta
 import lang.temper.name.FileType
@@ -35,7 +37,6 @@ import lang.temper.name.LanguageLabel
 import lang.temper.name.ModuleName
 import lang.temper.name.Symbol
 import lang.temper.name.rootModuleName
-import lang.temper.type.MethodKind
 
 /**
  * <!-- snippet: backend/csharp -->
@@ -143,23 +144,11 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
             libraryConfigurations,
             dependencyResolver,
             tentativeOutputPathFor = ::tentativeOutputPathFor,
-            withTentative = {
+            withTentative = { tentativeTmpL ->
                 injectSuperCallMethods(
-                    it,
-                    injectInto = { decl ->
-                        // For default interface methods, you can't use them directly on classes unless you redefine them.
-                        // But this only applies to classes, not sub-interfaces.
-                        decl.kind != TmpL.TypeDeclarationKind.Interface
-                    },
-                    chooseSuperName = { methodKind, name ->
-                        // Currently this will need to translate from camel to pascal again later, sadly.
-                        when (methodKind) {
-                            MethodKind.Normal -> "${name}Default"
-                            MethodKind.Getter -> "get${name.camelToPascal()}Default"
-                            MethodKind.Setter -> "set${name.camelToPascal()}Default"
-                            MethodKind.Constructor -> error("unexpected")
-                        }
-                    },
+                    tentativeTmpL,
+                    // We always need these in C# classes, even when there's not ambiguity in other languages.
+                    configSuperCall = { _, _ -> SuperCallConfig(skipThis = false) },
                 )
             },
         ).also {
@@ -195,6 +184,16 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
                         else -> {}
                     }
                 }
+            }
+            // Connected source.
+            for (file in rawBackendFiles) {
+                // Skip the library name dir and the file name, and keep the middle
+                val subspace = chooseSubspace(file.key.segments).subList(1, file.key.segments.size - 1)
+                MetadataFileSpecification(
+                    path = dirPath(SRC_PROJECT_DIR).resolve(dirPath(subspace)).resolveFile(file.key.segments.last()),
+                    mimeType = mimeType,
+                    content = file.value,
+                ).also { add(it) }
             }
             // Proj.
             val rootNamespaceByName = names.rootNamespaces.associate { it.first.libraryName.text to it.second }

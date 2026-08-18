@@ -8,9 +8,11 @@ import lang.temper.be.cli.ShellPreferences
 import lang.temper.be.cli.ToolchainRequest
 import lang.temper.be.cli.ToolchainResult
 import lang.temper.common.Console
+import lang.temper.common.CustomValueFormatter
 import lang.temper.common.Log
 import lang.temper.common.RFailure
 import lang.temper.common.currents.CancelGroup
+import lang.temper.format.ConsoleBackedContextualLogSink
 import lang.temper.fs.OutDir
 import lang.temper.fs.OutputRoot
 import lang.temper.fs.RealWritableFileSystem
@@ -39,9 +41,11 @@ internal class Runner(
             emptyMap()
         }
 
+        val cliConsole = args.cliConsole
+        val runLogSink = ConsoleBackedContextualLogSink(cliConsole, null, null, CustomValueFormatter.Nope)
         var testTally: TestTally
         val results = buildList {
-            testTally = tallyResults(realResults, args.cliConsole, resultDetails = this)
+            testTally = tallyResults(realResults, cliConsole, runLogSink, resultDetails = this)
         }
 
         return DoRunResult(
@@ -153,5 +157,6 @@ internal class SynchronizedPrintBuffer {
     @Synchronized
     fun append(str: String) { buffer.append(str) }
 
+    @Synchronized
     override fun toString(): String = "$buffer"
 }

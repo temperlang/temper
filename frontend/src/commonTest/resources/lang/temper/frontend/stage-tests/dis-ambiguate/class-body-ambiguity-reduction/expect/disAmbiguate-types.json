@@ -1,0 +1,11 @@
+{
+    "AnyValue": {
+        "abstract": true
+    },
+    "C": {
+        "word": "C"
+    },
+    "Void": {
+        "supers": []
+    }
+}

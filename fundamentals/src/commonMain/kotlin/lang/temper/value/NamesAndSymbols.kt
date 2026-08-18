@@ -4,6 +4,7 @@ import lang.temper.lexer.Operator
 import lang.temper.name.BuiltinName
 import lang.temper.name.ParsedName
 import lang.temper.name.Symbol
+import lang.temper.type.DotMember
 
 // Names and symbols for builtins
 
@@ -292,6 +293,13 @@ val returnDeclSymbol = Symbol("returnDecl")
 val vReturnDeclSymbol = Value(returnDeclSymbol)
 
 /**
+ * Marks a synthesized declaration that contains top-level metadata for the module as a whole.
+ * This allows things like file-level annotations in other languages.
+ */
+val topLevelMetadataSymbol = Symbol("topLevelMetadata")
+val vTopLevelMetadataSymbol = Value(topLevelMetadataSymbol)
+
+/**
  * Symbol that marks whether [FunTree]s can be the target of a `return` statement.
  *
  *     let f(): Int {
@@ -531,6 +539,13 @@ val vInlineUnrealizedGoalSymbol = Value(inlineUnrealizedGoalSymbol)
 val extensionSymbol = Symbol("extension")
 val vExtensionSymbol = Value(extensionSymbol)
 
+/**
+ * Metadata key for operator specifications that indicates that
+ * a method or function implements an operator.
+ */
+val operatorSymbol = Symbol("operator")
+val vOperatorSymbol = Value(operatorSymbol)
+
 /** Provides an overload name to a function or class member. */
 val overloadSymbol = Symbol("overload")
 
@@ -548,6 +563,9 @@ val vParameterNameSymbolsListSymbol = Value(parameterNameSymbolsListSymbol)
  * See the `@fun` builtin.
  */
 val functionalInterfaceSymbol = Symbol("functionalInterface")
+
+val imuSymbol = Symbol("imu")
+val partialImuSymbol = Symbol("partialImu")
 
 /**
  * The receiver type when an extension (see [extensionSymbol]) function is invoked via
@@ -575,8 +593,19 @@ val jsonExtraSymbol = Symbol("jsonExtra")
 val jsonNameSymbol = Symbol("jsonName")
 
 /** Provides a convenient default string representation. */
-val toStringSymbol = Symbol("toString")
-val vToStringSymbol = Value(toStringSymbol)
+val toStringDotName = DotMember(Symbol("toString"))
+val constructorDotName = DotMember(constructorSymbol)
+
+/**
+ * Allows embedding data files constructed by macros in module-level metadata
+ * for extraction by the data file backend.
+ *
+ * TODO: The eventual goal for data files is that they are retrievable from within
+ * Temper and that they can have a struct type overload, and that there is a convenience
+ * that generates them in a type-safe way by generating both the file and the struct reader
+ * via a convenience macro that parameterizes over the struct type.
+ */
+val declareDataFileSymbol = Symbol("declareDataFile")
 
 val consoleParsedName = ParsedName("console")
 val defaultParsedName = ParsedName("default")
@@ -614,7 +643,6 @@ val listedTypeBuiltinName = BuiltinName("Listed")
 val logicalOrBuiltinName = BuiltinName("||")
 val newBuiltinName = BuiltinName("new")
 val ofBuiltinName = BuiltinName("of")
-val postfixApplyName = BuiltinName("postfixApply")
 val quasiInnerBuiltinName = BuiltinName("quasiInner")
 val quasiLeafBuiltinName = BuiltinName("quasiLeaf")
 val rawBuiltinName = BuiltinName("raw")

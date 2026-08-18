@@ -36,7 +36,7 @@ import lang.temper.value.ValueLeaf
 import lang.temper.value.debug
 import lang.temper.value.errorFn
 import lang.temper.value.fromTypeSymbol
-import lang.temper.value.isImplicits
+import lang.temper.value.isCore
 import lang.temper.value.orderedPathIndices
 import lang.temper.value.toPseudoCode
 import lang.temper.value.typeDeclSymbol
@@ -510,7 +510,7 @@ internal class UseBeforeInit(
         val names: Map<ResolvedName, Set<Position>>,
     )
 
-    private val debugging get() = DEBUG && !module.isImplicits
+    private val debugging get() = DEBUG && !module.isCore
 
     @Suppress("unused")
     inline fun debug(diagnosticBlock: Console.() -> Unit) {

@@ -30,9 +30,7 @@ class GrammarProductionExtractorTest {
                     """
                     |## Syntax for *JsonBoolean*
                     |
-                    |![JsonBoolean &#58;&#61; &#34;false&#34; &#124; &#34;true&#34;]${
-                        ""
-                    }[snippet/syntax/JsonBoolean.svg]
+                    |![JsonBoolean &#58;&#61; &#34;false&#34; &#124; &#34;true&#34;][snippet/syntax/JsonBoolean.svg]
                     |
                     |Truth values are represented using the keywords `false` and `true`.
                     """.trimMargin(),
@@ -42,14 +40,11 @@ class GrammarProductionExtractorTest {
                     |const rr = require("@prantlf/railroad-diagrams");
                     |const fs = require("fs");
                     |
-                    |const component = new (rr.Choice)(1, new (rr.Terminal)("false"),${
-                        ""} new (rr.Terminal)("true"));
+                    |const component = new (rr.Choice)(1, new (rr.Terminal)("false"), new (rr.Terminal)("true"));
                     |
                     |const diagram = new rr.Diagram(component);
                     |
-                    |let title = "\u003ctitle\u003eJsonBoolean \u0026#58;\u0026#61;${
-                        ""} \u0026#34;false\u0026#34; \u0026#124;${
-                        ""} \u0026#34;true\u0026#34;\u003c/title\u003e";
+                    |let title = "<title>JsonBoolean &#58;&#61; &#34;false&#34; &#124; &#34;true&#34;<\/title>";
                     |
                     |let scopedCssFile = require.resolve('@prantlf/railroad-diagrams/railroad-diagrams.css');
                     |let scopedCss = fs.readFileSync(scopedCssFile, 'utf8');

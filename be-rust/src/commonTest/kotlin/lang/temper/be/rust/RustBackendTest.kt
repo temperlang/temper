@@ -68,6 +68,7 @@ class RustBackendTest {
             |        lib.rs: {
             |          content: ```
             |            #![allow(warnings)]
+            |            #![allow(dependency_on_unit_never_type_fallback)]
             |            pub mod bar;
             |            mod r#mod;
             |            pub use r#mod::*;
@@ -87,6 +88,7 @@ class RustBackendTest {
             |        mod.rs: {
             |          content: ```
             |            #![allow(warnings)]
+            |            #![allow(dependency_on_unit_never_type_fallback)]
             |            use temper_core::AnyValueTrait;
             |            use temper_core::AsAnyValue;
             |            use temper_core::Pair;
@@ -94,14 +96,11 @@ class RustBackendTest {
             |            pub (crate) fn init() -> temper_core::Result<()> {
             |                static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |                INIT_ONCE.get_or_init(| |{
+            |                        let stringifyValue__0: std::sync::Arc<dyn Fn (i32) -> std::sync::Arc<String> + std::marker::Send + std::marker::Sync> = std::sync::Arc::new(crate::bar::stringify.clone());
             |                        println!("{}", "Foo");
-            |                        STRINGIFY_VALUE_HERE.set(std::sync::Arc::new(stringifyHere__0.clone())).unwrap_or_else(| _ | panic!());
+            |                        let stringifyValueHere__0: std::sync::Arc<dyn Fn (i32) -> std::sync::Arc<String> + std::marker::Send + std::marker::Sync> = std::sync::Arc::new(stringifyHere__0.clone());
             |                        Ok(())
             |                }).clone()
-            |            }
-            |            static STRINGIFY_VALUE_HERE: std::sync::OnceLock<std::sync::Arc<dyn Fn (i32) -> std::sync::Arc<String> + std::marker::Send + std::marker::Sync>> = std::sync::OnceLock::new();
-            |            fn stringify_value_here() -> std::sync::Arc<dyn Fn (i32) -> std::sync::Arc<String> + std::marker::Send + std::marker::Sync> {
-            |                ( * STRINGIFY_VALUE_HERE.get().unwrap()).clone()
             |            }
             |            fn stringifyHere__0(i__0: i32) -> std::sync::Arc<String> {
             |                return temper_core::int_to_string(i__0, None);
@@ -109,13 +108,13 @@ class RustBackendTest {
             |            pub fn hi(nums__0: impl temper_core::ToListed<i32>) -> std::sync::Arc<String> {
             |                let nums__0 = nums__0.to_listed();
             |                let a__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & crate::bar::stringify.clone());
-            |                let b__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & ( * crate::bar::stringify_value().clone()));
+            |                let b__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & crate::bar::stringify.clone());
             |                let c__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & stringifyHere__0.clone());
-            |                let d__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & ( * stringify_value_here().clone()));
+            |                let d__0: std::sync::Arc<String> = temper_core::listed::join( & ( * nums__0), std::sync::Arc::new("".to_string()), & stringifyHere__0.clone());
             |                return std::sync::Arc::new(format!("{}{}{}{}", a__0, b__0.clone(), c__0.clone(), d__0.clone()));
             |            }
-            |            pub fn make_talk_here(talker__1: crate::bar::Talker) {
-            |                talker__1.talk();
+            |            pub fn make_talk_here(talker__0: crate::bar::Talker) {
+            |                talker__0.talk();
             |            }
             |
             |            ```
@@ -125,6 +124,7 @@ class RustBackendTest {
             |          mod.rs: {
             |            content: ```
             |              #![allow(warnings)]
+            |              #![allow(dependency_on_unit_never_type_fallback)]
             |              use temper_core::AnyValueTrait;
             |              use temper_core::AsAnyValue;
             |              use temper_core::Pair;
@@ -152,6 +152,14 @@ class RustBackendTest {
             |                      Talker(std::sync::Arc::new(selfish))
             |                  }
             |              }
+            |              impl TalkerTrait for Talker {
+            |                  fn clone_boxed(& self) -> Talker {
+            |                      TalkerTrait::clone_boxed( & ( * self.0))
+            |                  }
+            |                  fn talk(& self) -> () {
+            |                      TalkerTrait::talk( & ( * self.0))
+            |                  }
+            |              }
             |              temper_core::impl_any_value_trait_for_interface!(Talker);
             |              impl std::ops::Deref for Talker {
             |                  type Target = dyn TalkerTrait;
@@ -162,8 +170,8 @@ class RustBackendTest {
             |              pub fn stringify(i__1: i32) -> std::sync::Arc<String> {
             |                  return temper_core::int_to_string(i__1, None);
             |              }
-            |              pub fn make_talk(talker__0: Talker) {
-            |                  talker__0.talk();
+            |              pub fn make_talk(talker__1: Talker) {
+            |                  talker__1.talk();
             |              }
             |
             |              ```
@@ -227,12 +235,11 @@ class RustBackendTest {
                 |temper_core::impl_any_value_trait!(A, []);
                 |fn fn__0() -> temper_core::SafeGenerator<()> {
                 |    let mut caseIndex___0: std::sync::Arc<std::sync::RwLock<i32>> = std::sync::Arc::new(std::sync::RwLock::new(0));
-                |    let mut t___0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>> = std::sync::Arc::new(std::sync::RwLock::new(std::sync::Arc::new("".to_string())));
-                |    let mut t___1: std::sync::Arc<std::sync::RwLock<Option<A>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
-                |    let mut t___2: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>> = std::sync::Arc::new(std::sync::RwLock::new(std::sync::Arc::new("".to_string())));
+                |    let mut t___0: std::sync::Arc<std::sync::RwLock<Option<A>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
+                |    let mut t___1: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>> = std::sync::Arc::new(std::sync::RwLock::new(std::sync::Arc::new("".to_string())));
                 |    #[derive(Clone)]
                 |    struct ClosureGroup___0 {
-                |        caseIndex___0: std::sync::Arc<std::sync::RwLock<i32>>, t___1: std::sync::Arc<std::sync::RwLock<Option<A>>>, t___2: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>>, t___0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>>
+                |        caseIndex___0: std::sync::Arc<std::sync::RwLock<i32>>, t___0: std::sync::Arc<std::sync::RwLock<Option<A>>>, t___1: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>>
                 |    }
                 |    impl ClosureGroup___0 {
                 |        fn convertedCoroutine___0(& self, generator___0: temper_core::SafeGenerator<()>) -> Option<()> {
@@ -255,7 +262,7 @@ class RustBackendTest {
                 |                        match p().clone().get() {
                 |                            Ok(x) => {
                 |                                {
-                |                                    * self.t___1.write().unwrap() = Some(x);
+                |                                    * self.t___0.write().unwrap() = Some(x);
                 |                                }
                 |                                {
                 |                                    * self.caseIndex___0.write().unwrap() = 3;
@@ -268,7 +275,7 @@ class RustBackendTest {
                 |                    },
                 |                    2 => {
                 |                        {
-                |                            * self.t___2.write().unwrap() = std::sync::Arc::new("".to_string());
+                |                            * self.t___1.write().unwrap() = std::sync::Arc::new("".to_string());
                 |                        }
                 |                        {
                 |                            * self.caseIndex___0.write().unwrap() = 4;
@@ -276,17 +283,14 @@ class RustBackendTest {
                 |                    },
                 |                    3 => {
                 |                        {
-                |                            * self.t___0.write().unwrap() = temper_core::read_locked( & self.t___1).clone().unwrap().a();
-                |                        }
-                |                        {
-                |                            * self.t___2.write().unwrap() = temper_core::read_locked( & self.t___0).clone();
+                |                            * self.t___1.write().unwrap() = temper_core::read_locked( & self.t___0).clone().unwrap().a();
                 |                        }
                 |                        {
                 |                            * self.caseIndex___0.write().unwrap() = 4;
                 |                        }
                 |                    },
                 |                    4 => {
-                |                        println!("{}", temper_core::read_locked( & self.t___2).clone());
+                |                        println!("{}", temper_core::read_locked( & self.t___1).clone());
                 |                        return None;
                 |                    },
                 |                    _ => {
@@ -297,7 +301,7 @@ class RustBackendTest {
                 |        }
                 |    }
                 |    let closure_group = ClosureGroup___0 {
-                |        caseIndex___0: caseIndex___0.clone(), t___1: t___1.clone(), t___2: t___2.clone(), t___0: t___0.clone()
+                |        caseIndex___0: caseIndex___0.clone(), t___0: t___0.clone(), t___1: t___1.clone()
                 |    };
                 |    let convertedCoroutine___0 = {
                 |        let closure_group = closure_group.clone();
@@ -313,8 +317,8 @@ class RustBackendTest {
     fun bubblyOption() {
         assertGenerateWanted(
             temper = """
-                |public let blah(i: Int): Int throws Bubble { something(i) orelse 0 }
-                |public let something(var i: Int?): Int throws Bubble {
+                |export let blah(i: Int): Int throws Bubble { something(i) orelse 0 }
+                |export let something(var i: Int?): Int throws Bubble {
                 |  when (i) {
                 |    is Int -> 5 % (i as Int); // cast needed because var
                 |    else -> 1;
@@ -328,7 +332,7 @@ class RustBackendTest {
                 |            Ok(())
                 |    }).clone()
                 |}
-                |fn something__0(mut i__0: Option<i32>) -> temper_core::Result<i32> {
+                |pub fn something(mut i__0: Option<i32>) -> temper_core::Result<i32> {
                 |    let return__0: i32;
                 |    let mut t___0: bool;
                 |    let mut t___1: i32;
@@ -349,12 +353,12 @@ class RustBackendTest {
                 |    }
                 |    return Ok(return__0);
                 |}
-                |fn blah__0(i__1: i32) -> temper_core::Result<i32> {
+                |pub fn blah(i__1: i32) -> temper_core::Result<i32> {
                 |    let return__1: i32;
                 |    let mut t___3: i32;
                 |    'ok___0: {
                 |        'orelse___0: {
-                |            t___3 = match something__0(Some(i__1)) {
+                |            t___3 = match something(Some(i__1)) {
                 |                Ok(x) => x,
                 |                _ => break 'orelse___0
                 |            };
@@ -436,11 +440,9 @@ class RustBackendTest {
             |    }).clone()
             |}
             |pub fn hi(n__0: i32) {
-            |    let mut t___0: std::sync::Arc<String>;
             |    let mut i__0: i32 = 0;
-            |    'loop___0: while Some(i__0) < Some(n__0) {
-            |        t___0 = temper_core::int_to_string(i__0, None);
-            |        let mut a__0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>> = std::sync::Arc::new(std::sync::RwLock::new(std::sync::Arc::new(format!("{}", t___0))));
+            |    'loop___0: while i__0 < n__0 {
+            |        let mut a__0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>> = std::sync::Arc::new(std::sync::RwLock::new(std::sync::Arc::new(format!("{}", i__0))));
             |        #[derive(Clone)]
             |        struct ClosureGroup___0 {
             |            a__0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>>
@@ -493,7 +495,7 @@ class RustBackendTest {
             |}
             |fn repeat__0(times__0: i32, act__0: std::sync::Arc<dyn Fn (i32) + std::marker::Send + std::marker::Sync>) {
             |    let mut i__0: i32 = 0;
-            |    'loop___0: while Some(i__0) < Some(times__0) {
+            |    'loop___0: while i__0 < times__0 {
             |        act__0(i__0);
             |        i__0 = i__0.wrapping_add(1);
             |    }
@@ -647,6 +649,34 @@ class RustBackendTest {
     )
 
     @Test
+    fun floatComparisons() = assertGenerateWanted(
+        temper = """
+            |export let f(a: Float64, b: Float64): Boolean {
+            |  a != b && a < b + 1.0
+            |}
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            Ok(())
+            |    }).clone()
+            |}
+            |pub fn f(a__0: f64, b__0: f64) -> bool {
+            |    let return__0: bool;
+            |    let mut t___0: f64;
+            |    if temper_core::float64::cmp_option(Some(a__0), Some(b__0)) != 0 {
+            |        t___0 = b__0 + 1.0f64;
+            |        return__0 = temper_core::float64::cmp(a__0, t___0) < 0;
+            |    } else {
+            |        return__0 = false;
+            |    }
+            |    return return__0;
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun funArgWrong() = assertGenerateWanted(
         temper = """
             |@fun interface Handler(): Void;
@@ -752,38 +782,30 @@ class RustBackendTest {
             |        crate::init(None);
             |        temper_std::init(None);
             |        let test___0 = temper_std::testing::Test::new();
+            |        let mut t___0: bool;
             |        let nums__0: temper_core::List<i32> = std::sync::Arc::new(vec![0, 1]);
-            |        #[derive(Clone)]
-            |        struct ClosureGroup___0 {
-            |            nums__0: temper_core::List<i32>, test___0: temper_std::testing::Test
-            |        }
-            |        impl ClosureGroup___0 {
-            |            fn fn__0(& self, i__0: i32) {
-            |                let mut t___0: i32 = temper_core::ListedTrait::len( & self.nums__0);
-            |                let mut t___1: bool = Some(i__0) < Some(t___0);
-            |                #[derive(Clone)]
-            |                struct ClosureGroup___1 {}
-            |                impl ClosureGroup___1 {
-            |                    fn fn__1(& self) -> std::sync::Arc<String> {
-            |                        return std::sync::Arc::new("expected i < nums.length".to_string());
-            |                    }
+            |        let this__0: temper_core::List<i32> = nums__0.clone();
+            |        let n__0: i32 = temper_core::ListedTrait::len( & this__0);
+            |        let mut i__0: i32 = 0;
+            |        'loop___0: while i__0 < n__0 {
+            |            let el__0: i32 = temper_core::ListedTrait::get( & this__0, i__0);
+            |            i__0 = i__0.wrapping_add(1);
+            |            let i__1: i32 = el__0;
+            |            t___0 = i__1 < temper_core::ListedTrait::len( & nums__0);
+            |            #[derive(Clone)]
+            |            struct ClosureGroup___0 {}
+            |            impl ClosureGroup___0 {
+            |                fn fn__0(& self) -> std::sync::Arc<String> {
+            |                    return std::sync::Arc::new("expected i < nums.length".to_string());
             |                }
-            |                let closure_group = ClosureGroup___1 {};
-            |                let fn__1 = {
-            |                    let closure_group = closure_group.clone();
-            |                    std::sync::Arc::new(move | | closure_group.fn__1())
-            |                };
-            |                self.test___0.assert(t___1, fn__1.clone());
             |            }
+            |            let closure_group = ClosureGroup___0 {};
+            |            let fn__0 = {
+            |                let closure_group = closure_group.clone();
+            |                std::sync::Arc::new(move | | closure_group.fn__0())
+            |            };
+            |            test___0.assert(t___0, fn__0.clone());
             |        }
-            |        let closure_group = ClosureGroup___0 {
-            |            nums__0: nums__0.clone(), test___0: test___0.clone()
-            |        };
-            |        let fn__0 = {
-            |            let closure_group = closure_group.clone();
-            |            std::sync::Arc::new(move | i__0: i32 | closure_group.fn__0(i__0))
-            |        };
-            |        temper_core::listed::list_for_each( & nums__0, & ( * fn__0.clone()));
             |        test___0.soft_fail_to_hard()
             |    }
             |    use super::*;
@@ -868,6 +890,14 @@ class RustBackendTest {
                 |impl Apple {
                 |    pub fn new(selfish: impl AppleTrait + 'static) -> Apple {
                 |        Apple(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |impl AppleTrait for Apple {
+                |    fn as_enum(& self) -> AppleEnum {
+                |        AppleTrait::as_enum( & ( * self.0))
+                |    }
+                |    fn clone_boxed(& self) -> Apple {
+                |        AppleTrait::clone_boxed( & ( * self.0))
                 |    }
                 |}
                 |temper_core::impl_any_value_trait_for_interface!(Apple);
@@ -1006,7 +1036,7 @@ class RustBackendTest {
                 |pub fn fib(mut i__0: i32) -> i32 {
                 |    let mut a__0: i32 = 0;
                 |    let mut b__0: i32 = 1;
-                |    'loop___0: while Some(i__0) > Some(0) {
+                |    'loop___0: while i__0 > 0 {
                 |        let c__0: i32 = a__0.wrapping_add(b__0);
                 |        a__0 = b__0;
                 |        b__0 = c__0;
@@ -1052,6 +1082,7 @@ class RustBackendTest {
             |        lib.rs: {
             |          content: ```
             |            #![allow(warnings)]
+            |            #![allow(dependency_on_unit_never_type_fallback)]
             |            pub mod bar;
             |            pub mod bob;
             |            mod support;
@@ -1071,6 +1102,7 @@ class RustBackendTest {
             |          mod.rs: {
             |            content: ```
             |              #![allow(warnings)]
+            |              #![allow(dependency_on_unit_never_type_fallback)]
             |              use temper_core::AnyValueTrait;
             |              use temper_core::AsAnyValue;
             |              use temper_core::Pair;
@@ -1107,6 +1139,7 @@ class RustBackendTest {
             |              "mod.rs": {
             |                content: ```
             |                  #![allow(warnings)]
+            |                  #![allow(dependency_on_unit_never_type_fallback)]
             |                  use temper_core::AnyValueTrait;
             |                  use temper_core::AsAnyValue;
             |                  use temper_core::Pair;
@@ -1170,15 +1203,6 @@ class RustBackendTest {
                 |}
                 |#[derive(Clone)]
                 |pub struct C(std::sync::Arc<std::sync::RwLock<CStruct>>);
-                |#[derive(Clone)]
-                |pub struct CBuilder {
-                |    pub x: std::sync::Arc<String>, pub y: std::sync::Arc<String>
-                |}
-                |impl CBuilder {
-                |    pub fn build(self) -> C {
-                |        C::new(self.x, self.y)
-                |    }
-                |}
                 |impl C {
                 |    pub fn v(& self) -> std::sync::Arc<String> {
                 |        return std::sync::Arc::new("ciao".to_string());
@@ -1228,6 +1252,606 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait!(C, []);
+                |pub mod builders {
+                |    #[derive(Clone)]
+                |    pub struct CBuilder {
+                |        pub x: std::sync::Arc<String>, pub y: std::sync::Arc<String>
+                |    }
+                |    impl CBuilder {
+                |        pub fn build(self) -> C {
+                |            C::new(self.x, self.y)
+                |        }
+                |    }
+                |    use super::*;
+                |}
+            """.trimMargin(),
+        )
+    }
+
+    @Test
+    fun genericConstraints() {
+        assertGenerateWanted(
+            temper = """
+                |interface A {
+                |  // Use different ways of declaring props.
+                |  public var prop: String;
+                |  public get thing(): String;
+                |  public set thing(that: String): Void;
+                |  public greeting(): String { "Hi!" }
+                |  public whatever(): String;
+                |}
+                |interface B<T extends A> extends A {
+                |  // No greeting here.
+                |  public whatever(): String { "blah" }
+                |}
+                |class C<T extends A>(
+                |  public var prop: String,
+                |  public var thing: String,
+                |) extends B<T> {
+                |  public greeting(): String { "Ha!" }
+                |  public spawn(): C<B<A>> { new C<B<A>>("", "") }
+                |}
+                |// D provides alternate paths for override resolution.
+                |interface D<T> extends A {
+                |  public get prop(): String { "Hello!" }
+                |  public set prop(value: String): Void {}
+                |  public set thing(value: String): Void {}
+                |  public whatever(): String { "sure" }
+                |}
+                |// E provides indirection on type bindings to D.
+                |interface E<T> extends D<T> {}
+                |// Alternate prop/thing set/get vs D above.
+                |class F extends B<C<A>> & E<Int> {
+                |  public get thing(): String { "Hello!" }
+                |}
+            """.trimMargin(),
+            rust = """
+                |pub (crate) fn init() -> temper_core::Result<()> {
+                |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+                |    INIT_ONCE.get_or_init(| |{
+                |            Ok(())
+                |    }).clone()
+                |}
+                |trait ATrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
+                |    fn clone_boxed(& self) -> A;
+                |    fn prop(& self) -> std::sync::Arc<String>;
+                |    fn set_prop(& self, newprop___0: std::sync::Arc<String>);
+                |    fn thing(& self) -> std::sync::Arc<String>;
+                |    fn set_thing(& self, that__0: std::sync::Arc<String>);
+                |    fn greeting(& self) -> std::sync::Arc<String> {
+                |        return std::sync::Arc::new("Hi!".to_string());
+                |    }
+                |    fn whatever(& self) -> std::sync::Arc<String>;
+                |}
+                |#[derive(Clone)]
+                |struct A(std::sync::Arc<dyn ATrait>);
+                |impl A {
+                |    pub fn new(selfish: impl ATrait + 'static) -> A {
+                |        A(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |impl ATrait for A {
+                |    fn clone_boxed(& self) -> A {
+                |        ATrait::clone_boxed( & ( * self.0))
+                |    }
+                |    fn thing(& self) -> std::sync::Arc<String> {
+                |        ATrait::thing( & ( * self.0))
+                |    }
+                |    fn set_thing(& self, value: std::sync::Arc<String>) {
+                |        ATrait::set_thing( & ( * self.0), value)
+                |    }
+                |    fn greeting(& self) -> std::sync::Arc<String> {
+                |        ATrait::greeting( & ( * self.0))
+                |    }
+                |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        ATrait::whatever( & ( * self.0))
+                |    }
+                |    fn prop(& self) -> std::sync::Arc<String> {
+                |        ATrait::prop( & ( * self.0))
+                |    }
+                |    fn set_prop(& self, value: std::sync::Arc<String>) {
+                |        ATrait::set_prop( & ( * self.0), value)
+                |    }
+                |}
+                |temper_core::impl_any_value_trait_for_interface!(A);
+                |impl std::ops::Deref for A {
+                |    type Target = dyn ATrait;
+                |    fn deref(& self) -> & Self::Target {
+                |        & ( * self.0)
+                |    }
+                |}
+                |trait BTrait<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + ATrait {
+                |    fn clone_boxed(& self) -> B<T>;
+                |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        return std::sync::Arc::new("blah".to_string());
+                |    }
+                |}
+                |#[derive(Clone)]
+                |struct B<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn BTrait<T>>);
+                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> B<T> {
+                |    pub fn new(selfish: impl BTrait<T> + 'static) -> B<T> {
+                |        B(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> BTrait<T> for B<T> {
+                |    fn clone_boxed(& self) -> B<T> {
+                |        BTrait::clone_boxed( & ( * self.0))
+                |    }
+                |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        BTrait::whatever( & ( * self.0))
+                |    }
+                |}
+                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for B<T> {
+                |    fn clone_boxed(& self) -> A {
+                |        ATrait::clone_boxed( & ( * self.0))
+                |    }
+                |    fn thing(& self) -> std::sync::Arc<String> {
+                |        ATrait::thing( & ( * self.0))
+                |    }
+                |    fn set_thing(& self, value: std::sync::Arc<String>) {
+                |        ATrait::set_thing( & ( * self.0), value)
+                |    }
+                |    fn greeting(& self) -> std::sync::Arc<String> {
+                |        ATrait::greeting( & ( * self.0))
+                |    }
+                |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        ATrait::whatever( & ( * self.0))
+                |    }
+                |    fn prop(& self) -> std::sync::Arc<String> {
+                |        ATrait::prop( & ( * self.0))
+                |    }
+                |    fn set_prop(& self, value: std::sync::Arc<String>) {
+                |        ATrait::set_prop( & ( * self.0), value)
+                |    }
+                |}
+                |temper_core::impl_any_value_trait_for_interface!(B<T> where T: ATrait);
+                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for B<T> {
+                |    type Target = dyn BTrait<T>;
+                |    fn deref(& self) -> & Self::Target {
+                |        & ( * self.0)
+                |    }
+                |}
+                |struct CStruct<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |    prop: std::sync::Arc<String>, thing: std::sync::Arc<String>, phantom_T: std::marker::PhantomData<T>
+                |}
+                |#[derive(Clone)]
+                |pub (crate) struct C<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<std::sync::RwLock<CStruct<T>>>);
+                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> C<T> {
+                |    pub fn greeting(& self) -> std::sync::Arc<String> {
+                |        return std::sync::Arc::new("Ha!".to_string());
+                |    }
+                |    pub fn spawn(& self) -> C<B<A>> {
+                |        return C::new("", "");
+                |    }
+                |    pub fn new(prop__0: impl temper_core::ToArcString, thing__0: impl temper_core::ToArcString) -> C<T> {
+                |        let prop__0 = prop__0.to_arc_string();
+                |        let thing__0 = thing__0.to_arc_string();
+                |        let prop;
+                |        let thing;
+                |        prop = prop__0.clone();
+                |        thing = thing__0.clone();
+                |        let selfish = C(std::sync::Arc::new(std::sync::RwLock::new(CStruct {
+                |                        prop, thing, phantom_T: std::marker::PhantomData
+                |        })));
+                |        return selfish;
+                |    }
+                |    pub fn prop(& self) -> std::sync::Arc<String> {
+                |        return self.0.read().unwrap().prop.clone();
+                |    }
+                |    pub fn set_prop(& self, newProp__0: impl temper_core::ToArcString) {
+                |        let newProp__0 = newProp__0.to_arc_string();
+                |        self.0.write().unwrap().prop = newProp__0.clone();
+                |    }
+                |    pub fn thing(& self) -> std::sync::Arc<String> {
+                |        return self.0.read().unwrap().thing.clone();
+                |    }
+                |    pub fn set_thing(& self, newThing__0: impl temper_core::ToArcString) {
+                |        let newThing__0 = newThing__0.to_arc_string();
+                |        self.0.write().unwrap().thing = newThing__0.clone();
+                |    }
+                |}
+                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> BTrait<T> for C<T> {
+                |    fn clone_boxed(& self) -> B<T> {
+                |        B::new(self.clone())
+                |    }
+                |}
+                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for C<T> {
+                |    fn clone_boxed(& self) -> A {
+                |        A::new(self.clone())
+                |    }
+                |    fn thing(& self) -> std::sync::Arc<String> {
+                |        self.thing()
+                |    }
+                |    fn set_thing(& self, newThing__0: std::sync::Arc<String>) {
+                |        self.set_thing(newThing__0)
+                |    }
+                |    fn greeting(& self) -> std::sync::Arc<String> {
+                |        self.greeting()
+                |    }
+                |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        BTrait::whatever(self)
+                |    }
+                |    fn prop(& self) -> std::sync::Arc<String> {
+                |        self.prop()
+                |    }
+                |    fn set_prop(& self, newProp__0: std::sync::Arc<String>) {
+                |        self.set_prop(newProp__0)
+                |    }
+                |}
+                |temper_core::impl_any_value_trait!(C<T>, [B<T>, A] where T: ATrait);
+                |trait DTrait<T: Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + ATrait {
+                |    fn clone_boxed(& self) -> D<T>;
+                |    fn prop(& self) -> std::sync::Arc<String> {
+                |        return std::sync::Arc::new("Hello!".to_string());
+                |    }
+                |    fn set_prop(& self, value__0: std::sync::Arc<String>) {}
+                |    fn thing(& self) -> std::sync::Arc<String>;
+                |    fn set_thing(& self, value__1: std::sync::Arc<String>) {}
+                |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        return std::sync::Arc::new("sure".to_string());
+                |    }
+                |}
+                |#[derive(Clone)]
+                |struct D<T: Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn DTrait<T>>);
+                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> D<T> {
+                |    pub fn new(selfish: impl DTrait<T> + 'static) -> D<T> {
+                |        D(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> DTrait<T> for D<T> {
+                |    fn clone_boxed(& self) -> D<T> {
+                |        DTrait::clone_boxed( & ( * self.0))
+                |    }
+                |    fn prop(& self) -> std::sync::Arc<String> {
+                |        DTrait::prop( & ( * self.0))
+                |    }
+                |    fn set_prop(& self, value: std::sync::Arc<String>) {
+                |        DTrait::set_prop( & ( * self.0), value)
+                |    }
+                |    fn set_thing(& self, value: std::sync::Arc<String>) {
+                |        DTrait::set_thing( & ( * self.0), value)
+                |    }
+                |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        DTrait::whatever( & ( * self.0))
+                |    }
+                |    fn thing(& self) -> std::sync::Arc<String> {
+                |        DTrait::thing( & ( * self.0))
+                |    }
+                |}
+                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for D<T> {
+                |    fn clone_boxed(& self) -> A {
+                |        ATrait::clone_boxed( & ( * self.0))
+                |    }
+                |    fn thing(& self) -> std::sync::Arc<String> {
+                |        ATrait::thing( & ( * self.0))
+                |    }
+                |    fn set_thing(& self, value: std::sync::Arc<String>) {
+                |        ATrait::set_thing( & ( * self.0), value)
+                |    }
+                |    fn greeting(& self) -> std::sync::Arc<String> {
+                |        ATrait::greeting( & ( * self.0))
+                |    }
+                |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        ATrait::whatever( & ( * self.0))
+                |    }
+                |    fn prop(& self) -> std::sync::Arc<String> {
+                |        ATrait::prop( & ( * self.0))
+                |    }
+                |    fn set_prop(& self, value: std::sync::Arc<String>) {
+                |        ATrait::set_prop( & ( * self.0), value)
+                |    }
+                |}
+                |temper_core::impl_any_value_trait_for_interface!(D<T>);
+                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for D<T> {
+                |    type Target = dyn DTrait<T>;
+                |    fn deref(& self) -> & Self::Target {
+                |        & ( * self.0)
+                |    }
+                |}
+                |trait ETrait<T: Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + DTrait<T> {
+                |    fn clone_boxed(& self) -> E<T>;
+                |}
+                |#[derive(Clone)]
+                |struct E<T: Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn ETrait<T>>);
+                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> E<T> {
+                |    pub fn new(selfish: impl ETrait<T> + 'static) -> E<T> {
+                |        E(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> ETrait<T> for E<T> {
+                |    fn clone_boxed(& self) -> E<T> {
+                |        ETrait::clone_boxed( & ( * self.0))
+                |    }
+                |}
+                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> DTrait<T> for E<T> {
+                |    fn clone_boxed(& self) -> D<T> {
+                |        DTrait::clone_boxed( & ( * self.0))
+                |    }
+                |    fn prop(& self) -> std::sync::Arc<String> {
+                |        DTrait::prop( & ( * self.0))
+                |    }
+                |    fn set_prop(& self, value: std::sync::Arc<String>) {
+                |        DTrait::set_prop( & ( * self.0), value)
+                |    }
+                |    fn set_thing(& self, value: std::sync::Arc<String>) {
+                |        DTrait::set_thing( & ( * self.0), value)
+                |    }
+                |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        DTrait::whatever( & ( * self.0))
+                |    }
+                |    fn thing(& self) -> std::sync::Arc<String> {
+                |        DTrait::thing( & ( * self.0))
+                |    }
+                |}
+                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for E<T> {
+                |    fn clone_boxed(& self) -> A {
+                |        ATrait::clone_boxed( & ( * self.0))
+                |    }
+                |    fn thing(& self) -> std::sync::Arc<String> {
+                |        ATrait::thing( & ( * self.0))
+                |    }
+                |    fn set_thing(& self, value: std::sync::Arc<String>) {
+                |        ATrait::set_thing( & ( * self.0), value)
+                |    }
+                |    fn greeting(& self) -> std::sync::Arc<String> {
+                |        ATrait::greeting( & ( * self.0))
+                |    }
+                |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        ATrait::whatever( & ( * self.0))
+                |    }
+                |    fn prop(& self) -> std::sync::Arc<String> {
+                |        ATrait::prop( & ( * self.0))
+                |    }
+                |    fn set_prop(& self, value: std::sync::Arc<String>) {
+                |        ATrait::set_prop( & ( * self.0), value)
+                |    }
+                |}
+                |temper_core::impl_any_value_trait_for_interface!(E<T>);
+                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for E<T> {
+                |    type Target = dyn ETrait<T>;
+                |    fn deref(& self) -> & Self::Target {
+                |        & ( * self.0)
+                |    }
+                |}
+                |struct FStruct {}
+                |#[derive(Clone)]
+                |pub (crate) struct F(std::sync::Arc<FStruct>);
+                |impl F {
+                |    pub fn thing(& self) -> std::sync::Arc<String> {
+                |        return std::sync::Arc::new("Hello!".to_string());
+                |    }
+                |    pub fn new() -> F {
+                |        let selfish = F(std::sync::Arc::new(FStruct {}));
+                |        return selfish;
+                |    }
+                |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        BTrait::whatever(self)
+                |    }
+                |    fn greeting(& self) -> std::sync::Arc<String> {
+                |        ATrait::greeting(self)
+                |    }
+                |}
+                |impl BTrait<C<A>> for F {
+                |    fn clone_boxed(& self) -> B<C<A>> {
+                |        B::new(self.clone())
+                |    }
+                |}
+                |impl ATrait for F {
+                |    fn clone_boxed(& self) -> A {
+                |        A::new(self.clone())
+                |    }
+                |    fn thing(& self) -> std::sync::Arc<String> {
+                |        self.thing()
+                |    }
+                |    fn set_thing(& self, value: std::sync::Arc<String>) {
+                |        DTrait::set_thing(self, value)
+                |    }
+                |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        BTrait::whatever(self)
+                |    }
+                |    fn prop(& self) -> std::sync::Arc<String> {
+                |        DTrait::prop(self)
+                |    }
+                |    fn set_prop(& self, value: std::sync::Arc<String>) {
+                |        DTrait::set_prop(self, value)
+                |    }
+                |}
+                |impl ETrait<i32> for F {
+                |    fn clone_boxed(& self) -> E<i32> {
+                |        E::new(self.clone())
+                |    }
+                |}
+                |impl DTrait<T> for F {
+                |    fn clone_boxed(& self) -> D<T> {
+                |        D::new(self.clone())
+                |    }
+                |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        BTrait::whatever(self)
+                |    }
+                |    fn thing(& self) -> std::sync::Arc<String> {
+                |        self.thing()
+                |    }
+                |}
+                |temper_core::impl_any_value_trait!(F, [B<C<A>>, A, E<i32>, D<T>]);
+            """.trimMargin(),
+        )
+    }
+
+    @Test
+    fun genericEnum() {
+        assertGenerateWanted(
+            temper = """
+                |export interface I {}
+                |export sealed interface Hi<T extends I> {}
+                |export class Lo<T extends I> extends Hi<T> {}
+                |// Piggyback a subtypeless sealed interface with a non-sealed supertype.
+                |export sealed interface AllAlone extends I {}
+            """.trimMargin(),
+            rust = """
+                |pub (crate) fn init() -> temper_core::Result<()> {
+                |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+                |    INIT_ONCE.get_or_init(| |{
+                |            Ok(())
+                |    }).clone()
+                |}
+                |pub trait ITrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
+                |    fn clone_boxed(& self) -> I;
+                |}
+                |#[derive(Clone)]
+                |pub struct I(std::sync::Arc<dyn ITrait>);
+                |impl I {
+                |    pub fn new(selfish: impl ITrait + 'static) -> I {
+                |        I(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |impl ITrait for I {
+                |    fn clone_boxed(& self) -> I {
+                |        ITrait::clone_boxed( & ( * self.0))
+                |    }
+                |}
+                |temper_core::impl_any_value_trait_for_interface!(I);
+                |impl std::ops::Deref for I {
+                |    type Target = dyn ITrait;
+                |    fn deref(& self) -> & Self::Target {
+                |        & ( * self.0)
+                |    }
+                |}
+                |pub enum HiEnum<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |    Lo(Lo<T>)
+                |}
+                |pub trait HiTrait<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
+                |    fn as_enum(& self) -> HiEnum<T>;
+                |    fn clone_boxed(& self) -> Hi<T>;
+                |}
+                |#[derive(Clone)]
+                |pub struct Hi<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn HiTrait<T>>);
+                |impl<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> Hi<T> {
+                |    pub fn new(selfish: impl HiTrait<T> + 'static) -> Hi<T> {
+                |        Hi(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |impl<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> HiTrait<T> for Hi<T> {
+                |    fn as_enum(& self) -> HiEnum<T> {
+                |        HiTrait::as_enum( & ( * self.0))
+                |    }
+                |    fn clone_boxed(& self) -> Hi<T> {
+                |        HiTrait::clone_boxed( & ( * self.0))
+                |    }
+                |}
+                |temper_core::impl_any_value_trait_for_interface!(Hi<T> where T: ITrait);
+                |impl<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for Hi<T> {
+                |    type Target = dyn HiTrait<T>;
+                |    fn deref(& self) -> & Self::Target {
+                |        & ( * self.0)
+                |    }
+                |}
+                |struct LoStruct<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |    phantom_T: std::marker::PhantomData<T>
+                |}
+                |#[derive(Clone)]
+                |pub struct Lo<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<LoStruct<T>>);
+                |impl<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> Lo<T> {
+                |    pub fn new() -> Lo<T> {
+                |        let selfish = Lo(std::sync::Arc::new(LoStruct {
+                |                    phantom_T: std::marker::PhantomData
+                |        }));
+                |        return selfish;
+                |    }
+                |}
+                |impl<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> HiTrait<T> for Lo<T> {
+                |    fn as_enum(& self) -> HiEnum<T> {
+                |        HiEnum::Lo(self.clone())
+                |    }
+                |    fn clone_boxed(& self) -> Hi<T> {
+                |        Hi::new(self.clone())
+                |    }
+                |}
+                |temper_core::impl_any_value_trait!(Lo<T>, [Hi<T>] where T: ITrait);
+                |pub enum AllAloneEnum {}
+                |pub trait AllAloneTrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + ITrait {
+                |    fn as_enum(& self) -> AllAloneEnum;
+                |    fn clone_boxed(& self) -> AllAlone;
+                |}
+                |#[derive(Clone)]
+                |pub struct AllAlone(std::sync::Arc<dyn AllAloneTrait>);
+                |impl AllAlone {
+                |    pub fn new(selfish: impl AllAloneTrait + 'static) -> AllAlone {
+                |        AllAlone(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |impl AllAloneTrait for AllAlone {
+                |    fn as_enum(& self) -> AllAloneEnum {
+                |        AllAloneTrait::as_enum( & ( * self.0))
+                |    }
+                |    fn clone_boxed(& self) -> AllAlone {
+                |        AllAloneTrait::clone_boxed( & ( * self.0))
+                |    }
+                |}
+                |impl ITrait for AllAlone {
+                |    fn clone_boxed(& self) -> I {
+                |        ITrait::clone_boxed( & ( * self.0))
+                |    }
+                |}
+                |temper_core::impl_any_value_trait_for_interface!(AllAlone);
+                |impl std::ops::Deref for AllAlone {
+                |    type Target = dyn AllAloneTrait;
+                |    fn deref(& self) -> & Self::Target {
+                |        & ( * self.0)
+                |    }
+                |}
+            """.trimMargin(),
+        )
+    }
+
+    @Test
+    fun needlesslyGenericBuilder() {
+        assertGenerateWanted(
+            temper = """
+                |export class Ha<T>(public i: Int, public j: Int) {}
+            """.trimMargin(),
+            rust = """
+                |pub (crate) fn init() -> temper_core::Result<()> {
+                |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+                |    INIT_ONCE.get_or_init(| |{
+                |            Ok(())
+                |    }).clone()
+                |}
+                |struct HaStruct<T: Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |    i: i32, j: i32, phantom_T: std::marker::PhantomData<T>
+                |}
+                |#[derive(Clone)]
+                |pub struct Ha<T: Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<HaStruct<T>>);
+                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> Ha<T> {
+                |    pub fn new(i__0: i32, j__0: i32) -> Ha<T> {
+                |        let i;
+                |        let j;
+                |        i = i__0;
+                |        j = j__0;
+                |        let selfish = Ha(std::sync::Arc::new(HaStruct {
+                |                    i, j, phantom_T: std::marker::PhantomData
+                |        }));
+                |        return selfish;
+                |    }
+                |    pub fn i(& self) -> i32 {
+                |        return self.0.i;
+                |    }
+                |    pub fn j(& self) -> i32 {
+                |        return self.0.j;
+                |    }
+                |}
+                |temper_core::impl_any_value_trait!(Ha<T>, []);
+                |pub mod builders {
+                |    #[derive(Clone)]
+                |    pub struct HaBuilder {
+                |        pub i: i32, pub j: i32
+                |    }
+                |    impl HaBuilder {
+                |        pub fn build<T: Clone + std::marker::Send + std::marker::Sync + 'static>(self) -> Ha<T> {
+                |            Ha::new(self.i, self.j)
+                |        }
+                |    }
+                |    use super::*;
+                |}
             """.trimMargin(),
         )
     }
@@ -1255,22 +1879,6 @@ class RustBackendTest {
                 |}
                 |#[derive(Clone)]
                 |pub struct Hi<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<HiStruct<T, U>>);
-                |#[derive(Clone, Default)]
-                |pub struct HiOptions {
-                |    pub i: Option<i32>
-                |}
-                |#[derive(Clone)]
-                |pub struct HiBuilder<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> {
-                |    pub t: Option<T>, pub u: U
-                |}
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> HiBuilder<T, U> {
-                |    pub fn build(self) -> Hi<T, U> {
-                |        self.build_with(std::default::Default::default())
-                |    }
-                |    pub fn build_with(self, options: HiOptions) -> Hi<T, U> {
-                |        Hi::new(self.t, self.u, options.i)
-                |    }
-                |}
                 |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> Hi<T, U> {
                 |    pub fn new(t__0: Option<T>, u__0: U, i__0: Option<i32>) -> Hi<T, U> {
                 |        let t;
@@ -1297,7 +1905,40 @@ class RustBackendTest {
                 |        return self.0.i;
                 |    }
                 |}
-                |temper_core::impl_any_value_trait!(Hi<T, U>, []);
+                |temper_core::impl_any_value_trait!(Hi<T, U>, [] where U: std::cmp::Eq + std::hash::Hash);
+                |pub mod builders {
+                |    #[derive(Clone)]
+                |    pub struct HiBuilder<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |        pub t: Option<T>, pub u: U
+                |    }
+                |    #[derive(Clone)]
+                |    pub struct HiOptions<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |        selfish: HiBuilder<T, U>, i: Option<i32>
+                |    }
+                |    impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> HiOptions<T, U> {
+                |        pub fn new(selfish: HiBuilder<T, U>) -> Self {
+                |            Self {
+                |                selfish, i: None
+                |            }
+                |        }
+                |        pub fn i(mut self, i: i32) -> Self {
+                |            self.i = Some(i);
+                |            self
+                |        }
+                |        pub fn build(self) -> Hi<T, U> {
+                |            Hi::new(self.selfish.t, self.selfish.u, self.i)
+                |        }
+                |    }
+                |    impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> HiBuilder<T, U> {
+                |        pub fn build(self) -> Hi<T, U> {
+                |            self.options().build()
+                |        }
+                |        pub fn options(self) -> HiOptions<T, U> {
+                |            HiOptions::new(self)
+                |        }
+                |    }
+                |    use super::*;
+                |}
             """.trimMargin(),
         )
     }
@@ -1406,7 +2047,7 @@ class RustBackendTest {
             |    let mut t___0: i32;
             |    'outer__0: loop {
             |        let mut j__0: i32 = 0;
-            |        'loop___0: while Some(j__0) < Some(n__0) {
+            |        'loop___0: while j__0 < n__0 {
             |            continue 'outer__0;
             |        }
             |        break;
@@ -1415,11 +2056,11 @@ class RustBackendTest {
             |    'loop___1: loop {
             |        'continue___0: {
             |            t___0 = temper_core::ListedTrait::len( & nums__0);
-            |            if ! (Some(i__0) < Some(t___0)) {
+            |            if ! (i__0 < t___0) {
             |                break 'loop___1;
             |            }
             |            let mut j__1: i32 = 0;
-            |            'loop___2: while Some(j__1) < Some(n__0) {
+            |            'loop___2: while j__1 < n__0 {
             |                break 'continue___0;
             |            }
             |        }
@@ -1428,6 +2069,79 @@ class RustBackendTest {
             |}
         """.trimMargin(),
     )
+
+    @Test
+    fun mutualRecursion() {
+        assertGenerateWanted(
+            temper = """
+                |// Purposely use camelCase names here, because we had a problem with that.
+                |export let partOne(i: Int): Int {
+                |  if (i < 0) {
+                |    partTwo(i)
+                |  } else {
+                |    i
+                |  }
+                |}
+                |export let partTwo(i: Int): Int {
+                |  partOne(i + 1)
+                |}
+                |// Now do static method versions, and yes these would recurse infinitely, but meh.
+                |// This also checks type name references, which are lower risk right now, but might as well.
+                |class PartThree {
+                |  public static partFour(i: Int): Int { PartFive.partSix(i) }
+                |}
+                |class PartFive {
+                |  public static partSix(i: Int): Int { PartThree.partFour(i) }
+                |}
+            """.trimMargin(),
+            rust = """
+                |pub (crate) fn init() -> temper_core::Result<()> {
+                |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+                |    INIT_ONCE.get_or_init(| |{
+                |            Ok(())
+                |    }).clone()
+                |}
+                |pub fn part_one(i__0: i32) -> i32 {
+                |    let return__0: i32;
+                |    if i__0 < 0 {
+                |        return__0 = part_two(i__0);
+                |    } else {
+                |        return__0 = i__0;
+                |    }
+                |    return return__0;
+                |}
+                |struct PartThreeStruct {}
+                |#[derive(Clone)]
+                |pub (crate) struct PartThree(std::sync::Arc<PartThreeStruct>);
+                |impl PartThree {
+                |    pub fn part_four(i__1: i32) -> i32 {
+                |        return PartFive::part_six(i__1);
+                |    }
+                |    pub fn new() -> PartThree {
+                |        let selfish = PartThree(std::sync::Arc::new(PartThreeStruct {}));
+                |        return selfish;
+                |    }
+                |}
+                |temper_core::impl_any_value_trait!(PartThree, []);
+                |struct PartFiveStruct {}
+                |#[derive(Clone)]
+                |pub (crate) struct PartFive(std::sync::Arc<PartFiveStruct>);
+                |impl PartFive {
+                |    pub fn part_six(i__2: i32) -> i32 {
+                |        return PartThree::part_four(i__2);
+                |    }
+                |    pub fn new() -> PartFive {
+                |        let selfish = PartFive(std::sync::Arc::new(PartFiveStruct {}));
+                |        return selfish;
+                |    }
+                |}
+                |temper_core::impl_any_value_trait!(PartFive, []);
+                |pub fn part_two(i__3: i32) -> i32 {
+                |    return part_one(i__3.wrapping_add(1));
+                |}
+            """.trimMargin(),
+        )
+    }
 
     @Test
     fun nullFun() {
@@ -1469,15 +2183,6 @@ class RustBackendTest {
             |}
             |#[derive(Clone)]
             |pub struct Vec2(std::sync::Arc<Vec2Struct>);
-            |#[derive(Clone, Default)]
-            |pub struct Vec2Options {
-            |    pub x: Option<f64>, pub y: Option<f64>
-            |}
-            |impl Vec2Options {
-            |    pub fn build(self) -> Vec2 {
-            |        Vec2::new(self.x, self.y)
-            |    }
-            |}
             |impl Vec2 {
             |    pub fn new(x__0: Option<f64>, y__0: Option<f64>) -> Vec2 {
             |        let x;
@@ -1509,6 +2214,41 @@ class RustBackendTest {
             |    }
             |}
             |temper_core::impl_any_value_trait!(Vec2, []);
+            |pub mod builders {
+            |    #[derive(Clone)]
+            |    pub struct Vec2Builder {}
+            |    #[derive(Clone)]
+            |    pub struct Vec2Options {
+            |        selfish: Vec2Builder, x: Option<f64>, y: Option<f64>
+            |    }
+            |    impl Vec2Options {
+            |        pub fn new(selfish: Vec2Builder) -> Self {
+            |            Self {
+            |                selfish, x: None, y: None
+            |            }
+            |        }
+            |        pub fn x(mut self, x: f64) -> Self {
+            |            self.x = Some(x);
+            |            self
+            |        }
+            |        pub fn y(mut self, y: f64) -> Self {
+            |            self.y = Some(y);
+            |            self
+            |        }
+            |        pub fn build(self) -> Vec2 {
+            |            Vec2::new(self.x, self.y)
+            |        }
+            |    }
+            |    impl Vec2Builder {
+            |        pub fn build(self) -> Vec2 {
+            |            self.options().build()
+            |        }
+            |        pub fn options(self) -> Vec2Options {
+            |            Vec2Options::new(self)
+            |        }
+            |    }
+            |    use super::*;
+            |}
         """.trimMargin(),
     )
 
@@ -1731,6 +2471,14 @@ class RustBackendTest {
             |        Hi(std::sync::Arc::new(selfish))
             |    }
             |}
+            |impl HiTrait for Hi {
+            |    fn clone_boxed(& self) -> Hi {
+            |        HiTrait::clone_boxed( & ( * self.0))
+            |    }
+            |    fn thing(& self) -> i32 {
+            |        HiTrait::thing( & ( * self.0))
+            |    }
+            |}
             |temper_core::impl_any_value_trait_for_interface!(Hi);
             |impl std::ops::Deref for Hi {
             |    type Target = dyn HiTrait;
@@ -1850,6 +2598,7 @@ class RustBackendTest {
             temper = $$"""
                 |let a: A = new B();
                 |let a2 = a;
+                |// TODO Without contextual inference of `new B() as A`, these should be illegal variance.
                 |let things: List<A> = [new B()];
                 |let more = [new B()] as List<A>;
                 |console.log(a2.adjust("hi"));
@@ -1858,9 +2607,15 @@ class RustBackendTest {
                 |}
                 |export class B extends A {
                 |  public adjust(text: String): String { "${text} there" }
+                |  public greet(text: String): String {
+                |    needy(this, text)
+                |  }
+                |}
+                |export let needy(a: A, text: String): String {
+                |  a.adjust(text)
                 |}
             """.trimMargin(),
-            // TODO Fix broken things below.
+            // TODO Fix broken things below. Is that just the list things that might just be variance matters?
             rust = """
                 |pub (crate) fn init() -> temper_core::Result<()> {
                 |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
@@ -1885,6 +2640,14 @@ class RustBackendTest {
                 |        A(std::sync::Arc::new(selfish))
                 |    }
                 |}
+                |impl ATrait for A {
+                |    fn clone_boxed(& self) -> A {
+                |        ATrait::clone_boxed( & ( * self.0))
+                |    }
+                |    fn adjust(& self, arg1: std::sync::Arc<String>) -> std::sync::Arc<String> {
+                |        ATrait::adjust( & ( * self.0), arg1)
+                |    }
+                |}
                 |temper_core::impl_any_value_trait_for_interface!(A);
                 |impl std::ops::Deref for A {
                 |    type Target = dyn ATrait;
@@ -1900,6 +2663,10 @@ class RustBackendTest {
                 |        let text__1 = text__1.to_arc_string();
                 |        return std::sync::Arc::new(format!("{} there", text__1));
                 |    }
+                |    pub fn greet(& self, text__2: impl temper_core::ToArcString) -> std::sync::Arc<String> {
+                |        let text__2 = text__2.to_arc_string();
+                |        return needy(A::new(self.clone()), text__2.clone());
+                |    }
                 |    pub fn new() -> B {
                 |        let selfish = B(std::sync::Arc::new(BStruct {}));
                 |        return selfish;
@@ -1914,6 +2681,10 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait!(B, [A]);
+                |pub fn needy(a__1: A, text__3: impl temper_core::ToArcString) -> std::sync::Arc<String> {
+                |    let text__3 = text__3.to_arc_string();
+                |    return a__1.adjust(text__3.clone());
+                |}
             """.trimMargin(),
         )
     }
@@ -1951,6 +2722,20 @@ class RustBackendTest {
                 |impl A {
                 |    pub fn new(selfish: impl ATrait + 'static) -> A {
                 |        A(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |impl ATrait for A {
+                |    fn clone_boxed(& self) -> A {
+                |        ATrait::clone_boxed( & ( * self.0))
+                |    }
+                |    fn thing(& self) -> i32 {
+                |        ATrait::thing( & ( * self.0))
+                |    }
+                |    fn set_thing(& self, value: i32) {
+                |        ATrait::set_thing( & ( * self.0), value)
+                |    }
+                |    fn other(& self) -> i32 {
+                |        ATrait::other( & ( * self.0))
                 |    }
                 |}
                 |temper_core::impl_any_value_trait_for_interface!(A);
@@ -2002,6 +2787,113 @@ class RustBackendTest {
             """.trimMargin(),
         )
     }
+
+    @Test
+    fun decodeHexTest() = assertGenerateWanted(
+        temper = """
+            |let decodeHexUnsigned(
+            |  sourceText: String, start: StringIndex, limit: StringIndex
+            |): Int {
+            |  var n = 0;
+            |  var i = start;
+            |  while (i.compareTo(limit) < 0) {
+            |    let cp = sourceText[i];
+            |    let digit = if (char'0' <= cp && cp <= char'9') {
+            |      cp - char'0'
+            |    } else if (char'A' <= cp && cp <= char'F') {
+            |      cp - char'A' + 10
+            |    } else if (char'a' <= cp && cp <= char'f') {
+            |      cp - char'a' + 10
+            |    } else {
+            |      return -1;
+            |    }
+            |    n = (n * 16) + digit;
+            |    i = sourceText.next(i);
+            |  }
+            |  n
+            |}
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            Ok(())
+            |    }).clone()
+            |}
+            |fn decodeHexUnsigned__0(sourceText__0: impl temper_core::ToArcString, start__0: usize, limit__0: usize) -> i32 {
+            |    let sourceText__0 = sourceText__0.to_arc_string();
+            |    let return__0: i32;
+            |    let mut t___0: bool;
+            |    let mut t___1: bool;
+            |    let mut t___2: bool;
+            |    let mut t___3: i32;
+            |    'fn__0: {
+            |        let mut n__0: i32 = 0;
+            |        let mut i__0: usize = start__0;
+            |        'loop___0: loop {
+            |            if ! ((Some(i__0).cmp( & Some(limit__0)) as i32) < 0) {
+            |                break;
+            |            }
+            |            let cp__0: i32 = temper_core::string::get( & sourceText__0, i__0);
+            |            if 48 <= cp__0 {
+            |                t___0 = cp__0 <= 57;
+            |            } else {
+            |                t___0 = false;
+            |            }
+            |            if t___0 {
+            |                t___3 = cp__0.wrapping_sub(48);
+            |            } else {
+            |                if 65 <= cp__0 {
+            |                    t___1 = cp__0 <= 70;
+            |                } else {
+            |                    t___1 = false;
+            |                }
+            |                if t___1 {
+            |                    t___3 = cp__0.wrapping_sub(65).wrapping_add(10);
+            |                } else {
+            |                    if 97 <= cp__0 {
+            |                        t___2 = cp__0 <= 102;
+            |                    } else {
+            |                        t___2 = false;
+            |                    }
+            |                    if t___2 {
+            |                        t___3 = cp__0.wrapping_sub(97).wrapping_add(10);
+            |                    } else {
+            |                        return__0 = -1;
+            |                        break 'fn__0;
+            |                    }
+            |                }
+            |            }
+            |            let digit__0: i32 = t___3;
+            |            n__0 = n__0.wrapping_mul(16).wrapping_add(digit__0);
+            |            i__0 = temper_core::string::next( & sourceText__0, i__0);
+            |        }
+            |        return__0 = n__0;
+            |    }
+            |    return return__0;
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun stringIndexOptionCompareToStringIndexMinimal() = assertGenerateWanted(
+        temper = """
+            |export let notEmpty(start: StringIndex, limit: StringIndex): Boolean {
+            |  start.compareTo(limit) < 0
+            |}
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            Ok(())
+            |    }).clone()
+            |}
+            |pub fn not_empty(start__0: usize, limit__0: usize) -> bool {
+            |    return (Some(start__0).cmp( & Some(limit__0)) as i32) < 0;
+            |}
+        """.trimMargin(),
+    )
 }
 
 private fun assertGenerateWanted(
@@ -2024,6 +2916,7 @@ private fun assertGenerateWanted(modules: List<ModuleInfo>) {
             |                        "content":
             |```
             |#![allow(warnings)]
+            |#![allow(dependency_on_unit_never_type_fallback)]
             |use temper_core::AnyValueTrait;
             |use temper_core::AsAnyValue;
             |use temper_core::Pair;

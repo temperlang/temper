@@ -16,8 +16,8 @@ import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
 
 /**
- * The macro backing the `class` and `interface` builtins that delegates stage specific work to
- * other macros including:
+ * The macro backing the `class` and `interface` builtins that delegates
+ * stage-specific work to other macros including:
  *
  * - [typeDisambiguateMacro] for [Stage.DisAmbiguate]
  * - [typeSyntaxMacro] for [Stage.SyntaxMacro]
@@ -66,7 +66,7 @@ import lang.temper.value.PartialResult
  * ```
  *
  * A minimal class declaration may omit many of those elements along with
- * the brackets and keyword (like [snippet/builtin/extends]):
+ * the brackets and [`extends` clause][snippet/typedef/extends]:
  *
  * ```temper
  * class Minimal {}
@@ -80,17 +80,22 @@ import lang.temper.value.PartialResult
  *
  * Re parenthetical declarations, see also: [snippet/builtin/@noProperty]
  *
+ * Be aware that [`<` space sensitivity][snippet/syntax/less-than-space-sensitivity] requires
+ * leaving no space between the type name and the start of the `<...>` type parameter list.
+ *
  * <!-- snippet: builtin/interface -->
  * # `interface`
  * Defines an abstract `interface` type.
  * Interface types may define abstract properties but may not define constructors or backed
  * properties.
  * Interface's properties may be overridden by backed properties in a [snippet/builtin/class]
- * sub-type.
+ * subtype.
  *
  * See also [snippet/builtin/class] for details and examples of type declaration syntax.
  *
  * Source: [temper/**/TypeDefinitionMacro.kt]
+ *
+ * ⎀ typedef/extends
  */
 internal sealed class TypeDefinitionMacro(
     private val abstractness: Abstractness,

@@ -21,17 +21,20 @@ import lang.temper.name.ResolvedName
 import lang.temper.name.Symbol
 import lang.temper.name.Temporary
 import lang.temper.type.DotHelper
+import lang.temper.type.DotMember
 import lang.temper.type.ExtensionResolution
-import lang.temper.type.ExternalBind
+import lang.temper.type.ExternalCall
 import lang.temper.type.ExternalGet
 import lang.temper.type.ExternalSet
 import lang.temper.type.InstanceExtensionResolution
-import lang.temper.type.InternalBind
+import lang.temper.type.InternalCall
 import lang.temper.type.InternalGet
 import lang.temper.type.InternalSet
+import lang.temper.type.Member
 import lang.temper.type.MemberAccessor
 import lang.temper.type.MkType
 import lang.temper.type.NominalType
+import lang.temper.type.OperatorMember
 import lang.temper.type.StaticExtensionResolution
 import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
@@ -66,6 +69,7 @@ import lang.temper.value.freeTree
 import lang.temper.value.functionContained
 import lang.temper.value.lookThroughDecorations
 import lang.temper.value.nameContained
+import lang.temper.value.operatorSymbol
 import lang.temper.value.reifiedTypeContained
 import lang.temper.value.staticExtensionSymbol
 import lang.temper.value.symbolContained
@@ -101,15 +105,15 @@ private enum class DotContext {
  * allows them to act as dot operations.
  */
 private data class Extensions(
-    private val extensionNames: Map<Symbol, List<ExtensionResolution>>,
+    private val extensionNames: Map<Member, List<ExtensionResolution>>,
     private val parent: Extensions?,
 ) {
-    private val cache = mutableMapOf<Symbol, List<ExtensionResolution>>()
+    private val cache = mutableMapOf<Member, List<ExtensionResolution>>()
 
-    operator fun get(symbol: Symbol): List<ExtensionResolution> = cache.getOrPut(symbol) {
+    operator fun get(member: Member): List<ExtensionResolution> = cache.getOrPut(member) {
         buildList {
-            extensionNames[symbol]?.let { addAll(it) }
-            parent?.get(symbol)?.let { addAll(it) }
+            extensionNames[member]?.let { addAll(it) }
+            parent?.get(member)?.let { addAll(it) }
         }
     }
 
@@ -181,8 +185,18 @@ internal class DotOperationDesugarer(
             }
             val extensionStackBefore = extensionStack
             if (t is BlockTree && considerExtensions) {
+                fun reportAnyMetadataProblem(e: TEdge, metadataKey: Symbol, metadataProblem: Any?) {
+                    if (metadataProblem != null) {
+                        logSink.log(
+                            Log.Error,
+                            MessageTemplate.UnexpectedMetadata,
+                            e.target.pos,
+                            listOf(metadataKey, metadataProblem),
+                        )
+                    }
+                }
                 // Find extension declarations so that we can store them with dot helpers
-                val extensions = buildMap<Symbol, MutableList<ExtensionResolution>> {
+                val extensions = buildMap<Member, MutableList<ExtensionResolution>> {
                     for (e in t.edges) {
                         val decorated = lookThroughDecorations(e).target
                         if (decorated is DeclTree) {
@@ -194,20 +208,13 @@ internal class DotOperationDesugarer(
                                     var metadataProblem: Any? = null
                                     when (ext?.typeTag) {
                                         TString -> putMultiList( // For instance extensions we get "dotName"
-                                            Symbol(TString.unpack(ext)),
+                                            DotMember(Symbol(TString.unpack(ext))),
                                             InstanceExtensionResolution(resolvedName),
                                         )
                                         null -> metadataProblem = "missing"
                                         else -> metadataProblem = ext
                                     }
-                                    if (metadataProblem != null) {
-                                        logSink.log(
-                                            Log.Error,
-                                            MessageTemplate.UnexpectedMetadata,
-                                            metadataEdge.target.pos,
-                                            listOf(extensionSymbol, metadataProblem),
-                                        )
-                                    }
+                                    reportAnyMetadataProblem(metadataEdge, extensionSymbol, metadataProblem)
                                 }
                                 parts.metadataSymbolMultimap[staticExtensionSymbol]?.forEach { metadataEdge ->
                                     val ext = metadataEdge.target.valueContained
@@ -218,7 +225,7 @@ internal class DotOperationDesugarer(
                                         val dotNameText = TString.unpackOrNull(dotName)
                                         if (dotNameText != null) {
                                             putMultiList(
-                                                Symbol(dotNameText),
+                                                DotMember(Symbol(dotNameText)),
                                                 StaticExtensionResolution(resolvedName),
                                             )
                                         } else {
@@ -229,14 +236,18 @@ internal class DotOperationDesugarer(
                                     } else {
                                         metadataProblem = ext
                                     }
-                                    if (metadataProblem != null) {
-                                        logSink.log(
-                                            Log.Error,
-                                            MessageTemplate.UnexpectedMetadata,
-                                            metadataEdge.target.pos,
-                                            listOf(extensionSymbol, metadataProblem),
-                                        )
+                                    reportAnyMetadataProblem(metadataEdge, extensionSymbol, metadataProblem)
+                                }
+                                parts.metadataSymbolMultimap[operatorSymbol]?.forEach { metadataEdge ->
+                                    val operatorSpecifier = metadataEdge.target.valueContained(TString)
+                                    var metadataProblem: Any? = null
+                                    if (operatorSpecifier == null) {
+                                        metadataProblem = metadataEdge.target.valueContained ?: "missing"
+                                    } else {
+                                        val m = OperatorMember(operatorSpecifier)
+                                        putMultiList(m, InstanceExtensionResolution(resolvedName))
                                     }
+                                    reportAnyMetadataProblem(metadataEdge, operatorSymbol, metadataProblem)
                                 }
                             }
                         }
@@ -269,10 +280,10 @@ internal class DotOperationDesugarer(
 private fun Planting.plantHandler(
     pos: Position,
     memberAccessor: MemberAccessor,
-    symbol: Symbol,
+    member: Member,
     extensions: Extensions,
 ) {
-    val helper = DotHelper(memberAccessor, symbol, extensions[symbol])
+    val helper = DotHelper(memberAccessor, member, extensions[member])
     V(pos, Value(helper))
 }
 
@@ -309,6 +320,7 @@ private fun desugarDotOperation(
         convertToErrorNode(dotCallEdge, problem)
         return null
     }
+    val dotName = DotMember(symbol)
 
     val subjectValue = subject.valueContained
     // See if it's a static member access first.
@@ -319,7 +331,7 @@ private fun desugarDotOperation(
         // If it might resolve to an extension, we need to delay resolution
         // until the *Typer* can check whether there is a member on the
         // type and/or use type info to filter the extension list.
-        if (subjectType != null && extensions[symbol].isEmpty()) {
+        if (subjectType != null && extensions[dotName].isEmpty()) {
             val gets = when (subjectType) {
                 // Nothing really causes internal static get here these days, because this is already a special case.
                 // TODO Some way to fake conjure for testing?
@@ -349,7 +361,7 @@ private fun desugarDotOperation(
     if (actuallyEnclosingTypeTree != null && dotKind == DotKind.SimpleDot) {
         val actuallyEnclosingType = actuallyEnclosingTypeTree.reifiedTypeContained?.type2
         val actuallyEnclosingTypeShape = (actuallyEnclosingType as? DefinedNonNullType)?.definition
-        if (actuallyEnclosingTypeShape?.name == subject.nameContained && extensions[symbol].isEmpty()) {
+        if (actuallyEnclosingTypeShape?.name == subject.nameContained && extensions[dotName].isEmpty()) {
             // The name is a type name, post name resolution, and no matching extension, so must be a static get.
             return dotCallEdge to {
                 Call {
@@ -486,7 +498,7 @@ private fun desugarDotOperation(
                             } else {
                                 ExternalSet
                             },
-                            symbol,
+                            dotName,
                             Extensions.none,
                         )
                         if (enclosingTypeTree != null) {
@@ -524,24 +536,22 @@ private fun desugarDotOperation(
             replacer = {
                 val call = edgeToReplace.target as CallTree
                 Call(call.pos) {
-                    Call(listOf(subjectPos, nameTree.pos).spanningPosition(subjectPos)) {
-                        plantHandler(
-                            nameTree.pos,
-                            if (enclosingTypeShape != null) {
-                                InternalBind
-                            } else {
-                                ExternalBind
-                            },
-                            symbol,
-                            extensions,
-                        )
-                        if (enclosingTypeTree != null) {
-                            // internal calls need the enclosing type at
-                            // InternalCall.enclosingTypeIndexOrNegativeOne
-                            V(enclosingTypeTree.pos, enclosingTypeValue!!)
-                        }
-                        Replant(freeTarget(subjectEdge))
+                    plantHandler(
+                        nameTree.pos,
+                        if (enclosingTypeShape != null) {
+                            InternalCall
+                        } else {
+                            ExternalCall
+                        },
+                        dotName,
+                        extensions,
+                    )
+                    if (enclosingTypeTree != null) {
+                        // internal calls need the enclosing type at
+                        // InternalCall.enclosingTypeIndexOrNegativeOne
+                        V(enclosingTypeTree.pos, enclosingTypeValue!!)
                     }
+                    Replant(freeTarget(subjectEdge))
                     // `this.f(x) -> (Call this.f x) so arg 0 is at position 1
                     call.edges.subListToEnd(1).forEach {
                         Replant(freeTarget(it))
@@ -562,7 +572,7 @@ private fun desugarDotOperation(
                         } else {
                             ExternalGet
                         },
-                        symbol,
+                        dotName,
                         Extensions.none,
                     )
                     if (enclosingTypeTree != null) {

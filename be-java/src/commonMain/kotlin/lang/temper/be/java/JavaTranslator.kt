@@ -10,10 +10,12 @@ import lang.temper.be.tmpl.TmpLOperator
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.autodocFor
 import lang.temper.be.tmpl.dependencyCategory
+import lang.temper.be.tmpl.findImmediateSuperReaching
 import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapGeneric
 import lang.temper.be.tmpl.mapGenericIndexed
+import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.toSigBestEffort
 import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.be.tmpl.withoutNull
@@ -24,13 +26,14 @@ import lang.temper.common.modifiedUtf8LenExceeds
 import lang.temper.log.Position
 import lang.temper.log.spanningPosition
 import lang.temper.log.unknownPos
-import lang.temper.name.DashedIdentifier
 import lang.temper.name.ExportedName
 import lang.temper.name.ModuleName
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
 import lang.temper.type.Abstractness
-import lang.temper.type.Visibility
+import lang.temper.type.MethodKind
+import lang.temper.type.MethodShape
+import lang.temper.type.WellKnownTypes
 import lang.temper.type.isVoidLike
 import lang.temper.type.mentionsInvalid
 import lang.temper.type.simplify
@@ -55,6 +58,7 @@ import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.TVoid
 import lang.temper.value.Value
+import lang.temper.value.connectedSymbol
 import lang.temper.be.java.Java as J
 import lang.temper.value.DependencyCategory as DepCat
 
@@ -124,8 +128,10 @@ class JavaTranslator(
         private val moduleInit: MutableList<J.BlockLevelStatement> = mutableListOf()
         private val moduleTestDecls: MutableList<J.ClassBodyDeclaration> = mutableListOf()
         private val moduleTestInit: MutableList<J.BlockLevelStatement> = mutableListOf()
-        private var libraryName: DashedIdentifier? = null
         private var processingTestCode = false
+
+        /** Might even stay null for snippets. */
+        private var module: TmpL.Module? = null
 
         private fun activeDecls(decls: MutableList<J.ClassBodyDeclaration>) = when {
             processingTestCode -> moduleTestDecls
@@ -150,7 +156,7 @@ class JavaTranslator(
             )
 
         fun module(module: TmpL.Module): List<J.Program> {
-            libraryName = module.libraryName
+            this.module = module
             val result = module.result
             topLevels@ for (tl in module.topLevels) {
                 try {
@@ -453,6 +459,32 @@ class JavaTranslator(
             is TmpL.BoilerplateCodeFoldStart -> J.CommentLine(t.pos, t.markerText)
         }
 
+        private fun connectedBody(fn: TmpL.FunctionDeclaration, result: J.ResultType): J.BlockLevelStatement {
+            val pos = fn.pos
+            val defaulting = fn.parameterDefaultStatementsInfo()
+            return buildList {
+                for (statement in defaulting.defaultStatements) {
+                    add(stmt(statement))
+                }
+                J.StaticMethodInvocationExpr(
+                    pos,
+                    type = J.QualIdentifier(pos, listOf(J.Identifier(pos, moduleInfo.connectedClassName))),
+                    method = names.method(fn.name),
+                    args = buildList {
+                        for ((tmpl, java) in fn.parameters.parameters.zip(parameters(fn.parameters).parameters)) {
+                            when {
+                                tmpl.optional -> {
+                                    val name = defaulting.parameterMapping.getValue(tmpl.name.name)
+                                    names.lookupRegularLocalNameObj(name).asIdentifier(tmpl.pos)
+                                }
+                                else -> java.name
+                            }.also { add(it.asNameExpr().asArgument()) }
+                        }
+                    },
+                ).exprOrReturnStatement(shouldReturn = result !is J.VoidType).also { add(it) }
+            }.let { J.BlockStatement(pos, it) }
+        }
+
         private fun overloads(
             adj: BoxedTypeAdjustments?,
             px: TmpL.Parameters,
@@ -473,7 +505,7 @@ class JavaTranslator(
                 val overloadFormals = withAdjustments(parameters(overloadParameters), adj)
                 val callForwardArgs: List<J.Argument> = originalFormals.parameters.mapIndexed { ix, formal ->
                     if (ix in overloadFormals.parameters.indices) {
-                        formal.name.deepCopy().asNameExpr()
+                        formal.name.asNameExpr()
                     } else {
                         J.NullLiteral(formal.pos)
                     }.asArgument()
@@ -484,11 +516,15 @@ class JavaTranslator(
 
         private fun moduleFunction(t: TmpL.FunctionDeclaration) {
             val autodoc = autodocFor(t)
-            val body = stmt(t.body).asBlock(t.pos).preface(
-                translateMetadata(t.pos.leftEdge, t.metadata),
-            )
             val name = names.moduleFunction(t.name).second.toIdentifier(t.name.pos)
             val result = resultType(names, t.returnType, pos = t.returnType.pos)
+            val body = when {
+                t.metadata.any { it.key.symbol == connectedSymbol } && module?.isStdLib != true ->
+                    connectedBody(t, result)
+                else -> stmt(t.body)
+            }.asBlock(t.pos).preface(
+                translateMetadata(t.pos.leftEdge, t.metadata),
+            )
             val mods = J.MethodModifiers(t.pos, modAccess = access(t.name), modStatic = J.ModStatic.Static)
             val typeParams: J.TypeParameters = typeFormals(t.typeParameters)
             val overloads = overloads(null, t.parameters, body) { args ->
@@ -518,7 +554,7 @@ class JavaTranslator(
 
         private fun moduleTest(t: TmpL.Test) {
             val name = names.moduleFunction(t.name).second.toIdentifier(t.name.pos)
-            dependenciesBuilder?.addTest(libraryName, t, name.outName.outputNameText)
+            dependenciesBuilder?.addTest(module?.libraryName, t, name.outName.outputNameText)
 
             fun wrapTest(testParam: TmpL.Formal?): J.BlockStatement {
                 val nominalType = (testParam?.type?.ot as? TmpL.NominalType)
@@ -1839,8 +1875,8 @@ class JavaTranslator(
                     expr = expr(subject),
                     field = names.field(gp.property),
                 )
-                is TmpL.TypeName ->
-                    names.classTypeName(subject.sourceDefinition)
+                is TmpL.TypeSubject ->
+                    names.classTypeName(subject.typeName.sourceDefinition)
                         .qualify(names.staticField(gp.property))
                         .toNameExpr(gp.pos)
             }
@@ -1978,6 +2014,29 @@ class JavaTranslator(
             val subject = fn.subject
             val methodSignature = toSigBestEffort(fn.method?.descriptor)
             when (subject) {
+                is TmpL.SuperSubject -> {
+                    val namePos = fn.methodName.pos
+                    // We really need and expect this, but allow fallbacks anyway.
+                    val (superType, methodName) = (fn.method as? MethodShape)?.let { method ->
+                        val methodName = when (method.methodKind) {
+                            MethodKind.Getter -> {
+                                val returnType = method.descriptor?.returnType2 ?: WellKnownTypes.invalidType2
+                                names.getterName(fn.methodName, returnType)
+                            }
+                            MethodKind.Setter -> names.setterName(fn.methodName)
+                            else -> names.method(fn.methodName).toIdentifier(namePos)
+                        }
+                        subject.subType.findImmediateSuperReaching(method)?.definition?.let { superType ->
+                            superType to methodName
+                        }
+                    } ?: (subject.typeName.sourceDefinition to names.method(fn.methodName).toIdentifier(namePos))
+                    return J.SuperMethodInvocationExpr(
+                        pos,
+                        type = names.classTypeName(superType).toQualIdent(subject.pos),
+                        method = methodName,
+                        args = callActuals(actuals, methodSignature),
+                    )
+                }
                 is TmpL.TypeName -> return J.StaticMethodInvocationExpr(
                     pos,
                     type = names.classTypeName(subject.sourceDefinition).toQualIdent(subject.pos),
@@ -2434,7 +2493,7 @@ private fun abstract(body: TmpL.BlockStatement?): J.ModAbstract {
     }
 }
 
-internal fun resultType(names: JavaNames, type: TmpL.AType?, pos: Position) =
+fun resultType(names: JavaNames, type: TmpL.AType?, pos: Position) =
     resultType(names, type?.ot, pos)
 
 internal fun resultType(names: JavaNames, type: TmpL.Type?, pos: Position): J.ResultType = when (type) {

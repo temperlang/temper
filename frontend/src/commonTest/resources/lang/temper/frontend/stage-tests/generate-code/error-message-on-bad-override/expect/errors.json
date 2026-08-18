@@ -1,0 +1,9 @@
+[
+    "Type B has method f with signature f(x: Int32): Void, but it should be f(x: String): Void to correctly override from I!",
+    "Type C has method f with signature f(x: String?): Void, but it should be f(x: String): Void to correctly override from I!",
+    "Type D has method f with signature f(x: String): String, but it should be f(x: String): Void to correctly override from I!",
+    "Type E has method f with signature f(): Void, but it should be f(x: String): Void to correctly override from I!",
+    "Type F has method f with signature f(x: String, y: String): Void, but it should be f(x: String): Void to correctly override from I!",
+    "Type G has method f with signature f(x: Int32): Void, but it should be f(x: String): Void to correctly override from I!",
+    "Type H has method f but it's visibility is private which is narrower than the method it overrides in I!"
+]

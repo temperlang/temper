@@ -67,7 +67,7 @@ object Debug : LogConfigurations("*", null, listOf("frontend", "backend", "docge
             object ConvertObjectSyntax : LogConfigurations("frontend.defineStage.convertObjectSyntax", "frontend.defineStage", listOf())
             object After : LogConfigurations("frontend.defineStage.after", "frontend.defineStage", listOf())
         }
-        object TypeStage : LogConfigurations("frontend.typeStage", "frontend", listOf("frontend.typeStage.before", "frontend.typeStage.beforeInterpretation", "frontend.typeStage.afterInterpretation", "frontend.typeStage.magicSecurityDust", "frontend.typeStage.afterSprinkle", "frontend.typeStage.weaver", "frontend.typeStage.afterWeave", "frontend.typeStage.simplifyFlow", "frontend.typeStage.afterSimplifyFlow", "frontend.typeStage.makeResultsExplicit", "frontend.typeStage.afterExplicitResults", "frontend.typeStage.type", "frontend.typeStage.afterTyper", "frontend.typeStage.useBeforeInit", "frontend.typeStage.afterUseBeforeInit", "frontend.typeStage.reorderArgs", "frontend.typeStage.afterReorderArgs", "frontend.typeStage.simplifyFlow2", "frontend.typeStage.afterSimplifyFlow2", "frontend.typeStage.cleanupTemporaries", "frontend.typeStage.afterCleanupTemporaries", "frontend.typeStage.simplifyFlow3", "frontend.typeStage.afterSimplifyFlow3", "frontend.typeStage.repairUnrealizedGoals", "frontend.typeStage.afterRepairUnrealizedGoals", "frontend.typeStage.after")) {
+        object TypeStage : LogConfigurations("frontend.typeStage", "frontend", listOf("frontend.typeStage.before", "frontend.typeStage.beforeInterpretation", "frontend.typeStage.afterInterpretation", "frontend.typeStage.magicSecurityDust", "frontend.typeStage.afterSprinkle", "frontend.typeStage.weaver", "frontend.typeStage.afterWeave", "frontend.typeStage.simplifyFlow", "frontend.typeStage.afterSimplifyFlow", "frontend.typeStage.makeResultsExplicit", "frontend.typeStage.afterExplicitResults", "frontend.typeStage.type", "frontend.typeStage.afterTyper", "frontend.typeStage.replaceVoidishPanics", "frontend.typeStage.afterReplaceVoidishPanics", "frontend.typeStage.useBeforeInit", "frontend.typeStage.afterUseBeforeInit", "frontend.typeStage.reorderArgs", "frontend.typeStage.afterReorderArgs", "frontend.typeStage.simplifyFlow2", "frontend.typeStage.afterSimplifyFlow2", "frontend.typeStage.cleanupTemporaries", "frontend.typeStage.afterCleanupTemporaries", "frontend.typeStage.simplifyFlow3", "frontend.typeStage.afterSimplifyFlow3", "frontend.typeStage.repairUnrealizedGoals", "frontend.typeStage.afterRepairUnrealizedGoals", "frontend.typeStage.after")) {
             object Before : LogConfigurations("frontend.typeStage.before", "frontend.typeStage", listOf())
             object BeforeInterpretation : LogConfigurations("frontend.typeStage.beforeInterpretation", "frontend.typeStage", listOf())
             object AfterInterpretation : LogConfigurations("frontend.typeStage.afterInterpretation", "frontend.typeStage", listOf())
@@ -81,6 +81,8 @@ object Debug : LogConfigurations("*", null, listOf("frontend", "backend", "docge
             object AfterExplicitResults : LogConfigurations("frontend.typeStage.afterExplicitResults", "frontend.typeStage", listOf())
             object Type : LogConfigurations("frontend.typeStage.type", "frontend.typeStage", listOf())
             object AfterTyper : LogConfigurations("frontend.typeStage.afterTyper", "frontend.typeStage", listOf())
+            object ReplaceVoidishPanics : LogConfigurations("frontend.typeStage.replaceVoidishPanics", "frontend.typeStage", listOf())
+            object AfterReplaceVoidishPanics : LogConfigurations("frontend.typeStage.afterReplaceVoidishPanics", "frontend.typeStage", listOf())
             object UseBeforeInit : LogConfigurations("frontend.typeStage.useBeforeInit", "frontend.typeStage", listOf())
             object AfterUseBeforeInit : LogConfigurations("frontend.typeStage.afterUseBeforeInit", "frontend.typeStage", listOf())
             object ReorderArgs : LogConfigurations("frontend.typeStage.reorderArgs", "frontend.typeStage", listOf())
@@ -180,6 +182,8 @@ val logConfigurationsByName: Map<String, LogConfigurations> = mapOf(
     "frontend.typeStage.afterExplicitResults" to Debug.Frontend.TypeStage.AfterExplicitResults,
     "frontend.typeStage.type" to Debug.Frontend.TypeStage.Type,
     "frontend.typeStage.afterTyper" to Debug.Frontend.TypeStage.AfterTyper,
+    "frontend.typeStage.replaceVoidishPanics" to Debug.Frontend.TypeStage.ReplaceVoidishPanics,
+    "frontend.typeStage.afterReplaceVoidishPanics" to Debug.Frontend.TypeStage.AfterReplaceVoidishPanics,
     "frontend.typeStage.useBeforeInit" to Debug.Frontend.TypeStage.UseBeforeInit,
     "frontend.typeStage.afterUseBeforeInit" to Debug.Frontend.TypeStage.AfterUseBeforeInit,
     "frontend.typeStage.reorderArgs" to Debug.Frontend.TypeStage.ReorderArgs,

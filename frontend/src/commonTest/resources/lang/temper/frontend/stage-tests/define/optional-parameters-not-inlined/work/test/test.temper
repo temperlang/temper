@@ -1,0 +1,3 @@
+let f(i: Int = 42): Int { i };
+console.log("f( )=${f().toString()}");
+console.log("f(1)=${f(1).toString()}");

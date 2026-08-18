@@ -17,20 +17,23 @@ import lang.temper.log.LogEntry
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.snapshot
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ParsedName
 import lang.temper.name.TemperName
 import lang.temper.stage.Stage
+import lang.temper.type.WellKnownTypes
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.DeclTree
 import lang.temper.value.FunTree
 import lang.temper.value.LinearFlow
 import lang.temper.value.NameLeaf
+import lang.temper.value.ReifiedType
 import lang.temper.value.RightNameLeaf
 import lang.temper.value.TBoolean
 import lang.temper.value.TEdge
 import lang.temper.value.Tree
+import lang.temper.value.Value
 import lang.temper.value.consoleBuiltinName
 import lang.temper.value.fnParsedName
 import lang.temper.value.fnSymbol
@@ -109,7 +112,7 @@ internal class SyntaxMacroStage(
 
 private fun declareModuleConsole(root: BlockTree) {
     root.document.context.genre == Genre.Documentation && return
-    root.pos.loc is ImplicitsCodeLocation && return
+    root.pos.loc is CoreCodeLocation && return
     val consoleRefs = buildList {
         TreeVisit.startingAt(root).forEachContinuing { node ->
             if ((node as? RightNameLeaf)?.content == consoleBuiltinName) {
@@ -125,7 +128,16 @@ private fun declareModuleConsole(root: BlockTree) {
             Ln { it.unusedTemporaryName("console").also { name -> consoleName = name } }
             V(vInitSymbol)
             Call {
-                Rn(getConsoleBuiltinName)
+                V(BuiltinFuns.vDoPure)
+                Fn {
+                    V(outTypeSymbol)
+                    V(Value(ReifiedType(WellKnownTypes.consoleType2)))
+                    Block {
+                        Call {
+                            Rn(getConsoleBuiltinName)
+                        }
+                    }
+                }
             }
         }
     }
@@ -233,6 +245,20 @@ internal fun rewriteFun(
         else -> true
     }
 
+    // Add a marked panic call if we don't have a fun tree.
+    // We can mark this an error later if there's no connected marker.
+    if (!isTypeExpr && call.lastChild !is FunTree) {
+        call.add(
+            call.treeFarm.grow(call.pos.rightEdge) {
+                Fn {
+                    Block {
+                        Call { V(BuiltinFuns.vAbstractPanic) }
+                    }
+                }
+            },
+        )
+    }
+
     var i = 1 // skip callee
     // Look for the word first.
     if (!isTypeExpr && i + 2 < call.size && call.child(i).symbolContained == wordSymbol) {
@@ -269,7 +295,7 @@ internal fun rewriteFun(
                 name == null && parentParts.name.content is ParsedName -> { // Adopt name
                     reuseOuterDeclaration = true
                     name = parentParts.name.copyRight()
-                    call.replace(i until i) {
+                    call.insert(i) {
                         V(name.pos.leftEdge, wordSymbol)
                         Replant(name)
                     }

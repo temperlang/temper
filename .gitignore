@@ -57,6 +57,8 @@ hs_err_pid*
 /be-cppv/.gradle
 /be-csharp/build
 /be-csharp/.gradle
+/be-data/build
+/be-data/.gradle
 /be-java/build
 /be-java/.gradle
 /be-js/build

@@ -3,6 +3,7 @@ package lang.temper.type2
 import lang.temper.common.firstOrNullAs
 import lang.temper.common.subListToEnd
 import lang.temper.name.Symbol
+import lang.temper.type.DotMember
 import lang.temper.type.MemberShape
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
@@ -160,7 +161,7 @@ inline fun <T> withType(
 fun sigForFunInterfaceType(t: DefinedType): Signature2? {
     val (fnTypeShape, bindings) = t
     val formals = fnTypeShape.formals
-    val applyMethodShape = fnTypeShape.membersMatching(applyDotName)
+    val applyMethodShape = fnTypeShape.membersMatching(DotMember(applyDotName))
         .firstOrNullAs<MemberShape, MethodShape> {
             it.methodKind == MethodKind.Normal && it.visibility == Visibility.Public
         }

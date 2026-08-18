@@ -13,7 +13,7 @@ import lang.temper.log.dirPath
 import lang.temper.log.last
 import lang.temper.log.resolveFile
 import lang.temper.log.spanningPosition
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ModuleName
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
@@ -37,11 +37,18 @@ import lang.temper.type2.withType
 /**
  * We generate plenty of warnings. Some we could try to clean up, but it's awkward.
  * Ignoring warnings means we have to pay manual attention to generated public names.
+ *
+ * Also allow `dependency_on_unit_never_type_fallback` in our generated code for now.
+ * This was a backward incompatible change in newer versions of Rust, even without a
+ * change in edition. We should investigate this more in the future, though. It would
+ * be good to support latest expectations.
  */
-internal fun allowWarnings(pos: Position): Rust.AttrInner = Rust.AttrInner(
-    pos,
-    Rust.Call(pos, "allow".toId(pos), listOf("warnings".toId(pos))),
-)
+internal fun allowWarnings(pos: Position) = run {
+    // Separate them with `warnings` first, to prevent warnings against the other on older rust.
+    listOf("warnings", "dependency_on_unit_never_type_fallback").map { key ->
+        Rust.AttrInner(pos, Rust.Call(pos, "allow".toId(pos), listOf(key.toId(pos))))
+    }
+}
 
 internal fun makeError(pos: Position) = Rust.Call(pos, callee = ERROR_NEW_NAME.toId(pos), args = listOf())
 
@@ -54,10 +61,38 @@ fun makeSrcFilePath(relDir: List<FilePathSegment>): FilePath {
     return dirPath("src").resolve(modPath)
 }
 
+internal fun whereForAnyValueImpl(pos: Position, translatedGenerics: List<Rust.GenericParam>): Rust.Where? = run {
+    val whereItems = translatedGenerics.mapNotNull generics@{ translatedParam ->
+        val translatedFormal = translatedParam as? Rust.TypeParam ?: return@generics null
+        // We get the common ones automatically in the impl any value macros, but we need custom ones explicit.
+        val ownBoundsCount = translatedFormal.bounds.size - commonTypeBounds.size
+        ownBoundsCount > 0 || return@generics null
+        Rust.TypeParam(
+            translatedFormal.pos,
+            id = translatedFormal.id,
+            bounds = translatedFormal.bounds.slice(0..<ownBoundsCount).map { it.deepCopy() },
+        )
+    }
+    when {
+        whereItems.isEmpty() -> null
+        else -> Rust.Where(pos, whereItems)
+    }
+}
+
 internal fun MutableList<Rust.Item>.declareSubmods(pos: Position, modKids: Collection<FilePath>) {
     for (kid in modKids) {
-        val modId = kid.last().temperAwareBaseName().dashToSnake().toId(pos)
-        add(Rust.Module(pos, id = modId, pub = Rust.VisibilityPub(pos)).toItem())
+        val (modId, pub) = kid.last().temperAwareBaseName().let { name ->
+            // This is a hacky workaround to recognize our "_connected" convention.
+            // But at least it does distinguish something that's already snake case.
+            // The main problem with this convention is that leading underscore typically
+            // means unused in Rust rather than private, but it still works.
+            // TODO Just say "connected" and recognize that here explicitly for non-pub?
+            when {
+                name.startsWith("_") -> name.toId(pos) to null
+                else -> name.dashToSnake().toId(pos) to Rust.VisibilityPub(pos)
+            }
+        }
+        add(Rust.Module(pos, id = modId, pub = pub).toItem())
     }
 }
 
@@ -291,7 +326,7 @@ internal fun Rust.Expr.member(key: Rust.Expr, notMethod: Boolean = false) = when
     else -> RustOperator.Member
 }.let { infix(it, right = key) }
 
-internal fun Rust.Expr.methodCall(key: String, args: List<Rust.Expr> = listOf()) =
+internal fun Rust.Expr.methodCall(key: String, args: List<Rust.Expr> = listOf(), pos: Position = this.pos) =
     Rust.Call(pos, callee = member(key), args = args)
 
 internal fun Rust.Expr.methodCall(key: Rust.Expr, args: List<Rust.Expr> = listOf()) =
@@ -344,23 +379,53 @@ internal fun Rust.Expr.wrapOkOrElse(pos: Position = this.pos) =
 
 internal fun Rust.Expr.wrapSome() = Rust.Call(pos, callee = "Some".toId(pos), args = listOf(this))
 
-/** Only handles cases where the pattern is a [Rust.Id]. */
-internal fun Rust.FunctionParamOption.toId(): Rust.Id {
+/**
+ * Only properly handles cases where the pattern is a [Rust.FunctionParam].
+ * Errors otherwise, unless [approximate], in which case, the id might be
+ * invalid.
+ */
+internal fun Rust.FunctionParamOption.toId(approximate: Boolean = false): Rust.Id {
     return when (this) {
         is Rust.FunctionParam -> this.pattern.deepCopy() as Rust.Id
-        is Rust.Id, is Rust.RefType -> error(this)
+        is Rust.Id, is Rust.RefType -> when {
+            approximate -> when (this) {
+                is Rust.Id -> this
+                is Rust.RefType -> when (val type = this.type) {
+                    is Rust.Id -> type
+                    // This is a total punt. Shouldn't get here on valid Temper code.
+                    else -> type.toString().toId(pos)
+                }
+                else -> error(this) // Can't actually happen, but Kotlin fails to realize.
+            }
+            else -> error(this)
+        }
     }
 }
 
-internal fun Rust.GenericParam.toArg(): Rust.Id {
+internal fun Iterable<Rust.GenericParam>.except(unwanteds: Iterable<Rust.GenericParam>): List<Rust.GenericParam> {
+    val unwantedIdTexts = unwanteds.mapTo(mutableSetOf()) { it.lastIdText() }
+    return buildList {
+        for (generic in this@except) {
+            if (generic.lastIdText() !in unwantedIdTexts) {
+                add(generic.deepCopy())
+            }
+        }
+    }
+}
+
+internal fun Rust.GenericParam.lastId(): Rust.Id {
     return when (this) {
         is Rust.Id -> this
         is Rust.TypeParam -> id
-        is Rust.PathSegments -> TODO() // needed?
-    }.deepCopy()
+        is Rust.PathSegments -> segments.last() as Rust.Id
+    }
 }
 
-internal fun Rust.Id.makeTypeRef(generics: List<Rust.GenericParam>): Rust.Type = when {
+internal fun Rust.GenericParam.lastIdText(): String = lastId().outName.outputNameText
+
+internal fun Rust.GenericParam.toArg(): Rust.Id = lastId().deepCopy()
+
+internal fun Rust.Path.makeTypeRef(generics: List<Rust.GenericParam>): Rust.Type = when {
     generics.isEmpty() -> this
     else -> Rust.GenericType(pos, path = deepCopy(), args = generics.map { it.toArg() })
 }
@@ -398,6 +463,8 @@ internal fun Rust.Path.extendWith(nexts: Iterable<Rust.PathSegment>): Rust.Path 
 internal fun Rust.Path.extendWith(nexts: List<String>): Rust.Path {
     return extendWith(nexts.map { it.toId(pos) })
 }
+
+internal fun Rust.Path.extendWith(next: Rust.PathSegment) = extendWith(listOf(next))
 
 internal fun Rust.Path.extendWith(next: String) = extendWith(listOf(next.toId(pos)))
 
@@ -449,7 +516,7 @@ internal fun Descriptor.isCopy(): Boolean {
         // Plain functions and methods are Copy, but our Arc function values aren't. We distinguish that elsewhere.
         // is FunctionType -> true
         is DefinedNonNullType -> when (type.definition.sourceLocation) {
-            ImplicitsCodeLocation -> when (type.definition) {
+            CoreCodeLocation -> when (type.definition) {
                 // TODO Which others are copy?
                 WellKnownTypes.booleanTypeDefinition,
                 WellKnownTypes.float64TypeDefinition,
@@ -537,7 +604,7 @@ internal fun TmpL.BlockStatement?.isPureVirtual() = isPureVirtual(PureVirtualBui
 
 internal fun TmpL.ModuleLevelDeclaration.isConsole(): Boolean {
     (type.ot as? TmpL.NominalType)?.typeName?.sourceDefinition?.let { typeDefinition ->
-        if (typeDefinition.sourceLocation === ImplicitsCodeLocation) {
+        if (typeDefinition.sourceLocation === CoreCodeLocation) {
             when ((typeDefinition.name as? ResolvedParsedName)?.baseName?.nameText) {
                 "Console", "GlobalConsole" -> return true
                 else -> {}
@@ -649,8 +716,14 @@ internal fun Rust.Type.isUnit() = this is Rust.Id && this.outName.outputNameText
 private val TypeDefinition.abstractness get() = (this as? TypeShape)?.abstractness
 
 // TODO: can we replace this with uses of SuperTypeTree2
-internal fun TypeDefinition.allInterfaces(): Sequence<Pair<TypeDefinition, Type2>> = sequence {
-    // SuperTypeTree requires a NominalType to start with, and I didn't find that in TmpL.TypeDeclaration.
+internal fun TypeDefinition.allInterfaces(
+    allowStart: Boolean = false,
+): Sequence<Pair<TypeDefinition, Type2>> = sequence {
+    val thisType = this@allInterfaces
+    if (allowStart && thisType is TypeShape && thisType.abstractness == Abstractness.Abstract) {
+        // For interfaces, we need to implement in the trait for its own wrapper, so provide that here.
+        yield(thisType to MkType2(thisType).position(pos).get())
+    }
     types@ for (type in superTypes) {
         type.definition == WellKnownTypes.anyValueTypeDefinition && continue@types
         val superType = hackMapOldStyleToNew(type)

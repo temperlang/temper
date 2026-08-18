@@ -37,6 +37,7 @@ import lang.temper.value.connectedSymbol
 import lang.temper.value.defaultParsedName
 import lang.temper.value.staySymbol
 import lang.temper.value.toPseudoCode
+import lang.temper.value.void
 import kotlin.test.Ignore
 import kotlin.test.Test
 
@@ -173,7 +174,7 @@ class CreateLocalBindingsForImportTest {
      * Some options:
      *
      * - Use the assigned name as a namespace but not as an object, sort of like current `builtins`.
-     * - Reify each module as an objects of an implicit type.
+     * - Reify each module as an object of an implicit type.
      * - Allow some default export as shown here, or maybe defaults just apply to backend generation where
      *   applicable, such as JS.
      */
@@ -269,11 +270,11 @@ class CreateLocalBindingsForImportTest {
         input = """
             |let { a, b, c } = import("./exporter");
         """.trimMargin(),
-        // We were getting @connected("::a") on all three local declarations.
+        // We were getting @connected on all three local declarations.
         want = """
-            |@stay @imported(\(`lib//exporter`.a)) @connected("::a") let a = `lib//exporter`.a,
-            |      @imported(\(`lib//exporter`.b)) @connected("::b")     b = `lib//exporter`.b,
-            |      @imported(\(`lib//exporter`.c)) @connected("::c")     c = `lib//exporter`.c;
+            |@stay @imported(\(`lib//exporter`.a)) @connected let a = `lib//exporter`.a,
+            |      @imported(\(`lib//exporter`.b)) @connected     b = `lib//exporter`.b,
+            |      @imported(\(`lib//exporter`.c)) @connected     c = `lib//exporter`.c;
             |
         """.trimMargin()
             // trim internal whitespace so that we can line things up nicely above.
@@ -282,17 +283,17 @@ class CreateLocalBindingsForImportTest {
         export(
             "a",
             Value("A", TString),
-            declarationMetadata = listOf(connectedSymbol to Value("::a", TString)),
+            declarationMetadata = listOf(connectedSymbol to void),
         )
         export(
             "b",
             Value("B", TString),
-            declarationMetadata = listOf(connectedSymbol to Value("::b", TString)),
+            declarationMetadata = listOf(connectedSymbol to void),
         )
         export(
             "c",
             Value("C", TString),
-            declarationMetadata = listOf(connectedSymbol to Value("::c", TString)),
+            declarationMetadata = listOf(connectedSymbol to void),
         )
     }
 }
@@ -329,7 +330,8 @@ private class ExportListBuilder(
             Export(
                 exporter = exporter,
                 name = name,
-                value = value,
+                valueFromStaging = value,
+                valueFromRun = null,
                 typeInferences = typeInferences,
                 declarationMetadata = buildListMultimap {
                     for ((mdKey, mdValue) in declarationMetadata) {

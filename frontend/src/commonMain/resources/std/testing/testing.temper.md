@@ -11,7 +11,7 @@ Recommended default Temper assert is soft, meaning that it records failures for
 reporting but doesn't immediately end test execution on a false value. This lets
 you check multiple conditions more easily.
 
-      @connected("Test::assert")
+      @connected
       public assert(success: Boolean, message: fn (): String): Void {
         if (!success) {
           _passing = false;
@@ -21,7 +21,7 @@ you check multiple conditions more easily.
 
 Typical hard asserts that end the test on false condition also are available.
 
-      @connected("Test::assertHard")
+      @connected
       public assertHard(
         success: Boolean,
         message: fn (): String,
@@ -50,7 +50,7 @@ manually at any desired point in your test.
 Provide a bailing `Bubble` method here that enables backends to customize
 message delivery on failure.
 
-      @connected("Test::bail")
+      @connected
       private bail(): Never<Void> throws Bubble {
         bubble()
       }
@@ -60,14 +60,14 @@ currently passing if all soft checks and hard asserts have been successful.
 
 TODO Does this need to be function call syntax for macro purposes?
 
-      @connected("Test::passing")
+      @connected
       public get passing(): Boolean { _passing }
 
 Messages access is presented as a function because it likely allocates. Also,
 messages might be automatically constructed in some cases, so it's possibly
 unwise to depend on their exact formatting.
 
-      @connected("Test::messages")
+      @connected
       public messages(): List<String> { _messages.toList() }
 
 ### Backend helper methods
@@ -76,7 +76,7 @@ Avoid using backend helper methods in user code. Their behavior might be
 unreliable on some backends and/or have high risk of changing in future releases
 of Temper.
 
-      @connected("Test::failedOnAssert")
+      @connected
       public get failedOnAssert(): Boolean { _failedOnAssert }
 
 Additional helper methods to simplify backend code generation in some contexts.
@@ -111,7 +111,7 @@ implementation of testing within the interpreter.
     export let TestName = String;
     export let TestResult = Pair<TestName, List<TestFailureMessage>>;
 
-    @connected("::processTestCases")
+    @connected
     export let processTestCases(testCases: List<TestCase>): List<TestResult> {
       testCases.map { (testCase): TestResult =>
         let { key, value as fun } = testCase;
@@ -137,7 +137,7 @@ implementation of testing within the interpreter.
       }
     }
 
-    @connected("::reportTestResults")
+    @connected
     export let reportTestResults(
       testResults: List<TestResult>,
       writeLine: fn (String): Void,
@@ -170,7 +170,7 @@ implementation of testing within the interpreter.
       writeLine("</testsuites>");
     }
 
-    @connected("::runTestCases")
+    @connected
     export let runTestCases(testCases: List<TestCase>): String {
       let report = new StringBuilder();
       reportTestResults(processTestCases(testCases)) { line =>

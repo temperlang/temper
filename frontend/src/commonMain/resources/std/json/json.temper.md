@@ -29,7 +29,8 @@ And for convenience, here's a blank interchange context.
     export class NullInterchangeContext extends InterchangeContext {
       public getHeader(headerName: String): String? { null }
 
-      public static instance = new NullInterchangeContext();
+      public static instance: NullInterchangeContext =
+        doPure { new NullInterchangeContext() };
     }
 
 ## Marshalling support
@@ -1013,7 +1014,7 @@ where such a distinction is not possible to represent.
       var i = start;
       while (i.compareTo(limit) < 0) {
         let cp = sourceText[i];
-        let digit = if (char'0' <= cp && cp <= char'0') {
+        let digit = if (char'0' <= cp && cp <= char'9') {
           cp - char'0'
         } else if (char'A' <= cp && cp <= char'F') {
           cp - char'A' + 10

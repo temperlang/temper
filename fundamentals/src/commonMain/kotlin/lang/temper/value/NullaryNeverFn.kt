@@ -10,7 +10,7 @@ import lang.temper.format.TokenSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.Symbol
 import lang.temper.stage.Stage
 import lang.temper.type.TypeFormal
@@ -45,6 +45,25 @@ object BubbleFn : NullaryNeverFn {
 }
 
 /**
+ * Specifically so far, this is inserted for missing else clauses. This should
+ * stay panic if the else is found unreachable based on type information.
+ * Otherwise, it should become void. The value formals are the value being
+ * checked and the static type it needs to have for the check to be exhaustive.
+ */
+object VoidishPanicFn : NullaryNeverFn {
+    override val name = "voidishPanic"
+
+    override val callMayFailPerSe: Boolean get() = false
+
+    override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode) =
+        throw Panic()
+
+    override val sigs = nullaryNeverReturnsSigs(
+        requiredInputTypes = listOf(WKT.anyValueType2, WKT.typeType2),
+    ) { it }
+}
+
+/**
  * Panics immediately.
  *
  *  * <!-- snippet: builtin/panic -->
@@ -67,7 +86,7 @@ object PanicFn : NullaryNeverFn {
 }
 
 /**
- * Marker for bodies of abstract functions that must be overridden in all concrete subtypes of the
+ * Marker for bodies of abstract methods that must be overridden in all concrete subtypes of the
  * containing type.
  */
 object PureVirtual : NullaryNeverFn {
@@ -85,6 +104,19 @@ object PureVirtual : NullaryNeverFn {
     override val isPure: Boolean = false // Do not try to inline
 
     override val callMayFailPerSe: Boolean = false // Panics are distinct from failure
+}
+
+/**
+ * Marker for bodies of abstract functions that must be connected.
+ */
+object AbstractPanic : NullaryNeverFn {
+    override val name: String = "abstractPanic"
+    override val sigs = nullaryNeverReturnsSigs { it }
+    override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): Result {
+        throw Panic("AbstractPanic invoked @ ${cb.pos}")
+    }
+    override val builtinOperatorId get() = BuiltinOperatorId.Panic
+    override val callMayFailPerSe: Boolean = false
 }
 
 fun Tree?.isPureVirtualBody(): Boolean = when (this) {
@@ -164,11 +196,12 @@ object ErrorFn : NullaryNeverFn, TokenSerializable {
 }
 
 private fun NamedBuiltinFun.nullaryNeverReturnsSigs(
+    requiredInputTypes: List<Type2> = listOf(),
     makeReturnType: (Type2) -> Type2,
 ): List<Signature2> {
     val nameKey = "${name}T"
     val typeFormal = TypeFormal(
-        Position(ImplicitsCodeLocation, 0, 0),
+        Position(CoreCodeLocation, 0, 0),
         BuiltinName(nameKey),
         Symbol(nameKey),
         Variance.Invariant,
@@ -187,13 +220,13 @@ private fun NamedBuiltinFun.nullaryNeverReturnsSigs(
     return listOf(
         Signature2(
             returnType2 = neverVoidReturnType,
-            requiredInputTypes = listOf(),
+            requiredInputTypes = requiredInputTypes,
             hasThisFormal = false,
             typeFormals = listOf(),
         ),
         Signature2(
             returnType2 = neverTReturnType,
-            requiredInputTypes = listOf(),
+            requiredInputTypes = requiredInputTypes,
             hasThisFormal = false,
             typeFormals = listOf(typeFormal),
         ),

@@ -386,15 +386,15 @@ TODO(tjp, regex): Any static checking for stable frontend regex values?
 
   // Extension functions on some backends need the private `compiled` value
   // passed in directly.
-  @connected("Regex::compiledFound")
+  @connected
   private compiledFound(compiled: AnyValue, text: String): Boolean;
 
-  @connected("Regex::compiledFind")
+  @connected
   private compiledFind(
     compiled: AnyValue, text: String, begin: StringIndex, regexRefs: RegexRefs
   ): Match throws Bubble;
 
-  @connected("Regex::compiledReplace")
+  @connected
   private compiledReplace(
     compiled: AnyValue,
     text: String,
@@ -402,7 +402,7 @@ TODO(tjp, regex): Any static checking for stable frontend regex values?
     regexRefs: RegexRefs,
   ): String;
 
-  @connected("Regex::compiledSplit")
+  @connected
   private compiledSplit(
     compiled: AnyValue,
     text: String,
@@ -436,12 +436,12 @@ at Temper compile time.
 class RegexFormatter {
   private let out: StringBuilder = new StringBuilder();
 
-  @connected("Regex::compileFormatted")
+  @connected
   public static regexCompileFormatted(
     data: RegexNode, formatted: String
   ): AnyValue;
 
-  @connected("Regex::format")
+  @connected
   public static regexFormat(data: RegexNode): String {
     new RegexFormatter().format(data)
   }
@@ -485,7 +485,7 @@ class RegexFormatter {
     out.append(")");
   }
 
-  @connected("RegexFormatter::pushCaptureName")
+  @connected
   private pushCaptureName(out: StringBuilder, name: String): Void {
     // All so far except Python use this form.
     out.append("?<${name}>");
@@ -537,7 +537,7 @@ class RegexFormatter {
     }
   } orelse panic() } // fromCodePoint bubbles
 
-  @connected("RegexFormatter::pushCodeTo")
+  @connected
   private pushCodeTo(out: StringBuilder, code: Int, insideCodeSet: Boolean): Void;
 
   private pushCodePoints(codePoints: CodePoints, insideCodeSet: Boolean): Void {
@@ -567,20 +567,32 @@ class RegexFormatter {
     let adjusted = adjustCodeSet(codeSet, regexRefs);
     when (adjusted) {
       is CodeSet -> do {
-        out.append("[");
-        if (adjusted.negated) {
-          out.append("^");
+        if (adjusted.items.isEmpty) {
+          // Many regex engines don't like empty code sets.
+          if (adjusted.negated) {
+            // Match anything.
+            out.append(raw"[\s\S]");
+          } else {
+            // Match nothing.
+            out.append("(?:$.)");
+          }
+        } else {
+          // Common non-empty case.
+          out.append("[");
+          if (adjusted.negated) {
+            out.append("^");
+          }
+          for (var i = 0; i < adjusted.items.length; i += 1) {
+            pushCodeSetItem(adjusted.items[i]);
+          }
+          out.append("]");
         }
-        for (var i = 0; i < adjusted.items.length; i += 1) {
-          pushCodeSetItem(adjusted.items[i]);
-        }
-        out.append("]");
       }
       else -> pushRegex(adjusted);
     }
   }
 
-  @connected("RegexFormatter::adjustCodeSet")
+  @connected
   private adjustCodeSet(codeSet: CodeSet, regexRefs: RegexRefs): RegexNode { codeSet }
 
   private pushCodeSetItem(codePart: CodePart): Void {

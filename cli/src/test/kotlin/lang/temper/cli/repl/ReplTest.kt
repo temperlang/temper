@@ -124,10 +124,9 @@ class ReplTest {
         assertPrompt("  ")
         assertPending("")
         repl.processLine(")")
-        @Suppress("SpellCheckingInspection")
         assertPending(
             """
-                |interactive#0: "foo\nbar\nbaz"
+                |interactive#0: "foo\nbar\nbaz\n"
                 |
             """.trimMargin(),
         )
@@ -316,7 +315,7 @@ class ReplTest {
             |
             """.trimMargin(),
         )
-        // Then we define a concrete sub-type of that interface that does not
+        // Then we define a concrete subtype of that interface that does not
         // override the method.
         repl.processLine("""class C extends I {}""")
         assertPending(
@@ -453,7 +452,6 @@ class ReplTest {
         )
     }
 
-    @Suppress("SpellCheckingInspection") // Base64 encoding in source-map
     @Test
     fun translateToJs() {
         repl.processLine("1 + 1")
@@ -468,12 +466,16 @@ class ReplTest {
             """
                 |Translated js for interactive#0
                 |  interactive/
-                |    i0000.js: text/javascript
+                |    i0000.internal.js: text/javascript
                 |      /** @type {number} */
-                |      const return_0 = 2;
+                |      export const return_0 = 2;
                 |      export default return_0;
+                |    i0000.internal.js.map: application/json
+                |      { "version": 3, "file": "js/interactive/⋯A,aAAAA,QAAA,IAAK,AAAL;AAAK,eAAAA,QAAA" }
+                |    i0000.js: text/javascript
+                |      export {} from "./i0000.internal.js";
                 |    i0000.js.map: application/json
-                |      { "version": 3, "file": "js/interactive/⋯A,MAAAA,QAAA,IAAK,AAAL;AAAK,eAAAA,QAAA" }
+                |      { "version": 3, "file": "js/interactive/⋯ [], "mappings": "AAAK,cAAA,AAAL,sBAAK" }
                 |interactive#1: void
                 |
             """.trimMargin(),
@@ -501,11 +503,13 @@ class ReplTest {
                     |        java/
                     |          interactive/
                     |            i0000/
+                    |              .*
                     |              I0000Main[.]java: text/x-java-source
                     |                package interactive[.]i0000;
                     |                import temper[.]core[.]Core;
                     |
                 """.trimMargin(),
+                RegexOption.DOT_MATCHES_ALL,
             ),
         )
     }
@@ -553,7 +557,7 @@ class ReplTest {
         assertPendingContains(
             Regex(
                 """
-                    |        def b\(a: 'a'\) -> 'a':
+                    |        def b\(a: 'a', /\) -> 'a':
                     |            return a
                 """.trimMargin(),
             ),
@@ -636,9 +640,9 @@ class ReplTest {
         repl.processLine("let hi(i: Int): Int { when (i) { 1 -> 1 } }")
         assertPending(
             """
-                |1: t hi(i: Int): Int { when (i) { 1 -> 1 } }
-                |                       ┗━━━━━━━━━━━━━━━━━┛
-                |[interactive#0:1+22-41]@G: Cannot assign to Int32 from Void
+                |1: when (i) { 1 -> 1 } }
+                |                      ⇧
+                |[interactive#0:1+41]@G: Cannot assign to Int32 from Void
                 |interactive#0: void
                 |
             """.trimMargin(),
@@ -738,6 +742,28 @@ class ReplTest {
     }
 
     @Test
+    fun helpOfOperators() {
+        // `+` outside infix position
+        repl.processLine("help(+)")
+        assertPendingContains(
+            Regex(
+                """
+                    |signed addition
+                """.trimMargin(),
+            ),
+        )
+        // `is` is an infix operator, so it can't normally appear there.
+        repl.processLine("help(is);")
+        assertPendingContains(
+            Regex(
+                """
+                    |The "is" operator allows runtime type-checking.
+                """.trimMargin(),
+            ),
+        )
+    }
+
+    @Test
     fun canImport() {
         // We can import something from std
         repl.processLine(
@@ -797,7 +823,7 @@ class ReplTest {
         // This is about error reporting rather than repl, but repl is an easy place to test it.
         // This uses imports, which repl supports.
         repl.processLine("""let { CodePart, Dot } = import("std/regex");""")
-        // Use wrong return type.
+        // Use the wrong return type.
         repl.processLine("""let hi(): CodePart { Dot }""")
         // We want the right error, not the wrong error. Earlier, we got the error on the import.
         assertPending(
@@ -814,7 +840,7 @@ class ReplTest {
 
     @Test
     fun surviveBadImport() {
-        // Use plain "std" instead of expected sub-path.
+        // Use plain "std" instead of the expected sub-path.
         repl.processLine(
             """
                 |import("std");
@@ -894,7 +920,7 @@ class ReplTest {
                 |
             """.trimMargin(),
         )
-        // `y` is still there when we need it though.
+        // `y` is still there when we need it, though.
         repl.processLine("y + 1")
         assertPending("interactive#4: 3\n")
     }
@@ -1045,7 +1071,7 @@ class ReplTest {
         )
         assertPrompt("$ ")
         // One half of a co-recursive function group.
-        // If we stopped at newlines, then we would get an `No declaration for odd` error.
+        // If we stopped at newlines, then we would get a `No declaration for odd` error.
         repl.processLine("let even(n: Int): Boolean { n == 0 || odd(n - 1) }")
         assertPrompt("$ ")
         assertPending("")
@@ -1124,7 +1150,7 @@ class ReplTest {
             """
                 |1: new Map([5])
                 |           ┗━┛
-                |[interactive#0:1+8-11]@G: Actual arguments do not match signature: <in K__30 extends AnyValue & MapKey, out V__31 extends AnyValue>(List<Pair<K__30, V__31>>) -> Map<K__30, V__31> expected [List<Pair<MapKey, AnyValue>>], but got [List<Int32>]
+                |[interactive#0:1+8-11]@G: Actual arguments do not match signature: <in K__32 extends AnyValue & MapKey, out V__33 extends AnyValue>(List<Pair<K__32, V__33>>) -> Map<K__32, V__33> expected [List<Pair<MapKey, AnyValue>>], but got [List<Int32>]
                 |interactive#0: fail
                 |
             """.trimMargin(),
@@ -1135,7 +1161,7 @@ class ReplTest {
             """
                 |1: new Map(5)
                 |           ⇧
-                |[interactive#1:1+8-9]@G: Actual arguments do not match signature: <in K__30 extends AnyValue & MapKey, out V__31 extends AnyValue>(List<Pair<K__30, V__31>>) -> Map<K__30, V__31> expected [List<Pair<MapKey, AnyValue>>], but got [Int32]
+                |[interactive#1:1+8-9]@G: Actual arguments do not match signature: <in K__32 extends AnyValue & MapKey, out V__33 extends AnyValue>(List<Pair<K__32, V__33>>) -> Map<K__32, V__33> expected [List<Pair<MapKey, AnyValue>>], but got [Int32]
                 |interactive#1: fail
                 |
             """.trimMargin(),
@@ -1150,15 +1176,19 @@ class ReplTest {
             fs.write(filePath("config.temper.md"), "# hello".toByteArray())
             fs.write(
                 filePath("src.temper"),
-                """export let message(): String { "Hello, World!" }""".toByteArray(),
+                """
+                    |export class Message(public text: String) {
+                    |  public static hello: Message = new Message("Hello, World!");
+                    |}
+                """.trimMargin().toByteArray(),
             )
         }
         repl.processLine("""help("${AvailableImports.NAME}")""")
         assertPendingContains(
             Regex("""║hello *║/ *║let \{...} = import\("hello//"\); *║"""),
         )
-        repl.processLine("""let { message } = import("hello")""")
-        repl.processLine("""console.log(message())""")
+        repl.processLine("""let { Message } = import("hello")""")
+        repl.processLine("""console.log(Message.hello.text)""")
         assertPending(
             """
                 |interactive#1: void

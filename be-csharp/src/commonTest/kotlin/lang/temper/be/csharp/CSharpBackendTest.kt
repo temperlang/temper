@@ -119,9 +119,10 @@ class CSharpBackendTest {
         assertGenerateWanted(
             temper = $$"""
                 |export interface Sup {
-                |  public grab(map: Mapped<String, Int>): Int throws Bubble { map["hi"] }
-                |  public message(name: String): String;
-                |  public repeat(name: String): String {
+                |  get thing(): String { "thing" }
+                |  grab(map: Mapped<String, Int>): Int throws Bubble { map["hi"] }
+                |  message(name: String): String;
+                |  repeat(name: String): String {
                 |    "${message(name)} ${message(name)}"
                 |  }
                 |}
@@ -140,7 +141,18 @@ class CSharpBackendTest {
                     decls = """
                         |public interface ISup
                         |{
-                        |    protected static int GrabDefault(ISup this__0, G::IReadOnlyDictionary<string, int> map__0)
+                        |    string Thing
+                        |    {
+                        |        get
+                        |        {
+                        |            return GetThingDefault(this);
+                        |        }
+                        |    }
+                        |    protected static string GetThingDefault(ISup this__0)
+                        |    {
+                        |        return "thing";
+                        |    }
+                        |    protected static int GrabDefault(ISup this__1, G::IReadOnlyDictionary<string, int> map__0)
                         |    {
                         |        return map__0["hi"];
                         |    }
@@ -149,9 +161,9 @@ class CSharpBackendTest {
                         |        return GrabDefault(this, map__0);
                         |    }
                         |    string Message(string name__0);
-                        |    protected static string RepeatDefault(ISup this__1, string name__1)
+                        |    protected static string RepeatDefault(ISup this__2, string name__1)
                         |    {
-                        |        return this__1.Message(name__1) + " " + this__1.Message(name__1);
+                        |        return this__2.Message(name__1) + " " + this__2.Message(name__1);
                         |    }
                         |    string Repeat(string name__1)
                         |    {
@@ -180,6 +192,13 @@ class CSharpBackendTest {
                         |    }
                         |    public Sub()
                         |    {
+                        |    }
+                        |    public string Thing
+                        |    {
+                        |        get
+                        |        {
+                        |            return ISup.GetThingDefault(this);
+                        |        }
                         |    }
                         |    public int Grab(G::IReadOnlyDictionary<string, int> map___0)
                         |    {
@@ -363,8 +382,7 @@ class CSharpBackendTest {
                 |}
             """.trimMargin(),
             usings = """
-                |using S0 = MyTestLibrary.Support;
-                |using S1 = System;
+                |using S = MyTestLibrary.Support;
                 |using C = TemperLang.Core;
             """.trimMargin(),
             csharp = """
@@ -377,10 +395,10 @@ class CSharpBackendTest {
                 |internal static int value__0;
                 |static TestGlobal()
                 |{
-                |    console___0 = S0::Logging.LoggingConsoleFactory.CreateConsole("MyTestLibrary.Test");
+                |    console___0 = S::Logging.LoggingConsoleFactory.CreateConsole("MyTestLibrary.Test");
                 |    console___0.Log("Hi!");
                 |    value__0 = calc__0();
-                |    console___0.Log(S1::Convert.ToString(value__0, 16));
+                |    console___0.Log(C::Core.ConvertToString(value__0, 16));
                 |}
             """.trimMargin(),
         )
@@ -432,6 +450,35 @@ class CSharpBackendTest {
                 |{
                 |    builder__0 = new C::OrderedDictionary<string, string>();
                 |    Mapped = C::Mapped.AsReadOnly(builder__0);
+                |}
+            """.trimMargin(),
+        )
+    }
+
+    @Test
+    fun mapBuilderToMap() {
+        assertGeneratedGlobalClass(
+            temper = """
+                |let builder: MapBuilder<String, String> = new MapBuilder<String, String>();
+                |export let map1 = builder.toMap();
+                |let mapped: Mapped<String, String> = builder;
+                |export let map2 = mapped.toMap();
+            """.trimMargin(),
+            usings = """
+                |using G = System.Collections.Generic;
+                |using C = TemperLang.Core;
+            """.trimMargin(),
+            csharp = """
+                |internal static G::IDictionary<string, string> builder__0;
+                |public static G::IReadOnlyDictionary<string, string> Map1;
+                |internal static G::IReadOnlyDictionary<string, string> mapped__0;
+                |public static G::IReadOnlyDictionary<string, string> Map2;
+                |static TestGlobal()
+                |{
+                |    builder__0 = new C::OrderedDictionary<string, string>();
+                |    Map1 = C::Mapped.ToMap(C::Mapped.AsReadOnly(builder__0));
+                |    mapped__0 = C::Mapped.AsReadOnly(builder__0);
+                |    Map2 = C::Mapped.ToMap(mapped__0);
                 |}
             """.trimMargin(),
         )
@@ -518,7 +565,8 @@ class CSharpBackendTest {
                 |    }
                 |    public string Thing()
                 |    {
-                |        return this.Punctuate("Hi, " + this.name__0);
+                |        string t___0 = this.name__0;
+                |        return this.Punctuate("Hi, " + t___0);
                 |    }
                 |    string Punctuate(string message__0)
                 |    {
@@ -1191,14 +1239,13 @@ class CSharpBackendTest {
                     |    {
                     |        string t___0;
                     |        string ? t__0 = C::Optional.OrNull<string>(new Identity<string>().Identity_(C::Optional.Of<string>(s__0)));
-                    |        if (!(t__0 == null))
+                    |        if (t__0 == null)
                     |        {
-                    |            string t___1 = t__0!;
-                    |            t___0 = t___1;
+                    |            t___0 = "not";
                     |        }
                     |        else
                     |        {
-                    |            t___0 = "not";
+                    |            t___0 = t__0!;
                     |        }
                     |        console___0.Log(t___0);
                     |    }
@@ -1396,6 +1443,7 @@ class CSharpBackendTest {
             |            content: ```
             |              using U = Microsoft.VisualStudio.TestTools.UnitTesting;
             |              using S = System;
+            |              using C = TemperLang.Core;
             |              using T = TemperLang.Std.Testing;
             |              namespace MyTestLibrary.Test
             |              {
@@ -1414,7 +1462,7 @@ class CSharpBackendTest {
             |                          {
             |                              string fn__0()
             |                              {
-            |                                  return "expected 1 == (" + S::Convert.ToString(1) + ") not (" + S::Convert.ToString(1) + ")";
+            |                                  return "expected 1 == (" + C::Core.ConvertToString(1) + ") not (" + C::Core.ConvertToString(1) + ")";
             |                              }
             |                              test___0.Assert(true, (S::Func<string>) fn__0);
             |                          }

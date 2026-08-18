@@ -2,13 +2,14 @@ package lang.temper.frontend.typestage
 
 import lang.temper.ast.TreeVisit
 import lang.temper.builtin.BuiltinFuns
-import lang.temper.builtin.isHandlerScopeCall
 import lang.temper.common.Cons
+import lang.temper.common.Log
 import lang.temper.common.ignore
 import lang.temper.common.putMultiList
 import lang.temper.common.subListToEnd
 import lang.temper.frontend.syntax.isAssignment
 import lang.temper.log.LogSink
+import lang.temper.log.MessageTemplate
 import lang.temper.name.InternalModularName
 import lang.temper.name.ResolvedName
 import lang.temper.name.TemperName
@@ -16,11 +17,11 @@ import lang.temper.name.unusedAnalogueFor
 import lang.temper.type.Abstractness
 import lang.temper.type.AndType
 import lang.temper.type.DotHelper
-import lang.temper.type.ExternalBind
+import lang.temper.type.ExternalCall
 import lang.temper.type.ExternalGet
 import lang.temper.type.ExternalSet
 import lang.temper.type.FunctionType
-import lang.temper.type.InternalBind
+import lang.temper.type.InternalCall
 import lang.temper.type.InternalGet
 import lang.temper.type.InternalMemberAccessor
 import lang.temper.type.InternalSet
@@ -61,9 +62,11 @@ import lang.temper.value.Tree
 import lang.temper.value.TypeInferences
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
+import lang.temper.value.firstArgumentIndex
 import lang.temper.value.freeTree
 import lang.temper.value.functionContained
 import lang.temper.value.inlineUnrealizedGoalSymbol
+import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.matches
 import lang.temper.value.ssaSymbol
 import lang.temper.value.typeSymbol
@@ -87,9 +90,10 @@ internal fun inlineToRepairUnrealizedGoals(
     logSink: LogSink,
 ): List<TEdge> {
     val inliner = InlineToRepairUnrealizedGoals(root, logSink)
-    if (!inliner.findFunctionsWithUnrealizedGoals()) { return emptyList() }
-    if (!inliner.findCallsToInline()) { return emptyList() }
-    inliner.doInlining()
+    inliner.findFunctions()
+    if (inliner.findCallsToInline()) {
+        inliner.doInlining()
+    }
     inliner.reportRemainingUnrealizedGoals()
     return inliner.getNeedsWeaving()
 }
@@ -99,38 +103,45 @@ private class InlineToRepairUnrealizedGoals(
     val logSink: LogSink,
 ) {
     private val reparableFns = mutableSetOf<FunTree>()
-    fun findFunctionsWithUnrealizedGoals(): Boolean {
+    fun findFunctions() {
         TreeVisit.startingAt(root)
             .forEachContinuing { tree ->
-                if (tree !is FunTree) { return@forEachContinuing }
-                val body = tree.parts?.body as? BlockTree ?: return@forEachContinuing
-                val flow = body.flow
-                if (flow is StructuredFlow) {
-                    val controlFlows: ArrayDeque<Pair<ControlFlow, Cons<JumpDestination>>> =
-                        ArrayDeque(listOf(flow.controlFlow to Cons.Empty))
-                    while (true) {
-                        val (cf, inScope) = controlFlows.removeFirstOrNull()
-                            ?: break
-                        if (cf is ControlFlow.Jump) {
-                            if (inScope.none { it.matches(cf) }) {
-                                reparableFns.add(tree)
-                                break
-                            }
-                        } else if (cf is JumpDestination) {
-                            val inScopeWithDest = Cons(cf, inScope)
-                            cf.clauses.mapTo(controlFlows) {
-                                it to inScopeWithDest
-                            }
-                        } else {
-                            cf.clauses.mapTo(controlFlows) {
-                                it to inScope
-                            }
-                        }
+                if (tree !is FunTree) {
+                    return@forEachContinuing
+                }
+                reparableFns.add(tree)
+            }
+            .visitPreOrder()
+    }
+    fun findUnrealizedGoals(
+        tree: FunTree,
+        unrealized: MutableList<ControlFlow.Jump>,
+    ): List<ControlFlow.Jump> {
+        val body = tree.parts?.body as? BlockTree ?: return emptyList()
+        val flow = body.flow
+        if (flow is StructuredFlow) {
+            val controlFlows: ArrayDeque<Pair<ControlFlow, Cons<JumpDestination>>> =
+                ArrayDeque(listOf(flow.controlFlow to Cons.Empty))
+            while (true) {
+                val (cf, inScope) = controlFlows.removeFirstOrNull()
+                    ?: break
+                if (cf is ControlFlow.Jump) {
+                    if (inScope.none { it.matches(cf) }) {
+                        unrealized.add(cf)
+                    }
+                } else if (cf is JumpDestination) {
+                    val inScopeWithDest = Cons(cf, inScope)
+                    cf.clauses.mapTo(controlFlows) {
+                        it to inScopeWithDest
+                    }
+                } else {
+                    cf.clauses.mapTo(controlFlows) {
+                        it to inScope
                     }
                 }
             }
-            .visitPreOrder()
-        return reparableFns.isNotEmpty()
+        }
+        return unrealized.toList()
     }
 
     private data class FunArg(
@@ -185,8 +196,8 @@ private class InlineToRepairUnrealizedGoals(
                 parent,
                 FunArg(
                     // edge indices include callee, but there's also a subject that needs to be curried in,
-                    // so we subtract one for the callee, and add one back.
-                    argIndex = edgeIndex,
+                    // so we subtract one for the callee and add one back.
+                    argIndex = edgeIndex - parent.firstArgumentIndex,
                     funTree = f,
                 ),
             )
@@ -218,7 +229,7 @@ private class InlineToRepairUnrealizedGoals(
             }
 
             // We've paired local names within the function body to functions to inline.
-            // Now prune out anywhere the local name is over-used.
+            // Now prune out anywhere the local name is overused.
             // If the local name is `f`, then look for situations where:
             //
             // 1. `f` is passed, so calling it is delegated.  It needs to be a function value.
@@ -310,7 +321,6 @@ private class InlineToRepairUnrealizedGoals(
             val calleeTree = callToInline.definition
             val formalNameToArg = callToInline.formalNameToFunArg
             val thisBindings = callToInline.thisTypeBindings
-            callToInline.thisTypeBindings
 
             val combinedCallArgs = callToInline.combinedCallArgs
             val callEdge = call.incoming!!
@@ -609,10 +619,23 @@ private class InlineToRepairUnrealizedGoals(
         }
     }
 
+    /**
+     * Warn about unrealized goals that we couldn't repair and
+     * replace with error nodes.
+     */
     fun reportRemainingUnrealizedGoals() {
-        // TODO: Warn about unrealized goals that we couldn't repair and
-        // replace with error nodes.
-        ignore(logSink)
+        val unrealizedGoals = mutableListOf<ControlFlow.Jump>()
+        for (f in reparableFns) {
+            findUnrealizedGoals(f, unrealizedGoals)
+        }
+        for (g in unrealizedGoals) {
+            logSink.log(
+                Log.Warn,
+                MessageTemplate.UnresolvedJumpTarget,
+                g.pos,
+                listOf(),
+            )
+        }
     }
 
     fun getNeedsWeaving() = needWeaving.toList()
@@ -630,15 +653,13 @@ private class InlineToRepairUnrealizedGoals(
 
         // Look for a callee with the form (Call (Call DotHelper(ExternalBind) subject))
         val (dotHelper, thisArg) = run findDotHelper@{
-            if (callee is CallTree) {
-                val possibleDotHelper = callee.childOrNull(0)?.functionContained
-                if (possibleDotHelper is DotHelper) {
-                    val thisArg = callee.childOrNull(
-                        possibleDotHelper.memberAccessor.enclosingTypeIndexOrNegativeOne + 2,
-                    )
-                    if (thisArg != null) {
-                        return@findDotHelper possibleDotHelper to thisArg
-                    }
+            val possibleDotHelper = callee.functionContained
+            if (possibleDotHelper is DotHelper) {
+                val thisArg = call.childOrNull(
+                    possibleDotHelper.memberAccessor.enclosingTypeIndexOrNegativeOne + 2,
+                )
+                if (thisArg != null) {
+                    return@findDotHelper possibleDotHelper to thisArg
                 }
             }
             null to null
@@ -647,7 +668,7 @@ private class InlineToRepairUnrealizedGoals(
         // We could try other strategies.  If callee is by name,
         // it would be good to have some way to follow any chain
         // of names back to a named function declaration or exported name.
-        if (dotHelper != null && dotHelper.memberAccessor is ExternalBind) {
+        if (dotHelper != null && dotHelper.memberAccessor is ExternalCall) {
             val thisType = thisArg?.typeInferences?.type ?: return null
             val thisShape = representativeTypeShapeFor(listOf(thisType)) ?: return null
 
@@ -695,19 +716,19 @@ private fun representativeTypeShapeFor(ts: Iterable<StaticType>): TypeShape? =
     representativeNominalValueType(ts)?.definition as TypeShape?
 
 /**
- * Conservative.  True if the given method is not overridden by any sub-type of [typeShape].
+ * Conservative.  True if the given method is not overridden by any subtype of [typeShape].
  *
  * Assumes [typeShape] extends whatever type defines this method and uses its implementation.
  *
  * True if, for example, this method is defined with a default, inherited implementation in
- * typeShape and typeShape cannot have a sub-type that overrides it.
+ * typeShape and typeShape cannot have a subtype that overrides it.
  *
  * May return false even if not overridden
  */
 fun MethodShape.isNotOverriddenIn(typeShape: TypeShape): Boolean {
     if (this.enclosingType.abstractness == Abstractness.Concrete) { return true }
     // TODO: for sealed interfaces, check exhaustively whether it is not
-    // overridden in sub-types.
+    // overridden in subtypes.
     ignore(typeShape)
     return false
 }
@@ -764,11 +785,11 @@ private fun convertMemberUseToExternal(
     val accessor = dotHelper.memberAccessor
     if (accessor !is InternalMemberAccessor) { return }
     val externalAccessor = when (accessor) {
-        InternalBind -> ExternalBind
+        InternalCall -> ExternalCall
         InternalGet -> ExternalGet
         InternalSet -> ExternalSet
     }
-    val convertedDotHelper = DotHelper(externalAccessor, dotHelper.symbol, dotHelper.extensions)
+    val convertedDotHelper = DotHelper(externalAccessor, dotHelper.member, dotHelper.extensions)
     val callee = callChildren[0]
     val adjustedCallee = ValueLeaf(callee.document, callee.pos, Value(convertedDotHelper))
     adjustedCallee.typeInferences = callee.typeInferences?.let { ti ->

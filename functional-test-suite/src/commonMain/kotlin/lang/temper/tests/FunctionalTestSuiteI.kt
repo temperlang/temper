@@ -161,6 +161,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.FunctionsAsValues)
 
     @Test
+    fun functionsConnected() =
+        runFunctionalTest(Ft.FunctionsConnected)
+
+    @Test
     fun functionsConstructorCallbacks() =
         runFunctionalTest(Ft.FunctionsConstructorCallbacks)
 
@@ -271,6 +275,10 @@ interface FunctionalTestSuiteI {
     @Test
     fun typesIntLimits() =
         runFunctionalTest(Ft.TypesIntLimits)
+
+    @Test
+    fun typesIntShifty() =
+        runFunctionalTest(Ft.TypesIntShifty)
 
     @Test
     fun typesJsonSyntaxTree() =

@@ -1,0 +1,66 @@
+[
+    "Block",
+    [
+        [
+            "Call",
+            [
+                [
+                    "RightName",
+                    "fn"
+                ],
+                [
+                    "Value",
+                    "\\word: Symbol"
+                ],
+                [
+                    "LeftName",
+                    "f"
+                ],
+                [
+                    "Call",
+                    [
+                        [
+                            "RightName",
+                            "@A"
+                        ],
+                        [
+                            "Call",
+                            [
+                                [
+                                    "RightName",
+                                    "@B"
+                                ],
+                                [
+                                    "Decl",
+                                    [
+                                        [
+                                            "LeftName",
+                                            "x"
+                                        ],
+                                        [
+                                            "Value",
+                                            "\\word: Symbol"
+                                        ],
+                                        [
+                                            "Value",
+                                            "\\x: Symbol"
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+                [
+                    "Fun",
+                    [
+                        [
+                            "Block",
+                            []
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    ]
+]

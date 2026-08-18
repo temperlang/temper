@@ -1,0 +1,16 @@
+@method(\f) @visibility(\public) @fn @stay @fromType(I__0) @reach(\none) let f__0;
+f__0 = (@stay fn f(@impliedThis(I__0) this__0: I__0) /* return__0 */: Int32 {
+    pureVirtual()
+});
+@typeDecl(I__0) @stay @reach(\none) let I__0;
+I__0 = type (I__0);
+@typeDecl(C__0) @stay @reach(\none) let C__0;
+C__0 = type (C__0);
+@method(\f) @visibility(\protected) @fn @stay @fromType(C__0) @reach(\none) let f__1;
+f__1 = (@stay fn f(@impliedThis(C__0) this__1: C__0) /* return__1 */: Int32 {
+    return__1 = 1
+});
+@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) @reach(\none) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(C__0) this__2: C__0) /* return__3 */: Void {
+    return__3 = void
+})

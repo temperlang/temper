@@ -1,0 +1,1 @@
+let x: int = (do { if (a) { 42 } else { 0 } })

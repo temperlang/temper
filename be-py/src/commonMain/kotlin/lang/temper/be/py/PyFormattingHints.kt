@@ -2,6 +2,7 @@ package lang.temper.be.py
 
 import lang.temper.format.FormattingHints
 import lang.temper.format.OutputToken
+import lang.temper.format.OutputTokenType
 import lang.temper.format.OutputTokenType.Punctuation
 import lang.temper.format.OutputTokenType.Word
 import lang.temper.format.SpecialTokens
@@ -26,6 +27,7 @@ internal object PyFormattingHints : FormattingHints {
         isStarPrefix(preceding) -> false
         isFrom(preceding) && isDots(following) -> true
         isDots(preceding) && isDots(following) -> false
+        preceding.type == OutputTokenType.OtherValue -> false
         else -> super.spaceBetween(preceding, following)
     }
 }

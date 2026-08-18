@@ -11,7 +11,7 @@ Temper is a programming language and toolchain for making *libraries* that can
 be used natively from any other language.
 
 Temper compiles to idiomatic types and functions for each target
-language: currently Python, JavaScript, C#, Java, and Lua, with plans
+language: currently Python, JavaScript, C#, Java, Lua, and Rust, with plans
 for many more. Whether you're an open-source developer or work in an
 enterprise, Temper can multiply the reach and effect of your
 work. ["Why a new programming language?"](why.md) explains what Temper
@@ -33,7 +33,7 @@ export class Person(
 ) {
   public ageAt(date: Date): Int {
     // Or support other definitions of age.
-    date.yearsSince(birthDate)
+    Date.yearsBetween(birthDate, date)
   }
 }
 ```

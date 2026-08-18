@@ -216,12 +216,12 @@ class PyTranslatorTest : TranslatorTests(PyBackend.Python3.backendMeta, PySuppor
             "expressionAssociativityRightPlus" to "a + (b + c)",
             "unexportedClass" to
                 """
-                    |class Thing_7:
+                    |class _Thing:
                     |    prop_name_9: 'str0'
                     |    __slots__ = ('prop_name_9',)
-                    |    def __init__(blah_12: 'str0') -> None:
+                    |    def __init__(blah: 'str0', /) -> None:
                     |        pass
-                    |    def fun_name(required_arg_17: 'str0', optional_arg_15: 'Union1[int2, None]' = None) -> 'int2':
+                    |    def fun_name(required_arg_17: 'str0', optional_arg_15: 'Union1[int2, None]' = None, /) -> 'int2':
                     |        _optional_arg_15: 'Union1[int2, None]' = optional_arg_15
                     |        return_16: 'int2'
                     |        if True:
@@ -233,7 +233,7 @@ class PyTranslatorTest : TranslatorTests(PyBackend.Python3.backendMeta, PySuppor
                 """.trimMargin(),
             "exportedFun" to
                 """
-                    |def fun_name(required_arg_9: 'str0', optional_arg_7: 'Union1[int2, None]' = None) -> 'int2':
+                    |def fun_name(required_arg_9: 'str0', optional_arg_7: 'Union1[int2, None]' = None, /) -> 'int2':
                     |    _optional_arg_7: 'Union1[int2, None]' = optional_arg_7
                     |    return_8: 'int2'
                     |    if True:
@@ -244,7 +244,7 @@ class PyTranslatorTest : TranslatorTests(PyBackend.Python3.backendMeta, PySuppor
             "funLambdaArgs" to
                 """
                     |X_7 = TypeVar0('X_7')
-                    |def function_8(alpha_9: 'str1', beta_10: 'int2', gamma_11: 'Callable3[[str1, str1], X_7]') -> 'str1':
+                    |def function_8(alpha_9: 'str1', beta_10: 'int2', gamma_11: 'Callable3[[str1, str1], X_7]', /) -> 'str1':
                     |    pass
                 """.trimMargin(),
             "simpleGenerator" to
@@ -256,7 +256,7 @@ class PyTranslatorTest : TranslatorTests(PyBackend.Python3.backendMeta, PySuppor
                 """.trimMargin(),
             "trailingRequiredArgs" to
                 """
-                    |def function_7(alpha_8: 'int0', beta_9: 'Union1[int0, None]' = None, gamma_10: Optional2['int0'] = None) -> 'int0':
+                    |def function_7(alpha_8: 'int0', beta_9: 'Union1[int0, None]' = None, gamma_10: Optional2['int0'] = None, /) -> 'int0':
                     |    _beta_9: 'Union1[int0, None]' = beta_9
                     |    _gamma_10: Optional2['int0'] = gamma_10
                     |    return_11: 'int0'

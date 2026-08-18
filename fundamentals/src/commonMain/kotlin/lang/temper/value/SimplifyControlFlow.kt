@@ -176,11 +176,25 @@ fun simplifyControlFlow(
      * results are stored in output variables.
      */
     assumeResultsCaptured: Boolean,
+    logicalOperators: LogicalOperators,
 ): StructuredFlow {
     val nameMaker = block.document.nameMaker
 
-    fun truthiness(ref: BlockChildReference) =
-        block.dereference(ref)?.valueContained(TBoolean)
+    fun truthiness(ref: BlockChildReference): Boolean? {
+        // Ideally, we just have a simple boolean value.
+        val tree = (block.dereference(ref) ?: return null).target
+        tree.valueContained(TBoolean)?.let { simpleAnswer -> return@truthiness simpleAnswer }
+        // Not completely simple, but check for simple negation of a boolean value.
+        tree is CallTree && tree.size == 2 || return null
+        val value = tree.child(1).valueContained(TBoolean) ?: return null
+        // Single boolean operand, so dig more at the function.
+        val fn = tree.child(0).functionContained ?: return null
+        return if (isNotOperator(fn)) {
+            !value
+        } else {
+            null
+        }
+    }
 
     val loopDepth = DepthCounter()
 
@@ -251,7 +265,7 @@ fun simplifyControlFlow(
                     var newThenClause = tTrimmed.simpler as ControlFlow.StmtBlock
                     var newElseClause = eTrimmed.simpler as ControlFlow.StmtBlock
                     if (newThenClause.isEmptyBlock() && !newElseClause.isEmptyBlock()) {
-                        cf.condition.invertLogicalExpr(block)
+                        cf.condition.invertLogicalExpr(block, logicalOperators)
                         val swap = newThenClause
                         newThenClause = newElseClause
                         newElseClause = swap
@@ -559,7 +573,7 @@ fun simplifyControlFlow(
                         checkPosition = LeftOrRight.Left
                         // `break` if the condition is false
                         // `if (!condition) { break }`
-                        condition.invertLogicalExpr(block)
+                        condition.invertLogicalExpr(block, logicalOperators)
                         if (bodyContinues || bodyFlows != Freq3.Never) {
                             conditionCheckAtEnd = ControlFlow.If(
                                 condition.pos,
@@ -894,12 +908,14 @@ fun simplifyStructuredBlock(
     flow: StructuredFlow,
     assumeAllJumpsResolved: Boolean,
     assumeResultsCaptured: Boolean,
+    logicalOperators: LogicalOperators,
 ) {
     val newFlow = simplifyControlFlow(
         block,
         flow.controlFlow,
         assumeAllJumpsResolved = assumeAllJumpsResolved,
         assumeResultsCaptured = assumeResultsCaptured,
+        logicalOperators = logicalOperators,
     )
     block.replaceFlow(newFlow)
 
@@ -953,4 +969,10 @@ private class DepthCounter {
             depth -= 1
         }
     }
+}
+
+private fun isNotOperator(fn: MacroValue): Boolean = when (fn) {
+    is NamedBuiltinFun -> fn.builtinOperatorId == BuiltinOperatorId.BooleanNegation
+    is CoverFunction -> fn.covered.all { isNotOperator(it) }
+    else -> false
 }

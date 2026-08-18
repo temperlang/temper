@@ -49,6 +49,11 @@ enum class MessageTemplate(
         CompilationPhase.Staging,
     ),
     MalformedAssignment("Malformed assignment", CompilationPhase.Staging),
+    MalformedOperatorSpec(
+        "Malformed operator spec, got %s but expected a string" +
+            " with an underscore at the beginning and/or at the end, and an operator text",
+        CompilationPhase.Staging,
+    ),
     DuplicateLibraryName(
         "Library name %s is used by multiple libraries at %s",
         CompilationPhase.CodeGeneration,
@@ -58,6 +63,12 @@ enum class MessageTemplate(
     // Lexical problems
     BadEmoji("Emoji not allowed", CompilationPhase.Lex),
     InvalidIdentifier("Not a valid identifier", CompilationPhase.Lex),
+    Int32OutOfBounds("Int32 value, %s, out of representable bounds", CompilationPhase.Lex),
+    Int64OutOfBounds("Int64 value, %s, out of representable bounds", CompilationPhase.Lex),
+    MaybePromoteInt32ToInt64(
+        "You can turn an Int32 literal into an Int64 by putting i64 at the end",
+        CompilationPhase.Lex,
+    ),
     MalformedNumber("Malformed number", CompilationPhase.Lex),
     MalformedSemilit("Malformed semi-literate boundary", CompilationPhase.Lex),
     UnclosedBlock("Open bracket has no closing bracket", CompilationPhase.Lex),
@@ -66,6 +77,7 @@ enum class MessageTemplate(
     UnnormalizedIdentifier("Identifier is not in Unicode normal form NFKC", CompilationPhase.Lex),
     UnrecognizedStringEscape("Unrecognized escape sequence in quoted string", CompilationPhase.Lex),
     UnrecognizedToken("Syntax error", CompilationPhase.Lex),
+    UnsupportedNestedMultiQuote("Multi-quoted string nesting not yet supported", CompilationPhase.Lex),
 
     // Parsing problems
     TooFewOperands("Operator %s expects at least %d operands but got %d", CompilationPhase.Parse),
@@ -116,6 +128,7 @@ enum class MessageTemplate(
         "Type %s must implement %s from %s.  Maybe add `%s`",
         CompilationPhase.Interpreter,
     ),
+    MissingReturnType("Explicit return type required", CompilationPhase.Interpreter),
     TypeCheckRejected("Type %s rejected value %s", CompilationPhase.Interpreter),
     BuiltinEnvironmentIsNotMutable(
         "Cannot declare locals (e.g. %s) in the builtin environment",
@@ -205,6 +218,7 @@ enum class MessageTemplate(
     CannotInvokeMacroAsFunction("Cannot invoke macro as function", CompilationPhase.Interpreter),
     NotApplicable("Cannot apply %s to %s:%s", CompilationPhase.Interpreter),
     InternalInterpreterError("Internal error: %s", CompilationPhase.Interpreter),
+    InternalErrorMacroNotErased("Internal error: %s did not erase", CompilationPhase.Interpreter),
     CouldNotStoreFailureBit(
         "Internal error: failed to set failure bit",
         CompilationPhase.Interpreter,
@@ -214,6 +228,10 @@ enum class MessageTemplate(
     ThisOutsideClassBody(
         "`this` may only appear inside a type definition",
         CompilationPhase.Interpreter,
+    ),
+    FunctionBodyMissing(
+        "Function body required except for virtual methods or connected functions",
+        CompilationPhase.CodeGeneration,
     ),
     CannotExtend(
         "A class may not extend %s. Only named types and And(`&`) types may be extended",
@@ -301,7 +319,7 @@ enum class MessageTemplate(
         "No symbol for import from %s",
         CompilationPhase.Interpreter,
     ),
-    ImplicitsUnavailable(
+    CoreUnavailable(
         "Implicit imports are unavailable due to an internal compiler error",
         CompilationPhase.Interpreter,
     ),

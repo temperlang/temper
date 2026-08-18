@@ -1,0 +1,1 @@
+class C<T, U extends D, @out V, @in W> extends A, B {}

@@ -1,0 +1,1 @@
+let f<@in T extends MapKey>(x: T): Void {}

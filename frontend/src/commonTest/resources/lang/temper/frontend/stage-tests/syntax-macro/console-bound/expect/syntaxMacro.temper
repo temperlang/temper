@@ -1,0 +1,5 @@
+let console#0 = doPure(fn: Console {
+    getConsole()
+}), console__0 = getConsole("myConsole");
+do_call_log(console__0, "Hi!");
+do_call_log(console#0, "Bye!");

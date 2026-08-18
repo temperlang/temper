@@ -1,0 +1,40 @@
+@typeDecl(StringHolder__0) @stay let StringHolder__0 = type (StringHolder__0);
+@fn let `test//`.maybeLength;
+class(\word, \StringHolder, \concrete, true, @typeDefined(StringHolder__0) fn {
+    StringHolder__0 extends AnyValue;
+    @constructorProperty @maybeVar @visibility(\public) let string__0: String;
+    @visibility(\public) let constructor__0 = fn constructor(@impliedThis(StringHolder__0) this__0: StringHolder__0, string__1 /* aka string */: String) /* return__0 */: Void {
+      do {
+        let t#0;
+        do_iset_string(type (StringHolder__0), this(StringHolder__0), t#0 = string__1);
+        t#0
+      };
+    };
+});
+`test//`.maybeLength = fn maybeLength(a__0 /* aka a */: StringHolder__0?, min__0 /* aka min */: Int) /* return__1 */: (Int?) {
+  fn__0: do {
+    {
+      let subject#0;
+      subject#0 = {
+        let subject#1;
+        subject#1 = {
+          if (isNull(a__0)) {
+            null
+          } else {
+            do_get_string(notNull(a__0))
+          }
+        };
+        if (isNull(subject#1)) {
+          null
+        } else {
+          do_call_countBetween(notNull(subject#1), do_get_begin(String), do_get_end(do_get_string(a__0)))
+        }
+      };
+      if (isNull(subject#0)) {
+        null
+      } else {
+        do_call_max(notNull(subject#0), min__0)
+      }
+    }
+  }
+};

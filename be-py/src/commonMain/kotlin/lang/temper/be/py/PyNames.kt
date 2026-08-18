@@ -19,6 +19,7 @@ import lang.temper.name.ModuleName
 import lang.temper.name.OutName
 import lang.temper.name.QName
 import lang.temper.name.ResolvedName
+import lang.temper.name.ResolvedParsedName
 import lang.temper.name.SourceName
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
@@ -138,9 +139,9 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
         when (name) {
             is Temporary -> chooseSourceName(name, name.nameHint, name.uid, kind, reach)
             is SourceName -> chooseSourceName(name, name.baseName.nameText, name.uid, kind, reach)
-            is BuiltinName -> OutName(styleName(name.builtinKey, kind, reach), sourceName = name)
+            is BuiltinName -> OutName(styleName(name.builtinKey, kind), sourceName = name)
             is ExportedName -> {
-                val styledName = styleName(toSafePrefix(name), kind, reach)
+                val styledName = styleName(toSafePrefix(name), kind)
                 val safeName = avoidReserved(styledName)
                 OutName(safeName, sourceName = name)
             } // always external
@@ -160,21 +161,31 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
         kind: TmpL.IdKind,
         reach: TmpL.IdReach,
     ): OutName {
-        val styledName = styleName(safeIdent(prefix), kind, reach)
+        val styledName = styleName(safeIdent(prefix), kind)
         val safeName = when (reach) {
-            TmpL.IdReach.Internal -> concatIfVerbose(styledName, "_$uid") // numeric suffix, won't be a keyword
+            TmpL.IdReach.Internal -> when (kind) {
+                TmpL.IdKind.Type ->
+                    "_$styledName" // won't be keyword if not starting with `_`, which has other issues
+                // Type formals still need suffices for uniqueness right now.
+                TmpL.IdKind.TypeFormal, TmpL.IdKind.Value ->
+                    concatIfVerbose(styledName, "_$uid") // numeric suffix, won't be a keyword
+            }
             TmpL.IdReach.External -> avoidReserved(styledName)
         }
         return OutName(safeName, sourceName = name)
     }
 
+    /** Provide a pretty name, whether exported or not. */
+    fun choosePrettyName(name: ResolvedParsedName, kind: TmpL.IdKind): String {
+        return avoidReserved(styleName(safeIdent(name.baseName.nameText), kind))
+    }
+
     private fun styleName(
         name: String,
         kind: TmpL.IdKind,
-        reach: TmpL.IdReach,
     ): String = when (kind) {
         TmpL.IdKind.Value -> IdentStyle.Camel.convertTo(IdentStyle.Snake, name)
-        TmpL.IdKind.Type -> name // Already matches Temper style for types.
+        TmpL.IdKind.Type, TmpL.IdKind.TypeFormal -> name // Already matches Temper style for types.
     }
 
     /** A name that has not been returned by a previous call to this name generator. */

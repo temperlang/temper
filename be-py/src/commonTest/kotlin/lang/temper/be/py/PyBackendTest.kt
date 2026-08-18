@@ -9,6 +9,7 @@ import lang.temper.common.structure.StructureSink
 import lang.temper.common.structure.Structured
 import lang.temper.log.FilePath
 import lang.temper.log.filePath
+import org.junit.jupiter.api.Timeout
 import kotlin.test.Test
 
 @SuppressWarnings("MaxLineLength")
@@ -28,12 +29,12 @@ class PyBackendTest {
             |U_3 = TypeVar1('U_3', bound = Any0)
             |class Thing(Generic2[T_1]):
             |    __slots__ = ()
-            |    def identity(this_2, u_11: 'U_3', f_12: 'Callable3[[U_3], T_1]') -> 'T_1':
+            |    def identity(this_2, u_11: 'U_3', f_12: 'Callable3[[U_3], T_1]', /) -> 'T_1':
             |        return f_12(u_11)
-            |    def __init__(this_5) -> None:
+            |    def __init__(this, /) -> None:
             |        pass
             |T_0 = TypeVar1('T_0', bound = Any0)
-            |def identity(t_8: 'T_0') -> 'T_0':
+            |def identity(t_8: 'T_0', /) -> 'T_0':
             |    "They're the same thing!\n\nt__0: T__0\n  The thing to return\n"
             |    return t_8
             |
@@ -60,27 +61,27 @@ class PyBackendTest {
         want = """
             |from builtins import int as int3, str as str4
             |from temper_core import int64_to_int32 as int64_to_int320, string_to_int32 as string_to_int321, int_add as int_add2
-            |int64_to_int32_35 = int64_to_int320
-            |string_to_int32_36 = string_to_int321
-            |int_add_37 = int_add2
+            |int64_to_int32_37 = int64_to_int320
+            |string_to_int32_38 = string_to_int321
+            |int_add_39 = int_add2
             |class IntMaker:
             |    radix_7: 'int3'
             |    __slots__ = ('radix_7',)
-            |    def int64_to_int(this_0, int_9: 'int64_21') -> 'int3':
-            |        return int64_to_int32_35(int_9)
-            |    def string_to_int(this_1, string_12: 'str4') -> 'int3':
-            |        return string_to_int32_36(string_12, this_1.radix_7)
-            |    def __init__(this_2, radix_15: 'int3') -> None:
-            |        this_2.radix_7 = radix_15
+            |    def int64_to_int(this_0, int_9: 'int64_23', /) -> 'int3':
+            |        return int64_to_int32_37(int_9)
+            |    def string_to_int(this_1, string_12: 'str4', /) -> 'int3':
+            |        return string_to_int32_38(string_12, this_1.radix_7)
+            |    def __init__(this, /, radix: 'int3') -> None:
+            |        this.radix_7 = radix
             |    @property
-            |    def radix(this_24) -> 'int3':
+            |    def radix(this_24, /) -> 'int3':
             |        return this_24.radix_7
-            |def crazy_sum(int_maker_16: 'IntMaker', int_17: 'int64_21', string_18: 'str4') -> 'int3':
+            |def crazy_sum(int_maker_16: 'IntMaker', int_17: 'int64_23', string_18: 'str4', /) -> 'int3':
             |    int_int_20: 'int3'
             |    int_int_20 = int_maker_16.int64_to_int(int_17)
             |    string_int_21: 'int3'
             |    string_int_21 = int_maker_16.string_to_int(string_18)
-            |    return int_add_37(int_int_20, string_int_21)
+            |    return int_add_39(int_int_20, string_int_21)
             |
         """.trimMargin(),
     )
@@ -132,7 +133,7 @@ class PyBackendTest {
             |var m: MapBuilder<String, Int>? = null;
             |for (let e of [1, 2, 3]) {
             |  if (e == 2) {
-            |    m = new MapBuilder<String, Int>()
+            |    m = new MapBuilder<String, Int>();
             |  }
             |}
             |if (m is MapBuilder<String, Int>) {
@@ -140,26 +141,32 @@ class PyBackendTest {
             |}
         """.trimMargin(),
         want = """
-            |from builtins import bool as bool1, str as str4, int as int5, isinstance as isinstance7
-            |from temper_core import LoggingConsole as LoggingConsole2, list_for_each as list_for_each0
-            |from typing import Dict as Dict3, Union as Union6
-            |list_for_each_33 = list_for_each0
-            |t_29: 'bool1'
-            |t_26: 'LoggingConsole2' = LoggingConsole2(__name__)
-            |def f() -> 'Dict3[str4, int5]':
+            |from builtins import bool as bool3, str as str6, int as int7, isinstance as isinstance10, len as len0
+            |from temper_core import LoggingConsole as LoggingConsole4, list_get as list_get1, int_add as int_add2
+            |from typing import Dict as Dict5, Union as Union8, Sequence as Sequence9
+            |len_38 = len0
+            |list_get_39 = list_get1
+            |int_add_40 = int_add2
+            |t_16: 'bool3'
+            |t_31: 'LoggingConsole4' = LoggingConsole4(__name__)
+            |def f() -> 'Dict5[str6, int7]':
             |    return {}
-            |m_1: 'Union6[(Dict3[str4, int5]), None]' = None
-            |def fn_25(e_3: 'int5') -> 'None':
-            |    global m_1
+            |m_1: 'Union8[(Dict5[str6, int7]), None]' = None
+            |this_19: 'Sequence9[int7]' = (1, 2, 3)
+            |n_20: 'int7' = len_38(this_19)
+            |i_21: 'int7' = 0
+            |while i_21 < n_20:
+            |    el_22: 'int7' = list_get_39(this_19, i_21)
+            |    i_21 = int_add_40(i_21, 1)
+            |    e_3: 'int7' = el_22
             |    if e_3 == 2:
             |        m_1 = {}
-            |list_for_each_33((1, 2, 3), fn_25)
             |if not m_1 is None:
-            |    t_29 = isinstance7(m_1, Dict3)
+            |    t_16 = isinstance10(m_1, Dict5)
             |else:
-            |    t_29 = False
-            |if t_29:
-            |    t_26.log('Allocated m')
+            |    t_16 = False
+            |if t_16:
+            |    t_31.log('Allocated m')
             |
         """.trimMargin(),
     )
@@ -183,10 +190,10 @@ class PyBackendTest {
             |class J(I):
             |    x_3: 'int2'
             |    __slots__ = ('x_3',)
-            |    def __init__(this_0, x_5: 'int2') -> None:
-            |        this_0.x_3 = x_5
+            |    def __init__(this, /, x: 'int2') -> None:
+            |        this.x_3 = x
             |    @property
-            |    def x(this_8) -> 'int2':
+            |    def x(this_8, /) -> 'int2':
             |        return this_8.x_3
             |
         """.trimMargin(),
@@ -222,8 +229,8 @@ class PyBackendTest {
             |from builtins import int as int1
             |from typing import Union as Union2
             |from temper_core import int_add as int_add0
-            |int_add_13 = int_add0
-            |def something(i_1: 'int1', j_5: 'Union2[int1, None]' = None, k_7: 'Union2[int1, None]' = None) -> 'int1':
+            |int_add_17 = int_add0
+            |def something(i_1: 'int1', j_5: 'Union2[int1, None]' = None, k_7: 'Union2[int1, None]' = None, /) -> 'int1':
             |    _j_5: 'Union2[int1, None]' = j_5
             |    _k_7: 'Union2[int1, None]' = k_7
             |    j_2: 'int1'
@@ -236,11 +243,12 @@ class PyBackendTest {
             |        k_3 = 6
             |    else:
             |        k_3 = _k_7
-            |    return int_add_13(int_add_13(i_1, j_2), k_3)
+            |    return int_add_17(int_add_17(i_1, j_2), k_3)
             |
         """.trimMargin(),
     )
 
+    @Timeout(LONG_TEST_TIMEOUT_SECONDS)
     @Test
     fun importIncludesNeededTypes() = assertGeneratedCode(
         input = """
@@ -252,29 +260,29 @@ class PyBackendTest {
         want = """
             |from temper_std.json import parse_json as parse_json_3, JsonAdapter, JsonProducer, JsonSyntaxTree, InterchangeContext, JsonObject
             |from temper_core import cast_by_type as cast_by_type0
-            |class CJsonAdapter_8(JsonAdapter['C']):
+            |class _CJsonAdapter(JsonAdapter['C']):
             |    __slots__ = ()
-            |    def encode_to_json(this_21, x_16: 'C', p_17: 'JsonProducer') -> 'None':
+            |    def encode_to_json(this_21, x_16: 'C', p_17: 'JsonProducer', /) -> 'None':
             |        x_16.encode_to_json(p_17)
-            |    def decode_from_json(this_22, t_18: 'JsonSyntaxTree', ic_19: 'InterchangeContext') -> 'C':
+            |    def decode_from_json(this_22, t_18: 'JsonSyntaxTree', ic_19: 'InterchangeContext', /) -> 'C':
             |        return C.decode_from_json(t_18, ic_19)
-            |    def __init__(this_23) -> None:
+            |    def __init__(this, /) -> None:
             |        pass
             |class C:
             |    __slots__ = ()
-            |    def __init__(this_0) -> None:
+            |    def __init__(this, /) -> None:
             |        pass
-            |    def encode_to_json(this_20, p_15: 'JsonProducer') -> 'None':
+            |    def encode_to_json(this_20, p_15: 'JsonProducer', /) -> 'None':
             |        p_15.start_object()
             |        p_15.end_object()
             |    @staticmethod
-            |    def decode_from_json(t_5: 'JsonSyntaxTree', ic_6: 'InterchangeContext') -> 'C':
+            |    def decode_from_json(t_5: 'JsonSyntaxTree', ic_6: 'InterchangeContext', /) -> 'C':
             |        obj_7: 'JsonObject'
             |        obj_7 = cast_by_type0(t_5, JsonObject)
             |        return C()
             |    @staticmethod
             |    def json_adapter() -> 'JsonAdapter[C]':
-            |        return CJsonAdapter_8()
+            |        return _CJsonAdapter()
             |
         """.trimMargin(),
     )
@@ -318,10 +326,10 @@ class PyBackendTest {
             |            class A:
             |                x_2: 'int0'
             |                __slots__ = ('x_2',)
-            |                def __init__(this_0, x_4: 'int0') -> None:
-            |                    this_0.x_2 = x_4
+            |                def __init__(this, /, x: 'int0') -> None:
+            |                    this.x_2 = x
             |                @property
-            |                def x(this_7) -> 'int0':
+            |                def x(this_7, /) -> 'int0':
             |                    return this_7.x_2
             |
             |            ```
@@ -374,63 +382,63 @@ class PyBackendTest {
             |from builtins import int as int2, AttributeError as AttributeError4
             |from typing import Any as Any3, ClassVar as ClassVar5
             |from temper_core import int_sub as int_sub0, int_add as int_add1
-            |int_sub_110 = int_sub0
-            |int_add_111 = int_add1
+            |int_sub_122 = int_sub0
+            |int_add_123 = int_add1
             |class C:
             |    y_26: 'int2'
             |    z_27: 'int2'
             |    __slots__ = ('y_26', 'z_27')
             |    @property
-            |    def p(this_0) -> 'int2':
-            |        return int_sub_110(this_0.y_26, 1)
-            |    def _set_p(this_1, new_p_31: 'int2') -> 'None':
-            |        t_90: 'int2' = int_add_111(new_p_31, 1)
-            |        this_1.y_26 = t_90
+            |    def p(this_0, /) -> 'int2':
+            |        return int_sub_122(this_0.y_26, 1)
+            |    def _set_p(this_1, new_p_31: 'int2', /) -> 'None':
+            |        t_100: 'int2' = int_add_123(new_p_31, 1)
+            |        this_1.y_26 = t_100
             |    @property
-            |    def q(this_113) -> 'Any3':
+            |    def q(this_125, /) -> 'Any3':
             |        raise AttributeError4('q getter unavailable')
             |    @q.setter
-            |    def q(this_2, new_q_34: 'int2') -> 'None':
+            |    def q(this_2, new_q_34: 'int2', /) -> 'None':
             |        this_2._set_p(new_q_34)
             |    @property
-            |    def r(this_3) -> 'int2':
+            |    def r(this_3, /) -> 'int2':
             |        raise AttributeError4('r getter unavailable')
-            |    def _get_r(this_3) -> 'int2':
+            |    def _get_r(this_3, /) -> 'int2':
             |        return this_3.p
             |    @r.setter
-            |    def r(this_4, new_r_39: 'int2') -> 'None':
+            |    def r(this_4, new_r_39: 'int2', /) -> 'None':
             |        this_4._set_p(new_r_39)
-            |    def _get_s(this_5) -> 'int2':
+            |    def _get_s(this_5, /) -> 'int2':
             |        return this_5.p
-            |    def incr(this_6) -> 'int2':
+            |    def incr(this_6, /) -> 'int2':
             |        return_20: 'int2'
-            |        return_20 = int_add_111(this_6._get_r(), 1)
+            |        return_20 = int_add_123(this_6._get_r(), 1)
             |        this_6._set_p(return_20)
             |        return return_20
-            |    def decr_45(this_7) -> 'int2':
+            |    def decr_45(this_7, /) -> 'int2':
             |        return_21: 'int2'
-            |        return_21 = int_sub_110(this_7._get_r(), 1)
+            |        return_21 = int_sub_122(this_7._get_r(), 1)
             |        this_7._set_p(return_21)
             |        return return_21
-            |    def __init__(this_12) -> None:
-            |        this_12.y_26 = 1
-            |        this_12.z_27 = 2
+            |    def __init__(this, /) -> None:
+            |        this.y_26 = 1
+            |        this.z_27 = 2
             |    @property
-            |    def z(this_62) -> 'int2':
+            |    def z(this_62, /) -> 'int2':
             |        return this_62.z_27
             |    @z.setter
-            |    def z(this_66, new_z_65: 'int2') -> 'None':
+            |    def z(this_66, new_z_65: 'int2', /) -> 'None':
             |        this_66.z_27 = new_z_65
             |class D:
             |    _i: ClassVar5['int2']
             |    __slots__ = ()
             |    @staticmethod
-            |    def f_49(j_50: 'int2') -> 'int2':
-            |        return int_add_111(D._i, j_50)
+            |    def f_49(j_50: 'int2', /) -> 'int2':
+            |        return int_add_123(D._i, j_50)
             |    @staticmethod
-            |    def g(n_53: 'int2') -> 'int2':
-            |        return int_add_111(D.f_49(n_53), n_53)
-            |    def __init__(this_22) -> None:
+            |    def g(n_53: 'int2', /) -> 'int2':
+            |        return int_add_123(D.f_49(n_53), n_53)
+            |    def __init__(this, /) -> None:
             |        pass
             |D._i = 1
             |
@@ -452,17 +460,17 @@ class PyBackendTest {
             |from typing import Any as Any1, Sequence as Sequence3
             |from builtins import bool as bool2, RuntimeError as RuntimeError4, isinstance as isinstance6
             |from temper_core import cast_by_type as cast_by_type5, list_get as list_get0
-            |list_get_17 = list_get0
-            |def probe(thing_1: 'Any1') -> 'bool2':
+            |list_get_14 = list_get0
+            |def probe(thing_1: 'Any1', /) -> 'bool2':
             |    return_0: 'bool2'
             |    things_3: 'Sequence3[Any1]'
             |    if thing_1 is None:
             |        raise RuntimeError4()
             |    else:
             |        things_3 = cast_by_type5(thing_1, Sequence3)
-            |    t_15: 'Any1' = list_get_17(things_3, 0)
-            |    if not t_15 is None:
-            |        return_0 = isinstance6(t_15, Sequence3)
+            |    t_13: 'Any1' = list_get_14(things_3, 0)
+            |    if not t_13 is None:
+            |        return_0 = isinstance6(t_13, Sequence3)
             |    else:
             |        return_0 = False
             |    return return_0
@@ -594,13 +602,13 @@ class PyBackendTest {
             |          content:
             |            ```
             |            from builtins import int as int0, bool as bool1
-            |            def f1(a_4: 'int0', b_5: 'int0') -> 'bool1':
+            |            def f1(a_4: 'int0', b_5: 'int0', /) -> 'bool1':
             |                return a_4 < b_5
-            |            def f2(a_7: 'int0', b_8: 'int0') -> 'bool1':
+            |            def f2(a_7: 'int0', b_8: 'int0', /) -> 'bool1':
             |                return a_7 >= b_8
-            |            def f3(a_10: 'int0', b_11: 'int0') -> 'bool1':
+            |            def f3(a_10: 'int0', b_11: 'int0', /) -> 'bool1':
             |                return a_10 <= b_11
-            |            def f4(a_13: 'int0') -> 'bool1':
+            |            def f4(a_13: 'int0', /) -> 'bool1':
             |                return a_13 > -1
             |
             |            ```
@@ -651,34 +659,33 @@ class PyBackendTest {
             |            from temper_core import LoggingConsole as LoggingConsole2, adapt_generator_factory as adapt_generator_factory3, str_cat as str_cat0, async_launch as async_launch1
             |            from typing import Union as Union5, Generator as Generator8
             |            from builtins import str as str6, Exception as Exception7
-            |            str_cat_66 = str_cat0
-            |            async_launch_67 = async_launch1
+            |            str_cat_73 = str_cat0
+            |            async_launch_74 = async_launch1
             |            console_5: 'LoggingConsole2' = LoggingConsole2(__name__)
             |            @adapt_generator_factory3
-            |            def fn_58(do_await_4) -> 'Generator8[empty, None, None]':
-            |                t_52: 'Union5[str6, None]'
-            |                t_28: 'Union5[str6, None]'
-            |                t_32: 'str6'
+            |            def fn_65(do_await_4) -> 'Generator8[empty, None, None]':
+            |                t_59: 'Union5[str6, None]'
+            |                t_31: 'Union5[str6, None]'
+            |                t_36: 'str6'
             |                try:
             |                    r_3: 'NetResponse'
             |                    r_3 = yield do_await_4(NetRequest('data:text/plain,Hello World!').send())
             |                    if r_3.status == 200:
             |                        body_4: 'str6'
-            |                        t_28 = yield do_await_4(r_3.text)
-            |                        if not t_28 is None:
-            |                            body_4 = t_28
-            |                        else:
+            |                        t_31 = yield do_await_4(r_3.text)
+            |                        if t_31 is None:
             |                            body_4 = 'missing'
-            |                        t_52 = r_3.content_type
-            |                        if not t_52 is None:
-            |                            subject_hash7_11: 'str6' = t_52
-            |                            t_32 = subject_hash7_11
             |                        else:
-            |                            t_32 = 'unknown'
-            |                        console_5.log(str_cat_66('Got ', body_4, ' / ', t_32))
+            |                            body_4 = t_31
+            |                        t_59 = r_3.content_type
+            |                        if t_59 is None:
+            |                            t_36 = 'unknown'
+            |                        else:
+            |                            t_36 = t_59
+            |                        console_5.log(str_cat_73('Got ', body_4, ' / ', t_36))
             |                except Exception7:
             |                    console_5.log('failed')
-            |            async_launch_67(fn_58)
+            |            async_launch_74(fn_65)
             |
             |            ```,
             |        },
@@ -767,3 +774,5 @@ class PyBackendTest {
 }
 
 private val dunderInitFiles = listOf("$DUNDER_INIT.py", "$DUNDER_INIT.py.map")
+
+private const val LONG_TEST_TIMEOUT_SECONDS = 60L

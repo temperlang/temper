@@ -8,12 +8,13 @@ import lang.temper.be.tmpl.DependencyGrouping
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
+import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.common.Console
 import lang.temper.common.MimeType
 import lang.temper.common.currents.SignalRFuture
 import lang.temper.common.ignore
 import lang.temper.common.isNotEmpty
-import lang.temper.frontend.Module
+import lang.temper.common.subListToEnd
 import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
 import lang.temper.fs.loadResource
@@ -26,6 +27,7 @@ import lang.temper.library.license
 import lang.temper.library.version
 import lang.temper.log.FilePath
 import lang.temper.log.FilePathSegment
+import lang.temper.log.asFilePath
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
 import lang.temper.log.last
@@ -73,18 +75,36 @@ class LuaBackend private constructor(
         tentativeOutputPathFor = { outRoot },
         libraryConfigurations = libraryConfigurations,
         dependencyResolver = dependencyResolver,
+        withTentative = { injectSuperCallMethods(it) },
     )
 
     override fun translate(finished: TmpL.ModuleSet): List<OutputFileSpecification> {
         val luaLibraryName = libraryConfigurations.currentLibraryConfiguration.libraryName.text
 
         val translations = finished.modules.flatMap { mod ->
+            val connectedPath = mod.codeLocation.codeLocation.sourceFile.resolveFile("_connected.lua")
             val translator = LuaTranslator(
                 luaNames,
                 luaLibraryName = luaLibraryName,
                 dependenciesBuilder = dependenciesBuilder,
+                connectedSource = rawBackendFiles[connectedPath],
             )
             translator.translateTopLevel(mod)
+        }
+
+        val connectedFiles = buildList {
+            rawBackendFiles@ for (file in rawBackendFiles) {
+                // Special _connected.lua file gets inlined.
+                file.key.last().fullName == "_connected.lua" && continue@rawBackendFiles
+                // Others get copied.
+                // TODO Make sure things get into good places.
+                MetadataFileSpecification(
+                    // Skip the library name part.
+                    path = file.key.segments.subListToEnd(1).asFilePath(),
+                    mimeType = MimeType.luaSource,
+                    content = file.value,
+                ).also { add(it) }
+            }
         }
 
         val initPath = filePath(INIT_NAME)
@@ -126,7 +146,7 @@ class LuaBackend private constructor(
             LuaMetadataKey.MainFilePath,
             FilePath(listOf(FilePathSegment(luaLibraryName)), isDir = true) + initPath,
         )
-        return translations + metadataFiles
+        return translations + connectedFiles + metadataFiles
     }
 
     private fun makeRockspec(

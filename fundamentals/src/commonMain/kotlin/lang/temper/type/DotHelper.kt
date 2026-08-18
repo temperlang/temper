@@ -1,6 +1,8 @@
 package lang.temper.type
 
+import lang.temper.common.Log
 import lang.temper.common.console
+import lang.temper.common.isEmpty
 import lang.temper.env.BindingNamingContext
 import lang.temper.env.InterpMode
 import lang.temper.format.OutToks
@@ -8,29 +10,30 @@ import lang.temper.format.OutputToken
 import lang.temper.format.OutputTokenType
 import lang.temper.format.TokenSerializable
 import lang.temper.format.TokenSink
+import lang.temper.log.LogEntry
 import lang.temper.log.MessageTemplate
+import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.ResolvedName
-import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.type2.Signature2
-import lang.temper.value.ActualValues
 import lang.temper.value.BuiltinStatelessMacroValue
 import lang.temper.value.CallableValue
+import lang.temper.value.CoverFunction
+import lang.temper.value.Document
 import lang.temper.value.Fail
-import lang.temper.value.InternalFeatureKeys
-import lang.temper.value.InterpreterCallback
+import lang.temper.value.LeafTree
 import lang.temper.value.MacroEnvironment
+import lang.temper.value.MacroValue
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
+import lang.temper.value.RightNameLeaf
 import lang.temper.value.SpecialFunction
-import lang.temper.value.StaySink
 import lang.temper.value.TClass
 import lang.temper.value.TFunction
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
-import lang.temper.value.and
 import lang.temper.value.staticBuiltinName
 import lang.temper.value.typeShapeAtLeafOrNull
 
@@ -45,37 +48,65 @@ private inline fun debug(action: () -> Unit) {
  * Info about how to resolve an extension method
  * (see @extension and @staticExtension in builtins).
  */
-sealed class ExtensionResolution {
-    abstract val resolution: ResolvedName
+sealed class ExtensionResolution : TokenSerializable {
+    abstract fun toLeaf(document: Document, pos: Position): LeafTree
 }
 
+sealed class NameExtensionResolution : ExtensionResolution() {
+    abstract val resolution: ResolvedName
+
+    override fun toLeaf(document: Document, pos: Position) =
+        RightNameLeaf(document, pos, resolution)
+
+    override fun renderTo(tokenSink: TokenSink) {
+        tokenSink.emit(resolution.toToken(false))
+    }
+}
 data class InstanceExtensionResolution(
     override val resolution: ResolvedName,
-) : ExtensionResolution()
+) : NameExtensionResolution()
 
 data class StaticExtensionResolution(
     override val resolution: ResolvedName,
-) : ExtensionResolution()
+) : NameExtensionResolution()
+
+data class FunctionResolution(
+    val fn: MacroValue,
+) : ExtensionResolution() {
+    override fun toLeaf(document: Document, pos: Position) =
+        ValueLeaf(document, pos, Value(fn))
+
+    override fun renderTo(tokenSink: TokenSink) {
+        val builtinOperatorId = (fn as? NamedBuiltinFun)?.builtinOperatorId
+        if (builtinOperatorId != null) {
+            tokenSink.emit(OutputToken(builtinOperatorId.name, OutputTokenType.Word))
+        } else {
+            Value(fn).renderTo(tokenSink)
+        }
+    }
+}
 
 /**
  * Implements support for desugared dot operations including:
  *
  * - `subject.adjective = expr` : property set via [ExternalSet] and [InternalSet]
  * - `subject.adjective` : property read via [ExternalGet] and [InternalGet]
- * - `subject.verb(args)` : method call via [ExternalBind] and [InternalBind]
+ * - `subject.verb(args)` : method call via [ExternalCall] and [InternalCall]
  * - `subject.verb` : read of a bound method via [ExternalGet] and [InternalGet]
- * - `subject.adjective(args)` : call to a function stored in a property via [ExternalBind] and
- *   [InternalBind]
+ * - `subject.adjective(args)` : call to a function stored in a property via [ExternalCall] and
+ *   [InternalCall] but rewritten statically by [lang.temper.frontend.maybeAdjustDotHelper]
+ *
+ * It also allows
  */
 class DotHelper(
     val memberAccessor: MemberAccessor,
-    val symbol: Symbol,
-    /** Resolutions of relevant extension function in scope with the same symbol. */
+    val member: Member,
+    /** Resolutions of the relevant extension function in scope with the same symbol. */
     val extensions: List<ExtensionResolution> = emptyList(),
 ) : SpecialFunction, NamedBuiltinFun, BuiltinStatelessMacroValue, TokenSerializable {
     override val name: String get() = buildString {
         append("do_")
-        append(memberAccessor.prefix(symbol).text)
+        append(memberAccessor.prefix(member))
     }
 
     // May be filled in by the typer.
@@ -90,26 +121,24 @@ class DotHelper(
                     tokenSink.emit(OutToks.comma)
                 }
                 when (extensionResolution) {
-                    is InstanceExtensionResolution -> {}
+                    is FunctionResolution,
+                    is InstanceExtensionResolution,
+                    -> {}
                     is StaticExtensionResolution -> {
                         tokenSink.emit(staticBuiltinName.toToken(inOperatorPosition = false))
                     }
                 }
-                tokenSink.emit(extensionResolution.resolution.toToken(inOperatorPosition = false))
+                extensionResolution.renderTo(tokenSink)
             }
             tokenSink.emit(OutToks.rightSquare)
         }
     }
 
-    override fun invoke(
-        macroEnv: MacroEnvironment,
-        interpMode: InterpMode,
-    ): PartialResult {
-        if (interpMode == InterpMode.Partial) {
-            return Fail
-        }
-        if (extensions.isNotEmpty()) {
-            // If we want to implement pre TypeStage execution,
+    override fun invoke(macroEnv: MacroEnvironment, interpMode: InterpMode): PartialResult {
+        if ((interpMode == InterpMode.Partial || extensions.isNotEmpty()) &&
+            memberAccessor !is CallMemberAccessor
+        ) {
+            // If we want to implement pre DefineStage execution,
             // we'd need to recognize and predict changes by
             // maybeAdjustDotHelper like treating Internal{Get,Set}s
             // of backed properties as getp/setp calls, and treating
@@ -118,52 +147,33 @@ class DotHelper(
 
             // One simple thing we could do is, if it's not a static
             // member, and we have no candidate members, then just
-            // delegate to a cover function of the extensions.
+            // delegate to a union of the extensions.
             return NotYet
         }
         val args = macroEnv.args
         val sizeWanted = when (memberAccessor) {
-            ExternalGet -> 1 // (this)
-            InternalGet -> 2 // (containingTypeShape, this)
-            ExternalSet -> 2 // (this, newValue)
+            ExternalGet -> arityOne // (this)
+            InternalGet -> arityTwo // (containingTypeShape, this)
+            ExternalSet -> arityTwo // (this, newValue)
             InternalSet ->
                 @Suppress("MagicNumber") // arity
-                3 // (containingTypeShape, this, newValue)
-            ExternalBind -> 1 // (this)
-            InternalBind -> 2 // (containingTypeShape, this)
+                arityThree // (containingTypeShape, this, newValue)
+            ExternalCall -> arityOneOrMore // (this, arg0, arg1, ...)
+            InternalCall -> arityTwoOrMore // (containingTypeShape, this, arg0, arg1)
         }
-        if (args.size != sizeWanted) {
+        if (args.size !in sizeWanted) {
             return macroEnv.fail(MessageTemplate.ArityMismatch, values = listOf(sizeWanted))
         }
         val subjectIndex = memberAccessor.firstArgumentIndex
-        var subject = when (val result = args.evaluate(subjectIndex, interpMode)) {
-            NotYet, is Fail -> return result
-            is Value<*> -> result
+        val originalSubject = args.evaluate(subjectIndex, interpMode)
+        var subject = originalSubject as? Value<*> ?: return originalSubject
+        // Promote the subject from a builtin type (like TInt) to the backing class
+        if (subject.typeTag !is TClass) {
+            subject = promoteSimpleValue(subject) ?: subject
         }
-        val classType: TClass = when (val typeTag = subject.typeTag) {
-            is TClass -> typeTag
-            else -> {
-                val promoter = TFunction.unpackOrNull(
-                    macroEnv.getFeatureImplementation(
-                        InternalFeatureKeys.PromoteSimpleValueToClassInstance.featureKey,
-                    ) as? Value<*>,
-                ) as? CallableValue
-                val subjectArgList = ActualValues.from(subject)
-                subject = promoter?.invoke(subjectArgList, macroEnv, interpMode) as? Value<*>
-                    ?: run {
-                        return@invoke macroEnv.fail(
-                            MessageTemplate.ExpectedValueOfType,
-                            pos = args.pos(0),
-                            values = listOf("class instance", subject.typeTag),
-                        )
-                    }
-                subject.typeTag as TClass
-            }
-        }
-        val instancePropertyRecord = classType.unpack(subject)
-        val objProperties = instancePropertyRecord.properties
-
-        val typeShape = classType.typeShape
+        val subjectTypeTag = subject.typeTag
+        val classType = subjectTypeTag as? TClass
+        val typeShape = classType?.typeShape
 
         val accessingTypeShape = when (memberAccessor) {
             is InternalMemberAccessor -> {
@@ -185,11 +195,10 @@ class DotHelper(
         }
         val argIndex = memberAccessor.firstArgumentIndex + 1 // skip over subject
 
-        val accessibleMembers = accessibleMembers(typeShape)
+        val accessibleMembers = typeShape?.let { accessibleMembers(it) } ?: listOf()
         debug {
-            console.log("memberAccessor=$memberAccessor symbol=$symbol")
+            console.log("memberAccessor=$memberAccessor member=$member")
             console.log(". subject=$subject")
-            console.log(". objProperties=$objProperties")
             console.log(". typeShape=$typeShape")
             console.log(". accessingTypeShape=$accessingTypeShape")
             console.log(". argIndex=$argIndex")
@@ -199,11 +208,53 @@ class DotHelper(
             }
         }
         fun inaccessible(): Fail {
-            macroEnv.explain(
-                MessageTemplate.NoAccessibleMember,
-                values = listOf(symbol.text, typeShape.name),
-            )
-            return Fail
+            val problem = if (classType == null) {
+                LogEntry(
+                    Log.Error,
+                    MessageTemplate.ExpectedValueOfType,
+                    pos = args.pos(0),
+                    values = listOf("$subjectTypeTag's wrapper class", subject.typeTag),
+                )
+            } else {
+                LogEntry(
+                    Log.Error,
+                    MessageTemplate.NoAccessibleMember,
+                    pos = macroEnv.pos,
+                    values = listOf(member, typeShape?.name ?: subjectTypeTag),
+                )
+            }
+            macroEnv.explain(problem)
+            return Fail(problem)
+        }
+
+        // If we know any resolution has to be via an extension, use a cover function as an
+        // abstraction to solve any overload resolution.
+        // This is important for early collapsing of arithmetic operations.
+        if (
+            accessibleMembers.isEmpty() && extensions.isNotEmpty() &&
+            extensions.all { (it as? FunctionResolution)?.fn is CallableValue }
+        ) {
+            val covered = extensions.map { (it as FunctionResolution).fn as CallableValue }
+            val chosen = CoverFunction.uncover(macroEnv.args, macroEnv, interpMode, covered, null)
+            chosen?.let { (resolution, args) ->
+                if (args != null) {
+                    val fn = TFunction.unpackOrNull(resolution as? Value<*>)
+                    if (fn is CallableValue) {
+                        val actuals = args.toPositionalActuals(macroEnv)
+                        if (actuals != null) {
+                            val result = fn.invoke(actuals, macroEnv, interpMode)
+                            if (macroEnv.call != null && result is Value<*> && interpMode == InterpMode.Partial &&
+                                fn.isPure
+                            ) {
+                                macroEnv.replaceMacroCallWith {
+                                    V(macroEnv.pos, result)
+                                }
+                            }
+                            return@invoke result
+                        }
+                    }
+                }
+            }
         }
 
         val doc = macroEnv.document
@@ -253,62 +304,38 @@ class DotHelper(
                         } else {
                             MessageTemplate.NoAccessibleSetter
                         },
-                        values = listOf(symbol.text, typeShape.name),
+                        values = listOf(member, typeShape?.name ?: subjectTypeTag),
                     )
                     return Fail
                 }
 
                 dispatchCallTo(helperShape)
             }
-            ExternalBind, InternalBind ->
+            ExternalCall, InternalCall ->
                 when (val method = accessibleMembers.firstOrNull()) {
                     null -> inaccessible()
-                    is MethodShape -> {
-                        if (method.methodKind == MethodKind.Normal) {
-                            lookupMemberDefinition(method).and { methodValue ->
-                                if (methodValue.typeTag != TFunction) {
-                                    macroEnv.fail(
-                                        MessageTemplate.ExpectedValueOfType,
-                                        values = listOf(TFunction, methodValue),
-                                    )
-                                } else {
-                                    val callable = TFunction.unpack(methodValue) // typeTag checked above
-                                    if (callable is CallableValue) {
-                                        Value(BoundMethod(method, callable, subject))
-                                    } else {
-                                        macroEnv.fail(
-                                            MessageTemplate.CannotInvokeMacroAsFunction,
-                                        )
-                                    }
-                                }
-                            }
-                        } else {
-                            // TODO: handle call of functions from getter as in
-                            //     obj.f()
-                            // where (obj.f) is a use of a getter than gets a function.
-                            Fail
-                        }
-                    }
-                    else -> TODO("Call of function stored in property")
+                    is MethodShape if (method.methodKind == MethodKind.Normal) ->
+                        dispatchCallTo(method)
+                    else ->
+                        // TODO: handle call of functions from getter as in
+                        //     obj.f()
+                        // where (obj.f) is a use of a getter than gets a function.
+                        // Currently, maybeAdjustDotHelper handles this but perhaps late.
+                        Fail
                 }
         }
     }
 
     fun accessibleMembers(accessingTypeShape: TypeShape): Iterable<MemberShape> =
-        AccessibleFilter(accessingTypeShape.membersMatching(symbol), accessingTypeShape)
+        AccessibleFilter(accessingTypeShape.membersMatching(member, member is OperatorMember), accessingTypeShape)
 
     fun publicMembers(accessingTypeShape: TypeShape): Iterable<MemberShape> =
-        AccessibleFilter(accessingTypeShape.membersMatching(symbol), null)
+        AccessibleFilter(accessingTypeShape.membersMatching(member, member is OperatorMember), null)
 
     override val callMayFailPerSe: Boolean
-        get() = when (memberAccessor) {
-            is BindMemberAccessor -> false // Just a curry operator
-            // getters and setters can bubble
-            is GetMemberAccessor -> true
-            is SetMemberAccessor -> true
-        }
+        get() = true
 
-    override fun toString() = "DotHelper(${this.memberAccessor.prefix}, ${this.symbol})"
+    override fun toString() = "DotHelper(${this.memberAccessor.prefix}, ${this.member})"
 }
 
 class AccessibleFilter<MEMBER_T : MemberShape>(
@@ -358,34 +385,10 @@ private fun lookupMemberDefinition(
     return methodDefinition?.value ?: NotYet
 }
 
-private class BoundMethod(
-    private val methodShape: MethodShape,
-    private val method: CallableValue,
-    private val subject: Value<*>,
-) : CallableValue, TokenSerializable {
-    override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
-        val allArgs = ActualValues.cat(ActualValues.from(subject), args)
-        return method.invoke(allArgs, cb, interpMode)
-    }
+private val arityOne = 1..1
+private val arityTwo = 2..2
 
-    override val sigs: List<Signature2>? get() = method.sigs?.map { sig ->
-        sig.copy(requiredInputTypes = sig.requiredInputTypes.drop(1), hasThisFormal = false)
-    }
-
-    override fun addStays(s: StaySink) {
-        // Not stable
-    }
-
-    override fun toString(): String = "BoundMethod(${subject}.${methodShape.name})"
-
-    override fun renderTo(tokenSink: TokenSink) {
-        tokenSink.emit(OutputToken("ƒ", OutputTokenType.Word))
-        tokenSink.emit(OutToks.dot)
-        tokenSink.emit(OutputToken("bind", OutputTokenType.Name))
-        tokenSink.emit(OutToks.leftParen)
-        tokenSink.emit(methodShape.enclosingType.name.toToken(inOperatorPosition = false))
-        tokenSink.emit(OutToks.dot)
-        tokenSink.emit(methodShape.name.toToken(inOperatorPosition = false))
-        tokenSink.emit(OutToks.rightParen)
-    }
-}
+@Suppress("MagicNumber") // Three is what's written on the tin.  (The magic tin)
+private val arityThree = 3..3
+private val arityOneOrMore = 1..Int.MAX_VALUE
+private val arityTwoOrMore = 2..Int.MAX_VALUE

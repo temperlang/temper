@@ -1,0 +1,3 @@
+f(fn (x /* aka x */: Int, y /* aka y */: Int) {
+    x + y
+})

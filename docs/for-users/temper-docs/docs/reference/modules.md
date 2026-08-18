@@ -21,7 +21,7 @@ In Temper Markdown, the file starts out in comment mode. That is, the
 text of the document is a comment to the Temper compiler. Temper code
 goes inside code blocks:
 
-````md
+````tempermd
 # My Temper Markdown source file
 
 This is text. You can treat it as a document.
@@ -29,7 +29,7 @@ This is text. You can treat it as a document.
 ```temper
 // This is active Temper code.
 fn greet(name: String): Void {
-  console.log("Hello, ${name}!);
+  console.log("Hello, ${name}!");
 }
 ```
 

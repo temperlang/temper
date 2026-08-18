@@ -1,5 +1,6 @@
 package lang.temper.docbuild
 
+import lang.temper.builtin.builtinOperatorSpecs
 import lang.temper.common.MimeType
 import lang.temper.common.RFailure
 import lang.temper.common.RResult
@@ -8,12 +9,13 @@ import lang.temper.common.asciiLowerCase
 import lang.temper.common.putMultiSet
 import lang.temper.common.toStringViaBuilder
 import lang.temper.format.OutputTokenType
-import lang.temper.frontend.implicits.builtinEnvironment
+import lang.temper.frontend.core.builtinEnvironment
 import lang.temper.interp.EmptyEnvironment
 import lang.temper.lexer.Genre
 import lang.temper.log.FilePath
 import lang.temper.name.BuiltinName
 import lang.temper.name.TemperName
+import lang.temper.type.OperatorMember
 import lang.temper.value.FunctionSpecies
 import lang.temper.value.InterpreterCallback
 import lang.temper.value.TFunction
@@ -27,6 +29,7 @@ private enum class BuiltinDocGroup(
     Constants("Constants"),
     Specials("Special functions"),
     Functions("Functions"),
+    Operators("Operators"),
     Types("Types"),
     Macros("Macros"),
 }
@@ -47,16 +50,22 @@ internal object BuiltinEnvironmentExtractor : SnippetExtractor() {
         val builtinsGrouped = mutableMapOf<BuiltinDocGroup, MutableSet<BuiltinName>>()
         val ungroupedImplicitNames = TypeShapeExtractor.ungroupedSnippets.map { BuiltinName(it.id.parts.last()) }
         val allBuiltinNames = buildList {
+            add(BuiltinName("++"))
+            add(BuiltinName("--"))
             addAll(env.locallyDeclared)
             addAll(ungroupedImplicitNames)
+            builtinOperatorSpecs.keys.mapTo(this) { operatorSpecifier ->
+                BuiltinName(OperatorMember(operatorSpecifier = operatorSpecifier).operator)
+            }
             sortBy { name: TemperName -> name.builtinKey ?: "" }
         }
         for (name in allBuiltinNames) {
             val builtinKey = name.builtinKey ?: continue
-            val value = env.get(name, InterpreterCallback.NullInterpreterCallback)
-            check(value is Value<*>) { "Unreadable builtin $name" }
+            val value = env[name, InterpreterCallback.NullInterpreterCallback] as? Value<*>
             val valueAsFn = TFunction.unpackOrNull(value)
+
             val group = when {
+                value == null -> BuiltinDocGroup.Operators
                 value.typeTag == TType -> BuiltinDocGroup.Types
                 valueAsFn == null -> BuiltinDocGroup.Constants
                 valueAsFn.functionSpecies == FunctionSpecies.Special -> BuiltinDocGroup.Specials
@@ -67,7 +76,7 @@ internal object BuiltinEnvironmentExtractor : SnippetExtractor() {
         }
 
         val snippetContent = toStringViaBuilder { snippetContentBuffer ->
-            for (group in BuiltinDocGroup.values()) {
+            for (group in BuiltinDocGroup.entries) {
                 val namesAsTokensSorted = (builtinsGrouped[group] ?: continue)
                     .toList()
                     .sortedWith { a, b ->

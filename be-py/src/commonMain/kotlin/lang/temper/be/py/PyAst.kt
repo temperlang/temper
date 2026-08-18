@@ -23,7 +23,7 @@ fun Py.Arguments.Companion.simple(pos: Position, vararg name: String): Py.Argume
     Py.Arguments.simple(pos, name.toList())
 
 fun Py.Arguments.Companion.simple(pos: Position, names: List<String>): Py.Arguments =
-    Py.Arguments(pos, names.map { Py.Arg(pos, it) })
+    Py.Arguments(pos, args = names.map { Py.Arg(pos, it) })
 
 fun Py.Assign.Companion.simple(name: Py.Name, init: Py.Expr) = Py.Assign(name.pos, targets = listOf(name), value = init)
 
@@ -151,9 +151,9 @@ fun garbageStmt(pos: Position, d: TmpL.Diagnostic?): Py.Stmt = garbageStmt(pos, 
 fun Py.Program?.orEmpty(outputPath: FilePath): Py.Program =
     this ?: Py.Program(
         unknownPos,
-        listOf(),
-        DependencyCategory.Production,
-        Genre.Library,
+        body = listOf(),
+        dependencyCategory = DependencyCategory.Production,
+        genre = Genre.Library,
         outputPath = outputPath,
     )
 

@@ -6,6 +6,7 @@ import lang.temper.astbuild.buildTree
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.Types
 import lang.temper.common.AppendingTextOutput
+import lang.temper.common.Freq3
 import lang.temper.common.ListBackedLogSink
 import lang.temper.common.NoneShortOrLong
 import lang.temper.common.TestDocumentContext
@@ -13,6 +14,7 @@ import lang.temper.common.assertStringsEqual
 import lang.temper.common.console
 import lang.temper.common.toStringViaBuilder
 import lang.temper.cst.CstComment
+import lang.temper.cst.NameConstants
 import lang.temper.interp.emptyValue
 import lang.temper.lexer.Lexer
 import lang.temper.log.FilePositions
@@ -27,10 +29,14 @@ import lang.temper.name.QName
 import lang.temper.name.Symbol
 import lang.temper.parser.parse
 import lang.temper.type.DotHelper
-import lang.temper.type.ExternalBind
+import lang.temper.type.DotMember
+import lang.temper.type.ExternalCall
 import lang.temper.type.ExternalGet
 import lang.temper.type.ExternalSet
+import lang.temper.type.FunctionType
 import lang.temper.type.MkType
+import lang.temper.type.OperatorMember
+import lang.temper.type.TypeTestHarness
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.MkType2
 import kotlin.test.Test
@@ -48,6 +54,13 @@ class PseudoCodeTest {
     fun prefixOp() = assertPseudoCode(
         input = "-123",
         want = "-123\n",
+    )
+
+    @Test
+    fun explicitPrefixOp() = assertPseudoCode(
+        input = "-123",
+        want = "desugarOperation (nym`-`, 123)\n",
+        detail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
     )
 
     @Test
@@ -806,7 +819,7 @@ class PseudoCodeTest {
             |@docString(...) let x = 1
             |
         """.trimMargin(),
-        detail = PseudoCodeDetail.default.copy(docStringDetail = NoneShortOrLong.Short),
+        detail = PseudoCodeDetail.default.copy(metadataValueDetail = NoneShortOrLong.Short),
     )
 
     private fun qNameExampleTest(
@@ -893,7 +906,7 @@ class PseudoCodeTest {
             |@docString(...) fn (x) {}
             |
         """.trimMargin(),
-        detail = PseudoCodeDetail.default.copy(docStringDetail = NoneShortOrLong.Short),
+        detail = PseudoCodeDetail.default.copy(metadataValueDetail = NoneShortOrLong.Short),
     )
 
     @Test
@@ -902,7 +915,7 @@ class PseudoCodeTest {
             |@docString((["Some docs", "Some docs\n\netc.", "path/to/a/file.temper"])) fn (x) {}
             |
         """.trimMargin(),
-        detail = PseudoCodeDetail.default.copy(docStringDetail = NoneShortOrLong.Long),
+        detail = PseudoCodeDetail.default.copy(metadataValueDetail = NoneShortOrLong.Long),
     )
 
     private fun growLetXEq123WithSsaMetadata(d: Document, p: Position): DeclTree =
@@ -953,21 +966,65 @@ class PseudoCodeTest {
             |x.j = x.i + x.f(1)
             |
         """.trimMargin(),
-        detail = PseudoCodeDetail(resugarDotHelpers = true),
+        detail = PseudoCodeDetail(resugarDotHelpers = Freq3.Always),
         makeInput = { doc, pos ->
             doc.treeFarm.grow(pos) {
-                Call(DotHelper(ExternalSet, Symbol("j"), emptyList())) {
+                Call(DotHelper(ExternalSet, DotMember(Symbol("j")), emptyList())) {
                     Rn(ParsedName("x"))
-                    Call(BuiltinFuns.plusFn) {
-                        Call(DotHelper(ExternalGet, Symbol("i"), emptyList())) {
+                    Call(BuiltinFuns.plusIntIntFn) {
+                        Call(DotHelper(ExternalGet, DotMember(Symbol("i")), emptyList())) {
                             Rn(ParsedName("x"))
                         }
-                        Call {
-                            Call(DotHelper(ExternalBind, Symbol("f"), emptyList())) {
-                                Rn(ParsedName("x"))
-                            }
+                        Call(DotHelper(ExternalCall, DotMember(Symbol("f")), emptyList())) {
+                            Rn(ParsedName("x"))
                             V(Value(1, TInt))
                         }
+                    }
+                }
+            }
+        },
+    )
+
+    @Test
+    fun explicitAndNonExplicitTypeParameters() = assertPseudoCode(
+        want = """
+            |o.foo<String>(str);
+            |o.bar ⋖ String ⋗(str)
+            |
+        """.trimMargin(),
+        detail = PseudoCodeDetail(resugarDotHelpers = Freq3.Always, showInferredTypes = true),
+        makeInput = { doc, pos ->
+            val unboundCalleeType: FunctionType
+            val tiWithBindings: CallTypeInferences
+            TypeTestHarness("").run {
+                unboundCalleeType = type("fn<T>(T): Void") as FunctionType
+                tiWithBindings = CallTypeInferences(
+                    WellKnownTypes.voidType,
+                    variant = type("fn (String): Void"),
+                    bindings2 = mapOf(unboundCalleeType.typeFormals[0] to WellKnownTypes.stringType),
+                    explanations = listOf(),
+                )
+            }
+
+            doc.treeFarm.grow(pos) {
+                Block {
+                    Call {
+                        Call {
+                            Rn(BuiltinName(NameConstants.Angle))
+                            V(Value(DotHelper(ExternalCall, DotMember(Symbol("foo")), emptyList())))
+                            V(Value(Types.string))
+                        }
+                        Rn(ParsedName("o"))
+                        Rn(ParsedName("str"))
+                    }
+
+                    Call(tiWithBindings) {
+                        V(
+                            Value(DotHelper(ExternalCall, DotMember(Symbol("bar")), emptyList())),
+                            type = unboundCalleeType,
+                        )
+                        Rn(ParsedName("o"))
+                        Rn(ParsedName("str"))
                     }
                 }
             }
@@ -993,7 +1050,7 @@ class PseudoCodeTest {
             |f()
             |
         """.trimMargin(),
-        detail = PseudoCodeDetail(resugarDotHelpers = true) {
+        detail = PseudoCodeDetail(resugarDotHelpers = Freq3.Always) {
             it is CallTree && it.incoming?.edgeIndex == 2
         },
         makeInput = { doc, pos ->
@@ -1014,7 +1071,7 @@ class PseudoCodeTest {
         // Some objects like {class: Empty__0} should be rendered on one
         // line.
         want = """
-            |let x = {class: Empty__9};
+            |let x = {class: Empty__10};
             |
         """.trimMargin(),
         makeInput = { doc, pos ->
@@ -1025,6 +1082,79 @@ class PseudoCodeTest {
                         V(emptyValue)
                     }
                     V(void)
+                }
+            }
+        },
+    )
+
+    @Test
+    fun resugarPostDesugarOperationsCall() = assertPseudoCode(
+        want = """
+            |x + y
+            |
+        """.trimMargin(),
+        makeInput = { doc, pos ->
+            doc.treeFarm.grow(pos) {
+                Call {
+                    V(Value(DotHelper(ExternalCall, OperatorMember("_+_"))))
+                    Rn(ParsedName("x"))
+                    Rn(ParsedName("y"))
+                }
+            }
+        },
+    )
+
+    @Test
+    fun explicitPostDesugarOperationsCall() = assertPseudoCode(
+        want = """
+            |nym`do_call__+_`(x, y)
+            |
+        """.trimMargin(),
+        detail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
+        makeInput = { doc, pos ->
+            doc.treeFarm.grow(pos) {
+                Call {
+                    V(Value(DotHelper(ExternalCall, OperatorMember("_+_"))))
+                    Rn(ParsedName("x"))
+                    Rn(ParsedName("y"))
+                }
+            }
+        },
+    )
+
+    @Test
+    fun resugarPostDesugarMethodCall() = assertPseudoCode(
+        want = """
+            |subject.verb(object1, object2)
+            |
+        """.trimMargin(),
+        detail = PseudoCodeDetail(resugarDotHelpers = Freq3.Always),
+        makeInput = { doc, pos ->
+            doc.treeFarm.grow(pos) {
+                Call {
+                    V(Value(DotHelper(ExternalCall, DotMember(Symbol("verb")))))
+                    Rn(ParsedName("subject"))
+                    Rn(ParsedName("object1"))
+                    Rn(ParsedName("object2"))
+                }
+            }
+        },
+    )
+
+    @Test
+    fun explicitPostDesugarMethodCall() = assertPseudoCode(
+        want = """
+            |do_call_verb(subject, object1, object2)
+            |
+        """.trimMargin(),
+        detail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
+        makeInput = { doc, pos ->
+            doc.treeFarm.grow(pos) {
+                Call {
+                    V(Value(DotHelper(ExternalCall, DotMember(Symbol("verb")))))
+                    Rn(ParsedName("subject"))
+                    Rn(ParsedName("object1"))
+                    Rn(ParsedName("object2"))
                 }
             }
         },

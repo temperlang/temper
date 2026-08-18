@@ -58,9 +58,9 @@ import lang.temper.log.MessageTemplateI
 import lang.temper.log.Position
 import lang.temper.log.unknownPos
 import lang.temper.name.BackendId
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ExportedName
-import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.ModuleLocation
 import lang.temper.name.ModuleName
 import lang.temper.name.interpBackendId
@@ -115,14 +115,7 @@ fun prepareBuild(
         return null
     }
 
-    val pluggedInConfig = moduleConfig.copy(
-        moduleCustomizeHook = { module, isNew ->
-            moduleConfig.moduleCustomizeHook.customize(module, isNew)
-            for (backendId in supportedBackends) {
-                module.addEnvironmentBindings(lookupFactory(backendId)!!.environmentBindings)
-            }
-        },
-    )
+    val pluggedInConfig = plugInBackendConfigs(moduleConfig)
     return Build(
         harness = h,
         requiredExt = requiredExt,
@@ -130,6 +123,19 @@ fun prepareBuild(
         moduleConfig = pluggedInConfig,
     )
 }
+
+/** Applies environment bindings for [backends]. */
+fun plugInBackendConfigs(
+    moduleConfig: ModuleConfig,
+    backends: List<BackendId> = supportedBackends,
+): ModuleConfig = moduleConfig.copy(
+    moduleCustomizeHook = { module, isNew ->
+        moduleConfig.moduleCustomizeHook.customize(module, isNew)
+        for (backendId in backends) {
+            module.addEnvironmentBindings(lookupFactory(backendId)!!.environmentBindings)
+        }
+    },
+)
 
 /** [Prepare][prepareBuild]s and executes a build, closing the harness afterward. */
 fun doBuild(
@@ -164,7 +170,7 @@ fun doBuild(
             doOneBuild(build)
                 // Once we exit the use block, close flips the switch on the
                 // cancel group, preventing any further interpretation using
-                // those modules continue condition.
+                // those modules' continue condition.
                 .also {
                     beforeClose?.invoke(it)
                 }
@@ -241,8 +247,8 @@ private fun stageLibraries(
 
     val modulesPreBuild = moduleAdvancer.getAllModules()
     // If all the modules were already built, we could reuse everything,
-    // then there's no point in doing translation.
-    // But if there's no modules, then we're trivially reusing everything,
+    // and there's no point in doing translation.
+    // But if there are no modules, then we're trivially reusing everything,
     // but may need to fire up the backends at least once to create output
     // directories and metadata files.
     val priorBuildSuffices = modulesPreBuild.isNotEmpty() &&
@@ -254,8 +260,8 @@ private fun stageLibraries(
     val libraryConfigurationsByRoot = mutableMapOf<FilePath, LibraryConfiguration>()
     moduleAdvancer.getAllLibraryConfigurations().forEach {
         var libraryConfiguration = it
-        // Finalize the library configurations bundle
-        // For example, if `std` was auto-staged it might have an empty backends list.
+        // Finalize the library configurations bundle.
+        // For example, if `std` was auto-staged, it might have an empty backends list.
         if (
             libraryConfiguration.supportedBackendList.isEmpty() &&
             libraryConfiguration.libraryName == DashedIdentifier.temperStandardLibraryIdentifier
@@ -359,7 +365,7 @@ fun doOneBuild(build: Build): BuildResult {
         is RFailure, is RThrowable -> object : DependencyResolver {
             override fun resolve(loc: ModuleLocation, backendId: BackendId, logSink: LogSink): JsonValue? {
                 val libraryRoot = when (loc) {
-                    is ImplicitsCodeLocation -> "unknown"
+                    is CoreCodeLocation -> "unknown"
                     is ModuleName -> loc.libraryRoot()
                 }
                 logSink.log(
@@ -373,9 +379,6 @@ fun doOneBuild(build: Build): BuildResult {
         }
     }
 
-    supplyCoreLibrary(harness.outputFileSystem, harness.backends, cancelGroup, harness.cliConsole)
-
-    build.beforeStartTranslation?.await()
     // Explode the backends x libraries to backends that are each responsible for translating one library
     // for one target language.
     val backendOrganization = organizeBackends(
@@ -392,6 +395,12 @@ fun doOneBuild(build: Build): BuildResult {
             }
         },
     )
+
+    // For supplying core library, buckets don't really matter.
+    val flatBackendIds = backendOrganization.backendBuckets.flatten()
+    supplyCoreLibrary(harness.outputFileSystem, flatBackendIds, cancelGroup, harness.cliConsole)
+
+    build.beforeStartTranslation?.await()
 
     /**
      * Allows collecting all the `<BACKEND>` associated bits in a type-safe way.
@@ -602,10 +611,7 @@ fun doOneBuild(build: Build): BuildResult {
         // Merge the two sets of results and print out a summary
         runResult = mergeResultsFromInterpAndBackends(interpResults, runResult)
         if (testingNeeded) {
-            runResult?.testTally?.let { testTally ->
-                cliConsole.log(testTally.summary())
-                cliConsole.textOutput.flush()
-            }
+            runResult?.testTally?.summary()?.logTo(projectLogSink)
         }
     }
     val maxLogLevel = logLevelTracker.maxLogLevel
@@ -677,7 +683,7 @@ internal val Module.hasTests: Boolean
 
 private data class InterpreterTestResults(
     val ok: Boolean,
-    /** The Junit XML report for each module that does testing. */
+    /** The JUnit XML report for each module that does testing. */
     val resultsByModule: Map<ModuleName, String>,
     val consoleOutput: String,
     val details: DoRunResultDetail,
@@ -718,7 +724,7 @@ private fun runInInterpreter(
 
     fun isTestedModule(module: Module): Boolean = request is RunTestsRequest &&
         when (val loc = module.loc) {
-            is ImplicitsCodeLocation -> false
+            is CoreCodeLocation -> false
             is ModuleName -> when (module.dependencyCategory) {
                 DependencyCategory.Test -> {
                     libraryConfigurationsBundle.byLibraryRoot[loc.libraryRoot()]?.libraryName in
@@ -775,7 +781,7 @@ private fun runInInterpreter(
             } catch (e: Panic) {
                 interpFailure = e
             } catch (
-                // Uncaught exceptions during tests warrant reporting
+                // Uncaught exceptions during tests warrant reporting.
                 @Suppress("TooGenericExceptionCaught")
                 e: Exception,
             ) {
@@ -785,7 +791,7 @@ private fun runInInterpreter(
             if (isTestedModule(module)) {
                 val reportName = ExportedName(module.namingContext, testReportExportName)
                 val report = TString.unpackOrNull(
-                    module.exports?.find { it.name == reportName }?.value,
+                    module.exports?.find { it.name == reportName }?.valueFromRun,
                 ) ?: interpFailure?.let { throwable ->
                     allOk = false
                     TestSuites(

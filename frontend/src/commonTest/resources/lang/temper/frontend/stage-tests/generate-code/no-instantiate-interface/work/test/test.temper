@@ -1,0 +1,4 @@
+interface Apple {}
+class Banana {}
+new Apple()
+new Banana()

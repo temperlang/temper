@@ -1,0 +1,20 @@
+@typeDecl(C__0) @stay let C__0 = type (C__0);
+class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
+    C__0 extends AnyValue;
+    @constructorProperty @maybeVar @visibility(\private) let x__0: Int;
+    do {};
+    @maybeVar @visibility(\private) let z__0: Int;
+    @visibility(\public) let constructor__0 = fn constructor(@impliedThis(C__0) this__0: C__0, x__1 /* aka x */: Int, @constructorProperty y__0 /* aka y */: Int) /* return__0 */: Void {
+      do {
+        let t#0;
+        do_iset_x(type (C__0), this(C__0), t#0 = x__1);
+        t#0
+      };
+      do {
+        let t#1;
+        do_iset_z(type (C__0), this(C__0), t#1 = y__0 + 1);
+        t#1
+      };
+    };
+});
+let `test//`.cs = list(new C__0(\x, 1, \y, 2), new(\x, 1, \y, 2, \z, 3));

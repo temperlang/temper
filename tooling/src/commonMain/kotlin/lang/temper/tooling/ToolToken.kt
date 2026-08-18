@@ -97,7 +97,7 @@ enum class TokenKind(
     /** Not a VSCode standard token type. For tokens that are malformed. */
     Error("error"),
 
-    /** Not a VSCode standard token type. For intermediate processing where wanted. Not for sending to client. */
+    /** Not a VSCode standard token type. For intermediate processing where wanted. Not for sending to the client. */
     Space("space"),
 }
 
@@ -153,6 +153,7 @@ fun sequenceToolTokens(codeLocation: CodeLocation, content: CharSequence, lang: 
         val currentTokenEnd = range.last + 1
         val kind = when (token.tokenType) {
             TokenType.Space -> continue
+            TokenType.Margin -> continue
             // Actually produce things from here down.
             TokenType.Comment -> TokenKind.Comment
             TokenType.Number -> TokenKind.Number

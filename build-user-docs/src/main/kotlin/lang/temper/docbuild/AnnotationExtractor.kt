@@ -40,7 +40,6 @@ internal object AnnotationExtractor {
         // "\"" : CLOSING_QUOTE
         // ")" : RPAR
 
-        //
         // We scan for HelpSnippet, look back for an `@` and then scan forward to find the parentheses.
         // The last quoted string is the snippet ID.
         var i = 0
@@ -55,7 +54,7 @@ internal object AnnotationExtractor {
             i = helpSnippetIdentifierIndex + 1
             if (
                 tokens[helpSnippetIdentifierIndex].text == HELP_SNIPPET_ANNOTATION_NAME &&
-                tokens.getOrNull(helpSnippetIdentifierIndex)?.text != "@"
+                tokens.getOrNull(helpSnippetIdentifierIndex - 1)?.text != "@"
             ) {
                 continue
             }
@@ -75,6 +74,7 @@ internal object AnnotationExtractor {
                     else -> {}
                 }
             }
+
             val argumentTokens = tokens.subList(helpSnippetIdentifierIndex + 1, endOfParenBlock)
             val openQuote = argumentTokens.indexOfLast { it.type == KotlinTokenType.OPEN_QUOTE }
             if (openQuote >= 0) {
@@ -85,6 +85,7 @@ internal object AnnotationExtractor {
                         }
                     }
                 }
+
                 if (snippetIdStr.isNotEmpty()) {
                     val unpacked = unpackQuotedString(snippetIdStr, skipDelimiter = false)
                     if (unpacked.isOk) {

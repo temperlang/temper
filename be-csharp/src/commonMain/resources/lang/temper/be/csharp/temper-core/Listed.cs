@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Linq;
 
@@ -227,11 +228,10 @@ namespace TemperLang.Core
         }
 
         /// <summary>
-        /// Always ensures wrapping in ReadOnlyCollection. If collection is
-        /// already an IList, doesn't create a new one.
+        /// Always ensures converting to an immutable list. If collection is
+        /// already an ImmutableList, doesn't create a new one.
         /// </summary>
         public static IReadOnlyList<T> ToReadOnlyList<T>(this IEnumerable<T> collection) =>
-            collection as ReadOnlyCollection<T>
-            ?? new ReadOnlyCollection<T>(collection as IList<T> ?? new List<T>(collection));
+            collection.ToImmutableList();
     }
 }

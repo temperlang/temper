@@ -41,8 +41,8 @@ import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.dirPath
 import lang.temper.name.BackendId
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.DashedIdentifier
-import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.ModuleLocation
 import lang.temper.name.ModuleName
 import lang.temper.tests.FunctionalTestBase
@@ -261,7 +261,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
                 }
                 for ((moduleIndex, module) in modules.withIndex()) {
                     when (val loc = module.loc) {
-                        ImplicitsCodeLocation -> {}
+                        CoreCodeLocation -> {}
                         is ModuleName -> {
                             if (loc.libraryRoot() == test.projectRoot) {
                                 need(moduleIndex)
@@ -294,6 +294,10 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
 
         @Suppress("UNCHECKED_CAST")
         val factory = lookupFactory(backendId) as Backend.Factory<B>
+        val extensions = factory.backendMeta.fileExtensionMap.values.toSet()
+        val rawBackendFiles = test.gatherFiles { filePath ->
+            filePath.lastOrNull()?.extension?.let { it in extensions } == true
+        }
         val backends = partitionedModules.mapValues { (root, lib) ->
             val (libraryConfiguration, modules) = lib
             val (outputDir, keepDir) = outputDirs.getValue(root)
@@ -308,6 +312,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
                     dependencyResolver = NullDependencyResolver,
                     config = config,
                     dependenciesBuilder = dependenciesBuilder,
+                    rawBackendFiles = rawBackendFiles,
                 ),
             )
         }

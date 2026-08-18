@@ -2,7 +2,7 @@ package lang.temper.be.cppv
 
 import lang.temper.be.tmpl.TmpL
 import lang.temper.common.utf8ByteLength
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ResolvedParsedName
 import lang.temper.name.identifiers.IdentStyle
 
@@ -18,7 +18,7 @@ fun String.utf8Length(): Int = run {
 
 internal fun TmpL.ModuleLevelDeclaration.isConsole(): Boolean {
     (type.ot as? TmpL.NominalType)?.typeName?.sourceDefinition?.let { typeDefinition ->
-        if (typeDefinition.sourceLocation === ImplicitsCodeLocation) {
+        if (typeDefinition.sourceLocation === CoreCodeLocation) {
             when ((typeDefinition.name as? ResolvedParsedName)?.baseName?.nameText) {
                 "Console", "GlobalConsole" -> return true
                 else -> {}

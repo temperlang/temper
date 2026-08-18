@@ -1,0 +1,188 @@
+[
+    "Block",
+    [
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "I__0"
+                ],
+                [
+                    "Value",
+                    "\\init: Symbol"
+                ],
+                [
+                    "Value",
+                    "I__0: Type"
+                ],
+                [
+                    "Value",
+                    "\\typeDecl: Symbol"
+                ],
+                [
+                    "Value",
+                    "I__0: Type"
+                ],
+                [
+                    "Value",
+                    "\\stay: Symbol"
+                ],
+                [
+                    "Stay",
+                    "kotlin.Unit"
+                ],
+                [
+                    "Value",
+                    "\\QName: Symbol"
+                ],
+                [
+                    "Value",
+                    "\u0022test-code.type I\u0022: String"
+                ]
+            ]
+        ],
+        [
+            "Call",
+            [
+                [
+                    "Value",
+                    "REM: Function"
+                ],
+                [
+                    "Value",
+                    "\u0022Stack many decorators on a declaration and make sure they eliminate themselves.\u0022: String"
+                ],
+                [
+                    "Value",
+                    "null: Null"
+                ],
+                [
+                    "Value",
+                    "false: Boolean"
+                ]
+            ]
+        ],
+        [
+            "Call",
+            [
+                [
+                    "RightName",
+                    "interface"
+                ],
+                [
+                    "Value",
+                    "\\word: Symbol"
+                ],
+                [
+                    "Value",
+                    "\\I: Symbol"
+                ],
+                [
+                    "Value",
+                    "\\concrete: Symbol"
+                ],
+                [
+                    "Value",
+                    "false: Boolean"
+                ],
+                [
+                    "Fun",
+                    [
+                        [
+                            "Value",
+                            "\\typeDefined: Symbol"
+                        ],
+                        [
+                            "Value",
+                            "I__0: Type"
+                        ],
+                        [
+                            "Block",
+                            [
+                                [
+                                    "Call",
+                                    [
+                                        [
+                                            "Value",
+                                            "extends: Function"
+                                        ],
+                                        [
+                                            "Value",
+                                            "I__0: Type"
+                                        ],
+                                        [
+                                            "Value",
+                                            "AnyValue: Type"
+                                        ]
+                                    ]
+                                ],
+                                [
+                                    "Decl",
+                                    [
+                                        [
+                                            "LeftName",
+                                            "thing__0"
+                                        ],
+                                        [
+                                            "Value",
+                                            "\\staticProperty: Symbol"
+                                        ],
+                                        [
+                                            "Value",
+                                            "\\thing: Symbol"
+                                        ],
+                                        [
+                                            "Value",
+                                            "\\var: Symbol"
+                                        ],
+                                        [
+                                            "Value",
+                                            "void: Void"
+                                        ],
+                                        [
+                                            "Value",
+                                            "\\static: Symbol"
+                                        ],
+                                        [
+                                            "Value",
+                                            "void: Void"
+                                        ],
+                                        [
+                                            "Value",
+                                            "\\visibility: Symbol"
+                                        ],
+                                        [
+                                            "Value",
+                                            "\\public: Symbol"
+                                        ],
+                                        [
+                                            "Value",
+                                            "\\foo: Symbol"
+                                        ],
+                                        [
+                                            "Value",
+                                            "\u0022FOO\u0022: String"
+                                        ],
+                                        [
+                                            "Value",
+                                            "\\QName: Symbol"
+                                        ],
+                                        [
+                                            "Value",
+                                            "\u0022test-code.type I.thing\u0022: String"
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ],
+        [
+            "RightName",
+            "I__0"
+        ]
+    ]
+]

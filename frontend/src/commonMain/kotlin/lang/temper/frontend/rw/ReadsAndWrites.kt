@@ -2,7 +2,6 @@ package lang.temper.frontend.rw
 
 import lang.temper.ast.TreeVisit
 import lang.temper.ast.VisitCue
-import lang.temper.builtin.isHandlerScopeCall
 import lang.temper.common.ForwardOrBack
 import lang.temper.common.ZippedEntry
 import lang.temper.common.buildListMultimap
@@ -45,14 +44,15 @@ import lang.temper.value.Tree
 import lang.temper.value.ValueLeaf
 import lang.temper.value.debug
 import lang.temper.value.forwardMaximalPaths
-import lang.temper.value.isImplicits
+import lang.temper.value.isCore
+import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.orderedPathIndices
 import lang.temper.value.ssaSymbol
 import lang.temper.value.toPseudoCode
 import lang.temper.value.valueContained
 
 private const val DEBUG = false
-private val Document.debugging get() = DEBUG && !isImplicits
+private val Document.debugging get() = DEBUG && !isCore
 private inline fun Document.debug(body: () -> Unit) {
     if (debugging) {
         body()

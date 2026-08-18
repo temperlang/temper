@@ -144,6 +144,7 @@ internal fun copyTree(tree: Lua.Params): Lua.Params = Lua.Params(
 )
 
 internal fun copyTree(tree: Lua.Stmt): Lua.Stmt = when (tree) {
+    is Lua.Connected -> tree.deepCopy()
     is Lua.GotoStmt -> Lua.GotoStmt(
         tree.pos,
         copyTree(tree.name) as Lua.Name,
@@ -385,9 +386,13 @@ internal fun buildTableList(pos: Position, items: List<Lua.Expr>) = Lua.TableExp
 internal fun Lua.CallExpr.asStmt() = Lua.CallStmt(pos, this)
 internal fun Lua.Expr.asArgs() = Lua.Args(pos, asExprs())
 internal fun Lua.Expr.asExprs() = Lua.Exprs(pos, listOf(this))
+internal fun Lua.Expr.asLiteralExpr() = this as? Lua.LiteralExpr ?: Lua.WrappedExpr(pos, this)
 internal fun Lua.Expr.call(arg: Lua.Expr) = call(listOf(arg))
-internal fun Lua.Expr.call(args: List<Lua.Expr>) = Lua.FunctionCallExpr(pos, this, Lua.Args(pos, Lua.Exprs(pos, args)))
+internal fun Lua.Expr.call(args: List<Lua.Expr>) = call(Lua.Args(pos, Lua.Exprs(pos, args)))
+internal fun Lua.Expr.call(args: Lua.Args) = Lua.FunctionCallExpr(pos, this, args)
+internal fun Lua.Expr.dot(index: String) = asLiteralExpr().dot(index)
 internal fun Lua.LiteralExpr.dot(index: String) = Lua.DotIndexExpr(pos, this, name(index).at(pos))
+internal fun Lua.LiteralExpr.dotSafe(index: String) = Lua.DotIndexExpr(pos, this, safeName(index).at(pos))
 internal fun Lua.Name.asSetTarget() = Lua.NameSetTarget(pos, this)
 internal fun Lua.Name.asSetTargets() = asSetTarget().asSetTargets()
 internal fun Lua.Name.dotSet(index: LuaName) = Lua.DotSetTarget(pos, asSetTarget(), index.at(pos))

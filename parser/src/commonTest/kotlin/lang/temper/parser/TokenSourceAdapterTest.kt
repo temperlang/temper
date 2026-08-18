@@ -111,7 +111,7 @@ class TokenSourceAdapterTest {
         input = $$"""
             |$${"\"\"\""}
             |  "some character data
-            |  "{: statement(here) :}
+            |  : statement(here)
             |  "more character${} data ${}
             |  "last line
             |
@@ -123,11 +123,11 @@ class TokenSourceAdapterTest {
             "+++", "`some character data\n`", ";",
             "statement", "(", "here", ")",
             "+++", "`more character`", ";",
-            $$"${", "}", ";",
+            // ${} elided
             "+++", "` data `", ";",
-            $$"${", "}", ";",
+            // ${} elided but space still on ` data ` line
             "+++", "`\n`", ";",
-            "+++", "`last line`", ";",
+            "+++", "`last line\n`", ";",
             "\"\"\"",
             "}",
             "+", "1",
@@ -139,9 +139,9 @@ class TokenSourceAdapterTest {
         input = $$"""
             |$${"\"\"\""}
             |  "<ul>
-            |  "{: for (let item of items) { :}
+            |  : for (let item of items) {
             |  "  <li>${item}</li>\n
-            |  "{: } :}
+            |  : }
             |  "</ul>
         """.trimMargin(),
         want = listOf(
@@ -174,11 +174,30 @@ class TokenSourceAdapterTest {
             "\"\"\"",
             "`Hello,\n`",
             $$"${", "(", "\"", "`World`", "\"", ")", "}", "`\n`",
-            "`!`",
+            "`!\n`",
             "\"\"\"",
             ")",
             ";",
             "(", "\"", "`World`", "\"", ")",
+        ),
+    )
+
+    @Test // Issue#387
+    fun stringsOnStringTemplateLine() = assertAdaptedTokens(
+        input = $$"""
+            |$${"\"\"\""}
+            |  :for (let c of ["a", "b", "c"]) {
+            |    ~${c},
+            |  :}
+        """.trimMargin(),
+        want = listOf(
+            "{", "\"\"\"",
+            "for", "(", "let", "c", "of", "[",
+            "(", "\"", "`a`", "\"", ")", ",",
+            "(", "\"", "`b`", "\"", ")", ",",
+            "(", "\"", "`c`", "\"", ")", "]", ")", "{",
+            $$"${", "c", "}", ";", "+++", "`,`", ";",
+            "\"\"\"", "}",
         ),
     )
 
@@ -191,7 +210,7 @@ class TokenSourceAdapterTest {
             |
         """.trimMargin(),
         want = listOf(
-            "(", "\"\"\"", "`Line 1\n`", "`Line 2 `", $$"${", "}", "\"\"\"", ")",
+            "(", "\"\"\"", "`Line 1\n`", "`Line 2 `", $$"${", "}", "`\n`", "\"\"\"", ")",
         ),
     )
 

@@ -1,0 +1,5 @@
+let return__0, @typePlaceholder(I__0) typePlaceholder#0: Empty;
+typePlaceholder#0 = {class: Empty__0};
+@typeDecl(I__0) @stay let I__0;
+I__0 = type (I__0);
+return__0 = type (I__0)

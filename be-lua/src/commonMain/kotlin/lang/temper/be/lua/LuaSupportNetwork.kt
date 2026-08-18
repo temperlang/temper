@@ -14,6 +14,7 @@ import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.RuntimeTypeOperation
+import lang.temper.common.subListToEnd
 import lang.temper.format.TokenSink
 import lang.temper.lexer.Genre
 import lang.temper.log.Position
@@ -32,10 +33,18 @@ internal fun operatorToName(
     op: BuiltinOperatorId?,
 ): String = when (op) {
     BuiltinOperatorId.BooleanNegation -> "bool_not"
-    BuiltinOperatorId.BitwiseAnd -> "band"
-    BuiltinOperatorId.BitwiseOr -> "bor"
+    BuiltinOperatorId.BitwiseAnd32, BuiltinOperatorId.BitwiseAnd64 -> "band"
+    BuiltinOperatorId.BitwiseOr32, BuiltinOperatorId.BitwiseOr64 -> "bor"
+    BuiltinOperatorId.BitwiseNegation32, BuiltinOperatorId.BitwiseNegation64 -> "bnot"
+    BuiltinOperatorId.BitwiseXor32, BuiltinOperatorId.BitwiseXor64 -> "bxor"
+    BuiltinOperatorId.BitwiseShl32 -> "shl32"
+    BuiltinOperatorId.BitwiseShl64 -> "shl64"
+    BuiltinOperatorId.BitwiseShr32 -> "shr32"
+    BuiltinOperatorId.BitwiseShr64 -> "shr64"
+    BuiltinOperatorId.BitwiseShrUnsigned32 -> "ushr32"
+    BuiltinOperatorId.BitwiseShrUnsigned64 -> "ushr64"
     BuiltinOperatorId.IsNull -> "is_null"
-    BuiltinOperatorId.NotNull -> TODO()
+    BuiltinOperatorId.NotNull -> "not_null"
     BuiltinOperatorId.DivFltFlt -> "fdiv"
     BuiltinOperatorId.DivIntInt -> "int32_div"
     BuiltinOperatorId.DivIntInt64 -> "int64_div"
@@ -51,36 +60,36 @@ internal fun operatorToName(
     BuiltinOperatorId.MinusInt -> "int32_unm"
     BuiltinOperatorId.MinusInt64 -> "int64_unm" // TODO Just use `-x` because either standard int64 or metatabled?
     BuiltinOperatorId.MinusIntInt -> "int32_sub"
-    BuiltinOperatorId.MinusIntInt64 -> TODO()
+    BuiltinOperatorId.MinusIntInt64 -> "int64_sub"
     BuiltinOperatorId.PlusFltFlt -> "add"
     BuiltinOperatorId.PlusIntInt -> "int32_add"
-    BuiltinOperatorId.PlusIntInt64 -> TODO()
+    BuiltinOperatorId.PlusIntInt64 -> "int64_add"
     BuiltinOperatorId.PowFltFlt -> "pow"
     BuiltinOperatorId.TimesIntInt -> "int32_mul"
-    BuiltinOperatorId.TimesIntInt64 -> TODO()
+    BuiltinOperatorId.TimesIntInt64 -> "int64_mul"
     BuiltinOperatorId.TimesFltFlt -> "mul"
     BuiltinOperatorId.LtFltFlt -> "float_lt"
-    BuiltinOperatorId.LtIntInt -> TODO()
+    BuiltinOperatorId.LtIntInt -> "generic_lt"
     BuiltinOperatorId.LtStrStr -> "str_lt"
     BuiltinOperatorId.LtGeneric -> "generic_lt"
     BuiltinOperatorId.LeFltFlt -> "float_le"
-    BuiltinOperatorId.LeIntInt -> TODO()
+    BuiltinOperatorId.LeIntInt -> "generic_le"
     BuiltinOperatorId.LeStrStr -> "str_le"
     BuiltinOperatorId.LeGeneric -> "generic_le"
     BuiltinOperatorId.GtFltFlt -> "float_gt"
-    BuiltinOperatorId.GtIntInt -> TODO()
+    BuiltinOperatorId.GtIntInt -> "generic_gt"
     BuiltinOperatorId.GtStrStr -> "str_gt"
     BuiltinOperatorId.GtGeneric -> "generic_gt"
     BuiltinOperatorId.GeFltFlt -> "float_ge"
-    BuiltinOperatorId.GeIntInt -> TODO()
+    BuiltinOperatorId.GeIntInt -> "generic_ge"
     BuiltinOperatorId.GeStrStr -> "str_ge"
     BuiltinOperatorId.GeGeneric -> "generic_ge"
     BuiltinOperatorId.EqFltFlt -> "float_eq"
-    BuiltinOperatorId.EqIntInt -> TODO()
+    BuiltinOperatorId.EqIntInt -> "generic_eq"
     BuiltinOperatorId.EqStrStr -> "str_eq"
     BuiltinOperatorId.EqGeneric -> "generic_eq"
     BuiltinOperatorId.NeFltFlt -> "float_ne"
-    BuiltinOperatorId.NeIntInt -> TODO()
+    BuiltinOperatorId.NeIntInt -> "generic_ne"
     BuiltinOperatorId.NeStrStr -> "str_ne"
     BuiltinOperatorId.NeGeneric -> "generic_ne"
     BuiltinOperatorId.CmpFltFlt -> "float_cmp"
@@ -91,7 +100,7 @@ internal fun operatorToName(
     BuiltinOperatorId.Print -> "print"
     BuiltinOperatorId.StrCat -> "concat"
     BuiltinOperatorId.Listify -> "listof"
-    BuiltinOperatorId.Async -> "TODO" // TODO
+    BuiltinOperatorId.Async -> "async"
     // should not be used with CoroutineStrategy.TranslateToGenerator
     BuiltinOperatorId.AdaptGeneratorFn,
     BuiltinOperatorId.SafeAdaptGeneratorFn,
@@ -289,6 +298,92 @@ internal object LuaSupportNetwork : SupportNetwork {
                         args[1],
                     )
                 }
+                // Inline float arithmetic as native Lua operators (Lua numbers are doubles).
+                BuiltinOperatorId.PlusFltFlt -> InlineLua(
+                    builtin.builtinOperatorId.toString(),
+                    builtin.builtinOperatorId,
+                ) { pos, args ->
+                    Lua.BinaryExpr(
+                        pos, args[0],
+                        Lua.BinaryOp(pos, BinaryOpEnum.Add, LuaOperatorDefinition.Add),
+                        args[1],
+                    )
+                }
+                BuiltinOperatorId.MinusFltFlt -> InlineLua(
+                    builtin.builtinOperatorId.toString(),
+                    builtin.builtinOperatorId,
+                ) { pos, args ->
+                    Lua.BinaryExpr(
+                        pos, args[0],
+                        Lua.BinaryOp(pos, BinaryOpEnum.Sub, LuaOperatorDefinition.Sub),
+                        args[1],
+                    )
+                }
+                BuiltinOperatorId.TimesFltFlt -> InlineLua(
+                    builtin.builtinOperatorId.toString(),
+                    builtin.builtinOperatorId,
+                ) { pos, args ->
+                    Lua.BinaryExpr(
+                        pos, args[0],
+                        Lua.BinaryOp(pos, BinaryOpEnum.Mul, LuaOperatorDefinition.Mul),
+                        args[1],
+                    )
+                }
+                BuiltinOperatorId.DivFltFlt -> InlineLua(
+                    builtin.builtinOperatorId.toString(),
+                    builtin.builtinOperatorId,
+                ) { pos, args ->
+                    Lua.BinaryExpr(
+                        pos, args[0],
+                        Lua.BinaryOp(pos, BinaryOpEnum.Div, LuaOperatorDefinition.Div),
+                        args[1],
+                    )
+                }
+                BuiltinOperatorId.PowFltFlt -> InlineLua(
+                    builtin.builtinOperatorId.toString(),
+                    builtin.builtinOperatorId,
+                ) { pos, args ->
+                    Lua.BinaryExpr(
+                        pos, args[0],
+                        Lua.BinaryOp(pos, BinaryOpEnum.Pow, LuaOperatorDefinition.Pow),
+                        args[1],
+                    )
+                }
+                BuiltinOperatorId.MinusFlt -> InlineLua(
+                    builtin.builtinOperatorId.toString(),
+                    builtin.builtinOperatorId,
+                ) { pos, args ->
+                    Lua.UnaryExpr(
+                        pos,
+                        Lua.UnaryOp(pos.leftEdge, UnaryOpEnum.UnaryAdd, LuaOperatorDefinition.Unm),
+                        args[0],
+                    )
+                }
+                // Inline string comparisons as native Lua operators (lexicographic, same as Temper).
+                BuiltinOperatorId.EqStrStr -> inlineBinaryOp(
+                    builtin.builtinOperatorId.toString(), BinaryOpEnum.Eq, LuaOperatorDefinition.Eq,
+                    builtin.builtinOperatorId,
+                )
+                BuiltinOperatorId.NeStrStr -> inlineBinaryOp(
+                    builtin.builtinOperatorId.toString(), BinaryOpEnum.NotEq, LuaOperatorDefinition.Ne,
+                    builtin.builtinOperatorId,
+                )
+                BuiltinOperatorId.LtStrStr -> inlineBinaryOp(
+                    builtin.builtinOperatorId.toString(), BinaryOpEnum.Lt, LuaOperatorDefinition.Lt,
+                    builtin.builtinOperatorId,
+                )
+                BuiltinOperatorId.LeStrStr -> inlineBinaryOp(
+                    builtin.builtinOperatorId.toString(), BinaryOpEnum.LtEq, LuaOperatorDefinition.Le,
+                    builtin.builtinOperatorId,
+                )
+                BuiltinOperatorId.GtStrStr -> inlineBinaryOp(
+                    builtin.builtinOperatorId.toString(), BinaryOpEnum.Gt, LuaOperatorDefinition.Gt,
+                    builtin.builtinOperatorId,
+                )
+                BuiltinOperatorId.GeStrStr -> inlineBinaryOp(
+                    builtin.builtinOperatorId.toString(), BinaryOpEnum.GtEq, LuaOperatorDefinition.Ge,
+                    builtin.builtinOperatorId,
+                )
                 else -> InlineLua(builtin.builtinOperatorId.toString(), builtin.builtinOperatorId) { pos, args ->
                     Lua.FunctionCallExpr(
                         pos,
@@ -317,10 +412,10 @@ internal object LuaSupportNetwork : SupportNetwork {
         connectedKey: String,
         genre: Genre,
     ): SupportCode? = when (connectedKey) {
-        "::getConsole" -> InlineLua(connectedKey) { pos, _ ->
+        "core.getConsole()" -> InlineLua(connectedKey) { pos, _ ->
             Lua.Num(pos, 0.0)
         }
-        "Console::log" -> InlineLua(connectedKey) { pos, args ->
+        "core.type Console.log()" -> InlineLua(connectedKey) { pos, args ->
             Lua.FunctionCallExpr(
                 pos,
                 Lua.DotIndexExpr(
@@ -334,16 +429,16 @@ internal object LuaSupportNetwork : SupportNetwork {
                 ),
             )
         }
-        "String::begin" -> InlineLua(connectedKey) { pos, _ ->
+        "core.type String.begin" -> InlineLua(connectedKey) { pos, _ ->
             // Strings in Lua are one-indexed
             Lua.Num(pos, 1.0)
         }
-        "StringIndex::none" -> InlineLua(connectedKey) { pos, _ ->
+        "core.type StringIndex.none" -> InlineLua(connectedKey) { pos, _ ->
             // -1 is out of band
             Lua.Num(pos, -1.0)
         }
-        "Generator::next",
-        "SafeGenerator::next",
+        "core.type Generator.next()",
+        "core.type SafeGenerator.next()",
         -> InlineLua(connectedKey) { pos, args ->
             require(args.size == 1)
             Lua.FunctionCallExpr(
@@ -356,12 +451,96 @@ internal object LuaSupportNetwork : SupportNetwork {
                 Lua.Args(pos, Lua.Exprs(pos, args)),
             )
         }
-        else -> temperMethod(
-            connectedKey,
-            connectedKey
-                .replace("::", "_")
-                .lowercase(),
-        )
+
+        // core.type Int32.toFloat64() is identity in Lua (all numbers are doubles).
+        "core.type Int32.toFloat64()" -> inlineIdentity(connectedKey)
+
+        // Math functions → Lua's math.* standard library (available in 5.1+).
+        "core.type Float64.abs()" -> inlineGlobalCall(connectedKey, "math", "abs")
+        "core.type Float64.ceil()" -> inlineGlobalCall(connectedKey, "math", "ceil")
+        "core.type Float64.floor()" -> inlineGlobalCall(connectedKey, "math", "floor")
+        "core.type Float64.sqrt()" -> inlineGlobalCall(connectedKey, "math", "sqrt")
+        "core.type Float64.sin()" -> inlineGlobalCall(connectedKey, "math", "sin")
+        "core.type Float64.cos()" -> inlineGlobalCall(connectedKey, "math", "cos")
+        "core.type Float64.tan()" -> inlineGlobalCall(connectedKey, "math", "tan")
+        "core.type Float64.asin()" -> inlineGlobalCall(connectedKey, "math", "asin")
+        "core.type Float64.acos()" -> inlineGlobalCall(connectedKey, "math", "acos")
+        "core.type Float64.atan()" -> inlineGlobalCall(connectedKey, "math", "atan")
+        "core.type Float64.exp()" -> inlineGlobalCall(connectedKey, "math", "exp")
+        "core.type Float64.log()" -> inlineGlobalCall(connectedKey, "math", "log")
+        // core.type Float64.max()/min() have NaN propagation semantics; cannot use math.max/min directly.
+        "core.type Int32.max()" -> inlineGlobalCall(connectedKey, "math", "max")
+        "core.type Int32.min()" -> inlineGlobalCall(connectedKey, "math", "min")
+
+        // Math constants.
+        "core.type Float64.pi" -> inlineGlobalProp(connectedKey, "math", "pi")
+        "core.type Float64.infinity()" -> inlineGlobalProp(connectedKey, "math", "huge")
+
+        // core.type String.get isEmpty() → #str == 0 (byte-length check, correct for empty strings).
+        "core.type String.get isEmpty()" -> InlineLua(connectedKey) { pos, args ->
+            Lua.BinaryExpr(
+                pos,
+                Lua.UnaryExpr(
+                    pos,
+                    Lua.UnaryOp(pos, UnaryOpEnum.UnarySub, LuaOperatorDefinition.Unm),
+                    args[0],
+                ),
+                Lua.BinaryOp(pos, BinaryOpEnum.Eq, LuaOperatorDefinition.Eq),
+                Lua.Num(pos, 0.0),
+            )
+        }
+
+        // core.type List.isEmpty() → #list == 0.
+        "core.type List.isEmpty()",
+        "core.type Listed.isEmpty()",
+        -> InlineLua(connectedKey) { pos, args ->
+            Lua.BinaryExpr(
+                pos,
+                Lua.UnaryExpr(
+                    pos,
+                    Lua.UnaryOp(pos, UnaryOpEnum.UnarySub, LuaOperatorDefinition.Unm),
+                    args[0],
+                ),
+                Lua.BinaryOp(pos, BinaryOpEnum.Eq, LuaOperatorDefinition.Eq),
+                Lua.Num(pos, 0.0),
+            )
+        }
+
+        // core.type Boolean.toString() → tostring(). (core.type Int32.toString() has a radix param, can't inline.)
+        "core.type Boolean.toString()" -> inlineBuiltinCall(connectedKey, "tostring")
+
+        // StringIndex comparisons → native Lua operators (they're just integers).
+        "core.type StringIndexOption.compareTo()" -> InlineLua(connectedKey) { pos, args ->
+            Lua.BinaryExpr(pos, args[0], Lua.BinaryOp(pos, BinaryOpEnum.Sub, LuaOperatorDefinition.Sub), args[1])
+        }
+        "core.type StringIndexOption.compareTo()::eq" ->
+            inlineBinaryOp(connectedKey, BinaryOpEnum.Eq, LuaOperatorDefinition.Eq)
+        "core.type StringIndexOption.compareTo()::ne" ->
+            inlineBinaryOp(connectedKey, BinaryOpEnum.NotEq, LuaOperatorDefinition.Ne)
+        "core.type StringIndexOption.compareTo()::lt" ->
+            inlineBinaryOp(connectedKey, BinaryOpEnum.Lt, LuaOperatorDefinition.Lt)
+        "core.type StringIndexOption.compareTo()::le" ->
+            inlineBinaryOp(connectedKey, BinaryOpEnum.LtEq, LuaOperatorDefinition.Le)
+        "core.type StringIndexOption.compareTo()::gt" ->
+            inlineBinaryOp(connectedKey, BinaryOpEnum.Gt, LuaOperatorDefinition.Gt)
+        "core.type StringIndexOption.compareTo()::ge" ->
+            inlineBinaryOp(connectedKey, BinaryOpEnum.GtEq, LuaOperatorDefinition.Ge)
+
+        else if connectedKey.startsWith("core.") || connectedKey.startsWith("std/") ->
+            temperMethod(
+                connectedKey,
+                connectedKey
+                    .split(".", "::")
+                    // Skip module name.
+                    .subListToEnd(1)
+                    .joinToString("_") { part ->
+                        // Skip qualifiers and parens.
+                        part.split(" ").last().trimEnd('(', ')')
+                    }
+                    .lowercase(),
+            )
+
+        else -> null
     }
 
     override fun translatedConnectedType(
@@ -453,3 +632,52 @@ internal fun temperMethod(
         )
     },
 )
+
+// --- Inline helper factories for systematic operator/method inlining ---
+
+/** Inline a binary operator: `args[0] op args[1]` */
+private fun inlineBinaryOp(
+    key: String,
+    op: BinaryOpEnum,
+    opDef: LuaOperatorDefinition,
+    builtinOp: BuiltinOperatorId? = null,
+) = InlineLua(key, builtinOp) { pos, args ->
+    Lua.BinaryExpr(pos, args[0], Lua.BinaryOp(pos, op, opDef), args[1])
+}
+
+/** Inline a call to a Lua standard library function: `module.fn(args)` */
+private fun inlineGlobalCall(
+    key: String,
+    module: String,
+    fn: String,
+) = InlineLua(key) { pos, args ->
+    Lua.FunctionCallExpr(
+        pos,
+        Lua.DotIndexExpr(pos, Lua.Name(pos, name(module)), Lua.Name(pos, name(fn))),
+        Lua.Args(pos, Lua.Exprs(pos, args)),
+    )
+}
+
+/** Inline a call to a Lua global function: `fn(args)` */
+private fun inlineBuiltinCall(
+    key: String,
+    fn: String,
+) = InlineLua(key) { pos, args ->
+    Lua.FunctionCallExpr(
+        pos,
+        Lua.Name(pos, name(fn)),
+        Lua.Args(pos, Lua.Exprs(pos, args)),
+    )
+}
+
+/** Inline identity: returns `args[0]` unchanged. */
+private fun inlineIdentity(key: String) = InlineLua(key) { _, args -> args[0] }
+
+/** Inline a global property access: `module.prop` */
+private fun inlineGlobalProp(
+    key: String,
+    module: String,
+    prop: String,
+) = InlineLua(key) { pos, _ ->
+    Lua.DotIndexExpr(pos, Lua.Name(pos, name(module)), Lua.Name(pos, name(prop)))
+}

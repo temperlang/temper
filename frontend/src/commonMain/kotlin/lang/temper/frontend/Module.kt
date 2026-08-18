@@ -18,15 +18,15 @@ import lang.temper.env.Export
 import lang.temper.env.Exporter
 import lang.temper.format.FilteringLogSink
 import lang.temper.format.FormattingLogSink
+import lang.temper.frontend.core.CoreModule
+import lang.temper.frontend.core.builtinEnvironment
+import lang.temper.frontend.core.considerPrivilegedEnvironmentBindings
+import lang.temper.frontend.core.standardLibraryConnecteds
 import lang.temper.frontend.define.DefineStage
 import lang.temper.frontend.disambiguate.DisAmbiguateStage
 import lang.temper.frontend.export.ExportStage
 import lang.temper.frontend.function.FunctionMacroStage
 import lang.temper.frontend.generate.GenerateCodeStage
-import lang.temper.frontend.implicits.ImplicitsModule
-import lang.temper.frontend.implicits.builtinEnvironment
-import lang.temper.frontend.implicits.considerPrivilegedEnvironmentBindings
-import lang.temper.frontend.implicits.standardLibraryConnecteds
 import lang.temper.frontend.importstage.ImportStage
 import lang.temper.frontend.lex.LexStage
 import lang.temper.frontend.parse.ParseStage
@@ -55,8 +55,8 @@ import lang.temper.log.MessageTemplateI
 import lang.temper.log.Position
 import lang.temper.log.SharedLocationContext
 import lang.temper.log.snapshot
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.DashedIdentifier
-import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.LibraryNameLocationKey
 import lang.temper.name.ModuleLocation
 import lang.temper.name.ModuleName
@@ -76,6 +76,7 @@ import lang.temper.value.InternalFeatureKey
 import lang.temper.value.PartialResult
 import lang.temper.value.Promises
 import lang.temper.value.PseudoCodeDetail
+import lang.temper.value.StayLeaf
 import lang.temper.value.TBoolean
 import lang.temper.value.Tree
 import lang.temper.value.Value
@@ -91,13 +92,6 @@ class Module(
      * [lang.temper.value.Abort].
      */
     continueCondition: ContinueCondition,
-    /**
-     * Whether staging ends with the last stage before [Stage.Run] or whether execution may
-     * proceed to [Stage.Run].
-     * Modules that may be run might have [exports] and other derived information that come from
-     * running instead of being derived from partial interpretation.
-     */
-    val mayRun: Boolean = false,
     sharedLocationContext: SharedLocationContext? = null,
     override val genre: Genre = Genre.Library,
     allowDuplicateLogPositions: Boolean = false,
@@ -144,10 +138,10 @@ class Module(
     init {
         val cc = continueCondition
 
-        // We need questions like canAdvance to be repeatable so don't want to call stateful
+        // We need questions like canAdvance to be repeatable, so don't want to call stateful
         // functions like continueCondition directly.
         // Instead, we wrap it to flip a bit on its first false return.
-        // This has the side effect of also making this.continueCondition monotonic which is nice.
+        // This has the side effect of also making `this.continueCondition` monotonic, which is nice.
         data class ContinueConditionWrapper(val cc: ContinueCondition) : ContinueCondition {
             override fun shouldContinue(): Boolean = when {
                 continueConditionReturnedFalse -> false
@@ -176,7 +170,7 @@ class Module(
     }
 
     /**
-     * Wraps an environment to expose module accessible, but not module mutable bindings.
+     * Wraps an environment to expose module-accessible, but not module-mutable bindings.
      * This is used by [interpretiveDanceStage] to wrap the builtin environment with an environment
      * from the compiler.  For example, a non-preface module will bring preface module declarations
      * into scope.
@@ -202,7 +196,7 @@ class Module(
     }
 
     /**
-     * An outer module which is implicitly imported during [Stage.Import].
+     * An outer module that is implicitly imported during [Stage.Import].
      * This is used to connect a module to its preface.
      * Names exported from the preface are implicitly available to each module instance.
      */
@@ -255,11 +249,17 @@ class Module(
     val runResult get() = _runResult
 
     /**
-     * The name of the variable that will hold the module result if any.
+     * The name of the variable which will hold the module's result, if any.
      * `null` unless [StagingFlags.moduleResultNeeded] and we have reached [Stage.Type] and
      * run the MakeResultsExplicit pass.
      */
     val outputName get() = _outputName
+
+    /**
+     * The stay for a placeholder declaration which holds metadata related to the module as a whole.
+     */
+    var topLevelMetadataStay: StayLeaf? = null
+        internal set
 
     /** The type of [outputName] if any, and if types have been inferred and stored. */
     val outputType get() = _outputType
@@ -302,12 +302,12 @@ class Module(
      *
      * This will eventually be used to:
      * - allow tools like linters to store per-file configuration
-     * - allow versioning the language, by running a one-time tool over all legacy files that adds
+     * - allow versioning the language by running a one-time tool over all legacy files that adds
      *   `{ "Temper": { "languageVersion": "1.0-deprecated" } }`
      * - allow opting legacy files out of error checks added to the compiler after they were written
      *   by running a one-time tool over legacy files
      *
-     * so that when users start from a blank file, they're opting into the newest, strictest
+     * This means that when users start from a blank file, they're opting into the newest, strictest
      * version of the language.
      */
     var appendix: JsonValue? = null
@@ -365,6 +365,15 @@ class Module(
                 stageCallback,
             )
 
+            fun store(outputs: StageOutputs, stable: Boolean) {
+                this._tree = outputs.root
+                if (stable) {
+                    this._exports = outputs.exports
+                    this._declaredTypeShapes = outputs.declaredTypeShapes
+                    this.topLevelMetadataStay = outputs.topLevelMetadataStay
+                }
+            }
+
             // Allocate a top-level environment after setup code has had a
             // chance to call addEnvironmentBindings
             if (_topLevelBindings == null && stageToPerform > Stage.Parse) {
@@ -375,8 +384,8 @@ class Module(
                                 EmptyEnvironment,
                             ),
                             genre = genre,
-                            skipImplicits = loc is ImplicitsCodeLocation ||
-                                stableEnvironmentBindings[StagingFlags.skipImportImplicits] == TBoolean.valueTrue,
+                            skipCore = loc is CoreCodeLocation ||
+                                stableEnvironmentBindings[StagingFlags.skipImportCore] == TBoolean.valueTrue,
                         ),
                     ),
                 )
@@ -463,7 +472,7 @@ class Module(
                                     // Release individual trees for GC unless we might want to debug them further.
                                     _sources = _sources.map { it.copy(cst = null, tree = null) }
                                 }
-                                this._tree = outputs.root
+                                store(outputs, false)
                                 this.additionalImplicitImports.clear()
                             }
                         }
@@ -474,7 +483,7 @@ class Module(
                             .process { outputs: StageOutputs ->
                                 val result = outputs.result
                                 done(result !is Fail) {
-                                    this._tree = outputs.root
+                                    store(outputs, false)
                                 }
                             }
                     }
@@ -483,7 +492,7 @@ class Module(
                         SyntaxMacroStage(this, _tree!!, failLog, stageSpecificLogSink)
                             .process { outputs: StageOutputs ->
                                 done(outputs.result !is Fail) {
-                                    this._tree = outputs.root
+                                    store(outputs, false)
                                 }
                             }
                     }
@@ -493,7 +502,7 @@ class Module(
                             .process { outputs: StageOutputs ->
                                 val result = outputs.result
                                 done(result !is Fail) {
-                                    this._tree = outputs.root
+                                    store(outputs, true)
                                 }
                             }
                     }
@@ -503,7 +512,7 @@ class Module(
                             .process { outputs: StageOutputs, outputName: ResolvedName?, outputType: StaticType? ->
                                 val result = outputs.result
                                 done(result !is Fail) {
-                                    this._tree = outputs.root
+                                    store(outputs, true)
                                     this._outputName = outputName
                                     this._outputType = outputType
                                 }
@@ -525,9 +534,7 @@ class Module(
                             .process { outputs: StageOutputs ->
                                 val result = outputs.result
                                 done(result !is Fail) {
-                                    this._tree = outputs.root
-                                    this._exports = outputs.exports
-                                    this._declaredTypeShapes = outputs.declaredTypeShapes
+                                    store(outputs, true)
                                 }
                             }
                     }
@@ -542,9 +549,7 @@ class Module(
                             .process { outputs: StageOutputs ->
                                 val result = outputs.result
                                 done(result !is Fail) {
-                                    this._tree = outputs.root
-                                    this._exports = outputs.exports
-                                    this._declaredTypeShapes = outputs.declaredTypeShapes
+                                    store(outputs, true)
                                 }
                             }
                     }
@@ -608,17 +613,14 @@ class Module(
         Stage.Import,
         Stage.DisAmbiguate,
         Stage.SyntaxMacro,
-        ->
-            _tree != null
         Stage.Define,
         Stage.Type,
         Stage.FunctionMacro,
         Stage.Export,
         Stage.Query,
         Stage.GenerateCode,
-        ->
-            _tree != null
-        Stage.Run -> mayRun && _tree != null
+        Stage.Run,
+        -> _tree != null
     }
 
     private fun complete(stage: Stage, failMark: FailLog.FailMark, ok: Boolean, done: () -> Unit) {
@@ -736,10 +738,10 @@ class Module(
                         else -> null
                     }
                 }
-                ImplicitsCodeLocation -> {
+                CoreCodeLocation -> {
                     when (v) {
-                        CodeLocationKey.SourceCodeKey -> v.cast(ImplicitsModule.code)
-                        CodeLocationKey.FilePositionsKey -> v.cast(implicitsFilePositions)
+                        CodeLocationKey.SourceCodeKey -> v.cast(CoreModule.code)
+                        CodeLocationKey.FilePositionsKey -> v.cast(coreFilePositions)
                         else -> null
                     }
                 }
@@ -750,18 +752,18 @@ class Module(
     }
 
     companion object {
-        private val implicitsFilePositions get() = ImplicitsModule.implicitsFilePositions
+        private val coreFilePositions get() = CoreModule.coreFilePositions
     }
 
-    /** Whether this module represents Temper implicits/builtins, including for source editing purposes. */
-    val isEffectivelyImplicits = when (loc) {
-        // Recognize fake implicits, such as when editing them as ordinary files.
+    /** Whether this module represents Temper core/builtins, including for source editing purposes. */
+    val isEffectivelyCore = when (loc) {
+        // Recognize fake core, such as when editing them as ordinary files.
         is ModuleName ->
             !loc.isPreface &&
                 sharedLocationContext?.get(loc, LibraryNameLocationKey) ==
-                DashedIdentifier.temperImplicitsLibraryIdentifier
-        // Recognize real implicits, as provided through specialized machinery.
-        is ImplicitsCodeLocation -> true
+                DashedIdentifier.temperCoreLibraryIdentifier
+        // Recognize real core, as provided through specialized machinery.
+        is CoreCodeLocation -> true
     }
 
     /** Whether this module is from the Temper standard library, including for source editing purposes. */
@@ -812,14 +814,14 @@ internal fun destructureTreeMultipleRepresentations(
     ast: Tree,
     pseudoCodeDetail: PseudoCodeDetail,
 ) {
-    sink.key("code", Hints.s) {
+    sink.key("code", Hints.su) {
         val code = ast.toPseudoCode(
             singleLine = false,
             detail = pseudoCodeDetail,
         )
         value(code)
     }
-    sink.key("tree", Hints.s) { value(ast) }
+    sink.key("tree", Hints.su) { value(ast) }
 }
 
 fun Iterable<Module>.mergedNamingContext(mergedLoc: ModuleLocation): NamingContext {

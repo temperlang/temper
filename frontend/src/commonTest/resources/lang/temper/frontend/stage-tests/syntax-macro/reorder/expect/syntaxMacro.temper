@@ -1,0 +1,12 @@
+@fn let f__0, i__0 = 1, j__0 = i__0 + 1;
+f__0 = fn f /* return__0 */: (Int) {
+  fn__0: do {
+    @fn let g__0, i__1 = 4;
+    g__0 = fn g /* return__1 */: (Int) {
+      fn__1: do {
+        i__1 + j__0
+      }
+    };
+    g__0()
+  }
+};

@@ -22,8 +22,8 @@ import lang.temper.common.charCount
 import lang.temper.common.compatRemoveFirst
 import lang.temper.common.console
 import lang.temper.common.decodeUtf16
-import lang.temper.common.emptyBooleanArray
 import lang.temper.common.isEmpty
+import lang.temper.common.isNotEmpty
 import lang.temper.common.logIf
 import lang.temper.common.toStringViaBuilder
 import lang.temper.log.CodeLocation
@@ -82,20 +82,24 @@ class Lexer(
      * would be followed by token or character content.
      * Using a Cons list makes copying O(1).
      */
-    private var delimiterStack: Cons<Pair<String, Position>> = Cons.Empty
+    private var delimiterStack: Cons<MinimalToken> = Cons.Empty
 
     /**
      * For each `"""` entry on [delimiterStack], the stored brackets that need to be closed by a
      * scriptlet before the multi-quoted string can end.
      */
-    private var scriptletStack: Cons<List<Pair<String, Position>>> = Cons.Empty
+    private var scriptletStack: Cons<List<MinimalToken>> = Cons.Empty
     private var open: OpenTokenType = OpenTokenType.NONE
+
+    /** True if the current line of tokens is governed by a multi-quoted string expression margin character. */
+    private var contentLineKind: TokenCluster.ContentLineKind? = null
 
     /**
      * Indicates whether a '/' that does not start a comment starts a division operator
      * like '/' or '/=' and not a regular expression like `/reg(ular )?exp(r(ession)?)?/`
      */
     private var lastPreDiv: Boolean = false
+    private var lastTokenType: TokenType? = null
     private val pendingTokens = mutableListOf<TemperToken>()
 
     override fun hasNext(): Boolean = peek() != null
@@ -111,7 +115,7 @@ class Lexer(
                 findMoreTokens()
             } else if (!ignoreTrailingSynthetics) {
                 while (!delimiterStack.isEmpty() && pendingTokens.isEmpty()) {
-                    updateTokenClusters(end, end)
+                    updateTokenClusters(end, end, TokenType.Space)
                 }
             }
         }
@@ -143,7 +147,9 @@ class Lexer(
         copy.delimiterStack = delimiterStack
         copy.scriptletStack = scriptletStack
         copy.open = open
+        copy.contentLineKind = contentLineKind
         copy.lastPreDiv = lastPreDiv
+        copy.lastTokenType = lastTokenType
         return copy
     }
 
@@ -171,7 +177,7 @@ class Lexer(
 
     private fun updateLastPreDiv() {
         when (currentTokenType) {
-            null, TokenType.Comment, TokenType.Space -> {}
+            null, TokenType.Comment, TokenType.Space, TokenType.Margin -> {}
             TokenType.LeftDelimiter, TokenType.QuotedString, TokenType.RightDelimiter,
             TokenType.Number, TokenType.Error,
             -> {
@@ -215,7 +221,7 @@ class Lexer(
         }
 
         debug {
-            "B start=$start, limit=$limit, open=$open, DS=$delimiterStack, text=${
+            "B start=$start, limit=$limit, open=$open, DS=$delimiterStack, SS=$scriptletStack, text=${
                 escapeWithCaretAt(text, end)
             }"
         }
@@ -229,7 +235,7 @@ class Lexer(
             // Tokens can be interrupted by
             //     ```
             // on a line by itself.
-            // Multi-line token handling code below has to break to here on seeing a line break.
+            // The multi-line token handling code below has to break to here on seeing a line break.
             if (atStartOfLine(end) && open != OpenTokenType.SEMI_LIT_COMMENT) {
                 val delimiterEnd =
                     lookForEmbeddingLanguageDelimiter(lang::matchSemilitCommentEntrance)
@@ -351,9 +357,9 @@ class Lexer(
                                         currentTokenType = TokenType.Punctuation
                                         findPunctuationTokenEnd()
                                     } else {
-                                        updateTokenClusters(end, end + 1)
-                                        currentTokenType = TokenType.QuotedString
-                                        reenter = true
+                                        updateTokenClusters(end, end + 1, TokenType.LeftDelimiter)
+                                        currentTokenType = TokenType.LeftDelimiter
+                                        open = OpenTokenType.STRING
                                     }
                                 }
                             }
@@ -361,7 +367,7 @@ class Lexer(
                         LexicalDefinitions.CharKind.Backslash -> {
                             currentTokenType = TokenType.Punctuation
                             when (if (end + 1 < limit) { text[end + 1] } else { '\u0000' }) {
-                                '{' -> updateTokenClusters(end + 1, end + 2)
+                                '{' -> updateTokenClusters(end + 1, end + 2, TokenType.Punctuation)
                                 '(' -> end += 2
                                 else -> end += 1
                             }
@@ -369,7 +375,7 @@ class Lexer(
                         LexicalDefinitions.CharKind.Dollar -> {
                             if (end + 1 < limit && text[end + 1] == '{') {
                                 currentTokenType = TokenType.Punctuation
-                                updateTokenClusters(end, end + 2)
+                                updateTokenClusters(end, end + 2, TokenType.Punctuation)
                             } else {
                                 currentTokenType = TokenType.Error
                                 error(start, end, MessageTemplate.UnrecognizedToken)
@@ -382,51 +388,40 @@ class Lexer(
                         }
                         LexicalDefinitions.CharKind.Punctuation -> {
                             currentTokenType = TokenType.Punctuation
-                            if (cp0 == C_COLON && end + 1 < limit && sourceText[end + 1] == '}') {
-                                updateTokenClusters(end, end + 2)
+                            end += charCount(cp0)
+                            if (end < limit && text[end] == '\uFE0F') {
+                                // Special handling for keycap Emojis.
+                                // Disable this and see comments in unittests that fail for more
+                                // details.
+                                currentTokenType = TokenType.Error
+                                findEndOfWord()
+                                error(start, end, MessageTemplate.BadEmoji)
                             } else {
-                                end += charCount(cp0)
-                                if (end < limit && text[end] == '\uFE0F') {
-                                    // Special handling for keycap Emojis.
-                                    // Disable this and see comments in unittests that fail for more
-                                    // details.
-                                    currentTokenType = TokenType.Error
-                                    findEndOfWord()
-                                    error(start, end, MessageTemplate.BadEmoji)
-                                } else {
-                                    val continues = when (cp0) {
-                                        C_LT -> {
-                                            val next =
-                                                if (end < limit) {
-                                                    sourceText[end]
-                                                } else {
-                                                    '\u0000'
-                                                }
-                                            next == '<' || next == '=' || next == '/'
-                                        }
+                                val continues = when (cp0) {
+                                    C_LT -> {
+                                        val next =
+                                            if (end < limit) {
+                                                sourceText[end]
+                                            } else {
+                                                '\u0000'
+                                            }
+                                        next == '<' || next == '=' || next == '/'
+                                    }
 
-                                        C_GT -> !isAngleBracketAt(start) // Split >> as needed.
-                                        else -> true
-                                    }
-                                    if (continues) {
-                                        findPunctuationTokenEnd()
-                                    }
+                                    C_GT -> nOpenLeftAngleBrackets == 0 // Split >> as needed.
+                                    else -> true
+                                }
+                                if (continues) {
+                                    findPunctuationTokenEnd()
                                 }
                             }
                         }
                         LexicalDefinitions.CharKind.StandalonePunctuation -> {
                             currentTokenType = TokenType.Punctuation
                             when (cp0) {
-                                C_LEFT_CURLY -> {
-                                    val clusterEnd = end +
-                                        if (end + 1 < limit && sourceText[end + 1] == ':') {
-                                            2
-                                        } else {
-                                            1
-                                        }
-                                    updateTokenClusters(end, clusterEnd)
-                                }
-                                C_RIGHT_CURLY -> updateTokenClusters(end, end + 1)
+                                C_LEFT_CURLY,
+                                C_RIGHT_CURLY,
+                                -> updateTokenClusters(end, end + 1, TokenType.Punctuation)
                                 else -> end += 1
                             }
                         }
@@ -438,19 +433,36 @@ class Lexer(
                         LexicalDefinitions.CharKind.Space -> {
                             currentTokenType = TokenType.Space
                             findEndOfRun(kind)
+                            if (contentLineKind != null) {
+                                // If there's a margin character governing the current line, then
+                                // any line break puts us in a look-the-next-margin state
+                                val hasLineBreak = (start..<end).any { i ->
+                                    LexicalDefinitions.isLineBreak(sourceText[i])
+                                }
+                                if (hasLineBreak) {
+                                    open = OpenTokenType.STRING_CONTINUATION
+                                    contentLineKind = null
+                                }
+                            }
                         }
                         LexicalDefinitions.CharKind.LineBreak -> {
                             currentTokenType = TokenType.Space
                             findEndOfRun(kind)
+                            if (contentLineKind != null) {
+                                open = OpenTokenType.STRING_CONTINUATION
+                                contentLineKind = null
+                            }
                         }
                         LexicalDefinitions.CharKind.Semi -> {
                             currentTokenType = TokenType.Punctuation
                             findEndOfRun(kind)
                         }
                         LexicalDefinitions.CharKind.Quote -> {
+                            var isMultiQuote = false
+                            val oldContentLineKind = contentLineKind
                             when (cp0) {
                                 C_SQ, C_BQ -> {
-                                    updateTokenClusters(end, end + 1)
+                                    updateTokenClusters(end, end + 1, TokenType.LeftDelimiter)
                                 }
                                 C_DQ -> {
                                     var nQuoteChars = 1
@@ -461,15 +473,28 @@ class Lexer(
                                         }
                                     }
                                     val delimLength = if (nQuoteChars == MQ_DELIMITER_LENGTH) {
+                                        isMultiQuote = true
                                         MQ_DELIMITER_LENGTH
                                     } else { // Process "" as two separate single-char clusters
                                         1
                                     }
-                                    updateTokenClusters(end, end + delimLength)
+                                    updateTokenClusters(end, end + delimLength, TokenType.LeftDelimiter)
                                 }
                                 else -> error("$cp0")
                             }
-                            currentTokenType = if (open == OpenTokenType.STRING) {
+                            currentTokenType = if (
+                                isMultiQuote && oldContentLineKind == TokenCluster.ContentLineKind.StmtFragment
+                            ) {
+                                // Explicitly prohibit nested multiquote for now.
+                                // We don't handle this in token cluster because it depends on other than than `top`
+                                // context.
+                                error(
+                                    start,
+                                    end,
+                                    messageTemplate = MessageTemplate.UnsupportedNestedMultiQuote,
+                                )
+                                TokenType.Error
+                            } else if (open == OpenTokenType.STRING) {
                                 TokenType.LeftDelimiter
                             } else {
                                 TokenType.Error
@@ -485,7 +510,7 @@ class Lexer(
 
                         if (c == '*' && end < limit && text[end] == '/') {
                             end += 1 // Consume '/'
-                            open = when (TokenCluster.Chunk.from(delimiterStack.headOrNull?.first)) {
+                            open = when (TokenCluster.Chunk.from(delimiterStack.headOrNull)) {
                                 // If the comment started inside a multiline string, like the below,
                                 // keep looking for a margin character.
                                 TokenCluster.Chunk.MultiQuote -> OpenTokenType.STRING_CONTINUATION
@@ -504,13 +529,13 @@ class Lexer(
                     currentTokenType = TokenType.Comment
                     while (end < limit) {
                         if (LexicalDefinitions.isLineBreak(text[end])) {
-                            open = when (TokenCluster.Chunk.from(delimiterStack.headOrNull?.first)) {
+                            open = when (TokenCluster.Chunk.from(delimiterStack.headOrNull)) {
                                 // If the comment started inside a multiline string, like the below,
                                 // keep looking for a margin character.
                                 TokenCluster.Chunk.MultiQuote -> OpenTokenType.STRING_CONTINUATION
                                 else -> OpenTokenType.NONE
                             }
-                            // If the lexer was just reset, we might have consumed no content in
+                            // If the lexer was just reset, we might have consumed no content, in
                             // which case we need to parse a linebreak token.
                             reenter = end == start
                             break
@@ -521,7 +546,7 @@ class Lexer(
                 OpenTokenType.STRING -> {
                     currentTokenType = TokenType.QuotedString
                     val context = StringContext()
-                    var inCharClass = false // Handle '/' inside regex char class like /[/]/
+                    var inCharClass = false // Handle '/' inside a regex char class like /[/]/
                     @Suppress("LoopWithTooManyJumpStatements") // Enables flatter code.
                     while (end < limit) {
                         val c = text[end]
@@ -535,7 +560,7 @@ class Lexer(
                                 open = OpenTokenType.STRING_CONTINUATION
                                 end += 1
                             } else if (start == end) {
-                                updateTokenClusters(end, end + 1)
+                                updateTokenClusters(end, end + 1, TokenType.Space)
                                 if (open == OpenTokenType.STRING) {
                                     reenter = true
                                 } else {
@@ -546,7 +571,7 @@ class Lexer(
                         }
                         end += 1
 
-                        if ( // Check for special 2-or-3-character sequences: `${`, `{:`, `\u{`
+                        if ( // Check for special 2-or-3-character sequences: `${`, `\u{`
                             context.startingHole(c) ||
                             end + 1 < limit && (c == '\\' && text[end] == 'u' && text[end + 1] == '{')
                         ) {
@@ -556,7 +581,7 @@ class Lexer(
                                     text[end] == 'u' -> 2
                                     else -> 1
                                 }
-                                updateTokenClusters(end - 1, end + step)
+                                updateTokenClusters(end - 1, end + step, TokenType.QuotedString)
                                 if (open != OpenTokenType.STRING) {
                                     break
                                 }
@@ -589,12 +614,11 @@ class Lexer(
                                 }
                                 // Always keep each escape in its own token.
                                 // TODO Could technically keep in main string token if known non-error.
-                                break
                             } else {
                                 // Start a new token for the escape, as for cluster handling above.
                                 end -= 1
-                                break
                             }
+                            break
                             // Lower branches check for sequences that are valid when not escaped
                         } else if (!context.isMultiQuote && c == context.delimChar && !inCharClass) {
                             // String end.
@@ -609,7 +633,7 @@ class Lexer(
                                     }
                                 }
                             }
-                            if (start != (end - 1) && !context.isRegexLike) {
+                            if (start != (end - 1)) {
                                 end -= 1
                                 // Emit content unambiguously in the string, then re-enter to treat the delimiter
                                 // as a separate token.
@@ -617,14 +641,13 @@ class Lexer(
                             }
                             val delimiterStart = end - 1
                             val delimiterEnd = end
-                            updateTokenClusters(delimiterStart, delimiterEnd)
+                            updateTokenClusters(delimiterStart, delimiterEnd, TokenType.RightDelimiter)
                             if (open != OpenTokenType.STRING) {
                                 if (context.isRegexLike) {
                                     // Consume any regex flags
                                     findEndOfWord()
-                                } else {
-                                    currentTokenType = TokenType.RightDelimiter
                                 }
+                                currentTokenType = TokenType.RightDelimiter
                             }
                             break
                         } else if (c == '[' && context.isRegexLike) {
@@ -635,17 +658,29 @@ class Lexer(
                     }
                 }
                 OpenTokenType.STRING_CONTINUATION -> {
-                    // Consume all space and comments until we see a non-space characters.
-                    // Depending on the prefix we transition this way:
+                    // Consume all space and comments until we see a non-space character.
+                    // Depending on the prefix character, we transition this way:
                     //     "    -> a margin character. Skip it and transition to the STRING token type.
                     //     //   -> a line comment.  Process it normally.
                     //     /*   -> a block comment.  Process it normally.
                     //     else -> end of string.  Emit a synthetic delimiter.
                     val cp0 = decodeUtf16(text, end)
-                    if (cp0 == C_DQ) {
-                        open = OpenTokenType.STRING
+                    if (LexicalDefinitions.isMarginChar(cp0)) {
                         end += 1
-                        currentTokenType = TokenType.Space // Margin char is Ignorable
+                        currentTokenType = TokenType.Margin
+                        updateTokenClusters(start, end, TokenType.Margin)
+
+                        contentLineKind = if (cp0 == C_COLON) {
+                            // Inside a colon content line, we look for regular tokens.
+                            TokenCluster.ContentLineKind.StmtFragment
+                        } else {
+                            // Inside a `"` or `~` content line, we look for chars.
+                            TokenCluster.ContentLineKind.Chars
+                        }
+                        open = when (contentLineKind!!) {
+                            TokenCluster.ContentLineKind.Chars -> OpenTokenType.STRING
+                            TokenCluster.ContentLineKind.StmtFragment -> OpenTokenType.NONE
+                        }
                     } else if (LexicalDefinitions.isLineBreak(cp0)) {
                         currentTokenType = TokenType.Space
                         end += charCount(cp0)
@@ -668,6 +703,7 @@ class Lexer(
                         }
                         if (isComment) {
                             open = OpenTokenType.NONE
+                            contentLineKind = TokenCluster.ContentLineKind.StmtFragment
                             reenter = true
                         } else {
                             popDelimiterStack(start, synthesize = true)
@@ -698,7 +734,7 @@ class Lexer(
                     }
                 }
                 OpenTokenType.UNICODE_RUN -> {
-                    // End on right curly or holes. Otherwise, consume either word/number or not as a string.
+                    // End on a right curly or holes. Otherwise, consume either word/number or not as a string.
                     val c = text[end]
                     when (val cp0 = decodeUtf16(text, end)) {
                         C_COMMA -> {
@@ -708,16 +744,16 @@ class Lexer(
                         C_RIGHT_CURLY -> { // TODO Pop two levels on close quote? Need StringContext from below?
                             // End the run.
                             currentTokenType = TokenType.Punctuation
-                            updateTokenClusters(end, end + 1)
+                            updateTokenClusters(end, end + 1, TokenType.Punctuation)
                         }
                         else -> {
                             end += charCount(cp0)
                             when {
                                 // Check the stack outside the Unicode run.
-                                StringContext(skipFirst = true).startingHole(c) -> {
+                                StringContext().startingHole(c) -> {
                                     // Start a hole.
                                     currentTokenType = TokenType.Punctuation
-                                    updateTokenClusters(end - 1, end + 1)
+                                    updateTokenClusters(end - 1, end + 1, TokenType.Punctuation)
                                 }
                                 else -> {
                                     // Grab a chunk.
@@ -754,17 +790,26 @@ class Lexer(
         debug {
             ". got ${backtickTemperEscaper.escape(text.substring(start, end))} : tokenType=$currentTokenType${
                 "\n"
-            }. start=$start, limit=$limit, open=$open, DS=$delimiterStack, end=$end"
+            }. start=$start, limit=$limit, open=$open, DS=$delimiterStack, SS=$scriptletStack, end=$end"
         }
 
         val tokenText = sourceText.substring(start, end)
         val currentMayBracket = when (currentTokenType) {
-            TokenType.Punctuation ->
-                if (isOpenAngleBracketText(tokenText) || tokenText == ">") {
-                    isAngleBracketAt(start)
-                } else {
-                    tokenText in openBrackets || tokenText in closeBrackets
+            TokenType.Punctuation -> when (tokenText) {
+                // A '<' that is preceded by a space or comment token is infix.
+                "<" -> (lastTokenType?.ignorable == false).also { mayBracketLt ->
+                    if (mayBracketLt) {
+                        nOpenLeftAngleBrackets += 1
+                    }
                 }
+                ">" -> (nOpenLeftAngleBrackets != 0).also { mayBracketGt ->
+                    if (mayBracketGt) {
+                        nOpenLeftAngleBrackets -= 1
+                    }
+                }
+                in openBrackets, in closeBrackets -> true
+                else -> false
+            }
             TokenType.LeftDelimiter, TokenType.RightDelimiter -> true
             else -> false
         }
@@ -779,6 +824,7 @@ class Lexer(
         )
 
         pendingTokens.add(newToken)
+        lastTokenType = currentTokenType
         // Explode semilit comment tokens to synthetic tokens for each paragraph.
         // See massageToSemilitSyntheticComment for details.
         if (openWas == OpenTokenType.SEMI_LIT_COMMENT && newToken.tokenType == TokenType.Comment) {
@@ -788,7 +834,7 @@ class Lexer(
                         TemperToken(
                             pos = Position(
                                 codeLocation,
-                                range.first + offset, range.endInclusive + offset + 1,
+                                range.first + offset, range.last + offset + 1,
                             ),
                             tokenText = massagedTokenText,
                             tokenType = TokenType.Comment,
@@ -822,17 +868,22 @@ class Lexer(
         before: Int,
         /** Position in [sourceText] after the last character of the cluster */
         after: Int,
+        tokenType: TokenType,
     ) {
         console.groupIf(DEBUG, "updateTokenClusters") {
-            var tokenOrSourcePrefix = sourceText.substring(before, after)
+            var updateToken = MinimalToken(
+                Position(codeLocation, offset + before, offset + after),
+                sourceText.substring(before, after),
+                tokenType,
+            )
             while (true) { // Loop so that we can re-process with a different stack when needed.
                 val chunk =
-                    TokenCluster.Chunk.from(tokenOrSourcePrefix, atEndOfInput = after == sourceText.length)
-                val top = TokenCluster.Chunk.from(delimiterStack.headOrNull?.first)
+                    TokenCluster.Chunk.from(updateToken, atEndOfInput = after == sourceText.length)
+                val top = TokenCluster.Chunk.from(delimiterStack.headOrNull)
                 var changes = TokenCluster.Table[top, chunk]
                 debug {
                     ". updateTokenClusters@$before, ${
-                        backtickTemperEscaper.escape(tokenOrSourcePrefix)
+                        backtickTemperEscaper.escape(updateToken.tokenText)
                     }, top=${top.name}, chunk=${chunk.name}, DS=$delimiterStack, changes=${
                         changes.changeBitString
                     }"
@@ -842,7 +893,7 @@ class Lexer(
                     changes -= TokenCluster.Change.BadToken
                     error(
                         before,
-                        before + tokenOrSourcePrefix.length,
+                        after,
                         messageTemplate = TokenCluster.Table.errorMsgs[top to chunk]
                             ?: MessageTemplate.UnrecognizedToken,
                     )
@@ -864,8 +915,8 @@ class Lexer(
                         var stackCursor = delimiterStack
                         var stackCursorDepth = 0
                         while (stackCursor is Cons.NotEmpty) {
-                            val opener = TokenCluster.Chunk.from(stackCursor.head.first)
-                            if (opener == TokenCluster.Chunk.LeftCurlyColon) { break }
+                            val opener = TokenCluster.Chunk.from(stackCursor.head)
+                            if (opener == TokenCluster.Chunk.MultiQuote) { break }
 
                             stackCursor = stackCursor.tail
                             stackCursorDepth += 1
@@ -885,14 +936,14 @@ class Lexer(
                         foundScriptlet
                     }
 
-                    // We need to store everything above the shallowest `{:` token.
+                    // We need to store everything above the shallowest margin token.
                     val toStore = if (insideScriptlet) {
-                        val toStore = mutableListOf<Pair<String, Position>>()
+                        val toStore = mutableListOf<MinimalToken>()
                         var stackCursor = delimiterStack
                         while (stackCursor is Cons.NotEmpty) {
                             if (
-                                TokenCluster.Chunk.from(stackCursor.head.first) ==
-                                TokenCluster.Chunk.LeftCurlyColon
+                                TokenCluster.Chunk.from(stackCursor.head) ==
+                                TokenCluster.Chunk.MultiQuote
                             ) {
                                 break
                             }
@@ -911,7 +962,9 @@ class Lexer(
                     }
 
                     if (toStore != null) {
-                        scriptletStack = Cons(toStore, scriptletStack.tail)
+                        if (toStore.isNotEmpty()) {
+                            scriptletStack = Cons(toStore, scriptletStack)
+                        }
                     } else {
                         currentTokenType = TokenType.Error
                         changes += TokenCluster.Change.Cons1
@@ -921,7 +974,10 @@ class Lexer(
 
                 if (TokenCluster.Change.Cons1 in changes) {
                     changes -= TokenCluster.Change.Cons1
-                    tokenOrSourcePrefix = tokenOrSourcePrefix.take(1)
+                    updateToken = updateToken.copy(
+                        pos = updateToken.pos.copy(left = updateToken.pos.left + 1),
+                        tokenText = updateToken.tokenText.take(1),
+                    )
                 }
 
                 val synthesize = TokenCluster.Change.Syn in changes
@@ -944,12 +1000,7 @@ class Lexer(
 
                 if (TokenCluster.Change.Push in changes) {
                     changes -= TokenCluster.Change.Push
-                    val prefixPos = Position(
-                        codeLocation,
-                        before + offset,
-                        before + tokenOrSourcePrefix.length + offset,
-                    )
-                    delimiterStack = Cons(tokenOrSourcePrefix to prefixPos, delimiterStack)
+                    delimiterStack = Cons(updateToken, delimiterStack)
                     if (chunk == TokenCluster.Chunk.MultiQuote) {
                         scriptletStack = Cons(emptyList(), scriptletStack)
                     }
@@ -958,10 +1009,22 @@ class Lexer(
                 if (TokenCluster.Change.RestoreFromScriptlet in changes) {
                     changes -= TokenCluster.Change.RestoreFromScriptlet
                     val stored = scriptletStack.head
-                    scriptletStack = Cons(emptyList(), scriptletStack.tail)
+                    scriptletStack = when (scriptletStack.tail) {
+                        is Cons.Empty -> Cons(emptyList(), scriptletStack.tail)
+                        else -> scriptletStack.tail
+                    }
                     stored.forEach {
                         delimiterStack = Cons(it, delimiterStack)
                     }
+                }
+
+                if (TokenCluster.Change.ResetCL in changes) {
+                    changes -= TokenCluster.Change.ResetCL
+                    resetContentLineKind(TokenCluster.ContentLineKind.Chars)
+                }
+                if (TokenCluster.Change.UnsetCL in changes) {
+                    changes -= TokenCluster.Change.UnsetCL
+                    contentLineKind = null
                 }
 
                 if (TokenCluster.Change.Reproc in changes) {
@@ -974,57 +1037,58 @@ class Lexer(
                 break
             }
 
-            end = before + tokenOrSourcePrefix.length
-            open = when (TokenCluster.Chunk.from(delimiterStack.headOrNull?.first)) {
-                TokenCluster.Chunk.MultiQuote,
+            end = before + updateToken.tokenText.length
+            open = when (TokenCluster.Chunk.from(delimiterStack.headOrNull)) {
                 TokenCluster.Chunk.Quote,
                 TokenCluster.Chunk.Backtick,
+                TokenCluster.Chunk.MarginChars,
                 -> OpenTokenType.STRING
+
+                TokenCluster.Chunk.MultiQuote -> when (contentLineKind) {
+                    null, TokenCluster.ContentLineKind.Chars -> OpenTokenType.STRING
+                    TokenCluster.ContentLineKind.StmtFragment -> OpenTokenType.NONE
+                }
 
                 TokenCluster.Chunk.UnicodeLeft,
                 -> OpenTokenType.UNICODE_RUN
 
                 TokenCluster.Chunk.NoElement,
                 TokenCluster.Chunk.DollarLeft,
-                TokenCluster.Chunk.LeftCurlyColon,
+                TokenCluster.Chunk.MarginStmtFragment,
                 TokenCluster.Chunk.LeftCurly,
                 -> OpenTokenType.NONE
 
                 // Stack only has openers.
-                TokenCluster.Chunk.ColonRightCurly,
                 TokenCluster.Chunk.RightCurly,
                 TokenCluster.Chunk.LineBreak,
                 TokenCluster.Chunk.Other,
                 -> error("$delimiterStack")
             }
-            debug { ". . after updating token clusters, open=$open, end=$end, DS=$delimiterStack" }
+            debug { ". . after updating token clusters, open=$open, end=$end, DS=$delimiterStack, SS=$scriptletStack" }
         }
     }
 
     /** Pop an element from the delimiter stack per the token-clustering algo. */
     private fun popDelimiterStack(pos: Int, synthesize: Boolean = false) {
-        val (poppedText) = delimiterStack.headOrNull ?: return
+        val popped = delimiterStack.headOrNull ?: return
+        val (_, poppedText, _) = popped
+        val stringContext = StringContext()
+        val stackBefore = delimiterStack
         delimiterStack = delimiterStack.tail
 
-        if (poppedText.endsWith(MQ_DELIMITER)) {
+        val poppingMq = poppedText.endsWith(MQ_DELIMITER)
+        if (poppingMq) {
             val stored = scriptletStack.head
             val position = Position(codeLocation, pos + offset, pos + offset)
             if (stored.isNotEmpty()) {
-                pendingTokens.add(
-                    TemperToken(
-                        position,
-                        tokenText = TokenCluster.Chunk.LeftCurlyColon.prefixText,
-                        tokenType = TokenType.Punctuation,
-                        mayBracket = true,
-                        synthetic = true,
-                    ),
-                )
-                for ((storedText, storedOpenPos) in stored) {
+                if (stringContext.isMultiQuote) { requireAllowedRegularToken(position) }
+                for (storedOpener in stored) {
+                    val closer = TokenCluster.closerFor(storedOpener)!!
                     pendingTokens.add(
                         TemperToken(
                             position,
-                            tokenText = TokenCluster.closerFor(storedText)!!,
-                            tokenType = TokenCluster.Chunk.from(storedText).tokenType!!,
+                            tokenText = closer.tokenText,
+                            tokenType = closer.tokenType,
                             mayBracket = true,
                             synthetic = true,
                         ),
@@ -1032,16 +1096,16 @@ class Lexer(
                     logSink.log(
                         Log.Error,
                         MessageTemplate.UnclosedBlock,
-                        storedOpenPos,
+                        storedOpener.pos,
                         values = listOf(position),
                     )
                 }
                 pendingTokens.add(
                     TemperToken(
                         position,
-                        tokenText = TokenCluster.Chunk.ColonRightCurly.prefixText,
-                        tokenType = TokenType.Punctuation,
-                        mayBracket = true,
+                        tokenText = "\n",
+                        tokenType = TokenType.Space,
+                        mayBracket = false,
                         synthetic = true,
                     ),
                 )
@@ -1050,39 +1114,97 @@ class Lexer(
 
         if (synthesize) {
             val position = Position(codeLocation, pos + offset, pos + offset)
-            val closer = TokenCluster.closerFor(poppedText)
+            val closer = TokenCluster.closerFor(popped)
             if (closer != null) {
-                val tokenType = TokenCluster.Chunk.from(closer).tokenType!!
+                var needsStmtContext = false
+                if (!poppingMq && contentLineKind != TokenCluster.ContentLineKind.StmtFragment) {
+                    // Insert a colon margin character if required for the thing we're synthesizing.
+                    // For example, we're synthesizing a '}' that matches a '{', not a '${'.
+                    var stackPtr = stackBefore
+                    while (stackPtr.isNotEmpty()) {
+                        val opener = TokenCluster.Chunk.from(popped)
+                        when (opener) {
+                            TokenCluster.Chunk.MultiQuote -> {
+                                needsStmtContext = true
+                                break
+                            }
+
+                            TokenCluster.Chunk.DollarLeft -> break
+                            else -> {}
+                        }
+                        stackPtr = stackPtr.tail
+                    }
+                }
+                if (needsStmtContext) {
+                    requireAllowedRegularToken(position)
+                }
                 pendingTokens.add(
                     TemperToken(
                         position,
-                        tokenText = closer,
-                        tokenType = tokenType,
+                        tokenText = closer.tokenText,
+                        tokenType = closer.tokenType,
                         mayBracket = true,
                         synthetic = true,
                     ),
                 )
             }
         }
+        if (poppingMq) {
+            resetContentLineKind(TokenCluster.ContentLineKind.StmtFragment)
+        }
     }
 
-    private inner class StringContext(skipFirst: Boolean = false) {
-        private val delim = when {
-            skipFirst -> delimiterStack.tail.head.first
-            else -> delimiterStack.head.first
+    /**
+     * When we exit a construct that nests inside a multi-quoted string,
+     * we might need to reset the content-line kind.
+     *
+     * For example, `${...}` are in char lines, and `"""` can embed in a statement fragment line.
+     */
+    private fun resetContentLineKind(probableKind: TokenCluster.ContentLineKind) {
+        contentLineKind =
+            if (delimiterStack.headOrNull?.let { TokenCluster.Chunk.from(it) } == TokenCluster.Chunk.MultiQuote) {
+                probableKind
+            } else {
+                null
+            }
+    }
+
+    private fun requireAllowedRegularToken(position: Position) {
+        if (contentLineKind != TokenCluster.ContentLineKind.StmtFragment) {
+            pendingTokens.add(
+                TemperToken(
+                    position,
+                    tokenText = TokenCluster.Chunk.MarginStmtFragment.prefixText,
+                    tokenType = TokenType.Margin,
+                    mayBracket = false,
+                    synthetic = true,
+                ),
+            )
+            contentLineKind = TokenCluster.ContentLineKind.StmtFragment
         }
-        val delimChar = delim.last()
-        val isMultiQuote = delim.endsWith(MQ_DELIMITER)
-        private val allowInterpolation = when (delimChar) {
+    }
+
+    private inner class StringContext {
+        private val leftDelimiter = run {
+            var stack = delimiterStack
+            // Look through margin and Unicode runs to delimiter
+            while (true) {
+                val top = stack.headOrNull ?: break
+                if (top.tokenType == TokenType.LeftDelimiter) { break }
+                stack = stack.tail
+            }
+            stack.headOrNull
+        }
+        val delimChar = leftDelimiter?.tokenText?.last()
+        val isMultiQuote = leftDelimiter?.tokenText?.endsWith(MQ_DELIMITER) == true
+        private val allowInterpolation get() = when (delimChar) {
             '"', '`' -> true
             else -> false
         }
-        private val allowScriptlets = isMultiQuote // alias for readability
-        val isRegexLike = delim == "/"
+        val isRegexLike get() = delimChar == '/'
 
         fun startingHole(c: Char) = end < sourceText.length && (
-            (allowInterpolation && c == '$' && sourceText[end] == '{') ||
-                (allowScriptlets && c == '{' && sourceText[end] == ':')
+            (allowInterpolation && c == '$' && sourceText[end] == '{')
             )
     }
 
@@ -1097,16 +1219,15 @@ class Lexer(
                         // If a '<' is adjacent to a '<' or '=', treat it as part of a
                         // larger shift or comparison operator, or close tag start marker.
                         val before = text[end - 1]
-                        val after = if (end + 1 < limit) { text[end - 1] } else { '\u0000' }
+                        val after = if (end + 1 < limit) { text[end + 1] } else { '\u0000' }
                         if (
-                            !(before == '=' || before == '<' || after == '=' || after == '<') &&
-                            isAngleBracketAt(end)
+                            !(before == '=' || before == '<' || after == '=' || after == '<')
                         ) {
                             return
                         }
                     }
                     C_GT -> {
-                        val stopBeforeGt = isAngleBracketAt(end) ||
+                        val stopBeforeGt = nOpenLeftAngleBrackets > 0 ||
                             run {
                                 // Do not extend arbitrary punctuation with '>' which would prevent
                                 // it from being recognized as an angle bracket above.
@@ -1202,7 +1323,7 @@ class Lexer(
                 currentTokenType = TokenType.Error
             }
         }
-        // Allow letter suffixes like 42L used to distinguish long vs float variants in C++.
+        // Allow letter suffixes like 42L used to distinguish long vs. float variants in C++.
         // We use findEndOfWord so that we don't get into a situation where a word suffix
         // character like question mark, prime, or bang is a punctuation character adjacent
         // to a number but not adjacent to a word.
@@ -1280,7 +1401,7 @@ class Lexer(
         atStartOfLine(end) && lang.matchSemilitCommentEntrance(sourceText, end) >= 0
 
     private fun findEndOfWord() {
-        // Assume caller has consumed the start character already.
+        // Assume the caller has consumed the start character already.
 
         val text = sourceText
         val limit = text.length
@@ -1362,42 +1483,30 @@ class Lexer(
         return -1
     }
 
-    // We need to treat < and > specially when they are used as angle brackets as in
-    //    : TypeName<TypeParameter>
-    // but not in compound punctuation operators like
-    //    << <<= <= >> >>= >= >>> >>>=
-    // or custom punctuation tokens
-    //    <=> => ->
-    //
-    // To do that, we lazily compute a bitset indicating angle brackets
-    // by trying to find which '<' have a corresponding '>' without an
-    // intervening "angle bracket interrupter".
-    private fun isAngleBracketAt(pos: Int): Boolean {
-        if (findingAngleBrackets) {
-            return false
-        }
-        if (sourceText[pos] == '<' && pos !in angleBracketMaskLeft until angleBracketMaskRight) {
-            // Create a lexer copy that starts lexing at pos using the current state.
-            val finder = copy(logSink = LogSink.devNull, copyPendingTokens = false)
-            finder.findingAngleBrackets = true
-            finder.end = pos
-            val (abmLeft: Int, abm: BooleanArray) = console.groupIf(DEBUG, "Classifying angle brackets") {
-                classifyAngleBrackets(finder)
-            }
-            angleBracketMaskLeft = abmLeft
-            angleBracketMaskRight = abmLeft + abm.size
-            angleBracketMask = abm
-        }
-        if (pos in angleBracketMaskLeft until angleBracketMaskRight) {
-            return angleBracketMask[pos - angleBracketMaskLeft]
-        }
-        return false
-    }
+    /**
+     * We need to treat < and > as special when they are used as angle brackets as in
+     *
+     *     : TypeName<TypeParameter>
+     *
+     * but not in compound punctuation operators like
+     *
+     *     << <<= <= >> >>= >= >>> >>>=
+     *
+     * or custom punctuation tokens
+     *
+     *     <=> => ->
+     *
+     * To do that, we rely on some conventions:
+     *
+     * - A `<` is an angle bracket if it follows another non-ignorable token without
+     *   an ignorable token in between.
+     * - A `>` is an angle bracket if the count of `<` that are angle brackets has
+     *   not been decremented by previous `>` to zero.
+     */
+    private var nOpenLeftAngleBrackets = 0
 
-    private var findingAngleBrackets = false
-    private var angleBracketMaskLeft = 0
-    private var angleBracketMaskRight = 0
-    private var angleBracketMask = emptyBooleanArray
+    internal val delimiterStackForDebug get() = delimiterStack
+    internal val delimiterStackSizeForDebug get() = delimiterStackForDebug.count()
 }
 
 /**

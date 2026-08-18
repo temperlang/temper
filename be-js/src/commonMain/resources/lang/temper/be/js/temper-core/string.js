@@ -3,7 +3,7 @@ import {
 } from "./core.js";
 
 /**
- * Implements extension method String::fromCodePoint
+ * Implements extension method core.type String.fromCodePoint()
  * @param {number} codePoint
  * @returns {string}
  */
@@ -13,7 +13,7 @@ export const stringFromCodePoint = (codePoint) => {
 };
 
 /**
- * Implements extension method String::fromCodePoints
+ * Implements extension method core.type String.fromCodePoints()
  * @param {number[]} codePoints
  * @returns {string}
  */
@@ -26,7 +26,7 @@ export const stringFromCodePoints = (codePoints) => {
 };
 
 /**
- * Implements extension method String::isEmpty
+ * Implements extension method core.type String.get isEmpty()
  * @param {string} s
  * @returns {boolean}
  */
@@ -35,7 +35,7 @@ export const stringIsEmpty = (s) => {
 };
 
 /**
- * Implements extension method String::split
+ * Implements extension method core.type String.split()
  * @param {string} s
  * @param {string | undefined} separator
  * @returns {string[]}
@@ -45,7 +45,7 @@ export const stringSplit = (s, separator) => {
 };
 
 /**
- * Implements extension method String::toFloat64
+ * Implements extension method core.type String.toFloat64()
  * @param {string} s
  * @returns {number}
  */
@@ -58,7 +58,7 @@ export const stringToFloat64 = (s) => {
 };
 
 /**
- * Implements extension method String::toInt32
+ * Implements extension method core.type String.toInt32()
  * @param {string} s
  * @param {number?} radix
  * @returns {number}
@@ -82,7 +82,7 @@ export const stringToInt32 = (s, radix) => {
 };
 
 /**
- * Implements extension method String::toInt64
+ * Implements extension method core.type String.toInt64()
  * @param {string} s
  * @param {number?} radix
  * @returns {number}
@@ -159,7 +159,7 @@ export const stringHasAtLeast = (s, begin, end, minCount) => {
  * @returns {number}
  */
 export const stringNext = (s, i) => {
-    let iNext = Math.min(s.length, i);
+    let iNext = Math.min(s.length, Math.max(0, i));
     let cp = s.codePointAt(i);
     if (cp !== undefined) {
         iNext += 1 + !!(cp >>> 16);
@@ -173,7 +173,7 @@ export const stringNext = (s, i) => {
  * @returns {number}
  */
 export const stringPrev = (s, i) => {
-    let iPrev = Math.min(s.length, i);
+    let iPrev = Math.min(s.length, Math.max(0, i));
     if (iPrev) {
         iPrev -= 1;
         if (iPrev && s.codePointAt(iPrev - 1) >>> 16) {

@@ -1,0 +1,4 @@
+let f(): Void {}
+let g(b: Boolean): Int {
+  if (b) { 42 } else { 0 }
+}

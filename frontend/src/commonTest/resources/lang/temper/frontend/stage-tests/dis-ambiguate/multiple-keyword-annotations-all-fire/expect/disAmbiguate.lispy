@@ -1,0 +1,30 @@
+[
+    "Block",
+    [
+        [
+            "Decl",
+            [
+                [
+                    "LeftName",
+                    "x"
+                ],
+                [
+                    "Value",
+                    "\\static: Symbol"
+                ],
+                [
+                    "Value",
+                    "void: Void"
+                ],
+                [
+                    "Value",
+                    "\\visibility: Symbol"
+                ],
+                [
+                    "Value",
+                    "\\public: Symbol"
+                ]
+            ]
+        ]
+    ]
+]

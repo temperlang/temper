@@ -287,12 +287,24 @@ private fun PatternFormatContext.formatUnwrapped(codeRange: CodeRange) {
 private fun PatternFormatContext.format(codeSet: CodeSet) {
     when (val adjusted = formatter.adjusted(codeSet)) {
         is CodeSet -> {
-            out.append('[')
-            if (adjusted.negated) {
-                out.append('^')
+            when {
+                adjusted.items.isEmpty() -> {
+                    // Many regex engines don't like empty code sets.
+                    when {
+                        adjusted.negated -> """[\s\S]"""
+                        else -> "(?:$.)"
+                    }.also { out.append(it) }
+                }
+                else -> {
+                    // Common non-empty case.
+                    out.append('[')
+                    if (adjusted.negated) {
+                        out.append('^')
+                    }
+                    adjusted.items.forEach { formatCodeSetItem(it) }
+                    out.append(']')
+                }
             }
-            adjusted.items.forEach { formatCodeSetItem(it) }
-            out.append(']')
         }
         else -> format(adjusted)
     }

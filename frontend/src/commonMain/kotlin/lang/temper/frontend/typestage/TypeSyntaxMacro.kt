@@ -299,9 +299,15 @@ internal fun typeSyntaxMacro(macroEnv: MacroEnvironment): PartialResult {
                                     val temporary = nameMaker.unusedTemporaryName(
                                         "typeof_${propertyNameSymbol.text}",
                                     )
-                                    val typeEdgeIndex = typeEdge.edgeIndex
+                                    val typeInsertionPoint = run {
+                                        var e = typeEdge!! // The target is not null
+                                        while (e.source != classBody) {
+                                            e = e.source!!.incoming!!
+                                        }
+                                        e.edgeIndex
+                                    }
                                     val simpleTypeExpr = RightNameLeaf(doc, typeTree.pos, temporary)
-                                    classBody.insert(typeEdgeIndex - 1) {
+                                    classBody.insert(typeInsertionPoint) {
                                         Decl(typeTree.pos) {
                                             Replant(simpleTypeExpr.copyLeft())
                                             V(vInitSymbol)
@@ -339,9 +345,9 @@ internal fun typeSyntaxMacro(macroEnv: MacroEnvironment): PartialResult {
                 } else {
                     initExpr = spliceOut(initSymbol)
                     if (initExpr == null) {
-                        // Some wrappers that connect implicits types to Kotlin implementations
+                        // Some wrappers that connect core types to Kotlin implementations
                         // of methods are initialized by bespoke code in DotHelper.
-                        val isAllowedUninitialized = macroEnv.isProcessingImplicits &&
+                        val isAllowedUninitialized = macroEnv.isProcessingCore &&
                             propertyNameSymbol.text == "content"
                         if (!isAllowedUninitialized) {
                             macroEnv.logSink.log(
@@ -381,7 +387,7 @@ internal fun typeSyntaxMacro(macroEnv: MacroEnvironment): PartialResult {
             val constructorName = nameMaker.parsedName(constructorSymbol.text)!!
             val constructorPos = classBody.pos.leftEdge
             val constructorReturnName = nameMaker.unusedSourceName(returnParsedName)
-            classBody.replace(classBody.size until classBody.size) {
+            classBody.insert(classBody.size) {
                 Decl(constructorPos, constructorName) {
                     V(vInitSymbol)
                     Fn {

@@ -1,0 +1,49 @@
+{
+    "Anon": {
+        "properties": [
+            {
+                "name": "_x",
+                "visibility": "private",
+                "abstract": false
+            },
+            {
+                "name": "x",
+                "abstract": true,
+                "visibility": "public",
+                "getter": "get.x",
+                "setter": "set.x"
+            }
+        ],
+        "methods": [
+            {
+                "name": "get.x",
+                "symbol": "x",
+                "visibility": "public",
+                "open": false,
+                "kind": "Getter"
+            },
+            {
+                "name": "set.x",
+                "symbol": "x",
+                "visibility": "public",
+                "open": false,
+                "kind": "Setter"
+            },
+            {
+                "name": "constructor",
+                "visibility": "public",
+                "open": false,
+                "kind": "Constructor"
+            }
+        ],
+        "supers": [
+            "AnyValue__0"
+        ]
+    },
+    "AnyValue": {
+        "abstract": true
+    },
+    "Void": {
+        "supers": []
+    }
+}

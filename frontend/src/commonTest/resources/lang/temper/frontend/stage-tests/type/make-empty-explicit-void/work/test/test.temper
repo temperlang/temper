@@ -1,0 +1,3 @@
+let f(): Void {}
+let g(): Void { f() }
+g();

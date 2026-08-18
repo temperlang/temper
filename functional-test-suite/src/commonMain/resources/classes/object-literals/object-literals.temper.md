@@ -10,9 +10,9 @@ We infer the constructor by matching up property names.
 
 Define local types, too. We'll import other types syntactically further down.
 
-    class Person(
+    export class Person( // export for exploring generated builders
       public name: String,
-      public age: Int,
+      public age: Int = -100, // mostly just for exploring be-rust codegen
     ) extends Stringable {
       public toString(): String {
 

@@ -1,0 +1,1 @@
+let { a as b as c as d } = f();

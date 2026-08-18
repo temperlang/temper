@@ -1,0 +1,3 @@
+  nym`@`(var, let x = 1);
+## Parse produces a desugar call for `+=`
+  desugarOperation (nym`+=`, x, 2);

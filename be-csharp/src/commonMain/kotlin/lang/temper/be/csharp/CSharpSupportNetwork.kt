@@ -243,8 +243,13 @@ object CSharpSupportNetwork : SupportNetwork {
 private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): SupportCode? {
     return when (builtinOperatorId) {
         BuiltinOperatorId.BooleanNegation -> BooleanNegationInliner
-        BuiltinOperatorId.BitwiseAnd -> bitwiseAnd
-        BuiltinOperatorId.BitwiseOr -> bitwiseOr
+        BuiltinOperatorId.BitwiseAnd32, BuiltinOperatorId.BitwiseAnd64 -> bitwiseAnd
+        BuiltinOperatorId.BitwiseOr32, BuiltinOperatorId.BitwiseOr64 -> bitwiseOr
+        BuiltinOperatorId.BitwiseShl32, BuiltinOperatorId.BitwiseShl64 -> bitwiseShl
+        BuiltinOperatorId.BitwiseShr32, BuiltinOperatorId.BitwiseShr64 -> bitwiseShr
+        BuiltinOperatorId.BitwiseShrUnsigned32, BuiltinOperatorId.BitwiseShrUnsigned64 -> bitwiseUShr
+        BuiltinOperatorId.BitwiseXor32, BuiltinOperatorId.BitwiseXor64 -> bitwiseXor
+        BuiltinOperatorId.BitwiseNegation32, BuiltinOperatorId.BitwiseNegation64 -> bitwiseNegation
         BuiltinOperatorId.IsNull -> IsNull
         BuiltinOperatorId.NotNull -> null
         BuiltinOperatorId.DivFltFlt -> divFltFlt
@@ -552,7 +557,7 @@ internal class Throwing(
         get() = listOf(member.type)
 }
 
-private object BooleanToString : CSharpInlineSupportCode("Boolean::toString") {
+private object BooleanToString : CSharpInlineSupportCode("core.type Boolean.toString()") {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<CSharp.Tree>>,
@@ -564,7 +569,7 @@ private object BooleanToString : CSharpInlineSupportCode("Boolean::toString") {
     }
 }
 
-private object GetConsole : CSharpInlineSupportCode("::getConsole") {
+private object GetConsole : CSharpInlineSupportCode("core.getConsole()") {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<CSharp.Tree>>,
@@ -626,14 +631,15 @@ private val leStrStr = StringComparison(BuiltinOperatorId.LeStrStr, CSharpOperat
 private val ltStrStr = StringComparison(BuiltinOperatorId.LtStrStr, CSharpOperator.LessThan)
 
 private val denseBitVectorConstructor =
-    ObjectCreation("DenseBitVector::constructor", StandardNames.systemCollectionsBitArray)
-private val denseBitVectorGet = StaticCall("DenseBitVector::get", StandardNames.temperCoreCoreBitGet)
-private val denseBitVectorSet = StaticCall("DenseBitVector::set", StandardNames.temperCoreCoreBitSet)
+    ObjectCreation("core.type DenseBitVector.constructor()", StandardNames.systemCollectionsBitArray)
+private val denseBitVectorGet = StaticCall("core.type DenseBitVector.get()", StandardNames.temperCoreCoreBitGet)
+private val denseBitVectorSet = StaticCall("core.type DenseBitVector.set()", StandardNames.temperCoreCoreBitSet)
 
-private val dequeAdd = MethodCall("Deque::add", "Enqueue")
-private val dequeConstructor = ObjectCreation("Deque::constructor", StandardNames.systemCollectionsGenericQueue)
-private val dequeRemoveFirst = MethodCall("Deque::removeFirst", "Dequeue")
-private val empty = StaticCall("empty", StandardNames.temperCoreCoreEmpty)
+private val dequeAdd = MethodCall("core.type Deque.add()", "Enqueue")
+private val dequeConstructor =
+    ObjectCreation("core.type Deque.constructor()", StandardNames.systemCollectionsGenericQueue)
+private val dequeRemoveFirst = MethodCall("core.type Deque.removeFirst()", "Dequeue")
+private val empty = StaticCall("core.empty()", StandardNames.temperCoreCoreEmpty)
 
 private class Float64Compare(
     baseName: String,
@@ -659,7 +665,8 @@ private class Float64Compare(
     }
 }
 
-private class Float64Math(name: String, backendName: String? = null) : CSharpInlineSupportCode("Float64::$name") {
+private class Float64Math(name: String, backendName: String? = null) :
+    CSharpInlineSupportCode("core.type Float64.$name()") {
     private val member = StandardNames.systemMath.member(backendName ?: name.camelToPascal())
 
     override fun inlineToTree(
@@ -684,36 +691,36 @@ private val float64Atan2 = Float64Math("atan2")
 private val float64Ceil = Float64Math("ceil", "Ceiling")
 private val float64Cos = Float64Math("cos")
 private val float64Cosh = Float64Math("cosh")
-private val float64E = StaticMember("Float64::e", StandardNames.systemMathE)
+private val float64E = StaticMember("core.type Float64.e", StandardNames.systemMathE)
 private val float64Exp = Float64Math("exp")
-private val float64Expm1 = StaticCall("Float64::expm1", StandardNames.temperCoreFloat64ExpM1)
+private val float64Expm1 = StaticCall("core.type Float64.expm1()", StandardNames.temperCoreFloat64ExpM1)
 private val float64Floor = Float64Math("floor")
 private val float64Log = Float64Math("log")
 private val float64Log10 = Float64Math("log10")
-private val float64Log1p = StaticCall("Float64::log1p", StandardNames.temperCoreFloat64LogP1)
+private val float64Log1p = StaticCall("core.type Float64.log1p()", StandardNames.temperCoreFloat64LogP1)
 private val float64Max = Float64Math("max")
 private val float64Min = Float64Math("min")
-private val float64Near = StaticCall("Float64::near", StandardNames.temperCoreFloat64Near)
-private val float64Pi = StaticMember("Float64::pi", StandardNames.systemMathPi)
+private val float64Near = StaticCall("core.type Float64.near()", StandardNames.temperCoreFloat64Near)
+private val float64Pi = StaticMember("core.type Float64.pi", StandardNames.systemMathPi)
 private val float64Round = Float64Math("round")
-private val float64Sign = StaticCall("Float64::sign", StandardNames.temperCoreFloat64Sign)
+private val float64Sign = StaticCall("core.type Float64.sign()", StandardNames.temperCoreFloat64Sign)
 private val float64Sin = Float64Math("sin")
 private val float64Sinh = Float64Math("sinh")
 private val float64Sqrt = Float64Math("sqrt")
 private val float64Tan = Float64Math("tan")
 private val float64Tanh = Float64Math("tanh")
-private val float64ToInt = StaticCall("Float64::toInt32", StandardNames.temperCoreFloat64ToInt)
-private val float64ToIntUnsafe = Cast(listOf("Float64::toInt32Unsafe"), StandardNames.keyInt)
-private val float64ToInt64 = StaticCall("Float64::toInt64", StandardNames.temperCoreFloat64ToInt64)
-private val float64ToInt64Unsafe = Cast(listOf("Float64::toInt64Unsafe"), StandardNames.keyLong)
-private val float64ToString = StaticCall("Float64::toString", StandardNames.temperCoreFloat64Format)
+private val float64ToInt = StaticCall("core.type Float64.toInt32()", StandardNames.temperCoreFloat64ToInt)
+private val float64ToIntUnsafe = Cast(listOf("core.type Float64.toInt32Unsafe()"), StandardNames.keyInt)
+private val float64ToInt64 = StaticCall("core.type Float64.toInt64()", StandardNames.temperCoreFloat64ToInt64)
+private val float64ToInt64Unsafe = Cast(listOf("core.type Float64.toInt64Unsafe()"), StandardNames.keyLong)
+private val float64ToString = StaticCall("core.type Float64.toString()", StandardNames.temperCoreFloat64Format)
 
-private val generatorNext = StaticCall("Generator::next", StandardNames.temperCoreCoreGeneratorNext)
-private val safeGeneratorNext = StaticCall("SafeGenerator::next", StandardNames.temperCoreCoreGeneratorNext)
+private val generatorNext = StaticCall("core.type Generator.next()", StandardNames.temperCoreCoreGeneratorNext)
+private val safeGeneratorNext = StaticCall("core.type SafeGenerator.next()", StandardNames.temperCoreCoreGeneratorNext)
 
 // Might be needed for `[Pure]` calls if we ever mark those. See https://stackoverflow.com/a/36757742/2748187
 // TODO Optimize away entirely where allowed?
-private val ignore = StaticCall("ignore", StandardNames.temperCoreCoreIgnore)
+private val ignore = StaticCall("core.ignore()", StandardNames.temperCoreCoreIgnore)
 
 private class Cast(
     connectedNames: List<String>,
@@ -787,18 +794,18 @@ private class WrapAsOptional(
     }
 }
 
-private val intToFloat64 = Cast(listOf("Int32::toFloat64"), StandardNames.keyDouble)
-private val intToInt64 = Cast(listOf("Int32::toInt64"), StandardNames.keyLong)
-private val intToString = StaticCall("Int32::toString", StandardNames.systemConvertToString)
-private val intMax = StaticCall("Int32::max", StandardNames.systemMathMax)
-private val intMin = StaticCall("Int32::min", StandardNames.systemMathMin)
-private val int64Max = StaticCall("Int64::max", StandardNames.systemMathMax)
-private val int64Min = StaticCall("Int64::min", StandardNames.systemMathMin)
-private val int64ToFloat64 = StaticCall(listOf("Int64::toFloat64"), StandardNames.temperCoreFloat64ToFloat64)
-private val int64ToFloat64Unsafe = Cast(listOf("Int64::toFloat64Unsafe"), StandardNames.keyDouble)
-private val int64ToInt32 = StaticCall(listOf("Int64::toInt32"), StandardNames.temperCoreCoreToInt)
-private val int64ToInt32Unsafe = Cast(listOf("Int64::toInt32Unsafe"), StandardNames.keyInt)
-private val int64ToString = StaticCall("Int64::toString", StandardNames.systemConvertToString)
+private val intToFloat64 = Cast(listOf("core.type Int32.toFloat64()"), StandardNames.keyDouble)
+private val intToInt64 = Cast(listOf("core.type Int32.toInt64()"), StandardNames.keyLong)
+private val intToString = StaticCall("core.type Int32.toString()", StandardNames.temperCoreConvertToString)
+private val intMax = StaticCall("core.type Int32.max()", StandardNames.systemMathMax)
+private val intMin = StaticCall("core.type Int32.min()", StandardNames.systemMathMin)
+private val int64Max = StaticCall("core.type Int64.max()", StandardNames.systemMathMax)
+private val int64Min = StaticCall("core.type Int64.min()", StandardNames.systemMathMin)
+private val int64ToFloat64 = StaticCall(listOf("core.type Int64.toFloat64()"), StandardNames.temperCoreFloat64ToFloat64)
+private val int64ToFloat64Unsafe = Cast(listOf("core.type Int64.toFloat64Unsafe()"), StandardNames.keyDouble)
+private val int64ToInt32 = StaticCall(listOf("core.type Int64.toInt32()"), StandardNames.temperCoreCoreToInt)
+private val int64ToInt32Unsafe = Cast(listOf("core.type Int64.toInt32Unsafe()"), StandardNames.keyInt)
+private val int64ToString = StaticCall("core.type Int64.toString()", StandardNames.temperCoreConvertToString)
 
 private val listedTypes = listOf("Listed", "List", "ListBuilder")
 
@@ -812,14 +819,15 @@ internal val listify = StaticCall(
     guessTypeArgs = true,
 )
 
-private val listBuilderAdd = StaticCall("ListBuilder::add", StandardNames.temperCoreListedAdd)
-private val listBuilderAddAll = StaticCall("ListBuilder::addAll", StandardNames.temperCoreListedAddAll)
-private val listBuilderRemoveLast = StaticCall("ListBuilder::removeLast", StandardNames.temperCoreListedRemoveLast)
-private val listBuilderReverse = StaticCall("ListBuilder::reverse", StandardNames.temperCoreListedReverse)
-private val listBuilderSort = StaticCall("ListBuilder::sort", StandardNames.temperCoreListedSort)
-private val listBuilderSplice = StaticCall("ListBuilder::splice", StandardNames.temperCoreListedSplice)
+private val listBuilderAdd = StaticCall("core.type ListBuilder.add()", StandardNames.temperCoreListedAdd)
+private val listBuilderAddAll = StaticCall("core.type ListBuilder.addAll()", StandardNames.temperCoreListedAddAll)
+private val listBuilderRemoveLast =
+    StaticCall("core.type ListBuilder.removeLast()", StandardNames.temperCoreListedRemoveLast)
+private val listBuilderReverse = StaticCall("core.type ListBuilder.reverse()", StandardNames.temperCoreListedReverse)
+private val listBuilderSort = StaticCall("core.type ListBuilder.sort()", StandardNames.temperCoreListedSort)
+private val listBuilderSplice = StaticCall("core.type ListBuilder.splice()", StandardNames.temperCoreListedSplice)
 
-private object ListedFilter : CSharpInlineSupportCode("Listed::filter") {
+private object ListedFilter : CSharpInlineSupportCode("core.type Listed.filter()") {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<CSharp.Tree>>,
@@ -830,8 +838,10 @@ private object ListedFilter : CSharpInlineSupportCode("Listed::filter") {
     }
 }
 
-private val listForEach = StaticCall("List::forEach", StandardNames.temperCoreListedForEach)
-private object ListedGet : CSharpInlineSupportCode(listedTypes.map { "$it::get" } + listOf("Mapped::get")) {
+private val listForEach = StaticCall("core.type List.forEach()", StandardNames.temperCoreListedForEach)
+private object ListedGet : CSharpInlineSupportCode(
+    listedTypes.map { "core.type $it.get()" } + listOf("core.type Mapped.get()"),
+) {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<CSharp.Tree>>,
@@ -846,9 +856,11 @@ private object ListedGet : CSharpInlineSupportCode(listedTypes.map { "$it::get" 
     }
 }
 
-private val listedGetOr = StaticCall("Listed::getOr", StandardNames.temperCoreListedGetOr)
+private val listedGetOr = StaticCall("core.type Listed.getOr()", StandardNames.temperCoreListedGetOr)
 
-private object ListedIsEmpty : CSharpInlineSupportCode(listOf("Deque", "Listed").map { "$it::isEmpty" }) {
+private object ListedIsEmpty : CSharpInlineSupportCode(
+    listOf("Deque", "Listed").map { "core.type $it.get isEmpty()" },
+) {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<CSharp.Tree>>,
@@ -869,10 +881,10 @@ private object ListedIsEmpty : CSharpInlineSupportCode(listOf("Deque", "Listed")
     }
 }
 
-private val listedJoin = StaticCall("Listed::join", StandardNames.temperCoreListedJoin)
-private val listedLength = PropertyAccess(listedTypes.map { "$it::length" }, "Count")
+private val listedJoin = StaticCall("core.type Listed.join()", StandardNames.temperCoreListedJoin)
+private val listedLength = PropertyAccess(listedTypes.map { "core.type $it.get length()" }, "Count")
 
-private object ListedMap : CSharpInlineSupportCode("Listed::map") {
+private object ListedMap : CSharpInlineSupportCode("core.type Listed.map()") {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<CSharp.Tree>>,
@@ -884,16 +896,17 @@ private object ListedMap : CSharpInlineSupportCode("Listed::map") {
 }
 
 private val listedReduce = StaticCall(
-    listOf("reduce", "reduceFrom").map { "Listed::$it" },
+    listOf("reduce", "reduceFrom").map { "core.type Listed.$it()" },
     StandardNames.systemLinqEnumerableAggregate,
 )
 
-private val listedSlice = StaticCall("Listed::slice", StandardNames.temperCoreListedSlice)
-private val listedSorted = StaticCall("Listed::sorted", StandardNames.temperCoreListedSorted)
-private val listedToList = StaticCall(listedTypes.map { "$it::toList" }, StandardNames.temperCoreListedToReadOnlyList)
+private val listedSlice = StaticCall("core.type Listed.slice()", StandardNames.temperCoreListedSlice)
+private val listedSorted = StaticCall("core.type Listed.sorted()", StandardNames.temperCoreListedSorted)
+private val listedToList =
+    StaticCall(listedTypes.map { "core.type $it.toList()" }, StandardNames.temperCoreListedToReadOnlyList)
 
 private val listedToListBuilder =
-    StaticCall(listedTypes.map { "$it::toListBuilder" }, StandardNames.systemLinqEnumerableToList)
+    StaticCall(listedTypes.map { "core.type $it.toListBuilder()" }, StandardNames.systemLinqEnumerableToList)
 
 private fun commonListedMethod(
     pos: Position,
@@ -914,56 +927,59 @@ private fun commonListedMethod(
 }
 
 private val mappedLength = StaticCall(
-    "Mapped::length",
+    "core.type Mapped.get length()",
     StandardNames.temperCoreMappedLength,
 )
 private val mappedGetOr = StaticCall(
-    "Mapped::getOr",
+    "core.type Mapped.getOr()",
     StandardNames.temperCoreMappedGetOr,
 )
 private val mappedHas = StaticCall(
-    "Mapped::has",
+    "core.type Mapped.has()",
     StandardNames.temperCoreMappedHas,
 )
 private val mappedKeys = StaticCall(
-    "Mapped::keys",
+    "core.type Mapped.keys()",
     StandardNames.temperCoreMappedKeys,
 )
 private val mappedValues = StaticCall(
-    "Mapped::values",
+    "core.type Mapped.values()",
     StandardNames.temperCoreMappedValues,
 )
 private val mappedToMap = StaticCall(
-    "Mapped::toMap",
+    "core.type Mapped.toMap()",
     StandardNames.temperCoreMappedToMap,
 )
 private val mappedToMapBuilder = StaticCall(
-    "Mapped::toMapBuilder",
+    "core.type Mapped.toMapBuilder()",
     StandardNames.temperCoreMappedToMapBuilder,
 )
 private val mappedToList = StaticCall(
-    "Mapped::toList",
+    "core.type Mapped.toList()",
     StandardNames.temperCoreMappedToList,
 )
 private val mappedToListBuilder = StaticCall(
-    "Mapped::toListBuilder",
+    "core.type Mapped.toListBuilder()",
     StandardNames.temperCoreMappedToListBuilder,
 )
 private val mappedToListWith = StaticCall(
-    "Mapped::toListWith",
+    "core.type Mapped.toListWith()",
     StandardNames.temperCoreMappedToListWith,
 )
 private val mappedToListBuilderWith = StaticCall(
-    "Mapped::toListBuilderWith",
+    "core.type Mapped.toListBuilderWith()",
     StandardNames.temperCoreMappedToListBuilderWith,
 )
-private val mappedForEach = StaticCall("Mapped::forEach", StandardNames.temperCoreMappedForEach)
-private val mapConstructor = StaticCall("Map::constructor", StandardNames.temperCoreMapConstructor)
-private val mapBuilderConstructor = ObjectCreation("MapBuilder::constructor", StandardNames.temperCoreOrderedDictionary)
-private val mapBuilderRemove = StaticCall("MapBuilder::remove", StandardNames.temperCoreCoreRemoveGet)
-private val pairConstructor = ObjectCreation("Pair::constructor", StandardNames.systemCollectionsGenericKeyValuePair)
+private val mappedForEach = StaticCall("core.type Mapped.forEach()", StandardNames.temperCoreMappedForEach)
+private val mapConstructor = StaticCall("core.type Map.constructor()", StandardNames.temperCoreMapConstructor)
+private val mapBuilderConstructor =
+    ObjectCreation("core.type MapBuilder.constructor()", StandardNames.temperCoreOrderedDictionary)
+private val mapBuilderRemove = StaticCall("core.type MapBuilder.remove()", StandardNames.temperCoreCoreRemoveGet)
+private val pairConstructor =
+    ObjectCreation("core.type Pair.constructor()", StandardNames.systemCollectionsGenericKeyValuePair)
 
-private object MapBuilderSet : CSharpInlineSupportCode(listOf("ListBuilder::set", "MapBuilder::set")) {
+private object MapBuilderSet :
+    CSharpInlineSupportCode(listOf("core.type ListBuilder.set()", "core.type MapBuilder.set()")) {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<CSharp.Tree>>,
@@ -1005,56 +1021,65 @@ private object StrCat : CSharpInlineSupportCode("StrCat") {
     }
 }
 
-private val stringFromCodePoint = StaticCall("String::fromCodePoint", StandardNames.temperCoreCoreStringFromCodePoint)
+private val stringFromCodePoint =
+    StaticCall("core.type String.fromCodePoint()", StandardNames.temperCoreCoreStringFromCodePoint)
 private val stringFromCodePoints =
-    StaticCall("String::fromCodePoints", StandardNames.temperCoreCoreStringFromCodePoints)
+    StaticCall("core.type String.fromCodePoints()", StandardNames.temperCoreCoreStringFromCodePoints)
 
 // Could also compare `.Length == 0`, but this isn't much more expensive, and people might expect it more.
 // See also: https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca1820
-private val stringIsEmpty = StaticCall("String::isEmpty", StandardNames.keyStringIsNullOrEmpty)
+private val stringIsEmpty = StaticCall("core.type String.get isEmpty()", StandardNames.keyStringIsNullOrEmpty)
 
-private val stringSplit = StaticCall("String::split", StandardNames.temperCoreCoreSplit)
-private val stringToFloat64 = StaticCall("String::toFloat64", StandardNames.temperCoreFloat64ToFloat64)
-private val stringToInt = StaticCall("String::toInt32", StandardNames.temperCoreCoreToInt)
-private val stringToInt64 = StaticCall("String::toInt64", StandardNames.temperCoreCoreToInt64)
+private val stringSplit = StaticCall("core.type String.split()", StandardNames.temperCoreCoreSplit)
+private val stringToFloat64 = StaticCall("core.type String.toFloat64()", StandardNames.temperCoreFloat64ToFloat64)
+private val stringToInt = StaticCall("core.type String.toInt32()", StandardNames.temperCoreCoreToInt)
+private val stringToInt64 = StaticCall("core.type String.toInt64()", StandardNames.temperCoreCoreToInt64)
 private val stringBuilderAppend = MethodCall(
-    "StringBuilder::append",
+    "core.type StringBuilder.append()",
     "Append",
 )
-private val stringBuilderToString = MethodCall(
-    "StringBuilder::toString",
-    "ToString",
-)
 private val stringBuilderAppendBetween = StaticCall(
-    "StringBuilder::appendBetween",
+    "core.type StringBuilder.appendBetween()",
     StandardNames.temperCoreStringUtilAppendBetween,
 )
 private val stringBuilderAppendCodePoint = StaticCall(
-    "StringBuilder::appendCodePoint",
+    "core.type StringBuilder.appendCodePoint()",
     StandardNames.temperCoreStringUtilAppendCodePoint,
 )
-private val stringGet = StaticCall("String::get", StandardNames.temperCoreStringUtilGet)
+private val stringBuilderClear = MethodCall(
+    "core.type StringBuilder.clear()",
+    "Clear",
+)
+private val stringBuilderEnd = PropertyAccess(
+    "core.type StringBuilder.get end()",
+    "Length",
+)
+private val stringBuilderToString = MethodCall(
+    "core.type StringBuilder.toString()",
+    "ToString",
+)
+private val stringGet = StaticCall("core.type String.get()", StandardNames.temperCoreStringUtilGet)
 private val stringCountBetween = StaticCall(
-    "String::countBetween",
+    "core.type String.countBetween()",
     StandardNames.temperCoreStringUtilCountBetween,
 )
-private val stringEnd = PropertyAccess("String::end", "Length")
+private val stringEnd = PropertyAccess("core.type String.get end()", "Length")
 private val stringForEach = StaticCall(
-    "String::forEach",
+    "core.type String.forEach()",
     StandardNames.temperCoreStringUtilForEach,
 )
 private val stringHasAtLeast = StaticCall(
-    "String::hasAtLeast",
+    "core.type String.hasAtLeast()",
     StandardNames.temperCoreStringUtilHasAtLeast,
 )
 private val stringHasIndex = StaticCall(
-    "String::hasIndex",
+    "core.type String.hasIndex()",
     StandardNames.temperCoreStringUtilHasIndex,
 )
-private val stringNext = StaticCall("String::next", StandardNames.temperCoreStringUtilNext)
-private val stringPrev = StaticCall("String::prev", StandardNames.temperCoreStringUtilPrev)
-private val stringStep = StaticCall("String::step", StandardNames.temperCoreStringUtilStep)
-private object StringBegin : CSharpInlineSupportCode("String::begin") {
+private val stringNext = StaticCall("core.type String.next()", StandardNames.temperCoreStringUtilNext)
+private val stringPrev = StaticCall("core.type String.prev()", StandardNames.temperCoreStringUtilPrev)
+private val stringStep = StaticCall("core.type String.step()", StandardNames.temperCoreStringUtilStep)
+private object StringBegin : CSharpInlineSupportCode("core.type String.begin") {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<CSharp.Tree>>,
@@ -1062,7 +1087,7 @@ private object StringBegin : CSharpInlineSupportCode("String::begin") {
         translator: CSharpTranslator,
     ): CSharp.Tree = CSharp.NumberLiteral(pos, 0)
 }
-private object StringIndexNone : CSharpInlineSupportCode("StringIndex::none") {
+private object StringIndexNone : CSharpInlineSupportCode("core.type StringIndex.none") {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<CSharp.Tree>>,
@@ -1071,11 +1096,11 @@ private object StringIndexNone : CSharpInlineSupportCode("StringIndex::none") {
     ): CSharp.Tree = CSharp.NumberLiteral(pos, -1)
 }
 private val stringSlice = StaticCall(
-    "String::slice",
+    "core.type String.slice()",
     StandardNames.temperCoreStringUtilSlice,
 )
 private val stringIndexOptionCompareTo = MethodCall(
-    listOf("StringIndexOption::compareTo"),
+    listOf("core.type StringIndexOption.compareTo()"),
     "CompareTo",
 )
 private val requireStringIndex = StaticCall(
@@ -1088,20 +1113,20 @@ private val requireNoStringIndex = StaticCall(
 )
 
 private val promiseBuilderBreakPromise = StaticCall(
-    "PromiseBuilder::breakPromise",
+    "core.type PromiseBuilder.breakPromise()",
     StandardNames.temperCoreAsyncBreakPromise,
 )
 private val promiseBuilderCompletePromise = StaticCall(
-    "PromiseBuilder::complete",
+    "core.type PromiseBuilder.complete()",
     StandardNames.temperCoreAsyncCompletePromise,
 )
 private val promiseBuilderGetPromise = PropertyAccess(
-    "PromiseBuilder::getPromise",
+    "core.type PromiseBuilder.get promise()",
     "Task",
 )
 
 private val stdNetSend = StaticCall(
-    "stdNetSend",
+    "std/net.sendRequest()",
     StandardNames.temperCoreNetCoreStdNetSend,
 )
 
@@ -1211,7 +1236,7 @@ private object EqGeneric : CSharpInlineSupportCode("EqGeneric", BuiltinOperatorI
     }
 }
 
-private object TestBail : CSharpInlineSupportCode("Test::bail") {
+private object TestBail : CSharpInlineSupportCode("std/testing.type Test.bail()") {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<CSharp.Tree>>,
@@ -1245,8 +1270,21 @@ private object TestBail : CSharpInlineSupportCode("Test::bail") {
     }
 }
 
-private val bitwiseAnd = CSharpInfixInline("BitwiseAnd", BuiltinOperatorId.BitwiseAnd, CSharpOperator.And)
-private val bitwiseOr = CSharpInfixInline("BitwiseOr", BuiltinOperatorId.BitwiseOr, CSharpOperator.InclusiveOr)
+private val bitwiseAnd = CSharpInfixInline("BitwiseAnd", BuiltinOperatorId.BitwiseAnd32, CSharpOperator.And)
+private val bitwiseOr = CSharpInfixInline("BitwiseOr", BuiltinOperatorId.BitwiseOr32, CSharpOperator.InclusiveOr)
+private val bitwiseShl = CSharpInfixInline("BitwiseShl", BuiltinOperatorId.BitwiseShl32, CSharpOperator.LeftShift)
+private val bitwiseShr = CSharpInfixInline("BitwiseShr", BuiltinOperatorId.BitwiseShr32, CSharpOperator.RightShift)
+private val bitwiseUShr = StaticCall(
+    "BitwiseUShr",
+    StandardNames.temperCoreCoreUShr,
+    builtinOperatorId = BuiltinOperatorId.BitwiseShrUnsigned32,
+)
+private val bitwiseXor = CSharpInfixInline("BitwiseXor", BuiltinOperatorId.BitwiseXor32, CSharpOperator.ExclusiveOr)
+private val bitwiseNegation = CSharpPrefixInline(
+    "BitwiseNegation",
+    BuiltinOperatorId.BitwiseNegation32,
+    CSharpOperator.BitwiseComplement,
+)
 private val cmpGeneric = // Does this need to do something similar to EqGeneric?
     StaticCall("CmpGeneric", StandardNames.temperCoreCoreCompare, builtinOperatorId = BuiltinOperatorId.CmpGeneric)
 private val divFltFlt = CSharpInfixInline("DivFltFlt", BuiltinOperatorId.DivFltFlt, CSharpOperator.Division)
@@ -1302,31 +1340,39 @@ private object IsNull : CSharpInlineSupportCode("isNull", BuiltinOperatorId.IsNu
     ) = translator.translateIsNull(pos, arguments[0].expr as CSharp.Expression, arguments[0].type)
 }
 
-private val regexCompileFormatted =
-    StaticCall("Regex::compileFormatted", StandardNames.temperStdRegexRegexSupport.member("CompileFormatted"))
+private val regexCompileFormatted = StaticCall(
+    "std/regex.type RegexFormatter.regexCompileFormatted()",
+    StandardNames.temperStdRegexRegexSupport.member("CompileFormatted"),
+)
 private val regexCompiledFind =
-    StaticCall("Regex::compiledFind", StandardNames.temperStdRegexRegexSupport.member("CompiledFind"))
+    StaticCall("std/regex.type Regex.compiledFind()", StandardNames.temperStdRegexRegexSupport.member("CompiledFind"))
 private val regexCompiledFound =
-    StaticCall("Regex::compiledFound", StandardNames.temperStdRegexRegexSupport.member("CompiledFound"))
-private val regexCompiledReplace =
-    StaticCall("Regex::compiledReplace", StandardNames.temperStdRegexRegexSupport.member("CompiledReplace"))
+    StaticCall("std/regex.type Regex.compiledFound()", StandardNames.temperStdRegexRegexSupport.member("CompiledFound"))
+private val regexCompiledReplace = StaticCall(
+    "std/regex.type Regex.compiledReplace()",
+    StandardNames.temperStdRegexRegexSupport.member("CompiledReplace"),
+)
 private val regexCompiledSplit =
-    StaticCall("Regex::compiledSplit", StandardNames.temperStdRegexRegexSupport.member("CompiledSplit"))
-private val regexFormatterAdjustCodeSet =
-    StaticCall("RegexFormatter::adjustCodeSet", StandardNames.temperStdRegexRegexSupport.member("AdjustCodeSet"))
-private val regexFormatterPushCodeTo =
-    StaticCall("RegexFormatter::pushCodeTo", StandardNames.temperStdRegexRegexSupport.member("PushCodeTo"))
+    StaticCall("std/regex.type Regex.compiledSplit()", StandardNames.temperStdRegexRegexSupport.member("CompiledSplit"))
+private val regexFormatterAdjustCodeSet = StaticCall(
+    "std/regex.type RegexFormatter.adjustCodeSet()",
+    StandardNames.temperStdRegexRegexSupport.member("AdjustCodeSet"),
+)
+private val regexFormatterPushCodeTo = StaticCall(
+    "std/regex.type RegexFormatter.pushCodeTo()",
+    StandardNames.temperStdRegexRegexSupport.member("PushCodeTo"),
+)
 
-private val dateConstructor = ObjectCreation("Date::constructor", StandardNames.systemDateTime)
-private val dateGetDay = PropertyAccess("Date::getDay", "Day")
+private val dateConstructor = ObjectCreation("std/temporal.type Date.constructor()", StandardNames.systemDateTime)
+private val dateGetDay = PropertyAccess("std/temporal.type Date.day", "Day")
 private val dateGetDayOfWeek = StaticCall(
-    "Date::getDayOfWeek",
+    "std/temporal.type Date.get dayOfWeek()",
     StandardNames.temperStdTemporalTemporalSupportIsoWeekdayNum,
 )
-private val dateGetMonth = PropertyAccess("Date::getMonth", "Month")
-private val dateGetYear = PropertyAccess("Date::getYear", "Year")
+private val dateGetMonth = PropertyAccess("std/temporal.type Date.month", "Month")
+private val dateGetYear = PropertyAccess("std/temporal.type Date.year", "Year")
 private val dateToString = MethodCall(
-    baseName = "Date::toString",
+    baseName = "std/temporal.type Date.toString()",
     memberNameId = "ToString",
     builtinOperatorId = null,
 ) { pos ->
@@ -1334,10 +1380,11 @@ private val dateToString = MethodCall(
     listOf(CSharp.StringLiteral(pos, "yyyy-MM-dd"))
 }
 private val dateFromIsoString =
-    StaticCall("Date::fromIsoString", StandardNames.temperStdTemporalTemporalSupportFromIsoString)
-private val dateToday = StaticCall("Date::today", StandardNames.temperStdTemporalTemporalSupportToday)
+    StaticCall("std/temporal.type Date.fromIsoString()", StandardNames.temperStdTemporalTemporalSupportFromIsoString)
+private val dateToday =
+    StaticCall("std/temporal.type Date.today()", StandardNames.temperStdTemporalTemporalSupportToday)
 private val dateYearsBetween =
-    StaticCall("Date::yearsBetween", StandardNames.temperStdTemporalTemporalSupportYearsBetween)
+    StaticCall("std/temporal.type Date.yearsBetween()", StandardNames.temperStdTemporalTemporalSupportYearsBetween)
 
 private val launchGeneratorAsync =
     StaticCall("async", StandardNames.temperCoreAsync.member("LaunchGeneratorAsync"))
@@ -1459,6 +1506,8 @@ private val connectedReferences = listOf(
     stringBuilderAppend,
     stringBuilderAppendBetween,
     stringBuilderAppendCodePoint,
+    stringBuilderClear,
+    stringBuilderEnd,
     stringBuilderToString,
     stringCountBetween,
     stringEnd,
@@ -1482,15 +1531,16 @@ private val connectedReferences = listOf(
 ).flatMap { ref -> ref.connectedNames.map { it to ref } }.toMap()
 
 private val connectedTypes = mapOf<String, Pair<AbstractTypeName, ((List<Type2>) -> List<Type2>)?>>(
-    "Date" to (StandardNames.systemDateTime to null),
-    "Empty" to (StandardNames.systemTuple to { listOf(WellKnownTypes.anyValueType2.withNullity(Nullity.OrNull)) }),
+    "std/temporal.type Date" to (StandardNames.systemDateTime to null),
+    "core.type Empty" to
+        (StandardNames.systemTuple to { listOf(WellKnownTypes.anyValueType2.withNullity(Nullity.OrNull)) }),
     // Task<T>
-    "Promise" to (StandardNames.systemThreadingTasksTask to null),
+    "core.type Promise" to (StandardNames.systemThreadingTasksTask to null),
     // TaskCompletionSource<T>
-    "PromiseBuilder" to (StandardNames.systemThreadingTasksTaskCompletionSource to null),
-    "StringIndexOption" to (StandardNames.keyInt to null),
-    "NetResponse" to (StandardNames.temperCoreNetINetResponse to null),
-    "NoStringIndex" to (StandardNames.keyInt to null),
-    "StringIndex" to (StandardNames.keyInt to null),
-    "StringBuilder" to (StandardNames.systemTextStringBuilder to null),
+    "core.type PromiseBuilder" to (StandardNames.systemThreadingTasksTaskCompletionSource to null),
+    "core.type StringIndexOption" to (StandardNames.keyInt to null),
+    "std/net.type NetResponse" to (StandardNames.temperCoreNetINetResponse to null),
+    "core.type NoStringIndex" to (StandardNames.keyInt to null),
+    "core.type StringIndex" to (StandardNames.keyInt to null),
+    "core.type StringBuilder" to (StandardNames.systemTextStringBuilder to null),
 )

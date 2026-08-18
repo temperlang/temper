@@ -11,16 +11,15 @@ import lang.temper.be.names.NameSelection
 import lang.temper.be.py.PyDottedIdentifier.Companion.dotted
 import lang.temper.be.py.helper.MypySpecifics
 import lang.temper.be.py.helper.PythonSpecifics
-import lang.temper.be.tmpl.LibraryRootContext
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
+import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.common.MimeType
 import lang.temper.common.console
 import lang.temper.common.jsonEscaper
 import lang.temper.common.partitionNotNull
 import lang.temper.common.toStringViaBuilder
-import lang.temper.frontend.Module
 import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
 import lang.temper.fs.loadResource
@@ -39,6 +38,8 @@ import lang.temper.log.FilePathSegment
 import lang.temper.log.Position
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
+import lang.temper.log.last
+import lang.temper.log.resolveFile
 import lang.temper.log.unknownPos
 import lang.temper.name.BackendId
 import lang.temper.name.BackendMeta
@@ -277,6 +278,7 @@ class PyBackend private constructor(
             tentativeOutputPathFor = {
                 pyPathForModuleLocation(it.loc as ModuleName, pyLibraryNames)
             },
+            withTentative = { injectSuperCallMethods(it) },
         )
     }
 
@@ -301,6 +303,17 @@ class PyBackend private constructor(
         linkModules(topModule)
 
         val outputFileSpecifications = mutableListOf<OutputFileSpecification>()
+        rawBackendFiles@ for (file in rawBackendFiles) {
+            // Special __connected__.py file gets inlined.
+            file.key.last().fullName == "__connected__.py" && continue@rawBackendFiles
+            // Others get copied.
+            // TODO Make sure things get into good places.
+            MetadataFileSpecification(
+                path = file.key,
+                mimeType = mimeType,
+                content = file.value,
+            ).also { outputFileSpecifications.add(it) }
+        }
         if (config.makeMetaDataFile || anyTests) {
             val dependencies = buildList {
                 val importDeps = dependencyNames.map { depName ->
@@ -357,11 +370,6 @@ class PyBackend private constructor(
 
     override fun selectNames(): List<NameSelection> = pyNames!!.selectedNames()
 
-    override fun libraryRootContext(libraryConfiguration: LibraryConfiguration) = LibraryRootContext(
-        inRoot = libraryConfiguration.libraryRoot,
-        outRoot = safeForImportFilePath(dirPath(libraryConfiguration.libraryName.text)),
-    )
-
     private fun pyPathForModuleLocation(
         moduleName: ModuleName,
         pyLibraryNames: Map<FilePath, FilePathSegment>,
@@ -397,7 +405,8 @@ class PyBackend private constructor(
 
         val translations = modules.flatMap { tmpLModule ->
             val trans = this@PyBackend.translator(names, finished.genre)
-            val programs = trans.translate(tmpLModule)
+            val connectedPath = tmpLModule.codeLocation.codeLocation.sourceFile.resolveFile("__connected__.py")
+            val programs = trans.translate(tmpLModule, connectedSource = rawBackendFiles[connectedPath])
             for (program in programs) {
                 val mod = top.setProgram(program)
                 mod.saveSupport(trans, program.dependencyCategory)

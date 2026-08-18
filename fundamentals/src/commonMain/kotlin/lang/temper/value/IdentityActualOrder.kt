@@ -477,12 +477,11 @@ internal fun applicationOrderForActualsSlow(
 private fun mentionsFunctionType(type: Type2?): Boolean =
     type != null && functionalInterfaceSymbol in type.definition.metadata
 
-/** Returns an actuals list of the form needed by [applicationOrderForActuals] */
-fun actualsListFromTree(callTree: CallTree): List<Either<Symbol, TFunction>?> = buildList {
-    var i = callTree.firstArgumentIndex
-    val n = callTree.size
+fun actualsListFromTrees(inputTrees: List<Tree>): List<Either<Symbol, TFunction>?> = buildList {
+    var i = 0
+    val n = inputTrees.size
     while (i < n) {
-        val child = callTree.child(i)
+        val child = inputTrees[i]
         i += 1
         if (i < n) {
             val symbol = child.symbolContained
@@ -498,4 +497,10 @@ fun actualsListFromTree(callTree: CallTree): List<Either<Symbol, TFunction>?> = 
             add(null)
         }
     }
+}
+
+/** Returns an actuals list of the form needed by [applicationOrderForActuals] */
+fun actualsListFromTree(callTree: CallTree): List<Either<Symbol, TFunction>?> {
+    val trees = callTree.children.subList(callTree.firstArgumentIndex, callTree.size)
+    return actualsListFromTrees(trees)
 }

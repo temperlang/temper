@@ -10,34 +10,45 @@ import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLOperator
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.aType
+import lang.temper.be.tmpl.hasSplitSupers
 import lang.temper.be.tmpl.isNullValue
+import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapParameters
 import lang.temper.be.tmpl.mutableCaptures
 import lang.temper.be.tmpl.orInvalid
+import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.referencedNames
 import lang.temper.be.tmpl.splitConstructorBody
 import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.common.compatRemoveLast
+import lang.temper.common.subListToEnd
 import lang.temper.frontend.ModuleNamingContext
+import lang.temper.frontend.typestage.findOverrides
 import lang.temper.interp.importExport.STANDARD_LIBRARY_NAME
 import lang.temper.lexer.withTemperAwareExtension
 import lang.temper.library.LibraryConfigurations
 import lang.temper.log.FilePath
+import lang.temper.log.LogSink
 import lang.temper.log.Position
 import lang.temper.log.last
+import lang.temper.log.resolveDir
 import lang.temper.name.BuiltinName
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ExportedName
-import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.ModularName
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
 import lang.temper.name.ResolvedNameMaker
 import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
+import lang.temper.type.MethodKind
+import lang.temper.type.MethodShape
+import lang.temper.type.PropertyShape
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
+import lang.temper.type.VisibleMemberShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.canOnlyBeNull
 import lang.temper.type2.DefinedNonNullType
@@ -47,11 +58,13 @@ import lang.temper.type2.NonNullType
 import lang.temper.type2.Nullity
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
+import lang.temper.type2.TypeContext2
 import lang.temper.type2.TypeParamRef
 import lang.temper.type2.ValueFormalKind
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
+import lang.temper.value.DeclTree
 import lang.temper.value.TBoolean
 import lang.temper.value.TClass
 import lang.temper.value.TClosureRecord
@@ -85,11 +98,15 @@ class RustTranslator(
         libraryConfigurations.currentLibraryConfiguration.libraryName,
         DescriptorsForDeclarations.Key(RustBackend.Factory),
     )?.nameToDescriptor ?: mapOf()
+    private var anyConnected = false
     private var closureCount = 0
+    private val builderItems = mutableListOf<Rust.Item>()
     private val decls = mutableMapOf<ResolvedName, DeclInfo>()
-    private var insideMutableType = false
     private val failVars = mutableSetOf<ResolvedName>()
+    private var insideMutableType = false
+    internal val isRoot = module.codeLocation.codeLocation.relativePath().segments.isEmpty()
     private val functionContextStack = mutableListOf<FunctionContext>()
+    private val logSink = LogSink.devNull // TODO what?
     private val loopLabels = mutableListOf<Rust.Id?>()
     private val moduleInits = mutableListOf<Rust.Statement>()
     private val moduleItems = mutableListOf<Rust.Item>()
@@ -98,6 +115,7 @@ class RustTranslator(
     }
     private val testItems = mutableListOf<Rust.Item>()
     private val traitImports = mutableSetOf<Rust.Path>()
+    private val typeContext = TypeContext2()
 
     fun translateModule(): Backend.TranslatedFileSpecification {
         // Preprocess tops.
@@ -128,16 +146,15 @@ class RustTranslator(
         )
         // Build source file.
         val relPath = module.codeLocation.codeLocation.relativePath()
-        val isRoot = relPath.segments.isEmpty()
         return Backend.TranslatedFileSpecification(
             path = makeSrcFilePath(relPath.withTemperAwareExtension("")),
             content = Rust.SourceFile(
                 pos,
-                attrs = listOf(allowWarnings(module.pos)),
+                attrs = allowWarnings(module.pos),
                 items = buildList {
                     // Declare submodules, except for root that needs to declare in lib file.
                     if (!isRoot) {
-                        declareSubmods(pos, modKids)
+                        declareSubmods(pos, allModKids())
                     }
                     // Provide needed imports.
                     // We only need temper-core traits sometimes, but just keep simple for now.
@@ -167,6 +184,15 @@ class RustTranslator(
                     // Init and declare our own things.
                     add(init)
                     addAll(moduleItems)
+                    // Builders.
+                    if (builderItems.isNotEmpty()) {
+                        builderItems.add(Rust.Use(pos, "super::*".toId(pos)).toItem())
+                        Rust.Module(
+                            pos,
+                            id = "builders".toId(pos), // TODO Uniqueness?
+                            block = Rust.Block(pos, statements = builderItems),
+                        ).toItem(pub = Rust.VisibilityPub(pos)).also { add(it) }
+                    }
                     // Tests.
                     if (testItems.isNotEmpty()) {
                         testItems.add(Rust.Use(pos, "super::*".toId(pos)).toItem())
@@ -184,6 +210,19 @@ class RustTranslator(
             ),
             mimeType = RustBackend.mimeType,
         )
+    }
+
+    /** Includes both those passed in and any that might need added from translation. */
+    internal fun allModKids(): Collection<FilePath> {
+        return when {
+            anyConnected -> buildList {
+                addAll(modKids)
+                // We track _connected here because of how we do lib/mod on root, and because
+                // we want to put the root connected files in an expected place.
+                add(module.codeLocation.codeLocation.relativePath().resolveDir("_connected"))
+            }
+            else -> modKids
+        }
     }
 
     private fun buildInit(): Rust.Block {
@@ -247,7 +286,7 @@ class RustTranslator(
     }
 
     private fun preprocessTopLevels() {
-        // First gather decls.
+        // First gather value decls, but not functions, etc.
         decls@ for (topLevel in module.topLevels) {
             val decl = (topLevel as? TmpL.ModuleLevelDeclaration) ?: continue@decls
             decl.isConsole() && continue@decls
@@ -281,6 +320,17 @@ class RustTranslator(
             decl.topper || continue@decls
             buildTopperGetter(decl).also { moduleItems.add(it) }
         }
+        // Now also pre-track other top-level decls like functions.
+        // If we use a separate pre-naming stage for be-rust, this might matter less.
+        decls@ for (topLevel in module.topLevels) {
+            when (topLevel) {
+                is TmpL.ModuleFunctionDeclaration -> {
+                    decls[topLevel.name.name] = DeclInfo(topLevel, typeFrom = topLevel.sig)
+                }
+                // So far, we don't need other pre-decls, but this could expand as needed.
+                else -> {}
+            }
+        }
     }
 
     private fun processTopLevel(topLevel: TmpL.TopLevel) {
@@ -301,12 +351,12 @@ class RustTranslator(
         returnType: Type2,
     ) {
         // TODO Share this exclusion logic with Java & Js.
-        // If only `this` plus up to 1 more, don't bother with builder. TODO Instead checked named/optional?
+        // If only `this` plus up to 1 more, don't bother with builder.
         fn.parameters.parameters.count { it.name != fn.parameters.thisName } <= 1 && return
         // And for now, skip those with rest parameters. TODO Extract to list value?
         fn.parameters.restParameter != null && return
         // Build the builder.
-        // Here we make `WhateverBuilder` for requireds and/or `WhateverBuilderOptions` structs for optionals.
+        // Here we make `WhateverBuilder` for requireds and/or `WhateverOptions` structs for optionals.
         // Alternatively, could make a Java-style builder, which is common in Rust, but it takes less advantage of
         // standard static checking that we get with pub struct fields.
         val pos = fn.pos
@@ -320,7 +370,7 @@ class RustTranslator(
         val builderId = "${targetId.outName.outputNameText}Builder".toId(targetId.pos)
         val optionsId = "${targetId.outName.outputNameText}Options".toId(targetId.pos)
         // Figure out if we have requireds and/or optionals.
-        // We need to separate these in Rust because requireds often can't Default.
+        // We need to separate these in Rust because requireds often can't default.
         // We could get fancy about which requireds can, but that also becomes cognitive effort for users.
         val rustParams = translateParameters(
             fn.parameters,
@@ -335,110 +385,121 @@ class RustTranslator(
         }.let { (requireds, optionals) ->
             requireds.map { it.second } to optionals.map { it.second }
         }
+        val self = "self".toKeyId(pos)
+        val selfish = "selfish".toKeyId(pos)
         fun paramsToStructAdded(
             id: Rust.Id,
             params: List<Rust.FunctionParamOption>,
             attrs: List<Rust.AttrOuter> = listOf(),
+            fieldPub: Rust.VisibilityPub? = null,
         ): List<Rust.GenericParam> {
             // Work with Rust nodes rather than TmpL nodes because we already have generics handy in Rust form.
             // Any simple type name matching a formal has to be a reference to that formal.
             val usedTypes = params.findAllSimpleTypeNames()
-            val filteredGenerics = generics.filter { generic ->
-                val genericId = when (generic) {
-                    is Rust.Id -> generic
-                    is Rust.TypeParam -> generic.id
-                    else -> error(generic)
-                }.outName.outputNameText
-                genericId in usedTypes
-            }.deepCopy()
+            val filteredGenerics = generics.filter { it.lastIdText() in usedTypes }.deepCopy()
             Rust.Struct(
                 pos = pos,
                 id = id,
                 generics = filteredGenerics,
                 fields = params.map { param ->
                     param as Rust.FunctionParam
-                    Rust.StructField(param.pos, pub = pub, id = param.pattern as Rust.Id, type = param.type)
+                    Rust.StructField(param.pos, pub = fieldPub, id = param.pattern as Rust.Id, type = param.type)
                 },
-            ).also { moduleItems.add(it.toItem(attrs = attrs, pub = pub)) }
+            ).also { builderItems.add(it.toItem(attrs = attrs, pub = pub)) }
             return filteredGenerics
         }
-        val self = "self".toKeyId(pos)
         fun callNew(params: List<Rust.FunctionParamOption>) = Rust.Call(
             pos,
             callee = targetId.deepCopy().extendWith("new"),
             args = params.map { self.deepCopy().member(it.toId(), notMethod = true) },
         )
+        // Requireds struct first to get its generics.
+        // Adding new requireds is a breaking change anyway, so presume this is also fixed in Rust.
+        val attrs = listOf(buildDerive(pos, listOf("Clone")))
+        val requiredGenerics = paramsToStructAdded(builderId, requireds, attrs = attrs, fieldPub = pub)
         val rustReturnType = translateType(returnType, fn.returnType.pos)
+        // Optionals struct and impl next. We at least want optionals generics before requireds impl.
         val optionalGenerics = when {
             optionals.isEmpty() -> listOf()
             else -> {
                 // Manage optionals independently so they can default more easily.
-                val attrs = listOf(buildDerive(pos, listOf("Clone", "Default")))
-                val optionalGenerics = paramsToStructAdded(optionsId, optionals, attrs = attrs)
-                if (requireds.isEmpty()) {
-                    // If someone adds requireds later, then that's already breaking, so this is fine here.
-                    Rust.Impl(
-                        pos,
-                        generics = optionalGenerics.deepCopy(),
-                        trait = null,
-                        type = optionsId.makeTypeRef(optionalGenerics),
-                        items = buildList {
-                            Rust.Function(
-                                pos,
-                                id = "build".toId(pos),
-                                // Pass self by move on purpose in these, so we can avoid cloning.
-                                // We make builder types Clone in case anyone badly wants copies on their own.
-                                params = listOf(self),
-                                returnType = rustReturnType,
-                                block = Rust.Block(pos, result = callNew(optionals)),
-                            ).also { add(it.toItem(pub = pub)) }
-                        },
-                    ).also { moduleItems.add(it.toItem()) }
+                val attrs = listOf(buildDerive(pos, listOf("Clone")))
+                val selfishParam = Rust.FunctionParam(pos, selfish.deepCopy(), builderId.makeTypeRef(requiredGenerics))
+                val selfishPlusOptionals = buildList {
+                    add(selfishParam)
+                    addAll(optionals)
                 }
-                optionalGenerics
-            }
-        }
-        if (requireds.isNotEmpty()) {
-            // Adding new requireds is a breaking change anyway, so presume this is also fixed in Rust.
-            val attrs = listOf(buildDerive(pos, listOf("Clone")))
-            val filteredGenerics = paramsToStructAdded(builderId, requireds, attrs = attrs)
-            // Adding new optionals *isn't* breaking, but adding a new related "options" field to requireds would be.
-            // So make a builder independent of optionals, and another that acknowledges them if present.
-            Rust.Impl(
-                pos,
-                generics = filteredGenerics.deepCopy(),
-                trait = null,
-                type = builderId.makeTypeRef(filteredGenerics),
-                items = buildList {
-                    Rust.Function(
-                        pos,
-                        id = "build".toId(pos),
-                        params = listOf(self),
-                        returnType = rustReturnType,
-                        block = Rust.Block(
-                            pos,
-                            result = when {
-                                // Just call the constructor if we only have requireds.
-                                optionals.isEmpty() -> callNew(requireds)
-                                // Delegate to the with-optionals builder.
-                                else -> self.deepCopy().methodCall(
-                                    key = "build_with",
-                                    args = listOf(makePath(pos, "std", "default", "Default", "default").call()),
-                                )
-                            },
-                        ),
-                    ).also { add(it.toItem(pub = pub)) }
-                    if (optionals.isNotEmpty()) {
-                        val optionsArg = "options".toId(pos)
+                val optionalGenerics = paramsToStructAdded(optionsId, selfishPlusOptionals, attrs = attrs)
+                Rust.Impl(
+                    pos,
+                    generics = optionalGenerics.deepCopy(),
+                    trait = null,
+                    type = optionsId.makeTypeRef(optionalGenerics),
+                    items = buildList {
                         Rust.Function(
                             pos,
-                            id = "build_with".toId(pos),
-                            generics = optionalGenerics.deepCopy(),
-                            params = listOf(
-                                self.deepCopy(),
-                                Rust.FunctionParam(pos, optionsArg, optionsId.makeTypeRef(optionalGenerics)),
+                            id = "new".toId(pos),
+                            params = listOf(selfishParam.deepCopy()),
+                            returnType = "Self".toKeyId(pos),
+                            block = Rust.Block(
+                                pos,
+                                result = Rust.StructExpr(
+                                    pos,
+                                    id = "Self".toKeyId(pos),
+                                    members = buildList {
+                                        add(Rust.StructExprField(pos, selfish.deepCopy(), null))
+                                        for (param in optionals) {
+                                            param is Rust.FunctionParam
+                                            add(Rust.StructExprField(pos, param.toId(), expr = "None".toId(pos)))
+                                        }
+                                    },
+                                ),
                             ),
-                            returnType = rustReturnType,
+                        ).also { add(it.toItem(pub = pub.deepCopy())) }
+                        for (param in optionals) {
+                            param as Rust.FunctionParam
+                            // Undo optional for setter method params.
+                            val type = (param.type as? Rust.GenericType)?.args?.first() as Rust.Type?
+                            val paramId = param.pattern as Rust.Id
+                            Rust.Function(
+                                pos = param.pos,
+                                id = paramId.deepCopy(),
+                                params = listOf(
+                                    Rust.FunctionParam(
+                                        pos = param.pos,
+                                        pattern = Rust.IdPattern(pos, Rust.IdPatternMut(pos), self.deepCopy()),
+                                        type = null,
+                                    ),
+                                    Rust.FunctionParam(
+                                        pos = param.pos,
+                                        pattern = paramId.deepCopy(),
+                                        type = type,
+                                    ),
+                                ),
+                                returnType = "Self".toKeyId(param.pos),
+                                block = Rust.Block(
+                                    pos,
+                                    statements = Rust.ExprStatement(
+                                        param.pos,
+                                        Rust.Operation(
+                                            param.pos,
+                                            self.deepCopy().member(paramId.deepCopy(), notMethod = true),
+                                            Rust.Operator(pos, RustOperator.Assign),
+                                            paramId.deepCopy().wrapSome(),
+                                        ),
+                                    ).let { listOf(it) },
+                                    result = self.deepCopy(),
+                                ),
+                            ).also { add(it.toItem(pub = pub.deepCopy())) }
+                        }
+                        Rust.Function(
+                            pos,
+                            id = "build".toId(pos),
+                            generics = generics.except(optionalGenerics),
+                            // Pass self by move on purpose in these, so we can avoid cloning.
+                            // We make builder types Clone in case anyone badly wants copies on their own.
+                            params = listOf(self.deepCopy()),
+                            returnType = rustReturnType.deepCopy(),
                             block = Rust.Block(
                                 pos,
                                 result = Rust.Call(
@@ -447,24 +508,74 @@ class RustTranslator(
                                     args = buildList {
                                         // Different subjects for each case here.
                                         for (param in requireds) {
-                                            add(self.deepCopy().member(param.toId(), notMethod = true))
+                                            val selfish = self.deepCopy().member("selfish")
+                                            add(selfish.member(param.toId(), notMethod = true))
                                         }
                                         for (param in optionals) {
-                                            add(optionsArg.deepCopy().member(param.toId(), notMethod = true))
+                                            add(self.deepCopy().member(param.toId(), notMethod = true))
                                         }
                                     },
                                 ),
                             ),
-                        ).also { add(it.toItem(pub = pub)) }
-                    }
-                },
-            ).also { moduleItems.add(it.toItem()) }
+                        ).also { add(it.toItem(pub = pub.deepCopy())) }
+                    },
+                ).also { builderItems.add(it.toItem()) }
+                optionalGenerics
+            }
         }
+        // Requireds impl.
+        // Adding new optionals *isn't* breaking, but adding a new related "options" field to requireds would be.
+        // So make a builder independent of optionals, and another that acknowledges them if present.
+        Rust.Impl(
+            pos,
+            generics = requiredGenerics.deepCopy(),
+            trait = null,
+            type = builderId.makeTypeRef(requiredGenerics),
+            items = buildList {
+                Rust.Function(
+                    pos,
+                    id = "build".toId(pos),
+                    generics = generics.except(requiredGenerics),
+                    params = listOf(self),
+                    returnType = rustReturnType,
+                    block = Rust.Block(
+                        pos,
+                        result = when {
+                            // Just call the constructor if we only have requireds.
+                            optionals.isEmpty() -> callNew(requireds)
+                            // Or else delegate to the optionals builder.
+                            else -> self.deepCopy().methodCall("options").methodCall("build")
+                        },
+                    ),
+                ).also { add(it.toItem(pub = pub)) }
+                if (optionals.isNotEmpty()) {
+                    Rust.Function(
+                        pos,
+                        id = "options".toId(pos),
+                        generics = optionalGenerics.except(requiredGenerics),
+                        params = listOf(self.deepCopy()),
+                        returnType = optionsId.makeTypeRef(optionalGenerics),
+                        block = Rust.Block(
+                            pos,
+                            result = Rust.Call(
+                                pos,
+                                callee = optionsId.deepCopy().extendWith("new"),
+                                args = listOf(self.deepCopy()),
+                            ),
+                        ),
+                    ).also { add(it.toItem(pub = pub)) }
+                }
+            },
+        ).also { builderItems.add(it.toItem()) }
     }
 
     private fun processModuleFunctionDeclaration(decl: TmpL.ModuleFunctionDeclaration) {
-        decls.computeIfAbsent(decl.name.name) { DeclInfo(decl, typeFrom = decl.sig) }
-        moduleItems.add(translateFunctionDeclarationOrMethod(decl))
+        val connectedBlock = when {
+            decl.metadata.any { it.key.symbol == connectedSymbol } && !module.isStdLib ->
+                translateConnectedBody(decl)
+            else -> null
+        }
+        moduleItems.add(translateFunctionDeclarationOrMethod(decl, block = connectedBlock))
     }
 
     private fun processModuleInitBlock(block: TmpL.ModuleInitBlock) {
@@ -644,20 +755,6 @@ class RustTranslator(
                 ),
             ),
         ).toItem(attrs = listOf(buildDerive(pos, listOf("Clone"))), pub = pub).also { moduleItems.add(it) }
-        // Gather up instance methods by name so we can coordinate with supertypes as needed.
-        val instanceMethods = decl.members.filterIsInstance<TmpL.InstanceMethod>().filter { member ->
-            member is TmpL.NormalMethod || member is TmpL.GetterOrSetter
-        }.associateBy { member ->
-            when (member) {
-                is TmpL.NormalMethod -> member.name.name
-                // We sometimes get names like "getwhatever" rather than "get.whatever", so be explicit.
-                is TmpL.GetterOrSetter -> when (member) {
-                    is TmpL.Getter -> "get"
-                    is TmpL.Setter -> "set"
-                }.let { BuiltinName("$it.${member.dotName}") } // changed to "nym`...`" below
-                else -> error("unexpected")
-            }.displayName
-        }
         // We also need the impl itself for public class members working on the wrapper.
         val typeRef = id.makeTypeRef(generics)
         // And we need to know if we're implementing a shallowly mut type when getting internal property values.
@@ -668,29 +765,60 @@ class RustTranslator(
                 generics = generics.deepCopy(),
                 trait = null,
                 type = typeRef,
-                items = decl.members.flatMap { member ->
-                    translateMethodLike(member, generics = generics, type = typeRef, typePub = pub)
+                items = buildList {
+                    for (member in decl.members) {
+                        addAll(translateMethodLike(member, generics = generics, type = typeRef, typePub = pub))
+                    }
+                    for (inherited in decl.inherited) {
+                        addAll(translateMethodSuperCall(decl, inherited))
+                    }
                 },
             ).toItem().also { moduleItems.add(it) }
         } finally {
             // Because type defs are always top level, we don't need a stack of indicators.
             insideMutableType = false
         }
-        // Also all trait impls, remembering for AnyValue macro use.
+        // Implement traits, including AnyValue.
+        val supTypes = implTraits(pos, decl, typeRef, generics)
+        Rust.Call(
+            pos,
+            callee = "temper_core".toKeyId(pos).extendWith("impl_any_value_trait!"),
+            args = listOf(typeRef.deepCopy(), Rust.Array(pos, supTypes.deepCopy())),
+            where = whereForAnyValueImpl(pos, generics),
+        ).also { moduleItems.add(Rust.ExprStatement(pos, it).toItem()) }
+    }
+
+    /** Returns translated supertype refs. */
+    private fun implTraits(
+        pos: Position,
+        decl: TmpL.TypeDeclaration,
+        typeRef: Rust.Type,
+        generics: List<Rust.GenericParam>,
+    ): MutableList<Rust.Type> {
         val supTypes = mutableListOf<Rust.Type>()
         val selfParams = listOf(Rust.RefType(pos, type = "self".toKeyId(pos)))
         val handledSups = mutableSetOf<ModularName>()
-        sups@ for ((subShape, sup) in decl.typeShape.allInterfaces()) {
+        // Gather up instance methods by name so we can coordinate with supertypes as needed.
+        val instanceMethods = associateInstanceMethods(decl)
+        val isInterface = decl.kind == TmpL.TypeDeclarationKind.Interface
+        sups@ for ((subShape, sup) in decl.typeShape.allInterfaces(allowStart = true)) {
             // Only handle type shapes, and only unique ones.
             val supShape = (sup.definition as? TypeShape) ?: continue@sups
+            val supDecl = supShape.stayLeaf?.incoming?.source as? DeclTree
             // For sealed enums, this picks an arbitrary winner. TODO Allow diamonds and/or check against them earlier.
             handledSups.add(supShape.name) || continue@sups
             // Handle this one.
             val supName = translateIdFromNameAsPath(pos, supShape.name, style = NameStyle.Camel)
-            val supType = translateTypeNominalApplyAnyBindings(sup, supName)
-            val supTraitType = translateTypeNominalApplyAnyBindings(sup, supName.suffixed(TRAIT_NAME_SUFFIX))
+            val missedBindings = when {
+                subShape === supShape -> generics.map { it.toArg() }
+                else -> null
+            }
+            val supType = translateTypeNominalApplyAnyBindings(sup, supName, bindings = missedBindings)
+            val supTraitName = supName.suffixed(TRAIT_NAME_SUFFIX)
+            val supTraitType = translateTypeNominalApplyAnyBindings(sup, supTraitName, bindings = missedBindings)
             supTypes.add(translateTypeNominalApplyAnyBindings(sup, supName)) // without trait suffix
             val callClone = "self".toKeyId(pos).wrapClone()
+            val selfArg = "self".toKeyId(pos).member("0", notMethod = true).deref().ref()
             val supImpl = Rust.Impl(
                 pos,
                 generics = generics.deepCopy(),
@@ -698,7 +826,7 @@ class RustTranslator(
                 type = typeRef.deepCopy(),
                 items = buildList {
                     // Some need as_enum.
-                    if (supShape.sealedSubTypes != null) {
+                    if (supDecl?.parts?.metadataSymbolMap?.contains(sealedTypeSymbol) == true) {
                         // The sub shape must be a member of the sealed sub types if the Temper was legal.
                         // TODO Qualified path, not just name.
                         val enumId = supName.suffixed(ENUM_NAME_SUFFIX)
@@ -708,24 +836,33 @@ class RustTranslator(
                             // TODO Only if all sealed subtypes are public?
                             id = AS_ENUM_NAME.toId(pos),
                             params = selfParams.deepCopy(),
-                            returnType = enumId,
+                            returnType = enumId.makeTypeRef(generics),
                             block = Rust.Block(
                                 pos,
-                                result = Rust.Call(
-                                    pos,
-                                    callee = "$enumId::$subName".toId(pos),
-                                    args = callClone.deepCopy().let { clone ->
-                                        when {
-                                            subShape.isInterface() ->
-                                                clone.box(wanted = subShape, translator = this@RustTranslator)
-                                            else -> clone
-                                        }
-                                    }.let { listOf(it) },
-                                ),
+                                result = when {
+                                    isInterface -> Rust.Call(
+                                        pos,
+                                        callee = supTraitName.deepCopy().extendWith(AS_ENUM_NAME),
+                                        args = listOf(selfArg.deepCopy()),
+                                    )
+                                    else -> Rust.Call(
+                                        pos,
+                                        callee = "$enumId::$subName".toId(pos),
+                                        args = callClone.deepCopy().let { clone ->
+                                            when {
+                                                subShape.isInterface() ->
+                                                    clone.box(wanted = subShape, translator = this@RustTranslator)
+
+                                                else -> clone
+                                            }
+                                        }.let { listOf(it) },
+                                    )
+                                },
                             ),
                         ).also { add(it.toItem()) }
                     }
                     // All need clone_boxed.
+                    // TODO If for interface, forward to underlying trait.
                     Rust.Function(
                         pos,
                         id = CLONE_BOXED_NAME.toId(pos),
@@ -733,40 +870,79 @@ class RustTranslator(
                         returnType = supType,
                         block = Rust.Block(
                             pos,
-                            result = Rust.Call(
-                                pos,
-                                callee = supName.deepCopy().extendWith("new"),
-                                args = listOf(callClone.deepCopy()),
-                            ),
+                            result = when {
+                                isInterface -> Rust.Call(
+                                    pos,
+                                    callee = supTraitName.deepCopy().extendWith(CLONE_BOXED_NAME),
+                                    args = listOf(selfArg.deepCopy()),
+                                )
+                                else -> Rust.Call(
+                                    pos,
+                                    callee = supName.deepCopy().extendWith("new"),
+                                    args = listOf(callClone.deepCopy()),
+                                )
+                            },
                         ),
                     ).also { add(it.toItem()) }
                     // Then call the struct impl for each overridden trait method.
-                    methods@ for (supMethod in supShape.methods) {
-                        val method = instanceMethods[supMethod.name.displayName] ?: continue@methods
-                        // Only one expected there, but meh.
-                        addAll(buildForwarder(method, returnType = supMethod.descriptor.orInvalid.returnType2))
+                    for (supMethod in supShape.methods) {
+                        maybeAddTraitForwarder(
+                            pos,
+                            decl = decl,
+                            instanceMethods = instanceMethods,
+                            methodKind = supMethod.methodKind,
+                            methodName = supMethod.name.displayName,
+                            returnType = supMethod.descriptor.orInvalid.returnType2,
+                            superShape = supMethod,
+                        )
                     }
                     // Properties also, because they only sometimes align with methods.
                     for (supProperty in supShape.properties) {
                         if (supProperty.getter == null) {
-                            val getterName = BuiltinName("get.${supProperty.symbol.text}").displayName
-                            instanceMethods[getterName]?.let { addAll(buildForwarder(it)) }
+                            maybeAddTraitForwarder(
+                                pos,
+                                decl = decl,
+                                instanceMethods = instanceMethods,
+                                methodKind = MethodKind.Getter,
+                                methodName = BuiltinName("get.${supProperty.symbol.text}").displayName,
+                                superShape = supProperty,
+                            )
                         }
                         if (supProperty.setter == null && supProperty.hasSetter) {
-                            val setterName = BuiltinName("set.${supProperty.symbol.text}").displayName
-                            instanceMethods[setterName]?.let { addAll(buildForwarder(it)) }
+                            maybeAddTraitForwarder(
+                                pos,
+                                decl = decl,
+                                instanceMethods = instanceMethods,
+                                methodKind = MethodKind.Setter,
+                                methodName = BuiltinName("set.${supProperty.symbol.text}").displayName,
+                                superShape = supProperty,
+                            )
                         }
                     }
                 },
             )
             moduleItems.add(supImpl.toItem())
         }
-        // Implement AnyValue.
-        Rust.Call(
-            pos,
-            callee = "temper_core".toKeyId(pos).extendWith("impl_any_value_trait!"),
-            args = listOf(typeRef.deepCopy(), Rust.Array(pos, supTypes.deepCopy())),
-        ).also { moduleItems.add(Rust.ExprStatement(pos, it).toItem()) }
+        return supTypes
+    }
+
+    private fun MutableList<Rust.Item>.maybeAddTraitForwarder(
+        pos: Position,
+        decl: TmpL.TypeDeclaration,
+        instanceMethods: Map<String, TmpL.InstanceMethod>,
+        methodKind: MethodKind,
+        methodName: String,
+        superShape: VisibleMemberShape,
+        returnType: Type2? = null,
+    ) {
+        val isInterface = decl.kind == TmpL.TypeDeclarationKind.Interface
+        when {
+            isInterface -> buildForwarderFromInterfaceToTrait(pos, superShape, methodKind)
+            else -> when (val method = instanceMethods[methodName]) {
+                null -> buildForwarderFromClassToTrait(pos, decl, superShape, methodKind)
+                else -> buildForwarder(method, returnType)
+            }
+        }.also { addAll(it) } // only one expected here, but meh
     }
 
     private fun processTypeDeclarationInterface(decl: TmpL.TypeDeclaration) {
@@ -816,7 +992,7 @@ class RustTranslator(
                         // TODO Only if all sealed subtypes are public?
                         id = AS_ENUM_NAME.toId(pos),
                         params = selfParams.deepCopy(),
-                        returnType = enumId.deepCopy(),
+                        returnType = enumId.makeTypeRef(generics),
                         block = null,
                     ).also { add(it.toItem()) }
                 }
@@ -890,12 +1066,14 @@ class RustTranslator(
                 }
             },
         ).toItem().also { moduleItems.add(it) }
-        // Implement AnyValue.
+        // Implement traits including AnyValue.
         val typeRef = id.makeTypeRef(generics)
+        implTraits(pos, decl, typeRef, generics)
         Rust.Call(
             pos,
             callee = "temper_core".toKeyId(pos).extendWith("impl_any_value_trait_for_interface!"),
             args = listOf(typeRef.deepCopy()),
+            where = whereForAnyValueImpl(pos, generics),
         ).also { moduleItems.add(Rust.ExprStatement(pos, it).toItem()) }
         // Implement Deref for all our wrapped traits.
         Rust.Impl(
@@ -939,34 +1117,37 @@ class RustTranslator(
         return bounds
     }
 
-    private fun buildBoundsCommon(pos: Position): List<Rust.TypeParamBound> =
-        listOf("Clone", SEND_NAME, SYNC_NAME, STATIC_LIFETIME).map { it.toId(pos) }
+    private fun buildBoundsCommon(pos: Position): List<Rust.TypeParamBound> {
+        return commonTypeBounds.map { it.toId(pos) }
+    }
 
     internal fun buildCastCallee(
         pos: Position,
         found: Description,
         wanted: Description,
-    ): Rust.Path = when {
-        found.definition() == WellKnownTypes.noStringIndexTypeDefinition &&
-            wanted.definition() == WellKnownTypes.stringIndexOptionTypeDefinition
-        -> "temper_core".toKeyId(pos).extendWith(listOf("string", "cast_none_as_index_option"))
-
-        found.definition() == WellKnownTypes.stringIndexTypeDefinition &&
-            wanted.definition() == WellKnownTypes.stringIndexOptionTypeDefinition -> makePath(pos, "Some")
-
-        found.definition() == WellKnownTypes.stringIndexOptionTypeDefinition &&
-            wanted.definition() == WellKnownTypes.stringIndexTypeDefinition
-        -> "temper_core".toKeyId(pos).extendWith(listOf("string", "cast_as_index"))
-
-        found.definition() == WellKnownTypes.stringIndexOptionTypeDefinition &&
-            wanted.definition() == WellKnownTypes.noStringIndexTypeDefinition
-        -> "temper_core".toKeyId(pos).extendWith(listOf("string", "cast_as_no_index"))
-
-        else -> {
-            val typeSegment = Rust.GenericArgs(pos, listOf(translateType(wanted.type!!, pos)))
-            // TODO Some way to make fewer intermediate lists?
-            "temper_core".toKeyId(pos).extendWith("cast").extendWith(listOf(typeSegment))
+    ): Rust.Path = when (found.definition()) {
+        WellKnownTypes.listTypeDefinition, WellKnownTypes.listBuilderTypeDefinition -> when (wanted.definition()) {
+            WellKnownTypes.listedTypeDefinition -> TO_LISTED_TO_LISTED_NAME.toId(pos)
+            else -> null
         }
+        WellKnownTypes.noStringIndexTypeDefinition -> when (wanted.definition()) {
+            WellKnownTypes.stringIndexOptionTypeDefinition -> "cast_none_as_index_option"
+            else -> null
+        }?.let { "temper_core".toKeyId(pos).extendWith(listOf("string", it)) }
+        WellKnownTypes.stringIndexTypeDefinition -> when (wanted.definition()) {
+            WellKnownTypes.stringIndexOptionTypeDefinition -> makePath(pos, "Some")
+            else -> null
+        }
+        WellKnownTypes.stringIndexOptionTypeDefinition -> when (wanted.definition()) {
+            WellKnownTypes.stringIndexTypeDefinition -> "cast_as_index"
+            WellKnownTypes.noStringIndexTypeDefinition -> "cast_as_no_index"
+            else -> null
+        }?.let { "temper_core".toKeyId(pos).extendWith(listOf("string", it)) }
+        else -> null
+    } ?: run {
+        val typeSegment = Rust.GenericArgs(pos, listOf(translateType(wanted.type!!, pos)))
+        // TODO Some way to make fewer intermediate lists?
+        "temper_core".toKeyId(pos).extendWith("cast").extendWith(listOf(typeSegment))
     }
 
     private fun buildDerive(pos: Position, deriveArgs: List<String>) = Rust.AttrOuter(
@@ -1006,6 +1187,158 @@ class RustTranslator(
             },
         )
         return translateMethodLike(method, block = block, forTrait = true, returnType = effectiveReturnType)
+    }
+
+    private fun buildForwarderFromClassToTrait(
+        pos: Position,
+        decl: TmpL.TypeDeclaration,
+        superShape: VisibleMemberShape,
+        methodKind: MethodKind,
+    ): List<Rust.Item> = run {
+        // We're here because this class has no matching member, so walk its supertypes to match the super method.
+        // The method we inherit closest might be on a different branch.
+        val overrides = findOverrides(decl.typeShape, superShape, typeContext, logSink)
+        val override = overrides.find overrides@{ override ->
+            when (val foundMember = override.superTypeMember) {
+                is MethodShape -> !foundMember.isPureVirtual
+                is PropertyShape -> when (methodKind) {
+                    MethodKind.Getter -> foundMember.getter
+                    MethodKind.Setter -> foundMember.setter
+                    else -> return@overrides false
+                }.let { foundName ->
+                    // Interfaces can only provide property implementations with methods, so look at those.
+                    foundMember.enclosingType.methods.any { method ->
+                        !method.isPureVirtual && method.methodKind == methodKind && method.name == foundName
+                    }
+                }
+                else -> false
+            }
+        }
+        // Having selected an override, forward to it with simple self.
+        val targetType = override?.superTypeMember?.enclosingType
+        if (targetType == superShape.enclosingType) {
+            // Just let the trait handle this one directly. Self-call here is infinite recursion.
+            return listOf()
+        }
+        buildForwarderFromClassToTrait(pos, targetType, superShape, methodKind)
+    }
+
+    private fun buildForwarderFromClassToTrait(
+        pos: Position,
+        targetType: TypeShape?,
+        superShape: VisibleMemberShape,
+        methodKind: MethodKind,
+    ): List<Rust.Item> = run {
+        buildForwarderToTrait(pos, targetType, superShape, methodKind) result@{ traitType, methodId, argIds ->
+            Rust.Call(
+                pos,
+                callee = traitType.extendWith(methodId.deepCopy()),
+                args = buildList {
+                    add("self".toKeyId(pos))
+                    addAll(argIds)
+                },
+            )
+        }
+    }
+
+    /**
+     * Build a forwarder from a trait wrapper to a trait method that *isn't*
+     * overridden in the current trait. We need this to handle methods for
+     * which we have only frontend descriptions, not tmpl.
+     */
+    private fun buildForwarderFromInterfaceToTrait(
+        pos: Position,
+        shape: VisibleMemberShape,
+        methodKind: MethodKind,
+    ): List<Rust.Item> = run {
+        // From trait wrapper to trait, just forward the call with the unwrapped innards.
+        buildForwarderToTrait(pos, shape.enclosingType, shape, methodKind) result@{ traitType, methodId, argIds ->
+            Rust.Call(
+                pos,
+                callee = traitType.extendWith(methodId.deepCopy()),
+                args = buildList {
+                    add("self".toKeyId(pos).member("0", notMethod = true).deref().ref())
+                    addAll(argIds)
+                },
+            )
+        }
+    }
+
+    private fun buildForwarderToTrait(
+        pos: Position,
+        targetType: TypeShape?,
+        shape: VisibleMemberShape,
+        methodKind: MethodKind,
+        /** Trait type, method id, and arg ids, all ready to be used. */
+        buildResult: (Rust.Path, Rust.Id, List<Rust.Id>) -> Rust.Expr?,
+    ): List<Rust.Item> = run {
+        val selfParam = Rust.RefType(pos, "self".toKeyId(pos))
+        val traitType = targetType?.let {
+            (translateTypeDefinition(targetType, pos) as? Rust.Path)?.suffixed(TRAIT_NAME_SUFFIX)
+        }
+        when (methodKind) {
+            MethodKind.Normal -> {
+                val method = shape as MethodShape
+                val methodId = translateIdFromName(pos, method.name as ResolvedName, NameStyle.Snake)
+                val sig = method.descriptor ?: return listOf()
+                // We don't have param names here, so invent some.
+                val argIds = (1..<sig.requiredInputTypes.size + sig.optionalInputTypes.size).map { arg ->
+                    "arg$arg".toId(pos)
+                }
+                Rust.Function(
+                    pos,
+                    id = methodId.deepCopy(),
+                    params = buildList {
+                        add(selfParam)
+                        var index = 0
+                        for (paramType in sig.requiredInputTypes.subListToEnd(1)) {
+                            val paramName = argIds[index++].deepCopy()
+                            val translatedType = translateType(paramType, pos)
+                            add(Rust.FunctionParam(pos, paramName, translatedType))
+                        }
+                        for (paramType in sig.optionalInputTypes) {
+                            val paramName = argIds[index++].deepCopy()
+                            val translatedType = translateType(paramType, pos).option()
+                            add(Rust.FunctionParam(pos, paramName, translatedType))
+                        }
+                    },
+                    returnType = method.descriptor?.let { translateType(it.returnType2, pos = pos) },
+                    block = Rust.Block(pos, result = traitType?.let { buildResult(it, methodId, argIds) }),
+                )
+            }
+            MethodKind.Getter -> {
+                val methodId = shape.symbol.text.camelToSnake().toId(pos)
+                val returnType = when (val descriptor = shape.descriptor) {
+                    is Signature2 -> descriptor.returnType2
+                    is Type2 -> descriptor
+                    else -> null
+                }?.let { translateType(it, pos = pos) }
+                Rust.Function(
+                    pos,
+                    id = methodId.deepCopy(),
+                    params = listOf(selfParam),
+                    returnType = returnType,
+                    block = Rust.Block(pos, result = traitType?.let { buildResult(it, methodId, listOf()) }),
+                )
+            }
+            MethodKind.Setter -> {
+                val methodId = "set_${shape.symbol.text.camelToSnake()}".toId(pos)
+                val propertyType = when (val descriptor = shape.descriptor) {
+                    is Signature2 -> descriptor.requiredInputTypes.last()
+                    is Type2 -> descriptor
+                    else -> null
+                }?.let { translateType(it, pos = pos) }
+                // We don't have param names here, so invent one.
+                val value = "value".toId(pos)
+                Rust.Function(
+                    pos,
+                    id = methodId,
+                    params = listOf(selfParam, Rust.FunctionParam(pos, value.deepCopy(), propertyType)),
+                    block = Rust.Block(pos, result = traitType?.let { buildResult(it, methodId, listOf(value)) }),
+                )
+            }
+            else -> return listOf()
+        }.let { listOf(it.toItem()) }
     }
 
     private fun buildGenerics(typeParameters: TmpL.ATypeParameters) =
@@ -1146,13 +1479,16 @@ class RustTranslator(
         val enumId = "$id$ENUM_NAME_SUFFIX".toId(decl.name.pos)
         val pos = decl.pos
         val pub = chooseVisibility(decl)
+        val generics = buildGenerics(decl.typeParameters)
         // Enum type.
         Rust.Enum(
             pos,
             id = enumId,
-            items = decl.typeShape.sealedSubTypes!!.map { sub ->
+            generics = generics,
+            items = (decl.typeShape.sealedSubTypes ?: listOf()).map { sub ->
                 val subId = translateTypeOutName(sub.name).toId(pos)
-                Rust.EnumItemTuple(pos, id = subId, fields = listOf(Rust.TupleField(pos, type = subId.deepCopy())))
+                val subType = subId.deepCopy().makeTypeRef(generics)
+                Rust.EnumItemTuple(pos, id = subId, fields = listOf(Rust.TupleField(pos, type = subType)))
             },
         ).let { moduleItems.add(it.toItem(pub = pub)) }
         // Convenient return value.
@@ -1523,7 +1859,7 @@ class RustTranslator(
                     // Method calls typically use refs for self, so no need to clone.
                     is TmpL.Expression -> {
                         callable.method?.enclosingType?.let traitImport@{ owner ->
-                            // TODO Do we need to filter out implicits? So far, no examples of hitting that case.
+                            // TODO Do we need to filter out core? So far, no examples of hitting that case.
                             if (
                                 owner.abstractness == Abstractness.Abstract &&
                                 owner.sourceLocation != module.codeLocation.codeLocation
@@ -1538,7 +1874,7 @@ class RustTranslator(
                         }
                         translateExpression(subject, avoidClone = true).member(member)
                     }
-                    is TmpL.TypeName -> translateTypeName(subject).extendWith(listOf(member))
+                    is TmpL.TypeSubject -> translateTypeName(subject.typeName).extendWith(listOf(member))
                 }
             }
             is TmpL.GarbageCallable -> translateGarbage(callable)
@@ -1580,6 +1916,12 @@ class RustTranslator(
             }
         }.let { result ->
             when {
+                // Upcasting to listed doesn't need checked at all for any valid casts.
+                // Any invalid casts are reported as errors by frontend validation.
+                // But we still need to wrapOk because outer layers with less context still
+                // see the claimed tmpl type as being bubbly.
+                wanted.definition() == WellKnownTypes.listedTypeDefinition -> result.wrapOk()
+                // For others, trust standard type expectations.
                 cast.type.described().bubbly -> result.wrapOkOrElse(pos)
                 else -> result.methodCall("unwrap") // such as for assertAs
             }
@@ -1610,6 +1952,39 @@ class RustTranslator(
                     expr = translateBlock(elseCase.body),
                 ).also { add(it) }
             },
+        )
+    }
+
+    private fun translateConnectedBody(decl: TmpL.ModuleFunctionDeclaration): Rust.Block {
+        anyConnected = true
+        val pos = decl.pos
+        val defaulting = decl.parameterDefaultStatementsInfo()
+        return Rust.Block(
+            pos,
+            statements = buildList {
+                for (statement in defaulting.defaultStatements) {
+                    addAll(translateStatement(statement))
+                }
+            },
+            result = "_connected".toId(pos).let { connectedModule ->
+                when {
+                    isRoot -> "crate".toKeyId(pos).extendWith(connectedModule)
+                    else -> connectedModule
+                }
+            }.extendWith(translateId(decl.name, style = NameStyle.Snake)).call(
+                buildList {
+                    for ((tmpl, rust) in decl.parameters.parameters.zip(translateParameters(decl.parameters))) {
+                        when {
+                            tmpl.optional -> {
+                                val name = defaulting.parameterMapping.getValue(tmpl.name.name)
+                                translateIdFromName(pos, name)
+                            }
+                            // TODO Validate frontend cases that shouldn't get here.
+                            else -> rust.toId(approximate = true)
+                        }.also { add(it) }
+                    }
+                },
+            ),
         )
     }
 
@@ -1767,7 +2142,7 @@ class RustTranslator(
             is TmpL.GetProperty -> translateGetProperty(expression, avoidClone = avoidClone)
             is TmpL.InstanceOfExpression -> translateInstanceOfExpression(expression)
             is TmpL.InfixOperation -> translateInfixOperation(expression)
-            is TmpL.PrefixOperation -> TODO()
+            is TmpL.PrefixOperation -> translatePrefixOperation(expression)
             is TmpL.Reference -> translateReference(expression, avoidClone = avoidClone)
             is TmpL.RestParameterCountExpression -> TODO()
             is TmpL.RestParameterExpression -> TODO()
@@ -1872,9 +2247,12 @@ class RustTranslator(
         ).wrapArcType()
     }
 
-    private fun translateGarbage(garbage: TmpL.Garbage): Rust.Call {
-        val pos = garbage.pos
-        return "panic!".toId(pos).call(listOf(Rust.StringLiteral(pos, "Garbage")))
+    private fun translateGarbage(garbage: TmpL.Garbage): Rust.Expr = run {
+        translateUnsupported(garbage.pos, garbage.toString())
+    }
+
+    private fun translateGarbageStatement(garbage: TmpL.GarbageStatement): Rust.ExprStatement = run {
+        translateUnsupportedStatement(garbage)
     }
 
     private fun translateGetProperty(expression: TmpL.GetProperty, avoidClone: Boolean): Rust.Expr {
@@ -2121,8 +2499,8 @@ class RustTranslator(
         return Rust.Operator(
             op.pos,
             operator = when (op.tmpLOperator) {
-                TmpLOperator.AmpAmp -> TODO() // RustOperator.LogicalAnd
-                TmpLOperator.BarBar -> TODO() // RustOperator.LogicalOr
+                TmpLOperator.AmpAmp -> RustOperator.LogicalAnd
+                TmpLOperator.BarBar -> RustOperator.LogicalOr
                 TmpLOperator.EqEqInt -> RustOperator.Equals
                 TmpLOperator.GeInt -> RustOperator.GreaterEquals
                 TmpLOperator.GtInt -> RustOperator.GreaterThan
@@ -2130,6 +2508,18 @@ class RustTranslator(
                 TmpLOperator.LtInt -> RustOperator.LessThan
                 TmpLOperator.PlusInt -> RustOperator.Addition
             },
+        )
+    }
+
+    private fun translatePrefixOperation(expr: TmpL.PrefixOperation): Rust.Expr {
+        val operator = when (expr.op.tmpLOperator) {
+            TmpLOperator.Bang -> RustOperator.BoolComplement
+        }
+        return Rust.Operation(
+            expr.pos,
+            left = null,
+            operator = Rust.Operator(expr.op.pos, operator),
+            right = translateExpression(expr.operand),
         )
     }
 
@@ -2370,8 +2760,8 @@ class RustTranslator(
         return when (member) {
             is TmpL.Getter -> translateGetterId(member)
             is TmpL.Setter -> translateSetterId(member)
-            is TmpL.NormalMethod -> translateNormalishMethodId(member)
-            else -> TODO()
+            is TmpL.Method -> translateNormalishMethodId(member)
+            else -> error("unexpected member type for translateMethodId: $member")
         }
     }
 
@@ -2385,7 +2775,7 @@ class RustTranslator(
         typePub: Rust.VisibilityPub? = null,
     ): List<Rust.Item> {
         return when (member) {
-            is TmpL.GarbageStatement -> TODO()
+            is TmpL.GarbageStatement -> translateGarbageStatement(member).toItem() // won't compile but that's ok
             // So far only bother with returnType forwarding for instance methods. Will we need more later?
             is TmpL.Getter -> translateGetter(member, block = block, forTrait = forTrait, returnType = returnType)
             is TmpL.Setter -> translateSetter(member, block = block, forTrait = forTrait) // don't expect return type
@@ -2401,6 +2791,17 @@ class RustTranslator(
             is TmpL.InstanceProperty -> return listOf() // handled separately
             is TmpL.StaticProperty -> translateStaticProperty(member)
         }.let { listOf(it) }
+    }
+
+    private fun translateMethodSuperCall(
+        decl: TmpL.TypeDeclaration,
+        inherited: TmpL.SuperTypeMethod,
+    ): Collection<Rust.Item> = run {
+        decl.hasSplitSupers(inherited) || return listOf()
+        val superShape = inherited.memberOverride.superTypeMember
+        val targetType = superShape.enclosingType
+        val methodKind = (superShape as? MethodShape)?.methodKind ?: return listOf()
+        buildForwarderFromClassToTrait(inherited.pos, targetType, superShape, methodKind)
     }
 
     private fun translateModuleInitFailed(statement: TmpL.ModuleInitFailed): Rust.Statement {
@@ -2539,9 +2940,9 @@ class RustTranslator(
         }
         val subject = when (val subject = ref.subject) {
             is TmpL.Expression -> subject
-            is TmpL.TypeName -> {
+            is TmpL.TypeSubject -> {
                 // Static property access.
-                val callee = translateTypeName(subject).extendWith(listOf(propertyId))
+                val callee = translateTypeName(subject.typeName).extendWith(listOf(propertyId))
                 return Rust.Call(ref.pos, callee = callee, args = listOf())
             }
         }
@@ -2660,7 +3061,7 @@ class RustTranslator(
         // Get the property type so we know if we need to wrap the value. TODO Factor out any of this?
         val subjectShape = when (val subject = statement.left.subject) {
             is TmpL.Expression -> (subject.type as? DefinedNonNullType)?.definition
-            is TmpL.TypeName -> subject.sourceDefinition as? TypeShape
+            is TmpL.TypeSubject -> subject.typeName.sourceDefinition as? TypeShape
         }
         val propertyText = when (val property = statement.left.property) {
             is TmpL.ExternalPropertyId -> property.name.dotNameText
@@ -2674,7 +3075,10 @@ class RustTranslator(
         return when (statement.left.property) {
             is TmpL.ExternalPropertyId -> {
                 val ref = statement.left
-                val subject = translateExpression((ref.subject as? TmpL.Expression) ?: TODO(), avoidClone = true)
+                val subject = when (val subj = ref.subject) {
+                    is TmpL.Expression -> translateExpression(subj, avoidClone = true)
+                    is TmpL.TypeSubject -> translateTypeName(subj.typeName) // wrong but also shouldn't happen
+                }
                 val setter = "set_${translatePropertyId(ref.property)}"
                 subject.methodCall(setter, listOf(value))
             }
@@ -2701,27 +3105,33 @@ class RustTranslator(
         try {
             return when (statement) {
                 is TmpL.Assignment -> return translateAssignment(statement)
-                is TmpL.BoilerplateCodeFoldEnd -> TODO()
-                is TmpL.BoilerplateCodeFoldStart -> TODO()
+                is TmpL.BoilerplateCodeFoldEnd -> translateUnsupportedStatement(statement)
+                is TmpL.BoilerplateCodeFoldStart -> translateUnsupportedStatement(statement)
                 is TmpL.BreakStatement -> translateBreakStatement(statement)
                 is TmpL.ContinueStatement -> translateContinueStatement(statement)
-                is TmpL.EmbeddedComment -> TODO()
+                is TmpL.EmbeddedComment -> translateUnsupportedStatement(statement)
                 is TmpL.ExpressionStatement -> translateExpressionStatement(statement)
-                is TmpL.GarbageStatement -> TODO()
+                is TmpL.GarbageStatement -> translateGarbageStatement(statement)
                 is TmpL.HandlerScope -> error("handled elsewhere")
                 is TmpL.LocalDeclaration -> return translateModuleOrLocalDeclaration(statement)
-                is TmpL.LocalFunctionDeclaration -> TODO() // handled elsewhere
+                is TmpL.LocalFunctionDeclaration -> error("handled elsewhere")
                 is TmpL.ModuleInitFailed -> translateModuleInitFailed(statement)
                 is TmpL.BlockStatement -> translateBlock(statement)
                 is TmpL.ComputedJumpStatement -> translateComputedJumpStatement(statement)
                 is TmpL.IfStatement -> return translateIfStatement(statement)
                 is TmpL.LabeledStatement -> return translateLabeledStatement(statement)
-                is TmpL.TryStatement -> TODO()
+                // TryStatement and ThrowStatement are only generated by CatchBubble strategy;
+                // Rust uses IfHandlerScopeVar, so these should never appear.
+                is TmpL.TryStatement -> error("unexpected TryStatement: Rust uses IfHandlerScopeVar, not CatchBubble")
                 is TmpL.WhileStatement -> translateWhileStatement(statement)
                 is TmpL.ReturnStatement -> return translateReturnStatement(statement)
                 is TmpL.SetProperty -> translateSetProperty(statement)
-                is TmpL.ThrowStatement -> TODO()
-                is TmpL.YieldStatement -> TODO()
+                is TmpL.ThrowStatement ->
+                    error("unexpected ThrowStatement: Rust uses IfHandlerScopeVar, not CatchBubble")
+                // YieldStatement is only generated by TranslateToGenerator strategy;
+                // Rust uses TranslateToRegularFunction, which deletes yields during conversion.
+                is TmpL.YieldStatement ->
+                    error("unexpected YieldStatement: Rust uses TranslateToRegularFunction, not TranslateToGenerator")
             }.let { listOf(it) }
         } catch (_: NeverRefException) {
             // No statements referencing things that are typed never.
@@ -2829,11 +3239,19 @@ class RustTranslator(
         // Otherwise handle non-connected types.
         return when (type) {
             is TmpL.FunctionType -> translateFunctionType(type)
-            is TmpL.TypeIntersection -> TODO()
+            is TmpL.TypeIntersection -> when {
+                // This branch is never expected, so some this translation is untested.
+                type.types.isEmpty() -> ANY_NAME.toId(pos)
+                type.types.size == 1 -> translateType(type.types.first(), inExpr = inExpr, isFlex = isFlex)
+                else -> Rust.ImplTraitType(
+                    pos,
+                    bounds = type.types.map { translateType(it, inExpr = inExpr, isFlex = isFlex) as Rust.Path },
+                )
+            }
             is TmpL.TypeUnion -> translateTypeUnion(type, isFlex = isFlex)
             is TmpL.GarbageType -> "()".toId(pos)
             is TmpL.NominalType -> translateTypeNominal(type, inExpr = inExpr, isFlex = isFlex)
-            is TmpL.BubbleType -> TODO()
+            is TmpL.BubbleType -> "()".toId(pos)
             is TmpL.NeverType -> "!".toId(pos) // except not actually supported in stable rust
             is TmpL.TopType -> ANY_NAME.toId(pos)
         }
@@ -2861,14 +3279,14 @@ class RustTranslator(
 
     internal fun translateTypeDefinition(def: TypeDefinition, pos: Position, isParam: Boolean = false): Rust.Type {
         // First see if we have a connected type.
-        TString.unpackOrNull(def.metadata[connectedSymbol]?.firstOrNull())?.let { key ->
+        def.connectedKey?.let { key ->
             connectedTypes[key]?.let { typeName ->
                 return@translateTypeDefinition translateTypeConnected(pos, typeName)
             }
         }
         // Otherwise look up well-known types or use the user-defined type.
         return when (def.sourceLocation) {
-            ImplicitsCodeLocation -> when (def) {
+            CoreCodeLocation -> when (def) {
                 WellKnownTypes.anyValueTypeDefinition -> OutName(ANY_NAME, def.name)
                 WellKnownTypes.booleanTypeDefinition -> OutName("bool", def.name)
                 WellKnownTypes.denseBitVectorTypeDefinition -> OutName(DENSE_BIT_VECTOR_NAME, def.name)
@@ -2920,6 +3338,7 @@ class RustTranslator(
                 WellKnownTypes.noStringIndexTypeDefinition,
                 WellKnownTypes.nullTypeDefinition,
                 WellKnownTypes.emptyTypeDefinition,
+                WellKnownTypes.invalidTypeDefinition,
                 WellKnownTypes.voidTypeDefinition,
                 -> OutName("()", def.name)
 
@@ -2972,8 +3391,9 @@ class RustTranslator(
         type: Type2,
         translated: Rust.Type,
         inExpr: Boolean = false,
+        bindings: List<Rust.GenericArg>? = null,
     ) = when {
-        inExpr || type.bindings.isEmpty() -> translated
+        inExpr || (bindings ?: type.bindings).isEmpty() -> translated
         else -> {
             val core = when (translated) {
                 is Rust.ImplTraitType -> {
@@ -2986,7 +3406,7 @@ class RustTranslator(
             val generic = Rust.GenericType(
                 core.pos,
                 path = core,
-                args = translateTypeBindings(type, core.pos),
+                args = bindings?.deepCopy() ?: translateTypeBindings(type, core.pos),
             )
             when (translated) {
                 is Rust.ImplTraitType -> Rust.ImplTraitType(translated.pos, bounds = listOf(generic))
@@ -3088,6 +3508,18 @@ class RustTranslator(
             ),
             args = listOf(),
         )
+    }
+
+    private fun translateUnsupported(pos: Position, diagnostic: String): Rust.Expr = run {
+        "panic!".toId(pos).call(listOf(Rust.StringLiteral(pos, "Unsupported: $diagnostic")))
+    }
+
+    private fun translateUnsupported(tree: TmpL.Tree): Rust.Expr = run {
+        translateUnsupported(tree.pos, tree.toString())
+    }
+
+    private fun translateUnsupportedStatement(statement: TmpL.Statement): Rust.ExprStatement = run {
+        Rust.ExprStatement(statement.pos, translateUnsupported(statement))
     }
 
     private fun translateValueReference(expression: TmpL.ValueReference): Rust.Expr {
@@ -3276,6 +3708,22 @@ class RustTranslator(
     }
 }
 
+private fun associateInstanceMethods(decl: TmpL.TypeDeclaration): Map<String, TmpL.InstanceMethod> = run {
+    decl.members.filterIsInstance<TmpL.InstanceMethod>().filter { member ->
+        member is TmpL.NormalMethod || member is TmpL.GetterOrSetter
+    }.associateBy { member ->
+        when (member) {
+            is TmpL.NormalMethod -> member.name.name
+            // We sometimes get names like "getwhatever" rather than "get.whatever", so be explicit.
+            is TmpL.GetterOrSetter -> when (member) {
+                is TmpL.Getter -> "get"
+                is TmpL.Setter -> "set"
+            }.let { BuiltinName("$it.${member.dotName}") } // changed to "nym`...`" below
+            else -> error("unexpected")
+        }.displayName
+    }
+}
+
 private enum class ConstructorMode {
     Init,
     Use,
@@ -3364,3 +3812,5 @@ internal const val TO_LISTED_TO_LISTED_NAME = "temper_core::ToListed::to_listed"
 internal const val TRAIT_NAME_SUFFIX = "Trait"
 internal const val TYPE_ID_NAME = "std::any::TypeId"
 internal const val TYPE_ID_OF_NAME = "std::any::TypeId::of"
+
+internal val commonTypeBounds = listOf("Clone", SEND_NAME, SYNC_NAME, STATIC_LIFETIME)

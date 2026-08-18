@@ -1,0 +1,14 @@
+@fn @reach(\none) let f__0;
+f__0 = (@stay fn f(i__0 /* aka i */: StringIndexOption?) /* return__0 */: (Int32 | Bubble) {
+    var t#0;
+    if (!isNull(i__0)) {
+      t#0 = i__0 is StringIndexOption
+    } else {
+      t#0 = false
+    };
+    if (t#0) {
+      return__0 = 0
+    } else {
+      return__0 = 1
+    }
+})

@@ -26,8 +26,6 @@ import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.withType
 import lang.temper.value.DependencyCategory.Production
-import lang.temper.value.TString
-import lang.temper.value.connectedSymbol
 import lang.temper.be.java.Java as J
 
 class JavaNames private constructor(
@@ -295,8 +293,12 @@ class JavaNames private constructor(
     }
 
     fun lookupRegularLocalNameObj(name: TmpL.Id): RegularVarName {
-        val realName = resolveImportedName(name.name)
-        return (lookupLocalNameObj(name) as? RegularVarName)
+        return lookupRegularLocalNameObj(name.name)
+    }
+
+    fun lookupRegularLocalNameObj(resolvedName: ResolvedName): RegularVarName {
+        val realName = resolveImportedName(resolvedName)
+        return (lookupLocalNameObj(resolvedName) as? RegularVarName)
             ?: RegularVarName(distinctOutName(realName), isMutablyCaptured = false)
     }
 
@@ -359,7 +361,11 @@ class JavaNames private constructor(
 
     /** For e.g. [TmpL.Formal] to [J.FormalParameter] */
     fun formal(name: TmpL.Id): J.Identifier =
-        lookupRegularLocalNameObj(name).asIdentifier(name.pos)
+        formal(name.pos, name.name)
+
+    /** For e.g. [TmpL.Formal] to [J.FormalParameter] */
+    fun formal(pos: Position, name: ResolvedName): J.Identifier =
+        lookupRegularLocalNameObj(name).asIdentifier(pos)
 
     /** Temporary formal name for rest arguments */
     fun restFormal(name: TmpL.Id): J.Identifier =
@@ -376,9 +382,7 @@ class JavaNames private constructor(
         if (typeDef is TypeFormal) {
             return typeFormal(typeDef.name).toQualName()
         }
-        val connectedKey = TString.unpackOrNull(
-            typeDef.metadata[connectedSymbol]?.firstOrNull(),
-        )
+        val connectedKey = typeDef.connectedKey
         if (connectedKey != null) {
             val jt = supportNetwork.translatedConnectedTypeToJavaType(connectedKey, emptyList())
             if (jt is ReferenceType) {

@@ -69,9 +69,22 @@ data class LogEntry(
     val fyi: Boolean = false,
 ) : Structured {
     constructor (
+        template: MessageTemplateI,
+        pos: Position,
+        values: List<Any> = listOf(),
+        fyi: Boolean = false,
+    ) : this(
+        level = (template as? LeveledMessageTemplate)?.suggestedLevel ?: Log.Error,
+        template = template,
+        pos = pos,
+        values = values,
+        fyi = fyi,
+    )
+
+    constructor (
         template: LeveledMessageTemplate,
         pos: Position,
-        values: List<Any>,
+        values: List<Any> = listOf(),
         fyi: Boolean = false,
     ) : this(
         level = template.suggestedLevel,
@@ -102,7 +115,7 @@ data class LogEntry(
         return when (level) {
             Log.Fatal -> "$formatted!!"
             Log.Error -> "$formatted!"
-            Log.Warn, Log.Fine, Log.Info -> formatted
+            Log.Warn, Log.Summary, Log.Info, Log.Fine -> formatted
         }
     }
 }

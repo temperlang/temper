@@ -93,7 +93,7 @@ function temper.codepoint_fallback(s, i)
         b1 = string.byte(s, i + 1)
         -- TODO: these checks should really be (b1 & 192) == 128
         if b1 == nil or b1 >= 192 then return 0xFFFD; end
-        return (b0 - 192)*64 + b1
+        return (b0 - 192)*64 + b1%64
     end
 
     if b0 < 240 then
@@ -305,7 +305,7 @@ do
         local methods = {}
         local super = {}
 
-        for i = 1, select('#', ...) do
+        for i = select('#', ...), 1, -1 do
             local t = select(i, ...)
             for k, v in pairs(t.get) do
                 get[k] = v
@@ -330,13 +330,6 @@ do
         }
 
         tab.super[typename] = true
-
-        for i = 1, #super do
-            local t = super[i]
-            for k, v in pairs(t) do
-                tab[k] = tab[k] or v
-            end
-        end
 
         setmetatable(tab, type_meta)
 
@@ -429,7 +422,7 @@ function temper.float64_near(x, y, rel_tol, abs_tol)
     abs_tol = temper.null_to_nil(abs_tol) or 0.0
     local scale = temper.float64_max(temper.float64_abs(x), temper.float64_abs(y))
     local margin = temper.float64_max(scale * rel_tol, abs_tol)
-    return temper.float64_abs(x - y) < margin
+    return temper.float64_abs(x - y) <= margin
 end
 
 function temper.float64_round(x)
@@ -529,7 +522,7 @@ function temper.float64_toint32(n)
     if temper.is_safe_int32(ret) then
         return ret
     else
-        return temper.bubble("Float64::toInt32 failed")
+        return temper.bubble("core.type Float64.toInt32() failed")
     end
 end
 
@@ -587,7 +580,7 @@ end
 function temper.deque_removefirst(deque)
     local head = deque.head
     if head == deque.tail then
-        return temper.bubble("Deque::removeFirst on empty deque")
+        return temper.bubble("core.type Deque.removeFirst() on empty deque")
     end
     local first = deque[head]
     deque.head = head + 1
@@ -736,7 +729,7 @@ do
     local function temper_get(list, index)
         local got = list[index + 1]
         if got == nil then
-            return temper.bubble("Listed::get(" .. tostring(index) .. ") index out of bounds 0 .. " .. tostring(#list))
+            return temper.bubble("core.type Listed.get(" .. tostring(index) .. ") index out of bounds 0 .. " .. tostring(#list))
         end
         return got
     end
@@ -749,7 +742,7 @@ do
     local function temper_get(mapped, index)
         local got = mapped[index]
         if got == nil then
-            temper.bubble("Mapped::get no such key " .. tostring(index))
+            temper.bubble("core.type Mapped.get() no such key " .. tostring(index))
         end
         return got
     end
@@ -866,7 +859,7 @@ function temper.listbuilder_splice(builder, at, remove, new)
     remove = temper.null_to_nil(remove) or len
     new = temper.null_to_nil(new) or {}
     if at < 0 or at > len then
-        return temper.bubble("ListBuilder::splice index to high or too many to remove")
+        return temper.bubble("core.type ListBuilder.splice() index to high or too many to remove")
     end
     local ret = {}
     for i = 1, remove do
@@ -883,7 +876,7 @@ function temper.listbuilder_addall(builder, from, at)
     local len = #builder
     at = temper.null_to_nil(at) or len
     if at < 0 or at > len then
-        return temper.bubble("ListBuilder::addAll index " .. tostring(at) .. "out of range 0 .. " .. tostring(len))
+        return temper.bubble("core.type ListBuilder.addAll() index " .. tostring(at) .. "out of range 0 .. " .. tostring(len))
     end
     if at == len then
         for read = 1, #from do
@@ -902,7 +895,7 @@ function temper.listbuilder_add(builder, obj, at)
     local len = #builder
     at = temper.null_to_nil(at) or len
     if at < 0 or at > len then
-        return temper.bubble("ListBuilder::add index " .. tostring(at) .. "out of range 0 .. " .. tostring(len))
+        return temper.bubble("core.type ListBuilder.add() index " .. tostring(at) .. "out of range 0 .. " .. tostring(len))
     end
     if at == len then
         builder[at + 1] = obj
@@ -943,6 +936,59 @@ end
 
 temper.bor = temper_bit.bor
 temper.band = temper_bit.band
+temper.bnot = temper_bit.bnot
+temper.bxor = temper_bit.bxor
+function temper.shl32(a, b)
+    b = b % 32
+    local x = temper_bit.band(temper_bit.lshift(a, b), 0xFFFFFFFF)
+    if x >= 0x80000000 then x = x - 0x100000000 end
+    return x
+end
+function temper.shl64(a, b)
+    b = b % 64
+    -- TODO: is this safe against floaty precision problems
+    local x = temper_bit.band(temper_bit.lshift(a, b), 0xFFFFFFFFFFFFFFFF)
+    if x >= 0x8000000000000000 then x = x - 0x10000000000000000 end
+    return x
+end
+function temper.shr32(a, b)
+    b = b % 32
+    local x = temper_bit.band(
+        temper_bit.arshift(a, b),
+        0xFFFFFFFF
+    )
+    if x >= 0x80000000 then
+        x = x - 0x100000000
+    end
+    return x
+end
+function temper.shr64(a, b)
+    b = b % 64
+    local x = temper_bit.arshift(a, b)
+    if (a < 0) then
+        local high_bits = temper_bit.bnot(temper_bit.arshift(-1, b))
+        x = temper_bit.bor(x, high_bits)
+    end
+    return x
+end
+function temper.ushr32(a, b)
+    b = b % 32
+    if b == 0 then return a end
+    return temper_bit.band(
+        temper_bit.rshift(a, b),
+        temper_bit.rshift(0x7FFFFFFF, b - 1)
+    )
+end
+function temper.ushr64(a, b)
+    b = b % 64
+    if b == 0 then return a end
+    return temper_bit.band(
+        temper_bit.rshift(a, b),
+        temper_bit.rshift(0x7FFFFFFFFFFFFFFF, b - 1)
+    )
+end
+
+
 
 function temper.concat(...)
     return table_concat({...})
@@ -1077,6 +1123,36 @@ function temper.generic_ge(a, b)
     return a >= b
 end
 
+function temper.float_cmp(a, b)
+    if temper.float_lt(a, b) then
+        return -1
+    elseif temper.float_gt(a, b) then
+        return 1
+    else
+        return 0
+    end
+end
+
+function temper.int_cmp(a, b)
+    if a < b then
+        return -1
+    elseif a > b then
+        return 1
+    else
+        return 0
+    end
+end
+
+function temper.str_cmp(a, b)
+    if a < b then
+        return -1
+    elseif a > b then
+        return 1
+    else
+        return 0
+    end
+end
+
 function temper.str_eq(a, b)
     return a == b
 end
@@ -1138,10 +1214,21 @@ do
 
     local function temper_tostring(num, base)
         if num < 0 then
-            return "-" .. temper_tostring(-num, base)
+            if num == math.mininteger then
+                local last_digit_value = num % base
+                if last_digit_value ~= 0 then
+                    last_digit_value = base - last_digit_value
+                end
+                local negatable = temper_int.int_div(num + last_digit_value, base)
+                local digit_index = last_digit_value + 1
+                local last_digit = string_sub(digits, digit_index, digit_index)
+                return "-" .. temper_tostring(-negatable, base) .. last_digit
+            else
+                return "-" .. temper_tostring(-num, base)
+            end
         elseif num >= base then
             local mod = num % base + 1
-            return temper_tostring(math_floor(num / base), base) .. string_sub(digits, mod, mod)
+            return temper_tostring(temper_int.int_div(num, base), base) .. string_sub(digits, mod, mod)
         else
             local mod = num % base + 1
             return string_sub(digits, mod, mod)
@@ -1238,7 +1325,7 @@ function temper.string_fromcodepoint(code_point)
         or (code_point >= 0xD800 and code_point <= 0xDFFF)
         or code_point > 0x10FFFF
     then
-        temper.bubble("String::fromCodePoint invalid scalar value")
+        temper.bubble("core.type String.fromCodePoint() invalid scalar value")
     end
     return temper_utf8.char(code_point)
 end
@@ -1271,6 +1358,26 @@ end
 
 function temper.stringbuilder_appendbetween(builder, source, begin, end_)
     builder[#builder + 1] = temper.string_slice(source, begin, end_)
+end
+
+function temper.stringbuilder_clear(builder)
+    while #builder ~= 0 do
+        builder[#builder] = nil
+    end
+end
+
+function temper.stringbuilder_end(builder)
+    if #builder == 0 then
+        return 1
+    end
+
+    local compacted = table.concat(builder, "")
+
+    -- Compacting the stringbuilder amortizes the cost of this operation
+    temper.stringbuilder_clear(builder)
+    builder[1] = compacted
+
+    return temper.string_end(compacted)
 end
 
 function temper.stringbuilder_tostring(builder)
@@ -1320,7 +1427,7 @@ end
 function temper.listbuilder_removelast(lb)
     local len = #lb
     if len == 0 then
-        return temper.bubble("ListBuilder::removeLast on empty list")
+        return temper.bubble("core.type ListBuilder.removeLast() on empty list")
     end
     local got = lb[len]
     lb[len] = nil
@@ -1399,7 +1506,7 @@ function temper.string_tofloat64(str)
             end
         end
     end
-    temper.bubble("String::toFloat64 failed")
+    temper.bubble("core.type String.toFloat64() failed")
 end
 
 function temper.string_toint32(str, radix)
@@ -1410,11 +1517,11 @@ function temper.string_toint32(str, radix)
     if temper.is_safe_int32(ret) then
         return ret
     end
-    temper.bubble("String::toInt32 failed")
+    temper.bubble("core.type String.toInt32() failed")
 end
 
 function temper.string_end(str)
-    return #str + 1 -- String::begin is 1 and range ends need to be exclusive
+    return #str + 1 -- core.type String.begin is 1 and range ends need to be exclusive
 end
 
 function temper.string_slice(str, begin, end_)
@@ -1429,7 +1536,7 @@ end
 
 function temper.string_get(str, i)
     if i > #str then
-        temper.bubble("String::get failed")
+        temper.bubble("core.type String.get() failed")
     end
     local ok, cp = pcall(temper_utf8.codepoint, str, i)
     if ok then return cp; end
@@ -1470,7 +1577,7 @@ function temper.string_hasindex(str, i)
 end
 
 function temper.string_indexof(str, target, i)
-    return string.find(str, target, i, true) or 0
+    return string.find(str, target, i, true) or -1
 end
 
 function temper.string_next(str, i)
@@ -1556,8 +1663,12 @@ function temper.require_string_index(i)
 end
 
 function temper.string_foreach(str, f)
-    for _, c in utf8.codes(str) do
-        f(c)
+    local i = 1
+    local len = string_len(str)
+    while i <= len do
+        local cp = temper.codepoint_fallback(str, i)
+        f(cp)
+        i = i + utf8len(str, i)
     end
 end
 
@@ -1633,9 +1744,16 @@ end
 function temper.mapbuilder_remove(builder, key)
     local got = builder[key]
     if got == nil then
-        temper.bubble("MapBuilder::remove key not found: " .. tostring(key))
+        temper.bubble("core.type MapBuilder.remove() key not found: " .. tostring(key))
     end
-    builder[key] = nil
+    rawset(builder, key, nil)
+    local key_order_list = rawget(builder, map_key_order)
+    for i = #key_order_list, 1, -1 do
+        if key_order_list[i] == key then
+            table_remove(key_order_list, i)
+            break
+        end
+    end
     return got
 end
 
@@ -1701,10 +1819,10 @@ do
 
     function temper.date_constructor(year, month, day)
         if not (1 <= month and month <= 12) then
-            temper.bubble("Date::constructor bad month " .. month)
+            temper.bubble("std/temporal.type Date.constructor() bad month " .. month)
         end
         if not (1 <= day and day <= days_in_month_of_year(year, month)) then
-            temper.bubble("Date::constructor can only go up to day " .. days_in_month_of_year(year, month) .. ", got " .. day)
+            temper.bubble("std/temporal.type Date.constructor() can only go up to day " .. days_in_month_of_year(year, month) .. ", got " .. day)
         end
         return {
             year = year,
@@ -1715,19 +1833,19 @@ do
     end
 end
 
-function temper.date_getyear(date)
+function temper.date_year(date)
     return date.year
 end
 
-function temper.date_getmonth(date)
+function temper.date_month(date)
     return date.month
 end
 
-function temper.date_getday(date)
+function temper.date_day(date)
     return date.day
 end
 
-function temper.date_getdayofweek(date)
+function temper.date_dayofweek(date)
     -- os.date week days are 1 indexed: Sunday is 1, Monday is 2, ... Saturday is 7
     local wday = os.date("*t", os.time {
         year = date.year,
@@ -1748,7 +1866,7 @@ do
         local sign
         if string_byte(str, 1) == 45 then
             sign = "-"
-            str = string_sub(pad, 2, string_len(str))
+            str = string_sub(str, 2)
         else
             sign = ""
         end
@@ -1861,6 +1979,13 @@ function temper.cast_to_listbuilder(thing)
     return thing
 end
 
+function temper.cast_to_listed(thing)
+    if type(thing) ~= 'table' or (thing[temper.type_tag] ~= 'List' and thing[temper.type_tag] ~= 'ListBuilder') then
+        return temper.bubble("cast to Listed")
+    end
+    return thing
+end
+
 function temper.cast_to_map(thing)
     if type(thing) ~= 'table' or thing[temper.type_tag] ~= 'Map' then
         return temper.bubble("cast to Map")
@@ -1871,6 +1996,13 @@ end
 function temper.cast_to_mapbuilder(thing)
     if type(thing) ~= 'table' or thing[temper.type_tag] ~= 'MapBuilder' then
         return temper.bubble("cast to MapBuilder")
+    end
+    return thing
+end
+
+function temper.cast_to_map(thing)
+    if type(thing) ~= 'table' or (thing[temper.type_tag] ~= 'Map' and thing[temper.type_tag] ~= 'MapBuilder') then
+        return temper.bubble("cast to Mapped")
     end
     return thing
 end
@@ -1890,8 +2022,19 @@ function temper.cast_to(thing, type)
     end
 end
 
-function temper.instance_of(thing, tag)
-    return type(thing) == "table" and thing[temper.type_tag].super[tag.typename]
+function temper.instance_of(thing, ...)
+    if type(thing) ~= "table" then
+        return false
+    end
+    local n = select('#', ...)
+    local type_tag = temper.type_tag
+    for i=1,n do
+        local tag = select(i, ...)
+        if thing[type_tag].super[tag.typename] then
+            return true
+        end
+    end
+    return false
 end
 
 function temper.test_bail()
@@ -1948,7 +2091,7 @@ end
 do
     local TemperRegexNFA = nil
 
-    function temper.regex_format(data)
+    function temper.regexformatter_regexformat(data)
         if TemperRegexNFA == nil then
             require('temper-core/regex/runtime')
             TemperRegexNFA = require("temper-regex-engine/nfa/nfa").TemperRegexNFA
@@ -1972,7 +2115,7 @@ do
         return pat:found(text)
     end
 
-    function temper.regex_compileformatted(self, regex)
+    function temper.regexformatter_regexcompileformatted(self, regex)
         return regex
     end
 

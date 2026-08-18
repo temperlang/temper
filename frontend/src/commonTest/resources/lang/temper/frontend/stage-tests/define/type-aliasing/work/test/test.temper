@@ -1,0 +1,4 @@
+class C {}
+let alias = C; // Reified types via aliases should be inlined.
+let o: C;
+let p: alias;

@@ -1,0 +1,10 @@
+let { C, g, complexSubject } = import("./c");
+
+let f(c: C?): Void {
+  g(c?.prop);
+  g(complexSubject(c)?.prop);
+
+  g(c?.method());
+  g(complexSubject(c)?.method());
+}
+

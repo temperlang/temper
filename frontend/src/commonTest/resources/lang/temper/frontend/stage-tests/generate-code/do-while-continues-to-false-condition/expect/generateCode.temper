@@ -1,0 +1,3 @@
+let return__0;
+do_call_log(getConsole(), "Done once");
+return__0 = void

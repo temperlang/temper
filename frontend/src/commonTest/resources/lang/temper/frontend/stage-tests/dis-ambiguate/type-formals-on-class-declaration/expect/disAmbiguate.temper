@@ -1,0 +1,11 @@
+@typeDecl(C__0<T__1, U__2, V__3, W__4>) @hoistLeft(true) @resolution(C__0) @stay let C = type (C__0);
+class(\word, C, \concrete, true, @typeDefined(C__0<T__1, U__2, V__3, W__4>) fn {
+    @typeFormal(\T) @typeDefined(T__1) @resolution(T__1) let T = type (T__1);
+    @typeFormal(\U) @typeDefined(U__2) @resolution(U__2) let U = type (U__2);
+    @typeFormal(\V) @typeDefined(V__3) @resolution(V__3) @stay @variance(1) let V = type (V__3);
+    @typeFormal(\W) @typeDefined(W__4) @resolution(W__4) @stay @variance(-1) let W = type (W__4);
+    U extends D;
+    C__0<T__1, U__2, V__3, W__4> extends A;
+    C__0<T__1, U__2, V__3, W__4> extends B
+});
+C

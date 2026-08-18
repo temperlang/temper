@@ -1,0 +1,7 @@
+[
+    "Type formal \u003clistT extends AnyValue\u003e cannot bind to Void which does not fit upper bounds [AnyValue]!",
+    "Void expressions cannot be used as values!",
+    "Void expressions cannot be used as values!",
+    "Void expressions cannot be used as values!",
+    "Void expressions cannot be used as values!"
+]

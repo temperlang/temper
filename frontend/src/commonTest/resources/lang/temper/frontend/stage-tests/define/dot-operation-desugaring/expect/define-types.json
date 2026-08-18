@@ -1,0 +1,68 @@
+{
+    "AnyValue": {
+        "abstract": true
+    },
+    "C": {
+        "supers": [
+            "I__0"
+        ],
+        "properties": [
+            {
+                "name": "next__12",
+                "abstract": true,
+                "getter": "get.next__13",
+                "setter": "set.next__16",
+                "visibility": "public"
+            },
+            {
+                "name": "i__9",
+                "abstract": false,
+                "visibility": "private"
+            }
+        ],
+        "methods": [
+            {
+                "name": "get.next__13",
+                "symbol": "next",
+                "open": false,
+                "visibility": "public",
+                "kind": "Getter"
+            },
+            {
+                "name": "set.next__16",
+                "symbol": "next",
+                "open": false,
+                "visibility": "private",
+                "kind": "Setter"
+            },
+            {
+                "name": "f__10",
+                "open": false,
+                "visibility": "public"
+            },
+            {
+                "name": "constructor__19",
+                "open": false,
+                "visibility": "public",
+                "kind": "Constructor"
+            }
+        ]
+    },
+    "I": {
+        "abstract": true,
+        "supers": [
+            "AnyValue__0"
+        ],
+        "properties": [
+            {
+                "name": "next__7",
+                "abstract": true,
+                "visibility": "public"
+            }
+        ]
+    },
+    "Void": {
+        "supers": []
+    },
+    "Console": "__DO_NOT_CARE__"
+}

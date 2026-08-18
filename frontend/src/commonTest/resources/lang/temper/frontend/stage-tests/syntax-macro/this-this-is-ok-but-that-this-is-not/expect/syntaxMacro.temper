@@ -1,0 +1,13 @@
+@typeDecl(C__0) @stay let C__0 = type (C__0);
+class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
+    C__0 extends AnyValue;
+    @property(\me) @maybeVar @visibility(\private) let me__3;
+    @method(\constructor) @visibility(\public) let constructor__4 = fn constructor(@impliedThis(C__0) this__5: C__0) /* return__0 */: Void {
+      do {
+        let t#0;
+        do_iset_me(type (C__0), this(C__0), t#0 = this(C__0));
+        t#0
+      };
+    };
+});
+let me__7 = error ();

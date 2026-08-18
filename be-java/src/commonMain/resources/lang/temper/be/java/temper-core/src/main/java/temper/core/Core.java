@@ -1,6 +1,13 @@
 package temper.core;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.CoderResult;
+import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -318,7 +325,7 @@ public final class Core {
         double rel = relTol == null ? 1e-9 : relTol;
         double abs = absTol == null ? 0.0 : absTol;
         double margin = Math.max(Math.max(Math.abs(x), Math.abs(y)) * rel, abs);
-        return Math.abs(x - y) < margin;
+        return Math.abs(x - y) <= margin;
     }
 
     /**
@@ -351,7 +358,7 @@ public final class Core {
     }
 
     /**
-     * Implements connected method {@code Float64::toString}.
+     * Implements connected method {@code core.type Float64.toString()}.
      * TODO It might be possible to do this more succinctly with DecimalFormat.
      */
     public static String float64ToString(double n) {
@@ -411,6 +418,75 @@ public final class Core {
             // Use error message similar to code point bounds message, which is checked elsewhere.
             // Focus on Unicode scalar value wording, because it might explain motive better than avoiding surrogates.
             throw new IllegalArgumentException(String.format("Not a valid Unicode scalar value: 0x%X", codePoint));
+        }
+    }
+
+    /**
+     * Decode a string from a section of a ByteBuffer.
+     * The caller is responsible for knowing that the slice exists.
+     * Default to UTF8 for null decoder.
+     */
+    public static String decodeFromSlice(
+        ByteBuffer source,
+        int sourceStart,
+        int sourceLength,
+        CharsetDecoder decoder
+    ) throws CharacterCodingException {
+        if (decoder == null) {
+            decoder = StandardCharsets.UTF_8.newDecoder();
+        }
+        // Limit slice.
+        int oldLimit = source.limit();
+        int oldPosition = source.position();
+        try {
+            source.position(sourceStart);
+            source.limit(sourceStart + sourceLength);
+            // Decode.
+            decoder.reset();
+            return decoder.decode(source).toString();
+        } finally {
+            // Restore.
+            source.limit(oldLimit);
+            source.position(oldPosition);
+        }
+    }
+
+    /**
+     * Encode a string into a section of a ByteBuffer, returning the number of bytes written.
+     * The caller is responsible for knowing that the slice exists.
+     * Default to UTF8 for null encoder.
+     */
+    public static int encodeIntoSlice(
+        String s,
+        ByteBuffer target,
+        int targetStart,
+        int targetLength,
+        CharsetEncoder encoder,
+        byte padByte
+    ) {
+        if (encoder == null) {
+            encoder = StandardCharsets.UTF_8.newEncoder();
+        }
+        // Limit slice.
+        int oldLimit = target.limit();
+        int oldPosition = target.position();
+        try {
+            target.position(targetStart);
+            target.limit(targetStart + targetLength);
+            // Encode.
+            encoder.reset();
+            CoderResult result = encoder.encode(CharBuffer.wrap(s), target, true);
+            encoder.flush(target);
+            // Pad.
+            int written = target.position() - targetStart;
+            while (target.hasRemaining()) {
+                target.put(padByte);
+            }
+            return written;
+        } finally {
+            // Restore.
+            target.limit(oldLimit);
+            target.position(oldPosition);
         }
     }
 
@@ -783,7 +859,7 @@ public final class Core {
     }
 
     /**
-     * <p>Implements {@code List::filter}.
+     * <p>Implements {@code core.type List.filter()}.
      * </p>
      * @param source read once for its contents
      * @param predicate result has values for which this returns true
@@ -802,7 +878,7 @@ public final class Core {
     }
 
     /**
-     * <p>Implements {@code List::filter}.
+     * <p>Implements {@code core.type List.filter()}.
      * </p>
      * @param source read once for its contents
      * @param predicate result has values for which this returns true
@@ -821,7 +897,7 @@ public final class Core {
 
 
     /**
-     * <p>Implements {@code List::filter}.
+     * <p>Implements {@code core.type List.filter()}.
      * </p>
      * @param source read once for its contents
      * @param predicate result has values for which this returns true
@@ -839,7 +915,7 @@ public final class Core {
     }
 
     /**
-     * <p>Implements {@code List::filter}.
+     * <p>Implements {@code core.type List.filter()}.
      * </p>
      * @param source read once for its contents
      * @param predicate result has values for which this returns true
@@ -882,7 +958,7 @@ public final class Core {
     }
 
     /**
-     * <p>Implements {@code List::join}.
+     * <p>Implements {@code core.type List.join()}.
      * </p>
      * @param source read once for its contents
      * @param delimiter the delimiter inserted between values
@@ -902,7 +978,7 @@ public final class Core {
     }
 
     /**
-     * <p>Implements {@code List::join}.
+     * <p>Implements {@code core.type List.join()}.
      * </p>
      * @param source read once for its contents
      * @param delimiter the delimiter inserted between values
@@ -921,7 +997,7 @@ public final class Core {
     }
 
     /**
-     * <p>Implements {@code List::join}.
+     * <p>Implements {@code core.type List.join()}.
      * </p>
      * @param source read once for its contents
      * @param delimiter the delimiter inserted between values
@@ -940,7 +1016,7 @@ public final class Core {
     }
 
     /**
-     * <p>Implements {@code List::join}.
+     * <p>Implements {@code core.type List.join()}.
      * </p>
      * @param source read once for its contents
      * @param delimiter the delimiter inserted between values
@@ -959,7 +1035,7 @@ public final class Core {
     }
 
     /**
-     * <p>Implements {@code Listed::map}.
+     * <p>Implements {@code core.type Listed.map()}.
      * </p>
      * @param source read once for its contents
      * @param function converts source values to result values
@@ -976,7 +1052,7 @@ public final class Core {
     }
 
     /**
-     * <p>Implements {@code Listed::map}.
+     * <p>Implements {@code core.type Listed.map()}.
      * </p>
      * @param source read once for its contents
      * @param function converts source values to result values
@@ -992,7 +1068,7 @@ public final class Core {
     }
 
     /**
-     * <p>Implements {@code Listed::map}.
+     * <p>Implements {@code core.type Listed.map()}.
      * </p>
      * @param source read once for its contents
      * @param function converts source values to result values
@@ -1007,7 +1083,7 @@ public final class Core {
     }
 
     /**
-     * <p>Implements {@code Listed::map}.
+     * <p>Implements {@code core.type Listed.map()}.
      * </p>
      * @param source read once for its contents
      * @param function converts source values to result values
@@ -1023,7 +1099,7 @@ public final class Core {
     }
 
     /**
-     * <p>Implements {@code Listed::map}.
+     * <p>Implements {@code core.type Listed.map()}.
      * </p>
      * @param source read once for its contents
      * @param function converts source values to result values
@@ -1038,7 +1114,7 @@ public final class Core {
     }
 
     /**
-     * <p>Implements {@code Listed::map}.
+     * <p>Implements {@code core.type Listed.map()}.
      * </p>
      * @param source read once for its contents
      * @param function converts source values to result values
@@ -1052,7 +1128,7 @@ public final class Core {
         return unmodifiableList(result);
     }
     /**
-     * <p>Implements {@code Listed::map}.
+     * <p>Implements {@code core.type Listed.map()}.
      * </p>
      * @param source read once for its contents
      * @param function converts source values to result values
@@ -1068,7 +1144,7 @@ public final class Core {
         return unmodifiableList(result);
     }
     /**
-     * <p>Implements {@code Listed::map}.
+     * <p>Implements {@code core.type Listed.map()}.
      * </p>
      * @param source read once for its contents
      * @param function converts source values to result values
@@ -1082,7 +1158,7 @@ public final class Core {
         return unmodifiableList(result);
     }
     /**
-     * <p>Implements {@code Listed::map}.
+     * <p>Implements {@code core.type Listed.map()}.
      * </p>
      * @param source read once for its contents
      * @param function converts source values to result values
@@ -1097,7 +1173,7 @@ public final class Core {
     }
 
     /**
-     * <p>Implements {@code Listed::map}.
+     * <p>Implements {@code core.type Listed.map()}.
      * </p>
      * @param source read once for its contents
      * @param function converts source values to result values
@@ -1112,7 +1188,7 @@ public final class Core {
         return unmodifiableList(result);
     }
     /**
-     * <p>Implements {@code Listed::map}.
+     * <p>Implements {@code core.type Listed.map()}.
      * </p>
      * @param source read once for its contents
      * @param function converts source values to result values
@@ -1127,7 +1203,7 @@ public final class Core {
     }
 
     /**
-     * <p>Implements {@code Listed::map}.
+     * <p>Implements {@code core.type Listed.map()}.
      * </p>
      * @param source read once for its contents
      * @param function converts source values to result values
@@ -1141,286 +1217,16 @@ public final class Core {
         return unmodifiableList(result);
     }
 
-    /**
-     * <p>Implements {@code Listed::mapDropping}.
-     * </p>
-     * @param source read once for its contents
-     * @param function converts source values to result values
-     * @return the remapped list, with the same length
-     * @param <E> the source element type
-     * @param <F> the result element type
-     */
-    public static <E, F> List<F> listMapDroppingObjToObj(List<E> source, Function<E, F> function) {
-        ArrayList<F> result = new ArrayList<>(source.size());
-        for (E elem : source) {
-            F mapped;
-            try {
-                mapped = function.apply(elem);
-            } catch(RuntimeException ignored) {
-                continue;
-            }
-            result.add(mapped);
-        }
-        result.trimToSize();
-        return unmodifiableList(result);
-    }
-
-    /**
-     * <p>Implements {@code Listed::mapDropping}.
-     * </p>
-     * @param source read once for its contents
-     * @param function converts source values to result values
-     * @return the remapped list, with the same length
-     * @param <F> the result element type
-     */
-    public static <F> List<F> listMapDroppingIntToObj(List<Integer> source, IntFunction<F> function) {
-        ArrayList<F> result = new ArrayList<>(source.size());
-        for (int elem : source) {
-            F mapped;
-            try {
-                mapped = function.apply(elem);
-            } catch(RuntimeException ignored) {
-                continue;
-            }
-            result.add(mapped);
-        }
-        result.trimToSize();
-        return unmodifiableList(result);
-    }
-
-    /**
-     * <p>Implements {@code Listed::mapDropping}.
-     * </p>
-     * @param source read once for its contents
-     * @param function converts source values to result values
-     * @return the remapped list, with the same length
-     * @param <F> the result element type
-     */
-    public static <F> List<F> listMapDroppingDoubleToObj(List<Double> source, DoubleFunction<F> function) {
-        ArrayList<F> result = new ArrayList<>(source.size());
-        for (double elem : source) {
-            F mapped;
-            try {
-                mapped = function.apply(elem);
-            } catch(RuntimeException ignored) {
-                continue;
-            }
-            result.add(mapped);
-        }
-        result.trimToSize();
-        return unmodifiableList(result);
-    }
-    /**
-     * <p>Implements {@code Listed::mapDropping}.
-     * </p>
-     * @param source read once for its contents
-     * @param function converts source values to result values
-     * @return the remapped list, with the same length
-     * @param <E> the source element type
-     */
-    public static <E> List<Boolean> listMapDroppingObjToBool(List<E> source, Predicate<E> function) {
-        ArrayList<Boolean> result = new ArrayList<>(source.size());
-        for (E elem : source) {
-            Boolean mapped;
-            try {
-                mapped = function.test(elem);
-            } catch(RuntimeException ignored) {
-                continue;
-            }
-            result.add(mapped);
-        }
-        result.trimToSize();
-        return unmodifiableList(result);
-    }
-
-    /**
-     * <p>Implements {@code Listed::mapDropping}.
-     * </p>
-     * @param source read once for its contents
-     * @param function converts source values to result values
-     * @return the remapped list, with the same length
-     */
-    public static List<Boolean> listMapDroppingIntToBool(List<Integer> source, IntPredicate function) {
-        ArrayList<Boolean> result = new ArrayList<>(source.size());
-        for (int elem : source) {
-            Boolean mapped;
-            try {
-                mapped = function.test(elem);
-            } catch(RuntimeException ignored) {
-                continue;
-            }
-            result.add(mapped);
-        }
-        result.trimToSize();
-        return unmodifiableList(result);
-    }
-
-    /**
-     * <p>Implements {@code Listed::mapDropping}.
-     * </p>
-     * @param source read once for its contents
-     * @param function converts source values to result values
-     * @return the remapped list, with the same length
-     */
-    public static List<Boolean> listMapDroppingDoubleToBool(List<Double> source, DoublePredicate function) {
-        ArrayList<Boolean> result = new ArrayList<>(source.size());
-        for (double elem : source) {
-            Boolean mapped;
-            try {
-                mapped = function.test(elem);
-            } catch(RuntimeException ignored) {
-                continue;
-            }
-            result.add(mapped);
-        }
-        result.trimToSize();
-        return unmodifiableList(result);
-    }
-
-    /**
-     * <p>Implements {@code Listed::mapDropping}.
-     * </p>
-     * @param source read once for its contents
-     * @param function converts source values to result values
-     * @return the remapped list, with the same length
-     * @param <E> the source element type
-     */
-    public static <E> List<Integer> listMapDroppingObjToInt(List<E> source, ToIntFunction<E> function) {
-        ArrayList<Integer> result = new ArrayList<>(source.size());
-        for (E elem : source) {
-            int mapped;
-            try {
-                mapped = function.applyAsInt(elem);
-            } catch(RuntimeException ignored) {
-                continue;
-            }
-            result.add(mapped);
-        }
-        result.trimToSize();
-        return unmodifiableList(result);
-    }
-
-    /**
-     * <p>Implements {@code Listed::mapDropping}.
-     * </p>
-     * @param source read once for its contents
-     * @param function converts source values to result values
-     * @return the remapped list, with the same length
-     */
-    public static List<Integer> listMapDroppingIntToInt(List<Integer> source, IntUnaryOperator function) {
-        ArrayList<Integer> result = new ArrayList<>(source.size());
-        for (int elem : source) {
-            int mapped;
-            try {
-                mapped = function.applyAsInt(elem);
-            } catch(RuntimeException ignored) {
-                continue;
-            }
-            result.add(mapped);
-        }
-        result.trimToSize();
-        return unmodifiableList(result);
-    }
-
-    /**
-     * <p>Implements {@code Listed::mapDropping}.
-     * </p>
-     * @param source read once for its contents
-     * @param function converts source values to result values
-     * @return the remapped list, with the same length
-     */
-    public static List<Integer> listMapDroppingDoubleToInt(List<Double> source, DoubleToIntFunction function) {
-        ArrayList<Integer> result = new ArrayList<>(source.size());
-        for (double elem : source) {
-            int mapped;
-            try {
-                mapped = function.applyAsInt(elem);
-            } catch(RuntimeException ignored) {
-                continue;
-            }
-            result.add(mapped);
-        }
-        result.trimToSize();
-        return unmodifiableList(result);
-    }
-
-    /**
-     * <p>Implements {@code Listed::mapDropping}.
-     * </p>
-     * @param source read once for its contents
-     * @param function converts source values to result values
-     * @return the remapped list, with the same length
-     * @param <E> the source element type
-     */
-    public static <E> List<Double> listMapDroppingObjToDouble(List<E> source, ToDoubleFunction<E> function) {
-        ArrayList<Double> result = new ArrayList<>(source.size());
-        for (E elem : source) {
-            double mapped;
-            try {
-                mapped = function.applyAsDouble(elem);
-            } catch(RuntimeException ignored) {
-                continue;
-            }
-            result.add(mapped);
-        }
-        result.trimToSize();
-        return unmodifiableList(result);
-    }
-
-    /**
-     * <p>Implements {@code Listed::mapDropping}.
-     * </p>
-     * @param source read once for its contents
-     * @param function converts source values to result values
-     * @return the remapped list, with the same length
-     */
-    public static List<Double> listMapDroppingIntToDouble(List<Integer> source, IntToDoubleFunction function) {
-        ArrayList<Double> result = new ArrayList<>(source.size());
-        for (int elem : source) {
-            double mapped;
-            try {
-                mapped = function.applyAsDouble(elem);
-            } catch(RuntimeException ignored) {
-                continue;
-            }
-            result.add(mapped);
-        }
-        result.trimToSize();
-        return unmodifiableList(result);
-    }
-
-    /**
-     * <p>Implements {@code Listed::mapDropping}.
-     * </p>
-     * @param source read once for its contents
-     * @param function converts source values to result values
-     * @return the remapped list, with the same length
-     */
-    public static List<Double> listMapDroppingDoubleToDouble(List<Double> source, DoubleUnaryOperator function) {
-        ArrayList<Double> result = new ArrayList<>(source.size());
-        for (double elem : source) {
-            double mapped;
-            try {
-                mapped = function.applyAsDouble(elem);
-            } catch(RuntimeException ignored) {
-                continue;
-            }
-            result.add(mapped);
-        }
-        result.trimToSize();
-        return unmodifiableList(result);
-    }
-
     public interface BooleanBiPredicate {
         boolean test(boolean left, boolean right);
     }
 
-    /** <p>Implements {@code Listed::reduce}.</p> */
+    /** <p>Implements {@code core.type Listed.reduce()}.</p> */
     public static boolean listedReduceBool(List<Boolean> source, BooleanBiPredicate reducer) {
         return listedReduceBoolToBool(source, source.get(0), 1, (reduction, item) -> reducer.test(reduction, item));
     }
 
-    /** <p>Implements {@code Listed::reduceFrom}.</p> */
+    /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
     public static boolean listedReduceBoolToBool(List<Boolean> source, boolean initial, BooleanBiPredicate reducer) {
         return listedReduceBoolToBool(source, initial, 0, reducer);
     }
@@ -1433,12 +1239,12 @@ public final class Core {
         return result;
     }
 
-    /** <p>Implements {@code Listed::reduce}.</p> */
+    /** <p>Implements {@code core.type Listed.reduce()}.</p> */
     public static double listedReduceDouble(List<Double> source, DoubleBinaryOperator reducer) {
         return listedReduceDoubleToDouble(source, source.get(0), 1, (reduction, item) -> reducer.applyAsDouble(reduction, item));
     }
 
-    /** <p>Implements {@code Listed::reduceFrom}.</p> */
+    /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
     public static double listedReduceDoubleToDouble(List<Double> source, double initial, DoubleBinaryOperator reducer) {
         return listedReduceDoubleToDouble(source, initial, 0, reducer);
     }
@@ -1451,12 +1257,12 @@ public final class Core {
         return result;
     }
 
-    /** <p>Implements {@code Listed::reduce}.</p> */
+    /** <p>Implements {@code core.type Listed.reduce()}.</p> */
     public static int listedReduceInt(List<Integer> source, IntBinaryOperator reducer) {
         return listedReduceIntToInt(source, source.get(0), 1, (reduction, item) -> reducer.applyAsInt(reduction, item));
     }
 
-    /** <p>Implements {@code Listed::reduceFrom}.</p> */
+    /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
     public static int listedReduceIntToInt(List<Integer> source, int initial, IntBinaryOperator reducer) {
         return listedReduceIntToInt(source, initial, 0, reducer);
     }
@@ -1469,12 +1275,12 @@ public final class Core {
         return result;
     }
 
-    /** <p>Implements {@code Listed::reduce}.</p> */
+    /** <p>Implements {@code core.type Listed.reduce()}.</p> */
     public static <R> R listedReduceObj(List<R> source, BinaryOperator<R> reducer) {
         return listedReduceObjToObj(source, source.get(0), 1, (reduction, item) -> reducer.apply(reduction, item));
     }
 
-    /** <p>Implements {@code Listed::reduceFrom}.</p> */
+    /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
     public static <R> R listedReduceObjToObj(List<R> source, R initial, BinaryOperator<R> reducer) {
         return listedReduceObjToObj(source, initial, 0, reducer);
     }
@@ -1491,7 +1297,7 @@ public final class Core {
         double apply(double reduction, boolean element);
     }
 
-    /** <p>Implements {@code Listed::reduceFrom}.</p> */
+    /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
     public static double listedReduceBoolToDouble(List<Boolean> source, double initial, BoolToDoubleReducer reducer) {
         double result = initial;
         for (int i = 0; i < source.size(); i += 1) {
@@ -1504,7 +1310,7 @@ public final class Core {
         int apply(int reduction, boolean element);
     }
 
-    /** <p>Implements {@code Listed::reduceFrom}.</p> */
+    /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
     public static int listedReduceBoolToInt(List<Boolean> source, int initial, BoolToIntReducer reducer) {
         int result = initial;
         for (int i = 0; i < source.size(); i += 1) {
@@ -1517,7 +1323,7 @@ public final class Core {
         R apply(R reduction, boolean element);
     }
 
-    /** <p>Implements {@code Listed::reduceFrom}.</p> */
+    /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
     public static <R> R listedReduceBoolToObj(List<Boolean> source, R initial, BoolToObjReducer<R> reducer) {
         R result = initial;
         for (int i = 0; i < source.size(); i += 1) {
@@ -1530,7 +1336,7 @@ public final class Core {
         boolean apply(boolean reduction, double element);
     }
 
-    /** <p>Implements {@code Listed::reduceFrom}.</p> */
+    /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
     public static boolean listedReduceDoubleToBool(List<Double> source, boolean initial, DoubleToBoolReducer reducer) {
         boolean result = initial;
         for (int i = 0; i < source.size(); i += 1) {
@@ -1543,7 +1349,7 @@ public final class Core {
         int apply(int reduction, double element);
     }
 
-    /** <p>Implements {@code Listed::reduceFrom}.</p> */
+    /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
     public static int listedReduceDoubleToInt(List<Double> source, int initial, DoubleToIntReducer reducer) {
         int result = initial;
         for (int i = 0; i < source.size(); i += 1) {
@@ -1556,7 +1362,7 @@ public final class Core {
         R apply(R reduction, double element);
     }
 
-    /** <p>Implements {@code Listed::reduceFrom}.</p> */
+    /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
     public static <R> R listedReduceDoubleToObj(List<Double> source, R initial, DoubleToObjReducer<R> reducer) {
         R result = initial;
         for (int i = 0; i < source.size(); i += 1) {
@@ -1569,7 +1375,7 @@ public final class Core {
         boolean apply(boolean reduction, int element);
     }
 
-    /** <p>Implements {@code Listed::reduceFrom}.</p> */
+    /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
     public static boolean listedReduceIntToBool(List<Integer> source, boolean initial, IntToBoolReducer reducer) {
         boolean result = initial;
         for (int i = 0; i < source.size(); i += 1) {
@@ -1582,7 +1388,7 @@ public final class Core {
         double apply(double reduction, int element);
     }
 
-    /** <p>Implements {@code Listed::reduceFrom}.</p> */
+    /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
     public static double listedReduceIntToDouble(List<Integer> source, double initial, IntToDoubleReducer reducer) {
         double result = initial;
         for (int i = 0; i < source.size(); i += 1) {
@@ -1595,7 +1401,7 @@ public final class Core {
         R apply(R reduction, int element);
     }
 
-    /** <p>Implements {@code Listed::reduceFrom}.</p> */
+    /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
     public static <R> R listedReduceIntToObj(List<Integer> source, R initial, IntToObjReducer<R> reducer) {
         R result = initial;
         for (int i = 0; i < source.size(); i += 1) {
@@ -1608,7 +1414,7 @@ public final class Core {
         boolean apply(boolean reduction, R element);
     }
 
-    /** <p>Implements {@code Listed::reduceFrom}.</p> */
+    /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
     public static <R> boolean listedReduceObjToBool(List<R> source, boolean initial, ObjToBoolReducer<R> reducer) {
         boolean result = initial;
         for (int i = 0; i < source.size(); i += 1) {
@@ -1621,7 +1427,7 @@ public final class Core {
         double apply(double reduction, R element);
     }
 
-    /** <p>Implements {@code Listed::reduceFrom}.</p> */
+    /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
     public static <R> double listedReduceObjToDouble(List<R> source, double initial, ObjToDoubleReducer<R> reducer) {
         double result = initial;
         for (int i = 0; i < source.size(); i += 1) {
@@ -1634,7 +1440,7 @@ public final class Core {
         int apply(int reduction, R element);
     }
 
-    /** <p>Implements {@code Listed::reduceFrom}.</p> */
+    /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
     public static <R> int listedReduceObjToInt(List<R> source, int initial, ObjToIntReducer<R> reducer) {
         int result = initial;
         for (int i = 0; i < source.size(); i += 1) {

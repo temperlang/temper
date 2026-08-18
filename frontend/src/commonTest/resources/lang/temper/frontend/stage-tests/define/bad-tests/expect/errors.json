@@ -1,0 +1,12 @@
+[
+    "Wrong number of arguments.  Expected 2!",
+    "Wrong number of arguments.  Expected 2!",
+    "Expected function type, but got Int32!",
+    "Wrong number of arguments.  Expected 2!",
+    "Wrong number of arguments.  Expected 2!",
+    "Expected a name!",
+    "Expected value of type String not Int32!",
+    "Expected function type, but got Int32!",
+    "Unable to evaluate!",
+    "Invalid block content!"
+]

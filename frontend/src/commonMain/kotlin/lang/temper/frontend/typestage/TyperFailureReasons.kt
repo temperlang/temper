@@ -1,6 +1,7 @@
 package lang.temper.frontend.typestage
 
 import lang.temper.common.Log
+import lang.temper.common.abbreviate
 import lang.temper.format.OutToks
 import lang.temper.format.OutputToken
 import lang.temper.format.OutputTokenType
@@ -10,16 +11,17 @@ import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.log.Positioned
-import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedName
-import lang.temper.name.Symbol
+import lang.temper.type.Member
 import lang.temper.type.StaticType
 import lang.temper.type.TypeShape
 import lang.temper.type2.TypeReason
 import lang.temper.value.AbstractTypeReasonElement
 import lang.temper.value.CallTree
+import lang.temper.value.Tree
 import lang.temper.value.TypeReasonElement
 import lang.temper.value.toLispy
+import lang.temper.value.toPseudoCode
 
 internal class BecauseNameUndeclared(
     override val pos: Position,
@@ -89,15 +91,6 @@ internal class BecauseUnresolvedFunctionSignaturePart(
     override val level: Log.Level get() = Log.Info
 }
 
-internal class BecauseReturnTypeRequired(
-    override val pos: Position,
-) : AbstractTypeReasonElement() {
-    override val name get() = "BecauseReturnTypeRequired"
-    override val formatString get() = "Explicit return type required"
-    override val templateFillers: List<TokenSerializable> get() = emptyList()
-    override val level: Log.Level get() = Log.Error
-}
-
 internal class BecauseIllegalAssignment(
     override val pos: Position,
     val leftType: StaticType,
@@ -113,27 +106,27 @@ internal class BecauseIllegalAssignment(
     }
 }
 
-internal class BecauseTypeInfoMissingForName(
+internal class BecauseTypeInfoMissing(
     override val pos: Position,
-    val nameMissingInfo: ResolvedName,
+    val missingInfo: TokenSerializable,
 ) : AbstractTypeReasonElement() {
-    override val name get() = "BecauseTypeInfoMissingForName"
+    override val name get() = "BecauseTypeInfoMissing"
     override val level: Log.Level get() = Log.Error
     override val formatString get() = "Missing type info for %s"
     override val templateFillers: List<TokenSerializable>
-        get() = listOf(nameMissingInfo.toToken(inOperatorPosition = false))
+        get() = listOf(missingInfo)
 }
 
 internal abstract class BecauseNoMemberAccessible(
     override val pos: Position,
-    private val memberSymbol: Symbol,
+    private val member: Member,
     private val definingTypes: Set<TypeShape>,
 ) : AbstractTypeReasonElement() {
     override val name get() = "BecauseCannotAccessMembers"
     override val level: Log.Level get() = Log.Error
     override val templateFillers: List<TokenSerializable>
         get() = listOf(
-            ParsedName(memberSymbol.text).toToken(inOperatorPosition = false),
+            member,
             if (definingTypes.isNotEmpty()) {
                 definingTypes.joinToTokenSerializable(OutToks.bar) {
                     it.name.toToken(inOperatorPosition = false)
@@ -146,30 +139,31 @@ internal abstract class BecauseNoMemberAccessible(
 
 internal class BecauseCannotAccessMembers(
     pos: Position,
-    memberSymbol: Symbol,
+    member: Member,
     definingTypes: Set<TypeShape>,
-) : BecauseNoMemberAccessible(pos, memberSymbol, definingTypes) {
+) : BecauseNoMemberAccessible(pos, member, definingTypes) {
     override val formatString get() = "Member %s defined in %s not publicly accessible"
 }
 
 internal class BecauseNoMemberCompatible(
     pos: Position,
-    memberSymbol: Symbol,
+    member: Member,
     definingTypes: Set<TypeShape>,
-) : BecauseNoMemberAccessible(pos, memberSymbol, definingTypes) {
+) : BecauseNoMemberAccessible(pos, member, definingTypes) {
     override val formatString get() = MessageTemplate.IncompatibleUsage.formatString
 }
 
 internal class BecauseNoSuchMember(
     pos: Position,
-    memberSymbol: Symbol,
+    member: Member,
     definingTypes: Set<TypeShape>,
-) : BecauseNoMemberAccessible(pos, memberSymbol, definingTypes) {
+) : BecauseNoMemberAccessible(pos, member, definingTypes) {
     override val formatString get() = "No member %s in %s"
 }
 
 internal class BecauseUnresolvedTypeReference(
     override val pos: Position,
+    val unexpected: TokenSerializable,
 ) : AbstractTypeReasonElement() {
     override val name get() = "BecauseUnresolvedTypeReference"
     override val level: Log.Level get() = Log.Error
@@ -177,6 +171,7 @@ internal class BecauseUnresolvedTypeReference(
     override val templateFillers: List<TokenSerializable>
         get() = listOf(
             OutputToken("Type", OutputTokenType.Word),
+            unexpected,
         )
 }
 
@@ -235,3 +230,9 @@ internal fun becauseRedundantArgument(p: Positioned) = TypeReason(
         listOf(),
     ),
 )
+
+fun shortPseudoCode(tree: Tree?): TokenSerializable {
+    if (tree == null) return OutputToken("missing type", OutputTokenType.Comment)
+    val text = "`${abbreviate(tree.toPseudoCode())}`"
+    return OutputToken(text, OutputTokenType.QuotedValue)
+}

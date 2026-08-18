@@ -1,0 +1,1 @@
+fn () : Boolean { return 42 }

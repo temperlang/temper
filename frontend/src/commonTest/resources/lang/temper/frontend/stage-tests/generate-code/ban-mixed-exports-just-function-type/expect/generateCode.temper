@@ -1,0 +1,10 @@
+@typeDecl(Hidden__0) @stay @reach(\none) let Hidden__0;
+Hidden__0 = type (Hidden__0);
+@fn let `test//`.sneak;
+@fn @visibility(\public) @stay @fromType(Hidden__0) @reach(\none) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(Hidden__0) this__0: Hidden__0) /* return__0 */: Void {
+    return__0 = void
+});
+`test//`.sneak = (@stay fn sneak(hidden__0 /* aka hidden */: (fn (Hidden__0): Void)) /* return__1 */: Void {
+    return__1 = void
+})

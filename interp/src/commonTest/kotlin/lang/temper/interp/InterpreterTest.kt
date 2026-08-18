@@ -176,7 +176,7 @@ class InterpreterTest {
                     }
                     """,
                     input = """${lSign}0.0 / ${rSign}0.0""",
-                    // Presumably we shouldn't have these type errors, but we do at present.
+                    // Presumably, we shouldn't have these type errors, but we do at present.
                     expectedFailLog = """
                     f.t:1+0-11: Interpreting
                         ${lSign}0.0 / ${rSign}0.0
@@ -374,8 +374,11 @@ class InterpreterTest {
             while (true) {     i = i + 1 }
         f.t:3+4-13: Interpreting
             i = i + 1
-        f.t:3+6-7: Interpretation aborted
-            =
+        f.t:3+8-13: Interpreting
+            i + 1
+        f.t:3+12-13: Interpretation aborted
+            1
+
         """.trimIndent(),
     )
 
@@ -614,20 +617,20 @@ class InterpreterTest {
                     V(initSymbol)
                     V(Value(3, TInt))
                 }
-                Call(BuiltinFuns.lessThanFn) { // i < 10
+                Call(BuiltinFuns.ltIntFn) { // i < 10
                     Rn(i)
                     V(Value(10, TInt))
                 }
                 Call(BuiltinFuns.setLocalFn) { // i = i + 1
                     Ln(i)
-                    Call(BuiltinFuns.plusFn) {
+                    Call(BuiltinFuns.plusIntIntFn) {
                         Rn(i)
                         V(Value(1, TInt))
                     }
                 }
                 Call(BuiltinFuns.setLocalFn) { // x = x + i
                     Ln(x)
-                    Call(BuiltinFuns.plusFn) {
+                    Call(BuiltinFuns.plusIntIntFn) {
                         Rn(x)
                         Rn(i)
                     }
@@ -647,6 +650,7 @@ class InterpreterTest {
             |};
             |T
         """.trimMargin(),
+        stage = Stage.GenerateCode,
         expectedJson = """
             |{
             |  result: [ "U__1", "Type" ],
@@ -776,34 +780,6 @@ class InterpreterTest {
         }
     }
 
-    private fun assertResult(
-        expectedJson: String,
-        input: String,
-        expectedFailLog: String? = null,
-    ) = assertResult(
-        expectedJson,
-        inputText = input,
-        expectedFailLog = expectedFailLog,
-    ) { logSink, context ->
-        // Lex the input
-        val lexer = Lexer(context.loc, logSink, input)
-
-        // Build a parse tree
-        val comments = mutableListOf<CstComment>()
-        val cst = parse(lexer, logSink, comments)
-
-        // Build an AST.
-        val ast = buildTree(
-            cstParts = flatten(cst),
-            storedCommentTokens = StoredCommentTokens(comments),
-            logSink = logSink,
-            documentContext = context,
-        )
-
-        // Pre-process the AST to do just enough to get basic language features working.
-        preprocess(ast)
-    }
-
     @Test
     fun declMetadataVisitedDuringPartialInterp() {
         val logSink = ListBackedLogSink()
@@ -864,6 +840,34 @@ class InterpreterTest {
 
     private fun assertResult(
         expectedJson: String,
+        input: String,
+        expectedFailLog: String? = null,
+    ) = assertResult(
+        expectedJson,
+        inputText = input,
+        expectedFailLog = expectedFailLog,
+    ) { logSink, context ->
+        // Lex the input
+        val lexer = Lexer(context.loc, logSink, input)
+
+        // Build a parse tree
+        val comments = mutableListOf<CstComment>()
+        val cst = parse(lexer, logSink, comments)
+
+        // Build an AST.
+        val ast = buildTree(
+            cstParts = flatten(cst),
+            storedCommentTokens = StoredCommentTokens(comments),
+            logSink = logSink,
+            documentContext = context,
+        )
+
+        // Pre-process the AST to do just enough to get basic language features working.
+        preprocess(ast)
+    }
+
+    private fun assertResult(
+        expectedJson: String,
         inputText: String,
         expectedFailLog: String? = null,
         verbose: Boolean = false,
@@ -898,7 +902,7 @@ class InterpreterTest {
             continueCondition,
         )
 
-        // Wrapping an AST in a block solves lots of problems; e.g. macro calls always have an
+        // Wrapping an AST in a block solves lots of problems; e.g., macro calls always have an
         // incoming edge to hold their expansion.  The compiler does this so that we don't miss
         // coverage by not wrapping.
         val root = BlockTree.wrap(ast)
@@ -1005,7 +1009,7 @@ class InterpreterTest {
     }
 
     private fun makeContinueCondition(): ContinueCondition {
-        // Take fewer than 10000 steps.
+        // Take fewer than 10_000 steps.
         var thousandsLeft = 10
         return ContinueCondition {
             if (thousandsLeft > 0) {

@@ -1,0 +1,4 @@
+class Apple {}
+class Banana {}
+interface Cherry {}
+class Durian extends Apple, Banana & Cherry {}

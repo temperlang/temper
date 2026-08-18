@@ -1,0 +1,39 @@
+{
+    "I": {
+        "name": "I__0",
+        "abstract": true,
+        "supers": [
+            "AnyValue__0"
+        ],
+        "metadata": {
+            "foo": [
+                "void: Void"
+            ],
+            "reach": [
+                "\\none: Symbol"
+            ]
+        }
+    },
+    "Empty": {
+        "supers": [
+            "AnyValue__0",
+            "Equatable__0"
+        ],
+        "methods": [
+            {
+                "name": "constructor__0",
+                "visibility": "private",
+                "kind": "Constructor",
+                "open": false
+            }
+        ],
+        "metadata": {
+            "connected": [
+                "void: Void"
+            ],
+            "imu": [
+                "void: Void"
+            ]
+        }
+    }
+}

@@ -5,7 +5,7 @@
  * @param {string | null} bodyMimeType
  * @return {Promise<Response>}
  */
-export function stdNetSend(url, method, bodyContent, bodyMimeType) {
+export function sendRequest(url, method, bodyContent, bodyMimeType) {
   let details = { method };
   if (typeof bodyContent === 'string') {
     details.body = bodyContent;

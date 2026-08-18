@@ -14,6 +14,7 @@ import lang.temper.frontend.Weaver
 import lang.temper.frontend.flipDeclaredNames
 import lang.temper.frontend.interpretiveDanceStage
 import lang.temper.frontend.simplifyFlow
+import lang.temper.frontend.typestage.ImuChecker
 import lang.temper.frontend.typestage.Typer
 import lang.temper.interp.ReplacementPolicy
 import lang.temper.interp.docgenalts.DocGenAltFn
@@ -41,7 +42,7 @@ import lang.temper.value.void
 private const val BENCHMARK = false
 
 /**
- * A stage that runs just before module contents is passed to backends.  It makes sure that all the
+ * A stage that runs just before the module content is passed to backends.  It makes sure that all the
  * ducks are in a row; that the TmpL translator will be able to recreate a statement / expression
  * layering without introducing temporaries.
  */
@@ -139,6 +140,7 @@ class GenerateCodeStage(
         Debug.Frontend.GenerateCodeStage.AfterTypeCheck.snapshot(configKey, AstSnapshotKey, root)
 
         UnicodeScalarChecker(module).check(root)
+        ImuChecker(logSink).check(root)
 
         if (genre != Genre.Documentation) {
             Debug.Frontend.GenerateCodeStage.CleanupTemporaries(configKey)

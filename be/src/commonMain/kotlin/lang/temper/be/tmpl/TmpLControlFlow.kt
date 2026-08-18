@@ -3,7 +3,6 @@ package lang.temper.be.tmpl
 import lang.temper.ast.TreeVisit
 import lang.temper.be.BaseOutTree
 import lang.temper.builtin.BuiltinFuns
-import lang.temper.builtin.isHandlerScopeCall
 import lang.temper.builtin.isSetPropertyCall
 import lang.temper.common.LeftOrRight
 import lang.temper.common.allIndexed
@@ -12,7 +11,7 @@ import lang.temper.format.OutToks
 import lang.temper.format.OutputToken
 import lang.temper.format.OutputTokenType
 import lang.temper.format.TokenSink
-import lang.temper.frontend.implicits.ImplicitsModule
+import lang.temper.frontend.core.CoreModule
 import lang.temper.interp.LongLivedUserFunction
 import lang.temper.interp.docgenalts.DocGenAltFn
 import lang.temper.interp.docgenalts.DocGenAltIfFn
@@ -23,8 +22,8 @@ import lang.temper.interp.emptyValue
 import lang.temper.log.Position
 import lang.temper.log.Positioned
 import lang.temper.log.spanningPosition
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ExportedName
-import lang.temper.name.ImplicitsCodeLocation
 import lang.temper.name.NameMaker
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedName
@@ -68,6 +67,7 @@ import lang.temper.value.functionContained
 import lang.temper.value.initSymbol
 import lang.temper.value.isBubbleCall
 import lang.temper.value.isEmptyBlock
+import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.isPanicCall
 import lang.temper.value.jumpKind
 import lang.temper.value.ssaSymbol
@@ -87,7 +87,7 @@ internal fun translateFlow(
     outputName: TemperName?,
     /**
      * If null, do not do a state machine conversion.
-     * If non-null, the type of the generator produced
+     * If non-null, the type of the generator produced.
      */
     stateMachineConversionType: Type2? = null,
 ): PreTranslated {
@@ -211,7 +211,7 @@ private fun translateAltDocGenFn(
 }
 
 /**
- * We need to delayed translation of subtrees until after we've grouped elements of a block
+ * We need to delay translation of subtrees until after we've grouped elements of a block
  * together so that we can group declarations and their initializers.  If we don't suspend them,
  * then we need to treat declarations of functions as assignments of a function value to a local
  * variable instead of as a local function declaration for some period of time.
@@ -332,7 +332,7 @@ internal sealed class PreTranslated : Positioned {
      * This is its own node type because some parts of the translation
      * need to be recombined into a larger translation, like
      * declarations that are initialized before a yield but also
-     * need to be available after a resume.
+     * need to be available after resuming.
      */
     data class ConvertedCoroutine(
         override val pos: Position,
@@ -989,7 +989,8 @@ private class ControlFlowTranslator(
             var toAdd: PreTranslated? = pt
             if (options.nrbStrategy == BubbleBranchStrategy.CatchBubble) {
                 // hs(..., expr) -> expr
-                toAdd = toAdd?.let { unpackHandlerScopeCall(it) } ?: toAdd
+                @Suppress("UNNECESSARY_NOT_NULL_ASSERTION") // To IDE, it's not; to CLI, it is.
+                toAdd = unpackHandlerScopeCall(toAdd!!) ?: toAdd
                 if (toAdd is PreTranslated.TreeWrapper) {
                     val t = toAdd.tree
                     val declParts = (t as? DeclTree)?.parts
@@ -1636,7 +1637,7 @@ private fun removeReferencesAndAssignmentsToVoid(
                 is CallTree -> {
                     if (isVoidLikeAssignment(tree)) {
                         // If it's a void value reference, drop it entirely.
-                        // Otherwise, just substitute the right hand side.
+                        // Otherwise, just substitute the right-hand side.
                         val right = tree.child(2)
                         val rightWrapper = PreTranslated.TreeWrapper(right)
                         rewriteTreeWrapper(rightWrapper, Unit).first
@@ -1892,7 +1893,7 @@ internal fun simplifyGeneratorFnReturns(body: PreTranslated, returnName: Resolve
                     if (it is PreTranslated.TreeWrapper) {
                         val tree = it.tree
                         !(
-                            // Filter out `return__123 = implicits.doneResult()`
+                            // Filter out `return__123 = core.doneResult()`
                             isAssignmentCall(tree) &&
                                 (tree.child(1) as? LeftNameLeaf)?.content == returnName &&
                                 isDoneResultCall(tree.child(2))
@@ -1918,8 +1919,8 @@ internal fun simplifyGeneratorFnReturns(body: PreTranslated, returnName: Resolve
             }
             return if (callee is RightNameLeaf) {
                 val calleeName = callee.content as? ResolvedName
-                // Is it the name of `@export let doneResult = new DoneResult()` from Implicits.temper
-                calleeName is ExportedName && calleeName.origin.loc is ImplicitsCodeLocation &&
+                // Is it the name of `@export let doneResult = new DoneResult()` from core.temper
+                calleeName is ExportedName && calleeName.origin.loc is CoreCodeLocation &&
                     calleeName.baseName == doneResultParsedName
             } else {
                 val fn = callee.functionContained
@@ -1931,7 +1932,7 @@ internal fun simplifyGeneratorFnReturns(body: PreTranslated, returnName: Resolve
     return simpler
 }
 
-private val doneResultParsedName = ParsedName("doneResult") // defined in Implicits.temper
+private val doneResultParsedName = ParsedName("doneResult") // defined in core.temper
 
 private val PreTranslated.isEmptyBlock get() =
     this is PreTranslated.Block && this.unfixedElements.isEmpty()
@@ -1949,8 +1950,8 @@ private fun forEachLeafStmt(
 private val doneResultExportStay = lazy {
     (
         TFunction.unpackOrNull(
-            ImplicitsModule.module.exports!!.first { it.name.toSymbol().text == doneResultParsedName.nameText }
-                .value,
+            CoreModule.module.exports!!.first { it.name.toSymbol().text == doneResultParsedName.nameText }
+                .valueFromStaging,
         ) as? LongLivedUserFunction
         )?.stayLeaf
 }

@@ -1,0 +1,10 @@
+// A class to null chain to.
+export class C(public prop: String) {
+  public method(): String;
+}
+
+// Somewhere to send null chaining uses.
+export let g(x: String?): Void { if (x != null) { console.log(x) }; }
+
+// Calls to complexSubject shouldn't be duplicated
+export let complexSubject(c: C?): C? { c }

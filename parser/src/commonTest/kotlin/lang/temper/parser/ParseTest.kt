@@ -294,7 +294,7 @@ class ParseTest {
             ")"
         ]
         """,
-        "f(a<b, c)",
+        "f(a < b, c)",
     )
 
     @Test
@@ -319,7 +319,7 @@ class ParseTest {
             ")"
         ]
         """,
-        "f(a<b && c>d)",
+        "f(a < b && c > d)",
     )
 
     @Test
@@ -344,7 +344,7 @@ class ParseTest {
             ")"
         ]
         """,
-        "f(a<b || c>d)",
+        "f(a < b || c > d)",
     )
 
     @Test
@@ -448,7 +448,15 @@ class ParseTest {
             |    ],
             |  "\""], ")"],
             |  ";",
-            |  ["/(^|,)", "\\s", "*/"],
+            |  [
+            |    "(",
+            |    [
+            |      "/",
+            |      ["(^|,)", "\\s", "*"],
+            |      "/"
+            |    ],
+            |    ")",
+            |  ],
             |  ";",
             |  ["(", ["\"", [
             |    "wanna", "\\u0020", "be", "\\x20", ":", "\\ud800", "\\udc00",
@@ -556,7 +564,7 @@ class ParseTest {
             |
             |"Line 2: \u0123
             |/* Comment */
-            |"Line 3: ${} $ { }
+            |~Line 3: ${} $ { }
             |;
         """.trimMargin(),
         want = """
@@ -583,71 +591,6 @@ class ParseTest {
             |  ";",
             |]
         """.trimMargin(),
-    )
-
-    @Test
-    fun greaterThanInsideTemplateStringDoesNotCompleteAngle() = assertParseTree(
-        """
-        [
-          [
-            ["a"],
-            "<",
-            [
-              "(",
-              [
-                "\"",
-                ["..."],
-                [
-                  "$INTERP_EMBED",
-                  [
-                    ["b"],
-                    ">",
-                    ["-", ["c"]]
-                  ],
-                  "}"
-                ],
-                ["..."],
-                "\"",
-              ],
-              ")",
-            ],
-          ],
-          ";",
-          [
-            [
-              ["a"],
-              "<",
-              [
-                "(",
-                [
-                  "\"",
-                  ["..."],
-                  [
-                    "$INTERP_EMBED",
-                    [
-                      ["b"],
-                      ">",
-                      ["-", ["c"]]
-                    ],
-                    "}",
-                  ],
-                  ["..."],
-                  "\"",
-                ],
-                ")",
-              ],
-              ">",
-            ],
-            "-",
-            ["d"]
-          ],
-          ";"
-        ]
-        """,
-        """
-        a < "...$INTERP_EMBED b > - c }...";       // Compares a to a composed string
-        a < "...$INTERP_EMBED b > - c }..." > - d; // a parameterized w/ a string template minus d
-        """,
     )
 
     @Test
@@ -714,141 +657,6 @@ class ParseTest {
         """,
         // multiple closers in  '>>='
         "let a: Array<Array<number>>= [[]];",
-    )
-
-    @Test
-    fun tag() = assertParseTree(
-        input = "<bar>",
-        want = """
-        [
-          "<",
-          [ "bar" ],
-          ">"
-        ]
-        """,
-    )
-
-    @Test
-    fun closeTag() = assertParseTree(
-        input = "<bar> . x . </bar>",
-        want = """
-        [
-          [
-            [
-              "<",
-              [ "bar" ],
-              ">",
-            ],
-            ".",
-            [ "x" ],
-          ],
-          ".",
-          [
-            "</",
-            [ "bar" ],
-            ">",
-          ],
-        ]
-        """,
-    )
-
-    @Test
-    fun tagWithMultipleAttributes() = assertParseTree(
-        input = """<html:a b="c" d="e" f:g="h">""",
-        want = """
-        [
-          "<",
-          [
-            [ "html" ],
-            ":",
-            [ "a" ],
-          ],
-          [
-            [ "b" ],
-            "=",
-            [
-              "(",
-              [ "\"", ["c"], "\"" ],
-              ")"
-            ]
-          ],
-          [
-            [ "d" ],
-            "=",
-            [
-              "(",
-              [ "\"", ["e"], "\"" ],
-              ")"
-            ]
-          ],
-          [
-            [
-              [ "f" ],
-              ":",
-              [ "g" ]
-            ],
-            "=",
-            [
-              "(",
-              [ "\"", ["h"], "\"" ],
-              ")"
-            ]
-          ],
-          ">",
-        ]
-        """,
-    )
-
-    @Test
-    fun multiTagExample() = assertParseTree(
-        input = """<foo:bar one="1" two="2"> & <a href=url title="title"> & </a>""",
-        want = """
-        [
-          [
-            "<",
-            [
-              [ "foo" ],
-              ":",
-              [ "bar" ],
-            ],
-            [
-              [ "one" ],
-              "=",
-              [ "(", [ "\"", ["1"], "\"" ], ")" ]
-            ],
-            [
-              [ "two" ],
-              "=",
-              [ "(", [ "\"", ["2"], "\"" ], ")" ]
-            ],
-            ">",
-          ],
-          "&",
-          [
-            [
-              "<",
-              [ "a" ],
-              [
-                [ "href" ],
-                "=",
-                [ "url" ],
-              ],
-              [
-                [ "title" ],
-                "=",
-                [ "(", [ "\"", ["title"], "\"" ], ")" ]
-              ],
-              ">",
-            ],
-            "&",
-            [
-              "</",
-              [ "a" ],
-              ">",
-            ]
-          ]
-        ]
-        """,
     )
 
     @Test
@@ -2842,7 +2650,7 @@ class ParseTest {
     @Test
     fun classDeclWithComputedPropertyAndSuperTypes() = assertParseTree(
         input = """
-            class Cee extends Dee<Eee>, Eff {
+            class Cee extends Dee<@imu Eee, @blah @blech Gee>, Eff {
                 get ex() { 42 };
             }
         """,
@@ -2854,7 +2662,11 @@ class ParseTest {
             [
               ["Dee"],
               "<",
-              ["Eee"],
+              [
+                ["@", ["imu"], ["Eee"]],
+                ",",
+                ["@", ["blah"], ["@", ["blech"], ["Gee"]]],
+              ],
               ">",
             ],
             ",",
@@ -3017,16 +2829,16 @@ class ParseTest {
 
     @Test
     fun adjacentWords() = assertParseTree(
-        input = "public class Foo extends Bar",
+        input = "export class Foo extends Bar",
         want = """
         [
           "@",
-          [ "public" ],
+          [ "export" ],
           [
             [ "class", "Foo" ],
             "extends",
             [ "Bar" ],
-          ]
+          ],
         ]
         """,
     )
@@ -3186,6 +2998,48 @@ class ParseTest {
           "}"
         ]
         """,
+    )
+
+    @Test
+    fun extendsWithDecoration() = assertParseTree(
+        input = "class C<@A T extends D, @B(1) U implements E> {}",
+        want = """
+             |[
+             |  [
+             |    ["class", "C"],
+             |    "<",
+             |    [
+             |      [
+             |        "@",
+             |        ["A"],
+             |        [
+             |          ["T"],
+             |          "extends",
+             |          ["D"]
+             |        ],
+             |      ],
+             |      ",", // Comma does not follow extends
+             |      [
+             |        "@",
+             |        [
+             |          ["B"],
+             |          "(",
+             |          [ "1" ],
+             |          ")",
+             |        ],
+             |        [
+             |          ["U"],
+             |          "implements",
+             |          ["E"]
+             |        ]
+             |      ],
+             |    ],
+             |    ">",
+             |  ],
+             |  "{",
+             |  "}"
+             |]
+        """.trimMargin(),
     )
 
     @Test
@@ -3855,7 +3709,10 @@ class ParseTest {
 
     @Test
     fun angleBracketConfusion() = assertParseTree(
-        input = "or(a < 2, a > 0)",
+        // This is an odd case and this tests documents behaviour.
+        // Because there's no space after the `a`, the `<` is an angle bracket,
+        // and it eats the `>` after the `b`.
+        input = "or(a< 2, b>0)",
         want = """
             |[
             |  [ "or" ],
@@ -3866,7 +3723,7 @@ class ParseTest {
             |    [
             |      ["2"],
             |      ",",
-            |      ["a"],
+            |      ["b"],
             |    ],
             |    ">",
             |  ],
@@ -4262,9 +4119,9 @@ class ParseTest {
         input = $$"""
             |$${"\"\"\""}
             |  "<ul>
-            |  "{:  for (let item of items) {  :}
+            |  : for (let item of items) {
             |  "  <li>${item}</li>
-            |  "{:  }  :}
+            |  : }
             |  "</ul>
         """.trimMargin(),
         want = """
@@ -4323,9 +4180,9 @@ class ParseTest {
         input = $$"""
             |tag$${"\"\"\""}
             |  "<ul>
-            |  "{:  for (let item of items) {  :}
+            |  : for (let item of items) {
             |  "  <li>${item}</li>
-            |  "{:  }  :}
+            |  : }
             |  "</ul>
         """.trimMargin(),
         want = """

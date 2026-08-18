@@ -3,6 +3,8 @@ package lang.temper.value
 import lang.temper.lexer.Operator
 import lang.temper.name.BuiltinName
 import lang.temper.name.TemperName
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 // Helpers for yielding functions that don't let MaximalPaths understand them
 // without depending on subprojects like builtins where those functions are
@@ -69,13 +71,30 @@ fun disassembleYieldingCall(outerTree: Tree?): YieldingCallDisassembled? {
     }
 }
 
+@OptIn(ExperimentalContracts::class)
 fun isCallOfFunction(tree: Tree, function: MacroValue): Boolean {
+    contract {
+        returns(true) implies (tree is CallTree)
+    }
     if (tree !is CallTree || tree.size < 1) { return false }
     return tree.child(0).functionContained === function
 }
 
-fun isBubbleCall(tree: Tree) = isCallOfFunction(tree, BubbleFn)
-fun isPanicCall(tree: Tree) = isCallOfFunction(tree, PanicFn)
+@OptIn(ExperimentalContracts::class)
+fun isBubbleCall(tree: Tree): Boolean {
+    contract {
+        returns(true) implies (tree is CallTree)
+    }
+    return isCallOfFunction(tree, BubbleFn)
+}
+
+@OptIn(ExperimentalContracts::class)
+fun isPanicCall(tree: Tree): Boolean {
+    contract {
+        returns(true) implies (tree is CallTree)
+    }
+    return isCallOfFunction(tree, PanicFn)
+}
 
 fun MaximalPath.Element?.yieldingCallKind(block: BlockTree) = this?.ref?.yieldingCallKind(block)
 fun BlockChildReference?.yieldingCallKind(block: BlockTree): YieldingFnKind? {
@@ -83,7 +102,11 @@ fun BlockChildReference?.yieldingCallKind(block: BlockTree): YieldingFnKind? {
     return block.dereference(this)?.target?.yieldingCallKind()
 }
 
+@OptIn(ExperimentalContracts::class)
 fun Tree?.calleeBuiltinName(): String? {
+    contract {
+        returnsNotNull() implies (this@calleeBuiltinName is CallTree)
+    }
     if (this !is CallTree) {
         return null
     }
@@ -93,7 +116,12 @@ fun Tree?.calleeBuiltinName(): String? {
         else -> (callee.functionContained as? NamedBuiltinFun)?.name
     }
 }
+
+@OptIn(ExperimentalContracts::class)
 fun Tree?.yieldingCallKind(): YieldingFnKind? {
+    contract {
+        returnsNotNull() implies (this@yieldingCallKind is CallTree)
+    }
     return when (calleeBuiltinName()) {
         "await" -> YieldingFnKind.await
         "yield" -> YieldingFnKind.yield
@@ -101,11 +129,39 @@ fun Tree?.yieldingCallKind(): YieldingFnKind? {
     }
 }
 
-fun isAwaitCall(t: Tree): Boolean = t.yieldingCallKind() == YieldingFnKind.await
-fun isYieldCall(t: Tree): Boolean = t.yieldingCallKind() == YieldingFnKind.yield
+@OptIn(ExperimentalContracts::class)
+fun isAwaitCall(t: Tree): Boolean {
+    contract {
+        returns(true) implies (t is CallTree)
+    }
+    return t.yieldingCallKind() == YieldingFnKind.await
+}
+
+@OptIn(ExperimentalContracts::class)
+fun isYieldCall(t: Tree): Boolean {
+    contract {
+        returns(true) implies (t is CallTree)
+    }
+    return t.yieldingCallKind() == YieldingFnKind.yield
+}
+
+private const val HS_ARITY = 3 // Callee, fail var, operation
+private const val ASSIGN_ARITY = 3 // Callee, left, right
 
 const val HANDLER_SCOPE_FN_NAME = "hs"
-private fun isHandlerScopeCall(t: Tree): Boolean =
-    t.calleeBuiltinName() == HANDLER_SCOPE_FN_NAME
-private fun isAssignment(t: Tree): Boolean =
-    t.calleeBuiltinName() == "="
+
+@OptIn(ExperimentalContracts::class)
+fun isHandlerScopeCall(t: Tree): Boolean {
+    contract {
+        returns(true) implies (t is CallTree)
+    }
+    return t.size == HS_ARITY && t.calleeBuiltinName() == HANDLER_SCOPE_FN_NAME
+}
+
+@OptIn(ExperimentalContracts::class)
+fun isAssignment(t: Tree): Boolean {
+    contract {
+        returns(true) implies (t is CallTree)
+    }
+    return t.size == ASSIGN_ARITY && t.calleeBuiltinName() == "="
+}

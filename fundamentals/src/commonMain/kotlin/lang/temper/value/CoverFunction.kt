@@ -26,69 +26,6 @@ class CoverFunction(
         get() = covered.any { it.callMayFailPerSe } ||
             (otherwise?.callMayFailPerSe ?: false)
 
-    fun uncover(
-        args: Actuals,
-        cb: InterpreterCallback,
-        interpMode: InterpMode,
-    ): Pair<Result, Arguments?>? {
-        val beforeTypeCheck = cb.failLog.markBeforeRecoverableFailure()
-
-        val message = DynamicMessage(args, interpMode)
-        var toRun: MacroValue? = otherwise
-        var argumentsToUse: Arguments? = null
-        fnLoop@
-        for (c in covered) {
-            if (c is CoverFunction) {
-                when (val p = c.uncover(args, cb, interpMode)) {
-                    null -> return null
-                    else -> {
-                        if (p.first is Value<*>) {
-                            return p
-                        }
-                        continue@fnLoop
-                    }
-                }
-            }
-
-            val cSigs = c.sigs
-            if (cSigs == null) { // Applicable to all argument lists.
-                toRun = c
-                break
-            }
-            for (cSig in cSigs) {
-                val resolutions = Resolutions(cb)
-                val arguments = unify(message, cSig, resolutions)
-                // Four cases
-                // | arguments | contradiction | do                       |
-                // | --------- | ------------- | ------------------------ |
-                // | *         | true          | look at other signatures |
-                // | null      | false         | stop, do not know        |
-                // | !null     | false         | stop, use result         |
-                if (resolutions.contradiction) {
-                    cb.explain(
-                        MessageTemplate.NotApplicable,
-                        cb.pos,
-                        listOf(cSig, args, resolutions.problem ?: ""),
-                    )
-                } else if (arguments == null) {
-                    // Don't know if c was applicable
-                    return null
-                } else {
-                    argumentsToUse = arguments
-                    toRun = c
-                    break@fnLoop
-                }
-            }
-        }
-        return when (toRun) {
-            null -> null
-            else -> {
-                beforeTypeCheck.rollback()
-                Value(toRun) to argumentsToUse
-            }
-        }
-    }
-
     override fun addStays(s: StaySink) {
         for (f in covered) {
             f.addStays(s)
@@ -138,7 +75,7 @@ class CoverFunction(
         cb: InterpreterCallback,
         interpMode: InterpMode,
     ): PartialResult {
-        return when (val uncovered = uncover(args, cb, interpMode)) {
+        return when (val uncovered = uncover(args, cb, interpMode, covered, otherwise)) {
             null -> Fail
             else -> {
                 val (toRun, arguments) = uncovered
@@ -173,6 +110,72 @@ class CoverFunction(
             addAll(otherwise.sigs!!)
         }
     }.toList()
+
+    companion object {
+        fun uncover(
+            args: Actuals,
+            cb: InterpreterCallback,
+            interpMode: InterpMode,
+            covered: List<CallableValue>,
+            otherwise: CallableValue? = null,
+        ): Pair<Result, Arguments?>? {
+            val beforeTypeCheck = cb.failLog.markBeforeRecoverableFailure()
+            val message = DynamicMessage(args, interpMode)
+            var toRun: MacroValue? = otherwise
+            var argumentsToUse: Arguments? = null
+            fnLoop@
+            for (c in covered) {
+                if (c is CoverFunction) {
+                    when (val p = uncover(args, cb, interpMode, c.covered, c.otherwise)) {
+                        null -> return null
+                        else -> {
+                            if (p.first is Value<*>) {
+                                return p
+                            }
+                            continue@fnLoop
+                        }
+                    }
+                }
+
+                val cSigs = c.sigs
+                if (cSigs == null) { // Applicable to all argument lists.
+                    toRun = c
+                    break
+                }
+                for (cSig in cSigs) {
+                    val resolutions = Resolutions(cb)
+                    val arguments = unify(message, cSig, resolutions)
+                    // Four cases
+                    // | arguments | contradiction | do                       |
+                    // | --------- | ------------- | ------------------------ |
+                    // | *         | true          | look at other signatures |
+                    // | null      | false         | stop, do not know        |
+                    // | !null     | false         | stop, use result         |
+                    if (resolutions.contradiction) {
+                        cb.explain(
+                            MessageTemplate.NotApplicable,
+                            cb.pos,
+                            listOf(cSig, args, resolutions.problem ?: ""),
+                        )
+                    } else if (arguments == null) {
+                        // Don't know if c was applicable
+                        return null
+                    } else {
+                        argumentsToUse = arguments
+                        toRun = c
+                        break@fnLoop
+                    }
+                }
+            }
+            return when (toRun) {
+                null -> null
+                else -> {
+                    beforeTypeCheck.rollback()
+                    Value(toRun) to argumentsToUse
+                }
+            }
+        }
+    }
 }
 
 private class CollectingSink(val out: MutableList<OutputToken>) : TokenSink {

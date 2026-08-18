@@ -48,6 +48,9 @@ internal fun extractRequiredInlinedSnippets(
 private fun combineMarkdownLinesDroppingIncidentalSpace(
     lines: MutableList<String>,
 ): String {
+    lines.removeIf { line ->
+        snippetAnchorHtmlPattern.matchEntire(line) != null
+    }
     while (lines.isNotEmpty() && lines.last().isBlank()) {
         lines.removeLast()
     }
@@ -92,3 +95,9 @@ private fun combineMarkdownLinesDroppingIncidentalSpace(
         .render(MarkdownContent(lines.joinToString(separator = "\n")).root)
         .trimEnd()
 }
+
+// Markers like `<a name="builtin&#45;is" class="snippet-anchor-name"></a>` allow for
+// internal navigation but are not useful.
+private val snippetAnchorHtmlPattern = Regex(
+    """\s*<a [^>]*class="$SNIPPET_ANCHOR_CLASSNAME"[^>]*></a>\s*""",
+)

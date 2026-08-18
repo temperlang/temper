@@ -6,7 +6,7 @@ import lang.temper.name.BackendId
 
 abstract class CppMetadataKey<VALUE> : MetadataKey<CppBackend, VALUE>() {
     override val backendId: BackendId
-        get() = CppBackend.Cpp11.backendId
+        get() = CppBackend.Cpp.backendId
 
     data object MainFilePath : CppMetadataKey<FilePath>()
 }

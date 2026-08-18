@@ -129,6 +129,12 @@ def str_cat(*parts: str) -> str:
     return "".join(map(str, parts))
 
 
+def string_builder_end(string_builder: list[str]) -> int:
+    compacted = "".join(string_builder)
+    string_builder[:] = (compacted,)
+    return len(compacted)
+
+
 def make_bubble_exception() -> Exception:
     return RuntimeError()
 
@@ -180,7 +186,7 @@ def float_gt_eq(left: float, right: float) -> bool:
 
 
 def float_gt(left: float, right: float) -> bool:
-    "Checks if left <= right, caring about sign of zeros."
+    "Checks if left > right, caring about sign of zeros."
     return float_cmp(left, right) > 0
 
 
@@ -216,7 +222,7 @@ def generic_lt_eq(left: C, right: C) -> bool:
 
 
 def generic_lt(left: C, right: C) -> bool:
-    "Checks if two left <=right, caring about the sign of zeros of floats."
+    "Checks if left < right, caring about the sign of zeros of floats."
     if isinstance(left, float) and isinstance(right, float):
         return float_lt(left, right)
     return left < right
@@ -251,9 +257,60 @@ def arith_int_mod(dividend: int, divisor: int) -> int:
     arith_int_mod(5, 3) == 2
     arith_int_mod(-5, -3) == -2
     arith_int_mod(5, -3) == 2
-    arith_int_mod(-5, -3) == -2
+    arith_int_mod(-5, 3) == -2
     """
-    return dividend - divisor * int(dividend / divisor)
+    q = dividend // divisor
+    if (dividend ^ divisor) < 0 and q * divisor != dividend:
+        q += 1
+    return dividend - divisor * q
+
+def arith_bit_shl32(n: int, shift: int) -> int:
+    """
+    Performs an Int32 left shift.
+    """
+    # ctypes.c_int32 but that does not expose shift operators
+    # so is not helpful here.
+    # In Python, `&` with a non-negative number always yields a non-negative.
+    shifted = (n << (shift & 0x1F)) & 0xFFFF_FFFF
+    if shifted >= 0x8000_0000:
+        # Checking the sign bit handles the case where
+        # the number starts negative and the case where
+        # a bit of a positive number shifts into the sign
+        # bit position.
+        shifted -= 0x1_0000_0000
+    return shifted
+
+def arith_bit_shl64(n: int, shift: int) -> int:
+    """
+    Performs an Int64 left shift
+    """
+    shifted = (n << (shift & 0x3F)) & 0xFFFF_FFFF_FFFF_FFFF
+    if shifted >= 0x8000_0000_0000_0000:
+        shifted -= 0x1_0000_0000_0000_0000
+    return shifted
+
+def arith_bit_ushr32(n: int, shift: int) -> int:
+    """
+    Performs an Int32 logical right shift
+    """
+    shift = shift & 0x1F
+    if shift:
+        return (n & 0xFFFF_FFFF) >> shift
+    else:
+        # UShr by zero is identity.  It's special because given
+        # a negative input you get a negative output.
+        return n
+
+
+def arith_bit_ushr64(n: int, shift: int) -> int:
+    """
+    Performs an Int64 logical right shift
+    """
+    shift = shift & 0x3F
+    if shift:
+        return (n & 0xFFFF_FFFF_FFFF_FFFF) >> shift
+    else:
+        return n
 
 
 def isinstance_int(val: T) -> bool:
@@ -387,7 +444,7 @@ class DenseBitVector(object):
 
     def __bool__(self) -> bool:
         "Test if any bit is set."
-        return bool(rb"\0" in self._bytearray)
+        return any(b != 0 for b in self._bytearray)
 
     def __bytes__(self) -> bytes:
         "Convert the bit vector into a read-only bytes value."
@@ -455,7 +512,7 @@ def int_sub(a: int, b: int) -> int:
 
 
 def int_to_string(num: int, radix: int = 10) -> str:
-    "Implements connected method Int32::toString."
+    "Implements connected method core.type Int32.toString()."
     if not 2 <= radix < 36:
         raise ValueError()
     elif radix == 10:
@@ -496,7 +553,10 @@ def int64_div(a: int, b: int) -> int:
     # Mostly concerned with b == -1, but maybe evil `a` snuck in from outside?
     if a <= -0x8000_0000_0000_0000 and b < 0:
         return int64_clamp(int(a / b))
-    return int(a / b)
+    r = a // b
+    if (a ^ b) < 0 and r * b != a:
+        r += 1
+    return r
 
 
 def int64_mul(a: int, b: int) -> int:
@@ -514,32 +574,32 @@ def int64_sub(a: int, b: int) -> int:
 
 
 def int64_to_float64(value: int) -> float:
-    "Implements connected method Int64::toFloat64."
+    "Implements connected method core.type Int64.toFloat64()."
     if -0x20_0000_0000_0000 < value < 0x20_0000_0000_0000:
         return float(value)
     raise OverflowError()
 
 
-def int64_to_int32(value: int) -> float:
-    "Implements connected method Int64::toInt32."
+def int64_to_int32(value: int) -> int:
+    "Implements connected method core.type Int64.toInt32()."
     if -0x8000_0000 <= value <= 0x7FFF_FFFF:
         return int(value)
     raise OverflowError()
 
 
-def int64_to_int32_unsafe(value: int) -> float:
-    "Implements connected method Int64::toInt32Unsafe."
+def int64_to_int32_unsafe(value: int) -> int:
+    "Implements connected method core.type Int64.toInt32Unsafe()."
     return int_clamp(int(value))
 
 
 def float64_max(x: float, y: float) -> float:
-    "Implements connected method Float64::max."
+    "Implements connected method core.type Float64.max()."
     # Already returns nan if x is nan.
     return nan if isnan(y) else max(x, y)
 
 
 def float64_min(x: float, y: float) -> float:
-    "Implements connected method Float64::min."
+    "Implements connected method core.type Float64.min()."
     # Already returns nan if x is nan.
     return nan if isnan(y) else min(x, y)
 
@@ -549,8 +609,8 @@ def float64_near(
     y: float,
     rel_tol: Optional[float] = Unset,
     abs_tol: Optional[float] = Unset,
-) -> float:
-    "Implements connected method Float64::near."
+) -> bool:
+    "Implements connected method core.type Float64.near()."
     # This exactly matches isclose behavior, but matching our forwarding our
     # optionals to python named args is awkward, so duplicate the logic.
     # TODO We could possibly inline usage of isclose instead of this logic.
@@ -562,12 +622,12 @@ def float64_near(
 
 
 def float64_sign(x: float) -> float:
-    "Implements connected method Float64::sign."
+    "Implements connected method core.type Float64.sign()."
     return x if isnan(x) or x == 0.0 else copysign(1.0, x)
 
 
 def float64_to_int(value: float) -> int:
-    "Implements connected method Float64::toInt32."
+    "Implements connected method core.type Float64.toInt32()."
     if -0x8000_0001 < value < 0x8000_0000:
         return int(value)
     if isnan(value):
@@ -577,7 +637,7 @@ def float64_to_int(value: float) -> int:
 
 
 def float64_to_int_unsafe(value: float) -> int:
-    "Implements connected method Float64::toInt32Unsafe."
+    "Implements connected method core.type Float64.toInt32Unsafe()."
     try:
         # Checks limits first to avoid absurdly large ints.
         return float64_to_int(value)
@@ -589,7 +649,7 @@ def float64_to_int_unsafe(value: float) -> int:
 
 
 def float64_to_int64(value: float) -> int:
-    "Implements connected method Float64::toInt64."
+    "Implements connected method core.type Float64.toInt64()."
     if -0x1F_FFFF_FFFF_FFFF <= value <= 0x1F_FFFF_FFFF_FFFF:
         return int(value)
     if isnan(value):
@@ -599,7 +659,7 @@ def float64_to_int64(value: float) -> int:
 
 
 def float64_to_int64_unsafe(value: float) -> int:
-    "Implements connected method Float64::toInt64Unsafe."
+    "Implements connected method core.type Float64.toInt64Unsafe()."
     # Avoid converting crazy large float to int.
     if -0x8000_0000_0000_0000 <= value <= 0x7FFF_FFFF_FFFF_FFFF:
         return int(value)
@@ -619,7 +679,7 @@ def _ensure_dot_frac(text: str) -> str:
 
 
 def float64_to_string(value: float) -> str:
-    "Implements connected method Float64::toString."
+    "Implements connected method core.type Float64.toString()."
     if value == inf:
         return "Infinity"
     elif value == -inf:
@@ -631,7 +691,7 @@ def float64_to_string(value: float) -> str:
 
 
 def boolean_to_string(value: bool) -> str:
-    "Turns a stirng into a boolean (lowercase like temper)."
+    "Turns a boolean into a string (lowercase like temper)."
     return "true" if value else "false"
 
 
@@ -722,7 +782,7 @@ def require_string_index(i: int) -> int:
 def require_no_string_index(i: int) -> int:
     "Checked cast from i to NoStringIndex, a negative int"
     if i < 0:
-        return -1
+        return i
     raise AssertionError(f"require_string_index; {i!r} not < 0 ")
 
 
@@ -759,7 +819,7 @@ def string_to_float64(string: str) -> float:
     return result
 
 
-def string_to_int32(string: str, radix: Optional[int] = None) -> float:
+def string_to_int32(string: str, radix: Optional[int] = None) -> int:
     if radix == 0:
         # Other values we reject are checked already.
         raise ValueError()
@@ -769,7 +829,7 @@ def string_to_int32(string: str, radix: Optional[int] = None) -> float:
     raise OverflowError()
 
 
-def string_to_int64(string: str, radix: Optional[int] = None) -> float:
+def string_to_int64(string: str, radix: Optional[int] = None) -> int:
     if radix == 0:
         # Other values we reject are checked already.
         raise ValueError()

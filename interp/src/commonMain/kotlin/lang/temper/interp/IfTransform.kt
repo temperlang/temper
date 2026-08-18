@@ -1,21 +1,30 @@
 package lang.temper.interp
 
+import lang.temper.builtin.BuiltinFuns
 import lang.temper.env.InterpMode
 import lang.temper.log.spanningPosition
+import lang.temper.name.TemperName
+import lang.temper.type.TypeDefinition
+import lang.temper.type.TypeShape
+import lang.temper.type2.MkType2
 import lang.temper.type2.Signature2
 import lang.temper.value.ActualValues
+import lang.temper.value.CallTree
 import lang.temper.value.ControlFlow
 import lang.temper.value.Fail
 import lang.temper.value.MacroEnvironment
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
+import lang.temper.value.ReifiedType
 import lang.temper.value.Result
 import lang.temper.value.SpecialFunction
 import lang.temper.value.TEdge
 import lang.temper.value.Value
 import lang.temper.value.elseIfSymbol
 import lang.temper.value.elseSymbol
+import lang.temper.value.nameContained
+import lang.temper.value.valueContained
 import lang.temper.value.void
 
 /**
@@ -188,11 +197,24 @@ internal object IfTransform : ControlFlowTransform("if") {
                     if (hasFinalElse) {
                         null
                     } else {
-                        // Having a `void` here makes sure that static checks like UseBeforeInit
-                        // get a diagnostic position for error logging.
-                        ControlFlow.Stmt(
-                            macroCursor.referenceToVoid(macroCursor.macroEnvironment.pos.rightEdge),
-                        )
+                        // Using `rightEdge` here improves diagnostic positions such as in UseBeforeInit.
+                        val endPos = wholePos.rightEdge
+                        when (val nameType = anyExhaustiveSealedType(branches)) {
+                            null -> macroCursor.referenceToVoid(endPos)
+                            else -> {
+                                val (checkedName, expectedType) = nameType
+                                val panicCall = macroCursor.macroEnvironment.document.treeFarm.grow(endPos) {
+                                    Block {
+                                        Call {
+                                            V(BuiltinFuns.vVoidishPanic)
+                                            Rn(checkedName)
+                                            V(Value(expectedType))
+                                        }
+                                    }
+                                }.edge(0)
+                                macroCursor.referenceTo(panicCall)
+                            }
+                        }.let { ControlFlow.Stmt(it) }
                     }
                 while (branchIndex != 0) {
                     branchIndex -= 1
@@ -218,24 +240,49 @@ internal object IfTransform : ControlFlowTransform("if") {
                     }
                 }
 
-                // `if` chains that don't end in an `else` should be typed as Void.
-                // See LoopTransform comments on typing as for the problems with control-flow
-                // constructs that start with a condition and which don't reliably follow it
-                // with a typeable tree.
-                if (controlFlow != null && !hasFinalElse) {
-                    controlFlow = ControlFlow.StmtBlock(
-                        controlFlow.pos,
-                        listOf(
-                            controlFlow,
-                            ControlFlow.Stmt(
-                                macroCursor.referenceToVoid(controlFlow.pos.rightEdge),
-                            ),
-                        ),
-                    )
-                }
-
                 controlFlow?.let { ControlFlowSubflow(it) }
             }
         }
     }
+}
+
+/**
+ * Check for simple sealed exhaustiveness. This requires that a single name be
+ * checked against each sealed subtype of some sealed supertype. If so, default
+ * to voidish panic instead of void, which allows for type inference without an
+ * else.
+ *
+ * Rely on checks elsewhere to validate and replace with either void or standard
+ * panic.
+ *
+ * TODO Fancy flowtyping check for exhaustiveness.
+ */
+private fun anyExhaustiveSealedType(branches: MutableList<Pair<TEdge?, TEdge>>): Pair<TemperName, ReifiedType>? {
+    val allFoundSealedSubs = mutableMapOf<TypeShape, MutableSet<TypeDefinition>>()
+    var checkedName: TemperName? = null
+    branches@ for (branch in branches) {
+        val condition = branch.first?.target as? CallTree ?: continue@branches
+        condition.childOrNull(0)?.valueContained?.stateVector == BuiltinFuns.isFn || continue@branches
+        val nextCheckedName = condition.childOrNull(1)?.nameContained ?: continue@branches
+        when (checkedName) {
+            null -> checkedName = nextCheckedName
+            else if checkedName != nextCheckedName -> break@branches
+            else -> {}
+        }
+        val subtype = condition.childOrNull(2)?.valueContained?.stateVector as? ReifiedType ?: continue@branches
+        val subdef = subtype.type2.definition
+        supertypes@ for (supertype in subdef.superTypes) {
+            val supershape = supertype.definition as? TypeShape
+            val sealedSubs = supershape?.sealedSubTypes ?: continue@supertypes
+            if (subdef in sealedSubs) {
+                val foundSealedSubs = allFoundSealedSubs.getOrPut(supershape) { mutableSetOf() }
+                foundSealedSubs.add(subdef)
+                if (foundSealedSubs.size == sealedSubs.size) {
+                    // For purposes of later type verification, we don't need any type actual bindings.
+                    return checkedName to ReifiedType(MkType2(supershape).get())
+                }
+            }
+        }
+    }
+    return null
 }

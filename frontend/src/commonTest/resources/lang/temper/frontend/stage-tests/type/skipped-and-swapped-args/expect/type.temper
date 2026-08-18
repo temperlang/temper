@@ -1,0 +1,36 @@
+var t#0;
+@constructorProperty @visibility(\private) @stay @fromType(Hi__0) let a__0: Int32;
+@constructorProperty @visibility(\private) @stay @fromType(Hi__0) let b__0: Int32;
+@constructorProperty @visibility(\private) @stay @fromType(Hi__0) let c__0: Int32;
+@fn @visibility(\public) @stay @fromType(Hi__0) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(Hi__0) this__0: Hi__0, @optional(true) a__1 /* aka a */: Int32?, @optional(true) b__1 /* aka b */: Int32?, @optional(true) c__1 /* aka c */: Int32?) /* return__0 */: Void {
+    let a__2 /* aka a */: Int32;
+    if (isNull(a__1)) {
+      a__2 = 1
+    } else {
+      a__2 = notNull(a__1);
+    };
+    let b__2 /* aka b */: Int32;
+    if (isNull(b__1)) {
+      b__2 = 2
+    } else {
+      b__2 = notNull(b__1);
+    };
+    let c__2 /* aka c */: Int32;
+    if (isNull(c__1)) {
+      c__2 = 3
+    } else {
+      c__2 = notNull(c__1);
+    };
+    setp(a__0, this__0, a__2);
+    setp(b__0, this__0, b__2);
+    setp(c__0, this__0, c__2);
+    return__0 = void
+});
+@typeDecl(Hi__0) @stay let Hi__0;
+Hi__0 = type (Hi__0);
+var n__0;
+n__0 = 1;
+n__0 = n__0 + 1;
+t#0 = n__0;
+new Hi__0(n__0 + 1, null, t#0);

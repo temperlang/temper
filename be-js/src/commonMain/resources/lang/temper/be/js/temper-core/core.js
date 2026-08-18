@@ -96,7 +96,7 @@ export const clampInt64 = (x) => {
 };
 
 /**
- * Implements extension method Int64::max
+ * Implements extension method core.type Int64.max()
  * @param {bigint} a
  * @param {bigint} b
  * @returns {bigint}
@@ -106,7 +106,7 @@ export const int64Max = (a, b) => {
 }
 
 /**
- * Implements extension method Int64::min
+ * Implements extension method core.type Int64.min()
  * @param {bigint} a
  * @param {bigint} b
  * @returns {bigint}
@@ -116,7 +116,7 @@ export const int64Min = (a, b) => {
 }
 
 /**
- * Implements extension method Int64::toInt32
+ * Implements extension method core.type Int64.toInt32()
  * @param {bigint} n
  * @returns {number}
  */
@@ -128,7 +128,7 @@ export const int64ToInt32 = (n) => {
 }
 
 /**
- * Implements extension method Int64::toInt32Unsafe
+ * Implements extension method core.type Int64.toInt32Unsafe()
  * @param {bigint} n
  * @returns {number}
  */
@@ -137,7 +137,7 @@ export const int64ToInt32Unsafe = (n) => {
 }
 
 /**
- * Implements extension method Int64::toFloat64
+ * Implements extension method core.type Int64.toFloat64()
  * @param {bigint} n
  * @returns {number}
  */
@@ -149,7 +149,7 @@ export const int64ToFloat64 = (n) => {
 }
 
 /**
- * Implements extension method Int64::toFloat63Unsafe
+ * Implements extension method core.type Int64.toFloat63Unsafe()
  * @param {bigint} n
  * @returns {number}
  */

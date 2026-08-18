@@ -144,49 +144,49 @@ For [*true*](builtins.md#builtin-true), the string `"true"`.
 Because it is so frequently used, the alias *Int* is encouraged in source
 code.
 
-<!-- snippet: syntax/int/examples -->
+<!-- snippet: syntax/int32/examples -->
 
-<a name="syntax&#45;int&#45;examples" class="snippet-anchor-name"></a>
+<a name="syntax&#45;int32&#45;examples" class="snippet-anchor-name"></a>
 
-### Int Syntax Examples
+### Int32 Syntax Examples
 Integers can be runs of decimal digits.
 
-<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/0 -->
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/0 -->
 
 ```temper
 123
 // ✅ 123
 ```
 
-<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/0 -->
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/0 -->
 
 Zero is a valid number, but C-style octal literals (with zero padding) would be a source
 of confusion.
 
-<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/1 -->
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/1 -->
 
 ```temper
 0
 // ✅ 0
 ```
 
-<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/1 -->
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/1 -->
 
-<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/2 -->
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/2 -->
 
 ```temper
 let hundred = 100;
 let ten     = 010; // <!-- No
 let one     = 001; // <!-- Still no
-// ❌ Interpreter encountered error()!
+// ❌ Malformed number!, Malformed number!
 ```
 
-<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/2 -->
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/2 -->
 
 You can't use commas in a number literal to make large numbers readable,
 but you can use an underscore to separate digit groups.
 
-<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/3 -->
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/3 -->
 
 ```temper
 [123,456,789] == [123 , 456 , 789] &&  // Commas separate elements
@@ -194,23 +194,23 @@ but you can use an underscore to separate digit groups.
 // ✅
 ```
 
-<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/3 -->
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/3 -->
 
 Exponential notation is fine for floating point values, but not for integers.
 
-<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/4 -->
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/4 -->
 
 ```temper
 1e2 == 100.0
 // ✅
 ```
 
-<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/4 -->
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/4 -->
 
 And feel free to use a base like hexadecimal or binary when that fits what you're
-modelling.
+modeling.
 
-<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/5 -->
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/5 -->
 
 ```temper
 0x10 == 16 && // Hex
@@ -219,9 +219,9 @@ modelling.
 // ✅
 ```
 
-<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int/examples/snippet.md/5 -->
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/5 -->
 
-<!-- /snippet: syntax/int/examples -->
+<!-- /snippet: syntax/int32/examples -->
 
 <!-- /snippet: type/Int32/commentary -->
 
@@ -391,6 +391,54 @@ Supports radix 2 through 36. Doesn't prefix `+` for positive.
 
 <!-- /snippet: type/Int32/method/max -->
 
+<!-- snippet: type/Int32/method/succ -->
+
+<a name="type&#45;Int32&#45;method&#45;succ" class="snippet-anchor-name"></a>
+
+#### `Int32.succ`
+
+<!-- snippet: type/Int32/method/succ/sig -->
+
+<a name="type&#45;Int32&#45;method&#45;succ&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Int32*](#type-Int32)`):` [*Int32*](#type-Int32)
+
+<!-- /snippet: type/Int32/method/succ/sig -->
+
+<!-- snippet: type/Int32/method/succ/commentary -->
+
+<a name="type&#45;Int32&#45;method&#45;succ&#45;commentary" class="snippet-anchor-name"></a>
+
+`this + 1`, the successor value used by [`++` operator: increment](builtins.md#builtin-%2B%2B).
+
+<!-- /snippet: type/Int32/method/succ/commentary -->
+
+<!-- /snippet: type/Int32/method/succ -->
+
+<!-- snippet: type/Int32/method/pred -->
+
+<a name="type&#45;Int32&#45;method&#45;pred" class="snippet-anchor-name"></a>
+
+#### `Int32.pred`
+
+<!-- snippet: type/Int32/method/pred/sig -->
+
+<a name="type&#45;Int32&#45;method&#45;pred&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Int32*](#type-Int32)`):` [*Int32*](#type-Int32)
+
+<!-- /snippet: type/Int32/method/pred/sig -->
+
+<!-- snippet: type/Int32/method/pred/commentary -->
+
+<a name="type&#45;Int32&#45;method&#45;pred&#45;commentary" class="snippet-anchor-name"></a>
+
+`this - 1`, the predecessor value used by [`--` operator: decrement](builtins.md#builtin---).
+
+<!-- /snippet: type/Int32/method/pred/commentary -->
+
+<!-- /snippet: type/Int32/method/pred -->
+
 <!-- /snippet: type/Int32/methods -->
 
 <!-- snippet: type/Int32/statics -->
@@ -415,13 +463,35 @@ Supports radix 2 through 36. Doesn't prefix `+` for positive.
 
 <a name="type&#45;Int64&#45;commentary" class="snippet-anchor-name"></a>
 
+*Int64* is a double wide, signed integer type.
+
+Possible *Int64* values range from -2<sup>63</sup> to (2<sup>63</sup> - 1).
+
+<!-- snippet: syntax/int64/examples -->
+
+<a name="syntax&#45;int64&#45;examples" class="snippet-anchor-name"></a>
+
+`i64` after a decimal or hex literal makes it an [*Int64*](#type-Int64).
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int64/examples/snippet.md/0 -->
+
+```temper
+let my64: Int64 = 1i64;
+1i64 * 0x2i64 == 2i64
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int64/examples/snippet.md/0 -->
+
+<!-- /snippet: syntax/int64/examples -->
+
 <!-- /snippet: type/Int64/commentary -->
 
 <!-- snippet: type/Int64/sig -->
 
 <a name="type&#45;Int64&#45;sig" class="snippet-anchor-name"></a>
 
-*Int64* `extends` [*AnyValue*](#type-AnyValue)
+*Int64* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)
 
 <!-- /snippet: type/Int64/sig -->
 
@@ -639,6 +709,54 @@ Supports radix 2 through 36. Doesn't prefix `+` for positive.
 
 <!-- /snippet: type/Int64/method/max -->
 
+<!-- snippet: type/Int64/method/succ -->
+
+<a name="type&#45;Int64&#45;method&#45;succ" class="snippet-anchor-name"></a>
+
+#### `Int64.succ`
+
+<!-- snippet: type/Int64/method/succ/sig -->
+
+<a name="type&#45;Int64&#45;method&#45;succ&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Int64*](#type-Int64)`):` [*Int64*](#type-Int64)
+
+<!-- /snippet: type/Int64/method/succ/sig -->
+
+<!-- snippet: type/Int64/method/succ/commentary -->
+
+<a name="type&#45;Int64&#45;method&#45;succ&#45;commentary" class="snippet-anchor-name"></a>
+
+`this + 1i64`, the successor value used by [`++` operator: increment](builtins.md#builtin-%2B%2B).
+
+<!-- /snippet: type/Int64/method/succ/commentary -->
+
+<!-- /snippet: type/Int64/method/succ -->
+
+<!-- snippet: type/Int64/method/pred -->
+
+<a name="type&#45;Int64&#45;method&#45;pred" class="snippet-anchor-name"></a>
+
+#### `Int64.pred`
+
+<!-- snippet: type/Int64/method/pred/sig -->
+
+<a name="type&#45;Int64&#45;method&#45;pred&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Int64*](#type-Int64)`):` [*Int64*](#type-Int64)
+
+<!-- /snippet: type/Int64/method/pred/sig -->
+
+<!-- snippet: type/Int64/method/pred/commentary -->
+
+<a name="type&#45;Int64&#45;method&#45;pred&#45;commentary" class="snippet-anchor-name"></a>
+
+`this - 1i64`, the predecessor value used by [`--` operator: decrement](builtins.md#builtin---).
+
+<!-- /snippet: type/Int64/method/pred/commentary -->
+
+<!-- /snippet: type/Int64/method/pred -->
+
 <!-- /snippet: type/Int64/methods -->
 
 <!-- snippet: type/Int64/statics -->
@@ -705,7 +823,7 @@ You can make big numbers more readable by separating digits with underscore(`_`)
 <!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/float64/examples/snippet.md/1 -->
 
 A number with an exponent is a Float64 even if it does not have a decimal point.
-The exponent follows letter 'e', either upper or lower-case.
+The exponent follows the letter 'e', either upper or lower-case.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/float64/examples/snippet.md/2 -->
 
@@ -772,7 +890,7 @@ Temper also does not recognize all C's number suffixes.
 
 ```temper
 1F
-// ❌ Expected subtype of Top, but got Invalid!
+// ❌ Malformed number!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/float64/examples/snippet.md/7 -->
@@ -1492,6 +1610,54 @@ Matches semantics of Python's *math.isclose*.
 
 <!-- /snippet: type/Float64/method/tanh -->
 
+<!-- snippet: type/Float64/method/succ -->
+
+<a name="type&#45;Float64&#45;method&#45;succ" class="snippet-anchor-name"></a>
+
+#### `Float64.succ`
+
+<!-- snippet: type/Float64/method/succ/sig -->
+
+<a name="type&#45;Float64&#45;method&#45;succ&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Float64*](#type-Float64)`):` [*Float64*](#type-Float64)
+
+<!-- /snippet: type/Float64/method/succ/sig -->
+
+<!-- snippet: type/Float64/method/succ/commentary -->
+
+<a name="type&#45;Float64&#45;method&#45;succ&#45;commentary" class="snippet-anchor-name"></a>
+
+`this + 1.0`, the successor value used by [`++` operator: increment](builtins.md#builtin-%2B%2B).
+
+<!-- /snippet: type/Float64/method/succ/commentary -->
+
+<!-- /snippet: type/Float64/method/succ -->
+
+<!-- snippet: type/Float64/method/pred -->
+
+<a name="type&#45;Float64&#45;method&#45;pred" class="snippet-anchor-name"></a>
+
+#### `Float64.pred`
+
+<!-- snippet: type/Float64/method/pred/sig -->
+
+<a name="type&#45;Float64&#45;method&#45;pred&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Float64*](#type-Float64)`):` [*Float64*](#type-Float64)
+
+<!-- /snippet: type/Float64/method/pred/sig -->
+
+<!-- snippet: type/Float64/method/pred/commentary -->
+
+<a name="type&#45;Float64&#45;method&#45;pred&#45;commentary" class="snippet-anchor-name"></a>
+
+`this - 1.0`, the predecessor value used by [`--` operator: decrement](builtins.md#builtin---).
+
+<!-- /snippet: type/Float64/method/pred/commentary -->
+
+<!-- /snippet: type/Float64/method/pred -->
+
 <!-- /snippet: type/Float64/methods -->
 
 <!-- snippet: type/Float64/statics -->
@@ -1568,7 +1734,7 @@ A *String* is a chunk of textual content.
 
 <a name="syntax&#45;StringExpr" class="snippet-anchor-name"></a>
 
-![StringExpr &#58;&#61; &#34;&#92;u0022&#34; &#40;SourceCharacter &#45; &#40;&#92;&#92;n&#92;&#44; &#92;&#92;r&#92;&#44; &#92;&#92;&#92;&#44; &#92;&#34;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#34;&#92;u0022&#34; &#124; &#34;&#92;u0022&#92;u0022&#92;u0022&#34; &#40;Content line starting with &#96;&#34;&#96;&#58; &#34;LineBreak&#34; indentation &#40;Ignored margin quote&#58; &#34;&#92;u0022&#34;&#41; &#40;&#40;SourceCharacter &#45; &#40;&#92;&#92;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#124; &#34;&#123;&#58;&#34; StatementFragment &#34;&#58;&#125;&#34;&#41;&#41;&#42; &#34;LineBreak&#34;](../snippet/syntax/StringExpr/snippet.svg)
+![StringExpr &#58;&#61; &#34;&#92;u0022&#34; &#40;SourceCharacter &#45; &#40;&#92;&#92;n&#92;&#44; &#92;&#92;r&#92;&#44; &#92;&#92;&#92;&#44; &#92;&#34;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#34;&#92;u0022&#34; &#124; &#34;&#96;&#34; &#40;SourceCharacter &#45; &#40;&#92;&#92;n&#92;&#44; &#92;&#92;r&#92;&#44; &#92;&#92;&#92;&#44; &#92;&#96;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#34;&#96;&#34; &#124; &#34;&#92;&#34; &#40;SourceCharacter &#45; &#40;&#92;&#92;n&#92;&#44; &#92;&#92;r&#92;&#44; &#92;&#92;&#92;&#44; &#92;&#92;&#92;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#34;&#92;&#34; &#124; &#34;&#92;u0022&#92;u0022&#92;u0022&#34; &#40;Content line starting with &#96;&#34;&#96;&#58; &#34;LineBreak&#34; indentation &#40;&#40;Ignored margin character&#58; &#34;&#92;u0022&#34; &#124; &#34;&#126;&#34;&#41; &#40;SourceCharacter &#45; &#40;&#92;&#92;&#92;&#41; &#124; EscapeSequence &#124; &#40;UTF&#45;16 Code Unit&#58; &#34;&#92;&#92;u&#34; Hex Hex Hex Hex&#41; &#124; &#40;Unicode Scalar Values&#58; &#34;&#92;&#92;u&#123;&#34; HexDigits&#43;&#40;&#34;&#44;&#34;&#41; &#34;&#125;&#34;&#41; &#124; &#40;Interpolation&#58; &#34;&#92;u0024&#123;&#34; Expr &#34;&#125;&#34;&#41;&#41;&#42; &#124; &#34;&#58;&#34; StatementFragment&#41;&#41;&#42; &#34;LineBreak&#34;](../snippet/syntax/StringExpr/snippet.svg)
 
 <!-- /snippet: syntax/StringExpr -->
 
@@ -1585,8 +1751,16 @@ multi-line strings with interpolation, use triple-quotes: `"""` for multi-line s
 <a name="syntax&#45;multi&#45;quoted&#45;strings" class="snippet-anchor-name"></a>
 
 Multi-quoted strings start with 3 `"`'s.
-Each content line must start with a `"`, called a *margin-quote*,
+Each content line must start with a *margin-character*,
 which is not part of the content.
+
+The allowed margin characters are:
+- A double quote (`"`) which is followed by characters and/or interpolations.
+  The content line has an implicit line feed (LF U+A) character at the end.
+- A tilde (`~`) which is just like a double quote margin, but there is no
+  implied line feed at the end.
+- A colon (`:`) which allows embedding a statement fragment (see below)
+  instead of literal character data.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/multi-quoted-strings/snippet.md/0 -->
 
@@ -1602,13 +1776,13 @@ which is not part of the content.
 When a non-blank line doesn't start with a margin-quote, the
 multi-quoted string ends.
 
-Quotes can be embedded inside a multi-quoted strings.
+Quotes can be embedded inside multi-quoted strings.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/multi-quoted-strings/snippet.md/1 -->
 
 ```temper
 (
-  "Alice said\n\"Hello, World!\"" ==
+  "Alice said\n\"Hello, World!\"\n" ==
     """
     "Alice said
     ""Hello, World!"
@@ -1623,15 +1797,71 @@ Multi-quoted strings may contain interpolations.
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/multi-quoted-strings/snippet.md/2 -->
 
 ```temper
-let whom = """
-    "World
-;
-"Hello, World!" == """
-  "Hello, ${whom}!
+let whom = "World";
+
+"Hello, World!" ==
+  """
+  ~Hello, ${whom}!
 // ✅
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/multi-quoted-strings/snippet.md/2 -->
+
+Multi-quoted string content lines may be split across multiple lines.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/multi-quoted-strings/snippet.md/3 -->
+
+```temper
+"""
+"This is one line.
+~This is a longer line that, because it starts with a tilde,
+~does not have a line feed at the end, until finally we get
+"to a line with a double-quote character in the margin, Phew!
+;
+// ✅ null
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/multi-quoted-strings/snippet.md/3 -->
+
+Statement fragment lines, which start with colon (`:`) allow
+for composing complex strings by iterating and using conditionals.
+
+These two ways of constructing content are equivalent, but the
+structure of the output is easier to understand from the
+multi-quoted string.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/multi-quoted-strings/snippet.md/4 -->
+
+```temper
+let numbers = ["Zero", "One", "Two", "Three"];
+// Starting at zero because the Count is a vampire, not a monster.
+let action = "count";
+
+let a = """
+  ~I am the Count who loves to ${action}!
+  : for (let number of numbers) {
+      ~ ${number}! Ha HA ha.
+  : }
+  ;
+
+let b = do {
+  let sb = new StringBuilder();
+  sb.append("I am the Count who loves to ");
+  sb.append(action);
+  sb.append("!");
+  for (let number of numbers) {
+    sb.append(" ");
+    sb.append(number);
+    sb.append("! Ha HA ha.");
+  }
+  sb.toString()
+};
+
+a == b
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/multi-quoted-strings/snippet.md/4 -->
 
 <!-- /snippet: syntax/multi-quoted-strings -->
 
@@ -1680,32 +1910,33 @@ it contributes to the content of the resulting string value.
 Spaces that do not contribute to the content are called *incidental spaces*.
 Incidental spaces include:
 
-- those used for code indentation, and
-- those that appear at the end of a line so are invisible to readers, and
-  often automatically stripped by editors, and
-- carriage returns which may be inserted or removed depending on
+- Those used for code indentation, and
+- Those that appear at the end of a line so are invisible to readers and
+  often automatically stripped by code editors, and
+- Carriage returns which may be inserted or removed depending on
   whether a file is edited on Windows or UNIX.
 
 Normalizing incidental space steps include:
 
-1. Removing leading space on each line that match the indentation of the close quote.
-2. Removing the newline after the open quote, and before the close quote.
-3. Removing space at the end of each line.
-4. Normalizing line break sequences CRLF, CR, and LF to LF.
+1. Removing space before the margin character.
+2. Removing the newline after the open quote.
+3. Removing spaces and tabs at the end of each line.
+4. Removing line break sequences at the end of lines with the
+   tilde (`~`) margin character.
+5. Normalizing line break sequences CRLF, CR, and LF to LF.
 
-For the purposes of identifying incidental space, we imagine that any
-interpolation `${...}`, scriptlet `{:...:}`, or hole `${}` contributes
+To identify incidental space, we imagine that any
+interpolation `${...}`, or hole `${}` contributes
 1 or more non-space, non-line-break characters.
-
-Indentation matching the close quote is incidental, hence removed.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/string/incidental-space-removal/snippet.md/0 -->
 
 ```temper
 """
-    "Line 1
-    "Line 2
-== "Line 1\nLine 2"
+  "Line 1
+  "Line 2
+  ~Line 3 without LF at end
+== "Line 1\nLine 2\nLine 3 without LF at end"
 // ✅
 ```
 
@@ -1721,13 +1952,15 @@ It's good style to line up the margin characters, but not necessary.
     " Line 1
    "  Line 2
     "   Line 3
-== " Line 1\n  Line 2\n   Line 3"
+== " Line 1\n  Line 2\n   Line 3\n"
 // ✅
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/string/incidental-space-removal/snippet.md/1 -->
 
-It's an error if a line is not un-indented from the close quote.
+It's an error if a line is missing a margin character.
+Temper's parser will treat such lines as regular code,
+often leading to other syntax errors.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/string/incidental-space-removal/snippet.md/2 -->
 
@@ -1750,7 +1983,7 @@ interpolation or hole:
 """
     "Line 1  ${"interpolation"}
     "Line 2  ${/*hole*/}
-    "Line 3
+    ~Line 3
     == "Line 1  interpolation\nLine 2  \nLine 3"
 // ✅
 ```
@@ -1763,7 +1996,7 @@ For the purpose of this, space includes:
 - Tab character: U+9 '\t'
 
 A line consists of any maximal sequence of characters other than
-CR (U+A '\n') and LF (U+D '\r').
+CR (U+D '\r') and LF (U+A '\n').
 
 A line break is any of the following sequences:
 
@@ -1776,6 +2009,8 @@ Windows machine (prefers CR LF) or another machine (tend to prefer LF)
 the meaning of a string is the same.  This means that all of those sequences,
 where not trimmed, are simplified to LF.  Use `${}` if you really need to
 embed a `\r` in a file.
+
+See [Multi-quoted strings](#syntax-multi-quoted-strings) for more details on margin characters.
 
 <!-- /snippet: syntax/string/incidental-space-removal -->
 
@@ -1831,7 +2066,9 @@ which means it may be used to embed meta-characters.
 give fine-grained control over what the tag receives.)
 
 Empty interpolations can also be used to wrap a long
-string across multiple lines.
+string across multiple lines, but using a multi-quoted
+string with the tilde (`~`) margin character can be
+easier.
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/string/interpolation/snippet.md/3 -->
 
@@ -1853,12 +2090,19 @@ the end of a line in a multi-quoted string.
 ```temper
 """
 "Line 1
-"Line 2 ${}
+~Line 2 ${}
 == "Line 1\nLine 2 "
 // ✅
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/string/interpolation/snippet.md/4 -->
+
+In that multi-quoted string, the margin characters at the left (`"` and `~`)
+control newlines.  Line feeds (LF U+A) are added at the end of lines that have
+a double-quote character (`"`) in the margin, but not at the end of lines that
+have a tilde character (`~`) in the margin.
+
+See [Multi-quoted strings](#syntax-multi-quoted-strings) for more details on that syntax.
 
 <!-- /snippet: syntax/string/interpolation -->
 
@@ -2577,6 +2821,22 @@ A string index that works for the start of any string.
 A *StringBuilder* allows composing a string by appending substrings at the
 end.
 
+<!-- snippet: temper-code/build-user-docs/build/snippet/type/StringBuilder/commentary/snippet.md/0 -->
+
+```temper
+let stringBuilder = new StringBuilder();
+stringBuilder.append("Hello");
+console.log(stringBuilder.toString()); //!outputs "Hello"
+stringBuilder.append(", World!");
+console.log(stringBuilder.toString()); //!outputs "Hello, World!"
+stringBuilder.clear();
+stringBuilder.append("Goodbye.");
+console.log(stringBuilder.toString()); //!outputs "Goodbye."
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/type/StringBuilder/commentary/snippet.md/0 -->
+
 <!-- /snippet: type/StringBuilder/commentary -->
 
 <!-- snippet: type/StringBuilder/sig -->
@@ -2602,6 +2862,55 @@ end.
 <!-- snippet: type/StringBuilder/properties -->
 
 <a name="type&#45;StringBuilder&#45;properties" class="snippet-anchor-name"></a>
+
+### properties
+
+<!-- snippet: type/StringBuilder/property/end -->
+
+<a name="type&#45;StringBuilder&#45;property&#45;end" class="snippet-anchor-name"></a>
+
+#### `StringBuilder.end`
+
+<!-- snippet: type/StringBuilder/property/end/sig -->
+
+<a name="type&#45;StringBuilder&#45;property&#45;end&#45;sig" class="snippet-anchor-name"></a>
+
+`:` [*StringIndex*](#type-StringIndex)
+
+<!-- /snippet: type/StringBuilder/property/end/sig -->
+
+<!-- snippet: type/StringBuilder/property/end/commentary -->
+
+<a name="type&#45;StringBuilder&#45;property&#45;end&#45;commentary" class="snippet-anchor-name"></a>
+
+The index at the end of the string built by this string
+as it stands right now.  It will still be the index after
+the previously appended content even if more content is appended.
+The end index is invalidated by any subsequent calls to [clear].
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/type/StringBuilder/property/end/commentary/snippet.md/0 -->
+
+```temper
+let stringBuilder = new StringBuilder();
+stringBuilder.append("Hello");
+let afterHello = stringBuilder.end;
+stringBuilder.append(", World!");
+let str = stringBuilder.toString();
+// Now I can use afterHello with str.
+console.log(str.slice(String.begin, afterHello)); //!outputs "Hello"
+console.log(str.slice(afterHello, str.end)); //!outputs ", World!"
+
+// ⚠️ Do not use afterHello after calling clear.
+stringBuilder.clear();
+// stringBuilder.toString()[afterHello] would panic!
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/type/StringBuilder/property/end/commentary/snippet.md/0 -->
+
+<!-- /snippet: type/StringBuilder/property/end/commentary -->
+
+<!-- /snippet: type/StringBuilder/property/end -->
 
 <!-- /snippet: type/StringBuilder/properties -->
 
@@ -2708,6 +3017,33 @@ without creating a new backing array for the substring.
 <!-- /snippet: type/StringBuilder/method/appendBetween/commentary -->
 
 <!-- /snippet: type/StringBuilder/method/appendBetween -->
+
+<!-- snippet: type/StringBuilder/method/clear -->
+
+<a name="type&#45;StringBuilder&#45;method&#45;clear" class="snippet-anchor-name"></a>
+
+#### `StringBuilder.clear`
+
+<!-- snippet: type/StringBuilder/method/clear/sig -->
+
+<a name="type&#45;StringBuilder&#45;method&#45;clear&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*StringBuilder*](#type-StringBuilder)`):` [*Void*](#type-Void)
+
+<!-- /snippet: type/StringBuilder/method/clear/sig -->
+
+<!-- snippet: type/StringBuilder/method/clear/commentary -->
+
+<a name="type&#45;StringBuilder&#45;method&#45;clear&#45;commentary" class="snippet-anchor-name"></a>
+
+*clear()* removes any previously appended content, returning this
+*StringBuilder* to its newly created state.
+
+This *StringBuilder* may be reused after clearing.
+
+<!-- /snippet: type/StringBuilder/method/clear/commentary -->
+
+<!-- /snippet: type/StringBuilder/method/clear -->
 
 <!-- snippet: type/StringBuilder/method/toString -->
 
@@ -3997,31 +4333,6 @@ Always creates a new object and backing buffer even if this is already a
 <!-- /snippet: type/Listed/method/toListBuilder/commentary -->
 
 <!-- /snippet: type/Listed/method/toListBuilder -->
-
-<!-- snippet: type/Listed/method/mapDropping -->
-
-<a name="type&#45;Listed&#45;method&#45;mapDropping" class="snippet-anchor-name"></a>
-
-#### `Listed.mapDropping`
-
-<!-- snippet: type/Listed/method/mapDropping/sig -->
-
-<a name="type&#45;Listed&#45;method&#45;mapDropping&#45;sig" class="snippet-anchor-name"></a>
-
-`:` `fn<`*O*`>(`[*Listed*](#type-Listed)&lt;[*T*](#type-Listed-typeFormal-T)&gt;, `fn(`[*T*](#type-Listed-typeFormal-T)`):` *O* `throws` [*Bubble*](#type-Bubble)`):` [*List*](#type-List)&lt;*O*&gt;
-
-<!-- /snippet: type/Listed/method/mapDropping/sig -->
-
-<!-- snippet: type/Listed/method/mapDropping/commentary -->
-
-<a name="type&#45;Listed&#45;method&#45;mapDropping&#45;commentary" class="snippet-anchor-name"></a>
-
-Maps elements using [transform] and filtering out elements for which
-[transform] fails.
-
-<!-- /snippet: type/Listed/method/mapDropping/commentary -->
-
-<!-- /snippet: type/Listed/method/mapDropping -->
 
 <!-- snippet: type/Listed/method/map -->
 
@@ -7110,10 +7421,10 @@ Static types have more nuance than type tags.
 | `List<Int>`  | `List`       |
 | `fn(): Void` | `Function`   |
 
-As you can see, all function values have the same type tag, *Function*, and generic class's
+As you can see, all function values have the same type tag, *Function*, and a generic class's
 corresponding type tag has the type parameters erased.
 
-[^1]: A narrowing cast is from a super-type to a sub-type.  For example, from [*AnyValue*](#type-AnyValue) to `class C`.
+[^1]: A narrowing cast is from a super-type to a subtype.  For example, from [*AnyValue*](#type-AnyValue) to `class C`.
 
 <!-- /snippet: type-tag -->
 

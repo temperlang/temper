@@ -3,19 +3,28 @@ package lang.temper.value
 import lang.temper.common.BINARY_RADIX
 import lang.temper.common.DECIMAL_RADIX
 import lang.temper.common.HEX_RADIX
+import lang.temper.common.Log
 import lang.temper.common.OCTAL_RADIX
 import lang.temper.common.ignore
 import lang.temper.common.max
 import lang.temper.lexer.TokenType
 import lang.temper.lexer.unpackQuotedString
+import lang.temper.log.LogEntry
+import lang.temper.log.MessageTemplate
+import lang.temper.log.unknownPos
 import lang.temper.name.Symbol
 import lang.temper.name.decodeName
+import java.math.BigInteger
 
-fun unpackValue(tokenText: String, tokenType: TokenType): Result {
+fun unpackValue(
+    tokenText: String,
+    tokenType: TokenType,
+    onProblem: ((Log.Level, MessageTemplate, List<Any>) -> Unit)? = null,
+): Result {
     return when (tokenType) {
         /**
-         * <!-- snippet: syntax/int/examples -->
-         * # Int Syntax Examples
+         * <!-- snippet: syntax/int32/examples -->
+         * # Int32 Syntax Examples
          * Integers can be runs of decimal digits.
          *
          * ```temper 123
@@ -50,12 +59,21 @@ fun unpackValue(tokenText: String, tokenType: TokenType): Result {
          * ```
          *
          * And feel free to use a base like hexadecimal or binary when that fits what you're
-         * modelling.
+         * modeling.
          *
          * ```temper
          * 0x10 == 16 && // Hex
          * 0b10 ==  2 && // Binary
          * 0o10 ==  8
+         * ```
+         *
+         * <!-- snippet: syntax/int64/examples -->
+         *
+         * `i64` after a decimal or hex literal makes it an [snippet/type/Int64].
+         *
+         * ```temper
+         * let my64: Int64 = 1i64;
+         * 1i64 * 0x2i64 == 2i64
          * ```
          *
          * <!-- snippet: syntax/float64/examples -->
@@ -74,7 +92,7 @@ fun unpackValue(tokenText: String, tokenType: TokenType): Result {
          * ```
          *
          * A number with an exponent is a Float64 even if it does not have a decimal point.
-         * The exponent follows letter 'e', either upper or lower-case.
+         * The exponent follows the letter 'e', either upper or lower-case.
          *
          * ```temper
          * 123e2 == 12_300.0 &&
@@ -156,25 +174,39 @@ fun unpackValue(tokenText: String, tokenType: TokenType): Result {
                 //    const ONE     = 001;
                 // Enough so that JS strict mode banned them.
                 //
-                // There are some domain specific use cases, `chmod` masks,
+                // There are some domain-specific use cases, `chmod` masks,
                 // but, as above, we allow 0o010 to the same end.
-                return Fail
+                return Fail(LogEntry(Log.Error, MessageTemplate.MalformedNumber, unknownPos, listOf()))
             }
             try {
                 if (isInt) {
-                    val long = try {
-                        text.toLong(radix)
-                    } catch (_: NumberFormatException) {
-                        // For supporting -0x8000_0000_0000_0000_i64 for now.
-                        // But we expect this to allocate, so only bother with this for unusual cases.
-                        // TODO Actually error on any other cases for now? Gives room for compile-time semi-bigints?
-                        // TODO But we can't identify here if negated outside the literal.
-                        text.toBigInteger(radix).toLong()
-                    }
+                    val big = text.toBigInteger(radix)
                     when (typeTag) {
-                        // TODO Actually error on Int32 beyond -0x8000_0000? Again, external negation is awkward.
-                        TInt -> Value(long.toInt(), TInt)
-                        TInt64 -> Value(long, TInt64)
+                        TInt -> {
+                            if (
+                                onProblem != null &&
+                                big !in bigInt32Min..bigInt32Max &&
+                                // Relax for 0x... unsigned syntax which is idiomatic for bit strings
+                                // regardless of signedness.
+                                !(radix == HEX_RADIX && big in bigUint32Min..bigUint32Max)
+                            ) {
+                                onProblem(Log.Warn, MessageTemplate.Int32OutOfBounds, listOf(big))
+                                if (big in bigInt64Min..bigInt64Max) {
+                                    onProblem(Log.Info, MessageTemplate.MaybePromoteInt32ToInt64, listOf())
+                                }
+                            }
+                            Value(big.toInt(), TInt)
+                        }
+                        TInt64 -> {
+                            if (
+                                onProblem != null &&
+                                big !in bigInt64Min..bigInt64Max &&
+                                !(radix == HEX_RADIX && big in bigUint64Min..bigUint64Max)
+                            ) {
+                                onProblem(Log.Warn, MessageTemplate.Int64OutOfBounds, listOf(big))
+                            }
+                            Value(big.toLong(), TInt64)
+                        }
                         else -> error("inconceivable")
                     }
                 } else {
@@ -182,16 +214,18 @@ fun unpackValue(tokenText: String, tokenType: TokenType): Result {
                 }
             } catch (e: NumberFormatException) {
                 ignore(e)
-                return Fail
+                return Fail(LogEntry(Log.Error, MessageTemplate.MalformedNumber, unknownPos, listOf()))
             }
         }
         TokenType.Word -> when (val parsedName = decodeName(tokenText)) {
-            null -> Fail
+            null -> Fail()
             else -> Value(Symbol(parsedName.nameText), TSymbol)
         }
         TokenType.QuotedString -> {
             val (decoded, isOk) = unpackQuotedString(tokenText, skipDelimiter = false)
             if (!isOk) {
+                // We scan later for string errors and report them in context.
+                // For example, for two surrogates we suggest supplemental codepoint syntax.
                 Fail
             } else {
                 Value(
@@ -243,3 +277,27 @@ fun findNumericTypeSuffix(text: String, radix: Int): Pair<String, TypeTag<*>>? {
 }
 
 private const val MAX_NUMERIC_SUFFIX_LENGTH = 3
+
+@Suppress("MagicNumber")
+private val bigInt32Min = BigInteger("-80000000", 16)
+
+@Suppress("MagicNumber")
+private val bigInt32Max = BigInteger("7fffffff", 16)
+
+@Suppress("MagicNumber")
+private val bigInt64Min = BigInteger("-8000000000000000", 16)
+
+@Suppress("MagicNumber")
+private val bigInt64Max = BigInteger("7fffffffffffffff", 16)
+
+@Suppress("MagicNumber")
+private val bigUint32Min = BigInteger.ZERO
+
+@Suppress("MagicNumber")
+private val bigUint32Max = BigInteger("ffffffff", 16)
+
+@Suppress("MagicNumber")
+private val bigUint64Min = BigInteger.ZERO
+
+@Suppress("MagicNumber")
+private val bigUint64Max = BigInteger("ffffffffffffffff", 16)

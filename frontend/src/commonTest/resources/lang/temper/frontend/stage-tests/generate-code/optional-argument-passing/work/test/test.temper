@@ -1,0 +1,2 @@
+let f(a: Int = 0, b: Int = 1): String { "a=${a.toString()}, b=${b.toString()}" };
+"${ f(2) }; ${ f(null, 2) }; ${ f(3, 2) }"

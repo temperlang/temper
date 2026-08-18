@@ -31,9 +31,6 @@ import lang.temper.fs.NullSystemAccess
 import lang.temper.fs.OutDir
 import lang.temper.fs.OutputRoot
 import lang.temper.fs.fileTreeStructure
-import lang.temper.interp.connectedDecoratorBindings
-import lang.temper.interp.connectedDecoratorName
-import lang.temper.interp.vConnectedDecorator
 import lang.temper.lexer.Genre
 import lang.temper.library.LibraryConfiguration
 import lang.temper.library.LibraryConfigurations
@@ -53,6 +50,7 @@ import lang.temper.name.ParsedName
 import lang.temper.name.PseudoCodeNameRenumberer
 import lang.temper.name.SourceName
 import lang.temper.name.Symbol
+import lang.temper.stage.Stage
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
@@ -61,8 +59,8 @@ import lang.temper.value.TBoolean
 import lang.temper.value.TFloat64
 import lang.temper.value.Value
 import lang.temper.value.initSymbol
+import lang.temper.value.toStringDotName
 import lang.temper.value.typeSymbol
-import lang.temper.value.vToStringSymbol
 import kotlin.test.Ignore
 import kotlin.test.Test
 
@@ -165,7 +163,7 @@ class TmpLBackendTest {
                     "content":
                     ```
                     //// work//for/ => for.tmpl
-                    let nym`<#1` = builtins.nym`<` /* (Int32?, Int32?) -> Boolean */;
+                    let nym`<#1` = builtins.nym`<` /* (Int32, Int32) -> Boolean */;
                     let nym`+#2` = builtins.nym`+` /* (Int32, Int32) -> Int32 */;
                     @QName("test-library/for.x=") var x__0: Int32 = 0;
                     module init {
@@ -385,7 +383,7 @@ class TmpLBackendTest {
                 |            "content":
                 |            ```
                 |            //// work//fib/ => fib.tmpl
-                |            let nym`>#9` = builtins.nym`>` /* (Int32?, Int32?) -> Boolean */;
+                |            let nym`>#9` = builtins.nym`>` /* (Int32, Int32) -> Boolean */;
                 |            let nym`+#10` = builtins.nym`+` /* (Int32, Int32) -> Int32 */;
                 |            let nym`-#11` = builtins.nym`-` /* (Int32, Int32) -> Int32 */;
                 |            @QName("test-library/fib.fib()") let fib__0(@QName("test-library/fib.fib().(i)") var i__0: Int32): Int32 {
@@ -640,7 +638,7 @@ class TmpLBackendTest {
                     "content":
                     ```
                     //// work//do-nothing/ => do-nothing.tmpl
-                    let nym`<#1` = builtins.nym`<` /* (Int32?, Int32?) -> Boolean */;
+                    let nym`<#1` = builtins.nym`<` /* (Int32, Int32) -> Boolean */;
                     let nym`+#2` = builtins.nym`+` /* (Int32, Int32) -> Int32 */;
                     @QName("test-library/do-nothing.i") var i__0: Int32 = 0;
                     module init {
@@ -830,9 +828,9 @@ class TmpLBackendTest {
             |           content:
             |               ```
             |               //// work//isEmptyWrapper/ => isEmptyWrapper.tmpl
-            |               let StringIsEmpty#0 = builtins.StringIsEmpty;
+            |               let StringGetIsEmpty#0 = builtins.StringGetIsEmpty;
             |               let return__0(@QName("test-library/isEmptyWrapper.(s)") s__1: String): Boolean {
-            |                 return StringIsEmpty#0(s__1);
+            |                 return StringGetIsEmpty#0(s__1);
             |               }
             |               export return__0;
             |
@@ -866,7 +864,7 @@ class TmpLBackendTest {
             |               ```
             |               //// work//lengthWrapper/ => lengthWrapper.tmpl
             |               let return__0(@QName("test-library/lengthWrapper.(ls)") ls__1: List<Int32>): Int32 {
-            |                 return (inline ListLength)(ls__1);
+            |                 return (inline ListGetLength)(ls__1);
             |               }
             |               export return__0;
             |
@@ -1378,7 +1376,7 @@ class TmpLBackendTest {
     fun localDeclarationsNotEaten() = assertGeneratedCode(
         inputs = inputFileMapFromJson(
             // This example was reduced from the Myers diff functional test code.
-            // The variable `c` was pulled into a synthesized, labeled block, and so was not
+            // The variable `c` was pulled into a synthesized, labeled block; so was not
             // visible to its use in `e`'s initializer.
             """
                 |{
@@ -1402,18 +1400,16 @@ class TmpLBackendTest {
             |            "content": ```
             |                //// work//example/ => example.tmpl
             |                let GetConsole#0 = builtins.GetConsole;
-            |                let DequeIsEmpty#0 = builtins.DequeIsEmpty;
+            |                let DequeGetIsEmpty#0 = builtins.DequeGetIsEmpty;
             |                let DequeRemoveFirst#0 = builtins.DequeRemoveFirst;
             |                let isNull#0 = builtins.isNull /* <isNullT extends AnyValue>(isNullT?) -> Boolean */;
             |                let ConsoleLog#0 = builtins.ConsoleLog;
             |                let console#0: Console = GetConsole#0();
             |                @QName("test-library/example.f()") @reach(\none) let f__0(@QName("test-library/example.f().(d)") d__0: Deque<String | Null>): Void | Bubble {
-            |                  var t#0: String | Null;
             |                  @fail var fail#0: Boolean;
             |                  @QName("test-library/example.f().c=") let c__0: String | Null;
-            |                  if (!DequeIsEmpty#0(d__0)) {
-            |                    t#0 = DequeRemoveFirst#0(d__0);
-            |                    c__0 = t#0;
+            |                  if (!DequeGetIsEmpty#0(d__0)) {
+            |                    c__0 = DequeRemoveFirst#0(d__0);
             |                  } else {
             |                    c__0 = null;
             |                  }
@@ -1965,7 +1961,7 @@ class TmpLBackendTest {
                                 V(typeSymbol)
                                 V(Types.vFloat64)
                                 V(initSymbol)
-                                Call(BuiltinFuns.divFn) {
+                                Call(BuiltinFuns.divFloatFloatFn) {
                                     V(Value(0.0, TFloat64))
                                     V(Value(0.0, TFloat64))
                                 }
@@ -1985,7 +1981,7 @@ class TmpLBackendTest {
                                             Rn(xName)
                                             Rn(BuiltinName("Float64"))
                                         }
-                                        V(vToStringSymbol)
+                                        V(toStringDotName.dotName)
                                     }
                                 }
                             }
@@ -2080,12 +2076,13 @@ class TmpLBackendTest {
             |      content: ```
             |        //// work//foo/ => foo.tmpl
             |        let GetConsole#0 = builtins.GetConsole;
-            |        let nym`<=#28` = builtins.nym`<=` /* (Int32?, Int32?) -> Boolean */;
+            |        let nym`<=#28` = builtins.nym`<=` /* (Int32, Int32) -> Boolean */;
             |        let ConsoleLog#0 = builtins.ConsoleLog;
             |        let nym`+#30` = builtins.nym`+` /* (Int32, Int32) -> Int32 */;
-            |        let nym`>=#31` = builtins.nym`>=` /* (Int32?, Int32?) -> Boolean */;
+            |        let nym`>=#31` = builtins.nym`>=` /* (Int32, Int32) -> Boolean */;
             |        let console#0: Console = GetConsole#0();
             |        @QName("test-library/foo.f()") @reach(\none) let f__0(): Void {
+            |          var t#0: Int32;
             |          @QName("test-library/foo.f().data=") var data__0: Int32 = 0;
             |          @QName("test-library/foo.f().x=") var x__0: Int32 = 0;
             |          while (nym`<=#28`(x__0, 1)) {
@@ -2093,9 +2090,9 @@ class TmpLBackendTest {
             |            @QName("test-library/foo.f().y=") var y__0: Int32 = 75;
             |            while (nym`<=#28`(y__0, 77)) {
             |              ConsoleLog#0(console#0, "b");
-            |              let postfixReturn#0: Int32 = data__0;
-            |              data__0 = nym`+#30`(data__0, 1);
-            |              if (nym`>=#31`(postfixReturn#0, 76)) {
+            |              t#0 = data__0;
+            |              data__0 = nym`+#30`(t#0, 1);
+            |              if (nym`>=#31`(t#0, 76)) {
             |                ConsoleLog#0(console#0, "c");
             |                break;
             |              }
@@ -2205,13 +2202,13 @@ class TmpLBackendTest {
                     |{
                     |  defines: {
                     |    defines.temper: ```
-                    |      @connected("C")
+                    |      @connected
                     |      export class C {
-                    |        @connected("C::f")
+                    |        @connected
                     |        public static let f(): Void { console.log("f"); }
-                    |        @connected("C::g")
+                    |        @connected
                     |        public static let g(): Void { console.log("g"); }
-                    |        @connected("C::constructor")
+                    |        @connected
                     |        public constructor() {}
                     |      }
                     |      ```
@@ -2229,18 +2226,8 @@ class TmpLBackendTest {
             ),
             want = want,
             supportNetwork = supportNetwork,
-            customizeModule = allowConnectedDecoratorInTestInput,
         )
     }
-
-    private val allowConnectedDecoratorInTestInput =
-        ModuleCustomizeHook { module, isNew ->
-            if (isNew) {
-                module.addEnvironmentBindings(
-                    mapOf(connectedDecoratorName to vConnectedDecorator),
-                )
-            }
-        }
 
     @Test
     fun noStaticMethodConnected() = runStaticConnectedMethodTest(
@@ -2252,16 +2239,16 @@ class TmpLBackendTest {
             |        //// work//defines/ => defines.tmpl
             |        let GetConsole#0 = builtins.GetConsole;
             |        let console#0: Console = GetConsole#0();
-            |        @QName("test-library/defines.type C") class C / C {
-            |          @QName("test-library/defines.type C.f()") static let f__0(): Void {
+            |        @connected @QName("test-library/defines.type C") class C / C {
+            |          @QName("test-library/defines.type C.f()") @connected static let f__0(): Void {
             |            console#0.log("f");
             |            return;
             |          }
-            |          @QName("test-library/defines.type C.g()") static let g__0(): Void {
+            |          @QName("test-library/defines.type C.g()") @connected static let g__0(): Void {
             |            console#0.log("g");
             |            return;
             |          }
-            |          @QName("test-library/defines.type C.constructor()") constructor__0(this = this__0, @QName("test-library/defines.type C.constructor().(this)") @impliedThis(C) this__0: C) {
+            |          @QName("test-library/defines.type C.constructor()") @connected constructor__0(this = this__0, @QName("test-library/defines.type C.constructor().(this)") @impliedThis(C) this__0: C) {
             |            return;
             |          }
             |        }
@@ -2273,7 +2260,7 @@ class TmpLBackendTest {
             |        //// work//uses/ => uses.tmpl
             |        let {
             |          C
-            |        }: @QName("test-library/defines.type C") type = import ("./defines.tmpl");
+            |        }: @connected @QName("test-library/defines.type C") type = import ("./defines.tmpl");
             |        module init {
             |          C.f();
             |          C.g();
@@ -2287,7 +2274,7 @@ class TmpLBackendTest {
             |}
         """.trimMargin(),
         supportNetwork = defaultTestSupportNetwork.copy(
-            isConnected = { it == "::getConsole" },
+            isConnected = { it == "core.getConsole()" },
         ),
     )
 
@@ -2301,12 +2288,12 @@ class TmpLBackendTest {
             |        //// work//defines/ => defines.tmpl
             |        let GetConsole#0 = builtins.GetConsole;
             |        let console#0: Console = GetConsole#0();
-            |        @QName("test-library/defines.type C") class C / C {
-            |          @QName("test-library/defines.type C.g()") static let g__0(): Void {
+            |        @connected @QName("test-library/defines.type C") class C / C {
+            |          @QName("test-library/defines.type C.g()") @connected static let g__0(): Void {
             |            console#0.log("g");
             |            return;
             |          }
-            |          @QName("test-library/defines.type C.constructor()") constructor__0(this = this__0, @QName("test-library/defines.type C.constructor().(this)") @impliedThis(C) this__0: C) {
+            |          @QName("test-library/defines.type C.constructor()") @connected constructor__0(this = this__0, @QName("test-library/defines.type C.constructor().(this)") @impliedThis(C) this__0: C) {
             |            return;
             |          }
             |        }
@@ -2318,7 +2305,7 @@ class TmpLBackendTest {
             |        //// work//uses/ => uses.tmpl
             |        let {
             |          C
-            |        }: @QName("test-library/defines.type C") type = import ("./defines.tmpl");
+            |        }: @connected @QName("test-library/defines.type C") type = import ("./defines.tmpl");
             |        let CF#0 = builtins.CF;
             |        module init {
             |          CF#0();
@@ -2333,7 +2320,7 @@ class TmpLBackendTest {
             |}
         """.trimMargin(),
         supportNetwork = defaultTestSupportNetwork.copy(
-            isConnected = { it == "::getConsole" || it == "C::f" },
+            isConnected = { it == "core.getConsole()" || it == "test-library/defines.type C.f()" },
         ),
     )
 
@@ -2352,8 +2339,8 @@ class TmpLBackendTest {
             |        //// work//defines/ => defines.tmpl
             |        let GetConsole#0 = builtins.GetConsole;
             |        let console#0: Console = GetConsole#0();
-            |        @QName("test-library/defines.type C") class C connects C;
-            |        @QName("test-library/defines.type C.g()") let g__0(): Void {
+            |        @connected @QName("test-library/defines.type C") class C connects C;
+            |        @QName("test-library/defines.type C.g()") @connected let g__0(): Void {
             |          console#0.log("g");
             |          return;
             |        }
@@ -2365,7 +2352,7 @@ class TmpLBackendTest {
             |        //// work//uses/ => uses.tmpl
             |        let {
             |          g__0
-            |        }: @QName("test-library/defines.type C.g()") fn () -> Void = import ("./defines.tmpl");
+            |        }: @QName("test-library/defines.type C.g()") @connected fn () -> Void = import ("./defines.tmpl");
             |        let CF#0 = builtins.CF;
             |        module init {
             |          CF#0();
@@ -2380,18 +2367,31 @@ class TmpLBackendTest {
             |}
         """.trimMargin(),
         supportNetwork = defaultTestSupportNetwork.copy(
-            isConnected = { it == "::getConsole" || it == "C::f" || it == "C" || it == "C::constructor" },
+            isConnected = { key ->
+                when (key) {
+                    "core.getConsole()",
+                    "test-library/defines.type C",
+                    "test-library/defines.type C.constructor()",
+                    "test-library/defines.type C.f()",
+                    -> true
+                    else -> false
+                }
+            },
         ),
     )
 
     @Test
     fun virtualInterfaceMethodsNotConnected() = assertGeneratedCode(
-        customizeModule = allowConnectedDecoratorInTestInput,
         supportNetwork = defaultTestSupportNetwork.copy(
             isConnected = { connectedKey ->
                 when (connectedKey) {
-                    "I", "I::f", "I::getA" -> true
-                    "I::g", "I::getB" -> false
+                    "test-library/foo.type I",
+                    "test-library/foo.type I.f()",
+                    "test-library/foo.type I.get a()",
+                    -> true
+                    "test-library/foo.type I.g()",
+                    "test-library/foo.type I.get b()",
+                    -> false
                     else -> false
                 }
             },
@@ -2402,15 +2402,15 @@ class TmpLBackendTest {
                 |  foo: {
                 |    foo.temper:
                 |      ```
-                |      @connected("I")
+                |      @connected
                 |      export interface I {
-                |        @connected("I::f")
+                |        @connected
                 |        f(): Void {}
-                |        @connected("I::g")
+                |        @connected
                 |        g(): Void;
-                |        @connected("I::getA")
+                |        @connected
                 |        get a(): Int { 42 }
-                |        @connected("I::getB")
+                |        @connected
                 |        get b(): Int;
                 |      }
                 |      ```,
@@ -2428,7 +2428,7 @@ class TmpLBackendTest {
             |        require temper-core;
             |        let InterfaceTypeSupport#0 = InterfaceTypeSupport;
             |        let pureVirtual#0 = builtins.pureVirtual;
-            |        @QName("test-library/foo.type I") interface I connects I;
+            |        @connected @QName("test-library/foo.type I") interface I connects I;
             |
             |        ```
             |    },
@@ -2477,7 +2477,7 @@ class TmpLBackendTest {
         """.trimMargin(),
     )
 
-    // Check that inline support code are not doubly called.
+    // Check that inline support codes are not doubly called.
     // There was a problem in the C# and Lua backends where the connection
     // for static methods like `Date.yearsBetween(a, b)` came out as
     // `TemperCore.Temporal.yearsBetween()(a, b)`.
@@ -2525,7 +2525,7 @@ class TmpLBackendTest {
                 connectedKey: String,
                 genre: Genre,
             ): SupportCode? {
-                if (connectedKey == "Date::today") {
+                if (connectedKey == "std/temporal.type Date.today()") {
                     return object : InlineSupportCode<TmpL.Tree, TmpLTranslator> {
                         override val needsThisEquivalent: Boolean get() = false
                         override fun inlineToTree(
@@ -2808,8 +2808,7 @@ class TmpLBackendTest {
             |              caseIndex#0 = -1;
             |              when (caseIndexLocal#0) {
             |                0 -> do {
-            |                  var t#1: Int32 = initialI__0();
-            |                  i__0 = t#1;
+            |                  i__0 = initialI__0();
             |## The initializer was left in place.
             |                  caseIndex#0 = 1;
             |                }
@@ -2906,8 +2905,8 @@ class TmpLBackendTest {
             |        }
             |        let fn__0(): SafeGenerator<Empty> {
             |          var caseIndex#0: Int32 = 0;
-            |          @QName("test-library/foo.i=") var i__0: Int32 = 1;
-            |          @QName("test-library/foo.j=") var j__0: Int32 = 2;
+            |          @QName("test-library/foo.i=") var i__0: Int32 = 0;
+            |          @QName("test-library/foo.j=") var j__0: Int32 = 0;
             |          @QName("test-library/foo.helper()") let helper__0(): Void {
             |            var t#0: String = "" + nym`+#67`(i__0, j__0);
             |            ConsoleLog#0(console#0, t#0);
@@ -2918,6 +2917,8 @@ class TmpLBackendTest {
             |            caseIndex#0 = -1;
             |            when (caseIndexLocal#0) {
             |              0 -> do {
+            |                i__0 = 1;
+            |                j__0 = 2;
             |                @QName("test-library/foo.k=") var k__0: Int32 = 3;
             |                j__0 = nym`+#67`(j__0, 1);
             |                k__0 = nym`+#67`(k__0, 1);
@@ -3102,7 +3103,7 @@ class TmpLBackendTest {
             |      content:
             |      ```
             |      //// work//bubble-ordering/ => bubble-ordering.tmpl
-            |      let nym`<=#24` = builtins.nym`<=` /* (Int32?, Int32?) -> Boolean */;
+            |      let nym`<=#24` = builtins.nym`<=` /* (Int32, Int32) -> Boolean */;
             |      @QName("test-library/bubble-ordering.type Apple") class Apple / Apple {
             |        @QName("test-library/bubble-ordering.type Apple.maybe()") let maybe__0(this = this__0, @QName("test-library/bubble-ordering.type Apple.maybe().(this)") @impliedThis(Apple) this__0: Apple): Apple | Bubble {
             |          return /* this */ this__0;
@@ -3147,7 +3148,7 @@ class TmpLBackendTest {
             |      content:
             |      ```
             |      //// work//bubble-ordering/ => bubble-ordering.tmpl
-            |      let nym`<=#24` = builtins.nym`<=` /* (Int32?, Int32?) -> Boolean */;
+            |      let nym`<=#24` = builtins.nym`<=` /* (Int32, Int32) -> Boolean */;
             |      @fail var fail#0: Boolean;
             |      @fail var fail#1: Boolean;
             |      @QName("test-library/bubble-ordering.type Apple") class Apple / Apple {
@@ -3556,21 +3557,16 @@ class TmpLBackendTest {
 
     @Test
     fun disconnectedMethod() = assertGeneratedCode(
-        customizeModule = { module, isNew ->
-            if (isNew) {
-                module.addEnvironmentBindings(connectedDecoratorBindings)
-            }
-        },
         inputJsonPathToContent = $$"""
             |{
             |  foo: {
             |    "foo.temper": ```
-            |      @connected("C")
+            |      @connected
             |      class C {
-            |        @connected("C::constructor")
+            |        @connected
             |        public constructor(): Void {}
             |
-            |        @connected("C::a")
+            |        @connected
             |        public a(): String { "" }
             |
             |        // not connected
@@ -3604,7 +3600,7 @@ class TmpLBackendTest {
             |        let console#0: Console = GetConsole#0();
             |## Here we've got a class connection, but no class declaration because
             |## everything either connected or was pulled out.
-            |        @QName("test-library/foo.type C") class C__0 connects C;
+            |        @connected @QName("test-library/foo.type C") class C__0 connects C;
             |        @QName("test-library/foo.type C.b") let b__0: String = "b";
             |        @QName("test-library/foo.type C.c()") let c__0(@QName("test-library/foo.type C.c().(b)") b__1: Boolean): String {
             |          if (b__1) {
@@ -3637,7 +3633,7 @@ class TmpLBackendTest {
     fun multipleUsersOfSameConnected() = assertGeneratedCode(
         inputJsonPathToContent = """
             |{
-            |  // Both of these use String::get
+            |  // Both of these use core.type String.get()
             |  foo: {
             |    "foo.temper": ```
             |      export let f(s: String): Int { s[String.begin] orelse 0 }
@@ -4163,6 +4159,40 @@ class TmpLBackendTest {
         """.trimMargin(),
     )
 
+    @Test
+    fun moduleLevelMetadata() = assertGeneratedCode(
+        // We shouldn't generate a declaration for any module metadata.
+        // But we should store the metadata with the Module node.
+        // Backends like be-data do additional stuff with that, so we
+        // can test there that this works end-to-end.
+        inputJsonPathToContent = """
+            |{
+            |  foo: {
+            |    "foo.temper": ```
+            |      dataFile("foo.json", "application/json", '{ "my-favorite-number": 123 }');
+            |
+            |      export let x = 123;
+            |      ```,
+            |  },
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  tmpl: {
+            |    foo.tmpl: {
+            |      content:
+            |        ```
+            |        //// work//foo/ => foo.tmpl
+            |        @QName("test-library/foo.x") let x: Int32 = 123;
+            |
+            |        ```
+            |    },
+            |    foo.tmpl.map: "__DO_NOT_CARE__",
+            |  }
+            |}
+        """.trimMargin(),
+    )
+
     private fun assertGeneratedCode(
         inputJsonPathToContent: String,
         want: String,
@@ -4281,7 +4311,7 @@ abstract class TestCompiler(
         )
         partitionSourceFilesIntoModules(snapshot, moduleAdvancer, logSink, console, root = projectRoot)
 
-        moduleAdvancer.advanceModules()
+        moduleAdvancer.advanceModules(stopBefore = Stage.Run)
         return moduleAdvancer.getPartitionedModules()
     }
 

@@ -5,6 +5,7 @@ export * from "./core.js";
 export * from "./date.js";
 export * from "./deque.js";
 export * from "./float.js";
+export * from "./int.js";
 export * from "./interface.js";
 export * from "./listed.js";
 export * from "./mapped.js";

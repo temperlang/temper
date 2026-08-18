@@ -1,0 +1,7 @@
+[
+    "Type arguments cannot be introduced with is or as runtime type checks: \u003c[Sub__0\u003cString\u003e]\u003e from AnyValue!",
+    "Unrelated types cannot be targeted with is or as runtime type checks: \u003c[Sub__0\u003cString\u003e]\u003e from Sup__0\u003cT__0\u003e!",
+    "Unrelated types cannot be targeted with is or as runtime type checks: \u003c[Sub2__0\u003cT__1\u003e]\u003e from Sup__0\u003cT__1\u003e!",
+    "Type arguments cannot be introduced with is or as runtime type checks: \u003c[Sup2__0\u003cT__2, U__0\u003e]\u003e from Sup__0\u003cU__0\u003e!",
+    "Unrelated types cannot be targeted with is or as runtime type checks: \u003c[Sub4__0]\u003e from Sup__0\u003cT__3\u003e!"
+]

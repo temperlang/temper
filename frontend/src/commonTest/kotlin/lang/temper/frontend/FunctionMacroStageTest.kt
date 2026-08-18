@@ -24,33 +24,9 @@ import kotlin.test.assertTrue
 class FunctionMacroStageTest {
     @Test
     fun compileLogExecutionOrder() = assertModuleAtStage(
+        stageTestDir = StageTestDir("function-macro/compile-log-execution-order"),
         stage = Stage.FunctionMacro,
-        want = """
-        {
-          functionMacro: {
-            body:
-            ```
-            compilelog("1", @F);
-            if (c) {
-              compilelog("2", @F)
-            } else {
-              compilelog("3", @F)
-            };
-            compilelog("4", @F)
-
-            ```
-          },
-          stdout:
-          ```
-          clog:F: 1
-          clog:F: 2
-          clog:F: 3
-          clog:F: 4
-
-          ```
-        }
-        """,
-    ) { module, _ ->
+    ) { module, _, _ ->
         val loc = testCodeLocation
         val doc = Document(module)
         val pos = Position(loc, 0, 0)
@@ -116,15 +92,13 @@ class FunctionMacroStageTest {
 
         root.replaceFlow(StructuredFlow(controlFlow))
 
-        module.deliverContent(
-            root,
-        )
+        module.deliverContent(root)
     }
 
     @Test
     fun multiInitErrorInClass() = assertModuleAtStage(
+        stageTestDir = StageTestDir("function-macro/multi-init-error-in-class"),
         stage = Stage.FunctionMacro,
-        input = "class Aha(private hmm: Int) {}; class Boo { let { hmm } = new Aha(1) }",
         manualCheck = { got ->
             val errors = (got["errors"] as JsonArray).map {
                 (((it as JsonObject)["formatted"]) as JsonString).content

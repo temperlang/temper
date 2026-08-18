@@ -374,6 +374,7 @@ class TyperTest {
             "22+28-31: Type Invalid mentions Invalid",
             "22+28-33: Type Invalid mentions Invalid",
         ),
+        skipCore = true,
     )
 
     @Test
@@ -638,6 +639,7 @@ class TyperTest {
         |/// ┣━━━━━┓        ┃  : C
         |    new C().method()
         """.trimMargin(),
+        skipCore = true,
     )
 
     @Test
@@ -748,9 +750,8 @@ class TyperTest {
         |    void
         """.trimMargin(),
         wantErrors = listOf(
-            "3+4-15: Member b defined in Something incompatible with usage!",
+            "3+4-17: Member b defined in Something incompatible with usage!",
             "3+4: Type Invalid mentions Invalid",
-            "3+4-15: Type Invalid mentions Invalid",
             "3+4-17: Type Invalid mentions Invalid",
             "3+14-15: Type Invalid mentions Invalid",
         ),
@@ -782,7 +783,7 @@ class TyperTest {
         |    (new B() as A).hi;
         """.trimMargin(),
         wantErrors = listOf(
-            "1+4-9: No member hi in MissingType!",
+            "1+4-6: No type for subject of .hi!",
             "4+4-21: No member hi in A | AnyValue!",
             "1+4-9: Type Invalid mentions Invalid",
             "1+7-9: Type Invalid mentions Invalid",
@@ -1035,6 +1036,7 @@ class TyperTest {
         |    (i + 1) + (i * i);
         |/// ┗━━━━━━━━━━━━━━━┛ : Int32
         """.trimMargin(),
+        skipCore = true,
     )
 
     @Test
@@ -1187,6 +1189,21 @@ class TyperTest {
         |///        ┗━━┛ : Int32?
         |     }
         |   }
+        """.trimMargin(),
+    )
+
+    @Test
+    fun functionLikePropertyCalled() = assertTypes(
+        $$"""
+            |    class C<T>(
+            |      private map: fn (t: T): T
+            |    ) {
+            |      public f(t: T): T { map(t) }
+            |    }
+            |
+            |    export let result = new C(fn (str: String) { "Hello, ${str}!" }).f("World");
+            |    result
+            |/// ┗━━━━┛ : String
         """.trimMargin(),
     )
 
@@ -1446,8 +1463,7 @@ class TyperTest {
         |    }
         """.trimMargin(),
         wantErrors = listOf(
-            "2+23-33: No member toString in Equatable | AnyValue!",
-            "2+23-33: Type Invalid mentions Invalid",
+            "2+23-35: No member toString in Equatable | AnyValue!",
             "2+23-35: Type Invalid mentions Invalid",
             "2+25-33: Type Invalid mentions Invalid",
         ),
@@ -1599,18 +1615,22 @@ class TyperTest {
     @Test
     fun undeclared() = assertTypes(
         """
-        |///     ┏━━━┓           : Top
+        |///     ┏━━━┓           : Invalid
         |    let banjo = avocado as Thing;
         |///             ┗━━━━━┛ : Invalid
         |    let cobra: Commander;
         |///     ┗━━━┛ : Top
         """.trimMargin(),
         wantErrors = listOf(
-            "2+27-32: Expected value of type Type not ❎!",
+            "2+27-32: Expected value of type Type not `Thing`!",
             "2+16-23: No declaration for avocado!",
             "2+27-32: No declaration for Thing!",
             "4+15-24: No declaration for Commander!",
+            "2+8-13: Type Invalid mentions Invalid",
+            "2+16: Type Invalid mentions Invalid",
             "2+16-23: Type Invalid mentions Invalid",
+            "2+16-32: Type Invalid mentions Invalid",
+            "2+24-26: Type Invalid mentions Invalid",
             "2+27-32: Type Invalid mentions Invalid",
             "4+15-24: Type Invalid mentions Invalid",
         ),
@@ -1679,18 +1699,18 @@ class TyperTest {
     fun extensionMethodIsAlternative() = assertTypes(
         """
             |    class C {
-            |      public f(i: Int): Int { i }
+            |      public foo(i: Int): Int { i }
             |    }
             |
-            |    @extension("f")
+            |    @extension("foo")
             |    let cf(c: C, s: String): String { s }
             |
             |    let c = new C();
             |
-            |    c.f(1234);
-            |/// ┗━━━━━━━┛ : Int32
-            |    c.f("hi");
-            |/// ┗━━━━━━━┛ : String
+            |    c.foo(1234);
+            |/// ┗━━━━━━━━━┛ : Int32
+            |    c.foo("hi");
+            |/// ┗━━━━━━━━━┛ : String
         """.trimMargin(),
     )
 
@@ -1710,8 +1730,29 @@ class TyperTest {
             |
             |    inst.f();
             |/// ┗━━━━━━┛ : String
-            |    I.f()
+            |    I.f();
             |/// ┗━━━┛ : Int32
+        """.trimMargin(),
+    )
+
+    @Test
+    fun genericExtension() = assertTypes(
+        $$"""
+            |    @staticExtension(Boolean, "sayHi")
+            |    let boolSaysHi(): String {
+            |      "Hi, Booleans can be true or false! What's your name?"
+            |    }
+            |
+            |    @staticExtension(List, "sayHi")
+            |    let listSaysHi<T>(ls: List<T>): String {
+            |      "Hi! Fun fact, a list can have ${ls.length} things!"
+            |    }
+            |
+            |    Boolean.sayHi();
+            |/// ┗━━━━━━━━━━━━━┛ : String
+            |
+            |    List.sayHi([1, 2, 3]);
+            |/// ┗━━━━━━━━━━━━━━━━━━━┛ : String
         """.trimMargin(),
     )
 
@@ -1848,6 +1889,160 @@ class TyperTest {
         """.trimMargin(),
     )
 
+    @Test
+    fun doPure() = assertTypes(
+        """
+            |    class C {}
+            |
+            |    let makeC(): C { new C() }
+            |
+            |    export let x = doPure { (): C => makeC() };
+            |
+            |    x
+            |/// ╹     : C
+        """.trimMargin(),
+    )
+
+    @Test
+    fun chainedLambdas() = assertTypes(
+        """
+            |    let ls: List<Int> = panic();
+            |
+            |    let negStrs =
+            |      ls.map { (x): Int => -x }
+            |///             ╹          ┗┛             : Int32
+            |        .join(", ") { x => x.toString() }
+            |///                 ┃ ╹    ╹            ┃ : Int32
+            |///                 ┗━━━━━━━━━━━━━━━━━━━┛ : fn (Int32): String
+            |
+        """.trimMargin(),
+    )
+
+    @Test
+    fun namedArgs() = assertTypes(
+        """
+            |    class OneD(public x: Int) {}
+            |
+            |    let foo<T>(
+            |      n: Int,
+            |      transform: fn (Int): T,
+            |      oneD: OneD = { class: OneD, x: 0 },
+            |    ): T {
+            |      transform(oneD.x)
+            |    }
+            |
+            |    foo(2, { x: 3 }) { (n): String =>
+            |      n.toString()
+            |    };
+        """.trimMargin(),
+    )
+
+    @Test
+    fun multipleInheritedMethodImplementations() = assertTypes(
+        // Here we've got a complex inheritance tree like the below.
+        //     A
+        //   /
+        //  B     C
+        //   \   /
+        //     D
+        //
+        // A and C both implement a() but since C is reachable first,
+        // its implementation unambiguously wins.
+        """
+            |    interface A { a(): String { "A wins!" } }
+            |    interface B extends A {}
+            |    interface C { a(): String { "C wins!" } }
+            |    class D extends B & C {}
+            |    new D().a()
+            |/// ┗━━━━━━━━━┛ : String
+        """.trimMargin(),
+        skipCore = true,
+    )
+
+    /**
+     * Like [multipleInheritedMethodImplementations] but the methods are
+     * only equivalent post-contextualization.
+     */
+    @Test
+    fun multipleInheritedMethodsWithParameterization() = assertTypes(
+        // Here we've got a complex inheritance tree like the below.
+        //     A
+        //   /
+        //  B     C
+        //   \   /
+        //     D
+        //
+        // A and C both implement a() but since C is reachable first,
+        // and A<String>'s .a method is equivalent, in the context of D
+        // to C's .a method, C's implementation unambiguously wins.
+        $$"""
+            |    interface A<T> { a(x: T): T { x } }
+            |    interface B extends A<String> {}
+            |    interface C { a(x: String): String { "C: ${x}" } }
+            |    class D extends B & C {}
+            |    new D().a("hi")
+            |/// ┗━━━━━━━━━━━━━┛ : String
+        """.trimMargin(),
+        skipCore = true,
+    )
+
+    /**
+     * Like [multipleInheritedMethodImplementations] but the methods are
+     * only equivalent assuming corresponding type formals are equivalent.
+     */
+    @Test
+    fun multipleInheritedMethodsWithFormalsAssumedEquivalent() = assertTypes(
+        // Here we've got a complex inheritance tree like the below.
+        //     A
+        //   /
+        //  B     C
+        //   \   /
+        //     D
+        """
+            |    interface A { a<T>(x: T): T { x } }
+            |    interface B extends A {}
+            |    interface C { a<T>(x: T): T { x } }
+            |    class D extends B & C {}
+            |    new D().a("hi")
+            |/// ┗━━━━━━━━━━━━━┛ : String
+        """.trimMargin(),
+        skipCore = true,
+        // We resolved types just fine, but parameterized methods in interfaces are still suss.
+        wantErrors = listOf(
+            "1+20: Illegal type parameter T. Overridable methods don't allow generics!",
+            "3+20: Illegal type parameter T. Overridable methods don't allow generics!",
+        ),
+    )
+
+    @Test
+    fun multipleInheritedMethodsWithConflict() = assertTypes(
+        // Here we've got a complex inheritance tree like the below.
+        //
+        //     A
+        //   /
+        //  B     C
+        //   \   /
+        //     D
+        //
+        // A and C both implement a() but their methods have irreconcilable
+        // signatures (Void vs String return type), so an error is reported.
+        """
+            |    interface A { a(): Void {} }
+            |    interface B extends A {}
+            |    interface C { a(): String { "C wins!" } }
+            |    class D extends B & C {}
+            |    new D().a()
+            |/// ┗━━━━━━━━━┛ : Invalid
+        """.trimMargin(),
+        skipCore = true,
+        wantErrors = listOf(
+            "5+4-15: No callee matches inputs [D] among [(A) -> Void, (C) -> String]!",
+            "1+4: Type Invalid mentions Invalid",
+            "5+4: Type Invalid mentions Invalid",
+            "5+4-15: Type Invalid mentions Invalid",
+        ),
+    )
+
     /** Text at a position in a source code snippet in a unit test */
     data class Chunk(
         val text: String,
@@ -1878,7 +2073,7 @@ class TyperTest {
         wantErrors: List<String> = emptyList(),
         verbose: Boolean = false,
         nameSimplifying: Boolean = true,
-        skipImplicits: Boolean = false,
+        skipCore: Boolean = false,
     ) {
         val filePath = testCodeLocation
         val source = ModuleSource(
@@ -1893,7 +2088,7 @@ class TyperTest {
             content = source,
             verbose = verbose,
             nameSimplifying = nameSimplifying,
-            skipImplicits = skipImplicits,
+            skipCore = skipCore,
         )
 
         val requirementsToInferences = matchRequirementsWithInferences(root, typeRequirements)
@@ -2060,7 +2255,7 @@ class TyperTest {
         content: ModuleSource,
         verbose: Boolean,
         nameSimplifying: Boolean,
-        skipImplicits: Boolean,
+        skipCore: Boolean,
     ): Pair<Tree, List<Pair<Position, String>>> {
         val logSink = ListBackedLogSink()
         val projectLogSink = ValueSimplifyingLogSink(logSink, nameSimplifying = nameSimplifying)
@@ -2078,8 +2273,8 @@ class TyperTest {
         )
         module.deliverContent(content)
         module.addEnvironmentBindings(extraBindings)
-        if (skipImplicits) {
-            module.addEnvironmentBindings(mapOf(StagingFlags.skipImportImplicits to TBoolean.valueTrue))
+        if (skipCore) {
+            module.addEnvironmentBindings(mapOf(StagingFlags.skipImportCore to TBoolean.valueTrue))
         }
 
         var treeAfterTyper: BlockTree? = null
@@ -2156,23 +2351,32 @@ class TyperTest {
             childOrder.forEach { i -> findContradictionsAndInvalidType(t.child(i)) }
 
             val typeInferences = t.typeInferences
+            var hasProblem = false
             if (typeInferences != null) {
                 if (typeInferences.type.mentionsInvalid) {
                     invalidPositions.putMultiSet(t.pos, "Type ${typeInferences.type}")
+                    hasProblem = true
                 } else if (typeInferences is CallTypeInferences) {
                     typeInferences.bindings2.forEach { (typeFormal, binding) ->
                         val name = typeFormal.name
                         if (binding is StaticType && binding.mentionsInvalid) {
                             invalidPositions.putMultiSet(t.pos, "Binding from $name to $binding")
+                            hasProblem = true
                         }
                     }
                     val variant = typeInferences.variant
                     if (variant.mentionsInvalid) {
                         invalidPositions.putMultiSet(t.pos, "Invalid variant: $variant")
+                        hasProblem = true
                     }
                 }
                 typeInferences.explanations.forEach {
                     it.logTo(projectLogSink)
+                }
+            }
+            if (hasProblem && verbose) {
+                console.group("${t.pos}: invalid type") {
+                    t.toPseudoCode(console.textOutput)
                 }
             }
         }

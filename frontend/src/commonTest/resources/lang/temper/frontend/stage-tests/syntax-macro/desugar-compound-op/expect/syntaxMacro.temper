@@ -1,0 +1,3 @@
+## Names resolved
+  var x__0 = 1;
+  x__0 = (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(x__0, 2);

@@ -1,0 +1,7 @@
+let f(literals: List<String>, values: List<String>): String {
+  literals[0]
+}
+
+export let g(there: String): String {
+  f"hi${there}"
+}

@@ -3,11 +3,16 @@ package lang.temper.be.lua
 // Could go up to 200 in theory, but smaller numbers allow for larger closures.
 const val MAX_ALLOWABLE_LOCALS = 128
 
+// When wrapping is needed, keep first N locals as real locals for performance.
+// The rest overflow into the env table. Budget: LOCALS_TO_KEEP + 1 (env table) < MAX_ALLOWABLE_LOCALS.
+private const val LOCALS_TO_KEEP = 100
+
 class LuaLocalRemover {
     private var locals = mutableMapOf<LuaName, LuaName>()
     private var luaName = LuaName("_G")
     private var numLocalTables = 0
-    private var shouldRewrite = false
+    private var needsEnvTable = false
+    private var localsKept = 0
     private var localsToDecl = mutableListOf<LuaName>()
 
     private fun allocLocalTableName(): LuaName = LuaName("env_t${++numLocalTables}")
@@ -15,13 +20,15 @@ class LuaLocalRemover {
     private fun scoped(cb: () -> Lua.Chunk): Lua.Chunk {
         val lastLocals = locals.toMutableMap()
         val lastLuaName = luaName
-        val lastShouldRewrite = shouldRewrite
+        val lastNeedsEnvTable = needsEnvTable
+        val lastLocalsKept = localsKept
         val lastLocalsToDecl = localsToDecl
         localsToDecl = mutableListOf()
         val ret = cb()
         locals = lastLocals
         luaName = lastLuaName
-        shouldRewrite = lastShouldRewrite
+        needsEnvTable = lastNeedsEnvTable
+        localsKept = lastLocalsKept
         val localsToWrap = localsToDecl
         localsToDecl = lastLocalsToDecl
         return luaChunk(
@@ -50,12 +57,12 @@ class LuaLocalRemover {
         )
     }
 
-    private fun define(target: Lua.SetTarget) {
+    private fun define(target: Lua.SetTarget, asEnvField: Boolean) {
         when (target) {
             is Lua.DotSetTarget -> TODO()
             is Lua.IndexSetTarget -> TODO()
             is Lua.NameSetTarget -> {
-                if (shouldRewrite) {
+                if (asEnvField) {
                     locals[target.target.id] = luaName
                 } else {
                     locals.remove(target.target.id)
@@ -63,6 +70,10 @@ class LuaLocalRemover {
             }
         }
     }
+
+    // Decide whether a batch of N new locals should overflow to the env table.
+    private fun shouldOverflow(count: Int): Boolean =
+        needsEnvTable && localsKept + count > LOCALS_TO_KEEP
 
     private fun set(target: Lua.SetTarget): Lua.SetTarget = when (target) {
         is Lua.DotSetTarget -> when (val obj = target.obj) {
@@ -230,8 +241,9 @@ class LuaLocalRemover {
     private fun wrapLocals(chunk: Lua.Chunk): List<Lua.Stmt> {
         luaName = allocLocalTableName()
         val numLocals = countLocalsDirectlyIn(chunk)
-        shouldRewrite = numLocals >= MAX_ALLOWABLE_LOCALS
-        if (shouldRewrite) {
+        needsEnvTable = numLocals >= MAX_ALLOWABLE_LOCALS
+        if (needsEnvTable) {
+            localsKept = 0
             return listOf(
                 Lua.LocalStmt(
                     chunk.pos,
@@ -273,6 +285,7 @@ class LuaLocalRemover {
     }
 
     internal fun scan(stmt: Lua.Stmt): Lua.Stmt? = when (stmt) {
+        is Lua.Connected -> stmt.deepCopy() // TODO Anything we can/should do here?
         is Lua.GotoStmt -> Lua.GotoStmt(
             stmt.pos,
             Lua.Name(stmt.name.pos, stmt.name.id),
@@ -355,17 +368,17 @@ class LuaLocalRemover {
             Lua.Name(stmt.name.pos, stmt.name.id),
         )
         is Lua.LocalDeclStmt -> {
-            stmt.targets.targets.forEach(::define)
-            if (shouldRewrite) {
-                null
-            } else {
+            val overflow = shouldOverflow(stmt.targets.targets.size)
+            stmt.targets.targets.forEach { define(it, asEnvField = overflow) }
+            if (!overflow) {
+                if (needsEnvTable) localsKept += stmt.targets.targets.size
                 stmt.targets.targets.forEach {
                     localsToDecl.add((it as Lua.NameSetTarget).target.id)
                 }
-                null
             }
+            null
         }
-        is Lua.LocalFunctionStmt -> if (shouldRewrite) {
+        is Lua.LocalFunctionStmt -> if (shouldOverflow(1)) {
             locals[stmt.name.id] = luaName
             Lua.SetStmt(
                 stmt.pos,
@@ -405,6 +418,7 @@ class LuaLocalRemover {
                 ),
             )
         } else {
+            if (needsEnvTable) localsKept++
             localsToDecl.add(stmt.name.id)
             Lua.SetStmt(
                 stmt.pos,
@@ -440,7 +454,7 @@ class LuaLocalRemover {
                 ),
             )
         }
-        is Lua.LocalStmt -> if (shouldRewrite) {
+        is Lua.LocalStmt -> if (shouldOverflow(stmt.targets.targets.size)) {
             val ret = Lua.SetStmt(
                 stmt.pos,
                 Lua.SetTargets(
@@ -461,9 +475,10 @@ class LuaLocalRemover {
                     stmt.exprs.exprs.map(::scan),
                 ),
             )
-            stmt.targets.targets.forEach(::define)
+            stmt.targets.targets.forEach { define(it, asEnvField = true) }
             ret
         } else {
+            if (needsEnvTable) localsKept += stmt.targets.targets.size
             val ret = Lua.SetStmt(
                 stmt.pos,
                 Lua.SetTargets(
@@ -479,7 +494,7 @@ class LuaLocalRemover {
                     stmt.exprs.exprs.map(::scan),
                 ),
             )
-            stmt.targets.targets.forEach(::define)
+            stmt.targets.targets.forEach { define(it, asEnvField = false) }
             ret
         }
         is Lua.SetStmt -> {

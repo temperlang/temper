@@ -1,0 +1,59 @@
+{
+    "AnyValue": {
+        "abstract": true
+    },
+    "C": {
+        "word": "C",
+        "typeParameters": [
+            {
+                "name": "T__2"
+            }
+        ],
+        "supers": [
+            "I__0"
+        ],
+        "properties": [
+            {
+                "name": "y",
+                "symbol": "y",
+                "abstract": false,
+                "visibility": "public"
+            }
+        ],
+        "methods": [
+            {
+                "name": "f",
+                "symbol": "f",
+                "open": false,
+                "visibility": "private"
+            },
+            {
+                "name": "constructor",
+                "open": false,
+                "visibility": "public",
+                "kind": "Constructor"
+            }
+        ]
+    },
+    "I": {
+        "word": "I",
+        "abstract": true,
+        "properties": [
+            {
+                "name": "x",
+                "symbol": "x",
+                "abstract": true,
+                "visibility": "public"
+            }
+        ],
+        "supers": [
+            "AnyValue__0"
+        ]
+    },
+    "T": {
+        "word": "T"
+    },
+    "Void": {
+        "supers": []
+    }
+}

@@ -1,0 +1,25 @@
+@stay @imported(\(`test//c/`.C)) let C__0 = type (C), console#0 = doPure(fn: Console {
+    getConsole()
+});
+do (fn {
+    let c__0 = new C__0();
+    do {
+      let t#0;
+      t#0 = c__0;
+      do {
+        let t#2;
+        do_set_x(t#0, t#2 = (nym`do_call__+_`[PlusIntInt, PlusIntInt64, PlusFltFlt])(do_get_x(t#0), 1));
+        t#2
+      }
+    };
+    do {
+      let t#1;
+      t#1 = c__0;
+      do {
+        let t#3;
+        do_set_x(t#1, t#3 = (nym`do_call__*_`[TimesIntInt, TimesIntInt64, TimesFltFlt])(do_get_x(t#1), 2));
+        t#3
+      }
+    };
+    do_call_log(console#0, do_get_x(c__0));
+})

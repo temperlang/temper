@@ -1,0 +1,27 @@
+@typeDecl(Whatever__0) @hoistLeft(true) @resolution(Whatever__0) @stay let Whatever = type (Whatever__0);
+interface(\word, Whatever, \concrete, false, @typeDefined(Whatever__0) fn {
+    Whatever__0 extends AnyValue;
+    let blather = fn(\word, blather, \typeFormal, do {
+        @resolution(A__0) @typeFormal(\A) @typeDecl(A__0) let A = type (A__0);
+        type (A__0)
+      }, @impliedThis(Whatever__0) let this__0: Whatever__0, let a /* aka a */: A, \outType, A, fn {
+        pureVirtual()
+    });
+    @visibility(\public) let bling = fn(\word, bling, \typeFormal, do {
+        @resolution(B__0) @typeFormal(\B) @typeDecl(B__0) let B = type (B__0);
+        type (B__0)
+      }, \typeFormal, do {
+        @resolution(C__0) @typeFormal(\C) @typeDecl(C__0) let C = type (C__0);
+        C__0 extends Whatever;
+        type (C__0)
+      }, @impliedThis(Whatever__0) let this__1: Whatever__0, let b /* aka b */: B, let c /* aka c */: C, \outType, B, fn {
+        b
+    });
+    @fn @static let blot = fn(\word, blot, \typeFormal, do {
+        @resolution(T__1) @typeFormal(\T) @typeDecl(T__1) let T = type (T__1);
+        type (T__1)
+      }, let d /* aka d */: D, \outType, D, fn {
+        pureVirtual()
+    });
+});
+Whatever

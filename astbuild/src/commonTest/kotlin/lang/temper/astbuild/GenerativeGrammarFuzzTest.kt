@@ -38,7 +38,18 @@ class GenerativeGrammarFuzzTest {
         for (i in 0 until nRuns) {
             val logSink = ListBackedLogSink()
             val tokens = GenerativeGrammar.generate(prng, 50) ?: continue
-            val input = tokens.joinToString(" ") { it.tokenText }
+            val input = buildString {
+                for (t in tokens) {
+                    val allowSpaceBefore = when {
+                        t.tokenText == "<" && t.token.mayBracket -> false
+                        else -> this.isNotEmpty()
+                    }
+                    if (allowSpaceBefore) {
+                        append(" ")
+                    }
+                    append(t.tokenText)
+                }
+            }
 
             nProgramsGenerated += 1
 

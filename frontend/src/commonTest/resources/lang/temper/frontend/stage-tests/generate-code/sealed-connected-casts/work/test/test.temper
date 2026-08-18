@@ -1,0 +1,18 @@
+@connected
+export sealed interface S {}
+
+@connected
+class C extends S {}
+@connected
+class D extends S {}
+
+@connected
+interface NS extends S {}
+@connected
+class E extends NS {}
+
+export let f(a: AnyValue, s: S): Void throws Bubble {
+  a as C;  // BAD: C is connected, and AnyValue is not.
+  s as C;  // OK.  C is a sub-type of S
+  s as E;  // BAD. E is a sub-type of S, but only via NS which is not-sealed.
+}

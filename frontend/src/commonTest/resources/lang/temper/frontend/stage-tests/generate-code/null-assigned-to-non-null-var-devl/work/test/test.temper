@@ -1,0 +1,17 @@
+let f(i: Int32): String {
+  var sbOrNull: StringBuilder = null;
+  //                         ^ No `?`
+  if (i % 2 == 0) {
+    let sbNow = sbOrNull;
+    let sb = sbNow ?? new StringBuilder();
+    sb.append("${i}");
+    sbOrNull = sb;
+  }
+  let finalSb = sbOrNull;
+  if (finalSb == null) {
+    ""
+  } else {
+    finalSb.toString()
+  }
+}
+f(4)

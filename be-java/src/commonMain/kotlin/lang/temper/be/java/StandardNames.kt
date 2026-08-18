@@ -12,6 +12,9 @@ const val FALLABCK_MODULE_NAME = "AdHoc"
 /** Given a module at the path `foo.bar-qux`, the class name will be `BarQuxGlobal`. */
 const val MODULE_GLOBAL_SUFFIX = "Global"
 
+/** Given a module at the path `foo.bar-qux`, the class name will be `BarQuxConnected`. */
+const val MODULE_CONNECTED_SUFFIX = "Connected"
+
 /** Given a module at the path `foo.bar-qux`, the class name will be `BarQuxName`. */
 const val MODULE_ENTRY_SUFFIX = "Main"
 
@@ -182,7 +185,6 @@ val temperListGet = temperCore.qualifyKnownSafe("listGet")
 val temperListGetOr = temperCore.qualifyKnownSafe("listGetOr")
 val temperListJoin = temperCore.qualifyKnownSafe("listJoin")
 val temperListMap = temperCore.qualifyKnownSafe("listMap")
-val temperListMapDropping = temperCore.qualifyKnownSafe("listMapDropping")
 val temperListedReduce = temperCore.qualifyKnownSafe("listedReduce")
 val temperListOf = temperCore.qualifyKnownSafe("listOf")
 val temperListRemoveLast = temperCore.qualifyKnownSafe("listRemoveLast")

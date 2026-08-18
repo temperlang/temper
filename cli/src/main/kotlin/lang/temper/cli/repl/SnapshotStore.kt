@@ -140,7 +140,7 @@ internal class SnapshotStore(
                             out.emit(OutToks.colon)
                             type.renderTo(out)
                         }
-                        val value = export.value
+                        val value = export.valueFromRun ?: export.valueFromStaging
                         if (value != null) {
                             out.emit(OutToks.eq)
                             value.renderTo(

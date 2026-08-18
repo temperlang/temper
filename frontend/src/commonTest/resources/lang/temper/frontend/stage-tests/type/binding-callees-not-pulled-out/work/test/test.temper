@@ -1,0 +1,5 @@
+let f(hi: String): Void {
+  let s: String;
+  console.log((s = "Hello, ${hi}!"));
+  console.log(s);
+}

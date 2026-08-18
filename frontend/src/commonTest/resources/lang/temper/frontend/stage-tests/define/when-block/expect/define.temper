@@ -1,0 +1,51 @@
+@typeDecl(A__0) @stay let A__0;
+A__0 = type (A__0);
+@typeDecl(B__0) @stay let B__0;
+B__0 = type (B__0);
+@fn let f__0;
+A__0 extends AnyValue;
+@typePlaceholder(A__0) let typePlaceholder#0: Empty;
+typePlaceholder#0 = {class: Empty__0};
+interface(\word, \A, \concrete, false, @typeDefined(A__0) fn {
+    do {}
+});
+B__0 extends A__0;
+@fn @method(\constructor) @visibility(\public) @stay @fromType(B__0) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(B__0) this__0: B__0) /* return__0 */: Void {});
+class(\word, \B, \concrete, true, @typeDefined(B__0) fn {
+    do {};
+    do {}
+});
+let b__0;
+b__0 = new B__0();
+f__0 = fn f(a__0 /* aka a */: A__0) /* return__1 */: A__0 {
+  fn__0: do {
+    do {
+      if(a__0 == b__0, fn {
+          a__0
+        }, \else_if, fn (f#0) {
+          f#0(a__0 is B__0, fn {
+              a__0
+            }, \else_if, fn (f#1) {
+              f#1(a__0 == fancyExpression + 4, fn {
+                  a__0
+                }, \else_if, fn (f#2) {
+                  f#2(if(a__0 == 4, @stay fn {
+                        true
+                      }, \else, fn (f#3) {
+                        f#3(fn {
+                            a__0 is C
+                        })
+                    }), fn {
+                      a__0
+                    }, \else, fn (f#4) {
+                      f#4(fn {
+                          a__0
+                      })
+                  })
+              })
+          })
+      })
+    }
+  }
+};

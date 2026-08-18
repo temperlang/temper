@@ -41,14 +41,20 @@ object Py {
     }
     sealed class BaseData : BaseOutData<Data>(), Data
 
+    /**
+     * [Slash] is standalone rather than a prefix, and [Star] can go either way, but
+     * keeping them all together still helps with organization.
+     */
     enum class ArgPrefix : FormattableEnum {
         None,
+        Slash,
         Star,
         DoubleStar,
     }
 
     class Program(
         pos: Position,
+        connected: Connected? = null,
         body: Iterable<Stmt>,
         var dependencyCategory: DependencyCategory,
         var genre: Genre,
@@ -59,43 +65,83 @@ object Py {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() = sharedCodeFormattingTemplate0
         override val formatElementCount
-            get() = 1
+            get() = 2
         override fun formatElement(
             index: Int,
         ): IndexableFormattableTreeElement {
             return when (index) {
-                0 -> FormattableTreeGroup(this.body)
+                0 -> this.connected ?: FormattableTreeGroup.empty
+                1 -> FormattableTreeGroup(this.body)
                 else -> throw IndexOutOfBoundsException("$index")
             }
         }
+        private var _connected: Connected?
+        var connected: Connected?
+            get() = _connected
+            set(newValue) { _connected = updateTreeConnection(_connected, newValue) }
         private val _body: MutableList<Stmt> = mutableListOf()
         var body: List<Stmt>
             get() = _body
             set(newValue) { updateTreeConnections(_body, newValue) }
         override fun deepCopy(): Program {
-            return Program(pos, body = this.body.deepCopy(), dependencyCategory = this.dependencyCategory, genre = this.genre, outputPath = this.outputPath)
+            return Program(pos, connected = this.connected?.deepCopy(), body = this.body.deepCopy(), dependencyCategory = this.dependencyCategory, genre = this.genre, outputPath = this.outputPath)
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is Program && this.body == other.body && this.dependencyCategory == other.dependencyCategory && this.genre == other.genre && this.outputPath == other.outputPath
+            return other is Program && this.connected == other.connected && this.body == other.body && this.dependencyCategory == other.dependencyCategory && this.genre == other.genre && this.outputPath == other.outputPath
         }
         override fun hashCode(): Int {
-            var hc = body.hashCode()
+            var hc = (connected?.hashCode() ?: 0)
+            hc = 31 * hc + body.hashCode()
             hc = 31 * hc + dependencyCategory.hashCode()
             hc = 31 * hc + genre.hashCode()
             hc = 31 * hc + outputPath.hashCode()
             return hc
         }
         init {
+            this._connected = updateTreeConnection(null, connected)
             updateTreeConnections(this._body, body)
         }
         companion object {
             private val cmr = ChildMemberRelationships(
+                { n -> (n as Program).connected },
                 { n -> (n as Program).body },
             )
+        }
+    }
+
+    /** For embedding external raw `@connected` Python source. */
+    class Connected(
+        pos: Position,
+        var source: String,
+    ) : BaseTree(pos) {
+        override val operatorDefinition: PyOperatorDefinition?
+            get() = null
+        override fun renderTo(
+            tokenSink: TokenSink,
+        ) {
+            tokenSink.value(source)
+        }
+        override val codeFormattingTemplate: CodeFormattingTemplate?
+            get() = null
+        override fun deepCopy(): Connected {
+            return Connected(pos, source = this.source)
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is Connected && this.source == other.source
+        }
+        override fun hashCode(): Int {
+            return source.hashCode()
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships()
         }
     }
 
@@ -1619,7 +1665,7 @@ object Py {
             this._arg = updateTreeConnection(null, arg)
             this._value = updateTreeConnection(null, value)
             require(prefix == ArgPrefix.None || arg == null)
-            require(prefix != ArgPrefix.Star)
+            require(prefix != ArgPrefix.Slash)
         }
         companion object {
             private val cmr = ChildMemberRelationships(
@@ -1642,6 +1688,8 @@ object Py {
      * parameter               ::=  identifier [":" expression]
      * defparameter            ::=  parameter ["=" expression]
      * ```
+     *
+     * With positional-only "/" added in https://github.com/python/cpython/blob/3.8/Grammar/Grammar
      */
     class Arguments(
         pos: Position,
@@ -3662,7 +3710,7 @@ object Py {
 
     class Arg(
         pos: Position,
-        arg: Identifier,
+        arg: Identifier?,
         annotation: Expr? = null,
         defaultValue: Expr? = null,
         var prefix: ArgPrefix = ArgPrefix.None,
@@ -3671,28 +3719,36 @@ object Py {
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
-                if (prefix == ArgPrefix.Star && annotation != null && defaultValue != null) {
+                if (prefix == ArgPrefix.Slash && annotation != null && defaultValue != null) {
                     sharedCodeFormattingTemplate124
-                } else if (prefix == ArgPrefix.Star && annotation != null) {
+                } else if (prefix == ArgPrefix.Slash && annotation != null) {
                     sharedCodeFormattingTemplate125
-                } else if (prefix == ArgPrefix.Star && defaultValue != null) {
+                } else if (prefix == ArgPrefix.Slash && defaultValue != null) {
                     sharedCodeFormattingTemplate126
+                } else if (prefix == ArgPrefix.Slash) {
+                    sharedCodeFormattingTemplate127
+                } else if (prefix == ArgPrefix.Star && annotation != null && defaultValue != null) {
+                    sharedCodeFormattingTemplate128
+                } else if (prefix == ArgPrefix.Star && annotation != null) {
+                    sharedCodeFormattingTemplate129
+                } else if (prefix == ArgPrefix.Star && defaultValue != null) {
+                    sharedCodeFormattingTemplate130
                 } else if (prefix == ArgPrefix.Star) {
                     sharedCodeFormattingTemplate114
                 } else if (prefix == ArgPrefix.DoubleStar && annotation != null && defaultValue != null) {
-                    sharedCodeFormattingTemplate127
-                } else if (prefix == ArgPrefix.DoubleStar && annotation != null) {
-                    sharedCodeFormattingTemplate128
-                } else if (prefix == ArgPrefix.DoubleStar && defaultValue != null) {
-                    sharedCodeFormattingTemplate129
-                } else if (prefix == ArgPrefix.DoubleStar) {
-                    sharedCodeFormattingTemplate130
-                } else if (annotation != null && defaultValue != null) {
                     sharedCodeFormattingTemplate131
+                } else if (prefix == ArgPrefix.DoubleStar && annotation != null) {
+                    sharedCodeFormattingTemplate132
+                } else if (prefix == ArgPrefix.DoubleStar && defaultValue != null) {
+                    sharedCodeFormattingTemplate133
+                } else if (prefix == ArgPrefix.DoubleStar) {
+                    sharedCodeFormattingTemplate134
+                } else if (annotation != null && defaultValue != null) {
+                    sharedCodeFormattingTemplate135
                 } else if (annotation != null) {
                     sharedCodeFormattingTemplate118
                 } else if (defaultValue != null) {
-                    sharedCodeFormattingTemplate132
+                    sharedCodeFormattingTemplate136
                 } else {
                     sharedCodeFormattingTemplate87
                 }
@@ -3702,14 +3758,14 @@ object Py {
             index: Int,
         ): IndexableFormattableTreeElement {
             return when (index) {
-                0 -> this.arg
+                0 -> this.arg ?: FormattableTreeGroup.empty
                 1 -> this.annotation ?: FormattableTreeGroup.empty
                 2 -> this.defaultValue ?: FormattableTreeGroup.empty
                 else -> throw IndexOutOfBoundsException("$index")
             }
         }
-        private var _arg: Identifier
-        var arg: Identifier
+        private var _arg: Identifier?
+        var arg: Identifier?
             get() = _arg
             set(newValue) { _arg = updateTreeConnection(_arg, newValue) }
         private var _annotation: Expr?
@@ -3721,7 +3777,7 @@ object Py {
             get() = _defaultValue
             set(newValue) { _defaultValue = updateTreeConnection(_defaultValue, newValue) }
         override fun deepCopy(): Arg {
-            return Arg(pos, arg = this.arg.deepCopy(), annotation = this.annotation?.deepCopy(), defaultValue = this.defaultValue?.deepCopy(), prefix = this.prefix)
+            return Arg(pos, arg = this.arg?.deepCopy(), annotation = this.annotation?.deepCopy(), defaultValue = this.defaultValue?.deepCopy(), prefix = this.prefix)
         }
         override val childMemberRelationships
             get() = cmr
@@ -3731,7 +3787,7 @@ object Py {
             return other is Arg && this.arg == other.arg && this.annotation == other.annotation && this.defaultValue == other.defaultValue && this.prefix == other.prefix
         }
         override fun hashCode(): Int {
-            var hc = arg.hashCode()
+            var hc = (arg?.hashCode() ?: 0)
             hc = 31 * hc + (annotation?.hashCode() ?: 0)
             hc = 31 * hc + (defaultValue?.hashCode() ?: 0)
             hc = 31 * hc + prefix.hashCode()
@@ -3742,6 +3798,8 @@ object Py {
             this._annotation = updateTreeConnection(null, annotation)
             this._defaultValue = updateTreeConnection(null, defaultValue)
             require(prefix == ArgPrefix.None || defaultValue == null)
+            require(arg != null || prefix == ArgPrefix.Slash || prefix == ArgPrefix.Star)
+            require(arg != null || (annotation == null && defaultValue == null))
         }
         companion object {
             private val cmr = ChildMemberRelationships(
@@ -3752,11 +3810,16 @@ object Py {
         }
     }
 
-    /** `{{0*}}` */
+    /** `{{0}} {{1*}}` */
     private val sharedCodeFormattingTemplate0 =
-        CodeFormattingTemplate.GroupSubstitution(
-            0,
-            CodeFormattingTemplate.empty,
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.GroupSubstitution(
+                    1,
+                    CodeFormattingTemplate.empty,
+                ),
+            ),
         )
 
     /** `{{0*}} async def {{1}} ( {{2}} ) -> {{3}} : \n `SpecialTokens.indent` {{4*}} pass \n `SpecialTokens.dedent`` */
@@ -6204,8 +6267,52 @@ object Py {
             ),
         )
 
-    /** ``starToken` {{0}} : {{1}} = {{2}}` */
+    /** ``slashToken` {{0}} : {{1}} = {{2}}` */
     private val sharedCodeFormattingTemplate124 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken(slashToken),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(":", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.LiteralToken("=", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(2),
+            ),
+        )
+
+    /** ``slashToken` {{0}} : {{1}}` */
+    private val sharedCodeFormattingTemplate125 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken(slashToken),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(":", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(1),
+            ),
+        )
+
+    /** ``slashToken` {{0}} = {{2}}` */
+    private val sharedCodeFormattingTemplate126 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken(slashToken),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken("=", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(2),
+            ),
+        )
+
+    /** ``slashToken` {{0}}` */
+    private val sharedCodeFormattingTemplate127 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken(slashToken),
+                CodeFormattingTemplate.OneSubstitution(0),
+            ),
+        )
+
+    /** ``starToken` {{0}} : {{1}} = {{2}}` */
+    private val sharedCodeFormattingTemplate128 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken(starToken),
@@ -6218,7 +6325,7 @@ object Py {
         )
 
     /** ``starToken` {{0}} : {{1}}` */
-    private val sharedCodeFormattingTemplate125 =
+    private val sharedCodeFormattingTemplate129 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken(starToken),
@@ -6229,7 +6336,7 @@ object Py {
         )
 
     /** ``starToken` {{0}} = {{2}}` */
-    private val sharedCodeFormattingTemplate126 =
+    private val sharedCodeFormattingTemplate130 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken(starToken),
@@ -6240,7 +6347,7 @@ object Py {
         )
 
     /** ``starStarToken` {{0}} : {{1}} = {{2}}` */
-    private val sharedCodeFormattingTemplate127 =
+    private val sharedCodeFormattingTemplate131 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken(starStarToken),
@@ -6253,7 +6360,7 @@ object Py {
         )
 
     /** ``starStarToken` {{0}} : {{1}}` */
-    private val sharedCodeFormattingTemplate128 =
+    private val sharedCodeFormattingTemplate132 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken(starStarToken),
@@ -6264,7 +6371,7 @@ object Py {
         )
 
     /** ``starStarToken` {{0}} = {{2}}` */
-    private val sharedCodeFormattingTemplate129 =
+    private val sharedCodeFormattingTemplate133 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken(starStarToken),
@@ -6275,7 +6382,7 @@ object Py {
         )
 
     /** ``starStarToken` {{0}}` */
-    private val sharedCodeFormattingTemplate130 =
+    private val sharedCodeFormattingTemplate134 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken(starStarToken),
@@ -6284,7 +6391,7 @@ object Py {
         )
 
     /** `{{0}} : {{1}} = {{2}}` */
-    private val sharedCodeFormattingTemplate131 =
+    private val sharedCodeFormattingTemplate135 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -6296,7 +6403,7 @@ object Py {
         )
 
     /** `{{0}} = {{2}}` */
-    private val sharedCodeFormattingTemplate132 =
+    private val sharedCodeFormattingTemplate136 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),

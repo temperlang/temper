@@ -1,0 +1,4 @@
+export class C {
+  public get x(): Int32 { 1 }
+  public set x(newX: Int32) { /* ignoring it */ }
+}

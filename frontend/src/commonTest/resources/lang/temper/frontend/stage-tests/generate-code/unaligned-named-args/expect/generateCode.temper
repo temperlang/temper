@@ -1,0 +1,8 @@
+let console#0;
+console#0 = getConsole();
+@fn let hi__0;
+hi__0 = (@stay fn hi(name__0 /* aka name */: String) /* return__1 */: Void {
+    do_call_log(console#0, name__0);
+    return__1 = void
+});
+hi__0(\nom, "Alice")

@@ -530,5 +530,5 @@ val benchmarkQuietThreshold = 50.toDuration(DurationUnit.MILLISECONDS)
 val Log.Level.style: Style get() = when (this) {
     Log.Error, Log.Fatal -> Style.LogErrorOutput
     Log.Warn -> Style.LogWarningOutput
-    Log.Info, Log.Fine -> Style.LogInfoOutput
+    Log.Summary, Log.Info, Log.Fine -> Style.LogInfoOutput
 }

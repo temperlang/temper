@@ -550,28 +550,34 @@ class WeaverTest {
             |export let sum = await p + await p;
         """.trimMargin(),
         want = """
-            |[[ var t#4 ]];
             |[[ var t#5 ]];
             |[[ var t#6 ]];
+            |[[ var t#7 ]];
+            |[[ var t#8 ]];
             |[[ var fail#1 ]];
             |[[ var fail#2 ]];
             |[[ var fail#3 ]];
+            |[[ var fail#4 ]];
             |[[ let p__0: Promise<Int32> ]];
-            |[[ t#4 = hs(fail#1, g()) ]];
+            |[[ t#5 = hs(fail#1, g()) ]];
             |if ([[ fail#1 ]]) {
             |  [[ bubble() ]];
             |}
-            |[[ p__0 = t#4 ]];
+            |[[ p__0 = t#5 ]];
             |[[ let `test//`.sum ]];
-            |[[ t#5 = hs(fail#2, await p__0) ]];
-            |if ([[ fail#2 ]]) {
-            |  [[ bubble() ]];
-            |}
             |[[ t#6 = hs(fail#3, await p__0) ]];
             |if ([[ fail#3 ]]) {
             |  [[ bubble() ]];
             |}
-            |[[ `test//`.sum = t#5 + t#6 ]];
+            |[[ t#7 = hs(fail#4, await p__0) ]];
+            |if ([[ fail#4 ]]) {
+            |  [[ bubble() ]];
+            |}
+            |[[ t#8 = hs(fail#2, t#6 + t#7) ]];
+            |if ([[ fail#2 ]]) {
+            |  [[ bubble() ]];
+            |}
+            |[[ `test//`.sum = t#8 ]];
         """.trimMargin(),
     )
 
@@ -717,7 +723,7 @@ private val extraEnvironmentBindings: Map<TemperName, Value<*>> = run {
     )
     val t = MkType2(tf).get()
     mapOf(
-        StagingFlags.skipImportImplicits to TBoolean.valueTrue,
+        StagingFlags.skipImportCore to TBoolean.valueTrue,
         StagingFlags.moduleResultNeeded to TBoolean.valueTrue,
         BuiltinName("f") to Value(PlaceholderFunction("f", false, WellKnownTypes.voidType2)),
         BuiltinName("ff") to Value(PlaceholderFunction("ff", true, WellKnownTypes.voidType2)),

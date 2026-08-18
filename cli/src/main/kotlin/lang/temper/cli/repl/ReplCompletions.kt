@@ -3,8 +3,8 @@ package lang.temper.cli.repl
 import lang.temper.common.Trie
 import lang.temper.common.buildUniqList
 import lang.temper.common.unquotedTemperEscaper
-import lang.temper.frontend.implicits.allImplicitlyImportedNames
-import lang.temper.frontend.implicits.builtinEnvironment
+import lang.temper.frontend.core.allImplicitlyImportedNames
+import lang.temper.frontend.core.builtinEnvironment
 import lang.temper.interp.EmptyEnvironment
 import lang.temper.lexer.Genre
 import lang.temper.lexer.TokenType
@@ -166,6 +166,7 @@ private fun splitTemplateCompletionContextBeforeString(
                 adjustedTokenIndex -= 1
             }
             TokenType.Comment,
+            TokenType.Margin,
             TokenType.Number,
             TokenType.Punctuation,
             TokenType.RightDelimiter,

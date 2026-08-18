@@ -1,0 +1,3 @@
+class C<@in @imu T> {}
+class D<@imu @in T> {}
+let f<@imu @partialImu T>(t: T): Void {}

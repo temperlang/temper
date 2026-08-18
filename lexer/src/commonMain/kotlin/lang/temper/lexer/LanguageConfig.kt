@@ -10,6 +10,9 @@ import lang.temper.log.FilePathSegmentOrPseudoSegment
  * match that starts at *pos* in *text*; or -1 if no such match.
  */
 interface LanguageConfig {
+    /** The preferred file extension, with the dot, but excluding any ".temper" */
+    val dotExtension: String?
+
     /**
      * True if the lexer should start in a semilit comment context and look for an exit
      * before the first content tokens.
@@ -28,7 +31,7 @@ interface LanguageConfig {
      *      * LINES OF STRING
      *      */
      *
-     * These may be optionally incorporated by later stages based on textual cues as javadoc for definitions.
+     * These may be optionally incorporated by later stages based on textual cues as Javadoc for definitions.
      *
      * For example, given that the name `f` is defined here:
      *
@@ -41,7 +44,7 @@ interface LanguageConfig {
      * For this to work, implementations should split semilit comments into paragraphs based on the local
      * language convention.
      *
-     * This allows for literate style association of paragraphs in markdown with definitions.
+     * This allows for literate style association of paragraphs in Markdown with definitions.
      *
      * @return ranges into text between start and end in order of paragraphs
      */
@@ -49,6 +52,8 @@ interface LanguageConfig {
 }
 
 class MarkdownLanguageConfig : LanguageConfig {
+    override val dotExtension: String get() = ".md"
+
     // March code ranges forward only.
     private var _codeRanges: List<TaggedRange>? = null
     private var codeRangeIndex = 0
@@ -56,17 +61,16 @@ class MarkdownLanguageConfig : LanguageConfig {
     override val isSemilit get() = true
 
     private fun codeRanges(text: CharSequence): List<TaggedRange> =
-        _codeRanges ?: findMarkdownCodeBlocks(text.toString()).also {
+        _codeRanges ?: findMarkdownCodeBlocks("$text").also {
             _codeRanges = it
         }
 
     override fun matchSemilitCommentEntrance(text: CharSequence, pos: Int): Int {
         // We shouldn't be able to match comment entrance (code end) until we've seen a comment exit (code begin).
         // We'll have reviewed all the text in advance on the first call to check for comment exit (code begin).
-        codeRanges(text).getOrNull(codeRangeIndex)?.let { range ->
-            if (range.end.first == pos) {
-                return range.end.last + 1
-            }
+        val range = codeRanges(text).getOrNull(codeRangeIndex)
+        if (range != null && range.end.first == pos) {
+            return range.end.last + 1
         }
         return -1
     }
@@ -100,7 +104,7 @@ class MarkdownLanguageConfig : LanguageConfig {
                     break
                 }
                 if (range.tags == null) {
-                    add((range.begin.endInclusive + 1) until range.end.first)
+                    add((range.begin.last + 1) until range.end.first)
                 }
             }
         }
@@ -132,6 +136,7 @@ data class TaggedRange(
 expect fun findMarkdownCodeBlocks(text: String): List<TaggedRange>
 
 object StandaloneLanguageConfig : LanguageConfig {
+    override val dotExtension: Nothing? get() = null
     override val isSemilit get() = false
     override fun matchSemilitCommentEntrance(text: CharSequence, pos: Int) = -1
     override fun matchSemilitCommentExit(text: CharSequence, pos: Int) = -1

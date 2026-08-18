@@ -1,0 +1,18 @@
+@fn let `test//`.something ⦂(fn (String?): String | Bubble);
+`test//`.something = (@stay fn something(x__0 /* aka x */: String?) /* return__0 */: (String | Bubble) {
+    var t#0 ⦂ Boolean;
+    if (!isNull ⋖ String ⋗(x__0)) {
+      t#0 = x__0 is String
+    } else {
+      t#0 = false
+    };
+    if (t#0) {
+      if (isNull ⋖ String ⋗(x__0)) {
+        return__0 = panic ⋖ String ⋗()
+      } else {
+        return__0 = assertAs ⋖ String ⋗(x__0, String)
+      }
+    } else {
+      bubble ⋖ String ⋗()
+    }
+})

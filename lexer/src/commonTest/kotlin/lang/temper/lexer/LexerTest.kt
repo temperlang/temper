@@ -84,7 +84,7 @@ import kotlin.test.assertEquals
 private data class TokenMetadata(val type: TokenType, val mayBracket: Boolean, val synthetic: Boolean)
 
 private const val C = $$"${" // So $C in a string means ${ and takes the same space
-private const val Q3 = "\"\"\"" // So $Q3 in a string means """ and takes the same space
+internal const val Q3 = "\"\"\"" // So $Q3 in a string means """ and takes the same space
 
 /**
  * Single character abbreviations for [TokenType]s used in test-case metadata lines.
@@ -96,6 +96,7 @@ private val charToTokenMetadata: Map<Char, TokenMetadata> = buildMap {
             TokenType.Comment -> 'C' to false
             TokenType.Number -> 'N' to false
             TokenType.Punctuation -> 'P' to false
+            TokenType.Margin -> 'M' to false
             TokenType.LeftDelimiter -> 'L' to true
             TokenType.RightDelimiter -> 'R' to true
             TokenType.QuotedString -> 'Q' to false
@@ -277,16 +278,16 @@ class LexerTest {
             |>    let text = $Q3
             |:   S  WS   WSPS  LQ
             |>      "Here is string content.
-            |:     SS                       Q
+            |:     SM                       Q
             |>${
             // blank line in middle of quoted group contributes no chars
             ""
         }
             |:S
             |>      "
-            |:     SSQ
+            |:     SMQ
             |>      "Here is more string content.
-            |:     SS                            Q
+            |:     SM                            Q
             |>      $Q3;
             |:     S  rPS
             |>
@@ -319,7 +320,7 @@ class LexerTest {
         >$Q3
         :  LQ
         >"$C a }
-        :S BSWSBQ
+        :M BSWSBQ
         >$Q3;
         :  rP
         """.trimIndent(),
@@ -331,11 +332,11 @@ class LexerTest {
         >$Q3
         :  LQ
         >  "Line 1
-        : SS      Q
+        : SM      Q
         >  // Between Line 1 and 2 is a comment
         : S                                   CS
         >  "Line 2
-        : SS      Q
+        : SM      Q
         >  /*
         : S
         >   * Block comments are ok too.
@@ -343,7 +344,7 @@ class LexerTest {
         >  */
         :   CS
         >  "Line 3
-        : SS      Q
+        : SM      Q
         >$Q3;
         :  rP
         """.trimIndent(),
@@ -355,11 +356,11 @@ class LexerTest {
         >$Q3
         :  LQ
         >"   not-at-start-of-line$Q3
-        :S                          Q
+        :M                          Q
         >"   $Q3" quotes embedded
-        :S                       Q
+        :M                       Q
         >"" first quote is ignored but second is content
-        :S                                              Q
+        :M                                              Q
         >   $Q3; // Ok
         :  S  rPS    C
         """.trimIndent(),
@@ -371,11 +372,11 @@ class LexerTest {
         >$Q3
         :  LQ
         >"line of character data
-        :S                      Q
-        >"{: embedded { statement } :}
-        :S BS       WSBS        WSBS BQ
+        :M                      Q
+        >: embedded { statement }
+        :MS       WSBS        WSBS
         >"another line of character data
-        :S                              Q
+        :M                              Q
         >   $Q3;
         :  S  rP
         """.trimIndent(),
@@ -388,13 +389,13 @@ class LexerTest {
         >$Q3
         :  LQ
         >"   Python doc-strings start and end with a $Q3 sequence like
-        :S                                                            Q
+        :M                                                            Q
         >"       $Q3
-        :S          Q
+        :M          Q
         >"       some chars
-        :S                 Q
+        :M                 Q
         >"       $Q3
-        :S          Q
+        :M          Q
         >    $Q3; // Ok
         :   S  rPS    C
         """.trimIndent(),
@@ -407,7 +408,7 @@ class LexerTest {
         >$Q3
         :  LQ
         >"   chars $C expr } more chars$Q3
-        :S        Q BS   WSB          Q  r
+        :M        Q BS   WSB          Q  r
         """.trimIndent(),
     )
 
@@ -418,11 +419,11 @@ class LexerTest {
         >$Q3
         :  LQ
         >"   chars $C
-        :S        Q BS
+        :M        Q BS
         >     $Q3
         :    S  LQ
         >    "nested chars
-        :   SS            Q
+        :   SM            Q
         >   $Q3} more chars
         :  S  rB           Q
         >$Q3
@@ -436,13 +437,13 @@ class LexerTest {
         >$Q3
         :  LQ
         >"Table of Contents:
-        :S                  Q
-        >"{: for (x in xs) { :}
-        :S BS  WSBWS WS WBSBS BQ
+        :M                  Q
+        >: for (x in xs) {
+        :MS  WSBWS WS WBSBS
         >" - $C x }
-        :S  Q BSWSBQ
-        >"{: } :}
-        :S BSBS BQ
+        :M  Q BSWSBQ
+        >: }
+        :MSBS
         >$Q3
         :  r
         """.trimIndent(),
@@ -512,14 +513,6 @@ class LexerTest {
     )
 
     @Test
-    fun angleBracketFinding() = assertTokenization(
-        """
-        >x == <T>y
-        :WS PSBWBW
-        """.trimIndent(),
-    )
-
-    @Test
     fun splitCloseAngles() = assertTokenization(
         """
         >x:T<U<V>>= y >> z
@@ -560,30 +553,6 @@ class LexerTest {
     )
 
     @Test
-    fun doubleAmpInterruptsAngles() = assertTokenization(
-        """
-        >T<A && B>(c)
-        :WPWS PSWPBWB
-        """.trimIndent(),
-    )
-
-    @Test
-    fun doubleBarInterruptsAngles() = assertTokenization(
-        """
-        >T<A || B>(c)
-        :WPWS PSWPBWB
-        """.trimIndent(),
-    )
-
-    @Test
-    fun semiInterruptsAngles() = assertTokenization(
-        """
-        >T<A ; B>(c)
-        :WPWSPSWPBWB
-        """.trimIndent(),
-    )
-
-    @Test
     fun shiftsNotAngles() = assertTokenization(
         """
         >T<<A | B>>(c)
@@ -616,66 +585,15 @@ class LexerTest {
     )
 
     @Test
-    fun anglesDoNotMatchAcrossParens() = assertTokenization(
-        """
-        >T<B(C>D)>
-        :WBWBWPWBB
-        """.trimIndent(),
-    )
-
-    @Test
-    fun anglesDoNotMatchAcrossInterpolationBoundaries() = assertTokenization(
-        $$"""
-        >a<"...${-b > -c}..."> - d;
-        :WBL  Q BPWSPSPWB  QRBSPSWP
-        """.trimIndent(),
-    )
-
-    @Test
-    fun tripleSemiInterruptsAnglesParenthesized() = assertTokenization(
-        """
-        >T<(A ;;; B)>(c)
-        :WPBWS  PSWBPBWB
-        """.trimIndent(),
-    )
-
-    // We want to be able to reuse the lexer for DSLs with close tags like </foo> where the "</"
-    // and ">" form a bracket pair.  Specifically, the "/" should not start a regex when adjacent
-    // to the "<".
-    @Test
-    fun slashAfterLessThanIsNotRegex() = assertTokenization(
-        """
-        ></foo attr="value">
-        : B  WS   WPL    QRB
-        """.trimIndent(),
-    )
-
-    @Test
     fun ltIsARegexPreceder() = assertTokenization(
         """
-        >< /foo attr="value">
-        :PS                 Q
+        >< /foo attr="value">/
+        :PSL                Qr
         """.trimIndent(),
 
         wantedErrors = listOf(
             "20: Missing close quote!",
         ),
-    )
-
-    @Test
-    fun tagStartDoesNotConsumeComment() = assertTokenization(
-        """
-        ></*foo*/><//foo
-        :B      CBP    C
-        """.trimIndent(),
-    )
-
-    @Test
-    fun tagAttributes() = assertTokenization(
-        """
-        ><foo bar="1">
-        :B  WS  WPLQRB
-        """.trimIndent(),
     )
 
     @Test
@@ -726,21 +644,21 @@ class LexerTest {
 
     @Test
     fun stringEscapes() = assertTokenization(
-        """
-        >"\x20Escaped at start with more later\u{20,$C/*hi*/}b1,,  {21 }."
+        $$"""
+        >"\x20Escaped at start with more later\u{20,$$C/*hi*/}b1,,  {21 }."
         :L   Q                               Q  B QP B     CB QPP QQ QQBQRS
-        >$Q3
+        >$$Q3
         :  LQ
         >"Maybe\u0020here?
-        :S    Q     Q     Q
-        >"${'$'}{hi}
-        :S${' '}B WBQ
-        >$Q3;
+        :M    Q     Q     Q
+        >"${hi}
+        :M$${' '}B WBQ
+        >$$Q3;
         :  rPS
-        >raw"hi\u{$C" t"}}here"
+        >raw"hi\u{$$C" t"}}here"
         :  WL Q  B BL QRBB   QRS
         >"\u{20"
-        :L  B Q ${""}
+        :L  B Q $${""}
         >
         :Q
         >}"
@@ -748,6 +666,114 @@ class LexerTest {
         """.trimIndent(),
         wantedErrors = listOf(
             "129: Missing close quote!",
+        ),
+    )
+
+    @Test
+    fun templatesEasier() = assertTokenization(
+        $$"""
+            |>$$Q3
+            |:  LQ
+            |>~Things: ${}
+            |:M       Q BBQ
+            |>:do {
+            |:M WSBS
+            |>  ~${i}, ${}
+            |: SM BWB Q BBQ
+            |>  // Comment inside loop after content.
+            |: S                                    CS
+            |>:}
+            |:MBS
+            |>~and so on$$Q3
+            |:M        Q  r
+        """.trimMargin(),
+    )
+
+    @Test
+    fun templatesHarder() = assertTokenization(
+        $$"""
+            |>$$Q3
+            |:  LQ
+            |>:do {
+            |:M WSBS
+            |>  ~${i}
+            |: SM BWBQ
+            |>  ~, ${}
+            |: SM Q BBQ
+            |>  ~, ${}
+            |: SM Q BBQ
+            |>:}
+            |:MBS
+            |>~and so on$$Q3
+            |:M        Q  r
+        """.trimMargin(),
+    )
+
+    @Test
+    fun templatesHarderMore() = assertTokenization(
+        $$"""
+            |>$$Q3
+            |:  LQ
+            |>:do {
+            |:M WSBS
+            |>  // Comment inside loop before content.
+            |: S                                     CS
+            |>  ~${i}
+            |: SM BWBQ
+            |>  :do { // Nested block.
+            |: SM WSBS               CS
+            |>    ~, ${}
+            |:   SM Q BBQ
+            |>  :}
+            |: SMBS
+            |>:}
+            |:MBS
+            |>~and so on$$Q3
+            |:M        Q  r
+        """.trimMargin(),
+    )
+
+    @Test
+    fun templatesNested() = assertTokenization(
+        $$"""
+            |>$$Q3
+            |:  LQ
+            |>:let a = $$Q3
+            |:M  WSWSPS  EQ
+            |>  ~hi
+            |: SM  Q
+            |>:;
+            |:MPS
+            |>~${a}$$Q3$$Q3
+            |:M BWB  r  r
+        """.trimMargin(),
+        wantedErrors = listOf(
+            "13-16: `\"\"\"`: Multi-quoted string nesting not yet supported!",
+        ),
+    )
+
+    @Test
+    fun templatesNestedInsideBlock() = assertTokenization(
+        $$"""
+            |>$$Q3
+            |:  LQ
+            |>:do {
+            |:M WSBS
+            |>  :let a = $$Q3
+            |: SM  WSWSPS  EQ
+            |>    ~hi
+            |:   SM  Q
+            |>  :;
+            |: SMPS
+            |>:}
+            |:MES
+            |>~${a}$$Q3}$$Q3
+            |:M BWB  rb  r
+        """.trimMargin(),
+        wantedErrors = listOf(
+            "21-24: `$Q3`: Multi-quoted string nesting not yet supported!",
+            "39-40: `}`: Close bracket matches no open bracket!",
+            "46: Close bracket matches no open bracket!",
         ),
     )
 
@@ -1034,7 +1060,7 @@ class LexerTest {
     fun returnRegex() = assertTokenization(
         """
         >return / regex/i
-        :     WS        Q
+        :     WSL     Q R
         """.trimIndent(),
     )
 
@@ -1042,7 +1068,7 @@ class LexerTest {
     fun yieldRegex() = assertTokenization(
         """
         >yield / regex/i
-        :    WS        Q
+        :    WSL     Q R
         """.trimIndent(),
     )
 
@@ -1098,7 +1124,7 @@ class LexerTest {
     fun plusEqRegex() = assertTokenization(
         """
         >x += / regex/i.n
-        :WS PS        QPW
+        :WS PSL     Q RPW
         """.trimIndent(),
     )
 
@@ -1106,7 +1132,7 @@ class LexerTest {
     fun minusRegex() = assertTokenization(
         """
         >x - / regex/i.n
-        :WSPS        QPW
+        :WSPSL     Q RPW
         """.trimIndent(),
     )
 
@@ -1114,7 +1140,7 @@ class LexerTest {
     fun timesRegex() = assertTokenization(
         """
         >x * / regex/i.n
-        :WSPS        QPW
+        :WSPSL     Q RPW
         """.trimIndent(),
     )
 
@@ -1122,7 +1148,7 @@ class LexerTest {
     fun regexNoTail() = assertTokenization(
         """
         >/foo/
-        :    Q
+        :L  QR
         """.trimIndent(),
     )
 
@@ -1130,7 +1156,7 @@ class LexerTest {
     fun regexBigTail() = assertTokenization(
         """
         >/foo/smigu
-        :         Q
+        :L  Q     R
         """.trimIndent(),
     )
 
@@ -1138,7 +1164,7 @@ class LexerTest {
     fun regexBigOddTail() = assertTokenization(
         """
         >/foo/foo
-        :       Q
+        :L  Q   R
         """.trimIndent(),
     )
 
@@ -1146,7 +1172,7 @@ class LexerTest {
     fun bangRegex() = assertTokenization(
         """
         >! /foo/i.something
-        :PS     QP        W
+        :PSL  Q RP        W
         """.trimIndent(),
     )
 
@@ -1154,7 +1180,7 @@ class LexerTest {
     fun tildeRegex() = assertTokenization(
         """
         >x ~ /foo/i.something
-        :WSPS     QP        W
+        :WSPSL  Q RP        W
         """.trimIndent(),
     )
 
@@ -1162,7 +1188,7 @@ class LexerTest {
     fun regexSpace() = assertTokenization(
         """
         >/a a/
-        :    Q
+        :L  QR
         """.trimIndent(),
     )
 
@@ -1170,7 +1196,7 @@ class LexerTest {
     fun regexReplace() = assertTokenization(
         """
         >/foo/->bar/
-        :          Q
+        :L        QR
         """.trimIndent(),
     )
 
@@ -1178,7 +1204,7 @@ class LexerTest {
     fun regexReplaceWithNothing() = assertTokenization(
         """
         >/foo/->/
-        :       Q
+        :L     QR
         """.trimIndent(),
     )
 
@@ -1186,7 +1212,7 @@ class LexerTest {
     fun regexReplaceSpace() = assertTokenization(
         """
         >/foo/-> /
-        :        Q
+        :L      QR
         """.trimIndent(),
     )
 
@@ -1194,7 +1220,7 @@ class LexerTest {
     fun regexThenComment() = assertTokenization(
         """
         >/foo/bar//stuff
-        :       Q      C
+        :L  Q   R      C
         """.trimIndent(),
     )
 
@@ -1202,7 +1228,7 @@ class LexerTest {
     fun regexReplaceNonEnd() = assertTokenization(
         """
         >/foo/->bar/ foo
-        :          QS  W
+        :L        QRS  W
         """.trimIndent(),
     )
 
@@ -1210,7 +1236,7 @@ class LexerTest {
     fun regexReplaceTail() = assertTokenization(
         """
         >/foo/->bar/i
-        :           Q
+        :L        Q R
         """.trimIndent(),
     )
 
@@ -1218,15 +1244,15 @@ class LexerTest {
     fun regexReplaceIncomplete1() = assertTokenization(
         """
         >/foo/-
-        :    QP
+        :L  QRP
         """.trimIndent(),
     )
 
     @Test
     fun regexReplaceIncomplete2() = assertTokenization(
         """
-        >/foo/->
-        :      Q
+        >/foo/->/
+        :L     Qr
         """.trimIndent(),
 
         wantedErrors = listOf(
@@ -1405,7 +1431,7 @@ class LexerTest {
             .filter { it.second?.synthetic != true }
             .joinToString("") { it.first }
 
-        /** Convert tokens and metadata back into alternating input-line/metadata-line form. */
+        /** Convert tokens and metadata back into an alternating input-line/metadata-line form. */
         fun condense(ls: List<Pair<String, TokenMetadata?>>) = buildString {
             val inputLine = StringBuilder()
             val metadataLine = StringBuilder()

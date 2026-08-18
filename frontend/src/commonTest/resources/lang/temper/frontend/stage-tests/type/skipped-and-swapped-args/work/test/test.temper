@@ -1,0 +1,3 @@
+class Hi(private a: Int = 1, private b: Int = 2, private c: Int = 3) {}
+var n = 1;
+{ c: do { n += 1; n }, a: n + 1 };

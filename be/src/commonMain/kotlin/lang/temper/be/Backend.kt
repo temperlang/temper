@@ -5,7 +5,6 @@ import lang.temper.be.cli.CliEnv
 import lang.temper.be.cli.RunnerSpecifics
 import lang.temper.be.names.NameSelection
 import lang.temper.be.names.NameSelectionFile
-import lang.temper.be.tmpl.LibraryRootContext
 import lang.temper.be.tmpl.SignatureAdjustments
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
@@ -44,7 +43,6 @@ import lang.temper.log.FileRelatedCodeLocation
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.bannedPathSegmentNames
-import lang.temper.log.dirPath
 import lang.temper.log.filePath
 import lang.temper.log.last
 import lang.temper.log.plus
@@ -110,6 +108,7 @@ abstract class Backend<SELF : Backend<SELF>>(
      * libraries in [libraryConfigurations].
      */
     val dependenciesBuilder: Dependencies.Builder<SELF>,
+    val rawBackendFiles: Map<FilePath, String> = mapOf(),
 ) {
     constructor(backendId: BackendId, setup: BackendSetup<SELF>) : this(
         backendId = backendId,
@@ -121,6 +120,7 @@ abstract class Backend<SELF : Backend<SELF>>(
         logSink = setup.logSink,
         config = setup.config,
         dependenciesBuilder = setup.dependenciesBuilder,
+        rawBackendFiles = setup.rawBackendFiles,
     )
 
     val libraryConfigurations = dependenciesBuilder.libraryConfigurations
@@ -648,13 +648,6 @@ abstract class Backend<SELF : Backend<SELF>>(
         }
     }
 
-    /** Locates the temper source files for a library */
-    open fun libraryRootContext(libraryConfiguration: LibraryConfiguration) =
-        LibraryRootContext(
-            inRoot = libraryConfiguration.libraryRoot,
-            outRoot = dirPath(libraryConfiguration.libraryName.text),
-        )
-
     private val allocatedFiles = mutableSetOf<FilePath>()
     protected fun allocateTextFile(
         /** Might be a dir path, if that has meaning to the backend in question. */
@@ -903,6 +896,8 @@ data class BackendSetup<BACKEND : Backend<BACKEND>>(
     val logSink: LogSink,
     val dependencyResolver: DependencyResolver,
     val config: Backend.Config,
+    /** Files matching backend extensions from the library source tree. */
+    val rawBackendFiles: Map<FilePath, String> = mapOf(),
 )
 
 private fun sourceMapFile(outputSourceFile: FilePath): FilePath {

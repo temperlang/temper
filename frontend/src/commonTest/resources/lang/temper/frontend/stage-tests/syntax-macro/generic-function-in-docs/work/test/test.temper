@@ -1,0 +1,1 @@
+let f<T, U extends T>(x: T): U { x }

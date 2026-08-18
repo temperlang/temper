@@ -366,6 +366,8 @@ class TyperPlanTest {
             """
             |{
             |    "i__0": ["0"],
+            |    // Don't know yet that `+` doesn't bubble.
+            |    "t#0": ["hs(fail#0, i__0 + 1)"],
             |    "return__0": ["void"]
             |}
             """.trimMargin(),
@@ -590,10 +592,14 @@ class TyperPlanTest {
             |  "g(i)",
             |  "hs(fail, g(i))",
             |  "t + 1",
+            |  "hs(fail, t + 1)",
             |  "fn ...",
             |  "f(1, fn ...)",
             |  "2 * k",
+            |  "hs(fail, 2 * k)",
             |  "hs(fail, f(1, fn ...))",
+            |  "bubble()",
+            |  "bubble()",
             |  "bubble()",
             |  "bubble()",
             |]
@@ -652,27 +658,27 @@ class TyperPlanTest {
         assertStringsEqual(
             """
                 |let return__9, @fn f__1;
-                |f__1 = fn f(s__2 /* aka s */: String) /* return__0 */: Boolean {
-                |  var t#7, t#8;
-                |  fn__3: do {
-                |    var fail#6;
-                |    let x__4;
-                |    orelse#5: {
-                |      t#7 = hs(fail#6, do_bind_toFloat64(s__2)());
-                |      if (fail#6) {
-                |        break orelse#5;
-                |      };
-                |      t#8 = t#7
-                |    } orelse {
+                |f__1 = (@stay fn f(s__2 /* aka s */: String) /* return__0 */: Boolean {
+                |    var t#7, t#8;
+                |    fn__3: do {
+                |      var fail#6;
+                |      let x__4;
+                |      orelse#5: {
+                |        t#7 = hs(fail#6, do_call_toFloat64(s__2));
+                |        if (fail#6) {
+                |          break orelse#5;
+                |        };
+                |        t#8 = t#7
+                |      } orelse {
                 |## This is not an initializer for t#8
                 |## And this assignment needs to be typed after t#8's initializer
                 |## so that its context can be used to compute Never<Float64> as a type.
-                |      t#8 = panic()
-                |    };
-                |    x__4 = t#8;
-                |    return__0 = x__4 > 0.0
-                |  }
-                |};
+                |        t#8 = panic()
+                |      };
+                |      x__4 = t#8;
+                |      return__0 = x__4 > 0.0
+                |    }
+                |});
                 |return__9 = void
                 |
             """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
@@ -682,10 +688,10 @@ class TyperPlanTest {
             """
                 |{
                 |    "f__1": [
-                |        "fn f(s__2 /* aka s */: String) /* return__0 */: Boolean {var t#7, t#8; fn__3: do {var fail#6; let x__4; orelse#5: {t#7 = hs(fail#6, do_bind_toFloat64(s__2)()); if (fail#6) {break orelse#5;}; t#8 = t#7} orelse {t#8 = panic()}; x__4 = t#8; return__0 = x__4 \u003e 0.0}}"
+                |        "@stay fn f(s__2 /* aka s */: String) /* return__0 */: Boolean {var t#7, t#8; fn__3: do {var fail#6; let x__4; orelse#5: {t#7 = hs(fail#6, do_call_toFloat64(s__2)); if (fail#6) {break orelse#5;}; t#8 = t#7} orelse {t#8 = panic()}; x__4 = t#8; return__0 = x__4 \u003e 0.0}}"
                 |    ],
                 |    "t#7": [
-                |        "hs(fail#6, do_bind_toFloat64(s__2)())"
+                |        "hs(fail#6, do_call_toFloat64(s__2))"
                 |    ],
                 |    "t#8": [
                 |## No panic()
@@ -695,7 +701,7 @@ class TyperPlanTest {
                 |        "t#8"
                 |    ],
                 |    "return__0": [
-                |        "x__4 \u003e 0.0"
+                |        "x__4 > 0.0"
                 |    ],
                 |    "return__9": [
                 |        "void"
@@ -707,10 +713,9 @@ class TyperPlanTest {
         assertStructure(
             """
                 |[
-                |  "do_bind_toFloat64(s)",
-                |  "do_bind_toFloat64(s)()",
-                |  "hs(fail, do_bind_toFloat64(s)())",
-                |  "x \u003e 0.0",
+                |  "do_call_toFloat64(s)",
+                |  "hs(fail, do_call_toFloat64(s))",
+                |  "x > 0.0",
                 |  "fn ...",
                 |  "panic()",
                 |]

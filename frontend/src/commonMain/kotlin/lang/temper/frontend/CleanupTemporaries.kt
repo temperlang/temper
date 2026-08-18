@@ -1,6 +1,7 @@
 package lang.temper.frontend
 
 import lang.temper.ast.TreeVisit
+import lang.temper.ast.VisitCue
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.GetStaticOp
 import lang.temper.builtin.Types
@@ -8,6 +9,7 @@ import lang.temper.common.Log
 import lang.temper.common.SnapshotKey
 import lang.temper.common.console
 import lang.temper.common.isNotEmpty
+import lang.temper.common.logIf
 import lang.temper.common.mapFirst
 import lang.temper.common.soleElementOrNull
 import lang.temper.common.structure.StructureSink
@@ -21,6 +23,7 @@ import lang.temper.frontend.rw.writesLive
 import lang.temper.frontend.syntax.isAssignment
 import lang.temper.log.LogConfigurations
 import lang.temper.log.MessageTemplate
+import lang.temper.log.Position
 import lang.temper.log.Positioned
 import lang.temper.name.InternalModularName
 import lang.temper.name.ModuleLocation
@@ -29,8 +32,6 @@ import lang.temper.name.SourceName
 import lang.temper.name.StableTemperName
 import lang.temper.name.Symbol
 import lang.temper.name.Temporary
-import lang.temper.type.BindMemberAccessor
-import lang.temper.type.DotHelper
 import lang.temper.type.StaticType
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.isVoidLike
@@ -44,11 +45,13 @@ import lang.temper.value.DeclTree
 import lang.temper.value.Document
 import lang.temper.value.EscTree
 import lang.temper.value.FunTree
+import lang.temper.value.InnerTree
 import lang.temper.value.LeftNameLeaf
 import lang.temper.value.MaximalPath
 import lang.temper.value.NameLeaf
 import lang.temper.value.Planting
 import lang.temper.value.PseudoCodeDetail
+import lang.temper.value.RightNameLeaf
 import lang.temper.value.StayLeaf
 import lang.temper.value.TBoolean
 import lang.temper.value.TEdge
@@ -61,7 +64,7 @@ import lang.temper.value.failSymbol
 import lang.temper.value.freeTree
 import lang.temper.value.fromTypeSymbol
 import lang.temper.value.functionContained
-import lang.temper.value.isImplicits
+import lang.temper.value.isCore
 import lang.temper.value.ssaSymbol
 import lang.temper.value.syntheticSymbol
 import lang.temper.value.toPseudoCode
@@ -72,8 +75,8 @@ import lang.temper.value.void
 
 private const val DEBUG = false
 
-@Suppress("SimplifyBooleanWithConstants", "KotlinConstantConditions")
-private inline val Document.debugging get() = DEBUG && !this.isImplicits
+@Suppress("SimplifyBooleanWithConstants")
+private inline val Document.debugging get() = DEBUG && !isCore
 private inline fun Document.debug(message: () -> Any?) {
     if (debugging) {
         val o = message()
@@ -108,7 +111,8 @@ internal class CleanupTemporaries private constructor(
     private var requiredNames: Set<ResolvedName> = emptySet()
 
     fun clean(): DataTables {
-        root.document.debug {
+        val doc = root.document
+        doc.debug {
             console.group("Before") {
                 root.toPseudoCode(
                     console.textOutput,
@@ -127,34 +131,70 @@ internal class CleanupTemporaries private constructor(
         var edits: List<Edit>
 
         edits = simplifyVoidAssignments(readsAndWrites)
+        doc.debug {
+            console.logIf(edits.isNotEmpty()) { "edits came from simplifyVoidAssignments" }
+        }
+        if (edits.isEmpty()) {
+            edits = assignNonTemporariesFirst(readsAndWrites)
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from assignNonTemporariesFirst" }
+            }
+        }
         if (edits.isEmpty() && !beforeResultsExplicit) {
             edits = eliminateNoopReads(readsAndWrites)
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from eliminateNoopReads" }
+            }
         }
         if (edits.isEmpty()) {
             edits = collapseWritesToSingleName(readsAndWrites)
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from collapseWritesToSingleName" }
+            }
         }
         if (edits.isEmpty()) {
             edits = eliminateWritesUpstreamOfNothing(readsAndWrites)
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from eliminateWritesUpstreamOfNothing" }
+            }
         }
         if (edits.isEmpty()) {
             edits = collapseWritesLiveOnlyForAnAssignment(readsAndWrites)
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from collapseWritesLiveOnlyForAnAssignment" }
+            }
         }
         if (edits.isEmpty()) {
             edits = inlineAdjacentSingleReadWritePairs(readsAndWrites)
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from inlineAdjacentSingleReadWritePairs" }
+            }
         }
         if (edits.isEmpty()) {
             edits = inlineStaticReads(readsAndWrites)
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from inlineStaticReads" }
+            }
         }
         if (edits.isEmpty()) {
             edits = eliminateUnusedDeclarations(readsAndWrites)
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from eliminateUnusedDeclarations" }
+            }
         }
         if (edits.isEmpty()) {
             val namesThatNeedVar = mayNeedVar.toSet()
             mayNeedVar.clear()
             edits = fixupVarAtEnd(namesThatNeedVar, readsAndWrites)
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from fixupVarAtEnd" }
+            }
         }
         if (edits.isEmpty()) {
             edits = flagProblems()
+            doc.debug {
+                console.logIf(edits.isNotEmpty()) { "edits came from flagProblems" }
+            }
         }
 
         performEdits(edits)
@@ -188,7 +228,15 @@ internal class CleanupTemporaries private constructor(
         lineNo: Int,
         description: String,
         val edgeToReplace: TEdge,
-        val createReplacement: Planting.() -> UnpositionedTreeTemplate<*>,
+        val createReplacement: Planting.(Position) -> UnpositionedTreeTemplate<*>,
+    ) : Edit(lineNo, description)
+
+    class ReplaceRange(
+        lineNo: Int,
+        description: String,
+        val parent: InnerTree,
+        val range: IntRange,
+        val createReplacement: Planting.() -> Unit,
     ) : Edit(lineNo, description)
 
     class SplitAssignment(
@@ -239,12 +287,108 @@ internal class CleanupTemporaries private constructor(
         }
     }
 
+    private fun assignNonTemporariesFirst(readsAndWrites: ReadsAndWrites): List<Edit> = buildList {
+        val edits = this
+
+        // Quick and dirty. Walks basic blocks and look for adjacent statement pairs like the below:
+        //
+        //    t#0 = expr;
+        //    namedVar = t#0;
+        //
+        // Those are equivalent to
+        //
+        //    namedVar = expr;
+        //    t#0 = namedVar;
+        //
+        // But often, that allows for eliminating t#0 entirely.
+
+        for (maximalPath in readsAndWrites.paths.maximalPaths) {
+            val elements = maximalPath.elements // Just consider the non-joining parts
+            for (i in 1..elements.lastIndex) {
+                val firstElement = elements[i - 1]
+                val firstEdge = firstElement.edge ?: continue
+                val secondEdge = elements[i].edge ?: continue
+                val firstTree = firstEdge.target
+                val secondTree = secondEdge.target
+                if (isAssignment(firstTree) && isAssignment(secondTree)) {
+                    val firstLeft = firstTree.childOrNull(1) as? NameLeaf
+                    val secondLeft = secondTree.childOrNull(1) as? NameLeaf
+                    val secondRight = secondTree.childOrNull(2) as? NameLeaf
+                    if (
+                        firstLeft != null && secondLeft != null && firstLeft.content == secondRight?.content &&
+                        firstLeft.content is Temporary && secondLeft.content !is Temporary &&
+                        // Don't muck with a temporary that has important metadata
+                        firstLeft.content !in requiredNames
+                    ) {
+                        // Now, we've got a useful change.
+                        // Next, unroll any more of a chain like `t#0 = expr; t#1 = t#0, x = t#0`.
+                        // Turning that into `x = expr; t#0 = x; t#1 = x` in one pass avoids
+                        // expensive recomputation of readsAndWrites.
+                        val chainStart = run {
+                            var chainStart = i - 1
+                            var assignedName = (firstTree.child(2) as? NameLeaf)?.content
+                            while (chainStart > 0 && assignedName != null && assignedName !in requiredNames) {
+                                val priorEdge = elements[chainStart - 1].edge
+                                val priorTree = priorEdge?.target
+                                if (priorTree != null && isAssignment(priorTree)) {
+                                    val (_, left, right) = priorTree.children
+                                    if (left is NameLeaf && left.content == assignedName) {
+                                        chainStart -= 1
+                                        assignedName = (right as? NameLeaf)?.content
+                                        continue
+                                    }
+                                }
+                                break // continue above if conditions met
+                            }
+
+                            chainStart
+                        }
+
+                        // Now we have a range of assignments in chainStart..i
+                        // First, take the start of the chain and assign the name to it.
+                        val initalAssignmentEdge = elements[chainStart].edge!!
+                        val namedName = secondLeft.content
+                        val temporaryLeaves = (chainStart..<i).map {
+                            val assignment = elements[it].edge!!.target
+                            assignment.child(1) as NameLeaf
+                        }
+                        edits.add( // `t#0 = expr` -> `named = expr`
+                            Replace(
+                                lineFor(initalAssignmentEdge.target),
+                                "assign to $namedName instead of temporary",
+                                initalAssignmentEdge.target.edge(1),
+                            ) {
+                                Replant(freeTree(secondLeft))
+                            },
+                        )
+                        for ((elementIndex, temporaryLeaf) in ((chainStart + 1)..i) zip temporaryLeaves) {
+                            val element = elements[elementIndex]
+                            val assignment = element.edge!!.target as CallTree
+                            val temporary = temporaryLeaf.content as Temporary
+                            edits.add(
+                                ReplaceRange(
+                                    lineFor(element),
+                                    "assign $temporary after swapping to assign $namedName first",
+                                    assignment,
+                                    1..2, // left and right
+                                ) {
+                                    Replant(temporaryLeaf.copyLeft(true))
+                                    Replant(secondLeft.copyRight(true))
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private val mayNeedVar = mutableSetOf<ResolvedName>()
     private fun collapseWritesToSingleName(readsAndWrites: ReadsAndWrites): List<Edit> = buildList {
         val editListBuilder = this
 
         // If there is a name x such that all reads of it are in writes to y, and there are no other
-        // writes to y, then we can either replace x with y.
+        // writes to y, then we can replace x with y.
         //
         //     x = 1;
         //     ...
@@ -294,7 +438,7 @@ internal class CleanupTemporaries private constructor(
         //   in which `x` and `y` are defined.
         //
         // For each such pair, we'll choose to eliminate either `x` or `y` or abort:
-        // - if `x` and `y` are both required name (see elsewhere), eliminate neither, else
+        // - if `x` and `y` are both required names (see elsewhere), eliminate neither, else
         // - if `x` is a required name, and `y` is not, eliminate `y`, else
         // - if `y` is a required name, and `x` is not, eliminate `x`, else
         // - if `x` is a Temporary and `y` is not, eliminate `x`, else
@@ -369,12 +513,32 @@ internal class CleanupTemporaries private constructor(
                 },
                 canRenameYToXExtra = {
                     val readsOfX = readsAndWrites.reads[x] ?: emptyList()
+                    val writesOfX = readsAndWrites.writes[x] ?: emptyList()
                     // no write to `y` is live during a read of `x`.
                     !readsOfX.any { readOfX ->
                         val elementContainingRead = readOfX.containingPathElement
                         elementContainingRead != null &&
                             readsAndWrites.writesLive(y, elementContainingRead).isNotEmpty()
-                    }
+                    } &&
+                        !writesOfX.any { writeOfX ->
+                            val assigned = writeOfX.tree?.childOrNull(2)
+                            var mentionsY = false
+                            if (assigned != null) {
+                                TreeVisit.startingAt(assigned)
+                                    .forEach { t ->
+                                        when (t) {
+                                            is RightNameLeaf if t.content == y -> {
+                                                mentionsY = true
+                                                VisitCue.AllDone
+                                            }
+                                            is FunTree -> VisitCue.SkipOne
+                                            else -> VisitCue.Continue
+                                        }
+                                    }
+                                    .visitPreOrder()
+                            }
+                            mentionsY
+                        }
                 },
             )
             strategy?.let { Triple(x, y, it) }
@@ -451,7 +615,6 @@ internal class CleanupTemporaries private constructor(
                     }
                 }
                 RStrategy.RenameYToX -> {
-                    check(strategy == RStrategy.RenameYToX)
                     // Each read of y changes to x
                     readsAndWrites.reads[y]?.forEach { readOfY ->
                         val readEdge = readOfY.tree!!.incoming!!
@@ -1069,11 +1232,11 @@ internal class CleanupTemporaries private constructor(
             when (edit) {
                 is Replace -> {
                     val edgeToReplace = edit.edgeToReplace
-                    val createReplacement = edit.createReplacement
-                    edgeToReplace.replace {
-                        createReplacement()
-                    }
+                    edgeToReplace.replace(edit.createReplacement)
                 }
+
+                is ReplaceRange ->
+                    edit.parent.replace(edit.range, edit.createReplacement)
 
                 is AddMetadata -> {
                     val decl = edit.decl
@@ -1355,7 +1518,7 @@ private fun computeRequiredNames(
             // Exported and builtin names can't go anywhere because other
             // modules may need them.
             !is InternalModularName -> true
-            // We could eliminate these names but the IDE needs them and
+            // We could eliminate these names, but the IDE needs them and
             // the readability of translated code often depends upon them.
             is SourceName -> true
             is Temporary -> {
@@ -1528,24 +1691,19 @@ private fun mayReorderOver(t: Tree, readsAndWrites: ReadsAndWrites): Boolean = w
     is StayLeaf -> true
     is CallTree -> {
         // conservatively may not, but allow for some patterns:
-        // - do_bind_methodName(subject) where subject can be reordered over
         // - nym`<>`(callee, TypeActuals) where callee can be reordered over
+        // - read of a static is just a stable name
         val callee = t.childOrNull(0)?.functionContained
         when (callee) {
             BuiltinFuns.angleFn if t.size >= 2 -> mayReorderOver(t.child(1), readsAndWrites)
             is GetStaticOp -> true
-            is DotHelper if callee.memberAccessor is BindMemberAccessor -> {
-                val subject = t.childOrNull(
-                    callee.memberAccessor.enclosingTypeIndexOrNegativeOne + 2,
-                )
-                subject != null && mayReorderOver(subject, readsAndWrites)
-            }
             else -> false
         }
     }
     is EscTree -> false // conservatively
     is BlockTree -> t.children.all { mayReorderOver(it, readsAndWrites) }
-    is NameLeaf -> when (val nameAtLeaf = t.content) {
+    is LeftNameLeaf -> true
+    is RightNameLeaf -> when (val nameAtLeaf = t.content) {
         is StableTemperName -> true
         else -> { // If it's effectively const, its value can't be changed by reordering
             val decl = readsAndWrites.declarations[nameAtLeaf]?.soleElementOrNull

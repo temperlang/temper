@@ -1,0 +1,3 @@
+/** I am a pretty cool type */
+export interface I {}
+;

@@ -43,10 +43,10 @@ import lang.temper.type.WellKnownTypes
  * | `List<Int>`  | `List`       |
  * | `fn(): Void` | `Function`   |
  *
- * As you can see, all function values have the same type tag, *Function*, and generic class's
+ * As you can see, all function values have the same type tag, *Function*, and a generic class's
  * corresponding type tag has the type parameters erased.
  *
- * [^1]: A narrowing cast is from a super-type to a sub-type.  For example, from [snippet/type/AnyValue] to `class C`.
+ * [^1]: A narrowing cast is from a super-type to a subtype.  For example, from [snippet/type/AnyValue] to `class C`.
  */
 sealed class TypeTag<V : Any>(val name: ResolvedName) : Structured {
     constructor(nameText: String) : this(BuiltinName(nameText))
@@ -205,9 +205,6 @@ object TFloat64 : ComparableTypeTag<Double>("Float64", ConsistentDoubleComparato
 
     /** As a convenience to backends, unpack and use a wrapper to expose various special float values. */
     fun unpackParsed(v: Value<*>): ParseDouble = ParseDouble(unpack(v))
-
-    /** As a convenience to backends, unpack and use a wrapper to expose various special float values. */
-    fun unpackParsedOrNull(v: Value<*>): ParseDouble? = unpackOrNull(v) ?. let { ParseDouble(it) }
 }
 
 /**
@@ -347,9 +344,9 @@ sealed class TListed<V : List<Value<*>>>(nameText: String) : TypeTag<V>(nameText
 object TList : TListed<List<Value<*>>>("List") {
     override fun stabilityOf(value: List<Value<*>>): ValueStability {
         if (value.isNotEmpty() && value.all { it.typeTag == TType }) {
-            // Allow lists of types from type bound operator (`A & B`) to
-            // make it to extends clauses.
-            // do not commit, is this necessary
+            // Allow values for lists of types in extends clauses (`A & B`) and
+            // metadata to get to type macros.
+            // TODO: is this necessary
             return ValueStability.Stable
         }
         return super.stabilityOf(value)
@@ -430,10 +427,10 @@ object TNull : TypeTag<TNull.Null>("Null") {
      *
      * `null` may be used to represent an absent value, for example:
      *
-     * - an unspecified, optional input
-     * - an output that is not usable but not due to an error, for example, when mapping a list of values,
+     * - An unspecified, optional input
+     * - An output that is not usable but not due to an error, for example, when mapping a list of values
      *   but excluding some corresponding elements from the output list
-     * - a temporary, not computed *yet*, intermediate value
+     * - A temporary, not computed *yet*, intermediate value
      *
      * `null` is distinguishable, in translated Temper code, from any other value.
      * For example, in the context of the *Int32?* type, *0* is not equal to `null`.

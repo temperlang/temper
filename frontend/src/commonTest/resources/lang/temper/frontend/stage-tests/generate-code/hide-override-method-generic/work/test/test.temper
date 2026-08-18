@@ -1,0 +1,2 @@
+interface I<T>          { public    f<A>(x: A, t: T, i: I<T>): T; }
+class C<U> extends I<U> { protected f<B>(x: B, u: U, i: I<U>): U { u } }

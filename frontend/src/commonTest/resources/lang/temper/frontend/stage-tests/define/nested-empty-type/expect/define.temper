@@ -1,0 +1,14 @@
+@fn let functionThatNestsAType__0;
+EmptyHelper__0 extends AnyValue;
+@typePlaceholder(EmptyHelper__0) let typePlaceholder#0: Empty;
+typePlaceholder#0 = {class: Empty__0};
+functionThatNestsAType__0 = fn functionThatNestsAType /* return__0 */: Void {
+  fn__0: do {
+    @typeDecl(EmptyHelper__0) @stay let EmptyHelper__0;
+    EmptyHelper__0 = type (EmptyHelper__0);
+    interface(\word, \EmptyHelper, \concrete, false, @typeDefined(EmptyHelper__0) fn {
+        do {}
+    });
+    type (EmptyHelper__0)
+  }
+};

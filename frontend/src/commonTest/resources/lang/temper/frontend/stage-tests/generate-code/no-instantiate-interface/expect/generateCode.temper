@@ -1,0 +1,12 @@
+@typePlaceholder(Apple__0) let typePlaceholder#0: Empty;
+typePlaceholder#0 = {class: Empty__0};
+@typeDecl(Apple__0) @stay let Apple__0;
+Apple__0 = type (Apple__0);
+@typeDecl(Banana__0) @stay let Banana__0;
+Banana__0 = type (Banana__0);
+@fn @method(\constructor) @visibility(\public) @stay @fromType(Banana__0) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(Banana__0) this__0: Banana__0) /* return__0 */: Void {
+    return__0 = void
+});
+new Apple__0();
+new Banana__0()

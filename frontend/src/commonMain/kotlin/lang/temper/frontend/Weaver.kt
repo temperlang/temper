@@ -4,8 +4,8 @@ import lang.temper.ast.TreeVisit
 import lang.temper.ast.VisitCue
 import lang.temper.builtin.AwaitFn
 import lang.temper.builtin.BuiltinFuns
+import lang.temper.builtin.BuiltinLogicalOperators
 import lang.temper.builtin.YieldFn
-import lang.temper.builtin.isHandlerScopeCall
 import lang.temper.common.LeftOrRight
 import lang.temper.common.Log
 import lang.temper.common.allMapToSameElseNull
@@ -21,11 +21,10 @@ import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.log.Positioned
-import lang.temper.name.ImplicitsCodeLocation
+import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ResolvedName
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
-import lang.temper.type.BindMemberAccessor
 import lang.temper.type.DotHelper
 import lang.temper.type.ExternalSet
 import lang.temper.type.InternalSet
@@ -65,6 +64,7 @@ import lang.temper.value.getTerminalExpressions
 import lang.temper.value.initSymbol
 import lang.temper.value.invertLogicalExpr
 import lang.temper.value.isBubbleCall
+import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.matches
 import lang.temper.value.returnsVoidClearly
 import lang.temper.value.toLispy
@@ -77,7 +77,7 @@ private const val DEBUG = false
 
 private inline fun debug(p: Positioned, f: () -> Any) {
     @Suppress("SimplifyBooleanWithConstants", "KotlinConstantConditions")
-    if (DEBUG && p.pos.loc != ImplicitsCodeLocation) {
+    if (DEBUG && p.pos.loc != CoreCodeLocation) {
         val x = f()
         if (x != Unit) {
             console.log("$x")
@@ -419,12 +419,9 @@ class Weaver private constructor(
             child is CallTree -> {
                 // Some calls are intermediate steps to other calls:
                 // - angle bracket calls associate type parameters with a callee.
-                // - do_bind_xyz calls associate a subject with a method dot name
                 // These should stay in situ.
-                val callee = child.childOrNull(0)
-                when (val calleeFn = callee?.functionContained) {
+                when (child.childOrNull(0)?.functionContained) {
                     BuiltinFuns.angleFn -> child.size != 1 || shouldExtract(child, 1)
-                    is DotHelper -> calleeFn.memberAccessor !is BindMemberAccessor
                     else -> true
                 }
             }
@@ -673,7 +670,7 @@ class Weaver private constructor(
                         val body = rc.body
                         val doc = outerBlock.document
                         val innerRemapped = remapControlFlow(pulledBlock, outerBlock)
-                        rc.condition.invertLogicalExpr(outerBlock)
+                        rc.condition.invertLogicalExpr(outerBlock, BuiltinLogicalOperators)
                         val breakUnlessCondition = ControlFlow.If(
                             rc.condition.pos,
                             rc.condition,

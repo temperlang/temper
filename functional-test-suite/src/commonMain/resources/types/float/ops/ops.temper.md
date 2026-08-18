@@ -77,8 +77,11 @@ But also a bit of testing of `near` params.
 We have both `relTol` and `absTol` tolerance options, in that order. Either or
 both can be specified, although we try only one or the other here.
 
-    console.log("one.near(one + 0.1, absTol = 0.11): ${
-      one.near(one + 0.1, null, 0.11).toString()
+    console.log("one.near(one + 0.25, absTol = 0.25): ${
+      one.near(one + 0.25, null, 0.25).toString()
+    }");
+    console.log("one.near(one + 0.1 + 1e-9, absTol = 0.1): ${
+      one.near(one + 0.1 + 1e-9, null, 0.1).toString()
     }");
     console.log("one.near(one - 0.1, absTol = 0.11): ${
       one.near(one - 0.1, null, 0.11).toString()
@@ -127,7 +130,8 @@ one.sinh(): ✅
 (three * pi / four).tan(): ✅
 one.tanh(): ✅
 one.near(one + 0.1): false
-one.near(one + 0.1, absTol = 0.11): true
+one.near(one + 0.25, absTol = 0.25): true
+one.near(one + 0.1 + 1e-9, absTol = 0.1): false
 one.near(one - 0.1, absTol = 0.11): true
 ten.near(ten + 0.1, absTol = 0.011): false
 ten.near(ten + 0.1, relTol = 0.011): true

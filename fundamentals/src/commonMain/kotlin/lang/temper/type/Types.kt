@@ -29,6 +29,7 @@ import lang.temper.value.Stayless
 enum class TypeOpPrecedence {
     Or, // Binds loosest
     And,
+    Fn,
     Postfixed,
     SelfContained, // Binds tightest
 }
@@ -368,6 +369,10 @@ class FunctionType private constructor(
         returnType = returnType,
         returnTypeOpPrecedence = returnType.precedence,
     )
+
+    override val precedence: TypeOpPrecedence
+        // So `?` suffix doesn't spuriously attach to return type.
+        get() = TypeOpPrecedence.Fn
 
     companion object {
         internal fun renderFunctionType(
@@ -832,9 +837,9 @@ val StaticType.mentionsInvalid: Boolean get() = when (this) {
 }
 
 /** Determine if any component is invalid. */
-val Type2.mentionsInvalid: Boolean get() =
-    this.definition == WellKnownTypes ||
-        this.bindings.any { it.mentionsInvalid }
+val Type2.mentionsInvalid: Boolean get() = this.mentions { it == WellKnownTypes.invalidTypeDefinition }
+fun Type2.mentions(definitionPredicate: (TypeDefinition) -> Boolean): Boolean =
+    definitionPredicate(this.definition) || this.bindings.any { it.mentions(definitionPredicate) }
 
 val StaticType.isBooleanLike: Boolean get() = isTypeOrNever(WellKnownTypes.booleanTypeDefinition)
 val StaticType.isVoidLike: Boolean get() = isTypeOrNever(WellKnownTypes.voidTypeDefinition)
@@ -884,6 +889,27 @@ val StaticType.isBubbly: Boolean get() = when (this) {
     is OrType -> members.any { it.isBubbly }
     is TopType -> true
     else -> false
+}
+
+val StaticType.nullity: Nullity get() = when (this) {
+    is FunctionType,
+    is BubbleType,
+    is InvalidType,
+    -> Nullity.NonNull
+    is NominalType -> if (definition == WellKnownTypes.nullTypeDefinition) {
+        Nullity.OrNull
+    } else {
+        Nullity.NonNull
+    }
+    is AndType,
+    is OrType,
+    -> {
+        val members = if (this is AndType) { members } else { (this as OrType).members }
+        if (members.any { it.nullity == Nullity.OrNull }) { Nullity.OrNull } else {
+            Nullity.NonNull
+        }
+    }
+    is TopType -> Nullity.OrNull
 }
 
 /**

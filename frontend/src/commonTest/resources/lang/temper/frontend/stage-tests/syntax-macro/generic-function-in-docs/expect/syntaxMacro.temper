@@ -1,0 +1,7 @@
+@fn let f__0;
+@typeFormal(\T) @typeDecl(T__0) @withinDocFold let T__0 = type (T__0);
+@typeFormal(\U) @typeDecl(U__0) @withinDocFold let U__0 = type (U__0);
+U__0 extends T__0;
+f__0 = fn f<T__0 extends AnyValue, U__0 extends T__0>(x__0 /* aka x */: T__0) /* return__0 */: (U__0) {
+  x__0
+};

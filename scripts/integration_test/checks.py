@@ -2,6 +2,7 @@ import collections as c
 import contextlib as ctx
 import glob
 import inspect
+import json
 import os.path
 import pathlib as p
 import shutil as sh
@@ -50,16 +51,17 @@ class Checks:
         self,
         key: str,
         condition: t.Callable[[], bool],
-        on_failure: t.Callable[[], None] = lambda: None,
+        on_failure: t.Callable[[], None] | None = None,
     ) -> bool:
         ok = condition()
         if not ok:
             source = inspect.getsource(condition).strip()
             self.failures[key].append(f"failed: {source}")
-            on_failure()
+            if on_failure is not None:
+                on_failure()
         return ok
 
-    def check_all(self, checks: t.Optional[t.List[str]] = None) -> bool:
+    def check_all(self, checks: t.List[str] | None = None) -> bool:
         if checks is None:
             checks = [
                 "build",
@@ -73,6 +75,8 @@ class Checks:
                 # Including multiple together, since we had a regression with that.
                 "test-backend=java",
                 "test-backend=csharp,js",
+                # Test JSON formatting of log output
+                "test-backend=py-logformat=json",
                 "watch",
                 # Slow and currently broken, so exclude by default.
                 # "mypy_produces_binaries",
@@ -100,7 +104,10 @@ class Checks:
         tops = sorted(kid.name for kid in out_dir.iterdir())
         print(f"Tops: {tops}")
         self.check(
-            key, lambda: tops == ["-logs", "csharp", "java", "js", "lua", "py", "rust"]
+            key,
+            lambda: (
+                tops == ["-logs", "csharp", "data", "java", "js", "lua", "py", "rust"]
+            ),
         )
         # Next level are libraries.
         subs = sorted(kid.name for kid in (out_dir / "java").iterdir())
@@ -218,10 +225,12 @@ class Checks:
         )
 
     @report_check
-    def check_test(self, backend: str) -> None:
+    def check_test(self, backend: str, logformat: str | None = None) -> None:
         with self.tmp_copy("cli/src/test/resources/testing/multi") as tmp:
             backends = backend.split(",")
             backend_args = [arg for b in backends for arg in ("-b", b)]
+            if logformat is not None:
+                backend_args[:0] = ["--logformat", logformat]
             process = self.run_temper(
                 args=["test", *backend_args, *self.verbosity()],
                 cwd=tmp,
@@ -235,7 +244,49 @@ class Checks:
             print(f"Temper test {backend}\nstderr:\n{stderr}\nstdout:\n{stdout}")
             if not self.verbose:
                 n = 3 * len(backends)
-                self.check("test", lambda: f"Tests passed: {n} of {n}" in stderr)
+                if logformat == "json":
+                    # Need to check the output log message and also
+                    # that each line of stderr is its own JSON record
+                    records = self._unpack_logformat_json_stderr(stderr)
+                    all_records_ok = all(
+                        isinstance(x, dict) or not x.startswith("INVALID_JSON: ")
+                        for x in records
+                    )
+                    wanted_record = {
+                        "level": "summary",
+                        "template": "TestSummaryAllRun",
+                        "values": [n, n],
+                    }
+                    wanted_record_present = wanted_record in records
+
+                    def condition() -> bool:
+                        return all_records_ok and wanted_record_present
+
+                    def on_failure():
+                        print("Records parsed as JSON")
+                        for record in records:
+                            print(f"- {record!r}")
+                        if not wanted_record_present:
+                            print(f"Expected {wanted_record!r}")
+                else:
+
+                    def condition():
+                        return f"Tests passed: {n} of {n}" in stderr
+
+                    on_failure = None
+                self.check("test", condition, on_failure=on_failure)
+
+    def _unpack_logformat_json_stderr(
+        self, stderr: str
+    ) -> list[str | dict[str, t.Any]]:
+        def unpack(x: str) -> str | dict[str, t.Any]:
+            """Unpack a JSON record from a line"""
+            try:
+                return t.cast(dict[str, t.Any], json.loads(x))
+            except json.decoder.JSONDecodeError:
+                return "INVALID JSON: {x}"
+
+        return [unpack(line) for line in stderr.splitlines()]
 
     @report_check
     def check_watch(self) -> None:

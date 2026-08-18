@@ -1,0 +1,11 @@
+interface Hidden {}
+export class Exported<HI extends Hidden>(public hi: Hidden) extends Hidden {
+  public attempt(): Hidden { hi }
+  public attempt2<H extends Hidden>(hmm: H): H { hmm }
+  public static subvert(): Map<String, Hidden> { more }
+  // This one should be fine, unlike all the others.
+  private ha: Hidden = hi;
+}
+export let consider(hu: Hidden): Hidden? { hu }
+export let sneak<H extends Hidden>(he: H): H { he }
+export let more = new Map<String, Hidden>([]);

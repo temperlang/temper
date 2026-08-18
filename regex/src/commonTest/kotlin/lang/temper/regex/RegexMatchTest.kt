@@ -78,6 +78,7 @@ class RegexMatchTest {
             "moreBoundaryUgly" to
                 RegexCheck(true, RegexMatch("""(?!$word)ø${wordBoundary}8""", "ø8")),
             "digitsNonAsciiUgly" to RegexCheck(false, RegexMatch("""[0-9]+""", "\u0662")),
+            "matchAll" to RegexCheck(true, RegexMatch("""[\s\S]+""", "a\nb")),
         )
         checkMatchDotnet(checksMap.values)
     }
@@ -202,7 +203,7 @@ internal fun checkMatchDotnet(checks: Iterable<RegexCheck>) {
             List.map
                 (fun pair ->
                     try
-                        Nullable<bool>(Regex.IsMatch(pair.matchText, pair.pattern))
+                        Nullable<bool>(Regex.IsMatch(pair.matchText, "^" + pair.pattern + "$"))
                     with
                         | _ -> Nullable())
                 (JsonSerializer.Deserialize<List<PatternMatch>>

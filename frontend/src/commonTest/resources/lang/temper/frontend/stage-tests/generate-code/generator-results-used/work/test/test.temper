@@ -1,0 +1,19 @@
+do {
+  let adNauseam(factory: fn (): SafeGenerator<Int>): Void {
+    let generator: SafeGenerator<Int> = factory();
+    while (true) {
+      let x = generator.next();
+      when (x) {
+        is DoneResult<Int> -> break;
+        is ValueResult<Int> -> console.log("Received ${ x.value.toString() }");
+      }
+    }
+    generator.close();
+    console.log("Done");
+  }
+
+  adNauseam { (): GeneratorResult<Int> extends GeneratorFn =>
+    yield 1;
+    yield 2;
+  }
+}

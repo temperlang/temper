@@ -1,0 +1,6 @@
+let f(maybe: List<Int>?): String {
+  when (maybe) {
+    is List<Int> -> "yep";
+    else -> "nope";
+  }
+}

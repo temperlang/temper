@@ -6,10 +6,24 @@ package lang.temper.value
  */
 enum class BuiltinOperatorId {
     BooleanNegation,
-    BitwiseAnd,
-    BitwiseOr,
     IsNull,
     NotNull,
+
+    BitwiseAnd32,
+    BitwiseAnd64,
+    BitwiseOr32,
+    BitwiseOr64,
+    BitwiseXor32,
+    BitwiseXor64,
+    BitwiseNegation32,
+    BitwiseNegation64,
+    BitwiseShl32,
+    BitwiseShl64,
+    BitwiseShr32,
+    BitwiseShr64,
+    BitwiseShrUnsigned32,
+    BitwiseShrUnsigned64,
+
     DivFltFlt,
     DivIntInt,
     DivIntInt64,

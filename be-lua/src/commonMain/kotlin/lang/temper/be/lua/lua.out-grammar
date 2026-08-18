@@ -9,8 +9,15 @@ Program = Chunk;
 
 Chunk ::= body%Stmt*"" & last%LastStmt?;
 
-Stmt = LabelStmt | DoStmt | WhileStmt | IfStmt | SetStmt | FunctionStmt | LocalDeclStmt | LocalStmt | LocalFunctionStmt | CallStmt | Comment | GotoStmt;
+Stmt = LabelStmt | DoStmt | WhileStmt | IfStmt | SetStmt | FunctionStmt | LocalDeclStmt | LocalStmt | LocalFunctionStmt | CallStmt | Comment | GotoStmt | Connected;
 LastStmt = ReturnStmt | BreakStmt | GotoStmt;
+
+/**
+ * For embedding external raw `@connected` Lua source. Should be placed after
+ * predeclarations and before other top-level statements.
+ */
+Connected(source%`String`);
+Connected.renderTo = `tokenSink.value(source)`;
 
 CallStmt ::= callExpr%CallExpr & ";";
 CallExpr = MethodCallExpr | FunctionCallExpr;

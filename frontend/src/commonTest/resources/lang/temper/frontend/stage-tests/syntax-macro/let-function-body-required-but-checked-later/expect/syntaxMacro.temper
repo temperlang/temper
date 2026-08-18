@@ -1,0 +1,6 @@
+@fn let f__0;
+f__0 = fn f {
+  fn__0: do {
+    abstractPanic()
+  }
+};
