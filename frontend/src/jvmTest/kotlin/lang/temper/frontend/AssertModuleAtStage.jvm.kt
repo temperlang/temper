@@ -2,6 +2,7 @@ package lang.temper.frontend
 
 import lang.temper.fs.Url
 import lang.temper.fs.temperRoot
+import java.nio.file.Path
 
 private object FrontendResourcePlaceholder
 
@@ -16,11 +17,6 @@ actual val stageTestDirFileRoot: Url by lazy {
 }
 
 actual val stageTestDirFileSourceRoot: Url by lazy {
-    Url(
-        "file",
-        null, // authority
-        "$temperRoot/frontend/src/commonTest/resources/$PACKAGE_PATH/$README_RELPATH",
-        null,
-        null,
-    ).resolve(".")
+    val path = "$temperRoot/frontend/src/commonTest/resources/$PACKAGE_PATH/$README_RELPATH"
+    Path.of(path).toUri().resolve(".")
 }
