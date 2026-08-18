@@ -4,14 +4,11 @@
   Test__2 = type (Test);
   @fn @test("to be or not to be null") let toBeOrNotToBeNull__5;
   toBeOrNotToBeNull__5 = (@stay fn toBeOrNotToBeNull(test#0: Test) /* return__3 */: (Void | Bubble) {
-      let t#12;
       return__3 = void;
       let c0__4;
       c0__4 = new C("");
       let actual#6;
       actual#6 = do_get_optionalString(c0__4);
-## Here's the assertion predicate
-      t#12 = actual#6 == "";
 ## Here's a block that computes the failure message if the predicate is false.
       let fn__11;
       fn__11 = (@stay fn /* return__8 */{
@@ -25,5 +22,6 @@
           return__8 = cat("expected c0.optionalString == (", "", ") not (", t#9, ")")
       });
       fn__11;
-      do_call_assert(test#0, t#12, fn__11)
+## Here's the assertion predicate
+      do_call_assert(test#0, actual#6 == "", fn__11)
   })

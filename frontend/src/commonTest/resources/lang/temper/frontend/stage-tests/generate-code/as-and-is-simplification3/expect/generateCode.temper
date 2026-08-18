@@ -1,7 +1,7 @@
 @fn @reach(\none) let f__1;
 f__1 = (@stay fn f(i__2 /* aka i */: StringIndexOption?) /* return__0 */: (Int32 | Bubble) {
-    let j__4;
     orelse#5: {
+      let j__4;
       if (isNull(i__2)) {
         j__4 = null
       } else {

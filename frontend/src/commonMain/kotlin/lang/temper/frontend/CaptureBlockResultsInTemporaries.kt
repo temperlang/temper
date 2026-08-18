@@ -642,35 +642,45 @@ internal class CaptureBlockResultsInTemporaries(
                  */
                 var tmpName: InternalModularName? = null
                 if (firstResult.type == null || firstResult.type != secondResult.type) {
-                    // Allocate a fresh temporary
+                    // Allocate a fresh temporary unless we know that the results' types union well.
                     tmpName = block.document.nameMaker.unusedTemporaryName(Temporary.defaultNameHint)
                 }
-                val resultsAndClausesToAdjust = buildList {
-                    add(firstResult to firstClause)
-                    add(secondResult to secondClause)
-                    // See if we can reuse an already allocated name.
-                    for (i in indices) {
-                        val result = this[i].first
-                        if (
-                            result is NameCaptureResult &&
-                            firstDetails.undeclaredNamed(result.capturedIn)?.type == result.type
-                        ) {
-                            tmpName = result.capturedIn
-                            // Don't adjust the one already using the name
-                            removeAt(i)
-                            break
+                val resultsAndClausesToAdjust =
+                    buildList<Triple<CaptureDetails, CaptureResult, ControlFlow.StmtBlock>> {
+                        add(Triple(firstDetails, firstResult, firstClause))
+                        add(Triple(secondDetails, secondResult, secondClause))
+                        // See if we can reuse an already allocated name.
+                        if (tmpName == null) {
+                            for (i in indices) {
+                                val (details, result, _) = this[i]
+                                if (
+                                    result is NameCaptureResult &&
+                                    // Name consistency check which assumes pre-allocation above didn't happen.
+                                    details.undeclaredNamed(result.capturedIn)?.type == result.type
+                                ) {
+                                    tmpName = result.capturedIn
+                                    // Don't adjust the one already using the name
+                                    removeAt(i)
+                                    break
+                                }
+                            }
                         }
                     }
-                }
                 if (tmpName == null) {
                     tmpName = block.document.nameMaker.unusedTemporaryName(Temporary.defaultNameHint)
                 }
                 if (commonDeclarationsAsVar) {
                     allMightBeReassigned.add(tmpName)
                 }
-                for ((result, clause) in resultsAndClausesToAdjust) {
-                    addCaptureResultToClause(block, clause, result) {
-                            pos, buildResult ->
+                for ((_, result, clause) in resultsAndClausesToAdjust) {
+                    addCaptureResultToClause(
+                        block, clause, result,
+                        replaceLastIf = { edge ->
+                            val target = edge.target
+                            target is RightNameLeaf &&
+                                target.content == (result as? NameCaptureResult)?.capturedIn
+                        },
+                    ) { pos, buildResult ->
                         Assign(pos, tmpName, result.type) {
                             buildResult()
                         }
@@ -799,20 +809,34 @@ internal class CaptureBlockResultsInTemporaries(
         block: BlockTree,
         clause: ControlFlow.StmtBlock,
         result: CaptureResult,
-        buildInsertion: Planting.(Position, Planting.() -> TreeTemplate<*>) -> Unit,
+        replaceLastIf: (TEdge) -> Boolean = { false },
+        buildInsertion: Planting.(Position, Planting.() -> TreeTemplate<*>) -> TreeTemplate<*>,
     ) {
-        val indexOfTmpAssignment = block.size
-        val pos = clause.pos.rightEdge
-        block.insert(indexOfTmpAssignment) {
-            buildInsertion(pos) {
-                when (result) {
-                    is NameCaptureResult -> Rn(pos, result.capturedIn, result.type)
-                    is KnownValueCaptureResult -> V(pos, result.value, result.type)
+        val last = (clause.stmts.lastOrNull() as? ControlFlow.Stmt)?.ref?.let {
+            block.dereference(it)
+        }
+        fun Planting.emplaceResult(pos: Position): TreeTemplate<*> =
+            when (result) {
+                is NameCaptureResult -> Rn(pos, result.capturedIn, result.type)
+                is KnownValueCaptureResult -> V(pos, result.value, result.type)
+            }
+        if (last != null && replaceLastIf(last)) {
+            last.replace { pos ->
+                buildInsertion(clause.pos.rightEdge) {
+                    emplaceResult(pos)
                 }
             }
-        }
-        clause.withMutableStmtList {
-            it.add(ControlFlow.Stmt(BlockChildReference(indexOfTmpAssignment, pos)))
+        } else {
+            val indexOfTmpAssignment = block.size
+            val pos = clause.pos.rightEdge
+            block.insert(indexOfTmpAssignment) {
+                buildInsertion(pos) {
+                    emplaceResult(pos)
+                }
+            }
+            clause.withMutableStmtList {
+                it.add(ControlFlow.Stmt(BlockChildReference(indexOfTmpAssignment, pos)))
+            }
         }
     }
 }

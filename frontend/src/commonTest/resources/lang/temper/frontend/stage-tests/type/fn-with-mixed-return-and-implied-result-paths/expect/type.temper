@@ -1,8 +1,8 @@
 let return__3;
-@stay fn (b__1 /* aka b */) /* return__0 */{
-  fn__2: do {
-    if (b__1) {
-      return__0 = 1
-    }
-  };
-}
+return__3 = (@stay fn (b__1 /* aka b */) /* return__0 */{
+    fn__2: do {
+      if (b__1) {
+        return__0 = 1
+      }
+    };
+});

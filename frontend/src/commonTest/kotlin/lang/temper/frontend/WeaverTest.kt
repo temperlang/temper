@@ -730,7 +730,7 @@ class WeaverTest {
                             V(0)
                         }
                     },
-                    thn = { V(Value("one", TString)) },
+                    thn = { V(Value("one", TString), WKT.stringType) },
                     els = {
                         If(
                             {
@@ -739,7 +739,7 @@ class WeaverTest {
                                     V(1)
                                 }
                             },
-                            thn = { V(Value("two", TString)) },
+                            thn = { V(Value("two", TString), WKT.stringType) },
                             els = {
                                 If(
                                     {
@@ -748,8 +748,8 @@ class WeaverTest {
                                             V(3)
                                         }
                                     },
-                                    thn = { V(Value("three", TString)) },
-                                    els = { V(Value("many", TString)) },
+                                    thn = { V(Value("three", TString), WKT.stringType) },
+                                    els = { V(Value("many", TString), WKT.stringType) },
                                 )
                             },
                         )
@@ -814,17 +814,19 @@ class WeaverTest {
         want = """
             |[[ let return__2 ]];
             |[[ let x__0: Int32? ]];
-            |[[ var t#3 ]];
+            |[[ var t#4 ]];
+            |[[ let t#3 ]];
             |orElse#1: do {
             |  if ([[ b(0) ]]) {
             |    [[ t#3 = f(1) ]];
             |  } else {
             |    [[ t#3 = ff(2) ]];
             |  }
+            |  [[ t#4 = t#3 ]];
             |} orelse {
-            |  [[ t#3 = null ]];
+            |  [[ t#4 = null ]];
             |}
-            |[[ x__0 = t#3 ]];
+            |[[ x__0 = t#4 ]];
             |[[ return__2 = x__0 ]];
         """.trimMargin(),
     ) {
@@ -860,6 +862,7 @@ class WeaverTest {
                                 type = hackMapNewStyleToOld(
                                     MkType2(WKT.neverTypeDefinition)
                                         .actuals(listOf(WKT.intType2))
+                                        .canBeNull(true)
                                         .get(),
                                 ),
                             )
@@ -1009,6 +1012,60 @@ class WeaverTest {
             |      return__1 = "foo"
             |    };
             |}) ]];
+        """.trimMargin(),
+    )
+
+    @Test
+    fun mixedExternalConstantNames() = assertWovenRoot(
+        buildInput = {
+            val (x, y, z) = listOf("x", "y", "z")
+                .map { nameMaker.unusedSourceName(ParsedName(it)) }
+
+            Decl { Ln(x, WKT.intType) }
+            Decl { Ln(y, WKT.intType) }
+            Fn {
+                Block {
+                    Decl { Ln(z, WKT.intType) }
+                    Assign(z, WKT.intType) {
+                        Block {
+                            If(
+                                cond = { CallB { V(0) } },
+                                thn = { Rn(x, WKT.intType) },
+                                els = { Rn(y, WKT.intType) },
+                            )
+                        }
+                    }
+                    CallF { Rn(z, WKT.intType) }
+                }
+            }
+        },
+        // let x = 1;
+        // let y = 2;
+        // fn {
+        //   let z = if (b(0)) {
+        //     x
+        //   } else {
+        //     y
+        //   };
+        //   f(z)
+        // }
+        want = """
+            |[[ let return__3 ]];
+            |[[ let x__0 ]];
+            |[[ let y__1 ]];
+            |[[ return__3 = fn /* return__4 */{
+            |  let t#5, z__2;
+            |  {
+            |    if (b(0)) {
+            |      t#5 = x__0
+            |    } else {
+            |      t#5 = y__1
+            |    }
+            |  };
+            |  z__2 = t#5;
+            |  return__4 = f(z__2);
+            |}
+            |]];
         """.trimMargin(),
     )
 

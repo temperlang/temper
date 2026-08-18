@@ -1,31 +1,32 @@
 @fn @reach(\none) let f__3;
 f__3 = (@stay fn f(i__4 /* aka i */: StringIndexOption?) /* return__2 */: (Int32 | Bubble) {
-    let t#10;
+    let t#11;
     if (isNull(i__4)) {
-      t#10 = true
+      t#11 = true
     } else {
-      t#10 = i__4 is StringIndex
+      t#11 = i__4 is StringIndex
     };
-    if (t#10) {
-      let t#12;
+    if (t#11) {
+      let t#13;
       if (isNull(i__4)) {
-        t#12 = null
+        t#13 = null
       } else {
-        t#12 = assertAs(i__4, StringIndex)
+        t#13 = assertAs(i__4, StringIndex)
       };
-      let j__6;
-      if (isNull(t#12)) {
+      let j__6, t#14;
+      if (isNull(t#13)) {
         j__6 = null
       } else {
-        j__6 = t#12 as StringIndex
+        t#14 = t#13 as StringIndex;
+        j__6 = t#14
       };
-      let t#16;
+      let t#17;
       if (!isNull(j__6)) {
-        t#16 = j__6 is StringIndex
+        t#17 = j__6 is StringIndex
       } else {
-        t#16 = false
+        t#17 = false
       };
-      if (t#16) {
+      if (t#17) {
         return__2 = 1
       } else {
         return__2 = 2

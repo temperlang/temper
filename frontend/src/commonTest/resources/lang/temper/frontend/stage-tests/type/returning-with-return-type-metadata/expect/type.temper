@@ -1,6 +1,6 @@
 let return__2;
-@stay fn /* return__0 */: Int32 {
-  fn__1: do {
-    return__0 = 42
-  };
-}
+return__2 = (@stay fn /* return__0 */: Int32 {
+    fn__1: do {
+      return__0 = 42
+    };
+});

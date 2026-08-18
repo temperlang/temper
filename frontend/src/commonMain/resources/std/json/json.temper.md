@@ -397,7 +397,7 @@ JSON source text.
           JSON_STATE_NO_VALUE ->
             stack[stack.length - 1] = JSON_STATE_ONE_VALUE;
           JSON_STATE_ONE_VALUE, JSON_STATE_AFTER_PROPERTY ->
-            wellFormed = false;
+            do { wellFormed = false; }
         }
       }
 

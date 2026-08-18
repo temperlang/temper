@@ -17,9 +17,7 @@ fp__20 = (@stay fn fp(i__21 /* aka i */: Int32) /* return__6 */: Int32 {
 });
 @visibility(\public) @fn @stay @fromType(C__0) @reach(\none) let g__23;
 g__23 = (@stay fn g(@impliedThis(C__0) this__1: C__0, i__24 /* aka i */: Int32) /* return__7 */: Int32 {
-    igetStatic(C__0, \f);
-    igetStatic(C__0, \fp);
-    return__7 = 2 * (fn f)(i__24) * (fn fp)(i__24) * getp(bp__15, this__1) * getp(b__16, this__1) * getp(bp__15, this__1) * getp(b__16, this__1)
+    return__7 = 2 * igetStatic(C__0, \f)(i__24) * igetStatic(C__0, \fp)(i__24) * getp(bp__15, this__1) * getp(b__16, this__1) * getp(bp__15, this__1) * getp(b__16, this__1)
 });
 @visibility(\public) @fn @stay @fromType(C__0) @reach(\none) let h__26;
 h__26 = (@stay fn h(@impliedThis(C__0) this__2: C__0, i__27 /* aka i */: Int32) /* return__8 */: Int32 {
@@ -27,9 +25,7 @@ h__26 = (@stay fn h(@impliedThis(C__0) this__2: C__0, i__27 /* aka i */: Int32) 
 });
 @fn @static @visibility(\public) @stay @fromType(C__0) @reach(\none) let g2__29;
 g2__29 = (@stay fn g2(i__30 /* aka i */: Int32) /* return__9 */: Int32 {
-    igetStatic(C__0, \f);
-    igetStatic(C__0, \fp);
-    return__9 = 2 * (fn f)(i__30) * (fn fp)(i__30)
+    return__9 = 2 * igetStatic(C__0, \f)(i__30) * igetStatic(C__0, \fp)(i__30)
 });
 @fn @static @visibility(\public) @stay @fromType(C__0) @reach(\none) let h2__32;
 h2__32 = (@stay fn h2(i__33 /* aka i */: Int32) /* return__10 */: Int32 {
@@ -44,8 +40,5 @@ constructor__35 = (@stay fn constructor(@impliedThis(C__0) this__3: C__0) /* ret
     setp(b__16, this__3, t#38)
 });
 g3__12 = (@stay fn g3(i__36 /* aka i */: Int32) /* return__11 */: Int32 {
-    let t#40;
-    t#40 = new C__0();
-    getStatic(C__0, \f);
-    return__11 = 2 * (fn f)(i__36) * do_call_g(t#40, i__36) * getStatic(C__0, \a) * getStatic(C__0, \ap)
+    return__11 = 2 * getStatic(C__0, \f)(i__36) * do_call_g(new C__0(), i__36) * getStatic(C__0, \a) * getStatic(C__0, \ap)
 })

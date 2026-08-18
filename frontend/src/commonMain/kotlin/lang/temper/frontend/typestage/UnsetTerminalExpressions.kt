@@ -121,9 +121,6 @@ private class TerminalExpressionFinder(
     }
 
     private fun walkTree(t: Tree, notes: Notes, inTerminalPosition: Boolean): Notes {
-        if (t is FunTree) {
-            return notes
-        }
         if (t is BlockTree) {
             return walkBlock(t, notes, inTerminalPosition = inTerminalPosition)
         }
@@ -137,18 +134,19 @@ private class TerminalExpressionFinder(
             }
         }
 
-        for (c in t.children) {
-            notes = walkTree(c, notes, inTerminalPosition = false)
+        if (t !is FunTree) {
+            // Function trees have their own root, so do not recurse to their children.
+            for (c in t.children) {
+                notes = walkTree(c, notes, inTerminalPosition = false)
+            }
         }
 
         if (inTerminalPosition && notes.returnsPrior == Freq3.Never) {
             // t should be a terminal expression.
             val canBeTerminalExpression: Boolean = when (lookThroughDecorations(t.incoming!!).target) {
                 is EscTree, is DeclTree, is StayLeaf, is LeftNameLeaf -> false
-                is RightNameLeaf, is ValueLeaf, is CallTree -> notes.exclusion == 0
-                is BlockTree,
-                is FunTree,
-                -> error("returns above")
+                is RightNameLeaf, is ValueLeaf, is CallTree, is FunTree -> notes.exclusion == 0
+                is BlockTree -> error("returns above")
             }
 
             // Either we found a return or we found a place one should be inserted.

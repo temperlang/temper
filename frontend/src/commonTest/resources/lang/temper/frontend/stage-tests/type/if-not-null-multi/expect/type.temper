@@ -3,13 +3,14 @@ return__9 = void;
 @fn let `test//`.multi, @fn `test//`.post;
 `test//`.multi = (@stay fn multi(a__3 /* aka a */: Int32?, b__4 /* aka b */: Int32?) /* return__1 */: Int32 {
     fn__5: do {
-      let t#10;
+      let t#11;
+      void;
       if (!isNull(a__3)) {
-        t#10 = !isNull(b__4)
+        t#11 = !isNull(b__4)
       } else {
-        t#10 = false
+        t#11 = false
       };
-      if (t#10) {
+      if (t#11) {
         return__1 = a__3 * b__4
       }
     };

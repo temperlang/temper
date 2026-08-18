@@ -647,21 +647,22 @@ class TyperPlanTest {
                 |@fn let f__1;
                 |f__1 = (@stay fn f(s__2 /* aka s */: String) /* return__0 */: Boolean {
                 |    fn__3: do {
-                |      var t#7;
+                |      var t#9;
                 |      let x__4;
                 |      {
-                |        let t#8;
+                |        let t#7, t#8;
                 |        orelse#5: {
-                |          t#7 = do_call_toFloat64(s__2)
+                |          t#7 = do_call_toFloat64(s__2);
+                |          t#9 = t#7
                 |        } orelse {
                 |## This is not an initializer for t#8
                 |## And this assignment needs to be typed after t#8's initializer
                 |## so that its context can be used to compute Never<Float64> as a type.
                 |          t#8 = panic();
-                |          t#7 = t#8
+                |          t#9 = t#8
                 |        }
                 |      };
-                |      x__4 = t#7;
+                |      x__4 = t#9;
                 |      return__0 = x__4 > 0.0
                 |    };
                 |});
@@ -679,11 +680,14 @@ class TyperPlanTest {
                 |        "@stay fn f(s__2 /* aka s */: String) /* return__0 */: Boolean {...}"
                 |    ],
                 |    "t#7": [
-                |## No panic()
                 |        "do_call_toFloat64(s__2)"
                 |    ],
-                |    "x__4": [
+                |## No panic() for t#8.
+                |    "t#9": [
                 |        "t#7"
+                |    ],
+                |    "x__4": [
+                |        "t#9"
                 |    ],
                 |    "return__0": [
                 |        "x__4 > 0.0"

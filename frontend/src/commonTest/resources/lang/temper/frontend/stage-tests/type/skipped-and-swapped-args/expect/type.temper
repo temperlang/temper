@@ -8,19 +8,19 @@ constructor__7 = fn constructor(@impliedThis(Hi__0) this__1: Hi__0, @optional(tr
   if (isNull(a__14)) {
     a__8 = 1
   } else {
-    a__8 = notNull(a__14);
+    a__8 = notNull(a__14)
   };
   let b__9 /* aka b */: Int32;
   if (isNull(b__15)) {
     b__9 = 2
   } else {
-    b__9 = notNull(b__15);
+    b__9 = notNull(b__15)
   };
   let c__10 /* aka c */: Int32;
   if (isNull(c__16)) {
     c__10 = 3
   } else {
-    c__10 = notNull(c__16);
+    c__10 = notNull(c__16)
   };
   setp(a__4, this__1, a__8);
   setp(b__5, this__1, b__9);
