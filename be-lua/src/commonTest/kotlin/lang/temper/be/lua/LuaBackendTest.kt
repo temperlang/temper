@@ -284,7 +284,7 @@ class LuaBackendTest {
     fun someGenerator() = assertGenerated(
         temper = """
             |let f(generatorFactory: fn (): SafeGenerator<Empty>): Void {
-            |  generatorFactory().next();
+            |  generatorFactory().nextSafe();
             |}
             |f { (): GeneratorResult<Empty> extends GeneratorFn =>
             |  console.log("foo");

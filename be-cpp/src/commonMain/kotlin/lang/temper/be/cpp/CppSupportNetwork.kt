@@ -301,6 +301,7 @@ internal object CppSupportNetwork : SupportNetwork {
             put("std/testing.type Test.bail()", Like.core("testBail"))
             put("core.type Generator.next()", Like.core("next"))
             put("core.type SafeGenerator.next()", Like.core("next"))
+            put("core.type SafeGenerator.nextSafe()", Like.core("next"))
             put("core.doneResult()", Like.core("doneResult"))
         }
     }
