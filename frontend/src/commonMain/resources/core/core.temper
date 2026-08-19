@@ -210,7 +210,12 @@ export interface SafeGenerator<@out YIELD extends AnyValue> extends Generator<YI
    * [snippet/builtin/yield].
    */
   @connected
-  public next(): GeneratorResult<YIELD>;
+  public next(): GeneratorResult<YIELD> throws Bubble {
+    nextSafe()
+  }
+
+  @connected
+  public nextSafe(): GeneratorResult<YIELD>;
 }
 
 /**
@@ -281,7 +286,7 @@ extends SafeGenerator<YIELD> {
     this.generatorFn = generatorFn;
   }
 
-  public next(): GeneratorResult<YIELD> throws Bubble {
+  public nextSafe(): GeneratorResult<YIELD> {
     if (this._done) {
       return doneResult<YIELD>();
     }

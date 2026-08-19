@@ -26,7 +26,7 @@ impl AsyncRunner {
         let gen = gen();
         // TODO Any way to avoid the extra Arc wrapping?
         let gen_ignoring_result = Arc::new(move || {
-            let _ = gen.next();
+            let _ = gen.next_safe();
         });
         self.0.run_async(gen_ignoring_result);
     }

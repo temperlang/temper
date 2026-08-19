@@ -716,7 +716,10 @@ private val float64ToInt64Unsafe = Cast(listOf("core.type Float64.toInt64Unsafe(
 private val float64ToString = StaticCall("core.type Float64.toString()", StandardNames.temperCoreFloat64Format)
 
 private val generatorNext = StaticCall("core.type Generator.next()", StandardNames.temperCoreCoreGeneratorNext)
-private val safeGeneratorNext = StaticCall("core.type SafeGenerator.next()", StandardNames.temperCoreCoreGeneratorNext)
+private val safeGeneratorNext = StaticCall(
+    listOf("core.type SafeGenerator.next()", "core.type SafeGenerator.nextSafe()"),
+    StandardNames.temperCoreCoreGeneratorNext,
+)
 
 // Might be needed for `[Pure]` calls if we ever mark those. See https://stackoverflow.com/a/36757742/2748187
 // TODO Optimize away entirely where allowed?

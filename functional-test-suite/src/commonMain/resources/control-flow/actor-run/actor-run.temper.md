@@ -7,11 +7,11 @@ Tests a yielding function.
     let f(body: fn (): SafeGenerator<Empty>): Void {
       let generator = body();
       console.log("f0");
-      generator.next();
+      generator.nextSafe();
       console.log("f1");
-      generator.next();
+      generator.nextSafe();
       console.log("f2");
-      generator.next();
+      generator.nextSafe();
       console.log("f3");
     };
 

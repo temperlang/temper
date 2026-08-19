@@ -116,12 +116,6 @@ internal class TypeDeclChecker(val module: Module, val logSink: LogSink) {
     }
 
     private fun checkOverridesCompatible(typeShape: TypeShape, superTypeShapes: Set<TypeShape>) {
-        if (WellKnownTypes.isWellKnown(typeShape)) {
-            // TODO: cleanup implicits so it runs clean.  GeneratorResult.next and SafeGeneratorResult.next
-            // are problematic because one Bubbles and one does not.
-            return
-        }
-
         for (method in typeShape.methods) {
             val sig = method.descriptor?.let { adjustOptionalToNullable(it) } ?: continue
             val methodKind = method.methodKind

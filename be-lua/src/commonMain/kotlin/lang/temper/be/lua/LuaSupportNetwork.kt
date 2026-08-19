@@ -439,6 +439,7 @@ internal object LuaSupportNetwork : SupportNetwork {
         }
         "core.type Generator.next()",
         "core.type SafeGenerator.next()",
+        "core.type SafeGenerator.nextSafe()",
         -> InlineLua(connectedKey) { pos, args ->
             require(args.size == 1)
             Lua.FunctionCallExpr(
