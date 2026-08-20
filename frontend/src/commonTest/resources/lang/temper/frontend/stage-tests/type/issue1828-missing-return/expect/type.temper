@@ -7,8 +7,8 @@ a__1 = (@stay fn a(i__2 /* aka i */: List<Int32>) /* return__0 */: (List<Int32>)
       };
       let n__4;
       n__4 = new ListBuilder<Int32>();
-      do_call_map(n__4, @stay fn (it__5 /* aka it */) /* return__6 */: Int32 {
+      return__0 = do_call_map(n__4, @stay fn (it__5 /* aka it */) /* return__6 */: Int32 {
           return__6 = 2 * it__5;
       })
-    }
+    };
 });

@@ -6,9 +6,7 @@ let return__4 ⦂ String, @fn `test//`.f ⦂(fn (): String | Bubble);
 });
 var x__1 ⦂ String;
 orelse#3: {
-  let t#5 ⦂ String;
-  t#5 = (fn f)();
-  x__1 = t#5
+  x__1 = (fn f)()
 } orelse {
   x__1 = panic ⋖ String ⋗();
 };

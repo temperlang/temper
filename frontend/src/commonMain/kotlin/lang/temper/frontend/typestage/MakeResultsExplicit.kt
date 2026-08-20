@@ -205,6 +205,9 @@ internal class MakeResultsExplicit private constructor(
                     ),
                 )
             }
+            console.group("MakeResultsExplicit") {
+                root.toPseudoCode(console.textOutput)
+            }
             table("terminal", terminalExpressions.unsetTerminalExpressionEdges) {
                 MultilineOutput.of(it.target.toPseudoCode())
             }

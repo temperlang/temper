@@ -944,20 +944,18 @@ class CleanupTemporariesTest {
                 |          if (isNull(a__0)) {
                 |            t#0 = 1
                 |          } else {
-                |            let t#2, a#0;
+                |            let a#0;
                 |            a#0 = notNull(a__0);
-                |            t#2 = a#0;
-                |            t#0 = t#2
+                |            t#0 = a#0
                 |          };
                 |          a__1 = t#0;
                 |          let b__1 /* aka b */: Int32;
                 |          if (isNull(b__0)) {
                 |            t#1 = 2
                 |          } else {
-                |            let t#3, b#0;
+                |            let b#0;
                 |            b#0 = notNull(b__0);
-                |            t#3 = b#0;
-                |            t#1 = t#3
+                |            t#1 = b#0
                 |          };
                 |          b__1 = t#1;
                 |          return__0 = a__1 + b__1
@@ -973,13 +971,13 @@ class CleanupTemporariesTest {
                 |          if (isNull(a__0)) {
                 |            a__1 = 1
                 |          } else {
-                |            a__1 = notNull(a__0)
+                |            a__1 = notNull(a__0);
                 |          };
                 |          let b__1 /* aka b */: Int32;
                 |          if (isNull(b__0)) {
                 |            b__1 = 2
                 |          } else {
-                |            b__1 = notNull(b__0)
+                |            b__1 = notNull(b__0);
                 |          };
                 |          return__0 = a__1 + b__1
                 |        }
@@ -1204,9 +1202,7 @@ class CleanupTemporariesTest {
                 |        return__0 = getConsole()
                 |    });
                 |    orelse#1: {
-                |      let t#2;
-                |      t#2 = do_call_toString(0.0 / 0.0);
-                |      t#1 = t#2
+                |      t#1 = do_call_toString(0.0 / 0.0)
                 |    } orelse {
                 |      t#1 = "Bubble"
                 |    };
@@ -1329,7 +1325,7 @@ class CleanupTemporariesTest {
                 |        if (isNull(w__0)) {
                 |          w__1 = 3
                 |        } else {
-                |          w__1 = notNull(w__0)
+                |          w__1 = notNull(w__0);
                 |        };
                 |        x__0 = x__0 + 1;
                 |        y__0 = y__0 + 2;

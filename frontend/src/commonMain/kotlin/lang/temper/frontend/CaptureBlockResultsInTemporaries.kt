@@ -650,19 +650,17 @@ internal class CaptureBlockResultsInTemporaries(
                         add(Triple(firstDetails, firstResult, firstClause))
                         add(Triple(secondDetails, secondResult, secondClause))
                         // See if we can reuse an already allocated name.
-                        if (tmpName == null) {
-                            for (i in indices) {
-                                val (details, result, _) = this[i]
-                                if (
-                                    result is NameCaptureResult &&
-                                    // Name consistency check which assumes pre-allocation above didn't happen.
-                                    details.undeclaredNamed(result.capturedIn)?.type == result.type
-                                ) {
-                                    tmpName = result.capturedIn
-                                    // Don't adjust the one already using the name
-                                    removeAt(i)
-                                    break
-                                }
+                        for (i in indices) {
+                            val (details, result, _) = this[i]
+                            val resultName = (result as? NameCaptureResult)?.capturedIn
+                                ?: continue
+                            // We can't go adding assignments for temporaries that were not declared
+                            // specifically for this pass, since they might be used elsewhere.
+                            if (details.undeclaredNamed(resultName) != null) {
+                                tmpName = resultName
+                                // Don't adjust the one already using the name
+                                removeAt(i)
+                                break
                             }
                         }
                     }

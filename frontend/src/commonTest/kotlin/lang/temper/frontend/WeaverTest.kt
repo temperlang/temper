@@ -584,6 +584,47 @@ class WeaverTest {
     }
 
     @Test
+    fun simpleWhileLoopWithTrappedBubblesInBody() = assertWovenRoot(
+        /*
+         * while (b(0)) {
+         *   let x = ff(1) orelse -1;
+         *   f(x);
+         * }
+         */
+        want = """
+            |[[ let return__2 ]];
+            |[[ return__2 = void ]];
+            |for (;
+            |  [[ b(0) ]];
+            |) {
+            |  [[ var t#3 ]];
+            |  [[ let x__0 ]];
+            |  orElse#1: do {
+            |    [[ t#3 = ff(1) ]];
+            |  } orelse {
+            |    [[ t#3 = -1 ]];
+            |  }
+            |  [[ x__0 = t#3 ]];
+            |  [[ f(x__0) ]];
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    ) {
+        val x = nameMaker.unusedSourceName(ParsedName("x"))
+        While(cond = { CallB { V(0) } }, testAt = LeftOrRight.Left) {
+            Decl { Ln(x) }
+            Assign(x, null) {
+                Block {
+                    OrElse(
+                        or = { Call(ffCallee) { V(1) } },
+                        els = { V(-1) },
+                    )
+                }
+            }
+            CallF { Rn(x) }
+        }
+    }
+
+    @Test
     fun simpleDoWhileLoopWithBubblyCondition() = assertWovenRoot(
         /*
          * do {
@@ -814,19 +855,17 @@ class WeaverTest {
         want = """
             |[[ let return__2 ]];
             |[[ let x__0: Int32? ]];
-            |[[ var t#4 ]];
+            |[[ var t#3 ]];
             |orElse#1: do {
-            |  [[ let t#3 ]];
             |  if ([[ b(0) ]]) {
             |    [[ t#3 = f(1) ]];
             |  } else {
             |    [[ t#3 = ff(2) ]];
             |  }
-            |  [[ t#4 = t#3 ]];
             |} orelse {
-            |  [[ t#4 = null ]];
+            |  [[ t#3 = null ]];
             |}
-            |[[ x__0 = t#4 ]];
+            |[[ x__0 = t#3 ]];
             |[[ return__2 = x__0 ]];
         """.trimMargin(),
     ) {

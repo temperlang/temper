@@ -2,11 +2,10 @@
   console#4 = getConsole();
   @fn let f__1;
   f__1 = (@stay fn f(i__2 /* aka i */: StringIndexOption) /* return__0 */: Void {
+      let t#6, t#8;
 ## str has erased to a .toString() call here
       return__0 = void;
-      let t#6;
       t#6 = i__2 is StringIndex;
-      let t#8;
       t#8 = i__2 is NoStringIndex;
       do_call_log(console#4, cat("Yes ", do_call_toString(t#6), ", no ", do_call_toString(t#8)))
   });

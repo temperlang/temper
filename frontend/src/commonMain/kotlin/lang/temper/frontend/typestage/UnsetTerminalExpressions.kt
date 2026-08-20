@@ -101,7 +101,7 @@ private class TerminalExpressionFinder(
             is LinearFlow -> {
                 val startIndex = t.parts.startIndex
                 val terminalIndex = if (inTerminalPosition) { t.size - 1 } else { -1 }
-                if (inTerminalPosition && startIndex > terminalIndex && notes.returnsPrior == Freq3.Never) {
+                if (inTerminalPosition && startIndex > terminalIndex && notes.returnsPrior != Freq3.Always) {
                     // Empty block
                     blocksMissingTerminators.add(t to null)
                     notes = notes.copy(returnsPrior = Freq3.Always)
@@ -141,7 +141,7 @@ private class TerminalExpressionFinder(
             }
         }
 
-        if (inTerminalPosition && notes.returnsPrior == Freq3.Never) {
+        if (inTerminalPosition && notes.returnsPrior != Freq3.Always) {
             // t should be a terminal expression.
             val canBeTerminalExpression: Boolean = when (lookThroughDecorations(t.incoming!!).target) {
                 is EscTree, is DeclTree, is StayLeaf, is LeftNameLeaf -> false
@@ -187,11 +187,11 @@ private class TerminalExpressionFinder(
                 notes = walk(t, cf.body, notes, false)
                 notes = walk(t, cf.increment, notes, false)
                 notes = notes.bumpExclusion(-1)
-                if (inTerminalPosition && notes.returnsPrior == Freq3.Never) {
+                if (inTerminalPosition && notes.returnsPrior != Freq3.Always) {
                     throw MissingTerminalExpression(notes)
                 }
             }
-            is ControlFlow.Jump -> if (inTerminalPosition && notes.returnsPrior == Freq3.Never) {
+            is ControlFlow.Jump -> if (inTerminalPosition && notes.returnsPrior != Freq3.Always) {
                 throw MissingTerminalExpression(notes)
             }
             is ControlFlow.Labeled -> {
