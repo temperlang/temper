@@ -410,7 +410,7 @@ class TmpLBackendTest {
     )
 
     @Test
-    fun gracefulFailureWithIfBubbleBranchStrategy() = assertGeneratedCode(
+    fun gracefulFailureWithResultsBranchStrategy() = assertGeneratedCode(
         inputs = inputFileMapFromJson(
             """
                 |{
@@ -429,17 +429,17 @@ class TmpLBackendTest {
                   ```
                   //// work//Brahmagupta'sRevenge/ => Brahmagupta'sRevenge.tmpl
                   let nym`/#7` = builtins.nym`/` /* (Int32, Int32) -> Result<Int32, Bubble> */;
-                  let return__3: Int32;
-                  var t#1: Int32;
-                  @fail var fail#0: Boolean;
+                  let isOkResult#0 = builtins.isOkResult /* <isOkResultPASS extends AnyValue, isOkResultFAIL extends AnyValue>(Result<isOkResultPASS, isOkResultFAIL>) -> Boolean */;
+                  let unpackOkResult#0 = builtins.unpackOkResult /* <unpackOkResultPASS extends AnyValue, unpackOkResultFAIL extends AnyValue>(Result<unpackOkResultPASS, unpackOkResultFAIL>) -> unpackOkResultPASS */;
+                  var return__3: Int32;
                   module init {
                     ok#0: {
                       orelse#0: {
-                        t#1 = hs (fail#0, nym`/#7`(0, 0));
-                        if (fail#0) {
+                        let return#0: Int32 | Bubble = nym`/#7`(0, 0);
+                        if (!isOkResult#0(return#0)) {
                           break orelse#0;
                         }
-                        return__3 = t#1;
+                        return__3 = unpackOkResult#0(return#0);
                         break ok#0;
                       }
                       return__3 = 0;
@@ -454,7 +454,7 @@ class TmpLBackendTest {
           }
         """,
         supportNetwork = defaultTestSupportNetwork.copy(
-            bubbleStrategy = BubbleBranchStrategy.IfHandlerScopeVar,
+            bubbleStrategy = BubbleBranchStrategy.Results,
         ),
     )
 
@@ -478,12 +478,10 @@ class TmpLBackendTest {
                   ```
                   //// work//Brahmagupta'sRevenge/ => Brahmagupta'sRevenge.tmpl
                   let nym`/#6` = builtins.nym`/` /* (Int32, Int32) -> Result<Int32, Bubble> */;
-                  let return__3: Int32;
-                  var t#2: Int32;
+                  var return__3: Int32;
                   module init {
                     try {
-                      t#2 = nym`/#6`(0, 0);
-                      return__3 = t#2;
+                      return__3 = nym`/#6`(0, 0);
                     } catch {
                       return__3 = 0;
                     }
@@ -497,7 +495,7 @@ class TmpLBackendTest {
           }
         """,
         supportNetwork = defaultTestSupportNetwork.copy(
-            bubbleStrategy = BubbleBranchStrategy.CatchBubble,
+            bubbleStrategy = BubbleBranchStrategy.Exceptions,
         ),
     )
 
@@ -521,10 +519,7 @@ class TmpLBackendTest {
                   ```
                   //// work//bubbly-arithmetic/ => bubbly-arithmetic.tmpl
                   let nym`/#3` = builtins.nym`/` /* (Int32, Int32) -> Result<Int32, Bubble> */;
-                  let return__3: Int32;
-                  module init {
-                    return__3 = nym`/#3`(0, 0);
-                  }
+                  let return__3: Int32 = nym`/#3`(0, 0);
                   export return__3;
 
                   ```
@@ -534,7 +529,7 @@ class TmpLBackendTest {
           }
         """,
         supportNetwork = defaultTestSupportNetwork.copy(
-            bubbleStrategy = BubbleBranchStrategy.CatchBubble,
+            bubbleStrategy = BubbleBranchStrategy.Exceptions,
         ),
     )
 
@@ -570,12 +565,12 @@ class TmpLBackendTest {
           }
         """,
         supportNetwork = defaultTestSupportNetwork.copy(
-            bubbleStrategy = BubbleBranchStrategy.CatchBubble,
+            bubbleStrategy = BubbleBranchStrategy.Exceptions,
         ),
     )
 
     @Test
-    fun unhandledBubbleInFunctionWithFailVar() = assertGeneratedCode(
+    fun unhandledBubbleInFunctionUsingResults() = assertGeneratedCode(
         inputs = inputFileMapFromJson(
             """
                 |{
@@ -588,31 +583,34 @@ class TmpLBackendTest {
             """.trimMargin(),
         ),
         want = """
-          {
-            tmpl: {
-              "bubbly-functions.tmpl": {
-                content:
-                  ```
-                  //// work//bubbly-functions/ => bubbly-functions.tmpl
-                  let nym`/#5` = builtins.nym`/` /* (Int32, Int32) -> Result<Int32, Bubble> */;
-                  @QName("test-library/bubbly-functions.f()") @reach(\none) let f__0(): Int32 | Bubble {
-                    @QName("test-library/bubbly-functions.f().return") let return__0: Int32;
-                    @fail var fail#0: Boolean;
-                    return__0 = hs (fail#0, nym`/#5`(0, 0));
-                    if (fail#0) {
-                      return failure;
-                    }
-                    return return__0;
-                  }
-
-                  ```
-              },
-              "bubbly-functions.tmpl.map": "__DO_NOT_CARE__",
-            }
-          }
-        """,
+            |{
+            |  tmpl: {
+            |    "bubbly-functions.tmpl": {
+            |      content:
+            |        ```
+            |        //// work//bubbly-functions/ => bubbly-functions.tmpl
+            |        let nym`/#5` = builtins.nym`/` /* (Int32, Int32) -> Result<Int32, Bubble> */;
+            |        let isOkResult#0 = builtins.isOkResult /* <isOkResultPASS extends AnyValue, isOkResultFAIL extends AnyValue>(Result<isOkResultPASS, isOkResultFAIL>) -> Boolean */;
+            |        let unpackOkResult#0 = builtins.unpackOkResult /* <unpackOkResultPASS extends AnyValue, unpackOkResultFAIL extends AnyValue>(Result<unpackOkResultPASS, unpackOkResultFAIL>) -> unpackOkResultPASS */;
+            |        let packOkResult#0 = builtins.packOkResult /* <packOkResultPASS extends AnyValue, packOkResultFAIL extends AnyValue>(packOkResultPASS) -> Result<packOkResultPASS, packOkResultFAIL> */;
+            |        @QName("test-library/bubbly-functions.f()") @reach(\none) let f__0(): Int32 | Bubble {
+            |          let return#0: Int32 | Bubble = nym`/#5`(0, 0);
+            |## It's not ideal that we're returning the result both ways.
+            |## TODO: Maybe SimplifyFunctionBodyParts could handle this.
+            |          if (!isOkResult#0(return#0)) {
+            |            return return#0;
+            |          }
+            |          return return#0;
+            |        }
+            |
+            |        ```
+            |    },
+            |    "bubbly-functions.tmpl.map": "__DO_NOT_CARE__",
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
         supportNetwork = defaultTestSupportNetwork.copy(
-            bubbleStrategy = BubbleBranchStrategy.IfHandlerScopeVar,
+            bubbleStrategy = BubbleBranchStrategy.Results,
         ),
     )
 
@@ -684,7 +682,7 @@ class TmpLBackendTest {
                       }
                       @QName("test-library/C.type C.constructor()") @reach(\none) constructor__8(this = this__2, @QName("test-library/C.type C.constructor().(this)") @impliedThis(C__0) this__2: C__0, @QName("test-library/C.type C.constructor().(prop)") prop__9: Int32) {
                         /* this */ this__2.prop__5 = prop__9;
-                        return;
+                        return void;
                       }
                     }
 
@@ -720,14 +718,14 @@ class TmpLBackendTest {
                       @QName("test-library/C.type C.prop") @constructorProperty @reach(\none) var prop__4: Int32;
                       @QName("test-library/C.type C.constructor()") @reach(\none) constructor__5(this = this__1, @QName("test-library/C.type C.constructor().(this)") @impliedThis(C__0) this__1: C__0, @QName("test-library/C.type C.constructor().(prop)") prop__6: Int32) {
                         /* this */ this__1.prop__4 = prop__6;
-                        return;
+                        return void;
                       }
                       @reach(\none) get.prop -> getprop__8(this = this__9, @impliedThis(C__0) this__9: C__0): Int32 {
                         return /* this */ this__9.prop__4;
                       }
                       @reach(\none) set.prop -> setprop__11(this = this__13, @impliedThis(C__0) this__13: C__0, newProp__12: Int32): Void {
                         /* this */ this__13.prop__4 = newProp__12;
-                        return;
+                        return void;
                       }
                     }
 
@@ -1064,7 +1062,7 @@ class TmpLBackendTest {
                         return x__7;
                       }
                       @QName("test-library/method.type C.constructor()") @reach(\none) constructor__9(this = this__2, @QName("test-library/method.type C.constructor().(this)") @impliedThis(C__0) this__2: C__0) {
-                        return;
+                        return void;
                       }
                     }
 
@@ -1104,7 +1102,7 @@ class TmpLBackendTest {
                             return x__8;
                           }
                           @QName("test-library/genericMethod.type C.constructor()") @reach(\none) constructor__10(this = this__3, @QName("test-library/genericMethod.type C.constructor().(this)") @impliedThis(C__0) this__3: C__0) {
-                            return;
+                            return void;
                           }
                         }
 
@@ -1196,6 +1194,9 @@ class TmpLBackendTest {
             |  }
             |}
         """.trimMargin(),
+        supportNetwork = defaultTestSupportNetwork.copy(
+            representationOfVoid = RepresentationOfVoid.DoNotReifyVoid,
+        ),
         want = """
             |{
             |  "tmpl": {
@@ -1204,7 +1205,6 @@ class TmpLBackendTest {
             |        ```
             |        //// work//fn/ => fn.tmpl
             |        @QName("test-library/fn.overExplained()") @docString(["A short explanation.", "A short explanation.\n\nA longer, more detailed explanation.", "work/fn/fn.temper"]) let overExplained(): Void {
-            |          return;
             |        }
             |
             |        ```,
@@ -1254,7 +1254,7 @@ class TmpLBackendTest {
             |          }
             |          @QName("test-library/myClass.type C.constructor()") constructor__0(this = this__2, @QName("test-library/myClass.type C.constructor().(this)") @impliedThis(C) this__2: C, @QName("test-library/myClass.type C.constructor().(x)") x__1: Int32) {
             |            /* this */ this__2.x__0 = x__1;
-            |            return;
+            |            return void;
             |          }
             |          get.x -> getx__0(this = this__3, @impliedThis(C) this__3: C): Int32 {
             |            return /* this */ this__3.x__0;
@@ -1357,7 +1357,7 @@ class TmpLBackendTest {
             |                  @QName("test-library/nestedClass.f().type C.x") @constructorProperty @reach(\none) let x__0: Int32;
             |                  @QName("test-library/nestedClass.f().type C.constructor()") @reach(\none) constructor__0(this = this__0, @QName("test-library/nestedClass.f().type C.constructor().(this)") @impliedThis(C__0) this__0: C__0, @QName("test-library/nestedClass.f().type C.constructor().(x)") x__1: Int32) {
             |                    /* this */ this__0.x__0 = x__1;
-            |                    return;
+            |                    return void;
             |                  }
             |                }
             |                @QName("test-library/nestedClass.f()") @reach(\none) let f__0(): AnyValue {
@@ -1403,10 +1403,12 @@ class TmpLBackendTest {
             |                let DequeGetIsEmpty#0 = builtins.DequeGetIsEmpty;
             |                let DequeRemoveFirst#0 = builtins.DequeRemoveFirst;
             |                let isNull#0 = builtins.isNull /* <isNullT extends AnyValue>(isNullT?) -> Boolean */;
+            |                let isOkResult#0 = builtins.isOkResult /* <isOkResultPASS extends AnyValue, isOkResultFAIL extends AnyValue>(Result<isOkResultPASS, isOkResultFAIL>) -> Boolean */;
+            |                let unpackOkResult#0 = builtins.unpackOkResult /* <unpackOkResultPASS extends AnyValue, unpackOkResultFAIL extends AnyValue>(Result<unpackOkResultPASS, unpackOkResultFAIL>) -> unpackOkResultPASS */;
             |                let ConsoleLog#0 = builtins.ConsoleLog;
+            |                let packOkResult#0 = builtins.packOkResult /* <packOkResultPASS extends AnyValue, packOkResultFAIL extends AnyValue>(packOkResultPASS) -> Result<packOkResultPASS, packOkResultFAIL> */;
             |                let console#0: Console = GetConsole#0();
             |                @QName("test-library/example.f()") @reach(\none) let f__0(@QName("test-library/example.f().(d)") d__0: Deque<String | Null>): Void | Bubble {
-            |                  @fail var fail#0: Boolean;
             |                  @QName("test-library/example.f().c=") let c__0: String | Null;
             |                  if (!DequeGetIsEmpty#0(d__0)) {
             |                    c__0 = DequeRemoveFirst#0(d__0);
@@ -1417,13 +1419,14 @@ class TmpLBackendTest {
             |                  if (isNull#0(c__0)) {
             |                    return failure;
             |                  } else {
-            |                    e__0 = hs (fail#0, notNull (c__0));
-            |                    if (fail#0) {
-            |                      return failure;
+            |                    let e#0: String | Bubble = notNull (c__0);
+            |                    if (!isOkResult#0(e#0)) {
+            |                      return e#0;
             |                    }
+            |                    e__0 = unpackOkResult#0(e#0);
             |                  }
             |                  ConsoleLog#0(console#0, e__0);
-            |                  return;
+            |                  return packOkResult#0(void);
             |                }
             |
             |                ```
@@ -1459,14 +1462,14 @@ class TmpLBackendTest {
             |              @QName("test-library/foo.type C.p") @constructorProperty var p__0: Int32;
             |              @QName("test-library/foo.type C.constructor()") constructor__0(this = this__0, @QName("test-library/foo.type C.constructor().(this)") @impliedThis(C__0) this__0: C__0, @QName("test-library/foo.type C.constructor().(p)") p__1: Int32) {
             |                /* this */ this__0.p__0 = p__1;
-            |                return;
+            |                return void;
             |              }
             |              get.p -> getp__0(this = this__1, @impliedThis(C__0) this__1: C__0): Int32 {
             |                return /* this */ this__1.p__0;
             |              }
             |              set.p -> setp__0(this = this__2, @impliedThis(C__0) this__2: C__0, newP__0: Int32): Void {
             |                /* this */ this__2.p__0 = newP__0;
-            |                return;
+            |                return void;
             |              }
             |            }
             |            @QName("test-library/foo.c") let c__0: C__0 = /*new*/ C__0(0);
@@ -1483,13 +1486,13 @@ class TmpLBackendTest {
     )
 
     @Test
-    fun voidReified() = assertGeneratedCode(
+    fun voidReifiedNoResults() = assertGeneratedCode(
         inputs = inputFileMapFromJson(
             """
                 |{
                 |  foo: {
                 |    foo.temper: ```
-                |      let g(): Void throws Bubble {
+                |      let g(): Void {
                 |        console.log("hi");
                 |      }
                 |
@@ -1510,16 +1513,16 @@ class TmpLBackendTest {
             |      //// work//foo/ => foo.tmpl
             |      let GetConsole#0 = builtins.GetConsole;
             |      let ConsoleLog#0 = builtins.ConsoleLog;
+            |      let return__0: Void = void;
             |      let console#0: Console = GetConsole#0();
-            |      @QName("test-library/foo.g()") @reach(\none) let g__0(): Void | Bubble {
+            |      @QName("test-library/foo.g()") @reach(\none) let g__0(): Void {
             |        ConsoleLog#0(console#0, "hi");
-            |        return;
+            |        return void;
             |      }
             |      @QName("test-library/foo.f()") @reach(\none) let f__0(): Void | Bubble {
             |        g__0();
-            |        return;
+            |        return void;
             |      }
-            |      let return__0: Void = void;
             |      export return__0;
             |
             |      ```
@@ -1529,7 +1532,60 @@ class TmpLBackendTest {
             |}
         """.trimMargin(),
         supportNetwork = defaultTestSupportNetwork.copy(
-            bubbleStrategy = BubbleBranchStrategy.CatchBubble,
+            bubbleStrategy = BubbleBranchStrategy.Exceptions,
+            representationOfVoid = RepresentationOfVoid.ReifyVoid,
+        ),
+    )
+
+    @Test
+    fun voidReifiedResultTypes() = assertGeneratedCode(
+        inputs = inputFileMapFromJson(
+            """
+                |{
+                |  foo: {
+                |    foo.temper: ```
+                |      let g(): Void {
+                |        console.log("hi");
+                |      }
+                |
+                |      let f(): Void throws Bubble {
+                |        g()
+                |      }
+                |      ```
+                |  }
+                |}
+            """.trimMargin(),
+        ),
+        moduleNeedsResult = true, // So we can reify void from the module result
+        want = """
+            |{
+            |  "tmpl": {
+            |    "foo.tmpl": {
+            |      content: ```
+            |      //// work//foo/ => foo.tmpl
+            |      let GetConsole#0 = builtins.GetConsole;
+            |      let ConsoleLog#0 = builtins.ConsoleLog;
+            |      let packOkResult#0 = builtins.packOkResult /* <packOkResultPASS extends AnyValue, packOkResultFAIL extends AnyValue>(packOkResultPASS) -> Result<packOkResultPASS, packOkResultFAIL> */;
+            |      let return__0: Void = void;
+            |      let console#0: Console = GetConsole#0();
+            |      @QName("test-library/foo.g()") @reach(\none) let g__0(): Void {
+            |        ConsoleLog#0(console#0, "hi");
+            |        return void;
+            |      }
+            |      @QName("test-library/foo.f()") @reach(\none) let f__0(): Void | Bubble {
+            |        g__0();
+            |        return packOkResult#0(void);
+            |      }
+            |      export return__0;
+            |
+            |      ```
+            |    },
+            |    "foo.tmpl.map": "__DO_NOT_CARE__",
+            |  }
+            |}
+        """.trimMargin(),
+        supportNetwork = defaultTestSupportNetwork.copy(
+            bubbleStrategy = BubbleBranchStrategy.Results,
             representationOfVoid = RepresentationOfVoid.ReifyVoid,
         ),
     )
@@ -1577,7 +1633,7 @@ class TmpLBackendTest {
         """.trimMargin(),
         supportNetwork = defaultTestSupportNetwork.copy(
             // With CatchBubble, we don't expect handler scope calls in the generated tmpl.
-            bubbleStrategy = BubbleBranchStrategy.CatchBubble,
+            bubbleStrategy = BubbleBranchStrategy.Exceptions,
             representationOfVoid = RepresentationOfVoid.DoNotReifyVoid,
         ),
     )
@@ -1658,7 +1714,7 @@ class TmpLBackendTest {
             |          @QName("test-library/foo.type Point.x") @constructorProperty let x__0: Int32;
             |          @QName("test-library/foo.type Point.constructor()") constructor__0(this = this__0, @QName("test-library/foo.type Point.constructor().(this)") @impliedThis(Point) this__0: Point, @QName("test-library/foo.type Point.constructor().(x)") x__1: Int32) {
             |            /* this */ this__0.x__0 = x__1;
-            |            return;
+            |            return void;
             |          }
             |          get.x -> getx__0(this = this__1, @impliedThis(Point) this__1: Point): Int32 {
             |            return /* this */ this__1.x__0;
@@ -1682,7 +1738,7 @@ class TmpLBackendTest {
             |        }: @QName("test-library/foo.type Point") type = import ("./foo.tmpl");
             |        @QName("test-library/bar.something()") @test("blah") @test let something__0() {
             |          inc__0(/*new*/ Point(1).x);
-            |          return;
+            |          return void;
             |        }
             |
             |        ```,
@@ -1725,7 +1781,7 @@ class TmpLBackendTest {
             |          @QName("test-library/foo.type Point.constructor()") constructor__0(this = this__0, @QName("test-library/foo.type Point.constructor().(this)") @impliedThis(Point) this__0: Point, @QName("test-library/foo.type Point.constructor().(x)") x__1: Int32, @QName("test-library/foo.type Point.constructor().(y)") y__1: Int32) {
             |            /* this */ this__0.x__0 = x__1;
             |            /* this */ this__0.y__0 = y__1;
-            |            return;
+            |            return void;
             |          }
             |        }
             |
@@ -1783,7 +1839,7 @@ class TmpLBackendTest {
             |        }
             |        @QName("test-library/foo.sayEmphatically()") let sayEmphatically(@QName("test-library/foo.sayEmphatically().(s)") s__1: String): Void {
             |          ConsoleLog#0(console#0, emphatically(s__1));
-            |          return;
+            |          return void;
             |        }
             |
             |        ```,
@@ -1838,15 +1894,15 @@ class TmpLBackendTest {
             |    "foo.tmpl": {
             |      content: ```
             |        //// work//foo/ => foo.tmpl
+            |        let return__2: Void = void;
             |        @QName("test-library/foo.type C") class C / C {
             |          @QName("test-library/foo.type C.constructor()") constructor__0(this = this__0, @QName("test-library/foo.type C.constructor().(this)") @impliedThis(C) this__0: C) {
-            |            return;
+            |            return void;
             |          }
             |        }
             |        @QName("test-library/foo.c()") let c(): C {
             |          return /*new*/ C();
             |        }
-            |        let return__2: Void = void;
             |        export return__2;
             |
             |        ```
@@ -1894,14 +1950,15 @@ class TmpLBackendTest {
                 |      content: ```
                 |        //// work//a/ => a.tmpl
                 |        let nym`/#16` = builtins.nym`/` /* (Float64, Float64) -> Result<Float64, Bubble> */;
-                |        @fail var fail#0: Boolean;
-                |        @QName("test-library/a.x") let x__0: Float64;
+                |        let isOkResult#0 = builtins.isOkResult /* <isOkResultPASS extends AnyValue, isOkResultFAIL extends AnyValue>(Result<isOkResultPASS, isOkResultFAIL>) -> Boolean */;
+                |        let unpackOkResult#0 = builtins.unpackOkResult /* <unpackOkResultPASS extends AnyValue, unpackOkResultFAIL extends AnyValue>(Result<unpackOkResultPASS, unpackOkResultFAIL>) -> unpackOkResultPASS */;
+                |        let x#0: Float64 | Bubble = nym`/#16`(0.0, 0.0);
                 |        module init {
-                |          x__0 = hs (fail#0, nym`/#16`(0.0, 0.0));
-                |          if (fail#0) {
-                |            abortLoad;
+                |          if (!isOkResult#0(x#0)) {
+                |            abortLoad ();
                 |          }
                 |        }
+                |        @QName("test-library/a.x") let x__0: Float64 = unpackOkResult#0(x#0);
                 |
                 |        ```
                 |    },
@@ -1914,17 +1971,20 @@ class TmpLBackendTest {
                 |          x__0 as x__1
                 |        }: @QName("test-library/a.x") const Float64 = import ("./a.tmpl");
                 |        let GetConsole#0 = builtins.GetConsole;
+                |        let isOkResult#1 = builtins.isOkResult /* <isOkResultPASS extends AnyValue, isOkResultFAIL extends AnyValue>(Result<isOkResultPASS, isOkResultFAIL>) -> Boolean */;
+                |        let unpackOkResult#1 = builtins.unpackOkResult /* <unpackOkResultPASS extends AnyValue, unpackOkResultFAIL extends AnyValue>(Result<unpackOkResultPASS, unpackOkResultFAIL>) -> unpackOkResultPASS */;
                 |        let Float64ToString#0 = builtins.Float64ToString;
                 |        let ConsoleLog#0 = builtins.ConsoleLog;
-                |        @fail var fail#1: Boolean;
-                |        var t#0: Console = GetConsole#0();
-                |        var t#1: Float64;
+                |        let console#0: Console = GetConsole#0();
+                |        let result#0: Float64 | Bubble = cast (x__1, Float64);
                 |        module init {
-                |          t#1 = hs (fail#1, cast (x__1, Float64));
-                |          if (fail#1) {
-                |            abortLoad;
+                |          if (!isOkResult#1(result#0)) {
+                |            abortLoad ();
                 |          }
-                |          ConsoleLog#0(t#0, Float64ToString#0(t#1));
+                |        }
+                |        let t#1: Float64 = unpackOkResult#1(result#0);
+                |        module init {
+                |          ConsoleLog#0(console#0, Float64ToString#0(t#1));
                 |        }
                 |
                 |        ```,
@@ -2023,7 +2083,7 @@ class TmpLBackendTest {
             |              a__2 = notNull (a__1);
             |            }
             |            /* this */ this__0.a__0 = a__2;
-            |            return;
+            |            return void;
             |          }
             |          get.a -> geta__0(this = this__1, @impliedThis(A) this__1: A): String {
             |            return /* this */ this__1.a__0;
@@ -2082,7 +2142,6 @@ class TmpLBackendTest {
             |        let nym`>=#31` = builtins.nym`>=` /* (Int32, Int32) -> Boolean */;
             |        let console#0: Console = GetConsole#0();
             |        @QName("test-library/foo.f()") @reach(\none) let f__0(): Void {
-            |          var t#0: Int32;
             |          @QName("test-library/foo.f().data=") var data__0: Int32 = 0;
             |          @QName("test-library/foo.f().x=") var x__0: Int32 = 0;
             |          while (nym`<=#28`(x__0, 1)) {
@@ -2090,9 +2149,9 @@ class TmpLBackendTest {
             |            @QName("test-library/foo.f().y=") var y__0: Int32 = 75;
             |            while (nym`<=#28`(y__0, 77)) {
             |              ConsoleLog#0(console#0, "b");
-            |              t#0 = data__0;
-            |              data__0 = nym`+#30`(t#0, 1);
-            |              if (nym`>=#31`(t#0, 76)) {
+            |              let postfixReturn#0: Int32 = data__0;
+            |              data__0 = nym`+#30`(postfixReturn#0, 1);
+            |              if (nym`>=#31`(postfixReturn#0, 76)) {
             |                ConsoleLog#0(console#0, "c");
             |                break;
             |              }
@@ -2101,7 +2160,7 @@ class TmpLBackendTest {
             |            ConsoleLog#0(console#0, "d");
             |            x__0 = nym`+#30`(x__0, 1);
             |          }
-            |          return;
+            |          return void;
             |        }
             |
             |        ```
@@ -2121,7 +2180,7 @@ class TmpLBackendTest {
                 |    foo.temper: ```
                 |      export let f(a: Int, b: Int): Void {
                 |        var x;
-                |        let y;
+                |        var y;
                 |        (
                 |          do {
                 |            x = a / b;
@@ -2153,31 +2212,18 @@ class TmpLBackendTest {
             |        let nym`+#36` = builtins.nym`+` /* (Int32, Int32) -> Int32 */;
             |        let console#0: Console = GetConsole#0();
             |        @QName("test-library/foo.f()") let f(@QName("test-library/foo.f().(a)") a__0: Int32, @QName("test-library/foo.f().(b)") b__0: Int32): Void {
-            |          var t#0: Int32;
-            |          var t#1: Int32;
             |          @QName("test-library/foo.f().x=") var x__0: Int32;
-            |          @QName("test-library/foo.f().y=") let y__0: Int32;
-            |          var y#0: Int32;${
-            /* We synthesized this var late. */
-            ""
-        }
+            |          @QName("test-library/foo.f().y=") var y__0: Int32;
             |          try {
-            |            t#0 = nym`/#33`(a__0, b__0);
-            |            x__0 = t#0;
-            |            t#1 = nym`/#33`(b__0, a__0);
-            |            y#0 = t#1;
+            |            x__0 = nym`/#33`(a__0, b__0);
+            |            y__0 = nym`/#33`(b__0, a__0);
             |          } catch {
             |            x__0 = -1;
-            |            y#0 = -1;
+            |            y__0 = -1;
             |          }
-            |          y__0 = y#0;${
-            "" // Here's a single write back.
-        }
-            |          var t#2: String = "" + x__0;
-            |          ConsoleLog#0(console#0, t#2);
-            |          var t#3: String = "" + nym`+#36`(x__0, y__0);
-            |          ConsoleLog#0(console#0, t#3);
-            |          return;
+            |          ConsoleLog#0(console#0, "" + x__0);
+            |          ConsoleLog#0(console#0, "" + nym`+#36`(x__0, y__0));
+            |          return void;
             |        }
             |
             |        ```
@@ -2187,7 +2233,7 @@ class TmpLBackendTest {
             |}
         """.trimMargin(),
         supportNetwork = defaultTestSupportNetwork.copy(
-            bubbleStrategy = BubbleBranchStrategy.CatchBubble,
+            bubbleStrategy = BubbleBranchStrategy.Exceptions,
             mayAssignInBothTryAndRecover = false,
         ),
     )
@@ -2242,14 +2288,14 @@ class TmpLBackendTest {
             |        @connected @QName("test-library/defines.type C") class C / C {
             |          @QName("test-library/defines.type C.f()") @connected static let f__0(): Void {
             |            console#0.log("f");
-            |            return;
+            |            return void;
             |          }
             |          @QName("test-library/defines.type C.g()") @connected static let g__0(): Void {
             |            console#0.log("g");
-            |            return;
+            |            return void;
             |          }
             |          @QName("test-library/defines.type C.constructor()") @connected constructor__0(this = this__0, @QName("test-library/defines.type C.constructor().(this)") @impliedThis(C) this__0: C) {
-            |            return;
+            |            return void;
             |          }
             |        }
             |
@@ -2291,10 +2337,10 @@ class TmpLBackendTest {
             |        @connected @QName("test-library/defines.type C") class C / C {
             |          @QName("test-library/defines.type C.g()") @connected static let g__0(): Void {
             |            console#0.log("g");
-            |            return;
+            |            return void;
             |          }
             |          @QName("test-library/defines.type C.constructor()") @connected constructor__0(this = this__0, @QName("test-library/defines.type C.constructor().(this)") @impliedThis(C) this__0: C) {
-            |            return;
+            |            return void;
             |          }
             |        }
             |
@@ -2342,7 +2388,7 @@ class TmpLBackendTest {
             |        @connected @QName("test-library/defines.type C") class C connects C;
             |        @QName("test-library/defines.type C.g()") @connected let g__0(): Void {
             |          console#0.log("g");
-            |          return;
+            |          return void;
             |        }
             |
             |        ```,
@@ -2465,7 +2511,7 @@ class TmpLBackendTest {
             |            return 42;
             |          }
             |          @QName("test-library/foo.type C.constructor()") @reach(\none) constructor__0(this = this__1, @QName("test-library/foo.type C.constructor().(this)") @impliedThis(C__0) this__1: C__0) {
-            |            return;
+            |            return void;
             |          }
             |        }
             |
@@ -2516,7 +2562,7 @@ class TmpLBackendTest {
             |}
         """.trimMargin(),
         supportNetwork = object : TestSupportNetwork(
-            BubbleBranchStrategy.CatchBubble,
+            BubbleBranchStrategy.Exceptions,
             CoroutineStrategy.TranslateToGenerator,
             RepresentationOfVoid.ReifyVoid,
         ) {
@@ -2612,14 +2658,15 @@ class TmpLBackendTest {
             |      content: ```
             |        //// work//foo/ => foo.tmpl
             |        let DateFromIsoString#0 = builtins.DateFromIsoString;
-            |        @fail var fail#0: Boolean;
-            |        @QName("test-library/foo.d") let d: Date;
+            |        let isOkResult#0 = builtins.isOkResult /* <isOkResultPASS extends AnyValue, isOkResultFAIL extends AnyValue>(Result<isOkResultPASS, isOkResultFAIL>) -> Boolean */;
+            |        let unpackOkResult#0 = builtins.unpackOkResult /* <unpackOkResultPASS extends AnyValue, unpackOkResultFAIL extends AnyValue>(Result<unpackOkResultPASS, unpackOkResultFAIL>) -> unpackOkResultPASS */;
+            |        let d#0: Date | Bubble = DateFromIsoString#0("2001-02-03");
             |        module init {
-            |          d = hs (fail#0, DateFromIsoString#0("2001-02-03"));
-            |          if (fail#0) {
-            |            abortLoad;
+            |          if (!isOkResult#0(d#0)) {
+            |            abortLoad ();
             |          }
             |        }
+            |        @QName("test-library/foo.d") let d: Date = unpackOkResult#0(d#0);
             |
             |        ```
             |    },
@@ -2795,7 +2842,7 @@ class TmpLBackendTest {
             |          @QName("test-library/foo.f().coroutine=") let coroutine__0: SafeGenerator<Empty> = makeGenerator__0();
             |          SafeGeneratorNext#0(coroutine__0);
             |          SafeGeneratorNext#0(coroutine__0);
-            |          return;
+            |          return void;
             |        }
             |        let fn__0(): SafeGenerator<Empty> {
             |          var caseIndex#0: Int32 = 0;
@@ -2901,7 +2948,7 @@ class TmpLBackendTest {
             |          @QName("test-library/foo.f().generator=") let generator__0: SafeGenerator<Empty> = makeGenerator__0();
             |          SafeGeneratorNext#0(generator__0);
             |          SafeGeneratorNext#0(generator__0);
-            |          return;
+            |          return void;
             |        }
             |        let fn__0(): SafeGenerator<Empty> {
             |          var caseIndex#0: Int32 = 0;
@@ -2910,7 +2957,7 @@ class TmpLBackendTest {
             |          @QName("test-library/foo.helper()") let helper__0(): Void {
             |            var t#0: String = "" + nym`+#67`(i__0, j__0);
             |            ConsoleLog#0(console#0, t#0);
-            |            return;
+            |            return void;
             |          }
             |          let convertedCoroutine#0(generator#0: SafeGenerator<Empty>): GeneratorResult<Empty> {
             |            let caseIndexLocal#0: Int32 = caseIndex#0;
@@ -3012,7 +3059,7 @@ class TmpLBackendTest {
             |          @QName("test-library/foo.type C.constructor()") constructor__0(this = this__0, @QName("test-library/foo.type C.constructor().(this)") @impliedThis(C__0) this__0: C__0, @QName("test-library/foo.type C.constructor().(s)") s__1: String) {
             |            /* this */ this__0.s__0 = s__1;
             |            ConsoleLog#0(console#0, "Made C");
-            |            return;
+            |            return void;
             |          }
             |          get.s -> gets__0(this = this__1, @impliedThis(C__0) this__1: C__0): String {
             |            return /* this */ this__1.s__0;
@@ -3023,7 +3070,7 @@ class TmpLBackendTest {
             |          SafeGeneratorNext#0(generator__0);
             |          SafeGeneratorNext#0(generator__0);
             |          SafeGeneratorNext#0(generator__0);
-            |          return;
+            |          return void;
             |        }
             |        let fn__0(): SafeGenerator<Empty> {
             |          var caseIndex#0: Int32 = 0;
@@ -3095,7 +3142,7 @@ class TmpLBackendTest {
 
     @Test
     fun classOrderingCatch() = classOrdering(
-        bubbleStrategy = BubbleBranchStrategy.CatchBubble,
+        bubbleStrategy = BubbleBranchStrategy.Exceptions,
         want = """
             |{
             |  tmpl: {
@@ -3109,17 +3156,11 @@ class TmpLBackendTest {
             |          return /* this */ this__0;
             |        }
             |        @QName("test-library/bubble-ordering.type Apple.constructor()") constructor__0(this = this__1, @QName("test-library/bubble-ordering.type Apple.constructor().(this)") @impliedThis(Apple) this__1: Apple) {
-            |          return;
+            |          return void;
             |        }
             |      }
-            |      @QName("test-library/bubble-ordering.fuji") let fuji: Apple;
-            |      module init {
-            |        fuji = /*new*/ Apple().maybe();
-            |      }
-            |      @QName("test-library/bubble-ordering.gala") let gala: Apple;
-            |      module init {
-            |        gala = /*new*/ Apple().maybe();
-            |      }
+            |      @QName("test-library/bubble-ordering.fuji") let fuji: Apple = /*new*/ Apple().maybe();
+            |      @QName("test-library/bubble-ordering.gala") let gala: Apple = /*new*/ Apple().maybe();
             |      @QName("test-library/bubble-ordering.juggle()") let juggle(@QName("test-library/bubble-ordering.juggle().(some)") some__0: Int32): Apple {
             |        @QName("test-library/bubble-ordering.juggle().return") let return__0: Apple;
             |        if (nym`<=#24`(some__0, 0)) {
@@ -3140,7 +3181,7 @@ class TmpLBackendTest {
 
     @Test
     fun classOrderingIf() = classOrdering(
-        bubbleStrategy = BubbleBranchStrategy.IfHandlerScopeVar,
+        bubbleStrategy = BubbleBranchStrategy.Results,
         want = """
             |{
             |  tmpl: {
@@ -3148,31 +3189,32 @@ class TmpLBackendTest {
             |      content:
             |      ```
             |      //// work//bubble-ordering/ => bubble-ordering.tmpl
+            |      let packOkResult#0 = builtins.packOkResult /* <packOkResultPASS extends AnyValue, packOkResultFAIL extends AnyValue>(packOkResultPASS) -> Result<packOkResultPASS, packOkResultFAIL> */;
+            |      let isOkResult#0 = builtins.isOkResult /* <isOkResultPASS extends AnyValue, isOkResultFAIL extends AnyValue>(Result<isOkResultPASS, isOkResultFAIL>) -> Boolean */;
+            |      let unpackOkResult#0 = builtins.unpackOkResult /* <unpackOkResultPASS extends AnyValue, unpackOkResultFAIL extends AnyValue>(Result<unpackOkResultPASS, unpackOkResultFAIL>) -> unpackOkResultPASS */;
             |      let nym`<=#24` = builtins.nym`<=` /* (Int32, Int32) -> Boolean */;
-            |      @fail var fail#0: Boolean;
-            |      @fail var fail#1: Boolean;
             |      @QName("test-library/bubble-ordering.type Apple") class Apple / Apple {
             |        @QName("test-library/bubble-ordering.type Apple.maybe()") let maybe__0(this = this__0, @QName("test-library/bubble-ordering.type Apple.maybe().(this)") @impliedThis(Apple) this__0: Apple): Apple | Bubble {
-            |          return /* this */ this__0;
+            |          return packOkResult#0(/* this */ this__0);
             |        }
             |        @QName("test-library/bubble-ordering.type Apple.constructor()") constructor__0(this = this__1, @QName("test-library/bubble-ordering.type Apple.constructor().(this)") @impliedThis(Apple) this__1: Apple) {
-            |          return;
+            |          return void;
             |        }
             |      }
-            |      @QName("test-library/bubble-ordering.fuji") let fuji: Apple;
+            |      let fuji#0: Apple | Bubble = /*new*/ Apple().maybe();
             |      module init {
-            |        fuji = hs (fail#0, /*new*/ Apple().maybe());
-            |        if (fail#0) {
-            |          abortLoad;
+            |        if (!isOkResult#0(fuji#0)) {
+            |          abortLoad ();
             |        }
             |      }
-            |      @QName("test-library/bubble-ordering.gala") let gala: Apple;
+            |      @QName("test-library/bubble-ordering.fuji") let fuji: Apple = unpackOkResult#0(fuji#0);
+            |      let gala#0: Apple | Bubble = /*new*/ Apple().maybe();
             |      module init {
-            |        gala = hs (fail#1, /*new*/ Apple().maybe());
-            |        if (fail#1) {
-            |          abortLoad;
+            |        if (!isOkResult#0(gala#0)) {
+            |          abortLoad ();
             |        }
             |      }
+            |      @QName("test-library/bubble-ordering.gala") let gala: Apple = unpackOkResult#0(gala#0);
             |      @QName("test-library/bubble-ordering.juggle()") let juggle(@QName("test-library/bubble-ordering.juggle().(some)") some__0: Int32): Apple {
             |        @QName("test-library/bubble-ordering.juggle().return") let return__0: Apple;
             |        if (nym`<=#24`(some__0, 0)) {
@@ -3220,7 +3262,7 @@ class TmpLBackendTest {
                 |}
             """.trimMargin(),
             supportNetwork = defaultTestSupportNetwork.copy(
-                bubbleStrategy = BubbleBranchStrategy.CatchBubble,
+                bubbleStrategy = BubbleBranchStrategy.Exceptions,
             ),
         )
     }
@@ -3420,20 +3462,23 @@ class TmpLBackendTest {
             |        //// work//foo/ => foo.tmpl
             |        let nym`==#7` = builtins.nym`==` /* (Int32?, Int32?) -> Boolean */;
             |        let nym`%#8` = builtins.nym`%` /* (Int32, Int32) -> Result<Int32, Bubble> */;
+            |        let isOkResult#0 = builtins.isOkResult /* <isOkResultPASS extends AnyValue, isOkResultFAIL extends AnyValue>(Result<isOkResultPASS, isOkResultFAIL>) -> Boolean */;
+            |        let unpackOkResult#0 = builtins.unpackOkResult /* <unpackOkResultPASS extends AnyValue, unpackOkResultFAIL extends AnyValue>(Result<unpackOkResultPASS, unpackOkResultFAIL>) -> unpackOkResultPASS */;
+            |        let packOkResult#0 = builtins.packOkResult /* <packOkResultPASS extends AnyValue, packOkResultFAIL extends AnyValue>(packOkResultPASS) -> Result<packOkResultPASS, packOkResultFAIL> */;
             |        @QName("test-library/foo.mod()") @reach(\none) let mod__0(@QName("test-library/foo.mod().(n)") n__0: Int32, @QName("test-library/foo.mod().(d)") d__0: Int32): Int32 | Bubble {
             |          @QName("test-library/foo.mod().return") let return__0: Int32;
             |          fn__0: {
-            |            @fail var fail#0: Boolean;
             |            if (!nym`==#7`(d__0, 0)) {
-            |              return__0 = hs (fail#0, nym`%#8`(n__0, d__0));
-            |              if (fail#0) {
-            |                return failure;
+            |              let return#0: Int32 | Bubble = nym`%#8`(n__0, d__0);
+            |              if (!isOkResult#0(return#0)) {
+            |                return return#0;
             |              }
+            |              return__0 = unpackOkResult#0(return#0);
             |              break fn__0;
             |            }
             |            return failure;
             |          }
-            |          return return__0;
+            |          return packOkResult#0(return__0);
             |        }
             |
             |        ```
@@ -3719,7 +3764,7 @@ class TmpLBackendTest {
             |          @QName("test-library/foo.type StringBoxes.s") @constructorProperty let s__0: String;
             |          @QName("test-library/foo.type StringBoxes.constructor()") constructor__0(this = this__0, @QName("test-library/foo.type StringBoxes.constructor().(this)") @impliedThis(StringBoxes) this__0: StringBoxes, @QName("test-library/foo.type StringBoxes.constructor().(s)") s__1: String) {
             |            /* this */ this__0.s__0 = s__1;
-            |            return;
+            |            return void;
             |          }
             |          get.s -> gets__0(this = this__1, @impliedThis(StringBoxes) this__1: StringBoxes): String {
             |            return /* this */ this__1.s__0;
@@ -3730,15 +3775,14 @@ class TmpLBackendTest {
             |            return x__0;
             |          }
             |          @QName("test-library/foo.type Identity.constructor()") constructor__1(this = this__3, @QName("test-library/foo.type Identity.constructor().(this)") @impliedThis(Identity<T__0>) this__3: Identity<T__0>) {
-            |            return;
+            |            return void;
             |          }
             |        }
             |        @QName("test-library/foo.logStringOrNot()") let logStringOrNot__0(@QName("test-library/foo.logStringOrNot().(s)") s__2: StringBoxes): Void {
             |## Here are the injected box and unbox calls.
             |          @QName("test-library/foo.logStringOrNot().t=") let t__0: StringBoxes = unbox#0(/*new*/ Identity().identity(box#0(s__2)));
-            |          var t#0: String = t__0.s;
-            |          ConsoleLog#0(console#0, t#0);
-            |          return;
+            |          ConsoleLog#0(console#0, t__0.s);
+            |          return void;
             |        }
             |        module init {
             |          logStringOrNot__0(/*new*/ StringBoxes("Hello, World!"));
@@ -3815,26 +3859,29 @@ class TmpLBackendTest {
             |    foo.tmpl: {
             |      content: ```
             |        //// work//foo/ => foo.tmpl
-            |        @fail var fail#0: Boolean;
+            |        let packOkResult#0 = builtins.packOkResult /* <packOkResultPASS extends AnyValue, packOkResultFAIL extends AnyValue>(packOkResultPASS) -> Result<packOkResultPASS, packOkResultFAIL> */;
+            |        let isOkResult#0 = builtins.isOkResult /* <isOkResultPASS extends AnyValue, isOkResultFAIL extends AnyValue>(Result<isOkResultPASS, isOkResultFAIL>) -> Boolean */;
+            |        let unpackOkResult#0 = builtins.unpackOkResult /* <unpackOkResultPASS extends AnyValue, unpackOkResultFAIL extends AnyValue>(Result<unpackOkResultPASS, unpackOkResultFAIL>) -> unpackOkResultPASS */;
             |        @QName("test-library/foo.m") var m__0: Int32 = 0;
             |        @QName("test-library/foo.f()") let f__0(): Int32 | Null | Bubble {
             |          m__0 = 5;
-            |          return m__0;
+            |          return packOkResult#0(m__0);
             |        }
-            |        @QName("test-library/foo.n") let n: Int32 | Null;
+            |## This bubbly type on a declaration is intentional.  Ideally it would render as a result type.
+            |        let n#0: Int32 | Null | Bubble = f__0();
             |        module init {
-            |          n = hs (fail#0, f__0());
-            |          if (fail#0) {
-            |            abortLoad;
+            |          if (!isOkResult#0(n#0)) {
+            |            abortLoad ();
             |          }
             |        }
+            |        @QName("test-library/foo.n") let n: Int32 | Null = unpackOkResult#0(n#0);
             |
             |        ```
             |    },
             |    foo.tmpl.map: "__DO_NOT_CARE__",
             |  }
             |}
-        """.trimMargin(),
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
     @Test
@@ -3877,7 +3924,7 @@ class TmpLBackendTest {
             |            return 42;
             |          }
             |          @QName("test-library/foo.type C.constructor()") constructor__0(this = this__2, @QName("test-library/foo.type C.constructor().(this)") @impliedThis(C) this__2: C) {
-            |            return;
+            |            return void;
             |          }
             |        }
             |
@@ -4016,7 +4063,7 @@ class TmpLBackendTest {
             |          }
             |          @QName("test-library/foo.type Callable.constructor()") constructor__0(this = this__1, @QName("test-library/foo.type Callable.constructor().(this)") @impliedThis(Callable<Return__0>) this__1: Callable<Return__0>, @QName("test-library/foo.type Callable.constructor().(func)") func__1: fn (): Return__0) {
             |            /* this */ this__1.func__0 = func__1;
-            |            return;
+            |            return void;
             |          }
             |        }
             |        @QName("test-library/foo.hello()") let hello__0(): String {
@@ -4148,7 +4195,7 @@ class TmpLBackendTest {
             |        }
             |        @QName("test-library/foo.f()") let f<T__0 extends Foo>(@QName("test-library/foo.f().(x)") x__0: T__0): Void {
             |          x__0.foo();
-            |          return;
+            |          return void;
             |        }
             |
             |        ```

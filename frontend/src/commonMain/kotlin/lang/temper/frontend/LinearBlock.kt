@@ -12,7 +12,9 @@ import lang.temper.value.TEdge
  * This is like getting the maximal paths and seeing if there is one basic block that
  * starts at the entry and ends at the exit.
  */
-fun getBlockChildrenInOrderIfLinear(block: BlockTree): List<TEdge>? = when (val flow = block.flow) {
+fun getBlockChildrenInOrderIfLinear(
+    block: BlockTree,
+): List<TEdge>? = when (val flow = block.flow) {
     is StructuredFlow -> {
         val edges = mutableListOf<TEdge>()
         fun walk(cf: ControlFlow): Boolean {

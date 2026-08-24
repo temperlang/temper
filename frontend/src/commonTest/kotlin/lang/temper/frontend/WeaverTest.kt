@@ -1174,6 +1174,7 @@ class WeaverTest {
                 structureBlock(block).controlFlow,
                 assumeAllJumpsResolved = false,
                 assumeResultsCaptured = true,
+                assumeUseBeforeInitChecked = runMakeResultsExplicit,
                 logicalOperators = BuiltinLogicalOperators,
             ),
         )

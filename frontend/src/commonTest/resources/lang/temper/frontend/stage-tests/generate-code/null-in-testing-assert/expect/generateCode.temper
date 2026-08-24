@@ -21,7 +21,6 @@
           };
           return__8 = cat("expected c0.optionalString == (", "", ") not (", t#9, ")")
       });
-      fn__11;
 ## Here's the assertion predicate
       do_call_assert(test#0, actual#6 == "", fn__11)
   })

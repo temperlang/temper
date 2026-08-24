@@ -1099,7 +1099,6 @@ Statement =
     | Assignment
     | BreakStatement
     | ContinueStatement
-    | HandlerScope
     | LocalDeclaration
     | LocalFunctionDeclaration
     | ModuleInitFailed
@@ -1127,18 +1126,7 @@ NestingStatement(nestedStatements%Statement*"");
 JumpUpStatement = BreakStatement | ContinueStatement;
 JumpUpStatement(label%JumpLabel?);
 
-/** Identifies an operation that may fail. */
-Handled = Expression | SetAbstractProperty;
-/**
- * [failed] is set to `true` when [handled] fails, or `false` otherwise.
- * The result is the result of [handled] when it passes,
- * or [BubbleSentinel] otherwise.
- */
-HandlerScope ::= "hs" & "(" & failed%Id & "," & handled%Handled & ")";
-
-/** That which may be assigned to a something that can hold a value. */
-RightHandSide = Expression | HandlerScope;
-Assignment ::= left%Id & "=" & right%RightHandSide & ";";
+Assignment ::= left%Id & "=" & right%Expression & ";";
 Assignment.operatorDefinition = `TmpLOperatorDefinition.Eq`;
 Assignment(type%`Type2`);
 
@@ -1195,7 +1183,7 @@ ReturnStatement ::= "return" & (expression%Expression || ()) & ";";
  * May appear within a [ModuleInitBlock] to abort module initialization when
  * un-handled failure occurs during module initialization.
  */
-ModuleInitFailed ::= "abortLoad" & ";";
+ModuleInitFailed ::= "abortLoad" & "(" & ")" & ";";
 
 IfStatement ::=
       "if" & "(" & test%Expression & ")"

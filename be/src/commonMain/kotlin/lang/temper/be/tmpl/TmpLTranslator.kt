@@ -153,7 +153,6 @@ import lang.temper.value.impliedThisSymbol
 import lang.temper.value.importedSymbol
 import lang.temper.value.initSymbol
 import lang.temper.value.isBubbleCall
-import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.isNewCall
 import lang.temper.value.isYieldCall
 import lang.temper.value.parameterNameSymbolsListSymbol
@@ -500,14 +499,16 @@ class TmpLTranslator internal constructor(
         }
         var returnLabel: ResolvedName? = null
         class TranslateModuleExit : GoalTranslator {
+            override val bodyFor get() = BodyForModule
             override val translator: TmpLTranslator get() = this@TmpLTranslator
 
             override fun translateFreeFailure(p: Position): Stmt {
                 return when (cfOptions.nrbStrategy) {
-                    BubbleBranchStrategy.CatchBubble -> OneStmt(TmpL.ThrowStatement(p))
-                    BubbleBranchStrategy.IfHandlerScopeVar -> Stmts(
+                    BubbleBranchStrategy.Exceptions -> OneStmt(TmpL.ThrowStatement(p))
+                    BubbleBranchStrategy.Results -> Stmts(
                         p,
                         listOfNotNull(
+                            // TODO: should this be a panic?
                             outputName?.let {
                                 TmpL.Assignment(
                                     pos = p,
@@ -532,7 +533,7 @@ class TmpLTranslator internal constructor(
             }
 
             override fun translateJump(p: Position, kind: BreakOrContinue, target: JumpSpecifier): Stmt =
-                DefaultGoalTranslator(translator).translateJump(p, kind, target)
+                untranslatable(p, "$kind $target")
         }
 
         var (translation, md) = translateTopLevels(rootBlock, outputName, TranslateModuleExit())
@@ -660,7 +661,6 @@ class TmpLTranslator internal constructor(
                     is TmpL.BreakStatement,
                     is TmpL.ComputedJumpStatement,
                     is TmpL.ExpressionStatement,
-                    is TmpL.HandlerScope,
                     is TmpL.IfStatement,
                     is TmpL.LabeledStatement,
                     is TmpL.ModuleInitFailed,
@@ -1069,29 +1069,8 @@ class TmpLTranslator internal constructor(
         }
         is CallTree -> when {
             isYieldCall(tree) -> OneStmt(TmpL.YieldStatement(tree.pos)) // TODO: yielded value expression
-            isAssignmentCall(tree) -> Stmts(tree.pos, translateAssignment(tree, null))
-            isSetPropertyCall(tree) -> translateSetP(tree, failedId = null)
-            isHandlerScopeCall(tree) -> {
-                val failedTree = tree.child(1) as LeftNameLeaf
-                val failedName = failedTree.content as ResolvedName
-                val handledTree = tree.child(2)
-                if (isAssignmentCall(handledTree)) {
-                    val assignment = handledTree as CallTree
-                    val failedId = TmpL.Id(failedTree.pos, failedName)
-                    Stmts(tree.pos, translateAssignment(assignment, failedId))
-                } else {
-                    if (isSetPropertyCall(handledTree)) {
-                        val failedId = TmpL.Id(failedTree.pos, failedName)
-                        translateSetP(handledTree, failedId = failedId)
-                    } else {
-                        val statement = when (val call = translateHandlerScopeCallByStrategy(tree)) {
-                            is TmpL.Statement -> call
-                            is TmpL.Expression -> TmpL.ExpressionStatement(call)
-                        }
-                        OneStmt(statement)
-                    }
-                }
-            }
+            isAssignmentCall(tree) -> Stmts(tree.pos, translateAssignment(tree))
+            isSetPropertyCall(tree) -> translateSetP(tree)
             isBubbleCall(tree) -> OneStmt(TmpL.ThrowStatement(tree.pos))
             isRemCall(tree) -> translatedEmbeddedComment(tree)
             // Setter invocations are statement-like but the others
@@ -1116,19 +1095,17 @@ class TmpLTranslator internal constructor(
      */
     private fun translateAssignment(
         tree: CallTree,
-        failId: TmpL.Id?,
     ): List<TmpL.Statement> {
         require(isAssignmentCall(tree))
         val left = tree.child(1) as LeftNameLeaf
         val rightTree = tree.child(2)
-        return translateAssignment(tree.pos, left = left, right = rightTree, failId = failId)
+        return translateAssignment(tree.pos, left = left, right = rightTree)
     }
 
     private fun translateAssignment(
         pos: Position,
         left: LeftNameLeaf,
         right: Tree,
-        failId: TmpL.Id?,
     ): List<TmpL.Statement> {
         val leftName = left.content as ResolvedName
         var rightTree = right
@@ -1147,22 +1124,8 @@ class TmpLTranslator internal constructor(
             statements.addAll(translatedDeclaration.stmtList)
             rightTree = RightNameLeaf(rightTree.document, rightTree.pos, fnName)
         }
-        if (failId != null) {
-            statements.add(
-                TmpL.Assignment(
-                    pos.leftEdge,
-                    failId.deepCopy(),
-                    TmpL.ValueReference(pos.leftEdge, TBoolean.valueFalse),
-                    booleanType2,
-                ),
-            )
-        }
 
-        var rightExpr = if (isHandlerScopeCall(rightTree)) {
-            translateHandlerScopeCallByStrategy(rightTree)
-        } else {
-            translateExpression(rightTree)
-        }
+        var rightExpr = translateExpression(rightTree)
 
         if (rightExpr is TmpL.ValueReference) {
             // Value-references do not have constructors, so there is no opportunity
@@ -1188,10 +1151,7 @@ class TmpLTranslator internal constructor(
         return statements.toList()
     }
 
-    private fun translateSetP(
-        setPCall: Tree,
-        failedId: TmpL.Id?,
-    ): Stmt {
+    private fun translateSetP(setPCall: Tree): OneStmt {
         val pos = setPCall.pos
         val (_, propNameTree, objTree, rightTree) = setPCall.children
 
@@ -1208,25 +1168,7 @@ class TmpLTranslator internal constructor(
             translateExpression(rightTree),
         )
 
-        return if (failedId != null) {
-            Stmts(
-                pos,
-                listOf(
-                    // TODO: Figure out how setp can fail?
-                    // Does it check types for the right and/or obj?
-                    // If it can't, mark it as not failing per se.
-                    TmpL.Assignment(
-                        pos.leftEdge,
-                        failedId,
-                        TmpL.ValueReference(pos.leftEdge, TBoolean.valueFalse),
-                        booleanType2,
-                    ),
-                    setpStatement,
-                ),
-            )
-        } else {
-            OneStmt(setpStatement)
-        }
+        return OneStmt(setpStatement)
     }
 
     private fun translatePattern(tree: Tree): TmpL.Id? = when (tree) {
@@ -1769,10 +1711,6 @@ class TmpLTranslator internal constructor(
                 // Should be captured by statement processing.
                 BuiltinFuns.setLocalFn, BuiltinFuns.setpFn -> {
                     translation = untranslatableExpr(tree.pos, "misplaced assignment")
-                }
-                // Should be captured by statement processing.
-                BuiltinFuns.handlerScope -> {
-                    translation = untranslatableExpr(tree.pos, "misplaced hs")
                 }
                 BuiltinFuns.getpFn -> {
                     if (tree.size == GETP_ARITY) {
@@ -2523,35 +2461,35 @@ class TmpLTranslator internal constructor(
 
         var bodyReturned = false
         class TranslateFunctionExit : GoalTranslator {
+            override val bodyFor = BodyForFun(sig)
             override val translator: TmpLTranslator get() = this@TmpLTranslator
             override val supportNetwork: SupportNetwork get() = this@TmpLTranslator.supportNetwork
             override fun translateExit(p: Position): Stmt {
                 bodyReturned = true
-                return OneStmt(
-                    TmpL.ReturnStatement(
-                        p,
-                        when (output) {
-                            null -> null
-                            else -> {
-                                val outputNameLeaf = output.second.name
-                                val rightName = outputNameLeaf.copyRight()
-                                rightName.typeInferences = outputNameLeaf.typeInferences
-                                translator.translateExpression(rightName)
-                            }
-                        },
-                    ),
-                )
+                return PreTranslated.Return(
+                    p,
+                    when (output) {
+                        null -> null
+                        else -> {
+                            val outputNameLeaf = output.second.name
+                            val rightName = outputNameLeaf.copyRight()
+                            rightName.typeInferences = outputNameLeaf.typeInferences
+                            PreTranslated.TreeWrapper(rightName)
+                        }
+                    },
+                    bodyFor,
+                ).toStatement(translator)
             }
 
             override fun translateFreeFailure(p: Position): Stmt = OneStmt(
                 when (nrbStrategy) {
-                    BubbleBranchStrategy.IfHandlerScopeVar -> TmpL.ReturnStatement(p, TmpL.BubbleSentinel(p))
-                    BubbleBranchStrategy.CatchBubble -> TmpL.ThrowStatement(p)
+                    BubbleBranchStrategy.Results -> TmpL.ReturnStatement(p, TmpL.BubbleSentinel(p))
+                    BubbleBranchStrategy.Exceptions -> TmpL.ThrowStatement(p)
                 },
             )
 
             override fun translateJump(p: Position, kind: BreakOrContinue, target: JumpSpecifier): Stmt =
-                DefaultGoalTranslator(translator).translateJump(p, kind, target)
+                untranslatable(p, "$kind $target")
         }
 
         var convertYields = false
@@ -2709,7 +2647,7 @@ class TmpLTranslator internal constructor(
                 )
             }
         }
-        simplifyFunctionBodyParts(bodyParts)
+        simplifyFunctionBodyParts(bodyParts, pool)
         val bodyBlock = TmpL.BlockStatement(bodyTree.pos, bodyParts.toList())
 
         check(!mayYield || coroutineStrategy == CoroutineStrategy.TranslateToGenerator)
@@ -2785,39 +2723,6 @@ class TmpLTranslator internal constructor(
             )
             is Either.Right -> OneStmt(t.item)
         }
-    }
-
-    private fun translateHandlerScopeCallByStrategy(tree: Tree) = when (nrbStrategy) {
-        BubbleBranchStrategy.IfHandlerScopeVar -> translateHandlerScopeCall(tree as CallTree)
-        // Account for caveat in .operationTried in TmpLControlFlow.
-        BubbleBranchStrategy.CatchBubble -> translateExpression(tree.child(2))
-    }
-
-    private fun translateHandlerScopeCall(callTree: CallTree): TmpL.HandlerScope {
-        check(isHandlerScopeCall(callTree))
-        val failedTree = callTree.child(1) as LeftNameLeaf
-        val failedName = failedTree.content as ResolvedName
-
-        val handledTree = callTree.child(2)
-        val handled = if (isDotHelperCall(handledTree)) {
-            when (val translation = translateDotHelperCall(handledTree as CallTree)) {
-                is OneExpr -> translation.expr
-                is OneStmt -> when (val stmt = translation.stmt) {
-                    is TmpL.ExpressionStatement -> stmt.expression
-                    is TmpL.Handled -> stmt
-                    else -> null
-                }
-                else -> null
-            } ?: garbageExpr(handledTree.pos, "unhandleable dot operation")
-        } else {
-            translateExpression(handledTree)
-        }
-
-        return TmpL.HandlerScope(
-            callTree.pos,
-            TmpL.Id(failedTree.pos, failedName),
-            handled,
-        )
     }
 
     private fun translatedEmbeddedComment(tree: Tree): Stmt {
@@ -3203,9 +3108,6 @@ internal fun isVoidLikeAssignment(tree: Tree) = isAssignmentCall(tree) && hasVoi
 
 internal fun dotHelperFromCallOrNull(tree: Tree): DotHelper? =
     (tree as? CallTree)?.childOrNull(0)?.functionContained as? DotHelper
-
-internal fun isDotHelperCall(tree: Tree): Boolean =
-    dotHelperFromCallOrNull(tree) != null
 
 internal fun isSetterCall(tree: Tree): Boolean =
     dotHelperFromCallOrNull(tree)?.memberAccessor is SetMemberAccessor

@@ -95,12 +95,16 @@ internal fun convertCoroutineToControlFlow(
     val valueResultTypeExport = CoreModule.module.exports!!.first { it.name.baseName.nameText == "ValueResult" }
     val doneResultType = MkType2(WellKnownTypes.doneResultTypeDefinition).get()
 
-    val yieldedTypeActual = typeContext2.superTypeTreeOf(generatorType)[
+    val superTypeTree = typeContext2.superTypeTreeOf(generatorType)
+    val yieldedTypeActual = superTypeTree[
         WellKnownTypes.generatorTypeDefinition,
     ].firstOrNull()?.bindings?.getOrNull(0)
         ?: WellKnownTypes.invalidType2
 
-    fun doneResultExpr(): PreTranslated {
+    val bodyFor = BodyForFun(
+        TODO(),
+    )
+    fun doneResultExpr(): PreTranslated.TreeWrapper {
         return PreTranslated.TreeWrapper(
             document.treeFarm.grow(rPos) {
                 val doneResultOldType = hackMapNewStyleToOld(doneResultType)
@@ -116,7 +120,11 @@ internal fun convertCoroutineToControlFlow(
             },
         )
     }
-    fun valueResultExpr(pos: Position, yielded: Either<ResolvedName, Value<*>>, type: Type2): PreTranslated {
+    fun valueResultExpr(
+        pos: Position,
+        yielded: Either<ResolvedName, Value<*>>,
+        type: Type2,
+    ): PreTranslated.TreeWrapper {
         return PreTranslated.TreeWrapper(
             document.treeFarm.grow(pos) {
                 Call(pos.leftEdge, New, type = valueResultCtorSig(type)) {
@@ -142,7 +150,7 @@ internal fun convertCoroutineToControlFlow(
     //    We may need a second one.  If the path branches conditionally to two
     //    or more others, then any side effects in those conditions need to
     //    happen after resumption, which means that we need to set the case index
-    //    to another one that does the tests, and picks another case index.
+    //    to another one that does the tests and picks another case index.
     // C. We build a list of cases based on the allocations above by translating
     //    path elements, translating any `yield` to `return` after setting
     //    the case index for the follower.
@@ -210,7 +218,7 @@ internal fun convertCoroutineToControlFlow(
     //    The case index is set to the follow-on index BEFORE the yield so that
     //    the conditions are checked first, upon resuming.
     //
-    //    And `await` doesn't here because we replaced with `yield` above.
+    //    And `await` doesn't here, because we replaced with `yield` above.
     val pathIndexToCaseIndices = buildMap {
         var caseIndexCounter = 0
         maximalPaths.maximalPaths.forEach { path ->
@@ -241,7 +249,7 @@ internal fun convertCoroutineToControlFlow(
             }
         }
     }
-    // We initialize the case variable to 0 so this had better hold.
+    // We initialize the case variable to 0, so this had better hold.
     val (caseIndexName, caseIndexDecl) =
         combinedDeclarationForIntVar("caseIndex", isConst = false) {
             // This should always be zero, but it's easy enough to compute.
@@ -249,13 +257,13 @@ internal fun convertCoroutineToControlFlow(
             V(Value(startCaseIndex, TInt), type = WellKnownTypes.intType)
         }
 
-    // Here's where we accumulate the variables pulled out into the wrapper in (D)
+    // Here's where we accumulate the variables pulled out into the wrapper in (D),
     // but first, just capture the case index declaration from (A)
     val persistentDeclarations = mutableListOf<PreTranslated>(caseIndexDecl)
 
     // Step (C): build the case list.
     // But first, some helpers.
-    // setCaseInstruction -> `caseIndex = 123;`
+    // setCaseInstruction -> `caseIndex = 123`
     fun setCaseInstruction(newCaseIndex: Int): PreTranslated {
         return PreTranslated.TreeWrapper(
             tree.document.treeFarm.grow(rPos) {
@@ -295,7 +303,16 @@ internal fun convertCoroutineToControlFlow(
         val nextCaseIndex = follower.pathIndex?.let {
             pathIndexToCaseIndices.getValue(it).first
         }
-        val condTree = condition?.ref?.let { tree.dereference(it)?.target }
+        val condTree = when (condition) {
+            is MaximalPath.Bubbled -> {
+                // TODO: we probably need a control-flow with either result-semantics and flow
+                // based on !isOkResult(...) or a way to put try around all instructions that need
+                // it and catch blocks that just transition to the `else` branch state.
+                TODO("$condition")
+            }
+            is MaximalPath.AstElement -> tree.dereference(condition.ref)?.target
+            null -> null
+        }
         return if (condTree == null) {
             maybeCombineIntoBlock(
                 if (nextCaseIndex != null) {
@@ -425,9 +442,9 @@ internal fun convertCoroutineToControlFlow(
                         )
                     } to type
                 }
-                add(PreTranslated.Return(yieldingPos, valueResultExpr(yieldingPos, yielded, yieldedType)))
+                add(PreTranslated.Return(yieldingPos, valueResultExpr(yieldingPos, yielded, yieldedType), bodyFor))
             } else if (isTerminal) {
-                add(PreTranslated.Return(rPos, doneResultExpr()))
+                add(PreTranslated.Return(rPos, doneResultExpr(), bodyFor))
             }
 
             // Combine declarations where possible.
@@ -470,10 +487,10 @@ internal fun convertCoroutineToControlFlow(
             Rn(caseIndexName, type = WellKnownTypes.intType)
         }
 
-    val elseCase = PreTranslated.Return(rPos, doneResultExpr())
+    val elseCase = PreTranslated.Return(rPos, doneResultExpr(), bodyFor)
 
     // Step (D): Figure out which declarations to extract.
-    // If something is used in a different case than it's declared then
+    // If something is used in a different case than it's declared, then
     // we need to extract it.
     class StepDUseRecord(
         val caseDeclaring: Int,
@@ -737,7 +754,7 @@ private fun convertAwaitToYield(
     nameMaker: NameMaker,
     supportNetwork: SupportNetwork,
 ): BlockTree {
-    // First see if there's any await in the first place before doing copies.
+    // First, see if there's any await in the first place before doing copies.
     var anyAwait = false
     TreeVisit.startingAt(tree).forEach anyAwait@{ node ->
         node is FunTree && return@anyAwait VisitCue.SkipOne
@@ -751,7 +768,7 @@ private fun convertAwaitToYield(
         // No await, so nothing to transform.
         return tree
     }
-    // Work on a copy of the tree so don't modify common data for just one backend.
+    // Work on a copy of the tree, so don't modify common data for just one backend.
     val copy = tree.copy(copyInferences = true) as BlockTree
     TreeVisit.startingAt(copy).forEach nodes@{ node ->
         node is FunTree && return@nodes VisitCue.SkipOne
@@ -787,7 +804,7 @@ fun convertAwaitToYield(
     nameMaker: NameMaker,
     supportNetwork: SupportNetwork,
 ) {
-    // Gather the awaits, and replace each `await` with `getPromiseResultSync` on first pass.
+    // Gather the `await`s, and replace each `await` with `getPromiseResultSync` on first pass.
     class AwaitInfo(val promiseTree: Tree, val unhandledFailVar: TemperName?)
     val awaits = mutableListOf<Pair<Int, AwaitInfo>>()
     stmts@ for ((index, stmt) in flow.stmts.withIndex()) {
@@ -798,7 +815,6 @@ fun convertAwaitToYield(
         yieldingDetails.kind == YieldingFnKind.await || continue@stmts
         val yieldingCall = yieldingDetails.yieldingCall
         val promiseTree = yieldingCall.child(1)
-        var unhandledFailVar: TemperName? = null
         val yieldingIncoming = yieldingCall.incoming!!
         yieldingIncoming.replace { _ ->
             val yielded = yieldingCall.typeInferences?.type ?: InvalidType
@@ -811,16 +827,20 @@ fun convertAwaitToYield(
             )
             Call(GetPromiseResultSyncFn, type = getPromiseResultSyncCallType) {
                 when (supportNetwork.bubbleStrategy) {
-                    BubbleBranchStrategy.IfHandlerScopeVar -> null
-                    BubbleBranchStrategy.CatchBubble -> yieldingDetails.failVar?.let { failVar ->
+                    BubbleBranchStrategy.Results -> null
+                    BubbleBranchStrategy.Exceptions -> TODO(
+                        """
+                    yieldingDetails.failVar?.let { failVar ->
                         unhandledFailVar = failVar
                         Rn(failVar, type = WellKnownTypes.booleanType)
                     }
+                    """,
+                    )
                 } ?: V(TNull.value, type = MkType.nullable(WellKnownTypes.booleanType))
                 Replant(freeTree(promiseTree))
             }
         }
-        awaits.add(index to AwaitInfo(promiseTree, unhandledFailVar))
+        awaits.add(index to AwaitInfo(promiseTree, null)) // TODO: rework this to use resulting temporary.
     }
     // Now rebuild the stmt block if we had any awaits.
     if (awaits.isNotEmpty()) {
@@ -830,7 +850,7 @@ fun convertAwaitToYield(
             newStmts.clear()
             for ((index, stmt) in flow.stmts.withIndex()) {
                 while (index == awaitPair?.first) {
-                    // Extract temporary if the promise isn't a simple name reference.
+                    // Extract the temporary if the promise isn't a simple name reference.
                     val promiseRef = when (val promiseTree = awaitPair!!.second.promiseTree) {
                         is RightNameLeaf -> promiseTree.copy(copyInferences = true) as RightNameLeaf
                         else -> {
@@ -906,7 +926,7 @@ fun convertAwaitToYield(
                         // Former comments:
                         // Set the fail var to false before testing.
                         // This has the side effect of making it apparent that
-                        // the fail var is really a left hand side.
+                        // the fail var is really a left-hand side.
                         // TODO(): Use a LeftName above which would mean we
                         // need GetPromiseResultSync to have its own TmpL variant.
                         tree.insert {

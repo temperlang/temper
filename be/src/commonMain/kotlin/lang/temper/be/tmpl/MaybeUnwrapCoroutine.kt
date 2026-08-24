@@ -14,7 +14,7 @@ import lang.temper.value.functionContained
 import lang.temper.value.wrappedGeneratorFnSymbol
 
 internal fun maybeUnwrapCoroutine(body: Tree, returnDecl: DeclTree): Pair<FunTree, AdaptGeneratorFn>? {
-    // Look for a pattern in body.
+    // Look for a pattern like this in the body.
     //
     //     let fn__123;
     //     fn__123 = @wrappedGeneratorFn fn ...;

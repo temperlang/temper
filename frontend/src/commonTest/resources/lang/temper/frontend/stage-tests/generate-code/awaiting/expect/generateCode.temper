@@ -11,10 +11,8 @@ fn__8 = (@stay fn /* return__4 */{
         do_call_complete(pb__0, "Hello, World!");
         return__2 = (fn doneResult)<Empty>()
     });
-    fn__7;
     return__4 = adaptGeneratorFnSafe(fn__7)
 });
-fn__8;
 async(fn__8);
 t#6 = await p__1;
 do_call_log(console#3, t#6)

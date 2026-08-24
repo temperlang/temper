@@ -1,5 +1,6 @@
 package lang.temper.be.tmpl
 
+import lang.temper.builtin.Assign
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.Types
 import lang.temper.common.ListBackedLogSink
@@ -13,8 +14,12 @@ import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedNameMaker
+import lang.temper.type.MkType
+import lang.temper.type.TypeTestHarness
+import lang.temper.type.WellKnownTypes
 import lang.temper.value.BlockTree
 import lang.temper.value.BreakOrContinue
+import lang.temper.value.CallTypeInferences
 import lang.temper.value.Document
 import lang.temper.value.JumpSpecifier
 import lang.temper.value.Planting
@@ -30,6 +35,8 @@ class TmpLControlFlowTest {
         override val supportNetwork: SupportNetwork,
         override val cfOptions: CfOptions,
     ) : GoalTranslator {
+        override val bodyFor get() = TODO("Not yet implemented")
+
         override val translator: TmpLTranslator
             get() = TODO("Not yet implemented")
 
@@ -47,10 +54,9 @@ class TmpLControlFlowTest {
     }
 
     private fun assertFlow(
-        /** */
         want: String,
         expectedErrors: List<String> = emptyList(),
-        nrbStrategy: BubbleBranchStrategy = BubbleBranchStrategy.IfHandlerScopeVar,
+        nrbStrategy: BubbleBranchStrategy = BubbleBranchStrategy.Results,
         representationOfVoid: RepresentationOfVoid = RepresentationOfVoid.ReifyVoid,
         makeBlock: (Planting).(ResolvedNameMaker) -> UnpositionedTreeTemplate<BlockTree>,
     ) {
@@ -154,28 +160,25 @@ class TmpLControlFlowTest {
         val a = nameMaker.unusedSourceName(ParsedName("A"))
         val t1 = nameMaker.unusedTemporaryName("t")
         val t2 = nameMaker.unusedTemporaryName("t")
-        val fail = nameMaker.unusedTemporaryName("fail")
-        Block {
-            Decl(fail) {}
-            Decl(t1) {}
-            Decl(t2) {}
-            Decl(a) {} // This declaration should slide forward to group with its initializer
-            Call(BuiltinFuns.setLocalFn) {
-                Ln(t1)
-                V(Value(123, TInt))
-            }
-            Call(BuiltinFuns.setLocalFn) {
-                Ln(t2)
-                Call(BuiltinFuns.handlerScope) {
-                    Ln(fail)
-                    Call {
-                        Rn(BuiltinName("f"))
+        TypeTestHarness("").run {
+            val intType = WellKnownTypes.intType
+            val noneToInt = MkType.fn(listOf(), listOf(), null, intType)
+            Block {
+                Decl { Ln(t1, intType) }
+                Decl { Ln(t2, intType) }
+                Decl { Ln(a, intType) } // This declaration should slide forward to group with its initializer
+                Assign(t1, intType) {
+                    V(Value(123, TInt), intType)
+                }
+                Assign(t2, intType) {
+                    Call(type = CallTypeInferences(intType, noneToInt, mapOf(), listOf())) {
+                        Rn(BuiltinName("f"), noneToInt)
                     }
                 }
-            }
-            Call(BuiltinFuns.setLocalFn) {
-                Ln(a)
-                Rn(t2)
+                Call(BuiltinFuns.setLocalFn) {
+                    Ln(a, intType)
+                    Rn(t2, intType)
+                }
             }
         }
     }

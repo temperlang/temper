@@ -308,6 +308,7 @@ internal class MakeResultsExplicit private constructor(
             } else {
                 prefixWith(listOf(resultDecl), root)
             }
+        } else {
         }
 
         prefixBlockWith(newDeclarations, root)

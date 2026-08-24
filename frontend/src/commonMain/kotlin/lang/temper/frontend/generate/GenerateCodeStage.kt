@@ -144,11 +144,12 @@ class GenerateCodeStage(
         }
 
         Debug.Frontend.GenerateCodeStage.SimplifyFlow2(configKey)
-            .benchmarkIf(BENCHMARK, "TrimLooseThreads") {
+            .benchmarkIf(BENCHMARK, "SimplifyFlow2") {
                 simplifyFlow(
                     root,
                     assumeAllJumpsResolved = true,
                     assumeResultsCaptured = true,
+                    assumeUseBeforeInitChecked = true,
                 ) calledFor effect
             }
 

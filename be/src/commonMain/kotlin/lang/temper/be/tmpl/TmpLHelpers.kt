@@ -1273,11 +1273,7 @@ fun TmpL.Statement.isYieldingStatement(): Boolean =
 
         is TmpL.YieldStatement -> true
         is TmpL.ExpressionStatement -> expression is TmpL.AwaitExpression
-        is TmpL.HandlerScope -> handled is TmpL.AwaitExpression
-        is TmpL.Assignment -> when (val right = this.right) {
-            is TmpL.Expression -> right is TmpL.AwaitExpression
-            is TmpL.HandlerScope -> right.isYieldingStatement()
-        }
+        is TmpL.Assignment -> right is TmpL.AwaitExpression
 
         is TmpL.BlockStatement ->
             this.statements.any { it.isYieldingStatement() }

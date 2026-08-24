@@ -176,6 +176,15 @@ fun simplifyControlFlow(
      * results are stored in output variables.
      */
     assumeResultsCaptured: Boolean,
+    /**
+     * True if compilation has reached a point where bare references,
+     * which are sometimes inserted by the *Weaver*, can be assumed to
+     * be garbage, because the IR no longer needs to preserve references
+     * that are never used for a result to later be able to flag them
+     * as errors if they refer to something that has not been declared
+     * or initialized.
+     */
+    assumeUseBeforeInitChecked: Boolean,
     logicalOperators: LogicalOperators,
 ): StructuredFlow {
     val nameMaker = block.document.nameMaker
@@ -798,7 +807,12 @@ fun simplifyControlFlow(
                         trimmedStmtList[i] as? ControlFlow.Stmt ?: continue
                     if (sawStmtAfter || assumeResultsCaptured) {
                         val t = block.dereference(stmt.ref)?.target
-                        if (t is ValueLeaf && (assumeResultsCaptured || t.content == void)) {
+                        val eraseIt = when (t) {
+                            is ValueLeaf -> assumeResultsCaptured || t.content == void
+                            is RightNameLeaf -> assumeUseBeforeInitChecked
+                            else -> false
+                        }
+                        if (eraseIt) {
                             trimmedStmtList.removeAt(i)
                         }
                     } else {
@@ -909,6 +923,7 @@ fun simplifyStructuredBlock(
     flow: StructuredFlow,
     assumeAllJumpsResolved: Boolean,
     assumeResultsCaptured: Boolean,
+    assumeUseBeforeInitChecked: Boolean,
     logicalOperators: LogicalOperators,
 ) {
     val newFlow = simplifyControlFlow(
@@ -916,6 +931,7 @@ fun simplifyStructuredBlock(
         flow.controlFlow,
         assumeAllJumpsResolved = assumeAllJumpsResolved,
         assumeResultsCaptured = assumeResultsCaptured,
+        assumeUseBeforeInitChecked = assumeUseBeforeInitChecked,
         logicalOperators = logicalOperators,
     )
     block.replaceFlow(newFlow)

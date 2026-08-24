@@ -14,7 +14,7 @@ import lang.temper.type2.Signature2
  * `!`[snippet/builtin/false] is [snippet/builtin/true] and vice versa.
  */
 @HelpSnippet("Boolean inverse", "builtin/!")
-object NotFn : NamedBuiltinFun, CallableValue {
+object NotFn : NamedBuiltinFun, BuiltinStatelessCallableValue {
     override val name: String = "!"
     override val callMayFailPerSe: Boolean get() = false
     override val builtinOperatorId = BuiltinOperatorId.BooleanNegation

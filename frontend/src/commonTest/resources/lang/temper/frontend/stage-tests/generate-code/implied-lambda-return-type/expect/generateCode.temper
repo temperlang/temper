@@ -8,6 +8,5 @@ h__3 = (@stay fn h /* return__1 */: Void {
     fn__8 = (@stay fn /* return__7 */{
         return__7 = "hi"
     });
-    fn__8;
     f__2(fn__8)
 })

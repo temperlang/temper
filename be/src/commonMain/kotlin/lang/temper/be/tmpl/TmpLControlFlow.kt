@@ -12,6 +12,7 @@ import lang.temper.format.OutputToken
 import lang.temper.format.OutputTokenType
 import lang.temper.format.TokenSink
 import lang.temper.frontend.core.CoreModule
+import lang.temper.frontend.structureBlock
 import lang.temper.interp.LongLivedUserFunction
 import lang.temper.interp.docgenalts.DocGenAltFn
 import lang.temper.interp.docgenalts.DocGenAltIfFn
@@ -50,24 +51,20 @@ import lang.temper.value.EscTree
 import lang.temper.value.FunTree
 import lang.temper.value.JumpLabel
 import lang.temper.value.LeftNameLeaf
-import lang.temper.value.LinearFlow
 import lang.temper.value.NameLeaf
 import lang.temper.value.NamedJumpSpecifier
 import lang.temper.value.RightNameLeaf
 import lang.temper.value.StayLeaf
-import lang.temper.value.StructuredFlow
 import lang.temper.value.TFunction
 import lang.temper.value.TVoid
 import lang.temper.value.Tree
 import lang.temper.value.UnresolvedJumpSpecifier
 import lang.temper.value.ValueLeaf
-import lang.temper.value.failSymbol
 import lang.temper.value.fromTypeSymbol
 import lang.temper.value.functionContained
 import lang.temper.value.initSymbol
 import lang.temper.value.isBubbleCall
 import lang.temper.value.isEmptyBlock
-import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.isPanicCall
 import lang.temper.value.jumpKind
 import lang.temper.value.ssaSymbol
@@ -87,7 +84,7 @@ internal fun translateFlow(
     outputName: TemperName?,
     /**
      * If null, do not do a state machine conversion.
-     * If non-null, the type of the generator produced.
+     * If non-null, the type of the generator that is produced.
      */
     stateMachineConversionType: Type2? = null,
 ): PreTranslated {
@@ -100,11 +97,11 @@ internal fun translateFlow(
         }
     }
 
-    // First we recover structure.  This allows us to have all the adjacent "statements" in blocks
+    // First, we recover structure.  This allows us to have all the adjacent "statements" in blocks
     // so that we can merge adjacent declarations and initializers.
     // Once all our ducks are in a row, we produce something that the translator can interpret in
     // an expression/statement/top-level context as needed.
-    val flow = tree.flow
+    val flow = structureBlock(tree)
     val flowTranslator = ControlFlowTranslator(goalTranslator, nameMaker, options)
     var preTranslated = when {
         stateMachineConversionType != null -> convertCoroutineToControlFlow(
@@ -116,16 +113,8 @@ internal fun translateFlow(
             generatorType = stateMachineConversionType,
             ::translateBlockChild,
         )
-        flow is StructuredFlow -> {
+        else ->
             flowTranslator.translate(flow.controlFlow, tree)
-        }
-        else -> {
-            check(flow is LinearFlow)
-            PreTranslated.Block(
-                tree.pos,
-                tree.children.map { translateBlockChild(it) },
-            )
-        }
     }
 
     if (options.representationOfVoid == RepresentationOfVoid.DoNotReifyVoid) {
@@ -154,7 +143,7 @@ private fun translateAltDocGenFn(
         // We use a thunk so that translation happens in-order.
 
         // If there's not an `else`, then we need to fill in PreTranslated.If.alternate with
-        // an empty block.  That's the case when the last index is odd as seen below.
+        // an empty block.  That's the case when the last index is odd, as seen below.
 
         // if (b) { x } else if (c) { y } else { z }   Conditions 1 3   Bodies 2 4 5  Last 5
         // if (b) { x } else if (c) { y }              Conditions 1 3   Bodies 2 4    Last 4
@@ -194,7 +183,11 @@ private fun translateAltDocGenFn(
         // Translations are thunked so they happen in order.
         translation()
     }
-    is DocGenAltReturnFn -> PreTranslated.Return(t.pos, PreTranslated.TreeWrapper(t.child(1)))
+    is DocGenAltReturnFn -> PreTranslated.Return(
+        t.pos,
+        PreTranslated.TreeWrapper(t.child(1)),
+        goalTranslator.bodyFor as BodyForFun,
+    )
     is DocGenAltWhileFn -> PreTranslated.WhileLoop(
         t.pos,
         test = PreTranslated.TreeWrapper(t.child(1)),
@@ -649,14 +642,45 @@ internal sealed class PreTranslated : Positioned {
 
     data class Return(
         override val pos: Position,
-        val expr: PreTranslated?,
+        val expr: TreeWrapper?,
+        val bodyFor: BodyForFun,
     ) : PreTranslated() {
-        override fun toStatement(translator: TmpLTranslator, parent: PreTranslated?) = OneStmt(
-            TmpL.ReturnStatement(
-                pos,
-                expr?.toExpression(translator),
-            ),
-        )
+        override fun toStatement(translator: TmpLTranslator, parent: PreTranslated?): OneStmt {
+            var returned = expr
+            if (
+                returned != null &&
+                bodyFor.sig.returnType2.definition == WellKnownTypes.resultTypeDefinition &&
+                translator.supportNetwork.bubbleStrategy == BubbleBranchStrategy.Results
+            ) {
+                // We're expecting to return a backend-specific result value, so we need to
+                // pack up any passing result as a result.
+                val returnedTree = returned.tree
+                val returnedType = returnedTree.typeInferences?.type?.let { hackMapOldStyleToNew(it) }
+                if (returnedType?.definition != WellKnownTypes.resultTypeDefinition) {
+                    // Check whether we're packing up a result.  It would be odd to pack a result
+                    // and then unpack it.
+                    if (
+                        returnedTree is CallTree && returnedTree.size == 2 &&
+                        returnedTree.child(0).functionContained == ResultHelperFnPlaceholders.UnpackOkResult
+                    ) {
+                        returned = TreeWrapper(returnedTree.child(1))
+                    } else {
+                        val (passType, failType) = bodyFor.sig.returnType2.bindings
+                        returned = TreeWrapper(
+                            synthesizeCall(
+                                returnedTree.document, returnedTree.pos,
+                                ResultHelperFnPlaceholders.PackOkResult,
+                                listOf(returnedTree.copy(copyInferences = true)),
+                                typeActuals = listOf(passType, failType),
+                            ),
+                        )
+                    }
+                }
+            }
+            return OneStmt(
+                TmpL.ReturnStatement(pos, returned?.toExpression(translator)),
+            )
+        }
 
         override fun diagnosticToTokenSink(tokenSink: TokenSink) {
             tokenSink.emit(OutToks.returnWord)
@@ -793,17 +817,11 @@ private class ControlFlowTranslator(
     val options: CfOptions,
 ) {
     /**
-     * Variables that have [failSymbol] metadata so which track whether a
-     * [handler scope][isHandlerScopeCall] call succeeded.
-     */
-    val failVars = mutableSetOf<ResolvedName>()
-
-    /**
      * Labels defined on [ControlFlow.OrElse] that are currently in the scope of the
      * or-clause being processed.
      * Breaking to these simulates a local transfer to bubble-handling code
      */
-    val orElseJumpLabels = mutableSetOf<ResolvedName>()
+    val orElseJumpLabels = OrElseJumpLabels()
 
     private fun untranslatable(p: Position): PreTranslated = PreTranslated.TreeWrapper(
         goalTranslator.translator.document.treeFarm.grow {
@@ -823,7 +841,7 @@ private class ControlFlowTranslator(
         if (isBubbleCall(effectiveTree) || isPanicCall(effectiveTree)) {
             return PreTranslated.Goal(ref.pos, FreeFailure, goalTranslator)
         }
-        // But go back to original if not, in case someone has a more elaborate plan later.
+        // But go back to the original if not, in case someone has a more elaborate plan later.
         return PreTranslated.TreeWrapper(tree)
     }
 
@@ -869,15 +887,16 @@ private class ControlFlowTranslator(
                         var isEffectivelyThrow = false
                         val jumpLabel = label.jumpLabel
                         if (
-                            options.nrbStrategy == BubbleBranchStrategy.CatchBubble &&
-                            jumpLabel != null && jumpLabel in orElseJumpLabels
+                            options.nrbStrategy == BubbleBranchStrategy.Exceptions &&
+                            jumpLabel != null
                         ) {
-                            val parent = cf.parent as ControlFlow.StmtBlock?
-                            // Look for if (fail#123) { break orelse#234 }
-                            val grandParent = parent?.parent
-                            isEffectivelyThrow = !checksFailVarAndBubbles(grandParent, root)
+                            // TODO: do we need some way to jump past the innermost
+                            // catch?
+                            isEffectivelyThrow = jumpLabel in orElseJumpLabels
                         }
                         if (isEffectivelyThrow) {
+                            // We can't actually break to the or-else's label if we're
+                            // translating it to try/catch.
                             PreTranslated.TreeWrapper(
                                 root.document.treeFarm.grow(cf.pos) {
                                     Call(BubbleFn) {}
@@ -905,7 +924,7 @@ private class ControlFlowTranslator(
             val orElseJumpLabel = cf.orClause.breakLabel
 
             when (options.nrbStrategy) {
-                BubbleBranchStrategy.IfHandlerScopeVar -> {
+                BubbleBranchStrategy.Results -> {
                     // O orelse E
                     //
                     // ->
@@ -936,7 +955,9 @@ private class ControlFlowTranslator(
                                         orElseJumpLabel,
                                     ),
                                     buildPTBlock(cf.orClause.pos) {
+                                        orElseJumpLabels.add(orElseJumpLabel)
                                         add(translate(cf.orClause.stmts, root))
+                                        orElseJumpLabels.remove(orElseJumpLabel)
                                         add(
                                             PreTranslated.Break(
                                                 cf.orClause.pos.rightEdge,
@@ -954,7 +975,7 @@ private class ControlFlowTranslator(
                     )
                 }
 
-                BubbleBranchStrategy.CatchBubble -> {
+                BubbleBranchStrategy.Exceptions -> {
                     orElseJumpLabels.add(orElseJumpLabel)
                     val tried = translate(cf.orClause.stmts, root)
                     orElseJumpLabels.remove(orElseJumpLabel)
@@ -983,128 +1004,19 @@ private class ControlFlowTranslator(
 
         fun add(pt: PreTranslated) {
             if (pt is PreTranslated.Block) {
-                pt.unfixedElements.forEach { add(it) }
-                return
-            }
-            var toAdd: PreTranslated? = pt
-            if (options.nrbStrategy == BubbleBranchStrategy.CatchBubble) {
-                // hs(..., expr) -> expr
-                @Suppress("UNNECESSARY_NOT_NULL_ASSERTION") // To IDE, it's not; to CLI, it is.
-                toAdd = unpackHandlerScopeCall(toAdd!!) ?: toAdd
-                if (toAdd is PreTranslated.TreeWrapper) {
-                    val t = toAdd.tree
-                    val declParts = (t as? DeclTree)?.parts
-                    if (declParts != null) {
-                        if (failSymbol in declParts.metadataSymbolMultimap) {
-                            // var fail#123 -> nothing
-                            failVars.add(declParts.name.content as ResolvedName)
-                            toAdd = null
-                        }
-                    }
+                elements.addAll(pt.unfixedElements)
+            } else {
+                val adjusted =
+                    adjustForBubbles(pt, goalTranslator, orElseJumpLabels)
+                if (adjusted != null) {
+                    elements.addAll(adjusted)
+                } else {
+                    elements.add(pt)
                 }
-                if (toAdd is PreTranslated.If) {
-                    // if (fail#123) { bubble() } -> nothing
-                    if (checksFailVarAndBubbles(toAdd)) {
-                        toAdd = null
-                    }
-                }
-            }
-
-            if (toAdd != null) {
-                elements.add(toAdd)
             }
         }
 
         fun toList() = elements.toList()
-    }
-
-    fun unpackHandlerScopeCall(expr: PreTranslated): PreTranslated? {
-        val t = (expr as? PreTranslated.TreeWrapper)?.tree
-        if (t is CallTree) {
-            if (isHandlerScopeCall(t)) {
-                val failVar = (t.child(1) as? LeftNameLeaf)?.content
-                if (failVar is ResolvedName) {
-                    failVars.add(failVar)
-                    return PreTranslated.TreeWrapper(t.child(2))
-                }
-            } else if (isAssignmentCall(t)) {
-                val left = t.child(1)
-                val right = t.child(2)
-                if (left is LeftNameLeaf && right is CallTree && isHandlerScopeCall(right)) {
-                    val failVar = (right.child(1) as? LeftNameLeaf)?.content
-                    if (failVar is ResolvedName) {
-                        failVars.add(failVar)
-                    }
-                    // We can't split it down further without mutating the tree which
-                    // backends are not allowed to do, so TmpLTranslator specially handles
-                    // assignments of `hs` calls.
-                    return expr
-                }
-            }
-        }
-        return null
-    }
-
-    // Like `if (fail#123) { bubble() }`
-    fun checksFailVarAndBubbles(cf: ControlFlow?, blockTree: BlockTree): Boolean {
-        if (cf is ControlFlow.If && cf.elseClause.isEmptyBlock()) {
-            val test = blockTree.dereference(cf.condition)?.target
-            if (test is RightNameLeaf && test.content in failVars) {
-                val body = cf.thenClause
-                if (body.stmts.size == 1) {
-                    val stmt = body.stmts[0]
-                    if (
-                        stmt is ControlFlow.Break &&
-                        (stmt.target as? NamedJumpSpecifier)?.label?.let {
-                            it in orElseJumpLabels
-                        } == true
-                    ) {
-                        return true
-                    }
-                    if (stmt is ControlFlow.Stmt) {
-                        val tree = blockTree.dereference(stmt.ref)?.target
-                        if (tree != null && isBubbleCall(tree)) {
-                            return true
-                        }
-                    }
-                }
-            }
-        }
-        return false
-    }
-    fun checksFailVarAndBubbles(pt: PreTranslated): Boolean {
-        if (pt is PreTranslated.If && pt.alternate.isEmptyBlock) {
-            val test = (pt.test as? PreTranslated.TreeWrapper)?.tree
-            if (test is RightNameLeaf && test.content in failVars) {
-                var body = pt.consequent
-                if (body is PreTranslated.Block && body.unfixedElements.size == 1) {
-                    body = body.unfixedElements[0]
-                }
-                when (val goal = (body as? PreTranslated.Goal)?.goal) {
-                    is FreeFailure -> {
-                        // A transfer out of the current function
-                        return true
-                    }
-                    is JumpGoalSpecifier -> {
-                        if (goal.kind == BreakOrContinue.Break) {
-                            val label = (goal.target as? NamedJumpSpecifier)?.label
-                            if (label != null && label in orElseJumpLabels) {
-                                // A local failure transfer
-                                return true
-                            }
-                        }
-                    }
-                    null, ExitGoalSpecifier -> {}
-                }
-                if (body is PreTranslated.Break) {
-                    val jumpLabel = body.label.jumpLabel
-                    if (jumpLabel != null && jumpLabel in orElseJumpLabels) {
-                        return true
-                    }
-                }
-            }
-        }
-        return false
     }
 }
 
@@ -1597,7 +1509,6 @@ private fun migrateDeclarationsOutOfSyntheticBlocks(
 private fun translatesToExpression(t: Tree) = when (t) {
     is BlockTree -> false
     is CallTree -> when {
-        isHandlerScopeCall(t) -> false
         isAssignmentCall(t) -> false
         isSetPropertyCall(t) -> false
         else -> true
@@ -1745,7 +1656,7 @@ private fun removeReferencesAndAssignmentsToVoid(
  *       x = fallback;
  *     }
  *
- * and we turn that into
+ * We turn that into:
  *
  *     let x__0: SameTypeAsX; // Not marked assignOnce
  *     try {
@@ -1819,7 +1730,7 @@ private fun migrateConstAssignmentsOutOfTryCatch(
         }
     }
 
-    // After the try/catch we write the new names back to the original names.
+    // After the try/catch, we write the new names back to the original names.
     val rightEdge = pos.rightEdge
     val writeBack = buildList {
         // Assign to values.
@@ -1919,7 +1830,7 @@ internal fun simplifyGeneratorFnReturns(body: PreTranslated, returnName: Resolve
             }
             return if (callee is RightNameLeaf) {
                 val calleeName = callee.content as? ResolvedName
-                // Is it the name of `@export let doneResult = new DoneResult()` from core.temper
+                // True if it's the name of `@export let doneResult = new DoneResult()` from core.temper.
                 calleeName is ExportedName && calleeName.origin.loc is CoreCodeLocation &&
                     calleeName.baseName == doneResultParsedName
             } else {
@@ -1933,9 +1844,6 @@ internal fun simplifyGeneratorFnReturns(body: PreTranslated, returnName: Resolve
 }
 
 private val doneResultParsedName = ParsedName("doneResult") // defined in core.temper
-
-private val PreTranslated.isEmptyBlock get() =
-    this is PreTranslated.Block && this.unfixedElements.isEmpty()
 
 // Apply an operation to each simple statement, recursing through loops and conditions.
 private fun forEachLeafStmt(
