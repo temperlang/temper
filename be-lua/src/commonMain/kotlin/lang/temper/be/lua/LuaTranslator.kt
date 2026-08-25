@@ -2515,11 +2515,11 @@ private class ModuleParts(
         val withLocals = luaChunk(
             pos,
             buildList {
-                addAll(imports)
-                addAll(preDecls)
                 if (connectedSource != null) {
                     add(Lua.Connected(pos, connectedSource))
                 }
+                addAll(imports)
+                addAll(preDecls)
                 addAll(globalFuncs)
                 addAll(topLevels)
                 addAll(exports)

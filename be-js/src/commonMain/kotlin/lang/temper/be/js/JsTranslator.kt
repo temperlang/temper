@@ -210,13 +210,16 @@ internal class JsTranslator(
         val prodImports = filterImports(prodModuleParts.topLevels, imports)
         prodModuleParts.explicitImports.addAll(prodImports)
         if (hasConnected) {
+            val relativePath = t.codeLocation.codeLocation.relativePath()
+            // All except top-level connecteds go down a subdir along with temper-built submodules.
+            val dirName = relativePath.segments.lastOrNull()?.fullName?.let { "./$it" } ?: "."
             Js.ImportDeclaration(
                 t.pos,
                 specifiers = Js.ImportNamespaceSpecifier(
                     t.pos,
                     Js.Identifier(t.pos, connectedName, null),
                 ).let { listOf(it) },
-                source = Js.StringLiteral(t.pos, "./_connected.js"),
+                source = Js.StringLiteral(t.pos, "$dirName/_connected.js"),
             ).also { prodModuleParts.explicitImports.add(it) }
         }
 

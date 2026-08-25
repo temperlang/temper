@@ -2143,6 +2143,91 @@ class JavaBackendTest {
     )
 
     @Test
+    fun connected() = assertGeneratedJavaRaw(
+        inputs = inputFileMapFromJson(
+            // Test using a submodule.
+            """
+                |{
+                |  sub: {
+                |    things.temper: ```
+                |      @connected
+                |      export let sum(i: Int, j: Int, bonus: Int = 0): Int;
+                |      export let inc(i: Int): Int {
+                |          sum(i, 1)
+                |      }
+                |      ```,
+                |    SubConnected.java: ```
+                |      package my_test_library.sub;
+                |
+                |      class SubConnected {
+                |          static int sum(int i, int j, int bonus) {
+                |              return i + j + bonus;
+                |          }
+                |      }
+                |      ```,
+                |  },
+                |  other: {
+                |    thing: {
+                |      Whatever.java: ```
+                |        package my_test_library.other.thing;
+                |
+                |        class Whatever {}
+                |        ```,
+                |    },
+                |  },
+                |}
+            """.trimMargin(),
+        ),
+        want = """
+            |src: { main: { java: { my_test_library: {
+            |  MyTestLibraryGlobal.java: "__DO_NOT_CARE__",
+            |  MyTestLibraryMain.java: "__DO_NOT_CARE__",
+            |  "sub": {
+            |      "SubMain.java": "__DO_NOT_CARE__",
+            |      "SubGlobal.java": {
+            |          "content": ```
+            |            package my_test_library.sub;
+            |            import temper.core.Nullable;
+            |            public final class SubGlobal {
+            |                private SubGlobal() {
+            |                }
+            |                public static int sum(int i__0, int j__0, @Nullable Integer bonus__0) {
+            |                    int return__0;
+            |                    int bonus__1;
+            |                    if (bonus__0 == null) {
+            |                        bonus__1 = 0;
+            |                    } else {
+            |                        bonus__1 = bonus__0;
+            |                    }
+            |                    return SubConnected.sum(i__0, j__0, bonus__1);
+            |                }
+            |                public static int sum(int i__0, int j__0) {
+            |                    return sum(i__0, j__0, null);
+            |                }
+            |                public static int inc(int i__1) {
+            |                    return SubGlobal.sum(i__1, 1);
+            |                }
+            |            }
+            |
+            |            ```,
+            |      },
+            |## Connected code gets copied into same package dir.
+            |      "SubConnected.java": "__DO_NOT_CARE__",
+            |      "SubMain.java.map": "__DO_NOT_CARE__",
+            |      "SubGlobal.java.map": "__DO_NOT_CARE__",
+            |  },
+            |## Other raw files also get copied into package dirs by temper module dir.
+            |  "other": {
+            |      "thing": {
+            |          "Whatever.java": "__DO_NOT_CARE__",
+            |      },
+            |  },
+            |} } } },
+            |pom.xml: "__DO_NOT_CARE__"
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
+    @Test
     fun stringIndexOptionComparison() {
         assertGeneratedJava(
             """

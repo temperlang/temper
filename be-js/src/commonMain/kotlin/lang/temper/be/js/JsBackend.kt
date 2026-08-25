@@ -221,9 +221,10 @@ class JsBackend private constructor(
             }
         }
         // Connected files.
+        val rootSize = libraryConfigurations.currentLibraryConfiguration.libraryRoot.segments.size
         val connectedFiles = rawBackendFiles.map { file ->
             MetadataFileSpecification(
-                path = FilePath(file.key.segments.subListToEnd(1), isDir = false),
+                path = FilePath(file.key.segments.subListToEnd(rootSize), isDir = false),
                 mimeType = MimeType.javascript,
                 content = file.value,
             )

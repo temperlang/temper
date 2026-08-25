@@ -130,7 +130,8 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
             // Copy connected code.
             for (file in rawBackendFiles) {
                 // Put rust connected modules into a subdir, under "src/" but skipping library name.
-                val connectedDir = file.key.dirName().resolveDir("_connected").segments.subListToEnd(1)
+                val rootSize = libraryConfiguration.libraryRoot.segments.size
+                val connectedDir = file.key.dirName().resolveDir("_connected").segments.subListToEnd(rootSize)
                 val fileName = when (val fileName = file.key.last().fullName) {
                     "_connected.rs" -> "mod.rs"
                     else -> fileName

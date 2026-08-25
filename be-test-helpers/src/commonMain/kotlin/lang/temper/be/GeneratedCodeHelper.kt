@@ -17,7 +17,9 @@ import lang.temper.frontend.StagingFlags
 import lang.temper.frontend.staging.ModuleAdvancer
 import lang.temper.frontend.staging.ModuleConfig
 import lang.temper.frontend.staging.partitionSourceFilesIntoModules
+import lang.temper.fs.FileClassification
 import lang.temper.fs.FileFilterRules
+import lang.temper.fs.FileSystem
 import lang.temper.fs.FilteringFileSystemSnapshot
 import lang.temper.fs.MemoryFileSystem
 import lang.temper.fs.NullSystemAccess
@@ -187,6 +189,10 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
             } else {
                 NullSystemAccess(outputRoot.path.resolve(backendLib), cancelGroup)
             }
+            val extensions = factory.backendMeta.fileExtensionMap.values.toSet()
+            val rawBackendFiles = sourceTree.gatherFilesSync { filePath ->
+                filePath.lastOrNull()?.extension?.let { it in extensions } == true
+            }
             this[config] = factory.make(
                 BackendSetup(
                     config.libraryName,
@@ -197,6 +203,7 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
                     logSink,
                     NullDependencyResolver,
                     backendConfig,
+                    rawBackendFiles = rawBackendFiles,
                 ),
             )
         }
@@ -215,4 +222,25 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
         }
         throw e
     }
+}
+
+/**
+ * Map file paths to the textual content of files. Only [keep] files that can be
+ * decoded as UTF-8.
+ */
+fun FileSystem.gatherFilesSync(keep: (FilePath) -> Boolean): Map<FilePath, String> = buildMap {
+    fun addFiles(path: FilePath) {
+        when (classify(path)) {
+            FileClassification.File -> if (keep(path)) {
+                put(path, readBinaryFileContentSync(path).result!!.decodeToString())
+            }
+            FileClassification.Directory -> {
+                for (kid in directoryListing(path).result!!) {
+                    addFiles(kid)
+                }
+            }
+            FileClassification.DoesNotExist -> {}
+        }
+    }
+    addFiles(dirPath())
 }

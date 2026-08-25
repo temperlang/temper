@@ -3,6 +3,7 @@ package lang.temper.be.rust
 import lang.temper.be.Backend
 import lang.temper.be.assertGeneratedCode
 import lang.temper.be.inputFileMapFromJson
+import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.log.FilePath
 import lang.temper.log.filePath
 import lang.temper.name.DashedIdentifier
@@ -184,6 +185,92 @@ class RustBackendTest {
             |  }
             |}
         """.trimMargin(),
+    )
+
+    @Test
+    fun connected() = assertGeneratedFileTree(
+        inputs = inputFileMapFromJson(
+            """
+                |{
+                |## Test using a submodule.
+                |  sub: {
+                |    things.temper: ```
+                |      @connected
+                |      export let sum(i: Int, j: Int, bonus: Int = 0): Int;
+                |      export let inc(i: Int): Int {
+                |          sum(i, 1)
+                |      }
+                |      ```,
+                |    _connected.rs: ```
+                |## This submodule declaration in connected code is why we make a subdir later.
+                |      mod whatever;
+                |      pub(crate) fn sum(i: i32, j: i32, bonus: i32) -> i32 {
+                |          i + j + bonus
+                |      }
+                |      ```,
+                |## Include a bonus rust file to show where it ends up relative to connected code.
+                |    whatever.rs: ```
+                |      // Content doesn't matter.
+                |      ```,
+                |  },
+                |}
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        ),
+        want = """
+            |{
+            |  rust: {
+            |    my-test-library: {
+            |      Cargo.toml: "__DO_NOT_CARE__",
+            |      src: {
+            |        lib.rs: "__DO_NOT_CARE__",
+            |        lib.rs.map: "__DO_NOT_CARE__",
+            |        main.rs: "__DO_NOT_CARE__",
+            |        sub: {
+            |          mod.rs: {
+            |            content: ```
+            |              #![allow(warnings)]
+            |              #![allow(dependency_on_unit_never_type_fallback)]
+            |              mod _connected;
+            |              use temper_core::AnyValueTrait;
+            |              use temper_core::AsAnyValue;
+            |              use temper_core::Pair;
+            |              pub (crate) fn init() -> temper_core::Result<()> {
+            |                  static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |                  INIT_ONCE.get_or_init(| |{
+            |                          Ok(())
+            |                  }).clone()
+            |              }
+            |              pub fn sum(i__0: i32, j__0: i32, bonus__0: Option<i32>) -> i32 {
+            |                  let bonus__1: i32;
+            |                  if bonus__0.is_none() {
+            |                      bonus__1 = 0;
+            |                  } else {
+            |                      bonus__1 = bonus__0.unwrap();
+            |                  }
+            |                  _connected::sum(i__0, j__0, bonus__1)
+            |              }
+            |              pub fn inc(i__1: i32) -> i32 {
+            |                  return sum(i__1, 1, None);
+            |              }
+            |
+            |              ```
+            |          },
+            |          _connected: {
+            |## Raw rust code goes into this subdir so other raw files are below it.
+            |## The original "_connected.rs" gets renamed to "mod.rs", which leaves it
+            |## effectively still just named `_connected`, and "whatever.rs" is now
+            |## `_connected::whatever` relative to anything above.
+            |            mod.rs: "__DO_NOT_CARE__",
+            |            whatever.rs: "__DO_NOT_CARE__",
+            |          },
+            |          mod.rs.map: "__DO_NOT_CARE__",
+            |        },
+            |        $SUPPORT_FILES_DO_NOT_CARE
+            |      }
+            |    }
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
     @Test

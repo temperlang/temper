@@ -1,4 +1,4 @@
-local _connected = {};
+local _connected = {}
 
 do
   local s = require("work._support")

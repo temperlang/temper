@@ -699,6 +699,87 @@ class PyBackendTest {
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
+    @Test
+    fun connected() = assertGeneratedCode(
+        inputs = inputFileMapFromJson(
+            """
+            |{
+            |## Test using a submodule.
+            |  foo: {
+            |    foo.temper: ```
+            |      @connected
+            |      export let sum(i: Int, j: Int, bonus: Int = 0): Int;
+            |      export let inc(i: Int): Int {
+            |          sum(i, 1)
+            |      }
+            |      ```,
+            |    __connected__.py: ```
+            |## All connected code goes into a single `_connected` namespace, using a class here.
+            |      class _connected:
+            |          from ._support import Support
+            |
+            |          def sum(i: int, j: int, bonus: int) -> int:
+            |              return i + j + bonus
+            |
+            |      ```,
+            |## Include this bonus file *without* an explicit temper module at the
+            |## same level to prove we still get a dir for the translated module.
+            |    _support.py: ```
+            |      class Support:
+            |          pass
+            |      ```,
+            |  },
+            |}
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        ),
+        want = """
+            |{
+            |  py: {
+            |    my-test-library: {
+            |      my_test_library: {
+            |        foo: {
+            |          __init__.py: {
+            |            content:
+            |              ```
+            |## Here's the connected code inlined into the primary module *before* imports.
+            |              class _connected:
+            |                  from ._support import Support
+            |
+            |                  def sum(i: int, j: int, bonus: int) -> int:
+            |                      return i + j + bonus
+            |## Translated code starts here.
+            |              from builtins import int as int1
+            |              from typing import Union as Union2
+            |              from temper_core import bubble as bubble0
+            |              bubble_12 = bubble0
+            |              def sum(i_2: 'int1', j_3: 'int1', bonus_8: 'Union2[int1, None]' = None, /) -> 'int1':
+            |                  _bonus_8: 'Union2[int1, None]' = bonus_8
+            |                  return_0: 'int1'
+            |                  bonus_4: 'int1'
+            |                  if _bonus_8 is None:
+            |                      bonus_4 = 0
+            |                  else:
+            |                      bonus_4 = _bonus_8
+            |## Here's the connected call.
+            |                  return _connected.sum(i_2, j_3, bonus_4)
+            |              def inc(i_6: 'int1', /) -> 'int1':
+            |                  return sum(i_6, 1)
+            |
+            |              ```,
+            |          },
+            |## And here's the support file next to the primary module.
+            |          _support.py: "__DO_NOT_CARE__",
+            |          __init__.py.map: "__DO_NOT_CARE__",
+            |        },
+            |        "__init__.py": "__DO_NOT_CARE__",
+            |        "__init__.py.map": "__DO_NOT_CARE__"
+            |      },
+            |    },
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
     private fun assertGeneratedCode(
         inputs: List<Pair<FilePath, String>>,
         want: String,

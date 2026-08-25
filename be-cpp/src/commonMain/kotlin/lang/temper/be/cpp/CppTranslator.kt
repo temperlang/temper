@@ -3361,7 +3361,13 @@ class CppTranslator(
                         buildList {
                             add(cpp.include("$modPath$hppName"))
                             if (hasConnected) {
-                                add(cpp.includeLocal("_connected.hpp"))
+                                val connectedIncludePath = "_connected.hpp".let { connectedIncludeName ->
+                                    when {
+                                        relPath.segments.isEmpty() -> connectedIncludeName
+                                        else -> "$moduleBaseName/$connectedIncludeName"
+                                    }
+                                }
+                                add(cpp.includeLocal(connectedIncludePath))
                             }
                             addAll(namespaced(implVarDecls + impl))
                         },
