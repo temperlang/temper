@@ -668,7 +668,7 @@ class CSharpBackendTest {
     fun generatorTranslation() = assertGeneratedGlobalClass(
         temper = """
             |let callIt(f: fn (): SafeGenerator<Empty>): Void {
-            |  f().next();
+            |  f().nextSafe();
             |}
             |
             |callIt { (): GeneratorResult<Empty> extends GeneratorFn =>
@@ -713,7 +713,7 @@ class CSharpBackendTest {
         // See explanation on YieldOrDoNotYieldThereIsNoTry.
         temper = """
             |let callIt(f: fn (): SafeGenerator<Empty>): Void {
-            |  f().next();
+            |  f().nextSafe();
             |}
             |
             |let mayFail(s: String): Void throws Bubble {
@@ -1302,12 +1302,14 @@ class CSharpBackendTest {
         temper = """
             |export interface Base<T> { f(): T? }
             |
+            |// This used to return just `Int`, but we disallow that now.
+            |// So this test case is less interesting than before.
             |export class C extends Base<Int> {
-            |  public f(): Int { 0 }
+            |  public f(): Int? { 0 }
             |}
             |
             |// The initializer needs unboxing because C.f's type is adjusted to C::Optional<int>
-            |export let i: Int = new C().f();
+            |export let i: Int = new C().f() ?? 0;
         """.trimMargin(),
         classes = mapOf(
             "IBase" to Content(
@@ -1332,7 +1334,7 @@ class CSharpBackendTest {
                     |    {
                     |        return C::Optional.Of<int>(f__0());
                     |    }
-                    |    int f__0()
+                    |    int ? f__0()
                     |    {
                     |        return 0;
                     |    }
@@ -1350,9 +1352,18 @@ class CSharpBackendTest {
                     |public static class TestGlobal
                     |{
                     |    public static int I;
+                    |    internal static int ? t___0;
                     |    static TestGlobal()
                     |    {
-                    |        I = C::Optional.ToNullable<int>(new C().F());
+                    |        t___0 = C::Optional.ToNullable<int>(new C().F());
+                    |        if (t___0 == null)
+                    |        {
+                    |            I = 0;
+                    |        }
+                    |        else
+                    |        {
+                    |            I = t___0.Value;
+                    |        }
                     |    }
                     |}
                 """.trimMargin(),

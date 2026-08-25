@@ -281,11 +281,14 @@ key order would lead to brittle unmarshalling.
         content.toString()
       }
 
-      public asInt32(): Int { content }
+      public asInt32(): Int throws Bubble { content }
+      public asInt32Safe(): Int { content }
 
-      public asInt64(): Int64 { content.toInt64() }
+      public asInt64(): Int64 throws Bubble { asInt64Safe() }
+      public asInt64Safe(): Int64 { content.toInt64() }
 
-      public asFloat64(): Float64 { content.toFloat64() }
+      public asFloat64(): Float64 throws Bubble { asFloat64Safe() }
+      public asFloat64Safe(): Float64 { content.toFloat64() }
     }
 
     export class JsonInt64(
@@ -301,7 +304,8 @@ key order would lead to brittle unmarshalling.
 
       public asInt32(): Int throws Bubble { content.toInt32() }
 
-      public asInt64(): Int64 { content }
+      public asInt64(): Int64 throws Bubble { content }
+      public asInt64Safe(): Int64 { content }
 
       public asFloat64(): Float64 throws Bubble { content.toFloat64() }
     }
@@ -321,7 +325,8 @@ key order would lead to brittle unmarshalling.
 
       public asInt64(): Int64 throws Bubble { content.toInt64() }
 
-      public asFloat64(): Float64 { content }
+      public asFloat64(): Float64 throws Bubble { content }
+      public asFloat64Safe(): Float64 { content }
     }
 
     export class JsonNumericToken(
@@ -692,7 +697,8 @@ valid JSON, but if given a string that is not valid JSON, it has a syntax error.
 
       public get jsonError(): String? { error }
 
-      public get parseErrorReceiver(): JsonParseErrorReceiver { this }
+      public get parseErrorReceiver(): JsonParseErrorReceiver? { this }
+      public get parseErrorReceiverSafe(): JsonParseErrorReceiver { this }
 
       public explainJsonError(error: String): Void {
         this.error = error;

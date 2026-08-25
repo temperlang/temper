@@ -64,9 +64,9 @@ sealed class YieldingFn : SpecialFunction, NamedBuiltinFun {
  * let scheduleTwice(generatorFactory: fn (): SafeGenerator<Empty>): Void {
  *   let generator: SafeGenerator<Empty> = generatorFactory();
  *   console.log("S: Before first call");
- *   generator.next();
+ *   generator.nextSafe();
  *   console.log("S: Between calls");
- *   generator.next();
+ *   generator.nextSafe();
  *   console.log("S: After calls");
  * }
  *

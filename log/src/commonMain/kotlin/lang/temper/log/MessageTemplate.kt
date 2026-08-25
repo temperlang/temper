@@ -186,6 +186,14 @@ enum class MessageTemplate(
         "Cannot initialize an incomplete declaration",
         CompilationPhase.Interpreter,
     ),
+    IncompatibleVisibility(
+        "Type %s has method %s but it's visibility is %s which is narrower than the method it overrides in %s",
+        CompilationPhase.Interpreter,
+    ),
+    IncompatibleSignature(
+        "Type %s has method %s with signature %s, but it should be %s to correctly override from %s",
+        CompilationPhase.Interpreter,
+    ),
     MalformedActual(
         "Formal argument where actual expected.  `:` only applies to function parameters",
         CompilationPhase.Interpreter,

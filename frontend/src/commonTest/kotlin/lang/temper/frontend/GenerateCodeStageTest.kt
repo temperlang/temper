@@ -590,8 +590,13 @@ class GenerateCodeStageTest {
     )
 
     @Test
-    fun pureVirtualMethodInConcreteClass() = assertModuleAtStage(
-        stageTestDir = StageTestDir("generate-code/pure-virtual-method-in-concrete-class"),
+    fun errorMessageOnMissingOverride() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/error-message-on-missing-override"),
+    )
+
+    @Test
+    fun errorMessageOnBadOverride() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/error-message-on-bad-override"),
     )
 
     @Test

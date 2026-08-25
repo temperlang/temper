@@ -927,7 +927,7 @@ class JavaBackendTest {
     fun coroutineConversion() = assertGeneratedJavaRaw(
         """
             |let f(factory: fn (): SafeGenerator<Empty>): Void {
-            |  factory().next();
+            |  factory().nextSafe();
             |}
             |
             |f { (): GeneratorResult<Empty> extends GeneratorFn =>

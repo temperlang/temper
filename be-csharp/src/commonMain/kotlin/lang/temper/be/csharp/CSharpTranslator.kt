@@ -1652,8 +1652,8 @@ internal class CSharpTranslator(
                 var wrapperResultType = resultType
                 if (outputAdjustment != null) {
                     wrapperResultType = optionalTypeOf(
-                        (wrapperResultType as? CSharp.NullableType)?.type
-                            ?: wrapperResultType,
+                        (wrapperResultType as? CSharp.NullableType)?.type?.deepCopy()
+                            ?: wrapperResultType.deepCopy(),
                     )
                 }
                 val privateId = translateId(TmpL.Id(id.pos, method.memberShape.name as ResolvedName))

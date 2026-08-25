@@ -85,7 +85,7 @@ macro_rules! impl_any_value_trait_for_interface { // for abstract types
         }
 
         impl$(<$($param: Clone + Send + Sync + 'static),*>)? temper_core::AsAnyValue for $type $(<$($param),*>)?
-        $(where $($bounds)*)? 
+        $(where $($bounds)*)?
         {
             fn as_any_value(&self) -> temper_core::AnyValue {
                 temper_core::AsAnyValue::as_any_value(&*self.0)
