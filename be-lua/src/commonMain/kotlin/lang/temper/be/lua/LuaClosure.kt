@@ -221,6 +221,7 @@ class LuaClosure(val objName: LuaName, val importedNames: List<LuaName>) {
     private fun scan(stmt: Lua.LastStmt?): Lua.LastStmt? = stmt
 
     internal fun scan(stmt: Lua.Stmt): Lua.Stmt = when (stmt) {
+        is Lua.Connected -> stmt
         is Lua.LastStmt -> stmt
         is Lua.CallStmt -> Lua.CallStmt(
             stmt.pos,

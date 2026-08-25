@@ -144,6 +144,7 @@ internal fun copyTree(tree: Lua.Params): Lua.Params = Lua.Params(
 )
 
 internal fun copyTree(tree: Lua.Stmt): Lua.Stmt = when (tree) {
+    is Lua.Connected -> tree.deepCopy()
     is Lua.GotoStmt -> Lua.GotoStmt(
         tree.pos,
         copyTree(tree.name) as Lua.Name,

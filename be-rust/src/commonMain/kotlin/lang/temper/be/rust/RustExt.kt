@@ -81,8 +81,18 @@ internal fun whereForAnyValueImpl(pos: Position, translatedGenerics: List<Rust.G
 
 internal fun MutableList<Rust.Item>.declareSubmods(pos: Position, modKids: Collection<FilePath>) {
     for (kid in modKids) {
-        val modId = kid.last().temperAwareBaseName().dashToSnake().toId(pos)
-        add(Rust.Module(pos, id = modId, pub = Rust.VisibilityPub(pos)).toItem())
+        val (modId, pub) = kid.last().temperAwareBaseName().let { name ->
+            // This is a hacky workaround to recognize our "_connected" convention.
+            // But at least it does distinguish something that's already snake case.
+            // The main problem with this convention is that leading underscore typically
+            // means unused in Rust rather than private, but it still works.
+            // TODO Just say "connected" and recognize that here explicitly for non-pub?
+            when {
+                name.startsWith("_") -> name.toId(pos) to null
+                else -> name.dashToSnake().toId(pos) to Rust.VisibilityPub(pos)
+            }
+        }
+        add(Rust.Module(pos, id = modId, pub = pub).toItem())
     }
 }
 
@@ -369,11 +379,26 @@ internal fun Rust.Expr.wrapOkOrElse(pos: Position = this.pos) =
 
 internal fun Rust.Expr.wrapSome() = Rust.Call(pos, callee = "Some".toId(pos), args = listOf(this))
 
-/** Only handles cases where the pattern is a [Rust.Id]. */
-internal fun Rust.FunctionParamOption.toId(): Rust.Id {
+/**
+ * Only properly handles cases where the pattern is a [Rust.FunctionParam].
+ * Errors otherwise, unless [approximate], in which case, the id might be
+ * invalid.
+ */
+internal fun Rust.FunctionParamOption.toId(approximate: Boolean = false): Rust.Id {
     return when (this) {
         is Rust.FunctionParam -> this.pattern.deepCopy() as Rust.Id
-        is Rust.Id, is Rust.RefType -> error(this)
+        is Rust.Id, is Rust.RefType -> when {
+            approximate -> when (this) {
+                is Rust.Id -> this
+                is Rust.RefType -> when (val type = this.type) {
+                    is Rust.Id -> type
+                    // This is a total punt. Shouldn't get here on valid Temper code.
+                    else -> type.toString().toId(pos)
+                }
+                else -> error(this) // Can't actually happen, but Kotlin fails to realize.
+            }
+            else -> error(this)
+        }
     }
 }
 

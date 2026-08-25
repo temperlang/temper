@@ -5,9 +5,13 @@ import lang.temper.be.assertGeneratedCode
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.common.structure.FormattingStructureSink
+import lang.temper.common.structure.PropertySink
 import lang.temper.common.structure.StructureSink
 import lang.temper.common.structure.Structured
+import lang.temper.fs.FileClassification
+import lang.temper.fs.MemoryFileSystem
 import lang.temper.log.FilePath
+import lang.temper.log.dirPath
 import lang.temper.log.filePath
 import kotlin.test.Test
 
@@ -540,15 +544,15 @@ class CSharpBackendTest {
     @Test
     fun userClass() {
         assertGeneratedUserClass(
-            temper = """
+            temper = $$"""
                 |export class Test(public var name: String) {
                 |  // Custom getter is nice for contrast with automated sometimes.
                 |  public get that(): String { thing() }
                 |  public thing(): String {
-                |    punctuate("Hi, ${"$"}{name}")
+                |    punctuate("Hi, ${name}")
                 |  }
                 |  private punctuate(message: String): String {
-                |    "${"$"}{message}!"
+                |    "${message}!"
                 |  }
                 |}
             """.trimMargin(),
@@ -596,9 +600,9 @@ class CSharpBackendTest {
     fun optionals() {
         // Compare optionals for value and reference types, including a side effect for motivation.
         assertGeneratedGlobalClass(
-            temper = """
+            temper = $$"""
                 |let hi(i: Int = do { console.log("heh"); 1 }): Int { i + 1 }
-                |export let ha(s: String = "hum"): String { hi(); "${"$"}{s}bug" }
+                |export let ha(s: String = "hum"): String { hi(); "${s}bug" }
             """.trimMargin(),
             usings = """
                 |using S = MyTestLibrary.Support;
@@ -1498,6 +1502,98 @@ class CSharpBackendTest {
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
+
+    @Test
+    fun connected() = run {
+        val connecteds = listOf(
+            // Connected code needs explicit namespaces inside.
+            filePath("test", "TestConnected.cs") to """
+                    |namespace MyTestLibrary.Test
+                    |{
+                    |    static class TestConnected
+                    |    {
+                    |        static int sum(int i, int j, int bonus)
+                    |        {
+                    |            return Helper.sum2(Helper.sum2(i, j), bonus);
+                    |        }
+                    |    }
+                    |}
+            """.trimMargin(),
+            filePath("test", "Helper.cs") to """
+                    |namespace MyTestLibrary.Test
+                    |{
+                    |    static class Helper
+                    |    {
+                    |        static int sum2(int i, int j)
+                    |        {
+                    |            return i + j;
+                    |        }
+                    |    }
+                    |}
+            """.trimMargin(),
+            filePath("other", "thing", "Whatever.cs") to """
+                    |namespace MyTestLibrary.Other.Thing
+                    |{
+                    |    static class Whatever
+                    |    {
+                    |        // Just here for funzies.
+                    |    }
+                    |}
+            """.trimMargin(),
+        )
+        assertGenerateWanted(
+            inputs = listOf(
+                // Test using a submodule.
+                filePath("test", "rand.temper") to """
+                    |@connected
+                    |export let sum(i: Int, j: Int, bonus: Int = 0): Int;
+                    |export let inc(i: Int): Int {
+                    |    sum(i, 1)
+                    |}
+                """.trimMargin(),
+                filePath("test", "IgnoreMe.txt") to """
+                    |Hi there!!!
+                """.trimMargin(),
+            ) + connecteds,
+            classes = mapOf(
+                "TestGlobal" to Content(
+                    usings = "",
+                    decls = """
+                    |public static class TestGlobal
+                    |{
+                    |    public static int Sum(int i__0, int j__0, int ? bonus = null)
+                    |    {
+                    |        int return__0;
+                    |        int bonus__0;
+                    |        if (bonus == null)
+                    |        {
+                    |            bonus__0 = 0;
+                    |        }
+                    |        else
+                    |        {
+                    |            bonus__0 = bonus.Value;
+                    |        }
+                    |        return TestConnected.Sum(i__0, j__0, bonus__0);
+                    |    }
+                    |    public static int Inc(int i__1)
+                    |    {
+                    |        return Sum(i__1, 1);
+                    |    }
+                    |}
+                    """.trimMargin(),
+                ),
+            ),
+            outputs = connecteds.map { (filePath, content) ->
+                // Automatically place files we expect to copy over.
+                // They go in same namespace dirs here as translated code.
+                val segments = buildList {
+                    addAll(chooseSubspace(filePath.segments.subList(0, filePath.segments.size - 1)))
+                    add(filePath.segments.last().fullName)
+                }
+                filePath(segments) to content
+            },
+        )
+    }
 }
 
 private fun assertGenerateWanted(
@@ -1519,7 +1615,14 @@ private fun assertGenerateWanted(
     errors: List<String> = listOf(),
     moduleName: String = "test",
     namespaceName: String = moduleName.camelToPascal(),
+    outputs: List<Pair<FilePath, String>> = listOf(),
 ) {
+    // Build a tree-structured representation of outputs for easier nested handling.
+    val outputsFs = MemoryFileSystem()
+    for ((srcPath, content) in outputs) {
+        outputsFs.write(srcPath, content.toByteArray())
+    }
+    // Now build overall output structure.
     val want = object : Structured {
         override fun destructure(structureSink: StructureSink) = structureSink.run {
             obj {
@@ -1535,8 +1638,10 @@ private fun assertGenerateWanted(
                                 }
                                 key("src") {
                                     obj {
+                                        // Primary namespace with somewhat automated content.
                                         key(namespaceName) {
                                             obj {
+                                                // Classes.
                                                 classes.entries.forEach { (className, content) ->
                                                     key("$className.cs") {
                                                         obj {
@@ -1562,6 +1667,7 @@ private fun assertGenerateWanted(
                                                         value("__DO_NOT_CARE__")
                                                     }
                                                 }
+                                                // Global.
                                                 val globalName = "${namespaceName}Global"
                                                 if (globalName !in classes) {
                                                     key("$globalName.cs") {
@@ -1571,8 +1677,22 @@ private fun assertGenerateWanted(
                                                         value("__DO_NOT_CARE__")
                                                     }
                                                 }
+                                                // Extras.
+                                                val dirPath = dirPath(namespaceName)
+                                                when (outputsFs.classify(dirPath)) {
+                                                    FileClassification.Directory ->
+                                                        genStructureKids(outputsFs, dirPath)
+                                                    else -> {}
+                                                }
                                             }
                                         }
+                                        // Explicit outputs outside primary namespace.
+                                        for (kid in outputsFs.directoryListing(dirPath()).result!!) {
+                                            if (kid.segments.first().fullName != namespaceName) {
+                                                genStructure(outputsFs, kid)
+                                            }
+                                        }
+                                        // Always content.
                                         key("Logging.cs") { value("__DO_NOT_CARE__") }
                                         key("MyTestLibrary.csproj") { value("__DO_NOT_CARE__") }
                                         key("MyTestLibraryGlobal.cs") { value("__DO_NOT_CARE__") }
@@ -1599,6 +1719,26 @@ private fun assertGenerateWanted(
         inputs = inputs,
         wantJson = FormattingStructureSink.toJsonString(want),
     )
+}
+
+private fun PropertySink.genStructure(fs: MemoryFileSystem, path: FilePath) {
+    key(path.segments.last().fullName) {
+        obj {
+            when (fs.classify(path)) {
+                FileClassification.File -> key("content") {
+                    value(fs.readBinaryFileContentSync(path).result!!.decodeToString())
+                }
+                FileClassification.Directory -> genStructureKids(fs, path)
+                FileClassification.DoesNotExist -> {}
+            }
+        }
+    }
+}
+
+private fun PropertySink.genStructureKids(fs: MemoryFileSystem, dirPath: FilePath) {
+    for (kid in fs.directoryListing(dirPath).result!!) {
+        genStructure(fs, kid)
+    }
 }
 
 private fun assertGeneratedGlobalClass(

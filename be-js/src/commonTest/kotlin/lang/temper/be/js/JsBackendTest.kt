@@ -32,9 +32,7 @@ class JsBackendTest {
             |        "foo.js": {
             |          content:
             |            ```
-            |            /** @type {number} */
-            |            const return_2 = 123;
-            |            export default return_2;
+            |            export {} from "./foo.internal.js";
             |
             |            ```,
             |            mimeType: "text/javascript",
@@ -46,9 +44,31 @@ class JsBackendTest {
             |            file: "js/my-test-library/src/foo.js",
             |            sources: ["src/foo/foo.temper"],
             |            sourcesContent: ["123"],
+            |            names: [],
+            |            // Haven't checked.
+            |            mappings: "AAAG,cAAA,AAAH,oBAAG",
+            |          },
+            |        },
+            |        "foo.internal.js": {
+            |          content:
+            |            ```
+            |            /** @type {number} */
+            |            export const return_2 = 123;
+            |            export default return_2;
+            |
+            |            ```,
+            |            mimeType: "text/javascript",
+            |        },
+            |        "foo.internal.js.map": {
+            |          mimeType: "application/json",
+            |          jsonContent: {
+            |            version: 3,
+            |            file: "js/my-test-library/src/foo.internal.js",
+            |            sources: ["src/foo/foo.temper"],
+            |            sourcesContent: ["123"],
             |            names: ["return"],
             |            // Haven't checked.
-            |            mappings: "AAAA;AAAA,MAAAA,QAAA,MAAG,AAAH;AAAG,eAAAA,QAAA",
+            |            mappings: "AAAA;AAAA,aAAAA,QAAA,MAAG,AAAH;AAAG,eAAAA,QAAA",
             |          },
             |        }
             |      },
@@ -84,10 +104,14 @@ class JsBackendTest {
             |      "src": {
             |        "foo.js": "__DO_NOT_CARE__",
             |        "foo.js.map": "__DO_NOT_CARE__",
+            |        "foo.internal.js": "__DO_NOT_CARE__",
+            |        "foo.internal.js.map": "__DO_NOT_CARE__",
             |      },
             |## Top level module translated.
             |      "my_test_library.js": "__DO_NOT_CARE__",
             |      "my_test_library.js.map": "__DO_NOT_CARE__",
+            |      "my_test_library.internal.js": "__DO_NOT_CARE__",
+            |      "my_test_library.internal.js.map": "__DO_NOT_CARE__",
             |## The generated index.js should load the modules in order and re-export any top-level module.
             |      "index.js": {
             |        content: ```
@@ -137,12 +161,22 @@ class JsBackendTest {
             |        "foo.js": {
             |          content:
             |          ```
+            |          export {
+            |            i
+            |          } from "./foo.internal.js";
+            |
+            |          ```
+            |        },
+            |        "foo.internal.js": {
+            |          content:
+            |          ```
             |          /** @type {number} */
             |          export const i = 0;
             |
             |          ```
             |        },
-            |        "foo.js.map": "__DO_NOT_CARE__"
+            |        "foo.js.map": "__DO_NOT_CARE__",
+            |        "foo.internal.js.map": "__DO_NOT_CARE__",
             |      },
             |$OUTPUT_BOILERPLATE
             |    }
@@ -175,19 +209,21 @@ class JsBackendTest {
             |  "js": {
             |    "my-test-library": {
             |      "src": {
-            |        "foo.js": {
+            |        "foo.internal.js": {
             |          "content":
             |          ```
             |          /** @type {number} */
-            |          let one_0 = 1;
+            |          export let one_0 = 1;
             |          one_0 = one_0;
             |          /** @type {number} */
-            |          const return_0 = one_0 + one_0 | 0;
+            |          export const return_0 = one_0 + one_0 | 0;
             |          export default return_0;
             |
             |          ```
             |        },
-            |        "foo.js.map": "__DO_NOT_CARE__"
+            |        "foo.js": "__DO_NOT_CARE__",
+            |        "foo.js.map": "__DO_NOT_CARE__",
+            |        "foo.internal.js.map": "__DO_NOT_CARE__",
             |      },
             |$OUTPUT_BOILERPLATE
             |    }
@@ -237,12 +273,12 @@ class JsBackendTest {
             |            globalConsole as globalConsole_0
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
-            |          const console_0 = globalConsole_0;
+            |          export const console_0 = globalConsole_0;
             |          /**
             |           * @param {number} i_0
             |           * @returns {number}
             |           */
-            |          function fib_0(i_0) {
+            |          export function fib_0(i_0) {
             |            let t_0 = i_0.toString();
             |            console_0.log(t_0);
             |            let a_0 = 0;
@@ -254,16 +290,13 @@ class JsBackendTest {
             |              i_0 = i_0 - 1 | 0;
             |            }
             |            return a_0;
-            |          }
+            |          };
             |          /**
             |           * @param {number} i_1
             |           * @returns {number}
             |           */
             |          export function fibber(i_1) {
             |            return fib_0(i_1);
-            |          };
-            |          export {
-            |            fib_0
             |          };
             |
             |          ```
@@ -284,11 +317,11 @@ class JsBackendTest {
             |            "content":
             |            ```
             |            import {
-            |              fib_0
-            |            } from "../../src/fib.internal.js";
-            |            import {
             |              Test as Test_0
             |            } from "@temperlang/std/testing";
+            |            import {
+            |              fib_0
+            |            } from "../fib.internal.js";
             |            it("fib", function () {
             |                const test_0 = new Test_0();
             |                try {
@@ -352,11 +385,8 @@ class JsBackendTest {
             |            globalConsole as globalConsole_0
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
-            |          const console_0 = globalConsole_0;
+            |          export const console_0 = globalConsole_0;
             |          console_0.log("Here be side effects.");
-            |          export {
-            |            console_0
-            |          };
             |
             |          ```
             |        },
@@ -374,11 +404,11 @@ class JsBackendTest {
             |            "content":
             |            ```
             |            import {
-            |              console_0
-            |            } from "../sub.internal.js";
-            |            import {
             |              Test as Test_0
             |            } from "@temperlang/std/testing";
+            |            import {
+            |              console_0
+            |            } from "../sub.internal.js";
             |            /** @param {string} name_0 */
             |            function greet_0(name_0) {
             |              console_0.log("Hi, " + name_0 + "!");
@@ -430,16 +460,16 @@ class JsBackendTest {
             |  js: {
             |    "my-test-library": {
             |      src: {
-            |        "Brahmagupta'sRevenge.js": {
+            |        "Brahmagupta'sRevenge.internal.js": {
             |          content:
             |            ```
             |            import {
             |              divIntInt as divIntInt_0
             |            } from "@temperlang/core";
             |            /** @type {number} */
-            |            let return_0;
+            |            export let return_0;
             |            /** @type {number} */
-            |            let t_0;
+            |            export let t_0;
             |            try {
             |              t_0 = divIntInt_0(0, 0);
             |              return_0 = t_0;
@@ -450,7 +480,9 @@ class JsBackendTest {
             |
             |            ```
             |        },
+            |        "Brahmagupta'sRevenge.js": "__DO_NOT_CARE__",
             |        "Brahmagupta'sRevenge.js.map": "__DO_NOT_CARE__",
+            |        "Brahmagupta'sRevenge.internal.js.map": "__DO_NOT_CARE__",
             |      },
             |$OUTPUT_BOILERPLATE
             |    }
@@ -484,7 +516,7 @@ class JsBackendTest {
             |  js: {
             |    "my-test-library": {
             |      "src": {
-            |        "C.js": {
+            |        "C.internal.js": {
             |          content:
             |            ```
             |            import {
@@ -533,7 +565,9 @@ class JsBackendTest {
             |
             |            ```,
             |        },
+            |        "C.js": "__DO_NOT_CARE__",
             |        "C.js.map": "__DO_NOT_CARE__",
+            |        "C.internal.js.map": "__DO_NOT_CARE__",
             |      },
             |$OUTPUT_BOILERPLATE
             |    }
@@ -568,7 +602,7 @@ class JsBackendTest {
             |    "js": {
             |        "my-test-library": {
             |            "src": {
-            |                "C.js": {
+            |                "C.internal.js": {
             |                    "content":
             |                    ```
             |                    import {
@@ -600,7 +634,9 @@ class JsBackendTest {
             |
             |                    ```
             |                },
-            |                "C.js.map": "__DO_NOT_CARE__"
+            |                "C.js": "__DO_NOT_CARE__",
+            |                "C.js.map": "__DO_NOT_CARE__",
+            |                "C.internal.js.map": "__DO_NOT_CARE__",
             |            },
             |            "package.json": "__DO_NOT_CARE__",
             |            "index.js": "__DO_NOT_CARE__"
@@ -630,7 +666,7 @@ class JsBackendTest {
             |  "js": {
             |    "my-test-library": {
             |      "src": {
-            |        "eq.js": {
+            |        "eq.internal.js": {
             |          "content":
             |          ```
             |          /**
@@ -643,7 +679,9 @@ class JsBackendTest {
             |
             |          ```
             |        },
-            |        "eq.js.map": "__DO_NOT_CARE__"
+            |        "eq.js": "__DO_NOT_CARE__",
+            |        "eq.js.map": "__DO_NOT_CARE__",
+            |        "eq.internal.js.map": "__DO_NOT_CARE__",
             |      },
             |$OUTPUT_BOILERPLATE
             |    }
@@ -671,17 +709,17 @@ class JsBackendTest {
             |  "js": {
             |    "my-test-library": {
             |      "src": {
-            |        "list.js": {
-            |          "_name": "list.js",
-            |          "_type": "txt",
+            |        "list.internal.js": {
             |          "content": ```
             |            /** @type {Array<number>} */
-            |            const return_0 = Object.freeze([3, 4]);
+            |            export const return_0 = Object.freeze([3, 4]);
             |            export default return_0;
             |
             |            ```
             |        },
-            |        "list.js.map": "__DO_NOT_CARE__"
+            |        "list.js": "__DO_NOT_CARE__",
+            |        "list.js.map": "__DO_NOT_CARE__",
+            |        "list.internal.js.map": "__DO_NOT_CARE__",
             |      },
             |$OUTPUT_BOILERPLATE
             |    }
@@ -711,17 +749,17 @@ class JsBackendTest {
             |  "js": {
             |    "my-test-library": {
             |      "src": {
-            |        "list.js": {
-            |          "_name": "list.js",
-            |          "_type": "txt",
+            |        "list.internal.js": {
             |          "content": ```
             |            /** @type {Array<string>} */
-            |            const return_0 = Object.freeze(["", "foo", '"', "'", "<b>bold<\/b>", "foo\n\\bar\r\n.baz", "\x00"]);
+            |            export const return_0 = Object.freeze(["", "foo", '"', "'", "<b>bold<\/b>", "foo\n\\bar\r\n.baz", "\x00"]);
             |            export default return_0;
             |
             |            ```
             |        },
-            |        "list.js.map": "__DO_NOT_CARE__"
+            |        "list.js": "__DO_NOT_CARE__",
+            |        "list.js.map": "__DO_NOT_CARE__",
+            |        "list.internal.js.map": "__DO_NOT_CARE__",
             |      },
             |$OUTPUT_BOILERPLATE
             |    }
@@ -751,43 +789,40 @@ class JsBackendTest {
                 |}
             """.trimMargin(),
         ),
-        moduleResultNeeded = true,
         want = """
             |{
             |  js: {
             |    "my-test-library": {
             |      src: {
-            |        "a.js": {
+            |        "a.internal.js": {
             |          content: ```
             |            import {
             |              globalConsole as globalConsole_0
             |            } from "@temperlang/core";
             |            /** @type {Console_0} */
-            |            const console_0 = globalConsole_0;
+            |            export const console_0 = globalConsole_0;
             |            export function f() {
             |              console_0.log("f");
             |              return;
             |            };
-            |            /** @type {void} */
-            |            const return_1 = void 0;
-            |            export default return_1;
             |
             |            ```,
             |        },
-            |        "b.js": {
+            |        "b.internal.js": {
             |          content: ```
             |            import {
             |              f as f_0
             |            } from "./a.js";
             |            f_0();
-            |            /** @type {void} */
-            |            const return_2 = void 0;
-            |            export default return_2;
             |
             |            ```,
             |        },
+            |        "a.js": "__DO_NOT_CARE__",
+            |        "b.js": "__DO_NOT_CARE__",
             |        "a.js.map": "__DO_NOT_CARE__",
             |        "b.js.map": "__DO_NOT_CARE__",
+            |        "a.internal.js.map": "__DO_NOT_CARE__",
+            |        "b.internal.js.map": "__DO_NOT_CARE__",
             |      },
             |$OUTPUT_BOILERPLATE
             |    }
@@ -821,7 +856,16 @@ class JsBackendTest {
             |{
             |  "js": {
             |    "my-test-library": {
-            |      a.js: {
+            |      "a.js": {
+            |        content:
+            |          ```
+            |          export {
+            |            C
+            |          } from "./a.internal.js";
+            |
+            |          ```
+            |      },
+            |      a.internal.js: {
             |        content:
             |          ```
             |          import {
@@ -830,7 +874,7 @@ class JsBackendTest {
             |          import {
             |            type as type_0, requireInstanceOf as requireInstanceOf_0, marshalToJsonObject as marshalToJsonObject_0
             |          } from "@temperlang/core";
-            |          class CJsonAdapter_0 extends type_0() {
+            |          export class CJsonAdapter extends type_0() {
             |            /**
             |             * @param {C} x_0
             |             * @param {JsonProducer_0} p_0
@@ -851,7 +895,7 @@ class JsBackendTest {
             |              super ();
             |              return;
             |            }
-            |          }
+            |          };
             |          export class C extends type_0() {
             |            constructor() {
             |              super ();
@@ -875,7 +919,7 @@ class JsBackendTest {
             |            }
             |            /** @returns {JsonAdapter_0<C>} */
             |            static jsonAdapter() {
-            |              return new CJsonAdapter_0();
+            |              return new CJsonAdapter();
             |            }
             |            /** @returns {unknown} */
             |            toJSON() {
@@ -886,6 +930,7 @@ class JsBackendTest {
             |          ```
             |      },
             |      "a.js.map": "__DO_NOT_CARE__",
+            |      "a.internal.js.map": "__DO_NOT_CARE__",
             |      $OUTPUT_BOILERPLATE
             |    },
             |  }
@@ -910,13 +955,14 @@ class JsBackendTest {
                 |}
             """.trimMargin(),
         ),
+        // Result somewhat interesting for function type.
         moduleResultNeeded = true,
         want = """
             |{
             |  "js": {
             |    "my-test-library": {
             |      "src": {
-            |        "strings.js": {
+            |        "strings.internal.js": {
             |          "content":
             |          ```
             |          import {
@@ -926,17 +972,19 @@ class JsBackendTest {
             |           * @param {string} s_0
             |           * @returns {boolean}
             |           */
-            |          function f_0(s_0) {
+            |          export function f_0(s_0) {
             |            return stringSplit_0(s_0, ",").length === 1;
-            |          }
+            |          };
             |          /** @type {(arg0: string) => boolean} */
-            |          const return_1 = f_0;
+            |          export const return_1 = f_0;
             |          export default return_1;
             |
             |          ```,
             |          "mimeType": "text/javascript"
             |        },
-            |        "strings.js.map": "__DO_NOT_CARE__"
+            |        "strings.js": "__DO_NOT_CARE__",
+            |        "strings.js.map": "__DO_NOT_CARE__",
+            |        "strings.internal.js.map": "__DO_NOT_CARE__",
             |      },
             |$OUTPUT_BOILERPLATE
             |    }
@@ -968,7 +1016,7 @@ class JsBackendTest {
             |  "js": {
             |    "my-test-library": {
             |      "src": {
-            |        "props.js": {
+            |        "props.internal.js": {
             |          "content":
             |          ```
             |          import {
@@ -1025,7 +1073,9 @@ class JsBackendTest {
             |          ```,
             |          "mimeType": "text/javascript"
             |        },
-            |        "props.js.map": "__DO_NOT_CARE__"
+            |        "props.js": "__DO_NOT_CARE__",
+            |        "props.js.map": "__DO_NOT_CARE__",
+            |        "props.internal.js.map": "__DO_NOT_CARE__",
             |      },
             |$OUTPUT_BOILERPLATE
             |    }
@@ -1055,19 +1105,19 @@ class JsBackendTest {
             |  "js": {
             |    "my-test-library": {
             |      "src": {
-            |        "skipped.js": {
+            |        "skipped.internal.js": {
             |          "content":
             |          ```
             |          import {
             |            globalConsole as globalConsole_0
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
-            |          const console_0 = globalConsole_0;
+            |          export const console_0 = globalConsole_0;
             |          /**
             |           * @param {number | null} [a_0]
             |           * @param {number | null} [b_0]
             |           */
-            |          function hi_0(a_0, b_0) {
+            |          export function hi_0(a_0, b_0) {
             |            let a_1;
             |            if (a_0 == null) {
             |              a_1 = 1;
@@ -1083,13 +1133,15 @@ class JsBackendTest {
             |            let t_0 = (a_1 + b_1 | 0).toString();
             |            console_0.log(t_0);
             |            return;
-            |          }
+            |          };
             |          hi_0(null, 3);
             |
             |          ```,
             |          "mimeType": "text/javascript"
             |        },
-            |        "skipped.js.map": "__DO_NOT_CARE__"
+            |        "skipped.js": "__DO_NOT_CARE__",
+            |        "skipped.js.map": "__DO_NOT_CARE__",
+            |        "skipped.internal.js.map": "__DO_NOT_CARE__",
             |      },
             |$OUTPUT_BOILERPLATE
             |    }
@@ -1119,21 +1171,23 @@ class JsBackendTest {
             |  js: {
             |    "my-test-library": {
             |      src: {
-            |        "newDeque.js": {
+            |        "newDeque.internal.js": {
             |          content:
             |            ```
             |            import {
             |              dequeConstructor as dequeConstructor_0
             |            } from "@temperlang/core";
             |            /** @type {Deque_0<string>} */
-            |            const x_0 = dequeConstructor_0();
+            |            export const x_0 = dequeConstructor_0();
             |            /** @type {Deque_0<string>} */
-            |            const y_0 = dequeConstructor_0();
+            |            export const y_0 = dequeConstructor_0();
             |
             |            ```,
             |          mimeType: "text/javascript"
             |        },
+            |        "newDeque.js": "__DO_NOT_CARE__",
             |        "newDeque.js.map": "__DO_NOT_CARE__",
+            |        "newDeque.internal.js.map": "__DO_NOT_CARE__",
             |      },
             |$OUTPUT_BOILERPLATE
             |    }
@@ -1162,7 +1216,7 @@ class JsBackendTest {
             |  js: {
             |    "my-test-library": {
             |      src: {
-            |        "logs.js": {
+            |        "logs.internal.js": {
             |          content:
             |            ```
             |            import {
@@ -1173,7 +1227,9 @@ class JsBackendTest {
             |            ```,
             |          mimeType: "text/javascript"
             |        },
+            |        "logs.js": "__DO_NOT_CARE__",
             |        "logs.js.map": "__DO_NOT_CARE__",
+            |        "logs.internal.js.map": "__DO_NOT_CARE__",
             |      },
             |$OUTPUT_BOILERPLATE
             |    }
@@ -1208,7 +1264,7 @@ class JsBackendTest {
             |{
             |  js: {
             |    "my-test-library": {
-            |      "foo.js": {
+            |      "foo.internal.js": {
             |        content: ```
             |          import {
             |            type as type_0
@@ -1242,8 +1298,7 @@ class JsBackendTest {
             |
             |          ```,
             |      },
-            |      "foo.js.map": "__DO_NOT_CARE__",
-            |      "bar.js": {
+            |      "bar.internal.js": {
             |        content: ```
             |          import {
             |            Point as Point_0
@@ -1253,8 +1308,10 @@ class JsBackendTest {
             |
             |          ```,
             |      },
+            |      "bar.js": "__DO_NOT_CARE__",
             |      "bar.js.map": "__DO_NOT_CARE__",
-            |$OUTPUT_BOILERPLATE
+            |      "bar.internal.js.map": "__DO_NOT_CARE__",
+            |$BONUS_FOO_BOILERPLATE
             |    }
             |  }
             |}
@@ -1280,23 +1337,22 @@ class JsBackendTest {
             |{
             |  js: {
             |    "my-test-library": {
-            |      "foo.js": {
+            |      "foo.internal.js": {
             |        content: ```
             |          /** @type {number} */
-            |          let m_0 = 0;
+            |          export let m_0 = 0;
             |          /** @returns {number | null} */
-            |          function f_0() {
+            |          export function f_0() {
             |            m_0 = 5;
             |            return m_0;
-            |          }
+            |          };
             |          /** @type {number | null} */
             |          export let n;
             |          n = f_0();
             |
             |          ```,
             |      },
-            |      "foo.js.map": "__DO_NOT_CARE__",
-            |$OUTPUT_BOILERPLATE
+            |$BONUS_FOO_BOILERPLATE
             |    }
             |  }
             |}
@@ -1321,7 +1377,7 @@ class JsBackendTest {
             |{
             |  js: {
             |    "my-test-library": {
-            |      "foo.js": {
+            |      "foo.internal.js": {
             |        content: ```
             |          /** @returns {void} */
             |          export function f() {
@@ -1331,8 +1387,7 @@ class JsBackendTest {
             |
             |          ```,
             |      },
-            |      "foo.js.map": "__DO_NOT_CARE__",
-            |$OUTPUT_BOILERPLATE
+            |$BONUS_FOO_BOILERPLATE
             |    }
             |  }
             |}
@@ -1357,7 +1412,7 @@ class JsBackendTest {
             |{
             |  js: {
             |    "my-test-library": {
-            |      "foo.js": {
+            |      "foo.internal.js": {
             |        content: ```
             |          ((() => {
             |                throw "howAboutThis not available from core";
@@ -1365,8 +1420,7 @@ class JsBackendTest {
             |
             |          ```,
             |      },
-            |      "foo.js.map": "__DO_NOT_CARE__",
-            |$OUTPUT_BOILERPLATE
+            |$BONUS_FOO_BOILERPLATE
             |    }
             |  },
             |  errors: [
@@ -1394,7 +1448,7 @@ class JsBackendTest {
             |{
             |  js: {
             |    "my-test-library": {
-            |      "div-example.js": {
+            |      "div-example.internal.js": {
             |        content: ```
             |          /**
             |           * @param {number} n_0
@@ -1406,7 +1460,9 @@ class JsBackendTest {
             |
             |          ```,
             |      },
+            |      "div-example.js": "__DO_NOT_CARE__",
             |      "div-example.js.map": "__DO_NOT_CARE__",
+            |      "div-example.internal.js.map": "__DO_NOT_CARE__",
             |$OUTPUT_BOILERPLATE
             |    }
             |  }
@@ -1433,7 +1489,7 @@ class JsBackendTest {
             |{
             |  "js": {
             |    "my-test-library": {
-            |      "foo.js": {
+            |      "foo.internal.js": {
             |        content:
             |          ```
             |          import {
@@ -1452,8 +1508,7 @@ class JsBackendTest {
             |
             |          ```
             |      },
-            |      "foo.js.map": "__DO_NOT_CARE__",
-            |$OUTPUT_BOILERPLATE
+            |$BONUS_FOO_BOILERPLATE
             |    }
             |  },
             |}
@@ -1479,7 +1534,7 @@ class JsBackendTest {
             |{
             |  js: {
             |    "my-test-library": {
-            |      "foo.js": {
+            |      "foo.internal.js": {
             |        content:
             |          // If we generated an import any time there was a dependency,
             |          // even one that was satisfied by connecting to a JS builtin,
@@ -1491,8 +1546,7 @@ class JsBackendTest {
             |
             |          ```
             |      },
-            |      "foo.js.map": "__DO_NOT_CARE__",
-            |$OUTPUT_BOILERPLATE
+            |$BONUS_FOO_BOILERPLATE
             |    }
             |  }
             |}
@@ -1537,13 +1591,13 @@ class JsBackendTest {
             |  js: {
             |    "my-test-library": {
             |      src: {
-            |        "a.js": {
+            |        "a.internal.js": {
             |          content: ```
             |            import {
             |              globalConsole as globalConsole_0, type as type_0
             |            } from "@temperlang/core";
             |            /** @type {Console_0} */
-            |            const console_0 = globalConsole_0;
+            |            export const console_0 = globalConsole_0;
             |            export class catch_ extends type_0() {
             |              /** @type {string} */
             |              #if_0;
@@ -1568,12 +1622,12 @@ class JsBackendTest {
             |              return;
             |            };
             |            /** @type {catch_} */
-            |            const in_0 = new catch_("something");
+            |            export const in_0 = new catch_("something");
             |            console_0.log(in_0.if_);
             |
             |            ```,
             |        },
-            |        "b.js": {
+            |        "b.internal.js": {
             |          content: ```
             |            import {
             |              switch_ as switch_0, catch_ as catch_0
@@ -1585,8 +1639,12 @@ class JsBackendTest {
             |
             |            ```,
             |        },
+            |        "a.js": "__DO_NOT_CARE__",
+            |        "b.js": "__DO_NOT_CARE__",
             |        "a.js.map": "__DO_NOT_CARE__",
             |        "b.js.map": "__DO_NOT_CARE__",
+            |        "a.internal.js.map": "__DO_NOT_CARE__",
+            |        "b.internal.js.map": "__DO_NOT_CARE__",
             |      },
             |$OUTPUT_BOILERPLATE
             |    }
@@ -1617,20 +1675,20 @@ class JsBackendTest {
             |{
             |  js: {
             |    "my-test-library": {
-            |      "foo.js": {
+            |      "foo.internal.js": {
             |        content:
             |          ```
             |          import {
             |            globalConsole as globalConsole_0, PromiseBuilder as PromiseBuilder_0, adaptAwaiter as adaptAwaiter_0, panic as panic_0, runAsync as runAsync_0
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
-            |          const console_0 = globalConsole_0;
+            |          export const console_0 = globalConsole_0;
             |          /** @type {PromiseBuilder_0<string>} */
-            |          const b_0 = new PromiseBuilder_0();
+            |          export const b_0 = new PromiseBuilder_0();
             |          /** @type {globalThis.Promise<string>} */
-            |          const p_0 = b_0.promise;
+            |          export const p_0 = b_0.promise;
             |          /** @returns {Generator<{}>} */
-            |          const fn_0 = adaptAwaiter_0(function* fn_0(await_0) {
+            |          export const fn_0 = adaptAwaiter_0(function* fn_0(await_0) {
             |              let t_0;
             |              let t_1;
             |              try {
@@ -1646,8 +1704,7 @@ class JsBackendTest {
             |
             |          ```
             |      },
-            |      "foo.js.map": "__DO_NOT_CARE__",
-            |$OUTPUT_BOILERPLATE
+            |$BONUS_FOO_BOILERPLATE
             |    }
             |  }
             |}
@@ -1677,16 +1734,16 @@ class JsBackendTest {
             |{
             |  js: {
             |    "my-test-library": {
-            |      "foo.js": {
+            |      "foo.internal.js": {
             |        content:
             |          ```
             |          import {
             |            globalConsole as globalConsole_0
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
-            |          let t_0 = globalConsole_0;
+            |          export let t_0 = globalConsole_0;
             |          /** @type {globalThis.Array<string>} */
-            |          const sb_0 = [""];
+            |          export const sb_0 = [""];
             |          void (sb_0[0] += "Hello, ");
             |          void (sb_0[0] = "");
             |          void (sb_0[0] += "World");
@@ -1695,8 +1752,7 @@ class JsBackendTest {
             |
             |          ```
             |      },
-            |      "foo.js.map": "__DO_NOT_CARE__",
-            |$OUTPUT_BOILERPLATE
+            |$BONUS_FOO_BOILERPLATE
             |    }
             |  }
             |}
@@ -1723,7 +1779,7 @@ class JsBackendTest {
             |{
             |  js: {
             |    "my-test-library": {
-            |      "foo.js": {
+            |      "foo.internal.js": {
             |        content:
             |          ```
             |          import {
@@ -1739,8 +1795,7 @@ class JsBackendTest {
             |
             |          ```
             |      },
-            |      "foo.js.map": "__DO_NOT_CARE__",
-            |$OUTPUT_BOILERPLATE
+            |$BONUS_FOO_BOILERPLATE
             |    }
             |  }
             |}
@@ -1775,7 +1830,7 @@ class JsBackendTest {
             |{
             |  js: {
             |    "my-test-library": {
-            |      "foo.js": {
+            |      "foo.internal.js": {
             |        content:
             |          ```
             |          import {
@@ -1785,9 +1840,9 @@ class JsBackendTest {
             |            globalConsole as globalConsole_0, adaptAwaiter as adaptAwaiter_0, netResponseGetStatus as netResponseGetStatus_0, netResponseGetBodyContent as netResponseGetBodyContent_0, netResponseGetContentType as netResponseGetContentType_0, runAsync as runAsync_0
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
-            |          const console_0 = globalConsole_0;
+            |          export const console_0 = globalConsole_0;
             |          /** @returns {Generator<{}>} */
-            |          const fn_0 = adaptAwaiter_0(function* fn_0(await_0) {
+            |          export const fn_0 = adaptAwaiter_0(function* fn_0(await_0) {
             |              let t_0;
             |              let t_1;
             |              let t_2;
@@ -1822,8 +1877,7 @@ class JsBackendTest {
             |
             |          ```
             |      },
-            |      "foo.js.map": "__DO_NOT_CARE__",
-            |$OUTPUT_BOILERPLATE
+            |$BONUS_FOO_BOILERPLATE
             |    }
             |  }
             |}
@@ -1850,7 +1904,7 @@ class JsBackendTest {
             |{
             |  "js": {
             |    "my-test-library": {
-            |      "foo.js": {
+            |      "foo.internal.js": {
             |        content: ```
             |          const {
             |            imul: imul_0
@@ -1905,8 +1959,7 @@ class JsBackendTest {
             |
             |          ```
             |      },
-            |      "foo.js.map": "__DO_NOT_CARE__",
-            |      $OUTPUT_BOILERPLATE
+            |      $BONUS_FOO_BOILERPLATE
             |    },
             |  }
             |}
@@ -1939,13 +1992,13 @@ class JsBackendTest {
             |{
             |  "js": {
             |    "my-test-library": {
-            |      "foo.js": {
+            |      "foo.internal.js": {
             |        content: ```
             |          import {
             |            globalConsole as globalConsole_0
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
-            |          const console_0 = globalConsole_0;
+            |          export const console_0 = globalConsole_0;
             |          /** @param {DenseBitVector_0 | null} x_0 */
             |          export function f(x_0) {
             |            let t_0;
@@ -1964,8 +2017,7 @@ class JsBackendTest {
             |
             |          ```
             |      },
-            |      "foo.js.map": "__DO_NOT_CARE__",
-            |      $OUTPUT_BOILERPLATE
+            |      $BONUS_FOO_BOILERPLATE
             |    },
             |  }
             |}
@@ -1990,21 +2042,23 @@ class JsBackendTest {
             |{
             |  js: {
             |    my-test-library: {
-            |      casty.js: {
+            |      casty.internal.js: {
             |        content: ```
             |          import {
             |            requireIsArray as requireIsArray_0
             |          } from "@temperlang/core";
             |          /** @type {Array<string>} */
-            |          const lb_0 = [];
+            |          export const lb_0 = [];
             |          /** @type {Array<string>} */
             |          export let listed;
             |          listed = requireIsArray_0(lb_0);
             |
             |          ```,
             |      },
+            |      casty.js: "__DO_NOT_CARE__",
             |      casty.js.map: "__DO_NOT_CARE__",
-            |      index.js:     "__DO_NOT_CARE__",
+            |      casty.internal.js.map: "__DO_NOT_CARE__",
+            |      index.js: "__DO_NOT_CARE__",
             |      package.json: "__DO_NOT_CARE__",
             |    }
             |  }
@@ -2035,7 +2089,7 @@ class JsBackendTest {
             |{
             |  "js": {
             |    "my-test-library": {
-            |      "foo.js": {
+            |      "foo.internal.js": {
             |        content: ```
             |            import {
             |              requireStringIndex as requireStringIndex_0
@@ -2056,8 +2110,7 @@ class JsBackendTest {
             |
             |            ```
             |      },
-            |      "foo.js.map": "__DO_NOT_CARE__",
-            |      $OUTPUT_BOILERPLATE
+            |      $BONUS_FOO_BOILERPLATE
             |    },
             |  }
             |}
@@ -2088,7 +2141,7 @@ class JsBackendTest {
             |{
             |  "js": {
             |    "my-test-library": {
-            |      "foo.js": {
+            |      "foo.internal.js": {
             |        content: ```
             |            import {
             |              type as type_0
@@ -2122,8 +2175,7 @@ class JsBackendTest {
             |
             |            ```
             |      },
-            |      "foo.js.map": "__DO_NOT_CARE__",
-            |      $OUTPUT_BOILERPLATE
+            |      $BONUS_FOO_BOILERPLATE
             |    },
             |  }
             |}
@@ -2152,7 +2204,7 @@ class JsBackendTest {
             |{
             |  "js": {
             |    "my-test-library": {
-            |      "foo.js": {
+            |      "foo.internal.js": {
             |        content: ```
             |            import {
             |              type as type_0
@@ -2186,8 +2238,7 @@ class JsBackendTest {
             |
             |            ```
             |      },
-            |      "foo.js.map": "__DO_NOT_CARE__",
-            |      $OUTPUT_BOILERPLATE
+            |      $BONUS_FOO_BOILERPLATE
             |    },
             |  }
             |}
@@ -2215,7 +2266,7 @@ class JsBackendTest {
             |{
             |  "js": {
             |    "my-test-library": {
-            |      "foo.js": {
+            |      "foo.internal.js": {
             |        content: ```
             |            import {
             |              type as type_0
@@ -2245,8 +2296,7 @@ class JsBackendTest {
             |
             |            ```
             |      },
-            |      "foo.js.map": "__DO_NOT_CARE__",
-            |      $OUTPUT_BOILERPLATE
+            |      $BONUS_FOO_BOILERPLATE
             |    },
             |  }
             |}
@@ -2282,7 +2332,7 @@ class JsBackendTest {
             |{
             |  js: {
             |    my-test-library: {
-            |      foo.js: {
+            |      foo.internal.js: {
             |        content:
             |          ```
             |          /**
@@ -2319,9 +2369,7 @@ class JsBackendTest {
             |
             |          ```
             |      },
-            |      foo.js.map: "__DO_NOT_CARE__",
-            |      index.js: "__DO_NOT_CARE__",
-            |      package.json: "__DO_NOT_CARE__",
+            |      $BONUS_FOO_BOILERPLATE
             |    }
             |  }
             |}
@@ -2348,7 +2396,7 @@ class JsBackendTest {
             |  "js": {
             |    "my-test-library": {
             |      "src": {
-            |        "foo.js": {
+            |        "foo.internal.js": {
             |          "content":
             |          ```
             |          /** @type {string} */
@@ -2356,7 +2404,9 @@ class JsBackendTest {
             |
             |          ```
             |        },
-            |        "foo.js.map": "__DO_NOT_CARE__"
+            |        "foo.js": "__DO_NOT_CARE__",
+            |        "foo.js.map": "__DO_NOT_CARE__",
+            |        "foo.internal.js.map": "__DO_NOT_CARE__",
             |      },
             |      "package.json": "__DO_NOT_CARE__",
             |      "index.js": "__DO_NOT_CARE__",
@@ -2386,14 +2436,16 @@ class JsBackendTest {
             |  "js": {
             |    "my-test-library": {
             |      "src": {
-            |        "foo.js": {
+            |        "foo.internal.js": {
             |          "content":
             |          ```
             |          [""][0].length;
             |
             |          ```
             |        },
-            |        "foo.js.map": "__DO_NOT_CARE__"
+            |        "foo.js": "__DO_NOT_CARE__",
+            |        "foo.js.map": "__DO_NOT_CARE__",
+            |        "foo.internal.js.map": "__DO_NOT_CARE__",
             |      },
             |      "package.json": "__DO_NOT_CARE__",
             |      "index.js": "__DO_NOT_CARE__",
@@ -2402,8 +2454,148 @@ class JsBackendTest {
             |}
         """.trimMargin(),
     )
+
+    @Test
+    fun connected() = assertGeneratedCode(
+        inputs = inputFileMapFromJson(
+            """
+                |{
+                |  src: {
+                |    foo: {
+                |      blah.temper: ```
+                |        let { prod } = import("./deeper");
+                |        export let twice(i: Int): Int {
+                |          prod(i, 2)
+                |        }
+                |
+                |        @connected
+                |        export let sum(i: Int, j: Int, bonus: Int = 0): Int;
+                |        export let inc(i: Int): Int {
+                |            sum(i, 1)
+                |        }
+                |        ```,
+                |      _connected.js: ```
+                |        // Importing with "../" required here. See layout later for more.
+                |        import "../foo.internal.js";
+                |        export const sum = (i, j, bonus) => {
+                |          return i + j + bonus;
+                |        };
+                |        ```,
+                |      deeper: {
+                |        things.temper: ```
+                |          export let prod(i: Int, j: Int): Int {
+                |              i * j
+                |          }
+                |          ```
+                |      }
+                |    },
+                |    other: {
+                |      thing: {
+                |        whatever.js: "// Content doesn't matter.",
+                |      },
+                |    },
+                |  }
+                |}
+            """.trimMargin(),
+        ),
+        want = """
+            |{
+            |  "js": {
+            |    "my-test-library": {
+            |      "src": {
+            |        "foo.internal.js": {
+            |          "content": ```
+            |            import {
+            |              prod as prod_0
+            |            } from "./foo/deeper.js";
+            |            import * as _connected from "./foo/_connected.js";
+            |            import {
+            |              panic as panic_0
+            |            } from "@temperlang/core";
+            |            /**
+            |             * @param {number} i_0
+            |             * @returns {number}
+            |             */
+            |            export function twice(i_0) {
+            |              return prod_0(i_0, 2);
+            |            };
+            |            /**
+            |             * @param {number} i_1
+            |             * @param {number} j_0
+            |             * @param {number | null} [bonus_0]
+            |             * @returns {number}
+            |             */
+            |            export function sum(i_1, j_0, bonus_0) {
+            |              let bonus_1;
+            |              if (bonus_0 == null) {
+            |                bonus_1 = 0;
+            |              } else {
+            |                bonus_1 = bonus_0;
+            |              }
+            |              return _connected.sum(i_1, j_0, bonus_1);
+            |            };
+            |            /**
+            |             * @param {number} i_2
+            |             * @returns {number}
+            |             */
+            |            export function inc(i_2) {
+            |              return sum(i_2, 1);
+            |            };
+            |
+            |            ```
+            |        },
+            |## As for cpp, we currently put foo(.internal?).js at the upper level.
+            |        "foo.js": "__DO_NOT_CARE__",
+            |## And because we don't export internal modules in package.json, we can't
+            |## do a outer-namespaced import of the internal module, so we currently
+            |## have to pay attention to when we need to "../" import things from this
+            |## subdir. Maybe we can always make "foo/index.js" in the future instead.
+            |        "foo": {
+            |          "_connected.js": "__DO_NOT_CARE__",
+            |          "deeper.js": "__DO_NOT_CARE__",
+            |          "deeper.js.map": "__DO_NOT_CARE__",
+            |          "deeper.internal.js": "__DO_NOT_CARE__",
+            |          "deeper.internal.js.map": "__DO_NOT_CARE__",
+            |        },
+            |        "other": {
+            |          "thing": {
+            |            "whatever.js": "__DO_NOT_CARE__",
+            |          },
+            |        },
+            |        "foo.js.map": "__DO_NOT_CARE__",
+            |        "foo.internal.js.map": "__DO_NOT_CARE__",
+            |      },
+            |      "package.json": {
+            |        jsonContent: {
+            |          "name": "my-test-library",
+            |          "type": "module",
+            |          "exports": {
+            |            // Showing json to emphasize what's exported, which excludes connected.
+            |            "./src/foo/deeper": "./src/foo/deeper.js",
+            |            "./src/foo": "./src/foo.js",
+            |            ".": "./index.js"
+            |          },
+            |          "dependencies": {
+            |            "@temperlang/core": "0.6.0"
+            |          }
+            |        },
+            |      },
+            |      "index.js": "__DO_NOT_CARE__",
+            |    }
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
 }
 
 private const val OUTPUT_BOILERPLATE = """
     "package.json": "__DO_NOT_CARE__", "index.js": "__DO_NOT_CARE__",
+"""
+
+/** One very common case. */
+private const val BONUS_FOO_BOILERPLATE = """
+    "foo.js": "__DO_NOT_CARE__",
+    "foo.js.map": "__DO_NOT_CARE__",
+    "foo.internal.js.map": "__DO_NOT_CARE__",
+    $OUTPUT_BOILERPLATE
 """

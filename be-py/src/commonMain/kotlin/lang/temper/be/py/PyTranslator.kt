@@ -132,7 +132,6 @@ class PyTranslator(
         val tests = mutableListOf<Py.Stmt>()
         val ungroupedImports = mutableListOf<Py.ImportFrom>()
         translateImports(t.imports, ungroupedImports)
-        connectedSource?.also { result.add(Py.Raw(t.pos, it)) }
         t.topLevels.forEach {
             at(it) topLevel@{
                 val dependencyCategory = it.dependencyCategory() ?: return@topLevel
@@ -178,10 +177,11 @@ class PyTranslator(
                 add(
                     Py.Program(
                         t.pos,
-                        result,
-                        DependencyCategory.Production,
-                        defaultGenre,
-                        t.codeLocation.outputPath,
+                        connected = connectedSource?.let { Py.Connected(t.pos, it) },
+                        body = result,
+                        dependencyCategory = DependencyCategory.Production,
+                        genre = defaultGenre,
+                        outputPath = t.codeLocation.outputPath,
                     ),
                 )
             }
@@ -190,10 +190,10 @@ class PyTranslator(
                 add(
                     Py.Program(
                         t.pos,
-                        tests,
-                        DependencyCategory.Test,
-                        Genre.Library,
-                        convertToTestPath(t.codeLocation.outputPath),
+                        body = tests,
+                        dependencyCategory = DependencyCategory.Test,
+                        genre = Genre.Library,
+                        outputPath = convertToTestPath(t.codeLocation.outputPath),
                     ),
                 )
             }
@@ -1149,9 +1149,6 @@ class PyTranslator(
         args: Py.Arguments,
     ): List<Py.Stmt> {
         // Call the connected function, after substituting any default arg values.
-        // Use a pretty but private name for the connected function.
-        val name = func.name.name as ResolvedParsedName
-        val nameText = pyNames.choosePrettyPrivateSourceName(name, TmpL.IdKind.Value)
         return buildList {
             addAll(renames)
             val defaulting = func.parameterDefaultStatementsInfo()
@@ -1160,7 +1157,8 @@ class PyTranslator(
                 addAll(translate(statement))
             }
             // Call the connected function with defaults applied.
-            Py.Name(func.pos, PyIdentifierName(nameText)).call(
+            Py.Name(func.pos, PyIdentifierName("_connected")).method(
+                name = pyNames.choosePrettyName(func.name.name as ResolvedParsedName, TmpL.IdKind.Value),
                 args = buildList {
                     for ((tmpl, py) in func.parameters.parameters.zip(args.args)) {
                         when {

@@ -3,6 +3,7 @@ package lang.temper.be.lua
 import lang.temper.common.TriState
 import lang.temper.format.FormattingHints
 import lang.temper.format.OutputToken
+import lang.temper.format.OutputTokenType
 
 internal class LuaFormattingHints : FormattingHints {
     companion object {
@@ -31,6 +32,9 @@ internal class LuaFormattingHints : FormattingHints {
             return false
         }
         if (noSpace.matches(preceding.text) || noSpace.matches(following.text)) {
+            return false
+        }
+        if (preceding.type == OutputTokenType.OtherValue) {
             return false
         }
         return super.spaceBetween(preceding, following)

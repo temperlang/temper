@@ -285,6 +285,7 @@ class LuaLocalRemover {
     }
 
     internal fun scan(stmt: Lua.Stmt): Lua.Stmt? = when (stmt) {
+        is Lua.Connected -> stmt.deepCopy() // TODO Anything we can/should do here?
         is Lua.GotoStmt -> Lua.GotoStmt(
             stmt.pos,
             Lua.Name(stmt.name.pos, stmt.name.id),

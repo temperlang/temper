@@ -12,10 +12,12 @@ import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.aType
 import lang.temper.be.tmpl.hasSplitSupers
 import lang.temper.be.tmpl.isNullValue
+import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapParameters
 import lang.temper.be.tmpl.mutableCaptures
 import lang.temper.be.tmpl.orInvalid
+import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.referencedNames
 import lang.temper.be.tmpl.splitConstructorBody
 import lang.temper.be.tmpl.typeOrInvalid
@@ -30,6 +32,7 @@ import lang.temper.log.FilePath
 import lang.temper.log.LogSink
 import lang.temper.log.Position
 import lang.temper.log.last
+import lang.temper.log.resolveDir
 import lang.temper.name.BuiltinName
 import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ExportedName
@@ -80,6 +83,7 @@ import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.TVoid
+import lang.temper.value.connectedSymbol
 import lang.temper.value.failSymbol
 import lang.temper.value.sealedTypeSymbol
 
@@ -94,11 +98,13 @@ class RustTranslator(
         libraryConfigurations.currentLibraryConfiguration.libraryName,
         DescriptorsForDeclarations.Key(RustBackend.Factory),
     )?.nameToDescriptor ?: mapOf()
+    private var anyConnected = false
     private var closureCount = 0
     private val builderItems = mutableListOf<Rust.Item>()
     private val decls = mutableMapOf<ResolvedName, DeclInfo>()
     private val failVars = mutableSetOf<ResolvedName>()
     private var insideMutableType = false
+    internal val isRoot = module.codeLocation.codeLocation.relativePath().segments.isEmpty()
     private val functionContextStack = mutableListOf<FunctionContext>()
     private val logSink = LogSink.devNull // TODO what?
     private val loopLabels = mutableListOf<Rust.Id?>()
@@ -140,7 +146,6 @@ class RustTranslator(
         )
         // Build source file.
         val relPath = module.codeLocation.codeLocation.relativePath()
-        val isRoot = relPath.segments.isEmpty()
         return Backend.TranslatedFileSpecification(
             path = makeSrcFilePath(relPath.withTemperAwareExtension("")),
             content = Rust.SourceFile(
@@ -149,7 +154,7 @@ class RustTranslator(
                 items = buildList {
                     // Declare submodules, except for root that needs to declare in lib file.
                     if (!isRoot) {
-                        declareSubmods(pos, modKids)
+                        declareSubmods(pos, allModKids())
                     }
                     // Provide needed imports.
                     // We only need temper-core traits sometimes, but just keep simple for now.
@@ -205,6 +210,19 @@ class RustTranslator(
             ),
             mimeType = RustBackend.mimeType,
         )
+    }
+
+    /** Includes both those passed in and any that might need added from translation. */
+    internal fun allModKids(): Collection<FilePath> {
+        return when {
+            anyConnected -> buildList {
+                addAll(modKids)
+                // We track _connected here because of how we do lib/mod on root, and because
+                // we want to put the root connected files in an expected place.
+                add(module.codeLocation.codeLocation.relativePath().resolveDir("_connected"))
+            }
+            else -> modKids
+        }
     }
 
     private fun buildInit(): Rust.Block {
@@ -552,7 +570,12 @@ class RustTranslator(
     }
 
     private fun processModuleFunctionDeclaration(decl: TmpL.ModuleFunctionDeclaration) {
-        moduleItems.add(translateFunctionDeclarationOrMethod(decl))
+        val connectedBlock = when {
+            decl.metadata.any { it.key.symbol == connectedSymbol } && !module.isStdLib ->
+                translateConnectedBody(decl)
+            else -> null
+        }
+        moduleItems.add(translateFunctionDeclarationOrMethod(decl, block = connectedBlock))
     }
 
     private fun processModuleInitBlock(block: TmpL.ModuleInitBlock) {
@@ -1929,6 +1952,39 @@ class RustTranslator(
                     expr = translateBlock(elseCase.body),
                 ).also { add(it) }
             },
+        )
+    }
+
+    private fun translateConnectedBody(decl: TmpL.ModuleFunctionDeclaration): Rust.Block {
+        anyConnected = true
+        val pos = decl.pos
+        val defaulting = decl.parameterDefaultStatementsInfo()
+        return Rust.Block(
+            pos,
+            statements = buildList {
+                for (statement in defaulting.defaultStatements) {
+                    addAll(translateStatement(statement))
+                }
+            },
+            result = "_connected".toId(pos).let { connectedModule ->
+                when {
+                    isRoot -> "crate".toKeyId(pos).extendWith(connectedModule)
+                    else -> connectedModule
+                }
+            }.extendWith(translateId(decl.name, style = NameStyle.Snake)).call(
+                buildList {
+                    for ((tmpl, rust) in decl.parameters.parameters.zip(translateParameters(decl.parameters))) {
+                        when {
+                            tmpl.optional -> {
+                                val name = defaulting.parameterMapping.getValue(tmpl.name.name)
+                                translateIdFromName(pos, name)
+                            }
+                            // TODO Validate frontend cases that shouldn't get here.
+                            else -> rust.toId(approximate = true)
+                        }.also { add(it) }
+                    }
+                },
+            ),
         )
     }
 

@@ -14,7 +14,6 @@ import lang.temper.frontend.Module
 import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
 import lang.temper.interp.importExport.STANDARD_LIBRARY_NAME
-import lang.temper.library.LibraryConfiguration
 import lang.temper.library.authors
 import lang.temper.library.description
 import lang.temper.library.homepage
@@ -27,6 +26,7 @@ import lang.temper.log.dirPath
 import lang.temper.log.filePath
 import lang.temper.log.last
 import lang.temper.log.resolveDir
+import lang.temper.log.resolveFile
 import lang.temper.name.BackendId
 import lang.temper.name.BackendMeta
 import lang.temper.name.DashedIdentifier
@@ -85,12 +85,17 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
             val deps = mutableSetOf<Dep>()
             val featuresByDep = mutableMapOf<String, MutableSet<String>>()
             val modNames = mutableListOf<String>()
+            var rootModKids: Collection<FilePath> = allModKids[libraryConfiguration.libraryRoot] ?: listOf()
             for (module in modules) {
                 // Actually translate.
                 val modKids = allModKids[module.codeLocation.codeLocation.sourceFile] ?: listOf()
                 val translator = RustTranslator(dependenciesBuilder, module, names, modKids)
                 val mod = translator.translateModule()
                 add(mod)
+                // Track root mod kids, including possible connected.
+                if (translator.isRoot) {
+                    rootModKids = translator.allModKids()
+                }
                 // We slap mod.rs on the end of each, so exclude that.
                 val segments = mod.path.dirName().segments
                 val pathed = segments.subListToEnd(1).joinToString("::") { it.fullName.escapeIfNeeded() }
@@ -122,9 +127,24 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
                     ).let { deps.add(it) }
                 }
             }
+            // Copy connected code.
+            for (file in rawBackendFiles) {
+                // Put rust connected modules into a subdir, under "src/" but skipping library name.
+                val rootSize = libraryConfiguration.libraryRoot.segments.size
+                val connectedDir = file.key.dirName().resolveDir("_connected").segments.subListToEnd(rootSize)
+                val fileName = when (val fileName = file.key.last().fullName) {
+                    "_connected.rs" -> "mod.rs"
+                    else -> fileName
+                }
+                MetadataFileSpecification(
+                    path = dirPath("src").resolve(connectedDir, isDir = true).resolveFile(fileName),
+                    mimeType = mimeType,
+                    content = file.value,
+                ).also { add(it) }
+            }
             // Merge lib. TODO Can we sort init in dependency order? Do we need to? Dep order maybe not hierarchical?
             linkLayers(finished.pos, allModPaths, allModKids)
-            addLib(finished.pos, modules, allModKids, deps, libraryConfiguration, modNames)
+            addLib(finished.pos, modules, rootModKids, deps, modNames)
             // Main program.
             MetadataFileSpecification(
                 path = filePath("src", "main.rs"),
@@ -302,9 +322,8 @@ private fun ResourceDescriptor.mimeType() = rsrcPath.mimeType()
 private fun MutableList<Backend.OutputFileSpecification>.addLib(
     pos: Position,
     modules: List<TmpL.Module>,
-    allModKids: Map<FilePath, Set<FilePath>>,
+    modKids: Collection<FilePath>,
     deps: Set<Dep>,
-    libraryConfiguration: LibraryConfiguration,
     modNames: List<String>,
 ) {
     val hasTopLevel = modules.any { it.codeLocation.codeLocation.relativePath().segments.isEmpty() }
@@ -315,7 +334,7 @@ private fun MutableList<Backend.OutputFileSpecification>.addLib(
             attrs = allowWarnings(pos),
             items = buildList {
                 // Separate mods.
-                declareSubmods(pos, allModKids[libraryConfiguration.libraryRoot] ?: setOf())
+                declareSubmods(pos, modKids)
                 // Top mod.
                 val pub = Rust.VisibilityPub(pos)
                 if (hasTopLevel) {
