@@ -234,7 +234,7 @@ enum class MessageTemplate(
         CompilationPhase.CodeGeneration,
     ),
     UserConnectedNotFun(
-        "At this time, users can connect only functions",
+        "At this time, users can connect only top-level functions",
         CompilationPhase.CodeGeneration,
     ),
     UserConnectedFunHasRest(

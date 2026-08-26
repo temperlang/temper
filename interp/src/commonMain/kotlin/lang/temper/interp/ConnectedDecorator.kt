@@ -36,7 +36,9 @@ internal val connectedDecorator = MetadataDecorator(
             }
             else -> when (val init = metadata[initSymbol]?.target) {
                 is FunTree -> when {
-                    // Seems we aren't able to gather formal params yet when this macro is called.
+                    // Neither instance nor static methods get in here because of different tree structures.
+                    // That's good for now.
+                    // Also, we don't get formal params yet when this macro is called, so loop trees.
                     init.children.any { maybeParam ->
                         when (val maybeParamParts = (maybeParam as? DeclTree)?.parts) {
                             null -> false
@@ -55,6 +57,7 @@ internal val connectedDecorator = MetadataDecorator(
             }
         }
     }
+    // Whether we had errors or not, move on with a void value.
     void
 }
 
