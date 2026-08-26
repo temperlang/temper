@@ -1,0 +1,8 @@
+@connected
+export class NoConnectedTypesForNow {}
+
+@connected
+export let alsoNoRestArgsForNow(i: Int, ...more: List<Int>);
+
+@connected
+export let alsoNoOtherDecls: Int = 5;

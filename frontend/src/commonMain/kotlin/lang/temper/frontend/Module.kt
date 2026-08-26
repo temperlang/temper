@@ -38,6 +38,7 @@ import lang.temper.interp.EmptyEnvironment
 import lang.temper.interp.immutableEnvironment
 import lang.temper.interp.importExport.Importer
 import lang.temper.interp.importExport.STANDARD_LIBRARY_NAME
+import lang.temper.interp.importExport.isEffectivelyStd
 import lang.temper.lexer.Genre
 import lang.temper.lexer.TokenSource
 import lang.temper.log.CodeLocation
@@ -80,6 +81,7 @@ import lang.temper.value.StayLeaf
 import lang.temper.value.TBoolean
 import lang.temper.value.Tree
 import lang.temper.value.Value
+import lang.temper.value.isCore
 import lang.temper.value.toPseudoCode
 import kotlin.math.max
 
@@ -777,24 +779,6 @@ class Module(
         }
 
     private var _dependencyCategory = DependencyCategory.Production
-}
-
-fun ModuleLocation.isEffectivelyStd(sharedLocationContext: SharedLocationContext?): Boolean {
-    if (this is ModuleName) {
-        if (this.isPreface) { return false }
-        val libraryName = sharedLocationContext?.get(this, LibraryNameLocationKey)
-        if (libraryName == DashedIdentifier.temperStandardLibraryIdentifier) {
-            return true
-        }
-    }
-    if (this is FileRelatedCodeLocation) {
-        // Recognize fake std, such as when editing them as ordinary files.
-        val sourceFile = this.sourceFile
-        if (sourceFile.segments.firstOrNull()?.fullName == STANDARD_LIBRARY_NAME) {
-            return true
-        }
-    }
-    return false
 }
 
 internal fun destructureModuleBody(

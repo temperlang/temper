@@ -1,14 +1,19 @@
 package lang.temper.interp
 
+import lang.temper.common.Log
+import lang.temper.log.MessageTemplate
 import lang.temper.name.Symbol
 import lang.temper.value.CallTree
+import lang.temper.value.DeclTree
 import lang.temper.value.FunTree
 import lang.temper.value.MacroActuals
 import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.connectedSymbol
 import lang.temper.value.initSymbol
+import lang.temper.value.restFormalSymbol
 import lang.temper.value.symbolContained
+import lang.temper.value.typeDeclSymbol
 import lang.temper.value.void
 
 /**
@@ -21,7 +26,35 @@ import lang.temper.value.void
 internal val connectedDecorator = MetadataDecorator(
     connectedSymbol,
     findDecoratorInsertions = ::findConnectedDecoratorInsertions,
-) {
+) { args ->
+    // At this stage, we don't need the location context.
+    if (!(isProcessingCore || isProcessingStd(sharedLocationContext = null))) run check@{
+        val metadata = (args.rawTreeList.first() as? DeclTree)?.parts?.metadataSymbolMap ?: return@check
+        when {
+            typeDeclSymbol in metadata -> {
+                log(Log.Error, MessageTemplate.UserConnectedNotFun, pos, listOf())
+            }
+            else -> when (val init = metadata[initSymbol]?.target) {
+                is FunTree -> when {
+                    // Seems we aren't able to gather formal params yet when this macro is called.
+                    init.children.any { maybeParam ->
+                        when (val maybeParamParts = (maybeParam as? DeclTree)?.parts) {
+                            null -> false
+                            else -> restFormalSymbol in maybeParamParts.metadataSymbolMap
+                        }
+                    } -> {
+                        log(Log.Error, MessageTemplate.UserConnectedFunHasRest, pos, listOf())
+                    }
+                    else -> {
+                        // We support connected functions without rest params at this time.
+                    }
+                }
+                else -> {
+                    log(Log.Error, MessageTemplate.UserConnectedNotFun, pos, listOf())
+                }
+            }
+        }
+    }
     void
 }
 

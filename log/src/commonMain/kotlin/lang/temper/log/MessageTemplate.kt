@@ -233,6 +233,14 @@ enum class MessageTemplate(
         "Function body required except for virtual methods or connected functions",
         CompilationPhase.CodeGeneration,
     ),
+    UserConnectedNotFun(
+        "At this time, users can connect only functions",
+        CompilationPhase.CodeGeneration,
+    ),
+    UserConnectedFunHasRest(
+        "At this time, rest parameters aren't supported in user connected functions",
+        CompilationPhase.CodeGeneration,
+    ),
     CannotExtend(
         "A class may not extend %s. Only named types and And(`&`) types may be extended",
         CompilationPhase.Interpreter,

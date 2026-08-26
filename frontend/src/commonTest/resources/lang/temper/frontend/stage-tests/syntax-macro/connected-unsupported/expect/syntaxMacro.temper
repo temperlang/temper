@@ -1,0 +1,13 @@
+@typeDecl(NoConnectedTypesForNow) @stay @connected let `test//`.NoConnectedTypesForNow = type (NoConnectedTypesForNow);
+@fn @connected let `test//`.alsoNoRestArgsForNow;
+do {};
+class(\word, \NoConnectedTypesForNow, \concrete, true, @typeDefined(NoConnectedTypesForNow) fn {
+    NoConnectedTypesForNow extends AnyValue;
+    @visibility(\public) let constructor__2 = fn constructor(@impliedThis(NoConnectedTypesForNow) this__0: NoConnectedTypesForNow) /* return__1 */: Void {};
+});
+`test//`.alsoNoRestArgsForNow = (@connected fn alsoNoRestArgsForNow(i__3 /* aka i */: Int) {
+    fn__5: do {
+      abstractPanic()
+    }
+});
+@connected let `test//`.alsoNoOtherDecls: Int = 5;
