@@ -37,7 +37,6 @@ import lang.temper.interp.ContinueCondition
 import lang.temper.interp.EmptyEnvironment
 import lang.temper.interp.immutableEnvironment
 import lang.temper.interp.importExport.Importer
-import lang.temper.interp.importExport.STANDARD_LIBRARY_NAME
 import lang.temper.interp.importExport.isEffectivelyStd
 import lang.temper.lexer.Genre
 import lang.temper.lexer.TokenSource
@@ -81,7 +80,6 @@ import lang.temper.value.StayLeaf
 import lang.temper.value.TBoolean
 import lang.temper.value.Tree
 import lang.temper.value.Value
-import lang.temper.value.isCore
 import lang.temper.value.toPseudoCode
 import kotlin.math.max
 

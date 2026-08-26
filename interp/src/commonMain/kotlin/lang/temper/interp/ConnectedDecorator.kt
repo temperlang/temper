@@ -27,8 +27,11 @@ internal val connectedDecorator = MetadataDecorator(
     connectedSymbol,
     findDecoratorInsertions = ::findConnectedDecoratorInsertions,
 ) { args ->
-    // At this stage, we don't need the location context.
-    if (!(isProcessingCore || isProcessingStd(sharedLocationContext = null))) run check@{
+    // Whether we have errors or not, move on with a void value.
+    void.also check@{
+        isProcessingCore && return@check
+        // At this stage, we don't need the location context.
+        isProcessingStd(sharedLocationContext = null) && return@check
         val metadata = (args.rawTreeList.first() as? DeclTree)?.parts?.metadataSymbolMap ?: return@check
         when {
             typeDeclSymbol in metadata -> {
@@ -57,8 +60,6 @@ internal val connectedDecorator = MetadataDecorator(
             }
         }
     }
-    // Whether we had errors or not, move on with a void value.
-    void
 }
 
 val vConnectedDecorator = Value(connectedDecorator)
