@@ -124,7 +124,7 @@ class DoTestTest {
         "/testing/failing",
     ) { output, libraryName, jobName ->
         val result = doTestResult(listOf(JavaBackend.Java17.backendId), jobName, output, libraryName)
-        checkErrorResults(result)
+        checkFailureResults(result)
     }
 
     @Test
