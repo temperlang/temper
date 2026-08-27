@@ -134,6 +134,12 @@ class DoTestTest {
     }
 
     @Test
+    @Timeout(JAVA_TIMEOUT_SECONDS)
+    fun connectedsJava17All() {
+        checkPassing("ConnectedsJava17", "/testing/connecteds", listOf(JavaBackend.Java17.backendId))
+    }
+
+    @Test
     fun testPassingJsBackend() {
         checkPassing("TestPassingJsBackend", "/testing/passing", listOf(JsBackend.Factory.backendId))
     }
