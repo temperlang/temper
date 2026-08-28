@@ -108,6 +108,16 @@ data class MaximalPath(
     val diagnosticPosition: Position,
     val preceders: List<Preceder>,
     val followers: List<Follower>,
+    /**
+     * If this path starts the `else` clause of an
+     * [`orelse` flow construct][ControlFlow.OrElse], then this is the label
+     * associated with the corresponding [`or` clause][ControlFlow.OrElse.orClause].
+     *
+     * In the case where an `else` clause is empty, it's nice to be able to uniquely
+     * identify the `else` clause within a CFG even in cases like the below where
+     * there are no instructions in the path that would distinguish it from others.
+     */
+    val orLabel: JumpLabel?,
 ) {
     /** Can serve as a reason for a transition. */
     sealed interface PathElement : Positioned {
@@ -194,6 +204,7 @@ data class MaximalPaths(
                     unknownPos,
                     emptyList(),
                     emptyList(),
+                    null,
                 ),
             ),
             entryPathIndex = MaximalPathIndex(0),
@@ -215,6 +226,7 @@ private class MutPath(
     var isFailExit: Boolean,
 ) {
     val index = ProvisionalIndex()
+    var orLabel: JumpLabel? = null
 
     // When we collapse one mut path into another, the receiver adopts the formers' indices.
     var indices = mutableSetOf(index)
@@ -255,15 +267,47 @@ private class MutBubbled(val pos: Position) : MutPathElement() {
 private class MutEdge(
     val condition: MutPathElement?,
     val from: ProvisionalIndex,
-    val to: ProvisionalIndex,
+    var to: ProvisionalIndex,
     val dir: ForwardOrBack,
 )
 
-enum class ConservativeFailure(val atStart: Boolean, val atEnd: Boolean) {
-    CalleeTypeOnly(false, false),
-    AtStartOfOr(atStart = true, atEnd = false),
-    AtEndOfOr(atStart = false, atEnd = true),
-    AtStartAndEnd(true, true),
+private const val BUBBLY_CALL_BIT = 1
+private const val AT_START_BIT = 2
+private const val AT_END_BIT = 4
+
+enum class ConservativeFailure(val bits: Int) {
+    Never(0), // Ok, that's a choice.
+    CalleeTypeOnly(BUBBLY_CALL_BIT),
+    AtStartOfOrOnly(AT_START_BIT),
+    AtStartOfOr(AT_START_BIT or BUBBLY_CALL_BIT),
+    AtEndOfOrOnly(AT_END_BIT),
+    AtEndOfOr(AT_END_BIT or BUBBLY_CALL_BIT),
+    AtStartAndEndOnly(AT_START_BIT or AT_END_BIT),
+    AtStartAndEnd(AT_START_BIT or AT_END_BIT or BUBBLY_CALL_BIT),
+    ;
+
+    val atBubblyCall: Boolean get() = (bits and BUBBLY_CALL_BIT) != 0
+    val atStart: Boolean get() = (bits and AT_START_BIT) != 0
+    val atEnd: Boolean get() = (bits and AT_END_BIT) != 0
+
+    infix fun or(other: ConservativeFailure) =
+        fromBits(this.bits or other.bits)
+    infix fun and(other: ConservativeFailure) =
+        fromBits(this.bits and other.bits)
+
+    companion object {
+        private fun fromBits(bits: Int): ConservativeFailure = when (bits) {
+            0 -> Never
+            (BUBBLY_CALL_BIT) -> CalleeTypeOnly
+            (AT_START_BIT) -> AtStartOfOrOnly
+            (AT_START_BIT or BUBBLY_CALL_BIT) -> AtStartOfOr
+            (AT_END_BIT) -> AtEndOfOrOnly
+            (AT_END_BIT or BUBBLY_CALL_BIT) -> AtEndOfOr
+            (AT_START_BIT or AT_END_BIT) -> AtStartAndEndOnly
+            (AT_START_BIT or AT_END_BIT or BUBBLY_CALL_BIT) -> AtStartAndEnd
+            else -> error("$bits")
+        }
+    }
 }
 
 /**
@@ -601,36 +645,43 @@ private class MapMaker(
             val elseClause = controlFlow.elseClause
 
             val beforeElse = lazy {
-                newPath(elseClause.pos.leftEdge)
+                newPath(elseClause.pos.leftEdge).also {
+                    it.orLabel = orClause.breakLabel
+                }
             }
 
             orClauseFailOverStack.add(beforeElse)
-            val beforeThen = maybeJoinAll(preceders)
-            if (fails.atStart) {
-                TODO("preceders=$preceders, beforeThen=$beforeThen, cf=$controlFlow")
+            var beforeOr = maybeJoinAll(preceders)
+            if (fails.atStart && beforeOr != null) {
+                val orLeftPos = controlFlow.orClause.pos.leftEdge
+                val startOfOr = newPath()
+                startOfOr.positionHints.add(orLeftPos)
+                addFollower(beforeOr, beforeElse.value, MutBubbled(orLeftPos))
+                addFollower(beforeOr, startOfOr)
+                beforeOr = startOfOr
             }
 
-            var afterThen = withJumpTargets(
+            var afterOr = withJumpTargets(
                 listOf(
                     JumpTarget(BreakOrContinue.Break, NamedJumpSpecifier(controlFlow.orClause.breakLabel))
                         to beforeElse,
                 ),
             ) {
-                buildPaths(orClause.stmts, setOfNotNull(beforeThen))
+                buildPaths(orClause.stmts, setOfNotNull(beforeOr))
             }
 
             orClauseFailOverStack.compatRemoveLast() // === beforeElse
             if (fails.atEnd) {
                 // Some passes use maximal paths to traverse things in a sensible order,
                 // and `fails` hint allows those passes to reach everything.
-                val afterThenJoined = joinAll(afterThen)
-                if (afterThenJoined != null) {
+                val afterOrJoined = joinAll(afterOr)
+                if (afterOrJoined != null) {
                     addFollower(
-                        afterThenJoined,
+                        afterOrJoined,
                         beforeElse.value,
                         MutBubbled(orClause.pos.rightEdge),
                     )
-                    afterThen = setOf(afterThenJoined)
+                    afterOr = setOf(afterOrJoined)
                 }
             }
 
@@ -639,7 +690,7 @@ private class MapMaker(
             } else {
                 emptySet()
             }
-            afterThen + afterElse
+            afterOr + afterElse
         }
         is ControlFlow.Stmt -> {
             val tree = root.dereference(controlFlow.ref)?.target
@@ -647,32 +698,31 @@ private class MapMaker(
             if (path == null) {
                 setOf()
             } else if (tree != null && isBubbleCall(tree)) {
-                val failOver = orClauseFailOverStack.last()
+                val failOver by orClauseFailOverStack.last()
                 path.positionHints.add(tree.pos.leftEdge)
                 path.positionHints.add(tree.pos.rightEdge)
-                addFollower(path, failOver.value)
+                addFollower(path, failOver)
                 setOf()
             } else {
                 path.elements.add(Either.Left(controlFlow))
-                if (tree != null && treeCanBubble(tree)) {
-                    val failOver = orClauseFailOverStack.last()
+                val bubbles = tree != null && fails.atBubblyCall && treeCanBubble(tree)
+                val yieldingCallDetails = if (yieldingCallsEndPaths) {
+                    disassembleYieldingCall(controlFlow, root)
+                } else {
+                    null
+                }
 
+                if (bubbles || yieldingCallDetails != null) {
                     val continues = newPath()
-                    continues.positionHints.add(tree.pos.rightEdge)
+                    continues.positionHints.add(tree!!.pos.rightEdge)
 
-                    addFollower(path, failOver.value, MutBubbled(controlFlow.pos))
+                    if (bubbles) {
+                        val failOver = orClauseFailOverStack.last()
+                        addFollower(path, failOver.value, MutBubbled(controlFlow.pos))
+                    }
                     addFollower(path, continues)
 
                     path = continues
-                } else if (yieldingCallsEndPaths) {
-                    val yieldingCallDetails = disassembleYieldingCall(controlFlow, root)
-                    if (yieldingCallDetails != null) {
-                        check(tree != null) // Couldn't have disassembled it otherwise
-                        val followsYield = newPath()
-                        followsYield.positionHints.add(tree.pos.rightEdge)
-                        addFollower(path, followsYield)
-                        path = followsYield
-                    }
                 }
                 setOfNotNull(path)
             }
@@ -779,6 +829,7 @@ private class MapMaker(
                 diagnosticPosition = diagnosticPosition,
                 preceders = preceders,
                 followers = followers,
+                orLabel = mutPath.orLabel,
             )
         }
 
@@ -817,7 +868,7 @@ private fun eliminateEmptyTransitions(
             // After:  ... -> AB -> ...
             // If something is preceded by one branch, that only flows into it, collapse
             // them regardless of their content
-            if (path.preceders.size == 1) {
+            if (path.preceders.size == 1 && path.orLabel == null) {
                 val preceder = path.preceders.first()
                 if (preceder.dir == ForwardOrBack.Forward) {
                     if (indexToPath[preceder.from] == indexToPath[preceder.to]) {
@@ -849,7 +900,7 @@ private fun eliminateEmptyTransitions(
                         // Not handled above so not a simple continuation
                         val kept = path
                         val eliminated = indexToPath.getValue(follower.to)
-                        if (eliminated !in includeInto) {
+                        if (eliminated !in includeInto && eliminated.orLabel == null) {
                             includeInto[eliminated] = kept
                             path.positionHints.clear()
                             continue
@@ -928,6 +979,41 @@ private fun eliminateEmptyTransitions(
                 indexToPath[index] = path
             }
         }
+    }
+
+    // Some paths can't be folded into because we only fold followers
+    // into preceders and the follower might have valuable metadata.
+    // But we can identify empty paths with one unconditional follower and
+    // without valuable metadata and just forward their preceders to their
+    // follower.
+    while (true) {
+        var progressMade = false
+        for (p in mutPaths) {
+            if (p.index in p.indices) {
+                // Still the canonical path for its index
+                if (
+                    p.elements.isEmpty() && p.orLabel == null && p.preceders.isNotEmpty() &&
+                    p.followers.size == 1 && p.followers[0].condition == null &&
+                    !p.isExit && !p.isFailExit
+                ) {
+                    val follower = p.followers[0]
+                    val allPrecedersToRelink = mutableListOf<MutEdge>()
+                    if (follower.condition == null && follower.dir == ForwardOrBack.Forward) {
+                        p.indices.clear()
+                        for (preceder in p.preceders) {
+                            preceder.to = follower.to
+                            allPrecedersToRelink.add(preceder)
+                        }
+                        val followerNode = indexToPath.getValue(follower.to)
+                        val index = followerNode.preceders.indexOf(follower)
+                        followerNode.preceders.removeAt(index)
+                        followerNode.preceders.addAll(index, allPrecedersToRelink)
+                        progressMade = true
+                    }
+                }
+            }
+        }
+        if (!progressMade) { break }
     }
 
     mutPaths.removeAll { it.index !in it.indices }

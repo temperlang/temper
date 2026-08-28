@@ -19,7 +19,6 @@ import lang.temper.interp.docgenalts.DocGenAltIfFn
 import lang.temper.interp.docgenalts.DocGenAltImpliedResultFn
 import lang.temper.interp.docgenalts.DocGenAltReturnFn
 import lang.temper.interp.docgenalts.DocGenAltWhileFn
-import lang.temper.interp.emptyValue
 import lang.temper.log.Position
 import lang.temper.log.Positioned
 import lang.temper.log.spanningPosition
@@ -60,6 +59,7 @@ import lang.temper.value.TVoid
 import lang.temper.value.Tree
 import lang.temper.value.UnresolvedJumpSpecifier
 import lang.temper.value.ValueLeaf
+import lang.temper.value.emptyValue
 import lang.temper.value.fromTypeSymbol
 import lang.temper.value.functionContained
 import lang.temper.value.initSymbol

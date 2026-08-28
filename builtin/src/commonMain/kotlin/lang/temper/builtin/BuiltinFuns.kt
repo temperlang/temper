@@ -1368,6 +1368,7 @@ object BuiltinFuns {
     ) { cmp ->
         TBoolean.value(cmp == 0)
     }
+    val vEqIntFn = Value(eqIntFn)
 
     val eqLongFn: CallableValue = LongCompareFun(
         "==",
@@ -1656,7 +1657,7 @@ object BuiltinFuns {
     val vDoPure = Value(doPure)
 }
 
-internal fun makeTypeFormal(
+fun makeTypeFormal(
     fnName: String,
     nameSuffix: String,
     vararg upperBounds: NominalType,

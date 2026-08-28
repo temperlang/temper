@@ -1,0 +1,20 @@
+var caseIndex#6: Int32;
+caseIndex#6 = 0;
+return__2 = fn /* return__0 */: (GeneratorResult<Empty>) {
+  fn__7: do {
+    while (true) {
+      let caseIndexLocal#8: Int32;
+      caseIndexLocal#8 = caseIndex#6;
+      caseIndex#6 = -1;
+      if (caseIndexLocal#8 == 0) {
+        do_call_log(console#1, "foo");
+        do_call_log(console#1, "bar");
+        return__0 = (fn doneResult)();
+        break fn__7;
+      } else {
+        return__0 = (fn doneResult)();
+        break fn__7;
+      }
+    }
+  }
+}

@@ -64,6 +64,7 @@ class ControlFlowFuzzTest {
             block.flow as StructuredFlow,
             assumeAllJumpsResolved = false,
             assumeResultsCaptured = false,
+            assumeUseBeforeInitChecked = false,
             logicalOperators = BuiltinLogicalOperators,
         )
         val simpleBlock = block.copy() as BlockTree
@@ -72,6 +73,7 @@ class ControlFlowFuzzTest {
             block.flow as StructuredFlow,
             assumeAllJumpsResolved = false,
             assumeResultsCaptured = true,
+            assumeUseBeforeInitChecked = false,
             logicalOperators = BuiltinLogicalOperators,
         )
         val simplerBlock = block.copy() as BlockTree
@@ -80,6 +82,7 @@ class ControlFlowFuzzTest {
             block.flow as StructuredFlow,
             assumeResultsCaptured = true,
             assumeAllJumpsResolved = true,
+            assumeUseBeforeInitChecked = false,
             logicalOperators = BuiltinLogicalOperators,
         )
         val simplestBlock = block.copy() as BlockTree

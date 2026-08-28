@@ -1630,6 +1630,7 @@ class ControlFlowTest {
             structureBlock(block),
             assumeAllJumpsResolved = false,
             assumeResultsCaptured = true,
+            assumeUseBeforeInitChecked = false,
             logicalOperators = BuiltinLogicalOperators,
         )
         val simpler = snapshotBlock()
@@ -1639,6 +1640,7 @@ class ControlFlowTest {
             structureBlock(block),
             assumeAllJumpsResolved = true,
             assumeResultsCaptured = true,
+            assumeUseBeforeInitChecked = false,
             logicalOperators = BuiltinLogicalOperators,
         )
         val simplest = snapshotBlock()
@@ -1679,6 +1681,7 @@ class ControlFlowTest {
                         structureBlock(block).controlFlow,
                         assumeAllJumpsResolved = assume,
                         assumeResultsCaptured = false,
+                        assumeUseBeforeInitChecked = false,
                         logicalOperators = BuiltinLogicalOperators,
                     ),
                 )

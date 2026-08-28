@@ -1,6 +1,7 @@
 package lang.temper.be.tmpl
 
 import lang.temper.builtin.BuiltinFun
+import lang.temper.builtin.makeTypeFormal
 import lang.temper.env.InterpMode
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
@@ -33,8 +34,8 @@ object ResultHelperFnPlaceholders {
     object IsOkResult : BuiltinFun(
         BuiltinName(IS_OK_RESULT_NAME),
         signature = run {
-            val (passF, passT) = makeTypeFormalHelper(IS_OK_RESULT_NAME, "PASS")
-            val (failF, failT) = makeTypeFormalHelper(IS_OK_RESULT_NAME, "FAIL")
+            val (passF, passT) = makeTypeFormal(IS_OK_RESULT_NAME, "PASS")
+            val (failF, failT) = makeTypeFormal(IS_OK_RESULT_NAME, "FAIL")
             Signature2(
                 returnType2 = WellKnownTypes.booleanType2,
                 hasThisFormal = false,
@@ -64,8 +65,8 @@ object ResultHelperFnPlaceholders {
     object UnpackOkResult : BuiltinFun(
         BuiltinName(UNPACK_OK_RESULT_NAME),
         signature = run {
-            val (passF, passT) = makeTypeFormalHelper(UNPACK_OK_RESULT_NAME, "PASS")
-            val (failF, failT) = makeTypeFormalHelper(UNPACK_OK_RESULT_NAME, "FAIL")
+            val (passF, passT) = makeTypeFormal(UNPACK_OK_RESULT_NAME, "PASS")
+            val (failF, failT) = makeTypeFormal(UNPACK_OK_RESULT_NAME, "FAIL")
             Signature2(
                 returnType2 = passT,
                 hasThisFormal = false,
@@ -95,8 +96,8 @@ object ResultHelperFnPlaceholders {
     object PackOkResult : BuiltinFun(
         BuiltinName(PACK_OK_RESULT_NAME),
         signature = run {
-            val (passF, passT) = makeTypeFormalHelper(PACK_OK_RESULT_NAME, "PASS")
-            val (failF, failT) = makeTypeFormalHelper(PACK_OK_RESULT_NAME, "FAIL")
+            val (passF, passT) = makeTypeFormal(PACK_OK_RESULT_NAME, "PASS")
+            val (failF, failT) = makeTypeFormal(PACK_OK_RESULT_NAME, "FAIL")
             Signature2(
                 returnType2 = MkType2(WellKnownTypes.resultTypeDefinition)
                     .actuals(listOf(passT, failT))

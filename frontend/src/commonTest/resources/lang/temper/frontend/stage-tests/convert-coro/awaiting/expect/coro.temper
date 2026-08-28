@@ -1,0 +1,46 @@
+var caseIndex#12: Int32;
+caseIndex#12 = 0;
+var awaited#11: Promise<String>?;
+awaited#11 = null;
+var s__2: String;
+s__2 = "";
+return__4 = fn /* return__1 */: (GeneratorResult<Empty>) {
+  fn__13: do {
+    while (true) {
+      let caseIndexLocal#14: Int32;
+      caseIndexLocal#14 = caseIndex#12;
+      caseIndex#12 = -1;
+      if (caseIndexLocal#14 == 0) {
+        do_call_log(console#3, "Beginning");
+        caseIndex#12 = 1
+      } else if (caseIndexLocal#14 == 1) {
+        orElse#15: {
+          awaited#11 = p__0;
+          awakeUpon(notNull(awaited#11));
+          return__1 = new ValueResult<Empty>(do {});
+          caseIndex#12 = 2;
+          break fn__13;
+        } orelse {
+          caseIndex#12 = 3
+        }
+      } else if (caseIndexLocal#14 == 2) {
+        orElse#16: {
+          s__2 = getPromiseResultSync(notNull(awaited#11));
+          caseIndex#12 = 4
+        } orelse {
+          caseIndex#12 = 3
+        }
+      } else if (caseIndexLocal#14 == 3) {
+        s__2 = "Broken";
+        caseIndex#12 = 4
+      } else if (caseIndexLocal#14 == 4) {
+        do_call_log(console#3, s__2);
+        return__1 = (fn doneResult)();
+        break fn__13;
+      } else {
+        return__1 = (fn doneResult)();
+        break fn__13;
+      }
+    }
+  }
+}

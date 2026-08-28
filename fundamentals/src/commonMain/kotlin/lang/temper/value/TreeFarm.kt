@@ -141,7 +141,7 @@ abstract class Planting(
         pos: Position,
         flowMaker: FlowMaker? = null,
         type: StaticType? = null,
-        children: (Planting).() -> Any?,
+        children: (BlockPlanting).() -> Any?,
     ): TreeTemplate<BlockTree> {
         val planting = BlockPlanting(nameMaker)
         planting.children()

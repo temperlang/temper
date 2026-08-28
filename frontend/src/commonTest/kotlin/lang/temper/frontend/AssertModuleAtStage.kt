@@ -105,6 +105,8 @@ private fun shouldRegenerateStageTest(
     ignore(stageTestDir)
     ignore(isEmpty)
 
+    // Set to true temporarily if you want to regenerate test output which you should then check
+    // with `git diff`.
     return false
 }
 

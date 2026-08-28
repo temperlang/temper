@@ -25,11 +25,11 @@ import lang.temper.frontend.AdaptGeneratorFn
 import lang.temper.frontend.Module
 import lang.temper.frontend.ModuleNamingContext
 import lang.temper.frontend.core.builtinEnvironment
+import lang.temper.frontend.coroutine.maybeUnwrapCoroutine
 import lang.temper.frontend.mergedNamingContext
 import lang.temper.interp.EmptyEnvironment
 import lang.temper.interp.LongLivedUserFunction
 import lang.temper.interp.New
-import lang.temper.interp.emptyValue
 import lang.temper.lexer.Genre
 import lang.temper.library.LibraryConfiguration
 import lang.temper.library.LibraryConfigurations
@@ -142,6 +142,7 @@ import lang.temper.value.TypeInferences
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 import lang.temper.value.consoleParsedName
+import lang.temper.value.emptyValue
 import lang.temper.value.factorySignatureFromConstructorSignature
 import lang.temper.value.fnParsedName
 import lang.temper.value.fnSymbol

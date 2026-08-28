@@ -4,27 +4,21 @@ import lang.temper.ast.TreeVisit
 import lang.temper.ast.VisitCue
 import lang.temper.builtin.AwaitFn
 import lang.temper.builtin.BuiltinFuns
-import lang.temper.common.AtomicCounter
+import lang.temper.builtin.makeTypeFormal
 import lang.temper.common.Either
 import lang.temper.env.InterpMode
 import lang.temper.frontend.core.CoreModule
 import lang.temper.interp.New
-import lang.temper.interp.emptyValue
 import lang.temper.log.Position
 import lang.temper.log.spanningPosition
-import lang.temper.name.BuiltinName
-import lang.temper.name.CoreCodeLocation
 import lang.temper.name.NameMaker
 import lang.temper.name.ResolvedName
-import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
 import lang.temper.type.InvalidType
 import lang.temper.type.MkType
 import lang.temper.type.StaticType
 import lang.temper.type.SuperTypeTree
-import lang.temper.type.TypeFormal
-import lang.temper.type.Variance
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.excludeNullAndBubble
 import lang.temper.type.extractNominalTypes
@@ -66,7 +60,9 @@ import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 import lang.temper.value.YieldingCallDisassembled
 import lang.temper.value.YieldingFnKind
+import lang.temper.value.ZeroValues
 import lang.temper.value.disassembleYieldingCall
+import lang.temper.value.emptyValue
 import lang.temper.value.forwardMaximalPaths
 import lang.temper.value.freeTree
 import lang.temper.value.functionContained
@@ -1009,7 +1005,7 @@ object ConvertedCoroutineAwakeUponFn : NamedBuiltinFun, BuiltinStatelessMacroVal
 
     val sig = run {
         // Fn <T>(Promise<T>, Generator<T>): Void
-        val (t, tt) = makeTypeFormalHelper(name, "Y")
+        val (t, tt) = makeTypeFormal(name, "Y")
         Signature2(
             returnType2 = WellKnownTypes.voidType2,
             hasThisFormal = false,
@@ -1039,7 +1035,7 @@ object GetPromiseResultSyncFn : NamedBuiltinFun, BuiltinStatelessMacroValue {
     override val name = "getPromiseResultSync"
 
     val sig = run {
-        val (t, tt) = makeTypeFormalHelper(name, "Y")
+        val (t, tt) = makeTypeFormal(name, "Y")
         // Fn <Y>(Boolean, Promise<Y>): Y
         Signature2(
             returnType2 = tt,
@@ -1057,23 +1053,6 @@ object GetPromiseResultSyncFn : NamedBuiltinFun, BuiltinStatelessMacroValue {
     override fun invoke(macroEnv: MacroEnvironment, interpMode: InterpMode): PartialResult {
         throw Panic()
     }
-}
-
-internal fun makeTypeFormalHelper(
-    fnName: String,
-    nameSuffix: String,
-): Pair<TypeFormal, Type2> {
-    val nameKey = "$fnName$nameSuffix"
-    val typeFormal = TypeFormal(
-        Position(CoreCodeLocation, 0, 0),
-        BuiltinName(nameKey),
-        Symbol(nameKey),
-        Variance.Invariant,
-        AtomicCounter(),
-        upperBounds = listOf(WellKnownTypes.anyValueType),
-    )
-    val typeT = MkType2(typeFormal).get()
-    return typeFormal to typeT
 }
 
 private fun assignCallType(left: StaticType, right: StaticType = left) =

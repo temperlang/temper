@@ -376,6 +376,19 @@ fun intersect(a: IntRange, b: IntRange): IntRange {
     }
 }
 
+fun <T> Set<T>.intersects(other: Set<T>): Boolean {
+    val smaller: Set<T>
+    val larger: Set<T>
+    if (this.size <= other.size) {
+        smaller = this
+        larger = other
+    } else {
+        smaller = other
+        larger = this
+    }
+    return smaller.any { it in larger }
+}
+
 fun <T> (List<T>).indexOf(x: T, from: Int): Int {
     for (i in from until this.size) {
         if (this[i] == x) {

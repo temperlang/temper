@@ -1,0 +1,54 @@
+var caseIndex#9: Int32;
+caseIndex#9 = 0;
+var z__3: Int32;
+z__3 = 0;
+var sb__5: StringBuilder?;
+sb__5 = null;
+return__6 = fn /* return__2 */: (GeneratorResult<String>) {
+  fn__10: do {
+    while (true) {
+      let caseIndexLocal#11: Int32;
+      caseIndexLocal#11 = caseIndex#9;
+      caseIndex#9 = -1;
+      if (caseIndexLocal#11 == 0) {
+        z__3 = x__0 + y__1;
+        return__2 = new ValueResult<String>("Starting");
+        caseIndex#9 = 1;
+        break fn__10;
+      } else if (caseIndexLocal#11 == 1) {
+        sb__5 = new StringBuilder ();
+        do_call_append(notNull(sb__5), "x=");
+        do_call_append(notNull(sb__5), do_call_toString(x__0));
+        return__2 = new ValueResult<String>(do_call_toString(notNull(sb__5)));
+        caseIndex#9 = 2;
+        break fn__10;
+      } else if (caseIndexLocal#11 == 2) {
+        do_call_append(notNull(sb__5), ", y=");
+        do_call_append(notNull(sb__5), do_call_toString(y__1));
+        return__2 = new ValueResult<String>(do_call_toString(notNull(sb__5)));
+        caseIndex#9 = 3;
+        break fn__10;
+      } else if (caseIndexLocal#11 == 3) {
+        let w__4;
+        w__4 = z__3 + z__3;
+        do_call_append(notNull(sb__5), ", w=");
+        do_call_append(notNull(sb__5), do_call_toString(w__4));
+        return__2 = new ValueResult<String>(do_call_toString(notNull(sb__5)));
+        caseIndex#9 = 4;
+        break fn__10;
+      } else if (caseIndexLocal#11 == 4) {
+        do_call_append(notNull(sb__5), ", z=");
+        do_call_append(notNull(sb__5), do_call_toString(z__3));
+        return__2 = new ValueResult<String>(do_call_toString(notNull(sb__5)));
+        caseIndex#9 = 5;
+        break fn__10;
+      } else if (caseIndexLocal#11 == 5) {
+        return__2 = (fn doneResult)();
+        break fn__10;
+      } else {
+        return__2 = (fn doneResult)();
+        break fn__10;
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+f { (b1: Boolean, b2: Boolean) : GeneratorResult<Empty> extends GeneratorFn =>
+  console.log("Beginning");
+
+  yield;
+
+  if (b1) {
+    console.log("b1 is true");
+  } else {
+    console.log("b1 is false");
+  }
+
+  console.log("Middle");
+
+  if (b2) {
+    console.log("b2 is true");
+    yield;
+  } else {
+    yield;
+    console.log("b2 is false");
+  }
+
+  console.log("End");
+}

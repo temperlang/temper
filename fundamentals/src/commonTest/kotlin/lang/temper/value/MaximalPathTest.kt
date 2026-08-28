@@ -6,6 +6,7 @@ import lang.temper.common.LeftOrRight
 import lang.temper.common.TestDocumentContext
 import lang.temper.common.console
 import lang.temper.common.soleElement
+import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.frontend.structureBlock
 import lang.temper.log.Position
 import lang.temper.name.ParsedName
@@ -190,19 +191,19 @@ class MaximalPathTest {
                 |Fail exits
                 |
                 |Path#0
-                |if (ref#0?: `bad()`) -> Path#1
-                |else -> Path#2
+                |if (ref#0?: `bad()`) -> Path#2
+                |else -> Path#1
                 |
                 |Path#1
-                |- ref#3: `recover()`
-                |-> Path#3
-                |
-                |Path#2
                 |- ref#2: `known_safe()`
                 |-> Path#3
                 |
+                |Path#2 catches from orElse#0
+                |- ref#3: `recover()`
+                |-> Path#3
+                |
                 |Path#3
-            """.trimMargin(),
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
         ) {
             OrElse(
                 or = {
@@ -403,7 +404,7 @@ class MaximalPathTest {
             |- ref#5: `t#3 = t#2`
             |-> Path#3
             |
-            |Path#2
+            |Path#2 catches from orelse__4
             |- ref#6: `t#3 = -1`
             |-> Path#3
             |
@@ -835,7 +836,7 @@ class MaximalPathTest {
             |if (bubbled) -> Path#1
             |else -> Path#2
             |
-            |Path#1
+            |Path#1 catches from orelse__0
             |- ref#3: `g()`
             |-> Path#2
             |
@@ -881,6 +882,89 @@ class MaximalPathTest {
                 V(void)
                 Continue()
             }
+        }
+    }
+
+    @Test
+    fun inStartAndEndModeNoPathIsGuardedByTwoOrs() {
+        assertMaximalPaths(
+            fails = ConservativeFailure.AtStartAndEndOnly,
+            // f();
+            // do {
+            //   g();
+            //   do {
+            //     h();
+            //     i();
+            //   } orelse do {
+            //     a()
+            //   }
+            //   j();
+            //   k();
+            // } orelse do {
+            //   b()
+            // }
+            want = """
+                |Entry Path#0
+                |Exits Path#6
+                |Fail exits
+                |
+                |Path#0
+                |- ref#0: `f()`
+                |if (bubbled) -> Path#2
+                |else -> Path#1
+                |
+                |## g() flows directly into h(), but the bubbled below
+                |## prevents them from being in the same basic block
+                |## which is important because h() has a different failure
+                |## handler than g().
+                |##
+                |## Same with f() and g().
+                |Path#1
+                |- ref#1: `g()`
+                |if (bubbled) -> Path#4
+                |else -> Path#3
+                |
+                |Path#3
+                |- ref#2: `h()`
+                |- ref#3: `i()`
+                |if (bubbled) -> Path#4
+                |else -> Path#5
+                |
+                |## After a() in the else block, control
+                |## flows to j() same as from i().
+                |Path#4 catches from orElse#0
+                |- ref#4: `a()`
+                |-> Path#5
+                |
+                |Path#5
+                |- ref#5: `j()`
+                |- ref#6: `k()`
+                |if (bubbled) -> Path#2
+                |else -> Path#6
+                |
+                |Path#2 catches from orElse#1
+                |- ref#7: `b()`
+                |-> Path#6
+                |
+                |Path#6
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        ) {
+            Stmt("f")
+            OrElse(
+                or = {
+                    Stmt("g")
+                    OrElse(
+                        or = {
+                            Stmt("h")
+                            Stmt("i")
+                        },
+                        els = { Stmt("a") },
+                    )
+                    Stmt("j")
+                    Stmt("k")
+                },
+                els = { Stmt("b") },
+            )
         }
     }
 
@@ -967,6 +1051,9 @@ private fun basicBlocksToString(
         val mp = maximalPaths[pi]
         append("Path")
         append(mp.pathIndex)
+        if (mp.orLabel != null) {
+            append(" catches from ${mp.orLabel}")
+        }
         append('\n')
 
         for (element in mp.elements) {

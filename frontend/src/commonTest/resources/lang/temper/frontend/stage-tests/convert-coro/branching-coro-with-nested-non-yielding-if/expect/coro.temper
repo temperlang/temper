@@ -1,0 +1,48 @@
+var caseIndex#10: Int32;
+caseIndex#10 = 0;
+return__6 = fn /* return__4 */: (GeneratorResult<Empty>) {
+  fn__11: do {
+    while (true) {
+      let caseIndexLocal#12: Int32;
+      caseIndexLocal#12 = caseIndex#10;
+      caseIndex#10 = -1;
+      if (caseIndexLocal#12 == 0) {
+        do_call_log(console#5, "Beginning");
+        return__4 = new ValueResult<Empty>({class: Empty__10});
+        caseIndex#10 = 1;
+        break fn__11;
+      } else if (caseIndexLocal#12 == 1) {
+        if (b1__2) {
+          do_call_log(console#5, "b1 is true")
+        } else {
+          do_call_log(console#5, "b1 is false")
+        };
+        do_call_log(console#5, "Middle");
+        if (b2__3) {
+          caseIndex#10 = 2
+        } else {
+          caseIndex#10 = 3
+        }
+      } else if (caseIndexLocal#12 == 2) {
+        do_call_log(console#5, "b2 is true");
+        return__4 = new ValueResult<Empty>({class: Empty__10});
+        caseIndex#10 = 4;
+        break fn__11;
+      } else if (caseIndexLocal#12 == 3) {
+        return__4 = new ValueResult<Empty>({class: Empty__10});
+        caseIndex#10 = 5;
+        break fn__11;
+      } else if (caseIndexLocal#12 == 4) {
+        do_call_log(console#5, "End");
+        return__4 = (fn doneResult)();
+        break fn__11;
+      } else if (caseIndexLocal#12 == 5) {
+        do_call_log(console#5, "b2 is false");
+        caseIndex#10 = 4
+      } else {
+        return__4 = (fn doneResult)();
+        break fn__11;
+      }
+    }
+  }
+}

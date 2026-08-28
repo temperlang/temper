@@ -1,0 +1,36 @@
+var caseIndex#5: Int32;
+caseIndex#5 = 0;
+var i__1: Int32;
+i__1 = 0;
+return__2 = fn /* return__0 */: (GeneratorResult<Int32>) {
+  fn__6: do {
+    while (true) {
+      let caseIndexLocal#7: Int32;
+      caseIndexLocal#7 = caseIndex#5;
+      caseIndex#5 = -1;
+      if (caseIndexLocal#7 == 0) {
+        i__1 = 0;
+        caseIndex#5 = 1
+      } else if (caseIndexLocal#7 == 1) {
+        if (i__1 < 10) {
+          caseIndex#5 = 2
+        } else {
+          caseIndex#5 = 3
+        }
+      } else if (caseIndexLocal#7 == 2) {
+        return__0 = new ValueResult<Int32>(i__1);
+        caseIndex#5 = 4;
+        break fn__6;
+      } else if (caseIndexLocal#7 == 3) {
+        return__0 = (fn doneResult)();
+        break fn__6;
+      } else if (caseIndexLocal#7 == 4) {
+        i__1 = i__1 + 1;
+        caseIndex#5 = 1
+      } else {
+        return__0 = (fn doneResult)();
+        break fn__6;
+      }
+    }
+  }
+}
