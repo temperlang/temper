@@ -309,7 +309,6 @@ private fun stageLibraries(
         libraryConfigurationsByRoot.values.toList(),
     )
 
-    sourceFilePartition
     return StagingResult(
         modulesInOrder,
         libraries = libraries.map { (config, modules) ->
