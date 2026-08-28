@@ -195,6 +195,19 @@ class Module(
         _topLevelBindings = null
     }
 
+    fun bindingsInjectors(): List<BindingsInjector> = mutableBindingsInjectors.toList()
+    private val mutableBindingsInjectors = mutableListOf<BindingsInjector>()
+
+    /**
+     * Actual injectors called during [DefineStage]. The primary initial use
+     * is for injecting config classes into config modules.
+     *
+     * TODO Instead define whole virtual modules for import?
+     */
+    fun addBindingsInjector(injector: BindingsInjector) {
+        mutableBindingsInjectors.add(injector)
+    }
+
     /**
      * An outer module that is implicitly imported during [Stage.Import].
      * This is used to connect a module to its preface.
@@ -832,4 +845,8 @@ fun Iterable<Module>.mergedNamingContext(mergedLoc: ModuleLocation): NamingConte
     return object : NamingContext(AtomicCounter(maxUid.toLong())) {
         override val loc: ModuleLocation = mergedLoc
     }
+}
+
+interface BindingsInjector {
+    fun inject(module: Module, root: BlockTree, logSink: LogSink)
 }

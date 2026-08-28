@@ -132,7 +132,7 @@ fun plugInBackendConfigs(
     moduleCustomizeHook = { module, isNew ->
         moduleConfig.moduleCustomizeHook.customize(module, isNew)
         for (backendId in backends) {
-            module.addEnvironmentBindings(lookupFactory(backendId)!!.environmentBindings)
+            lookupFactory(backendId)!!.addEnvironmentBindings(module)
         }
     },
 )

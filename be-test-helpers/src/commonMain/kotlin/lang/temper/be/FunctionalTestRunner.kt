@@ -144,7 +144,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
             customizeModule = { module, _ ->
                 module.addEnvironmentBindings(server.makeBindings())
                 for (factory in backendOrganization.factoriesById.values) {
-                    module.addEnvironmentBindings(factory.environmentBindings)
+                    factory.addEnvironmentBindings(module)
                 }
             },
         )

@@ -10,6 +10,7 @@ import lang.temper.be.tmpl.TmpLTranslator
 import lang.temper.be.tmpl.hasSplitSupers
 import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.common.MimeType
+import lang.temper.frontend.BindingsInjector
 import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
 import lang.temper.library.LibraryConfigurations
@@ -410,6 +411,8 @@ class JavaBackend private constructor(
 
         val pomPath = filePath("pom.xml")
         val pomMime = MimeType("text", "xml")
+
+        override val configBindingsInjector: BindingsInjector = JavaConfigInjector
 
         override fun make(setup: BackendSetup<JavaBackend>) = JavaBackend(this, setup)
     }

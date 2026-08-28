@@ -24,7 +24,9 @@ import lang.temper.common.structure.FormattingStructureSink
 import lang.temper.common.toStringViaBuilder
 import lang.temper.common.transitiveClosure
 import lang.temper.format.TokenSink
+import lang.temper.frontend.BindingsInjector
 import lang.temper.frontend.Module
+import lang.temper.frontend.staging.isConfigModule
 import lang.temper.fs.AsyncSystemAccess
 import lang.temper.fs.AsyncSystemReadAccess
 import lang.temper.fs.ResourceDescriptor
@@ -809,6 +811,17 @@ abstract class Backend<SELF : Backend<SELF>>(
          */
         val environmentBindings: Map<TemperName, Value<*>>
             get() = emptyMap()
+
+        val configBindingsInjector: BindingsInjector?
+            get() = null
+
+        /** Add environment bindings to the module as appropriate. */
+        fun addEnvironmentBindings(module: Module) {
+            module.addEnvironmentBindings(environmentBindings)
+            if (module.isConfigModule) {
+                configBindingsInjector?.also { module.addBindingsInjector(it) }
+            }
+        }
 
         /** See [BackendHelpTopicKeys] for more info. */
         val extraHelpTopics: Map<BackendHelpTopicKey, OccasionallyHelpful>

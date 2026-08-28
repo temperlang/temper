@@ -129,7 +129,7 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
     val moduleConfig = ModuleConfig(
         moduleCustomizeHook = { module, isNew ->
             for (activeFactory in activeFactories) {
-                module.addEnvironmentBindings(activeFactory.environmentBindings)
+                activeFactory.addEnvironmentBindings(module)
             }
             if (isNew && (module.loc as? ModuleName)?.isPreface == false) {
                 module.addEnvironmentBindings(

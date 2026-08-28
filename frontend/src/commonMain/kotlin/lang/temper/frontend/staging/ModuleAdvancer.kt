@@ -1112,7 +1112,7 @@ private fun toLocalSpecifier(
     return null
 }
 
-private val Module.isConfigModule: Boolean
+val Module.isConfigModule: Boolean
     get() = when (loc) {
         is ModuleName -> when {
             loc.isPreface -> false
