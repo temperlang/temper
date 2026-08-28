@@ -104,5 +104,3 @@ class JavaLibraryConfig(
                 else -> javaPackageMetadataString.split(".")
             }
 }
-
-private val commaSeparated = Regex("""\s*,\s*""")
