@@ -120,6 +120,12 @@ class CoroutineConverterTest {
     fun yieldInLoop() = assertConvertedCoroutine(
         StageTestDir("convert-coro/yield-in-loop"),
     )
+
+    @Test
+    fun nestedFunctionHoisting() = assertConvertedCoroutine(
+        StageTestDir("convert-coro/nested-function-hoisting"),
+        args = listOf(WellKnownTypes.intType2, WellKnownTypes.intType2),
+    )
 }
 
 /**
@@ -227,8 +233,9 @@ internal fun assertConvertedCoroutine(
             }
             VisitCue.Continue
         }.visitPreOrder()
-    val unconvertedCoroPseudocodeBefore =
-        coroDetails?.unwrappedCoroutine?.funTree?.toPseudoCode()
+    val funTree = coroDetails?.unwrappedCoroutine?.funTree
+    fun snapshotCoroPseudocode() = funTree?.toPseudoCode(singleLine = false)
+    val unconvertedCoroPseudocodeBefore = snapshotCoroPseudocode()
     var coroPseudocode: String? = null
     var simplifiedPseudocode: String? = null
     coroDetails?.let { (outerFn, unwrappedCoroutine) ->
@@ -274,8 +281,8 @@ internal fun assertConvertedCoroutine(
             }
         }
     }
-    val unconvertedCoroPseudocodeAfter =
-        coroDetails?.unwrappedCoroutine?.funTree?.toPseudoCode()
+
+    val unconvertedCoroPseudocodeAfter = snapshotCoroPseudocode()
 
     val got = listBackedLogSink.wrapErrorsAround(
         object : Structured {

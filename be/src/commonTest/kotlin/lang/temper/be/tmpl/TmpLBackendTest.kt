@@ -2953,8 +2953,7 @@ class TmpLBackendTest {
             |          @QName("test-library/foo.i=") var i__0: Int32 = 0;
             |          @QName("test-library/foo.j=") var j__0: Int32 = 0;
             |          @QName("test-library/foo.helper()") let helper__0(): Void {
-            |            var t#0: String = "" + nym`+#67`(i__0, j__0);
-            |            ConsoleLog#0(console#0, t#0);
+            |            ConsoleLog#0(console#0, "" + nym`+#67`(i__0, j__0));
             |            return void;
             |          }
             |          let convertedCoroutine#0(generator#0: SafeGenerator<Empty>): GeneratorResult<Empty> {
@@ -2967,8 +2966,7 @@ class TmpLBackendTest {
             |                @QName("test-library/foo.k=") var k__0: Int32 = 3;
             |                j__0 = nym`+#67`(j__0, 1);
             |                k__0 = nym`+#67`(k__0, 1);
-            |                var t#1: String = "" + k__0;
-            |                ConsoleLog#0(console#0, t#1);
+            |                ConsoleLog#0(console#0, "" + k__0);
             |                helper__0();
             |                caseIndex#0 = 1;
             |                return ValueResultConstructor#0(Empty#0());

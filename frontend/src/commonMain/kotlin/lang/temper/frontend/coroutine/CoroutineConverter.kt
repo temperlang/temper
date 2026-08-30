@@ -14,7 +14,6 @@ import lang.temper.common.KBitSet
 import lang.temper.common.abbreviate
 import lang.temper.common.addTransitiveClosure
 import lang.temper.common.bitIndices
-import lang.temper.common.buildSetMultimap
 import lang.temper.common.ignore
 import lang.temper.common.intersects
 import lang.temper.env.Export
@@ -77,6 +76,7 @@ import lang.temper.value.ZeroValues
 import lang.temper.value.disassembleYieldingCall
 import lang.temper.value.emptyValue
 import lang.temper.value.fnParsedName
+import lang.temper.value.fnSymbol
 import lang.temper.value.forwardMaximalPaths
 import lang.temper.value.freeTarget
 import lang.temper.value.freeTree
@@ -85,6 +85,7 @@ import lang.temper.value.isAssignment
 import lang.temper.value.isTypeAngleCall
 import lang.temper.value.mapControlFlowPlanting
 import lang.temper.value.simplifyControlFlow
+import lang.temper.value.ssaSymbol
 import lang.temper.value.toPseudoCode
 import lang.temper.value.typeFromSignature
 import lang.temper.value.typeSymbol
@@ -93,6 +94,7 @@ import lang.temper.value.vTypeSymbol
 import lang.temper.value.vVarSymbol
 import lang.temper.value.varSymbol
 import lang.temper.value.void
+import kotlin.math.max
 import lang.temper.type.WellKnownTypes as WKT
 
 /**
@@ -138,7 +140,7 @@ fun convertCoroutineFunctionBodyToRegularFunctionBody(
 }
 
 private class CoroutineConverter(
-    block: BlockTree,
+    blockShared: BlockTree,
     val ccNameMaker: NameMaker,
     val outerFnOutputName: ResolvedName,
     val outputDecl: DeclTree,
@@ -148,7 +150,7 @@ private class CoroutineConverter(
     val debugConsole: Console?,
     val skipSimplifyControlFlow: Boolean,
 ) {
-    val block = block.copy(copyInferences = true) as BlockTree
+    val block = blockShared.copy(copyInferences = true) as BlockTree
 
     fun convert(): BlockTree {
         if (debugConsole != null) {
@@ -193,7 +195,8 @@ private class CoroutineConverter(
         inspectNestedFns()
         debugConsole?.group("inspect nested fns") {
             nestedFnToLocalsNeeded.forEach { (name, names) ->
-                debugConsole.log("$name -> $names")
+                val init = nestedFnInitializers[name]
+                debugConsole.log("$name -> $names = ${init?.toPseudoCode()}")
             }
         }
 
@@ -427,28 +430,46 @@ private class CoroutineConverter(
     }
 
     private var nestedFnToLocalsNeeded: Map<InternalModularName, Set<InternalModularName>> = mapOf()
+    private var nestedFnInitializers: Map<InternalModularName, CallTree> = mapOf()
     private fun inspectNestedFns() {
         // From this, we compute a set of locals that each function needs if it is
         // used across basic blocks.
-        nestedFnToLocalsNeeded = buildSetMultimap {
-            TreeVisit.startingAt(block)
-                .forEach { t ->
-                    if (isAssignment(t)) {
-                        val (_, left, right) = t.children
-                        if (right is FunTree) {
-                            val leftName = (left as? NameLeaf)?.content as? InternalModularName
-                            if (leftName != null) {
-                                getOrPut(leftName) { mutableSetOf() }.addAll(useCache[right])
+        val nestedFnToLocalsNeeded = mutableMapOf<InternalModularName, MutableSet<InternalModularName>>()
+        val nestedFnInitializers = mutableMapOf<InternalModularName, CallTree>()
+        TreeVisit.startingAt(block)
+            .forEach { t ->
+                if (isAssignment(t)) {
+                    val (_, left, right) = t.children
+                    if (right is FunTree) {
+                        val leftName = (left as? NameLeaf)?.content as? InternalModularName
+                        if (leftName != null && leftName in useCache.localNames) {
+                            val decl = useCache.localNames[leftName]
+                            val declParts = decl?.parts
+                            if (
+                                declParts != null &&
+                                fnSymbol in declParts.metadataSymbolMap &&
+                                ssaSymbol in declParts.metadataSymbolMap
+                            ) {
+                                nestedFnInitializers[leftName] = t
+                                nestedFnToLocalsNeeded.getOrPut(leftName) { mutableSetOf() }
+                                    .addAll(useCache[right])
                             }
-                            return@forEach VisitCue.SkipOne
                         }
                     }
+                }
+                if (t is FunTree) {
+                    VisitCue.SkipOne
+                } else {
                     VisitCue.Continue
                 }
-                .visitPreOrder()
+            }
+            .visitPreOrder()
 
-            addTransitiveClosure(this)
+        addTransitiveClosure(nestedFnToLocalsNeeded)
+        this.nestedFnToLocalsNeeded = nestedFnToLocalsNeeded.mapValues {
+            it.value.toSet()
         }
+        this.nestedFnInitializers = nestedFnInitializers.toMap()
     }
     private fun expandRequiredNames(localNameSet: MutableSet<InternalModularName>) {
         for (k in nestedFnToLocalsNeeded.keys) {
@@ -700,7 +721,7 @@ private class CoroutineConverter(
     private data class HoistedNameInfo(
         override val name: InternalModularName,
         override val decl: DeclTree,
-        val zeroValueRecord: ZeroValueRecord,
+        val zeroValueRecord: ZeroValueRecord?,
     ) : NameInfo
     private data class NotHoisted(
         override val name: InternalModularName,
@@ -715,6 +736,25 @@ private class CoroutineConverter(
                     this[name] = 1 + this.getOrDefault(name, 0)
                 }
             }
+            // Hoist any functions and the names they close over if they're multiply used.
+            val hoistedFns = mutableSetOf<InternalModularName>()
+            while (true) {
+                var lookAgain = false
+                for ((fnName, namesUsedByFn) in nestedFnToLocalsNeeded) {
+                    if (fnName in hoistedFns) { continue }
+                    if (this.getOrDefault(fnName, 0) > 1) {
+                        hoistedFns.add(fnName)
+                        for (nameUsedByFn in namesUsedByFn) {
+                            val priorUseCount = this.getOrDefault(nameUsedByFn, 0)
+                            this[nameUsedByFn] = max(2, priorUseCount)
+                            if (priorUseCount < 2) {
+                                lookAgain = true
+                            }
+                        }
+                    }
+                }
+                if (!lookAgain) { break }
+            }
         }
 
         for ((name, decl) in useCache.localNames) {
@@ -724,7 +764,13 @@ private class CoroutineConverter(
                 val type = decl.parts?.name?.typeInferences?.type?.let {
                     hackMapOldStyleToNew(it)
                 } ?: WKT.invalidType2
-                val zeroValueRecord = ZeroValues[type]
+                val zeroValueRecord = if (name in nestedFnInitializers) {
+                    // We don't need a zero value because we're going to initialize
+                    // it to its const value where declared.
+                    null
+                } else {
+                    ZeroValues[type]
+                }
 
                 HoistedNameInfo(name, decl, zeroValueRecord)
             }
@@ -755,7 +801,21 @@ private class CoroutineConverter(
         val returnLabel: JumpLabel = ccNameMaker.unusedSourceName(fnParsedName)
         val caseIndexLocalName = ccNameMaker.unusedTemporaryName("caseIndexLocal")
 
-        val hoistedLocals = localNameInfo.values.filterIsInstance<HoistedNameInfo>()
+        val hoistedLocals = buildList {
+            // First, hoist the non-functions
+            for (nameInfo in localNameInfo.values) {
+                if (nameInfo is HoistedNameInfo && nameInfo.name !in nestedFnToLocalsNeeded) {
+                    add(nameInfo)
+                }
+            }
+
+            // Then hoist the functions.
+            for (nameInfo in localNameInfo.values) {
+                if (nameInfo is HoistedNameInfo && nameInfo.name in nestedFnToLocalsNeeded) {
+                    add(nameInfo)
+                }
+            }
+        }
         val generatorResultType = MkType2(WKT.generatorResultTypeDefinition)
             .actuals(generatorType.bindings)
             .get()
@@ -787,12 +847,15 @@ private class CoroutineConverter(
 
                 // Declare hoisted variables outside the step function body.
                 for (hv in hoistedLocals) {
+                    val zeroValueRecord = hv.zeroValueRecord
                     val decl = hv.decl
                     val parts = decl.parts!!
-                    val adjustedTypeOld = hackMapNewStyleToOld(hv.zeroValueRecord.adjustedType)
-                    if (hv.zeroValueRecord.needsNullAdjustment) {
+                    val adjustedTypeOld = zeroValueRecord?.adjustedType?.let { hackMapNewStyleToOld(it) }
+                        ?: parts.name.typeInferences?.type ?: InvalidType
+                    if (zeroValueRecord?.needsNullAdjustment == true) {
                         namesNeedingNullAdjustment.add(hv.name)
                     }
+                    val hoistedInitializer = nestedFnInitializers[hv.name]
                     Decl(decl.pos) {
                         Ln(parts.name.pos, hv.name, adjustedTypeOld)
                         var sawVar = false
@@ -800,7 +863,7 @@ private class CoroutineConverter(
                             if (metadataKey == varSymbol) {
                                 sawVar = true
                             }
-                            if (metadataKey == typeSymbol) {
+                            if (metadataKey == typeSymbol && zeroValueRecord != null) {
                                 continue
                             }
                             for (valueEdge in metadataValues) {
@@ -809,19 +872,30 @@ private class CoroutineConverter(
                             }
                         }
                         val metadataPos = decl.pos.leftEdge
-                        if (!sawVar) {
+                        if (!sawVar && hoistedInitializer == null) {
                             V(metadataPos, vVarSymbol, WKT.symbolType)
                             V(metadataPos, void, WKT.voidType)
                         }
-                        V(metadataPos, vTypeSymbol, WKT.symbolType)
-                        V(
-                            metadataPos,
-                            Value(ReifiedType(hv.zeroValueRecord.adjustedType), TType),
-                            WKT.typeType,
-                        )
+                        if (zeroValueRecord != null) {
+                            V(metadataPos, vTypeSymbol, WKT.symbolType)
+                            V(
+                                metadataPos,
+                                Value(ReifiedType(zeroValueRecord.adjustedType), TType),
+                                WKT.typeType,
+                            )
+                        }
                     }
-                    Assign(decl.pos.rightEdge, hv.name, adjustedTypeOld) {
-                        V(decl.pos.rightEdge, hv.zeroValueRecord.value, adjustedTypeOld)
+                    if (zeroValueRecord != null) {
+                        Assign(decl.pos.rightEdge, hv.name, adjustedTypeOld) {
+                            V(decl.pos.rightEdge, zeroValueRecord.value, adjustedTypeOld)
+                        }
+                    } else if (hoistedInitializer != null) {
+                        freeTree(hoistedInitializer)
+                        // hoistedInitializer is an assignment.  Just get the RHS.
+                        val initializerExpr = freeTree(hoistedInitializer.child(2))
+                        Assign(hoistedInitializer.pos, hv.name, initializerExpr.typeInferences?.type) {
+                            Replant(freeTree(initializerExpr))
+                        }
                     }
                 }
 
@@ -1135,7 +1209,7 @@ private class CoroutineConverter(
                                                         Rn(CoroHelperSpecialNames.awakeUpon, callType.variant)
                                                         NotNullCall(
                                                             promiseTree.pos,
-                                                            promiseNameInfo.zeroValueRecord,
+                                                            promiseNameInfo.zeroValueRecord!!,
                                                         ) { type ->
                                                             Rn(promiseTree.pos, promiseName, type)
                                                         }
@@ -1201,7 +1275,7 @@ private class CoroutineConverter(
                                                         callType.variant,
                                                     )
                                                     NotNullCall(
-                                                        promiseTree.pos, promiseNameInfo.zeroValueRecord,
+                                                        promiseTree.pos, promiseNameInfo.zeroValueRecord!!,
                                                     ) { adjustedPromiseType ->
                                                         Rn(promiseTree.pos, promiseName, adjustedPromiseType)
                                                     }
@@ -1287,7 +1361,7 @@ private class CoroutineConverter(
 
         private fun maybeAdjustRightNameLeaf(t: RightNameLeaf): Tree? {
             val nameInfo = localNameInfo[t.content]
-            if (nameInfo is HoistedNameInfo && nameInfo.zeroValueRecord.needsNullAdjustment) {
+            if (nameInfo is HoistedNameInfo && nameInfo.zeroValueRecord?.needsNullAdjustment == true) {
                 return t.document.treeFarm.grow {
                     NotNullCall(t.pos, nameInfo.zeroValueRecord) { argType ->
                         Rn(t.pos, t.content, argType)
