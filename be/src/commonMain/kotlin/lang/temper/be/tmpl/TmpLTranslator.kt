@@ -21,10 +21,10 @@ import lang.temper.common.isNotEmpty
 import lang.temper.common.putMultiList
 import lang.temper.common.subListToEnd
 import lang.temper.format.toStringViaTokenSink
-import lang.temper.frontend.AdaptGeneratorFn
 import lang.temper.frontend.Module
 import lang.temper.frontend.ModuleNamingContext
 import lang.temper.frontend.core.builtinEnvironment
+import lang.temper.frontend.coroutine.convertCoroutineFunctionBodyToRegularFunctionBody
 import lang.temper.frontend.coroutine.maybeUnwrapCoroutine
 import lang.temper.frontend.mergedNamingContext
 import lang.temper.interp.EmptyEnvironment
@@ -843,10 +843,6 @@ class TmpLTranslator internal constructor(
                         }
 
                         topLevels.addAll(otherStuff)
-                    }
-                    is PreTranslated.ConvertedCoroutine -> { // Handled in function translation
-                        flushInitStmts()
-                        topLevels.add(untranslatableTopLevel(pt.pos, "Misplaced coroutine body"))
                     }
                     is PreTranslated.Garbage -> {
                         flushInitStmts()
@@ -2280,27 +2276,37 @@ class TmpLTranslator internal constructor(
         var mayYield = fnParts.mayYield ?: false
 
         var isWrappedCoro = false
-        // If we're going to have to rewrap the coroutine because we need to convert
-        // it to a state machine, the adapter to use.
-        var coroAdapter: AdaptGeneratorFn? = null
         // If this function is just a wrapper for a coroutine, we might need to collapse
         // the wrapper into the coroutine.
         val (bodyTree: BlockTree, returnDecl: DeclTree?) = run unwrapCoro@{
             if (!mayYield) {
-                val bodyTree = fnParts.body
+                var bodyTree = fnParts.body
                 val returnDecl = fnParts.returnDecl
                 if (returnDecl != null) {
                     maybeUnwrapCoroutine(bodyTree, returnDecl)
-                        ?.let { (unwrapped, adapter) ->
+                        ?.let { (unwrapped, adapter, generatorType, generatorSig) ->
                             val unwrappedParts = unwrapped.parts
                             if (unwrappedParts != null) {
+                                val unwrappedBody = unwrappedParts.body
+                                val unwrappedReturnDecl = unwrappedParts.returnDecl
+                                if (coroutineStrategy == CoroutineStrategy.TranslateToRegularFunction &&
+                                    unwrappedReturnDecl != null
+                                ) {
+                                    val convertedBody = convertCoroutineFunctionBodyToRegularFunctionBody(
+                                        block = ensureIsBlock(unwrappedBody),
+                                        nameMaker = mergedNameMaker,
+                                        outerFnOutputName = returnDecl.parts!!.name.content as ResolvedName,
+                                        outputDecl = unwrappedReturnDecl,
+                                        adapterFn = adapter,
+                                        generatorType = generatorType,
+                                        generatorSig = generatorSig,
+                                    )
+                                    return@unwrapCoro convertedBody to returnDecl
+                                }
                                 mayYield = true
                                 isWrappedCoro = true
-                                if (coroutineStrategy == CoroutineStrategy.TranslateToRegularFunction) {
-                                    coroAdapter = adapter
-                                }
                                 fnSig = hackTryStaticTypeToSig(unwrapped.typeInferences?.type)!!
-                                return@unwrapCoro ensureIsBlock(unwrappedParts.body) to unwrappedParts.returnDecl
+                                return@unwrapCoro ensureIsBlock(unwrappedBody) to unwrappedReturnDecl
                             }
                         }
                 }
@@ -2315,7 +2321,7 @@ class TmpLTranslator internal constructor(
             },
         )
 
-        val (returnType, returnTemperType, wrappedReturnType) = run {
+        val returnType = run {
             val typePos = fnParts.returnDecl?.pos ?: pos.leftEdge
 
             fun retTypeForFn(sigT: Signature2?, returnDecl: DeclTree?): Type2 {
@@ -2334,9 +2340,9 @@ class TmpLTranslator internal constructor(
             // re-wrap it, then make sure we have that type too.
             if (mayYield) {
                 val unwrappedType = retTypeForFn(origFnType, fnParts.returnDecl)
-                Triple(translateType(typePos, unwrappedType), unwrappedType, type to retType)
+                translateType(typePos, unwrappedType)
             } else {
-                Triple(retType, type, null)
+                retType
             }
         }
         val pureVirtualCall = extractPureVirtualCall(fnParts.body)
@@ -2522,114 +2528,15 @@ class TmpLTranslator internal constructor(
                 } else {
                     null
                 },
-                stateMachineConversionType = if (convertYields) {
-                    returnTemperType
-                } else {
-                    null
-                },
             )
         }
-        if (preTranslatedBody is PreTranslated.ConvertedCoroutine) {
-            preTranslatedBody.persistentDeclarations.flatMapTo(bodyParts) {
-                it.toStatement(this).asStmtList()
-            }
-            var bodyBlock = preTranslatedBody.body.toStatement(this).asBlock()
-            if (preTranslatedBody.variablesToNullAdjust.isNotEmpty()) {
-                bodyBlock = nullAdjustConvertedCoroutineBody(bodyBlock, preTranslatedBody.variablesToNullAdjust)
-            }
-            val innerFnName = TmpL.Id(bodyBlock.pos.leftEdge, unusedName(ParsedName("convertedCoroutine")))
-            val (innerFnReturnTemperType, innerFnReturnType) = wrappedReturnType!!
-            val generatorType = sig.returnType2
-            val innerFnSig = Signature2(
-                returnType2 = innerFnReturnTemperType,
-                hasThisFormal = false,
-                requiredInputTypes = listOf(generatorType),
-            )
 
-            val currentGeneratorParam = run {
-                val paramPos = bodyBlock.pos.leftEdge
-                val metadata = emptyList<TmpL.DeclarationMetadata>()
-                TmpL.Formal(
-                    paramPos,
-                    metadata,
-                    TmpL.Id(paramPos, preTranslatedBody.generatorName),
-                    translateType(paramPos, returnTemperType).aType,
-                    returnTemperType,
-                )
-            }
-
-            bodyParts.add(
-                TmpL.LocalFunctionDeclaration(
-                    pos = bodyBlock.pos,
-                    metadata = emptyList(),
-                    name = innerFnName,
-                    typeParameters = TmpL.ATypeParameters(
-                        TmpL.TypeParameters(bodyBlock.pos.leftEdge, emptyList()),
-                    ),
-                    parameters = TmpL.Parameters(
-                        bodyBlock.pos.leftEdge,
-                        null,
-                        listOf(currentGeneratorParam),
-                        null,
-                    ),
-                    returnType = innerFnReturnType.aType,
-                    mayYield = false, // yields erased,
-                    sig = innerFnSig,
-                    body = bodyBlock,
-                ),
-            )
-            bodyReturned = true
-            val returnPos = bodyBlock.pos.rightEdge
-            val adaptFn: TmpL.Callable = when (
-                val supportCode = supportNetwork.getSupportCode(returnPos, coroAdapter!!, genre)
-            ) {
-                null -> TmpL.GarbageCallable(
-                    TmpL.Diagnostic(
-                        returnPos,
-                        "Backend converts coroutines but does not support $coroAdapter",
-                    ),
-                )
-                else -> supportCodeReference(
-                    supportCode,
-                    null,
-                    returnPos,
-                    coroAdapter.sig,
-                    mapOf(),
-                )
-            }
-            val innerFnType = hackMapOldStyleToNew(
-                // TODO: We need to define a functional interface for converted coroutines, or just a Fn1
-                MkType.fn(
-                    listOf(),
-                    innerFnSig.allValueFormals.map { hackMapNewStyleToOld(it.type) },
-                    null,
-                    hackMapNewStyleToOld(innerFnSig.returnType2),
-                ),
-            )
-            bodyParts.add(
-                TmpL.ReturnStatement(
-                    returnPos,
-                    maybeInline(
-                        TmpL.CallExpression(
-                            returnPos,
-                            adaptFn,
-                            parameters = listOf(
-                                // TODO: use a functional interface type.
-                                TmpL.Reference(returnPos, innerFnName.deepCopy(), innerFnType),
-                            ),
-                            type = returnTemperType,
-                        ),
-                    ),
-                ),
-            )
+        val preTranslated = if (mayYield && outputName != null) {
+            simplifyGeneratorFnReturns(preTranslatedBody, outputName)
         } else {
-            val preTranslated = if (mayYield && outputName != null) {
-                simplifyGeneratorFnReturns(preTranslatedBody, outputName)
-            } else {
-                preTranslatedBody
-            }
-            bodyParts.addAll(preTranslated.toStatement(this).asStmtList())
+            preTranslatedBody
         }
+        bodyParts.addAll(preTranslated.toStatement(this).asStmtList())
 
         if (!bodyReturned && offsetForReturnStatement != null) {
             // Wrap a body in `let return__123; ...; return return__123` unless all

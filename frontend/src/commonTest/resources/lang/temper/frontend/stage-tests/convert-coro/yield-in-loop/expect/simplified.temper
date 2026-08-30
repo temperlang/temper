@@ -1,10 +1,10 @@
-var caseIndex#6: Int32;
-caseIndex#6 = 0;
-var i__1: Int32;
-i__1 = 0;
-let convertedCoroutine#9;
-convertedCoroutine#9 = fn (generator#5: SafeGenerator<Int32>) /* return__0 */: (GeneratorResult<Int32>) {
-  fn__7: do {
+  var caseIndex#6: Int32;
+  caseIndex#6 = 0;
+  var i__1: Int32;
+  i__1 = 0;
+  let convertedCoroutine#9;
+  convertedCoroutine#9 = fn (generator#5: SafeGenerator<Int32>) /* return__0 */: (GeneratorResult<Int32>) {
+## fn__0 labeled block simplifies out.
     while (true) {
       let caseIndexLocal#8: Int32;
       caseIndexLocal#8 = caseIndex#6;
@@ -21,18 +21,18 @@ convertedCoroutine#9 = fn (generator#5: SafeGenerator<Int32>) /* return__0 */: (
       } else if (caseIndexLocal#8 == 2) {
         caseIndex#6 = 4;
         return__0 = new ValueResult<Int32>(i__1);
-        break fn__7;
+        break;
       } else if (caseIndexLocal#8 == 3) {
         return__0 = core.doneResult();
-        break fn__7;
+## break fn__0 to outer labeled block simplifies to just default break from loop.
+        break;
       } else if (caseIndexLocal#8 == 4) {
         i__1 = i__1 + 1;
         caseIndex#6 = 1
       } else {
         return__0 = core.doneResult();
-        break fn__7;
+        break;
       }
     }
-  }
-};
-return__2 = adaptGeneratorFnSafe(convertedCoroutine#9)
+  };
+  return__2 = adaptGeneratorFnSafe(convertedCoroutine#9)

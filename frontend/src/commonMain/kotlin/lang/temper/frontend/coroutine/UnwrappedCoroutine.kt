@@ -3,6 +3,9 @@ package lang.temper.frontend.coroutine
 import lang.temper.frontend.AdaptGeneratorFn
 import lang.temper.frontend.getBlockChildrenInOrderIfLinear
 import lang.temper.frontend.isAdaptGeneratorFnCall
+import lang.temper.type.WellKnownTypes
+import lang.temper.type2.MkType2
+import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.withType
@@ -17,7 +20,14 @@ import lang.temper.value.functionContained
 import lang.temper.value.isAssignment
 import lang.temper.value.wrappedGeneratorFnSymbol
 
-fun maybeUnwrapCoroutine(body: Tree, returnDecl: DeclTree): Triple<FunTree, AdaptGeneratorFn, Type2>? {
+data class UnwrappedCoroutine(
+    val funTree: FunTree,
+    val adapter: AdaptGeneratorFn,
+    val generatorType: Type2,
+    val generatorSig: Signature2,
+)
+
+fun maybeUnwrapCoroutine(body: Tree, returnDecl: DeclTree): UnwrappedCoroutine? {
     // Look for a pattern like this in the body.
     //
     //     let fn__123;
@@ -55,13 +65,34 @@ fun maybeUnwrapCoroutine(body: Tree, returnDecl: DeclTree): Triple<FunTree, Adap
     }
     val innerFnType = assignedCall.child(1).typeInferences?.type
         ?: return null
-    val generatorType = withType(
+    val assignedFunctionMeta = assignedFunction.parts?.metadataSymbolMultimap
+    if (assignedFunctionMeta?.contains(wrappedGeneratorFnSymbol) != true) {
+        return null
+    }
+    val generatorSig = withType(
         hackMapOldStyleToNew(innerFnType),
         fn = { _, sig, _ -> sig },
         fallback = { null },
-    )?.returnType2 ?: return null
-    if (assignedFunction.parts?.metadataSymbolMultimap?.contains(wrappedGeneratorFnSymbol) == true) {
-        return Triple(assignedFunction, adapter, generatorType)
-    }
-    return null
+    ) ?: return null
+    val generatorResultType = withType(
+        generatorSig.returnType2,
+        result = { pass, _, _ -> pass },
+        fallback = { it },
+    )
+    val generatorTypeArg = generatorResultType.bindings[0]
+    val generatorType =
+        MkType2(
+            if (generatorSig.returnType2.definition == WellKnownTypes.resultTypeDefinition) {
+                WellKnownTypes.generatorTypeDefinition
+            } else {
+                WellKnownTypes.safeGeneratorTypeDefinition
+            },
+        )
+            .actuals(listOf(generatorTypeArg))
+            .get()
+
+    return UnwrappedCoroutine(
+        assignedFunction, adapter, generatorType,
+        generatorSig,
+    )
 }

@@ -491,11 +491,30 @@ fun simplifyControlFlow(
                 for (spec in specs) {
                     noopJumpsForBody = Cons(JumpTarget(BreakOrContinue.Continue, spec), noopJumpsForBody)
                 }
+
+                var bodyJumpSimplifier =
+                    JumpSimplifier.compose(jumpSimplifier, continueRewriter)
+                // If a break to an outer label is a no-op, then
+                // that's equivalent to the default break.
+                val noopBreaks = buildSet {
+                    for ((kind, target) in noopJumps) {
+                        if (kind == BreakOrContinue.Break && target is NamedJumpSpecifier) {
+                            add(target)
+                        }
+                    }
+                }
+                if (noopBreaks.isNotEmpty()) {
+                    bodyJumpSimplifier = JumpSimplifier.compose(
+                        JumpSimplifier.NoopForLoopBody(noopBreaks, loopDepth.get() + 1),
+                        bodyJumpSimplifier,
+                    )
+                }
+
                 val (bodyUnwrapped, bodyFlows, jBody, bodyBubbles) =
                     loopDepth.withDepthIncremented {
                         trim(
                             cf.body,
-                            JumpSimplifier.compose(jumpSimplifier, continueRewriter),
+                            bodyJumpSimplifier,
                             noopJumpsForBody,
                         )
                     }
@@ -556,7 +575,7 @@ fun simplifyControlFlow(
                     freeJumps.remove(JumpTarget(BreakOrContinue.Continue, specifier))
                 }
 
-                // The loop flows to next sometimes if the body breaks, or if the condition is not truthy.
+                // The loop sometimes flows to next if the body breaks, or if the condition is not truthy.
                 val flowsToNext = when {
                     loopBreaks -> Freq3.Sometimes
                     condTruthiness != true -> Freq3.Sometimes
@@ -851,7 +870,7 @@ private interface JumpSimplifier {
         var breakLabel: JumpLabel?,
         /** The optional label for labeled `continue`s to rewrite */
         val continueLabel: JumpLabel?,
-        /** Used to allocates a `break` label if none is available. */
+        /** Used to allocate a `break` label if none is available. */
         val nameMaker: NameMaker,
         /** The loop depth of the loop we're rewriting for. */
         val depthOfDefaultLoop: Int,
@@ -893,6 +912,21 @@ private interface JumpSimplifier {
         override fun simplify(jump: ControlFlow.Jump, loopDepth: Int): ControlFlow.Jump? {
             if (jump.target == DefaultJumpSpecifier && loopDepth == depthOfDefaultLoop) {
                 return ControlFlow.Break(jump.pos, spec)
+            }
+            return null
+        }
+    }
+
+    class NoopForLoopBody(
+        val noopBreaksForLoop: Set<NamedJumpSpecifier>,
+        val loopDepth: Int,
+    ) : JumpSimplifier {
+        override fun simplify(jump: ControlFlow.Jump, loopDepth: Int): ControlFlow.Jump? {
+            if (
+                this.loopDepth == loopDepth && jump.jumpKind == BreakOrContinue.Break &&
+                jump.target in noopBreaksForLoop
+            ) {
+                return ControlFlow.Break(jump.pos, DefaultJumpSpecifier)
             }
             return null
         }

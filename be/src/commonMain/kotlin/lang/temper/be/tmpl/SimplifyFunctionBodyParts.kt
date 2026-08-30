@@ -1,10 +1,13 @@
 package lang.temper.be.tmpl
 
+import lang.temper.common.Cons
 import lang.temper.common.compatRemoveFirst
 import lang.temper.common.compatRemoveLast
+import lang.temper.common.contains
 import lang.temper.name.TemperName
 import lang.temper.type.WellKnownTypes
 import lang.temper.value.BuiltinOperatorId
+import lang.temper.value.JumpLabel
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.TBoolean
 import lang.temper.value.TFunction
@@ -100,6 +103,17 @@ internal fun simplifyFunctionBodyParts(
                         statements.compatRemoveLast() // last
                         statements.add(TmpL.ReturnStatement(initRight.pos, toReturn))
                     }
+                } else {
+                    val returnedId = returned.id
+                    val penultIndex = statements.lastIndex - 1
+                    val simplifiedSome =
+                        simplifyReturns(statements.getOrNull(penultIndex), returnedId)
+                    if (simplifiedSome) {
+                        if (statements.subList(1, penultIndex + 1).none { mentions(it, returnedId) }) {
+                            statements.compatRemoveFirst()
+                            statements.compatRemoveLast()
+                        }
+                    }
                 }
             }
         }
@@ -134,3 +148,121 @@ private fun lookThroughSingleArgFn(
 
 private val ConstantPool.representationOfVoid get() =
     translator.supportNetwork.representationOfVoid(translator.genre)
+
+private fun simplifyReturns(
+    terminal: TmpL.Statement?,
+    returnedId: TmpL.Id,
+    loopDepth: Int = 0,
+    labelsThatBreak: Cons<TmpL.JumpLabel> = Cons.Empty,
+): Boolean {
+    var simplified = false
+    when (terminal) {
+        is TmpL.Assignment,
+        is TmpL.BoilerplateCodeFoldEnd,
+        is TmpL.BoilerplateCodeFoldStart,
+        is TmpL.BreakStatement,
+        is TmpL.ContinueStatement,
+        is TmpL.EmbeddedComment,
+        is TmpL.ExpressionStatement,
+        is TmpL.GarbageStatement,
+        is TmpL.LocalDeclaration,
+        is TmpL.LocalFunctionDeclaration,
+        is TmpL.ModuleInitFailed,
+        is TmpL.ReturnStatement,
+        is TmpL.SetAbstractProperty,
+        is TmpL.SetBackedProperty,
+        is TmpL.ThrowStatement,
+        is TmpL.YieldStatement,
+        null,
+        -> {}
+
+        is TmpL.BlockStatement -> {
+            val blockStatements = terminal.statements
+            var assignmentToReturn: TmpL.Assignment? = null
+            var nToDrop = 0
+            if (loopDepth == 0) {
+                val last = blockStatements.lastOrNull()
+                if (last is TmpL.Assignment && last.left == returnedId) {
+                    nToDrop = 1
+                    assignmentToReturn = last
+                }
+            }
+            if (assignmentToReturn == null && blockStatements.size >= 2) {
+                val last = blockStatements[blockStatements.lastIndex]
+                val penult = blockStatements[blockStatements.lastIndex - 1]
+                if (penult is TmpL.Assignment && penult.left == returnedId) {
+                    val lastBreaksToEnd = when {
+                        last !is TmpL.BreakStatement -> false
+                        last.label == null -> loopDepth <= 1
+                        else -> last.label in labelsThatBreak
+                    }
+                    if (lastBreaksToEnd) {
+                        nToDrop = 2
+                        assignmentToReturn = penult
+                    }
+                }
+            }
+            if (assignmentToReturn != null) {
+                terminal.statements = buildList {
+                    addAll(blockStatements.subList(0, blockStatements.size - nToDrop))
+                    add(
+                        TmpL.ReturnStatement(
+                            assignmentToReturn.pos,
+                            assignmentToReturn.right.deepCopy(),
+                        ),
+                    )
+                }
+                simplified = true
+            } else {
+                simplified = simplifyReturns(
+                    blockStatements.lastOrNull(),
+                    returnedId,
+                    loopDepth = loopDepth,
+                    labelsThatBreak = labelsThatBreak,
+                )
+            }
+        }
+        is TmpL.ComputedJumpStatement -> {
+            for (case in terminal.cases) {
+                if (simplifyReturns(case.body, returnedId, loopDepth, labelsThatBreak)) {
+                    simplified = true
+                }
+            }
+            if (simplifyReturns(terminal.elseCase.body, returnedId, loopDepth, labelsThatBreak)) {
+                simplified = true
+            }
+        }
+        is TmpL.IfStatement -> {
+            if (simplifyReturns(terminal.consequent, returnedId, loopDepth, labelsThatBreak)) {
+                simplified = true
+            }
+            if (simplifyReturns(terminal.alternate, returnedId, loopDepth, labelsThatBreak)) {
+                simplified = true
+            }
+        }
+        is TmpL.LabeledStatement -> {
+            val label = terminal.label
+            simplified = simplifyReturns(terminal.statement, returnedId, loopDepth, Cons(label, labelsThatBreak))
+        }
+        is TmpL.TryStatement -> {
+            if (simplifyReturns(terminal.tried, returnedId, loopDepth, labelsThatBreak)) {
+                simplified = true
+            }
+            if (simplifyReturns(terminal.recover, returnedId, loopDepth, labelsThatBreak)) {
+                simplified = true
+            }
+        }
+        is TmpL.WhileStatement -> {
+            simplified = simplifyReturns(terminal.body, returnedId, loopDepth + 1, labelsThatBreak)
+        }
+    }
+    return simplified
+}
+
+private fun mentions(t: TmpL.Tree, id: TmpL.Id): Boolean {
+    if (t is TmpL.Id && t == id) { return true }
+    for (child in t.children) {
+        if (mentions(child, id)) { return true }
+    }
+    return false
+}

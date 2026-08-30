@@ -4,6 +4,7 @@ import lang.temper.ast.TreeVisit
 import lang.temper.ast.VisitCue
 import lang.temper.builtin.Assign
 import lang.temper.builtin.BuiltinFuns
+import lang.temper.builtin.BuiltinLogicalOperators
 import lang.temper.builtin.NotNullFn
 import lang.temper.builtin.Types
 import lang.temper.builtin.makeTypeFormal
@@ -39,6 +40,7 @@ import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.type2.hackMapOldStyleToNew
+import lang.temper.type2.mapType
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockPlanting
@@ -82,6 +84,7 @@ import lang.temper.value.functionContained
 import lang.temper.value.isAssignment
 import lang.temper.value.isTypeAngleCall
 import lang.temper.value.mapControlFlowPlanting
+import lang.temper.value.simplifyControlFlow
 import lang.temper.value.toPseudoCode
 import lang.temper.value.typeFromSignature
 import lang.temper.value.typeSymbol
@@ -100,14 +103,25 @@ import lang.temper.type.WellKnownTypes as WKT
  * the caller is responsible for either using the original or the
  * transformed, but not both.
  */
-internal fun convertCoroutineFunctionBodyToRegularFunctionBody(
+fun convertCoroutineFunctionBodyToRegularFunctionBody(
     block: BlockTree,
     nameMaker: NameMaker,
     outerFnOutputName: ResolvedName,
     outputDecl: DeclTree,
     adapterFn: AdaptGeneratorFn,
     generatorType: Type2,
+    generatorSig: Signature2,
     debugConsole: Console? = null,
+    /**
+     * True to skip simplifying the control flow of the converted function body.
+     * Simplification often gets rid of the `break fn_123` turning them into
+     * unlabelled breaks.
+     *
+     * There's no reason not to do that in production, but in the test harness
+     * it's nice to be able to test exactly the code produced, so this is
+     * off by default in *CoroutineConverterTest*.
+     */
+    skipSimplifyControlFlow: Boolean = false,
 ): BlockTree {
     val converter = CoroutineConverter(
         block,
@@ -116,7 +130,9 @@ internal fun convertCoroutineFunctionBodyToRegularFunctionBody(
         outputDecl,
         adapterFn,
         generatorType,
+        generatorSig,
         debugConsole,
+        skipSimplifyControlFlow = skipSimplifyControlFlow,
     )
     return converter.convert()
 }
@@ -128,7 +144,9 @@ private class CoroutineConverter(
     val outputDecl: DeclTree,
     val adapterFn: AdaptGeneratorFn,
     val generatorType: Type2,
+    val generatorSig: Signature2,
     val debugConsole: Console?,
+    val skipSimplifyControlFlow: Boolean,
 ) {
     val block = block.copy(copyInferences = true) as BlockTree
 
@@ -732,6 +750,7 @@ private class CoroutineConverter(
         check(caseInfoMap[basicBlocks.entryPathIndex to CaseKind.Main]?.assignedCaseIndex == 0)
 
         // Allocate some names to use in the generated step function.
+        val generatorInputName = ccNameMaker.unusedTemporaryName("generator")
         val caseIndexName = ccNameMaker.unusedTemporaryName("caseIndex")
         val returnLabel: JumpLabel = ccNameMaker.unusedSourceName(fnParsedName)
         val caseIndexLocalName = ccNameMaker.unusedTemporaryName("caseIndexLocal")
@@ -740,7 +759,7 @@ private class CoroutineConverter(
         val generatorResultType = MkType2(WKT.generatorResultTypeDefinition)
             .actuals(generatorType.bindings)
             .get()
-        val generatorFnType = typeFromSignature(Signature2(generatorResultType, false, listOf()))
+        val generatorFnType = typeFromSignature(generatorSig)
         val blockPos = block.pos
         val headerPos = blockPos.leftEdge
 
@@ -756,9 +775,9 @@ private class CoroutineConverter(
         return block.document.treeFarm.grow {
             Block(blockPos) {
                 Decl(headerPos) {
-                    Ln(caseIndexName)
+                    Ln(caseIndexName, WKT.intType)
                     V(vTypeSymbol)
-                    V(Types.vInt)
+                    V(Types.vInt, WKT.typeType)
                     V(vVarSymbol)
                     V(void)
                 }
@@ -806,34 +825,86 @@ private class CoroutineConverter(
                     }
                 }
 
-                // Create a step function that does the thing.
-                Assign(blockPos, outerFnOutputName, generatorFnType) {
-                    Fn(blockPos, type = generatorFnType) {
-                        V(headerPos, vReturnDeclSymbol)
-                        Replant(outputDecl.copy(copyInferences = true))
-                        Block(blockPos) {
-                            Do(blockPos, returnLabel) {
+                val fnName = ccNameMaker.unusedTemporaryName("convertedCoroutine")
+                val generatorTypeOld = hackMapNewStyleToOld(generatorType)
+                Decl(blockPos.leftEdge) {
+                    Ln(fnName, generatorFnType)
+                }
+                val fnBody = block.document.treeFarm.grow {
+                    Block(blockPos) {
+                        Do(blockPos, returnLabel) {
+                            fun BlockPlanting.plantCoroBody() {
+                                Decl(headerPos) {
+                                    Ln(caseIndexLocalName, WKT.intType)
+                                    V(vTypeSymbol)
+                                    V(headerPos, Types.vInt, WKT.typeType)
+                                }
+                                Assign(headerPos, caseIndexLocalName, WKT.intType) {
+                                    Rn(headerPos, caseIndexName, WKT.intType)
+                                }
+                                Assign(headerPos, caseIndexName, WKT.intType) {
+                                    V(headerPos, vNegOne, WKT.intType)
+                                }
+                                casesBuilder.unroll(this)
+                            }
+
+                            if (casesBuilder.anyCaseContinues) {
                                 While(
                                     blockPos,
                                     cond = {
                                         V(headerPos, TBoolean.valueTrue, WKT.booleanType)
                                     },
                                 ) {
-                                    Decl(headerPos) {
-                                        Ln(caseIndexLocalName, WKT.intType)
-                                        V(vTypeSymbol)
-                                        V(headerPos, Types.vInt, WKT.typeType)
-                                    }
-                                    Assign(headerPos, caseIndexLocalName, WKT.intType) {
-                                        Rn(headerPos, caseIndexName, WKT.intType)
-                                    }
-                                    Assign(headerPos, caseIndexName, WKT.intType) {
-                                        V(headerPos, vNegOne, WKT.intType)
-                                    }
-                                    casesBuilder.unroll(this)
+                                    plantCoroBody()
                                 }
+                            } else {
+                                plantCoroBody()
                             }
                         }
+                    }
+                }
+                if (!skipSimplifyControlFlow) {
+                    val simplifiedFnBodyFlow = simplifyControlFlow(
+                        fnBody,
+                        structureBlock(fnBody).controlFlow,
+                        assumeAllJumpsResolved = true,
+                        assumeResultsCaptured = true,
+                        assumeUseBeforeInitChecked = true,
+                        logicalOperators = BuiltinLogicalOperators,
+                    )
+                    fnBody.replaceFlow(simplifiedFnBodyFlow)
+                }
+
+                Assign(blockPos.leftEdge, fnName, generatorFnType) {
+                    Fn(blockPos, type = generatorFnType) {
+                        Decl(blockPos.leftEdge) {
+                            Ln(blockPos.leftEdge, generatorInputName, generatorTypeOld)
+                            V(blockPos.leftEdge, vTypeSymbol)
+                            V(blockPos.leftEdge, Value(ReifiedType(generatorType)), WKT.typeType)
+                        }
+                        V(headerPos, vReturnDeclSymbol)
+                        Replant(outputDecl.copy(copyInferences = true))
+                        Replant(fnBody)
+                    }
+                }
+
+                // Create a step function that does the thing.
+                val sig = adapterFn.sig
+                val generatorArgType = generatorType.bindings[0]
+                val bindings2 = mapOf(sig.typeFormals[0] to generatorArgType)
+                val bindings = bindings2.mapValues {
+                    hackMapNewStyleToOld(it.value)
+                }
+                val callType = CallTypeInferences(
+                    hackMapNewStyleToOld(sig.returnType2.mapType(bindings2)),
+                    sig,
+                    bindings,
+                    listOf(),
+                )
+                Assign(blockPos, outerFnOutputName, callType.type) {
+                    Call(blockPos.rightEdge, type = callType) {
+                        V(blockPos.rightEdge, Value(adapterFn), callType.variant)
+                        Rn(blockPos.rightEdge, fnName, generatorFnType)
                     }
                 }
             }
@@ -881,6 +952,25 @@ private class CoroutineConverter(
         val generatorResultType: Type2,
         val returnLabel: JumpLabel,
     ) {
+        val anyCaseContinues: Boolean get() = caseList.any { ci ->
+            val basicBlockIndex = ci.basicBlockIndex
+            var continues = true
+            if (
+                ci.hasFollower || // Going to return to pause
+                basicBlockIndex in basicBlocks.exitPathIndices || // Nowhere to go
+                basicBlockIndex in basicBlocks.failExitPathIndices
+            ) {
+                continues = false
+            }
+            if (continues && ci.kind == CaseKind.Main) {
+                val lastElement = basicBlocks[basicBlockIndex].elements.last()
+                val tree = block.dereference(lastElement.ref)?.target
+                if (disassembleYieldingCall(tree) != null) {
+                    continues = false // Going to return to pause
+                }
+            }
+            continues
+        }
         var caseListIndex = 0
         val hoistedLocalNames = buildSet {
             for (ni in localNameInfo.values) {
@@ -970,6 +1060,22 @@ private class CoroutineConverter(
                         }
                     },
                     thn = {
+                        // Putting `return__123 = new ValueResult(...);` right before
+                        // any `break fn__124` meets TmpLTranslator expectations about
+                        // how to resugar `return` statements, so when planting
+                        // case instructions, we store away the value result expression
+                        // used for `yield` and `await` statements.
+                        var valueResultExpr: Tree? = null
+                        fun Planting.maybeEmitValueResult(): Boolean {
+                            val valueExpr = valueResultExpr
+                            valueResultExpr = null
+                            if (valueExpr != null) {
+                                returnValueResult(this, valueExpr)
+                                return true
+                            }
+                            return false
+                        }
+
                         // Plant an assignment to the closed-over case index variable for the given
                         // case.  If `continues` is true, we want to process that case immediately via
                         // the outer `while` loop, but otherwise the caller must have set the return
@@ -981,6 +1087,7 @@ private class CoroutineConverter(
                             if (exits) {
                                 // Assume the return_value has been set to a GeneratorResult by the
                                 // yield handling stuff.
+                                maybeEmitValueResult()
                                 Break(pos, returnLabel)
                             }
                         }
@@ -993,6 +1100,7 @@ private class CoroutineConverter(
                             when (case.kind) {
                                 CaseKind.Main -> {
                                     val lastElementIndex = elements.lastIndex
+
                                     for (elementIndex in elements.indices) {
                                         val element = elements[elementIndex]
                                         val tree = block.dereference(element.ref)?.target
@@ -1035,12 +1143,11 @@ private class CoroutineConverter(
                                                 }
                                                 YieldingFnKind.yield -> {}
                                             }
-                                            val valueExpr = yieldingInfo.yieldingCall.childOrNull(1)
+                                            valueResultExpr = yieldingInfo.yieldingCall.childOrNull(1)
                                                 ?: ValueLeaf(block.document, yieldingInfo.yieldingCall.pos, emptyValue)
                                                     .also {
                                                         it.typeInferences = BasicTypeInferences(WKT.emptyType, listOf())
                                                     }
-                                            returnValueResult(this, maybeAdjustVars(valueExpr))
                                             continue
                                         }
                                         if (tree is BlockTree) {
@@ -1147,11 +1254,17 @@ private class CoroutineConverter(
                                 } else {
                                     ignore(isTerminal)
                                     val pos = path.diagnosticPosition.rightEdge
-                                    returnDoneResult(this, pos)
+                                    if (!maybeEmitValueResult()) {
+                                        returnDoneResult(this, pos)
+                                    }
                                     Break(pos, returnLabel)
                                 }
                             }
+                            if (followers.size >= 2) {
+                                maybeEmitValueResult()
+                            }
                             unrollFollowers(0)
+                            check(valueResultExpr == null)
                         }
                         if (case.onBubble != null) {
                             OrElse(
@@ -1225,11 +1338,7 @@ private class CoroutineConverter(
                     doneResultExport,
                 )
                 Call(pos, type = callType) {
-                    if (doneResultValue != null) {
-                        V(pos, doneResultValue, callType.variant)
-                    } else {
-                        Rn(pos, doneResultBuiltinName, callType.variant)
-                    }
+                    Rn(pos, doneResultExport.name, callType.variant)
                 }
             }
         }

@@ -14,7 +14,7 @@ object LinearFlow : BlockFlow() {
 data class StructuredFlow(
     val controlFlow: ControlFlow.StmtBlock,
 ) : BlockFlow() {
-    override fun copy(): BlockFlow = StructuredFlow(controlFlow.deepCopy())
+    override fun copy(): StructuredFlow = StructuredFlow(controlFlow.deepCopy())
 }
 
 fun StructuredFlow.blockChildReferenceToStmt(): Map<BlockChildReference, ControlFlow.Stmt> =

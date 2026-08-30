@@ -14,11 +14,6 @@ import lang.temper.format.TokenSink
 import lang.temper.frontend.core.CoreModule
 import lang.temper.frontend.structureBlock
 import lang.temper.interp.LongLivedUserFunction
-import lang.temper.interp.docgenalts.DocGenAltFn
-import lang.temper.interp.docgenalts.DocGenAltIfFn
-import lang.temper.interp.docgenalts.DocGenAltImpliedResultFn
-import lang.temper.interp.docgenalts.DocGenAltReturnFn
-import lang.temper.interp.docgenalts.DocGenAltWhileFn
 import lang.temper.log.Position
 import lang.temper.log.Positioned
 import lang.temper.log.spanningPosition
@@ -33,7 +28,6 @@ import lang.temper.name.name
 import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.DefinedNonNullType
-import lang.temper.type2.Type2
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockChildReference
@@ -82,40 +76,14 @@ internal fun translateFlow(
     nameMaker: NameMaker,
     options: CfOptions,
     outputName: TemperName?,
-    /**
-     * If null, do not do a state machine conversion.
-     * If non-null, the type of the generator that is produced.
-     */
-    stateMachineConversionType: Type2? = null,
 ): PreTranslated {
-    fun translateBlockChild(t: Tree): PreTranslated {
-        val altFn = (t as? CallTree)?.childOrNull(0)?.functionContained as? DocGenAltFn
-        return if (altFn != null) {
-            translateAltDocGenFn(altFn, t, goalTranslator, nameMaker, options, outputName = outputName)
-        } else {
-            PreTranslated.TreeWrapper(t)
-        }
-    }
-
     // First, we recover structure.  This allows us to have all the adjacent "statements" in blocks
     // so that we can merge adjacent declarations and initializers.
     // Once all our ducks are in a row, we produce something that the translator can interpret in
     // an expression/statement/top-level context as needed.
     val flow = structureBlock(tree)
     val flowTranslator = ControlFlowTranslator(goalTranslator, nameMaker, options)
-    var preTranslated = when {
-        stateMachineConversionType != null -> convertCoroutineToControlFlow(
-            tree,
-            nameMaker,
-            outputName,
-            goalTranslator.supportNetwork,
-            goalTranslator.translator.typeContext2,
-            generatorType = stateMachineConversionType,
-            ::translateBlockChild,
-        )
-        else ->
-            flowTranslator.translate(flow.controlFlow, tree)
-    }
+    var preTranslated = flowTranslator.translate(flow.controlFlow, tree)
 
     if (options.representationOfVoid == RepresentationOfVoid.DoNotReifyVoid) {
         preTranslated = removeReferencesAndAssignmentsToVoid(preTranslated)
@@ -123,84 +91,7 @@ internal fun translateFlow(
 
     preTranslated = migrateDeclarationsOutOfSyntheticBlocks(preTranslated, outputName = outputName)
 
-    check(preTranslated is PreTranslated.ConvertedCoroutine == (stateMachineConversionType != null))
-
     return preTranslated
-}
-
-private fun translateAltDocGenFn(
-    f: DocGenAltFn,
-    t: CallTree,
-    goalTranslator: GoalTranslator,
-    nameMaker: NameMaker,
-    options: CfOptions,
-    outputName: TemperName?,
-): PreTranslated = when (f) {
-    is DocGenAltIfFn -> {
-        val lastIndex = t.size - 1
-
-        // We walk backwards over the condition, block pairs building up a thunked translation.
-        // We use a thunk so that translation happens in-order.
-
-        // If there's not an `else`, then we need to fill in PreTranslated.If.alternate with
-        // an empty block.  That's the case when the last index is odd, as seen below.
-
-        // if (b) { x } else if (c) { y } else { z }   Conditions 1 3   Bodies 2 4 5  Last 5
-        // if (b) { x } else if (c) { y }              Conditions 1 3   Bodies 2 4    Last 4
-        // if (b) { x } else { y }                     Conditions 1     Bodies 2 3    Last 3
-        // if (b) { x }                                Conditions 1     Bodies 2      Last 2
-        val hasElse = (lastIndex and 1) != 0
-
-        var (index, translation) = if (hasElse) {
-            lastIndex - 1 to {
-                translateFlow(t.child(lastIndex) as BlockTree, goalTranslator, nameMaker, options, outputName)
-            }
-        } else {
-            lastIndex to { PreTranslated.Block(t.pos.rightEdge, emptyList()) }
-        }
-        while (index > 1) {
-            val testTree = t.child(index - 1)
-            val bodyTree = t.child(index) as BlockTree
-            index -= 2
-
-            val priorTranslation = translation
-            translation = {
-                val test = PreTranslated.TreeWrapper(testTree)
-                val consequent = translateFlow(bodyTree, goalTranslator, nameMaker, options, outputName)
-                val alternate = priorTranslation()
-                PreTranslated.If(
-                    pos = if (index == 1) {
-                        t.pos
-                    } else {
-                        listOf(test, consequent, alternate).spanningPosition(t.pos)
-                    },
-                    test = test,
-                    consequent = consequent,
-                    alternate = alternate,
-                )
-            }
-        }
-        // Translations are thunked so they happen in order.
-        translation()
-    }
-    is DocGenAltReturnFn -> PreTranslated.Return(
-        t.pos,
-        PreTranslated.TreeWrapper(t.child(1)),
-        goalTranslator.bodyFor as BodyForFun,
-    )
-    is DocGenAltWhileFn -> PreTranslated.WhileLoop(
-        t.pos,
-        test = PreTranslated.TreeWrapper(t.child(1)),
-        body = translateFlow(t.child(2) as BlockTree, goalTranslator, nameMaker, options, outputName),
-    )
-    is DocGenAltImpliedResultFn -> PreTranslated.Block(
-        t.pos,
-        listOf(
-            PreTranslated.DocFoldBoundary(TmpL.BoilerplateCodeFoldStart(t.pos.leftEdge)),
-            PreTranslated.TreeWrapper(t.child(1)),
-            PreTranslated.DocFoldBoundary(TmpL.BoilerplateCodeFoldEnd(t.pos.rightEdge)),
-        ),
-    )
 }
 
 /**
@@ -318,54 +209,6 @@ internal sealed class PreTranslated : Positioned {
             }
     }
 
-    /**
-     * A coroutine that has been converted to a regular function.
-     * See [CoroutineStrategy.TranslateToRegularFunction]
-     *
-     * This is its own node type because some parts of the translation
-     * need to be recombined into a larger translation, like
-     * declarations that are initialized before a yield but also
-     * need to be available after resuming.
-     */
-    data class ConvertedCoroutine(
-        override val pos: Position,
-        val persistentDeclarations: List<PreTranslated>,
-        val generatorName: ResolvedName,
-        val body: PreTranslated,
-        /** Maps names that need to adjust from a possibly null state to the value, the non-null type. */
-        val variablesToNullAdjust: Map<TemperName, Type2>,
-    ) : PreTranslated() {
-        override val children: Sequence<PreTranslated>
-            get() = run {
-                var i = 0
-                generateSequence {
-                    when (val k = i++) {
-                        in persistentDeclarations.indices ->
-                            persistentDeclarations[k]
-                        persistentDeclarations.size -> body
-                        else -> null
-                    }
-                }
-            }
-
-        override fun diagnosticToTokenSink(tokenSink: TokenSink) {
-            tokenSink.word("wasCoroutine")
-            tokenSink.emit(OutToks.leftCurly)
-            persistentDeclarations.forEach {
-                tokenSink.word("@extracted")
-                it.diagnosticToTokenSink(tokenSink)
-            }
-            tokenSink.emit(OutToks.semiSemi)
-            body.diagnosticToTokenSink(tokenSink)
-            if (variablesToNullAdjust.isNotEmpty()) {
-                tokenSink.emit(
-                    OutputToken.makeSlashStarComment("Need to adjust: $variablesToNullAdjust"),
-                )
-            }
-            tokenSink.emit(OutToks.rightCurly)
-        }
-    }
-
     data class TreeWrapper(
         val tree: Tree,
     ) : PreTranslated() {
@@ -408,6 +251,26 @@ internal sealed class PreTranslated : Positioned {
         val alternate: PreTranslated,
     ) : PreTranslated() {
         override fun toStatement(translator: TmpLTranslator, parent: PreTranslated?): OneStmt {
+            val unrolled = maybeUnrollToMatch(this)
+            if (unrolled != null) {
+                return OneStmt(
+                    TmpL.ComputedJumpStatement(
+                        pos = pos,
+                        caseExpr = translator.translateExpression(unrolled.name),
+                        cases = unrolled.cases.map { (ifStmt, caseLeaf, caseInt) ->
+                            TmpL.ComputedJumpCase(
+                                listOf(ifStmt.consequent.pos, ifStmt.test.pos).spanningPosition(ifStmt.test.pos),
+                                values = listOf(TmpL.ConstIndex(caseLeaf.pos, caseInt)),
+                                body = ifStmt.consequent.toStatement(translator, parent).asBlock(),
+                            )
+                        },
+                        elseCase = unrolled.finalElse.toStatement(translator).asBlock().let {
+                            TmpL.ComputedJumpElse(it.pos, it)
+                        },
+                    ),
+                )
+            }
+
             val testExpr = test.toExpression(translator)
             val consequentStmt = consequent.toStatement(translator).asStmt()
             var alternateStmt: TmpL.Statement? = alternate.toStatement(translator).asStmt()
@@ -537,7 +400,7 @@ internal sealed class PreTranslated : Positioned {
         val cases: List<Pair<Set<Int>, PreTranslated>>,
         val elseCase: PreTranslated,
     ) : PreTranslated() {
-        override fun toStatement(translator: TmpLTranslator, parent: PreTranslated?): Stmt {
+        override fun toStatement(translator: TmpLTranslator, parent: PreTranslated?): OneStmt {
             return OneStmt(
                 TmpL.ComputedJumpStatement(
                     pos = pos,
@@ -1316,7 +1179,6 @@ private open class PreTranslatedRewrite<I, O>(
         is PreTranslated.Break -> rewriteBreak(pt, x)
         is PreTranslated.CombinedDeclaration -> rewriteCombinedDeclaration(pt, x)
         is PreTranslated.CombinedTypeDefinition -> rewriteCombinedTypeDefinition(pt, x)
-        is PreTranslated.ConvertedCoroutine -> rewriteConvertedCoroutine(pt, x)
         is PreTranslated.Continue -> rewriteContinue(pt, x)
         is PreTranslated.Goal -> rewriteGoal(pt, x)
         is PreTranslated.Garbage -> rewriteGarbage(pt, x)
@@ -1361,13 +1223,6 @@ private open class PreTranslatedRewrite<I, O>(
     open fun rewriteBlock(pt: PreTranslated.Block, x: I) =
         rewriteByParts(pt, x, pt.unfixedElements) { es ->
             pt.copy(elements = es)
-        }
-    open fun rewriteConvertedCoroutine(pt: PreTranslated.ConvertedCoroutine, x: I) =
-        rewriteByParts(pt, x, pt.children.toList()) { parts ->
-            pt.copy(
-                persistentDeclarations = parts.subList(0, parts.size - 1),
-                body = parts.last(),
-            )
         }
     open fun rewriteLabeledStmt(pt: PreTranslated.LabeledStmt, x: I) =
         rewriteByParts(pt, x, listOf(pt.stmt)) { (s) ->
@@ -1835,7 +1690,7 @@ internal fun simplifyGeneratorFnReturns(body: PreTranslated, returnName: Resolve
                     calleeName.baseName == doneResultParsedName
             } else {
                 val fn = callee.functionContained
-                fn is LongLivedUserFunction && fn.stayLeaf == doneResultExportStay.value
+                fn is LongLivedUserFunction && fn.stayLeaf == doneResultExportStay
             }
         }
     }
@@ -1855,7 +1710,7 @@ private fun forEachLeafStmt(
     else -> body(stmt)
 }
 
-private val doneResultExportStay = lazy {
+private val doneResultExportStay by lazy {
     (
         TFunction.unpackOrNull(
             CoreModule.module.exports!!.first { it.name.toSymbol().text == doneResultParsedName.nameText }

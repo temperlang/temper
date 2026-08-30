@@ -1,17 +1,18 @@
-var caseIndex#10: Int32;
-caseIndex#10 = 0;
-return__6 = fn /* return__4 */: (GeneratorResult<Empty>) {
-  fn__11: do {
+var caseIndex#11: Int32;
+caseIndex#11 = 0;
+let convertedCoroutine#14;
+convertedCoroutine#14 = fn (generator#10: SafeGenerator<Empty>) /* return__4 */: (GeneratorResult<Empty>) {
+  fn__12: do {
     while (true) {
-      let caseIndexLocal#12: Int32;
-      caseIndexLocal#12 = caseIndex#10;
-      caseIndex#10 = -1;
-      if (caseIndexLocal#12 == 0) {
+      let caseIndexLocal#13: Int32;
+      caseIndexLocal#13 = caseIndex#11;
+      caseIndex#11 = -1;
+      if (caseIndexLocal#13 == 0) {
         do_call_log(console#5, "Beginning");
+        caseIndex#11 = 1;
         return__4 = new ValueResult<Empty>({class: Empty__10});
-        caseIndex#10 = 1;
-        break fn__11;
-      } else if (caseIndexLocal#12 == 1) {
+        break fn__12;
+      } else if (caseIndexLocal#13 == 1) {
         if (b1__2) {
           do_call_log(console#5, "b1 is true")
         } else {
@@ -19,30 +20,31 @@ return__6 = fn /* return__4 */: (GeneratorResult<Empty>) {
         };
         do_call_log(console#5, "Middle");
         if (b2__3) {
-          caseIndex#10 = 2
+          caseIndex#11 = 2
         } else {
-          caseIndex#10 = 3
+          caseIndex#11 = 3
         }
-      } else if (caseIndexLocal#12 == 2) {
+      } else if (caseIndexLocal#13 == 2) {
         do_call_log(console#5, "b2 is true");
+        caseIndex#11 = 4;
         return__4 = new ValueResult<Empty>({class: Empty__10});
-        caseIndex#10 = 4;
-        break fn__11;
-      } else if (caseIndexLocal#12 == 3) {
+        break fn__12;
+      } else if (caseIndexLocal#13 == 3) {
+        caseIndex#11 = 5;
         return__4 = new ValueResult<Empty>({class: Empty__10});
-        caseIndex#10 = 5;
-        break fn__11;
-      } else if (caseIndexLocal#12 == 4) {
+        break fn__12;
+      } else if (caseIndexLocal#13 == 4) {
         do_call_log(console#5, "End");
-        return__4 = (fn doneResult)();
-        break fn__11;
-      } else if (caseIndexLocal#12 == 5) {
+        return__4 = core.doneResult();
+        break fn__12;
+      } else if (caseIndexLocal#13 == 5) {
         do_call_log(console#5, "b2 is false");
-        caseIndex#10 = 4
+        caseIndex#11 = 4
       } else {
-        return__4 = (fn doneResult)();
-        break fn__11;
+        return__4 = core.doneResult();
+        break fn__12;
       }
     }
   }
-}
+};
+return__6 = adaptGeneratorFnSafe(convertedCoroutine#14)

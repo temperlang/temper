@@ -1,46 +1,48 @@
-var caseIndex#12: Int32;
-caseIndex#12 = 0;
+var caseIndex#13: Int32;
+caseIndex#13 = 0;
 var awaited#11: Promise<String>?;
 awaited#11 = null;
 var s__2: String;
 s__2 = "";
-return__4 = fn /* return__1 */: (GeneratorResult<Empty>) {
-  fn__13: do {
+let convertedCoroutine#16;
+convertedCoroutine#16 = fn (generator#12: SafeGenerator<Empty>) /* return__1 */: (GeneratorResult<Empty>) {
+  fn__14: do {
     while (true) {
-      let caseIndexLocal#14: Int32;
-      caseIndexLocal#14 = caseIndex#12;
-      caseIndex#12 = -1;
-      if (caseIndexLocal#14 == 0) {
+      let caseIndexLocal#15: Int32;
+      caseIndexLocal#15 = caseIndex#13;
+      caseIndex#13 = -1;
+      if (caseIndexLocal#15 == 0) {
         do_call_log(console#3, "Beginning");
-        caseIndex#12 = 1
-      } else if (caseIndexLocal#14 == 1) {
-        orElse#15: {
+        caseIndex#13 = 1
+      } else if (caseIndexLocal#15 == 1) {
+        orElse#17: {
           awaited#11 = p__0;
           awakeUpon(notNull(awaited#11));
+          caseIndex#13 = 2;
           return__1 = new ValueResult<Empty>(do {});
-          caseIndex#12 = 2;
-          break fn__13;
+          break fn__14;
         } orelse {
-          caseIndex#12 = 3
+          caseIndex#13 = 3
         }
-      } else if (caseIndexLocal#14 == 2) {
-        orElse#16: {
+      } else if (caseIndexLocal#15 == 2) {
+        orElse#18: {
           s__2 = getPromiseResultSync(notNull(awaited#11));
-          caseIndex#12 = 4
+          caseIndex#13 = 4
         } orelse {
-          caseIndex#12 = 3
+          caseIndex#13 = 3
         }
-      } else if (caseIndexLocal#14 == 3) {
+      } else if (caseIndexLocal#15 == 3) {
         s__2 = "Broken";
-        caseIndex#12 = 4
-      } else if (caseIndexLocal#14 == 4) {
+        caseIndex#13 = 4
+      } else if (caseIndexLocal#15 == 4) {
         do_call_log(console#3, s__2);
-        return__1 = (fn doneResult)();
-        break fn__13;
+        return__1 = core.doneResult();
+        break fn__14;
       } else {
-        return__1 = (fn doneResult)();
-        break fn__13;
+        return__1 = core.doneResult();
+        break fn__14;
       }
     }
   }
-}
+};
+return__4 = adaptGeneratorFnSafe(convertedCoroutine#16)

@@ -215,6 +215,87 @@ class ControlFlowTest {
     }
 
     @Test
+    fun labeledBlockHasBreakyLoopInLastPosition() = assertSimplified(
+        wantJson = """
+            |{
+            |    "simple":
+            |    ```
+            |    fn__0: do {
+            |      while (loop_cond()) {
+            |        if (if_outer()) {
+            |          breaking();
+            |          break fn__0;
+            |        } else if (if_inner()) {
+            |          also_breaking();
+            |          break fn__0;
+            |        } else {
+            |          embedded_increment()
+            |        }
+            |      }
+            |    }
+            |    ```,
+            |    "simpler":
+            |    ```
+            |    fn__0: do {
+            |      while (loop_cond()) {
+            |        if (if_outer()) {
+            |          breaking();
+            |          break;
+            |        } else if (if_inner()) {
+            |          also_breaking();
+            |          break;
+            |        } else {
+            |          embedded_increment()
+            |        }
+            |      }
+            |    }
+            |    ```,
+            |    "simplest":
+            |    ```
+            |    while (loop_cond()) {
+            |      if (if_outer()) {
+            |        breaking();
+            |        break;
+            |      } else if (if_inner()) {
+            |        also_breaking();
+            |        break;
+            |      } else {
+            |        embedded_increment()
+            |      }
+            |    }
+            |    ```
+            |}
+        """.trimMargin(),
+    ) {
+        val label = label("fn")
+        Do(label = label) {
+            While(
+                testAt = LeftOrRight.Left,
+                cond = { Stmt("loop_cond") },
+                increment = {},
+            ) {
+                If(
+                    cond = { Stmt("if_outer") },
+                    thn = {
+                        Stmt("breaking")
+                        Break(label)
+                    },
+                    els = {
+                        If(
+                            cond = { Stmt("if_inner") },
+                            thn = {
+                                Stmt("also_breaking")
+                                Break(label)
+                            },
+                            els = { Stmt("embedded_increment") },
+                        )
+                    },
+                )
+            }
+        }
+    }
+
+    @Test
     fun incorporateIncrement() = assertSimplified(
         wantJson = """
             |{
@@ -1025,18 +1106,16 @@ class ControlFlowTest {
             |
             |  simplest: ```
             |    while (i__1 < 4) {
-            |      continue#6: do {
-            |        var str__4;
-            |        str__4 = "row ";
-            |        var j__5;
-            |        j__5 = 0;
-            |        while (true) {
-            |          str__4 = cat(str__4);
-            |          if (i__1 <= j__5) {
-            |            break continue#6;
-            |          };
-            |          j__5 = j__5 + 1
-            |        }
+            |      var str__4;
+            |      str__4 = "row ";
+            |      var j__5;
+            |      j__5 = 0;
+            |      while (true) {
+            |        str__4 = cat(str__4);
+            |        if (i__1 <= j__5) {
+            |          break;
+            |        };
+            |        j__5 = j__5 + 1
             |      };
             |      let postfixReturn#2;
             |      postfixReturn#2 = i__1;

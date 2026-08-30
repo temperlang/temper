@@ -3,6 +3,7 @@ package lang.temper.frontend.coroutine
 import lang.temper.ast.TreeVisit
 import lang.temper.ast.VisitCue
 import lang.temper.builtin.BuiltinFun
+import lang.temper.builtin.BuiltinLogicalOperators
 import lang.temper.builtin.makeTypeFormal
 import lang.temper.common.Either
 import lang.temper.common.ListBackedLogSink
@@ -16,13 +17,13 @@ import lang.temper.common.json.JsonString
 import lang.temper.common.json.JsonValue
 import lang.temper.common.json.JsonValueBuilder
 import lang.temper.common.json.buildJsonNestedObject
+import lang.temper.common.structure.Hints
 import lang.temper.common.structure.StructureSink
 import lang.temper.common.structure.Structured
 import lang.temper.common.structure.reconcileStructure
 import lang.temper.common.testModuleName
 import lang.temper.env.InterpMode
 import lang.temper.format.ValueSimplifyingLogSink
-import lang.temper.frontend.AdaptGeneratorFn
 import lang.temper.frontend.DumpStackTracesForThoseErrors
 import lang.temper.frontend.Module
 import lang.temper.frontend.StageTestDir
@@ -31,6 +32,7 @@ import lang.temper.frontend.stageTestDirFileRoot
 import lang.temper.frontend.stageTestDirFileSourceRoot
 import lang.temper.frontend.staging.ModuleAdvancer
 import lang.temper.frontend.staging.ModuleConfig
+import lang.temper.frontend.structureBlock
 import lang.temper.frontend.testLibraryName
 import lang.temper.fs.Url
 import lang.temper.log.FilePath
@@ -61,6 +63,7 @@ import lang.temper.value.InterpreterCallback
 import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
 import lang.temper.value.Value
+import lang.temper.value.simplifyControlFlow
 import lang.temper.value.toPseudoCode
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -130,6 +133,7 @@ internal fun assertConvertedCoroutine(
     stageTestDir: StageTestDir,
     args: List<Type2> = listOf(),
     verboseDebug: Boolean = false,
+    skipSimplifyControlFlow: Boolean = true,
 ) {
     val testDir = readTestDir(stageTestDirFileRoot.resolve(stageTestDir.url))
     val debugConsole = if (verboseDebug) {
@@ -204,10 +208,8 @@ internal fun assertConvertedCoroutine(
     assertEquals(Stage.GenerateCode, module.stageCompleted)
 
     data class CoroDetails(
-        val innerFn: FunTree,
         val wrapperFn: FunTree,
-        val adapter: AdaptGeneratorFn,
-        val generatorType: Type2,
+        val unwrappedCoroutine: UnwrappedCoroutine,
     )
     var coroDetails: CoroDetails? = null
     TreeVisit.startingAt(module.treeForDebug!!)
@@ -217,23 +219,20 @@ internal fun assertConvertedCoroutine(
                 val body = parts?.body as? BlockTree
                 if (body != null) {
                     maybeUnwrapCoroutine(body, parts.returnDecl!!)
-                        ?.let { (innerFn, adapter, generatorType) ->
-                            coroDetails = CoroDetails(
-                                innerFn = innerFn,
-                                wrapperFn = t,
-                                adapter = adapter,
-                                generatorType = generatorType,
-                            )
+                        ?.let {
+                            coroDetails = CoroDetails(wrapperFn = t, unwrappedCoroutine = it)
                             return@forEach VisitCue.AllDone
                         }
                 }
             }
             VisitCue.Continue
         }.visitPreOrder()
-    val unconvertedCoroPseudocodeBefore: String? = coroDetails?.innerFn?.toPseudoCode()
+    val unconvertedCoroPseudocodeBefore =
+        coroDetails?.unwrappedCoroutine?.funTree?.toPseudoCode()
     var coroPseudocode: String? = null
-    coroDetails?.let { coroDetails ->
-        val (innerFn, outerFn, adapterFn, generatorType) = coroDetails
+    var simplifiedPseudocode: String? = null
+    coroDetails?.let { (outerFn, unwrappedCoroutine) ->
+        val innerFn = unwrappedCoroutine.funTree
         val parts = innerFn.parts!!
         val body = parts.body as BlockTree
         val converted = convertCoroutineFunctionBodyToRegularFunctionBody(
@@ -241,13 +240,42 @@ internal fun assertConvertedCoroutine(
             body.document.nameMaker,
             outerFnOutputName = outerFn.parts!!.returnDecl!!.parts!!.name.content as ResolvedName,
             outputDecl = parts.returnDecl!!,
-            adapterFn = adapterFn,
-            generatorType = generatorType,
+            adapterFn = unwrappedCoroutine.adapter,
+            generatorType = unwrappedCoroutine.generatorType,
+            generatorSig = unwrappedCoroutine.generatorSig,
             debugConsole = debugConsole,
+            skipSimplifyControlFlow = skipSimplifyControlFlow,
         )
         coroPseudocode = converted.toPseudoCode(singleLine = false)
+        run {
+            val blocks = buildList {
+                TreeVisit.startingAt(converted)
+                    .forEachContinuing {
+                        if (it is BlockTree) {
+                            add(it to structureBlock(it).copy())
+                        }
+                    }
+                    .visitPreOrder()
+            }
+            for ((block, originalFlow) in blocks) {
+                val simplerFlow = simplifyControlFlow(
+                    block,
+                    originalFlow.controlFlow,
+                    assumeAllJumpsResolved = true,
+                    assumeResultsCaptured = true,
+                    assumeUseBeforeInitChecked = true,
+                    logicalOperators = BuiltinLogicalOperators,
+                )
+                block.replaceFlow(simplerFlow)
+            }
+            simplifiedPseudocode = converted.toPseudoCode(singleLine = false)
+            for ((block, originalFlow) in blocks) {
+                block.replaceFlow(originalFlow)
+            }
+        }
     }
-    val unconvertedCoroPseudocodeAfter: String? = coroDetails?.innerFn?.toPseudoCode()
+    val unconvertedCoroPseudocodeAfter =
+        coroDetails?.unwrappedCoroutine?.funTree?.toPseudoCode()
 
     val got = listBackedLogSink.wrapErrorsAround(
         object : Structured {
@@ -256,6 +284,9 @@ internal fun assertConvertedCoroutine(
                     obj {
                         key("code") {
                             value(coroPseudocode)
+                        }
+                        key("simplified", Hints.u) {
+                            value(simplifiedPseudocode)
                         }
                     }
                 }
@@ -315,6 +346,12 @@ private val testResourceFileRelationships: Map<FilePath, TestResourceFileRelatio
         put(
             listOf("coro", "code"),
             filePath("expect", "coro.temper"),
+            FileContentStringConverter,
+        )
+
+        put(
+            listOf("coro", "simplified"),
+            filePath("expect", "simplified.temper"),
             FileContentStringConverter,
         )
 

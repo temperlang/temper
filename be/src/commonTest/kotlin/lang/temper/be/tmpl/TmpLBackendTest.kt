@@ -2846,7 +2846,6 @@ class TmpLBackendTest {
             |        }
             |        let fn__0(): SafeGenerator<Empty> {
             |          var caseIndex#0: Int32 = 0;
-            |          var t#0: String = "";
             |          @QName("test-library/foo.i=") var i__0: Int32 = 0;
             |## Here's the variable extracted with a zero-value.
             |          let convertedCoroutine#0(generator#0: SafeGenerator<Empty>): GeneratorResult<Empty> {
@@ -2860,8 +2859,7 @@ class TmpLBackendTest {
             |                  caseIndex#0 = 1;
             |                }
             |                1 -> do {
-            |                  t#0 = "" + i__0;
-            |                  ConsoleLog#0(console#0, t#0);
+            |                  ConsoleLog#0(console#0, "" + i__0);
             |                  i__0 = nym`+#58`(i__0, 1);
             |                  caseIndex#0 = 2;
             |                  return ValueResultConstructor#0(Empty#0());
@@ -3015,9 +3013,8 @@ class TmpLBackendTest {
             |        generator.next();
             |      }
             |
-            |      class C(
-            |        public s: String,
-            |      ) {
+            |      class C {
+            |        public s: String;
             |        public constructor(s: String) {
             |          this.s = s;
             |          // This side-effect means that we can't create a
@@ -3055,7 +3052,7 @@ class TmpLBackendTest {
             |        let adaptGeneratorFnSafe#0 = builtins.adaptGeneratorFnSafe /* <adaptGeneratorFnSafeYIELD extends AnyValue>(Fn__0<GeneratorResult<adaptGeneratorFnSafeYIELD>>) -> SafeGenerator<adaptGeneratorFnSafeYIELD> */;
             |        let console#0: Console = GetConsole#0();
             |        @QName("test-library/foo.type C") class C__0 / C {
-            |          @QName("test-library/foo.type C.s") @constructorProperty let s__0: String;
+            |          @QName("test-library/foo.type C.s") let s__0: String;
             |          @QName("test-library/foo.type C.constructor()") constructor__0(this = this__0, @QName("test-library/foo.type C.constructor().(this)") @impliedThis(C__0) this__0: C__0, @QName("test-library/foo.type C.constructor().(s)") s__1: String) {
             |            /* this */ this__0.s__0 = s__1;
             |            ConsoleLog#0(console#0, "Made C");
@@ -3074,7 +3071,6 @@ class TmpLBackendTest {
             |        }
             |        let fn__0(): SafeGenerator<Empty> {
             |          var caseIndex#0: Int32 = 0;
-            |          var t#0: String = "";
             |## Originally `let c: C` but is `var c: C?` and initialized to null.
             |          @QName("test-library/foo.c=") var c__0: C__0 | Null = null;
             |          let convertedCoroutine#0(generator#0: SafeGenerator<Empty>): GeneratorResult<Empty> {
@@ -3093,8 +3089,7 @@ class TmpLBackendTest {
             |                return ValueResultConstructor#0(Empty#0());
             |              }
             |              2 -> do {
-            |                t#0 = notNull (c__0).s;
-            |                ConsoleLog#0(console#0, t#0);
+            |                ConsoleLog#0(console#0, notNull (c__0).s);
             |                return DoneResult#0();
             |              }
             |              else -> do {
@@ -3162,13 +3157,11 @@ class TmpLBackendTest {
             |      @QName("test-library/bubble-ordering.fuji") let fuji: Apple = /*new*/ Apple().maybe();
             |      @QName("test-library/bubble-ordering.gala") let gala: Apple = /*new*/ Apple().maybe();
             |      @QName("test-library/bubble-ordering.juggle()") let juggle(@QName("test-library/bubble-ordering.juggle().(some)") some__0: Int32): Apple {
-            |        @QName("test-library/bubble-ordering.juggle().return") let return__0: Apple;
             |        if (nym`<=#24`(some__0, 0)) {
-            |          return__0 = fuji;
+            |          return fuji;
             |        } else {
-            |          return__0 = gala;
+            |          return gala;
             |        }
-            |        return return__0;
             |      }
             |
             |      ```
@@ -3216,13 +3209,11 @@ class TmpLBackendTest {
             |      }
             |      @QName("test-library/bubble-ordering.gala") let gala: Apple = unpackOkResult#0(gala#0);
             |      @QName("test-library/bubble-ordering.juggle()") let juggle(@QName("test-library/bubble-ordering.juggle().(some)") some__0: Int32): Apple {
-            |        @QName("test-library/bubble-ordering.juggle().return") let return__0: Apple;
             |        if (nym`<=#24`(some__0, 0)) {
-            |          return__0 = fuji;
+            |          return fuji;
             |        } else {
-            |          return__0 = gala;
+            |          return gala;
             |        }
-            |        return return__0;
             |      }
             |
             |      ```
@@ -3514,13 +3505,11 @@ class TmpLBackendTest {
             |        //// work//foo/ => foo.tmpl
             |        let StringBegin#0 = builtins.StringBegin;
             |        @QName("test-library/foo.f()") let f(@QName("test-library/foo.f().(i)") i__0: StringIndexOption): StringIndex {
-            |          @QName("test-library/foo.f().return") let return__0: StringIndex;
             |          if (i__0 >= 0) {
-            |            return__0 = cast (i__0, StringIndex);
+            |            return cast (i__0, StringIndex);
             |          } else {
-            |            return__0 = StringBegin#0;
+            |            return StringBegin#0;
             |          }
-            |          return return__0;
             |        }
             |
             |        ```

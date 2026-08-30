@@ -1,64 +1,66 @@
-var caseIndex#14: Int32;
-caseIndex#14 = 0;
-return__4 = fn /* return__2 */: (GeneratorResult<Boolean> | Bubble) {
-  fn__15: do {
+var caseIndex#15: Int32;
+caseIndex#15 = 0;
+let convertedCoroutine#18;
+convertedCoroutine#18 = fn (generator#14: Generator<Boolean>) /* return__2 */: (GeneratorResult<Boolean> | Bubble) {
+  fn__16: do {
     while (true) {
-      let caseIndexLocal#16: Int32;
-      caseIndexLocal#16 = caseIndex#14;
-      caseIndex#14 = -1;
-      if (caseIndexLocal#16 == 0) {
+      let caseIndexLocal#17: Int32;
+      caseIndexLocal#17 = caseIndex#15;
+      caseIndex#15 = -1;
+      if (caseIndexLocal#17 == 0) {
         let t#8;
         t#8 = x__0 / y__1;
         do_call_log(console#3, cat("x / y = ", do_call_toString(t#8)));
-        caseIndex#14 = 1
-      } else if (caseIndexLocal#16 == 1) {
-        orElse#17: {
+        caseIndex#15 = 1
+      } else if (caseIndexLocal#17 == 1) {
+        orElse#19: {
           let t#9;
           t#9 = x__0 / (y__1 + 1);
           do_call_log(console#3, cat("x / (y + 1) = ", do_call_toString(t#9)));
-          caseIndex#14 = 3
+          caseIndex#15 = 3
         } orelse {
-          caseIndex#14 = 2
+          caseIndex#15 = 2
         }
-      } else if (caseIndexLocal#16 == 2) {
+      } else if (caseIndexLocal#17 == 2) {
         do_call_log(console#3, cat("cannot divide by ", do_call_toString(y__1 + 1), "!, or was it ", do_call_toString(y__1 + 2), "?!"));
-        caseIndex#14 = 7
-      } else if (caseIndexLocal#16 == 3) {
-        orElse#18: {
+        caseIndex#15 = 7
+      } else if (caseIndexLocal#17 == 3) {
+        orElse#20: {
           let t#10;
           t#10 = x__0 / (y__1 - 1);
           do_call_log(console#3, cat("x / (y - 1) = ", do_call_toString(t#10)));
-          return__2 = new ValueResult<GeneratorResult<Boolean>>(true);
-          caseIndex#14 = 5;
-          break fn__15;
+          caseIndex#15 = 5;
+          return__2 = new ValueResult<Boolean>(true);
+          break fn__16;
         } orelse {
-          caseIndex#14 = 4
+          caseIndex#15 = 4
         }
-      } else if (caseIndexLocal#16 == 4) {
-        orElse#19: {
+      } else if (caseIndexLocal#17 == 4) {
+        orElse#21: {
           do_call_log(console#3, cat("cannot divide by ", do_call_toString(y__1 - 1), "!"));
-          caseIndex#14 = 6
+          caseIndex#15 = 6
         } orelse {
-          caseIndex#14 = 2
+          caseIndex#15 = 2
         }
-      } else if (caseIndexLocal#16 == 5) {
-        caseIndex#14 = 6
-      } else if (caseIndexLocal#16 == 6) {
-        orElse#20: {
+      } else if (caseIndexLocal#17 == 5) {
+        caseIndex#15 = 6
+      } else if (caseIndexLocal#17 == 6) {
+        orElse#22: {
           let t#11;
           t#11 = x__0 / (y__1 + 2);
           do_call_log(console#3, cat("x / (y + 2) = ", do_call_toString(t#11)));
-          caseIndex#14 = 7
+          caseIndex#15 = 7
         } orelse {
-          caseIndex#14 = 2
+          caseIndex#15 = 2
         }
-      } else if (caseIndexLocal#16 == 7) {
-        return__2 = (fn doneResult)();
-        break fn__15;
+      } else if (caseIndexLocal#17 == 7) {
+        return__2 = core.doneResult();
+        break fn__16;
       } else {
-        return__2 = (fn doneResult)();
-        break fn__15;
+        return__2 = core.doneResult();
+        break fn__16;
       }
     }
   }
-}
+};
+return__4 = adaptGeneratorFn(convertedCoroutine#18)
