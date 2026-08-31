@@ -50,19 +50,26 @@ enum DefMod = Static;
 enum MethodQualifier = Const;
 
 // Optional return type allows for constructors.
-FuncDecl ::= mod%DefMod? & ret%Type? & convention%SingleName? & name%SingleName & "(" & args%Type*"," & ")" & qual%MethodQualifier? & ";";
+// Attribute should be richer, but SingleName allows using some `#define`.
+FuncDecl ::= attr%SingleName? & mod%DefMod? & ret%Type? & convention%SingleName? & name%SingleName & "(" & args%Type*"," & ")" & qual%MethodQualifier? & ";";
+FuncDecl.attr.default = `null`;
 FuncDecl.mod.default = `null`;
 FuncDecl.convention.default = `null`;
 FuncDecl.qual.default = `null`;
-FuncDef ::= mod%DefMod? & ret%Type? & convention%SingleName? & name%Name & "(" & args%FuncParam*"," & ")" & qual%MethodQualifier? & body%BlockStmt;
+FuncDef ::= attr%SingleName? & mod%DefMod? & ret%Type? & convention%SingleName? & name%Name & "(" & args%FuncParam*"," & ")" & qual%MethodQualifier? & body%BlockStmt;
+FuncDef.attr.default = `null`;
 FuncDef.mod.default = `null`;
 FuncDef.convention.default = `null`;
 FuncDef.qual.default = `null`;
 FuncParam ::= type%Type & name%SingleName;
 
 VarDecl ::= "extern" & type%Type & name%SingleName & ";";
-VarDef ::= mod%DefMod? & type%Type & name%Name & ("=" & init%Expr || ()) & ";";
+VarDef ::= mod%DefMod? & type%Type & name%VarDefNamePart & ("=" & init%Expr || ()) & ";";
 VarDef.mod.default = `null`;
+
+// TODO Some equivalent for VarDecl when need that.
+VarDefNamePart = Name | ArrayVarDefDim;
+ArrayVarDefDim ::= name%VarDefNamePart & "[" & dim%LiteralExpr? & "]";
 
 TypeDef ::= "typedef" & type%Type & name%SingleName & ";";
 

@@ -3,7 +3,7 @@ package lang.temper.frontend.define
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.common.Log
 import lang.temper.frontend.Module
-import lang.temper.frontend.isEffectivelyStd
+import lang.temper.interp.importExport.isEffectivelyStd
 import lang.temper.log.MessageTemplate
 import lang.temper.name.BuiltinName
 import lang.temper.name.ExportedName

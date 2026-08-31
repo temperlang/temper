@@ -1,0 +1,29 @@
+@typeDecl(NoConnectedTypesForNow) @stay @connected let `test//`.NoConnectedTypesForNow = type (NoConnectedTypesForNow);
+@fn @connected let `test//`.alsoNoRestArgsYet, @fn @visibility(\private) @connected butDefaultArgsDoWork__3;
+do {};
+class(\word, \NoConnectedTypesForNow, \concrete, true, @typeDefined(NoConnectedTypesForNow) fn {
+    NoConnectedTypesForNow extends AnyValue;
+    @visibility(\public) @connected @fn let alsoNoConnectedMethodsYet__4 = (@connected fn alsoNoConnectedMethodsYet(@impliedThis(NoConnectedTypesForNow) this__0: NoConnectedTypesForNow) {
+        fn__5: do {
+          pureVirtual()
+        }
+    });
+    @fn @static @visibility(\public) @connected let notEvenStaticMethodsYet__6 = (@connected fn notEvenStaticMethodsYet {
+        fn__7: do {
+          pureVirtual()
+        }
+    });
+    @visibility(\public) let constructor__8 = fn constructor(@impliedThis(NoConnectedTypesForNow) this__1: NoConnectedTypesForNow) /* return__2 */: Void {};
+});
+`test//`.alsoNoRestArgsYet = (@connected fn alsoNoRestArgsYet(i__9 /* aka i */: Int) {
+    fn__11: do {
+      abstractPanic()
+    }
+});
+@connected let `test//`.alsoNoOtherDeclsYet: Int = 5;
+REM("For now, this is the only case in this file without errors. Support like this\nis also tested in functional testing, but showing here also provides\ncontrast.", null, false);
+butDefaultArgsDoWork__3 = (@connected fn butDefaultArgsDoWork(i__12 /* aka i */: Int, j__13 /* aka j */: Int = 2) {
+    fn__14: do {
+      abstractPanic()
+    }
+});

@@ -2270,7 +2270,13 @@ class TmpLBackendTest {
             |    },
             |    "defines.tmpl.map": "__DO_NOT_CARE__",
             |    "uses.tmpl.map": "__DO_NOT_CARE__",
-            |  }
+            |  },
+            |  errors: [
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |  ]
             |}
         """.trimMargin(),
         supportNetwork = defaultTestSupportNetwork.copy(
@@ -2316,7 +2322,13 @@ class TmpLBackendTest {
             |    },
             |    "defines.tmpl.map": "__DO_NOT_CARE__",
             |    "uses.tmpl.map": "__DO_NOT_CARE__",
-            |  }
+            |  },
+            |  errors: [
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |  ]
             |}
         """.trimMargin(),
         supportNetwork = defaultTestSupportNetwork.copy(
@@ -2363,7 +2375,13 @@ class TmpLBackendTest {
             |    },
             |    "defines.tmpl.map": "__DO_NOT_CARE__",
             |    "uses.tmpl.map": "__DO_NOT_CARE__",
-            |  }
+            |  },
+            |  errors: [
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |  ]
             |}
         """.trimMargin(),
         supportNetwork = defaultTestSupportNetwork.copy(
@@ -2434,6 +2452,13 @@ class TmpLBackendTest {
             |    },
             |    foo.tmpl.map: "__DO_NOT_CARE__",
             |  },
+            |  errors: [
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |  ]
             |}
         """.trimMargin(),
     )
@@ -3624,7 +3649,12 @@ class TmpLBackendTest {
             |        ```
             |    },
             |    "foo.tmpl.map": "__DO_NOT_CARE__",
-            |  }
+            |  },
+            |  errors: [
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |  ]
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )

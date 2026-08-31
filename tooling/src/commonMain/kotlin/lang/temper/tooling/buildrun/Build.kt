@@ -343,13 +343,15 @@ fun doOneBuild(build: Build): BuildResult {
     val backendOrganization = organizeBackends(
         backendIds = harness.backends,
         lookupFactory = ::lookupFactory,
-        onMissingFactory = { backendId ->
-            if (backendId != interpBackendId) {
+        onError = { err ->
+            if (err.backendId != interpBackendId) {
+                // Ignore error kind for now, but that might be nice to add in the future.
+                // These errors should be rare.
                 initLogSink.log(
                     Log.Error,
                     MessageTemplate.BadBackend,
                     unknownPos,
-                    listOf(backendId),
+                    listOf(err.backendId),
                 )
             }
         },
@@ -450,6 +452,7 @@ fun doOneBuild(build: Build): BuildResult {
                     logSink = projectLogSink,
                     dependencyResolver = dependencyResolver,
                     config = harness.backendConfig,
+                    adjusterFactory = backendOrganization.adjusterFactories[factory.backendId],
                     rawBackendFiles = rawBackendFiles,
                 ),
             )
