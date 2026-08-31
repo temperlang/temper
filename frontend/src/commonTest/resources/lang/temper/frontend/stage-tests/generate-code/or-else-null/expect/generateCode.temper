@@ -1,0 +1,20 @@
+let t#11 ⦂ String, console#1 ⦂ Console;
+console#1 = getConsole();
+var x__0: Float64?;
+orelse#3: {
+  x__0 = do_call_toFloat64("four")
+} orelse {
+  x__0 = null
+};
+let t#9 ⦂ String?;
+if (isNull ⋖ Float64 ⋗(x__0)) {
+  t#9 = null
+} else {
+  t#9 = do_call_toString(notNull ⋖ Float64 ⋗(x__0))
+};
+if (isNull ⋖ String ⋗(t#9)) {
+  t#11 = "NaN"
+} else {
+  t#11 = notNull ⋖ String ⋗(t#9)
+};
+do_call_log(console#1, t#11)

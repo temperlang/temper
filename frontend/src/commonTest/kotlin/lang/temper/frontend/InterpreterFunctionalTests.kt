@@ -53,6 +53,16 @@ class InterpreterFunctionalTests : FunctionalTestSuiteI {
 
     private var _cancelGroup: CancelGroup? = null
 
+    @Test // do not commit
+    override fun typesJsonSyntaxTree() {
+        super.typesJsonSyntaxTree()
+    }
+
+    @Test // do not commit
+    override fun semanticsBroken() {
+        super.semanticsBroken()
+    }
+
     @BeforeTest
     fun makeCancelGroup() {
         _cancelGroup = makeCancelGroupForTest()
