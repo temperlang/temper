@@ -859,10 +859,12 @@ class TmpLTranslator internal constructor(
     }
 
     private fun postProcess(topLevel: TmpL.TopLevel): TmpL.TopLevel {
-        return when {
-            supportNetwork.needsLabeledBreakFromSwitch ->
+        return when (supportNetwork.computedJumpStrategy) {
+            ComputedJumpStrategy.IsDefaultBreakScope ->
                 labelBreaksFromSwitchIfNeeded(topLevel, mergedNameMaker) as TmpL.TopLevel
-            else -> topLevel
+            ComputedJumpStrategy.NeverUse,
+            ComputedJumpStrategy.Use,
+            -> topLevel
         }
     }
 

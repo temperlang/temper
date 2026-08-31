@@ -77,10 +77,8 @@ class PyBackendTest {
             |    def radix(this_24, /) -> 'int3':
             |        return this_24.radix_7
             |def crazy_sum(int_maker_16: 'IntMaker', int_17: 'int64_23', string_18: 'str4', /) -> 'int3':
-            |    int_int_20: 'int3'
-            |    int_int_20 = int_maker_16.int64_to_int(int_17)
-            |    string_int_21: 'int3'
-            |    string_int_21 = int_maker_16.string_to_int(string_18)
+            |    int_int_20: 'int3' = int_maker_16.int64_to_int(int_17)
+            |    string_int_21: 'int3' = int_maker_16.string_to_int(string_18)
             |    return int_add_39(int_int_20, string_int_21)
             |
         """.trimMargin(),
@@ -141,14 +139,13 @@ class PyBackendTest {
             |}
         """.trimMargin(),
         want = """
-            |from builtins import bool as bool3, str as str6, int as int7, isinstance as isinstance10, len as len0
             |from temper_core import LoggingConsole as LoggingConsole4, list_get as list_get1, int_add as int_add2
             |from typing import Dict as Dict5, Union as Union8, Sequence as Sequence9
+            |from builtins import bool as bool3, str as str6, int as int7, isinstance as isinstance10, len as len0
             |len_38 = len0
             |list_get_39 = list_get1
             |int_add_40 = int_add2
-            |t_16: 'bool3'
-            |t_31: 'LoggingConsole4' = LoggingConsole4(__name__)
+            |console_31: 'LoggingConsole4' = LoggingConsole4(__name__)
             |def f() -> 'Dict5[str6, int7]':
             |    return {}
             |m_1: 'Union8[(Dict5[str6, int7]), None]' = None
@@ -161,12 +158,13 @@ class PyBackendTest {
             |    e_3: 'int7' = el_22
             |    if e_3 == 2:
             |        m_1 = {}
+            |t_16: 'bool3'
             |if not m_1 is None:
             |    t_16 = isinstance10(m_1, Dict5)
             |else:
             |    t_16 = False
             |if t_16:
-            |    t_31.log('Allocated m')
+            |    console_31.log('Allocated m')
             |
         """.trimMargin(),
     )
@@ -212,8 +210,8 @@ class PyBackendTest {
             |from typing import MutableSequence as MutableSequence1
             |from builtins import int as int2, list as list0
             |from temper_core import list_builder_add as list_builder_add3
-            |list_13 = list0
-            |b_0: 'MutableSequence1[int2]' = list_13()
+            |list_1 = list0
+            |b_0: 'MutableSequence1[int2]' = list_1()
             |b_0.append(1)
             |list_builder_add3(b_0, 2, 0)
             |
@@ -360,12 +358,12 @@ class PyBackendTest {
             |  public var z: Int = 2;
             |  // Public get, private set.
             |  public get p(): Int { y - 1 }
-            |  private set p(newP: Int): Void { y = newP + 1 }
+            |  private set p(newP: Int): Void { y = newP + 1; }
             |  // No get, public set.
-            |  public set q(newQ: Int): Void { p = newQ }
+            |  public set q(newQ: Int): Void { p = newQ; }
             |  // Private get, public set.
             |  private get r(): Int { p }
-            |  public set r(newR: Int): Void { p = newR }
+            |  public set r(newR: Int): Void { p = newR; }
             |  // Private get, no set.
             |  private get s(): Int { p }
             |  // Public and private methods.
@@ -458,11 +456,10 @@ class PyBackendTest {
         // But generate as good of code as we can, anyway.
         want = """
             |from typing import Any as Any1, Sequence as Sequence3
-            |from builtins import bool as bool2, RuntimeError as RuntimeError4, isinstance as isinstance6
+            |from builtins import RuntimeError as RuntimeError4, isinstance as isinstance6, bool as bool2
             |from temper_core import cast_by_type as cast_by_type5, list_get as list_get0
             |list_get_14 = list_get0
             |def probe(thing_1: 'Any1', /) -> 'bool2':
-            |    return_0: 'bool2'
             |    things_3: 'Sequence3[Any1]'
             |    if thing_1 is None:
             |        raise RuntimeError4()
@@ -470,10 +467,9 @@ class PyBackendTest {
             |        things_3 = cast_by_type5(thing_1, Sequence3)
             |    t_13: 'Any1' = list_get_14(things_3, 0)
             |    if not t_13 is None:
-            |        return_0 = isinstance6(t_13, Sequence3)
+            |        return isinstance6(t_13, Sequence3)
             |    else:
-            |        return_0 = False
-            |    return return_0
+            |        return False
             |
         """.trimMargin(),
         errors = listOf(

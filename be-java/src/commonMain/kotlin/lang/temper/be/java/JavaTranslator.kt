@@ -2259,17 +2259,16 @@ class JavaTranslator(
                 // A promise was awaited but its result is not used
                 coroPromiseResultAsync -> {
                     // Converted coroutines use these also.
-                    //     left = getPromiseResultSync(fail#1, promise)
+                    //     left = getPromiseResultSync(promise)
                     // ->
                     //     try {
                     //       left = promise.get();
-                    //     } catch (InterruptedException) {
-                    //       break; // skips to done state in `switch`
-                    //     } catch (ExecutionException) {
-                    //       fail_1 = true;
+                    //     } catch (InterruptedException | ExecutionException ex) {
+                    //       // Route the checked exceptions from promise unpacking
+                    //       // to any orelse handler looking for an RTE.
+                    //       ...
                     //     }
-                    val failVar = (parameters[0] as? TmpL.Reference)?.id
-                    val promise = expr(parameters[1] as TmpL.Expression)
+                    val promise = expr(parameters[0] as TmpL.Expression)
                     var getCall: J.ExpressionStatementExpr = J.InstanceMethodInvocationExpr(
                         pos = pos,
                         expr = promise,
@@ -2288,8 +2287,7 @@ class JavaTranslator(
                         getCall
                     }
                     val catchPos = pos.rightEdge
-                    val interruptedExceptionName = names.ignoredIdentifier(catchPos)
-                    val executionExceptionName = names.ignoredIdentifier(catchPos)
+                    val exceptionName = names.ignoredIdentifier(catchPos)
                     J.TryStatement(
                         pos = pos,
                         bodyBlock = J.BlockStatement(J.ExpressionStatement(getCall)),
@@ -2298,34 +2296,24 @@ class JavaTranslator(
                                 pos = catchPos,
                                 types = listOf(
                                     javaLangInterruptedException.toClassType(catchPos),
-                                ),
-                                name = interruptedExceptionName,
-                                body = J.BlockStatement(
-                                    // Since the state machine tentatively sets the case index
-                                    // to -1 before switching the coroutine will enter a done
-                                    // statement if we break from the case here.
-                                    J.BreakStatement(catchPos),
-                                ),
-                            ),
-                            J.CatchBlock(
-                                pos = catchPos,
-                                types = listOf(
                                     javaUtilConcurrentExecutionException.toClassType(catchPos),
                                 ),
-                                name = executionExceptionName,
+                                name = exceptionName,
                                 body = J.BlockStatement(
-                                    if (failVar != null) {
-                                        J.ExpressionStatement(
-                                            J.AssignmentExpr(
-                                                catchPos,
-                                                leftHandSide(failVar),
-                                                J.Operator(catchPos, Assign),
-                                                J.BooleanLiteral(catchPos, true),
+                                    // Since the state machine tentatively sets the case index
+                                    // to -1 before switching, the coroutine will enter a done
+                                    // statement if we break from the case here.
+                                    J.ThrowStatement(
+                                        catchPos,
+                                        J.InstanceCreationExpr(
+                                            catchPos,
+                                            javaLangRuntimeException.toClassType(catchPos),
+                                            args = listOf(
+                                                J.NameExpr(exceptionName.deepCopy())
+                                                    .asArgument(catchPos),
                                             ),
-                                        )
-                                    } else {
-                                        J.ThrowStatement(catchPos, J.NameExpr(executionExceptionName.deepCopy()))
-                                    },
+                                        ),
+                                    ),
                                 ),
                             ),
                         ),

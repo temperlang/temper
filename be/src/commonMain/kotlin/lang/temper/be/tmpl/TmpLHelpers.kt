@@ -58,6 +58,7 @@ import lang.temper.value.qNameSymbol
 import lang.temper.value.reachSymbol
 import lang.temper.value.testSymbol
 import lang.temper.value.typeDeclSymbol
+import lang.temper.value.void
 
 internal fun dotNameMatchesName(dotName: TmpL.DotName, name: TmpL.Id): Boolean =
     dotName.dotNameText == (name.name as? SourceName)?.baseName?.nameText
@@ -1286,6 +1287,9 @@ fun TmpL.Statement.isYieldingStatement(): Boolean =
             this.recover.isYieldingStatement()
         is TmpL.WhileStatement -> this.body.isYieldingStatement()
     }
+
+val TmpL.Expression.isVoidConstant: Boolean get() =
+    this is TmpL.ValueReference && this.value == void
 
 fun qNameFor(d: TmpL.Declaration): QName? {
     val md = d.metadata.firstOrNull { it.key.symbol == qNameSymbol }

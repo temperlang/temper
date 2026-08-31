@@ -243,8 +243,7 @@ class JsBackendTest {
             |           * @returns {number}
             |           */
             |          function fib_0(i_0) {
-            |            let t_0 = i_0.toString();
-            |            console_0.log(t_0);
+            |            console_0.log(i_0.toString());
             |            let a_0 = 0;
             |            let b_0 = 1;
             |            while (i_0 > 0) {
@@ -293,11 +292,10 @@ class JsBackendTest {
             |                const test_0 = new Test_0();
             |                try {
             |                  const actual_0 = fib_0(0);
-            |                  let t_1 = actual_0 === 0;
             |                  function fn_0() {
             |                    return "expected fib(0) == (" + 0 .toString() + ") not (" + actual_0.toString() + ")";
             |                  }
-            |                  test_0.assert(t_1, fn_0);
+            |                  test_0.assert(actual_0 === 0, fn_0);
             |                  return;
             |                } finally {
             |                  test_0.softFailToHard();
@@ -438,11 +436,8 @@ class JsBackendTest {
             |            } from "@temperlang/core";
             |            /** @type {number} */
             |            let return_0;
-            |            /** @type {number} */
-            |            let t_0;
             |            try {
-            |              t_0 = divIntInt_0(0, 0);
-            |              return_0 = t_0;
+            |              return_0 = divIntInt_0(0, 0);
             |            } catch {
             |              return_0 = 0;
             |            }
@@ -762,14 +757,14 @@ class JsBackendTest {
             |            import {
             |              globalConsole as globalConsole_0
             |            } from "@temperlang/core";
+            |            /** @type {void} */
+            |            const return_1 = void 0;
             |            /** @type {Console_0} */
             |            const console_0 = globalConsole_0;
             |            export function f() {
             |              console_0.log("f");
             |              return;
             |            };
-            |            /** @type {void} */
-            |            const return_1 = void 0;
             |            export default return_1;
             |
             |            ```,
@@ -869,8 +864,7 @@ class JsBackendTest {
             |             * @returns {C}
             |             */
             |            static decodeFromJson(t_1, ic_1) {
-            |              let obj_0;
-            |              obj_0 = requireInstanceOf_0(t_1, JsonObject_0);
+            |              const obj_0 = requireInstanceOf_0(t_1, JsonObject_0);
             |              return new C();
             |            }
             |            /** @returns {JsonAdapter_0<C>} */
@@ -1080,8 +1074,7 @@ class JsBackendTest {
             |            } else {
             |              b_1 = b_0;
             |            }
-            |            let t_0 = (a_1 + b_1 | 0).toString();
-            |            console_0.log(t_0);
+            |            console_0.log((a_1 + b_1 | 0).toString());
             |            return;
             |          }
             |          hi_0(null, 3);
@@ -1290,8 +1283,7 @@ class JsBackendTest {
             |            return m_0;
             |          }
             |          /** @type {number | null} */
-            |          export let n;
-            |          n = f_0();
+            |          export const n = f_0();
             |
             |          ```,
             |      },
@@ -1486,8 +1478,7 @@ class JsBackendTest {
             |          // then there would be a useless JS `import` statement below.
             |          ```
             |          /** @type {globalThis.Date} */
-            |          export let d;
-            |          d = new (globalThis.Date)(globalThis.Date.UTC(2000, 1 - 1, 1));
+            |          export const d = new (globalThis.Date)(globalThis.Date.UTC(2000, 1 - 1, 1));
             |
             |          ```
             |      },
@@ -1632,14 +1623,12 @@ class JsBackendTest {
             |          /** @returns {Generator<{}>} */
             |          const fn_0 = adaptAwaiter_0(function* fn_0(await_0) {
             |              let t_0;
-            |              let t_1;
             |              try {
             |                t_0 = yield await_0(p_0);
-            |                t_1 = t_0;
             |              } catch {
-            |                t_1 = panic_0();
+            |                t_0 = panic_0();
             |              }
-            |              console_0.log(t_1);
+            |              console_0.log(t_0);
             |          });
             |          runAsync_0(fn_0);
             |          b_0.complete("Hi");
@@ -1684,14 +1673,14 @@ class JsBackendTest {
             |            globalConsole as globalConsole_0
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
-            |          let t_0 = globalConsole_0;
+            |          const console_0 = globalConsole_0;
             |          /** @type {globalThis.Array<string>} */
             |          const sb_0 = [""];
             |          void (sb_0[0] += "Hello, ");
             |          void (sb_0[0] = "");
             |          void (sb_0[0] += "World");
             |          void (sb_0[0] += "!");
-            |          t_0.log(sb_0[0]);
+            |          console_0.log(sb_0[0]);
             |
             |          ```
             |      },
@@ -1788,31 +1777,28 @@ class JsBackendTest {
             |          const console_0 = globalConsole_0;
             |          /** @returns {Generator<{}>} */
             |          const fn_0 = adaptAwaiter_0(function* fn_0(await_0) {
-            |              let t_0;
-            |              let t_1;
-            |              let t_2;
             |              try {
-            |                let r_0;
             |## NetRequest is defined in Temper, so it doesn't need to connect
-            |                r_0 = yield await_0(new NetRequest_0("data:text/plain,Hello World!").send());
+            |                const r_0 = yield await_0(new NetRequest_0("data:text/plain,Hello World!").send());
             |## Getting a status from the response involves a helper function.
             |## We could use a custom jobby to just do `.status`.
             |                if (netResponseGetStatus_0(r_0) === 200) {
+            |                  let t_0;
             |                  let body_0;
             |## Similarly for body content.
-            |                  t_1 = yield await_0(netResponseGetBodyContent_0(r_0));
-            |                  if (t_1 == null) {
+            |                  const subject_0 = yield await_0(netResponseGetBodyContent_0(r_0));
+            |                  if (subject_0 == null) {
             |                    body_0 = "missing";
             |                  } else {
-            |                    body_0 = t_1;
+            |                    body_0 = subject_0;
             |                  }
-            |                  t_0 = netResponseGetContentType_0(r_0);
-            |                  if (t_0 == null) {
-            |                    t_2 = "unknown";
+            |                  const subject_1 = netResponseGetContentType_0(r_0);
+            |                  if (subject_1 == null) {
+            |                    t_0 = "unknown";
             |                  } else {
-            |                    t_2 = t_0;
+            |                    t_0 = subject_1;
             |                  }
-            |                  console_0.log("Got " + body_0 + " / " + t_2);
+            |                  console_0.log("Got " + body_0 + " / " + t_0);
             |                }
             |              } catch {
             |                console_0.log("failed");
@@ -1879,11 +1865,11 @@ class JsBackendTest {
             |           */
             |          export function prodWrap(i_1, j_2) {
             |            let t_1;
-            |            let t_2 = listedGet_0(j_2, 0);
-            |            if (t_2 == null) {
+            |            const subject_0 = listedGet_0(j_2, 0);
+            |            if (subject_0 == null) {
             |              t_1 = 1;
             |            } else {
-            |              t_1 = t_2;
+            |              t_1 = subject_0;
             |            }
             |            return imul_0(i_1, t_1);
             |          };
@@ -1892,15 +1878,12 @@ class JsBackendTest {
             |           * @returns {number | null}
             |           */
             |          export function maybeLength(a_0) {
-            |            let return_0;
-            |            let t_3;
             |            if (a_0 == null) {
-            |              return_0 = null;
+            |              return null;
             |            } else {
-            |              t_3 = a_0;
-            |              return_0 = stringCountBetween_0(t_3, 0, t_3.length);
+            |              const a_1 = a_0;
+            |              return stringCountBetween_0(a_1, 0, a_1.length);
             |            }
-            |            return return_0;
             |          };
             |
             |          ```
@@ -1956,10 +1939,13 @@ class JsBackendTest {
             |            }
             |            if (t_0) {
             |              console_0.log("dense");
+            |              return;
             |            } else if (x_0 == null) {
             |              console_0.log("not dense");
+            |              return;
+            |            } else {
+            |              return;
             |            }
-            |            return;
             |          };
             |
             |          ```
@@ -1998,8 +1984,7 @@ class JsBackendTest {
             |          /** @type {Array<string>} */
             |          const lb_0 = [];
             |          /** @type {Array<string>} */
-            |          export let listed;
-            |          listed = requireIsArray_0(lb_0);
+            |          export const listed = requireIsArray_0(lb_0);
             |
             |          ```,
             |      },
@@ -2045,13 +2030,11 @@ class JsBackendTest {
             |             * @returns {globalThis.number}
             |             */
             |            export function f(i_0) {
-            |              let return_0;
             |              if (i_0 >= 0) {
-            |                return_0 = requireStringIndex_0(i_0);
+            |                return requireStringIndex_0(i_0);
             |              } else {
-            |                return_0 = 0;
+            |                return 0;
             |              }
-            |              return return_0;
             |            };
             |
             |            ```
@@ -2075,7 +2058,7 @@ class JsBackendTest {
                 |        private constructor() {}
                 |        private var y: Int;
                 |        private get x(): Int { y + 1 }
-                |        private set x(newX: Int): Void { y = newX - 1 }
+                |        private set x(newX: Int): Void { y = newX - 1; }
                 |        private f(): Int { x }
                 |        public g(): Int { f() / 2 }
                 |      }
@@ -2106,7 +2089,7 @@ class JsBackendTest {
             |              }
             |              /** @param {number} newX_0 */
             |              set #x_0(newX_0) {
-            |                let t_0 = newX_0 - 1 | 0;
+            |                const t_0 = newX_0 - 1 | 0;
             |                this.#y_0 = t_0;
             |                return;
             |              }
@@ -2140,7 +2123,7 @@ class JsBackendTest {
                 |      export class C {
                 |        private var y: Int = 1;
                 |        public get p(): Int { y - 1 }
-                |        private set p(newP: Int): Void { y = newP + 1 }
+                |        private set p(newP: Int): Void { y = newP + 1; }
                 |        public incr(): Int { p += 1 }
                 |      }
                 |      ```
@@ -2166,7 +2149,7 @@ class JsBackendTest {
             |              }
             |              /** @param {number} newP_0 */
             |              set #p_0(newP_0) {
-            |                let t_0 = newP_0 + 1 | 0;
+            |                const t_0 = newP_0 + 1 | 0;
             |                this.#y_0 = t_0;
             |                return;
             |              }

@@ -592,8 +592,7 @@ Statement =
     | Declaration
     | DocumentedDeclaration
     | IfStatement
-    | WhileStatement
-    | ForOfStatement
+    | LoopStatement
     | SwitchStatement
     | TryStatement
     | ThrowStatement
@@ -603,6 +602,8 @@ Statement =
     | ContinueStatement
     | CommentLine
     | JsDocComment;
+
+LoopStatement = ForOfStatement | WhileStatement;
 
 ExpressionStatement ::=
       ((needsParentheses==true => "(" & expression%Expression & ")")

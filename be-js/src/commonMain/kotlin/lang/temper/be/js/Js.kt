@@ -3978,131 +3978,8 @@ object Js {
         }
     }
 
-    class WhileStatement(
-        pos: Position,
-        test: Expression,
-        body: Statement,
-    ) : BaseTree(pos), Statement {
-        override val operatorDefinition: JsOperatorDefinition?
-            get() = null
-        override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate154
-        override val formatElementCount
-            get() = 2
-        override fun formatElement(
-            index: Int,
-        ): IndexableFormattableTreeElement {
-            return when (index) {
-                0 -> this.test
-                1 -> this.body
-                else -> throw IndexOutOfBoundsException("$index")
-            }
-        }
-        private var _test: Expression
-        var test: Expression
-            get() = _test
-            set(newValue) { _test = updateTreeConnection(_test, newValue) }
-        private var _body: Statement
-        var body: Statement
-            get() = _body
-            set(newValue) { _body = updateTreeConnection(_body, newValue) }
-        override fun deepCopy(): WhileStatement {
-            return WhileStatement(pos, test = this.test.deepCopy(), body = this.body.deepCopy())
-        }
-        override val childMemberRelationships
-            get() = cmr
-        override fun equals(
-            other: Any?,
-        ): Boolean {
-            return other is WhileStatement && this.test == other.test && this.body == other.body
-        }
-        override fun hashCode(): Int {
-            var hc = test.hashCode()
-            hc = 31 * hc + body.hashCode()
-            return hc
-        }
-        init {
-            this._test = updateTreeConnection(null, test)
-            this._body = updateTreeConnection(null, body)
-        }
-        companion object {
-            private val cmr = ChildMemberRelationships(
-                { n -> (n as WhileStatement).test },
-                { n -> (n as WhileStatement).body },
-            )
-        }
-    }
-
-    class ForOfStatement(
-        pos: Position,
-        left: LoopLeft,
-        right: Expression,
-        body: Statement,
-        var awaits: Boolean,
-    ) : BaseTree(pos), Statement {
-        override val operatorDefinition: JsOperatorDefinition?
-            get() = null
-        override val codeFormattingTemplate: CodeFormattingTemplate
-            get() =
-                if (awaits) {
-                    sharedCodeFormattingTemplate155
-                } else {
-                    sharedCodeFormattingTemplate156
-                }
-        override val formatElementCount
-            get() = 3
-        override fun formatElement(
-            index: Int,
-        ): IndexableFormattableTreeElement {
-            return when (index) {
-                0 -> this.left
-                1 -> this.right
-                2 -> this.body
-                else -> throw IndexOutOfBoundsException("$index")
-            }
-        }
-        private var _left: LoopLeft
-        var left: LoopLeft
-            get() = _left
-            set(newValue) { _left = updateTreeConnection(_left, newValue) }
-        private var _right: Expression
-        var right: Expression
-            get() = _right
-            set(newValue) { _right = updateTreeConnection(_right, newValue) }
-        private var _body: Statement
-        var body: Statement
-            get() = _body
-            set(newValue) { _body = updateTreeConnection(_body, newValue) }
-        override fun deepCopy(): ForOfStatement {
-            return ForOfStatement(pos, left = this.left.deepCopy(), right = this.right.deepCopy(), body = this.body.deepCopy(), awaits = this.awaits)
-        }
-        override val childMemberRelationships
-            get() = cmr
-        override fun equals(
-            other: Any?,
-        ): Boolean {
-            return other is ForOfStatement && this.left == other.left && this.right == other.right && this.body == other.body && this.awaits == other.awaits
-        }
-        override fun hashCode(): Int {
-            var hc = left.hashCode()
-            hc = 31 * hc + right.hashCode()
-            hc = 31 * hc + body.hashCode()
-            hc = 31 * hc + awaits.hashCode()
-            return hc
-        }
-        init {
-            this._left = updateTreeConnection(null, left)
-            this._right = updateTreeConnection(null, right)
-            this._body = updateTreeConnection(null, body)
-            require((this.left as? VariableDeclaration)?.let { it.declarations.size == 1 } ?: true)
-        }
-        companion object {
-            private val cmr = ChildMemberRelationships(
-                { n -> (n as ForOfStatement).left },
-                { n -> (n as ForOfStatement).right },
-                { n -> (n as ForOfStatement).body },
-            )
-        }
+    sealed interface LoopStatement : Tree, Statement {
+        override fun deepCopy(): LoopStatement
     }
 
     class SwitchStatement(
@@ -4113,7 +3990,7 @@ object Js {
         override val operatorDefinition: JsOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate157
+            get() = sharedCodeFormattingTemplate154
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -4171,13 +4048,13 @@ object Js {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (handler != null && finalizer != null) {
-                    sharedCodeFormattingTemplate158
+                    sharedCodeFormattingTemplate155
                 } else if (handler != null) {
-                    sharedCodeFormattingTemplate159
+                    sharedCodeFormattingTemplate156
                 } else if (finalizer != null) {
-                    sharedCodeFormattingTemplate160
+                    sharedCodeFormattingTemplate157
                 } else {
-                    sharedCodeFormattingTemplate161
+                    sharedCodeFormattingTemplate158
                 }
         override val formatElementCount
             get() = 3
@@ -4241,7 +4118,7 @@ object Js {
         override val operatorDefinition: JsOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate162
+            get() = sharedCodeFormattingTemplate159
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -4288,9 +4165,9 @@ object Js {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (expr != null) {
-                    sharedCodeFormattingTemplate163
+                    sharedCodeFormattingTemplate160
                 } else {
-                    sharedCodeFormattingTemplate164
+                    sharedCodeFormattingTemplate161
                 }
         override val formatElementCount
             get() = 1
@@ -4393,9 +4270,9 @@ object Js {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (label != null) {
-                    sharedCodeFormattingTemplate165
+                    sharedCodeFormattingTemplate162
                 } else {
-                    sharedCodeFormattingTemplate166
+                    sharedCodeFormattingTemplate163
                 }
         override val formatElementCount
             get() = 1
@@ -4443,9 +4320,9 @@ object Js {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (label != null) {
-                    sharedCodeFormattingTemplate167
+                    sharedCodeFormattingTemplate164
                 } else {
-                    sharedCodeFormattingTemplate168
+                    sharedCodeFormattingTemplate165
                 }
         override val formatElementCount
             get() = 1
@@ -4527,6 +4404,133 @@ object Js {
         }
         companion object {
             private val cmr = ChildMemberRelationships()
+        }
+    }
+
+    class ForOfStatement(
+        pos: Position,
+        left: LoopLeft,
+        right: Expression,
+        body: Statement,
+        var awaits: Boolean,
+    ) : BaseTree(pos), LoopStatement {
+        override val operatorDefinition: JsOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() =
+                if (awaits) {
+                    sharedCodeFormattingTemplate166
+                } else {
+                    sharedCodeFormattingTemplate167
+                }
+        override val formatElementCount
+            get() = 3
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.left
+                1 -> this.right
+                2 -> this.body
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _left: LoopLeft
+        var left: LoopLeft
+            get() = _left
+            set(newValue) { _left = updateTreeConnection(_left, newValue) }
+        private var _right: Expression
+        var right: Expression
+            get() = _right
+            set(newValue) { _right = updateTreeConnection(_right, newValue) }
+        private var _body: Statement
+        var body: Statement
+            get() = _body
+            set(newValue) { _body = updateTreeConnection(_body, newValue) }
+        override fun deepCopy(): ForOfStatement {
+            return ForOfStatement(pos, left = this.left.deepCopy(), right = this.right.deepCopy(), body = this.body.deepCopy(), awaits = this.awaits)
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is ForOfStatement && this.left == other.left && this.right == other.right && this.body == other.body && this.awaits == other.awaits
+        }
+        override fun hashCode(): Int {
+            var hc = left.hashCode()
+            hc = 31 * hc + right.hashCode()
+            hc = 31 * hc + body.hashCode()
+            hc = 31 * hc + awaits.hashCode()
+            return hc
+        }
+        init {
+            this._left = updateTreeConnection(null, left)
+            this._right = updateTreeConnection(null, right)
+            this._body = updateTreeConnection(null, body)
+            require((this.left as? VariableDeclaration)?.let { it.declarations.size == 1 } ?: true)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as ForOfStatement).left },
+                { n -> (n as ForOfStatement).right },
+                { n -> (n as ForOfStatement).body },
+            )
+        }
+    }
+
+    class WhileStatement(
+        pos: Position,
+        test: Expression,
+        body: Statement,
+    ) : BaseTree(pos), LoopStatement {
+        override val operatorDefinition: JsOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate168
+        override val formatElementCount
+            get() = 2
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.test
+                1 -> this.body
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _test: Expression
+        var test: Expression
+            get() = _test
+            set(newValue) { _test = updateTreeConnection(_test, newValue) }
+        private var _body: Statement
+        var body: Statement
+            get() = _body
+            set(newValue) { _body = updateTreeConnection(_body, newValue) }
+        override fun deepCopy(): WhileStatement {
+            return WhileStatement(pos, test = this.test.deepCopy(), body = this.body.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is WhileStatement && this.test == other.test && this.body == other.body
+        }
+        override fun hashCode(): Int {
+            var hc = test.hashCode()
+            hc = 31 * hc + body.hashCode()
+            return hc
+        }
+        init {
+            this._test = updateTreeConnection(null, test)
+            this._body = updateTreeConnection(null, body)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as WhileStatement).test },
+                { n -> (n as WhileStatement).body },
+            )
         }
     }
 
@@ -6976,61 +6980,8 @@ object Js {
             ),
         )
 
-    /** `while ( {{0}} ) \{ \n {{1}} \n \}` */
-    private val sharedCodeFormattingTemplate154 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("while", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.NewLine,
-                CodeFormattingTemplate.OneSubstitution(1),
-                CodeFormattingTemplate.NewLine,
-                CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
-            ),
-        )
-
-    /** `for await ( {{0}} of {{1}} ) \{ \n {{2}} \n \}` */
-    private val sharedCodeFormattingTemplate155 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("for", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("await", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken("of", OutputTokenType.Word),
-                CodeFormattingTemplate.OneSubstitution(1),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.NewLine,
-                CodeFormattingTemplate.OneSubstitution(2),
-                CodeFormattingTemplate.NewLine,
-                CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
-            ),
-        )
-
-    /** `for ( {{0}} of {{1}} ) \{ \n {{2}} \n \}` */
-    private val sharedCodeFormattingTemplate156 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("for", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken("of", OutputTokenType.Word),
-                CodeFormattingTemplate.OneSubstitution(1),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.NewLine,
-                CodeFormattingTemplate.OneSubstitution(2),
-                CodeFormattingTemplate.NewLine,
-                CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
-            ),
-        )
-
     /** `switch ( {{0}} ) \{ \n {{1*\n}} \n \}` */
-    private val sharedCodeFormattingTemplate157 =
+    private val sharedCodeFormattingTemplate154 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("switch", OutputTokenType.Word),
@@ -7049,7 +7000,7 @@ object Js {
         )
 
     /** `try \{ \n {{0}} \n \} {{1}} finally {{2}}` */
-    private val sharedCodeFormattingTemplate158 =
+    private val sharedCodeFormattingTemplate155 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -7065,7 +7016,7 @@ object Js {
         )
 
     /** `try \{ \n {{0}} \n \} {{1}}` */
-    private val sharedCodeFormattingTemplate159 =
+    private val sharedCodeFormattingTemplate156 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -7079,7 +7030,7 @@ object Js {
         )
 
     /** `try \{ \n {{0}} \n \} finally {{2}}` */
-    private val sharedCodeFormattingTemplate160 =
+    private val sharedCodeFormattingTemplate157 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -7094,7 +7045,7 @@ object Js {
         )
 
     /** `try \{ \n {{0}} \n \}` */
-    private val sharedCodeFormattingTemplate161 =
+    private val sharedCodeFormattingTemplate158 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -7107,7 +7058,7 @@ object Js {
         )
 
     /** `throw {{0}} ;` */
-    private val sharedCodeFormattingTemplate162 =
+    private val sharedCodeFormattingTemplate159 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("throw", OutputTokenType.Word),
@@ -7117,7 +7068,7 @@ object Js {
         )
 
     /** `return {{0}} ;` */
-    private val sharedCodeFormattingTemplate163 =
+    private val sharedCodeFormattingTemplate160 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("return", OutputTokenType.Word),
@@ -7127,7 +7078,7 @@ object Js {
         )
 
     /** `return ;` */
-    private val sharedCodeFormattingTemplate164 =
+    private val sharedCodeFormattingTemplate161 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("return", OutputTokenType.Word),
@@ -7136,7 +7087,7 @@ object Js {
         )
 
     /** `break {{0}} ;` */
-    private val sharedCodeFormattingTemplate165 =
+    private val sharedCodeFormattingTemplate162 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("break", OutputTokenType.Word),
@@ -7146,7 +7097,7 @@ object Js {
         )
 
     /** `break ;` */
-    private val sharedCodeFormattingTemplate166 =
+    private val sharedCodeFormattingTemplate163 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("break", OutputTokenType.Word),
@@ -7155,7 +7106,7 @@ object Js {
         )
 
     /** `continue {{0}} ;` */
-    private val sharedCodeFormattingTemplate167 =
+    private val sharedCodeFormattingTemplate164 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("continue", OutputTokenType.Word),
@@ -7165,11 +7116,64 @@ object Js {
         )
 
     /** `continue ;` */
-    private val sharedCodeFormattingTemplate168 =
+    private val sharedCodeFormattingTemplate165 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("continue", OutputTokenType.Word),
                 CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `for await ( {{0}} of {{1}} ) \{ \n {{2}} \n \}` */
+    private val sharedCodeFormattingTemplate166 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("for", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken("await", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken("of", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.NewLine,
+                CodeFormattingTemplate.OneSubstitution(2),
+                CodeFormattingTemplate.NewLine,
+                CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `for ( {{0}} of {{1}} ) \{ \n {{2}} \n \}` */
+    private val sharedCodeFormattingTemplate167 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("for", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken("of", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.NewLine,
+                CodeFormattingTemplate.OneSubstitution(2),
+                CodeFormattingTemplate.NewLine,
+                CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `while ( {{0}} ) \{ \n {{1}} \n \}` */
+    private val sharedCodeFormattingTemplate168 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("while", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.NewLine,
+                CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.NewLine,
+                CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
             ),
         )
 

@@ -15,6 +15,7 @@ import lang.temper.be.cli.ToolchainRequest
 import lang.temper.be.cli.ToolchainResult
 import lang.temper.be.data.DataBackend.Factory.BACKEND_ID
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
 import lang.temper.be.tmpl.InlineSupportCode
@@ -241,6 +242,8 @@ internal object DataSupportNetwork : SupportNetwork {
         get() = CoroutineStrategy.TranslateToGenerator // sure
     override val functionTypeStrategy: FunctionTypeStrategy
         get() = FunctionTypeStrategy.ToFunctionType // arrow types are neat
+    override val computedJumpStrategy: ComputedJumpStrategy
+        get() = ComputedJumpStrategy.NeverUse
 
     override fun representationOfVoid(genre: Genre): RepresentationOfVoid = RepresentationOfVoid.ReifyVoid
 

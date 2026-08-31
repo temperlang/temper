@@ -817,7 +817,13 @@ private class CoroutineConverter(
         val generatorResultType = MkType2(WKT.generatorResultTypeDefinition)
             .actuals(generatorType.bindings)
             .get()
-        val generatorFnType = typeFromSignature(generatorSig)
+        val generatorSigAdjusted = generatorSig.copy(
+            // We are converting to a function that takes the generator that wraps it
+            // as an input so it can use the awakeUpon callback to notify the scheduler
+            // about the promise being awaited.
+            requiredInputTypes = generatorSig.requiredInputTypes + listOf(generatorType),
+        )
+        val generatorFnType = typeFromSignature(generatorSigAdjusted)
         val blockPos = block.pos
         val headerPos = blockPos.leftEdge
 

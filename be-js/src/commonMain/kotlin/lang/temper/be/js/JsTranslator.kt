@@ -13,6 +13,7 @@ import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.findDeclaration
 import lang.temper.be.tmpl.implicitTypeTag
+import lang.temper.be.tmpl.isVoidConstant
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapGeneric
 import lang.temper.be.tmpl.toTmpL
@@ -1025,10 +1026,7 @@ internal class JsTranslator(
             }
         }
         is TmpL.NormalMethod, is TmpL.GetterOrSetter, is TmpL.StaticMethod -> {
-            @Suppress("USELESS_IS_CHECK")
-            check(member is TmpL.DotAccessible && member is TmpL.Method)
             val (visibility, shapeForKey) =
-                @Suppress("USELESS_IS_CHECK") // for is Constructor
                 when (member) {
                     is TmpL.StaticMethod ->
                         member.visibility.visibility to member.memberShape
@@ -1036,8 +1034,6 @@ internal class JsTranslator(
                         member.visibility.visibility to member.propertyShape
                     is TmpL.NormalMethod ->
                         member.visibility.visibility to member.memberShape
-                    // unreachable
-                    is TmpL.Constructor -> error("$member")
                 }
             val nameId = translateIdStrict(member.name)
             val (keyExpr, keyComputed) = decomposeMemberKey(
@@ -1304,7 +1300,7 @@ internal class JsTranslator(
                             buildList {
                                 var testInstanceId: Js.Identifier? = null
                                 // const test = new Test();
-                                // We expect the test parameter, but check in case of manual oddities.
+                                // We expect the test parameter but check in case of manual oddities.
                                 t.parameters.parameters.firstOrNull()?.let testParam@{ testParam ->
                                     val nominalType = testParam.type.ot as? TmpL.NominalType
                                         ?: return@testParam
@@ -1412,6 +1408,108 @@ internal class JsTranslator(
 
     private fun translateEmbeddedComment(t: TmpL.EmbeddedComment): List<Js.CommentLine> =
         listOf(Js.CommentLine(t.pos, t.commentText))
+
+    private fun translateComputedJump(t: TmpL.ComputedJumpStatement): List<Js.Statement> {
+        val expr = translateExpression(t.caseExpr)
+
+        val translatedCases = t.cases.map {
+            it to translateStatement(it.body)
+        }
+        val translatedElse = t.elseCase to translateStatement(t.elseCase.body)
+
+        return listOf(
+            Js.SwitchStatement(
+                t.pos,
+                expr,
+                buildList {
+                    val lastCaseIndex = translatedCases.lastIndex
+                    for ((tmplCase, jsStmts) in translatedCases) {
+                        for ((i, constIndex) in tmplCase.values.withIndex()) {
+                            add(
+                                Js.SwitchCase(
+                                    tmplCase.pos,
+                                    Js.NumericLiteral(constIndex.pos, constIndex.index),
+                                    if (i == lastCaseIndex) {
+                                        listOf() // Fall through to next case.
+                                    } else {
+                                        jsStmts +
+                                            listOf(Js.BreakStatement(tmplCase.pos.rightEdge, null))
+                                    },
+                                ),
+                            )
+                        }
+                    }
+                    val (tmpLElse, elseJsStmts) = translatedElse
+                    if (elseJsStmts.isNotEmpty()) {
+                        add(
+                            Js.SwitchCase(
+                                tmpLElse.pos,
+                                null,
+                                elseJsStmts,
+                            ),
+                        )
+                    }
+                },
+            ),
+        )
+
+        // For now, though, we just build an if-chain.
+        return buildList {
+            val caseExprId = if (expr is Js.Identifier) {
+                expr
+            } else {
+                Js.Identifier(expr.pos, jsNames.unusedName("caseNum%d"), null).also {
+                    add(
+                        Js.VariableDeclaration(
+                            expr.pos,
+                            listOf(
+                                Js.VariableDeclarator(expr.pos, it, expr),
+                            ),
+                            Js.DeclarationKind.Const,
+                        ),
+                    )
+                }
+            }
+            fun caseNumIn(values: List<TmpL.ConstIndex>): Js.Expression {
+                var expr: Js.Expression? = null
+                for (v in values) {
+                    val pos = v.pos
+                    val atom = Js.BinaryExpression(
+                        pos,
+                        caseExprId.deepCopy(),
+                        Js.Operator(pos.leftEdge, "==="),
+                        Js.NumericLiteral(pos, v.index),
+                    )
+                    if (expr == null) {
+                        expr = atom
+                    } else {
+                        expr = Js.BinaryExpression(
+                            pos,
+                            expr,
+                            Js.Operator(pos.leftEdge, "||"),
+                            atom,
+                        )
+                    }
+                }
+                return expr ?: Js.BooleanLiteral(caseExprId.pos, true)
+            }
+            fun unroll(i: Int): Js.Statement {
+                val case = translatedCases.getOrNull(i)
+                return if (case != null) {
+                    val (tmpLCase, jsStmts) = case
+                    Js.IfStatement(
+                        tmpLCase.pos,
+                        caseNumIn(tmpLCase.values),
+                        Js.BlockStatement(tmpLCase.pos, jsStmts),
+                        unroll(i + 1),
+                    )
+                } else {
+                    Js.BlockStatement(translatedElse.first.pos, translatedElse.second)
+                }
+            }
+            add(unroll(0))
+        }
+    }
 
     /** Translate a [TmpL.Id] which must not be a reference to an implied `this`. */
     private fun translateIdStrict(id: TmpL.Id): Js.Identifier = translateId(id) as Js.Identifier
@@ -1718,9 +1816,9 @@ internal class JsTranslator(
                 listOf(
                     when {
                         // Handle the common case: return from a regular function.
-                        !inConstructorBody -> Js.ReturnStatement(
+                        !inConstructorBody && expression?.isVoidConstant == false -> Js.ReturnStatement(
                             s.pos,
-                            expression?.let { translateExpression(it) },
+                            translateExpression(expression),
                         )
                         // In JS constructors, the return value can override the
                         // constructed value if we're not careful.
@@ -1765,9 +1863,7 @@ internal class JsTranslator(
             )
             is TmpL.BoilerplateCodeFoldBoundary -> listOf(translateBoilerplateCodeFoldBoundary(s))
             is TmpL.EmbeddedComment -> translateEmbeddedComment(s)
-            // Currently compute jumps are only used with coroutine strategy mode not
-            // opted into by the support network.
-            is TmpL.ComputedJumpStatement -> TODO()
+            is TmpL.ComputedJumpStatement -> translateComputedJump(s)
         }
     }
 
@@ -2017,7 +2113,8 @@ internal class JsTranslator(
                     )
                 },
             ),
-            // All types are also expressions.
+            // All types are also expressions, except `void` is not a syntactically
+            // valid expression, so do not use this function type in an expression context.
             translateTypeUnwrapped(t.returnType) as Js.Expression,
         )
     }

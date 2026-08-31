@@ -271,7 +271,12 @@ internal sealed class PreTranslated : Positioned {
         val alternate: PreTranslated,
     ) : PreTranslated() {
         override fun toStatement(translator: TmpLTranslator, parent: PreTranslated?): OneStmt {
-            val unrolled = maybeUnrollToMatch(this)
+            val unrolled = when (translator.supportNetwork.computedJumpStrategy) {
+                ComputedJumpStrategy.NeverUse -> null
+                ComputedJumpStrategy.IsDefaultBreakScope,
+                ComputedJumpStrategy.Use,
+                -> maybeUnrollToMatch(this)
+            }
             if (unrolled != null) {
                 return OneStmt(
                     TmpL.ComputedJumpStatement(

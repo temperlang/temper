@@ -807,8 +807,6 @@ class PyTranslator(
         is TmpL.ThrowStatement -> translateThrow(s)
         is TmpL.TryStatement -> translateTry(s)
         is TmpL.WhileStatement -> translateWhile(s)
-        // Currently compute jumps are only used with coroutine strategy mode not
-        // opted into by the support network.
         is TmpL.ComputedJumpStatement -> TODO()
     }
 

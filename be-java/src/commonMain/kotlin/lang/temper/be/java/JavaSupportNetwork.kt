@@ -2,6 +2,7 @@ package lang.temper.be.java
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
 import lang.temper.be.tmpl.GetStaticSupport
@@ -41,8 +42,8 @@ class JavaSupportNetwork private constructor(private val javaLang: JavaLang) : S
     override val bubbleStrategy = BubbleBranchStrategy.Exceptions
     override val coroutineStrategy = CoroutineStrategy.TranslateToRegularFunction
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionType // TODO: rework to use @fun interfaces
+    override val computedJumpStrategy = ComputedJumpStrategy.IsDefaultBreakScope
     override val mayAssignInBothTryAndRecover = false
-    override val needsLabeledBreakFromSwitch = true
 
     override fun representationOfVoid(genre: Genre): RepresentationOfVoid =
         RepresentationOfVoid.DoNotReifyVoid

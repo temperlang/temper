@@ -2,6 +2,7 @@ package lang.temper.be.cpp
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
 import lang.temper.be.tmpl.InlineSupportCode
@@ -38,6 +39,7 @@ internal object CppSupportNetwork : SupportNetwork {
     override val bubbleStrategy: BubbleBranchStrategy = BubbleBranchStrategy.Exceptions
     override val coroutineStrategy: CoroutineStrategy = CoroutineStrategy.TranslateToRegularFunction
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionType
+    override val computedJumpStrategy = ComputedJumpStrategy.IsDefaultBreakScope
 
     override fun representationOfVoid(
         genre: Genre,

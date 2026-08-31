@@ -122,6 +122,7 @@ internal open class TestSupportNetwork(
     override val coroutineStrategy: CoroutineStrategy = CoroutineStrategy.TranslateToGenerator,
     private val representationOfVoid: RepresentationOfVoid = RepresentationOfVoid.ReifyVoid,
     override val functionTypeStrategy: FunctionTypeStrategy = FunctionTypeStrategy.ToFunctionType,
+    override val computedJumpStrategy: ComputedJumpStrategy = ComputedJumpStrategy.IsDefaultBreakScope,
     override val needsLocalNameForExternallyDefinedFunction: Boolean = false,
     override val needsLocalNameForExternallyDefinedType: Boolean = false,
     override val needsLocalNameForExternallyDefinedValue: Boolean = false,
@@ -411,7 +412,7 @@ private fun forEachTree(t: TmpL.Tree, f: (TmpL.Tree) -> Unit) {
  *
  * But these blocks should not separate declarations of local variables from their uses.
  *
- * @return true if any uses of locals is separate from the scope of its declaration.
+ * @return true if any use of a local is separate from the scope of its declaration.
  */
 private fun useOutOfScopeOfDeclaration(root: TmpL.Module): Boolean {
     val decls = mutableListOf<TmpL.NameDeclaration>()

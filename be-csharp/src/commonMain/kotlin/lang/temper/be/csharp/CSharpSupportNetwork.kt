@@ -1,6 +1,7 @@
 package lang.temper.be.csharp
 
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
 import lang.temper.be.tmpl.InlineSupportCode
@@ -46,6 +47,7 @@ object CSharpSupportNetwork : SupportNetwork {
     override val bubbleStrategy = BubbleBranchStrategy.Exceptions
     override val coroutineStrategy = CoroutineStrategy.TranslateToGenerator
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionType
+    override val computedJumpStrategy = ComputedJumpStrategy.IsDefaultBreakScope
     override fun representationOfVoid(genre: Genre) = RepresentationOfVoid.DoNotReifyVoid
     override val simplifyOrTypes: Boolean get() = true
 

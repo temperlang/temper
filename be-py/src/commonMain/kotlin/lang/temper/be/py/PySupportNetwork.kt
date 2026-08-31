@@ -4,6 +4,7 @@ package lang.temper.be.py
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
 import lang.temper.be.tmpl.GetStaticSupport
@@ -49,6 +50,7 @@ internal object PySupportNetwork : SupportNetwork {
     override val backendDescription = "Python backend"
     override val coroutineStrategy = CoroutineStrategy.TranslateToGenerator
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionType
+    override val computedJumpStrategy = ComputedJumpStrategy.NeverUse
 
     override fun getSupportCode(
         pos: Position,

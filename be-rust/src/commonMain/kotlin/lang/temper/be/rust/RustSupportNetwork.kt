@@ -2,6 +2,7 @@ package lang.temper.be.rust
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
 import lang.temper.be.tmpl.InlineSupportCode
@@ -39,6 +40,7 @@ object RustSupportNetwork : SupportNetwork {
     override val bubbleStrategy = BubbleBranchStrategy.Results
     override val coroutineStrategy = CoroutineStrategy.TranslateToRegularFunction
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionType
+    override val computedJumpStrategy = ComputedJumpStrategy.Use
 
     override fun representationOfVoid(genre: Genre) = RepresentationOfVoid.ReifyVoid
     override val simplifyOrTypes: Boolean = true

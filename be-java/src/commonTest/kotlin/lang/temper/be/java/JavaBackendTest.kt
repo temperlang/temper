@@ -324,13 +324,11 @@ class JavaBackendTest {
             """.trimMargin(),
             """
             |public static String foo(String src__0, boolean flag__0) {
-            |    String return__0;
             |    if (flag__0) {
-            |        return__0 = src__0;
+            |        return src__0;
             |    } else {
             |        throw Core.bubble();
             |    }
-            |    return return__0;
             |}
             """.javaMethod("import temper.core.Core;"),
         )
@@ -350,13 +348,11 @@ class JavaBackendTest {
             """.trimMargin(),
             """
             |public static String foo(String src__0, boolean flag__0) {
-            |    String return__0;
             |    if (flag__0) {
-            |        return__0 = src__0;
+            |        return src__0;
             |    } else {
             |        throw Core.bubble();
             |    }
-            |    return return__0;
             |}
             """.javaMethod("import temper.core.Core;"),
         )
@@ -965,17 +961,17 @@ class JavaBackendTest {
             |                              }
             |                              static Generator<Optional<? super Object>> fn__0() {
             |                                  class Local_1 {
-            |                                      int caseIndex_41 = 0;
+            |                                      int caseIndex_13 = 0;
             |                                  }
             |                                  final Local_1 local$1 = new Local_1();
-            |                                  Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine_45 = generator_40 -> {
-            |                                      int caseIndexLocal_42 = local$1.caseIndex_41;
-            |                                      local$1.caseIndex_41 = -1;
-            |                                      switch (caseIndexLocal_42) {
+            |                                  Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine_16 = generator_12 -> {
+            |                                      int caseIndexLocal_15 = local$1.caseIndex_13;
+            |                                      local$1.caseIndex_13 = -1;
+            |                                      switch (caseIndexLocal_15) {
             |                                          case 0:
             |                                              {
             |                                              console_5.log("foo");
-            |                                              local$1.caseIndex_41 = 1;
+            |                                              local$1.caseIndex_13 = 1;
             |                                              return new ValueResult<>(Optional.empty());
             |                                          }
             |                                          case 1:
@@ -989,7 +985,7 @@ class JavaBackendTest {
             |                                          }
             |                                      }
             |                                  };
-            |                                  return Core.safeAdaptGeneratorFn(convertedCoroutine_45 :: apply);
+            |                                  return Core.safeAdaptGeneratorFn(convertedCoroutine_16 :: apply);
             |                              }
             |                              static {
             |                                  console_5 = Core.getConsole(Logger.getLogger("my_test_library.test"));
@@ -1036,9 +1032,7 @@ class JavaBackendTest {
         """.trimMargin(),
         want = """
             |public static LocalDate f() {
-            |    LocalDate t_5;
-            |    t_5 = LocalDate.parse("2001-02-03");
-            |    return t_5;
+            |    return LocalDate.parse("2001-02-03");
             |}
         """.javaMethod(
             "import java.time.LocalDate;",
@@ -1272,13 +1266,11 @@ class JavaBackendTest {
                 methods = """
                     |public static<T__0> boolean all(List<T__0> items__0, Predicate<T__0> check__0) {
                     |    BiPredicate<Boolean, T__0> fn__0 = (result__0, it__0) -> {
-                    |        boolean return__0;
                     |        if (result__0) {
-                    |            return__0 = check__0.test(it__0);
+                    |            return check__0.test(it__0);
                     |        } else {
-                    |            return__0 = false;
+                    |            return false;
                     |        }
-                    |        return return__0;
                     |    };
                     |    return Core.listedReduceObjToBool(items__0, true, fn__0 :: test);
                     |}
@@ -1317,6 +1309,7 @@ class JavaBackendTest {
             |              import temper.core.Generator.Result;
             |              import java.util.logging.Logger;
             |              import temper.core.Core.Console;
+            |              import temper.core.Nullable;
             |              import java.util.function.Function;
             |              import temper.core.Generator.ValueResult;
             |              import java.util.concurrent.ExecutionException;
@@ -1328,58 +1321,54 @@ class JavaBackendTest {
             |                  static final CompletableFuture<String> p__0;
             |                  static Generator<Optional<? super Object>> fn__0() {
             |                      class Local_1 {
-            |                          int caseIndex_44 = 0;
-            |                          String t_14 = "";
-            |                          String t_15 = "";
-            |                          boolean fail_12 = false;
+            |                          int caseIndex_15 = 0;
+            |                          @Nullable CompletableFuture<String> awaited_13 = null;
+            |                          String t_7 = "";
             |                      }
             |                      final Local_1 local$1 = new Local_1();
-            |                      Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine_50 = generator_43 -> {
+            |                      Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine_18 = generator_14 -> {
             |                          while (true) {
-            |                              int caseIndexLocal_45 = local$1.caseIndex_44;
-            |                              local$1.caseIndex_44 = -1;
-            |                              switch (caseIndexLocal_45) {
+            |                              int caseIndexLocal_17 = local$1.caseIndex_15;
+            |                              local$1.caseIndex_15 = -1;
+            |                              switch (caseIndexLocal_17) {
             |                                  case 0:
             |                                      {
-            |                                      local$1.caseIndex_44 = 1;
-            |                                      p__0.handle((ignored$1, ignored$2) -> {
-            |                                              generator_43.get();
-            |                                              return null;
-            |                                      });
-            |                                      return new ValueResult<>(Optional.empty());
+            |                                      local$1.caseIndex_15 = 1;
+            |                                      break;
             |                                  }
             |                                  case 1:
             |                                      {
-            |                                      local$1.fail_12 = false;
-            |                                      try {
-            |                                          local$1.t_14 = p__0.get();
-            |                                      } catch (InterruptedException ignored$3) {
-            |                                          break;
-            |                                      } catch (ExecutionException ignored$4) {
-            |                                          local$1.fail_12 = true;
-            |                                      }
-            |                                      if (local$1.fail_12) {
-            |                                          local$1.caseIndex_44 = 2;
-            |                                      } else {
-            |                                          local$1.caseIndex_44 = 3;
-            |                                      }
-            |                                      break;
+            |                                      local$1.awaited_13 = p__0;
+            |                                      local$1.awaited_13.handle((ignored$1, ignored$2) -> {
+            |                                              generator_14.get();
+            |                                              return null;
+            |                                      });
+            |                                      local$1.caseIndex_15 = 2;
+            |                                      return new ValueResult<>(Optional.empty());
             |                                  }
             |                                  case 2:
             |                                      {
-            |                                      local$1.t_15 = "broken";
-            |                                      local$1.caseIndex_44 = 4;
+            |                                      try {
+            |                                          try {
+            |                                              local$1.t_7 = local$1.awaited_13.get();
+            |                                          } catch (InterruptedException | ExecutionException ignored$3) {
+            |                                              throw new RuntimeException(ignored$3);
+            |                                          }
+            |                                          local$1.caseIndex_15 = 4;
+            |                                      } catch (RuntimeException ignored$4) {
+            |                                          local$1.caseIndex_15 = 3;
+            |                                      }
             |                                      break;
             |                                  }
             |                                  case 3:
             |                                      {
-            |                                      local$1.t_15 = local$1.t_14;
-            |                                      local$1.caseIndex_44 = 4;
+            |                                      local$1.t_7 = "broken";
+            |                                      local$1.caseIndex_15 = 4;
             |                                      break;
             |                                  }
             |                                  case 4:
             |                                      {
-            |                                      console_3.log(local$1.t_15);
+            |                                      console_3.log(local$1.t_7);
             |                                      return DoneResult.get();
             |                                  }
             |                                  default:
@@ -1389,7 +1378,7 @@ class JavaBackendTest {
             |                              }
             |                          }
             |                      };
-            |                      return Core.safeAdaptGeneratorFn(convertedCoroutine_50 :: apply);
+            |                      return Core.safeAdaptGeneratorFn(convertedCoroutine_18 :: apply);
             |                  }
             |                  static {
             |                      console_3 = Core.getConsole(Logger.getLogger("my_test_library.test"));
@@ -1533,15 +1522,15 @@ class JavaBackendTest {
             |console.log(sb.toString());
         """.trimMargin(),
         """
-            |static Console t_26;
+            |static final Console console_1;
             |static final StringBuilder sb__0;
             |static {
-            |    t_26 = Core.getConsole(Logger.getLogger("my_test_library.test"));
+            |    console_1 = Core.getConsole(Logger.getLogger("my_test_library.test"));
             |    sb__0 = new StringBuilder();
             |    sb__0.append("Hello, ");
             |    sb__0.append("World");
             |    sb__0.append("!");
-            |    t_26.log(sb__0.toString());
+            |    console_1.log(sb__0.toString());
             |}
         """.javaMethod(
             "import temper.core.Core;",
@@ -1702,19 +1691,17 @@ class JavaBackendTest {
             |              public final class TestGlobal {
             |                  private TestGlobal() {
             |                  }
-            |                  static Console t_49;
+            |                  static final Console console_13;
             |                  public static<I_T__0 extends my_test_library.test.I> I_T__0 least(I_T__0 i__0, I_T__0 j__0) {
-            |                      I_T__0 return__0;
             |                      if (i__0.getX().compareTo(j__0.getX()) < 0) {
-            |                          return__0 = i__0;
+            |                          return i__0;
             |                      } else {
-            |                          return__0 = j__0;
+            |                          return j__0;
             |                      }
-            |                      return return__0;
             |                  }
             |                  static {
-            |                      t_49 = Core.getConsole(Logger.getLogger("my_test_library.test"));
-            |                      t_49.log(TestGlobal.least(new C("foo"), new C("bar")).getX());
+            |                      console_13 = Core.getConsole(Logger.getLogger("my_test_library.test"));
+            |                      console_13.log(TestGlobal.least(new C("foo"), new C("bar")).getX());
             |                  }
             |              }
             |
@@ -1790,17 +1777,16 @@ class JavaBackendTest {
         """.trimMargin(),
         want = """
             |public static int doThings(int n__0) {
-            |    int t_9;
-            |    boolean t_10;
             |    int i__0 = 0;
             |    top__0: while (i__0 < n__0) {
+            |        boolean t_6;
             |        try {
-            |            t_9 = Core.modIntInt(n__0, i__0);
-            |            t_10 = t_9 == 0;
+            |            int t_8 = Core.modIntInt(n__0, i__0);
+            |            t_6 = t_8 == 0;
             |        } catch (RuntimeException ignored$1) {
-            |            t_10 = false;
+            |            t_6 = false;
             |        }
-            |        if (t_10) {
+            |        if (t_6) {
             |            break top__0;
             |        }
             |        i__0 = i__0 + 1;
@@ -1829,20 +1815,18 @@ class JavaBackendTest {
             |public static int doThings(int n__0) {
             |    int return__0;
             |    fn__0: {
-            |        int return_7;
-            |        escapeLabel_9: try {
+            |        try {
             |            if (n__0 < 0) {
-            |                return_7 = -1;
-            |                break escapeLabel_9;
+            |                return__0 = -1;
+            |                break fn__0;
             |            }
             |            if (n__0 == 0) {
             |                throw Core.bubble();
             |            }
-            |            return_7 = n__0;
+            |            return n__0;
             |        } catch (RuntimeException ignored$1) {
-            |            return_7 = -2;
+            |            return -2;
             |        }
-            |        return__0 = return_7;
             |    }
             |    return return__0;
             |}
@@ -1857,7 +1841,7 @@ class JavaBackendTest {
             |  var result = 0;
             |  while (result == 0) {
             |    outer: do {
-            |      let more: Int;
+            |      var more: Int;
             |      do {
             |        if (n < 3) {
             |          bubble();
@@ -1895,64 +1879,38 @@ class JavaBackendTest {
         """.trimMargin(),
         want = """
             |public static int doThings(int n__0) {
-            |    int t_13;
             |    int result__0 = 0;
-            |    label_20: while (result__0 == 0) {
+            |    while (result__0 == 0) {
             |        outer__0: {
             |            int more__0;
-            |            int escape_18 = 0;
-            |            int more_17;
-            |            escapeLabel_19: try {
+            |            try {
             |                if (n__0 < 3) {
             |                    throw Core.bubble();
             |                }
             |                int i__0 = 2;
             |                while (i__0 < n__0) {
-            |                    t_13 = Core.modIntInt(n__0, i__0);
-            |                    if (t_13 == 0) {
+            |                    int t_8 = Core.modIntInt(n__0, i__0);
+            |                    if (t_8 == 0) {
             |                        break;
             |                    }
             |                    result__0 = result__0 + i__0;
             |                    i__0 = i__0 + 1;
             |                }
             |                if (n__0 > 25) {
-            |                    escape_18 = 1;
-            |                    break escapeLabel_19;
-            |                }
-            |                if (n__0 > 20) {
-            |                    escape_18 = 2;
-            |                    break escapeLabel_19;
-            |                }
-            |                if (n__0 > 15) {
-            |                    escape_18 = 3;
-            |                    break escapeLabel_19;
-            |                }
-            |                if (n__0 > 10) {
-            |                    escape_18 = 2;
-            |                    break escapeLabel_19;
-            |                }
-            |                more_17 = 1;
-            |            } catch (RuntimeException ignored$1) {
-            |                more_17 = 2;
-            |            }
-            |            more__0 = more_17;
-            |            switch (escape_18) {
-            |                case 1:
-            |                    {
             |                    continue;
             |                }
-            |                case 2:
-            |                    {
+            |                if (n__0 > 20) {
             |                    break outer__0;
             |                }
-            |                case 3:
-            |                    {
-            |                    break label_20;
-            |                }
-            |                default:
-            |                    {
+            |                if (n__0 > 15) {
             |                    break;
             |                }
+            |                if (n__0 > 10) {
+            |                    break outer__0;
+            |                }
+            |                more__0 = 1;
+            |            } catch (RuntimeException ignored$1) {
+            |                more__0 = 2;
             |            }
             |            result__0 = result__0 + more__0;
             |        }
@@ -1977,16 +1935,14 @@ class JavaBackendTest {
         """.trimMargin(),
         want = """
             |public static int doThingsEasier(int n__0) {
-            |    int return_7;
             |    try {
             |        if (n__0 == 0) {
             |            throw Core.bubble();
             |        }
-            |        return_7 = n__0;
+            |        return n__0;
             |    } catch (RuntimeException ignored$1) {
-            |        return_7 = -2;
+            |        return -2;
             |    }
-            |    return return_7;
             |}
         """.javaMethod("import temper.core.Core;"),
     )
@@ -2170,7 +2126,6 @@ class JavaBackendTest {
         """.trimMargin(),
         """
             |public static int orZero(@Nullable Integer x__0) {
-            |    int return__0;
             |    boolean t_5;
             |    if (x__0 != null) {
             |        t_5 = x__0 instanceof Integer;
@@ -2181,12 +2136,11 @@ class JavaBackendTest {
             |        if (x__0 == null) {
             |            throw Core.bubble();
             |        } else {
-            |            return__0 = x__0;
+            |            return x__0;
             |        }
             |    } else {
-            |        return__0 = 0;
+            |        return 0;
             |    }
-            |    return return__0;
             |}
         """.trimIndent().javaMethod(
             "import temper.core.Core;",
@@ -2227,13 +2181,10 @@ class JavaBackendTest {
             |    IntBinaryOperator fn__0 = (a__0, b__0) -> a__0 - b__0;
             |    Core.listSortInt(builder__0, fn__0);
             |    IntBinaryOperator fn__1 = (a__1, b__1) -> a__1 - b__1;
-            |    List<Integer> t_65 = Core.listSortedInt(ints__0, fn__1);
             |    IntFunction<String> fn__2 = a__2 -> Integer.toString(a__2);
-            |    String t_67 = Core.listJoinInt(t_65, ", ", fn__2);
-            |    console_10.log(t_67);
+            |    console_10.log(Core.listJoinInt(Core.listSortedInt(ints__0, fn__1), ", ", fn__2));
             |    IntFunction<String> fn__3 = a__3 -> Integer.toString(a__3);
-            |    String t_70 = Core.listJoinInt(builder__0, ", ", fn__3);
-            |    console_10.log(t_70);
+            |    console_10.log(Core.listJoinInt(builder__0, ", ", fn__3));
             |}
             |static {
             |    console_10 = Core.getConsole(Logger.getLogger("my_test_library.test"));

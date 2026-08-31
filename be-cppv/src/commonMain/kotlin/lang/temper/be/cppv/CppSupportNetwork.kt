@@ -5,6 +5,7 @@ import lang.temper.be.cpp.BinaryOpEnum
 import lang.temper.be.cpp.Cpp
 import lang.temper.be.cpp.CppBuilder
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
 import lang.temper.be.tmpl.InlineSupportCode
@@ -30,6 +31,7 @@ object CppSupportNetwork : SupportNetwork {
     override val bubbleStrategy = BubbleBranchStrategy.Results
     override val coroutineStrategy = CoroutineStrategy.TranslateToRegularFunction
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionalInterface
+    override val computedJumpStrategy = ComputedJumpStrategy.IsDefaultBreakScope
 
     override fun representationOfVoid(genre: Genre) = RepresentationOfVoid.DoNotReifyVoid
 
