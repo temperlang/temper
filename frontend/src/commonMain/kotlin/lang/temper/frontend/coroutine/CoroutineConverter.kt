@@ -1043,8 +1043,8 @@ private class CoroutineConverter(
                 continues = false
             }
             if (continues && ci.kind == CaseKind.Main) {
-                val lastElement = basicBlocks[basicBlockIndex].elements.last()
-                val tree = block.dereference(lastElement.ref)?.target
+                val lastElement = basicBlocks[basicBlockIndex].elements.lastOrNull()
+                val tree = lastElement?.ref?.let { block.dereference(it)?.target }
                 if (disassembleYieldingCall(tree) != null) {
                     continues = false // Going to return to pause
                 }

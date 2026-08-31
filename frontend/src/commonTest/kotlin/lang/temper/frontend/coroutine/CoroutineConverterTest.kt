@@ -95,6 +95,17 @@ class CoroutineConverterTest {
     )
 
     @Test
+    fun minimalAwaiting() = assertConvertedCoroutine(
+        StageTestDir("convert-coro/minimal-awaiting"),
+        args = listOf(
+            MkType2(WellKnownTypes.promiseTypeDefinition)
+                .actuals(listOf(WellKnownTypes.stringType2))
+                .get(),
+        ),
+        verboseDebug = true, // do not commit
+    )
+
+    @Test
     fun awaiting() = assertConvertedCoroutine(
         StageTestDir("convert-coro/awaiting"),
         args = listOf(

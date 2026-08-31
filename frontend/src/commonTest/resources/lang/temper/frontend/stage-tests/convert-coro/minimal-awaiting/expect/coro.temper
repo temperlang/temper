@@ -1,0 +1,46 @@
+var caseIndex#8: Int32;
+caseIndex#8 = 0;
+var awaited#6: Promise<Empty>?;
+awaited#6 = null;
+let convertedCoroutine#11;
+convertedCoroutine#11 = fn (generator#7: SafeGenerator<Empty>) /* return__1 */: (GeneratorResult<Empty>) {
+  fn__9: do {
+    while (true) {
+      let caseIndexLocal#10: Int32;
+      caseIndexLocal#10 = caseIndex#8;
+      caseIndex#8 = -1;
+      if (caseIndexLocal#10 == 0) {
+        caseIndex#8 = 1
+      } else if (caseIndexLocal#10 == 1) {
+        orElse#12: {
+          awaited#6 = p__0;
+          awakeUpon(notNull(awaited#6), generator#7);
+          caseIndex#8 = 2;
+          return__1 = new ValueResult<Empty>({class: Empty__10});
+          break fn__9;
+        } orelse {
+          caseIndex#8 = 3
+        }
+      } else if (caseIndexLocal#10 == 2) {
+        orElse#13: {
+          getPromiseResultSync(notNull(awaited#6));
+          caseIndex#8 = 4
+        } orelse {
+          caseIndex#8 = 3
+        }
+      } else if (caseIndexLocal#10 == 3) {
+        panic();
+        caseIndex#8 = 5
+      } else if (caseIndexLocal#10 == 4) {
+        caseIndex#8 = 5
+      } else if (caseIndexLocal#10 == 5) {
+        return__1 = core.doneResult();
+        break fn__9;
+      } else {
+        return__1 = core.doneResult();
+        break fn__9;
+      }
+    }
+  }
+};
+return__2 = adaptGeneratorFnSafe(convertedCoroutine#11)

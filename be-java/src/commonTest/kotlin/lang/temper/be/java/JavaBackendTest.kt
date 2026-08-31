@@ -1424,11 +1424,12 @@ class JavaBackendTest {
             |              ```
             |              package my_test_library.test;
             |              import java.util.Optional;
+            |              import java.util.concurrent.CompletableFuture;
             |              import temper.core.Core;
             |              import temper.core.Generator.DoneResult;
-            |              import java.util.concurrent.CompletableFuture;
             |              import temper.core.Generator;
             |              import temper.core.Generator.Result;
+            |              import temper.core.Nullable;
             |              import java.util.function.Function;
             |              import temper.core.Generator.ValueResult;
             |              import java.util.concurrent.ExecutionException;
@@ -1438,48 +1439,56 @@ class JavaBackendTest {
             |                  static final CompletableFuture<Optional<? super Object>> p__0;
             |                  static Generator<Optional<? super Object>> fn__0() {
             |                      class Local_1 {
-            |                          int caseIndex_26 = 0;
-            |                          boolean fail_7 = false;
+            |                          int caseIndex_9 = 0;
+            |                          @Nullable CompletableFuture<Optional<? super Object>> awaited_7 = null;
             |                      }
             |                      final Local_1 local$1 = new Local_1();
-            |                      Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine_33 = generator_25 -> {
+            |                      Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine_12 = generator_8 -> {
             |                          while (true) {
-            |                              int caseIndexLocal_27 = local$1.caseIndex_26;
-            |                              local$1.caseIndex_26 = -1;
-            |                              switch (caseIndexLocal_27) {
+            |                              int caseIndexLocal_11 = local$1.caseIndex_9;
+            |                              local$1.caseIndex_9 = -1;
+            |                              switch (caseIndexLocal_11) {
             |                                  case 0:
             |                                      {
-            |                                      local$1.caseIndex_26 = 1;
-            |                                      p__0.handle((ignored$1, ignored$2) -> {
-            |                                              generator_25.get();
-            |                                              return null;
-            |                                      });
-            |                                      return new ValueResult<>(Optional.empty());
+            |                                      local$1.caseIndex_9 = 1;
+            |                                      break;
             |                                  }
             |                                  case 1:
             |                                      {
-            |                                      local$1.fail_7 = false;
-            |                                      try {
-            |                                          p__0.get();
-            |                                      } catch (InterruptedException ignored$3) {
-            |                                          break;
-            |                                      } catch (ExecutionException ignored$4) {
-            |                                          local$1.fail_7 = true;
-            |                                      }
-            |                                      if (local$1.fail_7) {
-            |                                          local$1.caseIndex_26 = 2;
-            |                                      } else {
-            |                                          local$1.caseIndex_26 = 3;
-            |                                      }
-            |                                      break;
+            |                                      local$1.awaited_7 = p__0;
+            |                                      local$1.awaited_7.handle((ignored$1, ignored$2) -> {
+            |                                              generator_8.get();
+            |                                              return null;
+            |                                      });
+            |                                      local$1.caseIndex_9 = 2;
+            |                                      return new ValueResult<>(Optional.empty());
             |                                  }
             |                                  case 2:
             |                                      {
-            |                                      Core.throwBubble();
-            |                                      local$1.caseIndex_26 = 3;
+            |                                      try {
+            |                                          try {
+            |                                              local$1.awaited_7.get();
+            |                                          } catch (InterruptedException | ExecutionException ignored$3) {
+            |                                              throw new RuntimeException(ignored$3);
+            |                                          }
+            |                                          local$1.caseIndex_9 = 4;
+            |                                      } catch (RuntimeException ignored$4) {
+            |                                          local$1.caseIndex_9 = 3;
+            |                                      }
             |                                      break;
             |                                  }
             |                                  case 3:
+            |                                      {
+            |                                      throw Core.bubble();
+            |                                      local$1.caseIndex_9 = 5;
+            |                                      break;
+            |                                  }
+            |                                  case 4:
+            |                                      {
+            |                                      local$1.caseIndex_9 = 5;
+            |                                      break;
+            |                                  }
+            |                                  case 5:
             |                                      {
             |                                      return DoneResult.get();
             |                                  }
@@ -1490,7 +1499,7 @@ class JavaBackendTest {
             |                              }
             |                          }
             |                      };
-            |                      return Core.safeAdaptGeneratorFn(convertedCoroutine_33 :: apply);
+            |                      return Core.safeAdaptGeneratorFn(convertedCoroutine_12 :: apply);
             |                  }
             |                  static {
             |                      p__0 = new CompletableFuture<>();
