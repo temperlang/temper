@@ -1561,6 +1561,7 @@ private val connections: Map<String, ((JavaLang) -> SupportCode)> = mapOf(
     // "std/regex.type RegexFormatter.pushCaptureName()" to null,
     "std/regex.type RegexFormatter.pushCodeTo()" to { it.regexFormatterPushCodeTo },
     "core.type SafeGenerator.next()" to { it.generatorNext },
+    "core.type SafeGenerator.nextSafe()" to { it.generatorNext },
     "core.type String.begin" to { it.stringBegin },
     "core.type String.countBetween()" to { it.stringCountBetween },
     "core.type String.get end()" to { it.stringEnd },

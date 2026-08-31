@@ -1,0 +1,33 @@
+export interface I<T> { f(x: T): Void; }
+
+export class A extends I<String> {
+  public f(x: String): Void {}  // OK
+}
+
+export class B extends I<String> {
+  public f(x: Int32): Void {}  // Wrong type
+}
+
+export class C extends I<String> {
+  public f(x: String?): Void {}  // Nullable.  Mismatch on optioning backends
+}
+
+export class D extends I<String> {
+  public f(x: String): String { x }  // Return type mismatch
+}
+
+export class E extends I<String> {
+  public f(): Void {}  // Too few params
+}
+
+export class F extends I<String> {
+  public f(x: String, y: String): Void {}  // Too many params
+}
+
+export interface G extends I<String> {
+  f(x: Int32): Void;  // Same as D but not a concrete type.
+}
+
+export class H extends I<String> {
+  private f(x: String): Void {} // Reduced visibility
+}

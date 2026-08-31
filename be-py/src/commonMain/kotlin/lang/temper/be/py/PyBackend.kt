@@ -19,6 +19,7 @@ import lang.temper.common.MimeType
 import lang.temper.common.console
 import lang.temper.common.jsonEscaper
 import lang.temper.common.partitionNotNull
+import lang.temper.common.subListToEnd
 import lang.temper.common.toStringViaBuilder
 import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
@@ -36,6 +37,7 @@ import lang.temper.library.versionOrDefault
 import lang.temper.log.FilePath
 import lang.temper.log.FilePathSegment
 import lang.temper.log.Position
+import lang.temper.log.asFilePath
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
 import lang.temper.log.last
@@ -306,13 +308,19 @@ class PyBackend private constructor(
         rawBackendFiles@ for (file in rawBackendFiles) {
             // Special __connected__.py file gets inlined.
             file.key.last().fullName == "__connected__.py" && continue@rawBackendFiles
-            // Others get copied.
-            // TODO Make sure things get into good places.
-            MetadataFileSpecification(
-                path = file.key,
-                mimeType = mimeType,
-                content = file.value,
-            ).also { outputFileSpecifications.add(it) }
+            // Others get copied, stripping the root path then prefixing the library name.
+            val rootSize = libraryConfigurations.currentLibraryConfiguration.libraryRoot.segments.size
+            val path = buildList {
+                add(FilePathSegment(pyLibraryName.text))
+                addAll(file.key.segments.subListToEnd(rootSize))
+            }.asFilePath()
+            topModule.setOutputFile(
+                MetadataFileSpecification(
+                    path = path,
+                    mimeType = mimeType,
+                    content = file.value,
+                ),
+            )
         }
         if (config.makeMetaDataFile || anyTests) {
             val dependencies = buildList {
@@ -329,7 +337,7 @@ class PyBackend private constructor(
         }
         topModule.mapNotNullTo(outputFileSpecifications) { mod ->
             if (mod.moduleId != null) {
-                mod.write().toTreeFile()
+                mod.toOutputFile()
             } else {
                 null
             }
@@ -441,7 +449,7 @@ class PyBackend private constructor(
                                 val relImportPath = listOf("", program.outputPath.segments.last().baseName)
                                 Py.ImportWildcardFrom(
                                     unknownPos,
-                                    Py.ImportDotted(unknownPos, PyDottedIdentifier.dotted(relImportPath)),
+                                    Py.ImportDotted(unknownPos, dotted(relImportPath)),
                                 )
                             } else {
                                 // Import each, but make them ugly. This is for init side effects, not convenience.

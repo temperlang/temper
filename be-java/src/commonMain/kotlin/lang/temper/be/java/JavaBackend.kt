@@ -14,10 +14,12 @@ import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
 import lang.temper.library.LibraryConfigurations
 import lang.temper.log.FilePath
+import lang.temper.log.asFilePath
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
 import lang.temper.log.last
 import lang.temper.log.plus
+import lang.temper.log.resolveFile
 import lang.temper.name.BackendId
 import lang.temper.name.BackendMeta
 import lang.temper.name.FileType
@@ -136,7 +138,7 @@ class JavaBackend private constructor(
     private var rootMainClass: QualifiedName? = null
 
     override fun translate(finished: TmpL.ModuleSet) = buildList {
-        JavaTranslator(names, dependenciesBuilder).let { trans ->
+        JavaTranslator(names, dependenciesBuilder, adjusterFactory).let { trans ->
             names.scanNames(finished)
             finished.modules.flatMap { tmpLModule ->
                 trans.translate(tmpLModule)
@@ -152,10 +154,15 @@ class JavaBackend private constructor(
             )
             add(result)
         }
+        // Copy raw java files into package dirs.
+        val javaLibConfig = JavaLibraryConfig(libraryConfigurations.currentLibraryConfiguration)
         for (file in rawBackendFiles) {
-            // Just copy raw java files into package dirs.
+            val modulePath = file.key.segments.subList(0, file.key.segments.size - 1).asFilePath()
+            val packageName = javaLibConfigs.packageNameFor(modulePath, javaLibConfig)
+            val packagePath = dirPath(packageName.parts.map { it.outputNameText })
+            val filePath = packagePath.resolveFile(file.key.segments.last())
             MetadataFileSpecification(
-                path = J.SourceDirectory.MainJava.filePath.resolve(file.key),
+                path = J.SourceDirectory.MainJava.filePath.resolve(filePath),
                 mimeType = sourceMimeType,
                 content = file.value,
             ).also { add(it) }

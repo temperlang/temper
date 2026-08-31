@@ -1197,6 +1197,7 @@ private val pyConnections = mapOf(
     "std/regex.type RegexFormatter.pushCaptureName()" to RegexFormatterPushCaptureName,
     "std/regex.type RegexFormatter.pushCodeTo()" to RegexFormatterPushCodeTo,
     "core.type SafeGenerator.next()" to BuiltinNext,
+    "core.type SafeGenerator.nextSafe()" to BuiltinNext,
     "core.type String.begin" to StringBegin,
     "core.type String.countBetween()" to StringCountBetween,
     "core.type String.get end()" to LenFunction,

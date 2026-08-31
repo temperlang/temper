@@ -245,6 +245,7 @@ internal object JsSupportNetwork : SupportNetwork {
             "core.type Listed.get isEmpty()" -> listIsEmptyIdiomExpander
             "core.type ListBuilder.constructor()" -> listBuilderConstructorIdiomExpander
             "core.type ListBuilder.toListBuilder()" -> listToListBuilderIdiomExpander
+            "core.type SafeGenerator.nextSafe()" -> nextIdiomExpander
             "core.type String.get isEmpty()" -> stringIsEmptyIdiomExpander
             "core.type String.toString()" -> identityIdiomExpander
             "std/temporal.type Date.constructor()" -> { p, args, strict, translator ->
@@ -1370,6 +1371,25 @@ private val listBuilderConstructorIdiomExpander: Inliner =
             garbageExpression(pos, "Wrong arguments for ListBuilder idiom expander")
         } else {
             Js.ArrayExpression(pos, emptyList())
+        }
+    }
+
+/** Given `x` constructs `x.next()`. */
+private val nextIdiomExpander: Inliner =
+    { pos: Position, arguments: List<Js.Tree>, strict: Boolean, _ ->
+        val argument = arguments.getOrNull(0) as? Js.Expression
+        if (strict && (arguments.size != 1 || argument == null)) {
+            garbageExpression(pos, "core.type SafeGenerator.nextSafe() needs one argument")
+        } else {
+            Js.CallExpression(
+                pos = pos,
+                callee = Js.MemberExpression(
+                    pos = pos,
+                    obj = argument ?: Js.NullLiteral(pos),
+                    property = Js.Identifier(pos.rightEdge, JsIdentifierName("next"), null),
+                ),
+                arguments = emptyList(),
+            )
         }
     }
 

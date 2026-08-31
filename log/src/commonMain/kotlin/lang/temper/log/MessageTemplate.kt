@@ -194,6 +194,14 @@ enum class MessageTemplate(
         "Cannot initialize an incomplete declaration",
         CompilationPhase.Interpreter,
     ),
+    IncompatibleVisibility(
+        "Type %s has method %s but it's visibility is %s which is narrower than the method it overrides in %s",
+        CompilationPhase.Interpreter,
+    ),
+    IncompatibleSignature(
+        "Type %s has method %s with signature %s, but it should be %s to correctly override from %s",
+        CompilationPhase.Interpreter,
+    ),
     MalformedActual(
         "Formal argument where actual expected.  `:` only applies to function parameters",
         CompilationPhase.Interpreter,
@@ -231,6 +239,14 @@ enum class MessageTemplate(
     ),
     FunctionBodyMissing(
         "Function body required except for virtual methods or connected functions",
+        CompilationPhase.CodeGeneration,
+    ),
+    UserConnectedNotFun(
+        "At this time, users can connect only top-level functions",
+        CompilationPhase.CodeGeneration,
+    ),
+    UserConnectedFunHasRest(
+        "At this time, rest parameters aren't supported in user connected functions",
         CompilationPhase.CodeGeneration,
     ),
     CannotExtend(

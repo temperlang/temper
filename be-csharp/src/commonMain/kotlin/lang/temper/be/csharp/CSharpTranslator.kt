@@ -10,10 +10,12 @@ import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.canBeNull
 import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.isCommonlyImplied
+import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.isYieldingStatement
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapParameters
 import lang.temper.be.tmpl.orInvalid
+import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.toSigBestEffort
 import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.be.tmpl.withoutNullOrBubble
@@ -24,6 +26,7 @@ import lang.temper.lexer.Genre
 import lang.temper.lexer.withTemperAwareExtension
 import lang.temper.library.LibraryConfigurations
 import lang.temper.log.FilePath
+import lang.temper.log.FilePathSegment
 import lang.temper.log.Position
 import lang.temper.log.dirPath
 import lang.temper.log.resolveFile
@@ -76,6 +79,7 @@ import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.TVoid
 import lang.temper.value.YieldingFnKind
+import lang.temper.value.connectedSymbol
 import kotlin.math.abs
 
 /** Use a new translator for each temper module. */
@@ -112,6 +116,8 @@ internal class CSharpTranslator(
         fullNamespace = namespace
         qualifiedGlobalClassName = globalName
     }
+
+    private val connectedClassName = makeConnectedName(fullNamespace)
 
     private var imports: Map<ResolvedName, ExportedName> = module.imports.mapNotNull { imp ->
         imp.localName?.let { it.name to imp.externalName.name as ExportedName }
@@ -253,10 +259,7 @@ internal class CSharpTranslator(
         val modulePath = Backend.defaultFilePathForSource(
             libraryConfiguration, moduleName, "",
         )
-        val subspace = modulePath.segments.map { segment ->
-            segment.withTemperAwareExtension("").fullName.dashToPascal()
-        }
-        return subspace
+        return chooseSubspace(modulePath.segments)
     }
 
     private fun chooseVisibility(decl: TmpL.NameDeclaration) = when (decl.name.name) {
@@ -452,7 +455,11 @@ internal class CSharpTranslator(
             val result = translateType(decl.returnType)
             val (typeParameters, whereConstraints) = translateTypeParameters(decl.typeParameters)
             val parameters = translateParameters(decl.parameters)
-            var body = translateBlockStatement(decl.body, prelude = makeRestAssignment())
+            var body = when {
+                decl.metadata.any { it.key.symbol == connectedSymbol } && !module.isStdLib ->
+                    translateConnectedBody(decl, parameters) // TODO Rest param?
+                else -> translateBlockStatement(decl.body, prelude = makeRestAssignment())
+            }
 
             buildList {
                 if (!decl.mayYield) {
@@ -853,6 +860,40 @@ internal class CSharpTranslator(
             // This works because of how we generate labeled blocks. Goto is different than break.
             else -> CSharp.GotoStatement(statement.pos, translateId(label.id))
         }
+    }
+
+    private fun translateConnectedBody(
+        decl: TmpL.FunctionDeclaration,
+        parameters: List<CSharp.MethodParameter>,
+    ): CSharp.BlockStatement {
+        val pos = decl.pos
+        val defaulting = decl.parameterDefaultStatementsInfo()
+        return buildList {
+            for (statement in defaulting.defaultStatements) {
+                addAll(translateStatement(statement))
+            }
+            CSharp.InvocationExpression(
+                pos,
+                expr = CSharp.MemberAccess(
+                    pos,
+                    expr = connectedClassName.toIdentifier(pos) as CSharp.PrimaryExpression,
+                    id = translateId(decl.name, style = NameStyle.PrettyPascal),
+                ),
+                args = buildList {
+                    for ((tmpl, csharp) in decl.parameters.parameters.zip(parameters)) {
+                        when {
+                            tmpl.optional -> translateName(pos, defaulting.parameterMapping.getValue(tmpl.name.name))
+                            else -> csharp.name.deepCopy()
+                        }.also { add(it) }
+                    }
+                },
+            ).also { call ->
+                when {
+                    decl.returnType.isVoidish() -> CSharp.ExpressionStatement(pos, call)
+                    else -> CSharp.ReturnStatement(pos, call)
+                }.also { add(it) }
+            }
+        }.let { CSharp.BlockStatement(pos, it) }
     }
 
     private fun translateContinueStatement(statement: TmpL.ContinueStatement): CSharp.Statement {
@@ -1611,8 +1652,8 @@ internal class CSharpTranslator(
                 var wrapperResultType = resultType
                 if (outputAdjustment != null) {
                     wrapperResultType = optionalTypeOf(
-                        (wrapperResultType as? CSharp.NullableType)?.type
-                            ?: wrapperResultType,
+                        (wrapperResultType as? CSharp.NullableType)?.type?.deepCopy()
+                            ?: wrapperResultType.deepCopy(),
                     )
                 }
                 val privateId = translateId(TmpL.Id(id.pos, method.memberShape.name as ResolvedName))
@@ -2443,6 +2484,7 @@ private fun makeGarbageExpression(pos: Position, text: String?) = CSharp.Invocat
     args = text?.let { listOf(CSharp.StringLiteral(pos, text)) } ?: listOf(),
 )
 
+internal fun makeConnectedName(fullNamespace: QualifiedName) = "${fullNamespace.last()}Connected"
 internal fun makeGlobalName(fullNamespace: QualifiedName) = "${fullNamespace.last()}Global"
 
 /** This is awkward, but it centralizes common logic that's used in two places. Maybe reorg code better sometime. */
@@ -2489,6 +2531,13 @@ internal fun Type2.isOptionalTypeArg(): Boolean {
     val sawTypeFormal = this is TypeParamRef &&
         !excludeTypeFormalFromOptionalTransform(this.definition)
     return sawNull && sawTypeFormal
+}
+
+/** "foo-bar/baz/" -> ["FooBar", "Baz"] */
+internal fun chooseSubspace(segments: List<FilePathSegment>): List<String> {
+    return segments.map { segment ->
+        segment.withTemperAwareExtension("").fullName.dashToPascal()
+    }
 }
 
 private fun excludeTypeFormalFromOptionalTransform(typeFormal: TypeFormal): Boolean {

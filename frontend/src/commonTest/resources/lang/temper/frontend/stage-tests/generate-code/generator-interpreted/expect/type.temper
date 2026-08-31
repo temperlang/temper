@@ -8,11 +8,11 @@ runItThrice__1 = fn runItThrice(factory__2 /* aka factory */: (fn (): SafeGenera
     return__0 = void;
     let generator__4: SafeGenerator<Empty>;
     generator__4 = factory__2();
-    do_call_next(generator__4);
+    do_call_nextSafe(generator__4);
     do_call_log(console#6, ",");
-    do_call_next(generator__4);
+    do_call_nextSafe(generator__4);
     do_call_log(console#6, ",");
-    do_call_next(generator__4);
+    do_call_nextSafe(generator__4);
     do_call_log(console#6, ".")
   }
 };

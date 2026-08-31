@@ -3,7 +3,9 @@ package lang.temper.be.cpp
 import lang.temper.be.Backend
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TypedArg
+import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.mapParameters
+import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.referencedNames
 import lang.temper.common.MimeType
 import lang.temper.common.ignore
@@ -43,6 +45,7 @@ import lang.temper.value.TInt64
 import lang.temper.value.TNull
 import lang.temper.value.TProblem
 import lang.temper.value.TString
+import lang.temper.value.connectedSymbol
 
 /** How the C++ backend renders Temper function types. Emitted and matched in one place. */
 private const val STD_FUNCTION_PREFIX = "std::function"
@@ -562,7 +565,7 @@ class CppTranslator(
         name: Cpp.SingleName,
         params: List<Cpp.FuncParam> = emptyList(),
         qual: Cpp.MethodQualifier? = null,
-    ): Cpp.FuncDef = cpp.funcDef(null, retType, virtualConvention, name, params, pureVirtualBody(), qual = qual)
+    ): Cpp.FuncDef = cpp.funcDef(null, null, retType, virtualConvention, name, params, pureVirtualBody(), qual = qual)
 
     /**
      * The `const` qualifier for a member (method or getter) that does not mutate its
@@ -664,15 +667,16 @@ class CppTranslator(
         val bindings = type.bindings
         val typeArgs = bindings.map { translateType2(it) }
         if (typeArgs.isNotEmpty()) {
-            when {
-                def == WellKnownTypes.functionTypeDefinition ->
+            when (def) {
+                WellKnownTypes.functionTypeDefinition ->
                     return stdFunction(typeArgs.last(), typeArgs.dropLast(1))
-                def in listLikeDefs ->
+                in listLikeDefs ->
                     return sharedPtr(stdVector(typeArgs.first()))
-                def in mapLikeDefs ->
+                in mapLikeDefs ->
                     return sharedPtr(cpp.template(cppBaseTypeForDefinition(def)!!, typeArgs))
-                def == WellKnownTypes.dequeTypeDefinition ->
+                WellKnownTypes.dequeTypeDefinition ->
                     return sharedPtr(cpp.template(cppBaseTypeForDefinition(def)!!, typeArgs))
+                else -> {}
             }
         }
         cppBaseTypeForDefinition(def)?.let { base ->
@@ -746,9 +750,7 @@ class CppTranslator(
             cppBaseTypeForDefinition(def) ?: run {
                 // Check if this is a type formal with a known template parameter name
                 val typeFormalName = typeFormalNames[def] ?: typeFormalNamesByText[typeFormalKey(def)]
-                if (typeFormalName != null) {
-                    typeFormalName
-                } else {
+                typeFormalName ?: run {
                     when (val loc = def.sourceLocation) {
                         CoreCodeLocation -> when (val defName = def.name) {
                             is ExportedName -> translateCoreType(defName.baseName.builtinKey)
@@ -2716,6 +2718,7 @@ class CppTranslator(
                                 }
                                 val rawParent = "$parentText<$typeParamStr>"
                                 cpp.funcDef(
+                                    methodDef.attr,
                                     methodDef.mod,
                                     methodDef.ret,
                                     methodDef.convention,
@@ -2787,12 +2790,13 @@ class CppTranslator(
         // member ordering in TmpL.
         prepopulatePropertyDotNames(topLevel)
         val declaredSetters = mutableSetOf<String>()
-        val structFields = buildList<Cpp.StructPart> {
+        val structFields = buildList {
             // Add virtual destructor for interfaces to enable dynamic_pointer_cast
             if (isInterface) {
                 val dtorName = "~${cpp.name(topLevel.name).id.text}"
                 add(
                     cpp.funcDef(
+                        null,
                         null,
                         null,
                         cpp.singleName(CppName("virtual", allowKey = true)),
@@ -2893,12 +2897,17 @@ class CppTranslator(
         } else {
             formals.map { cpp.name(it.name) }
         }
+        val block = when {
+            topLevel.metadata.any { it.key.symbol == connectedSymbol } && !mod!!.isStdLib ->
+                translateConnectedBody(topLevel, allParamNames)
+            else -> translateBlock(topLevel.body)
+        }
         val func = cpp.func(
             cpp.name(topLevel.name),
             translateType(topLevel.returnType),
             allParamTypes,
             allParamNames,
-            translateBlock(topLevel.body),
+            block,
         )
         if (typeFormals.isNotEmpty()) {
             val templateParams = typeFormals.map { formal ->
@@ -2957,6 +2966,36 @@ class CppTranslator(
         for (key in savedTypeFormalKeys) {
             typeFormalNamesByText.remove(key)
         }
+    }
+
+    private fun translateConnectedBody(
+        fn: TmpL.FunctionDeclaration,
+        paramNames: List<Cpp.SingleName>,
+    ): Cpp.BlockStmt = cpp.pos(fn) {
+        hasConnected = true
+        val defaulting = fn.parameterDefaultStatementsInfo()
+        buildList {
+            for (statement in defaulting.defaultStatements) {
+                addAll(translateStatement(statement))
+            }
+            cpp.callExpr(
+                expr = cpp.name(cpp.name("_connected"), cpp.name(fn.name)),
+                args = buildList {
+                    for ((tmpl, cppName) in fn.parameters.parameters.zip(paramNames)) {
+                        when {
+                            tmpl.optional ->
+                                cpp.name(defaulting.parameterMapping.getValue(tmpl.name.name))
+                            else -> cppName
+                        }.also { add(it) }
+                    }
+                },
+            ).let { call ->
+                when ((fn.returnType.ot as? TmpL.NominalType)?.typeName?.sourceDefinition) {
+                    WellKnownTypes.voidTypeDefinition -> cpp.exprStmt(call)
+                    else -> cpp.returnStmt(call)
+                }
+            }.also { add(it) }
+        }.let { cpp.blockStmt(it) }
     }
 
     /**
@@ -3172,7 +3211,13 @@ class CppTranslator(
         impl.add(initFuncDef)
     }
 
+    private var mod: TmpL.Module? = null
+
+    /** If any userspace connected functions have been defined. */
+    private var hasConnected: Boolean = false
+
     fun translateModule(mod: TmpL.Module): List<Backend.TranslatedFileSpecification> {
+        this.mod = mod
         includes.clear()
         currentModuleLocation = mod.codeLocation.codeLocation
         preprocessImports(mod)
@@ -3307,6 +3352,15 @@ class CppTranslator(
                     content = cpp.program(
                         buildList {
                             add(cpp.include("$modPath$hppName"))
+                            if (hasConnected) {
+                                val connectedIncludePath = "_connected.hpp".let { connectedIncludeName ->
+                                    when {
+                                        relPath.segments.isEmpty() -> connectedIncludeName
+                                        else -> "$moduleBaseName/$connectedIncludeName"
+                                    }
+                                }
+                                add(cpp.includeLocal(connectedIncludePath))
+                            }
                             addAll(namespaced(implVarDecls + impl))
                         },
                     ),

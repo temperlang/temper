@@ -151,9 +151,9 @@ fun garbageStmt(pos: Position, d: TmpL.Diagnostic?): Py.Stmt = garbageStmt(pos, 
 fun Py.Program?.orEmpty(outputPath: FilePath): Py.Program =
     this ?: Py.Program(
         unknownPos,
-        listOf(),
-        DependencyCategory.Production,
-        Genre.Library,
+        body = listOf(),
+        dependencyCategory = DependencyCategory.Production,
+        genre = Genre.Library,
         outputPath = outputPath,
     )
 

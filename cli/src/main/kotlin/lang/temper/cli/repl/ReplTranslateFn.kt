@@ -167,7 +167,7 @@ internal class ReplTranslateFn(
         fun dump(f: OutFile): Unit = when (f) {
             is OutDir -> {
                 console.groupIf(f is OutSubDir, "${f.name}/") {
-                    f.files.forEach { dump(it) }
+                    f.files.sortedBy { it.name }.forEach { dump(it) }
                 }
             }
             is OutRegularFile -> dumpBinary(

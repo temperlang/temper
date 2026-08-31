@@ -9,11 +9,11 @@
       let generator__4: SafeGenerator<Empty>;
       generator__4 = factory__2();
 ## Since it's a SafeGenerator, no error checking around do_call_next(...)
-      do_call_next(generator__4);
+      do_call_nextSafe(generator__4);
       do_call_log(console#6, "Ran once");
-      do_call_next(generator__4);
+      do_call_nextSafe(generator__4);
       do_call_log(console#6, "Ran twice");
-      do_call_next(generator__4);
+      do_call_nextSafe(generator__4);
       do_call_log(console#6, "Ran thrice");
       do_call_close(generator__4)
     }

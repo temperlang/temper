@@ -260,6 +260,12 @@ class SyntaxMacroStageTest {
     )
 
     @Test
+    fun connectedUnsupported() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/connected-unsupported"),
+        moduleResultNeeded = true,
+    )
+
+    @Test
     fun reorder() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/reorder"),
     )

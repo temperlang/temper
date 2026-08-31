@@ -1,3 +1,4 @@
+use crate::Result;
 use std::sync::{Arc, RwLock};
 
 // pub trait GeneratorTrait<T> {
@@ -34,7 +35,11 @@ where
         SafeGenerator(Arc::new(selfish))
     }
 
-    pub fn next(&self) -> Option<T> {
+    pub fn next(&self) -> Result<Option<T>> {
+        Ok(self.next_safe())
+    }
+
+    pub fn next_safe(&self) -> Option<T> {
         self.0.next_with(&self)
     }
 }

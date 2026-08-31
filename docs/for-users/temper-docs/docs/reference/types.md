@@ -6613,7 +6613,7 @@ when computing the next result.
 
 <a name="type&#45;SafeGenerator&#45;method&#45;next&#45;sig" class="snippet-anchor-name"></a>
 
-`:` `fn(`[*SafeGenerator*](#type-SafeGenerator)&lt;[*YIELD*](#type-SafeGenerator-typeFormal-YIELD)&gt;`):` [*GeneratorResult*](#type-GeneratorResult)&lt;[*YIELD*](#type-SafeGenerator-typeFormal-YIELD)&gt;
+`:` `fn(`[*SafeGenerator*](#type-SafeGenerator)&lt;[*YIELD*](#type-SafeGenerator-typeFormal-YIELD)&gt;`):` [*GeneratorResult*](#type-GeneratorResult)&lt;[*YIELD*](#type-SafeGenerator-typeFormal-YIELD)&gt; `throws` [*Bubble*](#type-Bubble)
 
 <!-- /snippet: type/SafeGenerator/method/next/sig -->
 
@@ -6636,6 +6636,28 @@ For a [*GeneratorFn*](#type-GeneratorFn), this is the value passed to
 <!-- /snippet: type/SafeGenerator/method/next/commentary -->
 
 <!-- /snippet: type/SafeGenerator/method/next -->
+
+<!-- snippet: type/SafeGenerator/method/nextSafe -->
+
+<a name="type&#45;SafeGenerator&#45;method&#45;nextSafe" class="snippet-anchor-name"></a>
+
+##### `SafeGenerator.nextSafe`
+
+<!-- snippet: type/SafeGenerator/method/nextSafe/sig -->
+
+<a name="type&#45;SafeGenerator&#45;method&#45;nextSafe&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*SafeGenerator*](#type-SafeGenerator)&lt;[*YIELD*](#type-SafeGenerator-typeFormal-YIELD)&gt;`):` [*GeneratorResult*](#type-GeneratorResult)&lt;[*YIELD*](#type-SafeGenerator-typeFormal-YIELD)&gt;
+
+<!-- /snippet: type/SafeGenerator/method/nextSafe/sig -->
+
+<!-- snippet: type/SafeGenerator/method/nextSafe/commentary -->
+
+<a name="type&#45;SafeGenerator&#45;method&#45;nextSafe&#45;commentary" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/SafeGenerator/method/nextSafe/commentary -->
+
+<!-- /snippet: type/SafeGenerator/method/nextSafe -->
 
 <!-- /snippet: type/SafeGenerator/methods -->
 

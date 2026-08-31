@@ -466,12 +466,16 @@ class ReplTest {
             """
                 |Translated js for interactive#0
                 |  interactive/
-                |    i0000.js: text/javascript
+                |    i0000.internal.js: text/javascript
                 |      /** @type {number} */
-                |      const return_0 = 2;
+                |      export const return_0 = 2;
                 |      export default return_0;
+                |    i0000.internal.js.map: application/json
+                |      { "version": 3, "file": "js/interactive/⋯A,aAAAA,QAAA,IAAK,AAAL;AAAK,eAAAA,QAAA" }
+                |    i0000.js: text/javascript
+                |      export {} from "./i0000.internal.js";
                 |    i0000.js.map: application/json
-                |      { "version": 3, "file": "js/interactive/⋯A,MAAAA,QAAA,IAAK,AAAL;AAAK,eAAAA,QAAA" }
+                |      { "version": 3, "file": "js/interactive/⋯ [], "mappings": "AAAK,cAAA,AAAL,sBAAK" }
                 |interactive#1: void
                 |
             """.trimMargin(),
@@ -499,11 +503,13 @@ class ReplTest {
                     |        java/
                     |          interactive/
                     |            i0000/
+                    |              .*
                     |              I0000Main[.]java: text/x-java-source
                     |                package interactive[.]i0000;
                     |                import temper[.]core[.]Core;
                     |
                 """.trimMargin(),
+                RegexOption.DOT_MATCHES_ALL,
             ),
         )
     }

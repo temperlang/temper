@@ -25,12 +25,14 @@ import lang.temper.env.ReferentBit
 import lang.temper.env.ReferentBitSet
 import lang.temper.env.ReferentSource
 import lang.temper.env.or
+import lang.temper.interp.importExport.isEffectivelyStd
 import lang.temper.log.FailLog
 import lang.temper.log.LogEntry
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.log.Positioned
+import lang.temper.log.SharedLocationContext
 import lang.temper.log.spanningPosition
 import lang.temper.name.NameMaker
 import lang.temper.name.ParsedName
@@ -2460,6 +2462,10 @@ class Interpreter(
 
         override val isProcessingCore: Boolean
             get() = document.isCore
+
+        override fun isProcessingStd(sharedLocationContext: SharedLocationContext?): Boolean {
+            return document.nameMaker.namingContext.loc.isEffectivelyStd(sharedLocationContext)
+        }
 
         override fun connection(qname: String): ((Signature2) -> Value<*>)? {
             return this@Interpreter.connection(qname)

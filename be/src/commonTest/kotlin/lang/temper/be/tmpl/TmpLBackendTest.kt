@@ -2316,7 +2316,13 @@ class TmpLBackendTest {
             |    },
             |    "defines.tmpl.map": "__DO_NOT_CARE__",
             |    "uses.tmpl.map": "__DO_NOT_CARE__",
-            |  }
+            |  },
+            |  errors: [
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |  ]
             |}
         """.trimMargin(),
         supportNetwork = defaultTestSupportNetwork.copy(
@@ -2362,7 +2368,13 @@ class TmpLBackendTest {
             |    },
             |    "defines.tmpl.map": "__DO_NOT_CARE__",
             |    "uses.tmpl.map": "__DO_NOT_CARE__",
-            |  }
+            |  },
+            |  errors: [
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |  ]
             |}
         """.trimMargin(),
         supportNetwork = defaultTestSupportNetwork.copy(
@@ -2409,7 +2421,13 @@ class TmpLBackendTest {
             |    },
             |    "defines.tmpl.map": "__DO_NOT_CARE__",
             |    "uses.tmpl.map": "__DO_NOT_CARE__",
-            |  }
+            |  },
+            |  errors: [
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |  ]
             |}
         """.trimMargin(),
         supportNetwork = defaultTestSupportNetwork.copy(
@@ -2480,6 +2498,13 @@ class TmpLBackendTest {
             |    },
             |    foo.tmpl.map: "__DO_NOT_CARE__",
             |  },
+            |  errors: [
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |  ]
             |}
         """.trimMargin(),
     )
@@ -2688,7 +2713,7 @@ class TmpLBackendTest {
             |          yield;
             |          console.log("bar");
             |        };
-            |        coro.next();
+            |        coro.nextSafe();
             |      }
             |      ```
             |  }
@@ -2708,7 +2733,7 @@ class TmpLBackendTest {
             |          //// work//foo/ => foo.tmpl
             |          let GetConsole#0 = builtins.GetConsole;
             |          let ConsoleLog#0 = builtins.ConsoleLog;
-            |          let SafeGeneratorNext#0 = builtins.SafeGeneratorNext;
+            |          let SafeGeneratorNextSafe#0 = builtins.SafeGeneratorNextSafe;
             |          let console#0: Console = GetConsole#0();
             |          @QName("test-library/foo.f()") let f__0(@QName("test-library/foo.f().(x)") x__0: fn (): SafeGenerator<Empty>): SafeGenerator<Empty> {
             |            return x__0();
@@ -2720,7 +2745,7 @@ class TmpLBackendTest {
             |          }
             |          @QName("test-library/foo.coro=") let coro__0: SafeGenerator<Empty> = f__0(fn__0);
             |          module init {
-            |            SafeGeneratorNext#0(coro__0);
+            |            SafeGeneratorNextSafe#0(coro__0);
             |          }
             |
             |          ```
@@ -2749,7 +2774,7 @@ class TmpLBackendTest {
             |          let ValueResultConstructor#0 = builtins.ValueResultConstructor;
             |          let DoneResult#0 = builtins.DoneResult;
             |          let adaptGeneratorFnSafe#0 = builtins.adaptGeneratorFnSafe /* <adaptGeneratorFnSafeYIELD extends AnyValue>(Fn__0<GeneratorResult<adaptGeneratorFnSafeYIELD>>) -> SafeGenerator<adaptGeneratorFnSafeYIELD> */;
-            |          let SafeGeneratorNext#0 = builtins.SafeGeneratorNext;
+            |          let SafeGeneratorNextSafe#0 = builtins.SafeGeneratorNextSafe;
             |          let console#0: Console = GetConsole#0();
             |          @QName("test-library/foo.f()") let f__0(@QName("test-library/foo.f().(x)") x__0: fn (): SafeGenerator<Empty>): SafeGenerator<Empty> {
             |            return x__0();
@@ -2778,7 +2803,7 @@ class TmpLBackendTest {
             |          }
             |          @QName("test-library/foo.coro=") let coro__0: SafeGenerator<Empty> = f__0(fn__0);
             |          module init {
-            |            SafeGeneratorNext#0(coro__0);
+            |            SafeGeneratorNextSafe#0(coro__0);
             |          }
             |
             |          ```
@@ -2804,8 +2829,8 @@ class TmpLBackendTest {
             |      }
             |      let f(makeGenerator: fn (): SafeGenerator<Empty>): Void {
             |        let coroutine = makeGenerator();
-            |         coroutine.next();
-            |         coroutine.next();
+            |         coroutine.nextSafe();
+            |         coroutine.nextSafe();
             |      }
             |      f { (): GeneratorResult<Empty> extends GeneratorFn =>
             |        var i = initialI();
@@ -2827,7 +2852,7 @@ class TmpLBackendTest {
             |        //// work//foo/ => foo.tmpl
             |        let GetConsole#0 = builtins.GetConsole;
             |        let ConsoleLog#0 = builtins.ConsoleLog;
-            |        let SafeGeneratorNext#0 = builtins.SafeGeneratorNext;
+            |        let SafeGeneratorNextSafe#0 = builtins.SafeGeneratorNextSafe;
             |        let nym`+#58` = builtins.nym`+` /* (Int32, Int32) -> Int32 */;
             |        let Empty#0 = builtins.Empty;
             |        let ValueResultConstructor#0 = builtins.ValueResultConstructor;
@@ -2840,8 +2865,8 @@ class TmpLBackendTest {
             |        }
             |        @QName("test-library/foo.f()") let f__0(@QName("test-library/foo.f().(makeGenerator)") makeGenerator__0: fn (): SafeGenerator<Empty>): Void {
             |          @QName("test-library/foo.f().coroutine=") let coroutine__0: SafeGenerator<Empty> = makeGenerator__0();
-            |          SafeGeneratorNext#0(coroutine__0);
-            |          SafeGeneratorNext#0(coroutine__0);
+            |          SafeGeneratorNextSafe#0(coroutine__0);
+            |          SafeGeneratorNextSafe#0(coroutine__0);
             |          return void;
             |        }
             |        let fn__0(): SafeGenerator<Empty> {
@@ -2898,8 +2923,8 @@ class TmpLBackendTest {
             |    "foo.temper": ```
             |      let f(makeGenerator: fn (): SafeGenerator<Empty>): Void {
             |        let generator = makeGenerator();
-            |         generator.next();
-            |         generator.next();
+            |         generator.nextSafe();
+            |         generator.nextSafe();
             |      }
             |      f { (): GeneratorResult<Empty> extends GeneratorFn =>
             |        // We extract `i` because it's used on both sides
@@ -2934,7 +2959,7 @@ class TmpLBackendTest {
             |      content: ```
             |        //// work//foo/ => foo.tmpl
             |        let GetConsole#0 = builtins.GetConsole;
-            |        let SafeGeneratorNext#0 = builtins.SafeGeneratorNext;
+            |        let SafeGeneratorNextSafe#0 = builtins.SafeGeneratorNextSafe;
             |        let nym`+#67` = builtins.nym`+` /* (Int32, Int32) -> Int32 */;
             |        let ConsoleLog#0 = builtins.ConsoleLog;
             |        let Empty#0 = builtins.Empty;
@@ -2944,8 +2969,8 @@ class TmpLBackendTest {
             |        let console#0: Console = GetConsole#0();
             |        @QName("test-library/foo.f()") let f__0(@QName("test-library/foo.f().(makeGenerator)") makeGenerator__0: fn (): SafeGenerator<Empty>): Void {
             |          @QName("test-library/foo.f().generator=") let generator__0: SafeGenerator<Empty> = makeGenerator__0();
-            |          SafeGeneratorNext#0(generator__0);
-            |          SafeGeneratorNext#0(generator__0);
+            |          SafeGeneratorNextSafe#0(generator__0);
+            |          SafeGeneratorNextSafe#0(generator__0);
             |          return void;
             |        }
             |        let fn__0(): SafeGenerator<Empty> {
@@ -3006,9 +3031,9 @@ class TmpLBackendTest {
             |    "foo.temper": ```
             |      let f(makeGenerator: fn (): SafeGenerator<Empty>): Void {
             |        let generator = makeGenerator();
-            |        generator.next();
-            |        generator.next();
-            |        generator.next();
+            |        generator.nextSafe();
+            |        generator.nextSafe();
+            |        generator.nextSafe();
             |      }
             |
             |      class C {
@@ -3043,7 +3068,7 @@ class TmpLBackendTest {
             |        //// work//foo/ => foo.tmpl
             |        let GetConsole#0 = builtins.GetConsole;
             |        let ConsoleLog#0 = builtins.ConsoleLog;
-            |        let SafeGeneratorNext#0 = builtins.SafeGeneratorNext;
+            |        let SafeGeneratorNextSafe#0 = builtins.SafeGeneratorNextSafe;
             |        let Empty#0 = builtins.Empty;
             |        let ValueResultConstructor#0 = builtins.ValueResultConstructor;
             |        let DoneResult#0 = builtins.DoneResult;
@@ -3062,9 +3087,9 @@ class TmpLBackendTest {
             |        }
             |        @QName("test-library/foo.f()") let f__0(@QName("test-library/foo.f().(makeGenerator)") makeGenerator__0: fn (): SafeGenerator<Empty>): Void {
             |          @QName("test-library/foo.f().generator=") let generator__0: SafeGenerator<Empty> = makeGenerator__0();
-            |          SafeGeneratorNext#0(generator__0);
-            |          SafeGeneratorNext#0(generator__0);
-            |          SafeGeneratorNext#0(generator__0);
+            |          SafeGeneratorNextSafe#0(generator__0);
+            |          SafeGeneratorNextSafe#0(generator__0);
+            |          SafeGeneratorNextSafe#0(generator__0);
             |          return void;
             |        }
             |        let fn__0(): SafeGenerator<Empty> {
@@ -3661,7 +3686,12 @@ class TmpLBackendTest {
             |        ```
             |    },
             |    "foo.tmpl.map": "__DO_NOT_CARE__",
-            |  }
+            |  },
+            |  errors: [
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only top-level functions!",
+            |  ]
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )

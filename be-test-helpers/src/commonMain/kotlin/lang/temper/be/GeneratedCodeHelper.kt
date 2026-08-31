@@ -17,7 +17,9 @@ import lang.temper.frontend.StagingFlags
 import lang.temper.frontend.staging.ModuleAdvancer
 import lang.temper.frontend.staging.ModuleConfig
 import lang.temper.frontend.staging.partitionSourceFilesIntoModules
+import lang.temper.fs.FileClassification
 import lang.temper.fs.FileFilterRules
+import lang.temper.fs.FileSystem
 import lang.temper.fs.FilteringFileSystemSnapshot
 import lang.temper.fs.MemoryFileSystem
 import lang.temper.fs.NullSystemAccess
@@ -90,7 +92,7 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
     val backendOrganization = organizeBackends(
         listOf(factory.backendId),
         lookupFactory = lookupFactory,
-        onMissingFactory = { error(it) },
+        onError = { error(it) },
     )
     for (bucket in backendOrganization.backendBuckets) {
         for (backendId in bucket) {
@@ -103,6 +105,7 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
                 moduleResultNeeded = moduleResultNeeded,
                 logSink = logSink,
                 outputRoot = outputRoot,
+                adjusterFactory = factory.adjusterFactories()[backendId],
             )
         }
     }
@@ -117,6 +120,7 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
     moduleResultNeeded: Boolean,
     logSink: LogSink,
     outputRoot: OutputRoot,
+    adjusterFactory: BackendAdjusterFactory?,
     activeFactories: Iterable<Backend.Factory<*>> = listOf(factory),
 ) {
     val backendId = factory.backendId
@@ -187,6 +191,10 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
             } else {
                 NullSystemAccess(outputRoot.path.resolve(backendLib), cancelGroup)
             }
+            val extensions = factory.backendMeta.fileExtensionMap.values.toSet()
+            val rawBackendFiles = sourceTree.gatherFilesSync { filePath ->
+                filePath.lastOrNull()?.extension?.let { it in extensions } == true
+            }
             this[config] = factory.make(
                 BackendSetup(
                     config.libraryName,
@@ -197,6 +205,8 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
                     logSink,
                     NullDependencyResolver,
                     backendConfig,
+                    adjusterFactory = adjusterFactory,
+                    rawBackendFiles = rawBackendFiles,
                 ),
             )
         }
@@ -215,4 +225,25 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
         }
         throw e
     }
+}
+
+/**
+ * Map file paths to the textual content of files. Only [keep] files that can be
+ * decoded as UTF-8.
+ */
+fun FileSystem.gatherFilesSync(keep: (FilePath) -> Boolean): Map<FilePath, String> = buildMap {
+    fun addFiles(path: FilePath) {
+        when (classify(path)) {
+            FileClassification.File -> if (keep(path)) {
+                put(path, readBinaryFileContentSync(path).result!!.decodeToString())
+            }
+            FileClassification.Directory -> {
+                for (kid in directoryListing(path).result!!) {
+                    addFiles(kid)
+                }
+            }
+            FileClassification.DoesNotExist -> {}
+        }
+    }
+    addFiles(dirPath())
 }

@@ -923,6 +923,15 @@ inline fun <T : Any, reified U : T> Iterable<T>.firstOrNullAs(predicate: (U) -> 
     return null
 }
 
+inline fun <T : Any, reified U : T> Iterable<T>.filterAs(predicate: (U) -> Boolean): List<U> =
+    buildList {
+        for (x in this@filterAs) {
+            if (x is U && predicate(x)) {
+                add(x)
+            }
+        }
+    }
+
 class ConcatenatedListView<T>(
     private val left: List<T>,
     private val right: List<T>,

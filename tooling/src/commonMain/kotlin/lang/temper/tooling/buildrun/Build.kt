@@ -180,11 +180,17 @@ fun doBuild(
 
 private data class StagingResult(
     val modulesInOrder: List<Module>,
-    val libraries: List<Pair<LibraryConfiguration, List<Module>>>,
+    val libraries: List<LibraryContent>,
     val libraryConfigurationsBuilder: LibraryConfigurationsBundle,
     val projectLogSink: LogSink,
     val priorBuildSuffices: Boolean,
     val sourceSnapshot: FileSystemSnapshot? = null,
+)
+
+private data class LibraryContent(
+    val config: LibraryConfiguration,
+    val modules: List<Module>,
+    val rawFiles: Map<FilePath, String>,
 )
 
 /**
@@ -193,6 +199,7 @@ private data class StagingResult(
 private fun stageLibraries(
     logLevelTracker: MaxLogLevelTracker,
     build: Build,
+    backendFactories: Set<Backend.Factory<*>>,
 ): StagingResult? {
     val harness = build.harness
     val cliConsole = harness.cliConsole
@@ -239,7 +246,10 @@ private fun stageLibraries(
         sourceFilePartition.maybeReusePreviouslyStaged(it)
     }
     sourceFilePartition.maybeReusePreviouslyStaged(build.previouslyCompiled)
-    sourceFilePartition.scan(sourceSnapshot, root = BuildHarness.workDir)
+    val backendExtensions = backendFactories.flatMap { factory ->
+        factory.backendMeta.fileExtensionMap.map { it.value }
+    }.toSet()
+    sourceFilePartition.scan(sourceSnapshot, root = BuildHarness.workDir, backendExtensions)
     sourceFilePartition.addModulesToAdvancer()
     for (requirement in build.requiredExt) {
         moduleAdvancer.requireLibrary(requirement)
@@ -301,7 +311,12 @@ private fun stageLibraries(
 
     return StagingResult(
         modulesInOrder,
-        libraries,
+        libraries = libraries.map { (config, modules) ->
+            val rawFiles = sourceFilePartition.rawFilesForLibraryRoot(config.libraryRoot)?.associate { source ->
+                source.filePath!! to source.fetchedContent!!.toString() // likely a String anyway
+            } ?: mapOf()
+            LibraryContent(config, modules, rawFiles)
+        },
         libraryConfigurationsBundle,
         projectLogSink,
         priorBuildSuffices = priorBuildSuffices,
@@ -321,6 +336,27 @@ fun doOneBuild(build: Build): BuildResult {
     val logLevelTracker = MaxLogLevelTracker()
     val cancelGroup = build.cancelGroup
 
+    // Expand the backends to include other required backends as specified.
+    val initLogSink = ConsoleBackedContextualLogSink(
+        cliConsole, sharedLocationContext = null, logLevelTracker, CustomValueFormatter.Nope,
+    )
+    val backendOrganization = organizeBackends(
+        backendIds = harness.backends,
+        lookupFactory = ::lookupFactory,
+        onError = { err ->
+            if (err.backendId != interpBackendId) {
+                // Ignore error kind for now, but that might be nice to add in the future.
+                // These errors should be rare.
+                initLogSink.log(
+                    Log.Error,
+                    MessageTemplate.BadBackend,
+                    unknownPos,
+                    listOf(err.backendId),
+                )
+            }
+        },
+    )
+
     val (
         modulesInOrder,
         libraries,
@@ -328,7 +364,7 @@ fun doOneBuild(build: Build): BuildResult {
         projectLogSink,
         priorBuildSuffices,
         sourceSnapshot,
-    ) = stageLibraries(logLevelTracker, build)
+    ) = stageLibraries(logLevelTracker, build, backendOrganization.factoriesById.values.toSet())
         ?: return BuildInitFailed(ok = false, maxLogLevel = logLevelTracker.maxLogLevel)
 
     if (priorBuildSuffices) {
@@ -379,23 +415,6 @@ fun doOneBuild(build: Build): BuildResult {
         }
     }
 
-    // Explode the backends x libraries to backends that are each responsible for translating one library
-    // for one target language.
-    val backendOrganization = organizeBackends(
-        backendIds = libraries.flatMap { it.first.supportedBackendList }.toSet(),
-        lookupFactory = ::lookupFactory,
-        onMissingFactory = { backendId ->
-            if (backendId != interpBackendId) {
-                projectLogSink.log(
-                    Log.Error,
-                    MessageTemplate.BadBackend,
-                    unknownPos,
-                    listOf(backendId),
-                )
-            }
-        },
-    )
-
     // For supplying core library, buckets don't really matter.
     val flatBackendIds = backendOrganization.backendBuckets.flatten()
     supplyCoreLibrary(harness.outputFileSystem, flatBackendIds, cancelGroup, harness.cliConsole)
@@ -415,9 +434,14 @@ fun doOneBuild(build: Build): BuildResult {
         fun make(
             libraryName: DashedIdentifier,
             modules: List<Module>,
+            rawFiles: Map<FilePath, String>,
             buildFileCreator: AsyncSystemAccess,
             keepFileUpdater: AsyncSystemReadAccess,
         ) {
+            val extensions = factory.backendMeta.fileExtensionMap.values.toSet()
+            val rawBackendFiles = rawFiles.filter { entry ->
+                entry.key.lastOrNull()?.extension?.let { it in extensions } == true
+            }
             backends[libraryName] = factory.make(
                 BackendSetup(
                     libraryName = libraryName,
@@ -428,6 +452,8 @@ fun doOneBuild(build: Build): BuildResult {
                     logSink = projectLogSink,
                     dependencyResolver = dependencyResolver,
                     config = harness.backendConfig,
+                    adjusterFactory = backendOrganization.adjusterFactories[factory.backendId],
+                    rawBackendFiles = rawBackendFiles,
                 ),
             )
         }
@@ -438,6 +464,7 @@ fun doOneBuild(build: Build): BuildResult {
         data class TranslationBits(
             val backendId: BackendId,
             val modules: List<Module>,
+            val rawFiles: Map<FilePath, String>,
             val libraryName: DashedIdentifier,
         )
 
@@ -452,7 +479,7 @@ fun doOneBuild(build: Build): BuildResult {
             factoryAndBackends: FactoryAndBackends<BACKEND>,
             bits: TranslationBits,
         ) {
-            val (backendId, modules, libraryName) = bits
+            val (backendId, modules, rawFiles, libraryName) = bits
 
             // Make sure we have access to <backend-id>/<library-name>/ dirs
             // under temper.out and temper.keep
@@ -471,18 +498,20 @@ fun doOneBuild(build: Build): BuildResult {
             factoryAndBackends.make(
                 libraryName,
                 modules,
+                rawFiles,
                 outSystemAccess,
                 keepSystemAccess,
             )
         }
 
-        for ((configuration, modules) in libraries) {
+        for ((configuration, modules, rawFiles) in libraries) {
             val requiredBackendIds = configuration.supportedBackendList.flatMap { backendId ->
                 backendOrganization.backendRequirements.getOrDefault(backendId, listOf())
             }.toSet()
             for (backendId in requiredBackendIds) {
                 getFactoryAndBackends(backendId)?.let { factoryAndBackends ->
-                    addBackend(factoryAndBackends, TranslationBits(backendId, modules, configuration.libraryName))
+                    val bits = TranslationBits(backendId, modules, rawFiles, configuration.libraryName)
+                    addBackend(factoryAndBackends, bits)
                 }
             }
         }
@@ -526,7 +555,7 @@ fun doOneBuild(build: Build): BuildResult {
         ok = okCheck(null),
         maxLogLevel = logLevelTracker.maxLogLevel,
         libraryConfigurations = libraryConfigurationsBundle,
-        partitionedModules = libraries,
+        partitionedModules = libraries.map { it.config to it.modules },
         modulesInOrder = modulesInOrder,
         dependencies = dependencies,
         taskResults = null,
@@ -762,7 +791,7 @@ private fun runInInterpreter(
             },
         ),
     )
-    val stageResults = stageLibraries(logLevelTracker, mayRunBuild) ?: return null
+    val stageResults = stageLibraries(logLevelTracker, mayRunBuild, backendFactories = setOf()) ?: return null
 
     val modulesInOrder = stageResults.modulesInOrder
 

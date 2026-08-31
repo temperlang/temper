@@ -46,4 +46,4 @@ internal fun ResolvedName.simpleText(): String = when (this) {
 internal fun ResolvedName.distinctSafeText() = distinctText().safeIdentifier()
 
 /** Apply a simple set of rules to extract a name's text and ensure the identifier is safe for Java. */
-internal fun ResolvedName.simpleSafeText() = simpleText().safeIdentifier()
+fun ResolvedName.simpleSafeText() = simpleText().safeIdentifier()
