@@ -317,6 +317,7 @@ Statement =
     | LocalVariableDecl
     | MethodDecl // Some things not allowed for local functions, but eh.
     | ReturnStatement
+    | SwitchStatement
     | TryStatement
     | WhileStatement
     | YieldReturn
@@ -350,6 +351,12 @@ LocalVariableDecl ::= type%Type & variables%VariableDeclarator+", " & ";";
 // There's also a "return ref" option, but skip that for now.
 ReturnStatement ::= "return" & ((expr%Expression => expr) || ()) & ";";
 ReturnStatement.expr.default = `null`;
+
+SwitchStatement ::= "switch" & "(" & expr%Expression & ")" & "{" & "\n" & cases%SwitchCase*"\n" & "\n" & "}";
+SwitchCase ::=
+    ((expr%Expression => "case" & expr) || ("default")) &
+    ":" &
+    ((block%BlockStatement => block) || ());
 
 // Don't worry about multiple catch blocks for now.
 TryStatement ::=

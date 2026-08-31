@@ -1167,7 +1167,7 @@ internal class CSharpTranslator(
             is TmpL.RestParameterCountExpression -> TODO()
             is TmpL.RestParameterExpression -> TODO()
             is TmpL.This -> translateThis(expr)
-            is TmpL.ValueReference -> translateValueReference(expr)
+            is TmpL.ValueReference -> translateValueReference(expr, wantedType)
         }
         return result.wrapCollectionTypeIfNeeded(
             type = findMainType(expr.type),
@@ -1933,7 +1933,7 @@ internal class CSharpTranslator(
             is TmpL.ModuleInitFailed -> TODO()
             // Currently compute jumps are only used with coroutine strategy mode not
             // opted into by the SupportNetwork
-            is TmpL.ComputedJumpStatement -> TODO()
+            is TmpL.ComputedJumpStatement -> translateComputedJumpStatement(statement)
             is TmpL.BlockStatement -> translateBlockStatement(statement)
             is TmpL.IfStatement -> translateIfStatement(statement)
             is TmpL.LabeledStatement -> translateLabeledStatement(statement)
@@ -2401,7 +2401,7 @@ internal class CSharpTranslator(
         )
     }
 
-    private fun translateValueReference(expr: TmpL.ValueReference): CSharp.Expression {
+    private fun translateValueReference(expr: TmpL.ValueReference, wantedType: Type2?): CSharp.Expression {
         return when (expr.value.typeTag) {
             TBoolean -> makeKeywordReference(expr.pos, "${TBoolean.unpack(expr.value)}")
             TFloat64 -> translateFloat64Value(expr.pos, TFloat64.unpackParsed(expr.value))
@@ -2419,15 +2419,10 @@ internal class CSharpTranslator(
             TVoid -> makeKeywordReference(expr.pos, "null")
             TNull -> {
                 var translation: CSharp.Expression? = null
-                // If the null has type `T?` then it should actually be a reference to the
+                // If the null has type `T?`, then it should actually be a reference to the
                 // None optional.
-                val parentOfNull = expr.parent
-                // HACK: we only handle assignments of null, not null passed to generic functions.
-                // TODO: the TmpL translator should be inserting casts, or the Typer should
-                // be typing `null` literals as a nullable type that agrees with the function
-                // call receiving the literal.
-                if (parentOfNull is TmpL.Assignment && parentOfNull.right === expr) {
-                    val type = parentOfNull.type
+                if (wantedType != null) {
+                    val type = wantedType
                     val csharpType = translateTypeFromFrontend(expr.pos, type)
                     if (csharpType.isOptionalTypeArg) {
                         // C::Optional<T>.None
@@ -2456,6 +2451,51 @@ internal class CSharpTranslator(
             loop.pos,
             test = translateExpression(loop.test),
             body = translateStatement(loop.body).toBlock(loop.body.pos),
+        )
+    }
+
+    private fun translateComputedJumpStatement(s: TmpL.ComputedJumpStatement): CSharp.Statement {
+        return CSharp.SwitchStatement(
+            s.pos,
+            expr = translateExpression(s.caseExpr),
+            cases = buildList {
+                for (case in s.cases) {
+                    val values = case.values
+                    val lastValueIndex = values.lastIndex
+                    for (i in values.indices) {
+                        val value = values[i]
+                        add(
+                            CSharp.SwitchCase(
+                                case.pos,
+                                CSharp.NumberLiteral(value.pos, value.index),
+                                if (i == lastValueIndex) {
+                                    CSharp.BlockStatement(
+                                        case.pos,
+                                        buildList {
+                                            case.body.statements.flatMapTo(this) {
+                                                translateStatement(it)
+                                            }
+                                            add(CSharp.BreakStatement(case.pos.rightEdge))
+                                        },
+                                    )
+                                } else {
+                                    null
+                                },
+                            ),
+                        )
+                    }
+                    val elseCase = s.elseCase
+                    if (elseCase.body.statements.isNotEmpty()) {
+                        add(
+                            CSharp.SwitchCase(
+                                elseCase.pos,
+                                null,
+                                translateBlockStatement(elseCase.body),
+                            ),
+                        )
+                    }
+                }
+            },
         )
     }
 

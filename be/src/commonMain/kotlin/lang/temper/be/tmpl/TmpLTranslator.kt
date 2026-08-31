@@ -1087,7 +1087,7 @@ class TmpLTranslator internal constructor(
     }
 
     /**
-     * Translates an assignments.
+     * Translates an assignment.
      *
      * @return statements that should precede the handleable that performs the assigment,
      *     and the handleable.

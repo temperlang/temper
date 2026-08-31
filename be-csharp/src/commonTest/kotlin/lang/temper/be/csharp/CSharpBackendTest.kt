@@ -569,8 +569,7 @@ class CSharpBackendTest {
                 |    }
                 |    public string Thing()
                 |    {
-                |        string t___0 = this.name__0;
-                |        return this.Punctuate("Hi, " + t___0);
+                |        return this.Punctuate("Hi, " + this.name__0);
                 |    }
                 |    string Punctuate(string message__0)
                 |    {
@@ -808,7 +807,6 @@ class CSharpBackendTest {
             |static G::IEnumerable<S1::Tuple<object ?>> coroHelperfn__0()
             |{
             |    string t___0;
-            |    string t___1;
             |    T::Task<string> promise___0;
             |    try
             |    {
@@ -822,7 +820,6 @@ class CSharpBackendTest {
             |    try
             |    {
             |        t___0 = promise___0.Result;
-            |        t___1 = t___0;
             |    }
             |    catch
             |    {
@@ -831,12 +828,12 @@ class CSharpBackendTest {
             |    goto OK___0;
             |    CATCH___0:
             |    {
-            |        t___1 = "broken";
+            |        t___0 = "broken";
             |    }
             |    OK___0:
             |    {
             |    }
-            |    console___0.Log(t___1);
+            |    console___0.Log(t___0);
             |}
             |internal static C::IGenerator<S1::Tuple<object ?>> fn__0()
             |{
@@ -906,16 +903,16 @@ class CSharpBackendTest {
             |using C = TemperLang.Core;
         """.trimMargin(),
         csharp = """
-            |internal static C::ILoggingConsole t___0;
+            |internal static C::ILoggingConsole console___0;
             |internal static T::StringBuilder sb__0;
             |static TestGlobal()
             |{
-            |    t___0 = S::Logging.LoggingConsoleFactory.CreateConsole("MyTestLibrary.Test");
+            |    console___0 = S::Logging.LoggingConsoleFactory.CreateConsole("MyTestLibrary.Test");
             |    sb__0 = new T::StringBuilder();
             |    sb__0.Append("Hello, ");
             |    sb__0.Append("World");
             |    sb__0.Append("!");
-            |    t___0.Log(sb__0.ToString());
+            |    console___0.Log(sb__0.ToString());
             |}
         """.trimMargin(),
     )
@@ -929,16 +926,14 @@ class CSharpBackendTest {
         csharp = """
             |public static T__0 F<T__0>(C::Optional<T__0> x__0, T__0 fallback__0)
             |{
-            |    T__0 return__0;
             |    if (!x__0.HasValue)
             |    {
-            |        return__0 = fallback__0;
+            |        return fallback__0;
             |    }
             |    else
             |    {
-            |        return__0 = x__0.Value;
+            |        return x__0.Value;
             |    }
-            |    return return__0;
             |}
         """.trimMargin(),
     )
@@ -950,7 +945,7 @@ class CSharpBackendTest {
             |export class Test(private x: Int) {
             |  private var y: Int = 1;
             |  public get p(): Int { y - x }
-            |  private set p(newP: Int): Void { y = newP + 1 }
+            |  private set p(newP: Int): Void { y = newP + 1; }
             |  public incr(): Int { p += 1 }
             |}
         """.trimMargin(),
@@ -1125,12 +1120,10 @@ class CSharpBackendTest {
                         |{
                         |    public void G(C::Optional<T__2> x__4, S::Func<T__2, string> render__0)
                         |    {
-                        |        string t___0;
                         |        if (x__4.HasValue)
                         |        {
                         |            T__2 x___0 = x__4.Value;
-                        |            t___0 = render__0(x___0);
-                        |            T::TestGlobal.console___0.Log(t___0);
+                        |            T::TestGlobal.console___0.Log(render__0(x___0));
                         |        }
                         |    }
                         |    public Far()
@@ -1182,16 +1175,14 @@ class CSharpBackendTest {
             |{
             |    public C::Optional<T__0> F(T__0 x__0, bool b__0)
             |    {
-            |        C::Optional<T__0> return__0;
             |        if (b__0)
             |        {
-            |            return__0 = x__0;
+            |            return x__0;
             |        }
             |        else
             |        {
-            |            return__0 = C::Optional<T__0>.None;
+            |            return C::Optional<T__0>.None;
             |        }
-            |        return return__0;
             |    }
             |    public Test()
             |    {
@@ -1352,17 +1343,17 @@ class CSharpBackendTest {
                     |public static class TestGlobal
                     |{
                     |    public static int I;
-                    |    internal static int ? t___0;
+                    |    internal static int ? subject___0;
                     |    static TestGlobal()
                     |    {
-                    |        t___0 = C::Optional.ToNullable<int>(new C().F());
-                    |        if (t___0 == null)
+                    |        subject___0 = C::Optional.ToNullable<int>(new C().F());
+                    |        if (subject___0 == null)
                     |        {
                     |            I = 0;
                     |        }
                     |        else
                     |        {
-                    |            I = t___0.Value;
+                    |            I = subject___0.Value;
                     |        }
                     |    }
                     |}
@@ -1390,16 +1381,14 @@ class CSharpBackendTest {
         csharp = """
             |public static T__0 Or<T__0>(T__0 x__0, C::Optional<T__0> y__0)
             |{
-            |    T__0 return__0;
             |    if (!y__0.HasValue)
             |    {
-            |        return__0 = x__0;
+            |        return x__0;
             |    }
             |    else
             |    {
-            |        return__0 = y__0.Value;
+            |        return y__0.Value;
             |    }
-            |    return return__0;
             |}
             |public static string F(string x__1, string ? y__1)
             |{

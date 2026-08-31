@@ -565,9 +565,10 @@ internal sealed class PreTranslated : Positioned {
                     }
                 }
             }
-            return OneStmt(
-                TmpL.ReturnStatement(pos, returned?.toExpression(translator)),
-            )
+
+            val returnedTmpL = returned?.toExpression(translator)
+            // TODO: should we be injecting a cast for output here based on the bodyFor return type?
+            return OneStmt(TmpL.ReturnStatement(pos, returnedTmpL))
         }
 
         override fun diagnosticToTokenSink(tokenSink: TokenSink) {
