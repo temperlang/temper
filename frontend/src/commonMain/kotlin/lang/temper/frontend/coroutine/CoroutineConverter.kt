@@ -7,7 +7,6 @@ import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.BuiltinLogicalOperators
 import lang.temper.builtin.NotNullFn
 import lang.temper.builtin.Types
-import lang.temper.builtin.makeTypeFormal
 import lang.temper.common.Console
 import lang.temper.common.Either
 import lang.temper.common.KBitSet
@@ -29,7 +28,6 @@ import lang.temper.name.NameMaker
 import lang.temper.name.ResolvedName
 import lang.temper.name.Temporary
 import lang.temper.stage.Stage
-import lang.temper.type.BubbleType
 import lang.temper.type.FunctionType
 import lang.temper.type.InvalidType
 import lang.temper.type.MkType
@@ -829,6 +827,7 @@ private class CoroutineConverter(
             caseIndexName = caseIndexName,
             caseIndexLocalName = caseIndexLocalName,
             generatorResultType = generatorResultType,
+            generatorInputName = generatorInputName,
             returnLabel = returnLabel,
         )
 
@@ -1024,6 +1023,7 @@ private class CoroutineConverter(
         val caseIndexName: Temporary,
         val caseIndexLocalName: Temporary,
         val generatorResultType: Type2,
+        val generatorInputName: Temporary,
         val returnLabel: JumpLabel,
     ) {
         val anyCaseContinues: Boolean get() = caseList.any { ci ->
@@ -1184,6 +1184,7 @@ private class CoroutineConverter(
                                         }
 
                                         if (elementIndex == lastElementIndex && yieldingInfo != null) {
+                                            var yieldingExpr: Tree? = null
                                             when (yieldingInfo.kind) {
                                                 YieldingFnKind.await -> {
                                                     check(afterwards != null)
@@ -1196,28 +1197,34 @@ private class CoroutineConverter(
                                                     Assign(promiseTree.pos.leftEdge, promiseName, promiseType) {
                                                         Replant(freeTree(promiseTree))
                                                     }
-                                                    val callType = CallTypeInferences(
-                                                        WKT.voidType,
-                                                        CoroHelperSpecialNames.awakeUponType,
-                                                        mapOf(
-                                                            CoroHelperSpecialNames.awakeUponType.typeFormals[0] to
-                                                                promiseType,
-                                                        ),
-                                                        listOf(),
-                                                    )
-                                                    Call(yieldingInfo.yieldingCall.pos, type = callType) {
-                                                        Rn(CoroHelperSpecialNames.awakeUpon, callType.variant)
+                                                    val callType =
+                                                        CoroHelperSpecials.ConvertedCoroutineAwakeUponFn
+                                                            .callTypeInferences(promiseType = promiseType)
+                                                    val pos = yieldingInfo.yieldingCall.pos
+                                                    Call(pos, type = callType) {
+                                                        V(
+                                                            pos.leftEdge,
+                                                            Value(CoroHelperSpecials.ConvertedCoroutineAwakeUponFn),
+                                                            callType.variant,
+                                                        )
                                                         NotNullCall(
                                                             promiseTree.pos,
                                                             promiseNameInfo.zeroValueRecord!!,
                                                         ) { type ->
                                                             Rn(promiseTree.pos, promiseName, type)
                                                         }
+                                                        Rn(
+                                                            pos.leftEdge,
+                                                            generatorInputName,
+                                                            hackMapNewStyleToOld(generatorType),
+                                                        )
                                                     }
                                                 }
-                                                YieldingFnKind.yield -> {}
+                                                YieldingFnKind.yield -> {
+                                                    yieldingExpr = yieldingInfo.yieldingCall.childOrNull(1)
+                                                }
                                             }
-                                            valueResultExpr = yieldingInfo.yieldingCall.childOrNull(1)
+                                            valueResultExpr = yieldingExpr
                                                 ?: ValueLeaf(block.document, yieldingInfo.yieldingCall.pos, emptyValue)
                                                     .also {
                                                         it.typeInferences = BasicTypeInferences(WKT.emptyType, listOf())
@@ -1258,20 +1265,18 @@ private class CoroutineConverter(
                                             val promiseName = temporaryPromiseCaptures.getValue(yieldingElement)
                                             val promiseNameInfo = localNameInfo.getValue(promiseName)
                                                 as HoistedNameInfo
-                                            val callType = CallTypeInferences(
-                                                yieldedType,
-                                                CoroHelperSpecialNames.getPromiseResultSyncType,
-                                                mapOf(
-                                                    CoroHelperSpecialNames.getPromiseResultSyncType.typeFormals[0] to
-                                                        yieldedType,
-                                                ),
-                                                listOf(),
+                                            val promiseType = MkType.nominal(
+                                                WKT.promiseTypeDefinition,
+                                                listOf(yieldedType),
+                                            )
+                                            val callType = CoroHelperSpecials.GetPromiseResultSyncFn.callTypeInferences(
+                                                promiseType = promiseType,
                                             )
                                             fun Planting.plantGetPromiseResultSyncCall() =
                                                 Call(tree.pos, type = callType) {
-                                                    Rn(
+                                                    V(
                                                         tree.pos.leftEdge,
-                                                        CoroHelperSpecialNames.getPromiseResultSync,
+                                                        Value(CoroHelperSpecials.GetPromiseResultSyncFn),
                                                         callType.variant,
                                                     )
                                                     NotNullCall(
@@ -1549,35 +1554,6 @@ private fun Planting.VoidBubble(pos: Position): TreeTemplate<CallTree> =
     Call(pos, voidBubbleTypeInferences) {
         V(BuiltinFuns.vBubble, voidBubbleTypeInferences.variant)
     }
-
-object CoroHelperSpecialNames {
-    val awakeUpon = BuiltinName("awakeUpon")
-    val awakeUponType = run {
-        val (formal, tType) = makeTypeFormal(awakeUpon.builtinKey, "T")
-        MkType.fn(
-            typeFormals = listOf(formal),
-            listOf(
-                MkType.nominal(WKT.promiseTypeDefinition, listOf(hackMapNewStyleToOld(tType))),
-            ),
-            null,
-            WKT.voidType,
-        )
-    }
-
-    val getPromiseResultSync = BuiltinName("getPromiseResultSync")
-    val getPromiseResultSyncType = run {
-        val (formal, tType) = makeTypeFormal(getPromiseResultSync.builtinKey, "T")
-        val tTypeOld = hackMapNewStyleToOld(tType)
-        MkType.fn(
-            typeFormals = listOf(formal),
-            listOf(
-                MkType.nominal(WKT.promiseTypeDefinition, listOf(tTypeOld)),
-            ),
-            null,
-            MkType.or(tTypeOld, BubbleType),
-        )
-    }
-}
 
 private val notNullFnType = typeFromSignature(NotNullFn.sig)
 

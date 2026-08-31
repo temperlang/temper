@@ -3328,7 +3328,9 @@ class TmpLBackendTest {
             |        let awakeUpon#0 = builtins.awakeUpon /* <awakeUponY extends AnyValue>(Promise<awakeUponY>, Generator<awakeUponY>) -> Void */;
             |        let Empty#0 = builtins.Empty;
             |        let ValueResultConstructor#0 = builtins.ValueResultConstructor;
-            |        let getPromiseResultSync#0 = builtins.getPromiseResultSync /* <getPromiseResultSyncY extends AnyValue>(Boolean, Promise<getPromiseResultSyncY>) -> getPromiseResultSyncY */;
+            |        let getPromiseResultSync#0 = builtins.getPromiseResultSync /* <getPromiseResultSyncY extends AnyValue>(Promise<getPromiseResultSyncY>) -> Result<getPromiseResultSyncY, Bubble> */;
+            |        let isOkResult#0 = builtins.isOkResult /* <isOkResultPASS extends AnyValue, isOkResultFAIL extends AnyValue>(Result<isOkResultPASS, isOkResultFAIL>) -> Boolean */;
+            |        let unpackOkResult#0 = builtins.unpackOkResult /* <unpackOkResultPASS extends AnyValue, unpackOkResultFAIL extends AnyValue>(Result<unpackOkResultPASS, unpackOkResultFAIL>) -> unpackOkResultPASS */;
             |        let panic#0 = builtins.panic;
             |        let cat#0 = builtins.cat /* (...String) -> String */;
             |        let DoneResult#0 = builtins.DoneResult;
@@ -3342,10 +3344,8 @@ class TmpLBackendTest {
             |        }
             |        let fn__0(): SafeGenerator<Empty> {
             |          var caseIndex#0: Int32 = 0;
-            |          var t#0: String = "";
-            |          @fail var fail#0: Boolean = false;
+            |          var awaited#0: Promise<String> | Null = null;
             |          @QName("test-library/foo.x=") var x__0: String = "";
-            |          var promise#0: Promise<String> | Null = null;
             |          let convertedCoroutine#0(generator#0: SafeGenerator<Empty>): GeneratorResult<Empty> {
             |            while (true) {
             |              let caseIndexLocal#0: Int32 = caseIndex#0;
@@ -3353,25 +3353,30 @@ class TmpLBackendTest {
             |              when (caseIndexLocal#0) {
             |                0 -> do {
             |                  ConsoleLog#0(console#0, "Before");
-            |                  promise#0 = f__0();
             |                  caseIndex#0 = 1;
-            |                  awakeUpon#0(notNull (promise#0), generator#0);
-            |                  return ValueResultConstructor#0(Empty#0());
             |                }
             |                1 -> do {
-            |                  t#0 = hs (fail#0, getPromiseResultSync#0(null, notNull (promise#0)));
-            |                  if (fail#0) {
-            |                    caseIndex#0 = 2;
-            |                  } else {
+            |                  awaited#0 = f__0();
+            |                  awakeUpon#0(notNull (awaited#0), generator#0);
+            |                  caseIndex#0 = 2;
+            |                  return ValueResultConstructor#0(Empty#0());
+            |                }
+            |                2 -> do {
+            |                  ok#0: {
+            |                    orElse#0: {
+            |                      let x#0: String | Bubble = getPromiseResultSync#0(notNull (awaited#0));
+            |                      if (!isOkResult#0(x#0)) {
+            |                        break orElse#0;
+            |                      }
+            |                      x__0 = unpackOkResult#0(x#0);
+            |                      caseIndex#0 = 4;
+            |                      break ok#0;
+            |                    }
             |                    caseIndex#0 = 3;
             |                  }
             |                }
-            |                2 -> do {
-            |                  x__0 = panic#0();
-            |                  caseIndex#0 = 4;
-            |                }
             |                3 -> do {
-            |                  x__0 = t#0;
+            |                  x__0 = panic#0();
             |                  caseIndex#0 = 4;
             |                }
             |                4 -> do {

@@ -17,9 +17,9 @@ convertedCoroutine#16 = fn (generator#12: SafeGenerator<Empty>) /* return__1 */:
       } else if (caseIndexLocal#15 == 1) {
         orElse#17: {
           awaited#11 = p__0;
-          awakeUpon(notNull(awaited#11));
+          awakeUpon(notNull(awaited#11), generator#12);
           caseIndex#13 = 2;
-          return__1 = new ValueResult<Empty>(do {});
+          return__1 = new ValueResult<Empty>({class: Empty__10});
           break fn__14;
         } orelse {
           caseIndex#13 = 3
