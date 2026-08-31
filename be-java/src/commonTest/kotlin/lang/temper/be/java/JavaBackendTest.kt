@@ -2074,6 +2074,10 @@ class JavaBackendTest {
                 |    # My test library
                 |
                 |        export let javaPackage = "com.example";
+                |
+                |        export class JavaConfig(
+                |          public package: String,
+                |        ) {}
                 |    ```,
                 |  top.temper: "export class InPackageComExample {}",
                 |  foo: {
