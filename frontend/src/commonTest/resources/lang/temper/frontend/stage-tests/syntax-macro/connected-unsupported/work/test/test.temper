@@ -1,0 +1,20 @@
+@connected
+export class NoConnectedTypesForNow {
+  @connected
+  public alsoNoConnectedMethodsYet();
+
+  @connected
+  public static notEvenStaticMethodsYet();
+}
+
+@connected
+export let alsoNoRestArgsYet(i: Int, ...more: List<Int>);
+
+@connected
+export let alsoNoOtherDeclsYet: Int = 5;
+
+// For now, this is the only case in this file without errors. Support like this
+// is also tested in functional testing, but showing here also provides
+// contrast.
+@connected
+private let butDefaultArgsDoWork(i: Int, j: Int = 2);

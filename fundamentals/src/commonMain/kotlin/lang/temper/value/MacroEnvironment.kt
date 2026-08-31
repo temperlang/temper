@@ -10,6 +10,7 @@ import lang.temper.log.LogEntry
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.log.Positioned
+import lang.temper.log.SharedLocationContext
 import lang.temper.name.NameMaker
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
@@ -179,6 +180,12 @@ interface MacroEnvironment : InterpreterCallback, Positioned, ConfigurationKey.H
      * Core module.
      */
     val isProcessingCore: Boolean get() = false
+
+    /**
+     * Depending on the situation, [sharedLocationContext] might be needed for
+     * accurate results.
+     */
+    fun isProcessingStd(sharedLocationContext: SharedLocationContext?): Boolean
 
     override val promises: Promises
 
