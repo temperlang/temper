@@ -47,6 +47,16 @@ class SourceFilePartition(
     var needsRebuildPartition: NeedsRebuildPartition = NeedsRebuildPartition.empty
         private set
 
+    fun rawFilesForLibraryRoot(root: FilePath): List<ModuleSource>? {
+        return groupedByLibraryRoot[root]?.mapNotNull { segmented ->
+            val source = segmented.bodyModuleSource
+            when (source.languageConfig) {
+                null -> source // null languageConfig means raw file
+                else -> null
+            }
+        }
+    }
+
     /** If some modules were staged before, we can reuse them under some conditions */
     fun maybeReusePreviouslyStaged(previouslyCompiled: Iterable<Module>) {
         for (m in previouslyCompiled) {
@@ -83,7 +93,7 @@ class SourceFilePartition(
      * Identifies Temper source files in the sourceTree under [root]
      * and adds them to the internal list of sources grouped by modules.
      */
-    fun scan(sourceTree: FileSystemSnapshot, root: FilePath = FilePath.emptyPath) {
+    fun scan(sourceTree: FileSystemSnapshot, root: FilePath = FilePath.emptyPath, rawExtensions: Set<String>) {
         fun groupSources(p: FilePath, libraryRoot: FilePath) {
             when (val f = sourceTree[p]) {
                 is FileSnapshot.Dir -> {
@@ -128,10 +138,26 @@ class SourceFilePartition(
                             )
                             null
                         }?.let { content ->
-                            val moduleSources =
-                                moduleSources(p, content, f.contentHash, languageConfig, projectLogSink)
-                            groupedByLibraryRoot.putMultiList(libraryRoot, moduleSources)
+                            moduleSources(p, content, f.contentHash, languageConfig, projectLogSink)
                         }
+                    } else {
+                        // Store other files without a languageConfig for connected code.
+                        // But limit to known backend file extensions to reduce memory usage in some cases.
+                        when (p.lastOrNull()?.extension?.let { it in rawExtensions }) {
+                            true -> SegmentedModuleSources(
+                                filePath = p,
+                                contentHash = f.contentHash,
+                                prefaceModuleSource = null,
+                                bodyModuleSource = ModuleSource(
+                                    filePath = p,
+                                    contentHash = f.contentHash,
+                                    fetchedContent = f.content.decodeToString(throwOnInvalidSequence = true),
+                                ),
+                            )
+                            else -> null
+                        }
+                    }?.also { moduleSources ->
+                        groupedByLibraryRoot.putMultiList(libraryRoot, moduleSources)
                     }
                 }
             }
@@ -146,7 +172,8 @@ class SourceFilePartition(
             for ((libraryRoot, sources) in groupedByLibraryRoot) {
                 val libraryRootSegmentCount = libraryRoot.segments.size
                 val configPath = libraryRoot.resolve(LibraryConfiguration.fileName, isDir = false)
-                val (configSources, nonConfigSources) = sources.partition { it.filePath == configPath }
+                val (configSources, nonConfigFiles) = sources.partition { it.filePath == configPath }
+                val nonConfigSources = nonConfigFiles.filter { it.bodyModuleSource.languageConfig != null }
                 val nonConfigsGroupedByDir = nonConfigSources.groupBy { it.filePath.dirName() }
                 if (configSources.isNotEmpty()) {
                     check(configSources.size == 1)
@@ -439,7 +466,7 @@ fun partitionSourceFilesIntoModules(
         makeAContinueCondition = makeAContinueCondition,
         makeTentativeLibraryConfiguration = makeTentativeLibraryConfiguration,
     )
-    partition.scan(sourceTree, root)
+    partition.scan(sourceTree, root, rawExtensions = setOf())
     partition.addModulesToAdvancer()
 }
 

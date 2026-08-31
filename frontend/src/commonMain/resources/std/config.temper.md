@@ -45,7 +45,9 @@ And as long as the `testing` module is part of `std`, we need junit as a core
 dependency of `std`, so its internals can use it. For now, usage is done via
 specialized connected methods.
 
-    export let javaDependencies = "org.junit.jupiter:junit-jupiter:5.9.2";
+    export let javaDependencies = [
+      "org.junit.jupiter:junit-jupiter:5.9.2",
+    ];
 
 ## JS
 

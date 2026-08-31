@@ -9,6 +9,7 @@ import lang.temper.log.FilePath
 import lang.temper.log.FilePathSegment
 import lang.temper.name.ModuleName
 import lang.temper.name.Symbol
+import lang.temper.value.TList
 import lang.temper.value.TString
 
 open class JavaLibraryConfigs(
@@ -77,8 +78,9 @@ class JavaLibraryConfig(
     private val libraryArtifact: String get() = cfg(JavaBackend.javaLibraryArtifactConfigKey) ?: libraryName
 
     internal val dependencies by lazy {
-        val dependenciesText = cfg(JavaBackend.javaDependenciesKey) ?: return@lazy emptyList()
-        dependenciesText.split(commaSeparated).map { dependencyText ->
+        val deps = TList.unpackOrNull(base.configExports[JavaBackend.javaDependenciesKey]) ?: return@lazy emptyList()
+        deps.mapNotNull dep@{ depValue ->
+            val dependencyText = TString.unpackOrNull(depValue) ?: return@dep null
             val (groupId, artifactId, version) = dependencyText.trim().split(":")
             val artifact = Artifact(groupId, artifactId, version)
             // For javaDependencies, treat all as main. Factor logic if we make a javaTestDependencies later.
@@ -102,5 +104,3 @@ class JavaLibraryConfig(
                 else -> javaPackageMetadataString.split(".")
             }
 }
-
-private val commaSeparated = Regex("""\s*,\s*""")

@@ -195,9 +195,15 @@ internal fun runJavaBestEffort(
                             println(pair)
                         }
                     }
-                    libraryNames.mapNotNull libraries@{ libraryName ->
+                    var hasAnyReport = false
+                    libraryNames.withIndex().mapNotNull libraries@{ (index, libraryName) ->
                         val libraryDir = workingDir.resolveDir(libraryName.text)
-                        val testResult = withTestResult(libraryDir, result) ?: return@libraries null
+                        val testResult = withTestResult(libraryDir, result) ?: when (index) {
+                            // Allow *one* non-test failure. More than one confuses test counting later.
+                            libraryNames.size - 1 if !hasAnyReport && result.result == null -> result
+                            else -> return@libraries null
+                        }
+                        hasAnyReport = true
                         ToolchainResult(libraryName = libraryName, result = testResult)
                     }
                 }
