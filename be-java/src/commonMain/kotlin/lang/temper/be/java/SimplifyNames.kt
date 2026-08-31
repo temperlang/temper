@@ -446,6 +446,7 @@ class SimplifyNames(private val top: J.TopLevelClassDeclaration) {
     private fun Scope.scanLhs(e: J.LeftHandSide) = when (e) {
         is J.FieldAccessExpr -> scanExpr(e.expr)
         is J.NameExpr -> scanName(e)
+        is J.StaticFieldAccessExpr -> importType(e.type)
     }
 
     private fun Scope.scanArgs(ax: Iterable<J.Argument>) = ax.forEach { scanExpr(it.expr) }

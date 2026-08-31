@@ -2,6 +2,8 @@ package lang.temper.be.java
 
 import lang.temper.ast.deepSlice
 import lang.temper.ast.toLispy
+import lang.temper.be.BackendAdjuster
+import lang.temper.be.BackendAdjusterFactory
 import lang.temper.be.Dependencies
 import lang.temper.be.java.JavaOperator.Assign
 import lang.temper.be.tmpl.FnAutodoc
@@ -66,6 +68,7 @@ class JavaTranslator(
     /** a shared instance for consistent name mapping */
     private val topNames: JavaNames,
     private val dependenciesBuilder: Dependencies.Builder<JavaBackend>? = null,
+    private val adjusterFactory: BackendAdjusterFactory? = null,
 ) {
     /** Spin off an instance for a given module */
     private fun forModule(module: ModuleName, programMeta: J.ProgramMeta = J.ProgramMeta(unknownPos)): ModuleScope =
@@ -132,6 +135,7 @@ class JavaTranslator(
 
         /** Might even stay null for snippets. */
         private var module: TmpL.Module? = null
+        private var adjuster: BackendAdjuster? = null
 
         private fun activeDecls(decls: MutableList<J.ClassBodyDeclaration>) = when {
             processingTestCode -> moduleTestDecls
@@ -157,6 +161,7 @@ class JavaTranslator(
 
         fun module(module: TmpL.Module): List<J.Program> {
             this.module = module
+            adjuster = adjusterFactory?.makeAdjuster(module, this)
             val result = module.result
             topLevels@ for (tl in module.topLevels) {
                 try {
@@ -236,6 +241,7 @@ class JavaTranslator(
                     addAll(moduleTestDecls)
                 }
             }
+            adjuster?.adjustFilesAfterTranslation(programs)
             return programs
         }
 
@@ -481,7 +487,9 @@ class JavaTranslator(
                             }.also { add(it.asNameExpr().asArgument()) }
                         }
                     },
-                ).exprOrReturnStatement(shouldReturn = result !is J.VoidType).also { add(it) }
+                ).let { call ->
+                    adjuster?.adjustConnectedCall(fn, call as J.ExpressionStatementExpr) ?: call
+                }.exprOrReturnStatement(shouldReturn = result !is J.VoidType).also { add(it) }
             }.let { J.BlockStatement(pos, it) }
         }
 
@@ -517,7 +525,7 @@ class JavaTranslator(
         private fun moduleFunction(t: TmpL.FunctionDeclaration) {
             val autodoc = autodocFor(t)
             val name = names.moduleFunction(t.name).second.toIdentifier(t.name.pos)
-            val result = resultType(names, t.returnType, pos = t.returnType.pos)
+            val result = resultType(t)
             val body = when {
                 t.metadata.any { it.key.symbol == connectedSymbol } && module?.isStdLib != true ->
                     connectedBody(t, result)
@@ -898,7 +906,7 @@ class JavaTranslator(
                             }
                         }
                         is TmpL.Getter -> {
-                            val result = resultType(names, m.returnType, m.pos)
+                            val result = resultType(m)
                             val name = names.getterName(m.dotName, JavaType.toFrontend(m.returnType.ot))
                             val parameters = parameters(m.parameters)
                             val prop = t.members.firstNotNullOfOrNull {
@@ -924,7 +932,7 @@ class JavaTranslator(
                             )
                         }
                         is TmpL.Setter -> {
-                            val result = resultType(names, m.returnType, m.pos)
+                            val result = resultType(m)
                             val name = names.setterName(m.dotName)
                             val parameters = parameters(m.parameters)
                             add(
@@ -958,7 +966,7 @@ class JavaTranslator(
                                     J.ModStatic.Dynamic
                                 },
                             )
-                            val tentativeResult = resultType(names, m.returnType, m.pos)
+                            val tentativeResult = resultType(m)
 
                             val boxedTypeAdjustments = (m as? TmpL.NormalMethod)?.let {
                                 findJavaParametersThatNeedAdjustmentToBoxedType(
@@ -1066,7 +1074,7 @@ class JavaTranslator(
                                         modAccess = access(m),
                                         modFinal = final(m.assignOnce),
                                     ),
-                                    type = JavaType.fromTmpL(m.type, names).toTypeAst(m.pos),
+                                    type = varType(m),
                                     variable = names.field(m.name),
                                     initializer = null,
                                 ),
@@ -1082,7 +1090,7 @@ class JavaTranslator(
                                     modFinal = final(m.assignOnce),
                                     modStatic = J.ModStatic.Static,
                                 ),
-                                type = JavaType.fromTmpL(m.type, names).toTypeAst(m.pos),
+                                type = varType(m),
                                 variable = names.staticField(m.dotName),
                                 initializer = expr(m.expression),
                             ),
@@ -1164,7 +1172,7 @@ class JavaTranslator(
                                 pos = m.pos,
                                 autodoc = autodocFor(m),
                                 body = m.body,
-                                result = resultType(names, m.returnType, m.pos),
+                                result = resultType(m),
                                 name = names.getterName(m.dotName, JavaType.toFrontend(m.returnType.ot)),
                                 params = parameters(m.parameters),
                             ),
@@ -1174,7 +1182,7 @@ class JavaTranslator(
                                 pos = m.pos,
                                 autodoc = autodocFor(m),
                                 body = m.body,
-                                result = resultType(names, m.returnType, m.pos),
+                                result = resultType(m),
                                 name = names.setterName(m.dotName),
                                 params = parameters(m.parameters),
                             ),
@@ -1184,7 +1192,7 @@ class JavaTranslator(
                                 pos = m.pos,
                                 autodoc = autodocFor(m),
                                 body = m.body,
-                                result = resultType(names, m.returnType, m.pos),
+                                result = resultType(m),
                                 name = names.method(m.dotName).toIdentifier(m.dotName.pos),
                                 params = parameters(m.parameters),
                                 typeParams = typeFormals(m.typeParameters),
@@ -1196,7 +1204,7 @@ class JavaTranslator(
                                 autodoc = autodocFor(m),
                                 body = m.body,
                                 name = names.method(m.dotName).toIdentifier(m.dotName.pos),
-                                result = resultType(names, m.returnType, m.pos),
+                                result = resultType(m),
                                 params = parameters(m.parameters),
                                 typeParams = typeFormals(m.typeParameters),
                                 isStatic = true,
@@ -1211,7 +1219,7 @@ class JavaTranslator(
                             J.InterfaceFieldDeclaration(
                                 pos = m.pos,
                                 javadoc = javadoc(autodocFor(m.pos, m.metadata)),
-                                type = JavaType.fromTmpL(m.type, names).toTypeAst(m.type.pos),
+                                type = varType(m),
                                 variables = listOf(
                                     J.VariableDeclarator(
                                         m.pos,
@@ -1241,6 +1249,28 @@ class JavaTranslator(
                     ),
                 ),
             )
+        }
+
+        fun resultType(fn: TmpL.FunctionDeclarationOrMethod): J.ResultType {
+            // TODO Some manual calls chose the return type pos but most chose the function pos.
+            // TODO Maybe makes sense to standardize here, but which is best?
+            return resultType(names, fn.returnType, fn.pos)
+        }
+
+        fun resultType(type: TmpL.AType, pos: Position? = null): J.ResultType {
+            return resultType(names, type, pos ?: type.pos)
+        }
+
+        fun varType(property: TmpL.Property): J.Type {
+            return varType(property.type, property.pos)
+        }
+
+        fun varType(v: TmpL.VarLike): J.Type {
+            return JavaType.fromFrontend(v.descriptor, names).toTypeAst(v.pos)
+        }
+
+        fun varType(type: TmpL.AType, pos: Position? = null): J.Type {
+            return JavaType.fromTmpL(type, names).toTypeAst(pos ?: type.pos)
         }
 
         /** Create an object containing the method parameters and necessary preamble statements. */
@@ -1405,8 +1435,7 @@ class JavaTranslator(
                         scope.addDecl(
                             J.FieldDeclaration(
                                 pos,
-                                type = JavaType.fromTmpL(param.type, names)
-                                    .toTypeAst(pos),
+                                type = varType(param),
                                 variable = localName.outName.toIdentifier(varId.pos),
                                 initializer = newNames[oldName.outName]!!.toNameExpr(varId.pos),
                             ),
@@ -1452,7 +1481,7 @@ class JavaTranslator(
                             scope.addDecl(
                                 J.FieldDeclaration(
                                     stmt.pos,
-                                    type = JavaType.fromTmpL(stmt.type, names).toTypeAst(stmt.pos),
+                                    type = varType(stmt),
                                     variable = localName.outName.toIdentifier(varId.pos),
                                     initializer = stmt.init?.let(::expr),
                                 ),
@@ -1493,7 +1522,7 @@ class JavaTranslator(
                 stmts.add(
                     J.LocalVariableDeclaration(
                         pos,
-                        type = JavaType.fromTmpL(param.type, names).toTypeAst(pos),
+                        type = varType(param),
                         name = newName.toIdentifier(varId.pos),
                         expr = oldName.toIdentifier(varId.pos).asNameExpr(),
                     ),
@@ -1569,7 +1598,7 @@ class JavaTranslator(
             val javaType: J.Type get() = JavaType.fromSig(funcType, names).toTypeAst(pos)
 
             /** the result type of the function */
-            val javaResultType: J.ResultType get() = resultType(names, tmplFunc.returnType, tmplFunc.returnType.pos)
+            val javaResultType: J.ResultType get() = resultType(tmplFunc)
 
             /** a lambda expression can be used in a local variable declaration, or also in a forward declared form. */
             fun toLambdaExpr() =
@@ -1659,7 +1688,7 @@ class JavaTranslator(
         private fun localVar(t: TmpL.LocalDeclaration) =
             J.LocalVariableDeclaration(
                 t.pos,
-                type = JavaType.fromTmpL(t.type, names).toTypeAst(t.pos),
+                type = varType(t),
                 name = names.lookupRegularLocalNameObj(t.name).outName.toIdentifier(t.name.pos),
                 expr = t.init?.let(::expr),
             )
