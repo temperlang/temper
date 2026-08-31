@@ -35,7 +35,7 @@ internal const val TEMPER_CORE_NAMESPACE = "temper::core"
  */
 internal object CppSupportNetwork : SupportNetwork {
     override val backendDescription: String = "Cpp Backend"
-    override val bubbleStrategy: BubbleBranchStrategy = BubbleBranchStrategy.CatchBubble
+    override val bubbleStrategy: BubbleBranchStrategy = BubbleBranchStrategy.Exceptions
     override val coroutineStrategy: CoroutineStrategy = CoroutineStrategy.TranslateToRegularFunction
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionType
 
@@ -169,6 +169,12 @@ internal object CppSupportNetwork : SupportNetwork {
                 values,
             )
         }
+
+        // Using exceptions, not results
+        BuiltinOperatorId.IsOkResult,
+        BuiltinOperatorId.PackOkResult,
+        BuiltinOperatorId.UnpackOkResult,
+        -> null
     }
 
     override fun optionalSupportCode(

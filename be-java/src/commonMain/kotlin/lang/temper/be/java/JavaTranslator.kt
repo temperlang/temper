@@ -1331,7 +1331,6 @@ class JavaTranslator(
                 },
             )
 
-        private fun stubStmt(t: TmpL.Tree) = J.CommentLine(t.pos, t.toLispy().replace('\n', ' '))
         private fun stubExpr(t: TmpL.Tree) = J.StringLiteral(t.pos, t.toLispy())
 
         /**
@@ -1620,7 +1619,6 @@ class JavaTranslator(
                 is TmpL.BreakStatement -> J.BreakStatement(t.pos, t.label?.let { names.label(it) })
                 is TmpL.ContinueStatement -> J.ContinueStatement(t.pos, t.label?.let { names.label(it) })
                 is TmpL.ExpressionStatement -> exprStatement(t)
-                is TmpL.HandlerScope -> stubStmt(t)
                 is TmpL.IfStatement -> ifStmt(t)
                 is TmpL.LabeledStatement -> J.LabeledStatement(
                     t.pos,
@@ -1784,26 +1782,12 @@ class JavaTranslator(
         private fun leftHandSide(left: TmpL.Id) =
             names.lookupLocalOrExternalNameObj(left).asLhs(left.pos, names)
 
-        private fun assignment(t: TmpL.Assignment): J.BlockLevelStatement = when (val rhs = t.right) {
-            is TmpL.Expression ->
-                Assign.assign(
-                    leftHandSide(t.left),
-                    expr(rhs),
-                    pos = t.pos,
-                ).exprStatement(t.pos)
-            // TmpL
-            //     assignedTo = hs(fail, handled)
-            // becomes Java
-            //     fail = (assignedTo = handled) == null;
-            is TmpL.HandlerScope ->
-                Assign.assign(
-                    leftHandSide(rhs.failed),
-                    Assign.assign(
-                        leftHandSide(t.left),
-                        handled(rhs.handled),
-                    ).testNull(),
-                ).exprStatement(t.pos)
-        }
+        private fun assignment(t: TmpL.Assignment): J.BlockLevelStatement =
+            Assign.assign(
+                leftHandSide(t.left),
+                expr(t.right),
+                pos = t.pos,
+            ).exprStatement(t.pos)
 
         private fun setProperty(t: TmpL.SetProperty): J.BlockLevelStatement {
             val left = t.left
@@ -1820,11 +1804,6 @@ class JavaTranslator(
                 is TmpL.InternalPropertyId ->
                     Assign.assign(expr(leftSubject).field(names.field(prop)), expr(t.right)).exprStatement(t.pos)
             }
-        }
-
-        private fun handled(handled: TmpL.Handled): J.Expression = when (handled) {
-            is TmpL.Expression -> expr(handled)
-            is TmpL.SetAbstractProperty -> TODO()
         }
 
         fun expr(x: TmpL.Expression): J.Expression = when (x) {
@@ -2311,7 +2290,7 @@ class JavaTranslator(
                     val catchPos = pos.rightEdge
                     val interruptedExceptionName = names.ignoredIdentifier(catchPos)
                     val executionExceptionName = names.ignoredIdentifier(catchPos)
-                    return J.TryStatement(
+                    J.TryStatement(
                         pos = pos,
                         bodyBlock = J.BlockStatement(J.ExpressionStatement(getCall)),
                         catchBlocks = listOf(

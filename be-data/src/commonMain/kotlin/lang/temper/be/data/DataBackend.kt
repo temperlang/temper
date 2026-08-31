@@ -236,7 +236,7 @@ internal object DataSupportNetwork : SupportNetwork {
     override val backendDescription: String
         get() = "data backend"
     override val bubbleStrategy: BubbleBranchStrategy
-        get() = BubbleBranchStrategy.CatchBubble // why not?
+        get() = BubbleBranchStrategy.Exceptions // why not?
     override val coroutineStrategy: CoroutineStrategy
         get() = CoroutineStrategy.TranslateToGenerator // sure
     override val functionTypeStrategy: FunctionTypeStrategy

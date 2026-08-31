@@ -2,10 +2,8 @@ package lang.temper.be.rust
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
-import lang.temper.be.tmpl.ConvertedCoroutineAwakeUponFn
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
-import lang.temper.be.tmpl.GetPromiseResultSyncFn
 import lang.temper.be.tmpl.InlineSupportCode
 import lang.temper.be.tmpl.NamedSupportCode
 import lang.temper.be.tmpl.OptionalSupportCodeKind
@@ -18,6 +16,8 @@ import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.builtin.RuntimeTypeOperation
 import lang.temper.common.subListToEnd
 import lang.temper.format.TokenSink
+import lang.temper.frontend.coroutine.CoroHelperSpecials.ConvertedCoroutineAwakeUponFn
+import lang.temper.frontend.coroutine.CoroHelperSpecials.GetPromiseResultSyncFn
 import lang.temper.lexer.Genre
 import lang.temper.log.Position
 import lang.temper.name.OutName
@@ -36,7 +36,7 @@ import lang.temper.value.pureVirtualBuiltinName
 object RustSupportNetwork : SupportNetwork {
     override val backendDescription = "Rust Backend"
 
-    override val bubbleStrategy = BubbleBranchStrategy.IfHandlerScopeVar
+    override val bubbleStrategy = BubbleBranchStrategy.Results
     override val coroutineStrategy = CoroutineStrategy.TranslateToRegularFunction
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionType
 
@@ -165,6 +165,11 @@ private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): Supp
         // Should not be used with CoroutineStrategy.TranslateToGenerator, but we don't use that for now.
         BuiltinOperatorId.AdaptGeneratorFn -> adaptGeneratorFn
         BuiltinOperatorId.SafeAdaptGeneratorFn -> adaptGeneratorFnSafe
+
+        // Required since using results for failure recovery
+        BuiltinOperatorId.IsOkResult -> TODO()
+        BuiltinOperatorId.PackOkResult -> TODO()
+        BuiltinOperatorId.UnpackOkResult -> TODO()
 
         null -> null
     }

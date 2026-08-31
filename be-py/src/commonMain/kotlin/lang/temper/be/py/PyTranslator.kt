@@ -714,7 +714,7 @@ class PyTranslator(
 
     private fun translate(s: TmpL.Statement, renames: List<Py.Stmt>?) = renames.orEmpty() + translate(s)
 
-    private fun rightHasPureVirtual(rhs: TmpL.RightHandSide): Boolean {
+    private fun rightHasPureVirtual(rhs: TmpL.Expression): Boolean {
         if (rhs is TmpL.CallExpression) {
             val fn = rhs.fn
             if (fn is TmpL.InlineSupportCodeWrapper) {
@@ -769,18 +769,9 @@ class PyTranslator(
                 else -> listOf(Py.ExprStmt(s.pos, expr(s.expression)))
             }
         }
-        is TmpL.HandlerScope -> listOf(
-            garbageStmt(s.pos, "hs", "hs(...) not converted to try"),
-        )
 
         is TmpL.Assignment ->
-            when (val rhs = s.right) {
-                is TmpL.HandlerScope -> listOf(
-                    garbageStmt(s.pos, "assign hs", "hs(...) not converted to try"),
-                )
-
-                is TmpL.Expression -> listOf(Py.Assign.simple(name(s.left), expr(rhs)))
-            }
+            listOf(Py.Assign.simple(name(s.left), expr(s.right)))
 
         is TmpL.BreakStatement -> listOf(breakStmt(s))
         is TmpL.ContinueStatement -> listOf(continueStmt(s))

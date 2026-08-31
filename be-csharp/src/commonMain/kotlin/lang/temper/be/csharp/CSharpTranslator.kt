@@ -819,7 +819,7 @@ internal class CSharpTranslator(
     }
 
     private fun translateAssignment(statement: TmpL.Assignment): CSharp.Statement =
-        translateAssignment(statement.pos, statement.left, statement.right as TmpL.Expression)
+        translateAssignment(statement.pos, statement.left, statement.right)
 
     private fun translateAssignment(
         pos: Position,
@@ -1887,7 +1887,6 @@ internal class CSharpTranslator(
             is TmpL.EmbeddedComment -> TODO()
             is TmpL.ExpressionStatement -> return listOfNotNull(translateExpressionStatement(statement))
             is TmpL.GarbageStatement -> TODO()
-            is TmpL.HandlerScope -> TODO()
             is TmpL.LocalDeclaration -> translateLocalDeclaration(statement)
             is TmpL.LocalFunctionDeclaration -> return translateLocalFunctionDeclaration(statement)
             is TmpL.ModuleInitFailed -> TODO()

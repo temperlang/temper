@@ -173,10 +173,7 @@ open class CppTranslator(
         cpp.binaryExpr(
             translateId(stmt.left),
             cpp.binaryOp("="),
-            when (val value = stmt.right) {
-                is TmpL.Expression -> translateExpression(value)
-                is TmpL.HandlerScope -> error("$stmt") // handled elsewhere
-            },
+            translateExpression(stmt.right),
         ).let { cpp.exprStmt(it) }
     }
 
@@ -256,48 +253,6 @@ open class CppTranslator(
     private fun translateExpressionStatement(stmt: TmpL.ExpressionStatement): Cpp.Stmt = cpp.pos(stmt) {
         val expr = translateExpression(stmt.expression)
         cpp.exprStmt(expr)
-    }
-
-    private fun MutableList<Cpp.Stmt>.translateHandlerScopeAssignment(
-        assignment: TmpL.Assignment,
-        check: TmpL.Statement,
-    ) {
-        val handlerScope = assignment.right as TmpL.HandlerScope
-        val failed = translateId(handlerScope.failed)
-        // Get the Expected instance.
-        cpp.pos(assignment) {
-            cpp.varDef(
-                cpp.template(
-                    cpp.name("temper", "core", "Expected"),
-                    decls.getValue(assignment.left.name).type,
-                ),
-                failed as Cpp.SingleName,
-                translateExpression(handlerScope.handled as TmpL.Expression),
-            ).also { add(it) }
-        }
-        // Check if it's an error.
-        cpp.pos(check) check@{
-            val checkIf = (check as? TmpL.IfStatement) ?: return@check
-            cpp.ifStmt(
-                cpp.op("!", cpp.callExpr(cpp.memberExpr(failed, cpp.singleName("has_value")))),
-                run {
-                    // One of various options for providing failure information to failure propagation statements.
-                    fails.add(failed)
-                    try {
-                        cpp.stmt(translateStatement(checkIf.consequent))
-                    } finally {
-                        fails.removeLast()
-                    }
-                },
-            ).also { add(it) }
-        }
-        // Get the value from the Expected.
-        cpp.pos(assignment) {
-            // Use dereference op because we already checked if it has a value.
-            cpp.exprStmt(
-                cpp.op("=", translateId(assignment.left), cpp.op("*", failed)),
-            ).also { add(it) }
-        }
     }
 
     private fun translateId(id: TmpL.Id): Cpp.Name = cpp.pos(id) {
@@ -440,24 +395,6 @@ open class CppTranslator(
         var i = 0
         statements@ while (i < statements.size) {
             val statement = statements[i]
-            when (statement) {
-                // Combine handler scope statements that come awkwardly from frontend and tmpl.
-                // TODO Non-assignment handler scope.
-//                is TmpL.HandlerScope -> {
-//                    translateHandlerScope(statement, statements[i + 1])
-//                    i += 2
-//                    continue@statements
-//                }
-                is TmpL.Assignment -> when (statement.right) {
-                    is TmpL.HandlerScope -> {
-                        translateHandlerScopeAssignment(statement, statements[i + 1])
-                        i += 2
-                        continue@statements
-                    }
-                    else -> {}
-                }
-                else -> {}
-            }
             addAll(translateStatement(statement))
             i += 1
         }

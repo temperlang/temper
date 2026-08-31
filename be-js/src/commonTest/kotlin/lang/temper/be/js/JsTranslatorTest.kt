@@ -4,7 +4,6 @@ import lang.temper.be.TranslatorTests
 import lang.temper.be.tmpl.TmpL
 import lang.temper.format.TokenSink
 import lang.temper.lexer.Genre
-import kotlin.test.Ignore
 import kotlin.test.Test
 
 class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSupportNetwork) {
@@ -24,10 +23,6 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
     /** Override to allow IntelliJ to detect tests. */
     @Test
     override fun overrideThis() = Unit
-
-    @Ignore // JS backend uses BubbleBranchStrategy.CatchBubble
-    @Test
-    override fun assignToHse() = Unit
 
     companion object {
         private val testNameToExpectedCode = mapOf(
@@ -250,8 +245,6 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
                     |  return 42;
                     |}
                 """.trimMargin(),
-            "exprStatementHse" to
-                """failed_0 = false, "dummy" ||(failed_0 = true, null);""",
             "expressionAssociativityLeftAmp" to "a_0 && b_1 && c_2",
             "expressionAssociativityRightAmp" to "a_0 &&(b_1 && c_2)",
             "expressionAssociativityLeftPlus" to "a_0 + b_1 + c_2",

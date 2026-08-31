@@ -141,6 +141,11 @@ internal object PySupportNetwork : SupportNetwork {
             BuiltinOperatorId.AdaptGeneratorFn,
             BuiltinOperatorId.SafeAdaptGeneratorFn,
             -> null
+            // Using exceptions, not results.
+            BuiltinOperatorId.IsOkResult,
+            BuiltinOperatorId.PackOkResult,
+            BuiltinOperatorId.UnpackOkResult,
+            -> null
             null -> null
         }
 
@@ -200,7 +205,7 @@ internal object PySupportNetwork : SupportNetwork {
         return super.translateRuntimeTypeOperation(pos, rto, sourceType, targetType)
     }
 
-    override val bubbleStrategy = BubbleBranchStrategy.CatchBubble
+    override val bubbleStrategy = BubbleBranchStrategy.Exceptions
 
     // Technically, None is void in Python, but too many things are statements only, such as assert.
     override fun representationOfVoid(genre: Genre): RepresentationOfVoid =

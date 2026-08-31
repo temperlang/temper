@@ -10,6 +10,7 @@ import lang.temper.common.assertStringsEqual
 import lang.temper.format.toStringViaTokenSink
 import lang.temper.interp.docgenalts.AltIfFn
 import lang.temper.interp.docgenalts.AltReturnFn
+import lang.temper.lexer.Genre
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.ParsedName
@@ -17,6 +18,8 @@ import lang.temper.name.ResolvedNameMaker
 import lang.temper.type.MkType
 import lang.temper.type.TypeTestHarness
 import lang.temper.type.WellKnownTypes
+import lang.temper.type2.MkType2
+import lang.temper.type2.Signature2
 import lang.temper.value.BlockTree
 import lang.temper.value.BreakOrContinue
 import lang.temper.value.CallTypeInferences
@@ -34,8 +37,9 @@ class TmpLControlFlowTest {
     internal class TestGoalTranslator(
         override val supportNetwork: SupportNetwork,
         override val cfOptions: CfOptions,
+        override val genre: Genre,
+        override val bodyFor: BodyFor = BodyForModule,
     ) : GoalTranslator {
-        override val bodyFor get() = TODO("Not yet implemented")
 
         override val translator: TmpLTranslator
             get() = TODO("Not yet implemented")
@@ -58,6 +62,8 @@ class TmpLControlFlowTest {
         expectedErrors: List<String> = emptyList(),
         nrbStrategy: BubbleBranchStrategy = BubbleBranchStrategy.Results,
         representationOfVoid: RepresentationOfVoid = RepresentationOfVoid.ReifyVoid,
+        genre: Genre = Genre.Library,
+        bodyFor: BodyFor = BodyForModule,
         makeBlock: (Planting).(ResolvedNameMaker) -> UnpositionedTreeTemplate<BlockTree>,
     ) {
         val doc = Document(TestDocumentContext())
@@ -67,12 +73,14 @@ class TmpLControlFlowTest {
         val cfOptions = CfOptions(nrbStrategy, representationOfVoid)
 
         val testGoalTranslator = TestGoalTranslator(
-            TestSupportNetwork(
+            supportNetwork = TestSupportNetwork(
                 bubbleStrategy = nrbStrategy,
                 coroutineStrategy = CoroutineStrategy.TranslateToRegularFunction,
                 representationOfVoid = representationOfVoid,
             ),
-            cfOptions,
+            cfOptions = cfOptions,
+            genre = genre,
+            bodyFor = bodyFor,
         )
 
         val loc = doc.context.namingContext.loc
@@ -142,13 +150,14 @@ class TmpLControlFlowTest {
         want = (
             """
                 |{
-                |  let fail#3;
                 |  CombinedDeclaration {
                 |    let t#1;
                 |    = 123
                 |  };
-                |  let t#2;
-                |  t#2 = hs(fail#3, f());
+                |  CombinedDeclaration {
+                |    let t#2;
+                |    = f()
+                |  };
                 |  CombinedDeclaration {
                 |    let A__0;
                 |    = t#2
@@ -222,6 +231,13 @@ class TmpLControlFlowTest {
             |  return null;
             |}
         """.trimMargin(),
+        genre = Genre.Documentation,
+        bodyFor = BodyForFun(
+            Signature2(
+                MkType2(WellKnownTypes.intTypeDefinition).canBeNull().get(),
+                false, listOf(),
+            ),
+        ),
     ) { nameMaker ->
         val (cond, f, g) = listOf("cond", "f", "g").map { nameMaker.unusedSourceName(ParsedName(it)) }
         Block {

@@ -106,12 +106,16 @@ internal fun operatorToName(
     BuiltinOperatorId.SafeAdaptGeneratorFn,
     -> "null_op"
     null -> "null_op"
+    BuiltinOperatorId.IsOkResult,
+    BuiltinOperatorId.PackOkResult,
+    BuiltinOperatorId.UnpackOkResult,
+    -> error("Lua uses exceptions, not results")
 }
 
 internal object LuaSupportNetwork : SupportNetwork {
     override val backendDescription: String
         get() = "Lua Backend"
-    override val bubbleStrategy: BubbleBranchStrategy = BubbleBranchStrategy.CatchBubble
+    override val bubbleStrategy: BubbleBranchStrategy = BubbleBranchStrategy.Exceptions
     override val coroutineStrategy: CoroutineStrategy = CoroutineStrategy.TranslateToGenerator
     override val functionTypeStrategy: FunctionTypeStrategy = FunctionTypeStrategy.ToFunctionType
 

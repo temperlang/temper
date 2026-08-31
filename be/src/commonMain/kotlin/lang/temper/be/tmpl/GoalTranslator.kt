@@ -22,6 +22,7 @@ internal interface GoalTranslator {
     val cfOptions get() = translator.cfOptions
     val supportNetwork: SupportNetwork get() = translator.supportNetwork
     val bodyFor: BodyFor
+    val genre get() = translator.genre
 
     fun translateGoal(p: Position, goalSpecifier: GoalSpecifier) = when (goalSpecifier) {
         ExitGoalSpecifier -> translateExit(p)

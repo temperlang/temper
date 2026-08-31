@@ -27,7 +27,7 @@ import lang.temper.value.NamedBuiltinFun
 
 object CppSupportNetwork : SupportNetwork {
     override val backendDescription = "C++ Backend"
-    override val bubbleStrategy = BubbleBranchStrategy.IfHandlerScopeVar
+    override val bubbleStrategy = BubbleBranchStrategy.Results
     override val coroutineStrategy = CoroutineStrategy.TranslateToRegularFunction
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionalInterface
 

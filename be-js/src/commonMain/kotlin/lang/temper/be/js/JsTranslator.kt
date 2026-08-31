@@ -834,19 +834,6 @@ internal class JsTranslator(
         }
     }
 
-    /**
-     * [JsSupportNetwork] opts into
-     * [lang.temper.be.tmpl.BubbleBranchStrategy.CatchBubble]
-     * so we shouldn't get handler scope calls.
-     */
-    private fun translateHandlerScope(t: TmpL.HandlerScope, assignedTo: TmpL.Id?): List<Js.Statement> =
-        translateGarbageStatement(
-            TmpL.GarbageStatement(
-                t.pos,
-                diagnostic = TmpL.Diagnostic(t.pos, "$t -> $assignedTo not decompiled to throw"),
-            ),
-        )
-
     private fun translateParameters(parameters: List<TmpL.Actual>) =
         parameters.mapGeneric(::translateActual)
 
@@ -1776,7 +1763,6 @@ internal class JsTranslator(
             is TmpL.SetProperty -> listOf(
                 Js.ExpressionStatement(s.pos, translateSetProperty(s)),
             )
-            is TmpL.HandlerScope -> translateHandlerScope(s, null)
             is TmpL.BoilerplateCodeFoldBoundary -> listOf(translateBoilerplateCodeFoldBoundary(s))
             is TmpL.EmbeddedComment -> translateEmbeddedComment(s)
             // Currently compute jumps are only used with coroutine strategy mode not
@@ -1827,20 +1813,18 @@ internal class JsTranslator(
 
     private fun translateAssignment(e: TmpL.Assignment): List<Js.Statement> {
         val left = e.left
-        return when (val right = e.right) {
-            is TmpL.Expression -> listOf(
-                Js.ExpressionStatement(
+        val right = e.right
+        return listOf(
+            Js.ExpressionStatement(
+                e.pos,
+                Js.AssignmentExpression(
                     e.pos,
-                    Js.AssignmentExpression(
-                        e.pos,
-                        translateIdStrict(left),
-                        Js.Operator(e.pos, "="),
-                        translateExpression(right),
-                    ),
+                    translateIdStrict(left),
+                    Js.Operator(e.pos, "="),
+                    translateExpression(right),
                 ),
-            )
-            is TmpL.HandlerScope -> translateHandlerScope(right, assignedTo = left)
-        }
+            ),
+        )
     }
 
     private fun translateSetProperty(s: TmpL.SetProperty): Js.Expression {

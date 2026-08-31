@@ -14,6 +14,8 @@ import lang.temper.format.TokenSink
 import lang.temper.frontend.core.CoreModule
 import lang.temper.frontend.structureBlock
 import lang.temper.interp.LongLivedUserFunction
+import lang.temper.interp.docgenalts.DocGenAltFn
+import lang.temper.lexer.Genre
 import lang.temper.log.Position
 import lang.temper.log.Positioned
 import lang.temper.log.spanningPosition
@@ -44,6 +46,7 @@ import lang.temper.value.EscTree
 import lang.temper.value.FunTree
 import lang.temper.value.JumpLabel
 import lang.temper.value.LeftNameLeaf
+import lang.temper.value.LinearFlow
 import lang.temper.value.NameLeaf
 import lang.temper.value.NamedJumpSpecifier
 import lang.temper.value.RightNameLeaf
@@ -81,9 +84,26 @@ internal fun translateFlow(
     // so that we can merge adjacent declarations and initializers.
     // Once all our ducks are in a row, we produce something that the translator can interpret in
     // an expression/statement/top-level context as needed.
-    val flow = structureBlock(tree)
-    val flowTranslator = ControlFlowTranslator(goalTranslator, nameMaker, options)
-    var preTranslated = flowTranslator.translate(flow.controlFlow, tree)
+    var preTranslated =
+        if (goalTranslator.genre == Genre.Documentation && tree.flow is LinearFlow) {
+            fun translateBlockChild(t: Tree): PreTranslated {
+                val altFn = (t as? CallTree)?.childOrNull(0)?.functionContained as? DocGenAltFn
+                return if (altFn != null) {
+                    translateAltDocGenFn(altFn, t, goalTranslator, nameMaker, options, outputName = outputName)
+                } else {
+                    PreTranslated.TreeWrapper(t)
+                }
+            }
+            PreTranslated.Block(
+                tree.pos,
+                tree.children.map { translateBlockChild(it) },
+            )
+        } else {
+            val flow = structureBlock(tree)
+            val flowTranslator = ControlFlowTranslator(goalTranslator, nameMaker, options)
+
+            flowTranslator.translate(flow.controlFlow, tree)
+        }
 
     if (options.representationOfVoid == RepresentationOfVoid.DoNotReifyVoid) {
         preTranslated = removeReferencesAndAssignmentsToVoid(preTranslated)

@@ -378,7 +378,7 @@ internal object JsSupportNetwork : SupportNetwork {
         return super.translateRuntimeTypeOperation(pos, rto, sourceType, targetType)
     }
 
-    override val bubbleStrategy = BubbleBranchStrategy.CatchBubble
+    override val bubbleStrategy = BubbleBranchStrategy.Exceptions
     override val coroutineStrategy = CoroutineStrategy.TranslateToGenerator
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionType
 
@@ -1989,6 +1989,12 @@ private val builtinOperatorIdToSupportCode = BuiltinOperatorId.entries.mapNotNul
         // should not be used with CoroutineStrategy.TranslateToGenerator
         BuiltinOperatorId.AdaptGeneratorFn,
         BuiltinOperatorId.SafeAdaptGeneratorFn,
+        -> null
+
+        // should not be used with BubbleBranchStrategy.Exceptions
+        BuiltinOperatorId.IsOkResult,
+        BuiltinOperatorId.PackOkResult,
+        BuiltinOperatorId.UnpackOkResult,
         -> null
     }
 }.toMap()

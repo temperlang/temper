@@ -588,19 +588,7 @@ class RustTranslator(
                 pendingLocalFunctions.clear()
                 results.addAll(translateds)
             }
-            when (statement) {
-                // Combine handler scope statements that come awkwardly from frontend and tmpl.
-                is TmpL.HandlerScope -> translateHandlerScope(statement, statements[i + 1])
-                is TmpL.Assignment -> when (statement.right) {
-                    is TmpL.HandlerScope -> translateHandlerScopeAssignment(statement, statements[i + 1])
-                    else -> null
-                }
-
-                else -> null
-            }?.let { bubbler ->
-                results.add(bubbler)
-                i += 1
-            } ?: results.addAll(
+            results.addAll(
                 when {
                     skipLastReturn && i == statements.size - 1 && statement is TmpL.ReturnStatement ->
                         translateReturnStatement(statement, last = true)
@@ -1600,7 +1588,7 @@ class RustTranslator(
             else -> id
         }
         val value = right ?: run {
-            val foundRight = statement.right as TmpL.Expression
+            val foundRight = statement.right
             val value = translateExpression(foundRight)
             when (decl) {
                 null -> value
@@ -2218,30 +2206,12 @@ class RustTranslator(
 
     private fun translateGetterId(getter: TmpL.Getter) = translateDotName(getter.dotName)
 
+    /* do not commit
     private fun translateHandlerScope(statement: TmpL.HandlerScope, check: TmpL.Statement): Rust.Statement {
         return Rust.ExprStatement(
             statement.pos,
             expr = translateHandlerScopeExpression(statement = statement, check = check),
         )
-    }
-
-    private fun translateHandlerScopeAssignment(
-        statement: TmpL.Assignment,
-        check: TmpL.Statement,
-    ): Rust.Statement {
-        val decl = decls[statement.left.name]
-        val right = statement.right as TmpL.HandlerScope
-        val translatedRight = translateHandlerScopeExpression(
-            statement = right,
-            check = check,
-            assignment = statement,
-            wantedType = decl?.typeFrom as? Type2,
-        )
-        return when ((check as? TmpL.IfStatement)?.hasElse) {
-            // Use internal assignment if we have actual else content. Currently just for coroutine state machines.
-            true -> Rust.ExprStatement(statement.pos, translatedRight)
-            else -> translateAssignment(statement = statement, right = translatedRight).first()
-        }
     }
 
     private fun translateHandlerScopeExpression(
@@ -2325,6 +2295,7 @@ class RustTranslator(
             }
         }.toBlock(alternate.pos)
     }
+     */
 
     private fun translateId(id: TmpL.Id, style: NameStyle? = null): Rust.Id {
         return translateIdAsPath(id, style = style) as Rust.Id
@@ -3056,7 +3027,6 @@ class RustTranslator(
                 is TmpL.EmbeddedComment -> translateUnsupportedStatement(statement)
                 is TmpL.ExpressionStatement -> translateExpressionStatement(statement)
                 is TmpL.GarbageStatement -> translateGarbageStatement(statement)
-                is TmpL.HandlerScope -> error("handled elsewhere")
                 is TmpL.LocalDeclaration -> return translateModuleOrLocalDeclaration(statement)
                 is TmpL.LocalFunctionDeclaration -> error("handled elsewhere")
                 is TmpL.ModuleInitFailed -> translateModuleInitFailed(statement)
