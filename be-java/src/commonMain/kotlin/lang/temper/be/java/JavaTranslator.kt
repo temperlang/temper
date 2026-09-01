@@ -1740,14 +1740,7 @@ class JavaTranslator(
                     fun translateCaseBody(caseBody: TmpL.BlockStatement): List<J.BlockLevelStatement> {
                         val jBlock = block(caseBody)
                         // In Java, `break` is necessary to prevent fall-through to the next case.
-                        val needsBreak = when (jBlock.body.lastOrNull()) {
-                            is J.ReturnStatement,
-                            is J.ThrowStatement,
-                            is J.BreakStatement,
-                            is J.ContinueStatement,
-                            -> false
-                            else -> true // Conservative
-                        }
+                        val needsBreak = !codeAfterWouldBeDeadByJavaRules(jBlock, null)
                         if (needsBreak) {
                             jBlock.body += J.BreakStatement(jBlock.pos.rightEdge, null)
                         }
