@@ -1108,6 +1108,76 @@ class WeaverTest {
         """.trimMargin(),
     )
 
+    @Test
+    fun mixedIfAssignedEndsWithNullUntyped() = assertWovenRoot(
+        // let x =
+        //   if (b(0)) {
+        //     f(1)
+        //   } else if (b(2)) {
+        //     f(3)
+        //   } else {
+        //     null
+        //   };
+        buildInput = {
+            val x = nameMaker.unusedSourceName(ParsedName("x"))
+
+            Decl { Ln(x) }
+            Call(BuiltinFuns.vSetLocalFn) {
+                Ln(x)
+                Block {
+                    If(
+                        cond = {
+                            Call {
+                                Rn(BuiltinName("b"))
+                                V(Value(0, TInt))
+                            }
+                        },
+                        thn = {
+                            Call {
+                                Rn(BuiltinName("f"))
+                                V(Value(1, TInt))
+                            }
+                        },
+                        els = {
+                            If(
+                                cond = {
+                                    Call {
+                                        Rn(BuiltinName("b"))
+                                        V(Value(2, TInt))
+                                    }
+                                },
+                                thn = {
+                                    Call {
+                                        Rn(BuiltinName("f"))
+                                        V(Value(3, TInt))
+                                    }
+                                },
+                                els = {
+                                    V(TNull.value)
+                                },
+                            )
+                        },
+                    )
+                }
+            }
+            V(void)
+        },
+        want = """
+            |[[ let t#2 ]];
+            |[[ let return__1 ]];
+            |[[ return__1 = void ]];
+            |[[ let x__0 ]];
+            |if ([[ b(0) ]]) {
+            |  [[ t#2 = f(1) ]];
+            |} else if ([[ b(2) ]]) {
+            |  [[ t#2 = f(3) ]];
+            |} else {
+            |  [[ t#2 = null ]];
+            |}
+            |[[ x__0 = t#2 ]];
+        """.trimMargin(),
+    )
+
     private fun assertWovenRoot(
         want: String,
         runMakeResultsExplicit: Boolean = true,

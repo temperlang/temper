@@ -8,6 +8,6 @@ var x__1 ⦂ String;
 orelse#3: {
   x__1 = (fn f)()
 } orelse {
-  x__1 = panic ⋖ String ⋗();
+  x__1 = panic ⋖ String ⋗()
 };
 return__4 = x__1;
