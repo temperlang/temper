@@ -2131,7 +2131,6 @@ class RustBackendTest {
             |}
             |fn a__0(n__0: i32, nums__0: impl temper_core::ToList<i32>) {
             |    let nums__0 = nums__0.to_list();
-            |    let mut t___0: i32;
             |    'outer__0: loop {
             |        let mut j__0: i32 = 0;
             |        'loop___0: while j__0 < n__0 {
@@ -2140,19 +2139,14 @@ class RustBackendTest {
             |        break;
             |    }
             |    let mut i__0: i32 = 0;
-            |    'loop___1: loop {
-            |        'continue___0: {
-            |            t___0 = temper_core::ListedTrait::len( & nums__0);
-            |            if ! (i__0 < t___0) {
-            |                break 'loop___1;
-            |            }
-            |            let mut j__1: i32 = 0;
-            |            'loop___2: while j__1 < n__0 {
-            |                break 'continue___0;
-            |            }
+            |    'loop___1: while i__0 < temper_core::ListedTrait::len( & nums__0) {
+            |        let mut j__1: i32 = 0;
+            |        'loop___2: while j__1 < n__0 {
+            |            break;
             |        }
             |        i__0 = i__0.wrapping_add(1);
             |    }
+            |    return ();
             |}
         """.trimMargin(),
     )
@@ -2458,8 +2452,7 @@ class RustBackendTest {
             |}
             |pub fn hi(n__0: i32, things__0: impl temper_core::ToList<std::sync::Arc<String>>) -> i32 {
             |    let things__0 = things__0.to_list();
-            |    let mut t___0: i32 = temper_core::ListedTrait::len( & things__0);
-            |    return n__0.wrapping_add(t___0);
+            |    return n__0.wrapping_add(temper_core::ListedTrait::len( & things__0));
             |}
         """.trimMargin(),
     )
