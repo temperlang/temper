@@ -1260,21 +1260,10 @@ data class DependencyGrouping(
 
 fun TmpL.Statement.isYieldingStatement(): Boolean =
     when (this) {
-        is TmpL.BoilerplateCodeFoldBoundary,
-        is TmpL.BreakStatement,
-        is TmpL.ContinueStatement,
-        is TmpL.EmbeddedComment,
-        is TmpL.GarbageStatement,
-        is TmpL.Declaration,
-        is TmpL.ModuleInitFailed,
-        is TmpL.ReturnStatement,
-        is TmpL.SetProperty,
-        is TmpL.ThrowStatement,
-        -> false
-
         is TmpL.YieldStatement -> true
-        is TmpL.ExpressionStatement -> expression is TmpL.AwaitExpression
         is TmpL.Assignment -> right is TmpL.AwaitExpression
+        is TmpL.ExpressionStatement -> expression is TmpL.AwaitExpression
+        is TmpL.LocalDeclaration -> this.init is TmpL.AwaitExpression
 
         is TmpL.BlockStatement ->
             this.statements.any { it.isYieldingStatement() }
@@ -1286,6 +1275,18 @@ fun TmpL.Statement.isYieldingStatement(): Boolean =
         is TmpL.TryStatement -> this.tried.isYieldingStatement() ||
             this.recover.isYieldingStatement()
         is TmpL.WhileStatement -> this.body.isYieldingStatement()
+
+        is TmpL.BoilerplateCodeFoldBoundary,
+        is TmpL.BreakStatement,
+        is TmpL.ContinueStatement,
+        is TmpL.EmbeddedComment,
+        is TmpL.GarbageStatement,
+        is TmpL.Declaration,
+        is TmpL.ModuleInitFailed,
+        is TmpL.ReturnStatement,
+        is TmpL.SetProperty,
+        is TmpL.ThrowStatement,
+        -> false
     }
 
 val TmpL.Expression.isVoidConstant: Boolean get() =

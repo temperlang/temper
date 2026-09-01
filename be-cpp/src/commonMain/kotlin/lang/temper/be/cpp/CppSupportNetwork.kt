@@ -43,7 +43,7 @@ internal object CppSupportNetwork : SupportNetwork {
 
     override fun representationOfVoid(
         genre: Genre,
-    ): RepresentationOfVoid = RepresentationOfVoid.ReifyVoid
+    ): RepresentationOfVoid = RepresentationOfVoid.DoNotReifyVoid
 
     override fun getSupportCode(
         pos: Position,
