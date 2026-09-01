@@ -421,35 +421,42 @@ class RustBackendTest {
                 |}
                 |pub fn something(mut i__0: Option<i32>) -> temper_core::Result<i32> {
                 |    let return__0: i32;
-                |    let mut t___0: bool;
-                |    let mut t___1: i32;
+                |    let t___0: bool;
                 |    if ! i__0.is_none() {
                 |        t___0 = i__0.is_some();
                 |    } else {
                 |        t___0 = false;
                 |    }
                 |    if t___0 {
+                |        let t___1: i32;
                 |        if i__0.is_none() {
                 |            return Err(temper_core::Error::new());
                 |        } else {
-                |            t___1 = i__0.unwrap();
+                |            let result___0: temper_core::Result<i32> = Ok(i__0.unwrap());
+                |            if ! result___0.is_ok() {
+                |                return result___0;
+                |            }
+                |            t___1 = result___0.unwrap();
                 |        }
-                |        return__0 = temper_core::int_rem(5, t___1) ? ;
+                |        let return___0: temper_core::Result<i32> = Ok(temper_core::int_rem(5, t___1));
+                |        if ! return___0.is_ok() {
+                |            return return___0;
+                |        }
+                |        return__0 = return___0.unwrap();
                 |    } else {
                 |        return__0 = 1;
                 |    }
                 |    return Ok(return__0);
                 |}
                 |pub fn blah(i__1: i32) -> temper_core::Result<i32> {
-                |    let return__1: i32;
-                |    let mut t___3: i32;
+                |    let mut return__1: i32;
                 |    'ok___0: {
                 |        'orelse___0: {
-                |            t___3 = match something(Some(i__1)) {
-                |                Ok(x) => x,
-                |                _ => break 'orelse___0
-                |            };
-                |            return__1 = t___3;
+                |            let return___1: temper_core::Result<i32> = Ok(something(Some(i__1)));
+                |            if ! return___1.is_ok() {
+                |                break 'orelse___0;
+                |            }
+                |            return__1 = return___1.unwrap();
                 |            break 'ok___0;
                 |        }
                 |        return__1 = 0;
@@ -476,8 +483,11 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            let a__0: C;
-            |            a__0 = C::new(false) ? ;
+            |            let a___0: temper_core::Result<C> = Ok(C::new(false));
+            |            if ! a___0.is_ok() {
+            |                return Err(temper_core::Error::new());
+            |            }
+            |            let a__0: C = a___0.unwrap();
             |            Ok(())
             |    }).clone()
             |}
@@ -489,14 +499,16 @@ class RustBackendTest {
             |impl C {
             |    pub fn new(x__0: bool) -> temper_core::Result<C> {
             |        let x;
+            |        let return__0: ();
+            |        return__0 = ();
             |        if x__0 {
             |            return Err(temper_core::Error::new());
             |        }
             |        x = x__0;
+            |        return Ok(return__0);
             |        let selfish = C(std::sync::Arc::new(CStruct {
             |                    x
             |        }));
-            |        return Ok(selfish);
             |    }
             |    pub fn x(& self) -> bool {
             |        return self.0.x;
@@ -594,45 +606,47 @@ class RustBackendTest {
             |        crate::init(None);
             |        temper_std::init(None);
             |        let test___0 = temper_std::testing::Test::new();
-            |        let mut sum__1: std::sync::Arc<std::sync::RwLock<i32>> = std::sync::Arc::new(std::sync::RwLock::new(0));
+            |        let return__0: ();
+            |        return__0 = ();
+            |        let mut sum__0: std::sync::Arc<std::sync::RwLock<i32>> = std::sync::Arc::new(std::sync::RwLock::new(0));
             |        #[derive(Clone)]
-            |        struct ClosureGroup___1 {
-            |            sum__1: std::sync::Arc<std::sync::RwLock<i32>>
+            |        struct ClosureGroup___0 {
+            |            sum__0: std::sync::Arc<std::sync::RwLock<i32>>
             |        }
-            |        impl ClosureGroup___1 {
-            |            fn fn__1(& self, i__2: i32) {
+            |        impl ClosureGroup___0 {
+            |            fn fn__0(& self, i__1: i32) {
             |                {
-            |                    * self.sum__1.write().unwrap() = temper_core::read_locked( & self.sum__1).wrapping_add(i__2);
+            |                    * self.sum__0.write().unwrap() = temper_core::read_locked( & self.sum__0).wrapping_add(i__1);
             |                }
             |            }
             |        }
-            |        let closure_group = ClosureGroup___1 {
-            |            sum__1: sum__1.clone()
+            |        let closure_group = ClosureGroup___0 {
+            |            sum__0: sum__0.clone()
             |        };
-            |        let fn__1 = {
+            |        let fn__0 = {
             |            let closure_group = closure_group.clone();
-            |            std::sync::Arc::new(move | i__2: i32 | closure_group.fn__1(i__2))
+            |            std::sync::Arc::new(move | i__1: i32 | closure_group.fn__0(i__1))
             |        };
-            |        repeat__0(3, fn__1.clone());
-            |        let actual___0: i32 = temper_core::read_locked( & sum__1);
-            |        let mut t___0: bool = Some(actual___0) == Some(3);
+            |        repeat__0(3, fn__0.clone());
+            |        let actual___0: i32 = temper_core::read_locked( & sum__0);
             |        #[derive(Clone)]
-            |        struct ClosureGroup___2 {
+            |        struct ClosureGroup___1 {
             |            actual___0: i32
             |        }
-            |        impl ClosureGroup___2 {
-            |            fn fn__2(& self) -> std::sync::Arc<String> {
+            |        impl ClosureGroup___1 {
+            |            fn fn__1(& self) -> std::sync::Arc<String> {
             |                return std::sync::Arc::new(format!("expected sum == ({}) not ({})", 3, self.actual___0));
             |            }
             |        }
-            |        let closure_group = ClosureGroup___2 {
+            |        let closure_group = ClosureGroup___1 {
             |            actual___0
             |        };
-            |        let fn__2 = {
+            |        let fn__1 = {
             |            let closure_group = closure_group.clone();
-            |            std::sync::Arc::new(move | | closure_group.fn__2())
+            |            std::sync::Arc::new(move | | closure_group.fn__1())
             |        };
-            |        test___0.assert(t___0, fn__2.clone());
+            |        test___0.assert(Some(actual___0) == Some(3), fn__1.clone());
+            |        return Ok(return__0);
             |        test___0.soft_fail_to_hard()
             |    }
             |    use super::*;
@@ -658,23 +672,24 @@ class RustBackendTest {
             |    }).clone()
             |}
             |fn things__0(n__0: i32) -> temper_core::Result<temper_core::List<i32>> {
-            |    return Ok(std::sync::Arc::new(vec![n__0]));
+            |    let return__0: temper_core::List<i32>;
+            |    return__0 = std::sync::Arc::new(vec![n__0]);
+            |    return Ok( & return__0);
             |}
             |pub fn other(n__1: i32) -> temper_core::Listed<i32> {
-            |    let return__0: temper_core::Listed<i32>;
-            |    let mut t___0: temper_core::Listed<i32>;
+            |    let mut return__1: temper_core::Listed<i32>;
             |    'ok___0: {
             |        'orelse___0: {
-            |            t___0 = match things__0(n__1) {
-            |                Ok(x) => temper_core::ToListed::to_listed(x),
-            |                _ => break 'orelse___0
-            |            };
-            |            return__0 = t___0.clone();
+            |            let return___0: temper_core::Result<temper_core::List<i32>> = Ok(things__0(n__1));
+            |            if ! return___0.is_ok() {
+            |                break 'orelse___0;
+            |            }
+            |            return__1 = temper_core::ToListed::to_listed(return___0.unwrap());
             |            break 'ok___0;
             |        }
-            |        return__0 = temper_core::cast::<temper_core::Listed<i32>>(panic!()).unwrap();
+            |        return temper_core::cast::<temper_core::Listed<i32>>(panic!()).unwrap();
             |    }
-            |    return return__0.clone();
+            |    return return__1.clone();
             |}
         """.trimMargin(),
     )
@@ -822,10 +837,10 @@ class RustBackendTest {
             |    let mut passed__0: bool = true;
             |    'ok___0: {
             |        'orelse___0: {
-            |            match f__0() {
-            |                Ok(x) => x,
-            |                _ => break 'orelse___0
-            |            };
+            |            let result___0: temper_core::Result<()> = Ok(f__0());
+            |            if ! result___0.is_ok() {
+            |                break 'orelse___0;
+            |            }
             |            break 'ok___0;
             |        }
             |        passed__0 = false;
@@ -863,7 +878,7 @@ class RustBackendTest {
             |        crate::init(None);
             |        temper_std::init(None);
             |        let test___0 = temper_std::testing::Test::new();
-            |        let mut t___0: bool;
+            |        let return__0: ();
             |        let nums__0: temper_core::List<i32> = std::sync::Arc::new(vec![0, 1]);
             |        let this__0: temper_core::List<i32> = nums__0.clone();
             |        let n__0: i32 = temper_core::ListedTrait::len( & this__0);
@@ -872,7 +887,6 @@ class RustBackendTest {
             |            let el__0: i32 = temper_core::ListedTrait::get( & this__0, i__0);
             |            i__0 = i__0.wrapping_add(1);
             |            let i__1: i32 = el__0;
-            |            t___0 = i__1 < temper_core::ListedTrait::len( & nums__0);
             |            #[derive(Clone)]
             |            struct ClosureGroup___0 {}
             |            impl ClosureGroup___0 {
@@ -885,8 +899,10 @@ class RustBackendTest {
             |                let closure_group = closure_group.clone();
             |                std::sync::Arc::new(move | | closure_group.fn__0())
             |            };
-            |            test___0.assert(t___0, fn__0.clone());
+            |            test___0.assert(i__1 < temper_core::ListedTrait::len( & nums__0), fn__0.clone());
             |        }
+            |        return__0 = ();
+            |        return Ok(return__0);
             |        test___0.soft_fail_to_hard()
             |    }
             |    use super::*;
@@ -916,8 +932,11 @@ class RustBackendTest {
             |    INIT_ONCE.get_or_init(| |{
             |            let handyThings__0: temper_core::List<temper_core::AnyValue> = std::sync::Arc::new(vec![1.as_any_value(), 2.as_any_value()]);
             |            let thing__0: temper_core::AnyValue = 1.as_any_value();
-            |            let things__0: temper_core::List<temper_core::AnyValue>;
-            |            things__0 = std::sync::Arc::new(vec![1, 2]).ok_or_else(| | temper_core::Error::new()) ? ;
+            |            let things___0: temper_core::Result<temper_core::List<temper_core::AnyValue>> = Ok(std::sync::Arc::new(vec![1, 2]).unwrap());
+            |            if ! things___0.is_ok() {
+            |                return Err(temper_core::Error::new());
+            |            }
+            |            let things__0: temper_core::List<temper_core::AnyValue> = things___0.unwrap();
             |            let more__0: temper_core::List<i32> = std::sync::Arc::new(vec![1, 2]);
             |            let still__0: temper_core::List<temper_core::AnyValue> = std::sync::Arc::new(vec![1, 2]);
             |            let yet__0: temper_core::List<temper_core::MapKey> = std::sync::Arc::new(vec![temper_core::MapKey::new(1), temper_core::MapKey::new(std::sync::Arc::new("two".to_string()))]);
@@ -948,13 +967,20 @@ class RustBackendTest {
                 |    INIT_ONCE.get_or_init(| |{
                 |            let thing__0: Apple = Apple::new(Banana::new());
                 |            let maybe__0: Option<Apple> = Some(thing__0.clone());
-                |            let nope__0: Carrot;
-                |            nope__0 = temper_core::cast::<Carrot>(thing__0.clone()).ok_or_else(| | temper_core::Error::new()) ? ;
+                |            let nope___0: temper_core::Result<Carrot> = Ok(temper_core::cast::<Carrot>(thing__0.clone()).unwrap());
+                |            if ! nope___0.is_ok() {
+                |                return Err(temper_core::Error::new());
+                |            }
+                |            let nope__0: Carrot = nope___0.unwrap();
                 |            let alsoNope__0: Carrot;
                 |            if maybe__0.is_none() {
                 |                return Err(temper_core::Error::new());
                 |            } else {
-                |                alsoNope__0 = maybe__0.clone().and_then(| x | temper_core::cast::<Carrot>(x)).ok_or_else(| | temper_core::Error::new()) ? ;
+                |                let alsoNope___0: temper_core::Result<Carrot> = Ok(maybe__0.clone().and_then(| x | temper_core::cast::<Carrot>(x)).unwrap());
+                |                if ! alsoNope___0.is_ok() {
+                |                    return Err(temper_core::Error::new());
+                |                }
+                |                alsoNope__0 = alsoNope___0.unwrap();
                 |            }
                 |            Ok(())
                 |    }).clone()
@@ -2340,29 +2366,30 @@ class RustBackendTest {
             |    }).clone()
             |}
             |fn f__0(a__0: Option<i32>, b__0: Option<i32>) {
-            |    let mut t___0: i32;
             |    let a__1: i32;
             |    if a__0.is_none() {
             |        a__1 = 1;
             |    } else {
             |        a__1 = a__0.unwrap();
             |    }
-            |    let b__1: i32;
+            |    let mut b__1: i32;
             |    'ok___0: {
             |        'orelse___0: {
             |            if b__0.is_none() {
             |                break 'orelse___0;
             |            } else {
-            |                t___0 = b__0.unwrap();
+            |                let result___0: temper_core::Result<i32> = Ok(b__0.unwrap());
+            |                if ! result___0.is_ok() {
+            |                    break 'orelse___0;
+            |                }
+            |                let t___0: i32 = result___0.unwrap();
+            |                b__1 = t___0;
             |            }
-            |            b__1 = t___0;
             |            break 'ok___0;
             |        }
             |        b__1 = 3;
             |    }
-            |    let mut t___1: std::sync::Arc<String> = temper_core::int_to_string(a__1, None);
-            |    let mut t___2: std::sync::Arc<String> = temper_core::int_to_string(b__1, None);
-            |    println!("{} {}", t___1, t___2.clone());
+            |    println!("{} {}", a__1, b__1);
             |}
         """.trimMargin(),
     )
@@ -2606,7 +2633,11 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            J.set(prepare__0(1.5f64) ? ).unwrap_or_else(| _ | panic!());
+            |            let j___0: temper_core::Result<i32> = Ok(prepare__0(1.5f64));
+            |            if ! j___0.is_ok() {
+            |                return Err(temper_core::Error::new());
+            |            }
+            |            J.set(j___0.unwrap()).unwrap_or_else(| _ | panic!());
             |            Ok(())
             |    }).clone()
             |}
@@ -2616,9 +2647,12 @@ class RustBackendTest {
             |}
             |fn prepare__0(x__0: f64) -> temper_core::Result<i32> {
             |    let return__0: i32;
-            |    let mut t___0: std::sync::Arc<String> = temper_core::float64::to_string(x__0);
-            |    println!("{}", t___0.clone());
-            |    return__0 = temper_core::float64::to_int(x__0) ? ;
+            |    println!("{}", temper_core::float64::to_string(x__0));
+            |    let return___0: temper_core::Result<i32> = Ok(temper_core::float64::to_int(x__0));
+            |    if ! return___0.is_ok() {
+            |        return return___0;
+            |    }
+            |    return__0 = return___0.unwrap();
             |    return Ok(return__0);
             |}
             |pub fn inc_awkwardly(i__0: i32) -> i32 {
@@ -2692,8 +2726,11 @@ class RustBackendTest {
                 |            let a__0: A = A::new(B::new());
                 |            let a2__0: A = a__0.clone();
                 |            let things__0: temper_core::List<A> = std::sync::Arc::new(vec![B::new()]);
-                |            let more__0: temper_core::List<A>;
-                |            more__0 = std::sync::Arc::new(vec![B::new()]).ok_or_else(| | temper_core::Error::new()) ? ;
+                |            let more___0: temper_core::Result<temper_core::List<A>> = Ok(std::sync::Arc::new(vec![B::new()]).unwrap());
+                |            if ! more___0.is_ok() {
+                |                return Err(temper_core::Error::new());
+                |            }
+                |            let more__0: temper_core::List<A> = more___0.unwrap();
                 |            println!("{}", a2__0.adjust(std::sync::Arc::new("hi".to_string())));
                 |            Ok(())
                 |    }).clone()
