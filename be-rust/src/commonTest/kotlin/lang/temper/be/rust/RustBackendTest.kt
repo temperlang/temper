@@ -2378,12 +2378,11 @@ class RustBackendTest {
             |            if b__0.is_none() {
             |                break 'orelse___0;
             |            } else {
-            |                let result___0: temper_core::Result<i32> = Ok(b__0.unwrap());
-            |                if ! result___0.is_ok() {
+            |                let b___0: temper_core::Result<i32> = Ok(b__0.unwrap());
+            |                if ! b___0.is_ok() {
             |                    break 'orelse___0;
             |                }
-            |                let t___0: i32 = result___0.unwrap();
-            |                b__1 = t___0;
+            |                b__1 = b___0.unwrap();
             |            }
             |            break 'ok___0;
             |        }
@@ -2944,29 +2943,28 @@ class RustBackendTest {
             |            if t___0 {
             |                digit__0 = cp__0.wrapping_sub(48);
             |            } else {
-            |                let t___1: i32;
-            |                let t___2: bool;
+            |                let t___1: bool;
             |                if 65 <= cp__0 {
-            |                    t___2 = cp__0 <= 70;
+            |                    t___1 = cp__0 <= 70;
             |                } else {
-            |                    t___2 = false;
+            |                    t___1 = false;
             |                }
-            |                if t___2 {
-            |                    t___1 = cp__0.wrapping_sub(65).wrapping_add(10);
+            |                if t___1 {
+            |                    digit__0 = cp__0.wrapping_sub(65).wrapping_add(10);
             |                } else {
-            |                    let t___3: bool;
+            |                    let t___2: bool;
             |                    if 97 <= cp__0 {
-            |                        t___3 = cp__0 <= 102;
+            |                        t___2 = cp__0 <= 102;
             |                    } else {
-            |                        t___3 = false;
+            |                        t___2 = false;
             |                    }
-            |                    if ! t___3 {
+            |                    if t___2 {
+            |                        digit__0 = cp__0.wrapping_sub(97).wrapping_add(10);
+            |                    } else {
             |                        return__0 = -1;
             |                        break 'fn__0;
             |                    }
-            |                    t___1 = cp__0.wrapping_sub(97).wrapping_add(10);
             |                }
-            |                digit__0 = t___1;
             |            }
             |            n__0 = n__0.wrapping_mul(16).wrapping_add(digit__0);
             |            i__0 = temper_core::string::next( & sourceText__0, i__0);
