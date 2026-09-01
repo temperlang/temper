@@ -1134,6 +1134,7 @@ private object PackOkResult : FunctionCall(
     baseName = "PackOkResult",
     functionName = "Ok",
     builtinOperatorId = BuiltinOperatorId.PackOkResult,
+    cloneEvenIfFirst = true,
 )
 
 private object UnpackOkResult : MethodCall(

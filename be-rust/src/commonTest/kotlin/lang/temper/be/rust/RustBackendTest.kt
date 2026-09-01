@@ -674,7 +674,7 @@ class RustBackendTest {
             |fn things__0(n__0: i32) -> temper_core::Result<temper_core::List<i32>> {
             |    let return__0: temper_core::List<i32>;
             |    return__0 = std::sync::Arc::new(vec![n__0]);
-            |    return Ok( & return__0);
+            |    return Ok(return__0.clone().clone());
             |}
             |pub fn other(n__1: i32) -> temper_core::Listed<i32> {
             |    let mut return__1: temper_core::Listed<i32>;
