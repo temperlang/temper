@@ -1067,8 +1067,8 @@ class TyperTest {
     @Test
     fun orelse2() = assertTypes(
         """
-        |    (new Deque<String?>()).removeFirst() orelse null
-        |/// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ : String?
+        |    let x = (new Deque<String?>()).removeFirst() orelse null
+        |///         ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ : String?
         """.trimMargin(),
     )
 
@@ -1076,9 +1076,10 @@ class TyperTest {
     fun orelseObjects() = assertTypes(
         """
         |    class A {}
-        |/// ┏━━━━━┓        ┏━━━━━┓ : A
-        |    new A() orelse new A()
-        |/// ┗━━━━━━━━━━━━━━━━━━━━┛ : A
+        |    let x =
+        |///   ┏━━━━━┓        ┏━━━━━┓ : A
+        |      new A() orelse new A();
+        |///   ┗━━━━━━━━━━━━━━━━━━━━┛ : A
         """.trimMargin(),
     )
 
@@ -1826,7 +1827,7 @@ class TyperTest {
             |      }
             |    }
             |
-            |    let bail(): Never<Void> throws Bubble {
+            |    let bail(): Void throws Bubble {
             |      bubble()
             |///   ┗━━━━━━┛ : Bubble
             |    }

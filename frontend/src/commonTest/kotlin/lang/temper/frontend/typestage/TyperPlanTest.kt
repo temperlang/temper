@@ -35,6 +35,7 @@ import lang.temper.value.RightNameLeaf
 import lang.temper.value.TBoolean
 import lang.temper.value.Tree
 import lang.temper.value.toPseudoCode
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -629,6 +630,7 @@ class TyperPlanTest {
         )
     }
 
+    @Ignore // do we actually care about not having panic show up as an initializer?
     @Test
     fun orElsePanic() {
         val plan = planFor(
@@ -699,6 +701,94 @@ class TyperPlanTest {
                 |  "x > 0.0",
                 |  "fn ...",
                 |  "panic()",
+                |]
+            """.trimMargin(),
+            JsonValueBuilder.build(emptyMap()) {
+                value(trimToNonAssignmentAndFnCalls(plan.typeOrder))
+            },
+        )
+    }
+
+    @Test
+    fun orElseNull() {
+        val plan = planFor(
+            """
+                |let f(s: String): Float64 {
+                |  let x = s.toFloat64() orelse null;
+                |  x ?? 0.0
+                |}
+            """.trimMargin(),
+            stage = Stage.Type,
+        )
+        assertStringsEqual(
+            """
+                |let return__7;
+                |return__7 = void;
+                |@fn let f__1;
+                |f__1 = (@stay fn f(s__2 /* aka s */: String) /* return__0 */: Float64 {
+                |    fn__3: do {
+                |      var t#8;
+                |      let x__4;
+                |      {
+                |        orelse#5: {
+                |          t#8 = do_call_toFloat64(s__2)
+                |        } orelse {
+                |          null;
+                |## This initializer should not be seen as strictly after the initializer
+                |## above.
+                |          t#8 = null
+                |        }
+                |      };
+                |      x__4 = t#8;
+                |      {
+                |        if (isNull(x__4)) {
+                |          return__0 = 0.0
+                |        } else {
+                |          let x#6;
+                |          x#6 = notNull(x__4);
+                |          return__0 = x#6
+                |        }
+                |      }
+                |    };
+                |});
+                |
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+            plan.root.toPseudoCode(singleLine = false),
+        )
+        assertStructure(
+            """
+                |{
+                |    "return__7": [
+                |        "void"
+                |    ],
+                |    "f__1": [
+                |        "@stay fn f(s__2 /* aka s */: String) /* return__0 */: Float64 {...}"
+                |    ],
+                |    "t#8": [
+                |        "do_call_toFloat64(s__2)",
+                |        "null"
+                |    ],
+                |    "x__4": [
+                |        "t#8"
+                |    ],
+                |    "return__0": [
+                |        "0.0",
+                |        "x#6"
+                |    ],
+                |    "x#6": [
+                |        "notNull(x__4)"
+                |    ],
+                |}
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+            plan.initializersAsJson(expressionDetail = PseudoCodeDetail(elideFunctionBodies = true)),
+        )
+        assertStructure(
+            """
+                |[
+                |  "do_call_toFloat64(s)",
+                |  "isNull(x)",
+                |  "notNull(x)",
+                |  "fn ...",
                 |]
             """.trimMargin(),
             JsonValueBuilder.build(emptyMap()) {

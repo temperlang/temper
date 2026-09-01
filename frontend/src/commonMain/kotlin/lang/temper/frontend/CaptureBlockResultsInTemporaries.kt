@@ -169,7 +169,7 @@ internal class CaptureBlockResultsInTemporaries(
             // Blocks are what we need to capture, and we need to walk through the
             // control flow structure so that we can put temporaries in narrow scopes.
             val stmtBlock = structureBlock(t).controlFlow
-            capture(t, stmtBlock, rn).also { captureDetails ->
+            capture(t, stmtBlock, rn, suggestion).also { captureDetails ->
                 if (captureDetails.result != null) {
                     capturedBlocks[t] = captureDetails.result
                 }
@@ -424,7 +424,8 @@ internal class CaptureBlockResultsInTemporaries(
                         // allocate a temporary if none available
                         val type = edge.target.passType
                         val tmpName = when {
-                            suggestion != null && type != null && suggestion.type == type -> suggestion.name
+                            suggestion != null && (suggestion.type == null || suggestion.type == type) ->
+                                suggestion.name
                             else -> block.document.nameMaker.unusedTemporaryName(Temporary.defaultNameHint)
                         }
 

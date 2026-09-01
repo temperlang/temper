@@ -61,16 +61,16 @@ class PyBackendTest {
         want = """
             |from builtins import int as int3, str as str4
             |from temper_core import int64_to_int32 as int64_to_int320, string_to_int32 as string_to_int321, int_add as int_add2
-            |int64_to_int32_37 = int64_to_int320
-            |string_to_int32_38 = string_to_int321
-            |int_add_39 = int_add2
+            |int64_to_int32_26 = int64_to_int320
+            |string_to_int32_27 = string_to_int321
+            |int_add_28 = int_add2
             |class IntMaker:
             |    radix_7: 'int3'
             |    __slots__ = ('radix_7',)
             |    def int64_to_int(this_0, int_9: 'int64_23', /) -> 'int3':
-            |        return int64_to_int32_37(int_9)
+            |        return int64_to_int32_26(int_9)
             |    def string_to_int(this_1, string_12: 'str4', /) -> 'int3':
-            |        return string_to_int32_38(string_12, this_1.radix_7)
+            |        return string_to_int32_27(string_12, this_1.radix_7)
             |    def __init__(this, /, radix: 'int3') -> None:
             |        this.radix_7 = radix
             |    @property
@@ -79,7 +79,7 @@ class PyBackendTest {
             |def crazy_sum(int_maker_16: 'IntMaker', int_17: 'int64_23', string_18: 'str4', /) -> 'int3':
             |    int_int_20: 'int3' = int_maker_16.int64_to_int(int_17)
             |    string_int_21: 'int3' = int_maker_16.string_to_int(string_18)
-            |    return int_add_39(int_int_20, string_int_21)
+            |    return int_add_28(int_int_20, string_int_21)
             |
         """.trimMargin(),
     )
@@ -139,32 +139,32 @@ class PyBackendTest {
             |}
         """.trimMargin(),
         want = """
-            |from temper_core import LoggingConsole as LoggingConsole4, list_get as list_get1, int_add as int_add2
-            |from typing import Dict as Dict5, Union as Union8, Sequence as Sequence9
-            |from builtins import bool as bool3, str as str6, int as int7, isinstance as isinstance10, len as len0
-            |len_38 = len0
-            |list_get_39 = list_get1
-            |int_add_40 = int_add2
-            |console_31: 'LoggingConsole4' = LoggingConsole4(__name__)
-            |def f() -> 'Dict5[str6, int7]':
+            |from temper_core import LoggingConsole as LoggingConsole3, list_get as list_get1, int_add as int_add2
+            |from typing import Dict as Dict4, Union as Union7, Sequence as Sequence8
+            |from builtins import str as str5, int as int6, bool as bool9, isinstance as isinstance10, len as len0
+            |len_16 = len0
+            |list_get_17 = list_get1
+            |int_add_18 = int_add2
+            |console_4: 'LoggingConsole3' = LoggingConsole3(__name__)
+            |def f() -> 'Dict4[str5, int6]':
             |    return {}
-            |m_1: 'Union8[(Dict5[str6, int7]), None]' = None
-            |this_19: 'Sequence9[int7]' = (1, 2, 3)
-            |n_20: 'int7' = len_38(this_19)
-            |i_21: 'int7' = 0
-            |while i_21 < n_20:
-            |    el_22: 'int7' = list_get_39(this_19, i_21)
-            |    i_21 = int_add_40(i_21, 1)
-            |    e_3: 'int7' = el_22
+            |m_1: 'Union7[(Dict4[str5, int6]), None]' = None
+            |this_9: 'Sequence8[int6]' = (1, 2, 3)
+            |n_11: 'int6' = len_16(this_9)
+            |i_12: 'int6' = 0
+            |while i_12 < n_11:
+            |    el_13: 'int6' = list_get_17(this_9, i_12)
+            |    i_12 = int_add_18(i_12, 1)
+            |    e_3: 'int6' = el_13
             |    if e_3 == 2:
             |        m_1 = {}
-            |t_16: 'bool3'
+            |t_7: 'bool9'
             |if not m_1 is None:
-            |    t_16 = isinstance10(m_1, Dict5)
+            |    t_7 = isinstance10(m_1, Dict4)
             |else:
-            |    t_16 = False
-            |if t_16:
-            |    console_31.log('Allocated m')
+            |    t_7 = False
+            |if t_7:
+            |    console_4.log('Allocated m')
             |
         """.trimMargin(),
     )
@@ -227,21 +227,21 @@ class PyBackendTest {
             |from builtins import int as int1
             |from typing import Union as Union2
             |from temper_core import int_add as int_add0
-            |int_add_17 = int_add0
-            |def something(i_1: 'int1', j_5: 'Union2[int1, None]' = None, k_7: 'Union2[int1, None]' = None, /) -> 'int1':
+            |int_add_13 = int_add0
+            |def something(i_1: 'int1', j_5: 'Union2[int1, None]' = None, k_6: 'Union2[int1, None]' = None, /) -> 'int1':
             |    _j_5: 'Union2[int1, None]' = j_5
-            |    _k_7: 'Union2[int1, None]' = k_7
+            |    _k_6: 'Union2[int1, None]' = k_6
             |    j_2: 'int1'
             |    if _j_5 is None:
             |        j_2 = 5
             |    else:
             |        j_2 = _j_5
             |    k_3: 'int1'
-            |    if _k_7 is None:
+            |    if _k_6 is None:
             |        k_3 = 6
             |    else:
-            |        k_3 = _k_7
-            |    return int_add_17(int_add_17(i_1, j_2), k_3)
+            |        k_3 = _k_6
+            |    return int_add_13(int_add_13(i_1, j_2), k_3)
             |
         """.trimMargin(),
     )
@@ -275,8 +275,7 @@ class PyBackendTest {
             |        p_15.end_object()
             |    @staticmethod
             |    def decode_from_json(t_5: 'JsonSyntaxTree', ic_6: 'InterchangeContext', /) -> 'C':
-            |        obj_7: 'JsonObject'
-            |        obj_7 = cast_by_type0(t_5, JsonObject)
+            |        obj_7: 'JsonObject' = cast_by_type0(t_5, JsonObject)
             |        return C()
             |    @staticmethod
             |    def json_adapter() -> 'JsonAdapter[C]':
@@ -380,20 +379,20 @@ class PyBackendTest {
             |from builtins import int as int2, AttributeError as AttributeError4
             |from typing import Any as Any3, ClassVar as ClassVar5
             |from temper_core import int_sub as int_sub0, int_add as int_add1
-            |int_sub_122 = int_sub0
-            |int_add_123 = int_add1
+            |int_sub_68 = int_sub0
+            |int_add_69 = int_add1
             |class C:
             |    y_26: 'int2'
             |    z_27: 'int2'
             |    __slots__ = ('y_26', 'z_27')
             |    @property
             |    def p(this_0, /) -> 'int2':
-            |        return int_sub_122(this_0.y_26, 1)
+            |        return int_sub_68(this_0.y_26, 1)
             |    def _set_p(this_1, new_p_31: 'int2', /) -> 'None':
-            |        t_100: 'int2' = int_add_123(new_p_31, 1)
-            |        this_1.y_26 = t_100
+            |        t_60: 'int2' = int_add_69(new_p_31, 1)
+            |        this_1.y_26 = t_60
             |    @property
-            |    def q(this_125, /) -> 'Any3':
+            |    def q(this_71, /) -> 'Any3':
             |        raise AttributeError4('q getter unavailable')
             |    @q.setter
             |    def q(this_2, new_q_34: 'int2', /) -> 'None':
@@ -410,12 +409,12 @@ class PyBackendTest {
             |        return this_5.p
             |    def incr(this_6, /) -> 'int2':
             |        return_20: 'int2'
-            |        return_20 = int_add_123(this_6._get_r(), 1)
+            |        return_20 = int_add_69(this_6._get_r(), 1)
             |        this_6._set_p(return_20)
             |        return return_20
             |    def decr_45(this_7, /) -> 'int2':
             |        return_21: 'int2'
-            |        return_21 = int_sub_122(this_7._get_r(), 1)
+            |        return_21 = int_sub_68(this_7._get_r(), 1)
             |        this_7._set_p(return_21)
             |        return return_21
             |    def __init__(this, /) -> None:
@@ -432,10 +431,10 @@ class PyBackendTest {
             |    __slots__ = ()
             |    @staticmethod
             |    def f_49(j_50: 'int2', /) -> 'int2':
-            |        return int_add_123(D._i, j_50)
+            |        return int_add_69(D._i, j_50)
             |    @staticmethod
             |    def g(n_53: 'int2', /) -> 'int2':
-            |        return int_add_123(D.f_49(n_53), n_53)
+            |        return int_add_69(D.f_49(n_53), n_53)
             |    def __init__(this, /) -> None:
             |        pass
             |D._i = 1
@@ -451,23 +450,23 @@ class PyBackendTest {
             |  things[0] is List<AnyValue>
             |}
         """.trimMargin(),
-        // Key point is that we need non-parameterized types for `as` and `is` below.
+        // The key point is that we need non-parameterized types for `as` and `is` below.
         // Also, separately, downcasting to List should generate a Temper compiler error.
         // But generate as good of code as we can, anyway.
         want = """
-            |from typing import Any as Any1, Sequence as Sequence3
-            |from builtins import RuntimeError as RuntimeError4, isinstance as isinstance6, bool as bool2
-            |from temper_core import cast_by_type as cast_by_type5, list_get as list_get0
-            |list_get_14 = list_get0
-            |def probe(thing_1: 'Any1', /) -> 'bool2':
-            |    things_3: 'Sequence3[Any1]'
+            |from typing import Any as Any1, Sequence as Sequence2
+            |from builtins import RuntimeError as RuntimeError3, isinstance as isinstance5, bool as bool6
+            |from temper_core import cast_by_type as cast_by_type4, list_get as list_get0
+            |list_get_8 = list_get0
+            |def probe(thing_1: 'Any1', /) -> 'bool6':
+            |    things_3: 'Sequence2[Any1]'
             |    if thing_1 is None:
-            |        raise RuntimeError4()
+            |        raise RuntimeError3()
             |    else:
-            |        things_3 = cast_by_type5(thing_1, Sequence3)
-            |    t_13: 'Any1' = list_get_14(things_3, 0)
-            |    if not t_13 is None:
-            |        return isinstance6(t_13, Sequence3)
+            |        things_3 = cast_by_type4(thing_1, Sequence2)
+            |    t_4: 'Any1' = list_get_8(things_3, 0)
+            |    if not t_4 is None:
+            |        return isinstance5(t_4, Sequence2)
             |    else:
             |        return False
             |
@@ -653,35 +652,32 @@ class PyBackendTest {
             |            ```
             |            from temper_std.net import NetResponse, NetRequest
             |            from temper_core import LoggingConsole as LoggingConsole2, adapt_generator_factory as adapt_generator_factory3, str_cat as str_cat0, async_launch as async_launch1
-            |            from typing import Union as Union5, Generator as Generator8
-            |            from builtins import str as str6, Exception as Exception7
-            |            str_cat_73 = str_cat0
-            |            async_launch_74 = async_launch1
+            |            from builtins import str as str5, Exception as Exception7
+            |            from typing import Union as Union6, Generator as Generator8
+            |            str_cat_21 = str_cat0
+            |            async_launch_22 = async_launch1
             |            console_5: 'LoggingConsole2' = LoggingConsole2(__name__)
             |            @adapt_generator_factory3
-            |            def fn_65(do_await_4) -> 'Generator8[empty, None, None]':
-            |                t_59: 'Union5[str6, None]'
-            |                t_31: 'Union5[str6, None]'
-            |                t_36: 'str6'
+            |            def fn_16(do_await_4) -> 'Generator8[empty, None, None]':
             |                try:
-            |                    r_3: 'NetResponse'
-            |                    r_3 = yield do_await_4(NetRequest('data:text/plain,Hello World!').send())
+            |                    r_3: 'NetResponse' = yield do_await_4(NetRequest('data:text/plain,Hello World!').send())
             |                    if r_3.status == 200:
-            |                        body_4: 'str6'
-            |                        t_31 = yield do_await_4(r_3.text)
-            |                        if t_31 is None:
+            |                        t_14: 'str5'
+            |                        body_4: 'str5'
+            |                        subject_6: 'Union6[str5, None]' = yield do_await_4(r_3.text)
+            |                        if subject_6 is None:
             |                            body_4 = 'missing'
             |                        else:
-            |                            body_4 = t_31
-            |                        t_59 = r_3.content_type
-            |                        if t_59 is None:
-            |                            t_36 = 'unknown'
+            |                            body_4 = subject_6
+            |                        subject_7: 'Union6[str5, None]' = r_3.content_type
+            |                        if subject_7 is None:
+            |                            t_14 = 'unknown'
             |                        else:
-            |                            t_36 = t_59
-            |                        console_5.log(str_cat_73('Got ', body_4, ' / ', t_36))
+            |                            t_14 = subject_7
+            |                        console_5.log(str_cat_21('Got ', body_4, ' / ', t_14))
             |                except Exception7:
             |                    console_5.log('failed')
-            |            async_launch_74(fn_65)
+            |            async_launch_22(fn_16)
             |
             |            ```,
             |        },

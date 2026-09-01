@@ -28,7 +28,6 @@ class LuaBackendTest {
                 |Apple.constructor = function(this__1)
                 |  return nil;
                 |end;
-                |fuji__0 = nil;
                 |fuji__0 = Apple():maybe();
                 |exports = {};
                 |exports.Apple = Apple;
@@ -93,17 +92,15 @@ class LuaBackendTest {
                 |local temper = require('temper-core');
                 |local signText, exports;
                 |signText = function(i__0)
-                |  local return__0;
                 |  if (i__0 < 0) then
-                |    return__0 = 'negative';
+                |    return 'negative';
                 |  elseif (i__0 > 0) then
-                |    return__0 = 'positive';
+                |    return 'positive';
                 |  elseif (i__0 > 10) then
-                |    return__0 = 'very positive';
+                |    return 'very positive';
                 |  else
-                |    return__0 = 'zero';
+                |    return 'zero';
                 |  end
-                |  return return__0;
                 |end;
                 |exports = {};
                 |exports.signText = signText;
@@ -173,8 +170,8 @@ class LuaBackendTest {
             |  private var y: Int = 1;
             |  public var z: Int = 2;
             |  public get p(): Int { y - 1 }
-            |  private set p(newP: Int): Void { y = newP + 1 }
-            |  public set q(newQ: Int): Void { p = newQ }
+            |  private set p(newP: Int): Void { y = newP + 1; }
+            |  public set q(newQ: Int): Void { p = newQ; }
             |  public incr(): Int { p += 1 }
             |  private decr(): Int { p -= 1 }
             |}
@@ -418,26 +415,25 @@ class LuaBackendTest {
             |                "something-test.lua": {
             |                    content: ```
             |                      local temper = require('temper-core');
-            |                      local sum__0, local_4, local_5, exports;
+            |                      local sum__0, local_3, local_4, exports;
             |                      sum__0 = temper.import('my-test-library/something-internal', 'sum__0');
-            |                      local_4 = (unpack or table.unpack);
-            |                      local_5 = require('luaunit');
-            |                      local_5.FAILURE_PREFIX = temper.test_failure_prefix;
+            |                      local_3 = (unpack or table.unpack);
+            |                      local_4 = require('luaunit');
+            |                      local_4.FAILURE_PREFIX = temper.test_failure_prefix;
             |                      Test_ = {};
             |                      Test_.test_sum__0 = function()
             |                        temper.test('sum', function(test_1)
-            |                          local actual_2, t_3, fn__0;
+            |                          local actual_2, fn__0;
             |                          actual_2 = sum__0(1, 2);
-            |                          t_3 = (actual_2 == 3);
             |                          fn__0 = function()
             |                            return temper.concat('expected sum(1, 2) == (', temper.int32_tostring(3), ') not (', temper.int32_tostring(actual_2), ')');
             |                          end;
-            |                          temper.test_assert(test_1, t_3, fn__0);
+            |                          temper.test_assert(test_1, (actual_2 == 3), fn__0);
             |                          return nil;
             |                        end);
             |                      end;
             |                      exports = {};
-            |                      local_5.LuaUnit.run(local_4({'--pattern', '^Test_%.', local_4(arg)}));
+            |                      local_4.LuaUnit.run(local_3({'--pattern', '^Test_%.', local_3(arg)}));
             |                      return exports;
             |
             |                      ```

@@ -641,7 +641,7 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
                 if (tree is BlockTree) {
                     // The minimal set of maximal paths breaks the flow graph into sequences of
                     // subtrees that are executed in order.
-                    val paths = forwardMaximalPaths(tree, ConservativeFailure.AtEndOfOr)
+                    val paths = forwardMaximalPaths(tree, ConservativeFailure.AtStartOfOr)
 
                     // Walk the basic block graph again keeping track of which names have
                     // been assigned what possible values.

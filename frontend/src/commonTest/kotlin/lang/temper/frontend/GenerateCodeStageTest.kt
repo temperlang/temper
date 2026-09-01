@@ -469,6 +469,12 @@ class GenerateCodeStageTest {
         // Just making sure to explore the space of how we handle things.
     )
 
+    @Test // TODO: get this working without the explicit type on x
+    fun orElseNull() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/or-else-null"),
+        pseudoCodeDetail = PseudoCodeDetail(showInferredTypes = true),
+    )
+
     @Test
     fun extensionMethodUse() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/extension-method-use"),

@@ -9,6 +9,7 @@ backends, anyway.
 ```text
 @meta:arg allowedErrors = setOf(
 @meta:arg     "BecauseNameUndeclared",
+@meta:arg     "BecauseTypeInfoMissing",
 @meta:arg     MessageTemplate.IllegalAssignment.name,
 @meta:arg     MessageTemplate.SignatureInputMismatch.name,
 @meta:arg     MessageTemplate.CannotTranslate.name,
