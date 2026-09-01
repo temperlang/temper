@@ -13,6 +13,7 @@ import lang.temper.be.tmpl.aType
 import lang.temper.be.tmpl.hasSplitSupers
 import lang.temper.be.tmpl.isNullValue
 import lang.temper.be.tmpl.isStdLib
+import lang.temper.be.tmpl.isVoidish
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapParameters
 import lang.temper.be.tmpl.mutableCaptures
@@ -3010,8 +3011,9 @@ class RustTranslator(
         val pos = statement.pos
         val context = functionContextStack.last()
         val returnType = context.returnType
-        val value = when (val value = statement.expression) {
-            null -> when {
+        val expr = statement.expression
+        val value = when {
+            expr.isVoidish() -> when {
                 context.constructorMode == ConstructorMode.Use -> "selfish".toId(pos).let { selfish ->
                     when {
                         returnType.bubbly -> selfish.wrapOk()
@@ -3023,7 +3025,7 @@ class RustTranslator(
                 else -> null
             }
 
-            else -> translateExpression(value).maybeWrap(given = value.type, wanted = returnType, translator = this)
+            else -> translateExpression(expr!!).maybeWrap(given = expr.type, wanted = returnType, translator = this)
         }
         return listOf(Rust.ExprStatement(pos, expr = Rust.ReturnExpr(pos, value = value)))
     }

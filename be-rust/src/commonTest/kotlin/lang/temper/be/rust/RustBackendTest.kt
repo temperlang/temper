@@ -2146,7 +2146,6 @@ class RustBackendTest {
             |        }
             |        i__0 = i__0.wrapping_add(1);
             |    }
-            |    return ();
             |}
         """.trimMargin(),
     )
