@@ -30,10 +30,8 @@ convertedCoroutine#11 = fn (generator#7: SafeGenerator<Empty>) /* return__1 */: 
         }
       } else if (caseIndexLocal#10 == 3) {
         panic();
-        caseIndex#8 = 5
+        caseIndex#8 = 4
       } else if (caseIndexLocal#10 == 4) {
-        caseIndex#8 = 5
-      } else if (caseIndexLocal#10 == 5) {
         return__1 = core.doneResult();
         break fn__9;
       } else {

@@ -23,7 +23,7 @@ convertedCoroutine#18 = fn (generator#14: Generator<Boolean>) /* return__2 */: (
         }
       } else if (caseIndexLocal#17 == 2) {
         do_call_log(console#3, cat("cannot divide by ", do_call_toString(y__1 + 1), "!, or was it ", do_call_toString(y__1 + 2), "?!"));
-        caseIndex#15 = 7
+        caseIndex#15 = 6
       } else if (caseIndexLocal#17 == 3) {
         orElse#20: {
           let t#10;
@@ -38,22 +38,20 @@ convertedCoroutine#18 = fn (generator#14: Generator<Boolean>) /* return__2 */: (
       } else if (caseIndexLocal#17 == 4) {
         orElse#21: {
           do_call_log(console#3, cat("cannot divide by ", do_call_toString(y__1 - 1), "!"));
-          caseIndex#15 = 6
+          caseIndex#15 = 5
         } orelse {
           caseIndex#15 = 2
         }
       } else if (caseIndexLocal#17 == 5) {
-        caseIndex#15 = 6
-      } else if (caseIndexLocal#17 == 6) {
         orElse#22: {
           let t#11;
           t#11 = x__0 / (y__1 + 2);
           do_call_log(console#3, cat("x / (y + 2) = ", do_call_toString(t#11)));
-          caseIndex#15 = 7
+          caseIndex#15 = 6
         } orelse {
           caseIndex#15 = 2
         }
-      } else if (caseIndexLocal#17 == 7) {
+      } else if (caseIndexLocal#17 == 6) {
         return__2 = core.doneResult();
         break fn__16;
       } else {

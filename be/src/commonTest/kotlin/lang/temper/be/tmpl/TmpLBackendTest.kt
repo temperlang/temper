@@ -2886,11 +2886,8 @@ class TmpLBackendTest {
             |                1 -> do {
             |                  ConsoleLog#0(console#0, "" + i__0);
             |                  i__0 = nym`+#58`(i__0, 1);
-            |                  caseIndex#0 = 2;
-            |                  return ValueResultConstructor#0(Empty#0());
-            |                }
-            |                2 -> do {
             |                  caseIndex#0 = 1;
+            |                  return ValueResultConstructor#0(Empty#0());
             |                }
             |                else -> do {
             |                  return DoneResult#0();

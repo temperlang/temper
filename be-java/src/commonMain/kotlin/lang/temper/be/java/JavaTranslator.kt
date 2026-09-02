@@ -2203,19 +2203,28 @@ class JavaTranslator(
         private fun convertedCoroutinePromiseHandler(
             s: TmpL.Statement,
         ): J.BlockLevelStatement? {
+            val decl: TmpL.LocalDeclaration?
             val left: TmpL.Id?
-            val call: TmpL.CallExpression
+            val call: TmpL.Expression?
             when (s) {
                 is TmpL.Assignment -> {
+                    decl = null
                     left = s.left
-                    call = s.right as? TmpL.CallExpression ?: return null
+                    call = s.right
                 }
                 is TmpL.ExpressionStatement -> {
+                    decl = null
                     left = null
-                    call = s.expression as? TmpL.CallExpression ?: return null
+                    call = s.expression
+                }
+                is TmpL.LocalDeclaration -> {
+                    decl = s
+                    left = decl.name
+                    call = s.init
                 }
                 else -> return null
             }
+            if (call !is TmpL.CallExpression) { return null }
 
             // If this is a call to one of the helper functions, do special handling for it.
             val calleeId = (call.fn as? TmpL.FnReference)?.id
@@ -2291,55 +2300,26 @@ class JavaTranslator(
                     //       ...
                     //     }
                     val promise = expr(parameters[0] as TmpL.Expression)
-                    var getCall: J.ExpressionStatementExpr = J.InstanceMethodInvocationExpr(
-                        pos = pos,
-                        expr = promise,
-                        // CompletableFuture.get
-                        method = J.Identifier(pos.rightEdge, "get"),
-                        args = emptyList(),
-                    )
-                    getCall = if (left != null) {
-                        J.AssignmentExpr(
+                    val getCall: J.ExpressionStatementExpr =
+                        temperCoreGetPromiseResult.staticMethod(promise, pos = pos)
+                    when {
+                        decl != null -> J.LocalVariableDeclaration(
                             pos = pos,
-                            left = leftHandSide(left),
-                            operator = J.Operator(left.pos.rightEdge, Assign),
-                            right = getCall,
+                            type = varType(decl),
+                            name = names.lookupRegularLocalNameObj(left!!).outName
+                                .toIdentifier(left.pos),
+                            expr = getCall,
                         )
-                    } else {
-                        getCall
-                    }
-                    val catchPos = pos.rightEdge
-                    val exceptionName = names.ignoredIdentifier(catchPos)
-                    J.TryStatement(
-                        pos = pos,
-                        bodyBlock = J.BlockStatement(J.ExpressionStatement(getCall)),
-                        catchBlocks = listOf(
-                            J.CatchBlock(
-                                pos = catchPos,
-                                types = listOf(
-                                    javaLangInterruptedException.toClassType(catchPos),
-                                    javaUtilConcurrentExecutionException.toClassType(catchPos),
-                                ),
-                                name = exceptionName,
-                                body = J.BlockStatement(
-                                    // Since the state machine tentatively sets the case index
-                                    // to -1 before switching, the coroutine will enter a done
-                                    // statement if we break from the case here.
-                                    J.ThrowStatement(
-                                        catchPos,
-                                        J.InstanceCreationExpr(
-                                            catchPos,
-                                            javaLangRuntimeException.toClassType(catchPos),
-                                            args = listOf(
-                                                J.NameExpr(exceptionName.deepCopy())
-                                                    .asArgument(catchPos),
-                                            ),
-                                        ),
-                                    ),
-                                ),
+                        left != null -> J.ExpressionStatement(
+                            J.AssignmentExpr(
+                                pos = pos,
+                                left = leftHandSide(left),
+                                operator = J.Operator(left.pos.rightEdge, Assign),
+                                right = getCall,
                             ),
-                        ),
-                    )
+                        )
+                        else -> J.ExpressionStatement(getCall)
+                    }
                 }
                 else -> null
             }

@@ -1,0 +1,98 @@
+  var caseIndex#0: Int32;
+  caseIndex#0 = 0;
+  var awaited#0: Promise<NetResponse>?;
+  awaited#0 = null;
+  var awaited#1: Promise<String?>?;
+  awaited#1 = null;
+  var req__0: NetRequest?;
+  req__0 = null;
+  var resp__0: NetResponse?;
+  resp__0 = null;
+  var subject#0: String?;
+  subject#0 = null;
+  let convertedCoroutine#0;
+  convertedCoroutine#0 = fn (generator#0: SafeGenerator<Empty>) /* return__0 */: (GeneratorResult<Empty>) {
+    fn__0: do {
+      while (true) {
+        let caseIndexLocal#0: Int32;
+        caseIndexLocal#0 = caseIndex#0;
+        caseIndex#0 = -1;
+        if (caseIndexLocal#0 == 0) {
+          caseIndex#0 = 1
+        } else if (caseIndexLocal#0 == 1) {
+          orElse#0: {
+            req__0 = new NetRequest("http://127.0.0.1");
+            do_call_post(notNull(req__0), "[]", "application/json");
+            awaited#0 = do_call_send(req__0);
+            awakeUpon(notNull(awaited#0), generator#0);
+            caseIndex#0 = 2;
+            return__0 = new ValueResult<Empty>({class: Empty__0});
+            break fn__0;
+          } orelse {
+            caseIndex#0 = 3
+          }
+        } else if (caseIndexLocal#0 == 2) {
+          orElse#1: {
+            resp__0 = getPromiseResultSync(notNull(awaited#0));
+            if (do_get_status(notNull(resp__0)) == 200) {
+              caseIndex#0 = 4
+            } else {
+              caseIndex#0 = 6
+            }
+          } orelse {
+            caseIndex#0 = 3
+          }
+        } else if (caseIndexLocal#0 == 3) {
+          do_call_log(console#0, "failed");
+          caseIndex#0 = 10
+        } else if (caseIndexLocal#0 == 4) {
+          orElse#2: {
+## This await was not being transformed due to a bug in MaximalPaths.
+            awaited#1 = do_get_bodyContent(resp__0);
+            awakeUpon(notNull(awaited#1), generator#0);
+            caseIndex#0 = 5;
+            return__0 = new ValueResult<Empty>({class: Empty__0});
+            break fn__0;
+          } orelse {
+            caseIndex#0 = 3
+          }
+        } else if (caseIndexLocal#0 == 5) {
+          orElse#3: {
+            subject#0 = getPromiseResultSync(notNull(awaited#1));
+            caseIndex#0 = 7
+          } orelse {
+            caseIndex#0 = 3
+          }
+        } else if (caseIndexLocal#0 == 6) {
+          orElse#4: {
+            do_call_log(console#0, cat("HTTP status was not 200: ", do_call_toString(do_get_status(notNull(resp__0))), "!"));
+            caseIndex#0 = 8
+          } orelse {
+            caseIndex#0 = 3
+          }
+        } else if (caseIndexLocal#0 == 7) {
+          orElse#5: {
+            let body__0: String;
+            if (isNull(subject#0)) {
+              body__0 = "missing"
+            } else {
+              body__0 = notNull(subject#0)
+            };
+            let bodyChar0__0;
+            bodyChar0__0 = getStatic(String, \fromCodePoint)(do_call_get(body__0, getStatic(String, \begin)));
+            do_call_log(console#0, cat("Thanks, server.  I got '", bodyChar0__0, "'."));
+            caseIndex#0 = 8
+          } orelse {
+            caseIndex#0 = 3
+          }
+        } else if (caseIndexLocal#0 == 8) {
+          return__0 = core.doneResult();
+          break fn__0;
+        } else {
+          return__0 = core.doneResult();
+          break fn__0;
+        }
+      }
+    }
+  };
+  return__1 = adaptGeneratorFnSafe(convertedCoroutine#0)

@@ -137,6 +137,11 @@ class CoroutineConverterTest {
         StageTestDir("convert-coro/nested-function-hoisting"),
         args = listOf(WellKnownTypes.intType2, WellKnownTypes.intType2),
     )
+
+    @Test
+    fun netResponse() = assertConvertedCoroutine(
+        StageTestDir("convert-coro/net-response"),
+    )
 }
 
 /**
