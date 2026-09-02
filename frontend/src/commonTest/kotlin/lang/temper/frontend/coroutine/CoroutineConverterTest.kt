@@ -102,7 +102,6 @@ class CoroutineConverterTest {
                 .actuals(listOf(WellKnownTypes.stringType2))
                 .get(),
         ),
-        verboseDebug = true, // do not commit
     )
 
     @Test
@@ -136,6 +135,11 @@ class CoroutineConverterTest {
     fun nestedFunctionHoisting() = assertConvertedCoroutine(
         StageTestDir("convert-coro/nested-function-hoisting"),
         args = listOf(WellKnownTypes.intType2, WellKnownTypes.intType2),
+    )
+
+    @Test
+    fun netResponse() = assertConvertedCoroutine(
+        StageTestDir("convert-coro/net-response"),
     )
 }
 

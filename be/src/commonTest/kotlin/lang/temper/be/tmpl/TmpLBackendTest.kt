@@ -2886,11 +2886,8 @@ class TmpLBackendTest {
             |                1 -> do {
             |                  ConsoleLog#0(console#0, "" + i__0);
             |                  i__0 = nym`+#58`(i__0, 1);
-            |                  caseIndex#0 = 2;
-            |                  return ValueResultConstructor#0(Empty#0());
-            |                }
-            |                2 -> do {
             |                  caseIndex#0 = 1;
+            |                  return ValueResultConstructor#0(Empty#0());
             |                }
             |                else -> do {
             |                  return DoneResult#0();
@@ -3382,8 +3379,8 @@ class TmpLBackendTest {
             |                }
             |                1 -> do {
             |                  awaited#0 = f__0();
-            |                  awakeUpon#0(notNull (awaited#0), generator#0);
             |                  caseIndex#0 = 2;
+            |                  awakeUpon#0(notNull (awaited#0), generator#0);
             |                  return ValueResultConstructor#0(Empty#0());
             |                }
             |                2 -> do {
@@ -3402,7 +3399,6 @@ class TmpLBackendTest {
             |                }
             |                3 -> do {
             |                  x__0 = panic#0();
-            |                  caseIndex#0 = 4;
             |                }
             |                4 -> do {
             |                  ConsoleLog#0(console#0, cat#0("After ", x__0));

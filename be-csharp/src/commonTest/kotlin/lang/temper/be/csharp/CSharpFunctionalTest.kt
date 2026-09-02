@@ -23,6 +23,11 @@ class CSharpFunctionalTest : FunctionalTestRunner<CSharpBackend>(CSharpBackend.F
         super.algosHelloWorld()
     }
 
+    @Test // do not commit
+    override fun typesNetresponse() {
+        super.typesNetresponse()
+    }
+
     override fun runGeneratedCode(
         backend: CSharpBackend,
         modules: List<Module>,

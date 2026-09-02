@@ -14,6 +14,7 @@ import lang.temper.common.abbreviate
 import lang.temper.common.charCount
 import lang.temper.common.compatRemoveFirst
 import lang.temper.common.compatRemoveLast
+import lang.temper.common.console
 import lang.temper.common.decodeUtf16
 import lang.temper.common.inverse
 import lang.temper.common.partiallyOrder
@@ -266,7 +267,7 @@ private class MutBubbled(val pos: Position) : MutPathElement() {
 
 private class MutEdge(
     val condition: MutPathElement?,
-    val from: ProvisionalIndex,
+    var from: ProvisionalIndex,
     var to: ProvisionalIndex,
     val dir: ForwardOrBack,
 )
@@ -381,7 +382,9 @@ private class MapMaker(
     val ignoreConstantConditions: Boolean,
 ) {
     fun truthinessOf(ref: BlockChildReference?): Boolean? {
-        if (ignoreConstantConditions || ref == null) { return null }
+        if (ignoreConstantConditions || ref == null) {
+            return null
+        }
         val tree = root.dereference(ref)?.target
         return tree?.valueContained(TBoolean)
     }
@@ -431,7 +434,9 @@ private class MapMaker(
     }
 
     fun joinAll(preceders: Set<MutPath>): MutPath? {
-        if (preceders.isEmpty()) { return null }
+        if (preceders.isEmpty()) {
+            return null
+        }
         val joinPath = newPath()
         preceders.forEach {
             addFollower(it, joinPath)
@@ -498,16 +503,22 @@ private class MapMaker(
                         buildPaths(controlFlow.thenClause, setOf(intoThen)) +
                             buildPaths(controlFlow.elseClause, setOf(intoElse))
                     }
+
                     else -> {
                         inPath.elements.add(Either.Right(controlFlow))
                         buildPaths(
-                            if (truthiness) { controlFlow.thenClause } else { controlFlow.elseClause },
+                            if (truthiness) {
+                                controlFlow.thenClause
+                            } else {
+                                controlFlow.elseClause
+                            },
                             setOf(inPath),
                         )
                     }
                 }
             }
         }
+
         is ControlFlow.Loop -> {
             val loopStart = joinAll(preceders)
             val conditionTruthiness = truthinessOf(controlFlow.condition)
@@ -552,6 +563,7 @@ private class MapMaker(
                         }
                         afterCond
                     }
+
                     LeftOrRight.Right -> loopStart
                 }
 
@@ -579,6 +591,7 @@ private class MapMaker(
                         LeftOrRight.Left -> {
                             addFollower(beforeContinue, loopStart, dir = ForwardOrBack.Back)
                         }
+
                         LeftOrRight.Right -> {
                             if (conditionTruthiness != false) {
                                 val continuePath = newPath()
@@ -605,6 +618,7 @@ private class MapMaker(
                 afterLoop.toSet()
             }
         }
+
         is ControlFlow.Jump -> {
             val target = JumpTarget(controlFlow.jumpKind, controlFlow.target)
             val rightOfJump = controlFlow.pos.rightEdge
@@ -617,6 +631,7 @@ private class MapMaker(
             }
             setOf()
         }
+
         is ControlFlow.Labeled -> {
             val afterLabeled = lazy {
                 newPath(controlFlow.pos.rightEdge)
@@ -640,6 +655,7 @@ private class MapMaker(
             }
             afterLabeled.toSet() + afterStmts
         }
+
         is ControlFlow.OrElse -> {
             val orClause = controlFlow.orClause
             val elseClause = controlFlow.elseClause
@@ -692,6 +708,7 @@ private class MapMaker(
             }
             afterOr + afterElse
         }
+
         is ControlFlow.Stmt -> {
             val tree = root.dereference(controlFlow.ref)?.target
             var path = maybeJoinAll(preceders)
@@ -727,10 +744,13 @@ private class MapMaker(
                 setOfNotNull(path)
             }
         }
+
         is ControlFlow.StmtBlock -> {
             var before = preceders
             for (stmt in controlFlow.stmts) {
-                if (preceders.isEmpty()) { break }
+                if (preceders.isEmpty()) {
+                    break
+                }
                 before = buildPaths(stmt, before)
             }
             before
@@ -747,6 +767,7 @@ private class MapMaker(
                     ControlFlow.Stmt(BlockChildReference(index, tree.pos))
                 },
             )
+
             is StructuredFlow -> flow.controlFlow
         }
 
@@ -900,7 +921,10 @@ private fun eliminateEmptyTransitions(
                         // Not handled above so not a simple continuation
                         val kept = path
                         val eliminated = indexToPath.getValue(follower.to)
-                        if (eliminated !in includeInto && eliminated.orLabel == null) {
+                        if (
+                            eliminated !in includeInto && eliminated.orLabel == null &&
+                            (!yieldingCallsEndPaths || !endsYielding(kept, root))
+                        ) {
                             includeInto[eliminated] = kept
                             path.positionHints.clear()
                             continue
@@ -999,15 +1023,50 @@ private fun eliminateEmptyTransitions(
                     val follower = p.followers[0]
                     val allPrecedersToRelink = mutableListOf<MutEdge>()
                     if (follower.condition == null && follower.dir == ForwardOrBack.Forward) {
+                        val followerNode = indexToPath.getValue(follower.to)
+                        if (followerNode === p) { continue }
+
                         p.indices.clear()
                         for (preceder in p.preceders) {
                             preceder.to = follower.to
                             allPrecedersToRelink.add(preceder)
                         }
-                        val followerNode = indexToPath.getValue(follower.to)
                         val index = followerNode.preceders.indexOf(follower)
                         followerNode.preceders.removeAt(index)
                         followerNode.preceders.addAll(index, allPrecedersToRelink)
+                        progressMade = true
+                    }
+                }
+            }
+        }
+        if (!progressMade) { break }
+    }
+
+    // But we can identify empty paths with one unconditional preceder.
+    while (true) {
+        var progressMade = false
+        for (p in mutPaths) {
+            if (p.index in p.indices) {
+                // Still the canonical path for its index
+                if (
+                    p.elements.isEmpty() && p.orLabel == null &&
+                    p.preceders.size == 1 && p.preceders[0].condition == null &&
+                    !p.isExit && !p.isFailExit
+                ) {
+                    val preceder = p.preceders[0]
+                    val precederNode = indexToPath.getValue(preceder.from)
+                    if (precederNode === p) { continue }
+
+                    val allFollowersToRelink = mutableListOf<MutEdge>()
+                    if (preceder.condition == null && preceder.dir == ForwardOrBack.Forward) {
+                        p.indices.clear()
+                        for (follower in p.followers) {
+                            follower.from = preceder.from
+                            allFollowersToRelink.add(follower)
+                        }
+                        val index = precederNode.followers.indexOf(preceder)
+                        precederNode.followers.removeAt(index)
+                        precederNode.followers.addAll(index, allFollowersToRelink)
                         progressMade = true
                     }
                 }
@@ -1112,11 +1171,15 @@ fun orderedPathIndices(
 
 private fun endsYielding(mutPath: MutPath, root: BlockTree): Boolean {
     val ref = when (val last = mutPath.elements.lastOrNull()) {
-        null -> null
+        null -> return false
         is Either.Left -> last.item.ref
         is Either.Right -> last.item.ref
     }
-    return ref != null && ref.yieldingCallKind(root) != null
+    var tree = root.dereference(ref)?.target ?: return false
+    if (isAssignment(tree)) {
+        tree = tree.child(2)
+    }
+    return tree.yieldingCallKind() != null
 }
 
 fun diagnosticPositionForPathContents(

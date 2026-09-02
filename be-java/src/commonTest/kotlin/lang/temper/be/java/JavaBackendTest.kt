@@ -1302,8 +1302,8 @@ class JavaBackendTest {
             |              ```
             |              package my_test_library.test;
             |              import java.util.concurrent.CompletableFuture;
-            |              import java.util.Optional;
             |              import temper.core.Core;
+            |              import java.util.Optional;
             |              import temper.core.Generator.DoneResult;
             |              import temper.core.Generator;
             |              import temper.core.Generator.Result;
@@ -1312,7 +1312,6 @@ class JavaBackendTest {
             |              import temper.core.Nullable;
             |              import java.util.function.Function;
             |              import temper.core.Generator.ValueResult;
-            |              import java.util.concurrent.ExecutionException;
             |              public final class TestGlobal {
             |                  private TestGlobal() {
             |                  }
@@ -1339,23 +1338,19 @@ class JavaBackendTest {
             |                                  case 1:
             |                                      {
             |                                      local$1.awaited_13 = p__0;
+            |                                      local$1.caseIndex_15 = 2;
             |                                      local$1.awaited_13.handle((ignored$1, ignored$2) -> {
             |                                              generator_14.get();
             |                                              return null;
             |                                      });
-            |                                      local$1.caseIndex_15 = 2;
             |                                      return new ValueResult<>(Optional.empty());
             |                                  }
             |                                  case 2:
             |                                      {
             |                                      try {
-            |                                          try {
-            |                                              local$1.t_7 = local$1.awaited_13.get();
-            |                                          } catch (InterruptedException | ExecutionException ignored$3) {
-            |                                              throw new RuntimeException(ignored$3);
-            |                                          }
+            |                                          local$1.t_7 = Core.getPromiseResult(local$1.awaited_13);
             |                                          local$1.caseIndex_15 = 4;
-            |                                      } catch (RuntimeException ignored$4) {
+            |                                      } catch (RuntimeException ignored$3) {
             |                                          local$1.caseIndex_15 = 3;
             |                                      }
             |                                      break;
@@ -1424,15 +1419,14 @@ class JavaBackendTest {
             |              ```
             |              package my_test_library.test;
             |              import java.util.Optional;
-            |              import java.util.concurrent.CompletableFuture;
             |              import temper.core.Core;
+            |              import java.util.concurrent.CompletableFuture;
             |              import temper.core.Generator.DoneResult;
             |              import temper.core.Generator;
             |              import temper.core.Generator.Result;
             |              import temper.core.Nullable;
             |              import java.util.function.Function;
             |              import temper.core.Generator.ValueResult;
-            |              import java.util.concurrent.ExecutionException;
             |              public final class TestGlobal {
             |                  private TestGlobal() {
             |                  }
@@ -1456,23 +1450,19 @@ class JavaBackendTest {
             |                                  case 1:
             |                                      {
             |                                      local$1.awaited_7 = p__0;
+            |                                      local$1.caseIndex_9 = 2;
             |                                      local$1.awaited_7.handle((ignored$1, ignored$2) -> {
             |                                              generator_8.get();
             |                                              return null;
             |                                      });
-            |                                      local$1.caseIndex_9 = 2;
             |                                      return new ValueResult<>(Optional.empty());
             |                                  }
             |                                  case 2:
             |                                      {
             |                                      try {
-            |                                          try {
-            |                                              local$1.awaited_7.get();
-            |                                          } catch (InterruptedException | ExecutionException ignored$3) {
-            |                                              throw new RuntimeException(ignored$3);
-            |                                          }
+            |                                          Core.getPromiseResult(local$1.awaited_7);
             |                                          local$1.caseIndex_9 = 4;
-            |                                      } catch (RuntimeException ignored$4) {
+            |                                      } catch (RuntimeException ignored$3) {
             |                                          local$1.caseIndex_9 = 3;
             |                                      }
             |                                      break;
@@ -1480,15 +1470,8 @@ class JavaBackendTest {
             |                                  case 3:
             |                                      {
             |                                      throw Core.bubble();
-            |                                      local$1.caseIndex_9 = 5;
-            |                                      break;
             |                                  }
             |                                  case 4:
-            |                                      {
-            |                                      local$1.caseIndex_9 = 5;
-            |                                      break;
-            |                                  }
-            |                                  case 5:
             |                                      {
             |                                      return DoneResult.get();
             |                                  }

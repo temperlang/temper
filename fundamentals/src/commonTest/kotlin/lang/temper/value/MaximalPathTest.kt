@@ -9,6 +9,7 @@ import lang.temper.common.soleElement
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.frontend.structureBlock
 import lang.temper.log.Position
+import lang.temper.name.BuiltinName
 import lang.temper.name.ParsedName
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -239,21 +240,18 @@ class MaximalPathTest {
                 |Path#2
                 |- ref#2: `start_body()`
                 |if (ref#3?: `x()`) -> Path#3
-                |else -> Path#4
+                |else if (ref#4?: `y()`) -> Path#4
+                |else -> Path#5
                 |
                 |Path#3
                 |- ref#7: `after_loop()`
                 |
-                |Path#4
-                |if (ref#4?: `y()`) -> Path#5
-                |else -> Path#6
-                |
-                |Path#6
+                |Path#5
                 |- ref#5: `notX_notY()`
                 |- ref#6: `end_body()`
-                |-> Path#5
+                |-> Path#4
                 |
-                |Path#5
+                |Path#4
                 |<- Path#1
             """.trimMargin(),
         ) {
@@ -967,6 +965,162 @@ class MaximalPathTest {
             )
         }
     }
+
+    @Test
+    fun twoAwaitsWithAssignmentsInComplexFlow() = assertMaximalPaths(
+        fails = ConservativeFailure.AtStartAndEndOnly,
+        yieldingCallsEndPaths = true,
+        ignoreConstantConditions = false,
+        makeControlFlow = {
+            val (x, y, z, w, v) =
+                listOf("x", "y", "z", "w", "v").map {
+                    nameMaker.unusedSourceName(ParsedName(it))
+                }
+            OrElse(
+                or = {
+                    Decl(x) {}
+                    Call(BuiltinFuns.vSetLocalFn) {
+                        Ln(x)
+                        Stmt("a")
+                    }
+                    Call {
+                        Rn(BuiltinName("f"))
+                        Rn(x)
+                    }
+                    Decl(y) {}
+                    Call(BuiltinFuns.vSetLocalFn) {
+                        Ln(y)
+                        Call(BuiltinFuns.vAwait) {
+                            Rn(BuiltinName("g"))
+                            Rn(x)
+                        }
+                    }
+                    If(
+                        cond = {
+                            Call {
+                                Rn(BuiltinName("h"))
+                                Rn(y)
+                            }
+                        },
+                        thn = {
+                            Decl(z) {}
+                            Call(BuiltinFuns.vSetLocalFn) {
+                                Ln(z)
+                                Call(BuiltinFuns.vAwait) {
+                                    Call {
+                                        Rn(BuiltinName("i"))
+                                        Rn(y)
+                                    }
+                                }
+                            }
+                            Decl(w) {}
+                            If(
+                                cond = {
+                                    Call(vIsNullFn) {
+                                        Rn(z)
+                                    }
+                                },
+                                thn = {
+                                    Call(BuiltinFuns.vSetLocalFn) {
+                                        Ln(w)
+                                        V(Value("null", TString))
+                                    }
+                                },
+                                els = {
+                                    Call(BuiltinFuns.vSetLocalFn) {
+                                        Ln(w)
+                                        Call(BuiltinFuns.vNotNullFn) {
+                                            Rn(z)
+                                        }
+                                    }
+                                },
+                            )
+                            Decl(v) {}
+                            Call(BuiltinFuns.vSetLocalFn) {
+                                Ln(v)
+                                Call {
+                                    Rn(BuiltinName("j"))
+                                    Rn(w)
+                                }
+                            }
+                            Call {
+                                Rn(BuiltinName("k"))
+                                Rn(v)
+                            }
+                        },
+                        els = {
+                            Call {
+                                Rn(BuiltinName("m"))
+                                Rn(y)
+                            }
+                        },
+                    )
+                },
+                els = {
+                    Stmt("printFailed")
+                },
+            )
+            Do {}
+        },
+        want = """
+            |Entry Path#0
+            |Exits Path#10
+            |Fail exits
+            |
+            |Path#0
+            |if (bubbled) -> Path#2
+            |else -> Path#1
+            |
+            |Path#1
+            |- ref#0: `let x__0`
+            |- ref#1: `x__0 = a()`
+            |- ref#2: `f(x__0)`
+            |- ref#3: `let y__1`
+            |- ref#4: `y__1 = await(g, x__0)`
+            |if (ref#5?: `h(y__1)`) -> Path#3
+            |else -> Path#4
+            |
+            |Path#3
+            |- ref#6: `let z__2`
+            |- ref#7: `z__2 = await i(y__1)`
+            |###### This await is followed by a let but must be last in
+            |###### its basic block.
+            |-> Path#5
+            |
+            |Path#5
+            |- ref#8: `let w__3`
+            |if (ref#9?: `isNull(z__2)`) -> Path#6
+            |else -> Path#7
+            |
+            |Path#6
+            |- ref#10: `w__3 = "null"`
+            |-> Path#8
+            |
+            |Path#7
+            |- ref#11: `w__3 = notNull(z__2)`
+            |-> Path#8
+            |
+            |Path#8
+            |- ref#12: `let v__4`
+            |- ref#13: `v__4 = j(w__3)`
+            |- ref#14: `k(v__4)`
+            |-> Path#9
+            |
+            |Path#4
+            |- ref#15: `m(y__1)`
+            |-> Path#9
+            |
+            |Path#9
+            |if (bubbled) -> Path#2
+            |else -> Path#10
+            |
+            |Path#2 catches from orElse#5
+            |- ref#16: `printFailed()`
+            |-> Path#10
+            |
+            |Path#10
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
 
     private fun assertMaximalPaths(
         want: String,
