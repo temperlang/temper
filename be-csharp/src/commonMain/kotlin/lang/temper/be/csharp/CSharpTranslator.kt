@@ -2484,16 +2484,24 @@ internal class CSharpTranslator(
                             ),
                         )
                     }
-                    val elseCase = s.elseCase
-                    if (elseCase.body.statements.isNotEmpty()) {
-                        add(
-                            CSharp.SwitchCase(
+                }
+                val elseCase = s.elseCase
+                if (elseCase.body.statements.isNotEmpty()) {
+                    add(
+                        CSharp.SwitchCase(
+                            elseCase.pos,
+                            null,
+                            CSharp.BlockStatement(
                                 elseCase.pos,
-                                null,
-                                translateBlockStatement(elseCase.body),
+                                buildList {
+                                    elseCase.body.statements.flatMapTo(this) {
+                                        translateStatement(it)
+                                    }
+                                    add(CSharp.BreakStatement(elseCase.pos.rightEdge))
+                                },
                             ),
-                        )
-                    }
+                        ),
+                    )
                 }
             },
         )
