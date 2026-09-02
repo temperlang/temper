@@ -1450,11 +1450,11 @@ class JavaBackendTest {
             |                                  case 1:
             |                                      {
             |                                      local$1.awaited_7 = p__0;
+            |                                      local$1.caseIndex_9 = 2;
             |                                      local$1.awaited_7.handle((ignored$1, ignored$2) -> {
             |                                              generator_8.get();
             |                                              return null;
             |                                      });
-            |                                      local$1.caseIndex_9 = 2;
             |                                      return new ValueResult<>(Optional.empty());
             |                                  }
             |                                  case 2:
@@ -1470,8 +1470,6 @@ class JavaBackendTest {
             |                                  case 3:
             |                                      {
             |                                      throw Core.bubble();
-            |                                      local$1.caseIndex_9 = 4;
-            |                                      break;
             |                                  }
             |                                  case 4:
             |                                      {
