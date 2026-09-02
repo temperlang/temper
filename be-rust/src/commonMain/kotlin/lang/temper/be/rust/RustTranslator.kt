@@ -1833,8 +1833,8 @@ class RustTranslator(
         val args = call.mapParameters(optionalAsNullable = true) { arg, wantedType, _ ->
             translateActual(arg, needFull = wantedType == null, wantedType = wantedType)
         }
-        // Presume good arg count since these calls are generated internally.
-        return args[1].methodCall("get")
+        // Presume consistent arg usage since these calls are generated internally.
+        return args.first().methodCall("get")
     }
 
     private fun translateCallable(callable: TmpL.Callable): Rust.Expr {

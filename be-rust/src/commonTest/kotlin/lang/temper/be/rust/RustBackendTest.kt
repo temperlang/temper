@@ -322,11 +322,12 @@ class RustBackendTest {
                 |temper_core::impl_any_value_trait!(A, []);
                 |fn fn__0() -> temper_core::SafeGenerator<()> {
                 |    let mut caseIndex___0: std::sync::Arc<std::sync::RwLock<i32>> = std::sync::Arc::new(std::sync::RwLock::new(0));
-                |    let mut t___0: std::sync::Arc<std::sync::RwLock<Option<A>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
-                |    let mut t___1: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>> = std::sync::Arc::new(std::sync::RwLock::new(std::sync::Arc::new("".to_string())));
+                |    let mut awaited___0: std::sync::Arc<std::sync::RwLock<Option<temper_core::Promise<A>>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
+                |    let mut t___0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>> = std::sync::Arc::new(std::sync::RwLock::new(std::sync::Arc::new("".to_string())));
+                |    let mut t___1: std::sync::Arc<std::sync::RwLock<Option<A>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
                 |    #[derive(Clone)]
                 |    struct ClosureGroup___0 {
-                |        caseIndex___0: std::sync::Arc<std::sync::RwLock<i32>>, t___0: std::sync::Arc<std::sync::RwLock<Option<A>>>, t___1: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>>
+                |        caseIndex___0: std::sync::Arc<std::sync::RwLock<i32>>, awaited___0: std::sync::Arc<std::sync::RwLock<Option<temper_core::Promise<A>>>>, t___1: std::sync::Arc<std::sync::RwLock<Option<A>>>, t___0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>>
                 |    }
                 |    impl ClosureGroup___0 {
                 |        fn convertedCoroutine___0(& self, generator___0: temper_core::SafeGenerator<()>) -> Option<()> {
@@ -335,49 +336,62 @@ class RustBackendTest {
                 |                {
                 |                    * self.caseIndex___0.write().unwrap() = -1;
                 |                }
-                |                match caseIndexLocal___0.clone() {
+                |                match caseIndexLocal___0 {
                 |                    0 => {
                 |                        {
                 |                            * self.caseIndex___0.write().unwrap() = 1;
                 |                        }
-                |                        p().clone().on_ready(std::sync::Arc::new(move | |{
+                |                    },
+                |                    1 => {
+                |                        {
+                |                            * self.awaited___0.write().unwrap() = Some(p().clone());
+                |                        }
+                |                        {
+                |                            * self.caseIndex___0.write().unwrap() = 2;
+                |                        }
+                |                        temper_core::read_locked( & self.awaited___0).clone().unwrap().on_ready(std::sync::Arc::new(move | |{
                 |                                    generator___0.clone().next();
                 |                        }));
                 |                        return Some(().clone());
                 |                    },
-                |                    1 => {
-                |                        match p().clone().get() {
-                |                            Ok(x) => {
-                |                                {
-                |                                    * self.t___0.write().unwrap() = Some(x);
-                |                                }
-                |                                {
-                |                                    * self.caseIndex___0.write().unwrap() = 3;
-                |                                }
-                |                            },
-                |                            _ => {
-                |                                * self.caseIndex___0.write().unwrap() = 2;
-                |                            }
-                |                        };
-                |                    },
                 |                    2 => {
-                |                        {
-                |                            * self.t___1.write().unwrap() = std::sync::Arc::new("".to_string());
-                |                        }
-                |                        {
-                |                            * self.caseIndex___0.write().unwrap() = 4;
+                |                        'ok___0: {
+                |                            'orElse___0: {
+                |                                let result___0: temper_core::Result<A> = Ok(temper_core::read_locked( & self.awaited___0).clone().unwrap().get());
+                |                                if ! result___0.is_ok() {
+                |                                    break 'orElse___0;
+                |                                }
+                |                                {
+                |                                    * self.t___1.write().unwrap() = Some(result___0.unwrap());
+                |                                }
+                |                                {
+                |                                    * self.caseIndex___0.write().unwrap() = 4;
+                |                                }
+                |                                break 'ok___0;
+                |                            }
+                |                            {
+                |                                * self.caseIndex___0.write().unwrap() = 3;
+                |                            }
                 |                        }
                 |                    },
                 |                    3 => {
                 |                        {
-                |                            * self.t___1.write().unwrap() = temper_core::read_locked( & self.t___0).clone().unwrap().a();
+                |                            * self.t___0.write().unwrap() = std::sync::Arc::new("".to_string());
                 |                        }
                 |                        {
-                |                            * self.caseIndex___0.write().unwrap() = 4;
+                |                            * self.caseIndex___0.write().unwrap() = 5;
                 |                        }
                 |                    },
                 |                    4 => {
-                |                        println!("{}", temper_core::read_locked( & self.t___1).clone());
+                |                        {
+                |                            * self.t___0.write().unwrap() = temper_core::read_locked( & self.t___1).clone().unwrap().a();
+                |                        }
+                |                        {
+                |                            * self.caseIndex___0.write().unwrap() = 5;
+                |                        }
+                |                    },
+                |                    5 => {
+                |                        println!("{}", temper_core::read_locked( & self.t___0).clone());
                 |                        return None;
                 |                    },
                 |                    _ => {
@@ -388,7 +402,7 @@ class RustBackendTest {
                 |        }
                 |    }
                 |    let closure_group = ClosureGroup___0 {
-                |        caseIndex___0: caseIndex___0.clone(), t___0: t___0.clone(), t___1: t___1.clone()
+                |        caseIndex___0: caseIndex___0.clone(), awaited___0: awaited___0.clone(), t___1: t___1.clone(), t___0: t___0.clone()
                 |    };
                 |    let convertedCoroutine___0 = {
                 |        let closure_group = closure_group.clone();
