@@ -28,10 +28,12 @@ import lang.temper.name.NameMaker
 import lang.temper.name.ResolvedName
 import lang.temper.name.Temporary
 import lang.temper.stage.Stage
+import lang.temper.type.BubbleType
 import lang.temper.type.FunctionType
 import lang.temper.type.InvalidType
 import lang.temper.type.MkType
 import lang.temper.type.StaticType
+import lang.temper.type.isNeverType
 import lang.temper.type2.MkType2
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
@@ -726,6 +728,13 @@ private class CoroutineConverter(
         override val decl: DeclTree,
     ) : NameInfo
 
+    private data class AwakeUponInfo(
+        val promiseNameInfo: HoistedNameInfo,
+        val promiseType: StaticType,
+        val promiseTreePos: Position,
+        val yieldingCallPos: Position,
+    )
+
     private val localNameInfo = mutableMapOf<InternalModularName, NameInfo>()
     private fun inspectNames() {
         val counts = buildMap {
@@ -1070,66 +1079,6 @@ private class CoroutineConverter(
                 val case = caseList[caseListIndex++]
                 val path = basicBlocks[case.basicBlockIndex]
                 val pos = path.diagnosticPosition
-                val kind = case.kind
-
-                data class FollowerInfo(
-                    val pos: Position,
-                    val condition: BlockChildReference?,
-                    val target: CaseInfo,
-                    /**
-                     * True if control should exit the outer `while (true)` loop which otherwise
-                     * serves to cause one case from flowing immediately into the next.
-                     */
-                    val exits: Boolean,
-                )
-
-                val elements = path.elements
-                var isTerminal = path.pathIndex in basicBlocks.exitPathIndices
-                var isFreeBubble = path.pathIndex in basicBlocks.failExitPathIndices
-
-                val yieldingInfo = elements.lastOrNull()?.let {
-                    disassembleYieldingCall(block.dereference(it.ref)?.target)
-                }
-
-                val afterwards = if (case.hasFollower) {
-                    caseInfoMap.getValue(case.basicBlockIndex to CaseKind.Afterwards)
-                } else {
-                    null
-                }
-                val followers = if (afterwards != null && kind == CaseKind.Main) {
-                    isTerminal = false
-                    isFreeBubble = false
-                    // Dispatch to followers in the afterwards-case match code.
-                    listOf(
-                        FollowerInfo(
-                            path.diagnosticPosition.rightEdge,
-                            null,
-                            afterwards,
-                            exits = true,
-                        ),
-                    )
-                } else {
-                    path.followers.mapNotNull { f ->
-                        if (f.condition is MaximalPath.Bubbled) {
-                            // Just mark the beginning and end of `or` blocks for our purposes.
-                            null
-                        } else {
-                            f.pathIndex?.let { destPathIndex ->
-                                val cond = (f.condition as? MaximalPath.AstElement)?.ref
-                                FollowerInfo(
-                                    cond?.pos?.rightEdge ?: path.diagnosticPosition.rightEdge,
-                                    cond,
-                                    caseInfoMap.getValue(destPathIndex to CaseKind.Main),
-                                    // If pausing at the end of the case, break out of the containing
-                                    // `while (true)` loop instead of immediately continuing on to the
-                                    // next state machine state.
-                                    // CaseKind.Main is before the pause.
-                                    exits = yieldingInfo != null && case.kind == CaseKind.Main,
-                                )
-                            }
-                        }
-                    }
-                }
 
                 If(
                     cond = {
@@ -1140,233 +1089,307 @@ private class CoroutineConverter(
                         }
                     },
                     thn = {
-                        // Putting `return__123 = new ValueResult(...);` right before
-                        // any `break fn__124` meets TmpLTranslator expectations about
-                        // how to resugar `return` statements, so when planting
-                        // case instructions, we store away the value result expression
-                        // used for `yield` and `await` statements.
-                        var valueResultExpr: Tree? = null
-                        fun Planting.maybeEmitValueResult(): Boolean {
-                            val valueExpr = valueResultExpr
-                            valueResultExpr = null
-                            if (valueExpr != null) {
-                                returnValueResult(this, valueExpr)
-                                return true
-                            }
-                            return false
-                        }
-
-                        // Plant an assignment to the closed-over case index variable for the given
-                        // case.  If `continues` is true, we want to process that case immediately via
-                        // the outer `while` loop, but otherwise the caller must have set the return
-                        // variable, and we break to the end of the step function.
-                        fun BlockPlanting.transitionTo(pos: Position, target: CaseInfo, exits: Boolean) {
-                            Assign(pos, caseIndexName, WKT.intType) {
-                                V(pos, Value(target.assignedCaseIndex, TInt), WKT.intType)
-                            }
-                            if (exits) {
-                                // Assume the return_value has been set to a GeneratorResult by the
-                                // yield handling stuff.
-                                maybeEmitValueResult()
-                                Break(pos, returnLabel)
-                            }
-                        }
-
-                        // Plant the elements first, and then any transitions for followers
-                        // involving mapping follower targets to case indices.
-                        // This is a function, because, for failure handling, we might need
-                        // to wrap it in an OrElse.
-                        fun BlockPlanting.plantCaseInstructions() {
-                            when (case.kind) {
-                                CaseKind.Main -> {
-                                    val lastElementIndex = elements.lastIndex
-
-                                    for (elementIndex in elements.indices) {
-                                        val element = elements[elementIndex]
-                                        val tree = block.dereference(element.ref)?.target
-                                        if (tree == null) {
-                                            Call(element.pos, ErrorFn) {}
-                                            continue
-                                        }
-
-                                        if (elementIndex == lastElementIndex && yieldingInfo != null) {
-                                            var yieldingExpr: Tree? = null
-                                            when (yieldingInfo.kind) {
-                                                YieldingFnKind.await -> {
-                                                    check(afterwards != null)
-                                                    val promiseTree = yieldingInfo.yieldingCall.child(1)
-                                                    val promiseType = promiseTree.typeInferences?.type
-                                                        ?: InvalidType
-                                                    val promiseName = temporaryPromiseCaptures.getValue(element)
-                                                    val promiseNameInfo = localNameInfo.getValue(promiseName)
-                                                        as HoistedNameInfo
-                                                    Assign(promiseTree.pos.leftEdge, promiseName, promiseType) {
-                                                        Replant(freeTree(promiseTree))
-                                                    }
-                                                    val callType =
-                                                        CoroHelperSpecials.ConvertedCoroutineAwakeUponFn
-                                                            .callTypeInferences(promiseType = promiseType)
-                                                    val pos = yieldingInfo.yieldingCall.pos
-                                                    Call(pos, type = callType) {
-                                                        V(
-                                                            pos.leftEdge,
-                                                            Value(CoroHelperSpecials.ConvertedCoroutineAwakeUponFn),
-                                                            callType.variant,
-                                                        )
-                                                        NotNullCall(
-                                                            promiseTree.pos,
-                                                            promiseNameInfo.zeroValueRecord!!,
-                                                        ) { type ->
-                                                            Rn(promiseTree.pos, promiseName, type)
-                                                        }
-                                                        Rn(
-                                                            pos.leftEdge,
-                                                            generatorInputName,
-                                                            hackMapNewStyleToOld(generatorType),
-                                                        )
-                                                    }
-                                                }
-                                                YieldingFnKind.yield -> {
-                                                    yieldingExpr = yieldingInfo.yieldingCall.childOrNull(1)
-                                                }
-                                            }
-                                            valueResultExpr = yieldingExpr
-                                                ?: ValueLeaf(block.document, yieldingInfo.yieldingCall.pos, emptyValue)
-                                                    .also {
-                                                        it.typeInferences = BasicTypeInferences(WKT.emptyType, listOf())
-                                                    }
-                                            continue
-                                        }
-                                        if (tree is BlockTree) {
-                                            // Reweave that which was unwoven in step 3 above.
-                                            val flow = structureBlock(tree).controlFlow
-                                            mapControlFlowPlanting(
-                                                sourceBlock = tree, cf = flow, target = this,
-                                                mapLabel = { it },
-                                            ) { ref, edge ->
-                                                if (edge != null) {
-                                                    Replant(maybeAdjustVars(freeTarget(edge)))
-                                                } else {
-                                                    Call(ref.pos, ErrorFn) {}
-                                                }
-                                            }
-                                            continue
-                                        }
-                                        val adjustedTree = maybeAdjustVars(freeTree(tree))
-                                        if ((adjustedTree as? ValueLeaf)?.content != void) {
-                                            Replant(adjustedTree)
-                                        }
-                                    }
-                                }
-
-                                CaseKind.Afterwards -> {
-                                    val yieldingElement = path.elements.last()
-                                    val tree = block.dereference(yieldingElement.ref)?.target!!
-                                    val yieldingInfo = disassembleYieldingCall(tree)!!
-                                    when (yieldingInfo.kind) {
-                                        YieldingFnKind.await -> {
-                                            val promiseTree = yieldingInfo.yieldingCall.child(1)
-                                            val yieldedType = yieldingInfo.yieldingCall.typeInferences?.type
-                                                ?: InvalidType
-                                            val promiseName = temporaryPromiseCaptures.getValue(yieldingElement)
-                                            val promiseNameInfo = localNameInfo.getValue(promiseName)
-                                                as HoistedNameInfo
-                                            val promiseType = MkType.nominal(
-                                                WKT.promiseTypeDefinition,
-                                                listOf(yieldedType),
-                                            )
-                                            val callType = CoroHelperSpecials.GetPromiseResultSyncFn.callTypeInferences(
-                                                promiseType = promiseType,
-                                            )
-                                            fun Planting.plantGetPromiseResultSyncCall() =
-                                                Call(tree.pos, type = callType) {
-                                                    V(
-                                                        tree.pos.leftEdge,
-                                                        Value(CoroHelperSpecials.GetPromiseResultSyncFn),
-                                                        callType.variant,
-                                                    )
-                                                    NotNullCall(
-                                                        promiseTree.pos, promiseNameInfo.zeroValueRecord!!,
-                                                    ) { adjustedPromiseType ->
-                                                        Rn(promiseTree.pos, promiseName, adjustedPromiseType)
-                                                    }
-                                                }
-                                            val assignedTo = yieldingInfo.assignedTo
-                                            if (assignedTo != null) {
-                                                Assign(tree.pos, assignedTo as ResolvedName, yieldedType) {
-                                                    plantGetPromiseResultSyncCall()
-                                                }
-                                            } else {
-                                                plantGetPromiseResultSyncCall()
-                                            }
-                                        }
-
-                                        YieldingFnKind.yield -> {
-                                            check(yieldingInfo.assignedTo == null)
-                                        }
-                                    }
-                                }
-                            }
-
-                            fun BlockPlanting.unrollFollowers(followerIndex: Int) {
-                                if (followerIndex in followers.indices) {
-                                    val (fPos, condition, target, fExits) =
-                                        followers[followerIndex]
-
-                                    if (condition != null) {
-                                        If(
-                                            pos = condition.pos,
-                                            cond = {
-                                                val edge = block.dereference(condition)
-                                                if (edge != null) {
-                                                    Replant(maybeAdjustVars(freeTarget(edge)))
-                                                } else {
-                                                    Call(condition.pos, ErrorFn) {}
-                                                }
-                                            },
-                                            thn = {
-                                                transitionTo(fPos, target, exits = fExits)
-                                            },
-                                            els = {
-                                                unrollFollowers(followerIndex + 1)
-                                            },
-                                        )
-                                    } else {
-                                        transitionTo(fPos, target, exits = fExits)
-                                    }
-                                } else if (isFreeBubble) {
-                                    VoidBubble(path.diagnosticPosition.rightEdge)
-                                } else {
-                                    ignore(isTerminal)
-                                    val pos = path.diagnosticPosition.rightEdge
-                                    if (!maybeEmitValueResult()) {
-                                        returnDoneResult(this, pos)
-                                    }
-                                    Break(pos, returnLabel)
-                                }
-                            }
-                            if (followers.size >= 2) {
-                                maybeEmitValueResult()
-                            }
-                            unrollFollowers(0)
-                            check(valueResultExpr == null)
-                        }
-                        if (case.onBubble != null) {
-                            OrElse(
-                                or = { plantCaseInstructions() },
-                                els = {
-                                    val bubbleCase = caseInfoMap.getValue(case.onBubble to CaseKind.Main)
-                                    transitionTo(path.diagnosticPosition.rightEdge, bubbleCase, exits = false)
-                                },
-                            )
-                        } else {
-                            plantCaseInstructions()
-                        }
+                        plantCase(case)
                     },
                     els = {
                         unroll(this)
                     },
                 )
+            }
+        }
+
+        private fun BlockPlanting.plantCase(case: CaseInfo) {
+            val path = basicBlocks[case.basicBlockIndex]
+            val kind = case.kind
+
+            data class FollowerInfo(
+                val pos: Position,
+                val condition: BlockChildReference?,
+                val target: CaseInfo,
+                /**
+                 * True if control should exit the outer `while (true)` loop which otherwise
+                 * serves to cause one case from flowing immediately into the next.
+                 */
+                val exits: Boolean,
+            )
+
+            val elements = path.elements
+            var isTerminal = path.pathIndex in basicBlocks.exitPathIndices
+            var isFreeBubble = path.pathIndex in basicBlocks.failExitPathIndices
+
+            val yieldingInfo = elements.lastOrNull()?.let {
+                disassembleYieldingCall(block.dereference(it.ref)?.target)
+            }
+
+            val afterwards = if (case.hasFollower) {
+                caseInfoMap.getValue(case.basicBlockIndex to CaseKind.Afterwards)
+            } else {
+                null
+            }
+
+            val followers = if (afterwards != null && kind == CaseKind.Main) {
+                isTerminal = false
+                isFreeBubble = false
+                // Dispatch to followers in the afterwards-case match code.
+                listOf(
+                    FollowerInfo(
+                        path.diagnosticPosition.rightEdge,
+                        null,
+                        afterwards,
+                        exits = true,
+                    ),
+                )
+            } else {
+                path.followers.mapNotNull { f ->
+                    if (f.condition is MaximalPath.Bubbled) {
+                        // Just mark the beginning and end of `or` blocks for our purposes.
+                        null
+                    } else {
+                        f.pathIndex?.let { destPathIndex ->
+                            val cond = (f.condition as? MaximalPath.AstElement)?.ref
+                            FollowerInfo(
+                                cond?.pos?.rightEdge ?: path.diagnosticPosition.rightEdge,
+                                cond,
+                                caseInfoMap.getValue(destPathIndex to CaseKind.Main),
+                                // If pausing at the end of the case, break out of the containing
+                                // `while (true)` loop instead of immediately continuing on to the
+                                // next state machine state.
+                                // CaseKind.Main is before the pause.
+                                exits = yieldingInfo != null && case.kind == CaseKind.Main,
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Putting `return__123 = new ValueResult(...);` right before
+            // any `break fn__124` meets TmpLTranslator expectations about
+            // how to resugar `return` statements, so when planting
+            // case instructions, we store away the value result expression
+            // used for `yield` and `await` statements.
+            var valueResultExpr: Tree? = null
+            fun Planting.maybeEmitValueResult(): Boolean {
+                val valueExpr = valueResultExpr
+                valueResultExpr = null
+                if (valueExpr != null) {
+                    returnValueResult(this, valueExpr)
+                    return true
+                }
+                return false
+            }
+
+            var awakeUpon: AwakeUponInfo? = null
+
+            // Plant an assignment to the closed-over case index variable for the given
+            // case.  If `continues` is true, we want to process that case immediately via
+            // the outer `while` loop, but otherwise the caller must have set the return
+            // variable, and we break to the end of the step function.
+            fun BlockPlanting.transitionTo(pos: Position, target: CaseInfo, exits: Boolean) {
+                Assign(pos, caseIndexName, WKT.intType) {
+                    V(pos, Value(target.assignedCaseIndex, TInt), WKT.intType)
+                }
+                if (awakeUpon != null) {
+                    plantAwakeUponInstruction(awakeUpon!!)
+                    awakeUpon = null
+                }
+
+                if (exits) {
+                    // Assume the return_value has been set to a GeneratorResult by the
+                    // yield handling stuff.
+                    maybeEmitValueResult()
+                    Break(pos, returnLabel)
+                }
+            }
+
+            // Plant the elements first, and then any transitions for followers
+            // involving mapping follower targets to case indices.
+            // This is a function, because, for failure handling, we might need
+            // to wrap it in an OrElse.
+            fun BlockPlanting.plantCaseInstructions() {
+                var lastElementExitsNormally = true
+                when (case.kind) {
+                    CaseKind.Main -> {
+                        val lastElementIndex = elements.lastIndex
+
+                        for (elementIndex in elements.indices) {
+                            val element = elements[elementIndex]
+                            val tree = block.dereference(element.ref)?.target
+                            if (tree == null) {
+                                Call(element.pos, ErrorFn) {}
+                                continue
+                            }
+
+                            if (elementIndex == lastElementIndex) {
+                                if (yieldingInfo != null) {
+                                    var yieldingExpr: Tree? = null
+                                    when (yieldingInfo.kind) {
+                                        YieldingFnKind.await -> {
+                                            check(afterwards != null)
+                                            val promiseTree = yieldingInfo.yieldingCall.child(1)
+                                            val promiseType = promiseTree.typeInferences?.type
+                                                ?: InvalidType
+                                            val promiseName = temporaryPromiseCaptures.getValue(element)
+                                            val promiseNameInfo = localNameInfo.getValue(promiseName)
+                                                as HoistedNameInfo
+                                            Assign(promiseTree.pos.leftEdge, promiseName, promiseType) {
+                                                Replant(freeTree(promiseTree))
+                                            }
+                                            // Defer generating the awakeUpon call until after we've set
+                                            // the next caseIndex based on followers to avoid race conditions
+                                            // between callbacks from promises which might reschedule the
+                                            // coro function and setting the index to something other than -1.
+                                            awakeUpon = AwakeUponInfo(
+                                                promiseNameInfo,
+                                                promiseType,
+                                                promiseTree.pos,
+                                                yieldingInfo.yieldingCall.pos,
+                                            )
+                                        }
+
+                                        YieldingFnKind.yield -> {
+                                            yieldingExpr = yieldingInfo.yieldingCall.childOrNull(1)
+                                        }
+                                    }
+                                    valueResultExpr = yieldingExpr
+                                        ?: ValueLeaf(block.document, yieldingInfo.yieldingCall.pos, emptyValue)
+                                            .also {
+                                                it.typeInferences = BasicTypeInferences(WKT.emptyType, listOf())
+                                            }
+                                    continue
+                                }
+                                val lastElementType = tree.typeInferences?.type
+                                if (lastElementType is BubbleType || lastElementType?.isNeverType == true) {
+                                    lastElementExitsNormally = false
+                                }
+                            }
+                            if (tree is BlockTree) {
+                                // Reweave that which was unwoven in step 3 above.
+                                val flow = structureBlock(tree).controlFlow
+                                mapControlFlowPlanting(
+                                    sourceBlock = tree, cf = flow, target = this,
+                                    mapLabel = { it },
+                                ) { ref, edge ->
+                                    if (edge != null) {
+                                        Replant(maybeAdjustVars(freeTarget(edge)))
+                                    } else {
+                                        Call(ref.pos, ErrorFn) {}
+                                    }
+                                }
+                                continue
+                            }
+                            val adjustedTree = maybeAdjustVars(freeTree(tree))
+                            if ((adjustedTree as? ValueLeaf)?.content != void) {
+                                Replant(adjustedTree)
+                            }
+                        }
+                    }
+
+                    CaseKind.Afterwards -> {
+                        val yieldingElement = path.elements.last()
+                        val tree = block.dereference(yieldingElement.ref)?.target!!
+                        val yieldingInfo = disassembleYieldingCall(tree)!!
+                        when (yieldingInfo.kind) {
+                            YieldingFnKind.await -> {
+                                val promiseTree = yieldingInfo.yieldingCall.child(1)
+                                val yieldedType = yieldingInfo.yieldingCall.typeInferences?.type
+                                    ?: InvalidType
+                                val promiseName = temporaryPromiseCaptures.getValue(yieldingElement)
+                                val promiseNameInfo = localNameInfo.getValue(promiseName)
+                                    as HoistedNameInfo
+                                val promiseType = MkType.nominal(
+                                    WKT.promiseTypeDefinition,
+                                    listOf(yieldedType),
+                                )
+                                val callType = CoroHelperSpecials.GetPromiseResultSyncFn.callTypeInferences(
+                                    promiseType = promiseType,
+                                )
+                                fun Planting.plantGetPromiseResultSyncCall() =
+                                    Call(tree.pos, type = callType) {
+                                        V(
+                                            tree.pos.leftEdge,
+                                            Value(CoroHelperSpecials.GetPromiseResultSyncFn),
+                                            callType.variant,
+                                        )
+                                        NotNullCall(
+                                            promiseTree.pos, promiseNameInfo.zeroValueRecord!!,
+                                        ) { adjustedPromiseType ->
+                                            Rn(promiseTree.pos, promiseName, adjustedPromiseType)
+                                        }
+                                    }
+                                val assignedTo = yieldingInfo.assignedTo
+                                if (assignedTo != null) {
+                                    Assign(tree.pos, assignedTo as ResolvedName, yieldedType) {
+                                        plantGetPromiseResultSyncCall()
+                                    }
+                                } else {
+                                    plantGetPromiseResultSyncCall()
+                                }
+                            }
+
+                            YieldingFnKind.yield -> {
+                                check(yieldingInfo.assignedTo == null)
+                            }
+                        }
+                    }
+                }
+
+                fun BlockPlanting.unrollFollowers(followerIndex: Int) {
+                    if (followerIndex in followers.indices) {
+                        val (fPos, condition, target, fExits) =
+                            followers[followerIndex]
+
+                        if (condition != null) {
+                            If(
+                                pos = condition.pos,
+                                cond = {
+                                    val edge = block.dereference(condition)
+                                    if (edge != null) {
+                                        Replant(maybeAdjustVars(freeTarget(edge)))
+                                    } else {
+                                        Call(condition.pos, ErrorFn) {}
+                                    }
+                                },
+                                thn = {
+                                    transitionTo(fPos, target, exits = fExits)
+                                },
+                                els = {
+                                    unrollFollowers(followerIndex + 1)
+                                },
+                            )
+                        } else {
+                            transitionTo(fPos, target, exits = fExits)
+                        }
+                    } else if (isFreeBubble) {
+                        VoidBubble(path.diagnosticPosition.rightEdge)
+                    } else {
+                        ignore(isTerminal)
+                        val pos = path.diagnosticPosition.rightEdge
+                        if (!maybeEmitValueResult()) {
+                            returnDoneResult(this, pos)
+                        }
+                        Break(pos, returnLabel)
+                    }
+                }
+                if (lastElementExitsNormally) {
+                    if (followers.size >= 2) {
+                        maybeEmitValueResult()
+                    }
+                    unrollFollowers(0)
+
+                    check(awakeUpon == null)
+                    check(valueResultExpr == null)
+                }
+            }
+            if (case.onBubble != null) {
+                OrElse(
+                    or = { plantCaseInstructions() },
+                    els = {
+                        val bubbleCase = caseInfoMap.getValue(case.onBubble to CaseKind.Main)
+                        transitionTo(path.diagnosticPosition.rightEdge, bubbleCase, exits = false)
+                    },
+                )
+            } else {
+                plantCaseInstructions()
             }
         }
 
@@ -1409,6 +1432,33 @@ private class CoroutineConverter(
                     .visitPreOrder()
             }
             return t
+        }
+
+        private fun Planting.plantAwakeUponInstruction(awakeUpon: AwakeUponInfo) {
+            val callType =
+                CoroHelperSpecials.ConvertedCoroutineAwakeUponFn
+                    .callTypeInferences(promiseType = awakeUpon.promiseType)
+            val pos = awakeUpon.yieldingCallPos
+            val promisePos = awakeUpon.promiseTreePos
+            val promiseNameInfo = awakeUpon.promiseNameInfo
+            Call(pos, type = callType) {
+                V(
+                    pos.leftEdge,
+                    Value(CoroHelperSpecials.ConvertedCoroutineAwakeUponFn),
+                    callType.variant,
+                )
+                NotNullCall(
+                    promisePos,
+                    promiseNameInfo.zeroValueRecord!!,
+                ) { type ->
+                    Rn(promisePos, promiseNameInfo.name, type)
+                }
+                Rn(
+                    pos.leftEdge,
+                    generatorInputName,
+                    hackMapNewStyleToOld(generatorType),
+                )
+            }
         }
 
         /** Assign `doneResult()` from `Core.temper` to the return variable. */

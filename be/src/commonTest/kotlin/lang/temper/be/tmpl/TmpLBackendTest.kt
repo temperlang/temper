@@ -3379,8 +3379,8 @@ class TmpLBackendTest {
             |                }
             |                1 -> do {
             |                  awaited#0 = f__0();
-            |                  awakeUpon#0(notNull (awaited#0), generator#0);
             |                  caseIndex#0 = 2;
+            |                  awakeUpon#0(notNull (awaited#0), generator#0);
             |                  return ValueResultConstructor#0(Empty#0());
             |                }
             |                2 -> do {
@@ -3399,7 +3399,6 @@ class TmpLBackendTest {
             |                }
             |                3 -> do {
             |                  x__0 = panic#0();
-            |                  caseIndex#0 = 4;
             |                }
             |                4 -> do {
             |                  ConsoleLog#0(console#0, cat#0("After ", x__0));

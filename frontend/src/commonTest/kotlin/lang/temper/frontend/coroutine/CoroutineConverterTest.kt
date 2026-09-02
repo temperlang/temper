@@ -102,7 +102,6 @@ class CoroutineConverterTest {
                 .actuals(listOf(WellKnownTypes.stringType2))
                 .get(),
         ),
-        verboseDebug = true, // do not commit
     )
 
     @Test

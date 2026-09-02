@@ -1,98 +1,100 @@
-  var caseIndex#0: Int32;
-  caseIndex#0 = 0;
-  var awaited#0: Promise<NetResponse>?;
-  awaited#0 = null;
-  var awaited#1: Promise<String?>?;
-  awaited#1 = null;
-  var req__0: NetRequest?;
-  req__0 = null;
-  var resp__0: NetResponse?;
-  resp__0 = null;
-  var subject#0: String?;
-  subject#0 = null;
-  let convertedCoroutine#0;
-  convertedCoroutine#0 = fn (generator#0: SafeGenerator<Empty>) /* return__0 */: (GeneratorResult<Empty>) {
-    fn__0: do {
+  var caseIndex#21: Int32;
+  caseIndex#21 = 0;
+  var awaited#18: Promise<NetResponse>?;
+  awaited#18 = null;
+  var awaited#19: Promise<String?>?;
+  awaited#19 = null;
+  var req__5: NetRequest?;
+  req__5 = null;
+  var resp__6: NetResponse?;
+  resp__6 = null;
+  var subject#10: String?;
+  subject#10 = null;
+  let convertedCoroutine#24;
+  convertedCoroutine#24 = fn (generator#20: SafeGenerator<Empty>) /* return__4 */: (GeneratorResult<Empty>) {
+    fn__22: do {
       while (true) {
-        let caseIndexLocal#0: Int32;
-        caseIndexLocal#0 = caseIndex#0;
-        caseIndex#0 = -1;
-        if (caseIndexLocal#0 == 0) {
-          caseIndex#0 = 1
-        } else if (caseIndexLocal#0 == 1) {
-          orElse#0: {
-            req__0 = new NetRequest("http://127.0.0.1");
-            do_call_post(notNull(req__0), "[]", "application/json");
-            awaited#0 = do_call_send(req__0);
-            awakeUpon(notNull(awaited#0), generator#0);
-            caseIndex#0 = 2;
-            return__0 = new ValueResult<Empty>({class: Empty__0});
-            break fn__0;
+        let caseIndexLocal#23: Int32;
+        caseIndexLocal#23 = caseIndex#21;
+        caseIndex#21 = -1;
+        if (caseIndexLocal#23 == 0) {
+          caseIndex#21 = 1
+        } else if (caseIndexLocal#23 == 1) {
+          orElse#25: {
+            req__5 = new NetRequest("http://127.0.0.1");
+            do_call_post(notNull(req__5), "[]", "application/json");
+            awaited#18 = do_call_send(req__5);
+            caseIndex#21 = 2;
+            awakeUpon(notNull(awaited#18), generator#20);
+            return__4 = new ValueResult<Empty>({class: Empty__10});
+            break fn__22;
           } orelse {
-            caseIndex#0 = 3
+            caseIndex#21 = 3
           }
-        } else if (caseIndexLocal#0 == 2) {
-          orElse#1: {
-            resp__0 = getPromiseResultSync(notNull(awaited#0));
-            if (do_get_status(notNull(resp__0)) == 200) {
-              caseIndex#0 = 4
+        } else if (caseIndexLocal#23 == 2) {
+          orElse#26: {
+            resp__6 = getPromiseResultSync(notNull(awaited#18));
+            if (do_get_status(notNull(resp__6)) == 200) {
+              caseIndex#21 = 4
             } else {
-              caseIndex#0 = 6
+              caseIndex#21 = 6
             }
           } orelse {
-            caseIndex#0 = 3
+            caseIndex#21 = 3
           }
-        } else if (caseIndexLocal#0 == 3) {
-          do_call_log(console#0, "failed");
-          caseIndex#0 = 10
-        } else if (caseIndexLocal#0 == 4) {
-          orElse#2: {
+        } else if (caseIndexLocal#23 == 3) {
+          do_call_log(console#9, "failed");
+          caseIndex#21 = 9
+        } else if (caseIndexLocal#23 == 4) {
+          orElse#27: {
 ## This await was not being transformed due to a bug in MaximalPaths.
-            awaited#1 = do_get_bodyContent(resp__0);
-            awakeUpon(notNull(awaited#1), generator#0);
-            caseIndex#0 = 5;
-            return__0 = new ValueResult<Empty>({class: Empty__0});
-            break fn__0;
+            awaited#19 = do_get_bodyContent(resp__6);
+            caseIndex#21 = 5;
+            awakeUpon(notNull(awaited#19), generator#20);
+            return__4 = new ValueResult<Empty>({class: Empty__10});
+            break fn__22;
           } orelse {
-            caseIndex#0 = 3
+            caseIndex#21 = 3
           }
-        } else if (caseIndexLocal#0 == 5) {
-          orElse#3: {
-            subject#0 = getPromiseResultSync(notNull(awaited#1));
-            caseIndex#0 = 7
+        } else if (caseIndexLocal#23 == 5) {
+          orElse#28: {
+            subject#10 = getPromiseResultSync(notNull(awaited#19));
+            caseIndex#21 = 7
           } orelse {
-            caseIndex#0 = 3
+            caseIndex#21 = 3
           }
-        } else if (caseIndexLocal#0 == 6) {
-          orElse#4: {
-            do_call_log(console#0, cat("HTTP status was not 200: ", do_call_toString(do_get_status(notNull(resp__0))), "!"));
-            caseIndex#0 = 8
+        } else if (caseIndexLocal#23 == 6) {
+          orElse#29: {
+            do_call_log(console#9, cat("HTTP status was not 200: ", do_call_toString(do_get_status(notNull(resp__6))), "!"));
+            caseIndex#21 = 8
           } orelse {
-            caseIndex#0 = 3
+            caseIndex#21 = 3
           }
-        } else if (caseIndexLocal#0 == 7) {
-          orElse#5: {
-            let body__0: String;
-            if (isNull(subject#0)) {
-              body__0 = "missing"
+        } else if (caseIndexLocal#23 == 7) {
+          orElse#30: {
+            let body__7: String;
+            if (isNull(subject#10)) {
+              body__7 = "missing"
             } else {
-              body__0 = notNull(subject#0)
+              body__7 = notNull(subject#10)
             };
-            let bodyChar0__0;
-            bodyChar0__0 = getStatic(String, \fromCodePoint)(do_call_get(body__0, getStatic(String, \begin)));
-            do_call_log(console#0, cat("Thanks, server.  I got '", bodyChar0__0, "'."));
-            caseIndex#0 = 8
+            let bodyChar0__8;
+            bodyChar0__8 = getStatic(String, \fromCodePoint)(do_call_get(body__7, getStatic(String, \begin)));
+            do_call_log(console#9, cat("Thanks, server.  I got '", bodyChar0__8, "'."));
+            caseIndex#21 = 8
           } orelse {
-            caseIndex#0 = 3
+            caseIndex#21 = 3
           }
-        } else if (caseIndexLocal#0 == 8) {
-          return__0 = core.doneResult();
-          break fn__0;
+        } else if (caseIndexLocal#23 == 8) {
+          caseIndex#21 = 9
+        } else if (caseIndexLocal#23 == 9) {
+          return__4 = core.doneResult();
+          break fn__22;
         } else {
-          return__0 = core.doneResult();
-          break fn__0;
+          return__4 = core.doneResult();
+          break fn__22;
         }
       }
     }
   };
-  return__1 = adaptGeneratorFnSafe(convertedCoroutine#0)
+  return__11 = adaptGeneratorFnSafe(convertedCoroutine#24)
