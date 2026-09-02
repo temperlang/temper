@@ -131,8 +131,10 @@ fun plugInBackendConfigs(
 ): ModuleConfig = moduleConfig.copy(
     moduleCustomizeHook = { module, isNew ->
         moduleConfig.moduleCustomizeHook.customize(module, isNew)
-        for (backendId in backends) {
-            lookupFactory(backendId)!!.addEnvironmentBindings(module)
+        if (isNew) {
+            for (backendId in backends) {
+                lookupFactory(backendId)!!.addEnvironmentBindings(module)
+            }
         }
     },
 )

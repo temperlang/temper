@@ -62,9 +62,6 @@ internal class DefineStage(
                     }
 
                     mixinJsonInterop(module, root, logSink)
-                    for (injector in module.bindingsInjectors()) {
-                        injector.inject(module, root, logSink)
-                    }
 
                     InheritPropertyReassignability().process(root)
 

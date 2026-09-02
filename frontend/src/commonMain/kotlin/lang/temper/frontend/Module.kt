@@ -195,12 +195,12 @@ class Module(
         _topLevelBindings = null
     }
 
-    fun bindingsInjectors(): List<BindingsInjector> = mutableBindingsInjectors.toList()
-    private val mutableBindingsInjectors = mutableListOf<BindingsInjector>()
+    fun bindingsInjectors(): Set<BindingsInjector> = mutableBindingsInjectors.toSet()
+    private val mutableBindingsInjectors = mutableSetOf<BindingsInjector>()
 
     /**
-     * Actual injectors called during [DefineStage]. The primary initial use
-     * is for injecting config classes into config modules.
+     * Actual injectors called during (TODO specify stage). The primary initial
+     * use is for injecting config classes into config modules.
      *
      * TODO Instead define whole virtual modules for import?
      */

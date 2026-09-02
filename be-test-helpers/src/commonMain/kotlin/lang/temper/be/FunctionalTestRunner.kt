@@ -141,10 +141,12 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
         val preparedModules = prepareModulesForFunctionalTest(
             test,
             projectLogSink = logSink,
-            customizeModule = { module, _ ->
-                module.addEnvironmentBindings(server.makeBindings())
-                for (factory in backendOrganization.factoriesById.values) {
-                    factory.addEnvironmentBindings(module)
+            customizeModule = { module, isNew ->
+                if (isNew) {
+                    module.addEnvironmentBindings(server.makeBindings())
+                    for (factory in backendOrganization.factoriesById.values) {
+                        factory.addEnvironmentBindings(module)
+                    }
                 }
             },
         )

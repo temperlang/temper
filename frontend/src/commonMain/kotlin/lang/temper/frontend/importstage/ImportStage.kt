@@ -90,6 +90,9 @@ internal class ImportStage(
                 },
                 afterInterpretation = { (root), _ ->
                     flipDeclaredNames(root)
+                    for (injector in module.bindingsInjectors()) {
+                        injector.inject(module, root, logSink)
+                    }
 
                     Debug.Frontend.ImportStage.After.snapshot(configKey, AstSnapshotKey, root)
                 },
