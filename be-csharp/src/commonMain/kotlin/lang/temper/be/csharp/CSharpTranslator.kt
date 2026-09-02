@@ -1152,7 +1152,8 @@ internal class CSharpTranslator(
         wantedType: Type2? = null,
     ): CSharp.Expression {
         val result = when (expr) {
-            is TmpL.AwaitExpression -> error("await not caught by statement path")
+            is TmpL.AwaitExpression ->
+                error("await not caught by statement path: `${expr.parent}` is a ${expr.parent!!::class}")
             is TmpL.BubbleSentinel -> TODO()
             is TmpL.CallExpression -> translateCallExpression(expr)
             is TmpL.CastExpression -> translateCastExpression(expr)
@@ -1414,16 +1415,22 @@ internal class CSharpTranslator(
         )
     }
 
-    private fun translateLocalDeclaration(decl: TmpL.LocalDeclaration): CSharp.Statement {
+    private fun translateLocalDeclaration(decl: TmpL.LocalDeclaration): List<CSharp.Statement> {
+        val awaitInInitializer = tryTranslateYieldingStatement(decl)
+        if (awaitInInitializer != null) {
+            return awaitInInitializer
+        }
         val wantedType = varTypes[decl.name.name] as? Type2
-        return CSharp.LocalVariableDecl(
-            decl.pos,
-            type = translateType(decl.type),
-            variables = listOf(
-                CSharp.VariableDeclarator(
-                    decl.pos,
-                    variable = translateId(decl.name),
-                    initializer = decl.init?.let { translateExpression(it, wantedType = wantedType) },
+        return listOf(
+            CSharp.LocalVariableDecl(
+                decl.pos,
+                type = translateType(decl.type),
+                variables = listOf(
+                    CSharp.VariableDeclarator(
+                        decl.pos,
+                        variable = translateId(decl.name),
+                        initializer = decl.init?.let { translateExpression(it, wantedType = wantedType) },
+                    ),
                 ),
             ),
         )
@@ -1928,10 +1935,10 @@ internal class CSharpTranslator(
             is TmpL.EmbeddedComment -> TODO()
             is TmpL.ExpressionStatement -> return listOfNotNull(translateExpressionStatement(statement))
             is TmpL.GarbageStatement -> TODO()
-            is TmpL.LocalDeclaration -> translateLocalDeclaration(statement)
+            is TmpL.LocalDeclaration -> return translateLocalDeclaration(statement)
             is TmpL.LocalFunctionDeclaration -> return translateLocalFunctionDeclaration(statement)
             is TmpL.ModuleInitFailed -> TODO()
-            // Currently compute jumps are only used with coroutine strategy mode not
+            // Currently, compute jumps are only used with coroutine strategy mode not
             // opted into by the SupportNetwork
             is TmpL.ComputedJumpStatement -> translateComputedJumpStatement(statement)
             is TmpL.BlockStatement -> translateBlockStatement(statement)
@@ -2017,17 +2024,27 @@ internal class CSharpTranslator(
         // 3. yield;
         // 4. yield x;  // NOT YET SUPPORTED IN TMPL
 
+        val decl: TmpL.LocalDeclaration?
         val assignedTo: TmpL.Id?
         val yieldingNode: TmpL.BaseTree
         val arg: TmpL.Expression?
         val kind: YieldingFnKind
         when (statement) {
+            is TmpL.LocalDeclaration -> {
+                val await = (statement.init as? TmpL.AwaitExpression) ?: return null
+                assignedTo = statement.name
+                yieldingNode = await
+                arg = await.promise
+                kind = YieldingFnKind.await
+                decl = statement
+            }
             is TmpL.Assignment -> { // 1
                 val await = (statement.right as? TmpL.AwaitExpression) ?: return null
                 assignedTo = statement.left
                 yieldingNode = await
                 arg = await.promise
                 kind = YieldingFnKind.await
+                decl = null
             }
             is TmpL.ExpressionStatement -> { // 2
                 val await = (statement.expression as? TmpL.AwaitExpression) ?: return null
@@ -2035,12 +2052,14 @@ internal class CSharpTranslator(
                 yieldingNode = await
                 arg = await.promise
                 kind = YieldingFnKind.await
+                decl = null
             }
             is TmpL.YieldStatement -> { // 3 & 4
                 assignedTo = null
                 yieldingNode = statement
                 arg = null // TODO: when yield supports an expression fix this
                 kind = YieldingFnKind.yield
+                decl = null
             }
             else -> return null
         }
@@ -2084,16 +2103,32 @@ internal class CSharpTranslator(
                     "Result".toIdentifier(yieldingNode.pos.rightEdge),
                 )
                 if (assignedTo != null) {
-                    add(
-                        CSharp.ExpressionStatement(
-                            CSharp.Operation(
+                    if (decl != null) {
+                        add(
+                            CSharp.LocalVariableDecl(
                                 statement.pos,
-                                left = translateId(assignedTo),
-                                operator = CSharp.Operator(assignedTo.pos.rightEdge, CSharpOperator.Assign),
-                                right = readPromise,
+                                translateType(decl.type),
+                                listOf(
+                                    CSharp.VariableDeclarator(
+                                        statement.pos,
+                                        translateId(assignedTo),
+                                        readPromise,
+                                    ),
+                                ),
                             ),
-                        ),
-                    )
+                        )
+                    } else {
+                        add(
+                            CSharp.ExpressionStatement(
+                                CSharp.Operation(
+                                    statement.pos,
+                                    left = translateId(assignedTo),
+                                    operator = CSharp.Operator(assignedTo.pos.rightEdge, CSharpOperator.Assign),
+                                    right = readPromise,
+                                ),
+                            ),
+                        )
+                    }
                 } else {
                     add(
                         CSharp.ExpressionStatement(
