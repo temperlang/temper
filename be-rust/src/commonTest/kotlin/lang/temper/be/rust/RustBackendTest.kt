@@ -322,11 +322,12 @@ class RustBackendTest {
                 |temper_core::impl_any_value_trait!(A, []);
                 |fn fn__0() -> temper_core::SafeGenerator<()> {
                 |    let mut caseIndex___0: std::sync::Arc<std::sync::RwLock<i32>> = std::sync::Arc::new(std::sync::RwLock::new(0));
-                |    let mut t___0: std::sync::Arc<std::sync::RwLock<Option<A>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
-                |    let mut t___1: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>> = std::sync::Arc::new(std::sync::RwLock::new(std::sync::Arc::new("".to_string())));
+                |    let mut awaited___0: std::sync::Arc<std::sync::RwLock<Option<temper_core::Promise<A>>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
+                |    let mut t___0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>> = std::sync::Arc::new(std::sync::RwLock::new(std::sync::Arc::new("".to_string())));
+                |    let mut t___1: std::sync::Arc<std::sync::RwLock<Option<A>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
                 |    #[derive(Clone)]
                 |    struct ClosureGroup___0 {
-                |        caseIndex___0: std::sync::Arc<std::sync::RwLock<i32>>, t___0: std::sync::Arc<std::sync::RwLock<Option<A>>>, t___1: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>>
+                |        caseIndex___0: std::sync::Arc<std::sync::RwLock<i32>>, awaited___0: std::sync::Arc<std::sync::RwLock<Option<temper_core::Promise<A>>>>, t___1: std::sync::Arc<std::sync::RwLock<Option<A>>>, t___0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>>
                 |    }
                 |    impl ClosureGroup___0 {
                 |        fn convertedCoroutine___0(& self, generator___0: temper_core::SafeGenerator<()>) -> Option<()> {
@@ -335,49 +336,62 @@ class RustBackendTest {
                 |                {
                 |                    * self.caseIndex___0.write().unwrap() = -1;
                 |                }
-                |                match caseIndexLocal___0.clone() {
+                |                match caseIndexLocal___0 {
                 |                    0 => {
                 |                        {
                 |                            * self.caseIndex___0.write().unwrap() = 1;
                 |                        }
-                |                        p().clone().on_ready(std::sync::Arc::new(move | |{
+                |                    },
+                |                    1 => {
+                |                        {
+                |                            * self.awaited___0.write().unwrap() = Some(p().clone());
+                |                        }
+                |                        {
+                |                            * self.caseIndex___0.write().unwrap() = 2;
+                |                        }
+                |                        temper_core::read_locked( & self.awaited___0).clone().unwrap().on_ready(std::sync::Arc::new(move | |{
                 |                                    generator___0.clone().next();
                 |                        }));
                 |                        return Some(().clone());
                 |                    },
-                |                    1 => {
-                |                        match p().clone().get() {
-                |                            Ok(x) => {
-                |                                {
-                |                                    * self.t___0.write().unwrap() = Some(x);
-                |                                }
-                |                                {
-                |                                    * self.caseIndex___0.write().unwrap() = 3;
-                |                                }
-                |                            },
-                |                            _ => {
-                |                                * self.caseIndex___0.write().unwrap() = 2;
-                |                            }
-                |                        };
-                |                    },
                 |                    2 => {
-                |                        {
-                |                            * self.t___1.write().unwrap() = std::sync::Arc::new("".to_string());
-                |                        }
-                |                        {
-                |                            * self.caseIndex___0.write().unwrap() = 4;
+                |                        'ok___0: {
+                |                            'orElse___0: {
+                |                                let result___0: temper_core::Result<A> = Ok(temper_core::read_locked( & self.awaited___0).clone().unwrap().get());
+                |                                if ! result___0.is_ok() {
+                |                                    break 'orElse___0;
+                |                                }
+                |                                {
+                |                                    * self.t___1.write().unwrap() = Some(result___0.unwrap());
+                |                                }
+                |                                {
+                |                                    * self.caseIndex___0.write().unwrap() = 4;
+                |                                }
+                |                                break 'ok___0;
+                |                            }
+                |                            {
+                |                                * self.caseIndex___0.write().unwrap() = 3;
+                |                            }
                 |                        }
                 |                    },
                 |                    3 => {
                 |                        {
-                |                            * self.t___1.write().unwrap() = temper_core::read_locked( & self.t___0).clone().unwrap().a();
+                |                            * self.t___0.write().unwrap() = std::sync::Arc::new("".to_string());
                 |                        }
                 |                        {
-                |                            * self.caseIndex___0.write().unwrap() = 4;
+                |                            * self.caseIndex___0.write().unwrap() = 5;
                 |                        }
                 |                    },
                 |                    4 => {
-                |                        println!("{}", temper_core::read_locked( & self.t___1).clone());
+                |                        {
+                |                            * self.t___0.write().unwrap() = temper_core::read_locked( & self.t___1).clone().unwrap().a();
+                |                        }
+                |                        {
+                |                            * self.caseIndex___0.write().unwrap() = 5;
+                |                        }
+                |                    },
+                |                    5 => {
+                |                        println!("{}", temper_core::read_locked( & self.t___0).clone());
                 |                        return None;
                 |                    },
                 |                    _ => {
@@ -388,7 +402,7 @@ class RustBackendTest {
                 |        }
                 |    }
                 |    let closure_group = ClosureGroup___0 {
-                |        caseIndex___0: caseIndex___0.clone(), t___0: t___0.clone(), t___1: t___1.clone()
+                |        caseIndex___0: caseIndex___0.clone(), awaited___0: awaited___0.clone(), t___1: t___1.clone(), t___0: t___0.clone()
                 |    };
                 |    let convertedCoroutine___0 = {
                 |        let closure_group = closure_group.clone();
@@ -421,35 +435,42 @@ class RustBackendTest {
                 |}
                 |pub fn something(mut i__0: Option<i32>) -> temper_core::Result<i32> {
                 |    let return__0: i32;
-                |    let mut t___0: bool;
-                |    let mut t___1: i32;
+                |    let t___0: bool;
                 |    if ! i__0.is_none() {
                 |        t___0 = i__0.is_some();
                 |    } else {
                 |        t___0 = false;
                 |    }
                 |    if t___0 {
+                |        let t___1: i32;
                 |        if i__0.is_none() {
                 |            return Err(temper_core::Error::new());
                 |        } else {
-                |            t___1 = i__0.unwrap();
+                |            let result___0: temper_core::Result<i32> = Ok(i__0.unwrap());
+                |            if ! result___0.is_ok() {
+                |                return result___0;
+                |            }
+                |            t___1 = result___0.unwrap();
                 |        }
-                |        return__0 = temper_core::int_rem(5, t___1) ? ;
+                |        let return___0: temper_core::Result<i32> = Ok(temper_core::int_rem(5, t___1));
+                |        if ! return___0.is_ok() {
+                |            return return___0;
+                |        }
+                |        return__0 = return___0.unwrap();
                 |    } else {
                 |        return__0 = 1;
                 |    }
                 |    return Ok(return__0);
                 |}
                 |pub fn blah(i__1: i32) -> temper_core::Result<i32> {
-                |    let return__1: i32;
-                |    let mut t___3: i32;
+                |    let mut return__1: i32;
                 |    'ok___0: {
                 |        'orelse___0: {
-                |            t___3 = match something(Some(i__1)) {
-                |                Ok(x) => x,
-                |                _ => break 'orelse___0
-                |            };
-                |            return__1 = t___3;
+                |            let return___1: temper_core::Result<i32> = Ok(something(Some(i__1)));
+                |            if ! return___1.is_ok() {
+                |                break 'orelse___0;
+                |            }
+                |            return__1 = return___1.unwrap();
                 |            break 'ok___0;
                 |        }
                 |        return__1 = 0;
@@ -476,8 +497,11 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            let a__0: C;
-            |            a__0 = C::new(false) ? ;
+            |            let a___0: temper_core::Result<C> = Ok(C::new(false));
+            |            if ! a___0.is_ok() {
+            |                return Err(temper_core::Error::new());
+            |            }
+            |            let a__0: C = a___0.unwrap();
             |            Ok(())
             |    }).clone()
             |}
@@ -489,14 +513,16 @@ class RustBackendTest {
             |impl C {
             |    pub fn new(x__0: bool) -> temper_core::Result<C> {
             |        let x;
+            |        let return__0: ();
+            |        return__0 = ();
             |        if x__0 {
             |            return Err(temper_core::Error::new());
             |        }
             |        x = x__0;
+            |        return Ok(return__0);
             |        let selfish = C(std::sync::Arc::new(CStruct {
             |                    x
             |        }));
-            |        return Ok(selfish);
             |    }
             |    pub fn x(& self) -> bool {
             |        return self.0.x;
@@ -594,45 +620,47 @@ class RustBackendTest {
             |        crate::init(None);
             |        temper_std::init(None);
             |        let test___0 = temper_std::testing::Test::new();
-            |        let mut sum__1: std::sync::Arc<std::sync::RwLock<i32>> = std::sync::Arc::new(std::sync::RwLock::new(0));
+            |        let return__0: ();
+            |        return__0 = ();
+            |        let mut sum__0: std::sync::Arc<std::sync::RwLock<i32>> = std::sync::Arc::new(std::sync::RwLock::new(0));
             |        #[derive(Clone)]
-            |        struct ClosureGroup___1 {
-            |            sum__1: std::sync::Arc<std::sync::RwLock<i32>>
+            |        struct ClosureGroup___0 {
+            |            sum__0: std::sync::Arc<std::sync::RwLock<i32>>
             |        }
-            |        impl ClosureGroup___1 {
-            |            fn fn__1(& self, i__2: i32) {
+            |        impl ClosureGroup___0 {
+            |            fn fn__0(& self, i__1: i32) {
             |                {
-            |                    * self.sum__1.write().unwrap() = temper_core::read_locked( & self.sum__1).wrapping_add(i__2);
+            |                    * self.sum__0.write().unwrap() = temper_core::read_locked( & self.sum__0).wrapping_add(i__1);
             |                }
             |            }
             |        }
-            |        let closure_group = ClosureGroup___1 {
-            |            sum__1: sum__1.clone()
+            |        let closure_group = ClosureGroup___0 {
+            |            sum__0: sum__0.clone()
             |        };
-            |        let fn__1 = {
+            |        let fn__0 = {
             |            let closure_group = closure_group.clone();
-            |            std::sync::Arc::new(move | i__2: i32 | closure_group.fn__1(i__2))
+            |            std::sync::Arc::new(move | i__1: i32 | closure_group.fn__0(i__1))
             |        };
-            |        repeat__0(3, fn__1.clone());
-            |        let actual___0: i32 = temper_core::read_locked( & sum__1);
-            |        let mut t___0: bool = Some(actual___0) == Some(3);
+            |        repeat__0(3, fn__0.clone());
+            |        let actual___0: i32 = temper_core::read_locked( & sum__0);
             |        #[derive(Clone)]
-            |        struct ClosureGroup___2 {
+            |        struct ClosureGroup___1 {
             |            actual___0: i32
             |        }
-            |        impl ClosureGroup___2 {
-            |            fn fn__2(& self) -> std::sync::Arc<String> {
+            |        impl ClosureGroup___1 {
+            |            fn fn__1(& self) -> std::sync::Arc<String> {
             |                return std::sync::Arc::new(format!("expected sum == ({}) not ({})", 3, self.actual___0));
             |            }
             |        }
-            |        let closure_group = ClosureGroup___2 {
+            |        let closure_group = ClosureGroup___1 {
             |            actual___0
             |        };
-            |        let fn__2 = {
+            |        let fn__1 = {
             |            let closure_group = closure_group.clone();
-            |            std::sync::Arc::new(move | | closure_group.fn__2())
+            |            std::sync::Arc::new(move | | closure_group.fn__1())
             |        };
-            |        test___0.assert(t___0, fn__2.clone());
+            |        test___0.assert(Some(actual___0) == Some(3), fn__1.clone());
+            |        return Ok(return__0);
             |        test___0.soft_fail_to_hard()
             |    }
             |    use super::*;
@@ -658,23 +686,24 @@ class RustBackendTest {
             |    }).clone()
             |}
             |fn things__0(n__0: i32) -> temper_core::Result<temper_core::List<i32>> {
-            |    return Ok(std::sync::Arc::new(vec![n__0]));
+            |    let return__0: temper_core::List<i32>;
+            |    return__0 = std::sync::Arc::new(vec![n__0]);
+            |    return Ok(return__0.clone().clone());
             |}
             |pub fn other(n__1: i32) -> temper_core::Listed<i32> {
-            |    let return__0: temper_core::Listed<i32>;
-            |    let mut t___0: temper_core::Listed<i32>;
+            |    let mut return__1: temper_core::Listed<i32>;
             |    'ok___0: {
             |        'orelse___0: {
-            |            t___0 = match things__0(n__1) {
-            |                Ok(x) => temper_core::ToListed::to_listed(x),
-            |                _ => break 'orelse___0
-            |            };
-            |            return__0 = t___0.clone();
+            |            let return___0: temper_core::Result<temper_core::List<i32>> = Ok(things__0(n__1));
+            |            if ! return___0.is_ok() {
+            |                break 'orelse___0;
+            |            }
+            |            return__1 = temper_core::ToListed::to_listed(return___0.unwrap());
             |            break 'ok___0;
             |        }
-            |        return__0 = temper_core::cast::<temper_core::Listed<i32>>(panic!()).unwrap();
+            |        return temper_core::cast::<temper_core::Listed<i32>>(panic!()).unwrap();
             |    }
-            |    return return__0.clone();
+            |    return return__1.clone();
             |}
         """.trimMargin(),
     )
@@ -728,9 +757,7 @@ class RustBackendTest {
             |        std::sync::Arc::new(move | j__0: i32 | closure_group.fn__0(j__0))
             |    };
             |    let result__0: i32 = callIt__0(2, fn__0.clone());
-            |    let mut t___0: std::sync::Arc<String> = temper_core::int_to_string(result__0, None);
-            |    let mut t___1: std::sync::Arc<String> = temper_core::int_to_string(temper_core::read_locked( & k__0), None);
-            |    println!("{} and {}", t___0, t___1.clone());
+            |    println!("{} and {}", result__0, temper_core::read_locked( & k__0));
             |}
         """.trimMargin(),
     )
@@ -750,15 +777,11 @@ class RustBackendTest {
             |    }).clone()
             |}
             |pub fn f(a__0: f64, b__0: f64) -> bool {
-            |    let return__0: bool;
-            |    let mut t___0: f64;
             |    if temper_core::float64::cmp_option(Some(a__0), Some(b__0)) != 0 {
-            |        t___0 = b__0 + 1.0f64;
-            |        return__0 = temper_core::float64::cmp(a__0, t___0) < 0;
+            |        return temper_core::float64::cmp(a__0, b__0 + 1.0f64) < 0;
             |    } else {
-            |        return__0 = false;
+            |        return false;
             |    }
-            |    return return__0;
             |}
         """.trimMargin(),
     )
@@ -792,7 +815,7 @@ class RustBackendTest {
             |    }
             |    pub fn new() -> Hub {
             |        let handlers;
-            |        let mut t___0: temper_core::ListBuilder<std::sync::Arc<dyn Fn () + std::marker::Send + std::marker::Sync>> = temper_core::listed::new_builder();
+            |        let t___0: temper_core::ListBuilder<std::sync::Arc<dyn Fn () + std::marker::Send + std::marker::Sync>> = temper_core::listed::new_builder();
             |        handlers = t___0.clone();
             |        let selfish = Hub(std::sync::Arc::new(HubStruct {
             |                    handlers
@@ -828,10 +851,10 @@ class RustBackendTest {
             |    let mut passed__0: bool = true;
             |    'ok___0: {
             |        'orelse___0: {
-            |            match f__0() {
-            |                Ok(x) => x,
-            |                _ => break 'orelse___0
-            |            };
+            |            let result___0: temper_core::Result<()> = Ok(f__0());
+            |            if ! result___0.is_ok() {
+            |                break 'orelse___0;
+            |            }
             |            break 'ok___0;
             |        }
             |        passed__0 = false;
@@ -869,7 +892,7 @@ class RustBackendTest {
             |        crate::init(None);
             |        temper_std::init(None);
             |        let test___0 = temper_std::testing::Test::new();
-            |        let mut t___0: bool;
+            |        let return__0: ();
             |        let nums__0: temper_core::List<i32> = std::sync::Arc::new(vec![0, 1]);
             |        let this__0: temper_core::List<i32> = nums__0.clone();
             |        let n__0: i32 = temper_core::ListedTrait::len( & this__0);
@@ -878,7 +901,6 @@ class RustBackendTest {
             |            let el__0: i32 = temper_core::ListedTrait::get( & this__0, i__0);
             |            i__0 = i__0.wrapping_add(1);
             |            let i__1: i32 = el__0;
-            |            t___0 = i__1 < temper_core::ListedTrait::len( & nums__0);
             |            #[derive(Clone)]
             |            struct ClosureGroup___0 {}
             |            impl ClosureGroup___0 {
@@ -891,8 +913,10 @@ class RustBackendTest {
             |                let closure_group = closure_group.clone();
             |                std::sync::Arc::new(move | | closure_group.fn__0())
             |            };
-            |            test___0.assert(t___0, fn__0.clone());
+            |            test___0.assert(i__1 < temper_core::ListedTrait::len( & nums__0), fn__0.clone());
             |        }
+            |        return__0 = ();
+            |        return Ok(return__0);
             |        test___0.soft_fail_to_hard()
             |    }
             |    use super::*;
@@ -922,8 +946,11 @@ class RustBackendTest {
             |    INIT_ONCE.get_or_init(| |{
             |            let handyThings__0: temper_core::List<temper_core::AnyValue> = std::sync::Arc::new(vec![1.as_any_value(), 2.as_any_value()]);
             |            let thing__0: temper_core::AnyValue = 1.as_any_value();
-            |            let things__0: temper_core::List<temper_core::AnyValue>;
-            |            things__0 = std::sync::Arc::new(vec![1, 2]).ok_or_else(| | temper_core::Error::new()) ? ;
+            |            let things___0: temper_core::Result<temper_core::List<temper_core::AnyValue>> = Ok(std::sync::Arc::new(vec![1, 2]).unwrap());
+            |            if ! things___0.is_ok() {
+            |                return Err(temper_core::Error::new());
+            |            }
+            |            let things__0: temper_core::List<temper_core::AnyValue> = things___0.unwrap();
             |            let more__0: temper_core::List<i32> = std::sync::Arc::new(vec![1, 2]);
             |            let still__0: temper_core::List<temper_core::AnyValue> = std::sync::Arc::new(vec![1, 2]);
             |            let yet__0: temper_core::List<temper_core::MapKey> = std::sync::Arc::new(vec![temper_core::MapKey::new(1), temper_core::MapKey::new(std::sync::Arc::new("two".to_string()))]);
@@ -954,13 +981,20 @@ class RustBackendTest {
                 |    INIT_ONCE.get_or_init(| |{
                 |            let thing__0: Apple = Apple::new(Banana::new());
                 |            let maybe__0: Option<Apple> = Some(thing__0.clone());
-                |            let nope__0: Carrot;
-                |            nope__0 = temper_core::cast::<Carrot>(thing__0.clone()).ok_or_else(| | temper_core::Error::new()) ? ;
+                |            let nope___0: temper_core::Result<Carrot> = Ok(temper_core::cast::<Carrot>(thing__0.clone()).unwrap());
+                |            if ! nope___0.is_ok() {
+                |                return Err(temper_core::Error::new());
+                |            }
+                |            let nope__0: Carrot = nope___0.unwrap();
                 |            let alsoNope__0: Carrot;
                 |            if maybe__0.is_none() {
                 |                return Err(temper_core::Error::new());
                 |            } else {
-                |                alsoNope__0 = maybe__0.clone().and_then(| x | temper_core::cast::<Carrot>(x)).ok_or_else(| | temper_core::Error::new()) ? ;
+                |                let alsoNope___0: temper_core::Result<Carrot> = Ok(maybe__0.clone().and_then(| x | temper_core::cast::<Carrot>(x)).unwrap());
+                |                if ! alsoNope___0.is_ok() {
+                |                    return Err(temper_core::Error::new());
+                |                }
+                |                alsoNope__0 = alsoNope___0.unwrap();
                 |            }
                 |            Ok(())
                 |    }).clone()
@@ -1064,8 +1098,7 @@ class RustBackendTest {
                 |}
                 |temper_core::impl_any_value_trait!(Blah, []);
                 |fn something__0(value__0: temper_core::AnyValue) -> Blah {
-                |    let return__0: Blah;
-                |    let mut t___0: bool;
+                |    let t___0: bool;
                 |    if ! value__0.is_none() {
                 |        t___0 = temper_core::is::<Blah>(value__0.clone());
                 |    } else {
@@ -1073,14 +1106,13 @@ class RustBackendTest {
                 |    }
                 |    if t___0 {
                 |        if value__0.is_none() {
-                |            return__0 = panic!();
+                |            return panic!();
                 |        } else {
-                |            return__0 = temper_core::cast::<Blah>(value__0.clone()).unwrap();
+                |            return temper_core::cast::<Blah>(value__0.clone()).unwrap();
                 |        }
                 |    } else {
-                |        return__0 = Blah::new();
+                |        return Blah::new();
                 |    }
-                |    return return__0.clone();
                 |}
             """.trimMargin(),
         )
@@ -1309,9 +1341,9 @@ class RustBackendTest {
                 |        let mut z;
                 |        let w;
                 |        x = x__0.clone();
-                |        let mut t___0: std::sync::Arc<String> = y__0.clone();
+                |        let t___0: std::sync::Arc<String> = y__0.clone();
                 |        y = t___0.clone();
-                |        let mut t___1: std::sync::Arc<String> = std::sync::Arc::new(format!("{}{}", x, y__0.clone()));
+                |        let t___1: std::sync::Arc<String> = std::sync::Arc::new(format!("{}{}", x, y__0.clone()));
                 |        z = t___1.clone();
                 |        let v__0: std::sync::Arc<String> = z.clone();
                 |        z = std::sync::Arc::new("hi".to_string());
@@ -2091,7 +2123,7 @@ class RustBackendTest {
             |}
             |fn f__0(vals__0: impl temper_core::ToList<i32>) {
             |    let vals__0 = vals__0.to_list();
-            |    let mut t___0: std::sync::Arc<String>;
+            |    let t___0: std::sync::Arc<String>;
             |    if temper_core::ListedTrait::is_empty( & vals__0) {
             |        t___0 = std::sync::Arc::new("empty".to_string());
             |    } else {
@@ -2131,7 +2163,6 @@ class RustBackendTest {
             |}
             |fn a__0(n__0: i32, nums__0: impl temper_core::ToList<i32>) {
             |    let nums__0 = nums__0.to_list();
-            |    let mut t___0: i32;
             |    'outer__0: loop {
             |        let mut j__0: i32 = 0;
             |        'loop___0: while j__0 < n__0 {
@@ -2140,16 +2171,10 @@ class RustBackendTest {
             |        break;
             |    }
             |    let mut i__0: i32 = 0;
-            |    'loop___1: loop {
-            |        'continue___0: {
-            |            t___0 = temper_core::ListedTrait::len( & nums__0);
-            |            if ! (i__0 < t___0) {
-            |                break 'loop___1;
-            |            }
-            |            let mut j__1: i32 = 0;
-            |            'loop___2: while j__1 < n__0 {
-            |                break 'continue___0;
-            |            }
+            |    'loop___1: while i__0 < temper_core::ListedTrait::len( & nums__0) {
+            |        let mut j__1: i32 = 0;
+            |        'loop___2: while j__1 < n__0 {
+            |            break;
             |        }
             |        i__0 = i__0.wrapping_add(1);
             |    }
@@ -2189,13 +2214,11 @@ class RustBackendTest {
                 |    }).clone()
                 |}
                 |pub fn part_one(i__0: i32) -> i32 {
-                |    let return__0: i32;
                 |    if i__0 < 0 {
-                |        return__0 = part_two(i__0);
+                |        return part_two(i__0);
                 |    } else {
-                |        return__0 = i__0;
+                |        return i__0;
                 |    }
-                |    return return__0;
                 |}
                 |struct PartThreeStruct {}
                 |#[derive(Clone)]
@@ -2357,29 +2380,29 @@ class RustBackendTest {
             |    }).clone()
             |}
             |fn f__0(a__0: Option<i32>, b__0: Option<i32>) {
-            |    let mut t___0: i32;
             |    let a__1: i32;
             |    if a__0.is_none() {
             |        a__1 = 1;
             |    } else {
             |        a__1 = a__0.unwrap();
             |    }
-            |    let b__1: i32;
+            |    let mut b__1: i32;
             |    'ok___0: {
             |        'orelse___0: {
             |            if b__0.is_none() {
             |                break 'orelse___0;
             |            } else {
-            |                t___0 = b__0.unwrap();
+            |                let b___0: temper_core::Result<i32> = Ok(b__0.unwrap());
+            |                if ! b___0.is_ok() {
+            |                    break 'orelse___0;
+            |                }
+            |                b__1 = b___0.unwrap();
             |            }
-            |            b__1 = t___0;
             |            break 'ok___0;
             |        }
             |        b__1 = 3;
             |    }
-            |    let mut t___1: std::sync::Arc<String> = temper_core::int_to_string(a__1, None);
-            |    let mut t___2: std::sync::Arc<String> = temper_core::int_to_string(b__1, None);
-            |    println!("{} {}", t___1, t___2.clone());
+            |    println!("{} {}", a__1, b__1);
             |}
         """.trimMargin(),
     )
@@ -2458,8 +2481,7 @@ class RustBackendTest {
             |}
             |pub fn hi(n__0: i32, things__0: impl temper_core::ToList<std::sync::Arc<String>>) -> i32 {
             |    let things__0 = things__0.to_list();
-            |    let mut t___0: i32 = temper_core::ListedTrait::len( & things__0);
-            |    return n__0.wrapping_add(t___0);
+            |    return n__0.wrapping_add(temper_core::ListedTrait::len( & things__0));
             |}
         """.trimMargin(),
     )
@@ -2524,8 +2546,8 @@ class RustBackendTest {
             |    }).clone()
             |}
             |pub fn something(maybe__0: Option<usize>) {
-            |    let mut t___0: std::sync::Arc<String> = std::sync::Arc::new(maybe__0.is_some().to_string());
-            |    println!("{}", t___0.clone());
+            |    let t___0: bool = maybe__0.is_some();
+            |    println!("{}", t___0);
             |}
         """.trimMargin(),
     )
@@ -2624,7 +2646,11 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            J.set(prepare__0(1.5f64) ? ).unwrap_or_else(| _ | panic!());
+            |            let j___0: temper_core::Result<i32> = Ok(prepare__0(1.5f64));
+            |            if ! j___0.is_ok() {
+            |                return Err(temper_core::Error::new());
+            |            }
+            |            J.set(j___0.unwrap()).unwrap_or_else(| _ | panic!());
             |            Ok(())
             |    }).clone()
             |}
@@ -2634,9 +2660,12 @@ class RustBackendTest {
             |}
             |fn prepare__0(x__0: f64) -> temper_core::Result<i32> {
             |    let return__0: i32;
-            |    let mut t___0: std::sync::Arc<String> = temper_core::float64::to_string(x__0);
-            |    println!("{}", t___0.clone());
-            |    return__0 = temper_core::float64::to_int(x__0) ? ;
+            |    println!("{}", temper_core::float64::to_string(x__0));
+            |    let return___0: temper_core::Result<i32> = Ok(temper_core::float64::to_int(x__0));
+            |    if ! return___0.is_ok() {
+            |        return return___0;
+            |    }
+            |    return__0 = return___0.unwrap();
             |    return Ok(return__0);
             |}
             |pub fn inc_awkwardly(i__0: i32) -> i32 {
@@ -2710,8 +2739,11 @@ class RustBackendTest {
                 |            let a__0: A = A::new(B::new());
                 |            let a2__0: A = a__0.clone();
                 |            let things__0: temper_core::List<A> = std::sync::Arc::new(vec![B::new()]);
-                |            let more__0: temper_core::List<A>;
-                |            more__0 = std::sync::Arc::new(vec![B::new()]).ok_or_else(| | temper_core::Error::new()) ? ;
+                |            let more___0: temper_core::Result<temper_core::List<A>> = Ok(std::sync::Arc::new(vec![B::new()]).unwrap());
+                |            if ! more___0.is_ok() {
+                |                return Err(temper_core::Error::new());
+                |            }
+                |            let more__0: temper_core::List<A> = more___0.unwrap();
                 |            println!("{}", a2__0.adjust(std::sync::Arc::new("hi".to_string())));
                 |            Ok(())
                 |    }).clone()
@@ -2910,52 +2942,48 @@ class RustBackendTest {
             |fn decodeHexUnsigned__0(sourceText__0: impl temper_core::ToArcString, start__0: usize, limit__0: usize) -> i32 {
             |    let sourceText__0 = sourceText__0.to_arc_string();
             |    let return__0: i32;
-            |    let mut t___0: bool;
-            |    let mut t___1: bool;
-            |    let mut t___2: bool;
-            |    let mut t___3: i32;
             |    'fn__0: {
             |        let mut n__0: i32 = 0;
             |        let mut i__0: usize = start__0;
-            |        'loop___0: loop {
-            |            if ! ((Some(i__0).cmp( & Some(limit__0)) as i32) < 0) {
-            |                break;
-            |            }
+            |        'loop___0: while (Some(i__0).cmp( & Some(limit__0)) as i32) < 0 {
             |            let cp__0: i32 = temper_core::string::get( & sourceText__0, i__0);
+            |            let digit__0: i32;
+            |            let t___0: bool;
             |            if 48 <= cp__0 {
             |                t___0 = cp__0 <= 57;
             |            } else {
             |                t___0 = false;
             |            }
             |            if t___0 {
-            |                t___3 = cp__0.wrapping_sub(48);
+            |                digit__0 = cp__0.wrapping_sub(48);
             |            } else {
+            |                let t___1: bool;
             |                if 65 <= cp__0 {
             |                    t___1 = cp__0 <= 70;
             |                } else {
             |                    t___1 = false;
             |                }
             |                if t___1 {
-            |                    t___3 = cp__0.wrapping_sub(65).wrapping_add(10);
+            |                    digit__0 = cp__0.wrapping_sub(65).wrapping_add(10);
             |                } else {
+            |                    let t___2: bool;
             |                    if 97 <= cp__0 {
             |                        t___2 = cp__0 <= 102;
             |                    } else {
             |                        t___2 = false;
             |                    }
             |                    if t___2 {
-            |                        t___3 = cp__0.wrapping_sub(97).wrapping_add(10);
+            |                        digit__0 = cp__0.wrapping_sub(97).wrapping_add(10);
             |                    } else {
             |                        return__0 = -1;
             |                        break 'fn__0;
             |                    }
             |                }
             |            }
-            |            let digit__0: i32 = t___3;
             |            n__0 = n__0.wrapping_mul(16).wrapping_add(digit__0);
             |            i__0 = temper_core::string::next( & sourceText__0, i__0);
             |        }
-            |        return__0 = n__0;
+            |        return n__0;
             |    }
             |    return return__0;
             |}

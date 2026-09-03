@@ -933,7 +933,7 @@ fun List<TmpL.Statement>.splitConstructorBody(): Pair<List<TmpL.Statement>, List
         ) || statement.anyChildDepth(
             // We do nest functions, so only pay attention to outer returns.
             within = { it !is TmpL.FunctionLike },
-            predicate = { it is TmpL.ReturnStatement && it.expression == null },
+            predicate = { it is TmpL.ReturnStatement && it.expression.isVoidish() },
         )
         when {
             !reachedUse -> initStatements
@@ -941,6 +941,12 @@ fun List<TmpL.Statement>.splitConstructorBody(): Pair<List<TmpL.Statement>, List
         }.add(statement.deepCopy())
     }
     return initStatements to useStatements
+}
+
+/** True if either null or a void constant. */
+fun TmpL.Expression?.isVoidish(): Boolean = when (this) {
+    null -> true
+    else -> this.isVoidConstant
 }
 
 private fun List<TmpL.DeclarationMetadata>.dependencyCategory() =

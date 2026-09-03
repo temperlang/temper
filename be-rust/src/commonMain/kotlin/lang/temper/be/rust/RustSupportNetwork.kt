@@ -169,9 +169,9 @@ private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): Supp
         BuiltinOperatorId.SafeAdaptGeneratorFn -> adaptGeneratorFnSafe
 
         // Required since using results for failure recovery
-        BuiltinOperatorId.IsOkResult -> TODO()
-        BuiltinOperatorId.PackOkResult -> TODO()
-        BuiltinOperatorId.UnpackOkResult -> TODO()
+        BuiltinOperatorId.IsOkResult -> IsOkResult
+        BuiltinOperatorId.PackOkResult -> PackOkResult
+        BuiltinOperatorId.UnpackOkResult -> UnpackOkResult
 
         null -> null
     }
@@ -1123,6 +1123,25 @@ private val timesFltFlt = Infix("TimesFltFlt", BuiltinOperatorId.TimesFltFlt, Ru
 private val timesIntInt = MethodCall("TimesIntInt", "wrapping_mul", BuiltinOperatorId.TimesIntInt)
 private val valueResultConstructor =
     FunctionCall("core.type ValueResult.constructor()", "Some", cloneEvenIfFirst = true, hasGeneric = true)
+
+private object IsOkResult : MethodCall(
+    baseName = "IsOkResult",
+    memberName = "is_ok",
+    builtinOperatorId = BuiltinOperatorId.IsOkResult,
+)
+
+private object PackOkResult : FunctionCall(
+    baseName = "PackOkResult",
+    functionName = "Ok",
+    builtinOperatorId = BuiltinOperatorId.PackOkResult,
+    cloneEvenIfFirst = true,
+)
+
+private object UnpackOkResult : MethodCall(
+    baseName = "UnpackOkResult",
+    memberName = "unwrap",
+    builtinOperatorId = BuiltinOperatorId.UnpackOkResult,
+)
 
 private val connectedReferences = listOf(
     CmpGeneric,

@@ -13,6 +13,7 @@ import lang.temper.be.tmpl.aType
 import lang.temper.be.tmpl.hasSplitSupers
 import lang.temper.be.tmpl.isNullValue
 import lang.temper.be.tmpl.isStdLib
+import lang.temper.be.tmpl.isVoidish
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapParameters
 import lang.temper.be.tmpl.mutableCaptures
@@ -1832,8 +1833,8 @@ class RustTranslator(
         val args = call.mapParameters(optionalAsNullable = true) { arg, wantedType, _ ->
             translateActual(arg, needFull = wantedType == null, wantedType = wantedType)
         }
-        // Presume good arg count since these calls are generated internally.
-        return args[1].methodCall("get")
+        // Presume consistent arg usage since these calls are generated internally.
+        return args.first().methodCall("get")
     }
 
     private fun translateCallable(callable: TmpL.Callable): Rust.Expr {
@@ -2261,97 +2262,6 @@ class RustTranslator(
     }
 
     private fun translateGetterId(getter: TmpL.Getter) = translateDotName(getter.dotName)
-
-    /* do not commit
-    private fun translateHandlerScope(statement: TmpL.HandlerScope, check: TmpL.Statement): Rust.Statement {
-        return Rust.ExprStatement(
-            statement.pos,
-            expr = translateHandlerScopeExpression(statement = statement, check = check),
-        )
-    }
-
-    private fun translateHandlerScopeExpression(
-        statement: TmpL.HandlerScope,
-        check: TmpL.Statement,
-        assignment: TmpL.Assignment? = null,
-        wantedType: Type2? = null,
-    ): Rust.Expr {
-        val pos = statement.pos
-        // TODO Handled can also be SetAbstractProperty. Do we have examples of this?
-        val tmplHandled = statement.handled as TmpL.Expression
-        val handled = translateExpression(tmplHandled)
-        // Sometimes we generate handling for nonbubbly things, but don't allow that here.
-        if (!tmplHandled.type.described().bubbly) {
-            // TODO Clean front end for anything that gets here.
-            return handled
-        }
-        // Ok case.
-        // For situations we conjure so far, we don't expect name collisions.
-        val ifCheck = check as TmpL.IfStatement
-        val capture = "x".toId(pos)
-        val okValue = capture.deepCopy().maybeWrap(tmplHandled.type, wanted = wantedType, translator = this)
-        val okExpr = when {
-            ifCheck.hasElse -> translateHandlerScopeOkExtra(
-                alternate = ifCheck.alternate!!,
-                assignment = assignment,
-                okValue = okValue,
-            )
-            else -> okValue
-        }
-        // Err case.
-        val errExpr = ifCheck.consequent.let { failer ->
-            val trimmedFailer = when {
-                // We might not always want to unwrap blocks, but in this case, we do.
-                failer is TmpL.BlockStatement && failer.statements.size == 1 -> failer.statements.first()
-                else -> failer
-            }
-            if (
-                (trimmedFailer is TmpL.ReturnStatement && trimmedFailer.expression is TmpL.BubbleSentinel) ||
-                trimmedFailer is TmpL.ModuleInitFailed
-            ) {
-                // Just propagate pretty like.
-                return handled.propagate().maybeWrap(tmplHandled.type, wanted = wantedType, translator = this)
-            }
-            translateStatement(trimmedFailer).firstOrElse(
-                // Use just a single expr if we can, which should be the common case of return or break.
-                first = { (it as? Rust.ExprStatement)?.expr?.deepCopy() },
-                // TODO Do we ever actually have other cases?
-                default = { it.toBlock(failer.pos) },
-            )
-        }
-        // Put it all together.
-        val okPattern = Rust.TupleStructPattern(pos, "Ok".toId(pos), listOf(capture))
-        return Rust.Match(
-            pos,
-            expr = handled,
-            arms = listOf(
-                Rust.MatchArm(pos, pattern = okPattern, expr = okExpr),
-                Rust.MatchArm(pos, pattern = "_".toId(pos), expr = errExpr),
-            ),
-        )
-    }
-
-    private fun translateHandlerScopeOkExtra(
-        alternate: TmpL.Statement,
-        assignment: TmpL.Assignment?,
-        okValue: Rust.Expr,
-    ): Rust.Expr {
-        val internalAssignment = assignment?.let { translateAssignment(it, okValue) }
-        val extra = translateStatement(alternate).map { statement ->
-            when (statement) {
-                is Rust.Block -> statement.simplify()
-                else -> statement
-            }
-        }
-        return when (assignment) {
-            null -> extra
-            else -> buildList {
-                addAll(internalAssignment!!)
-                addAll(extra)
-            }
-        }.toBlock(alternate.pos)
-    }
-     */
 
     private fun translateId(id: TmpL.Id, style: NameStyle? = null): Rust.Id {
         return translateIdAsPath(id, style = style) as Rust.Id
@@ -3010,8 +2920,9 @@ class RustTranslator(
         val pos = statement.pos
         val context = functionContextStack.last()
         val returnType = context.returnType
-        val value = when (val value = statement.expression) {
-            null -> when {
+        val expr = statement.expression
+        val value = when {
+            expr.isVoidish() -> when {
                 context.constructorMode == ConstructorMode.Use -> "selfish".toId(pos).let { selfish ->
                     when {
                         returnType.bubbly -> selfish.wrapOk()
@@ -3023,7 +2934,7 @@ class RustTranslator(
                 else -> null
             }
 
-            else -> translateExpression(value).maybeWrap(given = value.type, wanted = returnType, translator = this)
+            else -> translateExpression(expr!!).maybeWrap(given = expr.type, wanted = returnType, translator = this)
         }
         return listOf(Rust.ExprStatement(pos, expr = Rust.ReturnExpr(pos, value = value)))
     }
