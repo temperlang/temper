@@ -1273,7 +1273,7 @@ class WeaverTest {
         Weaver.weave(
             block,
             sprinkleSecurityDust = true,
-            simplifyRttiCalls = true,
+            rttiCallSimplification = RttiCallSimplification.SeparateNullBranches,
             pullSpecialsRootward = true,
             nameAllFunctions = false,
             resultsAlreadyCaptured = runMakeResultsExplicit,

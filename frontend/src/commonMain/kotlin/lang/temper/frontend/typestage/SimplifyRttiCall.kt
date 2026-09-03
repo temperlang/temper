@@ -14,6 +14,7 @@ import lang.temper.type2.Nullity.NonNull
 import lang.temper.type2.Type2
 import lang.temper.type2.TypeContext2
 import lang.temper.type2.hackMapNewStyleToOld
+import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
 import lang.temper.value.BubbleFn
@@ -396,4 +397,26 @@ private fun bubbleFnCallTypeInferences(neverType: Type2): CallTypeInferences {
         bindings,
         listOf(),
     )
+}
+
+internal fun preferSafeCastOps(rttiCall: CallTree, typeContext: TypeContext2) {
+    val (fnTree, expr, targetTree) = rttiCall.children
+    val fn = fnTree.functionContained as RttiCheckFunction
+    if (fn.runtimeTypeOperation != RuntimeTypeOperation.As) {
+        return
+    }
+
+    val target = targetTree.reifiedTypeContained ?: return
+    val targetType = target.type2
+    val sourceType = expr.typeInferences?.type?.let { hackMapOldStyleToNew(it) }
+        ?: return
+    // Assume the null check has already been separated out.
+    val targetTypeNotNull = targetType.withNullity(NonNull)
+    val sourceTypeNotNull = sourceType.withNullity(NonNull)
+    if (typeContext.isSubType(sourceTypeNotNull, targetTypeNotNull)) {
+        val fnEdge = fnTree.incoming!!
+        fnEdge.replace {
+            V(fnTree.pos, BuiltinFuns.vAssertAsFn)
+        }
+    }
 }

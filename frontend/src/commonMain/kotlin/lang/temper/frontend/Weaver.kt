@@ -10,6 +10,7 @@ import lang.temper.common.compatReversed
 import lang.temper.common.console
 import lang.temper.frontend.syntax.isAssignment
 import lang.temper.frontend.syntax.isLeftHandSide
+import lang.temper.frontend.typestage.preferSafeCastOps
 import lang.temper.frontend.typestage.simplifyRttiCall
 import lang.temper.log.Position
 import lang.temper.log.Positioned
@@ -109,7 +110,7 @@ class Weaver private constructor(
      * Whether to split RTTI calls like `as` and `is` into separate `null`
      * checks and type checks against non-null values.
      */
-    private val simplifyRttiCalls: Boolean,
+    private val rttiCallSimplification: RttiCallSimplification,
     /**
      * Whether to pull special functions like assignments towards the root.
      */
@@ -409,23 +410,34 @@ class Weaver private constructor(
     }
 
     private fun simplifyRttiCalls(root: BlockTree) {
-        if (simplifyRttiCalls) {
-            val rttiCalls = mutableListOf<CallTree>()
-            TreeVisit.startingAt(root)
-                .forEach {
-                    if (it is FunTree) {
-                        VisitCue.SkipOne
-                    } else {
-                        if (isRttiCall(it)) {
-                            rttiCalls.add(it)
-                        }
-                        VisitCue.Continue
+        if (rttiCallSimplification == RttiCallSimplification.None) {
+            return
+        }
+        val rttiCalls = mutableListOf<CallTree>()
+        TreeVisit.startingAt(root)
+            .forEach {
+                if (it is FunTree) {
+                    VisitCue.SkipOne
+                } else {
+                    if (isRttiCall(it)) {
+                        rttiCalls.add(it)
                     }
+                    VisitCue.Continue
                 }
-                .visitPreOrder()
-            for (rttiCall in rttiCalls) {
-                simplifyRttiCall(rttiCall, typeContext2)
             }
+            .visitPreOrder()
+        when (rttiCallSimplification) {
+            RttiCallSimplification.PreferSafe -> {
+                for (rttiCall in rttiCalls) {
+                    preferSafeCastOps(rttiCall, typeContext2)
+                }
+            }
+            RttiCallSimplification.SeparateNullBranches -> {
+                for (rttiCall in rttiCalls) {
+                    simplifyRttiCall(rttiCall, typeContext2)
+                }
+            }
+            RttiCallSimplification.None -> {} // Checked above
         }
     }
 
@@ -635,7 +647,7 @@ class Weaver private constructor(
             sprinkleSecurityDust: Boolean,
             pullSpecialsRootward: Boolean,
             nameAllFunctions: Boolean,
-            simplifyRttiCalls: Boolean,
+            rttiCallSimplification: RttiCallSimplification,
             resultsAlreadyCaptured: Boolean = true,
         ): CaptureInfo {
             val varNames = varNamesOf(root)
@@ -654,7 +666,7 @@ class Weaver private constructor(
                 Weaver(
                     root = rootBlock,
                     sprinkleSecurityDust = sprinkleSecurityDust,
-                    simplifyRttiCalls = simplifyRttiCalls,
+                    rttiCallSimplification = rttiCallSimplification,
                     pullSpecialsRootward = pullSpecialsRootward,
                     nameAllFunctions = nameAllFunctions,
                     resultsAlreadyCaptured = resultsAlreadyCaptured,
@@ -734,6 +746,22 @@ class Weaver private constructor(
             }
         }
     }
+}
+
+enum class RttiCallSimplification {
+    None,
+
+    /**
+     * Use type information to convert `as` (bubbly) checks to `assertAs` (assumed safe)
+     * for known down-casts.
+     */
+    PreferSafe,
+
+    /**
+     * Split `is Foo?` into separate checks for the
+     * [null][lang.temper.value.IsNullFn] and the Foo case.
+     */
+    SeparateNullBranches,
 }
 
 internal fun prefixBlockWith(prefixes: List<Tree>, block: BlockTree) {

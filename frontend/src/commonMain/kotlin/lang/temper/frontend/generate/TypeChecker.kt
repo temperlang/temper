@@ -187,9 +187,9 @@ internal class TypeChecker(
             BuiltinFuns.getpFn, BuiltinFuns.getsFn, BuiltinFuns.igetsFn -> Unit // TODO
             BuiltinFuns.setpFn -> checkSetp(t)
             BuiltinFuns.angleFn -> Unit // Already taken into account
-            BuiltinFuns.asFn, BuiltinFuns.isFn -> {
+            is RttiCheckFunction -> {
                 checkRegularCall(t)
-                checkRttiCheckAllowed(t, fn as RttiCheckFunction)
+                checkRttiCheckAllowed(t, fn)
             }
             BuiltinFuns.abstractPanicFn -> checkAbstractPanicContext(t)
             else -> checkRegularCall(t)

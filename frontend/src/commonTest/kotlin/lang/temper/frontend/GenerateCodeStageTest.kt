@@ -647,6 +647,11 @@ class GenerateCodeStageTest {
     fun orelseInStringInterpolation() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/orelse-in-string-interpolation"),
     )
+
+    @Test
+    fun asVsAssertAs() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/as-vs-assertas"),
+    )
 }
 
 // Provide an extra binding to a function whose call does not inline so does not trigger any

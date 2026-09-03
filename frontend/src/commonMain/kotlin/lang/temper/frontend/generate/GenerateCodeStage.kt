@@ -8,6 +8,7 @@ import lang.temper.common.effect
 import lang.temper.frontend.AstSnapshotKey
 import lang.temper.frontend.CleanupTemporaries
 import lang.temper.frontend.Module
+import lang.temper.frontend.RttiCallSimplification
 import lang.temper.frontend.StageOutputs
 import lang.temper.frontend.Weaver
 import lang.temper.frontend.flipDeclaredNames
@@ -89,7 +90,7 @@ class GenerateCodeStage(
                 Weaver.weave(
                     root,
                     sprinkleSecurityDust = true,
-                    simplifyRttiCalls = false,
+                    rttiCallSimplification = RttiCallSimplification.PreferSafe,
                     pullSpecialsRootward = true,
                     nameAllFunctions = true,
                     resultsAlreadyCaptured = true,

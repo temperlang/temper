@@ -12,6 +12,7 @@ import lang.temper.frontend.AstSnapshotKey
 import lang.temper.frontend.CaptureInfo
 import lang.temper.frontend.CleanupTemporaries
 import lang.temper.frontend.Module
+import lang.temper.frontend.RttiCallSimplification
 import lang.temper.frontend.StageOutputs
 import lang.temper.frontend.StagingFlags
 import lang.temper.frontend.UseBeforeInit
@@ -132,7 +133,7 @@ internal class TypeStage(
                 Weaver.weave(
                     root,
                     sprinkleSecurityDust = false, // Not enough type info yet.
-                    simplifyRttiCalls = true,
+                    rttiCallSimplification = RttiCallSimplification.SeparateNullBranches,
                     pullSpecialsRootward = true,
                     nameAllFunctions = false,
                     resultsAlreadyCaptured = true,
@@ -239,7 +240,7 @@ internal class TypeStage(
                         // that backends can easily insert Result type testing and unpacking
                         // instructions.
                         sprinkleSecurityDust = true,
-                        simplifyRttiCalls = false,
+                        rttiCallSimplification = RttiCallSimplification.PreferSafe,
                         pullSpecialsRootward = true,
                         nameAllFunctions = false,
                         resultsAlreadyCaptured = true,
