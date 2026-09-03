@@ -46,7 +46,8 @@ object New : NamedBuiltinFun, SpecialFunction {
             macroEnv.explain(MessageTemplate.ArityMismatch, values = listOf(1))
             return Fail
         }
-        if (macroEnv.stage < Stage.Define) {
+        if (macroEnv.stage < Stage.Type) {
+            // I haven't seen it run properly before type stage, anyway, so this reduces compute.
             return NotYet
         }
         val typeResult = args.evaluate(0, interpMode)
@@ -75,8 +76,9 @@ object New : NamedBuiltinFun, SpecialFunction {
             macroEnv.explain(MessageTemplate.NotConstructible, values = listOf(typeResult))
             return Fail
         }
+        // TODO Also need to check for imu parameterizations of partialImu types.
+        // TODO Maybe can factor some logic in ImuChecker.
         if (interpMode == InterpMode.Partial && !typeShape.isImu()) {
-            // TODO: this may change once partial records (?) are a thing
             return NotYet
         }
 
@@ -157,6 +159,6 @@ object New : NamedBuiltinFun, SpecialFunction {
     override fun toString(): String = "builtin New"
 }
 
-fun TypeShape.isImu(): Boolean {
+private fun TypeShape.isImu(): Boolean {
     return (stayLeaf?.incoming?.source as? DeclTree)?.parts?.let { imuSymbol in it.metadataSymbolMap } == true
 }

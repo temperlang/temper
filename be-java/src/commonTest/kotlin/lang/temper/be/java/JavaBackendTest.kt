@@ -2083,6 +2083,7 @@ class JavaBackendTest {
                 |            package: "com.example",
                 |        };
                 |
+                |        @imu
                 |        export class JavaConfig(
                 |          public package: String? = null,
                 |          public dependencies: List<String> = [],
