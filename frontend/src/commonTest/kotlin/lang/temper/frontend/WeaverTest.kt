@@ -1178,6 +1178,50 @@ class WeaverTest {
         """.trimMargin(),
     )
 
+    @Test
+    fun orElseInitializesNonVar() = assertWovenRoot(
+        buildInput = {
+            val (x, y, z) = listOf("x", "y", "z").map {
+                nameMaker.unusedSourceName(ParsedName(it))
+            }
+            Decl {
+                Ln(x, WKT.intType)
+            }
+            Assign(x, WKT.intType) {
+                Block {
+                    OrElse(
+                        or = {
+                            plantCallWithTypeInfo(
+                                BuiltinFuns.divIntIntFn,
+                            ) {
+                                Rn(y, WKT.intType)
+                                Rn(z, WKT.intType)
+                            }
+                        },
+                        els = {
+                            V(0)
+                        },
+                    )
+                }
+            }
+            V(void)
+        },
+        want = """
+            |[[ var t#5 ]];
+            |## This var temporary is necessary because it joins results from the `orelse`.
+            |## We can't use `x__0 =` below because it's a non-var declaration.
+            |[[ let return__4 ]];
+            |[[ return__4 = void ]];
+            |[[ let x__0 ]];
+            |orElse#3: do {
+            |  [[ t#5 = y__1 / z__2 ]];
+            |} orelse {
+            |  [[ t#5 = 0 ]];
+            |}
+            |[[ x__0 = t#5 ]];
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
     private fun assertWovenRoot(
         want: String,
         runMakeResultsExplicit: Boolean = true,

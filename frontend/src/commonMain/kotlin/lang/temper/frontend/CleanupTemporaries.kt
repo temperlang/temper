@@ -344,7 +344,7 @@ internal class CleanupTemporaries private constructor(
                             chainStart
                         }
 
-                        // Now we have a range of assignments in chainStart..i
+                        // Now we have a range of assignments in chainStart..i.
                         // First, take the start of the chain and assign the name to it.
                         val initalAssignmentEdge = elements[chainStart].edge!!
                         val namedName = secondLeft.content
@@ -671,7 +671,7 @@ internal class CleanupTemporaries private constructor(
     ): RStrategy? {
         // See the comments above about renaming x to y or y to x
         val canRenameXToY = lazy(LazyThreadSafetyMode.NONE) {
-            // writes to x are all assignments so the name can just change
+            // writes to x are all assignments, so the name can just change
             readsAndWrites.writes[x]?.all { it.writeKind.isAssignment } == true &&
                 // y is not declared late
                 !declaredAfterAssignment(declared = y, assigned = x, readsAndWrites = readsAndWrites) &&
@@ -845,6 +845,16 @@ internal class CleanupTemporaries private constructor(
         for (x in localNames) {
             if (x !is Temporary) { continue }
             val writesToX = readsAndWrites.writes[x] ?: continue
+            val xWrittenInOrElse by lazy {
+                writesToX.any { w ->
+                    var controlFlow: ControlFlow? = w.containingPathElement?.stmt
+                    while (controlFlow != null) {
+                        if (controlFlow is ControlFlow.OrElse) { return@any true }
+                        controlFlow = controlFlow.parent
+                    }
+                    false
+                }
+            }
             for (writeToX in writesToX) {
                 val writeToXTree = writeToX.tree
                 if (writeToXTree == null || writeToX.writeKind != WriteKind.SimpleAssignment) { continue }
@@ -860,6 +870,8 @@ internal class CleanupTemporaries private constructor(
                     // Since x is a Temporary and y is not, this is monotonic so
                     // does not risk that.
                     if (y is Temporary) { continue }
+                    val yDeclParts = readsAndWrites.declarations[y]?.firstOrNull()?.parts
+                        ?: continue
                     val strategy = renameStrategyFor(
                         x = x,
                         y = y,
@@ -883,7 +895,14 @@ internal class CleanupTemporaries private constructor(
                             // Is there a readOfY such that
                             // there is a writeToX upstream of readToY
                             // that is also upstream of the readOfX in a writeToY.
-                            // If so, we cannot rename.
+                            // If so, we cannot rename it.
+
+                            if (!canMakeVar(yDeclParts, readsAndWrites) && xWrittenInOrElse) {
+                                // If the write to x is in an or-else then replacing
+                                // with writes to y would mean potentially having to
+                                // make something `var` that cannot be made `var`.
+                                return@canRenameXToY false
+                            }
 
                             val readsOfY = readsAndWrites.reads[y]
                             if (!readsOfY.isNullOrEmpty()) {
@@ -972,7 +991,7 @@ internal class CleanupTemporaries private constructor(
         //   For example, the read of `g` is a no-op and `f(x)` cannot change its value,
         //   so we can reorder `f(x)` after it.
 
-        // Finally review in reverse order to make it easier to inline a sequence
+        // Finally, review in reverse order to make it easier to inline a sequence
         // of assignments all at once. That can help in common degenerate cases like
         // 1000s of items going into the same list.
         val inlinedElements = mutableSetOf<MaximalPath.AstElement>()
@@ -1085,7 +1104,7 @@ internal class CleanupTemporaries private constructor(
                         Replace(
                             lineNo = lineFor(assigned),
                             description = "inline value assigned to $name at sole read",
-                            edgeToReplace = read.tree!!.incoming!!,
+                            edgeToReplace = read.tree.incoming!!,
                         ) {
                             Replant(freeTree(assigned))
                         },
@@ -1491,7 +1510,7 @@ private fun canMakeVar(declParts: DeclParts, readsAndWrites: ReadsAndWrites): Bo
         return false
     }
     // Do not muck with function or module signatures.
-    if (name in readsAndWrites.inputNames || name == readsAndWrites.outputName) {
+    if (name in readsAndWrites.inputNames) {
         return false
     }
     val metadataMap = declParts.metadataSymbolMultimap

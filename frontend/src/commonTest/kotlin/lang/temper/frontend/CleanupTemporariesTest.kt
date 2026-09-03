@@ -1873,6 +1873,55 @@ class CleanupTemporariesTest {
     }
 
     @Test
+    fun orElseInNonVarInitializer() {
+        val r = doCleanupTemporaries(
+            input = """
+                |export let f(x: Int32, y: Int32): Int32 {
+                |  // This `z` can be adjusted to `var`
+                |  let z = do { (x / y) orelse 0 };
+                |  z + 1;
+                |};
+                |
+                |// But exports can't be `var`.
+                |export let w = (randomInt() / randomInt()) orelse 0;
+            """.trimMargin(),
+        )
+        assertStructure(
+            """
+                |{
+                |  pseudoCodeAfter: ```
+                |    var t#0;
+                |    @fn let `test//`.f;
+                |    `test//`.f = (@stay fn f(x__0 /* aka x */: Int32, y__0 /* aka y */: Int32) /* return__0 */: Int32 {
+                |        fn__0: do {
+                |          return__0 = void;
+                |## Here, z__0 has been adjusted to `var` since it's a local.
+                |          var z__0;
+                |          orelse#0: {
+                |            z__0 = x__0 / y__0
+                |          } orelse {
+                |            z__0 = 0
+                |          };
+                |          z__0 + 1
+                |        }
+                |    });
+                |    let `test//`.w;
+                |## Here, we need to keep `t#0` because `w` cannot be made `var`.
+                |    orelse#1: {
+                |      t#0 = randomInt() / randomInt()
+                |    } orelse {
+                |      t#0 = 0
+                |    };
+                |    `test//`.w = t#0
+                |
+                |    ```
+                |}
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+            r,
+        )
+    }
+
+    @Test
     fun awaitNotInlinedBack() {
         // `await` is one of the specials that needs to be left as
         val r = doCleanupTemporaries("ignore(await p())") { module, isNew ->

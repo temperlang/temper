@@ -4,6 +4,7 @@ import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.cpp.BinaryOpEnum
 import lang.temper.be.cpp.Cpp
 import lang.temper.be.cpp.CppBuilder
+import lang.temper.be.cpp.UnaryOpEnum
 import lang.temper.be.tmpl.BubbleBranchStrategy
 import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
@@ -96,6 +97,7 @@ private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): Supp
         BuiltinOperatorId.PlusIntInt, BuiltinOperatorId.PlusIntInt64 -> plusIntInt
         BuiltinOperatorId.TimesIntInt, BuiltinOperatorId.TimesIntInt64 -> timesIntInt
         BuiltinOperatorId.StrCat -> strCat
+        BuiltinOperatorId.BooleanNegation -> boolNeg
         else -> null
     }
 }
@@ -176,6 +178,22 @@ internal class Infix(
         arguments[0].expr as Cpp.Expr,
         Cpp.BinaryOp(cpp.pos, op),
         arguments[1].expr as Cpp.Expr,
+    )
+}
+
+internal class Prefix(
+    connectedName: String,
+    val op: UnaryOpEnum,
+    builtinOperatorId: BuiltinOperatorId? = null,
+) : CppInlineSupportCode(connectedName, builtinOperatorId) {
+    override fun inlineToTree(
+        arguments: List<TypedArg<Cpp.Tree>>,
+        returnType: Type2,
+        translator: CppTranslator,
+        cpp: CppBuilder,
+    ): Cpp.Tree = cpp.unaryExpr(
+        Cpp.UnaryOp(cpp.pos, op),
+        arguments[0].expr as Cpp.Expr,
     )
 }
 
@@ -277,6 +295,7 @@ private val timesIntInt = FunctionCall("mul", listOf("TimesIntInt"), BuiltinOper
 private val toString = FunctionCall("to_string", listOf("core.type Int32.toString()", "core.type Int64.toString()"))
 private val toInt32 = FunctionCall("to_int32", listOf("core.type Int64.toInt32()", "core.type String.toInt32()"))
 private val toInt64 = FunctionCall("to_int64", listOf("core.type String.toInt64()"))
+private val boolNeg = Prefix("not", UnaryOpEnum.Not, BuiltinOperatorId.BooleanNegation)
 
 private val connectedReferences = listOf(
     ConsoleLog,

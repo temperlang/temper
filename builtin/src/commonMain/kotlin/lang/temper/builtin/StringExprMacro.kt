@@ -61,6 +61,7 @@ import lang.temper.value.outTypeSymbol
 import lang.temper.value.rawBuiltinName
 import lang.temper.value.safeStringPartSymbol
 import lang.temper.value.symbolContained
+import lang.temper.value.toLispy
 import lang.temper.value.toStringDotName
 import lang.temper.value.typeForValue
 import lang.temper.value.typeSymbol
@@ -731,11 +732,23 @@ internal object CoerceToString : SpecialFunction, BuiltinMacro("str", null) {
             InterpMode.Partial -> {
                 val arg = args.valueTree(0)
                 val type = arg.typeInferences?.type
+                val value = arg.valueContained
+                val stage = macroEnv.stage
                 if (type != null) {
                     macroEnv.replaceMacroCallWith {
                         buildStringifyCall(freeTree(arg), type)
                     }
-                } else if (macroEnv.stage == Stage.GenerateCode) {
+                } else if (value != null && stage > Stage.Type) {
+                    if (value.typeTag == TNull) {
+                        macroEnv.replaceMacroCallWith {
+                            V(macroEnv.pos, Value("null", TString), WellKnownTypes.stringType)
+                        }
+                    } else {
+                        macroEnv.replaceMacroCallWith {
+                            buildStringifyCall(freeTree(arg), typeForValue(value))
+                        }
+                    }
+                } else if (stage == Stage.GenerateCode) {
                     val problem = LogEntry(
                         Log.Error,
                         MessageTemplate.InternalErrorMacroNotErased,
@@ -745,9 +758,9 @@ internal object CoerceToString : SpecialFunction, BuiltinMacro("str", null) {
                     problem.logTo(macroEnv.logSink)
                     macroEnv.replaceMacroCallWithErrorNode(problem)
                 }
-                arg.valueContained?.let {
+                value?.let { value ->
                     try {
-                        stringify(it, macroEnv, interpMode, arg.pos) as? Value<*>
+                        stringify(value, macroEnv, interpMode, arg.pos) as? Value<*>
                     } catch (_: Panic) {
                         null
                     }

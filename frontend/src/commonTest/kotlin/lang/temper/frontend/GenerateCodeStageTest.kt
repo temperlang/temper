@@ -642,6 +642,11 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/var-get-p"),
         stagingFlags = setOf(StagingFlags.skipImportCore, StagingFlags.moduleResultNeeded),
     )
+
+    @Test
+    fun orelseInStringInterpolation() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/orelse-in-string-interpolation"),
+    )
 }
 
 // Provide an extra binding to a function whose call does not inline so does not trigger any

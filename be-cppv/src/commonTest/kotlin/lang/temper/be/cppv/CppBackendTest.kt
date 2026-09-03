@@ -68,7 +68,10 @@ class CppBackendTest {
                 |      return -0x8000_0000 / i;
                 |    }
                 |    export let that = why(-one);
-                |    export let other = why(0 * one) orelse 0;
+                |    export let other = do {
+                |      var x = why(0 * one) orelse 0;
+                |      x
+                |    };
                 |    var one = 1;
                 |    one = one * one;
                 |    ```,
