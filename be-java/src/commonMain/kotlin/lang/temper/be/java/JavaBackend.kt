@@ -336,21 +336,6 @@ class JavaBackend private constructor(
         // Module files get a specific name. Prohibited as a Java identifier because module is a reserved word
         const val moduleFileName = "module$sourceFileExtension"
 
-        /** Config files may export a name with this text to specify the Maven library name */
-        val javaLibraryNameConfigKey = Symbol("javaName")
-
-        /** Config files may export a name with this text to specify the Maven group id */
-        val javaLibraryGroupConfigKey = Symbol("javaGroup")
-
-        /** Config files may export a name with this text to specify the Maven artifact id */
-        val javaLibraryArtifactConfigKey = Symbol("javaArtifact")
-
-        /** Config files may export a name with this text to specify the Java `package` name */
-        val javaPackageConfigKey = Symbol("javaPackage")
-
-        /** Config key to specify Maven dependencies */
-        val javaDependenciesKey = Symbol("javaDependencies")
-
         // source MIME type
         val sourceMimeType = MimeType("text", "x-java-source")
         // class file MIME
