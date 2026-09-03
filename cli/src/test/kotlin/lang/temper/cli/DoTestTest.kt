@@ -124,13 +124,19 @@ class DoTestTest {
         "/testing/failing",
     ) { output, libraryName, jobName ->
         val result = doTestResult(listOf(JavaBackend.Java17.backendId), jobName, output, libraryName)
-        checkErrorResults(result)
+        checkFailureResults(result)
     }
 
     @Test
     @Timeout(JAVA_TIMEOUT_SECONDS)
     fun testPassingJava17Backend() {
         checkPassing("TestPassingJava17Backend", "/testing/passing", listOf(JavaBackend.Java17.backendId))
+    }
+
+    @Test
+    @Timeout(JAVA_TIMEOUT_SECONDS)
+    fun connectedsJava17All() {
+        checkPassing("ConnectedsJava17", "/testing/connecteds", listOf(JavaBackend.Java17.backendId))
     }
 
     @Test

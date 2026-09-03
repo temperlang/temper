@@ -80,11 +80,16 @@ class MetadataDecorator(
             return fail
         }
         val insertions = findDecoratorInsertions(args, symbolKey)
+        // Cache result across insertions because it doesn't depend on them.
+        var valuerResultCache: PartialResult? = null
         for (insertion in insertions) {
             val (decorated, insertionPoint) = insertion
             if (insertionPoint in 0..decorated.size) {
-                val calleePos = macroEnv.callee.pos
-                when (val valuerResult = macroEnv.valuer(args)) {
+                val valuerResult = when (valuerResultCache) {
+                    null -> macroEnv.valuer(args).also { valuerResultCache = it }
+                    else -> valuerResultCache
+                }
+                when (valuerResult) {
                     NotYet -> return NotYet
                     is Fail -> {
                         val logEntry = valuerResult.info
@@ -96,6 +101,7 @@ class MetadataDecorator(
                         return valuerResult
                     }
                     is Value<*> -> {
+                        val calleePos = macroEnv.callee.pos
                         (decorated as InnerTree).replace(insertionPoint until insertionPoint) {
                             V(calleePos, keyValue)
                             when (val error = TProblem.unpackOrNull(valuerResult)) {

@@ -710,7 +710,7 @@ private class SourceFilePartitionTestHarness {
             sourceFilePartition.maybeReusePreviouslyStaged(it)
         }
         val snapshot = FilteringFileSystemSnapshot(fs, FileFilterRules.Allow, workRootDir)
-        sourceFilePartition.scan(snapshot, workRootDir)
+        sourceFilePartition.scan(snapshot, workRootDir, rawExtensions = setOf())
         sourceFilePartition.addModulesToAdvancer()
 
         moduleAdvancer.advanceModules(stopBefore = Stage.Run)

@@ -973,7 +973,7 @@ private fun buildStdModules(
     stdPartition.maybeReusePreviouslyStaged(
         LibraryConfigurationsBundle.from(listOf(tentativeStdLibraryConfiguration)),
     )
-    stdPartition.scan(snapshot, libraryRoot)
+    stdPartition.scan(snapshot, libraryRoot, rawExtensions = setOf())
     val modules = stdPartition.addModulesToAdvancer()
     val modulesByFullSpecifier = buildMap {
         for (module in modules) {

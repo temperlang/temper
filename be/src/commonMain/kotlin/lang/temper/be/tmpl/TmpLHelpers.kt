@@ -247,7 +247,7 @@ fun TmpL.FunctionDeclaration.parameterDefaultStatementsInfo(): DefaultStatements
     // This includes being a lazy decision after we know that a backend wants this info.
     // Here we expect each optional to have an if statement mentioning it and an assignment inside.
     val defaultStatements = mutableListOf<TmpL.Statement>()
-    val parameterMapping = buildMap parameterMapping@{
+    val parameterMapping = buildMap parameterMapping@{ // TODO If nullable with default null, what happens here?
         parameters@ for (parameter in parameters.parameters) {
             // Start out with original names, but replace them later.
             if (parameter.optional) {

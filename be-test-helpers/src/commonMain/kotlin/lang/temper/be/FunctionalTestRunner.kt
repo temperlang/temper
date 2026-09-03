@@ -131,7 +131,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
         val backendOrganization = organizeBackends(
             listOf(backendId),
             lookupFactory = ::lookupFactory,
-            onMissingFactory = { error(it) },
+            onError = { error(it) },
         )
         // TODO Actually build by buckets?
         val outputRoot = OutputRoot(MemoryFileSystem())
@@ -162,6 +162,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
                 outputRoot = outputRoot,
                 preparedModules = preparedModules,
                 test = test,
+                adjusterFactory = backendOrganization.adjusterFactories[neededBackendId],
             )
         }
 
@@ -206,6 +207,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
         outputRoot: OutputRoot,
         preparedModules: PreparedFunctionalTest,
         test: FunctionalTestBase,
+        adjusterFactory: BackendAdjusterFactory?,
     ) = run {
         val supportedBackendList = listOf(backendId)
         val functionalTestLibraryConfiguration = LibraryConfiguration(
@@ -315,6 +317,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
                     config = config,
                     dependenciesBuilder = dependenciesBuilder,
                     rawBackendFiles = rawBackendFiles,
+                    adjusterFactory = adjusterFactory,
                 ),
             )
         }
