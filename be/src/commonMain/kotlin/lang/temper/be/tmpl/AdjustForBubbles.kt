@@ -81,7 +81,7 @@ internal fun adjustForBubbles(
                     it.typeInferences = BasicTypeInferences(resultTypeOld, listOf())
                 },
             ),
-            resultTypeOld,
+            null,
             listOf(bubblyCall.passType, bubblyCall.failType),
         )
 

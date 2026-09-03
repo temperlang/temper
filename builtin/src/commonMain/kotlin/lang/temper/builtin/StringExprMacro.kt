@@ -61,7 +61,6 @@ import lang.temper.value.outTypeSymbol
 import lang.temper.value.rawBuiltinName
 import lang.temper.value.safeStringPartSymbol
 import lang.temper.value.symbolContained
-import lang.temper.value.toLispy
 import lang.temper.value.toStringDotName
 import lang.temper.value.typeForValue
 import lang.temper.value.typeSymbol

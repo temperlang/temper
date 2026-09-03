@@ -452,7 +452,7 @@ class RustBackendTest {
                 |            }
                 |            t___1 = result___0.unwrap();
                 |        }
-                |        let return___0: temper_core::Result<i32> = Ok(temper_core::int_rem(5, t___1));
+                |        let return___0: temper_core::Result<i32> = temper_core::int_rem(5, t___1);
                 |        if ! return___0.is_ok() {
                 |            return return___0;
                 |        }
