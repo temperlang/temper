@@ -36,7 +36,6 @@ import lang.temper.frontend.define.testReportExportName
 import lang.temper.frontend.staging.ModuleAdvancer
 import lang.temper.frontend.staging.ModuleConfig
 import lang.temper.frontend.staging.SourceFilePartition
-import lang.temper.frontend.staging.addSharedStdConfigInjector
 import lang.temper.frontend.staging.fallbackLibraryName
 import lang.temper.frontend.staging.makeContinueCondition
 import lang.temper.frontend.staging.partitionModulesIntoLibraries
@@ -359,7 +358,6 @@ fun doOneBuild(build: Build): BuildResult {
             }
         },
     )
-    backendOrganization.addSharedStdConfigInjectors()
 
     val (
         modulesInOrder,

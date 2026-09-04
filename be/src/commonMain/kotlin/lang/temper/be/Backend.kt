@@ -26,7 +26,6 @@ import lang.temper.common.transitiveClosure
 import lang.temper.format.TokenSink
 import lang.temper.frontend.BindingsInjector
 import lang.temper.frontend.Module
-import lang.temper.frontend.staging.addSharedStdConfigInjector
 import lang.temper.frontend.staging.isConfigModule
 import lang.temper.fs.AsyncSystemAccess
 import lang.temper.fs.AsyncSystemReadAccess
@@ -1018,13 +1017,7 @@ data class BackendOrganization(
 
     /** Priority order rather than chain. */
     val adjusterFactories: Map<BackendId, BackendAdjusterFactory> = mapOf(),
-) {
-    fun addSharedStdConfigInjectors() {
-        for (factory in factoriesById.values) {
-            factory.configBindingsInjector?.also { addSharedStdConfigInjector(it) }
-        }
-    }
-}
+)
 
 data class BackendOrganizationError(
     val kind: BackendOrganizationErrorKind,

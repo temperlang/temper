@@ -25,7 +25,6 @@ import lang.temper.common.isNotEmpty
 import lang.temper.common.json.JsonValue
 import lang.temper.format.TextOutputTokenSink
 import lang.temper.frontend.Module
-import lang.temper.frontend.staging.addSharedStdConfigInjector
 import lang.temper.fs.MemoryFileSystem
 import lang.temper.fs.OutDir
 import lang.temper.fs.OutputRoot
@@ -134,7 +133,6 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
             lookupFactory = ::lookupFactory,
             onError = { error(it) },
         )
-        backendOrganization.addSharedStdConfigInjectors()
         // TODO Actually build by buckets?
         val outputRoot = OutputRoot(MemoryFileSystem())
         val inputs = test.temperFiles.toList()
