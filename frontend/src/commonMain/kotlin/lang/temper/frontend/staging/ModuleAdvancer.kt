@@ -990,9 +990,11 @@ private fun buildStdModules(
                         ) { it.fullName }
                     }
                     this[specifier] = module
-                    // Also add injectors.
-                    for (injector in sharedStdModuleInjectors) {
-                        module.addBindingsInjector(injector)
+                    // Also add config injectors.
+                    if (module.isConfigModule) {
+                        for (injector in sharedStdConfigInjectors) {
+                            module.addBindingsInjector(injector)
+                        }
                     }
                 }
             }
@@ -1074,15 +1076,15 @@ private class ModuleAdvancerContinueConditionImpl : ContinueCondition {
 /**
  * As global mutable state, synchronized just to be on the safe side.
  */
-private val sharedStdModuleInjectors = java.util.Collections.synchronizedSet(mutableSetOf<BindingsInjector>())
+private val sharedStdConfigInjectors = java.util.Collections.synchronizedSet(mutableSetOf<BindingsInjector>())
 
 /**
  * Call only on startup.
  *
  * TODO Replace this with ImportResolver instances somehow? Do we have to drive such modules through the stages?
  */
-fun addSharedStdModuleInjector(injector: BindingsInjector) {
-    sharedStdModuleInjectors.add(injector)
+fun addSharedStdConfigInjector(injector: BindingsInjector) {
+    sharedStdConfigInjectors.add(injector)
 }
 
 private val sharedStdModules = lazy {

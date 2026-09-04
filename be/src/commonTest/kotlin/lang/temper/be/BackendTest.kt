@@ -3,6 +3,7 @@ package lang.temper.be
 import lang.temper.ast.OutTree
 import lang.temper.be.tmpl.TestBackend
 import lang.temper.be.tmpl.TmpL
+import lang.temper.frontend.staging.addSharedStdConfigInjector
 import lang.temper.lexer.defaultClassifyTemperSource
 import lang.temper.library.LibraryConfiguration
 import lang.temper.log.dirPath
@@ -120,6 +121,7 @@ class BackendTest {
             lookupFactory = { backends[it] },
             onError = { err -> errors.add(err) },
         )
+        organization.addSharedStdConfigInjectors()
         // Collections maintain order by default, so these should be reliable.
         assertEquals(
             setOf(

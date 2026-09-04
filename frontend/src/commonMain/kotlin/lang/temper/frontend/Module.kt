@@ -199,10 +199,10 @@ class Module(
     private val mutableBindingsInjectors = mutableSetOf<BindingsInjector>()
 
     /**
-     * Actual injectors called during (TODO specify stage). The primary initial
-     * use is for injecting config classes into config modules.
+     * Injectors called during import stage. The primary initial use is for
+     * injecting config classes into config modules.
      *
-     * TODO Instead define whole virtual modules for import?
+     * TODO Instead define virtual modules or ImportResolvers for import?
      */
     fun addBindingsInjector(injector: BindingsInjector) {
         mutableBindingsInjectors.add(injector)
