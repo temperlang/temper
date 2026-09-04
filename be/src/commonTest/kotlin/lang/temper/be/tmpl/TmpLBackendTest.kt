@@ -1403,8 +1403,6 @@ class TmpLBackendTest {
             |                let DequeGetIsEmpty#0 = builtins.DequeGetIsEmpty;
             |                let DequeRemoveFirst#0 = builtins.DequeRemoveFirst;
             |                let isNull#0 = builtins.isNull /* <isNullT extends AnyValue>(isNullT?) -> Boolean */;
-            |                let isOkResult#0 = builtins.isOkResult /* <isOkResultPASS extends AnyValue, isOkResultFAIL extends AnyValue>(Result<isOkResultPASS, isOkResultFAIL>) -> Boolean */;
-            |                let unpackOkResult#0 = builtins.unpackOkResult /* <unpackOkResultPASS extends AnyValue, unpackOkResultFAIL extends AnyValue>(Result<unpackOkResultPASS, unpackOkResultFAIL>) -> unpackOkResultPASS */;
             |                let ConsoleLog#0 = builtins.ConsoleLog;
             |                let packOkResult#0 = builtins.packOkResult /* <packOkResultPASS extends AnyValue, packOkResultFAIL extends AnyValue>(packOkResultPASS) -> Result<packOkResultPASS, packOkResultFAIL> */;
             |                let console#0: Console = GetConsole#0();
@@ -1419,11 +1417,7 @@ class TmpLBackendTest {
             |                  if (isNull#0(c__0)) {
             |                    return failure;
             |                  } else {
-            |                    let e#0: String | Bubble = notNull (c__0);
-            |                    if (!isOkResult#0(e#0)) {
-            |                      return e#0;
-            |                    }
-            |                    e__0 = unpackOkResult#0(e#0);
+            |                    e__0 = notNull (c__0);
             |                  }
             |                  ConsoleLog#0(console#0, e__0);
             |                  return packOkResult#0(void);

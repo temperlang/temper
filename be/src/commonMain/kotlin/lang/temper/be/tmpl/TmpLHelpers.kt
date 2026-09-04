@@ -318,6 +318,12 @@ val TmpL.Actual.typeOrInvalid
         is TmpL.RestSpread -> WellKnownTypes.invalidType2
     }
 
+val TmpL.Expression.typeOrReturnedType: Type2
+    get() = when (this) {
+        is TmpL.CallExpression -> contextualizedSig.returnType2
+        else -> type
+    }
+
 fun TmpL.FunctionDeclaration.idKind() = when {
     metadata.any { it.key.symbol == typeDeclSymbol } -> TmpL.IdKind.Type
     else -> TmpL.IdKind.Value

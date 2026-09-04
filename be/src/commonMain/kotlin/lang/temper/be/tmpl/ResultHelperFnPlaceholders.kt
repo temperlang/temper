@@ -138,11 +138,12 @@ internal fun synthesizeCall(
             this[f] = a
         }
     }
-    val variant = sig.mapType(bindings2)
     val bindings = bindings2.mapValues { hackMapNewStyleToOld(it.value) }
+    val returnType = returnType
+        ?: hackMapNewStyleToOld(sig.returnType2.mapType(bindings2))
     call.typeInferences = CallTypeInferences(
-        returnType ?: hackMapNewStyleToOld(variant.returnType2),
-        variant,
+        returnType,
+        sig,
         bindings,
         listOf(),
     )

@@ -2164,10 +2164,11 @@ class TmpLTranslator internal constructor(
         }
         if (supportCode != null) {
             val returnType = when (rto) {
-                RuntimeTypeOperation.As, RuntimeTypeOperation.AssertAs ->
+                RuntimeTypeOperation.As ->
                     MkType2(resultTypeDefinition)
                         .actuals(listOf(targetType, bubbleType2))
                         .get()
+                RuntimeTypeOperation.AssertAs -> targetType
                 RuntimeTypeOperation.Is -> booleanType2
             }
             val supportCodeType = Signature2(returnType, hasThisFormal = false, listOf(expression.type))

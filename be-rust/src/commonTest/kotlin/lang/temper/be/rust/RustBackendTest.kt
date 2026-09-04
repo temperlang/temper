@@ -436,23 +436,12 @@ class RustBackendTest {
                 |pub fn something(mut i__0: Option<i32>) -> temper_core::Result<i32> {
                 |    let return__0: i32;
                 |    let t___0: bool;
-                |    if ! i__0.is_none() {
-                |        t___0 = i__0.is_some();
-                |    } else {
-                |        t___0 = false;
-                |    }
+                |    t___0 = i__0.is_some();
                 |    if t___0 {
-                |        let t___1: i32;
                 |        if i__0.is_none() {
                 |            return Err(temper_core::Error::new());
-                |        } else {
-                |            let result___0: temper_core::Result<i32> = Ok(i__0.unwrap());
-                |            if ! result___0.is_ok() {
-                |                return result___0;
-                |            }
-                |            t___1 = result___0.unwrap();
                 |        }
-                |        let return___0: temper_core::Result<i32> = temper_core::int_rem(5, t___1);
+                |        let return___0: temper_core::Result<i32> = temper_core::int_rem(5, i__0.unwrap());
                 |        if ! return___0.is_ok() {
                 |            return return___0;
                 |        }
@@ -466,7 +455,7 @@ class RustBackendTest {
                 |    let mut return__1: i32;
                 |    'ok___0: {
                 |        'orelse___0: {
-                |            let return___1: temper_core::Result<i32> = Ok(something(Some(i__1)));
+                |            let return___1: temper_core::Result<i32> = something(Some(i__1));
                 |            if ! return___1.is_ok() {
                 |                break 'orelse___0;
                 |            }

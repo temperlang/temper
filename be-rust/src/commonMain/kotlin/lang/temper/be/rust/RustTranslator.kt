@@ -22,6 +22,7 @@ import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.referencedNames
 import lang.temper.be.tmpl.splitConstructorBody
 import lang.temper.be.tmpl.typeOrInvalid
+import lang.temper.be.tmpl.typeOrReturnedType
 import lang.temper.common.compatRemoveLast
 import lang.temper.common.subListToEnd
 import lang.temper.frontend.ModuleNamingContext
@@ -1824,7 +1825,7 @@ class RustTranslator(
                 // The type might be a lie if we stripped toString, but rust support codes cope.
                 TypedArg(actual, arg.typeOrInvalid)
             },
-            returnType = call.type,
+            returnType = call.contextualizedSig.returnType2,
             translator = this,
         ) as Rust.Expr
     }
@@ -2715,8 +2716,11 @@ class RustTranslator(
         }
         val pos = decl.pos
         val value = decl.init?.let { init ->
-            val rawValue = translateExpression(init)
-                .maybeWrap(given = init.type.described(), wanted = info.typeFrom?.described(), translator = this)
+            val rawValue = translateExpression(init).maybeWrap(
+                given = init.typeOrReturnedType.described(),
+                wanted = info.typeFrom?.described(),
+                translator = this,
+            )
             when {
                 isMutableCapture -> rawValue.wrapLock().wrapArc()
                 else -> rawValue
