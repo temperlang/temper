@@ -360,9 +360,10 @@ class ReplTest {
         assertPending(
             """
             |Describe interactive#0 @ frontend.generateCodeStage.after
-            |  let return__0 ⦂ Void, @optionalImport `-repl//i0000/`.i ⦂ Int32;
-            |  `-repl//i0000/`.i = 1;
-            |  return__0 = void
+            |  let return__0 ⦂ Void;
+            |  return__0 = void;
+            |  @optionalImport let `-repl//i0000/`.i ⦂ Int32;
+            |  `-repl//i0000/`.i = 1
             |
             |interactive#1: void
             |

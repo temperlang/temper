@@ -216,12 +216,10 @@ class CppTranslator(
      */
     fun resolveTypeName(def: TypeDefinition): Cpp.Name {
         // Check if this is a type formal with a known template parameter name
-        (typeFormalNames[def] ?: typeFormalNamesByText[typeFormalKey(def)])?.let { return it }
-        val loc = def.sourceLocation
-        return when (loc) {
+        (typeFormalNames[def] ?: typeFormalNamesByText[typeFormalKey(def)])?.let { return@resolveTypeName it }
+        return when (val loc = def.sourceLocation) {
             CoreCodeLocation -> {
-                val defName = def.name
-                when (defName) {
+                when (val defName = def.name) {
                     is ExportedName -> cpp.name(TEMPER_CORE_NAMESPACE, defName.baseName.builtinKey)
                     is SourceName -> cpp.name(TEMPER_CORE_NAMESPACE, defName.baseName.builtinKey)
                     is Temporary -> cpp.name(def.name)

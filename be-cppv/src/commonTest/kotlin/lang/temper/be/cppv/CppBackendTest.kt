@@ -4,6 +4,7 @@ import lang.temper.be.Backend
 import lang.temper.be.assertGeneratedCode
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.log.FilePath
+import kotlin.test.Ignore
 import kotlin.test.Test
 
 @SuppressWarnings("MaxLineLength")
@@ -289,6 +290,44 @@ class CppBackendTest {
             |                }
             |              };
             |              _Init0 _init0;
+            |            }
+            |          }
+            |
+            |          ```
+            |      },
+            |      "my-test-library.cpp.map": "__DO_NOT_CARE__",
+            |      "main.cpp": "__DO_NOT_CARE__",
+            |    },
+            |  },
+            |}
+        """.trimMargin(),
+    )
+
+    // Need support for {Is,Unpack,Pack}OkResult in be-cppv.
+    // Deferred until we know long-term status of this backend vs. be-cpp.
+    @Ignore
+    @Test
+    fun brahmaguptasRevenge() = assertGeneratedCode(
+        inputs = inputFileMapFromJson(
+            """
+                |{
+                |  hithere.temper: ```
+                |    export let f(x: Int, y: Int): Int {
+                |      x / y orelse 0
+                |    }
+                |    ```,
+                |}
+            """.trimMargin(),
+        ),
+        want = """
+            |{
+            |  cppv: {
+            |    "my-test-library": {
+            |      "my-test-library.cpp": {
+            |        content: ```
+            |          #include <temper-core/core.hpp>
+            |          namespace my_test_library {
+            |            int32_t f(int32_t x, int32_t y) {
             |            }
             |          }
             |

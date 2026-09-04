@@ -746,7 +746,6 @@ class PyBackendTest {
             |              bubble_12 = bubble0
             |              def sum(i_2: 'int1', j_3: 'int1', bonus_8: 'Union2[int1, None]' = None, /) -> 'int1':
             |                  _bonus_8: 'Union2[int1, None]' = bonus_8
-            |                  return_0: 'int1'
             |                  bonus_4: 'int1'
             |                  if _bonus_8 is None:
             |                      bonus_4 = 0

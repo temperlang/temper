@@ -777,7 +777,7 @@ class TmpLTranslator internal constructor(
                         flushInitStmts()
                         val typeShape = pt.typeShape
 
-                        // Don't generate code for a type that is connected to a backend specific type
+                        // Don't generate code for a type that is connected to a backend-specific type
                         val connectedKey = typeShape.connectedKey
                         val type = MkType2(typeShape)
                             .actuals(typeShape.typeParameters.map { MkType2(it.definition).get() })

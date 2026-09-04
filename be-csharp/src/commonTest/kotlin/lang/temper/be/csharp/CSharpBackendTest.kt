@@ -1563,7 +1563,6 @@ class CSharpBackendTest {
                     |{
                     |    public static int Sum(int i__0, int j__0, int ? bonus = null)
                     |    {
-                    |        int return__0;
                     |        int bonus__0;
                     |        if (bonus == null)
                     |        {

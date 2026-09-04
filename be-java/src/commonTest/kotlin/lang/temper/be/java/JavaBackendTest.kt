@@ -2140,7 +2140,6 @@ class JavaBackendTest {
             |                private SubGlobal() {
             |                }
             |                public static int sum(int i__0, int j__0, @Nullable Integer bonus__0) {
-            |                    int return__0;
             |                    int bonus__1;
             |                    if (bonus__0 == null) {
             |                        bonus__1 = 0;

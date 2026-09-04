@@ -4,13 +4,16 @@ import lang.temper.common.Cons
 import lang.temper.common.compatRemoveFirst
 import lang.temper.common.compatRemoveLast
 import lang.temper.common.contains
+import lang.temper.name.SourceName
 import lang.temper.name.TemperName
 import lang.temper.type.WellKnownTypes
+import lang.temper.type.excludeBubble
+import lang.temper.type.isNeverType
 import lang.temper.value.BuiltinOperatorId
-import lang.temper.value.JumpLabel
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.TBoolean
 import lang.temper.value.TFunction
+import lang.temper.value.returnParsedName
 import lang.temper.value.void
 
 /**
@@ -43,7 +46,7 @@ internal fun simplifyFunctionBodyParts(
             val (returned, returnLookedThrough) = lookThroughSingleArgFn(
                 last.expression, BuiltinOperatorId.PackOkResult, pool,
             )
-            if (returned is TmpL.Reference && returned.id.name == zero.name.name) {
+            if (returned is TmpL.Reference && returned.id.name == zero.name.name && zero.init == null) {
                 val initIndex = statements.indexOfFirst {
                     it is TmpL.Assignment && it.left.name == zero.name.name
                 }
@@ -66,7 +69,7 @@ internal fun simplifyFunctionBodyParts(
                     if (okToSimplify) {
                         // Can't eliminate the *return_123* local if other statements need it.
                         for (i in 1..<lastIndex) {
-                            if (i != initIndex && statements[i].reads(returned.id.name)) {
+                            if (i != initIndex && statements[i].references(returned.id.name)) {
                                 okToSimplify = false
                                 break
                             }
@@ -118,12 +121,78 @@ internal fun simplifyFunctionBodyParts(
             }
         }
     }
+
+    // For processing pure-virtual, connected function bodies, TmpLHelpers needs to have only default
+    // statements at the front.  To that end, if there's still a `return__123` variable declaration,
+    // we move it forward.
+    //
+    //     -let return__123: ReturnType;
+    //     var optionalParameter#0;
+    //     if (optionalParameter__0 == null) {
+    //       optionalParameter#0 = defauleExpression();
+    //     } else {
+    //       optionalParameter#0 = notNull(optionalParameter__0);
+    //     }
+    //    -pureVirtual();
+    //    +let return__123: ReturnType;
+    //    +return__123 = pureVirtual();
+    //     return return__123;
+    //
+    // This allows TmpLHelpers.parameterDefaultStatementsInfo() to easily separate out the statements
+    // that get all the inputs to the target-language code that implements the connected function,
+    // without that function having to compute defaults itself.
+    if (statements.size >= 2) {
+        val returnStmt = statements.lastOrNull() as? TmpL.ReturnStatement
+        val returnedId = (returnStmt?.expression as? TmpL.Reference)?.id
+        val returnedName = returnedId?.name
+        val zero = statements[0] as? TmpL.LocalDeclaration
+        // If the zero-th statement declares a variable which is what's returned,
+        // and it has no side-effecting initializer, then we can reorder.
+        if (
+            returnedName is SourceName && returnedName.baseName == returnParsedName &&
+            zero?.name == returnedId && zero.init is TmpL.ValueReference?
+        ) {
+            val penultIndex = statements.lastIndex - 1
+            val penultStmt = statements[penultIndex]
+            val penultExpr = when (penultStmt) {
+                is TmpL.ExpressionStatement -> penultStmt.expression
+                is TmpL.Assignment -> penultStmt.right
+                else -> null
+            }
+            var canAdvanceTo = 1
+            while (canAdvanceTo in statements.indices) {
+                if (statements[canAdvanceTo].references(returnedId.name)) { break }
+                canAdvanceTo += 1
+            }
+            val penultExprHasNeverType =
+                penultExpr?.type?.let { excludeBubble(it) }?.isNeverType == true
+            if (
+                canAdvanceTo > penultIndex && penultExprHasNeverType &&
+                zero.init == null && penultStmt is TmpL.ExpressionStatement
+            ) {
+                // Turn the penultimate statement, a nullary never function or the pureVirtual call,
+                // into the missing initializer for the return variable.
+                penultStmt.expression = TmpL.ValueReference(penultExpr.pos, WellKnownTypes.voidType2, void)
+                statements[penultIndex] = TmpL.Assignment(
+                    penultStmt.pos,
+                    returnedId.deepCopy(),
+                    penultExpr,
+                    zero.descriptor,
+                )
+                canAdvanceTo = penultIndex
+            }
+            if (canAdvanceTo != 0) {
+                statements.add(canAdvanceTo, zero)
+                statements.removeAt(0)
+            }
+        }
+    }
 }
 
 private const val STATEMENT_COUNT_FOR_LET_ASSIGN_RETURN = 3
 
-private fun TmpL.Tree.reads(name: TemperName): Boolean {
-    return this is TmpL.Id && this.name == name || this.children.any { it.reads(name) }
+private fun TmpL.Tree.references(name: TemperName): Boolean {
+    return this is TmpL.Id && this.name == name || this.children.any { it.references(name) }
 }
 
 private fun lookThroughSingleArgFn(

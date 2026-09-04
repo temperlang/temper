@@ -8,6 +8,7 @@ import lang.temper.be.Dependencies
 import lang.temper.be.NullDependencyResolver
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.be.syncstaging.applyBackendsSynchronously
+import lang.temper.be.tmpl.BubbleBranchStrategy
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.Types
 import lang.temper.common.ListBackedLogSink
@@ -2499,6 +2500,89 @@ class TmpLBackendTest {
             |    "At this time, users can connect only top-level functions!",
             |    "At this time, users can connect only top-level functions!",
             |  ]
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun connectedFunctionWithOptionalParameters() = assertGeneratedCode(
+        inputJsonPathToContent = """
+            |{
+            |  connectMe: {
+            |    connectMe.temper:
+            |      ```
+            |      @connected
+            |      export let sum(i: Int, j: Int, bonus: Int = 0): Int;
+            |      ```
+            |  },
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  tmpl: {
+            |    connectMe.tmpl: {
+            |      content: ```
+            |        //// work//connectMe/ => connectMe.tmpl
+            |        let isNull#0 = builtins.isNull /* <isNullT extends AnyValue>(isNullT?) -> Boolean */;
+            |        let abstractPanic#0 = builtins.abstractPanic;
+            |        @QName("test-library/connectMe.sum()") @connected let sum(@QName("test-library/connectMe.sum().(i)") i__0: Int32, @QName("test-library/connectMe.sum().(j)") j__0: Int32, @QName("test-library/connectMe.sum().(bonus)") @optional(true) bonus__0: Int32 | Null = null): Int32 {
+            |          @QName("test-library/connectMe.sum().(bonus)") let bonus__1: Int32;
+            |          if (isNull#0(bonus__0)) {
+            |            bonus__1 = 0;
+            |          } else {
+            |            bonus__1 = notNull (bonus__0);
+            |          }
+            |          return abstractPanic#0();
+            |        }
+            |
+            |        ```
+            |    },
+            |    connectMe.tmpl.map: "__DO_NOT_CARE__",
+            |  }
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun connectedFunctionWithOptionalParametersDoNotReifyVoid() = assertGeneratedCode(
+        supportNetwork = TestSupportNetwork(
+            representationOfVoid = RepresentationOfVoid.DoNotReifyVoid,
+        ),
+        inputJsonPathToContent = """
+            |{
+            |  connectMe: {
+            |    connectMe.temper:
+            |      ```
+            |      @connected
+            |      export let sum(i: Int, j: Int, bonus: Int = 0): Int;
+            |      ```
+            |  },
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  tmpl: {
+            |    connectMe.tmpl: {
+            |      content: ```
+            |        //// work//connectMe/ => connectMe.tmpl
+            |        let isNull#0 = builtins.isNull /* <isNullT extends AnyValue>(isNullT?) -> Boolean */;
+            |        let abstractPanic#0 = builtins.abstractPanic;
+            |        @QName("test-library/connectMe.sum()") @connected let sum(@QName("test-library/connectMe.sum().(i)") i__0: Int32, @QName("test-library/connectMe.sum().(j)") j__0: Int32, @QName("test-library/connectMe.sum().(bonus)") @optional(true) bonus__0: Int32 | Null = null): Int32 {
+            |          @QName("test-library/connectMe.sum().(bonus)") let bonus__1: Int32;
+            |          if (isNull#0(bonus__0)) {
+            |            bonus__1 = 0;
+            |          } else {
+            |            bonus__1 = notNull (bonus__0);
+            |          }
+            |          @QName("test-library/connectMe.sum().return") let return__0: Int32;
+            |          return__0 = abstractPanic#0();
+            |          return return__0;
+            |        }
+            |
+            |        ```
+            |    },
+            |    connectMe.tmpl.map: "__DO_NOT_CARE__",
+            |  }
             |}
         """.trimMargin(),
     )
