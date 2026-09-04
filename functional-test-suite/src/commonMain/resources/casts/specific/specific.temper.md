@@ -8,9 +8,8 @@ We can make an interface with subclasses to verify.
     class BravoClass extends AlphaInterface { }
     class CharlieClass extends AlphaInterface { }
 
-Generics aren't reified today, so we can't cast to a generic type, but we can
-make a function to cast to a specific type. Although in the style of generic
-methods, the type goes in angle brackets.
+Generics aren't reified on all backends, so we can't cast to a generic type, but
+we can make a function to cast to a specific type.
 
 Casts are safe. If a value is not of the right type, then the cast won't
 succeed.

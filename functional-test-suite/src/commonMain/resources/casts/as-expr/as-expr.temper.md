@@ -1,8 +1,6 @@
 # Cast Functional Test
 
-The `as` operator allows casting, but it's only for casting down from sealed
-interfaces or from nullable to non-nullable. Not all backend languages support
-arbitrary casting of types.
+The `as` operator allows casting. Here we exercise various usages.
 
     interface Apple { public get name(): String; }
     class Fuji extends Apple { public get name(): String { "Fuji" } }

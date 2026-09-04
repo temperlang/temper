@@ -305,7 +305,8 @@ internal fun Rust.Expr.maybeWrap(
     }.let { result ->
         // Bubble/Result wrapping only applies to return values but easier just to check for all cases.
         when {
-            !given.bubbly && wanted.bubbly -> result.wrapOk()
+            // TODO Maybe tmpl always tells us now when this is needed?
+            // !given.bubbly && wanted.bubbly -> result.wrapOk()
             else -> result
         }
     }

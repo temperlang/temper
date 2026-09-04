@@ -1910,10 +1910,12 @@ class RustTranslator(
                 // Any invalid casts are reported as errors by frontend validation.
                 // But we still need to wrapOk because outer layers with less context still
                 // see the claimed tmpl type as being bubbly.
-                wanted.definition() == WellKnownTypes.listedTypeDefinition -> result.wrapOk()
+                wanted.definition() == WellKnownTypes.listedTypeDefinition -> result
                 // For others, trust standard type expectations.
-                cast.type.described().bubbly -> result.wrapOkOrElse(pos)
-                else -> result.methodCall("unwrap") // such as for assertAs
+                // TODO Except now we have no way to tell the difference.
+//                cast.type.described().bubbly -> result.wrapOkOrElse(pos)
+                else -> result.wrapOkOrElse(pos)
+//                else -> result.methodCall("unwrap") // such as for assertAs
             }
         }
     }
