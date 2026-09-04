@@ -357,7 +357,7 @@ class RustBackendTest {
                 |                    2 => {
                 |                        'ok___0: {
                 |                            'orElse___0: {
-                |                                let result___0: temper_core::Result<A> = Ok(temper_core::read_locked( & self.awaited___0).clone().unwrap().get());
+                |                                let result___0: temper_core::Result<A> = temper_core::read_locked( & self.awaited___0).clone().unwrap().get();
                 |                                if ! result___0.is_ok() {
                 |                                    break 'orElse___0;
                 |                                }
@@ -486,7 +486,7 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            let a___0: temper_core::Result<C> = Ok(C::new(false));
+            |            let a___0: temper_core::Result<C> = C::new(false);
             |            if ! a___0.is_ok() {
             |                return Err(temper_core::Error::new());
             |            }
@@ -683,7 +683,7 @@ class RustBackendTest {
             |    let mut return__1: temper_core::Listed<i32>;
             |    'ok___0: {
             |        'orelse___0: {
-            |            let return___0: temper_core::Result<temper_core::List<i32>> = Ok(things__0(n__1));
+            |            let return___0: temper_core::Result<temper_core::List<i32>> = things__0(n__1);
             |            if ! return___0.is_ok() {
             |                break 'orelse___0;
             |            }
@@ -840,7 +840,7 @@ class RustBackendTest {
             |    let mut passed__0: bool = true;
             |    'ok___0: {
             |        'orelse___0: {
-            |            let result___0: temper_core::Result<()> = Ok(f__0());
+            |            let result___0: temper_core::Result<()> = f__0();
             |            if ! result___0.is_ok() {
             |                break 'orelse___0;
             |            }
@@ -935,11 +935,7 @@ class RustBackendTest {
             |    INIT_ONCE.get_or_init(| |{
             |            let handyThings__0: temper_core::List<temper_core::AnyValue> = std::sync::Arc::new(vec![1.as_any_value(), 2.as_any_value()]);
             |            let thing__0: temper_core::AnyValue = 1.as_any_value();
-            |            let things___0: temper_core::Result<temper_core::List<temper_core::AnyValue>> = Ok(std::sync::Arc::new(vec![1, 2]).unwrap());
-            |            if ! things___0.is_ok() {
-            |                return Err(temper_core::Error::new());
-            |            }
-            |            let things__0: temper_core::List<temper_core::AnyValue> = things___0.unwrap();
+            |            let things__0: temper_core::List<temper_core::AnyValue> = std::sync::Arc::new(vec![1, 2]).unwrap();
             |            let more__0: temper_core::List<i32> = std::sync::Arc::new(vec![1, 2]);
             |            let still__0: temper_core::List<temper_core::AnyValue> = std::sync::Arc::new(vec![1, 2]);
             |            let yet__0: temper_core::List<temper_core::MapKey> = std::sync::Arc::new(vec![temper_core::MapKey::new(1), temper_core::MapKey::new(std::sync::Arc::new("two".to_string()))]);
@@ -2381,11 +2377,7 @@ class RustBackendTest {
             |            if b__0.is_none() {
             |                break 'orelse___0;
             |            } else {
-            |                let b___0: temper_core::Result<i32> = Ok(b__0.unwrap());
-            |                if ! b___0.is_ok() {
-            |                    break 'orelse___0;
-            |                }
-            |                b__1 = b___0.unwrap();
+            |                b__1 = b__0.unwrap();
             |            }
             |            break 'ok___0;
             |        }
@@ -2635,7 +2627,7 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            let j___0: temper_core::Result<i32> = Ok(prepare__0(1.5f64));
+            |            let j___0: temper_core::Result<i32> = prepare__0(1.5f64);
             |            if ! j___0.is_ok() {
             |                return Err(temper_core::Error::new());
             |            }
@@ -2650,7 +2642,7 @@ class RustBackendTest {
             |fn prepare__0(x__0: f64) -> temper_core::Result<i32> {
             |    let return__0: i32;
             |    println!("{}", temper_core::float64::to_string(x__0));
-            |    let return___0: temper_core::Result<i32> = Ok(temper_core::float64::to_int(x__0));
+            |    let return___0: temper_core::Result<i32> = temper_core::float64::to_int(x__0);
             |    if ! return___0.is_ok() {
             |        return return___0;
             |    }
@@ -2728,11 +2720,7 @@ class RustBackendTest {
                 |            let a__0: A = A::new(B::new());
                 |            let a2__0: A = a__0.clone();
                 |            let things__0: temper_core::List<A> = std::sync::Arc::new(vec![B::new()]);
-                |            let more___0: temper_core::Result<temper_core::List<A>> = Ok(std::sync::Arc::new(vec![B::new()]).unwrap());
-                |            if ! more___0.is_ok() {
-                |                return Err(temper_core::Error::new());
-                |            }
-                |            let more__0: temper_core::List<A> = more___0.unwrap();
+                |            let more__0: temper_core::List<A> = std::sync::Arc::new(vec![B::new()]).unwrap();
                 |            println!("{}", a2__0.adjust(std::sync::Arc::new("hi".to_string())));
                 |            Ok(())
                 |    }).clone()
