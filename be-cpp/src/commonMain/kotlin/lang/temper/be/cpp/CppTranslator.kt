@@ -216,12 +216,10 @@ class CppTranslator(
      */
     fun resolveTypeName(def: TypeDefinition): Cpp.Name {
         // Check if this is a type formal with a known template parameter name
-        (typeFormalNames[def] ?: typeFormalNamesByText[typeFormalKey(def)])?.let { return it }
-        val loc = def.sourceLocation
-        return when (loc) {
+        (typeFormalNames[def] ?: typeFormalNamesByText[typeFormalKey(def)])?.let { return@resolveTypeName it }
+        return when (val loc = def.sourceLocation) {
             CoreCodeLocation -> {
-                val defName = def.name
-                when (defName) {
+                when (val defName = def.name) {
                     is ExportedName -> cpp.name(TEMPER_CORE_NAMESPACE, defName.baseName.builtinKey)
                     is SourceName -> cpp.name(TEMPER_CORE_NAMESPACE, defName.baseName.builtinKey)
                     is Temporary -> cpp.name(def.name)
@@ -1415,17 +1413,17 @@ class CppTranslator(
             is TmpL.Assignment -> {
                 // Skip assignments to imported names (they alias the external)
                 val leftKey = cpp.name(stmt.left).id.text
-                val isRhsVoid = stmt.right is TmpL.Expression &&
-                    (stmt.right as TmpL.Expression).type.definition == WellKnownTypes.voidTypeDefinition
+                val isRhsVoid =
+                    stmt.right.type.definition == WellKnownTypes.voidTypeDefinition
                 if (leftKey in importedNames || leftKey in voidVarNames || isRhsVoid) {
                     emptyList()
                 } else {
                     val right = stmt.right
                     val isAnyValueTarget = stmt.type.definition ==
                         WellKnownTypes.anyValueTypeDefinition
-                    val isRhsNever = right is TmpL.Expression &&
+                    val isRhsNever =
                         right.type.definition == WellKnownTypes.neverTypeDefinition
-                    val rightExpr = if (right is TmpL.Expression && isTypeMismatch2(stmt.type, right)) {
+                    val rightExpr = if (isTypeMismatch2(stmt.type, right)) {
                         // Type mismatch at compile time — generate bubble instead
                         val cppType = translateType2(stmt.type)
                         cpp.callExpr(
@@ -1446,30 +1444,23 @@ class CppTranslator(
                             ),
                             emptyList(),
                         )
-                    } else if (isAnyValueTarget && right is TmpL.Expression && isValueType(right.type)) {
+                    } else if (isAnyValueTarget && isValueType(right.type)) {
                         // Boxing value type into AnyValue
                         cpp.callExpr(
                             cpp.name(TEMPER_CORE_NAMESPACE, "any_box"),
                             listOf(translateExpression(right)),
                         )
                     } else {
-                        when (right) {
-                            is TmpL.Expression -> translateExpression(right)
-                            is TmpL.HandlerScope -> cpp.callExpr(
-                                cpp.name("std", "abort"),
-                            ).withComment("unhandled: ${right.javaClass}")
-                        }
+                        translateExpression(right)
                     }
                     // Wrap with list_upcast or narrowing cast if needed
-                    val finalRight = if (right is TmpL.Expression) {
+                    val finalRight = run {
                         val rhsType = right.type
                         wrapWithListUpcastIfNeeded(
                             rightExpr, rhsType, stmt.type,
                         ).let { upcast ->
                             wrapWithNarrowingCastIfNeeded(upcast, rhsType, stmt.type)
                         }
-                    } else {
-                        rightExpr
                     }
                     listOf(
                         cpp.exprStmt(
@@ -1504,9 +1495,6 @@ class CppTranslator(
             )
 
             is TmpL.GarbageStatement -> unsupportedStatement(stmt)
-            is TmpL.HandlerScope -> {
-                unsupportedStatement(stmt)
-            }
             is TmpL.LocalDeclaration -> {
                 if (!stmt.assignOnce) {
                     // Track mutable locals so nested closures capture them by reference.

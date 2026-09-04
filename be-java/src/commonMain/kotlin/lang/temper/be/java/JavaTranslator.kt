@@ -1361,7 +1361,6 @@ class JavaTranslator(
                 },
             )
 
-        private fun stubStmt(t: TmpL.Tree) = J.CommentLine(t.pos, t.toLispy().replace('\n', ' '))
         private fun stubExpr(t: TmpL.Tree) = J.StringLiteral(t.pos, t.toLispy())
 
         /**
@@ -1649,7 +1648,6 @@ class JavaTranslator(
                 is TmpL.BreakStatement -> J.BreakStatement(t.pos, t.label?.let { names.label(it) })
                 is TmpL.ContinueStatement -> J.ContinueStatement(t.pos, t.label?.let { names.label(it) })
                 is TmpL.ExpressionStatement -> exprStatement(t)
-                is TmpL.HandlerScope -> stubStmt(t)
                 is TmpL.IfStatement -> ifStmt(t)
                 is TmpL.LabeledStatement -> J.LabeledStatement(
                     t.pos,
@@ -1742,14 +1740,7 @@ class JavaTranslator(
                     fun translateCaseBody(caseBody: TmpL.BlockStatement): List<J.BlockLevelStatement> {
                         val jBlock = block(caseBody)
                         // In Java, `break` is necessary to prevent fall-through to the next case.
-                        val needsBreak = when (jBlock.body.lastOrNull()) {
-                            is J.ReturnStatement,
-                            is J.ThrowStatement,
-                            is J.BreakStatement,
-                            is J.ContinueStatement,
-                            -> false
-                            else -> true // Conservative
-                        }
+                        val needsBreak = !codeAfterWouldBeDeadByJavaRules(jBlock, null)
                         if (needsBreak) {
                             jBlock.body += J.BreakStatement(jBlock.pos.rightEdge, null)
                         }
@@ -1813,26 +1804,12 @@ class JavaTranslator(
         private fun leftHandSide(left: TmpL.Id) =
             names.lookupLocalOrExternalNameObj(left).asLhs(left.pos, names)
 
-        private fun assignment(t: TmpL.Assignment): J.BlockLevelStatement = when (val rhs = t.right) {
-            is TmpL.Expression ->
-                Assign.assign(
-                    leftHandSide(t.left),
-                    expr(rhs),
-                    pos = t.pos,
-                ).exprStatement(t.pos)
-            // TmpL
-            //     assignedTo = hs(fail, handled)
-            // becomes Java
-            //     fail = (assignedTo = handled) == null;
-            is TmpL.HandlerScope ->
-                Assign.assign(
-                    leftHandSide(rhs.failed),
-                    Assign.assign(
-                        leftHandSide(t.left),
-                        handled(rhs.handled),
-                    ).testNull(),
-                ).exprStatement(t.pos)
-        }
+        private fun assignment(t: TmpL.Assignment): J.BlockLevelStatement =
+            Assign.assign(
+                leftHandSide(t.left),
+                expr(t.right),
+                pos = t.pos,
+            ).exprStatement(t.pos)
 
         private fun setProperty(t: TmpL.SetProperty): J.BlockLevelStatement {
             val left = t.left
@@ -1849,11 +1826,6 @@ class JavaTranslator(
                 is TmpL.InternalPropertyId ->
                     Assign.assign(expr(leftSubject).field(names.field(prop)), expr(t.right)).exprStatement(t.pos)
             }
-        }
-
-        private fun handled(handled: TmpL.Handled): J.Expression = when (handled) {
-            is TmpL.Expression -> expr(handled)
-            is TmpL.SetAbstractProperty -> TODO()
         }
 
         fun expr(x: TmpL.Expression): J.Expression = when (x) {
@@ -2231,19 +2203,28 @@ class JavaTranslator(
         private fun convertedCoroutinePromiseHandler(
             s: TmpL.Statement,
         ): J.BlockLevelStatement? {
+            val decl: TmpL.LocalDeclaration?
             val left: TmpL.Id?
-            val call: TmpL.CallExpression
+            val call: TmpL.Expression?
             when (s) {
                 is TmpL.Assignment -> {
+                    decl = null
                     left = s.left
-                    call = s.right as? TmpL.CallExpression ?: return null
+                    call = s.right
                 }
                 is TmpL.ExpressionStatement -> {
+                    decl = null
                     left = null
-                    call = s.expression as? TmpL.CallExpression ?: return null
+                    call = s.expression
+                }
+                is TmpL.LocalDeclaration -> {
+                    decl = s
+                    left = decl.name
+                    call = s.init
                 }
                 else -> return null
             }
+            if (call !is TmpL.CallExpression) { return null }
 
             // If this is a call to one of the helper functions, do special handling for it.
             val calleeId = (call.fn as? TmpL.FnReference)?.id
@@ -2309,77 +2290,36 @@ class JavaTranslator(
                 // A promise was awaited but its result is not used
                 coroPromiseResultAsync -> {
                     // Converted coroutines use these also.
-                    //     left = getPromiseResultSync(fail#1, promise)
+                    //     left = getPromiseResultSync(promise)
                     // ->
                     //     try {
                     //       left = promise.get();
-                    //     } catch (InterruptedException) {
-                    //       break; // skips to done state in `switch`
-                    //     } catch (ExecutionException) {
-                    //       fail_1 = true;
+                    //     } catch (InterruptedException | ExecutionException ex) {
+                    //       // Route the checked exceptions from promise unpacking
+                    //       // to any orelse handler looking for an RTE.
+                    //       ...
                     //     }
-                    val failVar = (parameters[0] as? TmpL.Reference)?.id
-                    val promise = expr(parameters[1] as TmpL.Expression)
-                    var getCall: J.ExpressionStatementExpr = J.InstanceMethodInvocationExpr(
-                        pos = pos,
-                        expr = promise,
-                        // CompletableFuture.get
-                        method = J.Identifier(pos.rightEdge, "get"),
-                        args = emptyList(),
-                    )
-                    getCall = if (left != null) {
-                        J.AssignmentExpr(
+                    val promise = expr(parameters[0] as TmpL.Expression)
+                    val getCall: J.ExpressionStatementExpr =
+                        temperCoreGetPromiseResult.staticMethod(promise, pos = pos)
+                    when {
+                        decl != null -> J.LocalVariableDeclaration(
                             pos = pos,
-                            left = leftHandSide(left),
-                            operator = J.Operator(left.pos.rightEdge, Assign),
-                            right = getCall,
+                            type = varType(decl),
+                            name = names.lookupRegularLocalNameObj(left!!).outName
+                                .toIdentifier(left.pos),
+                            expr = getCall,
                         )
-                    } else {
-                        getCall
+                        left != null -> J.ExpressionStatement(
+                            J.AssignmentExpr(
+                                pos = pos,
+                                left = leftHandSide(left),
+                                operator = J.Operator(left.pos.rightEdge, Assign),
+                                right = getCall,
+                            ),
+                        )
+                        else -> J.ExpressionStatement(getCall)
                     }
-                    val catchPos = pos.rightEdge
-                    val interruptedExceptionName = names.ignoredIdentifier(catchPos)
-                    val executionExceptionName = names.ignoredIdentifier(catchPos)
-                    return J.TryStatement(
-                        pos = pos,
-                        bodyBlock = J.BlockStatement(J.ExpressionStatement(getCall)),
-                        catchBlocks = listOf(
-                            J.CatchBlock(
-                                pos = catchPos,
-                                types = listOf(
-                                    javaLangInterruptedException.toClassType(catchPos),
-                                ),
-                                name = interruptedExceptionName,
-                                body = J.BlockStatement(
-                                    // Since the state machine tentatively sets the case index
-                                    // to -1 before switching the coroutine will enter a done
-                                    // statement if we break from the case here.
-                                    J.BreakStatement(catchPos),
-                                ),
-                            ),
-                            J.CatchBlock(
-                                pos = catchPos,
-                                types = listOf(
-                                    javaUtilConcurrentExecutionException.toClassType(catchPos),
-                                ),
-                                name = executionExceptionName,
-                                body = J.BlockStatement(
-                                    if (failVar != null) {
-                                        J.ExpressionStatement(
-                                            J.AssignmentExpr(
-                                                catchPos,
-                                                leftHandSide(failVar),
-                                                J.Operator(catchPos, Assign),
-                                                J.BooleanLiteral(catchPos, true),
-                                            ),
-                                        )
-                                    } else {
-                                        J.ThrowStatement(catchPos, J.NameExpr(executionExceptionName.deepCopy()))
-                                    },
-                                ),
-                            ),
-                        ),
-                    )
                 }
                 else -> null
             }

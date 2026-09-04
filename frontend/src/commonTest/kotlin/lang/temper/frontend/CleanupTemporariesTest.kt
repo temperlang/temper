@@ -103,14 +103,10 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeBefore: ```
-                |    var t#0, fail#0, fail#1;
                 |    let console#0;
-                |    t#0 = doPure(@stay fn /* return__0 */: Console {
-                |        var t#1, fail#2;
-                |        t#1 = getConsole();
-                |        return__0 = t#1
+                |    console#0 = doPure(@stay fn /* return__0 */: Console {
+                |        return__0 = getConsole()
                 |    });
-                |    console#0 = t#0;
                 |    let toLogOrNotToLog__0;
                 |    var t1#0;
                 |    t1#0 = randomBool();
@@ -132,8 +128,6 @@ class CleanupTemporariesTest {
                 |        "ReplaceRange(L7: assign t4#0 after swapping to assign toLogOrNotToLog__0 first)"
                 |      ],
                 |      [
-                |        "Replace(L9: rename read console#0 to t#0)",
-                |        "Replace(L1: console#0=... -> no-op)",
                 |        "Replace(L5: rename written t3#0 to toLogOrNotToLog__0)",
                 |        "Replace(L6: toLogOrNotToLog__0=... -> no-op)",
                 |        "Replace(L5: rename read t2#0 to t1#0)",
@@ -147,38 +141,24 @@ class CleanupTemporariesTest {
                 |        "Replace(L7: simplify dead-store of t4#0)"
                 |      ],
                 |      [
-                |        "Replace(L1: let fail#0 -> no-op)",
-                |        "Replace(L1: let fail#1 -> no-op)",
-                |        "Replace(L1: let console#0 -> no-op)",
                 |        "Replace(L3: let t1#0 -> no-op)",
                 |        "Replace(L4: let t2#0 -> no-op)",
                 |        "Replace(L5: let t3#0 -> no-op)",
                 |        "Replace(L6: let t4#0 -> no-op)"
                 |      ],
                 |      [],
-                |      [
-                |        "Replace(L1: assign to return__0 instead of temporary)",
-                |        "ReplaceRange(L1: assign t#1 after swapping to assign return__0 first)"
-                |      ],
-                |      [
-                |        "Replace(L1: t#1=... -> no-op)"
-                |      ],
-                |      [
-                |        "Replace(L1: let t#1 -> no-op)",
-                |        "Replace(L1: let fail#2 -> no-op)"
-                |      ],
                 |      []
                 |    ],
                 |
                 |  pseudoCodeAfter: ```
-                |    var t#0;
-                |    t#0 = doPure(@stay fn /* return__0 */: Console {
-                |        return__0 = getConsole();
+                |    let console#0;
+                |    console#0 = doPure(@stay fn /* return__0 */: Console {
+                |        return__0 = getConsole()
                 |    });
                 |    let toLogOrNotToLog__0;
                 |    toLogOrNotToLog__0 = randomBool();
                 |    if (toLogOrNotToLog__0) {
-                |      do_call_log(t#0, "k")
+                |      do_call_log(console#0, "k")
                 |    }
                 |
                 |    ```,
@@ -223,19 +203,19 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeAfter: ```
                 |    let return__0;
-                |    var t#0;
-                |    t#0 = doPure(@stay fn /* return__1 */: Console {
-                |        return__1 = getConsole();
+                |    return__0 = void;
+                |    let console#0;
+                |    console#0 = doPure(@stay fn /* return__1 */: Console {
+                |        return__1 = getConsole()
                 |    });
                 |    var t1#0;
                 |    t1#0 = randomBool();
                 |    if (t1#0) {
-                |      do_call_log(t#0, "j")
+                |      do_call_log(console#0, "j")
                 |    };
                 |    if (t1#0) {
-                |      do_call_log(t#0, "k")
-                |    };
-                |    return__0 = void
+                |      do_call_log(console#0, "k")
+                |    }
                 |
                 |    ```,
                 |}
@@ -270,7 +250,7 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeBefore: ```
                 |    let return__9;
-                |    var t#6, t#7, t#8, fail#5, t#3;
+                |    var t#3;
                 |    let x__2;
                 |    if (randomBool()) {
                 |      t#3 = 1
@@ -278,80 +258,51 @@ class CleanupTemporariesTest {
                 |      t#3 = 2
                 |    };
                 |    x__2 = t#3;
-                |    t#6 = do_call_toString(x__2);
-                |    t#7 = t#6;
-                |    t#8 = t#7;
-                |    return__9 = t#8
+                |    return__9 = do_call_toString(x__2)
                 |
                 |    ```,
                 |
                 |  readsAndWrites0: {
+                |    "localNames": [
+                |        "return__9",
+                |        "t#3",
+                |        "x__2"
+                |    ],
                 |    "reads": {
                 |      "return__9":                ["R(return__9 @ L12)"],  // implied read by caller
                 |      "t#3":                      ["R(t#3 @ L10)"],
                 |      "x__2":                     ["R(x__2 @ L11)"],
-                |      "t#6":                      ["R(t#6 @ L11)"],
-                |      "t#7":                      ["R(t#7 @ L1)"],
-                |      "t#8":                      ["R(t#8 @ L1)"],
                 |    },
                 |    "writes": {
                 |      "t#3":                      ["W(t#3 A @ L6)", "W(t#3 A @ L8)"],
                 |      "x__2":                     ["W(x__2 A @ L10)"],
-                |      "t#6":                      ["W(t#6 A @ L11)"],
-                |      "t#7":                      ["W(t#7 A @ L11)"],
-                |      "t#8":                      ["W(t#8 A @ L1)"],
-                |      "return__9":                ["W(return__9 A @ L1)"]
+                |      "return__9":                ["W(return__9 A @ L11)"]
                 |    },
                 |    "upstream": {
                 |      "R(t#3 @ L10)":             ["W(t#3 A @ L6)", "W(t#3 A @ L8)"],
                 |      "R(x__2 @ L11)":            ["W(x__2 A @ L10)"],
-                |      "R(t#6 @ L11)":             ["W(t#6 A @ L11)"],
-                |      "R(t#7 @ L1)":              ["W(t#7 A @ L11)"],
-                |      "R(t#8 @ L1)":              ["W(t#8 A @ L1)"],
-                |      "R(return__9 @ L12)":       ["W(return__9 A @ L1)"]
+                |      "R(return__9 @ L12)":       ["W(return__9 A @ L11)"]
                 |    },
                 |    "downstream": {
                 |      "W(t#3 A @ L6)":            ["R(t#3 @ L10)"],
                 |      "W(t#3 A @ L8)":            ["R(t#3 @ L10)"],
                 |      "W(x__2 A @ L10)":          ["R(x__2 @ L11)"],
-                |      "W(t#6 A @ L11)":           ["R(t#6 @ L11)"],
-                |      "W(t#7 A @ L11)":           ["R(t#7 @ L1)"],
-                |      "W(t#8 A @ L1)":            ["R(t#8 @ L1)"],
-                |      "W(return__9 A @ L1)":      ["R(return__9 @ L12)"]
+                |      "W(return__9 A @ L11)":     ["R(return__9 @ L12)"]
                 |    },
                 |  },
                 |
                 |  allEdits: [
-                |    // First round through, we roll up a chain of temporaries and
-                |    // assign the `return` var first.
+                |    // First round through, we recognize that the temporary t#3 is only
+                |    // ever assigned to x__2.
                 |    [
-                |        "Replace(L11: assign to return__9 instead of temporary)",
-                |        "ReplaceRange(L11: assign t#6 after swapping to assign return__9 first)",
-                |        "ReplaceRange(L1: assign t#7 after swapping to assign return__9 first)",
-                |        "ReplaceRange(L1: assign t#8 after swapping to assign return__9 first)"
-                |    ],
-                |    // Now, quite a few of these temporaries are dangling assignments.
-                |    [
-                |        "Replace(L1: t#8=... -> no-op)",
                 |        // And the twin assignments along different paths to t#3 can both just
                 |        // assign to x instead.
                 |        "Replace(L6: rename written t#3 to x__2)",
                 |        "Replace(L8: rename written t#3 to x__2)",
                 |        "Replace(L10: x__2=... -> no-op)"
                 |    ],
-                |    // Eliminating dangling assignments.
+                |    // And finally we sweep up the declaration.
                 |    [
-                |        "Replace(L1: t#7=... -> no-op)"
-                |    ],
-                |    [
-                |        "Replace(L11: t#6=... -> no-op)"
-                |    ],
-                |    // And finally we sweep up some declarations.
-                |    [
-                |      "Replace(L11: let t#6 -> no-op)",
-                |      "Replace(L11: let t#7 -> no-op)",
-                |      "Replace(L1: let t#8 -> no-op)",
-                |      "Replace(L1: let fail#5 -> no-op)",
                 |      "Replace(L3: let t#3 -> no-op)",
                 |    ],
                 |    // And when we find no edits, we know to stop.
@@ -366,7 +317,7 @@ class CleanupTemporariesTest {
                 |    } else {
                 |      x__2 = 2
                 |    };
-                |    return__9 = do_call_toString(x__2);
+                |    return__9 = do_call_toString(x__2)
                 |
                 |    ```,
                 |}
@@ -392,43 +343,27 @@ class CleanupTemporariesTest {
             moduleResultNeeded = true,
         )
 
-        @Suppress("SpellCheckingInspection") // cut-off word in error message
         assertStructure(
             """
                 |{
                 |  pseudoCodeBefore: ```
-                |    let return__5;
-                |    var t#3, t#4;
-                |    let t_a#0;
+                |    let return__5, t_a#0;
                 |    var t_b#2;
                 |    t_b#2 = randomBool();
                 |    if (randomBool()) {
                 |      t_a#0 = t_b#2
                 |    };
-                |    t#3 = error (UseBeforeInitialization);
-                |    t#4 = t#3;
-                |    return__5 = t#4
+                |    return__5 = error (UseBeforeInitialization)
                 |
                 |    ```,
                 |  allEdits: [
                 |    [
-                |      "Replace(L8: assign to return__5 instead of temporary)",
-                |      "ReplaceRange(L1: assign t#3 after swapping to assign return__5 first)",
-                |      "ReplaceRange(L1: assign t#4 after swapping to assign return__5 first)"
-                |    ],
-                |    [
-                |      "Replace(L1: t#4=... -> no-op)",
                 |      "Replace(L6: t_a#0=... -> no-op)"
-                |    ],
-                |    [
-                |      "Replace(L1: t#3=... -> no-op)"
                 |    ],
                 |    [
                 |      "Replace(L4: simplify dead-store of t_b#2)",
                 |    ],
                 |    [
-                |      "Replace(L8: let t#3 -> no-op)",
-                |      "Replace(L1: let t#4 -> no-op)",
                 |      "Replace(L2: let t_a#0 -> no-op)",
                 |      "Replace(L3: let t_b#2 -> no-op)",
                 |    ],
@@ -438,7 +373,7 @@ class CleanupTemporariesTest {
                 |    let return__5;
                 |    randomBool();
                 |    if (randomBool()) {};
-                |    return__5 = error (UseBeforeInitialization);
+                |    return__5 = error (UseBeforeInitialization)
                 |
                 |    ```,
                 |  consoleOutput: ```
@@ -474,67 +409,25 @@ class CleanupTemporariesTest {
                 |{
                 |  allEdits: [
                 |    [
-                |      "SplitAssignment(L6: split void assignment of t#0)",
                 |      "SplitAssignment(L6: split void assignment of return__0)"
                 |    ],
-                |    [
-                |      "Replace(L6: read t#0 -> no-op)"
-                |    ],
-                |    [
-                |      "Replace(L6: simplify dead-store of t#0)",
-                |    ],
-                |    [
-                |      "Replace(L1: inlined assignment of t#1 -> no-op)",
-                |      "Replace(L1: inline value assigned to t#1 at sole read)"
-                |    ],
-                |    [
-                |      "Replace(L1: let t#1 -> no-op)",
-                |      "Replace(L6: let t#0 -> no-op)",
-                |      "Replace(L1: let fail#0 -> no-op)",
-                |      "Replace(L1: let fail#1 -> no-op)",
-                |    ],
                 |    [],
-                |    [
-                |      "Replace(L1: assign to return__1 instead of temporary)",
-                |      "ReplaceRange(L1: assign t#2 after swapping to assign return__1 first)"
-                |    ],
-                |    [
-                |      "Replace(L1: t#2=... -> no-op)"
-                |    ],
-                |    [
-                |      "Replace(L1: let t#2 -> no-op)",
-                |      "Replace(L1: let fail#2 -> no-op)"
-                |    ],
                 |    [],
-                |    [
-                |      "SplitAssignment(L3: split void assignment of t#3)"
-                |    ],
-                |    [
-                |      "Replace(L3: read t#3 -> no-op)"
-                |    ],
-                |    [
-                |      "Replace(L3: simplify dead-store of t#3)"
-                |    ],
-                |    [
-                |      "Replace(L3: let t#3 -> no-op)",
-                |      "Replace(L1: let fail#3 -> no-op)"
-                |    ],
                 |    []
                 |  ],
                 |
                 |  pseudoCodeAfter: ```
-                |    let return__0;
-                |    let console#0;
+                |    let return__0, console#0;
                 |    console#0 = doPure(@stay fn /* return__1 */: Console {
-                |        return__1 = getConsole();
+                |        return__1 = getConsole()
                 |    });
                 |    @fn let f__0;
                 |    f__0 = (@stay fn f /* return__2 */: Void {
                 |        fn__0: do {
+                |          return__2 = void;
                 |          if (randomBool()) {
-                |            do_call_log(console#0, "Random");
-                |          };
-                |          return__2 = void
+                |            do_call_log(console#0, "Random")
+                |          }
                 |        }
                 |    });
                 |    f__0();
@@ -561,9 +454,10 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeAfter: ```
-                |    let return__0, `test//`.answer;
-                |    `test//`.answer = 42;
-                |    return__0 = void
+                |    let return__0;
+                |    return__0 = void;
+                |    let `test//`.answer;
+                |    `test//`.answer = 42
                 |
                 |    ```,
                 |}
@@ -587,31 +481,25 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeBefore: ```
-                |    var t#0, t#1, fail#0, fail#1;
                 |    @constructorProperty @visibility(\public) @stay @fromType(E__0) let ordinal__0: Int32;
                 |    @constructorProperty @visibility(\public) @stay @fromType(E__0) let name__0: String;
                 |    @visibility(\public) @enumMember @static @stay @fromType(E__0) let A__0;
-                |## Here, the initializer for a member got pulled out into a temporary
-                |    t#0 = new E__0(0, "A");
-                |    A__0 = t#0;
+                |    A__0 = new E__0(0, "A");
                 |    @visibility(\public) @enumMember @static @stay @fromType(E__0) let B__0;
-                |    t#1 = new E__0(1, "B");
-                |    B__0 = t#1;
+                |    B__0 = new E__0(1, "B");
                 |    @fn @visibility(\public) @stay @fromType(E__0) let constructor__0;
                 |    constructor__0 = (@stay fn constructor(@impliedThis(E__0) this__0: E__0, ordinal__1 /* aka ordinal */: Int32, name__1 /* aka name */: String) /* return__1 */: Void {
-                |        var t#2, t#3, t#4;
+                |        return__1 = void;
                 |        let t#5;
                 |        t#5 = ordinal__1;
-                |        t#2 = t#5;
-                |        setp(ordinal__0, this__0, t#2);
+                |        t#5;
+                |        setp(ordinal__0, this__0, t#5);
                 |        t#5;
                 |        let t#6;
                 |        t#6 = name__1;
-                |        t#3 = t#6;
-                |        setp(name__0, this__0, t#3);
-                |        t#4 = t#6;
-                |        t#4;
-                |        return__1 = void
+                |        t#6;
+                |        setp(name__0, this__0, t#6);
+                |        t#6
                 |    });
                 |    @fn @visibility(\public) @stay @fromType(E__0) let getordinal__0;
                 |    getordinal__0 = (@stay fn (@impliedThis(E__0) this__1: E__0) /* return__2 */: Int32 {
@@ -636,9 +524,9 @@ class CleanupTemporariesTest {
                 |    B__0 = new E__0(1, "B");
                 |    @fn @visibility(\public) @stay @fromType(E__0) let constructor__0;
                 |    constructor__0 = (@stay fn constructor(@impliedThis(E__0) this__0: E__0, ordinal__1 /* aka ordinal */: Int32, name__1 /* aka name */: String) /* return__1 */: Void {
+                |        return__1 = void;
                 |        setp(ordinal__0, this__0, ordinal__1);
                 |        setp(name__0, this__0, name__1);
-                |        return__1 = void
                 |    });
                 |    @fn @visibility(\public) @stay @fromType(E__0) let getordinal__0;
                 |    getordinal__0 = (@stay fn (@impliedThis(E__0) this__1: E__0) /* return__2 */: Int32 {
@@ -678,16 +566,16 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeAfter: ```
-                |    var t#0;
-                |    t#0 = doPure(@stay fn /* return__0 */: Console {
-                |        return__0 = getConsole();
+                |    let console#0;
+                |    console#0 = doPure(@stay fn /* return__0 */: Console {
+                |        return__0 = getConsole()
                 |    });
                 |    var x__0;
                 |    x__0 = "foo";
                 |    if (randomBool()) {
                 |      x__0 = "bar"
                 |    };
-                |    do_call_log(t#0, x__0);
+                |    do_call_log(console#0, x__0)
                 |
                 |    ```,
                 |}
@@ -718,9 +606,10 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeAfter: ```
                 |    let return__0;
-                |    var t#0;
-                |    t#0 = doPure(@stay fn /* return__1 */: Console {
-                |        return__1 = getConsole();
+                |    return__0 = void;
+                |    let console#0;
+                |    console#0 = doPure(@stay fn /* return__1 */: Console {
+                |        return__1 = getConsole()
                 |    });
                 |    let `test//`.x;
                 |    var t#1;
@@ -729,8 +618,7 @@ class CleanupTemporariesTest {
                 |      t#1 = "bar"
                 |    };
                 |    `test//`.x = t#1;
-                |    do_call_log(t#0, `test//`.x);
-                |    return__0 = void
+                |    do_call_log(console#0, `test//`.x)
                 |
                 |    ```,
                 |}
@@ -760,7 +648,7 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeAfter: ```
                 |    do_call_log(doPure(@stay fn /* return__0 */: Console {
-                |          return__0 = getConsole();
+                |          return__0 = getConsole()
                 |      }), do_call_toString(2))
                 |
                 |    ```,
@@ -801,17 +689,14 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeAfter: ```
-                |    let return__0;
-                |    let console#0;
+                |    let return__0, console#0;
                 |    console#0 = doPure(@stay fn /* return__1 */: Console {
-                |        return__1 = getConsole();
+                |        return__1 = getConsole()
                 |    });
                 |    @fn let f__0;
                 |    f__0 = (@stay fn f(a__0 /* aka a */: Int32, b__0 /* aka b */: Int32) /* return__2 */: Void {
-                |        var t#0;
                 |        fn__0: do {
-                |          t#0 = do_call_toString(a__0 + b__0);
-                |          do_call_log(console#0, t#0);
+                |          do_call_log(console#0, do_call_toString(a__0 + b__0));
                 |          return__2 = void
                 |        }
                 |    });
@@ -860,16 +745,16 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeAfter: ```
-                |    var t#0;
-                |    t#0 = doPure(@stay fn /* return__0 */: Console {
-                |        return__0 = getConsole();
+                |    let console#0;
+                |    console#0 = doPure(@stay fn /* return__0 */: Console {
+                |        return__0 = getConsole()
                 |    });
                 |    var y__0, t#1;
                 |    y__0 = 1;
                 |    t#1 = 2;
-                |    do_call_log(t#0, do_call_toString(y__0));
+                |    do_call_log(console#0, do_call_toString(y__0));
                 |    y__0 = t#1;
-                |    do_call_log(t#0, do_call_toString(y__0));
+                |    do_call_log(console#0, do_call_toString(y__0))
                 |
                 |    ```,
                 |}
@@ -901,10 +786,9 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeAfter: ```
-                |    let return__0;
-                |    var t#0;
-                |    t#0 = doPure(@stay fn /* return__1 */: Console {
-                |        return__1 = getConsole();
+                |    let return__0, console#0;
+                |    console#0 = doPure(@stay fn /* return__1 */: Console {
+                |        return__1 = getConsole()
                 |    });
                 |    @fn let `test//`.f;
                 |    var t#1;
@@ -912,12 +796,12 @@ class CleanupTemporariesTest {
                 |    t#1 = 0;
                 |    `test//`.f = fn f /* return__2 */: Void {
                 |      fn__0: do {
-                |        t#1 = t#1 + 1;
-                |        return__2 = void
+                |        return__2 = void;
+                |        t#1 = t#1 + 1
                 |      }
                 |    };
                 |    x__0 = t#1;
-                |    do_call_log(t#0, do_call_toString(x__0));
+                |    do_call_log(console#0, do_call_toString(x__0));
                 |    return__0 = void
                 |
                 |    ```,
@@ -1006,11 +890,7 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeAfter: ```
                 |    let return__0;
-                |    var fail#0;
-                |    return__0 = hs(fail#0, randomInt(0, 10) / randomInt(0, 10));
-                |    if (fail#0) {
-                |      bubble()
-                |    };
+                |    return__0 = randomInt(0, 10) / randomInt(0, 10)
                 |
                 |    ```,
                 |}
@@ -1033,8 +913,9 @@ class CleanupTemporariesTest {
                 |  pseudoCodeAfter: ```
                 |    @fn let f__0;
                 |    f__0 = (@stay fn f /* return__0 */: Void {
-                |        return__0 = void;
-                |        fn__0: do {}
+                |        fn__0: do {
+                |          return__0 = void
+                |        }
                 |    })
                 |
                 |    ```,
@@ -1058,10 +939,8 @@ class CleanupTemporariesTest {
                 |  pseudoCodeBefore: ```
                 |    @fn let f__0;
                 |    f__0 = (@stay fn f(@optional(true) a__0 /* aka a */: Int32?, @optional(true) b__0 /* aka b */: Int32?) /* return__0 */: Int32 {
-                |        var t#0, t#1, t#2;
                 |        fn__0: do {
-                |          var fail#0;
-                |          let a__1 /* aka a */: Int32;
+                |          let t#0, t#1, a__1 /* aka a */: Int32;
                 |          if (isNull(a__0)) {
                 |            t#0 = 1
                 |          } else {
@@ -1079,8 +958,7 @@ class CleanupTemporariesTest {
                 |            t#1 = b#0
                 |          };
                 |          b__1 = t#1;
-                |          t#2 = a__1 + b__1;
-                |          return__0 = t#2
+                |          return__0 = a__1 + b__1
                 |        }
                 |    })
                 |
@@ -1101,7 +979,7 @@ class CleanupTemporariesTest {
                 |          } else {
                 |            b__1 = notNull(b__0);
                 |          };
-                |          return__0 = a__1 + b__1;
+                |          return__0 = a__1 + b__1
                 |        }
                 |    })
                 |
@@ -1126,43 +1004,30 @@ class CleanupTemporariesTest {
             moduleResultNeeded = true,
         )
 
+        // This used to lead to a lot of temporary creation,
+        // but we no longer need to capture non-nested failing
+        // calls in temporaries.
+
         assertStructure(
             """
                 |{
                 |  pseudoCodeBefore: ```
                 |      let return__0;
-                |      var t#0, t#1, t#2, t#3, fail#0, fail#1, x__0: Int32;
+                |      var x__0: Int32;
                 |      x__0 = 10;
-                |      t#0 = x__0 * 3;
-                |      x__0 = t#0;
-                |      t#1 = hs(fail#1, x__0 / 5);
-                |## This used to have compound assignment `t#0 = (x__0 = x__0 * 3);` but we no longer produce it.
-                |## TODO Some other way to conjure one for testing?
-                |      if (fail#1) {
-                |        bubble()
-                |      };
-                |      x__0 = t#1;
-                |      t#2 = x__0;
-                |      t#3 = t#2;
-                |      return__0 = t#3
+                |      x__0 = x__0 * 3;
+                |      x__0 = x__0 / 5;
+                |      return__0 = x__0
                 |
                 |      ```,
                 |
                 |  pseudoCodeAfter: ```
                 |      let return__0;
-                |      var t#1;
-                |      var fail#1, x__0: Int32;
+                |      var x__0: Int32;
                 |      x__0 = 10;
                 |      x__0 = x__0 * 3;
-                |## We don't rewrite the `t#0 =` below currently because
-                |## x__0 is a multiply assigned var.  We could fix that by
-                |## recognizing that x__0 has one live write.
-                |      t#1 = hs(fail#1, x__0 / 5);
-                |      if (fail#1) {
-                |        bubble()
-                |      };
-                |      x__0 = t#1;
-                |      return__0 = x__0;
+                |      x__0 = x__0 / 5;
+                |      return__0 = x__0
                 |
                 |      ```
                 |}
@@ -1186,19 +1051,17 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeBefore: ```
-                |      let return__0;
-                |      var t#0, t#1, t#2, t#3, t#4, t#5, fail#0, fail#1, fail#2, t0#0, t1#0, t2#0, t3#0;
+                |      let t#0, return__0;
+                |      var t0#0, t1#0, t2#0, t3#0;
+                |      let t#1, t#2;
                 |      t3#0 = randomInt();
-                |      t#0 = t3#0;
-                |      t2#0 = t#0;
+                |      t#2 = t3#0;
+                |      t2#0 = t#2;
                 |      t#1 = t2#0;
                 |      t1#0 = t#1;
-                |      t#2 = t1#0;
-                |      t0#0 = t#2;
-                |      t#3 = t0#0 + t1#0;
-                |      t#4 = t#3 + t2#0;
-                |      t#5 = t#4 + t3#0;
-                |      return__0 = t#5
+                |      t#0 = t1#0;
+                |      t0#0 = t#0;
+                |      return__0 = t0#0 + t1#0 + t2#0 + t3#0
                 |
                 |      ```,
                 |
@@ -1206,7 +1069,7 @@ class CleanupTemporariesTest {
                 |      let return__0;
                 |      var t0#0;
                 |      t0#0 = randomInt();
-                |      return__0 = t0#0 + t0#0 + t0#0 + t0#0;
+                |      return__0 = t0#0 + t0#0 + t0#0 + t0#0
                 |
                 |      ```,
                 |}
@@ -1270,8 +1133,9 @@ class CleanupTemporariesTest {
                 |      @visibility(\public) @stay @fromType(C__0) let p__0;
                 |      @visibility(\public) @fn @stay @fromType(C__0) let nym`set.p__1`;
                 |      nym`set.p__1` = (@stay fn nym`set.p`(@impliedThis(C__0) this__0: C__0, newValue__0 /* aka newValue */: Boolean) /* return__1 */: Void {
-                |          return__1 = void;
-                |          fn__0: do {}
+                |          fn__0: do {
+                |            return__1 = void
+                |          }
                 |      });
                 |      @fn @visibility(\public) @stay @fromType(C__0) let constructor__0;
                 |      constructor__0 = (@stay fn constructor(@impliedThis(C__0) this__1: C__0) /* return__2 */: Void {
@@ -1332,46 +1196,32 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeBefore: ```
-                |    var t#0, t#1, t#2, t#3, t#4, fail#0, fail#1, fail#2, fail#3;
+                |    var t#1;
                 |    let console#0;
-                |    t#0 = doPure(@stay fn /* return__0 */: Console {
-                |        var t#5, fail#4;
-                |        t#5 = getConsole();
-                |        return__0 = t#5
+                |    console#0 = doPure(@stay fn /* return__0 */: Console {
+                |        return__0 = getConsole()
                 |    });
-                |    console#0 = t#0;
                 |    orelse#1: {
-                |      t#1 = hs(fail#3, 0.0 / 0.0);
-                |      if (fail#3) {
-                |        break orelse#1;
-                |      };
-                |      t#2 = do_call_toString(t#1);
-                |      t#3 = t#2
+                |      t#1 = do_call_toString(0.0 / 0.0)
                 |    } orelse {
-                |      t#3 = "Bubble"
+                |      t#1 = "Bubble"
                 |    };
-                |    t#4 = do_call_log(console#0, t#3);
-                |    t#4
+                |    do_call_log(console#0, t#1)
                 |
                 |    ```,
                 |
                 |  pseudoCodeAfter: ```
-                |    var t#0, t#1;
-                |    var t#3;
-                |    var fail#3;
-                |    t#0 = doPure(@stay fn /* return__0 */: Console {
-                |        return__0 = getConsole();
+                |    var t#1;
+                |    let console#0;
+                |    console#0 = doPure(@stay fn /* return__0 */: Console {
+                |        return__0 = getConsole()
                 |    });
                 |    orelse#1: {
-                |      t#1 = hs(fail#3, 0.0 / 0.0);
-                |      if (fail#3) {
-                |        break orelse#1;
-                |      };
-                |      t#3 = do_call_toString(t#1)
+                |      t#1 = do_call_toString(0.0 / 0.0)
                 |    } orelse {
-                |      t#3 = "Bubble"
+                |      t#1 = "Bubble"
                 |    };
-                |    do_call_log(t#0, t#3);
+                |    do_call_log(console#0, t#1)
                 |
                 |    ```
                 |}
@@ -1394,11 +1244,7 @@ class CleanupTemporariesTest {
                 |    @fn let f__0;
                 |    f__0 = (@stay fn f /* return__1 */: (Int32 | Bubble) {
                 |        fn__0: do {
-                |          var fail#0;
-                |          return__1 = hs(fail#0, 0 / 0);
-                |          if (fail#0) {
-                |            bubble()
-                |          };
+                |          return__1 = 0 / 0
                 |        }
                 |    })
                 |
@@ -1426,11 +1272,11 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeAfter: ```
                 |    let return__0;
+                |    return__0 = void;
                 |    var x__0;
                 |## Fixed that for you, after issuing an error.
                 |    x__0 = randomBool();
-                |    x__0 = randomBool();
-                |    return__0 = void
+                |    x__0 = randomBool()
                 |
                 |    ```,
                 |  consoleOutput: ```
@@ -1473,22 +1319,22 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeAfter: ```
                 |    @fn let `test//`.hi;
-                |    `test//`.hi = (@stay fn hi(var x__0 /* aka x */: Int32, var y__0 /* aka y */: Int32, var z__0 /* aka z */: Int32, @optional(true) w__0 /* aka w */: Int32?) /* return__0 */: Int32 {
-                |        fn__0: do {
-                |          let w__1 /* aka w */: Int32;
-                |          if (isNull(w__0)) {
-                |            w__1 = 3
-                |          } else {
-                |            w__1 = notNull(w__0);
-                |          };
-                |          x__0 = x__0 + 1;
-                |          y__0 = y__0 + 2;
-                |          y__0 = y__0 + 3;
-                |          z__0 = z__0 + 4;
-                |          z__0 = z__0 + 5;
-                |          return__0 = x__0 + y__0 + z__0 + w__1;
-                |        }
-                |    })
+                |    `test//`.hi = fn hi(var x__0 /* aka x */: Int32, var y__0 /* aka y */: Int32, var z__0 /* aka z */: Int32, @optional(true) w__0 /* aka w */: Int32?) /* return__0 */: Int32 {
+                |      fn__0: do {
+                |        let w__1 /* aka w */: Int32;
+                |        if (isNull(w__0)) {
+                |          w__1 = 3
+                |        } else {
+                |          w__1 = notNull(w__0);
+                |        };
+                |        x__0 = x__0 + 1;
+                |        y__0 = y__0 + 2;
+                |        y__0 = y__0 + 3;
+                |        z__0 = z__0 + 4;
+                |        z__0 = z__0 + 5;
+                |        return__0 = x__0 + y__0 + z__0 + w__1
+                |      }
+                |    }
                 |
                 |    ```,
                 |  consoleOutput: ```
@@ -1543,9 +1389,7 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeBefore: ```
-                |    let return__9;
-                |    var t#5, t#6, t#7, t#8;
-                |    let b__2;
+                |    let return__9, t#5, t#6, b__2;
                 |    b__2 = randomBool();
                 |    let c__3;
                 |    if (b__2) {
@@ -1561,9 +1405,7 @@ class CleanupTemporariesTest {
                 |      t#6 = "no"
                 |    };
                 |    d__4 = t#6;
-                |    t#7 = c__3 == d__4;
-                |    t#8 = t#7;
-                |    return__9 = t#8
+                |    return__9 = c__3 == d__4
                 |
                 |    ```,
                 |  pseudoCodeAfter: ```
@@ -1582,7 +1424,7 @@ class CleanupTemporariesTest {
                 |    } else {
                 |      d__4 = "no"
                 |    };
-                |    return__9 = c__3 == d__4;
+                |    return__9 = c__3 == d__4
                 |
                 |    ```,
                 |}
@@ -1608,7 +1450,7 @@ class CleanupTemporariesTest {
                 |  pseudoCodeAfter: ```
                 |    label__0: do {
                 |      do_call_log(doPure(@stay fn /* return__0 */: Console {
-                |            return__0 = getConsole();
+                |            return__0 = getConsole()
                 |        }), "foo")
                 |    }
                 |
@@ -1635,39 +1477,33 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeBefore: ```
-                |    var t#0, t#1, t#2, t#3, fail#0, fail#1, fail#2, fail#3;
                 |    let console#0;
-                |    t#0 = doPure(@stay fn /* return__0 */: Console {
-                |        var t#4, fail#4;
-                |        t#4 = getConsole();
-                |        return__0 = t#4
+                |    console#0 = doPure(@stay fn /* return__0 */: Console {
+                |        return__0 = getConsole()
                 |    });
-                |    console#0 = t#0;
                 |    var i__0;
                 |    i__0 = 0;
                 |    while (i__0 < 3) {
                 |      let postfixReturn#0;
                 |      postfixReturn#0 = i__0;
-                |      t#1 = postfixReturn#0 + 1;
-                |      i__0 = t#1;
-                |      t#2 = postfixReturn#0;
-                |      t#3 = do_call_toString(t#2);
-                |      do_call_log(console#0, t#3)
+                |      i__0 = postfixReturn#0 + 1;
+                |      postfixReturn#0;
+                |      do_call_log(console#0, do_call_toString(postfixReturn#0))
                 |    }
                 |
                 |    ```,
                 |  pseudoCodeAfter: ```
-                |    var t#0;
-                |    var t#2;
-                |    t#0 = doPure(@stay fn /* return__0 */: Console {
-                |        return__0 = getConsole();
+                |    let console#0;
+                |    console#0 = doPure(@stay fn /* return__0 */: Console {
+                |        return__0 = getConsole()
                 |    });
                 |    var i__0;
                 |    i__0 = 0;
                 |    while (i__0 < 3) {
-                |      t#2 = i__0;
-                |      i__0 = t#2 + 1;
-                |      do_call_log(t#0, do_call_toString(t#2))
+                |      let postfixReturn#0;
+                |      postfixReturn#0 = i__0;
+                |      i__0 = postfixReturn#0 + 1;
+                |      do_call_log(console#0, do_call_toString(postfixReturn#0))
                 |    }
                 |
                 |    ```,
@@ -1695,43 +1531,37 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeBefore: ```
                 |    let return__0;
-                |    var t#0, t#1, t#2, t#3, fail#0, fail#1, fail#2, fail#3;
+                |    return__0 = void;
                 |    let console#0;
-                |    t#0 = doPure(@stay fn /* return__1 */: Console {
-                |        var t#4, fail#4;
-                |        t#4 = getConsole();
-                |        return__1 = t#4
+                |    console#0 = doPure(@stay fn /* return__1 */: Console {
+                |        return__1 = getConsole()
                 |    });
-                |    console#0 = t#0;
                 |    var i__0;
                 |    i__0 = 0;
                 |    while (i__0 < 3) {
                 |      let postfixReturn#0;
                 |      postfixReturn#0 = i__0;
-                |      t#1 = postfixReturn#0 + 1;
-                |      i__0 = t#1;
-                |      t#2 = postfixReturn#0;
-                |      t#3 = do_call_toString(t#2);
-                |      do_call_log(console#0, t#3)
-                |    };
-                |    return__0 = void
+                |      i__0 = postfixReturn#0 + 1;
+                |      postfixReturn#0;
+                |      do_call_log(console#0, do_call_toString(postfixReturn#0))
+                |    }
                 |
                 |    ```,
                 |  pseudoCodeAfter: ```
                 |    let return__0;
-                |    var t#0;
-                |    var t#2;
-                |    t#0 = doPure(@stay fn /* return__1 */: Console {
-                |        return__1 = getConsole();
+                |    return__0 = void;
+                |    let console#0;
+                |    console#0 = doPure(@stay fn /* return__1 */: Console {
+                |        return__1 = getConsole()
                 |    });
                 |    var i__0;
                 |    i__0 = 0;
                 |    while (i__0 < 3) {
-                |      t#2 = i__0;
-                |      i__0 = t#2 + 1;
-                |      do_call_log(t#0, do_call_toString(t#2))
-                |    };
-                |    return__0 = void
+                |      let postfixReturn#0;
+                |      postfixReturn#0 = i__0;
+                |      i__0 = postfixReturn#0 + 1;
+                |      do_call_log(console#0, do_call_toString(postfixReturn#0))
+                |    }
                 |
                 |    ```,
                 |}
@@ -1752,44 +1582,33 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeBefore: ```
-                |    let return__7, @fn `test//`.f;
+                |    let return__7;
+                |    return__7 = void;
+                |    @fn let `test//`.f;
                 |    `test//`.f = (@stay fn f(n__1 /* aka n */: Int32, d__2 /* aka d */: Int32) /* return__0 */: Int32 {
-                |        var t#5, t#6;
                 |        fn__0: do {
-                |          var fail#4;
                 |          orelse#0: {
-                |            t#5 = hs(fail#4, n__1 / d__2);
-                |            if (fail#4) {
-                |              break orelse#0;
-                |            };
-                |            t#6 = t#5
+                |            return__0 = n__1 / d__2
                 |          } orelse {
-                |            t#6 = -1
-                |          };
-                |          return__0 = t#6
+                |            return__0 = -1
+                |          }
                 |        }
-                |    });
-                |    return__7 = void
+                |    })
                 |
                 |    ```,
                 |  pseudoCodeAfter: ```
-                |    let return__7, @fn `test//`.f;
+                |    let return__7;
+                |    return__7 = void;
+                |    @fn let `test//`.f;
                 |    `test//`.f = (@stay fn f(n__1 /* aka n */: Int32, d__2 /* aka d */: Int32) /* return__0 */: Int32 {
-                |        var t#5;
                 |        fn__0: do {
-                |          var fail#4;
                 |          orelse#0: {
-                |            t#5 = hs(fail#4, n__1 / d__2);
-                |            if (fail#4) {
-                |              break orelse#0;
-                |            };
-                |            return__0 = t#5
+                |            return__0 = n__1 / d__2
                 |          } orelse {
                 |            return__0 = -1
-                |          };
+                |          }
                 |        }
-                |    });
-                |    return__7 = void
+                |    })
                 |
                 |    ```,
                 |}
@@ -1832,8 +1651,8 @@ class CleanupTemporariesTest {
                 |    localName__0 = (fn f);
                 |##  This is not a dead store
                 |    do_call_log(doPure(@stay fn /* return__0 */: Console {
-                |          return__0 = getConsole();
-                |      }), do_call_aString((fn f)()));
+                |          return__0 = getConsole()
+                |      }), do_call_aString((fn f)()))
                 |
                 |    ```,
                 |  "consoleOutput": ```
@@ -1979,11 +1798,10 @@ class CleanupTemporariesTest {
                 |    t_a#0 = randomInt(0, 10);
                 |    var result__0;
                 |    orelse#0: {
-                |      result__0 = 1 + t_a#0;
+                |      result__0 = 1 + t_a#0
                 |    } orelse {
-                |      result__0 = 2 + t_a#0;
-                |    };
-                |    result__0
+                |      result__0 = 2 + t_a#0
+                |    }
                 |
                 |    ```
                 |}
@@ -2016,11 +1834,9 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeAfter: ```
-                |    var t#0;
-                |    var t#4;
-                |    var t#6;
-                |    t#0 = doPure(@stay fn /* return__0 */: Console {
-                |        return__0 = getConsole();
+                |    let console#0;
+                |    console#0 = doPure(@stay fn /* return__0 */: Console {
+                |        return__0 = getConsole()
                 |    });
                 |    var n__0;
                 |    n__0 = 0;
@@ -2036,18 +1852,67 @@ class CleanupTemporariesTest {
                 |      var j__0;
                 |      j__0 = 0;
                 |      while (true) {
-                |        t#4 = str(str__0);
-                |        t#6 = n__0;
-                |        n__0 = t#6 + 1;
-                |## t#6 needs to be distinct from n where it's stringified here
-                |        str__0 = cat(t#4, " ", str(t#6));
+                |        let postfixReturn#0;
+                |        postfixReturn#0 = n__0;
+                |        n__0 = postfixReturn#0 + 1;
+                |## The postfix-return needs to be distinct from n where it's stringified here
+                |        str__0 = cat(str(str__0), " ", str(postfixReturn#0));
                 |        if (i__0 <= j__0) {
-                |          do_call_log(t#0, str__0);
+                |          do_call_log(console#0, str__0);
                 |          continue outer__0;
                 |        };
-                |        j__0 = j__0 + 1;
+                |        j__0 = j__0 + 1
                 |      }
                 |    }
+                |
+                |    ```
+                |}
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+            r,
+        )
+    }
+
+    @Test
+    fun orElseInNonVarInitializer() {
+        val r = doCleanupTemporaries(
+            input = """
+                |export let f(x: Int32, y: Int32): Int32 {
+                |  // This `z` can be adjusted to `var`
+                |  let z = do { (x / y) orelse 0 };
+                |  z + 1;
+                |};
+                |
+                |// But exports can't be `var`.
+                |export let w = (randomInt() / randomInt()) orelse 0;
+            """.trimMargin(),
+        )
+        assertStructure(
+            """
+                |{
+                |  pseudoCodeAfter: ```
+                |    var t#0;
+                |    @fn let `test//`.f;
+                |    `test//`.f = (@stay fn f(x__0 /* aka x */: Int32, y__0 /* aka y */: Int32) /* return__0 */: Int32 {
+                |        fn__0: do {
+                |          return__0 = void;
+                |## Here, z__0 has been adjusted to `var` since it's a local.
+                |          var z__0;
+                |          orelse#0: {
+                |            z__0 = x__0 / y__0
+                |          } orelse {
+                |            z__0 = 0
+                |          };
+                |          z__0 + 1
+                |        }
+                |    });
+                |    let `test//`.w;
+                |## Here, we need to keep `t#0` because `w` cannot be made `var`.
+                |    orelse#1: {
+                |      t#0 = randomInt() / randomInt()
+                |    } orelse {
+                |      t#0 = 0
+                |    };
+                |    `test//`.w = t#0
                 |
                 |    ```
                 |}
@@ -2093,11 +1958,8 @@ class CleanupTemporariesTest {
             """
                 |{
                 |  pseudoCodeAfter: ```
-                |    var t#0, fail#0;
-                |    t#0 = hs(fail#0, await p());
-                |    if (fail#0) {
-                |      bubble()
-                |    };
+                |    let t#0;
+                |    t#0 = await p();
                 |    (fn ignore)(t#0)
                 |
                 |    ```
@@ -2128,10 +1990,9 @@ class CleanupTemporariesTest {
             """
                 |{ pseudoCodeAfter:
                 |```
-                |var t#18, t#19;
-                |var fail#16;
-                |t#18 = doPure(@stay fn /* return__23 */: Console {
-                |    return__23 = getConsole();
+                |let console#0;
+                |console#0 = doPure(@stay fn /* return__23 */: Console {
+                |    return__23 = getConsole()
                 |});
                 |@typeDecl(IntUtil__0) @stay let IntUtil__0;
                 |IntUtil__0 = type (IntUtil__0);
@@ -2139,7 +2000,7 @@ class CleanupTemporariesTest {
                 |@fn @static @visibility(\public) @stay @fromType(IntUtil__0) let plusOne__5;
                 |plusOne__5 = (@stay fn plusOne(n__6 /* aka n */: Int32) /* return__24 */{
                 |    fn__7: do {
-                |      return__24 = n__6 + 1;
+                |      return__24 = n__6 + 1
                 |    }
                 |});
                 |@fn @visibility(\public) @stay @fromType(IntUtil__0) let constructor__8;
@@ -2160,11 +2021,7 @@ class CleanupTemporariesTest {
                 |## BY A STRICT READING OF ORDER OF OPERATIONS, THE READ OF Int.plusOne ##
                 |## OCCURS HERE, BEFORE ARGUMENT EVALUATION.                            ##
                 |#########################################################################
-                |t#19 = hs(fail#16, (fn intOrBubble)());
-                |if (fail#16) {
-                |  bubble()
-                |};
-                |do_call_log(t#18, getStatic(IntUtil__0, \plusOne)(t#19));
+                |do_call_log(console#0, getStatic(IntUtil__0, \plusOne)((fn intOrBubble)()))
                 |
                 |```
                 |}
@@ -2185,9 +2042,11 @@ class CleanupTemporariesTest {
         input: String,
         moduleResultNeeded: Boolean = false,
         advanceTo: Stage = Stage.Type,
+        verbose: Boolean = false,
         writeOtherModules: (MemoryFileSystem) -> Unit = {},
         moduleCustomizeHook: ModuleCustomizeHook? = null,
     ): CleanupTemporariesResult {
+        val debugConsole = if (verbose) { console } else { null }
         val projectLogSink = ListBackedLogSink()
         val libraryRoot = testModuleName.libraryRoot()
         val (makeResult, consoleOutput) = withCapturingConsole { cConsole ->
@@ -2252,6 +2111,10 @@ class CleanupTemporariesTest {
                             module.treeForDebug?.rewriteTNames()
                         }
                         moduleCustomizeHook?.customize(module, isNew = isNew)
+
+                        debugConsole?.group("Module ${module.loc} ${module.stageCompleted}") {
+                            module.treeForDebug?.toPseudoCode(debugConsole.textOutput)
+                        }
                     },
                 ),
             )

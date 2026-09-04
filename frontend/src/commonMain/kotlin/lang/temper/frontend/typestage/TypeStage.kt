@@ -9,9 +9,10 @@ import lang.temper.common.calledFor
 import lang.temper.common.doIfLogs
 import lang.temper.common.effect
 import lang.temper.frontend.AstSnapshotKey
+import lang.temper.frontend.CaptureInfo
 import lang.temper.frontend.CleanupTemporaries
-import lang.temper.frontend.MagicSecurityDust
 import lang.temper.frontend.Module
+import lang.temper.frontend.RttiCallSimplification
 import lang.temper.frontend.StageOutputs
 import lang.temper.frontend.StagingFlags
 import lang.temper.frontend.UseBeforeInit
@@ -96,26 +97,50 @@ internal class TypeStage(
 
         AutoCast(root).apply()
 
-        // Genre.Documentation requires statements start in statement position, and assumes some
+        val needResultForModuleRoot = TBoolean.valueTrue == (
+            builtinEnvironment[StagingFlags.moduleResultNeeded, nullCallback]
+            )
+
+        // Find terminal expressions and introduce explicit assignments to function output
+        // variables.
+        val (outputName, outputInfo) = Debug.Frontend.TypeStage.MakeResultsExplicit(configKey)
+            .benchmarkIf(BENCHMARK, "MakeResultsExplicit") {
+                when (module.genre) {
+                    Genre.Library -> MakeResultsExplicit.makeAllResultsExplicit(
+                        console = module.console,
+                        moduleRoot = root,
+                        needResultForModuleRoot = needResultForModuleRoot,
+                    )
+                    // For documentation, we do not rely on CFGs and use our alt `return` function instead of
+                    // assignments to the result variable.
+                    Genre.Documentation -> {
+                        MakeResultsExplicitForDocs(module, root)
+                        null to CaptureInfo.empty // Documentation fragments do not capture the module result.
+                    }
+                }
+            }
+
+        Debug.Frontend.TypeStage.MakeResultsExplicit
+            .snapshot(configKey, CaptureInfo.Key, outputInfo)
+        Debug.Frontend.TypeStage.AfterExplicitResults.snapshot(configKey, AstSnapshotKey, root)
+
+        // Genre.Documentation requires statements to start in statement position, and assumes some
         // block level idiom for failure gathering.
         if (genre != Genre.Documentation) {
-            // Make failure explicit
-            Debug.Frontend.TypeStage.MagicSecurityDust(configKey)
-                .benchmarkIf(BENCHMARK, "MagicSecurityDust") {
-                    MagicSecurityDust().sprinkle(root) calledFor effect
-                }
-
-            Debug.Frontend.TypeStage.AfterSprinkle.snapshot(configKey, AstSnapshotKey, root)
-
             // Pull statement-ish stuff to the root so that we have one control flow graph per
             // function/module body with failure paths.
             Debug.Frontend.TypeStage.Weaver(configKey).benchmarkIf(BENCHMARK, "Weaver") {
                 Weaver.weave(
-                    module,
                     root,
+                    sprinkleSecurityDust = false, // Not enough type info yet.
+                    rttiCallSimplification = RttiCallSimplification.SeparateNullBranches,
                     pullSpecialsRootward = true,
                     nameAllFunctions = false,
-                ) calledFor effect
+                    resultsAlreadyCaptured = true,
+                )
+            }.also { captureInfo ->
+                Debug.Frontend.TypeStage.AfterWeave
+                    .snapshot(configKey, CaptureInfo.Key, captureInfo)
             }
 
             Debug.Frontend.TypeStage.AfterWeave.snapshot(configKey, AstSnapshotKey, root)
@@ -126,30 +151,6 @@ internal class TypeStage(
 
             Debug.Frontend.TypeStage.AfterSimplifyFlow.snapshot(configKey, AstSnapshotKey, root)
         }
-
-        // Find terminal expressions and introduce explicit assignments to function output
-        // variables.  Since we wove blocks together, and simplified the flow,
-        // ControlFlow.getTerminalExpressions is accurate.
-        val outputName = Debug.Frontend.TypeStage.MakeResultsExplicit(configKey)
-            .benchmarkIf(BENCHMARK, "MakeResultsExplicit") {
-                when (module.genre) {
-                    Genre.Library -> MakeResultsExplicit(
-                        module,
-                        moduleRoot = root,
-                        needResultForModuleRoot = TBoolean.valueTrue == (
-                            builtinEnvironment[StagingFlags.moduleResultNeeded, nullCallback]
-                            ),
-                    )
-                    // For documentation, we do not rely on CFGs, and use our alt `return` function instead of
-                    // assignments to the result variable.
-                    Genre.Documentation -> {
-                        MakeResultsExplicitForDocs(module, root)
-                        null // Documentation fragments do not capture the module result.
-                    }
-                }
-            }
-
-        Debug.Frontend.TypeStage.AfterExplicitResults.snapshot(configKey, AstSnapshotKey, root)
 
         val nameToType =
             Debug.Frontend.TypeStage.Type(configKey).benchmarkIf(BENCHMARK, "Type") {
@@ -200,7 +201,7 @@ internal class TypeStage(
             dumpMissingTypeInfo(root, "After simplify flow 2", console)
         }
 
-        // Clean-up temporaries introduced so we have a scrutable output.
+        // Clean up temporaries introduced so we have a scrutable output.
         if (genre != Genre.Documentation) {
             Debug.Frontend.TypeStage.CleanupTemporaries(configKey)
                 .benchmarkIf(BENCHMARK, "CleanupTemporaries") {
@@ -227,14 +228,27 @@ internal class TypeStage(
         if (genre != Genre.Documentation) {
             Debug.Frontend.TypeStage.RepairUnrealizedGoals(configKey)
                 .benchmarkIf(BENCHMARK, "RepairUnrealizedGoals") {
-                    val needReweaving = inlineToRepairUnrealizedGoals(root, logSink)
-                    if (needReweaving.isNotEmpty()) {
-                        Weaver.reweaveSelected(needReweaving, logSink, module.filePositions)
-                        simplifyFlow(root, assumeAllJumpsResolved = false) calledFor effect
-                    }
+                    inlineToRepairUnrealizedGoals(root, logSink)
                 }
+            Debug.Frontend.TypeStage.AfterRepairUnrealizedGoals.snapshot(configKey, AstSnapshotKey, root)
+
+            Debug.Frontend.TypeStage.Weaver2(configKey)
+                .benchmarkIf(BENCHMARK, "Weave2") {
+                    Weaver.weave(
+                        root,
+                        // Make sure that failing expressions are not deeply nested so
+                        // that backends can easily insert Result type testing and unpacking
+                        // instructions.
+                        sprinkleSecurityDust = true,
+                        rttiCallSimplification = RttiCallSimplification.PreferSafe,
+                        pullSpecialsRootward = true,
+                        nameAllFunctions = false,
+                        resultsAlreadyCaptured = true,
+                    )
+                    simplifyFlow(root, assumeAllJumpsResolved = false) calledFor effect
+                }
+            Debug.Frontend.TypeStage.AfterWeaver2.snapshot(configKey, AstSnapshotKey, root)
         }
-        Debug.Frontend.TypeStage.AfterRepairUnrealizedGoals.snapshot(configKey, AstSnapshotKey, root)
 
         Debug.Frontend.TypeStage.After.snapshot(configKey, AstSnapshotKey, root)
         Debug.Frontend.TypeStage.After(configKey).doIfLogs { console ->
@@ -270,7 +284,7 @@ private fun dumpMissingTypeInfo(ast: Tree, description: String, console: Console
 }
 
 /**
- * Replace voidish panics with either void or panic.
+ * Replace void-like panics with either void or panic.
  * TODO Flow typing would be more general than this.
  */
 private fun replaceVoidishPanics(root: BlockTree) {
@@ -300,10 +314,10 @@ private fun replaceVoidishPanics(root: BlockTree) {
         }
         // Either way, these calls are effectively leaves, so don't bother with kids.
         VisitCue.SkipOne
-    }.visitPreOrder() // Ok because we never recurse target kids.
+    }.visitPreOrder() // Ok, because we never recurse target kids.
 }
 
-/** Just checks for same or subtype, ignoring type actuals. */
+/** Just checks for the same type or a subtype, ignoring type actuals. */
 private fun isSimpleSubtype(sub: NominalType, sup: NominalType): Boolean {
     sub.definition == sup.definition && return true
     return sub.definition.superTypes.any { isSimpleSubtype(it, sup) }

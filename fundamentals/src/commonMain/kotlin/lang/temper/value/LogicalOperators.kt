@@ -12,7 +12,6 @@ import lang.temper.type.WellKnownTypes
 
 /** The operators are defined in BuiltinFuns, so not accessible from this file :( */
 interface LogicalOperators {
-    fun notFn(doc: Document, pos: Position): LeafTree
     fun andFn(doc: Document, pos: Position): LeafTree
     fun orFn(doc: Document, pos: Position): LeafTree
 }
@@ -97,7 +96,7 @@ fun BlockChildReference.invertLogicalExpr(parentBlock: BlockTree, operators: Log
         }
 
         override fun not(x: Position, operand: Tree): Tree {
-            val notFn = operators.notFn(doc, x.leftEdge)
+            val notFn = ValueLeaf(doc, x.leftEdge, vNotFn)
             (notFn as BasicTypeInferencesTree).typeInferences = BasicTypeInferences(oneBoolToBoolType, emptyList())
             val call = CallTree(
                 doc,

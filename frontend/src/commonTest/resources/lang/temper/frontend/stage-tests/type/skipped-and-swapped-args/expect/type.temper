@@ -1,36 +1,36 @@
-var t#0;
-@constructorProperty @visibility(\private) @stay @fromType(Hi__0) let a__0: Int32;
-@constructorProperty @visibility(\private) @stay @fromType(Hi__0) let b__0: Int32;
-@constructorProperty @visibility(\private) @stay @fromType(Hi__0) let c__0: Int32;
-@fn @visibility(\public) @stay @fromType(Hi__0) let constructor__0;
-constructor__0 = (@stay fn constructor(@impliedThis(Hi__0) this__0: Hi__0, @optional(true) a__1 /* aka a */: Int32?, @optional(true) b__1 /* aka b */: Int32?, @optional(true) c__1 /* aka c */: Int32?) /* return__0 */: Void {
-    let a__2 /* aka a */: Int32;
-    if (isNull(a__1)) {
-      a__2 = 1
-    } else {
-      a__2 = notNull(a__1);
-    };
-    let b__2 /* aka b */: Int32;
-    if (isNull(b__1)) {
-      b__2 = 2
-    } else {
-      b__2 = notNull(b__1);
-    };
-    let c__2 /* aka c */: Int32;
-    if (isNull(c__1)) {
-      c__2 = 3
-    } else {
-      c__2 = notNull(c__1);
-    };
-    setp(a__0, this__0, a__2);
-    setp(b__0, this__0, b__2);
-    setp(c__0, this__0, c__2);
-    return__0 = void
-});
+@constructorProperty @visibility(\private) @stay @fromType(Hi__0) let a__4: Int32;
+@constructorProperty @visibility(\private) @stay @fromType(Hi__0) let b__5: Int32;
+@constructorProperty @visibility(\private) @stay @fromType(Hi__0) let c__6: Int32;
+@fn @visibility(\public) @stay @fromType(Hi__0) let constructor__7;
+constructor__7 = fn constructor(@impliedThis(Hi__0) this__1: Hi__0, @optional(true) a__14 /* aka a */: Int32?, @optional(true) b__15 /* aka b */: Int32?, @optional(true) c__16 /* aka c */: Int32?) /* return__2 */: Void {
+  return__2 = void;
+  let a__8 /* aka a */: Int32;
+  if (isNull(a__14)) {
+    a__8 = 1
+  } else {
+    a__8 = notNull(a__14);
+  };
+  let b__9 /* aka b */: Int32;
+  if (isNull(b__15)) {
+    b__9 = 2
+  } else {
+    b__9 = notNull(b__15);
+  };
+  let c__10 /* aka c */: Int32;
+  if (isNull(c__16)) {
+    c__10 = 3
+  } else {
+    c__10 = notNull(c__16);
+  };
+  setp(a__4, this__1, a__8);
+  setp(b__5, this__1, b__9);
+  setp(c__6, this__1, c__10);
+};
 @typeDecl(Hi__0) @stay let Hi__0;
 Hi__0 = type (Hi__0);
-var n__0;
-n__0 = 1;
-n__0 = n__0 + 1;
-t#0 = n__0;
-new Hi__0(n__0 + 1, null, t#0);
+var n__3;
+n__3 = 1;
+let t#28;
+n__3 = n__3 + 1;
+t#28 = n__3;
+new Hi__0(n__3 + 1, null, t#28)

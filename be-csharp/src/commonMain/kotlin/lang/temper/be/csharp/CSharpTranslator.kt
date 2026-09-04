@@ -826,7 +826,7 @@ internal class CSharpTranslator(
     }
 
     private fun translateAssignment(statement: TmpL.Assignment): CSharp.Statement =
-        translateAssignment(statement.pos, statement.left, statement.right as TmpL.Expression)
+        translateAssignment(statement.pos, statement.left, statement.right)
 
     private fun translateAssignment(
         pos: Position,
@@ -1152,7 +1152,8 @@ internal class CSharpTranslator(
         wantedType: Type2? = null,
     ): CSharp.Expression {
         val result = when (expr) {
-            is TmpL.AwaitExpression -> error("await not caught by statement path")
+            is TmpL.AwaitExpression ->
+                error("await not caught by statement path: `${expr.parent}` is a ${expr.parent!!::class}")
             is TmpL.BubbleSentinel -> TODO()
             is TmpL.CallExpression -> translateCallExpression(expr)
             is TmpL.CastExpression -> translateCastExpression(expr)
@@ -1167,7 +1168,7 @@ internal class CSharpTranslator(
             is TmpL.RestParameterCountExpression -> TODO()
             is TmpL.RestParameterExpression -> TODO()
             is TmpL.This -> translateThis(expr)
-            is TmpL.ValueReference -> translateValueReference(expr)
+            is TmpL.ValueReference -> translateValueReference(expr, wantedType)
         }
         return result.wrapCollectionTypeIfNeeded(
             type = findMainType(expr.type),
@@ -1414,16 +1415,22 @@ internal class CSharpTranslator(
         )
     }
 
-    private fun translateLocalDeclaration(decl: TmpL.LocalDeclaration): CSharp.Statement {
+    private fun translateLocalDeclaration(decl: TmpL.LocalDeclaration): List<CSharp.Statement> {
+        val awaitInInitializer = tryTranslateYieldingStatement(decl)
+        if (awaitInInitializer != null) {
+            return awaitInInitializer
+        }
         val wantedType = varTypes[decl.name.name] as? Type2
-        return CSharp.LocalVariableDecl(
-            decl.pos,
-            type = translateType(decl.type),
-            variables = listOf(
-                CSharp.VariableDeclarator(
-                    decl.pos,
-                    variable = translateId(decl.name),
-                    initializer = decl.init?.let { translateExpression(it, wantedType = wantedType) },
+        return listOf(
+            CSharp.LocalVariableDecl(
+                decl.pos,
+                type = translateType(decl.type),
+                variables = listOf(
+                    CSharp.VariableDeclarator(
+                        decl.pos,
+                        variable = translateId(decl.name),
+                        initializer = decl.init?.let { translateExpression(it, wantedType = wantedType) },
+                    ),
                 ),
             ),
         )
@@ -1928,13 +1935,12 @@ internal class CSharpTranslator(
             is TmpL.EmbeddedComment -> TODO()
             is TmpL.ExpressionStatement -> return listOfNotNull(translateExpressionStatement(statement))
             is TmpL.GarbageStatement -> TODO()
-            is TmpL.HandlerScope -> TODO()
-            is TmpL.LocalDeclaration -> translateLocalDeclaration(statement)
+            is TmpL.LocalDeclaration -> return translateLocalDeclaration(statement)
             is TmpL.LocalFunctionDeclaration -> return translateLocalFunctionDeclaration(statement)
             is TmpL.ModuleInitFailed -> TODO()
-            // Currently compute jumps are only used with coroutine strategy mode not
+            // Currently, compute jumps are only used with coroutine strategy mode not
             // opted into by the SupportNetwork
-            is TmpL.ComputedJumpStatement -> TODO()
+            is TmpL.ComputedJumpStatement -> translateComputedJumpStatement(statement)
             is TmpL.BlockStatement -> translateBlockStatement(statement)
             is TmpL.IfStatement -> translateIfStatement(statement)
             is TmpL.LabeledStatement -> translateLabeledStatement(statement)
@@ -2018,17 +2024,27 @@ internal class CSharpTranslator(
         // 3. yield;
         // 4. yield x;  // NOT YET SUPPORTED IN TMPL
 
+        val decl: TmpL.LocalDeclaration?
         val assignedTo: TmpL.Id?
         val yieldingNode: TmpL.BaseTree
         val arg: TmpL.Expression?
         val kind: YieldingFnKind
         when (statement) {
+            is TmpL.LocalDeclaration -> {
+                val await = (statement.init as? TmpL.AwaitExpression) ?: return null
+                assignedTo = statement.name
+                yieldingNode = await
+                arg = await.promise
+                kind = YieldingFnKind.await
+                decl = statement
+            }
             is TmpL.Assignment -> { // 1
                 val await = (statement.right as? TmpL.AwaitExpression) ?: return null
                 assignedTo = statement.left
                 yieldingNode = await
                 arg = await.promise
                 kind = YieldingFnKind.await
+                decl = null
             }
             is TmpL.ExpressionStatement -> { // 2
                 val await = (statement.expression as? TmpL.AwaitExpression) ?: return null
@@ -2036,12 +2052,14 @@ internal class CSharpTranslator(
                 yieldingNode = await
                 arg = await.promise
                 kind = YieldingFnKind.await
+                decl = null
             }
             is TmpL.YieldStatement -> { // 3 & 4
                 assignedTo = null
                 yieldingNode = statement
                 arg = null // TODO: when yield supports an expression fix this
                 kind = YieldingFnKind.yield
+                decl = null
             }
             else -> return null
         }
@@ -2085,16 +2103,32 @@ internal class CSharpTranslator(
                     "Result".toIdentifier(yieldingNode.pos.rightEdge),
                 )
                 if (assignedTo != null) {
-                    add(
-                        CSharp.ExpressionStatement(
-                            CSharp.Operation(
+                    if (decl != null) {
+                        add(
+                            CSharp.LocalVariableDecl(
                                 statement.pos,
-                                left = translateId(assignedTo),
-                                operator = CSharp.Operator(assignedTo.pos.rightEdge, CSharpOperator.Assign),
-                                right = readPromise,
+                                translateType(decl.type),
+                                listOf(
+                                    CSharp.VariableDeclarator(
+                                        statement.pos,
+                                        translateId(assignedTo),
+                                        readPromise,
+                                    ),
+                                ),
                             ),
-                        ),
-                    )
+                        )
+                    } else {
+                        add(
+                            CSharp.ExpressionStatement(
+                                CSharp.Operation(
+                                    statement.pos,
+                                    left = translateId(assignedTo),
+                                    operator = CSharp.Operator(assignedTo.pos.rightEdge, CSharpOperator.Assign),
+                                    right = readPromise,
+                                ),
+                            ),
+                        )
+                    }
                 } else {
                     add(
                         CSharp.ExpressionStatement(
@@ -2402,7 +2436,7 @@ internal class CSharpTranslator(
         )
     }
 
-    private fun translateValueReference(expr: TmpL.ValueReference): CSharp.Expression {
+    private fun translateValueReference(expr: TmpL.ValueReference, wantedType: Type2?): CSharp.Expression {
         return when (expr.value.typeTag) {
             TBoolean -> makeKeywordReference(expr.pos, "${TBoolean.unpack(expr.value)}")
             TFloat64 -> translateFloat64Value(expr.pos, TFloat64.unpackParsed(expr.value))
@@ -2420,15 +2454,10 @@ internal class CSharpTranslator(
             TVoid -> makeKeywordReference(expr.pos, "null")
             TNull -> {
                 var translation: CSharp.Expression? = null
-                // If the null has type `T?` then it should actually be a reference to the
+                // If the null has type `T?`, then it should actually be a reference to the
                 // None optional.
-                val parentOfNull = expr.parent
-                // HACK: we only handle assignments of null, not null passed to generic functions.
-                // TODO: the TmpL translator should be inserting casts, or the Typer should
-                // be typing `null` literals as a nullable type that agrees with the function
-                // call receiving the literal.
-                if (parentOfNull is TmpL.Assignment && parentOfNull.right === expr) {
-                    val type = parentOfNull.type
+                if (wantedType != null) {
+                    val type = wantedType
                     val csharpType = translateTypeFromFrontend(expr.pos, type)
                     if (csharpType.isOptionalTypeArg) {
                         // C::Optional<T>.None
@@ -2457,6 +2486,59 @@ internal class CSharpTranslator(
             loop.pos,
             test = translateExpression(loop.test),
             body = translateStatement(loop.body).toBlock(loop.body.pos),
+        )
+    }
+
+    private fun translateComputedJumpStatement(s: TmpL.ComputedJumpStatement): CSharp.Statement {
+        return CSharp.SwitchStatement(
+            s.pos,
+            expr = translateExpression(s.caseExpr),
+            cases = buildList {
+                for (case in s.cases) {
+                    val values = case.values
+                    val lastValueIndex = values.lastIndex
+                    for (i in values.indices) {
+                        val value = values[i]
+                        add(
+                            CSharp.SwitchCase(
+                                case.pos,
+                                CSharp.NumberLiteral(value.pos, value.index),
+                                if (i == lastValueIndex) {
+                                    CSharp.BlockStatement(
+                                        case.pos,
+                                        buildList {
+                                            case.body.statements.flatMapTo(this) {
+                                                translateStatement(it)
+                                            }
+                                            add(CSharp.BreakStatement(case.pos.rightEdge))
+                                        },
+                                    )
+                                } else {
+                                    null
+                                },
+                            ),
+                        )
+                    }
+                }
+                val elseCase = s.elseCase
+                if (elseCase.body.statements.isNotEmpty()) {
+                    add(
+                        CSharp.SwitchCase(
+                            elseCase.pos,
+                            null,
+                            CSharp.BlockStatement(
+                                elseCase.pos,
+                                buildList {
+                                    elseCase.body.statements.flatMapTo(this) {
+                                        translateStatement(it)
+                                    }
+                                    add(CSharp.BreakStatement(elseCase.pos.rightEdge))
+                                },
+                            ),
+                        ),
+                    )
+                }
+            },
         )
     }
 

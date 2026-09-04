@@ -1,31 +1,30 @@
-let console#6;
-console#6 = doPure(@stay fn /* return__35 */: Console {
-    return__35 = getConsole();
-});
-@fn let runItThrice__1;
-runItThrice__1 = fn runItThrice(factory__2 /* aka factory */: (fn (): SafeGenerator<Empty>)) /* return__0 */: Void {
-  void;
-  fn__3: do {
-    let generator__4: SafeGenerator<Empty>;
-    generator__4 = factory__2();
-    do_call_nextSafe(generator__4);
-    do_call_log(console#6, "Ran once");
-    do_call_nextSafe(generator__4);
-    do_call_log(console#6, "Ran twice");
-    do_call_nextSafe(generator__4);
-    do_call_log(console#6, "Ran thrice");
-    do_call_close(generator__4);
-    return__0 = void
-  }
-};
-runItThrice__1(fn /* return__7 */{
-    return__7 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__5 */: (GeneratorResult<Empty>) implements GeneratorFn {
-        return__5 = core.doneResult<Empty>();
-        void;
-        while (true) {
-          do_call_log(console#6, "Pausing");
-          yield();
-          do_call_log(console#6, "Resuming");
-        }
-    })
-});
+  let console#6;
+  console#6 = doPure(@stay fn /* return__8 */: Console {
+      return__8 = getConsole();
+  });
+  @fn let runItThrice__1;
+  runItThrice__1 = fn runItThrice(factory__2 /* aka factory */: (fn (): SafeGenerator<Empty>)) /* return__0 */: Void {
+    fn__3: do {
+      return__0 = void;
+      let generator__4: SafeGenerator<Empty>;
+      generator__4 = factory__2();
+## Since it's a SafeGenerator, no error checking around do_call_next(...)
+      do_call_nextSafe(generator__4);
+      do_call_log(console#6, "Ran once");
+      do_call_nextSafe(generator__4);
+      do_call_log(console#6, "Ran twice");
+      do_call_nextSafe(generator__4);
+      do_call_log(console#6, "Ran thrice");
+      do_call_close(generator__4)
+    }
+  };
+  runItThrice__1(fn /* return__7 */{
+## Adapt call specialized to adaptGeneratorFnSafe
+      return__7 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__5 */: (GeneratorResult<Empty>) implements GeneratorFn {
+          while (true) {
+            do_call_log(console#6, "Pausing");
+            yield();
+            do_call_log(console#6, "Resuming")
+          }
+      });
+  })

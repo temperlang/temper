@@ -1,0 +1,17 @@
+var t#7;
+let console#4;
+console#4 = getConsole();
+@fn let parseZero__1;
+parseZero__1 = (@stay fn parseZero(s__2 /* aka s */: String) /* return__0 */: (Int32 | Bubble) {
+    if (s__2 != "0") {
+      bubble()
+    };
+    return__0 = 0
+});
+do_call_log(console#4, cat("parseZero(", "\"", "0", "\"", ")            = ", do_call_toString(0)));
+orelse#5: {
+  t#7 = (fn parseZero)("hi")
+} orelse {
+  t#7 = -1
+};
+do_call_log(console#4, cat("parseZero(", "\"", "hi", "\"", ") orelse -1 = ", do_call_toString(t#7)))

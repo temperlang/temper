@@ -11,11 +11,13 @@ class BlockParts private constructor(
 ) {
     /**
      * The index of the first non-label related child.
-     * If [flow] is [ComplexFlow] this may not be the first child executed when interpreting
+     * If [flow] is [StructuredFlow] this may not be the first child executed when interpreting
      * the block.
      *
      *     foo:
-     * is represented as
+     *
+     * The above block label syntax is represented as a pair of trees:
+     *
      *     (Value \label) (LeftName foo)
      */
     val startIndex: Int get() = if (label != null) { 2 } else { 0 }

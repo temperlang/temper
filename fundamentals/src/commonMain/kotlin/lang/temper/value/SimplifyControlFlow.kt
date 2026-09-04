@@ -176,6 +176,15 @@ fun simplifyControlFlow(
      * results are stored in output variables.
      */
     assumeResultsCaptured: Boolean,
+    /**
+     * True if compilation has reached a point where bare references,
+     * which are sometimes inserted by the *Weaver*, can be assumed to
+     * be garbage, because the IR no longer needs to preserve references
+     * that are never used for a result to later be able to flag them
+     * as errors if they refer to something that has not been declared
+     * or initialized.
+     */
+    assumeUseBeforeInitChecked: Boolean,
     logicalOperators: LogicalOperators,
 ): StructuredFlow {
     val nameMaker = block.document.nameMaker
@@ -239,15 +248,16 @@ fun simplifyControlFlow(
         is ControlFlow.Stmt -> {
             val tree = block.dereference(cf.ref)?.target
             val isBubble = tree != null && isBubbleCall(tree)
+            val canBubble = isBubble || (tree != null && treeCanBubble(tree))
             val flowsToNext = if (isBubble) {
                 Freq3.Never
             } else {
                 Freq3.Always
             }
-            val bubbles = if (isBubble) {
-                Freq3.Always
-            } else {
-                Freq3.Never
+            val bubbles = when {
+                isBubble -> Freq3.Always
+                canBubble -> Freq3.Sometimes
+                else -> Freq3.Never
             }
             SimplifyResult(
                 simpler = cf.deepCopy(), // Will probably have a different parent
@@ -439,7 +449,7 @@ fun simplifyControlFlow(
                     // becomes a labeled statement with just a `break` label:
                     //
                     //     continue#123: do {
-                    //       if (x) { break#123 }
+                    //       if (x) { break continue#123 }
                     //       ...
                     //     }
                     //
@@ -453,8 +463,8 @@ fun simplifyControlFlow(
                     //     ->
                     //
                     //     while (true) {
-                    //       break#123: do {
-                    //         if (x) { break#123 } // does not skip condition check below
+                    //       continue#123: do {
+                    //         if (x) { break continue#123 } // does not skip condition check below
                     //         ...
                     //       }
                     //       if (!cond) { break }
@@ -481,11 +491,30 @@ fun simplifyControlFlow(
                 for (spec in specs) {
                     noopJumpsForBody = Cons(JumpTarget(BreakOrContinue.Continue, spec), noopJumpsForBody)
                 }
+
+                var bodyJumpSimplifier =
+                    JumpSimplifier.compose(jumpSimplifier, continueRewriter)
+                // If a break to an outer label is a no-op, then
+                // that's equivalent to the default break.
+                val noopBreaks = buildSet {
+                    for ((kind, target) in noopJumps) {
+                        if (kind == BreakOrContinue.Break && target is NamedJumpSpecifier) {
+                            add(target)
+                        }
+                    }
+                }
+                if (noopBreaks.isNotEmpty()) {
+                    bodyJumpSimplifier = JumpSimplifier.compose(
+                        JumpSimplifier.NoopForLoopBody(noopBreaks, loopDepth.get() + 1),
+                        bodyJumpSimplifier,
+                    )
+                }
+
                 val (bodyUnwrapped, bodyFlows, jBody, bodyBubbles) =
                     loopDepth.withDepthIncremented {
                         trim(
                             cf.body,
-                            JumpSimplifier.compose(jumpSimplifier, continueRewriter),
+                            bodyJumpSimplifier,
                             noopJumpsForBody,
                         )
                     }
@@ -546,7 +575,7 @@ fun simplifyControlFlow(
                     freeJumps.remove(JumpTarget(BreakOrContinue.Continue, specifier))
                 }
 
-                // The loop flows to next sometimes if the body breaks, or if the condition is not truthy.
+                // The loop sometimes flows to next if the body breaks, or if the condition is not truthy.
                 val flowsToNext = when {
                     loopBreaks -> Freq3.Sometimes
                     condTruthiness != true -> Freq3.Sometimes
@@ -797,7 +826,12 @@ fun simplifyControlFlow(
                         trimmedStmtList[i] as? ControlFlow.Stmt ?: continue
                     if (sawStmtAfter || assumeResultsCaptured) {
                         val t = block.dereference(stmt.ref)?.target
-                        if (t is ValueLeaf && (assumeResultsCaptured || t.content == void)) {
+                        val eraseIt = when (t) {
+                            is ValueLeaf -> assumeResultsCaptured || t.content == void
+                            is RightNameLeaf -> assumeUseBeforeInitChecked
+                            else -> false
+                        }
+                        if (eraseIt) {
                             trimmedStmtList.removeAt(i)
                         }
                     } else {
@@ -836,7 +870,7 @@ private interface JumpSimplifier {
         var breakLabel: JumpLabel?,
         /** The optional label for labeled `continue`s to rewrite */
         val continueLabel: JumpLabel?,
-        /** Used to allocates a `break` label if none is available. */
+        /** Used to allocate a `break` label if none is available. */
         val nameMaker: NameMaker,
         /** The loop depth of the loop we're rewriting for. */
         val depthOfDefaultLoop: Int,
@@ -883,6 +917,21 @@ private interface JumpSimplifier {
         }
     }
 
+    class NoopForLoopBody(
+        val noopBreaksForLoop: Set<NamedJumpSpecifier>,
+        val loopDepth: Int,
+    ) : JumpSimplifier {
+        override fun simplify(jump: ControlFlow.Jump, loopDepth: Int): ControlFlow.Jump? {
+            if (
+                this.loopDepth == loopDepth && jump.jumpKind == BreakOrContinue.Break &&
+                jump.target in noopBreaksForLoop
+            ) {
+                return ControlFlow.Break(jump.pos, DefaultJumpSpecifier)
+            }
+            return null
+        }
+    }
+
     private class Compose(
         val wider: JumpSimplifier,
         val narrower: JumpSimplifier,
@@ -908,6 +957,7 @@ fun simplifyStructuredBlock(
     flow: StructuredFlow,
     assumeAllJumpsResolved: Boolean,
     assumeResultsCaptured: Boolean,
+    assumeUseBeforeInitChecked: Boolean,
     logicalOperators: LogicalOperators,
 ) {
     val newFlow = simplifyControlFlow(
@@ -915,6 +965,7 @@ fun simplifyStructuredBlock(
         flow.controlFlow,
         assumeAllJumpsResolved = assumeAllJumpsResolved,
         assumeResultsCaptured = assumeResultsCaptured,
+        assumeUseBeforeInitChecked = assumeUseBeforeInitChecked,
         logicalOperators = logicalOperators,
     )
     block.replaceFlow(newFlow)

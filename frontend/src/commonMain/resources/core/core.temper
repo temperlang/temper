@@ -26,8 +26,8 @@ export sealed interface Equatable {}
  *
  * See also [snippet/builtin/orelse].
  */
-export class Bubble {
-}
+// export class Bubble {
+// }
 
 /**
  * *Invalid* is an untranslatable type that represents a failure to properly type an
@@ -113,7 +113,7 @@ export class Null extends Equatable {
 export class Empty extends Equatable {
   private constructor(): Void {}
 }
-let emptySingleton: Empty = doPure { new Empty() };
+let emptySingleton: Empty = doPure { (): Empty => new Empty() };
 @connected
 export let empty(): Empty { emptySingleton }
 
@@ -831,7 +831,7 @@ export class StringBuilder {
 
   @connected
   public toString(): String {
-    this.substrings.join("") { substring: String => substring }
+    this.substrings.join("") { (substring: String): String => substring }
   }
 }
 
@@ -1151,7 +1151,7 @@ export sealed interface Mapped<@in K extends MapKey, V> {
   @connected
   public get(key: K): V throws Bubble {
     var values = new ListBuilder<V>();
-    forEach { k, v =>
+    forEach { (k: K, v: V): Void =>
       if (key == k) {
         values.add(v);
       }

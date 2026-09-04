@@ -14,6 +14,7 @@ import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.findDeclaration
 import lang.temper.be.tmpl.implicitTypeTag
 import lang.temper.be.tmpl.isStdLib
+import lang.temper.be.tmpl.isVoidConstant
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapGeneric
 import lang.temper.be.tmpl.parameterDefaultStatementsInfo
@@ -912,19 +913,6 @@ internal class JsTranslator(
         }
     }
 
-    /**
-     * [JsSupportNetwork] opts into
-     * [lang.temper.be.tmpl.BubbleBranchStrategy.CatchBubble]
-     * so we shouldn't get handler scope calls.
-     */
-    private fun translateHandlerScope(t: TmpL.HandlerScope, assignedTo: TmpL.Id?): List<Js.Statement> =
-        translateGarbageStatement(
-            TmpL.GarbageStatement(
-                t.pos,
-                diagnostic = TmpL.Diagnostic(t.pos, "$t -> $assignedTo not decompiled to throw"),
-            ),
-        )
-
     private fun translateParameters(parameters: List<TmpL.Actual>) =
         parameters.mapGeneric(::translateActual)
 
@@ -1136,10 +1124,7 @@ internal class JsTranslator(
             }
         }
         is TmpL.NormalMethod, is TmpL.GetterOrSetter, is TmpL.StaticMethod -> {
-            @Suppress("USELESS_IS_CHECK")
-            check(member is TmpL.DotAccessible && member is TmpL.Method)
             val (visibility, shapeForKey) =
-                @Suppress("USELESS_IS_CHECK") // for is Constructor
                 when (member) {
                     is TmpL.StaticMethod ->
                         member.visibility.visibility to member.memberShape
@@ -1147,8 +1132,6 @@ internal class JsTranslator(
                         member.visibility.visibility to member.propertyShape
                     is TmpL.NormalMethod ->
                         member.visibility.visibility to member.memberShape
-                    // unreachable
-                    is TmpL.Constructor -> error("$member")
                 }
             val nameId = translateIdStrict(member.name)
             val (keyExpr, keyComputed) = decomposeMemberKey(
@@ -1415,7 +1398,7 @@ internal class JsTranslator(
                             buildList {
                                 var testInstanceId: Js.Identifier? = null
                                 // const test = new Test();
-                                // We expect the test parameter, but check in case of manual oddities.
+                                // We expect the test parameter but check in case of manual oddities.
                                 t.parameters.parameters.firstOrNull()?.let testParam@{ testParam ->
                                     val nominalType = testParam.type.ot as? TmpL.NominalType
                                         ?: return@testParam
@@ -1525,6 +1508,51 @@ internal class JsTranslator(
 
     private fun translateEmbeddedComment(t: TmpL.EmbeddedComment): List<Js.CommentLine> =
         listOf(Js.CommentLine(t.pos, t.commentText))
+
+    private fun translateComputedJump(t: TmpL.ComputedJumpStatement): List<Js.Statement> {
+        val expr = translateExpression(t.caseExpr)
+
+        val translatedCases = t.cases.map {
+            it to translateStatement(it.body)
+        }
+        val translatedElse = t.elseCase to translateStatement(t.elseCase.body)
+
+        return listOf(
+            Js.SwitchStatement(
+                t.pos,
+                expr,
+                buildList {
+                    val lastCaseIndex = translatedCases.lastIndex
+                    for ((tmplCase, jsStmts) in translatedCases) {
+                        for ((i, constIndex) in tmplCase.values.withIndex()) {
+                            add(
+                                Js.SwitchCase(
+                                    tmplCase.pos,
+                                    Js.NumericLiteral(constIndex.pos, constIndex.index),
+                                    if (i == lastCaseIndex) {
+                                        listOf() // Fall through to next case.
+                                    } else {
+                                        jsStmts +
+                                            listOf(Js.BreakStatement(tmplCase.pos.rightEdge, null))
+                                    },
+                                ),
+                            )
+                        }
+                    }
+                    val (tmpLElse, elseJsStmts) = translatedElse
+                    if (elseJsStmts.isNotEmpty()) {
+                        add(
+                            Js.SwitchCase(
+                                tmpLElse.pos,
+                                null,
+                                elseJsStmts,
+                            ),
+                        )
+                    }
+                },
+            ),
+        )
+    }
 
     /** Translate a [TmpL.Id] which must not be a reference to an implied `this`. */
     private fun translateIdStrict(id: TmpL.Id): Js.Identifier = translateId(id) as Js.Identifier
@@ -1879,9 +1907,9 @@ internal class JsTranslator(
                 listOf(
                     when {
                         // Handle the common case: return from a regular function.
-                        !inConstructorBody -> Js.ReturnStatement(
+                        !inConstructorBody && expression?.isVoidConstant == false -> Js.ReturnStatement(
                             s.pos,
-                            expression?.let { translateExpression(it) },
+                            translateExpression(expression),
                         )
                         // In JS constructors, the return value can override the
                         // constructed value if we're not careful.
@@ -1924,12 +1952,9 @@ internal class JsTranslator(
             is TmpL.SetProperty -> listOf(
                 Js.ExpressionStatement(s.pos, translateSetProperty(s)),
             )
-            is TmpL.HandlerScope -> translateHandlerScope(s, null)
             is TmpL.BoilerplateCodeFoldBoundary -> listOf(translateBoilerplateCodeFoldBoundary(s))
             is TmpL.EmbeddedComment -> translateEmbeddedComment(s)
-            // Currently compute jumps are only used with coroutine strategy mode not
-            // opted into by the support network.
-            is TmpL.ComputedJumpStatement -> TODO()
+            is TmpL.ComputedJumpStatement -> translateComputedJump(s)
         }
     }
 
@@ -1975,20 +2000,18 @@ internal class JsTranslator(
 
     private fun translateAssignment(e: TmpL.Assignment): List<Js.Statement> {
         val left = e.left
-        return when (val right = e.right) {
-            is TmpL.Expression -> listOf(
-                Js.ExpressionStatement(
+        val right = e.right
+        return listOf(
+            Js.ExpressionStatement(
+                e.pos,
+                Js.AssignmentExpression(
                     e.pos,
-                    Js.AssignmentExpression(
-                        e.pos,
-                        translateIdStrict(left),
-                        Js.Operator(e.pos, "="),
-                        translateExpression(right),
-                    ),
+                    translateIdStrict(left),
+                    Js.Operator(e.pos, "="),
+                    translateExpression(right),
                 ),
-            )
-            is TmpL.HandlerScope -> translateHandlerScope(right, assignedTo = left)
-        }
+            ),
+        )
     }
 
     private fun translateSetProperty(s: TmpL.SetProperty): Js.Expression {
@@ -2181,7 +2204,8 @@ internal class JsTranslator(
                     )
                 },
             ),
-            // All types are also expressions.
+            // All types are also expressions, except `void` is not a syntactically
+            // valid expression, so do not use this function type in an expression context.
             translateTypeUnwrapped(t.returnType) as Js.Expression,
         )
     }

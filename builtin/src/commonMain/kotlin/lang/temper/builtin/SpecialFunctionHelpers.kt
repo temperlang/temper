@@ -25,9 +25,6 @@ fun isSetPropertyCall(tree: Tree): Boolean {
 fun isNotNullCall(t: CallTree) =
     t.size >= 2 && t.child(0).functionContained == BuiltinFuns.notNullFn
 
-fun isTypeAngleCall(t: CallTree) =
-    t.size >= 2 && t.child(0).functionContained == BuiltinFuns.angleFn
-
 @OptIn(ExperimentalContracts::class)
 fun accessorForCall(t: Tree): MemberAccessor? {
     contract {

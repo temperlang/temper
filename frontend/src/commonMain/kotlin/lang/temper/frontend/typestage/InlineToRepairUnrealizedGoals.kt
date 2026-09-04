@@ -66,7 +66,6 @@ import lang.temper.value.firstArgumentIndex
 import lang.temper.value.freeTree
 import lang.temper.value.functionContained
 import lang.temper.value.inlineUnrealizedGoalSymbol
-import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.matches
 import lang.temper.value.ssaSymbol
 import lang.temper.value.typeSymbol
@@ -749,11 +748,7 @@ fun findSoleInitializer(decl: DeclTree?): Tree? {
         if (isAssignment(child)) {
             val left = child.child(1)
             if (left is LeftNameLeaf && left.content == name) {
-                var right = child.child(2)
-                if (isHandlerScopeCall(right)) {
-                    right = right.child(2)
-                }
-                return right
+                return child.child(2)
             }
         }
     }
@@ -805,11 +800,7 @@ private fun convertMemberUseToExternal(
 
 private fun eliminateAssignmentToVoidLikeResultName(blockBody: Tree, blockReturnName: TemperName) =
     TreeVisit.startingAt(blockBody)
-        .forEachContinuing {
-            var bodyPart = it
-            if (isHandlerScopeCall(bodyPart)) {
-                bodyPart = bodyPart.child(2)
-            }
+        .forEachContinuing { bodyPart ->
             if (isAssignment(bodyPart)) {
                 val left = bodyPart.child(1) as? NameLeaf
                 if (left?.content == blockReturnName) {

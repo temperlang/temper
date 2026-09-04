@@ -461,7 +461,7 @@ val vWhileSymbol = Value(whileSymbol)
 val withinDocFoldSymbol = Symbol("withinDocFold")
 val vWithinDocFoldSymbol = Value(withinDocFoldSymbol)
 
-/** Used to stores the parsed name for a function or declaration as a symbol. */
+/** Used to store the parsed name for a function or declaration as a symbol. */
 val wordSymbol = Symbol("word")
 val vWordSymbol = Value(wordSymbol)
 

@@ -58,6 +58,7 @@ import lang.temper.value.qNameSymbol
 import lang.temper.value.reachSymbol
 import lang.temper.value.testSymbol
 import lang.temper.value.typeDeclSymbol
+import lang.temper.value.void
 
 internal fun dotNameMatchesName(dotName: TmpL.DotName, name: TmpL.Id): Boolean =
     dotName.dotNameText == (name.name as? SourceName)?.baseName?.nameText
@@ -315,6 +316,12 @@ val TmpL.Actual.typeOrInvalid
     get() = when (this) {
         is TmpL.Expression -> type
         is TmpL.RestSpread -> WellKnownTypes.invalidType2
+    }
+
+val TmpL.Expression.typeOrReturnedType: Type2
+    get() = when (this) {
+        is TmpL.CallExpression -> contextualizedSig.returnType2
+        else -> type
     }
 
 fun TmpL.FunctionDeclaration.idKind() = when {
@@ -932,7 +939,7 @@ fun List<TmpL.Statement>.splitConstructorBody(): Pair<List<TmpL.Statement>, List
         ) || statement.anyChildDepth(
             // We do nest functions, so only pay attention to outer returns.
             within = { it !is TmpL.FunctionLike },
-            predicate = { it is TmpL.ReturnStatement && it.expression == null },
+            predicate = { it is TmpL.ReturnStatement && it.expression.isVoidish() },
         )
         when {
             !reachedUse -> initStatements
@@ -940,6 +947,12 @@ fun List<TmpL.Statement>.splitConstructorBody(): Pair<List<TmpL.Statement>, List
         }.add(statement.deepCopy())
     }
     return initStatements to useStatements
+}
+
+/** True if either null or a void constant. */
+fun TmpL.Expression?.isVoidish(): Boolean = when (this) {
+    null -> true
+    else -> this.isVoidConstant
 }
 
 private fun List<TmpL.DeclarationMetadata>.dependencyCategory() =
@@ -1259,25 +1272,10 @@ data class DependencyGrouping(
 
 fun TmpL.Statement.isYieldingStatement(): Boolean =
     when (this) {
-        is TmpL.BoilerplateCodeFoldBoundary,
-        is TmpL.BreakStatement,
-        is TmpL.ContinueStatement,
-        is TmpL.EmbeddedComment,
-        is TmpL.GarbageStatement,
-        is TmpL.Declaration,
-        is TmpL.ModuleInitFailed,
-        is TmpL.ReturnStatement,
-        is TmpL.SetProperty,
-        is TmpL.ThrowStatement,
-        -> false
-
         is TmpL.YieldStatement -> true
+        is TmpL.Assignment -> right is TmpL.AwaitExpression
         is TmpL.ExpressionStatement -> expression is TmpL.AwaitExpression
-        is TmpL.HandlerScope -> handled is TmpL.AwaitExpression
-        is TmpL.Assignment -> when (val right = this.right) {
-            is TmpL.Expression -> right is TmpL.AwaitExpression
-            is TmpL.HandlerScope -> right.isYieldingStatement()
-        }
+        is TmpL.LocalDeclaration -> this.init is TmpL.AwaitExpression
 
         is TmpL.BlockStatement ->
             this.statements.any { it.isYieldingStatement() }
@@ -1289,7 +1287,22 @@ fun TmpL.Statement.isYieldingStatement(): Boolean =
         is TmpL.TryStatement -> this.tried.isYieldingStatement() ||
             this.recover.isYieldingStatement()
         is TmpL.WhileStatement -> this.body.isYieldingStatement()
+
+        is TmpL.BoilerplateCodeFoldBoundary,
+        is TmpL.BreakStatement,
+        is TmpL.ContinueStatement,
+        is TmpL.EmbeddedComment,
+        is TmpL.GarbageStatement,
+        is TmpL.Declaration,
+        is TmpL.ModuleInitFailed,
+        is TmpL.ReturnStatement,
+        is TmpL.SetProperty,
+        is TmpL.ThrowStatement,
+        -> false
     }
+
+val TmpL.Expression.isVoidConstant: Boolean get() =
+    this is TmpL.ValueReference && this.value == void
 
 fun qNameFor(d: TmpL.Declaration): QName? {
     val md = d.metadata.firstOrNull { it.key.symbol == qNameSymbol }

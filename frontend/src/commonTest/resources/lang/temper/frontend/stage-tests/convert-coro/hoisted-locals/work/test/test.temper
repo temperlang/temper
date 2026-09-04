@@ -1,0 +1,32 @@
+f { (x: Int32, y: Int32) : GeneratorResult<String> extends GeneratorFn =>
+  // The zero-value for this local is just zero.  Non null-adjustment needed.
+  var z = x + y;
+  // Only used in one basic block so no need to hoist.
+  let w;
+
+  yield "Starting";
+
+  // No zero-value for StringBuilder so this needs null-adjustment
+  let sb = new StringBuilder();
+
+  sb.append("x=");
+  sb.append(x.toString());
+
+  yield sb.toString();
+
+  sb.append(", y=");
+  sb.append(y.toString());
+
+  yield sb.toString();
+
+  w = z + z;
+  sb.append(", w=");
+  sb.append(w.toString());
+
+  yield sb.toString();
+
+  sb.append(", z=");
+  sb.append(z.toString());
+
+  yield sb.toString();
+}

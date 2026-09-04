@@ -114,7 +114,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
     open fun getDiagnosticPreferences(test: FunctionalTestBase): FunctionalTestDiagnosticPreferences =
         FunctionalTestDiagnosticPreferences.defaultPreferences
 
-    private val otherFactoryMap = otherFactories.associate { it.backendId to it }
+    private val otherFactoryMap = otherFactories.associateBy { it.backendId }
     open fun lookupFactory(backendId: BackendId): Backend.Factory<*>? = when (backendId) {
         // In case the factory is already specialized, use the given factory for the given id.
         factory.backendId -> factory
@@ -239,7 +239,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
         val partitionedModules =
             if (needsBundling) {
                 val modules = preparedModules.modules
-                // Instead of just bundling (test.projectRoot to modules)
+                // Instead of just bundling (test.projectRoot to modules),
                 // we cherry-pick which other modules are needed.  This
                 // works around issue #1946 which triggers when
                 // we bring all of std in for the regexMatch functional test.

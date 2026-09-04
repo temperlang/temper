@@ -192,13 +192,9 @@ private fun NameVisitor.visitStmt(s: TmpL.Statement): Unit = when (s) {
     -> {}
     is TmpL.Assignment -> {
         varUse(s.left.name, s)
-        visitRhs(s.right)
+        visitExpr(s.right)
     }
     is TmpL.ExpressionStatement -> visitExpr(s.expression)
-    is TmpL.HandlerScope -> {
-        localVarDeclMisc(s.failed.name, s)
-        visitHandled(s.handled)
-    }
     is TmpL.LocalDeclaration -> {
         localVarDecl(s.name.name, s)
         typeUse(typeName(s.type.ot), s.type.ot)
@@ -259,23 +255,6 @@ private fun NameVisitor.visitStmt(s: TmpL.Statement): Unit = when (s) {
             is TmpL.BreakStatement -> labelUse(it, s)
             is TmpL.ContinueStatement -> labelUse(it, s)
         }
-    }
-}
-
-private fun NameVisitor.visitRhs(e: TmpL.RightHandSide): Unit = when (e) {
-    is TmpL.Expression -> visitExpr(e)
-    is TmpL.HandlerScope -> {
-        localVarDeclMisc(e.failed.name, e)
-        visitHandled(e.handled)
-    }
-}
-
-private fun NameVisitor.visitHandled(e: TmpL.Handled): Unit = when (e) {
-    is TmpL.Expression -> visitExpr(e)
-    is TmpL.SetAbstractProperty -> {
-        val left = e.left
-        propertyUse(subjectTypeName(left.subject), left.property, e)
-        visitExpr(e.right)
     }
 }
 
@@ -340,7 +319,7 @@ fun TmpL.SupportCodeWrapper.bestCodeName(): ResolvedName? {
     return this.supportCode.builtinOperatorId?.let { BuiltinName(it.name) }
 }
 
-/** Enables the `foo?.let { }` pattern, but always returns Unit. */
+/** Enables the `foo?.let { }` pattern but always returns Unit. */
 private inline fun <T, U> T?.letUnit(block: (T) -> U) {
     if (this != null) {
         block(this)

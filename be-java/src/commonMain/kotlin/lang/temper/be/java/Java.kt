@@ -4348,329 +4348,12 @@ object Java {
         }
     }
 
-    /**
-     * This production represents all the variants of while; JLS 14.12
-     */
-    class WhileStatement(
-        pos: Position,
-        test: Expression,
-        body: BlockStatement,
-    ) : BaseTree(pos), Statement {
-        override val operatorDefinition: JavaOperatorDefinition?
-            get() = null
-        override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate156
-        override val formatElementCount
-            get() = 2
-        override fun formatElement(
-            index: Int,
-        ): IndexableFormattableTreeElement {
-            return when (index) {
-                0 -> this.test
-                1 -> this.body
-                else -> throw IndexOutOfBoundsException("$index")
-            }
-        }
-        private var _test: Expression
-        var test: Expression
-            get() = _test
-            set(newValue) { _test = updateTreeConnection(_test, newValue) }
-        private var _body: BlockStatement
-        var body: BlockStatement
-            get() = _body
-            set(newValue) { _body = updateTreeConnection(_body, newValue) }
-        override fun deepCopy(): WhileStatement {
-            return WhileStatement(pos, test = this.test.deepCopy(), body = this.body.deepCopy())
-        }
-        override val childMemberRelationships
-            get() = cmr
-        override fun equals(
-            other: Any?,
-        ): Boolean {
-            return other is WhileStatement && this.test == other.test && this.body == other.body
-        }
-        override fun hashCode(): Int {
-            var hc = test.hashCode()
-            hc = 31 * hc + body.hashCode()
-            return hc
-        }
-        init {
-            this._test = updateTreeConnection(null, test)
-            this._body = updateTreeConnection(null, body)
-            require(body.regularBlock())
-        }
-        companion object {
-            private val cmr = ChildMemberRelationships(
-                { n -> (n as WhileStatement).test },
-                { n -> (n as WhileStatement).body },
-            )
-        }
+    sealed interface LoopStatement : Tree, Statement {
+        override fun deepCopy(): LoopStatement
     }
 
-    /**
-     * This production represents the do-while; JLS 14.13
-     */
-    class DoStatement(
-        pos: Position,
-        body: BlockStatement,
-        test: Expression,
-    ) : BaseTree(pos), Statement {
-        override val operatorDefinition: JavaOperatorDefinition?
-            get() = null
-        override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate157
-        override val formatElementCount
-            get() = 2
-        override fun formatElement(
-            index: Int,
-        ): IndexableFormattableTreeElement {
-            return when (index) {
-                0 -> this.body
-                1 -> this.test
-                else -> throw IndexOutOfBoundsException("$index")
-            }
-        }
-        private var _body: BlockStatement
-        var body: BlockStatement
-            get() = _body
-            set(newValue) { _body = updateTreeConnection(_body, newValue) }
-        private var _test: Expression
-        var test: Expression
-            get() = _test
-            set(newValue) { _test = updateTreeConnection(_test, newValue) }
-        override fun deepCopy(): DoStatement {
-            return DoStatement(pos, body = this.body.deepCopy(), test = this.test.deepCopy())
-        }
-        override val childMemberRelationships
-            get() = cmr
-        override fun equals(
-            other: Any?,
-        ): Boolean {
-            return other is DoStatement && this.body == other.body && this.test == other.test
-        }
-        override fun hashCode(): Int {
-            var hc = body.hashCode()
-            hc = 31 * hc + test.hashCode()
-            return hc
-        }
-        init {
-            this._body = updateTreeConnection(null, body)
-            this._test = updateTreeConnection(null, test)
-            require(body.regularBlock())
-        }
-        companion object {
-            private val cmr = ChildMemberRelationships(
-                { n -> (n as DoStatement).body },
-                { n -> (n as DoStatement).test },
-            )
-        }
-    }
-
-    /**
-     * Breaks either break out of an enclosing loop, switch or to a labeled statement. JLS 14.15
-     */
-    class BreakStatement(
-        pos: Position,
-        target: Identifier? = null,
-    ) : BaseTree(pos), Statement {
-        override val operatorDefinition: JavaOperatorDefinition?
-            get() = null
-        override val codeFormattingTemplate: CodeFormattingTemplate
-            get() =
-                if (target != null) {
-                    sharedCodeFormattingTemplate158
-                } else {
-                    sharedCodeFormattingTemplate159
-                }
-        override val formatElementCount
-            get() = 1
-        override fun formatElement(
-            index: Int,
-        ): IndexableFormattableTreeElement {
-            return when (index) {
-                0 -> this.target ?: FormattableTreeGroup.empty
-                else -> throw IndexOutOfBoundsException("$index")
-            }
-        }
-        private var _target: Identifier?
-        var target: Identifier?
-            get() = _target
-            set(newValue) { _target = updateTreeConnection(_target, newValue) }
-        override fun deepCopy(): BreakStatement {
-            return BreakStatement(pos, target = this.target?.deepCopy())
-        }
-        override val childMemberRelationships
-            get() = cmr
-        override fun equals(
-            other: Any?,
-        ): Boolean {
-            return other is BreakStatement && this.target == other.target
-        }
-        override fun hashCode(): Int {
-            return (target?.hashCode() ?: 0)
-        }
-        init {
-            this._target = updateTreeConnection(null, target)
-        }
-        companion object {
-            private val cmr = ChildMemberRelationships(
-                { n -> (n as BreakStatement).target },
-            )
-        }
-    }
-
-    /**
-     * Continues transfer control to the enclosing loop or to a labeled loop. JLS 14.16
-     */
-    class ContinueStatement(
-        pos: Position,
-        target: Identifier? = null,
-    ) : BaseTree(pos), Statement {
-        override val operatorDefinition: JavaOperatorDefinition?
-            get() = null
-        override val codeFormattingTemplate: CodeFormattingTemplate
-            get() =
-                if (target != null) {
-                    sharedCodeFormattingTemplate160
-                } else {
-                    sharedCodeFormattingTemplate161
-                }
-        override val formatElementCount
-            get() = 1
-        override fun formatElement(
-            index: Int,
-        ): IndexableFormattableTreeElement {
-            return when (index) {
-                0 -> this.target ?: FormattableTreeGroup.empty
-                else -> throw IndexOutOfBoundsException("$index")
-            }
-        }
-        private var _target: Identifier?
-        var target: Identifier?
-            get() = _target
-            set(newValue) { _target = updateTreeConnection(_target, newValue) }
-        override fun deepCopy(): ContinueStatement {
-            return ContinueStatement(pos, target = this.target?.deepCopy())
-        }
-        override val childMemberRelationships
-            get() = cmr
-        override fun equals(
-            other: Any?,
-        ): Boolean {
-            return other is ContinueStatement && this.target == other.target
-        }
-        override fun hashCode(): Int {
-            return (target?.hashCode() ?: 0)
-        }
-        init {
-            this._target = updateTreeConnection(null, target)
-        }
-        companion object {
-            private val cmr = ChildMemberRelationships(
-                { n -> (n as ContinueStatement).target },
-            )
-        }
-    }
-
-    /**
-     * Return transfers control to the invoker of the method. JLS 14.17
-     */
-    class ReturnStatement(
-        pos: Position,
-        expr: Expression? = null,
-    ) : BaseTree(pos), Statement {
-        override val operatorDefinition: JavaOperatorDefinition?
-            get() = null
-        override val codeFormattingTemplate: CodeFormattingTemplate
-            get() =
-                if (expr != null) {
-                    sharedCodeFormattingTemplate162
-                } else {
-                    sharedCodeFormattingTemplate163
-                }
-        override val formatElementCount
-            get() = 1
-        override fun formatElement(
-            index: Int,
-        ): IndexableFormattableTreeElement {
-            return when (index) {
-                0 -> this.expr ?: FormattableTreeGroup.empty
-                else -> throw IndexOutOfBoundsException("$index")
-            }
-        }
-        private var _expr: Expression?
-        var expr: Expression?
-            get() = _expr
-            set(newValue) { _expr = updateTreeConnection(_expr, newValue) }
-        override fun deepCopy(): ReturnStatement {
-            return ReturnStatement(pos, expr = this.expr?.deepCopy())
-        }
-        override val childMemberRelationships
-            get() = cmr
-        override fun equals(
-            other: Any?,
-        ): Boolean {
-            return other is ReturnStatement && this.expr == other.expr
-        }
-        override fun hashCode(): Int {
-            return (expr?.hashCode() ?: 0)
-        }
-        init {
-            this._expr = updateTreeConnection(null, expr)
-        }
-        companion object {
-            private val cmr = ChildMemberRelationships(
-                { n -> (n as ReturnStatement).expr },
-            )
-        }
-    }
-
-    /**
-     * Cause an exception to be thrown. JLS 14.18
-     */
-    class ThrowStatement(
-        pos: Position,
-        expr: Expression,
-    ) : BaseTree(pos), Statement {
-        override val operatorDefinition: JavaOperatorDefinition?
-            get() = null
-        override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate164
-        override val formatElementCount
-            get() = 1
-        override fun formatElement(
-            index: Int,
-        ): IndexableFormattableTreeElement {
-            return when (index) {
-                0 -> this.expr
-                else -> throw IndexOutOfBoundsException("$index")
-            }
-        }
-        private var _expr: Expression
-        var expr: Expression
-            get() = _expr
-            set(newValue) { _expr = updateTreeConnection(_expr, newValue) }
-        override fun deepCopy(): ThrowStatement {
-            return ThrowStatement(pos, expr = this.expr.deepCopy())
-        }
-        override val childMemberRelationships
-            get() = cmr
-        override fun equals(
-            other: Any?,
-        ): Boolean {
-            return other is ThrowStatement && this.expr == other.expr
-        }
-        override fun hashCode(): Int {
-            return expr.hashCode()
-        }
-        init {
-            this._expr = updateTreeConnection(null, expr)
-        }
-        companion object {
-            private val cmr = ChildMemberRelationships(
-                { n -> (n as ThrowStatement).expr },
-            )
-        }
+    sealed interface TransferOfControl : Tree, Statement {
+        override fun deepCopy(): TransferOfControl
     }
 
     /**
@@ -4688,13 +4371,13 @@ object Java {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (resources.isNotEmpty() && finallyBlock != null) {
-                    sharedCodeFormattingTemplate165
+                    sharedCodeFormattingTemplate156
                 } else if (resources.isNotEmpty()) {
-                    sharedCodeFormattingTemplate166
+                    sharedCodeFormattingTemplate157
                 } else if (finallyBlock != null) {
-                    sharedCodeFormattingTemplate167
+                    sharedCodeFormattingTemplate158
                 } else {
-                    sharedCodeFormattingTemplate168
+                    sharedCodeFormattingTemplate159
                 }
         override val formatElementCount
             get() = 4
@@ -4762,54 +4445,6 @@ object Java {
     }
 
     /**
-     * Transfers control to the enclosing switch expression to return its value. JLS 14.21
-     */
-    class YieldStatement(
-        pos: Position,
-        expr: Expression,
-    ) : BaseTree(pos), Statement {
-        override val operatorDefinition: JavaOperatorDefinition?
-            get() = null
-        override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate169
-        override val formatElementCount
-            get() = 1
-        override fun formatElement(
-            index: Int,
-        ): IndexableFormattableTreeElement {
-            return when (index) {
-                0 -> this.expr
-                else -> throw IndexOutOfBoundsException("$index")
-            }
-        }
-        private var _expr: Expression
-        var expr: Expression
-            get() = _expr
-            set(newValue) { _expr = updateTreeConnection(_expr, newValue) }
-        override fun deepCopy(): YieldStatement {
-            return YieldStatement(pos, expr = this.expr.deepCopy())
-        }
-        override val childMemberRelationships
-            get() = cmr
-        override fun equals(
-            other: Any?,
-        ): Boolean {
-            return other is YieldStatement && this.expr == other.expr
-        }
-        override fun hashCode(): Int {
-            return expr.hashCode()
-        }
-        init {
-            this._expr = updateTreeConnection(null, expr)
-        }
-        companion object {
-            private val cmr = ChildMemberRelationships(
-                { n -> (n as YieldStatement).expr },
-            )
-        }
-    }
-
-    /**
      * Deviating from JLS to keep things simple, we specify these as a regular statement.
      * Basically, a constructor can call `this(...)` once at the beginning to invoke another
      * constructor. JLS 8.8.7.1
@@ -4821,7 +4456,7 @@ object Java {
         override val operatorDefinition: JavaOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate170
+            get() = sharedCodeFormattingTemplate160
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -4988,7 +4623,7 @@ object Java {
         override val operatorDefinition: JavaOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate171
+            get() = sharedCodeFormattingTemplate161
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -5046,7 +4681,7 @@ object Java {
         override val operatorDefinition: JavaOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate172
+            get() = sharedCodeFormattingTemplate162
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -5090,7 +4725,7 @@ object Java {
         override val operatorDefinition: JavaOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate173
+            get() = sharedCodeFormattingTemplate163
         override val formatElementCount
             get() = 0
         override fun deepCopy(): SwitchDefaultLabel {
@@ -5123,7 +4758,7 @@ object Java {
         override val operatorDefinition: JavaOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate174
+            get() = sharedCodeFormattingTemplate164
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -5178,7 +4813,7 @@ object Java {
         override val operatorDefinition: JavaOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate175
+            get() = sharedCodeFormattingTemplate165
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -5234,7 +4869,7 @@ object Java {
         override val operatorDefinition: JavaOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate176
+            get() = sharedCodeFormattingTemplate166
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -5277,6 +4912,379 @@ object Java {
             private val cmr = ChildMemberRelationships(
                 { n -> (n as ThrowRuleStatement).label },
                 { n -> (n as ThrowRuleStatement).expr },
+            )
+        }
+    }
+
+    /**
+     * This production represents all the variants of while; JLS 14.12
+     */
+    class WhileStatement(
+        pos: Position,
+        test: Expression,
+        body: BlockStatement,
+    ) : BaseTree(pos), LoopStatement {
+        override val operatorDefinition: JavaOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate167
+        override val formatElementCount
+            get() = 2
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.test
+                1 -> this.body
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _test: Expression
+        var test: Expression
+            get() = _test
+            set(newValue) { _test = updateTreeConnection(_test, newValue) }
+        private var _body: BlockStatement
+        var body: BlockStatement
+            get() = _body
+            set(newValue) { _body = updateTreeConnection(_body, newValue) }
+        override fun deepCopy(): WhileStatement {
+            return WhileStatement(pos, test = this.test.deepCopy(), body = this.body.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is WhileStatement && this.test == other.test && this.body == other.body
+        }
+        override fun hashCode(): Int {
+            var hc = test.hashCode()
+            hc = 31 * hc + body.hashCode()
+            return hc
+        }
+        init {
+            this._test = updateTreeConnection(null, test)
+            this._body = updateTreeConnection(null, body)
+            require(body.regularBlock())
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as WhileStatement).test },
+                { n -> (n as WhileStatement).body },
+            )
+        }
+    }
+
+    /**
+     * This production represents the do-while; JLS 14.13
+     */
+    class DoStatement(
+        pos: Position,
+        body: BlockStatement,
+        test: Expression,
+    ) : BaseTree(pos), LoopStatement {
+        override val operatorDefinition: JavaOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate168
+        override val formatElementCount
+            get() = 2
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.body
+                1 -> this.test
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _body: BlockStatement
+        var body: BlockStatement
+            get() = _body
+            set(newValue) { _body = updateTreeConnection(_body, newValue) }
+        private var _test: Expression
+        var test: Expression
+            get() = _test
+            set(newValue) { _test = updateTreeConnection(_test, newValue) }
+        override fun deepCopy(): DoStatement {
+            return DoStatement(pos, body = this.body.deepCopy(), test = this.test.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is DoStatement && this.body == other.body && this.test == other.test
+        }
+        override fun hashCode(): Int {
+            var hc = body.hashCode()
+            hc = 31 * hc + test.hashCode()
+            return hc
+        }
+        init {
+            this._body = updateTreeConnection(null, body)
+            this._test = updateTreeConnection(null, test)
+            require(body.regularBlock())
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as DoStatement).body },
+                { n -> (n as DoStatement).test },
+            )
+        }
+    }
+
+    /**
+     * Breaks either break out of an enclosing loop, switch or to a labeled statement. JLS 14.15
+     */
+    class BreakStatement(
+        pos: Position,
+        target: Identifier? = null,
+    ) : BaseTree(pos), TransferOfControl {
+        override val operatorDefinition: JavaOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() =
+                if (target != null) {
+                    sharedCodeFormattingTemplate169
+                } else {
+                    sharedCodeFormattingTemplate170
+                }
+        override val formatElementCount
+            get() = 1
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.target ?: FormattableTreeGroup.empty
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _target: Identifier?
+        var target: Identifier?
+            get() = _target
+            set(newValue) { _target = updateTreeConnection(_target, newValue) }
+        override fun deepCopy(): BreakStatement {
+            return BreakStatement(pos, target = this.target?.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is BreakStatement && this.target == other.target
+        }
+        override fun hashCode(): Int {
+            return (target?.hashCode() ?: 0)
+        }
+        init {
+            this._target = updateTreeConnection(null, target)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as BreakStatement).target },
+            )
+        }
+    }
+
+    /**
+     * Continues transfer control to the enclosing loop or to a labeled loop. JLS 14.16
+     */
+    class ContinueStatement(
+        pos: Position,
+        target: Identifier? = null,
+    ) : BaseTree(pos), TransferOfControl {
+        override val operatorDefinition: JavaOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() =
+                if (target != null) {
+                    sharedCodeFormattingTemplate171
+                } else {
+                    sharedCodeFormattingTemplate172
+                }
+        override val formatElementCount
+            get() = 1
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.target ?: FormattableTreeGroup.empty
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _target: Identifier?
+        var target: Identifier?
+            get() = _target
+            set(newValue) { _target = updateTreeConnection(_target, newValue) }
+        override fun deepCopy(): ContinueStatement {
+            return ContinueStatement(pos, target = this.target?.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is ContinueStatement && this.target == other.target
+        }
+        override fun hashCode(): Int {
+            return (target?.hashCode() ?: 0)
+        }
+        init {
+            this._target = updateTreeConnection(null, target)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as ContinueStatement).target },
+            )
+        }
+    }
+
+    /**
+     * Return transfers control to the invoker of the method. JLS 14.17
+     */
+    class ReturnStatement(
+        pos: Position,
+        expr: Expression? = null,
+    ) : BaseTree(pos), TransferOfControl {
+        override val operatorDefinition: JavaOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() =
+                if (expr != null) {
+                    sharedCodeFormattingTemplate173
+                } else {
+                    sharedCodeFormattingTemplate174
+                }
+        override val formatElementCount
+            get() = 1
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.expr ?: FormattableTreeGroup.empty
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _expr: Expression?
+        var expr: Expression?
+            get() = _expr
+            set(newValue) { _expr = updateTreeConnection(_expr, newValue) }
+        override fun deepCopy(): ReturnStatement {
+            return ReturnStatement(pos, expr = this.expr?.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is ReturnStatement && this.expr == other.expr
+        }
+        override fun hashCode(): Int {
+            return (expr?.hashCode() ?: 0)
+        }
+        init {
+            this._expr = updateTreeConnection(null, expr)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as ReturnStatement).expr },
+            )
+        }
+    }
+
+    /**
+     * Cause an exception to be thrown. JLS 14.18
+     */
+    class ThrowStatement(
+        pos: Position,
+        expr: Expression,
+    ) : BaseTree(pos), TransferOfControl {
+        override val operatorDefinition: JavaOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate175
+        override val formatElementCount
+            get() = 1
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.expr
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _expr: Expression
+        var expr: Expression
+            get() = _expr
+            set(newValue) { _expr = updateTreeConnection(_expr, newValue) }
+        override fun deepCopy(): ThrowStatement {
+            return ThrowStatement(pos, expr = this.expr.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is ThrowStatement && this.expr == other.expr
+        }
+        override fun hashCode(): Int {
+            return expr.hashCode()
+        }
+        init {
+            this._expr = updateTreeConnection(null, expr)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as ThrowStatement).expr },
+            )
+        }
+    }
+
+    /**
+     * Transfers control to the enclosing switch expression to return its value. JLS 14.21
+     */
+    class YieldStatement(
+        pos: Position,
+        expr: Expression,
+    ) : BaseTree(pos), TransferOfControl {
+        override val operatorDefinition: JavaOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate176
+        override val formatElementCount
+            get() = 1
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.expr
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _expr: Expression
+        var expr: Expression
+            get() = _expr
+            set(newValue) { _expr = updateTreeConnection(_expr, newValue) }
+        override fun deepCopy(): YieldStatement {
+            return YieldStatement(pos, expr = this.expr.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is YieldStatement && this.expr == other.expr
+        }
+        override fun hashCode(): Int {
+            return expr.hashCode()
+        }
+        init {
+            this._expr = updateTreeConnection(null, expr)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as YieldStatement).expr },
             )
         }
     }
@@ -5852,7 +5860,7 @@ object Java {
         override val operatorDefinition
             get() = JavaOperatorDefinition.Lambda
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate175
+            get() = sharedCodeFormattingTemplate165
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -10211,101 +10219,8 @@ object Java {
             ),
         )
 
-    /** `while ( {{0}} ) {{1}}` */
-    private val sharedCodeFormattingTemplate156 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("while", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.OneSubstitution(1),
-            ),
-        )
-
-    /** `do {{0}} while ( {{1}} ) ;` */
-    private val sharedCodeFormattingTemplate157 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("do", OutputTokenType.Word),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken("while", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.OneSubstitution(1),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
-            ),
-        )
-
-    /** `break {{0}} ;` */
-    private val sharedCodeFormattingTemplate158 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("break", OutputTokenType.Word),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
-            ),
-        )
-
-    /** `break ;` */
-    private val sharedCodeFormattingTemplate159 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("break", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
-            ),
-        )
-
-    /** `continue {{0}} ;` */
-    private val sharedCodeFormattingTemplate160 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("continue", OutputTokenType.Word),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
-            ),
-        )
-
-    /** `continue ;` */
-    private val sharedCodeFormattingTemplate161 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("continue", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
-            ),
-        )
-
-    /** `return {{0}} ;` */
-    private val sharedCodeFormattingTemplate162 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("return", OutputTokenType.Word),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
-            ),
-        )
-
-    /** `return ;` */
-    private val sharedCodeFormattingTemplate163 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("return", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
-            ),
-        )
-
-    /** `throw {{0}} ;` */
-    private val sharedCodeFormattingTemplate164 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("throw", OutputTokenType.Word),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
-            ),
-        )
-
     /** `try ( {{0*;}} ) {{1}} {{2*}} finally {{3}}` */
-    private val sharedCodeFormattingTemplate165 =
+    private val sharedCodeFormattingTemplate156 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -10326,7 +10241,7 @@ object Java {
         )
 
     /** `try ( {{0*;}} ) {{1}} {{2*}}` */
-    private val sharedCodeFormattingTemplate166 =
+    private val sharedCodeFormattingTemplate157 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -10345,7 +10260,7 @@ object Java {
         )
 
     /** `try {{1}} {{2*}} finally {{3}}` */
-    private val sharedCodeFormattingTemplate167 =
+    private val sharedCodeFormattingTemplate158 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -10360,7 +10275,7 @@ object Java {
         )
 
     /** `try {{1}} {{2*}}` */
-    private val sharedCodeFormattingTemplate168 =
+    private val sharedCodeFormattingTemplate159 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -10372,18 +10287,8 @@ object Java {
             ),
         )
 
-    /** `yield {{0}} ;` */
-    private val sharedCodeFormattingTemplate169 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("yield", OutputTokenType.Word),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
-            ),
-        )
-
     /** `this ( {{0*,}} ) ;` */
-    private val sharedCodeFormattingTemplate170 =
+    private val sharedCodeFormattingTemplate160 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("this", OutputTokenType.Word),
@@ -10398,7 +10303,7 @@ object Java {
         )
 
     /** `{{0}} : \n {{1*\n}}` */
-    private val sharedCodeFormattingTemplate171 =
+    private val sharedCodeFormattingTemplate161 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -10412,7 +10317,7 @@ object Java {
         )
 
     /** `case {{0*,}}` */
-    private val sharedCodeFormattingTemplate172 =
+    private val sharedCodeFormattingTemplate162 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("case", OutputTokenType.Word),
@@ -10424,11 +10329,11 @@ object Java {
         )
 
     /** `default` */
-    private val sharedCodeFormattingTemplate173 =
+    private val sharedCodeFormattingTemplate163 =
         CodeFormattingTemplate.LiteralToken("default", OutputTokenType.Word)
 
     /** `{{0}} -> {{1}} ;` */
-    private val sharedCodeFormattingTemplate174 =
+    private val sharedCodeFormattingTemplate164 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -10439,7 +10344,7 @@ object Java {
         )
 
     /** `{{0}} -> {{1}}` */
-    private val sharedCodeFormattingTemplate175 =
+    private val sharedCodeFormattingTemplate165 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -10449,13 +10354,116 @@ object Java {
         )
 
     /** `{{0}} -> throw {{1}} ;` */
-    private val sharedCodeFormattingTemplate176 =
+    private val sharedCodeFormattingTemplate166 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.LiteralToken("-\u003e", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.LiteralToken("throw", OutputTokenType.Word),
                 CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `while ( {{0}} ) {{1}}` */
+    private val sharedCodeFormattingTemplate167 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("while", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.OneSubstitution(1),
+            ),
+        )
+
+    /** `do {{0}} while ( {{1}} ) ;` */
+    private val sharedCodeFormattingTemplate168 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("do", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken("while", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `break {{0}} ;` */
+    private val sharedCodeFormattingTemplate169 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("break", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `break ;` */
+    private val sharedCodeFormattingTemplate170 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("break", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `continue {{0}} ;` */
+    private val sharedCodeFormattingTemplate171 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("continue", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `continue ;` */
+    private val sharedCodeFormattingTemplate172 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("continue", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `return {{0}} ;` */
+    private val sharedCodeFormattingTemplate173 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("return", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `return ;` */
+    private val sharedCodeFormattingTemplate174 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("return", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `throw {{0}} ;` */
+    private val sharedCodeFormattingTemplate175 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("throw", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `yield {{0}} ;` */
+    private val sharedCodeFormattingTemplate176 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("yield", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
             ),
         )

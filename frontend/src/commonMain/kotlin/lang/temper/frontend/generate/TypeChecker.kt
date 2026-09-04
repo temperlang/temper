@@ -1,7 +1,6 @@
 package lang.temper.frontend.generate
 
 import lang.temper.ast.TreeVisit
-import lang.temper.ast.VisitCue
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.RttiCheckFunction
 import lang.temper.builtin.SETP_ARITY
@@ -40,6 +39,7 @@ import lang.temper.type.TypeShape
 import lang.temper.type.VisibleMemberShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.WellKnownTypes.invalidType2
+import lang.temper.type.excludeBubble
 import lang.temper.type.isBooleanLike
 import lang.temper.type.isBubbly
 import lang.temper.type.isVoid
@@ -52,7 +52,6 @@ import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.withNullity
 import lang.temper.value.BINARY_OP_CALL_ARG_COUNT
 import lang.temper.value.BlockTree
-import lang.temper.value.BubbleFn
 import lang.temper.value.CallTree
 import lang.temper.value.ControlFlow
 import lang.temper.value.DeclTree
@@ -185,13 +184,12 @@ internal class TypeChecker(
         val fn = t.childOrNull(0)?.functionContained
         when (fn) {
             BuiltinFuns.setLocalFn -> checkAssignment(t)
-            BuiltinFuns.handlerScope -> Unit // TODO
             BuiltinFuns.getpFn, BuiltinFuns.getsFn, BuiltinFuns.igetsFn -> Unit // TODO
             BuiltinFuns.setpFn -> checkSetp(t)
             BuiltinFuns.angleFn -> Unit // Already taken into account
-            BuiltinFuns.asFn, BuiltinFuns.isFn -> {
+            is RttiCheckFunction -> {
                 checkRegularCall(t)
-                checkRttiCheckAllowed(t, fn as RttiCheckFunction)
+                checkRttiCheckAllowed(t, fn)
             }
             BuiltinFuns.abstractPanicFn -> checkAbstractPanicContext(t)
             else -> checkRegularCall(t)
@@ -210,7 +208,7 @@ internal class TypeChecker(
     }
 
     private fun checkAbstractPanicContext(t: CallTree) {
-        // Find enclosing FunTree. Expected to be exactly 2 up, but loop is flexible.
+        // Find enclosing FunTree. Expected to be exactly 2 up, but this loop is flexible.
         val fn = run fn@{
             var parent = t.incoming?.source
             while (parent != null) {
@@ -302,19 +300,7 @@ internal class TypeChecker(
         val body = t.parts?.body ?: return
         // This runs for any non-bubbly function.
         // TODO Could use the outer tree walk if we track scope going into and out of the function.
-        TreeVisit.startingAt(body).forEach subs@{ sub ->
-            // Don't go into nested functions, as that's a new scope for bubble allowance.
-            sub is FunTree && return@subs VisitCue.SkipOne
-            if (sub is CallTree) {
-                // In the end, we only reference Bubble when it actually escapes from functions.
-                // And if some logic doesn't allow a branch to execute, we should clean it out before here.
-                // Given the above, we can complain here about any call to bubble.
-                if (sub.child(0).functionContained === BubbleFn) {
-                    logSink.log(Log.Error, MessageTemplate.ExpectedNoBubble, sub.pos, listOf())
-                }
-            }
-            VisitCue.Continue
-        }.visitPreOrder()
+        bubblesAreNotFree(body, logSink)
     }
 
     private fun checkStay(t: StayLeaf) {
@@ -368,7 +354,7 @@ internal class TypeChecker(
         // TODO: check that right type is a subtype of left-type.
         val (_, leftTree, rightTree) = t.children
         val leftType = leftTree.typeInferences?.type
-        val rightType = rightTree.typeInferences?.type
+        val rightType = rightTree.typeInferences?.type?.let { excludeBubble(it) }
         // TODO: We probably want to enforce that we have either a left or a right type from the
         // checker, but baby steps.
         checkSubType(t, leftType, rightType)
@@ -556,7 +542,7 @@ internal class TypeChecker(
                         }
                     }
                     val computedType = tTypeInferences.type
-                    val boundCalleeReturnType = boundCalleeType.returnType.let {
+                    val boundCalleePassType = excludeBubble(boundCalleeType.returnType).let {
                         // HACK: allow Never-ish compatibility on return type for nullary specials
                         // until we get rid of NeverType entirely.
                         MkType.map(
@@ -573,7 +559,7 @@ internal class TypeChecker(
                             },
                         )
                     }
-                    if (failsValidSubtypeCheck(boundCalleeReturnType, computedType)) {
+                    if (failsValidSubtypeCheck(boundCalleePassType, computedType)) {
                         logSink.log(
                             level = Log.Error,
                             template = MessageTemplate.ExpectedSubType,

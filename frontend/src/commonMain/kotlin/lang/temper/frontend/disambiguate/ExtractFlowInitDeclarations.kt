@@ -4,7 +4,6 @@ import lang.temper.ast.TreeVisit
 import lang.temper.common.Log
 import lang.temper.common.subListToEnd
 import lang.temper.interp.convertToErrorNode
-import lang.temper.interp.emptyValue
 import lang.temper.interp.isOfCall
 import lang.temper.log.LogEntry
 import lang.temper.log.LogSink
@@ -16,6 +15,7 @@ import lang.temper.value.DeclTree
 import lang.temper.value.FunTree
 import lang.temper.value.LinearFlow
 import lang.temper.value.TEdge
+import lang.temper.value.emptyValue
 import lang.temper.value.flowInitSymbol
 import lang.temper.value.freeTree
 import lang.temper.value.initSymbol

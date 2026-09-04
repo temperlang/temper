@@ -34,7 +34,6 @@ class CppBackendTest {
                 |  void greet(std::string name) {
                 |    temper::core::Console::log(console_0, "Hi:");
                 |    temper::core::Console::log(console_0, name);
-                |    return;
                 |  }
                 |  void global_init_something() {
                 |    static bool initialized = false;

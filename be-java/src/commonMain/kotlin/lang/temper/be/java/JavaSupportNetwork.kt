@@ -2,10 +2,9 @@ package lang.temper.be.java
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
-import lang.temper.be.tmpl.ConvertedCoroutineAwakeUponFn
+import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
-import lang.temper.be.tmpl.GetPromiseResultSyncFn
 import lang.temper.be.tmpl.GetStaticSupport
 import lang.temper.be.tmpl.InlineSupportCode
 import lang.temper.be.tmpl.NamedSupportCode
@@ -20,6 +19,8 @@ import lang.temper.builtin.GetStaticOp
 import lang.temper.builtin.RuntimeTypeOperation
 import lang.temper.common.subListToEnd
 import lang.temper.format.TokenSink
+import lang.temper.frontend.coroutine.CoroHelperSpecials.ConvertedCoroutineAwakeUponFn
+import lang.temper.frontend.coroutine.CoroHelperSpecials.GetPromiseResultSyncFn
 import lang.temper.lexer.Genre
 import lang.temper.log.Position
 import lang.temper.name.DashedIdentifier
@@ -38,11 +39,11 @@ import lang.temper.be.java.JavaSimpleType as Jst
 
 class JavaSupportNetwork private constructor(private val javaLang: JavaLang) : SupportNetwork {
     override val backendDescription: String = "Java / JVM Backend"
-    override val bubbleStrategy = BubbleBranchStrategy.CatchBubble
+    override val bubbleStrategy = BubbleBranchStrategy.Exceptions
     override val coroutineStrategy = CoroutineStrategy.TranslateToRegularFunction
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionType // TODO: rework to use @fun interfaces
+    override val computedJumpStrategy = ComputedJumpStrategy.IsDefaultBreakScope
     override val mayAssignInBothTryAndRecover = false
-    override val needsLabeledBreakFromSwitch = true
 
     override fun representationOfVoid(genre: Genre): RepresentationOfVoid =
         RepresentationOfVoid.DoNotReifyVoid
@@ -136,6 +137,11 @@ class JavaSupportNetwork private constructor(private val javaLang: JavaLang) : S
             BuiltinOperatorId.AdaptGeneratorFn -> adaptGeneratorFn
             BuiltinOperatorId.SafeAdaptGeneratorFn -> safeAdaptGeneratorFn
             BuiltinOperatorId.Async -> runAsync
+            // using Exceptions not Results
+            BuiltinOperatorId.IsOkResult,
+            BuiltinOperatorId.PackOkResult,
+            BuiltinOperatorId.UnpackOkResult,
+            -> null
             BuiltinOperatorId.NotNull -> TODO("$opId not supported")
         }
 

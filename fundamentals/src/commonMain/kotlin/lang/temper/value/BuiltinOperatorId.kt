@@ -91,4 +91,10 @@ enum class BuiltinOperatorId {
 
     // Asyncrony related
     Async,
+
+    // Related to unpacking result types on backends that do not
+    // treat bubbles as throwable exceptions.
+    IsOkResult,
+    PackOkResult,
+    UnpackOkResult,
 }

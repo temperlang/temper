@@ -1,0 +1,51 @@
+  var caseIndex#15: Int32;
+  caseIndex#15 = 0;
+## Here's our dependency of the hoisted function which
+## is not otherwise used in two or more basic blocks.
+  var negSum__9: Int32;
+  negSum__9 = 0;
+## We hoist the function which is used in two or more.
+  @fn let halfNegSum__6;
+## And its initializer.
+  halfNegSum__6 = (@stay fn halfNegSum /* return__1 */: Int32 {
+      return__1 = negSum__9 / 2
+  });
+  let convertedCoroutine#18;
+  convertedCoroutine#18 = fn (generator#14: SafeGenerator<Int32>) /* return__4 */: (GeneratorResult<Int32>) {
+    fn__16: do {
+      let caseIndexLocal#17: Int32;
+      caseIndexLocal#17 = caseIndex#15;
+      caseIndex#15 = -1;
+      if (caseIndexLocal#17 == 0) {
+## Not hoisting this fn.  Only used here.
+        @fn let sum__5;
+        sum__5 = (@stay fn sum /* return__0 */: Int32 {
+            return__0 = x__2 + y__3
+        });
+        caseIndex#15 = 1;
+        return__4 = new ValueResult<Int32>(sum__5());
+        break fn__16;
+      } else if (caseIndexLocal#17 == 1) {
+        let sum2__8;
+        sum2__8 = x__2 + y__3;
+        negSum__9 = -sum2__8;
+        caseIndex#15 = 2;
+## No remnant of the hoisted function's initializer here.
+## Use of the hoisted function here is not null adjusted.
+        return__4 = new ValueResult<Int32>(halfNegSum__6());
+        break fn__16;
+      } else if (caseIndexLocal#17 == 2) {
+        caseIndex#15 = 3;
+## Other use here.
+        return__4 = new ValueResult<Int32>(halfNegSum__6() + 1);
+        break fn__16;
+      } else if (caseIndexLocal#17 == 3) {
+        return__4 = core.doneResult();
+        break fn__16;
+      } else {
+        return__4 = core.doneResult();
+        break fn__16;
+      }
+    }
+  };
+  return__11 = adaptGeneratorFnSafe(convertedCoroutine#18)

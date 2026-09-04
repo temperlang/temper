@@ -1,24 +1,24 @@
-let return__15;
+let return__14;
 @fn @stay @fromType(I__0) let method__6;
-method__6 = fn method(@impliedThis(I__0) this__2: I__0) /* return__16 */{
-  fn__0: do {
+method__6 = fn method(@impliedThis(I__0) this__1: I__0) /* return__15 */{
+  fn__7: do {
     pureVirtual()
   }
 };
 @typeDecl(I__0) @stay let I__0;
 I__0 = type (I__0);
-@typeDecl(C__1) @stay let C__1;
-C__1 = type (C__1);
-@constructorProperty @visibility(\private) @stay @fromType(C__1) let property__9;
-@visibility(\public) @fn @stay @fromType(C__1) let method__10;
-method__10 = (@stay fn method(@impliedThis(C__1) this__3: C__1) /* return__17 */{
-    fn__1: do {
-      return__17 = getp(property__9, this__3)
-    }
+@typeDecl(C__2) @stay let C__2;
+C__2 = type (C__2);
+@constructorProperty @visibility(\private) @stay @fromType(C__2) let property__8;
+@visibility(\public) @fn @stay @fromType(C__2) let method__9;
+method__9 = (@stay fn method(@impliedThis(C__2) this__3: C__2) /* return__16 */{
+    fn__10: do {
+      return__16 = getp(property__8, this__3)
+    };
 });
-@fn @visibility(\public) @stay @fromType(C__1) let constructor__12;
-constructor__12 = (@stay fn constructor(@impliedThis(C__1) this__13: C__1, property__14 /* aka property */) /* return__18 */: Void {
-    setp(property__9, this__13, property__14);
-    return__18 = void
+@fn @visibility(\public) @stay @fromType(C__2) let constructor__11;
+constructor__11 = (@stay fn constructor(@impliedThis(C__2) this__4: C__2, property__12 /* aka property */) /* return__5 */: Void {
+    return__5 = void;
+    setp(property__8, this__4, property__12);
 });
-return__15 = type (C__1)
+return__14 = type (C__2);

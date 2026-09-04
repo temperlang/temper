@@ -1,60 +1,40 @@
 @typeDecl(IntMaker) @stay let `test//`.IntMaker ⦂ Type;
 `test//`.IntMaker = type (IntMaker);
 @fn let `test//`.crazySum ⦂(fn (IntMaker, Int64, String): Int32 | Bubble);
-@constructorProperty @visibility(\public) @stay @fromType(IntMaker) let radix__0: Int32;
-@visibility(\public) @overload("toInt") @fn @stay @fromType(IntMaker) let int64ToInt__0 ⦂(fn (IntMaker, Int64): Int32 | Bubble);
-int64ToInt__0 = (@stay fn int64ToInt(@impliedThis(IntMaker) this__0: IntMaker, int__0 /* aka int */: Int64) /* return__0 */: (Int32 | Bubble) {
-    void;
-    fn__0: do {
-      var fail#0 ⦂ Boolean;
-      return__0 = hs ⋖ Int32 ⋗(fail#0, do_call_toInt32(int__0));
-      if (fail#0) {
-        bubble ⋖ Int32 ⋗()
-      };
-    }
+@constructorProperty @visibility(\public) @stay @fromType(IntMaker) let radix__9: Int32;
+@visibility(\public) @overload("toInt") @fn @stay @fromType(IntMaker) let int64ToInt__10 ⦂(fn (IntMaker, Int64): Int32 | Bubble);
+int64ToInt__10 = (@stay fn int64ToInt(@impliedThis(IntMaker) this__0: IntMaker, int__11 /* aka int */: Int64) /* return__5 */: (Int32 | Bubble) {
+    fn__12: do {
+      return__5 = do_call_toInt32(int__11)
+    };
 });
-@visibility(\public) @overload("toInt") @fn @stay @fromType(IntMaker) let stringToInt__0 ⦂(fn (IntMaker, String): Int32 | Bubble);
-stringToInt__0 = (@stay fn stringToInt(@impliedThis(IntMaker) this__1: IntMaker, string__0 /* aka string */: String) /* return__1 */: (Int32 | Bubble) {
-    void;
-    fn__1: do {
-      var fail#1 ⦂ Boolean;
-      return__1 = hs ⋖ Int32 ⋗(fail#1, do_call_toInt32(string__0, getp(radix__0, this__1)));
-      if (fail#1) {
-        bubble ⋖ Int32 ⋗()
-      };
-    }
+@visibility(\public) @overload("toInt") @fn @stay @fromType(IntMaker) let stringToInt__13 ⦂(fn (IntMaker, String): Int32 | Bubble);
+stringToInt__13 = (@stay fn stringToInt(@impliedThis(IntMaker) this__1: IntMaker, string__14 /* aka string */: String) /* return__6 */: (Int32 | Bubble) {
+    fn__15: do {
+      return__6 = do_call_toInt32(string__14, getp(radix__9, this__1))
+    };
 });
-@visibility(\public) @overload("justMe") @fn @stay @fromType(IntMaker) let int32ToInt__0 ⦂(fn (IntMaker, Int32): Int32);
-int32ToInt__0 = (@stay fn int32ToInt(@impliedThis(IntMaker) this__2: IntMaker, int__1 /* aka int */: Int32) /* return__2 */: Int32 {
-    fn__2: do {
-      return__2 = int__1
-    }
+@visibility(\public) @overload("justMe") @fn @stay @fromType(IntMaker) let int32ToInt__16 ⦂(fn (IntMaker, Int32): Int32);
+int32ToInt__16 = (@stay fn int32ToInt(@impliedThis(IntMaker) this__2: IntMaker, int__17 /* aka int */: Int32) /* return__7 */: Int32 {
+    fn__18: do {
+      return__7 = int__17
+    };
 });
-@fn @visibility(\public) @stay @fromType(IntMaker) let constructor__0 ⦂(fn (IntMaker, Int32): Void);
-constructor__0 = (@stay fn constructor(@impliedThis(IntMaker) this__3: IntMaker, radix__1 /* aka radix */: Int32) /* return__3 */: Void {
-    setp(radix__0, this__3, radix__1);
-    return__3 = void
+@fn @visibility(\public) @stay @fromType(IntMaker) let constructor__19 ⦂(fn (IntMaker, Int32): Void);
+constructor__19 = (@stay fn constructor(@impliedThis(IntMaker) this__3: IntMaker, radix__20 /* aka radix */: Int32) /* return__4 */: Void {
+    return__4 = void;
+    setp(radix__9, this__3, radix__20);
 });
-@fn @visibility(\public) @stay @fromType(IntMaker) let getradix__0 ⦂(fn (IntMaker): Int32);
-getradix__0 = (@stay fn (@impliedThis(IntMaker) this__4: IntMaker) /* return__4 */: Int32 {
-    return__4 = getp(radix__0, this__4)
+@fn @visibility(\public) @stay @fromType(IntMaker) let getradix__28 ⦂(fn (IntMaker): Int32);
+getradix__28 = (@stay fn (@impliedThis(IntMaker) this__29: IntMaker) /* return__30 */: Int32 {
+    return__30 = getp(radix__9, this__29);
 });
-`test//`.crazySum = (@stay fn crazySum(intMaker__0 /* aka intMaker */: IntMaker, int__2 /* aka int */: Int64, string__1 /* aka string */: String) /* return__5 */: (Int32 | Bubble) {
-    var t#0 ⦂ Int32;
-    void;
-    fn__3: do {
-      var fail#2 ⦂ Boolean, fail#3 ⦂ Boolean;
-      let intInt__0 ⦂ Int32;
-      intInt__0 = hs ⋖ Int32 ⋗(fail#2, do_call_int64ToInt(intMaker__0, int__2));
-      if (fail#2) {
-        bubble ⋖ Int32 ⋗()
-      };
-      let stringInt__0 ⦂ Int32;
-      stringInt__0 = hs ⋖ Int32 ⋗(fail#3, do_call_stringToInt(intMaker__0, string__1));
-      if (fail#3) {
-        bubble ⋖ Int32 ⋗()
-      };
-      t#0 = intInt__0 + stringInt__0;
-      return__5 = do_call_int32ToInt(intMaker__0, t#0);
-    }
+`test//`.crazySum = (@stay fn crazySum(intMaker__21 /* aka intMaker */: IntMaker, int__22 /* aka int */: Int64, string__23 /* aka string */: String) /* return__8 */: (Int32 | Bubble) {
+    fn__24: do {
+      let intInt__25 ⦂ Int32;
+      intInt__25 = do_call_int64ToInt(intMaker__21, int__22);
+      let stringInt__26 ⦂ Int32;
+      stringInt__26 = do_call_stringToInt(intMaker__21, string__23);
+      return__8 = do_call_int32ToInt(intMaker__21, intInt__25 + stringInt__26)
+    };
 })

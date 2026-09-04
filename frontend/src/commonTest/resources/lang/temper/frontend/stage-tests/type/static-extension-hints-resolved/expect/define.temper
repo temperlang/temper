@@ -1,12 +1,12 @@
 @fn @staticExtension({
-    class: Pair__0, key: type (Int32), value: "isZero"
-}) let isZero__0;
-isZero__0 = (@stay fn isZero(x__0 /* aka x */: Int32) /* return__0 */: Boolean {
-    fn__0: do {
-      x__0 == 0
+    class: Pair__42, key: type (Int32), value: "isZero"
+}) let isZero__2;
+isZero__2 = (@stay fn isZero(x__3 /* aka x */: Int32) /* return__1 */: Boolean {
+    fn__4: do {
+      x__3 == 0
     }
 });
-if((do_call_isZero[static isZero__0])(type (Int32), 0), @stay fn {
+if((do_call_isZero[static isZero__2])(type (Int32), 0), @stay fn {
     true
   }, \else, fn (f#0) {
     f#0(@stay fn {

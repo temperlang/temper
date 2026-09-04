@@ -469,6 +469,12 @@ class GenerateCodeStageTest {
         // Just making sure to explore the space of how we handle things.
     )
 
+    @Test // TODO: get this working without the explicit type on x
+    fun orElseNull() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/or-else-null"),
+        pseudoCodeDetail = PseudoCodeDetail(showInferredTypes = true),
+    )
+
     @Test
     fun extensionMethodUse() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/extension-method-use"),
@@ -629,6 +635,22 @@ class GenerateCodeStageTest {
     @Test
     fun missingFunctionBody() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/missing-function-body"),
+    )
+
+    @Test
+    fun varGetP() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/var-get-p"),
+        stagingFlags = setOf(StagingFlags.skipImportCore, StagingFlags.moduleResultNeeded),
+    )
+
+    @Test
+    fun orelseInStringInterpolation() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/orelse-in-string-interpolation"),
+    )
+
+    @Test
+    fun asVsAssertAs() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/as-vs-assertas"),
     )
 }
 

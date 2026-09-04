@@ -1,55 +1,55 @@
 @typeDecl(C__0) @stay let C__0 = type (C__0);
-@fn let g3__0;
+@fn let g3__12;
 class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
     C__0 extends AnyValue;
-    @static @visibility(\private) let ap__0: Int = 1;
-    @static @visibility(\public) let a__0: Int = ap__0 + igetStatic(C__0, \ap);
-    @maybeVar @visibility(\private) let bp__0: Int;
-    @maybeVar @visibility(\private) let b__0: Int;
-    @fn @static @visibility(\public) let f__0 = fn f(i__0 /* aka i */: Int) /* return__0 */: (Int) {
-      fn__0: do {
-        i__0 + a__0 + igetStatic(C__0, \a) + ap__0 + igetStatic(C__0, \ap)
+    @static @visibility(\private) let ap__13: Int = 1;
+    @static @visibility(\public) let a__14: Int = ap__13 + igetStatic(C__0, \ap);
+    @maybeVar @visibility(\private) let bp__15: Int;
+    @maybeVar @visibility(\private) let b__16: Int;
+    @fn @static @visibility(\public) let f__17 = fn f(i__18 /* aka i */: Int) /* return__5 */: (Int) {
+      fn__19: do {
+        i__18 + a__14 + igetStatic(C__0, \a) + ap__13 + igetStatic(C__0, \ap)
       }
     };
-    @fn @static @visibility(\private) let fp__0 = fn fp(i__1 /* aka i */: Int) /* return__1 */: (Int) {
-      fn__1: do {
-        i__1 + 1
+    @fn @static @visibility(\private) let fp__20 = fn fp(i__21 /* aka i */: Int) /* return__6 */: (Int) {
+      fn__22: do {
+        i__21 + 1
       }
     };
-    @visibility(\public) @fn let g__0 = fn g(@impliedThis(C__0) this__0: C__0, i__2 /* aka i */: Int) /* return__2 */: (Int) {
-      fn__2: do {
-        2 * igetStatic(C__0, \f)(i__2) * igetStatic(C__0, \fp)(i__2) * do_iget_bp(type (C__0), this(C__0)) * do_iget_b(type (C__0), this(C__0)) * do_iget_bp(type (C__0), this(C__0)) * do_iget_b(type (C__0), this(C__0))
+    @visibility(\public) @fn let g__23 = fn g(@impliedThis(C__0) this__1: C__0, i__24 /* aka i */: Int) /* return__7 */: (Int) {
+      fn__25: do {
+        2 * igetStatic(C__0, \f)(i__24) * igetStatic(C__0, \fp)(i__24) * do_iget_bp(type (C__0), this(C__0)) * do_iget_b(type (C__0), this(C__0)) * do_iget_bp(type (C__0), this(C__0)) * do_iget_b(type (C__0), this(C__0))
       }
     };
-    @visibility(\public) @fn let h__0 = fn h(@impliedThis(C__0) this__1: C__0, i__3 /* aka i */: Int) /* return__3 */: (Int) {
-      fn__3: do {
-        2 * f__0(i__3) * fp__0(i__3) * do_icall_g(type (C__0), this(C__0), i__3) * do_icall_g(type (C__0), this(C__0), i__3)
+    @visibility(\public) @fn let h__26 = fn h(@impliedThis(C__0) this__2: C__0, i__27 /* aka i */: Int) /* return__8 */: (Int) {
+      fn__28: do {
+        2 * f__17(i__27) * fp__20(i__27) * do_icall_g(type (C__0), this(C__0), i__27) * do_icall_g(type (C__0), this(C__0), i__27)
       }
     };
-    @fn @static @visibility(\public) let g2__0 = fn g2(i__4 /* aka i */: Int) /* return__4 */: (Int) {
-      fn__4: do {
-        2 * igetStatic(C__0, \f)(i__4) * igetStatic(C__0, \fp)(i__4)
+    @fn @static @visibility(\public) let g2__29 = fn g2(i__30 /* aka i */: Int) /* return__9 */: (Int) {
+      fn__31: do {
+        2 * igetStatic(C__0, \f)(i__30) * igetStatic(C__0, \fp)(i__30)
       }
     };
-    @fn @static @visibility(\public) let h2__0 = fn h2(i__5 /* aka i */: Int) /* return__5 */: (Int) {
-      fn__5: do {
-        2 * f__0(i__5) * fp__0(i__5)
+    @fn @static @visibility(\public) let h2__32 = fn h2(i__33 /* aka i */: Int) /* return__10 */: (Int) {
+      fn__34: do {
+        2 * f__17(i__33) * fp__20(i__33)
       }
     };
-    @visibility(\public) let constructor__0 = fn constructor(@impliedThis(C__0) this__2: C__0) /* return__6 */: Void {
+    @visibility(\public) let constructor__35 = fn constructor(@impliedThis(C__0) this__3: C__0) /* return__4 */: Void {
       do {
         do_iset_bp(type (C__0), this(C__0), 1);
         1
       };
       do {
-        let t#0;
-        do_iset_b(type (C__0), this(C__0), t#0 = do_iget_bp(type (C__0), this(C__0)) + 1);
-        t#0
+        let t#38;
+        do_iset_b(type (C__0), this(C__0), t#38 = do_iget_bp(type (C__0), this(C__0)) + 1);
+        t#38
       };
     };
 });
-g3__0 = fn g3(i__6 /* aka i */: Int) /* return__7 */: (Int) {
-  fn__6: do {
-    2 * do_call_f(C__0, i__6) * do_call_g(new C__0(), i__6) * do_get_a(C__0) * do_get_ap(C__0)
+g3__12 = fn g3(i__36 /* aka i */: Int) /* return__11 */: (Int) {
+  fn__37: do {
+    2 * do_call_f(C__0, i__36) * do_call_g(new C__0(), i__36) * do_get_a(C__0) * do_get_ap(C__0)
   }
 };

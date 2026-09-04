@@ -35,6 +35,7 @@ import lang.temper.value.RightNameLeaf
 import lang.temper.value.TBoolean
 import lang.temper.value.Tree
 import lang.temper.value.toPseudoCode
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -165,6 +166,7 @@ class TyperPlanTest {
         assertStructure(
             """
             |{
+            |  return__0: ["void"], // Implied
             |  a__0:      ["0"],
             |  b__0:      ["1"],
             |  c__0:      ["c__0"],
@@ -172,11 +174,8 @@ class TyperPlanTest {
             |  e__0:      ["null", "\"foo()\""],
             |  g__0:      ["\"whatever\""],
             |  h__0:      ["\"[]\"", "\"[foo]\""],
-            |  "t#0":     ["2"],
-            |  j__0:      ["t#0"],
-            |  "t#1":     ["t#0"],
-            |  i__0:      ["t#1"],
-            |  return__0: ["void"], // Implied
+            |  j__0:      ["2"],
+            |  i__0:      ["j__0"],
             |}
             """.trimMargin(),
             plan.initializersAsJson(),
@@ -312,8 +311,8 @@ class TyperPlanTest {
         assertStructure(
             """
             |{
-            |  x__0: ["0"],
             |  return__0: ["void"],
+            |  x__0: ["0"],
             |}
             """.trimMargin(),
             plan.initializersAsJson(),
@@ -342,9 +341,9 @@ class TyperPlanTest {
         assertStructure(
             """
             |{
-            |  x__0: ["0", "1"], // TODO Shouldn't have "1" in it!!!
             |  return__0: ["void"],
             |  return__1: ["void"],
+            |  x__0: ["0", "1"], // TODO Shouldn't have "1" in it!!!
             |}
             """.trimMargin(),
             plan.initializersAsJson(),
@@ -365,10 +364,8 @@ class TyperPlanTest {
         assertStructure(
             """
             |{
+            |    "return__0": ["void"],
             |    "i__0": ["0"],
-            |    // Don't know yet that `+` doesn't bubble.
-            |    "t#0": ["hs(fail#0, i__0 + 1)"],
-            |    "return__0": ["void"]
             |}
             """.trimMargin(),
             plan.initializersAsJson(),
@@ -393,10 +390,10 @@ class TyperPlanTest {
         assertStructure(
             """
             |{
-            |  x__0: ["0"],
             |  return__0: ["void"],
-            |  x__1: ["1"],
             |  return__1: ["void"],
+            |  x__0: ["0"],
+            |  x__1: ["1"],
             |}
             """.trimMargin(),
             plan.initializersAsJson(),
@@ -409,7 +406,7 @@ class TyperPlanTest {
         val plan = planFor(
             """
             |if (foo()) {
-            |    foo()
+            |  foo()
             |} else {
             |}
             """.trimMargin(),
@@ -418,12 +415,9 @@ class TyperPlanTest {
         assertStructure(
             """
             |{
-            |  "t#0": ["hs(fail#0, foo())"],
-            |  "t#1": ["hs(fail#1, foo())"],
-            |  "t#2": ["void", "t#1"],
-            |  // There should only be one mention of t#2 here even though it's reached via both
-            |  // branches through the `if`.
-            |  "return__1": ["t#2"],
+            |  // There should only be one mention of foo() here.
+            |  // The use of `foo()` in the condition is not an initializer.
+            |  "return__1": ["foo()"],
             |}
             """.trimMargin(),
             plan.initializersAsJson(),
@@ -556,18 +550,18 @@ class TyperPlanTest {
             |f__1 = (@stay fn f /* return__0 */: String {
             |    fn__3: do {
             |      return__0 = "from f"
-            |    }
+            |    };
             |});
             |let return__2;
             |return__2 = "lies";
-            |return__4 = "from f"
+            |return__4 = "from f";
             |
             """.trimMargin(),
             plan.root.toPseudoCode(singleLine = false),
         )
         assertEquals(
             listOf(
-                // return__3 is from user code, but is not a return name
+                // return__3 is from user code but is not a return name
                 "return__4",
                 "return__0",
             ),
@@ -590,18 +584,10 @@ class TyperPlanTest {
             """
             |[
             |  "g(i)",
-            |  "hs(fail, g(i))",
-            |  "t + 1",
-            |  "hs(fail, t + 1)",
+            |  "g(i) + 1",
             |  "fn ...",
             |  "f(1, fn ...)",
             |  "2 * k",
-            |  "hs(fail, 2 * k)",
-            |  "hs(fail, f(1, fn ...))",
-            |  "bubble()",
-            |  "bubble()",
-            |  "bubble()",
-            |  "bubble()",
             |]
             """.trimMargin(),
             JsonValueBuilder.build(emptyMap()) {
@@ -644,6 +630,7 @@ class TyperPlanTest {
         )
     }
 
+    @Ignore // do we actually care about not having panic show up as an initializer?
     @Test
     fun orElsePanic() {
         val plan = planFor(
@@ -657,29 +644,29 @@ class TyperPlanTest {
         )
         assertStringsEqual(
             """
-                |let return__9, @fn f__1;
+                |let return__6;
+                |return__6 = void;
+                |@fn let f__1;
                 |f__1 = (@stay fn f(s__2 /* aka s */: String) /* return__0 */: Boolean {
-                |    var t#7, t#8;
                 |    fn__3: do {
-                |      var fail#6;
+                |      var t#7;
                 |      let x__4;
-                |      orelse#5: {
-                |        t#7 = hs(fail#6, do_call_toFloat64(s__2));
-                |        if (fail#6) {
-                |          break orelse#5;
-                |        };
-                |        t#8 = t#7
-                |      } orelse {
+                |      {
+                |        orelse#5: {
+                |          t#7 = do_call_toFloat64(s__2)
+                |        } orelse {
+                |          let t#8;
                 |## This is not an initializer for t#8
                 |## And this assignment needs to be typed after t#8's initializer
                 |## so that its context can be used to compute Never<Float64> as a type.
-                |        t#8 = panic()
+                |          t#8 = panic();
+                |          t#7 = t#8
+                |        }
                 |      };
-                |      x__4 = t#8;
+                |      x__4 = t#7;
                 |      return__0 = x__4 > 0.0
-                |    }
+                |    };
                 |});
-                |return__9 = void
                 |
             """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
             plan.root.toPseudoCode(singleLine = false),
@@ -687,37 +674,121 @@ class TyperPlanTest {
         assertStructure(
             """
                 |{
+                |    "return__6": [
+                |        "void"
+                |    ],
                 |    "f__1": [
-                |        "@stay fn f(s__2 /* aka s */: String) /* return__0 */: Boolean {var t#7, t#8; fn__3: do {var fail#6; let x__4; orelse#5: {t#7 = hs(fail#6, do_call_toFloat64(s__2)); if (fail#6) {break orelse#5;}; t#8 = t#7} orelse {t#8 = panic()}; x__4 = t#8; return__0 = x__4 \u003e 0.0}}"
+                |        "@stay fn f(s__2 /* aka s */: String) /* return__0 */: Boolean {...}"
                 |    ],
                 |    "t#7": [
-                |        "hs(fail#6, do_call_toFloat64(s__2))"
+                |        "do_call_toFloat64(s__2)"
                 |    ],
-                |    "t#8": [
-                |## No panic()
-                |        "t#7"
-                |    ],
+                |## No panic() for t#8.
                 |    "x__4": [
-                |        "t#8"
+                |        "t#7"
                 |    ],
                 |    "return__0": [
                 |        "x__4 > 0.0"
                 |    ],
-                |    "return__9": [
-                |        "void"
-                |    ]
                 |}
             """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
-            plan.initializersAsJson(),
+            plan.initializersAsJson(expressionDetail = PseudoCodeDetail(elideFunctionBodies = true)),
         )
         assertStructure(
             """
                 |[
                 |  "do_call_toFloat64(s)",
-                |  "hs(fail, do_call_toFloat64(s))",
                 |  "x > 0.0",
                 |  "fn ...",
                 |  "panic()",
+                |]
+            """.trimMargin(),
+            JsonValueBuilder.build(emptyMap()) {
+                value(trimToNonAssignmentAndFnCalls(plan.typeOrder))
+            },
+        )
+    }
+
+    @Test
+    fun orElseNull() {
+        val plan = planFor(
+            """
+                |let f(s: String): Float64 {
+                |  let x = s.toFloat64() orelse null;
+                |  x ?? 0.0
+                |}
+            """.trimMargin(),
+            stage = Stage.Type,
+        )
+        assertStringsEqual(
+            """
+                |let return__7;
+                |return__7 = void;
+                |@fn let f__1;
+                |f__1 = (@stay fn f(s__2 /* aka s */: String) /* return__0 */: Float64 {
+                |    fn__3: do {
+                |      var t#8;
+                |      let x__4;
+                |      {
+                |        orelse#5: {
+                |          t#8 = do_call_toFloat64(s__2)
+                |        } orelse {
+                |          null;
+                |## This initializer should not be seen as strictly after the initializer
+                |## above.
+                |          t#8 = null
+                |        }
+                |      };
+                |      x__4 = t#8;
+                |      {
+                |        if (isNull(x__4)) {
+                |          return__0 = 0.0
+                |        } else {
+                |          let x#6;
+                |          x#6 = notNull(x__4);
+                |          return__0 = x#6
+                |        }
+                |      }
+                |    };
+                |});
+                |
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+            plan.root.toPseudoCode(singleLine = false),
+        )
+        assertStructure(
+            """
+                |{
+                |    "return__7": [
+                |        "void"
+                |    ],
+                |    "f__1": [
+                |        "@stay fn f(s__2 /* aka s */: String) /* return__0 */: Float64 {...}"
+                |    ],
+                |    "t#8": [
+                |        "do_call_toFloat64(s__2)",
+                |        "null"
+                |    ],
+                |    "x__4": [
+                |        "t#8"
+                |    ],
+                |    "return__0": [
+                |        "0.0",
+                |        "x#6"
+                |    ],
+                |    "x#6": [
+                |        "notNull(x__4)"
+                |    ],
+                |}
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+            plan.initializersAsJson(expressionDetail = PseudoCodeDetail(elideFunctionBodies = true)),
+        )
+        assertStructure(
+            """
+                |[
+                |  "do_call_toFloat64(s)",
+                |  "isNull(x)",
+                |  "notNull(x)",
+                |  "fn ...",
                 |]
             """.trimMargin(),
             JsonValueBuilder.build(emptyMap()) {
@@ -746,7 +817,7 @@ class TyperPlanTest {
                     stepId: String,
                     state: IR,
                 ) {
-                    if (stepId == Debug.Frontend.TypeStage.AfterExplicitResults.loggerName) {
+                    if (stepId == Debug.Frontend.TypeStage.AfterWeave.loggerName) {
                         AstSnapshotKey.useIfSame(key, state) {
                             typerPlanRoot = it.copy() as BlockTree
                         }

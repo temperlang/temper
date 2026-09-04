@@ -2,6 +2,7 @@ package lang.temper.be.js
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
 import lang.temper.be.tmpl.GetStaticSupport
@@ -379,9 +380,10 @@ internal object JsSupportNetwork : SupportNetwork {
         return super.translateRuntimeTypeOperation(pos, rto, sourceType, targetType)
     }
 
-    override val bubbleStrategy = BubbleBranchStrategy.CatchBubble
+    override val bubbleStrategy = BubbleBranchStrategy.Exceptions
     override val coroutineStrategy = CoroutineStrategy.TranslateToGenerator
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionType
+    override val computedJumpStrategy = ComputedJumpStrategy.IsDefaultBreakScope
 
     override fun representationOfVoid(genre: Genre): RepresentationOfVoid =
         RepresentationOfVoid.ReifyVoid
@@ -1511,7 +1513,7 @@ private val ignoreIdiomExpander: Inliner =
             val voidValue = Js.UnaryExpression(pos, Js.Operator(pos, "void"), Js.NumericLiteral(pos, 0))
             when (val arg = arguments.getOrNull(0)) {
                 // Usually we've reduced things to just identifiers, where we can just ignore them here.
-                // We could replace with nothing if we know we're unused.
+                // We could replace them with nothing if we know we're unused.
                 // Maybe can do that after Temper handles void more.
                 // Meanwhile, minifiers I tried could discard these entirely when unused inside functions.
                 // And at least some can't discard calls to empty functions, so this is still useful.
@@ -2009,6 +2011,12 @@ private val builtinOperatorIdToSupportCode = BuiltinOperatorId.entries.mapNotNul
         // should not be used with CoroutineStrategy.TranslateToGenerator
         BuiltinOperatorId.AdaptGeneratorFn,
         BuiltinOperatorId.SafeAdaptGeneratorFn,
+        -> null
+
+        // should not be used with BubbleBranchStrategy.Exceptions
+        BuiltinOperatorId.IsOkResult,
+        BuiltinOperatorId.PackOkResult,
+        BuiltinOperatorId.UnpackOkResult,
         -> null
     }
 }.toMap()

@@ -17,10 +17,8 @@ import lang.temper.interp.importExport.ImportMacro
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.TemperName
-import lang.temper.type.WellKnownTypes
 import lang.temper.value.CoverFunction
 import lang.temper.value.Fail
-import lang.temper.value.InstancePropertyRecord
 import lang.temper.value.InternalFeatureKeys
 import lang.temper.value.InterpreterCallback
 import lang.temper.value.MacroValue
@@ -28,7 +26,6 @@ import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
 import lang.temper.value.TBoolean
-import lang.temper.value.TClass
 import lang.temper.value.TFloat64
 import lang.temper.value.TFunction
 import lang.temper.value.TInt
@@ -898,9 +895,3 @@ private fun <T : MacroValue> keyPair(v: Value<T>): Pair<String, Value<T>> {
 
 private fun keyPair(md: NamedBuiltinFun): Pair<String, Value<MacroValue>> =
     md.name to Value(md)
-
-/** The value of type [WellKnownTypes.emptyType] */
-val emptyValue = Value(
-    InstancePropertyRecord(mutableMapOf()),
-    TClass(WellKnownTypes.emptyTypeDefinition),
-)

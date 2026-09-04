@@ -1,0 +1,48 @@
+var caseIndex#13: Int32;
+caseIndex#13 = 0;
+var awaited#11: Promise<String>?;
+awaited#11 = null;
+var s__2: String;
+s__2 = "";
+let convertedCoroutine#16;
+convertedCoroutine#16 = fn (generator#12: SafeGenerator<Empty>) /* return__1 */: (GeneratorResult<Empty>) {
+  fn__14: do {
+    while (true) {
+      let caseIndexLocal#15: Int32;
+      caseIndexLocal#15 = caseIndex#13;
+      caseIndex#13 = -1;
+      if (caseIndexLocal#15 == 0) {
+        do_call_log(console#3, "Beginning");
+        caseIndex#13 = 1
+      } else if (caseIndexLocal#15 == 1) {
+        orElse#17: {
+          awaited#11 = p__0;
+          caseIndex#13 = 2;
+          awakeUpon(notNull(awaited#11), generator#12);
+          return__1 = new ValueResult<Empty>({class: Empty__10});
+          break fn__14;
+        } orelse {
+          caseIndex#13 = 3
+        }
+      } else if (caseIndexLocal#15 == 2) {
+        orElse#18: {
+          s__2 = getPromiseResultSync(notNull(awaited#11));
+          caseIndex#13 = 4
+        } orelse {
+          caseIndex#13 = 3
+        }
+      } else if (caseIndexLocal#15 == 3) {
+        s__2 = "Broken";
+        caseIndex#13 = 4
+      } else if (caseIndexLocal#15 == 4) {
+        do_call_log(console#3, s__2);
+        return__1 = core.doneResult();
+        break fn__14;
+      } else {
+        return__1 = core.doneResult();
+        break fn__14;
+      }
+    }
+  }
+};
+return__4 = adaptGeneratorFnSafe(convertedCoroutine#16)

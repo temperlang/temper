@@ -1,21 +1,19 @@
-let return__0, console#0;
-console#0 = getConsole();
-@property(\p) @visibility(\public) @stay @fromType(C__0) let p__0;
-@method(\p) @setter @visibility(\public) @fn @stay @fromType(C__0) let nym`set.p__1`;
-nym`set.p__1` = (@stay fn nym`set.p`(@impliedThis(C__0) this__0: C__0, newValue__0 /* aka newValue */: Int32) /* return__1 */: Void {
-    var t#0;
-    t#0 = do_call_toString(newValue__0, 10);
-    do_call_log(console#0, cat("Assigned ", t#0));
-    return__1 = void
+let return__14, console#13;
+console#13 = getConsole();
+@property(\p) @visibility(\public) @stay @fromType(C__0) let p__2;
+@method(\p) @setter @visibility(\public) @fn @stay @fromType(C__0) let nym`set.p__7`;
+nym`set.p__7` = (@stay fn nym`set.p`(@impliedThis(C__0) this__1: C__0, newValue__8 /* aka newValue */: Int32) /* return__5 */: Void {
+    return__5 = void;
+    do_call_log(console#13, cat("Assigned ", do_call_toString(newValue__8, 10)))
 });
-@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) let constructor__0;
-constructor__0 = (@stay fn constructor(@impliedThis(C__0) this__1: C__0) /* return__2 */: Void {
-    return__2 = void
+@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) let constructor__10;
+constructor__10 = (@stay fn constructor(@impliedThis(C__0) this__3: C__0) /* return__4 */: Void {
+    return__4 = void
 });
 @typeDecl(C__0) @stay let C__0;
 C__0 = type (C__0);
-let c__0;
-c__0 = new C__0();
-return__0 = oneTwoThree();
-do_set_p(c__0, return__0);
-do_set_p(c__0, return__0)
+let c__6;
+c__6 = new C__0();
+return__14 = oneTwoThree();
+do_set_p(c__6, return__14);
+do_set_p(c__6, return__14)

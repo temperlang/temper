@@ -8,6 +8,7 @@ but we don't auto-run those on all backends as of this writing: 2024-8)
       JsonNull,
       JsonNumeric,
       JsonObject,
+      JsonSyntaxTree,
       JsonSyntaxTreeProducer,
       JsonTextProducer,
       OrNullJsonAdapter,
@@ -21,7 +22,7 @@ but we don't auto-run those on all backends as of this writing: 2024-8)
 ## Empty list
 
     for (let s of ['[]', ' [] ', ' [ ] ', '[1]', 'null']) {
-      let jsonValue = parseJson(s) orelse null;
+      let jsonValue: JsonSyntaxTree? = parseJson(s) orelse null;
       console.log(
           "`${s}` is empty array: ${
             (jsonValue is JsonArray && jsonValue.elements.isEmpty).toString()

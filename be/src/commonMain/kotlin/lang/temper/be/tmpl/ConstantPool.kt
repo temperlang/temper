@@ -224,6 +224,8 @@ internal class ConstantPool(
     fun getSupportCodeReferenceForName(name: ResolvedName): SupportCode? =
         (revConstantPool[name] as? PooledSupportCode)?.supportCode
 
+    internal fun getPoolableForName(name: ResolvedName) = revConstantPool[name]
+
     fun associateWithStay(stay: StayLeaf, name: ResolvedName) {
         stayToName[stay] = name
     }

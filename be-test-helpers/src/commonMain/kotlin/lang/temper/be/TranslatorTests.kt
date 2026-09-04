@@ -550,20 +550,6 @@ abstract class TranslatorTests(
         }
     }
 
-    // TODO(mikesamuel, specialization): this testcase is overridden in {Js,Py}TranslatorTest
-    // since those backends use BubbleBranchStrategy.ThrowBubble so their invocations of
-    // TmpLTranslator do not produce TmpL.HandlerScope.
-    @Test
-    open fun assignToHse() {
-        doTest("assignToHse") {
-            makeId("val") assignTo TmpL.HandlerScope(
-                p0,
-                makeId("failed"),
-                value("dummy"),
-            )
-        }
-    }
-
     private fun abcOp(op: TmpLOperator.Infix, assoc: Associativity): TmpL.Expression =
         operatorJoin(
             gen.nullValue(WKT.booleanType2),

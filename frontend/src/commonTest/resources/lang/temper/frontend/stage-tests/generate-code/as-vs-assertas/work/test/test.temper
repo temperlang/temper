@@ -1,0 +1,20 @@
+// Even once null has been rules out, the `as` here is unsafe
+// for NoStringIndex
+export let f(x: StringIndexOption?): Boolean throws Bubble {
+  (x as StringIndex) > String.begin
+}
+
+// Once null has been rules out, the `as` here is safe.
+export let g(x: StringIndex?): Boolean throws Bubble {
+  (x as StringIndex) > String.begin
+}
+
+export let h(x: StringIndex?): Boolean {
+  if (x == null) {
+    false
+  } else {
+    // This is safe, so shold not require a `throws Bubble`
+    // clause above.
+    (x as StringIndex) > String.begin
+  }
+}

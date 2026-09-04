@@ -2,6 +2,7 @@ package lang.temper.be.lua
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
 import lang.temper.be.tmpl.InlineSupportCode
@@ -106,14 +107,19 @@ internal fun operatorToName(
     BuiltinOperatorId.SafeAdaptGeneratorFn,
     -> "null_op"
     null -> "null_op"
+    BuiltinOperatorId.IsOkResult,
+    BuiltinOperatorId.PackOkResult,
+    BuiltinOperatorId.UnpackOkResult,
+    -> error("Lua uses exceptions, not results")
 }
 
 internal object LuaSupportNetwork : SupportNetwork {
     override val backendDescription: String
         get() = "Lua Backend"
-    override val bubbleStrategy: BubbleBranchStrategy = BubbleBranchStrategy.CatchBubble
+    override val bubbleStrategy: BubbleBranchStrategy = BubbleBranchStrategy.Exceptions
     override val coroutineStrategy: CoroutineStrategy = CoroutineStrategy.TranslateToGenerator
     override val functionTypeStrategy: FunctionTypeStrategy = FunctionTypeStrategy.ToFunctionType
+    override val computedJumpStrategy = ComputedJumpStrategy.NeverUse
 
     override fun representationOfVoid(
         genre: Genre,

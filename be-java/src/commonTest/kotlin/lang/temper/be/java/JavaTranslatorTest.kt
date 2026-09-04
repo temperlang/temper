@@ -110,7 +110,6 @@ class JavaTranslatorTest : TranslatorTests(
                 """.trimMargin(),
             "expressionStatement" to "/* 42: Literal expression statement */",
             "assignmentToValue" to "maybeValue_7 = false;",
-            "assignToHse" to """failed_8 = val_7 = "dummy" == null;""",
             "blockStatementEmpty" to
                 """
                     |if (true) {

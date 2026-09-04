@@ -410,6 +410,18 @@ class TypeStageTest {
         stageTestDir = StageTestDir("type/overloaded-methods-wrong"),
         pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
     )
+
+    @Test
+    fun iteratorLoop() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/iterator-loop"),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
+    )
+
+    @Test
+    fun halfReturn() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/half-return"),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
+    )
 }
 
 private object ImpureIgnoreFn : NamedBuiltinFun, CallableValue {

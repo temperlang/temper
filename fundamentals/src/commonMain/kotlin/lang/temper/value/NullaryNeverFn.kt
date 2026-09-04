@@ -2,6 +2,7 @@ package lang.temper.value
 
 import lang.temper.common.AtomicCounter
 import lang.temper.common.Log
+import lang.temper.cst.NameConstants
 import lang.temper.env.InterpMode
 import lang.temper.format.OutputToken
 import lang.temper.format.OutputTokenType
@@ -246,5 +247,14 @@ fun isErrorCall(t: Tree) =
  * builtin zero argument calls whose return type is never, but
  * whose exact variant depends on the context in which they're called.
  */
-fun isNullaryNeverCall(t: Tree): Boolean =
-    (t as? CallTree)?.childOrNull(0)?.functionContained is NullaryNeverFn
+fun isNullaryNeverCall(t: Tree): Boolean {
+    if (t !is CallTree) { return false }
+    var callee = t.childOrNull(0)
+    if (callee is CallTree) {
+        val calleeCallee = callee.childOrNull(0)?.functionContained
+        if (calleeCallee is NamedBuiltinFun && calleeCallee.name == NameConstants.Angle) {
+            callee = callee.childOrNull(1)
+        }
+    }
+    return callee?.functionContained is NullaryNeverFn
+}

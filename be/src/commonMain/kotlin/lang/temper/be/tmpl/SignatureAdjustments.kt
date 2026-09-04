@@ -41,7 +41,7 @@ open class SignatureAdjustments(
     /**
      * A backend-specific representation of the kind of adjustment that needs to be made.
      *
-     * All of these should be created by the backend, so a backend should be able to define
+     * The backend should create All of these, so a backend should be able to define:
      *
      *     sealed interface MyBackendSignatureAdjustment : SignatureAdjustment
      *

@@ -7089,16 +7089,6 @@ Temper *Never* types can translate to bottom types in languages that support tha
 
 <a name="type&#45;Bubble&#45;commentary" class="snippet-anchor-name"></a>
 
-*Bubble* is a type that represents failure to compute a value.
-
-A function declaration may declare it [*throws*](builtins.md#builtin-throws) *Bubble*
-following its return type to indicate that it can fail.
-When translating to backends that use exceptions, this indicates the function can throw.
-On other backends, the translation function's return type might be a *Result* type or a
-Go-lang [extra, error result](https://gobyexample.com/errors).
-
-See also [`orelse`](builtins.md#builtin-orelse).
-
 <!-- /snippet: type/Bubble/commentary -->
 
 <!-- snippet: type/Bubble/sig -->
@@ -7130,30 +7120,6 @@ See also [`orelse`](builtins.md#builtin-orelse).
 <!-- snippet: type/Bubble/methods -->
 
 <a name="type&#45;Bubble&#45;methods" class="snippet-anchor-name"></a>
-
-#### methods
-
-<!-- snippet: type/Bubble/method/constructor -->
-
-<a name="type&#45;Bubble&#45;method&#45;constructor" class="snippet-anchor-name"></a>
-
-##### `Bubble.constructor`
-
-<!-- snippet: type/Bubble/method/constructor/sig -->
-
-<a name="type&#45;Bubble&#45;method&#45;constructor&#45;sig" class="snippet-anchor-name"></a>
-
-`:` `fn(`[*Bubble*](#type-Bubble)`):` [*Void*](#type-Void)
-
-<!-- /snippet: type/Bubble/method/constructor/sig -->
-
-<!-- snippet: type/Bubble/method/constructor/commentary -->
-
-<a name="type&#45;Bubble&#45;method&#45;constructor&#45;commentary" class="snippet-anchor-name"></a>
-
-<!-- /snippet: type/Bubble/method/constructor/commentary -->
-
-<!-- /snippet: type/Bubble/method/constructor -->
 
 <!-- /snippet: type/Bubble/methods -->
 

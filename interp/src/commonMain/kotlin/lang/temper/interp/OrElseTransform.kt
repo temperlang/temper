@@ -49,12 +49,10 @@ internal object OrElseTransform : ControlFlowTransform(Operator.OrElse.text!!) {
         //
         //     var fail#0;
         //     //orelse#1: {
-        //         var t#2;
-        //         hs(fail#0, t#2 = f(fn { if (g()) { break orelse } }));
-        //         if (fail#0) {
-        //           break orelse#1; // jump to else
-        //         }
-        //         t#2 // Then do not proceed to else.
+        //         let t#2;
+        //         t#2 = f(fn { if (g()) { break orelse#1 } });
+        //         // jump to the `else` block on failure.
+        //         t#2 // If we got here, do not proceed to else.
         //     //} else {
         //         h();
         //     //}

@@ -1,13 +1,13 @@
-let return__1, @fn @staticExtension({
-    class: Pair__0, key: type (Int32), value: "isZero"
-}) isZero__0;
-isZero__0 = (@stay fn isZero(x__0 /* aka x */: Int32) /* return__0 */: Boolean {
-    fn__0: do {
-      return__0 = x__0 == 0
-    }
+let return__5, @fn @staticExtension({
+    class: Pair__42, key: type (Int32), value: "isZero"
+}) isZero__2;
+isZero__2 = (@stay fn isZero(x__3 /* aka x */: Int32) /* return__1 */: Boolean {
+    fn__4: do {
+      return__1 = x__3 == 0
+    };
 });
-if (isZero__0(0)) {
-  return__1 = true
+if (isZero__2(0)) {
+  return__5 = true
 } else {
-  return__1 = false
+  return__5 = false
 };

@@ -1,4 +1,4 @@
 init;
 for (;
   cond;
-  incr) {}
+  incr) {};

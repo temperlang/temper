@@ -1,6 +1,7 @@
 package lang.temper.be.csharp
 
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
 import lang.temper.be.tmpl.InlineSupportCode
@@ -43,9 +44,10 @@ import kotlin.lazy
 
 object CSharpSupportNetwork : SupportNetwork {
     override val backendDescription = "C# Backend"
-    override val bubbleStrategy = BubbleBranchStrategy.CatchBubble
+    override val bubbleStrategy = BubbleBranchStrategy.Exceptions
     override val coroutineStrategy = CoroutineStrategy.TranslateToGenerator
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionType
+    override val computedJumpStrategy = ComputedJumpStrategy.IsDefaultBreakScope
     override fun representationOfVoid(genre: Genre) = RepresentationOfVoid.DoNotReifyVoid
     override val simplifyOrTypes: Boolean get() = true
 
@@ -305,6 +307,11 @@ private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): Supp
         BuiltinOperatorId.SafeAdaptGeneratorFn,
         -> null
         null -> null
+        // Using exceptions, not results.
+        BuiltinOperatorId.IsOkResult,
+        BuiltinOperatorId.PackOkResult,
+        BuiltinOperatorId.UnpackOkResult,
+        -> null
     }
 }
 

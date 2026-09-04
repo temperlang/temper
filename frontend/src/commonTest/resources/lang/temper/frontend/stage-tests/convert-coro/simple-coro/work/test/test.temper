@@ -1,0 +1,4 @@
+fBubbly<Empty> { (): GeneratorResult<Empty> extends GeneratorFn =>
+  console.log("foo");
+  console.log("bar");
+}

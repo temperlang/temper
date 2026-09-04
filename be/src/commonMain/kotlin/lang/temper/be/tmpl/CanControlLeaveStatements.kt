@@ -37,7 +37,6 @@ private fun exitsOf(stmts: List<TmpL.Statement>): Set<ExitKind> {
             is TmpL.Assignment,
             is TmpL.ExpressionStatement,
             is TmpL.GarbageStatement,
-            is TmpL.HandlerScope,
             is TmpL.LocalDeclaration,
             is TmpL.LocalFunctionDeclaration,
             is TmpL.SetAbstractProperty,

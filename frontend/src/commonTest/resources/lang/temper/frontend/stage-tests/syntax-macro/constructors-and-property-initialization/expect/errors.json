@@ -1,0 +1,4 @@
+[
+    "More than one constructor needs to adopt initializer for property b at [test/test.temper+687-698, test/test.temper+713-724]!",
+    "Constructor input s specified but there is already a constructor at test/test.temper+953-964!",
+]

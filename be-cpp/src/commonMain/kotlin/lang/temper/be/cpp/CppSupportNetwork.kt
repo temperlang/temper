@@ -2,6 +2,7 @@ package lang.temper.be.cpp
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
 import lang.temper.be.tmpl.InlineSupportCode
@@ -12,7 +13,6 @@ import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.builtin.RuntimeTypeOperation
-import lang.temper.format.OutputToken
 import lang.temper.format.TokenSink
 import lang.temper.lexer.Genre
 import lang.temper.log.Position
@@ -35,19 +35,20 @@ internal const val TEMPER_CORE_NAMESPACE = "temper::core"
  */
 internal object CppSupportNetwork : SupportNetwork {
     override val backendDescription: String = "Cpp Backend"
-    override val bubbleStrategy: BubbleBranchStrategy = BubbleBranchStrategy.CatchBubble
+    override val bubbleStrategy: BubbleBranchStrategy = BubbleBranchStrategy.Exceptions
     override val coroutineStrategy: CoroutineStrategy = CoroutineStrategy.TranslateToRegularFunction
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionType
+    override val computedJumpStrategy = ComputedJumpStrategy.IsDefaultBreakScope
 
     override fun representationOfVoid(
         genre: Genre,
-    ): RepresentationOfVoid = RepresentationOfVoid.ReifyVoid
+    ): RepresentationOfVoid = RepresentationOfVoid.DoNotReifyVoid
 
     override fun getSupportCode(
         pos: Position,
         builtin: NamedBuiltinFun,
         genre: Genre,
-    ): SupportCode? = when (builtin.builtinOperatorId) {
+    ): SupportCode? = when (val builtinOperatorId = builtin.builtinOperatorId) {
         BuiltinOperatorId.BooleanNegation -> Like.unary("!")
         BuiltinOperatorId.BitwiseAnd32, BuiltinOperatorId.BitwiseAnd64 -> Like.binary("&")
         BuiltinOperatorId.BitwiseOr32, BuiltinOperatorId.BitwiseOr64 -> Like.binary("|")
@@ -114,7 +115,7 @@ internal object CppSupportNetwork : SupportNetwork {
         BuiltinOperatorId.CmpIntInt -> Like.core("Compare::cmp")
         BuiltinOperatorId.CmpStrStr -> Like.core("Compare::cmp")
         BuiltinOperatorId.CmpGeneric -> Like.core("Compare::cmp")
-        BuiltinOperatorId.Bubble -> handle {
+        BuiltinOperatorId.Bubble -> handle(builtinOperatorId) {
             // bubble() is template<class T = void> — need explicit type when used in expression context
             val cppRetType = translator.translateType2(retType)
             cpp.callExpr(
@@ -127,7 +128,7 @@ internal object CppSupportNetwork : SupportNetwork {
         }
         BuiltinOperatorId.Print -> Like.core("print")
         BuiltinOperatorId.StrCat -> Like.core("cat")
-        BuiltinOperatorId.Listify -> handle {
+        BuiltinOperatorId.Listify -> handle(builtinOperatorId) {
             // List::make needs explicit template parameter since Elem can't be deduced
             val elemType = (retType as? DefinedType)?.bindings?.firstOrNull()
             if (elemType != null) {
@@ -159,7 +160,7 @@ internal object CppSupportNetwork : SupportNetwork {
             else -> null
         }
 
-        BuiltinOperatorId.Panic -> handle {
+        BuiltinOperatorId.Panic -> handle(builtinOperatorId) {
             val cppRetType = translator.translateType2(retType)
             cpp.callExpr(
                 cpp.template(
@@ -169,6 +170,12 @@ internal object CppSupportNetwork : SupportNetwork {
                 values,
             )
         }
+
+        // Using exceptions, not results
+        BuiltinOperatorId.IsOkResult,
+        BuiltinOperatorId.PackOkResult,
+        BuiltinOperatorId.UnpackOkResult,
+        -> null
     }
 
     override fun optionalSupportCode(
@@ -311,7 +318,7 @@ internal object CppSupportNetwork : SupportNetwork {
         connectedKey: String,
         genre: Genre,
     ): SupportCode? = connectedRefs[connectedKey] ?: when (connectedKey) {
-        "std/temporal.type Date.constructor()" -> handle {
+        "std/temporal.type Date.constructor()" -> handle(connectedKey) {
             val innerType = retType.bindings.firstOrNull() ?: retType
             val rawDateName = translator.resolveTypeName(innerType.definition)
             cpp.callExpr(
@@ -319,7 +326,7 @@ internal object CppSupportNetwork : SupportNetwork {
                 values,
             )
         }
-        "std/temporal.type Date.fromIsoString()" -> handle {
+        "std/temporal.type Date.fromIsoString()" -> handle(connectedKey) {
             val innerType = retType.bindings.firstOrNull() ?: retType
             val rawDateName = translator.resolveTypeName(innerType.definition)
             cpp.callExpr(
@@ -327,7 +334,7 @@ internal object CppSupportNetwork : SupportNetwork {
                 values,
             )
         }
-        "std/temporal.type Date.today()" -> handle {
+        "std/temporal.type Date.today()" -> handle(connectedKey) {
             val innerType = retType.bindings.firstOrNull() ?: retType
             val rawDateName = translator.resolveTypeName(innerType.definition)
             cpp.callExpr(
@@ -335,7 +342,7 @@ internal object CppSupportNetwork : SupportNetwork {
                 emptyList(),
             )
         }
-        "core.type Listed.reduceFrom()" -> handle {
+        "core.type Listed.reduceFrom()" -> handle(connectedKey) {
             val name = cpp.name(TEMPER_CORE_NAMESPACE, "List", "reduceFrom")
             val elemType = types.getOrNull(0)?.let { type ->
                 type.bindings.firstOrNull()?.let { translator.translateType2(it) }
@@ -366,7 +373,7 @@ internal object CppSupportNetwork : SupportNetwork {
         rto: RuntimeTypeOperation,
         sourceType: TmpL.NominalType,
         targetType: TmpL.NominalType,
-    ): SupportCode = handle {
+    ): SupportCode = handle(rto.name) {
         val dest = translator.resolveTypeName(targetType.typeName.sourceDefinition)
         val targetDef = targetType.typeName.sourceDefinition
         val isTargetValueType = translator.isValueTypeDef(targetDef)
@@ -436,7 +443,7 @@ internal data class InlineContext(
 )
 
 internal object Like {
-    private fun fromParts(parts: Iterable<String>) = handle {
+    private fun fromParts(parts: Iterable<String>) = handle(parts.joinToString("::")) {
         cpp.callExpr(
             cpp.name(
                 parts.flatMap {
@@ -447,25 +454,33 @@ internal object Like {
         )
     }
 
-    fun property(name: String): CppInlineSupportCode = handle {
+    fun property(name: String): CppInlineSupportCode = handle("property") {
         cpp.op(".", values[0], cpp.name(name))
     }
 
-    fun new(vararg parts: String): CppInlineSupportCode = handle {
-        cpp.callExpr(
-            fromParts(parts.toList()).generate(this),
-            values,
-        )
+    fun new(vararg parts: String): CppInlineSupportCode {
+        val partsSupport = fromParts(parts.toList())
+        return handle("new(${partsSupport.desc})") {
+            cpp.callExpr(
+                partsSupport.generate(this),
+                values,
+            )
+        }
     }
 
-    fun core(vararg parts: String): CppInlineSupportCode = handle {
-        fromParts(listOf(TEMPER_CORE_NAMESPACE) + parts.toList()).generate(this)
+    fun core(vararg parts: String): CppInlineSupportCode {
+        val partsHandler = fromParts(listOf(TEMPER_CORE_NAMESPACE) + parts.toList())
+        return handle(
+            "$TEMPER_CORE_NAMESPACE::${partsHandler.desc}",
+        ) {
+            partsHandler.generate(this)
+        }
     }
 
     private fun coreWithTypeArgs(
         parts: List<String>,
         extractBindings: InlineContext.() -> List<Type2>,
-    ): CppInlineSupportCode = handle {
+    ): CppInlineSupportCode = handle("coreWithTypeArgs") {
         val name = cpp.name(
             (listOf(TEMPER_CORE_NAMESPACE) + parts).flatMap { it.split("::") },
         )
@@ -483,22 +498,22 @@ internal object Like {
     fun coreWithRetTypeArgs(vararg parts: String): CppInlineSupportCode =
         coreWithTypeArgs(parts.toList()) { retType.bindings }
 
-    fun name(vararg parts: String): CppInlineSupportCode = handle {
+    fun name(vararg parts: String): CppInlineSupportCode = handle("name") {
         fromParts(parts.toList()).generate(this)
     }
 
-    fun unary(name: String): CppInlineSupportCode = handle {
+    fun unary(name: String): CppInlineSupportCode = handle("unary") {
         require(values.size == 1)
         cpp.op(name, values)
     }
 
-    fun binary(name: String): CppInlineSupportCode = handle {
+    fun binary(name: String): CppInlineSupportCode = handle("binary") {
         require(values.size == 2)
         cpp.op(name, values)
     }
 
     fun ignoring(other: CppInlineSupportCode): CppInlineSupportCode {
-        return handle {
+        return handle("ignoring") {
             cpp.cast(
                 cpp.type("void"),
                 other.generate(this),
@@ -507,7 +522,7 @@ internal object Like {
     }
 }
 
-internal val theLastArg = handle {
+internal val theLastArg = handle("theLastArg") {
     val ignore = if (values.size == 1) {
         values[0]
     } else {
@@ -516,15 +531,19 @@ internal val theLastArg = handle {
     cpp.cast(cpp.type("void"), ignore)
 }
 
-internal fun handle(generate: InlineContext.() -> Cpp.Expr) = CppInlineSupportCode(generate)
+internal fun handle(builtinOperatorId: BuiltinOperatorId, generate: InlineContext.() -> Cpp.Expr) =
+    handle(builtinOperatorId.name, generate)
+internal fun handle(desc: String, generate: InlineContext.() -> Cpp.Expr) =
+    CppInlineSupportCode(desc, generate)
 
 internal class CppInlineSupportCode(
+    val desc: String,
     val generate: InlineContext.() -> Cpp.Expr,
 ) : InlineSupportCode<Cpp.Tree, CppTranslator> {
     override val needsThisEquivalent: Boolean = false
 
     override fun renderTo(tokenSink: TokenSink) {
-        tokenSink.emit(OutputToken.makeSlashStarComment("/* $generate */"))
+        tokenSink.word(desc)
     }
 
     override fun inlineToTree(
@@ -541,4 +560,6 @@ internal class CppInlineSupportCode(
             returnType,
         ).generate()
     }
+
+    override fun toString() = desc
 }

@@ -1,7 +1,7 @@
 @stay @imported(\(`test//a/`.a)) let a__0 = `test//a/`.a;
 {
-  let subject#0;
-  subject#0 = {
+  let subject#2;
+  subject#2 = {
     let subject#1;
     subject#1 = {
       if (isNull(a__0)) {
@@ -16,10 +16,10 @@
       do_get_isEmpty(notNull(subject#1))
     }
   };
-  if (isNull(subject#0)) {
+  if (isNull(subject#2)) {
     null
   } else {
-    do_call_toString(notNull(subject#0))
+    do_call_toString(notNull(subject#2))
   }
 }
 ?? "NULL"

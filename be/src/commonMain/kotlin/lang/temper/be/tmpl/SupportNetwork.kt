@@ -51,16 +51,15 @@ interface SupportNetwork {
      * may be assigned in both a [TmpL.TryStatement]'s [tried][TmpL.TryStatement.tried] and
      * recover branches.
      *
-     * Only relevant when [bubbleStrategy] is [BubbleBranchStrategy.CatchBubble].
+     * Only relevant when [bubbleStrategy] is [BubbleBranchStrategy.Exceptions].
      */
     val mayAssignInBothTryAndRecover: Boolean get() = true
 
     /**
-     * Define true for languages where unlabeled break exits a [TmpL.ComputedJumpStatement]
-     * rather than an outside loop. If set to true, TmpL code will be automatically changed
-     * to use labeled breaks in such cases.
+     * Whether and how to generate [TmpL.ComputedJumpStatement]s which would normally
+     * translate to a `switch` or `match` statement in a target language.
      */
-    val needsLabeledBreakFromSwitch: Boolean get() = false
+    val computedJumpStrategy: ComputedJumpStrategy
 
     /** The way to represent void return values in module and function bodies. */
     fun representationOfVoid(genre: Genre): RepresentationOfVoid
@@ -76,7 +75,7 @@ interface SupportNetwork {
     ): SupportCode?
 
     /**
-     * Allows substituting a pre-existing function for a combination of builtins, e.g. infix `-`.
+     * Allows substituting a pre-existing function for a combination of builtins, e.g., infix `-`.
      */
     fun getSupportCode(
         pos: Position,
@@ -210,8 +209,8 @@ interface SupportNetwork {
      * could go either way.
      *
      * ```java
-     * public PropertyType getPropertyName() { ... }
-     * private void setPropertyName(PropertyType newValue) { ... }
+     * public PropertyType getPropertyName() { body }
+     * private void setPropertyName(PropertyType newValue) { body }
      * ```
      *
      * Defaults to false.
@@ -285,8 +284,8 @@ interface SupportNetwork {
      *
      * Use cases include:
      *
-     * - adding `toString` style methods for easy logging
-     * - adding `toJSON` methods in JavaScript to allow
+     * - Adding `toString` style methods for easy logging
+     * - Adding `toJSON` methods in JavaScript to allow
      *   non-generic types easy interop with the JSON.stringify builtin.
      */
     fun adjustTypeMembers(
@@ -324,12 +323,12 @@ private fun compareToZero(
                 hackMapOldStyleToNew(WellKnownTypes.intType),
             )
         }
-    val rpos = pos.rightEdge
+    val rPos = pos.rightEdge
     return TmpL.InfixOperation(
         pos,
         operand,
-        TmpL.InfixOperator(rpos, operator),
-        TmpL.ValueReference(rpos, Value(0, TInt), 0),
+        TmpL.InfixOperator(rPos, operator),
+        TmpL.ValueReference(rPos, Value(0, TInt), 0),
     )
 }
 

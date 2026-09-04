@@ -17,7 +17,6 @@ import lang.temper.frontend.disambiguate.reifiedTypeFor
 import lang.temper.frontend.maybeAdjustDotHelper
 import lang.temper.frontend.prefixBlockWith
 import lang.temper.interp.New
-import lang.temper.interp.emptyValue
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
@@ -60,6 +59,7 @@ import lang.temper.value.ValueLeaf
 import lang.temper.value.constructorDotName
 import lang.temper.value.crParsedName
 import lang.temper.value.defaultSymbol
+import lang.temper.value.emptyValue
 import lang.temper.value.freeTree
 import lang.temper.value.fromTypeSymbol
 import lang.temper.value.functionContained

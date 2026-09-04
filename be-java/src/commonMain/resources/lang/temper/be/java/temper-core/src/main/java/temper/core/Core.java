@@ -17,7 +17,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -1707,6 +1709,14 @@ public final class Core {
     /** Adapts a converted coroutine method reference or lambda to a Generator */
     public static <T> Generator<T> safeAdaptGeneratorFn(Function<Generator<T>, Generator.Result<T>> resultFunction) {
         return new WrapFunctionGenerator<T>(resultFunction);
+    }
+
+    public static <T> T getPromiseResult(Future<T> future) {
+        try {
+            return future.get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**

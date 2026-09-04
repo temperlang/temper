@@ -11,10 +11,10 @@ import lang.temper.common.IdentityEscape
 import lang.temper.common.LeftOrRight
 import lang.temper.common.NonsenseGradient
 import lang.temper.common.abbreviate
-import lang.temper.common.allIndexed
 import lang.temper.common.charCount
 import lang.temper.common.compatRemoveFirst
 import lang.temper.common.compatRemoveLast
+import lang.temper.common.console
 import lang.temper.common.decodeUtf16
 import lang.temper.common.inverse
 import lang.temper.common.partiallyOrder
@@ -42,7 +42,7 @@ data class Follower(
      * The condition under which control jumps to the start of the path at [pathIndex]
      * or `null` if control unconditionally jumps.
      */
-    val condition: MaximalPath.Element?,
+    val condition: MaximalPath.PathElement?,
     /** May be `null` if condition is guaranteed `false`. */
     override val pathIndex: MaximalPathIndex?,
     override val dir: ForwardOrBack,
@@ -104,17 +104,49 @@ data class MaximalPath(
      * The child references executed as part of this path
      * in the context of the flow nodes and edges they come from.
      */
-    val elements: List<Element>,
+    val elements: List<AstElement>,
     /** A position to highlight the path in a log sink message. */
     val diagnosticPosition: Position,
     val preceders: List<Preceder>,
     val followers: List<Follower>,
+    /**
+     * If this path starts the `else` clause of an
+     * [`orelse` flow construct][ControlFlow.OrElse], then this is the label
+     * associated with the corresponding [`or` clause][ControlFlow.OrElse.orClause].
+     *
+     * In the case where an `else` clause is empty, it's nice to be able to uniquely
+     * identify the `else` clause within a CFG even in cases like the below where
+     * there are no instructions in the path that would distinguish it from others.
+     */
+    val orLabel: JumpLabel?,
 ) {
+    /** Can serve as a reason for a transition. */
+    sealed interface PathElement : Positioned {
+        /**
+         * The [MaximalPath.pathIndex] of the path whose [MaximalPath.elements] contains this.
+         */
+        val pathIndex: MaximalPathIndex
+
+        fun toDebugString(root: BlockTree): String
+    }
+
+    /**
+     * Indicates that a transition happens when a failure bubbles up
+     * from one of the path's [AstElement]s.
+     */
+    data class Bubbled(
+        override val pos: Position,
+        override val pathIndex: MaximalPathIndex,
+        val followerIndex: Int,
+    ) : PathElement {
+        override fun toDebugString(root: BlockTree): String = toString()
+    }
+
     /**
      * Bundles the position in the block's CFG with the
      * [BlockChildReference] that may be used to get at the relevant edge.
      */
-    data class Element(
+    data class AstElement(
         val ref: BlockChildReference,
         /**
          * If the block has a structured flow, and the element is not a
@@ -125,18 +157,21 @@ data class MaximalPath(
         /**
          * The [MaximalPath.pathIndex] of the path whose [MaximalPath.elements] contains this.
          */
-        val pathIndex: MaximalPathIndex,
+        override val pathIndex: MaximalPathIndex,
         val isCondition: Boolean,
-    ) : Positioned by ref {
+    ) : PathElement, Positioned by ref {
         override fun equals(other: Any?): Boolean =
-            this === other || (other is Element && this.ref == other.ref)
+            this === other || (other is AstElement && this.ref == other.ref)
 
         override fun hashCode(): Int = this.ref.hashCode()
 
         override fun toString(): String = "MaximalPath.Element($ref @ ${ref.pos} in path$pathIndex)"
+
+        override fun toDebugString(root: BlockTree): String =
+            root.dereference(ref)?.target?.toPseudoCode() ?: "broken ref"
     }
 
-    val elementsAndConditions: Sequence<Element> get() = sequenceOf(
+    val elementsAndConditions: Sequence<PathElement> get() = sequenceOf(
         elements,
         followers.mapNotNull { it.condition },
     ).flatten()
@@ -153,7 +188,7 @@ data class MaximalPaths(
      */
     val exitPathIndices: Set<MaximalPathIndex>,
     /**
-     * Indices of path that exit the control flow graph with a failure.
+     * Indices of paths that exit the control flow graph with a failure.
      */
     val failExitPathIndices: Set<MaximalPathIndex>,
 ) {
@@ -170,6 +205,7 @@ data class MaximalPaths(
                     unknownPos,
                     emptyList(),
                     emptyList(),
+                    null,
                 ),
             ),
             entryPathIndex = MaximalPathIndex(0),
@@ -179,31 +215,101 @@ data class MaximalPaths(
     }
 }
 
+private class ProvisionalIndex {
+    var index: MaximalPathIndex? = null
+}
+
 private class MutPath(
-    val index: MaximalPathIndex,
     // Bits set once we've organized everything.
     // These are included in the constructor so that we can ensure they're
     // copied properly.
     var isExit: Boolean,
     var isFailExit: Boolean,
 ) {
+    val index = ProvisionalIndex()
+    var orLabel: JumpLabel? = null
+
+    // When we collapse one mut path into another, the receiver adopts the formers' indices.
+    var indices = mutableSetOf(index)
+
     /** So we can generate a good diagnostic position */
     val positionHints = mutableListOf<Position>()
 
     val elements = mutableListOf<Either<ControlFlow.Stmt, ControlFlow.Conditional>>()
 
     /** Things to link to */
-    val preceders = mutableListOf<Preceder>()
-    val followers = mutableListOf<MutFollower>()
+    val preceders = mutableListOf<MutEdge>()
+    val followers = mutableListOf<MutEdge>()
 
-    override fun toString() = "MutPath$index"
+    override fun toString() = "MutPath$indices"
 }
 
-private class MutFollower(
-    val condition: BlockChildReference?,
-    val toIndex: MaximalPathIndex,
+private sealed class MutPathElement {
+    abstract fun toPathElement(
+        pathIndex: MaximalPathIndex,
+        followerIndex: Int?,
+    ): MaximalPath.PathElement
+}
+
+private class MutAstElement(
+    val ref: BlockChildReference,
+    val stmt: ControlFlow.Stmt?,
+    val isCondition: Boolean,
+) : MutPathElement() {
+    override fun toPathElement(pathIndex: MaximalPathIndex, followerIndex: Int?) =
+        MaximalPath.AstElement(ref, stmt, pathIndex, isCondition)
+}
+
+private class MutBubbled(val pos: Position) : MutPathElement() {
+    override fun toPathElement(pathIndex: MaximalPathIndex, followerIndex: Int?) =
+        MaximalPath.Bubbled(pos, pathIndex, followerIndex!!)
+}
+
+private class MutEdge(
+    val condition: MutPathElement?,
+    var from: ProvisionalIndex,
+    var to: ProvisionalIndex,
     val dir: ForwardOrBack,
 )
+
+private const val BUBBLY_CALL_BIT = 1
+private const val AT_START_BIT = 2
+private const val AT_END_BIT = 4
+
+enum class ConservativeFailure(val bits: Int) {
+    Never(0), // Ok, that's a choice.
+    CalleeTypeOnly(BUBBLY_CALL_BIT),
+    AtStartOfOrOnly(AT_START_BIT),
+    AtStartOfOr(AT_START_BIT or BUBBLY_CALL_BIT),
+    AtEndOfOrOnly(AT_END_BIT),
+    AtEndOfOr(AT_END_BIT or BUBBLY_CALL_BIT),
+    AtStartAndEndOnly(AT_START_BIT or AT_END_BIT),
+    AtStartAndEnd(AT_START_BIT or AT_END_BIT or BUBBLY_CALL_BIT),
+    ;
+
+    val atBubblyCall: Boolean get() = (bits and BUBBLY_CALL_BIT) != 0
+    val atStart: Boolean get() = (bits and AT_START_BIT) != 0
+    val atEnd: Boolean get() = (bits and AT_END_BIT) != 0
+
+    infix fun or(other: ConservativeFailure) =
+        fromBits(this.bits or other.bits)
+    infix fun and(other: ConservativeFailure) =
+        fromBits(this.bits and other.bits)
+
+    companion object {
+        private fun fromBits(bits: Int): ConservativeFailure = when (bits) {
+            0 -> Never
+            (BUBBLY_CALL_BIT) -> CalleeTypeOnly
+            (AT_START_BIT) -> AtStartOfOrOnly
+            (AT_START_BIT or BUBBLY_CALL_BIT) -> AtStartOfOr
+            (AT_END_BIT) -> AtEndOfOrOnly
+            (AT_END_BIT or BUBBLY_CALL_BIT) -> AtEndOfOr
+            (AT_START_BIT or AT_END_BIT) -> AtStartAndEndOnly
+            (AT_START_BIT or AT_END_BIT or BUBBLY_CALL_BIT) -> AtStartAndEnd
+            else -> error("$bits")
+        }
+    }
+}
 
 /**
  * The minimal set of maximal paths.
@@ -215,30 +321,70 @@ private class MutFollower(
 fun forwardMaximalPaths(
     root: BlockTree,
     /**
+     * Whether to as if every `orelse`'s *or* clause has
+     * an implicit jump straight to the *else* clause.
+     * This guarantees that *else* clauses are visited.
+     *
+     * [ConservativeFailure.CalleeTypeOnly] looks at types of callees and adds
+     * a [MaximalPath.Bubbled] transition when the callee has a *Result* type.
+     * If type information is available and accurate then this is a precise option,
+     * and it's good for warning about unnecessary *orelse* uses.
+     *
+     * [ConservativeFailure.AtStartAndEnd] introduces a [MaximalPath.Bubbled] at the
+     * start and end of an `orelse`'s *or* clause.  This is the most conservative
+     * option.
+     * [ConservativeFailure.AtStartOfOr] only introduces such a transition at the
+     * start, and [ConservativeFailure.AtEndOfOr] only at the end.
+     *
+     * For example, when looking at:
+     *
+     *     var x;
+     *     do {
+     *       x = ff(1);
+     *     } orelse do {
+     *       x = f(2);
+     *     }
+     *     console.log(x);
+     *
+     * If you only inserted one at the start (assuming `ff` has no type info),
+     * you would accurately realize that `x` is reliably
+     * assigned, but not that it can be multiply assigned.
+     *
+     * If you only inserted a bubble transition at the end, then you would not
+     * realize that the `x = f(2)` assignment *is* necessary for `x` to be usable
+     * in the later log statement.
+     *
+     * If you insert both transitions, your analysis that `x` is assigned, needs to
+     * be `var`, and is reliably initialized before first read all are conservatively
+     * accurate.
+     */
+    fails: ConservativeFailure,
+    /**
      * Calls to the builtin `yield` function are sometimes significant for control
      * flow operations.
      */
     yieldingCallsEndPaths: Boolean = false,
     ignoreConstantConditions: Boolean = false,
-    /**
-     * When true, act as if every `orelse`'s `or` clause has
-     * an implicit jump straight to the `else` clause.
-     * This guarantees that `else` clauses are visited.
-     */
-    assumeFailureCanHappen: Boolean = false,
 ): MaximalPaths {
-    val topControlFLow = when (val flow = root.flow) {
-        LinearFlow -> ControlFlow.StmtBlock(
-            root.pos,
-            root.children.mapIndexed { index, tree ->
-                ControlFlow.Stmt(BlockChildReference(index, tree.pos))
-            },
-        )
-        is StructuredFlow -> flow.controlFlow
-    }
+    val mapMaker = MapMaker(
+        root = root,
+        fails = fails,
+        yieldingCallsEndPaths = yieldingCallsEndPaths,
+        ignoreConstantConditions = ignoreConstantConditions,
+    )
+    return mapMaker.makeMap()
+}
 
+private class MapMaker(
+    val root: BlockTree,
+    val fails: ConservativeFailure,
+    val yieldingCallsEndPaths: Boolean,
+    val ignoreConstantConditions: Boolean,
+) {
     fun truthinessOf(ref: BlockChildReference?): Boolean? {
-        if (ignoreConstantConditions || ref == null) { return null }
+        if (ignoreConstantConditions || ref == null) {
+            return null
+        }
         val tree = root.dereference(ref)?.target
         return tree?.valueContained(TBoolean)
     }
@@ -247,12 +393,32 @@ fun forwardMaximalPaths(
 
     fun newPath(): MutPath {
         val p = MutPath(
-            MaximalPathIndex(mutPaths.size),
             isExit = false,
             isFailExit = false,
         )
         mutPaths.add(p)
         return p
+    }
+
+    fun newPath(posHint: Position): MutPath = newPath().also { it.positionHints.add(posHint) }
+
+    fun addFollower(
+        from: MutPath,
+        to: MutPath,
+        condition: MutPathElement?,
+        dir: ForwardOrBack = ForwardOrBack.Forward,
+    ) {
+        val edge = MutEdge(condition, from.index, to.index, dir)
+        from.followers.add(edge)
+        to.preceders.add(edge)
+    }
+
+    fun addFollower(
+        from: MutPath,
+        to: MutPath,
+        dir: ForwardOrBack = ForwardOrBack.Forward,
+    ) {
+        addFollower(from = from, to = to, condition = (null as MutPathElement?), dir = dir)
     }
 
     fun addFollower(
@@ -261,15 +427,19 @@ fun forwardMaximalPaths(
         condition: BlockChildReference?,
         dir: ForwardOrBack = ForwardOrBack.Forward,
     ) {
-        from.followers.add(MutFollower(condition, to.index, dir))
-        to.preceders.add(Preceder(from.index, dir))
+        val conditionElement = condition?.let { ref ->
+            MutAstElement(ref, null, isCondition = true)
+        }
+        addFollower(from = from, to = to, condition = conditionElement, dir = dir)
     }
 
     fun joinAll(preceders: Set<MutPath>): MutPath? {
-        if (preceders.isEmpty()) { return null }
+        if (preceders.isEmpty()) {
+            return null
+        }
         val joinPath = newPath()
         preceders.forEach {
-            addFollower(it, joinPath, null)
+            addFollower(it, joinPath)
         }
         return joinPath
     }
@@ -284,30 +454,33 @@ fun forwardMaximalPaths(
         return joinAll(preceders)
     }
 
-    val jumpPreceders = mutableMapOf<JumpTarget, MutableSet<MutPath>>()
-    fun <T> withJumpPreceders(
-        newJumps: List<Pair<JumpTarget, MutableSet<MutPath>>>,
+    private val jumpTargets = mutableMapOf<JumpTarget, Lazy<MutPath>>()
+
+    fun <T> withJumpTargets(
+        newJumps: List<Pair<JumpTarget, Lazy<MutPath>>>,
         action: () -> T,
     ): T {
-        val replaced = mutableListOf<Pair<JumpTarget, MutableSet<MutPath>?>>()
+        val replaced = mutableListOf<Pair<JumpTarget, Lazy<MutPath>?>>()
         for ((jumpTarget, newSet) in newJumps) {
-            replaced.add(jumpTarget to jumpPreceders.remove(jumpTarget))
-            jumpPreceders[jumpTarget] = newSet
+            replaced.add(jumpTarget to jumpTargets.remove(jumpTarget))
+            jumpTargets[jumpTarget] = newSet
         }
         val result = action()
         for ((jumpTarget, oldSet) in replaced) {
             if (oldSet != null) {
-                jumpPreceders[jumpTarget] = oldSet
+                jumpTargets[jumpTarget] = oldSet
             } else {
-                jumpPreceders.remove(jumpTarget)
+                jumpTargets.remove(jumpTarget)
             }
         }
         return result
     }
 
-    // For each orClause being processed, the preceders for the else clause.
-    // The zero-th item are the free bubbles.
-    val orClauseFailOverStack = mutableListOf(mutableSetOf<MutPath>())
+    // For each orClause being processed, the path to start the else clause.
+    // The zero-th item is the target for free bubbles.
+    val orClauseFailOverStack: MutableList<Lazy<MutPath>> = mutableListOf(
+        lazy { newPath(root.pos.rightEdge) },
+    )
 
     fun buildPaths(
         controlFlow: ControlFlow,
@@ -326,20 +499,26 @@ fun forwardMaximalPaths(
                         intoElse.positionHints.add(controlFlow.elseClause.pos.leftEdge)
 
                         addFollower(inPath, intoThen, controlFlow.ref)
-                        addFollower(inPath, intoElse, null)
+                        addFollower(inPath, intoElse)
                         buildPaths(controlFlow.thenClause, setOf(intoThen)) +
                             buildPaths(controlFlow.elseClause, setOf(intoElse))
                     }
+
                     else -> {
                         inPath.elements.add(Either.Right(controlFlow))
                         buildPaths(
-                            if (truthiness) { controlFlow.thenClause } else { controlFlow.elseClause },
+                            if (truthiness) {
+                                controlFlow.thenClause
+                            } else {
+                                controlFlow.elseClause
+                            },
                             setOf(inPath),
                         )
                     }
                 }
             }
         }
+
         is ControlFlow.Loop -> {
             val loopStart = joinAll(preceders)
             val conditionTruthiness = truthinessOf(controlFlow.condition)
@@ -355,9 +534,17 @@ fun forwardMaximalPaths(
                     add(DefaultJumpSpecifier)
                     controlFlow.label?.let { add(NamedJumpSpecifier(it)) }
                 }
-                val afterLoopPreceders = mutableSetOf<MutPath>()
-                val beforeIncrementPreceders = mutableSetOf<MutPath>()
-                val errorJumps = mutableSetOf<MutPath>()
+                val afterLoop = lazy {
+                    newPath(controlFlow.pos.rightEdge)
+                }
+                val beforeIncrement = lazy {
+                    newPath(controlFlow.increment.pos.leftEdge)
+                }
+                val errorJumps = lazy {
+                    // Trying to continue from within the increment clause is just silly,
+                    // but we need some way to detect that.
+                    newPath(controlFlow.increment.pos)
+                }
 
                 val beforeBody: MutPath = when (checkPosition) {
                     LeftOrRight.Left -> {
@@ -372,26 +559,27 @@ fun forwardMaximalPaths(
                             },
                         )
                         if (truthinessOf(controlFlow.condition) != true) {
-                            afterLoopPreceders.add(loopStart)
+                            addFollower(loopStart, afterLoop.value)
                         }
                         afterCond
                     }
+
                     LeftOrRight.Right -> loopStart
                 }
 
-                val afterBody = withJumpPreceders(
-                    specifiers.map { JumpTarget(BreakOrContinue.Break, it) to afterLoopPreceders } +
-                        specifiers.map { JumpTarget(BreakOrContinue.Continue, it) to beforeIncrementPreceders },
+                val afterBody = withJumpTargets(
+                    specifiers.map { JumpTarget(BreakOrContinue.Break, it) to afterLoop } +
+                        specifiers.map { JumpTarget(BreakOrContinue.Continue, it) to beforeIncrement },
                 ) {
                     buildPaths(controlFlow.body, setOf(beforeBody))
                 }
-                val beforeIncrement = maybeJoinAll(afterBody + beforeIncrementPreceders)
-                val afterIncrement = if (beforeIncrement != null) {
-                    withJumpPreceders(
-                        specifiers.map { JumpTarget(BreakOrContinue.Break, it) to afterLoopPreceders } +
+                val beforeIncrementJoined = maybeJoinAll(afterBody + beforeIncrement.toSet())
+                val afterIncrement = if (beforeIncrementJoined != null) {
+                    withJumpTargets(
+                        specifiers.map { JumpTarget(BreakOrContinue.Break, it) to afterLoop } +
                             specifiers.map { JumpTarget(BreakOrContinue.Continue, it) to errorJumps },
                     ) {
-                        buildPaths(controlFlow.increment, setOf(beforeIncrement))
+                        buildPaths(controlFlow.increment, setOf(beforeIncrementJoined))
                     }
                 } else {
                     emptySet()
@@ -401,8 +589,9 @@ fun forwardMaximalPaths(
                 if (beforeContinue != null) {
                     when (checkPosition) {
                         LeftOrRight.Left -> {
-                            addFollower(beforeContinue, loopStart, null, ForwardOrBack.Back)
+                            addFollower(beforeContinue, loopStart, dir = ForwardOrBack.Back)
                         }
+
                         LeftOrRight.Right -> {
                             if (conditionTruthiness != false) {
                                 val continuePath = newPath()
@@ -415,30 +604,38 @@ fun forwardMaximalPaths(
                                         null
                                     },
                                 )
-                                addFollower(continuePath, loopStart, null, ForwardOrBack.Back)
+                                addFollower(continuePath, loopStart, dir = ForwardOrBack.Back)
                             }
                             if (conditionTruthiness != true) {
-                                afterLoopPreceders.add(beforeContinue)
+                                addFollower(beforeContinue, afterLoop.value)
                             }
                         }
                     }
                 }
-                if (errorJumps.isNotEmpty()) {
+                if (errorJumps.isInitialized()) {
                     TODO("do something with errorJumps")
                 }
-                afterLoopPreceders.toSet()
+                afterLoop.toSet()
             }
         }
+
         is ControlFlow.Jump -> {
             val target = JumpTarget(controlFlow.jumpKind, controlFlow.target)
-            val precedersForTarget: MutableSet<MutPath>? = jumpPreceders[target]
             val rightOfJump = controlFlow.pos.rightEdge
             preceders.forEach { it.positionHints.add(rightOfJump) }
-            precedersForTarget?.addAll(preceders)
+            val forTarget: Lazy<MutPath>? = jumpTargets[target]
+            if (forTarget != null) {
+                joinAll(preceders)?.let { preceder ->
+                    addFollower(preceder, forTarget.value)
+                }
+            }
             setOf()
         }
+
         is ControlFlow.Labeled -> {
-            val afterLabeled = mutableSetOf<MutPath>()
+            val afterLabeled = lazy {
+                newPath(controlFlow.pos.rightEdge)
+            }
             val targets = buildList {
                 add(
                     JumpTarget(BreakOrContinue.Break, NamedJumpSpecifier(controlFlow.breakLabel))
@@ -453,149 +650,217 @@ fun forwardMaximalPaths(
                     add(JumpTarget(BreakOrContinue.Continue, DefaultJumpSpecifier) to afterLabeled)
                 }
             }
-            val afterStmts = withJumpPreceders(targets) {
+            val afterStmts = withJumpTargets(targets) {
                 buildPaths(controlFlow.stmts, preceders)
             }
-            afterLabeled + afterStmts
+            afterLabeled.toSet() + afterStmts
         }
-        is ControlFlow.OrElse -> {
-            val startOfElse = mutableSetOf<MutPath>()
-            orClauseFailOverStack.add(startOfElse)
-            val beforeThen = maybeJoinAll(preceders)
-            val afterThen = withJumpPreceders(
-                listOf(
-                    JumpTarget(BreakOrContinue.Break, NamedJumpSpecifier(controlFlow.orClause.breakLabel))
-                        to startOfElse,
-                ),
-            ) {
-                buildPaths(controlFlow.orClause.stmts, setOfNotNull(beforeThen))
-            }
 
-            val beforeElse = orClauseFailOverStack.compatRemoveLast() // === startOfElse
-            if (beforeElse.isEmpty() && assumeFailureCanHappen) {
-                // Some passes use maximal paths to traverse things in a sensible order,
-                // and assumeFailureCanHappen allows those passes to reach everything.
-                if (beforeThen != null) {
-                    val beforeElsePath = newPath()
-                    addFollower(beforeThen, beforeElsePath, null)
-                    beforeElse.add(beforeElsePath)
+        is ControlFlow.OrElse -> {
+            val orClause = controlFlow.orClause
+            val elseClause = controlFlow.elseClause
+
+            val beforeElse = lazy {
+                newPath(elseClause.pos.leftEdge).also {
+                    it.orLabel = orClause.breakLabel
                 }
             }
 
-            val afterElse = if (beforeElse.isNotEmpty()) {
-                buildPaths(controlFlow.elseClause, beforeElse.toSet())
+            orClauseFailOverStack.add(beforeElse)
+            var beforeOr = maybeJoinAll(preceders)
+            if (fails.atStart && beforeOr != null) {
+                val orLeftPos = controlFlow.orClause.pos.leftEdge
+                val startOfOr = newPath()
+                startOfOr.positionHints.add(orLeftPos)
+                addFollower(beforeOr, beforeElse.value, MutBubbled(orLeftPos))
+                addFollower(beforeOr, startOfOr)
+                beforeOr = startOfOr
+            }
+
+            var afterOr = withJumpTargets(
+                listOf(
+                    JumpTarget(BreakOrContinue.Break, NamedJumpSpecifier(controlFlow.orClause.breakLabel))
+                        to beforeElse,
+                ),
+            ) {
+                buildPaths(orClause.stmts, setOfNotNull(beforeOr))
+            }
+
+            orClauseFailOverStack.compatRemoveLast() // === beforeElse
+            if (fails.atEnd) {
+                // Some passes use maximal paths to traverse things in a sensible order,
+                // and `fails` hint allows those passes to reach everything.
+                val afterOrJoined = joinAll(afterOr)
+                if (afterOrJoined != null) {
+                    addFollower(
+                        afterOrJoined,
+                        beforeElse.value,
+                        MutBubbled(orClause.pos.rightEdge),
+                    )
+                    afterOr = setOf(afterOrJoined)
+                }
+            }
+
+            val afterElse = if (beforeElse.isInitialized()) {
+                buildPaths(elseClause, setOf(beforeElse.value))
             } else {
                 emptySet()
             }
-            afterThen + afterElse
+            afterOr + afterElse
         }
+
         is ControlFlow.Stmt -> {
             val tree = root.dereference(controlFlow.ref)?.target
             var path = maybeJoinAll(preceders)
-            if (tree != null && isBubbleCall(tree)) {
-                val failOvers = orClauseFailOverStack.last()
-                path?.let {
-                    it.positionHints.add(tree.pos.leftEdge)
-                    it.positionHints.add(tree.pos.rightEdge)
-                    failOvers.add(it)
-                }
-                path = null
+            if (path == null) {
+                setOf()
+            } else if (tree != null && isBubbleCall(tree)) {
+                val failOver by orClauseFailOverStack.last()
+                path.positionHints.add(tree.pos.leftEdge)
+                path.positionHints.add(tree.pos.rightEdge)
+                addFollower(path, failOver)
+                setOf()
             } else {
-                path?.elements?.add(Either.Left(controlFlow))
-                if (yieldingCallsEndPaths) {
-                    val yieldingCallDetails = disassembleYieldingCall(controlFlow, root)
-                    if (yieldingCallDetails != null) {
-                        check(tree != null) // Couldn't have disassembled it otherwise
-                        val followsYield = newPath()
-                        followsYield.positionHints.add(tree.pos.rightEdge)
-                        if (path != null) {
-                            addFollower(path, followsYield, null)
-                        }
-                        path = followsYield
-                    }
+                path.elements.add(Either.Left(controlFlow))
+                val bubbles = tree != null && fails.atBubblyCall && treeCanBubble(tree)
+                val yieldingCallDetails = if (yieldingCallsEndPaths) {
+                    disassembleYieldingCall(controlFlow, root)
+                } else {
+                    null
                 }
+
+                if (bubbles || yieldingCallDetails != null) {
+                    val continues = newPath()
+                    continues.positionHints.add(tree!!.pos.rightEdge)
+
+                    if (bubbles) {
+                        val failOver = orClauseFailOverStack.last()
+                        addFollower(path, failOver.value, MutBubbled(controlFlow.pos))
+                    }
+                    addFollower(path, continues)
+
+                    path = continues
+                }
+                setOfNotNull(path)
             }
-            setOfNotNull(path)
         }
+
         is ControlFlow.StmtBlock -> {
             var before = preceders
             for (stmt in controlFlow.stmts) {
-                if (preceders.isEmpty()) { break }
+                if (preceders.isEmpty()) {
+                    break
+                }
                 before = buildPaths(stmt, before)
             }
             before
         }
     }
-    val entryPath = newPath()
-    val entryPathIndex = entryPath.index
-    check(entryPathIndex == MaximalPaths.zeroValue.entryPathIndex) // Use zero
-    val atExit = buildPaths(topControlFLow, setOf(entryPath))
-    // join the exit nodes so downstream code doesn't get confused by exit
-    // branches that also branch back to non-exit branches.
-    maybeJoinAll(atExit)?.let {
-        it.isExit = true
-    }
 
-    check(orClauseFailOverStack.size == 1)
-    val atFailExit = orClauseFailOverStack.compatRemoveFirst().toSet()
-    maybeJoinAll(atFailExit)?.let {
-        it.isFailExit = true
-    }
+    fun makeMap(): MaximalPaths {
+        val entryPath = newPath()
 
-    eliminateEmptyTransitions(mutPaths, root, yieldingCallsEndPaths = yieldingCallsEndPaths)
+        val topControlFLow = when (val flow = root.flow) {
+            LinearFlow -> ControlFlow.StmtBlock(
+                root.pos,
+                root.children.mapIndexed { index, tree ->
+                    ControlFlow.Stmt(BlockChildReference(index, tree.pos))
+                },
+            )
 
-    val exitPathIndices = setOfNotNull(
-        // We joined above, so there's at most one
-        mutPaths.firstOrNull { it.isExit }?.index,
-    )
-    val failExitPathIndices = setOfNotNull(
-        // We joined above, so there's at most one
-        mutPaths.firstOrNull { it.isFailExit }?.index,
-    )
+            is StructuredFlow -> flow.controlFlow
+        }
 
-    val maximalPaths = mutPaths.map { mutPath ->
-        val pathIndex = mutPath.index
-        val elements = mutPath.elements.map { e ->
-            when (e) {
-                is Either.Left ->
-                    MaximalPath.Element(e.item.ref, e.item, mutPath.index, isCondition = false)
-                is Either.Right ->
-                    MaximalPath.Element(e.item.condition, null, mutPath.index, isCondition = true)
+        val atExit = buildPaths(topControlFLow, setOf(entryPath))
+
+        // join the exit nodes so downstream code doesn't get confused by exit
+        // branches that also branch back to non-exit branches.
+        maybeJoinAll(atExit)?.let {
+            it.isExit = true
+        }
+
+        check(orClauseFailOverStack.size == 1)
+        val atFailExit = orClauseFailOverStack.compatRemoveFirst().toSet()
+        maybeJoinAll(atFailExit)?.let {
+            it.isFailExit = true
+        }
+
+        eliminateEmptyTransitions(mutPaths, root, yieldingCallsEndPaths = yieldingCallsEndPaths)
+
+        // Now that we've got the final list, assign final indices.
+        check(entryPath in mutPaths)
+        var indexCounter = 0
+        fun assignIndex(mutPath: MutPath) {
+            check(mutPath.index in mutPath.indices)
+            if (mutPath.index.index == null) {
+                val assignedIndex = MaximalPathIndex(indexCounter++)
+                for (provisionalIndex in mutPath.indices) {
+                    check(provisionalIndex.index == null)
+                    provisionalIndex.index = assignedIndex
+                }
             }
         }
-        val preceders = mutPath.preceders.toList()
-        val followers = mutPath.followers.map { mutFollower ->
-            Follower(
-                mutFollower.condition?.let {
-                    MaximalPath.Element(it, null, pathIndex, isCondition = true)
-                },
-                mutFollower.toIndex,
-                mutFollower.dir,
+        assignIndex(entryPath)
+        for (p in mutPaths) {
+            assignIndex(p)
+        }
+        check(entryPath.index.index == MaximalPaths.zeroValue.entryPathIndex) // Use zero
+
+        val exitPathIndices = setOfNotNull(
+            // We joined above, so there's at most one
+            mutPaths.firstOrNull { it.isExit }?.index?.index,
+        )
+        val failExitPathIndices = setOfNotNull(
+            // We joined above, so there's at most one
+            mutPaths.firstOrNull { it.isFailExit }?.index?.index,
+        )
+
+        val maximalPaths = mutPaths.map { mutPath ->
+            val pathIndex = mutPath.index.index!!
+            val elements = mutPath.elements.map { e ->
+                when (e) {
+                    is Either.Left ->
+                        MaximalPath.AstElement(e.item.ref, e.item, pathIndex, isCondition = false)
+
+                    is Either.Right ->
+                        MaximalPath.AstElement(e.item.condition, null, pathIndex, isCondition = true)
+                }
+            }
+            val preceders = mutPath.preceders.map {
+                Preceder(it.from.index!!, it.dir)
+            }
+            val followers = mutPath.followers.mapIndexed { followerIndex, mutFollower ->
+                Follower(
+                    mutFollower.condition?.toPathElement(pathIndex, followerIndex),
+                    mutFollower.to.index!!,
+                    mutFollower.dir,
+                )
+            }
+            val positioned = buildList {
+                mutPath.positionHints.mapTo(this) { Either.Left(it) }
+                elements.mapTo(this) { Either.Right(it) }
+                followers.mapNotNullTo(this) { follower ->
+                    (follower.condition as? MaximalPath.AstElement)?.let { Either.Right(it) }
+                }
+            }
+            val diagnosticPosition = diagnosticPositionForPathContents(positioned, root)
+            MaximalPath(
+                pathIndex = pathIndex,
+                elements = elements,
+                diagnosticPosition = diagnosticPosition,
+                preceders = preceders,
+                followers = followers,
+                orLabel = mutPath.orLabel,
             )
         }
-        val positioned = buildList {
-            mutPath.positionHints.mapTo(this) { Either.Left(it) }
-            elements.mapTo(this) { Either.Right(it) }
-            followers.mapNotNullTo(this) { follower ->
-                follower.condition?.let { Either.Right(it) }
-            }
-        }
-        val diagnosticPosition = diagnosticPositionForPathContents(positioned, root)
-        MaximalPath(
-            pathIndex = pathIndex,
-            elements = elements,
-            diagnosticPosition = diagnosticPosition,
-            preceders = preceders,
-            followers = followers,
+
+        return MaximalPaths(
+            maximalPaths = maximalPaths,
+            entryPathIndex = entryPath.index.index!!,
+            exitPathIndices = exitPathIndices,
+            failExitPathIndices = failExitPathIndices,
         )
     }
-
-    return MaximalPaths(
-        maximalPaths = maximalPaths,
-        entryPathIndex = entryPathIndex,
-        exitPathIndices = exitPathIndices,
-        failExitPathIndices = failExitPathIndices,
-    )
 }
 
 /**
@@ -609,36 +874,38 @@ private fun eliminateEmptyTransitions(
     root: BlockTree,
     yieldingCallsEndPaths: Boolean,
 ) {
-    check(mutPaths.allIndexed { i, mutPath -> i == mutPath.index.index })
+    val indexToPath = mutableMapOf<ProvisionalIndex, MutPath>()
+    for (m in mutPaths) {
+        indexToPath[m.index] = m
+    }
 
     while (true) {
         // The way we allocate a MutPath for each branch in ControlFlow.If above
         // means that sometimes we have a case where one branch leads to one other
         // and is the only one that leads to it.
-        val includeInto = mutableMapOf<MaximalPathIndex, MaximalPathIndex>()
-        for (path in mutPaths) {
+        val includeInto = mutableMapOf<MutPath, MutPath>()
+        for (path in indexToPath.values.toList()) {
             // Before: ... -> A -> B -> ...
             // After:  ... -> AB -> ...
             // If something is preceded by one branch, that only flows into it, collapse
             // them regardless of their content
-            if (path.preceders.size == 1) {
-                val precederIndex = path.preceders.first().pathIndex
-                if (precederIndex != path.index) {
-                    // Not a self-loop
-                    val precederPath = mutPaths[precederIndex.index]
+            if (path.preceders.size == 1 && path.orLabel == null) {
+                val preceder = path.preceders.first()
+                if (preceder.dir == ForwardOrBack.Forward) {
+                    if (indexToPath[preceder.from] == indexToPath[preceder.to]) {
+                        // A self-loop.
+                        continue
+                    }
+                    val precederPath = indexToPath.getValue(preceder.from)
                     if (
                         precederPath.followers.size == 1 &&
                         (!yieldingCallsEndPaths || !endsYielding(precederPath, root))
                     ) {
                         val follower = precederPath.followers.first()
                         if (follower.condition == null && follower.dir == ForwardOrBack.Forward) {
-                            check(follower.toIndex == path.index)
-                            val kept = path.index
-                            val eliminated = follower.toIndex
-                            if (eliminated !in includeInto && kept !in includeInto) {
-                                includeInto[eliminated] = kept
-                                continue
-                            }
+                            check(indexToPath[follower.to] == path)
+                            includeInto[path] = precederPath
+                            continue
                         }
                     }
                 }
@@ -650,12 +917,14 @@ private fun eliminateEmptyTransitions(
             if (path.followers.size == 1 && path.elements.isEmpty()) {
                 val follower = path.followers.first()
                 if (follower.condition == null && follower.dir == ForwardOrBack.Forward) {
-                    val followerPathIndex = follower.toIndex
-                    if (path.index !in includeInto) { // Avoid the above clobbering this
+                    if (path !in includeInto) { // Avoid the above clobbering this
                         // Not handled above so not a simple continuation
-                        val kept = path.index
-                        val eliminated = followerPathIndex
-                        if (eliminated !in includeInto) {
+                        val kept = path
+                        val eliminated = indexToPath.getValue(follower.to)
+                        if (
+                            eliminated !in includeInto && eliminated.orLabel == null &&
+                            (!yieldingCallsEndPaths || !endsYielding(kept, root))
+                        ) {
                             includeInto[eliminated] = kept
                             path.positionHints.clear()
                             continue
@@ -668,7 +937,7 @@ private fun eliminateEmptyTransitions(
         // Since we have computed some eliminations from follower to preceder
         // and some the other direction, break any cycles we accidentally
         // introduced arbitrarily.
-        val cycleSet = mutableSetOf<MaximalPathIndex>()
+        val cycleSet = mutableSetOf<MutPath>()
         for (eliminated in includeInto.keys.toList()) {
             cycleSet.clear()
             var pathIndex = eliminated
@@ -684,92 +953,133 @@ private fun eliminateEmptyTransitions(
 
         if (includeInto.isEmpty()) { break }
 
-        val pathIndexRemapping = buildMap {
-            for (path in mutPaths) {
-                val includedInto = includeInto[path.index]
-                if (includedInto == null) {
-                    this[path.index] = MaximalPathIndex(this.size)
-                }
-            }
-            // Now, remap eliminated items to the path that they are eventually included into
-            for ((eliminated, into) in includeInto) {
-                var target = into
-                // Inclusion can be transitive.  A may be included in B which is included in C.
-                // Only C was allocated an index in the index-from-size loop above
-                while (target in includeInto) {
-                    target = includeInto.getValue(target)
-                }
-                this[eliminated] = this.getValue(target)
-            }
-        }
-        fun remap(i: MaximalPathIndex) = pathIndexRemapping.getValue(i)
-
         val includedFrom = includeInto.inverse()
 
-        val rebuilt = buildList {
-            for (path in mutPaths) {
-                val index = path.index
-                if (index in includeInto) {
-                    // It is flattened when the loop reached the eventual destination
-                    continue
+        for (path in mutPaths) {
+            if (path in includeInto) {
+                // It is flattened when the loop reached the eventual destination
+                continue
+            }
+            val parts = buildList {
+                var inclusionPath = path
+                while (true) {
+                    add(inclusionPath)
+                    inclusionPath = includedFrom[inclusionPath] ?: break
                 }
-                val parts = buildList {
-                    var inclusionIndex = path.index
-                    while (true) {
-                        add(mutPaths[inclusionIndex.index])
-                        inclusionIndex = includedFrom[inclusionIndex] ?: break
+            }
+            if (parts.size <= 1) { continue }
+
+            path.isExit = parts.any { it.isExit }
+            path.isFailExit = parts.any { it.isFailExit }
+
+            path.followers.removeAll {
+                it.to in parts[1].indices
+            }
+
+            for (i in 1..parts.lastIndex) {
+                val part = parts[i]
+
+                part.preceders.forEach { p ->
+                    if (p.from !in path.indices) {
+                        path.preceders.add(p)
                     }
                 }
 
-                var isExit = false
-                var isFailExit = false
-                for (part in parts) {
-                    isExit = isExit || part.isExit
-                    isFailExit = isFailExit || part.isFailExit
-                }
-                val remappedPath = MutPath(remap(index), isExit = isExit, isFailExit = isFailExit)
+                path.indices.addAll(part.indices)
+                part.indices.clear()
 
-                for (i in parts.indices) {
-                    val part = parts[i]
-                    val prevPathIndex = parts.getOrNull(i - 1)?.index
-                    val nextPathIndex = parts.getOrNull(i + 1)?.index
+                path.elements.addAll(part.elements)
+                path.positionHints.addAll(part.positionHints)
 
-                    part.preceders.forEach { p ->
-                        if (p.pathIndex != prevPathIndex) {
-                            remappedPath.preceders.add(
-                                Preceder(remap(p.pathIndex), p.dir),
-                            )
-                        }
-                    }
-                    part.followers.forEach { f ->
-                        if (f.toIndex != nextPathIndex) {
-                            remappedPath.followers.add(
-                                MutFollower(f.condition, remap(f.toIndex), f.dir),
-                            )
-                        }
+                val nextPath = parts.getOrNull(i + 1)
+                part.followers.forEach { f ->
+                    if (nextPath == null || f.to !in nextPath.indices) {
+                        path.followers.add(f)
                     }
                 }
+            }
 
-                for (part in parts) {
-                    remappedPath.elements.addAll(part.elements)
-                    remappedPath.positionHints.addAll(part.positionHints)
-                }
-
-                // Double check that the identity between index integer value
-                // and offset in the list still holds.
-                // (See the check at top of this function)
-                check(this.size == remappedPath.index.index)
-                add(remappedPath)
+            for (index in path.indices) {
+                indexToPath[index] = path
             }
         }
-        check(mutPaths.size > rebuilt.size) // Monotonic so the `while (true)` terminates
-        mutPaths.clear()
-        mutPaths.addAll(rebuilt)
     }
+
+    // Some paths can't be folded into because we only fold followers
+    // into preceders and the follower might have valuable metadata.
+    // But we can identify empty paths with one unconditional follower and
+    // without valuable metadata and just forward their preceders to their
+    // follower.
+    while (true) {
+        var progressMade = false
+        for (p in mutPaths) {
+            if (p.index in p.indices) {
+                // Still the canonical path for its index
+                if (
+                    p.elements.isEmpty() && p.orLabel == null && p.preceders.isNotEmpty() &&
+                    p.followers.size == 1 && p.followers[0].condition == null &&
+                    !p.isExit && !p.isFailExit
+                ) {
+                    val follower = p.followers[0]
+                    val allPrecedersToRelink = mutableListOf<MutEdge>()
+                    if (follower.condition == null && follower.dir == ForwardOrBack.Forward) {
+                        val followerNode = indexToPath.getValue(follower.to)
+                        if (followerNode === p) { continue }
+
+                        p.indices.clear()
+                        for (preceder in p.preceders) {
+                            preceder.to = follower.to
+                            allPrecedersToRelink.add(preceder)
+                        }
+                        val index = followerNode.preceders.indexOf(follower)
+                        followerNode.preceders.removeAt(index)
+                        followerNode.preceders.addAll(index, allPrecedersToRelink)
+                        progressMade = true
+                    }
+                }
+            }
+        }
+        if (!progressMade) { break }
+    }
+
+    // But we can identify empty paths with one unconditional preceder.
+    while (true) {
+        var progressMade = false
+        for (p in mutPaths) {
+            if (p.index in p.indices) {
+                // Still the canonical path for its index
+                if (
+                    p.elements.isEmpty() && p.orLabel == null &&
+                    p.preceders.size == 1 && p.preceders[0].condition == null &&
+                    !p.isExit && !p.isFailExit
+                ) {
+                    val preceder = p.preceders[0]
+                    val precederNode = indexToPath.getValue(preceder.from)
+                    if (precederNode === p) { continue }
+
+                    val allFollowersToRelink = mutableListOf<MutEdge>()
+                    if (preceder.condition == null && preceder.dir == ForwardOrBack.Forward) {
+                        p.indices.clear()
+                        for (follower in p.followers) {
+                            follower.from = preceder.from
+                            allFollowersToRelink.add(follower)
+                        }
+                        val index = precederNode.followers.indexOf(preceder)
+                        precederNode.followers.removeAt(index)
+                        precederNode.followers.addAll(index, allFollowersToRelink)
+                        progressMade = true
+                    }
+                }
+            }
+        }
+        if (!progressMade) { break }
+    }
+
+    mutPaths.removeAll { it.index !in it.indices }
 }
 
 /**
- * Dump a representation of the paths to the given [console] if its nonnull
+ * Dump a representation of the paths to the given [console] if it's nonnull
  * using [root] to dereference any path elements for pseudocode.
  */
 fun MaximalPaths.debug(console: Console?, root: BlockTree) {
@@ -791,6 +1101,10 @@ fun MaximalPaths.debug(console: Console?, root: BlockTree) {
                 fun renderReference(ref: BlockChildReference) =
                     root.dereference(ref)?.target?.toPseudoCode(singleLine = true, detail = detail)
                         ?: "<broken>"
+                fun renderCondition(cond: MaximalPath.PathElement) = when (cond) {
+                    is MaximalPath.Bubbled -> "bubbled"
+                    is MaximalPath.AstElement -> renderReference(cond.ref)
+                }
                 if (path.preceders.isNotEmpty()) {
                     console.log("preceded by ${path.preceders}")
                 }
@@ -813,7 +1127,7 @@ fun MaximalPaths.debug(console: Console?, root: BlockTree) {
                                     }
                                     if (f.condition != null) {
                                         append(" when ")
-                                        append(renderReference(f.condition.ref))
+                                        append(renderCondition(f.condition))
                                     }
                                 },
                             )
@@ -857,25 +1171,29 @@ fun orderedPathIndices(
 
 private fun endsYielding(mutPath: MutPath, root: BlockTree): Boolean {
     val ref = when (val last = mutPath.elements.lastOrNull()) {
-        null -> null
+        null -> return false
         is Either.Left -> last.item.ref
         is Either.Right -> last.item.ref
     }
-    return ref != null && ref.yieldingCallKind(root) != null
+    var tree = root.dereference(ref)?.target ?: return false
+    if (isAssignment(tree)) {
+        tree = tree.child(2)
+    }
+    return tree.yieldingCallKind() != null
 }
 
 fun diagnosticPositionForPathContents(
     /**
-     * Either zero-width positions that mark start of blocks,
+     * Each is either a zero-width position that marks the start of a block
      * or an actual code element.
      */
-    positioned: List<Either<Position, MaximalPath.Element>>,
+    positioned: List<Either<Position, MaximalPath.AstElement>>,
     root: BlockTree,
 ): Position {
     // A lot of positions are synthesized declarations, especially in the entry segment.
     // Partition the elements into probably-synthetic and probably not synthetic.
-    // If we have some of the latter, use them to find a diagnostic position that's
-    // used in to generate excerpts of code in error messages.
+    // If we have some of the latter, use them to find a diagnostic position that'll be
+    // useful when generating excerpts of code in error messages.
     val positionedGrouped =
         mutableMapOf<NonsenseGradient, MutableList<Positioned>>()
     for (p in positioned) {
@@ -885,7 +1203,7 @@ fun diagnosticPositionForPathContents(
     }
 
     var minimalNonsenseGroup = emptyList<Positioned>()
-    for (ng in NonsenseGradient.values().reversed()) {
+    for (ng in NonsenseGradient.entries.reversed()) {
         if (minimalNonsenseGroup.isNotEmpty()) {
             break
         }
@@ -897,7 +1215,7 @@ fun diagnosticPositionForPathContents(
 }
 
 private fun positionAndConfidenceForBasicBlockPositionPart(
-    e: Either<Position, MaximalPath.Element>,
+    e: Either<Position, MaximalPath.AstElement>,
     root: BlockTree,
 ): Pair<NonsenseGradient, Positioned> = when (e) {
     is Either.Left -> NonsenseGradient.NotSuss to e.item
@@ -1016,7 +1334,7 @@ fun MaximalPaths.toMermaid(root: BlockTree): String = buildString {
     val nodeName = mutableMapOf<MaximalPathIndex, String>()
     // Now, pick the mermaid identifiers for nodes.
     // If we have a name like `IfJoin`, use that.
-    // If there are multiple, suffix with a number.
+    // If there are multiple descriptions, add a numeric suffix.
     // Fall back to `N123`.
     val allDescriptions = buildMap {
         nodeDescription.values.forEach {
@@ -1069,7 +1387,11 @@ fun MaximalPaths.toMermaid(root: BlockTree): String = buildString {
         val fromName = nodeName.getValue(maximalPath.pathIndex)
         maximalPath.followers.forEachIndexed { followerIndex, follower ->
             val desc = follower.condition?.let {
-                root.dereference(it.ref)?.target?.toPseudoCode(detail = detail) ?: "???"
+                when (it) {
+                    is MaximalPath.Bubbled -> "bubbled"
+                    is MaximalPath.AstElement ->
+                        root.dereference(it.ref)?.target?.toPseudoCode(detail = detail) ?: "???"
+                }
             }
             val head: String
             val tail: String
@@ -1121,4 +1443,12 @@ private fun isMermaidIdentifier(s: String): Boolean {
         }
     }
     return true
+}
+
+val ForwardOrBack.arrow get() = if (this == ForwardOrBack.Forward) "->" else "<-"
+
+private fun <T> Lazy<T>.toSet() = if (isInitialized()) {
+    setOf(value)
+} else {
+    setOf()
 }

@@ -1,5 +1,5 @@
-@fn @reach(\none) let hi__0;
-hi__0 = (@stay fn hi /* return__0 */: Void {
+@fn @reach(\none) let hi__1;
+hi__1 = (@stay fn hi /* return__0 */: Void {
     abstractPanic();
     return__0 = void
 })

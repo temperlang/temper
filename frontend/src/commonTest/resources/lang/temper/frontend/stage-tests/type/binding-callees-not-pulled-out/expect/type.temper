@@ -1,17 +1,14 @@
-let console#0;
-console#0 = doPure(@stay fn /* return__0 */: Console {
-    return__0 = getConsole();
+let console#5;
+console#5 = doPure(@stay fn /* return__6 */: Console {
+    return__6 = getConsole();
 });
-@fn let f__0;
-f__0 = (@stay fn f(hi__0 /* aka hi */: String) /* return__1 */: Void {
-    var t#0;
-    void;
-    fn__0: do {
-      let s__0: String;
-      s__0 = cat("Hello, ", str(hi__0), "!");
-      t#0 = s__0;
-      do_call_log(console#0, t#0);
-      do_call_log(console#0, s__0);
-      return__1 = void
+@fn let f__1;
+f__1 = (@stay fn f(hi__2 /* aka hi */: String) /* return__0 */: Void {
+    fn__3: do {
+      return__0 = void;
+      let s__4: String;
+      s__4 = cat("Hello, ", str(hi__2), "!");
+      do_call_log(console#5, s__4);
+      do_call_log(console#5, s__4)
     }
-})
+});

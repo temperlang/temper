@@ -184,13 +184,15 @@ sealed class ControlFlow : IControlFlow {
     }
 
     /** A single statement */
-    data class Stmt(
+    class Stmt(
         override val ref: BlockChildReference,
     ) : ControlFlow() {
         override val pos: Position get() = ref.pos
         override fun deepCopy() = Stmt(ref.copy())
         override val clauses: Iterable<ControlFlow> get() = listOf()
         override val parent: StmtBlock? get() = super.parent as StmtBlock?
+
+        override fun toString(): String = "Stmt($ref)"
     }
 
     /** A jump from the current location to a location in the same containing function/module. */
@@ -256,12 +258,11 @@ sealed class ControlFlow : IControlFlow {
         override val clauses: Iterable<ControlFlow> get() = stmts
 
         companion object {
-            fun wrap(controlFlow: ControlFlow): StmtBlock = if (controlFlow is StmtBlock) {
-                controlFlow
-            } else {
-                StmtBlock(controlFlow.pos, mutableListOf(controlFlow))
-            }
+            fun wrap(controlFlow: ControlFlow): StmtBlock = controlFlow as? StmtBlock
+                ?: StmtBlock(controlFlow.pos, mutableListOf(controlFlow))
         }
+
+        override fun toString() = "StmtBlock($stmts)"
     }
 
     /**
@@ -271,7 +272,7 @@ sealed class ControlFlow : IControlFlow {
      * Normal labeled blocks in languages provide [Break] targets only.
      * This construct also has an optional [continueLabel].  If provided, then this
      * labeled block intercepts [Continue]s to that label and default continues so
-     * may serve to allow inserting instructions after the loop body that get run
+     * may serve to allow inserting instructions after the loop body that are run
      * on continuation.  The [continueLabel] is simplified out when we know enough
      * to rewrite the [Continue]s it contains to [Break]s.
      */
@@ -293,6 +294,8 @@ sealed class ControlFlow : IControlFlow {
         )
         override val isDefaultBreakTarget get() = false
         override val isDefaultContinueTarget: Boolean get() = continueLabel != null
+
+        override fun toString(): String = "Labeled($breakLabel, $continueLabel, $stmts)"
     }
 
     /** A conditional branch */
@@ -315,6 +318,8 @@ sealed class ControlFlow : IControlFlow {
         )
 
         override val clauses get() = listOf(thenClause, elseClause)
+
+        override fun toString(): String = "If($condition, $thenClause, else = $elseClause)"
     }
 
     /** A loop that is reentered while the condition is true. */
@@ -382,6 +387,25 @@ sealed class ControlFlow : IControlFlow {
         override val isDefaultContinueTarget: Boolean get() = true
         override val breakLabel get() = label
         override val continueLabel get() = label
+
+        override fun toString(): String = buildString {
+            "Loop($label, $condition, $checkPosition, $body, increment=$increment)"
+            append("Loop(")
+            var sep = ""
+            if (label != null) {
+                append("label=$label")
+                sep = ", "
+            }
+            if (checkPosition != LeftOrRight.Left) {
+                append("${sep}check=$checkPosition")
+                sep = ", "
+            }
+            append("$sep$condition")
+            append(", $body")
+            if (!increment.isEmptyBlock()) {
+                append(", increment=$increment")
+            }
+        }
     }
 
     /**
@@ -405,14 +429,16 @@ sealed class ControlFlow : IControlFlow {
      * The or clause is a labeled statement block.  After weaving, any failures should
      * [Break] to [orClause]'s [label][Labeled.breakLabel] which means proceed to [elseClause].
      *
-     * So an orelse is effectively like the below where `fail_label` is the label on [orClause]:
+     * So an `orelse` is effectively like the below where `fail_label` is the label on [orClause],
+     * if we had some magic `trapBubble` expression evaluator:
      *
      *     ok_label: do {
      *       fail_label: do {
      *         // Start orClause
-     *         var fail: Boolean;
-     *         hs(fail, operationThatMayFail());
-     *         if (fail) { break fail_label; }
+     *         let failed = trapBubble {
+     *           operationThatMayFail()
+     *         }
+     *         if (failed) { break fail_label; }
      *         break ok_label; // Leapfrog over else clause
      *       }
      *       // Start elseClause
@@ -435,6 +461,8 @@ sealed class ControlFlow : IControlFlow {
             elseClause = elseClause.deepCopy(),
         )
         override val clauses get() = listOf(orClause, elseClause)
+
+        override fun toString(): String = "OrElse($orClause, $elseClause)"
     }
 }
 

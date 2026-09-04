@@ -20,7 +20,7 @@
                             [
                                 [
                                     "LeftName",
-                                    "return__0"
+                                    "return__1"
                                 ],
                                 [
                                     "Value",
@@ -44,7 +44,7 @@
                                         ],
                                         [
                                             "LeftName",
-                                            "return__0"
+                                            "return__1"
                                         ],
                                         [
                                             "Call",
@@ -65,7 +65,7 @@
                                                             [
                                                                 [
                                                                     "LeftName",
-                                                                    "return__1"
+                                                                    "return__0"
                                                                 ],
                                                                 [
                                                                     "Value",
@@ -104,45 +104,6 @@
                                                         [
                                                             "Block",
                                                             [
-                                                                [
-                                                                    "Call",
-                                                                    [
-                                                                        [
-                                                                            "Value",
-                                                                            "nym`=`: Function"
-                                                                        ],
-                                                                        [
-                                                                            "LeftName",
-                                                                            "return__1"
-                                                                        ],
-                                                                        [
-                                                                            "Call",
-                                                                            [
-                                                                                [
-                                                                                    "Call",
-                                                                                    [
-                                                                                        [
-                                                                                            "Value",
-                                                                                            "nym`\u003c\u003e`: Function"
-                                                                                        ],
-                                                                                        [
-                                                                                            "RightName",
-                                                                                            "core.doneResult"
-                                                                                        ],
-                                                                                        [
-                                                                                            "Value",
-                                                                                            "Empty: Type"
-                                                                                        ]
-                                                                                    ]
-                                                                                ]
-                                                                            ]
-                                                                        ]
-                                                                    ]
-                                                                ],
-                                                                [
-                                                                    "Value",
-                                                                    "void: Void"
-                                                                ],
                                                                 [
                                                                     "while",
                                                                     [
@@ -200,17 +161,34 @@
                                             ]
                                         ]
                                     ]
-                                ]
+                                ],
+                                {
+                                    "type": "Value",
+                                    "loc": "test/test.temper",
+                                    "left": 108,
+                                    "right": 108,
+                                    "content": {
+                                        "stateVector": null,
+                                        "typeTag": "Void",
+                                        "abbrev": "void: Void"
+                                    },
+                                    "typeInferences": {
+                                        "type": {
+                                            "type": "SourceName",
+                                            "module": "core",
+                                            "uid": 68,
+                                            "nameHint": "Void",
+                                            "abbrev": "Void__68"
+                                        },
+                                        "explanation": []
+                                    }
+                                }
                             ],
                             "StructuredFlow"
                         ]
                     ]
                 ]
             ]
-        ],
-        [
-            "Value",
-            "void: Void"
         ]
     ],
     "StructuredFlow"

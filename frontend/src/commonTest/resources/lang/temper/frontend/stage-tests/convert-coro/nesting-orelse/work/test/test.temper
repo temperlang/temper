@@ -1,0 +1,16 @@
+fBubbly { (x: Int32, y: Int32) : GeneratorResult<Boolean> throws Bubble extends GeneratorFn =>
+  // Ignoring bubble transitions, all of these are in the same basic block.
+  console.log("x / y = ${x / y}"); // Free bubble
+  do {
+    console.log("x / (y + 1) = ${x / (y + 1)}");
+    do {
+      console.log("x / (y - 1) = ${x / (y - 1)}");
+      yield true;
+    } orelse do {
+      console.log("cannot divide by ${ y - 1 }!");
+    };
+    console.log("x / (y + 2) = ${x / (y + 2)}");
+  } orelse do {
+    console.log("cannot divide by ${ y + 1 }!, or was it ${ y + 2 }?!");
+  }
+}

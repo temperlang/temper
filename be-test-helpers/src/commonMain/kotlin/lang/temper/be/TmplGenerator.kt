@@ -708,19 +708,13 @@ class ImportGenerator(val tmplGen: TmplGenerator, val name: String) {
     }
 }
 
-infix fun TmpL.Id.assignTo(expr: TmpL.RightHandSide) = this.assignTo(expr, type = null)
+infix fun TmpL.Id.assignTo(expr: TmpL.Expression) = this.assignTo(expr, type = null)
 
-fun TmpL.Id.assignTo(expr: TmpL.RightHandSide, type: Type2? = null) = TmpL.Assignment(
+fun TmpL.Id.assignTo(expr: TmpL.Expression, type: Type2? = null) = TmpL.Assignment(
     pos = p0,
     left = this,
     right = expr,
-    type = type ?: when (expr) {
-        is TmpL.Expression -> expr.type
-        is TmpL.HandlerScope -> when (val h = expr.handled) {
-            is TmpL.Expression -> h.type
-            is TmpL.SetAbstractProperty -> h.right.type
-        }
-    },
+    type = type ?: expr.type,
 )
 
 internal fun Type2.asTmpLNominal() = TmpL.NominalType(

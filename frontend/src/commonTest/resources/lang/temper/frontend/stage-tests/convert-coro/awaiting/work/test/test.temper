@@ -1,0 +1,5 @@
+f { (p: Promise<String>): GeneratorResult<Empty> extends GeneratorFn =>
+  console.log("Beginning");
+  let s = await(p) orelse "Broken";
+  console.log(s);
+}

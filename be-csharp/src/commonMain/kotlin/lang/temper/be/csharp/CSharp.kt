@@ -2450,6 +2450,61 @@ object CSharp {
         }
     }
 
+    class SwitchStatement(
+        pos: Position,
+        expr: Expression,
+        cases: Iterable<SwitchCase>,
+    ) : BaseTree(pos), Statement {
+        override val operatorDefinition: CSharpOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate86
+        override val formatElementCount
+            get() = 2
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.expr
+                1 -> FormattableTreeGroup(this.cases)
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _expr: Expression
+        var expr: Expression
+            get() = _expr
+            set(newValue) { _expr = updateTreeConnection(_expr, newValue) }
+        private val _cases: MutableList<SwitchCase> = mutableListOf()
+        var cases: List<SwitchCase>
+            get() = _cases
+            set(newValue) { updateTreeConnections(_cases, newValue) }
+        override fun deepCopy(): SwitchStatement {
+            return SwitchStatement(pos, expr = this.expr.deepCopy(), cases = this.cases.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is SwitchStatement && this.expr == other.expr && this.cases == other.cases
+        }
+        override fun hashCode(): Int {
+            var hc = expr.hashCode()
+            hc = 31 * hc + cases.hashCode()
+            return hc
+        }
+        init {
+            this._expr = updateTreeConnection(null, expr)
+            updateTreeConnections(this._cases, cases)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as SwitchStatement).expr },
+                { n -> (n as SwitchStatement).cases },
+            )
+        }
+    }
+
     class TryStatement(
         pos: Position,
         tryBlock: BlockStatement,
@@ -2461,13 +2516,13 @@ object CSharp {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (catchBlock != null && finallyBlock != null) {
-                    sharedCodeFormattingTemplate86
-                } else if (catchBlock != null) {
                     sharedCodeFormattingTemplate87
-                } else if (finallyBlock != null) {
+                } else if (catchBlock != null) {
                     sharedCodeFormattingTemplate88
-                } else {
+                } else if (finallyBlock != null) {
                     sharedCodeFormattingTemplate89
+                } else {
+                    sharedCodeFormattingTemplate90
                 }
         override val formatElementCount
             get() = 3
@@ -2531,7 +2586,7 @@ object CSharp {
         override val operatorDefinition: CSharpOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate90
+            get() = sharedCodeFormattingTemplate91
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -2585,7 +2640,7 @@ object CSharp {
         override val operatorDefinition: CSharpOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate91
+            get() = sharedCodeFormattingTemplate92
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -2628,6 +2683,70 @@ object CSharp {
         override fun deepCopy(): StatementExpression
     }
 
+    class SwitchCase(
+        pos: Position,
+        expr: Expression?,
+        block: BlockStatement?,
+    ) : BaseTree(pos) {
+        override val operatorDefinition: CSharpOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() =
+                if (expr != null && block != null) {
+                    sharedCodeFormattingTemplate93
+                } else if (expr != null) {
+                    sharedCodeFormattingTemplate94
+                } else if (block != null) {
+                    sharedCodeFormattingTemplate95
+                } else {
+                    sharedCodeFormattingTemplate96
+                }
+        override val formatElementCount
+            get() = 2
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.expr ?: FormattableTreeGroup.empty
+                1 -> this.block ?: FormattableTreeGroup.empty
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _expr: Expression?
+        var expr: Expression?
+            get() = _expr
+            set(newValue) { _expr = updateTreeConnection(_expr, newValue) }
+        private var _block: BlockStatement?
+        var block: BlockStatement?
+            get() = _block
+            set(newValue) { _block = updateTreeConnection(_block, newValue) }
+        override fun deepCopy(): SwitchCase {
+            return SwitchCase(pos, expr = this.expr?.deepCopy(), block = this.block?.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is SwitchCase && this.expr == other.expr && this.block == other.block
+        }
+        override fun hashCode(): Int {
+            var hc = (expr?.hashCode() ?: 0)
+            hc = 31 * hc + (block?.hashCode() ?: 0)
+            return hc
+        }
+        init {
+            this._expr = updateTreeConnection(null, expr)
+            this._block = updateTreeConnection(null, block)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as SwitchCase).expr },
+                { n -> (n as SwitchCase).block },
+            )
+        }
+    }
+
     class AwaitExpression(
         pos: Position,
         promise: Expression,
@@ -2635,7 +2754,7 @@ object CSharp {
         override val operatorDefinition: CSharpOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate92
+            get() = sharedCodeFormattingTemplate97
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -2684,9 +2803,9 @@ object CSharp {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (typeArgs.isNotEmpty()) {
-                    sharedCodeFormattingTemplate93
+                    sharedCodeFormattingTemplate98
                 } else {
-                    sharedCodeFormattingTemplate94
+                    sharedCodeFormattingTemplate99
                 }
         override val formatElementCount
             get() = 3
@@ -2753,13 +2872,13 @@ object CSharp {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (type != null && members.isNotEmpty()) {
-                    sharedCodeFormattingTemplate95
+                    sharedCodeFormattingTemplate100
                 } else if (type != null) {
-                    sharedCodeFormattingTemplate96
+                    sharedCodeFormattingTemplate101
                 } else if (members.isNotEmpty()) {
-                    sharedCodeFormattingTemplate97
+                    sharedCodeFormattingTemplate102
                 } else {
-                    sharedCodeFormattingTemplate98
+                    sharedCodeFormattingTemplate103
                 }
         override val formatElementCount
             get() = 3
@@ -2826,13 +2945,13 @@ object CSharp {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (left != null && right != null) {
-                    sharedCodeFormattingTemplate99
+                    sharedCodeFormattingTemplate104
                 } else if (left != null) {
                     sharedCodeFormattingTemplate70
                 } else if (right != null) {
-                    sharedCodeFormattingTemplate100
+                    sharedCodeFormattingTemplate105
                 } else {
-                    sharedCodeFormattingTemplate101
+                    sharedCodeFormattingTemplate106
                 }
         override val formatElementCount
             get() = 3
@@ -2895,7 +3014,7 @@ object CSharp {
         override val operatorDefinition: CSharpOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate102
+            get() = sharedCodeFormattingTemplate107
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -2941,7 +3060,7 @@ object CSharp {
         override val operatorDefinition
             get() = CSharpOperatorDefinition.Cast
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate103
+            get() = sharedCodeFormattingTemplate108
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -2996,7 +3115,7 @@ object CSharp {
         override val operatorDefinition: CSharpOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate104
+            get() = sharedCodeFormattingTemplate109
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -3056,7 +3175,7 @@ object CSharp {
         override val operatorDefinition
             get() = CSharpOperatorDefinition.Atom
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate105
+            get() = sharedCodeFormattingTemplate110
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -3111,7 +3230,7 @@ object CSharp {
         override val operatorDefinition: CSharpOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate106
+            get() = sharedCodeFormattingTemplate111
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -3192,7 +3311,7 @@ object CSharp {
                 if (name != null) {
                     sharedCodeFormattingTemplate82
                 } else {
-                    sharedCodeFormattingTemplate101
+                    sharedCodeFormattingTemplate106
                 }
         override val formatElementCount
             get() = 2
@@ -4742,8 +4861,27 @@ object CSharp {
             ),
         )
 
-    /** `try {{0}} catch {{1}} finally {{2}}` */
+    /** `switch ( {{0}} ) \{ \n {{1*\n}} \n \}` */
     private val sharedCodeFormattingTemplate86 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("switch", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.NewLine,
+                CodeFormattingTemplate.GroupSubstitution(
+                    1,
+                    CodeFormattingTemplate.NewLine,
+                ),
+                CodeFormattingTemplate.NewLine,
+                CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `try {{0}} catch {{1}} finally {{2}}` */
+    private val sharedCodeFormattingTemplate87 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -4756,7 +4894,7 @@ object CSharp {
         )
 
     /** `try {{0}} catch {{1}}` */
-    private val sharedCodeFormattingTemplate87 =
+    private val sharedCodeFormattingTemplate88 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -4767,7 +4905,7 @@ object CSharp {
         )
 
     /** `try {{0}} finally {{2}}` */
-    private val sharedCodeFormattingTemplate88 =
+    private val sharedCodeFormattingTemplate89 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -4778,7 +4916,7 @@ object CSharp {
         )
 
     /** `try {{0}}` */
-    private val sharedCodeFormattingTemplate89 =
+    private val sharedCodeFormattingTemplate90 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -4787,7 +4925,7 @@ object CSharp {
         )
 
     /** `while ( {{0}} ) {{1}}` */
-    private val sharedCodeFormattingTemplate90 =
+    private val sharedCodeFormattingTemplate91 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("while", OutputTokenType.Word),
@@ -4799,7 +4937,7 @@ object CSharp {
         )
 
     /** `yield return {{0}} ;` */
-    private val sharedCodeFormattingTemplate91 =
+    private val sharedCodeFormattingTemplate92 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("yield", OutputTokenType.Word),
@@ -4809,8 +4947,48 @@ object CSharp {
             ),
         )
 
+    /** `case {{0}} : {{1}}` */
+    private val sharedCodeFormattingTemplate93 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("case", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(":", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(1),
+            ),
+        )
+
+    /** `case {{0}} :` */
+    private val sharedCodeFormattingTemplate94 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("case", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(":", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `default : {{1}}` */
+    private val sharedCodeFormattingTemplate95 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("default", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken(":", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(1),
+            ),
+        )
+
+    /** `default :` */
+    private val sharedCodeFormattingTemplate96 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("default", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken(":", OutputTokenType.Punctuation),
+            ),
+        )
+
     /** `await ( {{0}} )` */
-    private val sharedCodeFormattingTemplate92 =
+    private val sharedCodeFormattingTemplate97 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("await", OutputTokenType.Word),
@@ -4821,7 +4999,7 @@ object CSharp {
         )
 
     /** `{{0}} < {{1*,}} > ( {{2*,}} )` */
-    private val sharedCodeFormattingTemplate93 =
+    private val sharedCodeFormattingTemplate98 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4841,7 +5019,7 @@ object CSharp {
         )
 
     /** `{{0}} ( {{2*,}} )` */
-    private val sharedCodeFormattingTemplate94 =
+    private val sharedCodeFormattingTemplate99 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4855,7 +5033,7 @@ object CSharp {
         )
 
     /** `new {{0}} ( {{1*,}} ) \{ {{2*,}} \}` */
-    private val sharedCodeFormattingTemplate95 =
+    private val sharedCodeFormattingTemplate100 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("new", OutputTokenType.Word),
@@ -4876,7 +5054,7 @@ object CSharp {
         )
 
     /** `new {{0}} ( {{1*,}} )` */
-    private val sharedCodeFormattingTemplate96 =
+    private val sharedCodeFormattingTemplate101 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("new", OutputTokenType.Word),
@@ -4891,7 +5069,7 @@ object CSharp {
         )
 
     /** `new ( {{1*,}} ) \{ {{2*,}} \}` */
-    private val sharedCodeFormattingTemplate97 =
+    private val sharedCodeFormattingTemplate102 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("new", OutputTokenType.Word),
@@ -4911,7 +5089,7 @@ object CSharp {
         )
 
     /** `new ( {{1*,}} )` */
-    private val sharedCodeFormattingTemplate98 =
+    private val sharedCodeFormattingTemplate103 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("new", OutputTokenType.Word),
@@ -4925,7 +5103,7 @@ object CSharp {
         )
 
     /** `{{0}} {{1}} {{2}}` */
-    private val sharedCodeFormattingTemplate99 =
+    private val sharedCodeFormattingTemplate104 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4935,7 +5113,7 @@ object CSharp {
         )
 
     /** `{{1}} {{2}}` */
-    private val sharedCodeFormattingTemplate100 =
+    private val sharedCodeFormattingTemplate105 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(1),
@@ -4944,11 +5122,11 @@ object CSharp {
         )
 
     /** `{{1}}` */
-    private val sharedCodeFormattingTemplate101 =
+    private val sharedCodeFormattingTemplate106 =
         CodeFormattingTemplate.OneSubstitution(1)
 
     /** `throw {{0}}` */
-    private val sharedCodeFormattingTemplate102 =
+    private val sharedCodeFormattingTemplate107 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("throw", OutputTokenType.Word),
@@ -4957,7 +5135,7 @@ object CSharp {
         )
 
     /** `( {{0}} ) {{1}}` */
-    private val sharedCodeFormattingTemplate103 =
+    private val sharedCodeFormattingTemplate108 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
@@ -4968,7 +5146,7 @@ object CSharp {
         )
 
     /** `{{0}} [ {{1*,}} ]` */
-    private val sharedCodeFormattingTemplate104 =
+    private val sharedCodeFormattingTemplate109 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4982,7 +5160,7 @@ object CSharp {
         )
 
     /** `{{0}} . {{1}}` */
-    private val sharedCodeFormattingTemplate105 =
+    private val sharedCodeFormattingTemplate110 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4992,7 +5170,7 @@ object CSharp {
         )
 
     /** `typeof ( {{0}} )` */
-    private val sharedCodeFormattingTemplate106 =
+    private val sharedCodeFormattingTemplate111 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("typeof", OutputTokenType.Word),

@@ -4,6 +4,7 @@ package lang.temper.be.py
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
 import lang.temper.be.tmpl.GetStaticSupport
@@ -49,6 +50,7 @@ internal object PySupportNetwork : SupportNetwork {
     override val backendDescription = "Python backend"
     override val coroutineStrategy = CoroutineStrategy.TranslateToGenerator
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionType
+    override val computedJumpStrategy = ComputedJumpStrategy.NeverUse
 
     override fun getSupportCode(
         pos: Position,
@@ -141,6 +143,11 @@ internal object PySupportNetwork : SupportNetwork {
             BuiltinOperatorId.AdaptGeneratorFn,
             BuiltinOperatorId.SafeAdaptGeneratorFn,
             -> null
+            // Using exceptions, not results.
+            BuiltinOperatorId.IsOkResult,
+            BuiltinOperatorId.PackOkResult,
+            BuiltinOperatorId.UnpackOkResult,
+            -> null
             null -> null
         }
 
@@ -200,7 +207,7 @@ internal object PySupportNetwork : SupportNetwork {
         return super.translateRuntimeTypeOperation(pos, rto, sourceType, targetType)
     }
 
-    override val bubbleStrategy = BubbleBranchStrategy.CatchBubble
+    override val bubbleStrategy = BubbleBranchStrategy.Exceptions
 
     // Technically, None is void in Python, but too many things are statements only, such as assert.
     override fun representationOfVoid(genre: Genre): RepresentationOfVoid =

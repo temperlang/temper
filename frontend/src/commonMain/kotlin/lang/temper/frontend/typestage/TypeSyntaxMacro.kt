@@ -2,9 +2,12 @@ package lang.temper.frontend.typestage
 
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.Types
+import lang.temper.common.Either
 import lang.temper.common.Log
 import lang.temper.common.OpenOrClosed
 import lang.temper.common.mapFirst
+import lang.temper.common.partitionByType
+import lang.temper.common.soleElement
 import lang.temper.env.Constness
 import lang.temper.env.DeclarationBits
 import lang.temper.env.ReferentBitSet
@@ -12,8 +15,11 @@ import lang.temper.env.ReferentSource
 import lang.temper.frontend.disambiguate.callSymbolPairsMutating
 import lang.temper.frontend.disambiguate.getTypeShapeForCallToTypeMacro
 import lang.temper.frontend.disambiguate.reifiedTypeFor
+import lang.temper.frontend.prefixBlockWith
+import lang.temper.frontend.syntax.rewriteFun
 import lang.temper.interp.convertToErrorNode
 import lang.temper.interp.isErrorNode
+import lang.temper.log.LogEntry
 import lang.temper.log.MessageTemplate
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedParsedName
@@ -21,16 +27,25 @@ import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
+import lang.temper.type.DotHelper
+import lang.temper.type.DotMember
+import lang.temper.type.InternalSet
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
+import lang.temper.type.PropertyShape
+import lang.temper.type.TypeShape
 import lang.temper.type.Visibility
 import lang.temper.value.BlockTree
+import lang.temper.value.CallTree
+import lang.temper.value.DeclParts
 import lang.temper.value.DeclTree
 import lang.temper.value.Fail
+import lang.temper.value.FnParts
 import lang.temper.value.FunTree
 import lang.temper.value.LeftNameLeaf
 import lang.temper.value.MacroEnvironment
 import lang.temper.value.NameLeaf
+import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.PartialResult
 import lang.temper.value.RightNameLeaf
 import lang.temper.value.TBoolean
@@ -43,8 +58,12 @@ import lang.temper.value.constructorPropertySymbol
 import lang.temper.value.constructorSymbol
 import lang.temper.value.defaultSymbol
 import lang.temper.value.dotBuiltinName
+import lang.temper.value.fnBuiltinName
 import lang.temper.value.freeTarget
+import lang.temper.value.freeTree
+import lang.temper.value.functionContained
 import lang.temper.value.getterSymbol
+import lang.temper.value.impliedThisSymbol
 import lang.temper.value.initSymbol
 import lang.temper.value.lookThroughDecorations
 import lang.temper.value.methodSymbol
@@ -75,6 +94,7 @@ internal fun typeSyntaxMacro(macroEnv: MacroEnvironment): PartialResult {
     val macroCall = macroEnv.call
         ?: return Fail // We can't do much if the class definition is not rooted in the AST.
     val shape = getTypeShapeForCallToTypeMacro(macroEnv) ?: return Fail
+    val typeValue = Value(reifiedTypeFor(shape))
 
     // Figure out the name, if any, and while we're at it, reduce \word metadata to a symbol so
     // that it does not get processed during renaming.
@@ -124,7 +144,6 @@ internal fun typeSyntaxMacro(macroEnv: MacroEnvironment): PartialResult {
 
     // Pre-declare so that the ClassShapeMacro can set up recursive reference
     if (leftName != null) {
-        val typeValue = Value(reifiedTypeFor(shape))
         macroEnv.declareLocal(
             leftName,
             DeclarationBits(
@@ -153,9 +172,20 @@ internal fun typeSyntaxMacro(macroEnv: MacroEnvironment): PartialResult {
         }
     } ?: Abstractness.Abstract
     val isConcrete = concreteness == Abstractness.Concrete
-    if (isConcrete && shape.methods.none { it.symbol == constructorSymbol }) {
+
+    val classBodyFn = macroCall.childOrNull(macroCall.size - 1) as? FunTree
+    val classBody = classBodyFn?.childOrNull(classBodyFn.size - 1) as? BlockTree
+
+    val cpInfo = if (isConcrete && classBody != null) {
+        findConstructorsAndProperties(classBody, shape, macroEnv)
+    } else {
+        ConstructorsAndProperties(listOf())
+    }
+
+    val nConstructors = cpInfo.parts.count { it is ConstructorsAndProperties.ConstructorInfo }
+    if (isConcrete && nConstructors == 0 && classBody != null) {
         run makeConstructor@{
-            // Given backed properties where the set of constructor parameters is (a, b, c)
+            // Given backed properties where the set of constructor parameters is (a, b)
             //     a: A = e(); // `=` means default
             //     b: B;
             //     c: C = f(); // not a constructorProperty, so `=` means initialized to
@@ -169,65 +199,12 @@ internal fun typeSyntaxMacro(macroEnv: MacroEnvironment): PartialResult {
             //         this.c = f();
             //     }
 
-            // A backed property a locally-declared (not inherited from an interface) property that
-            // does not have a locally-declared getter or setter.
+            // A backed property a locally declared (not inherited from an interface) property that
+            // does not have a locally declared getter or setter.
             //
             // All others are abstract properties.
             // A backed property may mask an inherited abstract property.  That's a compiler error but
             // one that will be detected later.
-
-            val classBodyFn = macroCall.childOrNull(macroCall.size - 1) as? FunTree
-                ?: return@makeConstructor
-            val classBody = classBodyFn.childOrNull(classBodyFn.size - 1) as? BlockTree
-                ?: return@makeConstructor
-
-            // First, build a list of the backed property declarations.
-            // To do that, we need to know about getters/setters.
-            val declarations = classBody.edges.mapNotNull {
-                val t = lookThroughDecorations(it).target
-                if (t is DeclTree) {
-                    t to (t.parts ?: return@mapNotNull null)
-                } else {
-                    null
-                }
-            }
-            val symbolsWithGettersSetters = mutableSetOf<Symbol>()
-            declarations.forEach { (_, declParts) ->
-                val metadata = declParts.metadataSymbolMap
-                if (getterSymbol in metadata || setterSymbol in metadata) {
-                    val edge = metadata[methodSymbol]
-                    val propertySymbol = edge?.target?.symbolContained
-                    if (propertySymbol != null) {
-                        symbolsWithGettersSetters.add(propertySymbol)
-                    }
-                }
-            }
-            val backedPropertyAndNoPropertyDeclarations = declarations.mapNotNull { (declTree, declParts) ->
-                val metadata = declParts.metadataSymbolMultimap
-                val symbol = declParts.name.content.toSymbol()
-                val neededForConstructor = when {
-                    noPropertySymbol in metadata -> {
-                        check(propertySymbol !in metadata) {
-                            "property=${
-                                declTree.toPseudoCode(singleLine = false)
-                            }\n\nfrom\n\n${
-                                macroEnv.call?.toPseudoCode(singleLine = false)
-                            }"
-                        }
-                        true
-                    }
-                    propertySymbol in metadata -> {
-                        constructorPropertySymbol in metadata ||
-                            (symbol != null && symbol !in symbolsWithGettersSetters)
-                    }
-                    else -> false
-                }
-                if (neededForConstructor) {
-                    declTree to declParts
-                } else {
-                    null
-                }
-            }
 
             val nameMaker = macroEnv.nameMaker
             val detachedTypeValue = Value(reifiedTypeFor(shape))
@@ -250,18 +227,31 @@ internal fun typeSyntaxMacro(macroEnv: MacroEnvironment): PartialResult {
             )
 
             val constructorBodyParts = mutableListOf<Tree>()
-            for ((declTree, declParts) in backedPropertyAndNoPropertyDeclarations) {
-                // Splice out metadata that is no longer needed, like a default expression
-                // so that we can use it in the constructor's argument list
-                fun spliceOut(metadataKey: Symbol): Tree? =
-                    declParts.metadataSymbolMap[metadataKey]?.let { edge ->
-                        val edgeIndex = edge.edgeIndex
-                        val tree = edge.target
-                        declTree.removeChildren(edgeIndex - 1..edgeIndex)
-                        tree
+            for (p in cpInfo.parts) {
+                val declTree: DeclTree
+                val declParts: DeclParts
+                val isConstructorInput: Boolean
+                val isProperty: Boolean
+                when (p) {
+                    is ConstructorsAndProperties.ConstructorInfo -> error("count from above")
+                    is ConstructorsAndProperties.BackedPropertyInfo -> {
+                        declTree = p.tree
+                        declParts = p.parts
+                        isConstructorInput = p.isConstructorProperty
+                        isProperty = true
                     }
+                    is ConstructorsAndProperties.NoPropertyArgInfo -> {
+                        declTree = p.tree
+                        declParts = p.parts
+                        isConstructorInput = true
+                        isProperty = false
+                    }
+                }
 
-                if (noPropertySymbol in declParts.metadataSymbolMultimap) {
+                fun spliceOut(metadataKey: Symbol): Tree? =
+                    spliceOut(metadataKey, declParts, declTree)
+
+                if (!isProperty) {
                     spliceOut(noPropertySymbol)
                     var edge = declTree.incoming!!
                     while (edge.source != classBody) {
@@ -281,8 +271,7 @@ internal fun typeSyntaxMacro(macroEnv: MacroEnvironment): PartialResult {
                 val propertyNameSymbol = propParsedName.toSymbol()
 
                 val initExpr: Tree?
-                val isConstructorProperty = constructorPropertySymbol in declParts.metadataSymbolMultimap
-                if (isConstructorProperty) {
+                if (isConstructorInput) {
                     val defaultExpr = spliceOut(defaultSymbol)
                     spliceOut(wordSymbol) // Moved to parameter
                     // Store any complex type expression in a temporary.
@@ -300,7 +289,7 @@ internal fun typeSyntaxMacro(macroEnv: MacroEnvironment): PartialResult {
                                         "typeof_${propertyNameSymbol.text}",
                                     )
                                     val typeInsertionPoint = run {
-                                        var e = typeEdge!! // The target is not null
+                                        var e: TEdge = typeEdge
                                         while (e.source != classBody) {
                                             e = e.source!!.incoming!!
                                         }
@@ -423,7 +412,261 @@ internal fun typeSyntaxMacro(macroEnv: MacroEnvironment): PartialResult {
                 ),
             )
         }
+    } else if (nConstructors != 0) {
+        // Check for incompatibilities between backed property declarations
+        // and constructors:
+        // - Parenthesized constructor inputs when there is an explicit constructor
+        //   TODO: could we just add input declarations to the end?
+        // - Properties with initializers when there are multiple constructors.
+        //   If a property is declared with an initializer like `private let prop = veryLargeExpression()`
+        //   we can't easily move that initializer into each constructors by transforming it into
+        //   `this.prop = veryLargeExpression()` because that would involve copying code trees which
+        //   we do not do unless they are known to be very small.
+        val (constructors, otherParts) = cpInfo.parts.partitionByType<
+            ConstructorsAndProperties.PartInfo,
+            ConstructorsAndProperties.ConstructorInfo,
+            ConstructorsAndProperties.NonConstructorInfo,
+            >()
+        val aConstructorPos = constructors.first().declParts.name.pos
+        val initializersToAdopt = mutableListOf<Pair<PropertyShape, Tree>>()
+        for (part in otherParts) {
+            var error: LogEntry? = null
+            when (part) {
+                is ConstructorsAndProperties.BackedPropertyInfo -> {
+                    if (part.isConstructorProperty) {
+                        error = LogEntry(
+                            MessageTemplate.ExplicitConstructorIncompatibleWithInput,
+                            part.tree.pos,
+                            listOf(part.parts.name.content, aConstructorPos),
+                        )
+                    } else {
+                        val init = part.parts.metadataSymbolMap[initSymbol]
+                        if (init != null) {
+                            if (nConstructors == 1) {
+                                // Fold it into the constructor.
+                                initializersToAdopt.add(part.propertyShape to init.target)
+                                spliceOut(initSymbol, part.parts, part.tree)
+                            } else {
+                                error = LogEntry(
+                                    MessageTemplate.MultipleConstructorsIncompatibleWIthInitializer,
+                                    part.tree.pos,
+                                    listOf(part.parts.name.content, constructors.map { it.declParts.name.pos }),
+                                )
+                            }
+                        }
+                    }
+                }
+                is ConstructorsAndProperties.NoPropertyArgInfo -> {
+                    error = LogEntry(
+                        MessageTemplate.ExplicitConstructorIncompatibleWithInput,
+                        part.tree.pos,
+                        listOf(part.parts.name.content, aConstructorPos),
+                    )
+                }
+            }
+            if (error != null) {
+                error.logTo(macroEnv.logSink)
+                convertToErrorNode(part.tree.incoming!!, error)
+            }
+        }
+        if (initializersToAdopt.isNotEmpty()) {
+            val ctor = constructors.soleElement!!
+            val thisName = ctor.parts.formals.first { impliedThisSymbol in it.parts!!.metadataSymbolMap }
+                .parts!!.name
+            var body = ctor.parts.body
+            if (body !is BlockTree) {
+                val bodyEdge = body.incoming!!
+                bodyEdge.replace { pos ->
+                    Block(pos) {
+                        Replant(freeTree(body))
+                    }
+                }
+                body = bodyEdge.target as BlockTree
+            }
+            prefixBlockWith(
+                body.document.treeFarm.growAll(body.pos.leftEdge) {
+                    initializersToAdopt.forEach { (propertyShape, initializer) ->
+                        Call(DotHelper(InternalSet, DotMember(propertyShape.symbol))) {
+                            V(typeValue)
+                            Replant(thisName.copyRight())
+                            Replant(initializer)
+                        }
+                    }
+                    V(void)
+                },
+                body,
+            )
+        }
     }
 
     return result
 }
+
+/**
+ * Collects information about property declarations and constructors to simplify both
+ * generating a constructor when none was explicitly declared and folding property
+ * initializers and default expressions into an existing constructor.
+ */
+private data class ConstructorsAndProperties(
+    val parts: List<PartInfo>,
+) {
+    sealed class PartInfo
+
+    data class ConstructorInfo(
+        val declTree: DeclTree,
+        val declParts: DeclParts,
+        val tree: FunTree,
+        val parts: FnParts,
+        val methodShape: MethodShape,
+    ) : PartInfo() {
+        override fun toString() = "ConstructorInfo(${methodShape.name}, `${tree.toPseudoCode()}`)"
+    }
+
+    sealed class NonConstructorInfo : PartInfo() {
+        abstract val tree: DeclTree
+        abstract val parts: DeclParts
+    }
+
+    data class NoPropertyArgInfo(
+        override val tree: DeclTree,
+        override val parts: DeclParts,
+    ) : NonConstructorInfo() {
+        override fun toString() = "NoPropertyInfo(`${tree.toPseudoCode()}`)"
+    }
+
+    data class BackedPropertyInfo(
+        override val tree: DeclTree,
+        override val parts: DeclParts,
+        val isConstructorProperty: Boolean,
+        val propertyShape: PropertyShape,
+    ) : NonConstructorInfo() {
+        override fun toString() =
+            "BackedPropertyInfo(${propertyShape.name}${
+                if (isConstructorProperty) { ", isConstructorProperty" } else { "" }
+            }, `${tree.toPseudoCode()}`)"
+    }
+}
+
+private fun findConstructorsAndProperties(
+    classBody: BlockTree,
+    typeShape: TypeShape,
+    macroEnv: MacroEnvironment,
+): ConstructorsAndProperties {
+    // First, build a list of the backed property declarations.
+    // To do that, we need to know about getters/setters.
+    val declarations = mutableListOf<Pair<DeclTree, DeclParts>>()
+    classBody.edges.mapNotNullTo(declarations) {
+        val t = lookThroughDecorations(it).target
+        if (t is DeclTree) {
+            t.parts?.let { parts -> t to parts }
+        } else {
+            null
+        }
+    }
+
+    // If we're mixing-in a type, there may be constructors that were extracted
+    // out into top-level declarations which also need to be mixe din.
+    val declarationsFoundSoFar = buildSet {
+        declarations.mapTo(this) { it.second.name.content }
+    }
+
+    for (method in typeShape.methods) {
+        if (method.methodKind == MethodKind.Constructor && method.name !in declarationsFoundSoFar) {
+            val stayLeaf = method.stay
+            val parent = stayLeaf?.incoming?.source
+            if (parent is DeclTree) {
+                val parts = parent.parts
+                if (parts != null) {
+                    declarations.add(parent to parts)
+                }
+            }
+        }
+    }
+
+    val parts = mutableListOf<ConstructorsAndProperties.PartInfo>()
+    val symbolsWithGettersSetters = mutableSetOf<Symbol>()
+    declarations.forEach { (_, declParts) ->
+        val metadata = declParts.metadataSymbolMap
+        if (getterSymbol in metadata || setterSymbol in metadata) {
+            val edge = metadata[methodSymbol]
+            val propertySymbol = edge?.target?.symbolContained
+            if (propertySymbol != null) {
+                symbolsWithGettersSetters.add(propertySymbol)
+            }
+        }
+    }
+
+    for ((decl, declParts) in declarations) {
+        val metadata = declParts.metadataSymbolMap
+        val name = declParts.name.content
+        if (methodSymbol in metadata) {
+            val symbol = metadata.getValue(methodSymbol).symbolContained
+            if (symbol == constructorSymbol) {
+                val initializer = metadata[initSymbol]?.let {
+                    lookThroughDecorations(it)
+                }
+                if (initializer?.target is CallTree) {
+                    // Expand `fn` macro calls.
+                    val call = initializer.target as CallTree
+                    val callee = call.childOrNull(0)?.functionContained
+                    if (callee is NamedBuiltinFun && callee.name == fnBuiltinName.builtinKey) {
+                        when (val rewritten = rewriteFun(call, isDeclaration = false)) {
+                            is Either.Left<Tree> -> initializer.replace(rewritten.item)
+                            is Either.Right<LogEntry> -> rewritten.item.logTo(macroEnv.logSink)
+                        }
+                    }
+                }
+                val fn = initializer?.target as? FunTree
+                val shape = typeShape.members.firstOrNull { it is MethodShape && it.name == name }
+                    as MethodShape?
+                val fnParts = fn?.parts
+                if (fnParts != null && shape != null) {
+                    parts.add(
+                        ConstructorsAndProperties.ConstructorInfo(
+                            decl, declParts,
+                            fn, fnParts, shape,
+                        ),
+                    )
+                }
+            }
+        } else if (noPropertySymbol in metadata) {
+            check(propertySymbol !in metadata) {
+                "property=${
+                    decl.toPseudoCode(singleLine = false)
+                }\n\nfrom\n\n${
+                    classBody.toPseudoCode(singleLine = false)
+                }"
+            }
+            parts.add(
+                ConstructorsAndProperties.NoPropertyArgInfo(decl, declParts),
+            )
+        } else if (propertySymbol in metadata) {
+            val symbol = metadata.getValue(propertySymbol).symbolContained
+            val propertyShape = typeShape.properties.firstOrNull { it.symbol == symbol && it.name == name }
+            if (propertyShape?.abstractness == Abstractness.Concrete && symbol !in symbolsWithGettersSetters) {
+                val isConstructorProperty = constructorPropertySymbol in metadata
+                parts.add(
+                    ConstructorsAndProperties.BackedPropertyInfo(
+                        decl, declParts,
+                        isConstructorProperty = isConstructorProperty,
+                        propertyShape = propertyShape,
+                    ),
+                )
+            }
+        }
+    }
+
+    return ConstructorsAndProperties(parts.toList())
+}
+
+/**
+ * Splice out metadata which is no longer needed, like a default expression
+ * so that we can repurpose the declaration or part of it.
+ */
+private fun spliceOut(metadataKey: Symbol, declParts: DeclParts, declTree: DeclTree): Tree? =
+    declParts.metadataSymbolMap[metadataKey]?.let { edge ->
+        val edgeIndex = edge.edgeIndex
+        val tree = edge.target
+        declTree.removeChildren(edgeIndex - 1..edgeIndex)
+        tree
+    }
