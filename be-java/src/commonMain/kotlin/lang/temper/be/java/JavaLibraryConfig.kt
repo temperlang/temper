@@ -131,7 +131,7 @@ class JavaLibraryConfig(
 
     internal val dependencies by lazy {
         val deps = TList.unpackOrNull(
-            properties?.get(DEPENDENCIES_KEY) ?: base.configExports[javaDependenciesGlobalKey]
+            properties?.get(DEPENDENCIES_KEY) ?: base.configExports[javaDependenciesGlobalKey],
         ) ?: return@lazy emptyList()
         deps.mapNotNull dep@{ depValue ->
             val dependencyText = TString.unpackOrNull(depValue) ?: return@dep null

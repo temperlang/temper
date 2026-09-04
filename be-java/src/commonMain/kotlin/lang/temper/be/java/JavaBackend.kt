@@ -27,7 +27,6 @@ import lang.temper.name.FileType
 import lang.temper.name.LanguageLabel
 import lang.temper.name.ModuleName
 import lang.temper.name.OutName
-import lang.temper.name.Symbol
 import lang.temper.name.rootModuleName
 import lang.temper.be.java.Java as J
 import lang.temper.value.DependencyCategory as DepCat
