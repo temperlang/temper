@@ -20,17 +20,17 @@ Now create some classes, one with a single implicit constructor:
 
 And another with custom constructors.
 
-    export class Rectangle {
-      public width: Int;
-      public height: Int;
+    export class Rectangle(
+      public width: Int,
+      public height: Int,
+    ) {
 
-      public constructor(width: Int, height: Int) {
-        this.width = width;
-        this.height = height;
-      }
+TODO: Once we have factory functions, expose this secondary one as
+a factory and update ./object-literals.temper to uncomment the
+property bag that uses it.
 
-      public constructor(squareWidth: Int) {
-        this.width = squareWidth;
-        this.height = squareWidth;
-      }
+    //@factory public static createSquare(squareWidth: Int): Rectangle {
+    //  ({ width: squareWidth, height: squareWidth })
+    //}
+
     }
