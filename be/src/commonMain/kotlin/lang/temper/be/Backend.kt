@@ -26,7 +26,6 @@ import lang.temper.common.transitiveClosure
 import lang.temper.format.TokenSink
 import lang.temper.frontend.BindingsInjector
 import lang.temper.frontend.Module
-import lang.temper.frontend.staging.addSharedStdModuleInjector
 import lang.temper.frontend.staging.isConfigModule
 import lang.temper.fs.AsyncSystemAccess
 import lang.temper.fs.AsyncSystemReadAccess
@@ -824,7 +823,6 @@ abstract class Backend<SELF : Backend<SELF>>(
             if (module.isConfigModule) {
                 configBindingsInjector?.also { injector ->
                     module.addBindingsInjector(injector)
-                    addSharedStdModuleInjector(injector)
                 }
             }
         }

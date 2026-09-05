@@ -15,10 +15,10 @@ import lang.temper.common.putMultiList
 import lang.temper.env.Exporter
 import lang.temper.env.InterpMode
 import lang.temper.format.ConsoleBackedContextualLogSink
-import lang.temper.frontend.BindingsInjector
 import lang.temper.frontend.Module
 import lang.temper.frontend.core.CoreModule
 import lang.temper.frontend.core.accessStdWrapped
+import lang.temper.frontend.staging.backend.JavaConfigInjector
 import lang.temper.fs.FileFilterRules
 import lang.temper.fs.FileSnapshot
 import lang.temper.fs.FileSystemSnapshot
@@ -990,9 +990,11 @@ private fun buildStdModules(
                         ) { it.fullName }
                     }
                     this[specifier] = module
-                    // Also add injectors.
-                    for (injector in sharedStdModuleInjectors) {
-                        module.addBindingsInjector(injector)
+                    // Also add config injectors.
+                    if (module.isConfigModule) {
+                        for (injector in sharedStdConfigInjectors) {
+                            module.addBindingsInjector(injector)
+                        }
                     }
                 }
             }
@@ -1071,19 +1073,10 @@ private class ModuleAdvancerContinueConditionImpl : ContinueCondition {
     override fun toString(): String = "ModuleAdvancerContinueConditionImpl(${count[0]})"
 }
 
-/**
- * As global mutable state, synchronized just to be on the safe side.
- */
-private val sharedStdModuleInjectors = java.util.Collections.synchronizedSet(mutableSetOf<BindingsInjector>())
-
-/**
- * Call only on startup.
- *
- * TODO Replace this with ImportResolver instances somehow? Do we have to drive such modules through the stages?
- */
-fun addSharedStdModuleInjector(injector: BindingsInjector) {
-    sharedStdModuleInjectors.add(injector)
-}
+/** Needed for including config for our bundled backends in std. */
+private val sharedStdConfigInjectors = setOf(
+    JavaConfigInjector,
+)
 
 private val sharedStdModules = lazy {
     val logSink = ConsoleBackedContextualLogSink(
