@@ -1,14 +1,20 @@
 package lang.temper.be.java
 
+import lang.temper.common.console
 import lang.temper.common.subListToEnd
+import lang.temper.frontend.staging.backend.JavaConfigKeys
 import lang.temper.library.LibraryConfiguration
 import lang.temper.library.LibraryConfigurations
 import lang.temper.library.backendLibraryName
 import lang.temper.library.versionOrDefault
 import lang.temper.log.FilePath
 import lang.temper.log.FilePathSegment
+import lang.temper.name.ExportedName
 import lang.temper.name.ModuleName
+import lang.temper.name.SourceName
 import lang.temper.name.Symbol
+import lang.temper.value.InstancePropertyRecord
+import lang.temper.value.TClass
 import lang.temper.value.TList
 import lang.temper.value.TString
 
@@ -64,21 +70,48 @@ open class JavaLibraryConfigs(
 class JavaLibraryConfig(
     val base: LibraryConfiguration,
 ) {
-    val libraryName: String get() = base.backendLibraryName(JavaBackend.javaLibraryNameConfigKey)
+    val libraryName: String get() = base.backendLibraryName(JavaConfigKeys.libraryNameGlobal)
     val libraryRoot: FilePath get() = base.libraryRoot
-    private fun cfg(sym: Symbol) = TString.unpackOrNull(base.configExports[sym])
+
+    private val properties = base.configExports[Symbol(JavaConfigKeys.CONFIG)]?.let value@{ value ->
+        // Check that we have a class instance.
+        val typeShape = (value.typeTag as? TClass)?.typeShape ?: run {
+            // TODO Provide a LogSink to backends?
+            console.error("Expected class instance for ${JavaConfigKeys.CONFIG} config")
+            return@value null
+        }
+        // Check the type name.
+        // We currently generate within the context of the config module, so the origin isn't special.
+        (typeShape.name as? ExportedName)?.baseName?.nameText == JavaConfigKeys.CONFIG_CLASS_NAME || run {
+            console.error("Expected config class ${JavaConfigKeys.CONFIG_CLASS_NAME}, not ${typeShape.name}")
+            return@value null
+        }
+        // Good enough for now. Extract a pretty map.
+        (value.stateVector as InstancePropertyRecord).properties.map { instance ->
+            (instance.key as SourceName).baseName.nameText to instance.value
+        }.toMap()
+    }
+
+    private fun cfg(propertyName: String, globalSymbol: Symbol) =
+        TString.unpackOrNull(properties?.get(propertyName) ?: base.configExports[globalSymbol])
+
+    private fun cfgPackage(): String? = cfg(JavaConfigKeys.PACKAGE, JavaConfigKeys.packageGlobal)
 
     private val libraryGroup: String
         get() =
-            cfg(JavaBackend.javaLibraryGroupConfigKey)
-                ?: cfg(JavaBackend.javaPackageConfigKey)
+            cfg(JavaConfigKeys.GROUP, JavaConfigKeys.libraryGroupGlobal)
+                ?: cfgPackage()
                 // Dashes not allowed in group names per
                 // maven.apache.org/guides/mini/guide-naming-conventions.html
                 ?: libraryName.safeIdentifier()
-    private val libraryArtifact: String get() = cfg(JavaBackend.javaLibraryArtifactConfigKey) ?: libraryName
+
+    private val libraryArtifact: String
+        get() = cfg(JavaConfigKeys.ARTIFACT, JavaConfigKeys.libraryArtifactGlobal) ?: libraryName
 
     internal val dependencies by lazy {
-        val deps = TList.unpackOrNull(base.configExports[JavaBackend.javaDependenciesKey]) ?: return@lazy emptyList()
+        val deps = TList.unpackOrNull(
+            properties?.get(JavaConfigKeys.DEPENDENCIES) ?: base.configExports[JavaConfigKeys.dependenciesGlobal],
+        ) ?: return@lazy emptyList()
         deps.mapNotNull dep@{ depValue ->
             val dependencyText = TString.unpackOrNull(depValue) ?: return@dep null
             val (groupId, artifactId, version) = dependencyText.trim().split(":")
@@ -98,7 +131,7 @@ class JavaLibraryConfig(
 
     val prefix: List<String>
         get() =
-            when (val javaPackageMetadataString = cfg(JavaBackend.javaPackageConfigKey)) {
+            when (val javaPackageMetadataString = cfgPackage()) {
                 "" -> emptyList()
                 null -> listOf(libraryName)
                 else -> javaPackageMetadataString.split(".")

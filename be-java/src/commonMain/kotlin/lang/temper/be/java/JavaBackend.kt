@@ -10,6 +10,8 @@ import lang.temper.be.tmpl.TmpLTranslator
 import lang.temper.be.tmpl.hasSplitSupers
 import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.common.MimeType
+import lang.temper.frontend.BindingsInjector
+import lang.temper.frontend.staging.backend.JavaConfigInjector
 import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
 import lang.temper.library.LibraryConfigurations
@@ -26,7 +28,6 @@ import lang.temper.name.FileType
 import lang.temper.name.LanguageLabel
 import lang.temper.name.ModuleName
 import lang.temper.name.OutName
-import lang.temper.name.Symbol
 import lang.temper.name.rootModuleName
 import lang.temper.be.java.Java as J
 import lang.temper.value.DependencyCategory as DepCat
@@ -335,21 +336,6 @@ class JavaBackend private constructor(
         // Module files get a specific name. Prohibited as a Java identifier because module is a reserved word
         const val moduleFileName = "module$sourceFileExtension"
 
-        /** Config files may export a name with this text to specify the Maven library name */
-        val javaLibraryNameConfigKey = Symbol("javaName")
-
-        /** Config files may export a name with this text to specify the Maven group id */
-        val javaLibraryGroupConfigKey = Symbol("javaGroup")
-
-        /** Config files may export a name with this text to specify the Maven artifact id */
-        val javaLibraryArtifactConfigKey = Symbol("javaArtifact")
-
-        /** Config files may export a name with this text to specify the Java `package` name */
-        val javaPackageConfigKey = Symbol("javaPackage")
-
-        /** Config key to specify Maven dependencies */
-        val javaDependenciesKey = Symbol("javaDependencies")
-
         // source MIME type
         val sourceMimeType = MimeType("text", "x-java-source")
         // class file MIME
@@ -410,6 +396,8 @@ class JavaBackend private constructor(
 
         val pomPath = filePath("pom.xml")
         val pomMime = MimeType("text", "xml")
+
+        override val configBindingsInjector: BindingsInjector = JavaConfigInjector
 
         override fun make(setup: BackendSetup<JavaBackend>) = JavaBackend(this, setup)
     }

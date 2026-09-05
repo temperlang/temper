@@ -130,13 +130,15 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
     val outputDir = outputRoot.makeDirs(backendLib)
     val moduleConfig = ModuleConfig(
         moduleCustomizeHook = { module, isNew ->
-            for (activeFactory in activeFactories) {
-                module.addEnvironmentBindings(activeFactory.environmentBindings)
-            }
-            if (isNew && (module.loc as? ModuleName)?.isPreface == false) {
-                module.addEnvironmentBindings(
-                    mapOf(StagingFlags.moduleResultNeeded to TBoolean.value(moduleResultNeeded)),
-                )
+            if (isNew) {
+                for (activeFactory in activeFactories) {
+                    activeFactory.addEnvironmentBindings(module)
+                }
+                if ((module.loc as? ModuleName)?.isPreface == false) {
+                    module.addEnvironmentBindings(
+                        mapOf(StagingFlags.moduleResultNeeded to TBoolean.value(moduleResultNeeded)),
+                    )
+                }
             }
         },
     )

@@ -18,6 +18,7 @@ import lang.temper.format.ConsoleBackedContextualLogSink
 import lang.temper.frontend.Module
 import lang.temper.frontend.core.CoreModule
 import lang.temper.frontend.core.accessStdWrapped
+import lang.temper.frontend.staging.backend.JavaConfigInjector
 import lang.temper.fs.FileFilterRules
 import lang.temper.fs.FileSnapshot
 import lang.temper.fs.FileSystemSnapshot
@@ -672,7 +673,7 @@ private class GroupOfModulesToAdvanceTogether(
             val lastStageCompleted = m.stageCompleted
             val isConfigModule = m.isConfigModule
             if (lastStageCompleted == stageBeforeRun && readyToRun != null && !isConfigModule) {
-                readyToRun!!.add(m)
+                readyToRun.add(m)
                 continue
             }
             val shouldAdvance = when {
@@ -989,6 +990,12 @@ private fun buildStdModules(
                         ) { it.fullName }
                     }
                     this[specifier] = module
+                    // Also add config injectors.
+                    if (module.isConfigModule) {
+                        for (injector in sharedStdConfigInjectors) {
+                            module.addBindingsInjector(injector)
+                        }
+                    }
                 }
             }
         }
@@ -1066,6 +1073,11 @@ private class ModuleAdvancerContinueConditionImpl : ContinueCondition {
     override fun toString(): String = "ModuleAdvancerContinueConditionImpl(${count[0]})"
 }
 
+/** Needed for including config for our bundled backends in std. */
+private val sharedStdConfigInjectors = setOf(
+    JavaConfigInjector,
+)
+
 private val sharedStdModules = lazy {
     val logSink = ConsoleBackedContextualLogSink(
         console,
@@ -1112,7 +1124,7 @@ private fun toLocalSpecifier(
     return null
 }
 
-private val Module.isConfigModule: Boolean
+val Module.isConfigModule: Boolean
     get() = when (loc) {
         is ModuleName -> when {
             loc.isPreface -> false
