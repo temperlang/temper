@@ -324,7 +324,7 @@ internal class Typer(
                     console.logIf(DEBUG) {
                         "Storing type of $name with ${member.enclosingType.name}.${
                             member.symbol.text
-                        }"
+                        } as $type"
                     }
                     when (member) {
                         is PropertyShape -> member.descriptor = hackMapOldStyleToNew(type)

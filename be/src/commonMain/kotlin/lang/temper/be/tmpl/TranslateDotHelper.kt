@@ -27,6 +27,7 @@ import lang.temper.type.TypeShape
 import lang.temper.type.Visibility
 import lang.temper.type.VisibleMemberShape
 import lang.temper.type.WellKnownTypes
+import lang.temper.type.excludeBubble
 import lang.temper.type2.DefinedNonNullType
 import lang.temper.type2.DefinedType
 import lang.temper.type2.MkType2
@@ -35,9 +36,8 @@ import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.TypeParamRef
 import lang.temper.type2.hackMapOldStyleToNew
-import lang.temper.type2.hackTryStaticTypeToSig
+import lang.temper.type2.mapType
 import lang.temper.type2.withNullity
-import lang.temper.type2.withType
 import lang.temper.value.CallTree
 import lang.temper.value.CallTypeInferences
 import lang.temper.value.Tree
@@ -154,7 +154,7 @@ internal object TranslateDotHelper {
     fun translate(
         callTree: CallTree,
         callee: Tree,
-        typeActuals: List<Tree>,
+        typeActualsTrees: List<Tree>,
         translator: TmpLTranslator,
     ): TranslatedDotHelper {
         val pos = callTree.pos
@@ -173,7 +173,9 @@ internal object TranslateDotHelper {
         val pool = translator.pool
 
         val subjectIndexInCallTree = 1 + dotHelper.memberAccessor.firstArgumentIndex
-        val subjectTypeDefinition = callTree.children[subjectIndexInCallTree].typeOrInvalid.definition
+        val subjectTree = callTree.children[subjectIndexInCallTree]
+        val subjectType = excludeBubble(subjectTree.typeOrInvalid)
+        val subjectTypeDefinition = subjectType.definition
         val members: Set<MethodShape> = findMembers(subjectTypeDefinition, dotHelper)
 
         val firstMember: MethodShape? = members.firstOrNull()
@@ -182,8 +184,19 @@ internal object TranslateDotHelper {
                 ?.get(it.name as ResolvedName)
         }
 
-        val declaredCalleeType: Signature2? = firstMember?.descriptor
-        val actualCalleeType: Signature2? = hackTryStaticTypeToSig(callTree.childOrNull(0)?.typeInferences?.type)
+        val bindingsFromThis = buildMap {
+            if (subjectTypeDefinition is TypeShape) {
+                check(subjectType is DefinedType)
+                for ((i, formal) in subjectTypeDefinition.formals.withIndex()) {
+                    this[formal] = subjectType.bindings.getOrNull(i)
+                        ?: WellKnownTypes.invalidType2
+                }
+            }
+        }
+
+        val declaredCalleeType: Signature2 = firstMember?.augmentedDescriptor
+            ?: invalidSig
+        val actualCalleeType: Signature2 = declaredCalleeType.mapType(bindingsFromThis)
 
         fun translatedExpr(e: TmpL.Expression) = TranslatedDotHelper(
             Either.Left(e),
@@ -211,6 +224,15 @@ internal object TranslateDotHelper {
         val subject = mergedArgumentList[0]
         val otherArgs = mergedArgumentList.subListToEnd(1)
 
+        val typeActualsPos = subjectTree.pos.rightEdge
+        val typeActuals = TmpL.ImplicitCallTypeActuals(
+            typeActualsPos,
+            subjectType.bindings.map {
+                translator.translateType(typeActualsPos, it).aType
+            },
+            bindingsFromThis,
+        )
+
         val connectedMemberInfo = findConnectedMember(members)
         if (connectedMemberInfo != null) {
             run connected@{
@@ -224,19 +246,13 @@ internal object TranslateDotHelper {
                         arg.tree.typeOrInvalid,
                     )
                 }
-                val calleeType = callee.typeOrInvalid
-                val unboundCalleeType = withType(
-                    calleeType,
-                    fn = { _, sig, _ -> sig },
-                    fallback = { null },
-                ).orInvalid
 
                 if (connectedReference is InlineTmpLSupportCode) {
                     return@translate translatedExpr(
                         connectedReference.inlineToTree(
                             calleePos,
                             parameters,
-                            unboundCalleeType.returnType2,
+                            declaredCalleeType.returnType2,
                             translator,
                         ),
                     )
@@ -244,10 +260,10 @@ internal object TranslateDotHelper {
                 val name = pool.fillIfAbsent(
                     pos = calleePos,
                     supportCode = connectedReference,
-                    desc = unboundCalleeType,
+                    desc = declaredCalleeType,
                     metadata = emptyMap(),
                 )
-                val callable = TmpL.FnReference(TmpL.Id(calleePos, name), unboundCalleeType)
+                val callable = TmpL.FnReference(TmpL.Id(calleePos, name), declaredCalleeType)
 
                 return@translate when (connectedMethod.methodKind to dotHelper.memberAccessor) {
                     MethodKind.Normal to ExternalCall,
@@ -262,6 +278,7 @@ internal object TranslateDotHelper {
                                 pos = pos,
                                 fn = callable,
                                 parameters = parameters.map { it.expr as TmpL.Actual },
+                                typeActuals = typeActuals,
                             ),
                         ),
                     )
@@ -305,7 +322,7 @@ internal object TranslateDotHelper {
                     ),
                     typeActuals = translator.translateCallTypeActuals(
                         pos = pos.leftEdge,
-                        typeActualTrees = typeActuals,
+                        typeActualTrees = typeActualsTrees,
                         callInferences = callTree.typeInferences,
                         sig = sig,
                     ),
@@ -369,8 +386,10 @@ internal object TranslateDotHelper {
                     calleePos = calleePos,
                     subject = subject,
                     dotHelper = dotHelper,
+                    sig = declaredCalleeType,
                     method = method,
                     typeActuals = typeActuals,
+                    typeActualsTrees = typeActualsTrees,
                     callTypeInferences = callTree.typeInferences,
                     args = otherArgs,
                     translator = translator,
@@ -389,7 +408,9 @@ internal object TranslateDotHelper {
         subject: Argument,
         dotHelper: DotHelper,
         method: MethodShape,
-        typeActuals: List<Tree>,
+        sig: Signature2,
+        typeActuals: TmpL.ImplicitCallTypeActuals,
+        typeActualsTrees: List<Tree>,
         callTypeInferences: CallTypeInferences?,
         args: List<Argument>,
         translator: TmpLTranslator,
@@ -405,8 +426,31 @@ internal object TranslateDotHelper {
                 ),
             )
         }
+        val allTypeActuals = if (typeActualsTrees.isEmpty()) {
+            typeActuals
+        } else {
+            val actualsFromTrees = translator.translateCallTypeActuals(
+                pos = calleePos.rightEdge,
+                typeActualTrees = typeActualsTrees,
+                callInferences = callTypeInferences,
+                sig = sig,
+            )
+            val freeTypeActuals = typeActuals.types.toMutableList()
+            freeTypeActuals.addAll(actualsFromTrees.types)
+            typeActuals.types = listOf()
+            when (actualsFromTrees) {
+                is TmpL.ExplicitCallTypeActuals -> actualsFromTrees.types = listOf()
+                is TmpL.ImplicitCallTypeActuals -> actualsFromTrees.types = listOf()
+            }
+
+            TmpL.ImplicitCallTypeActuals(
+                actualsFromTrees.pos,
+                freeTypeActuals.toList(),
+                typeActuals.bindings + actualsFromTrees.bindings,
+            )
+        }
+
         val dotName = TmpL.DotName(calleePos, dotMember.dotName.text)
-        val sig = method.descriptor.orInvalid
         val translation: TmpL.Expression = translator.maybeInline(
             TmpL.CallExpression(
                 pos = pos,
@@ -417,12 +461,7 @@ internal object TranslateDotHelper {
                     sig,
                     method,
                 ),
-                typeActuals = translator.translateCallTypeActuals(
-                    pos = calleePos.rightEdge,
-                    typeActualTrees = typeActuals,
-                    callInferences = callTypeInferences,
-                    sig = sig,
-                ),
+                typeActuals = allTypeActuals,
                 parameters = args.map { argument ->
                     argument.translate(translator)
                 },

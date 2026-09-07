@@ -289,6 +289,23 @@ class MethodShape(
 ) : VisibleMemberShape(enclosingType, name, symbol, stay, visibility) {
     override var descriptor: Signature2? = null
 
+    /**
+     * The augmented descriptor is the one that includes any type parameters
+     * declared on the containing type.
+     *
+     *     class C<T> {
+     *       public method(x: T): T { x }
+     *     }
+     *
+     * `C.method`'s descriptor is `(T) -> T` but its augmented descriptor is
+     * `<T> (T) -> T` meaning that the effective signature of an application
+     * of `method` when its `this` parameter is a `C<Foo>` can be computed by
+     * binding C's `<T>` to `Foo` and mapping types to get `(Foo) -> Foo`.
+     */
+    val augmentedDescriptor: Signature2? get() = descriptor?.let {
+        it.copy(typeFormals = enclosingType.formals + it.typeFormals)
+    }
+
     /** True for methods that do not have a body */
     var isPureVirtual = false
 

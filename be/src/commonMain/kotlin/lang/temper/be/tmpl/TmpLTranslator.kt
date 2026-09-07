@@ -2629,7 +2629,7 @@ class TmpLTranslator internal constructor(
         val dotTranslation = TranslateDotHelper.translate(
             callTree = callTree,
             callee = callee,
-            typeActuals = typeActuals,
+            typeActualsTrees = typeActuals,
             translator = this,
         )
         return when (val t = dotTranslation.translation) {

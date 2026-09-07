@@ -222,6 +222,7 @@ object CSharpSupportNetwork : SupportNetwork {
         if (builtinOperatorId == BuiltinOperatorId.IsNull) {
             return null
         }
+        val fromActualPassType = passTypeOf(fromActualType)
         val fromDeclaredPassType = passTypeOf(fromDeclaredType)
         val toDeclaredPassType = passTypeOf(toDeclaredType)
         val toActualPassType = passTypeOf(toActualType)
@@ -232,7 +233,7 @@ object CSharpSupportNetwork : SupportNetwork {
             hasOptional == needsOptional -> null
             // wrap as an optional when needed
             needsOptional -> WrapAsOptional(
-                toActualPassType.withNullity(Nullity.NonNull) as NonNullType,
+                fromActualPassType.withNullity(Nullity.NonNull) as NonNullType,
             )
             // receiver has no expectations about the value.  Possibly an is-null check or other RTTI operator.
             toDeclaredPassType.definition == WellKnownTypes.anyValueTypeDefinition -> null

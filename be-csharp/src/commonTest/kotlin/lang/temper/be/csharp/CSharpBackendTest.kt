@@ -1285,6 +1285,7 @@ class CSharpBackendTest {
         """.trimMargin(),
         errors = listOf(
             "Cannot instantiate abstract type Listed!",
+            "Cannot translate Invalid!",
         ),
     )
 
