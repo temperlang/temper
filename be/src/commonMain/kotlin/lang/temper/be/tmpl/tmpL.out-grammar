@@ -1418,7 +1418,7 @@ ExplicitCallTypeActuals ::= ((types => "<" & types*", " & ">") || ());
 ImplicitCallTypeActuals ::= ();
 ImplicitCallTypeActuals {
   `
-  constructor(src: CallTypeActuals): this(src.pos, src.types.deepCopy(), src.bindings)
+  constructor(src: CallTypeActuals) : this(src.pos, src.types.deepCopy(), src.bindings)
   `
 };
 

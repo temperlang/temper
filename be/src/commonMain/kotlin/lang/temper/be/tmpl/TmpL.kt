@@ -6809,7 +6809,7 @@ object TmpL {
                 { n -> (n as ImplicitCallTypeActuals).types },
             )
         }
-        constructor(src: CallTypeActuals): this(src.pos, src.types.deepCopy(), src.bindings)
+        constructor(src: CallTypeActuals) : this(src.pos, src.types.deepCopy(), src.bindings)
     }
 
     class ExplicitCallTypeActuals(
