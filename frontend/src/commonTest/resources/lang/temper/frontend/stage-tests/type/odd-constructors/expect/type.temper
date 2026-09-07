@@ -1,0 +1,11 @@
+  @stay @imported(\(`support//`.HasTwoTypeParams)) let HasTwoTypeParams__0;
+  HasTwoTypeParams__0 = type (HasTwoTypeParams);
+  let h2tpWithTypeContext__1: HasTwoTypeParams<Boolean, Int32>;
+## This next line has the type parameters inlined to aid translation.
+  h2tpWithTypeContext__1 = new HasTwoTypeParams<Boolean, Int32>("h2tp");
+  let h2tpWithoutContext__0;
+## AnyValue kind of sucks as a type binding, but without any other info
+## it's the least unreasonable choice.  We could go low if we had a
+## real bottom type, but every Never type binding has its own problems.
+## TODO: maybe we should warn on this.
+  h2tpWithoutContext__0 = new HasTwoTypeParams<AnyValue, AnyValue>("more h2tp");

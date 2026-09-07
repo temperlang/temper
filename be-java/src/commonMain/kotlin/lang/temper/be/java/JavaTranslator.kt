@@ -195,9 +195,9 @@ class JavaTranslator(
                 }
             }
             var hasResult = false
-            val resultType = if (result != null && !result.type.isVoidLike && !result.type.mentionsInvalid) {
+            val resultType = if (result != null && !result.passType.isVoidLike && !result.passType.mentionsInvalid) {
                 hasResult = true
-                JavaType.fromFrontend(result.type, names)
+                JavaType.fromFrontend(result.passType, names)
             } else {
                 Void.asReferenceType()
             }.toTypeAst(result?.pos ?: module.pos)
@@ -1865,7 +1865,7 @@ class JavaTranslator(
             J.InstanceMethodInvocationExpr(
                 gp.pos,
                 expr = expr(gp.subject),
-                method = names.getterName(gp.property, gp.type),
+                method = names.getterName(gp.property, gp.passType),
                 args = listOf(),
             )
 
@@ -1939,7 +1939,7 @@ class JavaTranslator(
                         sc.inlineToTree(
                             call.pos,
                             call.parameters.mapGeneric { TypedArg(actualExpr(it), it.typeOrInvalid) },
-                            call.type,
+                            call.passType,
                             this,
                         ) as J.Expression
 
@@ -1980,7 +1980,7 @@ class JavaTranslator(
             return actuals.mapGenericIndexed { idx, actual ->
                 var expr = actualExpr(actual)
                 if (calleeFormals != null && validInstanceMethodReferenceSubject(expr)) {
-                    val actualSig = (actual as? TmpL.Expression)?.type?.let {
+                    val actualSig = (actual as? TmpL.Expression)?.passType?.let {
                         withType(
                             it,
                             fn = { _, sig, _ -> sig },

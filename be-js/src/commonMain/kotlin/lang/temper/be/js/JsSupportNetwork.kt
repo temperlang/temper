@@ -97,7 +97,7 @@ internal object JsSupportNetwork : SupportNetwork {
             val thisName = nameMaker.unusedSourceName(thisParsedName)
             val visibility = Visibility.Public
             val jsonAdapterSig = Signature2( // Fn(): JsonAdapter<C>
-                MkType2((marshalToJsonObjectSig.value.requiredInputTypes[0] as DefinedType).definition)
+                MkType2((marshalToJsonObjectSig.requiredInputTypes[0] as DefinedType).definition)
                     .actuals(listOf(type))
                     .get(),
                 false,
@@ -112,6 +112,7 @@ internal object JsSupportNetwork : SupportNetwork {
                 methodKind = MethodKind.Normal,
                 openness = OpenOrClosed.Closed,
             )
+
             adjustedMembers = buildList {
                 addAll(adjustedMembers)
                 add(
@@ -153,7 +154,7 @@ internal object JsSupportNetwork : SupportNetwork {
                                         fn = translationAssistant.supportCodeReference(
                                             p,
                                             coreMarshalToJsonObject,
-                                            marshalToJsonObjectSig.value,
+                                            marshalToJsonObjectSig,
                                         ),
                                         parameters = listOf(
                                             TmpL.CallExpression(
@@ -166,11 +167,14 @@ internal object JsSupportNetwork : SupportNetwork {
                                                     method = methodShape,
                                                 ),
                                                 parameters = emptyList(),
-                                                type = jsonAdapterSig.returnType2,
                                             ),
                                             TmpL.This(p, TmpL.Id(p, thisName), type),
                                         ),
-                                        type = marshalToJsonObjectSig.value.returnType2,
+                                        typeActuals = TmpL.ImplicitCallTypeActuals(
+                                            p,
+                                            listOf(translationAssistant.translateType(p, type).aType),
+                                            mapOf(marshalToJsonObjectSig.typeFormals[0] to type),
+                                        ),
                                     ),
                                 ),
                             ),
@@ -950,7 +954,7 @@ private data object JsBackendNamingContext : NamingContext() {
     override val loc: ModuleLocation = ModuleName(filePath("-be", "js"), 2, isPreface = false)
     val counter = AtomicCounter()
 }
-private val marshalToJsonObjectSig = lazy {
+private val marshalToJsonObjectSig by lazy {
     val stdJson = getSharedStdModules().first { "json" in (it.loc as ModuleName).sourceFile.last().baseName }
     val jsonObjectExport = stdJson.exports!!.first { it.name.baseName.nameText == "JsonObject" }
     val jsonAdapterExport = stdJson.exports!!.first { it.name.baseName.nameText == "JsonAdapter" }

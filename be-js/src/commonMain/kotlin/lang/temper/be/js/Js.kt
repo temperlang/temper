@@ -238,9 +238,9 @@ object Js {
         }
         override fun hashCode(): Int {
             var hc = doc.hashCode()
-            hc = 31 * hc + (declaration?.hashCode() ?: 0)
+            hc = 31 * hc + declaration.hashCode()
             hc = 31 * hc + specifiers.hashCode()
-            hc = 31 * hc + (source?.hashCode() ?: 0)
+            hc = 31 * hc + source.hashCode()
             return hc
         }
         init {
@@ -460,7 +460,7 @@ object Js {
             return other is MaybeJsDocComment && this.doc == other.doc
         }
         override fun hashCode(): Int {
-            return (doc?.hashCode() ?: 0)
+            return doc.hashCode()
         }
         init {
             this._doc = updateTreeConnection(null, doc)
@@ -788,7 +788,7 @@ object Js {
         }
         override fun hashCode(): Int {
             var hc = name.hashCode()
-            hc = 31 * hc + (sourceIdentifier?.hashCode() ?: 0)
+            hc = 31 * hc + sourceIdentifier.hashCode()
             return hc
         }
         init {
@@ -997,7 +997,7 @@ object Js {
         override fun hashCode(): Int {
             var hc = id.hashCode()
             hc = 31 * hc + params.hashCode()
-            hc = 31 * hc + (body?.hashCode() ?: 0)
+            hc = 31 * hc + body.hashCode()
             hc = 31 * hc + async.hashCode()
             hc = 31 * hc + generator.hashCode()
             return hc
@@ -1087,7 +1087,7 @@ object Js {
         override fun hashCode(): Int {
             var hc = decorators.hashCode()
             hc = 31 * hc + id.hashCode()
-            hc = 31 * hc + (superClass?.hashCode() ?: 0)
+            hc = 31 * hc + superClass.hashCode()
             hc = 31 * hc + body.hashCode()
             return hc
         }
@@ -1852,7 +1852,7 @@ object Js {
         override fun hashCode(): Int {
             var hc = key.hashCode()
             hc = 31 * hc + params.hashCode()
-            hc = 31 * hc + (body?.hashCode() ?: 0)
+            hc = 31 * hc + body.hashCode()
             hc = 31 * hc + computed.hashCode()
             hc = 31 * hc + kind.hashCode()
             return hc
@@ -1902,9 +1902,9 @@ object Js {
             return other is FunctionExpression && this.id == other.id && this.params == other.params && this.body == other.body && this.async == other.async && this.generator == other.generator
         }
         override fun hashCode(): Int {
-            var hc = (id?.hashCode() ?: 0)
+            var hc = id.hashCode()
             hc = 31 * hc + params.hashCode()
-            hc = 31 * hc + (body?.hashCode() ?: 0)
+            hc = 31 * hc + body.hashCode()
             hc = 31 * hc + async.hashCode()
             hc = 31 * hc + generator.hashCode()
             return hc
@@ -2046,7 +2046,7 @@ object Js {
         }
         override fun hashCode(): Int {
             var hc = params.hashCode()
-            hc = 31 * hc + (returnType?.hashCode() ?: 0)
+            hc = 31 * hc + returnType.hashCode()
             return hc
         }
         init {
@@ -2163,7 +2163,7 @@ object Js {
         }
         override fun hashCode(): Int {
             var hc = pattern.hashCode()
-            hc = 31 * hc + (type?.hashCode() ?: 0)
+            hc = 31 * hc + type.hashCode()
             return hc
         }
         init {
@@ -2303,8 +2303,8 @@ object Js {
         }
         override fun hashCode(): Int {
             var hc = decorators.hashCode()
-            hc = 31 * hc + (id?.hashCode() ?: 0)
-            hc = 31 * hc + (superClass?.hashCode() ?: 0)
+            hc = 31 * hc + id.hashCode()
+            hc = 31 * hc + superClass.hashCode()
             hc = 31 * hc + body.hashCode()
             return hc
         }
@@ -2427,7 +2427,7 @@ object Js {
         override fun hashCode(): Int {
             var hc = doc.hashCode()
             hc = 31 * hc + key.hashCode()
-            hc = 31 * hc + (value?.hashCode() ?: 0)
+            hc = 31 * hc + value.hashCode()
             hc = 31 * hc + computed.hashCode()
             hc = 31 * hc + static.hashCode()
             return hc
@@ -2492,7 +2492,7 @@ object Js {
         }
         override fun hashCode(): Int {
             var hc = id.hashCode()
-            hc = 31 * hc + (init?.hashCode() ?: 0)
+            hc = 31 * hc + init.hashCode()
             return hc
         }
         init {
@@ -3382,7 +3382,7 @@ object Js {
         }
         override fun hashCode(): Int {
             var hc = name.hashCode()
-            hc = 31 * hc + (sourceIdentifier?.hashCode() ?: 0)
+            hc = 31 * hc + sourceIdentifier.hashCode()
             return hc
         }
         init {
@@ -3961,7 +3961,7 @@ object Js {
         override fun hashCode(): Int {
             var hc = test.hashCode()
             hc = 31 * hc + consequent.hashCode()
-            hc = 31 * hc + (alternate?.hashCode() ?: 0)
+            hc = 31 * hc + alternate.hashCode()
             return hc
         }
         init {
@@ -4092,8 +4092,8 @@ object Js {
         }
         override fun hashCode(): Int {
             var hc = block.hashCode()
-            hc = 31 * hc + (handler?.hashCode() ?: 0)
-            hc = 31 * hc + (finalizer?.hashCode() ?: 0)
+            hc = 31 * hc + handler.hashCode()
+            hc = 31 * hc + finalizer.hashCode()
             return hc
         }
         init {
@@ -4194,7 +4194,7 @@ object Js {
             return other is ReturnStatement && this.expr == other.expr
         }
         override fun hashCode(): Int {
-            return (expr?.hashCode() ?: 0)
+            return expr.hashCode()
         }
         init {
             this._expr = updateTreeConnection(null, expr)
@@ -4299,7 +4299,7 @@ object Js {
             return other is BreakStatement && this.label == other.label
         }
         override fun hashCode(): Int {
-            return (label?.hashCode() ?: 0)
+            return label.hashCode()
         }
         init {
             this._label = updateTreeConnection(null, label)
@@ -4349,7 +4349,7 @@ object Js {
             return other is ContinueStatement && this.label == other.label
         }
         override fun hashCode(): Int {
-            return (label?.hashCode() ?: 0)
+            return label.hashCode()
         }
         init {
             this._label = updateTreeConnection(null, label)
@@ -4578,7 +4578,7 @@ object Js {
             return other is SwitchCase && this.test == other.test && this.consequent == other.consequent
         }
         override fun hashCode(): Int {
-            var hc = (test?.hashCode() ?: 0)
+            var hc = test.hashCode()
             hc = 31 * hc + consequent.hashCode()
             return hc
         }
@@ -4638,7 +4638,7 @@ object Js {
             return other is CatchClause && this.exceptionDeclaration == other.exceptionDeclaration && this.body == other.body
         }
         override fun hashCode(): Int {
-            var hc = (exceptionDeclaration?.hashCode() ?: 0)
+            var hc = exceptionDeclaration.hashCode()
             hc = 31 * hc + body.hashCode()
             return hc
         }
@@ -4755,7 +4755,7 @@ object Js {
         override fun hashCode(): Int {
             var hc = templates.hashCode()
             hc = 31 * hc + params.hashCode()
-            hc = 31 * hc + (returnType?.hashCode() ?: 0)
+            hc = 31 * hc + returnType.hashCode()
             return hc
         }
         init {
@@ -4916,7 +4916,7 @@ object Js {
             return other is JsDocTagTemplate && this.type == other.type && this.id == other.id
         }
         override fun hashCode(): Int {
-            var hc = (type?.hashCode() ?: 0)
+            var hc = type.hashCode()
             hc = 31 * hc + id.hashCode()
             return hc
         }

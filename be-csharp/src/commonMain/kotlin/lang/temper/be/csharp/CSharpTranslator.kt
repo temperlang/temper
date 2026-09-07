@@ -912,7 +912,7 @@ internal class CSharpTranslator(
                     arguments = call.mapParameters { arg, wantedType, _ ->
                         TypedArg(translateActual(arg, wantedType = wantedType), arg.typeOrInvalid)
                     },
-                    returnType = call.type,
+                    returnType = call.passType,
                     translator = this,
                 ) as CSharp.Expression
 
@@ -942,7 +942,7 @@ internal class CSharpTranslator(
 
     private fun translateCastExpression(expr: TmpL.CastExpression): CSharp.Expression {
         return when {
-            expr.expr.type.isNullable() && !expr.type.isNullable() && !expr.type.isValueType() -> {
+            expr.expr.passType.isNullable() && !expr.passType.isNullable() && !expr.passType.isValueType() -> {
                 CSharp.InvocationExpression(
                     expr.pos,
                     expr = StandardNames.temperCoreCoreCastToNonNull.toStaticMember(expr.pos),
@@ -989,7 +989,7 @@ internal class CSharpTranslator(
         }
 
     private fun translateInstanceofExpression(expr: TmpL.InstanceOfExpression): CSharp.Expression {
-        val expressionType = expr.expr.type
+        val expressionType = expr.expr.passType
         val translatedExpression = translateExpression(expr.expr)
 
         val checkedType = expr.checkedType.ot
@@ -1047,14 +1047,14 @@ internal class CSharpTranslator(
         val pos = expr.pos
 
         // TODO: should we be doing any collections adjustment after verifying that it's not null?
-        val translated = translateExpression(expr.expression, wantedType = expr.type)
+        val translated = translateExpression(expr.expression, wantedType = expr.passType)
         return when {
             // x: T?        /   Optional<T>
             // x => x.Value
-            expr.expression.type.isOptionalTypeArg() ||
+            expr.expression.passType.isOptionalTypeArg() ||
                 // x: int?       /   Nullable<T>
                 // x => x.Value
-                expr.type.isValueType() ->
+                expr.passType.isValueType() ->
                 CSharp.MemberAccess(
                     pos = pos,
                     expr = translated as CSharp.PrimaryExpression,
@@ -1098,12 +1098,12 @@ internal class CSharpTranslator(
     }
 
     private fun translateConstructorReferenceCall(call: TmpL.CallExpression): CSharp.Expression {
-        if (call.type == WellKnownTypes.invalidType2) {
+        if (call.passType == WellKnownTypes.invalidType2) {
             return makeGarbageExpression(call.pos, "Invalid type for `new`")
         }
         // The constructor call gives us the type we're constructing.
         // The constructor reference fn inside the call is static type *Type*.
-        val nominalType = call.type as DefinedNonNullType
+        val nominalType = call.passType as DefinedNonNullType
         // Overriding type here rather than in support network lets us reuse more logic more easily.
         val name = when (nominalType.definition) {
             WellKnownTypes.listBuilderTypeDefinition -> StandardNames.systemCollectionsGenericList
@@ -1171,7 +1171,7 @@ internal class CSharpTranslator(
             is TmpL.ValueReference -> translateValueReference(expr, wantedType)
         }
         return result.wrapCollectionTypeIfNeeded(
-            type = findMainType(expr.type),
+            type = findMainType(expr.passType),
             wantedType = wantedType?.let { findMainType(it) },
         )
     }
@@ -1976,7 +1976,7 @@ internal class CSharpTranslator(
     private fun translateSubject(subject: TmpL.Subject): Pair<TypeDefinition?, CSharp.PrimaryExpression> {
         return when (subject) {
             is TmpL.Expression -> {
-                val type = subject.type
+                val type = subject.passType
                 type.definition to translateExpression(subject) as CSharp.PrimaryExpression
             }
             is TmpL.TypeSubject -> {
@@ -2077,7 +2077,7 @@ internal class CSharpTranslator(
                         add(
                             CSharp.LocalVariableDecl(
                                 declPos,
-                                translateTypeFromFrontend(declPos, arg.type),
+                                translateTypeFromFrontend(declPos, arg.passType),
                                 listOf(
                                     CSharp.VariableDeclarator(declPos, id, promiseExpr),
                                 ),

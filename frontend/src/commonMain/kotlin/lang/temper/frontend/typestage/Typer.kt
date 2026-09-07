@@ -102,7 +102,9 @@ import lang.temper.type2.Callee
 import lang.temper.type2.CalleePriority
 import lang.temper.type2.DefinedNonNullType
 import lang.temper.type2.InputBound
+import lang.temper.type2.InternalTyperFailureException
 import lang.temper.type2.MkType2
+import lang.temper.type2.OutputBound
 import lang.temper.type2.PositionedType
 import lang.temper.type2.Signature2
 import lang.temper.type2.SolverVarNamer
@@ -111,6 +113,7 @@ import lang.temper.type2.TypeContext2
 import lang.temper.type2.TypeReason
 import lang.temper.type2.TypeVar
 import lang.temper.type2.UntypedCall
+import lang.temper.type2.at
 import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.hackTryStaticTypeToSig
@@ -809,8 +812,8 @@ internal class Typer(
         val typedVariants = fixupCalleeType(tree)
 
         val priorProblems = mutableListOf<TypeReasonElement>()
-        val isNew = isNewCall(tree)
-        var effectiveCallee = if (isNew) {
+        val isNewCall = isNewCall(tree)
+        var effectiveCallee = if (isNewCall) {
             tree.child(1)
         } else {
             tree.childOrNull(0)
@@ -837,7 +840,7 @@ internal class Typer(
                     val type = explicitActual.staticTypeContained ?: InvalidType
                     type to explicitActual.pos
                 }
-            } else if (isNew && effectiveCallee != null) {
+            } else if (isNewCall && effectiveCallee != null) {
                 // Extract explicit type actuals from a reifiedType that has them.
                 val reifiedType = effectiveCallee.reifiedTypeContained
                 val nominalType = reifiedType?.type as? NominalType
@@ -857,7 +860,7 @@ internal class Typer(
             }
 
         val effectiveCalleeType = effectiveCallee?.let { ti.decisionType(it) }
-        if (effectiveCalleeType != null && !isNew) {
+        if (effectiveCalleeType != null && !isNewCall) {
             if (effectiveCalleeType is InvalidType) {
                 // Already reported as a problem elsewhere
             } else if (!isCallable(effectiveCalleeType)) {
@@ -891,7 +894,7 @@ internal class Typer(
         }
 
         val calleeVariants: List<Callee> = buildSet {
-            if (isNew) {
+            if (isNewCall) {
                 val constructorSigs = when (effectiveCalleeType) {
                     null -> {
                         // Late-typed constructor reference
@@ -948,6 +951,7 @@ internal class Typer(
             priorProblems = priorProblems,
             calleeVariants = calleeVariants,
             callTree = tree,
+            isNewCall = isNewCall,
             isRttiCall = calleeFn is RttiCheckFunction,
             typeActualsAndPositions = explicitActualTypesAndPositions,
             inputTrees = inputTrees,
@@ -985,7 +989,7 @@ internal class Typer(
 
             if (ancestor is CallTree) {
                 if (isAssignment(ancestor) && incoming == ancestor.edge(2)) {
-                    // We're the right-hand side.
+                    // incoming is the right-hand side.
                     val left = ancestor.child(1)
                     if (left is LeftNameLeaf) {
                         val leftName = left.content as ResolvedName
@@ -1065,6 +1069,7 @@ internal class Typer(
         calleeVariants: List<Callee>,
         callTree: CallTree,
         isRttiCall: Boolean,
+        isNewCall: Boolean,
         /** If we're calling like `f<Foo, Bar>` this is the `Foo` and `Bar` with position metadata */
         typeActualsAndPositions: List<Pair<StaticType, Position>>?,
         inputTrees: List<Tree>,
@@ -1082,7 +1087,7 @@ internal class Typer(
         var effectiveTypeActualsAndPositions = typeActualsAndPositions
         val lateTypedParameterIndices = mutableSetOf<Int>()
         // Some bounds require type solving, so skip the fast track.
-        var inputBoundsRequireFeedback = false
+        var boundsRequireFeedback = false
         val inputBounds: List<InputBound> = buildList {
             // For each input, we have position metadata which comes in handy when generating
             // diagnostics.
@@ -1110,7 +1115,7 @@ internal class Typer(
                         isRttiCall && childIndex == 1 && childI is ValueLeaf && childI.content.typeTag == TType -> {
                             // If we have a complete target type, express it as a type actual.
                             // That way we make better intertwining decisions.
-                            // Otherwise, we need an incomplete reification, so that context and input types can
+                            // Otherwise, we need an incomplete reification so that context and input types can
                             // be used to compute the missing bindings.
                             val reifiedType = TType.unpack(childI.content)
                             val targetType = reifiedType.type2
@@ -1126,7 +1131,7 @@ internal class Typer(
                                         as PositionedType,
                                 )
                             } else {
-                                inputBoundsRequireFeedback = true
+                                boundsRequireFeedback = true
                                 InputBound.IncompleteReification(
                                     pos = childI.pos,
                                     reifiedType = reifiedType,
@@ -1173,6 +1178,41 @@ internal class Typer(
         }
         val hasTrailingBlock = inputTrees.lastOrNull() is FunTree
 
+        val outputBounds = buildList<OutputBound> outputBounds@{
+            if (isNewCall) {
+                val typeEdge = callTree.edge(1)
+                val typeTree = typeEdge.target
+                val reifiedType = typeTree.reifiedTypeContained
+                    ?: return@outputBounds
+                val constructedType = reifiedType.type2
+                val typeFormals = constructedType.definition.formals
+                val typeActuals = constructedType.bindings
+                if (typeFormals.size > typeActuals.size) {
+                    // A partial type
+                    boundsRequireFeedback = true
+                    add(
+                        InputBound.IncompleteReification(
+                            pos = typeTree.pos,
+                            reifiedType = reifiedType,
+                            typeArgumentIndex = -1,
+                            typeVar = solverVarNamer.unusedTypeVar("constructedType"),
+                            reificationEdge = typeEdge,
+                            describedValueArgumentIndex = null,
+                        ),
+                    )
+                } else if (typeFormals.isNotEmpty() && typeFormals.size == typeActuals.size) {
+                    add(InputBound.Pretyped(constructedType.at(typeTree.pos)))
+                }
+            }
+        }
+        if (!boundsRequireFeedback && isNewCall) {
+            val typeConstructed = callTree.childOrNull(1)?.reifiedTypeContained?.type2
+            if (typeConstructed != null && typeConstructed.bindings.size < typeConstructed.definition.formals.size) {
+                // An incomplete type that needs completion, like `new Pair(k, v)` instead of `new Pair<K, V>(k, v)`.
+                boundsRequireFeedback = true
+            }
+        }
+
         val aliasedCall = ti.aliasedCallFor(callTree)?.let {
             if (it.use.isDirectlyNestedCallParameter) {
                 // Aliased call is used as a call parameter
@@ -1203,6 +1243,7 @@ internal class Typer(
                 nestingCall = nestingCall,
                 inputTrees = inputTrees,
                 inputBounds = inputBounds,
+                outputBounds = outputBounds,
                 hasTrailingBlock = hasTrailingBlock,
                 contextType = contextType,
                 passVar = solverVarNamer.unusedTypeVar("pass"),
@@ -1239,7 +1280,7 @@ internal class Typer(
         if (
             intertwined.isEmpty() && calleeVariants.size == 1 &&
             calleeVariants.first().sig.typeFormals.isEmpty() &&
-            !inputBoundsRequireFeedback
+            !boundsRequireFeedback
         ) {
             // Fast path for simple functions that do not require TypeSolving.
             val variant = calleeVariants.first()
@@ -1277,6 +1318,7 @@ internal class Typer(
                     calleeVariants = calleeVariants,
                     explicitActuals = effectiveTypeActualsAndPositions,
                     inputBounds = inputBounds,
+                    outputBounds = outputBounds,
                     hasTrailingBlock = hasTrailingBlock,
                     contextType = contextType,
                     passVar = null,
@@ -1290,6 +1332,7 @@ internal class Typer(
                     calleeVariants = it.calleeVariants,
                     explicitActuals = it.explicitActualTypesAndPositions,
                     inputBounds = it.inputBounds,
+                    outputBounds = it.outputBounds,
                     hasTrailingBlock = it.hasTrailingBlock,
                     contextType = it.contextType,
                     passVar = it.passVar,
@@ -1298,7 +1341,38 @@ internal class Typer(
                 )
             }
 
-            inferBounds(typeContext, typeContext2, solverVarNamer, calls, debug = DEBUG)
+            var internalError: InternalTyperFailureException? = null
+            try {
+                inferBounds(typeContext, typeContext2, solverVarNamer, calls, debug = DEBUG)
+            } catch (e: InternalTyperFailureException) {
+                internalError = e
+            }
+
+            if (internalError != null) {
+                val first = calls.first().callPosition
+                val rest = calls.subList(1, calls.size).map { it.callPosition }
+                val problem = LogEntry(
+                    Log.Error,
+                    MessageTemplate.InternalErrorTyper,
+                    first,
+                    listOf(internalError.constraintDump, rest),
+                )
+                for (call in calls) {
+                    val callSite = call.destination
+                    val allExplanations = buildList {
+                        call.explanations?.let { addAll(it) }
+                        add(TypeReason(problem))
+                    }
+                    val decision = Decision(
+                        type = call.passType ?: InvalidType,
+                        variant = invalidSigFnType,
+                        bindings = call.bindings ?: emptyMap(),
+                        explanations = allExplanations,
+                    )
+                    ti.decide(callSite, decision)
+                }
+                return
+            }
 
             for (call in calls) {
                 val callSite = call.destination
@@ -1403,7 +1477,7 @@ internal class Typer(
         val type = ti.binding(parts.name.content as ResolvedName)
         if (type != null) {
             // Optional expressions may be value references that need context to type.
-            // For example a `null` default expression like
+            // For example, a `null` default expression like
             //     let f(x: Int? = null) { ... }
             val optionalEdges = parts.metadataSymbolMultimap[optionalSymbol] ?: listOf()
             for (optionalEdge in optionalEdges) {
@@ -1440,6 +1514,7 @@ internal class Typer(
         nestingCall: TEdge?,
         inputTrees: List<Tree>,
         inputBounds: List<InputBound>,
+        outputBounds: List<OutputBound>,
         hasTrailingBlock: Boolean,
         contextType: Type2?,
         passVar: TypeVar,
@@ -1452,6 +1527,7 @@ internal class Typer(
                 nestingCall = nestingCall,
                 inputTrees = inputTrees,
                 inputBounds = inputBounds,
+                outputBounds = outputBounds,
                 hasTrailingBlock = hasTrailingBlock,
                 contextType = contextType,
                 passVar = passVar,
@@ -3087,6 +3163,7 @@ internal class Typer(
          * when the call is eventually typed in the context of other calls that can supply that info.
          */
         val inputBounds: List<InputBound>,
+        val outputBounds: List<OutputBound>,
         val hasTrailingBlock: Boolean,
         val contextType: Type2?,
         /**
@@ -3465,3 +3542,5 @@ internal fun isCallable(t: StaticType): Boolean = when (t) {
     )
     TopType -> false
 }
+
+private val invalidSigFnType = typeFromSignature(invalidSig)

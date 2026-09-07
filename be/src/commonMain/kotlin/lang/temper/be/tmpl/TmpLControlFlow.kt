@@ -60,6 +60,7 @@ import lang.temper.value.emptyValue
 import lang.temper.value.fromTypeSymbol
 import lang.temper.value.functionContained
 import lang.temper.value.initSymbol
+import lang.temper.value.isAssignment
 import lang.temper.value.isBubbleCall
 import lang.temper.value.isEmptyBlock
 import lang.temper.value.isPanicCall
@@ -921,7 +922,7 @@ private fun moveDeclarationsForwardToMeetInitializers(
                 val parts = tree.parts
                 val name = parts?.name?.content ?: continue
                 declarationToPosition[name] = index to parts
-            } else if (isAssignmentCall(tree)) {
+            } else if (isAssignment(tree)) {
                 val assigned = (tree.child(1) as? LeftNameLeaf)?.content ?: continue
                 if (assigned !in assignmentToPosition) {
                     assignmentToPosition[assigned] = index
@@ -1029,7 +1030,7 @@ internal fun combineDeclarationsOnto(stmts: List<PreTranslated>, out: MutableLis
     for (stmt in movedDeclarations) {
         if (
             stmt is PreTranslated.TreeWrapper &&
-            isAssignmentCall(stmt.tree) &&
+            isAssignment(stmt.tree) &&
             translatesToExpression(stmt.tree.child(2))
         ) {
             // Combine an assignment to a variable into a declaration of that variable
@@ -1390,7 +1391,7 @@ private fun migrateDeclarationsOutOfSyntheticBlocks(
 private fun translatesToExpression(t: Tree) = when (t) {
     is BlockTree -> false
     is CallTree -> when {
-        isAssignmentCall(t) -> false
+        isAssignment(t) -> false
         isSetPropertyCall(t) -> false
         else -> true
     }
@@ -1686,7 +1687,7 @@ internal fun simplifyGeneratorFnReturns(body: PreTranslated, returnName: Resolve
                         val tree = it.tree
                         !(
                             // Filter out `return__123 = core.doneResult()`
-                            isAssignmentCall(tree) &&
+                            isAssignment(tree) &&
                                 (tree.child(1) as? LeftNameLeaf)?.content == returnName &&
                                 isDoneResultCall(tree.child(2))
                             )

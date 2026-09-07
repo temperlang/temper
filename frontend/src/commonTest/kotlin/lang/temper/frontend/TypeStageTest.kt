@@ -422,6 +422,16 @@ class TypeStageTest {
         stageTestDir = StageTestDir("type/half-return"),
         stagingFlags = setOf(StagingFlags.skipImportCore),
     )
+
+    @Test
+    fun completedTypes() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/completed-types"),
+    )
+
+    @Test
+    fun oddConstructors() = assertModuleAtStage(
+        stageTestDir = StageTestDir("type/odd-constructors"),
+    )
 }
 
 private object ImpureIgnoreFn : NamedBuiltinFun, CallableValue {

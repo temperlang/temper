@@ -96,7 +96,7 @@ enum class MessageTemplate(
         CompilationPhase.TreeBuild,
     ),
 
-    // Detected during string unpacking, but only reported later.
+    // Detected during string unpacking but only reported later.
     InvalidUnicode("Invalid Unicode scalar value", CompilationPhase.TreeBuild),
     InvalidUnicodeBecauseLarge("Invalid Unicode scalar value, too large", CompilationPhase.TreeBuild),
     InvalidUnicodeBecauseSurrogate(
@@ -218,7 +218,6 @@ enum class MessageTemplate(
     ),
     Unreached("Never reached by macro expander %s", CompilationPhase.Interpreter),
     Aborted("Interpretation aborted", CompilationPhase.Interpreter),
-    MalformedFlow("Block has broken flow graph", CompilationPhase.Interpreter),
     InterpreterCannotEvaluateErrorExpression(
         "Interpreter encountered error()",
         CompilationPhase.Interpreter,
@@ -227,8 +226,8 @@ enum class MessageTemplate(
     NotApplicable("Cannot apply %s to %s:%s", CompilationPhase.Interpreter),
     InternalInterpreterError("Internal error: %s", CompilationPhase.Interpreter),
     InternalErrorMacroNotErased("Internal error: %s did not erase", CompilationPhase.Interpreter),
-    CouldNotStoreFailureBit(
-        "Internal error: failed to set failure bit",
+    InternalErrorTyper(
+        "Internal error: failed to resolve constraints [%s] from %s",
         CompilationPhase.Interpreter,
     ),
     ReturnOutsideFn("Return outside function body", CompilationPhase.Interpreter),

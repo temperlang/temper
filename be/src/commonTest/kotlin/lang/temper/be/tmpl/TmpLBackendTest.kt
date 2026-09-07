@@ -8,7 +8,6 @@ import lang.temper.be.Dependencies
 import lang.temper.be.NullDependencyResolver
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.be.syncstaging.applyBackendsSynchronously
-import lang.temper.be.tmpl.BubbleBranchStrategy
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.Types
 import lang.temper.common.ListBackedLogSink
@@ -52,7 +51,6 @@ import lang.temper.name.PseudoCodeNameRenumberer
 import lang.temper.name.SourceName
 import lang.temper.name.Symbol
 import lang.temper.stage.Stage
-import lang.temper.type.WellKnownTypes
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.value.Document
@@ -2687,10 +2685,9 @@ class TmpLBackendTest {
                                 pos = pos,
                                 fn = TmpL.FnReference(
                                     TmpL.Id(pos, BuiltinName("myDateToday"), null),
-                                    Signature2(returnType2 = WellKnownTypes.anyValueType2, false, listOf()),
+                                    Signature2(returnType2 = returnType, false, listOf()),
                                 ),
                                 parameters = arguments.map { it.expr as TmpL.Actual },
-                                type = returnType,
                             )
                         }
 
@@ -3608,7 +3605,7 @@ class TmpLBackendTest {
             |        let StringBegin#0 = builtins.StringBegin;
             |        @QName("test-library/foo.f()") let f(@QName("test-library/foo.f().(i)") i__0: StringIndexOption): StringIndex {
             |          if (i__0 >= 0) {
-            |            return cast (i__0, StringIndex);
+            |            return safeCast (i__0, StringIndex);
             |          } else {
             |            return StringBegin#0;
             |          }
@@ -4138,7 +4135,7 @@ class TmpLBackendTest {
             |          }
             |        }
             |        let hello(): String { "Hello" }
-            |        new Callable(hello)
+            |        new Callable<String>(hello)
             |        ```
             |  }
             |}

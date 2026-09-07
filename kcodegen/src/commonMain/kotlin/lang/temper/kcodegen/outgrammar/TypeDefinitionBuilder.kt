@@ -685,7 +685,7 @@ internal class TypeDefinitionBuilder(
                 // That way, things that are flag-like appear towards the end.
                 // This makes it convenient to pass the nodes in positional order, and use
                 // named parameters for flags, which is especially important when node names
-                // are long and flags includes booleans which are, by themselves,
+                // are long and flags include booleans which are, by themselves,
                 // not meaningful.
                 for (prop in properties.values) {
                     if (
@@ -1169,13 +1169,7 @@ internal class TypeDefinitionBuilder(
                     body = KotlinCode(
                         toStringViaBuilder { bodyCode ->
                             fun argHashFor(constructorArgument: Id): String {
-                                val count = nodeType.properties[constructorArgument]
-                                    ?.typeAndCount?.count
-                                return if (count == PropertyCount.ZeroOrOne) {
-                                    "(${constructorArgument.text}?.hashCode() ?: 0)"
-                                } else {
-                                    "${constructorArgument.text}.hashCode()"
-                                }
+                                return "${constructorArgument.text}.hashCode()"
                             }
 
                             val constructorArgumentsList = constructorArguments.toList()

@@ -94,7 +94,7 @@ object Py {
             return other is Program && this.connected == other.connected && this.body == other.body && this.dependencyCategory == other.dependencyCategory && this.genre == other.genre && this.outputPath == other.outputPath
         }
         override fun hashCode(): Int {
-            var hc = (connected?.hashCode() ?: 0)
+            var hc = connected.hashCode()
             hc = 31 * hc + body.hashCode()
             hc = 31 * hc + dependencyCategory.hashCode()
             hc = 31 * hc + genre.hashCode()
@@ -234,7 +234,7 @@ object Py {
             var hc = decoratorList.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + args.hashCode()
-            hc = 31 * hc + (returns?.hashCode() ?: 0)
+            hc = 31 * hc + returns.hashCode()
             hc = 31 * hc + body.hashCode()
             hc = 31 * hc + async.hashCode()
             return hc
@@ -383,7 +383,7 @@ object Py {
             return other is Return && this.value == other.value
         }
         override fun hashCode(): Int {
-            return (value?.hashCode() ?: 0)
+            return value.hashCode()
         }
         init {
             this._value = updateTreeConnection(null, value)
@@ -622,7 +622,7 @@ object Py {
         override fun hashCode(): Int {
             var hc = target.hashCode()
             hc = 31 * hc + annotation.hashCode()
-            hc = 31 * hc + (value?.hashCode() ?: 0)
+            hc = 31 * hc + value.hashCode()
             return hc
         }
         init {
@@ -1028,8 +1028,8 @@ object Py {
             return other is Raise && this.exc == other.exc && this.cause == other.cause
         }
         override fun hashCode(): Int {
-            var hc = (exc?.hashCode() ?: 0)
-            hc = 31 * hc + (cause?.hashCode() ?: 0)
+            var hc = exc.hashCode()
+            hc = 31 * hc + cause.hashCode()
             return hc
         }
         init {
@@ -1216,8 +1216,8 @@ object Py {
             return other is Assert && this.test == other.test && this.msg == other.msg
         }
         override fun hashCode(): Int {
-            var hc = (test?.hashCode() ?: 0)
-            hc = 31 * hc + (msg?.hashCode() ?: 0)
+            var hc = test.hashCode()
+            hc = 31 * hc + msg.hashCode()
             return hc
         }
         init {
@@ -1593,7 +1593,7 @@ object Py {
         }
         override fun hashCode(): Int {
             var hc = id.hashCode()
-            hc = 31 * hc + (sourceIdentifier?.hashCode() ?: 0)
+            hc = 31 * hc + sourceIdentifier.hashCode()
             return hc
         }
         companion object {
@@ -1656,7 +1656,7 @@ object Py {
             return other is CallArg && this.arg == other.arg && this.value == other.value && this.prefix == other.prefix
         }
         override fun hashCode(): Int {
-            var hc = (arg?.hashCode() ?: 0)
+            var hc = arg.hashCode()
             hc = 31 * hc + value.hashCode()
             hc = 31 * hc + prefix.hashCode()
             return hc
@@ -1887,7 +1887,7 @@ object Py {
         }
         override fun hashCode(): Int {
             var hc = contextExpr.hashCode()
-            hc = 31 * hc + (optionalVars?.hashCode() ?: 0)
+            hc = 31 * hc + optionalVars.hashCode()
             return hc
         }
         init {
@@ -1962,8 +1962,8 @@ object Py {
             return other is ExceptHandler && this.type == other.type && this.name == other.name && this.body == other.body
         }
         override fun hashCode(): Int {
-            var hc = (type?.hashCode() ?: 0)
-            hc = 31 * hc + (name?.hashCode() ?: 0)
+            var hc = type.hashCode()
+            hc = 31 * hc + name.hashCode()
             hc = 31 * hc + body.hashCode()
             return hc
         }
@@ -2171,7 +2171,7 @@ object Py {
         }
         override fun hashCode(): Int {
             var hc = name.hashCode()
-            hc = 31 * hc + (asname?.hashCode() ?: 0)
+            hc = 31 * hc + asname.hashCode()
             return hc
         }
         init {
@@ -2380,7 +2380,7 @@ object Py {
             return other is Lambda && this.args == other.args && this.body == other.body
         }
         override fun hashCode(): Int {
-            var hc = (args?.hashCode() ?: 0)
+            var hc = args.hashCode()
             hc = 31 * hc + body.hashCode()
             return hc
         }
@@ -2863,7 +2863,7 @@ object Py {
             return other is Yield && this.value == other.value
         }
         override fun hashCode(): Int {
-            return (value?.hashCode() ?: 0)
+            return value.hashCode()
         }
         init {
             this._value = updateTreeConnection(null, value)
@@ -2908,7 +2908,7 @@ object Py {
             return other is YieldFrom && this.value == other.value
         }
         override fun hashCode(): Int {
-            return (value?.hashCode() ?: 0)
+            return value.hashCode()
         }
         init {
             this._value = updateTreeConnection(null, value)
@@ -3293,7 +3293,7 @@ object Py {
         }
         override fun hashCode(): Int {
             var hc = id.hashCode()
-            hc = 31 * hc + (sourceIdentifier?.hashCode() ?: 0)
+            hc = 31 * hc + sourceIdentifier.hashCode()
             return hc
         }
         companion object {
@@ -3644,9 +3644,9 @@ object Py {
             return other is Slice && this.lower == other.lower && this.upper == other.upper && this.step == other.step
         }
         override fun hashCode(): Int {
-            var hc = (lower?.hashCode() ?: 0)
-            hc = 31 * hc + (upper?.hashCode() ?: 0)
-            hc = 31 * hc + (step?.hashCode() ?: 0)
+            var hc = lower.hashCode()
+            hc = 31 * hc + upper.hashCode()
+            hc = 31 * hc + step.hashCode()
             return hc
         }
         init {
@@ -3787,9 +3787,9 @@ object Py {
             return other is Arg && this.arg == other.arg && this.annotation == other.annotation && this.defaultValue == other.defaultValue && this.prefix == other.prefix
         }
         override fun hashCode(): Int {
-            var hc = (arg?.hashCode() ?: 0)
-            hc = 31 * hc + (annotation?.hashCode() ?: 0)
-            hc = 31 * hc + (defaultValue?.hashCode() ?: 0)
+            var hc = arg.hashCode()
+            hc = 31 * hc + annotation.hashCode()
+            hc = 31 * hc + defaultValue.hashCode()
             hc = 31 * hc + prefix.hashCode()
             return hc
         }

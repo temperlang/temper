@@ -39,7 +39,6 @@ import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.log.Positioned
-import lang.temper.log.SharedLocationContext
 import lang.temper.log.spanningPosition
 import lang.temper.name.BuiltinName
 import lang.temper.name.DashedIdentifier
@@ -78,11 +77,9 @@ import lang.temper.type2.MkType2
 import lang.temper.type2.Nullity.NonNull
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
-import lang.temper.type2.TypeContext2
 import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.type2.hackMapOldStyleActualsToNew
 import lang.temper.type2.hackMapOldStyleToNew
-import lang.temper.type2.hackMapOldStyleToNewAllowNever
 import lang.temper.type2.hackMapOldStyleToNewOrNull
 import lang.temper.type2.hackTryStaticTypeToSig
 import lang.temper.type2.invalidSig
@@ -153,6 +150,7 @@ import lang.temper.value.functionalInterfaceSymbol
 import lang.temper.value.impliedThisSymbol
 import lang.temper.value.importedSymbol
 import lang.temper.value.initSymbol
+import lang.temper.value.isAssignment
 import lang.temper.value.isBubbleCall
 import lang.temper.value.isNewCall
 import lang.temper.value.isYieldCall
@@ -202,7 +200,6 @@ class TmpLTranslator internal constructor(
     internal val topLevels: MutableList<TmpL.TopLevel>,
     internal val metadata: MutableList<TmpL.DeclarationMetadata>,
     internal val libraryConfigurations: LibraryConfigurations,
-    internal val sharedLocationContext: SharedLocationContext?,
     internal val moduleIndex: Int,
     internal val dependencyResolver: MetadataDependencyResolver<*>,
     mergedNamingContext: NamingContext,
@@ -287,7 +284,7 @@ class TmpLTranslator internal constructor(
             }
 
             // We do a bit of post-processing on support code references.
-            // So we delay the final module making step after looking at all modules' top-levels.
+            // So we delay the final module-making step after looking at all modules' top-levels.
             val nascentModules = mutableListOf<NascentModule>()
             for ((moduleIndex, module) in modules.withIndex()) {
                 val root = module.generatedCode
@@ -310,7 +307,6 @@ class TmpLTranslator internal constructor(
                     topLevels,
                     metadata,
                     libraryConfigurations,
-                    module.sharedLocationContext,
                     moduleIndex,
                     dependencyResolver,
                     mergedNamingContext,
@@ -329,7 +325,7 @@ class TmpLTranslator internal constructor(
                 nascentModules.add(nascentModule)
             }
 
-            // Remove top level declarations that are unused.
+            // Remove top-level declarations that are unused.
             // - SupportCodeDeclarations are unused if they declare InlineSupportCode and are only
             //   ever used as the callee in a CallExpression.
             // - InternalModularNames are unused if they are \connected references to InlineSupportCode
@@ -433,7 +429,6 @@ class TmpLTranslator internal constructor(
     private val thisNames = mutableMapOf<ResolvedName, DefinedNonNullType?>()
     private val topLevelMetadata = mutableMapOf<TemperName, List<TmpL.DeclarationMetadata>>()
     internal val translationAssistant: TranslationAssistant = TranslationAssistantImpl(this)
-    internal val typeContext2 = TypeContext2()
 
     /** Allows backend-type agnostic code to fetch metadata for the appropriate backend */
     internal class MetadataFetcher<BACKEND : Backend<BACKEND>>(
@@ -1068,7 +1063,7 @@ class TmpLTranslator internal constructor(
         }
         is CallTree -> when {
             isYieldCall(tree) -> OneStmt(TmpL.YieldStatement(tree.pos)) // TODO: yielded value expression
-            isAssignmentCall(tree) -> Stmts(tree.pos, translateAssignment(tree))
+            isAssignment(tree) -> Stmts(tree.pos, translateAssignment(tree))
             isSetPropertyCall(tree) -> translateSetP(tree)
             isBubbleCall(tree) -> OneStmt(TmpL.ThrowStatement(tree.pos))
             isRemCall(tree) -> translatedEmbeddedComment(tree)
@@ -1095,7 +1090,7 @@ class TmpLTranslator internal constructor(
     private fun translateAssignment(
         tree: CallTree,
     ): List<TmpL.Statement> {
-        require(isAssignmentCall(tree))
+        require(isAssignment(tree))
         val left = tree.child(1) as LeftNameLeaf
         val rightTree = tree.child(2)
         return translateAssignment(tree.pos, left = left, right = rightTree)
@@ -1133,7 +1128,7 @@ class TmpLTranslator internal constructor(
             // Simulate an output cast injection here to catch that case.
             rightExpr = maybeInjectCastForOutput(
                 expr = rightExpr,
-                actualCalleeType = Signature2(rightExpr.type, hasThisFormal = false, listOf()),
+                actualCalleeType = Signature2(rightExpr.passType, hasThisFormal = false, listOf()),
                 declaredCalleeType = hackMapOldStyleToNewOrNull(left.typeInferences?.type)?.let {
                     Signature2(it, hasThisFormal = false, listOf())
                 },
@@ -1285,7 +1280,7 @@ class TmpLTranslator internal constructor(
                 if (name in thisNames) {
                     val thisType = thisNames[name]
                     return if (thisType != null) {
-                        TmpL.This(TmpL.Id(pos, name as ResolvedName), type = thisType)
+                        TmpL.This(TmpL.Id(pos, name as ResolvedName), passType = thisType)
                     } else {
                         untranslatableExpr(pos, "Missing type info for `this` reference: $name")
                     }
@@ -1397,13 +1392,12 @@ class TmpLTranslator internal constructor(
                         TmpL.CallExpression(
                             pos,
                             callable,
-                            TmpL.CallTypeActuals(
+                            TmpL.ImplicitCallTypeActuals(
                                 pos.leftEdge,
                                 listOf(translateType(pos, type).aType),
                                 mapOf(panicFnSig.typeFormals[0] to type),
                             ),
                             listOf(),
-                            type,
                         ),
                     )
                 } else {
@@ -1536,7 +1530,7 @@ class TmpLTranslator internal constructor(
             ?: return expr
         val declaredArg = declaredCalleeType?.valueFormalForActual(argIndex)
             ?: return expr
-        val type = expr.type
+        val type = expr.passType
         val cast = supportNetwork.maybeInsertImplicitCast(
             fromActualType = type,
             fromDeclaredType = type,
@@ -1557,7 +1551,7 @@ class TmpLTranslator internal constructor(
         builtinOperatorId: BuiltinOperatorId?,
     ): TmpL.Expression {
         if (actualCalleeType == null || declaredCalleeType == null) { return expr }
-        val type = expr.type
+        val type = expr.passType
         val cast = supportNetwork.maybeInsertImplicitCast(
             fromActualType = actualCalleeType.returnType2,
             fromDeclaredType = declaredCalleeType.returnType2,
@@ -1571,7 +1565,7 @@ class TmpLTranslator internal constructor(
     }
 
     private fun maybeInjectCast(cast: SupportCode?, expr: TmpL.Expression): TmpL.Expression {
-        val type = expr.type
+        val type = expr.passType
         return if (cast != null) {
             val callee = supportCodeReference(
                 cast,
@@ -1585,7 +1579,6 @@ class TmpLTranslator internal constructor(
                     pos = expr.pos,
                     fn = callee,
                     parameters = listOf(expr),
-                    type = type,
                 ),
             )
         } else {
@@ -1653,7 +1646,6 @@ class TmpLTranslator internal constructor(
                                             builtinOperatorId = builtinOperatorId,
                                         )
                                     },
-                                    type = tree.typeOrInvalid,
                                 ),
                             ),
                             actualCalleeType = effectiveCallee.sig,
@@ -1723,7 +1715,7 @@ class TmpLTranslator internal constructor(
                                 property = TmpL.InternalPropertyId(
                                     TmpL.Id(propNameTree.pos, propName),
                                 ),
-                                type = tree.typeOrInvalid,
+                                passType = tree.typeOrInvalid,
                             )
                         }
                     }
@@ -1741,7 +1733,7 @@ class TmpLTranslator internal constructor(
                     translation = TmpL.UncheckedNotNullExpression(
                         pos = tree.pos,
                         expression = translateExpression(tree.child(1)),
-                        type = tree.typeOrInvalid,
+                        passType = tree.typeOrInvalid,
                     )
                 }
                 is RttiCheckFunction -> {
@@ -1802,13 +1794,29 @@ class TmpLTranslator internal constructor(
                                         method = method,
                                     )
 
-                            // TODO: Where do we put type actuals
+                            val afterCtor = constructorTree.pos.rightEdge
+                            val aTypes = mutableListOf<TmpL.AType>()
+                            val bindings = mutableMapOf<TypeFormal, Type2>()
+                            for ((i, formal) in typeShape.formals.withIndex()) {
+                                val actual = constructedType.bindings.getOrNull(i) ?: WellKnownTypes.invalidType2
+                                bindings[formal] = actual
+                                aTypes.add(translateType(afterCtor, actual).aType)
+                            }
+
+                            val actualsPos = if (typeActuals.isNotEmpty()) {
+                                typeActuals.spanningPosition(typeActuals.first().pos)
+                            } else {
+                                afterCtor
+                            }
+                            val typeActualsForConstructor =
+                                TmpL.ImplicitCallTypeActuals(actualsPos, aTypes.toList(), bindings.toMap())
+
                             translation = maybeInline(
                                 TmpL.CallExpression(
                                     pos = tree.pos,
                                     fn = constructorCallee,
                                     parameters = args,
-                                    type = tree.typeOrInvalid,
+                                    typeActuals = typeActualsForConstructor,
                                 ),
                             )
                         }
@@ -1923,9 +1931,6 @@ class TmpLTranslator internal constructor(
                         builtinOperatorId = builtinOperatorId,
                     )
                 },
-                type = tree.typeInferences?.type?.let {
-                    hackMapOldStyleToNewAllowNever(it)
-                }.orInvalid,
             )
 
             translation = maybeInjectCastForOutput(
@@ -1949,7 +1954,12 @@ class TmpLTranslator internal constructor(
     ): TmpL.CallTypeActuals {
         val aTypes = mutableListOf<TmpL.AType>()
         val bindings = mutableMapOf<TypeFormal, Type2>()
-        if (typeActualTrees.isNotEmpty()) {
+        val actualsPos = if (typeActualTrees.isNotEmpty()) {
+            typeActualTrees.spanningPosition(typeActualTrees.first().pos)
+        } else {
+            pos
+        }
+        return if (typeActualTrees.isNotEmpty()) {
             for ((i, typeTree) in typeActualTrees.withIndex()) {
                 val typeFromTree = typeTree.reifiedTypeContained?.type2
                 if (typeFromTree != null) {
@@ -1961,26 +1971,28 @@ class TmpLTranslator internal constructor(
                     aTypes.add(untranslatableType(typeTree.pos, "Missing actual type").aType)
                 }
             }
-        } else {
-            val bindingsByTypeFormal = callInferences?.bindings2 ?: emptyMap()
+            TmpL.ExplicitCallTypeActuals(
+                pos = actualsPos,
+                types = aTypes.toList(),
+                bindings = bindings.toMap(),
+            )
+        } else if (callInferences != null) {
+            val bindingsByTypeFormal = callInferences.bindings2
             for (tf in sig.typeFormals) {
                 val binding = bindingsByTypeFormal[tf]
                     ?.let { hackMapOldStyleToNew(it as StaticType) }
                     ?: WellKnownTypes.invalidType2
                 bindings[tf] = binding
-                // TODO: Do some backends benefit from implicit type actuals?
-                // aTypes.add(translateType(pos, binding).aType)
+                aTypes.add(translateType(pos, binding).aType)
             }
+            TmpL.ImplicitCallTypeActuals(
+                pos = actualsPos,
+                types = aTypes,
+                bindings = bindings.toMap(),
+            )
+        } else {
+            TmpL.CallTypeActuals.empty(pos)
         }
-        return TmpL.CallTypeActuals(
-            pos = if (typeActualTrees.isNotEmpty()) {
-                typeActualTrees.spanningPosition(typeActualTrees.first().pos)
-            } else {
-                pos
-            },
-            types = aTypes.toList(),
-            bindings = bindings.toMap(),
-        )
     }
     private fun translateGetStaticOp(
         tree: Tree,
@@ -2069,7 +2081,6 @@ class TmpLTranslator internal constructor(
                                 type = originalCalleeSig,
                             ),
                             parameters = emptyList(),
-                            type = tree.typeOrInvalid,
                         ),
                     )
                 }
@@ -2117,7 +2128,7 @@ class TmpLTranslator internal constructor(
                 pos = tree.pos,
                 subject = subject,
                 property = TmpL.ExternalPropertyId(dotName),
-                type = tree.typeOrInvalid,
+                passType = tree.typeOrInvalid,
             )
         }
     }
@@ -2171,22 +2182,21 @@ class TmpLTranslator internal constructor(
                 RuntimeTypeOperation.AssertAs -> targetType
                 RuntimeTypeOperation.Is -> booleanType2
             }
-            val supportCodeType = Signature2(returnType, hasThisFormal = false, listOf(expression.type))
+            val supportCodeType = Signature2(returnType, hasThisFormal = false, listOf(expression.passType))
 
             val wrapper = supportCodeReference(supportCode, null, pos, supportCodeType, emptyMap())
             return maybeInline(
-                TmpL.CallExpression(pos, wrapper, parameters = listOf(expression), type = returnType),
+                TmpL.CallExpression(pos, wrapper, parameters = listOf(expression)),
             )
         }
 
-        val type = callTree.typeOrInvalid
         return when (rto) {
             RuntimeTypeOperation.As, RuntimeTypeOperation.AssertAs -> TmpL.CastExpression(
                 pos = pos,
                 expr = expression,
                 checkedType = targetTmpLType.aType,
-                type = type,
                 checkedFrontendType = targetType,
+                canFail = rto == RuntimeTypeOperation.As,
             )
             RuntimeTypeOperation.Is -> TmpL.InstanceOfExpression(
                 pos = pos,
@@ -2205,7 +2215,7 @@ class TmpLTranslator internal constructor(
                 val parameters = call.parameters.map {
                     TypedArg<TmpL.Tree>(it, it.typeOrInvalid)
                 }
-                return supportCode.inlineToTree(call.pos, parameters, call.type, this)
+                return supportCode.inlineToTree(call.pos, parameters, call.passType, this)
             }
         }
 
@@ -2221,7 +2231,7 @@ class TmpLTranslator internal constructor(
                     val parameters = call.parameters.map {
                         TypedArg<TmpL.Tree>(it, it.typeOrInvalid)
                     }
-                    supportCode.inlineToTree(call.pos, parameters, call.type, this)
+                    supportCode.inlineToTree(call.pos, parameters, call.passType, this)
                 } else {
                     TmpL.CallExpression(
                         pos = call.pos,
@@ -2231,7 +2241,7 @@ class TmpLTranslator internal constructor(
                             type = fn.type,
                         ),
                         parameters = call.parameters.deepCopy(),
-                        type = call.type,
+                        typeActuals = TmpL.ImplicitCallTypeActuals(call.typeActuals),
                     )
                 }
             }
@@ -2953,7 +2963,7 @@ private fun labelTopLevelInitBlocks(
                                         init.pos,
                                         topLevel.name.deepCopy(),
                                         init,
-                                        init.type,
+                                        init.passType,
                                     ),
                                 ),
                             ),
@@ -3006,16 +3016,7 @@ private class TranslatedDeclaration(
     val stmtList: List<TmpL.Statement> get() = listOf(declaringStatement)
 }
 
-internal fun isAssignmentCall(tree: Tree): Boolean {
-    if (tree !is CallTree || tree.size != BINARY_OP_CALL_ARG_COUNT) {
-        return false
-    }
-    val callee = tree.childOrNull(0)
-    if (callee !is ValueLeaf) { return false }
-    return callee.content == BuiltinFuns.vSetLocalFn && tree.child(1) is LeftNameLeaf
-}
-
-internal fun isVoidLikeAssignment(tree: Tree) = isAssignmentCall(tree) && hasVoidLikeType(tree)
+internal fun isVoidLikeAssignment(tree: Tree) = isAssignment(tree) && hasVoidLikeType(tree)
 
 internal fun dotHelperFromCallOrNull(tree: Tree): DotHelper? =
     (tree as? CallTree)?.childOrNull(0)?.functionContained as? DotHelper
@@ -3232,7 +3233,7 @@ private fun exportedNameForStay(
     if (parent is FunTree) {
         val grandparent = parent.incoming?.source
         if (
-            grandparent != null && isAssignmentCall(grandparent) &&
+            grandparent != null && isAssignment(grandparent) &&
             grandparent.edge(2) == parent.incoming
         ) {
             canonName = (grandparent.child(1) as? LeftNameLeaf)?.content
@@ -3374,7 +3375,7 @@ private fun extractPureVirtualCall(tree: Tree): CallTree? {
     if (tree is BlockTree && tree.size == 1) {
         return extractPureVirtualCall(tree.child(0))
     }
-    if (isAssignmentCall(tree)) {
+    if (isAssignment(tree)) {
         return extractPureVirtualCall(tree.child(2))
     }
     if (tree is CallTree) {

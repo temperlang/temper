@@ -489,11 +489,11 @@ class CppTranslator(
             is TmpL.NominalType -> declaredType.typeName.sourceDefinition
             else -> return false
         }
-        return isValueTypeMismatch(declDef, expr.type.definition)
+        return isValueTypeMismatch(declDef, expr.passType.definition)
     }
 
     private fun isTypeMismatch2(declaredType: Type2, expr: TmpL.Expression): Boolean =
-        isValueTypeMismatch(declaredType.definition, expr.type.definition)
+        isValueTypeMismatch(declaredType.definition, expr.passType.definition)
 
     private fun renderToString(tree: Cpp.Tree): String =
         toStringViaTokenSink(CppFormattingHints.getInstance(), singleLine = true) { tree.renderTo(it) }
@@ -929,7 +929,7 @@ class CppTranslator(
                 when (val subject = fn.subject) {
                     is TmpL.Expression -> {
                         val methodName = cpp.singleName(CppName(fn.methodName.dotNameText))
-                        if (isValueType(subject.type)) {
+                        if (isValueType(subject.passType)) {
                             cpp.memberExpr(translateExpression(subject), methodName)
                         } else {
                             cpp.op("->", translateExpression(subject), methodName)
@@ -1034,7 +1034,7 @@ class CppTranslator(
                                 staticType ?: WellKnownTypes.anyValueType2,
                             )
                         },
-                        expr.type,
+                        expr.passType,
                         this,
                     ) as? Cpp.Expr ?: error("inline support code did not produce an expression")
 
@@ -1045,7 +1045,7 @@ class CppTranslator(
             is TmpL.ConstructorReference -> {
                 // For constructor calls, get the concrete type from the
                 // call expression's return type (not the generic signature)
-                val callReturnType = expr.type
+                val callReturnType = expr.passType
                 val baseTypeName = translateTypeName(fn.typeName)
                 val bindings = callReturnType.bindings
                 val qualifiedType = if (bindings.isNotEmpty()) {
@@ -1088,7 +1088,7 @@ class CppTranslator(
                             val paramType = ctorParamTypes.getOrNull(idx)
                             wrapArgForParam(
                                 translated,
-                                actualExpr.type,
+                                actualExpr.passType,
                                 paramType,
                             )
                         }
@@ -1192,7 +1192,7 @@ class CppTranslator(
                         translatedArgs.add(
                             wrapArgForParam(
                                 translated,
-                                actualExpr.type,
+                                actualExpr.passType,
                                 paramType,
                             ),
                         )
@@ -1306,7 +1306,7 @@ class CppTranslator(
         return if (isCheckedValueType) {
             // Value type — can't use dynamic_pointer_cast.
             // Check if source is nullable (shared_ptr or function type that might be null)
-            val sourceType = expr.expr.type
+            val sourceType = expr.expr.passType
             val isSourceRefType = !isValueType(sourceType) &&
                 sourceType.definition != WellKnownTypes.nullTypeDefinition
             if (isSourceRefType) {
@@ -1384,7 +1384,7 @@ class CppTranslator(
             // be run; emit a benign placeholder purely so diagnostic codegen completes.
             TProblem -> cpp.literal(cpp.raw("/* error value */ 0"))
             else -> {
-                val type = expr.type
+                val type = expr.passType
                 when (type.definition) {
                     WellKnownTypes.voidType.definition -> cpp.literal(cpp.raw("(void)0"))
                     WellKnownTypes.typeType.definition -> cpp.literal(
@@ -1414,7 +1414,7 @@ class CppTranslator(
                 // Skip assignments to imported names (they alias the external)
                 val leftKey = cpp.name(stmt.left).id.text
                 val isRhsVoid =
-                    stmt.right.type.definition == WellKnownTypes.voidTypeDefinition
+                    stmt.right.passType.definition == WellKnownTypes.voidTypeDefinition
                 if (leftKey in importedNames || leftKey in voidVarNames || isRhsVoid) {
                     emptyList()
                 } else {
@@ -1422,7 +1422,7 @@ class CppTranslator(
                     val isAnyValueTarget = stmt.type.definition ==
                         WellKnownTypes.anyValueTypeDefinition
                     val isRhsNever =
-                        right.type.definition == WellKnownTypes.neverTypeDefinition
+                        right.passType.definition == WellKnownTypes.neverTypeDefinition
                     val rightExpr = if (isTypeMismatch2(stmt.type, right)) {
                         // Type mismatch at compile time — generate bubble instead
                         val cppType = translateType2(stmt.type)
@@ -1444,7 +1444,7 @@ class CppTranslator(
                             ),
                             emptyList(),
                         )
-                    } else if (isAnyValueTarget && isValueType(right.type)) {
+                    } else if (isAnyValueTarget && isValueType(right.passType)) {
                         // Boxing value type into AnyValue
                         cpp.callExpr(
                             cpp.name(TEMPER_CORE_NAMESPACE, "any_box"),
@@ -1455,7 +1455,7 @@ class CppTranslator(
                     }
                     // Wrap with list_upcast or narrowing cast if needed
                     val finalRight = run {
-                        val rhsType = right.type
+                        val rhsType = right.passType
                         wrapWithListUpcastIfNeeded(
                             rightExpr, rhsType, stmt.type,
                         ).let { upcast ->
@@ -1531,7 +1531,7 @@ class CppTranslator(
                     } else if (
                         initExpr != null &&
                         isAnyValueTmpLType(innerType) &&
-                        isValueType(initExpr.type)
+                        isValueType(initExpr.passType)
                     ) {
                         // Boxing value type into AnyValue
                         cpp.callExpr(
@@ -1545,7 +1545,7 @@ class CppTranslator(
                     val finalInit = if (translatedInit != null && initExpr != null) {
                         wrapWithListUpcastIfNeeded(
                             translatedInit,
-                            initExpr.type,
+                            initExpr.passType,
                             stmt.descriptor,
                         )
                     } else {
@@ -3035,7 +3035,7 @@ class CppTranslator(
                 val translatedInit = if (
                     initExpr != null &&
                     isAnyValueTmpLType(topLevel.type.ot) &&
-                    isValueType(initExpr.type)
+                    isValueType(initExpr.passType)
                 ) {
                     cpp.callExpr(
                         cpp.name(TEMPER_CORE_NAMESPACE, "any_box"),

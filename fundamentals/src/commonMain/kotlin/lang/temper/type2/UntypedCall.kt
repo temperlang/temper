@@ -15,6 +15,11 @@ data class UntypedCall(
     val explicitActuals: List<Pair<StaticType, Position>>?,
     /** For each input, its inferred type, or if it is delayed, an inference variable. */
     val inputBounds: List<InputBound>,
+    /**
+     * Equivalence bounds on the pass type.
+     * This is different from [contextType] which establishes an assignable to bound.
+     */
+    val outputBounds: List<OutputBound>,
     val hasTrailingBlock: Boolean,
     /**
      * null or a type for the context in which the call is used.

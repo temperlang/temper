@@ -110,7 +110,7 @@ class GrammarProcessorTest {
                 |        return other is FooBar && this.bar == other.bar
                 |    }
                 |    override fun hashCode(): Int {
-                |        return (bar?.hashCode() ?: 0)
+                |        return bar.hashCode()
                 |    }
                 |    init {
                 |        this._bar = updateTreeConnection(null, bar)
@@ -603,7 +603,7 @@ class GrammarProcessorTest {
                 |    }
                 |    override fun hashCode(): Int {
                 |        var hc = a.hashCode()
-                |        hc = 31 * hc + (b?.hashCode() ?: 0)
+                |        hc = 31 * hc + b.hashCode()
                 |        return hc
                 |    }
                 |    init {

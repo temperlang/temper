@@ -161,7 +161,6 @@ class TmplGenerator(
             pos = p0,
             fn = TmpL.FnReference(makeId(which), calleeType),
             parameters = args.toList(),
-            type = calleeType.returnType2,
         )
 
     fun call(
@@ -592,7 +591,7 @@ class MethodFuncGenerator(
     }
 
     fun exampleMethod() {
-        // Reuse other function example as much as possible, just for convenience.
+        // Reuse another function example as much as possible, just for convenience.
         exampleFunction()
 
         visibility = TmpL.Visibility.Public
@@ -714,7 +713,7 @@ fun TmpL.Id.assignTo(expr: TmpL.Expression, type: Type2? = null) = TmpL.Assignme
     pos = p0,
     left = this,
     right = expr,
-    type = type ?: expr.type,
+    type = type ?: expr.passType,
 )
 
 internal fun Type2.asTmpLNominal() = TmpL.NominalType(

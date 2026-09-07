@@ -86,7 +86,6 @@ internal fun simplifyFunctionBodyParts(
                                     fn = preStrippedReturn.fn.deepCopy(),
                                     typeActuals = preStrippedReturn.typeActuals.deepCopy(),
                                     parameters = listOf(initRight.deepCopy()),
-                                    type = preStrippedReturn.type,
                                 )
                             } else if (
                                 initRight is TmpL.ValueReference && initRight.value == void &&
@@ -165,7 +164,7 @@ internal fun simplifyFunctionBodyParts(
                 canAdvanceTo += 1
             }
             val penultExprHasNeverType =
-                penultExpr?.type?.let { excludeBubble(it) }?.isNeverType == true
+                penultExpr?.passType?.let { excludeBubble(it) }?.isNeverType == true
             if (
                 canAdvanceTo > penultIndex && penultExprHasNeverType &&
                 zero.init == null && penultStmt is TmpL.ExpressionStatement

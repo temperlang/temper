@@ -1,0 +1,11 @@
+export interface I<A, B> {
+  a: A?;
+  b: B?;
+}
+
+export class C<A, B>(
+  public a: A?,
+  public b: B?,
+) extends I<A, B> {
+  public foo(): Void {}
+}

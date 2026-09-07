@@ -795,7 +795,6 @@ abstract class TranslatorTests(
                                                 it,
                                             ),
                                             listOf(),
-                                            WKT.emptyType2,
                                         )
                                     }
                                     ?: TmpL.Reference(

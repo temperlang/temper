@@ -206,7 +206,7 @@ open class CppTranslator(
                             staticType ?: WellKnownTypes.anyValueType2,
                         )
                     },
-                    expr.type,
+                    expr.passType,
                     this,
                 ) as Cpp.Expr
             }

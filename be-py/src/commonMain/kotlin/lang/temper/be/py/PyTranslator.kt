@@ -1464,7 +1464,7 @@ class PyTranslator(
                         x.parameters.mapGeneric {
                             TypedArg(translateParamExpr(it), it.typeOrInvalid)
                         },
-                        x.type,
+                        x.passType,
                         this,
                     )
                 }
@@ -1507,7 +1507,7 @@ class PyTranslator(
     }
 
     private fun getProperty(px: TmpL.GetAbstractProperty): Py.Expr {
-        return getProperty(px, expr(px.subject), (px.subject.type as? DefinedType)?.definition)
+        return getProperty(px, expr(px.subject), (px.subject.passType as? DefinedType)?.definition)
     }
 
     private fun getProperty(px: TmpL.GetBackedProperty): Py.Expr {

@@ -103,7 +103,7 @@ private fun NameVisitor.visitParams(px: TmpL.Parameters) {
 }
 
 private fun subjectTypeName(s: TmpL.Subject): ResolvedName? = when (s) {
-    is TmpL.Expression -> (s.type as? DefinedType)?.definition?.name
+    is TmpL.Expression -> (s.passType as? DefinedType)?.definition?.name
     is TmpL.TypeSubject -> s.typeName.sourceDefinition.name
 }
 

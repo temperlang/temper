@@ -567,7 +567,7 @@ internal class JsTranslator(
                     supportCode.inlineToTree(
                         e.pos,
                         translateParametersTyped(params),
-                        e.type,
+                        e.passType,
                         this,
                     ) as Js.Expression
                 }

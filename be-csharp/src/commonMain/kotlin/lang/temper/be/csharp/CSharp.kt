@@ -192,7 +192,7 @@ object CSharp {
             return other is AttributeSection && this.target == other.target && this.attributes == other.attributes
         }
         override fun hashCode(): Int {
-            var hc = (target?.hashCode() ?: 0)
+            var hc = target.hashCode()
             hc = 31 * hc + attributes.hashCode()
             return hc
         }
@@ -256,7 +256,7 @@ object CSharp {
             return other is UsingNamespaceDirective && this.alias == other.alias && this.ids == other.ids
         }
         override fun hashCode(): Int {
-            var hc = (alias?.hashCode() ?: 0)
+            var hc = alias.hashCode()
             hc = 31 * hc + ids.hashCode()
             return hc
         }
@@ -1204,13 +1204,13 @@ object CSharp {
         }
         override fun hashCode(): Int {
             var hc = attributes.hashCode()
-            hc = 31 * hc + (mods?.hashCode() ?: 0)
-            hc = 31 * hc + (result?.hashCode() ?: 0)
+            hc = 31 * hc + mods.hashCode()
+            hc = 31 * hc + result.hashCode()
             hc = 31 * hc + id.hashCode()
             hc = 31 * hc + typeParameters.hashCode()
             hc = 31 * hc + parameters.hashCode()
             hc = 31 * hc + whereConstraints.hashCode()
-            hc = 31 * hc + (body?.hashCode() ?: 0)
+            hc = 31 * hc + body.hashCode()
             return hc
         }
         init {
@@ -1380,7 +1380,7 @@ object CSharp {
         override fun hashCode(): Int {
             var hc = attributes.hashCode()
             hc = 31 * hc + id.hashCode()
-            hc = 31 * hc + (body?.hashCode() ?: 0)
+            hc = 31 * hc + body.hashCode()
             return hc
         }
         init {
@@ -1483,7 +1483,7 @@ object CSharp {
         }
         override fun hashCode(): Int {
             var hc = variable.hashCode()
-            hc = 31 * hc + (initializer?.hashCode() ?: 0)
+            hc = 31 * hc + initializer.hashCode()
             return hc
         }
         init {
@@ -1645,7 +1645,7 @@ object CSharp {
         override fun hashCode(): Int {
             var hc = type.hashCode()
             hc = 31 * hc + name.hashCode()
-            hc = 31 * hc + (defaultValue?.hashCode() ?: 0)
+            hc = 31 * hc + defaultValue.hashCode()
             return hc
         }
         init {
@@ -1762,7 +1762,7 @@ object CSharp {
         }
         override fun hashCode(): Int {
             var hc = mods.hashCode()
-            hc = 31 * hc + (body?.hashCode() ?: 0)
+            hc = 31 * hc + body.hashCode()
             return hc
         }
         init {
@@ -1803,7 +1803,7 @@ object CSharp {
             return other is PropertyAccessorModifiers && this.modAccess == other.modAccess && this.modAccessorKind == other.modAccessorKind
         }
         override fun hashCode(): Int {
-            var hc = (modAccess?.hashCode() ?: 0)
+            var hc = modAccess.hashCode()
             hc = 31 * hc + modAccessorKind.hashCode()
             return hc
         }
@@ -1898,7 +1898,7 @@ object CSharp {
         }
         override fun hashCode(): Int {
             var hc = name.hashCode()
-            hc = 31 * hc + (definition?.hashCode() ?: 0)
+            hc = 31 * hc + definition.hashCode()
             return hc
         }
         init {
@@ -2059,7 +2059,7 @@ object CSharp {
             return other is QualTypeName && this.namespaceAlias == other.namespaceAlias && this.id == other.id
         }
         override fun hashCode(): Int {
-            var hc = (namespaceAlias?.hashCode() ?: 0)
+            var hc = namespaceAlias.hashCode()
             hc = 31 * hc + id.hashCode()
             return hc
         }
@@ -2273,7 +2273,7 @@ object CSharp {
         override fun hashCode(): Int {
             var hc = test.hashCode()
             hc = 31 * hc + consequent.hashCode()
-            hc = 31 * hc + (alternate?.hashCode() ?: 0)
+            hc = 31 * hc + alternate.hashCode()
             return hc
         }
         init {
@@ -2438,7 +2438,7 @@ object CSharp {
             return other is ReturnStatement && this.expr == other.expr
         }
         override fun hashCode(): Int {
-            return (expr?.hashCode() ?: 0)
+            return expr.hashCode()
         }
         init {
             this._expr = updateTreeConnection(null, expr)
@@ -2560,8 +2560,8 @@ object CSharp {
         }
         override fun hashCode(): Int {
             var hc = tryBlock.hashCode()
-            hc = 31 * hc + (catchBlock?.hashCode() ?: 0)
-            hc = 31 * hc + (finallyBlock?.hashCode() ?: 0)
+            hc = 31 * hc + catchBlock.hashCode()
+            hc = 31 * hc + finallyBlock.hashCode()
             return hc
         }
         init {
@@ -2731,8 +2731,8 @@ object CSharp {
             return other is SwitchCase && this.expr == other.expr && this.block == other.block
         }
         override fun hashCode(): Int {
-            var hc = (expr?.hashCode() ?: 0)
-            hc = 31 * hc + (block?.hashCode() ?: 0)
+            var hc = expr.hashCode()
+            hc = 31 * hc + block.hashCode()
             return hc
         }
         init {
@@ -2915,7 +2915,7 @@ object CSharp {
             return other is ObjectCreationExpression && this.type == other.type && this.args == other.args && this.members == other.members
         }
         override fun hashCode(): Int {
-            var hc = (type?.hashCode() ?: 0)
+            var hc = type.hashCode()
             hc = 31 * hc + args.hashCode()
             hc = 31 * hc + members.hashCode()
             return hc
@@ -2988,9 +2988,9 @@ object CSharp {
             return other is Operation && this.left == other.left && this.operator == other.operator && this.right == other.right
         }
         override fun hashCode(): Int {
-            var hc = (left?.hashCode() ?: 0)
+            var hc = left.hashCode()
             hc = 31 * hc + operator.hashCode()
-            hc = 31 * hc + (right?.hashCode() ?: 0)
+            hc = 31 * hc + right.hashCode()
             return hc
         }
         init {
@@ -3343,7 +3343,7 @@ object CSharp {
             return other is FullArg && this.name == other.name && this.value == other.value
         }
         override fun hashCode(): Int {
-            var hc = (name?.hashCode() ?: 0)
+            var hc = name.hashCode()
             hc = 31 * hc + value.hashCode()
             return hc
         }

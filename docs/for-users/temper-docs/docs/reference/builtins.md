@@ -1731,17 +1731,14 @@ class MyTypeName<TYPE, FORMAL>(
 }
 
 // Given such a declaration, we can create values of type MyTypeName.
-// Properties that appear in the parenthetical are both constructor parameters.
-let value = { propertyName: 11 };
+// Properties that appear in the parenthetical are both properties and
+// constructor parameters that initialize their corresponding property.
+let value = new MyTypeName<Boolean, Boolean>(123);
 // But parenthetical declarations also declare a property.
-console.log(value.propertyName.toString()); //!outputs "11"
-// Public members (the default) declared in the body are also available.
-console.log(value.anotherProperty.toString()); //!outputs "12"
-console.log(value.method().toString()); //!outputs "24"
-
-// For unconnected classes, you can check whether a value is of that type
-// at runtime.
-console.log((value is MyTypeName<AnyValue, AnyValue>).toString()); //!outputs "true"
+console.log(value.propertyName.toString()); //!outputs "123"
+// Public members declared in the body are also available.
+console.log(value.anotherProperty.toString()); //!outputs "124"
+console.log(value.method().toString()); //!outputs "248"
 // ✅
 ```
 

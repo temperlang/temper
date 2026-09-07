@@ -109,7 +109,7 @@ internal object TranslateDotHelper {
                 // and subjectType is an interface type, then we cannot use this path.
                 if (result != null) {
                     // Check for sub or super type. This could be inefficient in the form here, but we don't expect to
-                    // go through more than a few matching candidates. Currently maybe only 2.
+                    // go through more than a few matching candidates. Currently, maybe only 2.
                     if (result.first.enclosingType.isSubOrSame(member.enclosingType)) {
                         // We already have a more specialized case, so skip this one. This is the common case.
                         continue
@@ -262,7 +262,6 @@ internal object TranslateDotHelper {
                                 pos = pos,
                                 fn = callable,
                                 parameters = parameters.map { it.expr as TmpL.Actual },
-                                type = callType,
                             ),
                         ),
                     )
@@ -291,8 +290,8 @@ internal object TranslateDotHelper {
             isConstructor = false, // Not accessed via dotHelper
         )
 
-        // Handle disconnected members: one's whose type is connected, but it
-        // is not so is pulled out to a regular function.
+        // Handle disconnected members: ones whose type is connected, but it
+        // is not, so is pulled out to a regular function.
         if (isPulledOutMember) {
             @Suppress("USELESS_IS_CHECK")
             check(firstMember is VisibleMemberShape)
@@ -311,7 +310,6 @@ internal object TranslateDotHelper {
                         sig = sig,
                     ),
                     parameters = mergedArgumentList.map { it.translate(translator) },
-                    type = callType,
                 ),
             )
         }
@@ -375,7 +373,6 @@ internal object TranslateDotHelper {
                     typeActuals = typeActuals,
                     callTypeInferences = callTree.typeInferences,
                     args = otherArgs,
-                    type = callType,
                     translator = translator,
                 )
             }
@@ -395,7 +392,6 @@ internal object TranslateDotHelper {
         typeActuals: List<Tree>,
         callTypeInferences: CallTypeInferences?,
         args: List<Argument>,
-        type: Type2,
         translator: TmpLTranslator,
     ): TmpL.Expression {
         val dotMember = dotHelper.member
@@ -430,7 +426,6 @@ internal object TranslateDotHelper {
                 parameters = args.map { argument ->
                     argument.translate(translator)
                 },
-                type = type,
             ),
         )
 

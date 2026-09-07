@@ -10,9 +10,9 @@ import lang.temper.log.FilePathSegment
 /**
  * Can be run to generate Kotlin classes from sources.
  *
- * Trying to get multi-platform gradle to work with generated sources is a headache.
+ * Trying to get multi-platform Gradle to work with generated sources is a headache.
  * Instead, we define code generators in Kotlin, check in the code, and use the test runner to
- * ensure that they stay up-to-date.
+ * ensure that they stay up to date.
  */
 abstract class CodeGenerator(internal val subProject: String) {
 
@@ -63,7 +63,7 @@ abstract class CodeGenerator(internal val subProject: String) {
                 isDir = false,
             )
 
-        final override fun hashCode(): Int = (content?.hashCode() ?: 0) + 31 * path.hashCode()
+        final override fun hashCode(): Int = content.hashCode() + 31 * path.hashCode()
         final override fun equals(other: Any?): Boolean = other is GeneratedSource &&
             this.path == other.path && this.content == other.content
 

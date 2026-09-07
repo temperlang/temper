@@ -528,7 +528,7 @@ private class CmpStrStr(
         // And propagate `wantedType` because it might be nullable.
         val expr = (actual as? TmpL.Expression) ?: return null
         val outExpr = translator.translateExpression(expr, avoidClone = true).methodCall("as_str")
-        return outExpr.maybeWrap(given = expr.type, wanted = wantedType, translator = translator)
+        return outExpr.maybeWrap(given = expr.passType, wanted = wantedType, translator = translator)
     }
 }
 

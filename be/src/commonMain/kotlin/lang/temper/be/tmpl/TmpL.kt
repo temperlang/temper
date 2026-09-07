@@ -50,8 +50,10 @@ import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeShape
 import lang.temper.type.VisibleMemberShape
 import lang.temper.type.WellKnownTypes
+import lang.temper.type.excludeBubble
 import lang.temper.type2.DefinedType
 import lang.temper.type2.Descriptor
+import lang.temper.type2.MkType2
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.value.DependencyCategory
@@ -267,7 +269,7 @@ object TmpL {
             hc = 31 * hc + deps.hashCode()
             hc = 31 * hc + imports.hashCode()
             hc = 31 * hc + topLevels.hashCode()
-            hc = 31 * hc + (result?.hashCode() ?: 0)
+            hc = 31 * hc + result.hashCode()
             return hc
         }
         init {
@@ -410,8 +412,8 @@ object TmpL {
      * Allows backends to recognize, before processing a [Module] body, which names in [Id]s
      * are defined externally, so that it can:
      *
-     * - generate its own linking directives,
-     * - compute complete (non-transitive) dependency metadata,
+     * - Generate its own linking directives.
+     * - Or compute complete (non-transitive) dependency metadata.
      */
     class Import(
         pos: Position,
@@ -491,9 +493,9 @@ object TmpL {
         override fun hashCode(): Int {
             var hc = metadata.hashCode()
             hc = 31 * hc + externalName.hashCode()
-            hc = 31 * hc + (localName?.hashCode() ?: 0)
-            hc = 31 * hc + (sig?.hashCode() ?: 0)
-            hc = 31 * hc + (path?.hashCode() ?: 0)
+            hc = 31 * hc + localName.hashCode()
+            hc = 31 * hc + sig.hashCode()
+            hc = 31 * hc + path.hashCode()
             return hc
         }
         init {
@@ -555,6 +557,7 @@ object TmpL {
     }
 
     sealed interface Expression : Tree, ExpressionOrCallable, Actual, Subject {
+        val passType: Type2
         val type: Type2
         override fun deepCopy(): Expression
     }
@@ -632,7 +635,7 @@ object TmpL {
             get() = null
 
         /**
-         * Relative path from this module's outputPath to the targets output path.
+         * Relative path from this module's outputPath to the target's output path.
          */
         val relativePath: List<FilePathSegmentOrPseudoSegment>
             get() =
@@ -1067,8 +1070,8 @@ object TmpL {
             return other is AType && this.privOtOrNull == other.privOtOrNull && this.privNtOrNull == other.privNtOrNull
         }
         override fun hashCode(): Int {
-            var hc = (privOtOrNull?.hashCode() ?: 0)
-            hc = 31 * hc + (privNtOrNull?.hashCode() ?: 0)
+            var hc = privOtOrNull.hashCode()
+            hc = 31 * hc + privNtOrNull.hashCode()
             return hc
         }
         init {
@@ -1328,8 +1331,8 @@ object TmpL {
             return other is ATypeParameters && this.privOtOrNull == other.privOtOrNull && this.privNtOrNull == other.privNtOrNull
         }
         override fun hashCode(): Int {
-            var hc = (privOtOrNull?.hashCode() ?: 0)
-            hc = 31 * hc + (privNtOrNull?.hashCode() ?: 0)
+            var hc = privOtOrNull.hashCode()
+            hc = 31 * hc + privNtOrNull.hashCode()
             return hc
         }
         init {
@@ -1456,7 +1459,7 @@ object TmpL {
     }
 
     /**
-     * A type which admits the null value when *canBeNull* is true.
+     * A type that admits the null value when *canBeNull* is true.
      */
     sealed interface NullableType : Tree, NewType {
         val withoutNull: NullableType
@@ -1500,7 +1503,7 @@ object TmpL {
      * can evaluate.
      * Expressions that never evaluate to a result can still be described using
      * the semi-special *Never\<IF_I_DID>* type.
-     * Expressions have *first-class* values meaning they can be stored in variables
+     * Expressions have *first-class* values, meaning they can be stored in variables
      * and passed as arguments in function calls.
      */
     sealed interface ExprType : Tree, PassType {
@@ -1673,7 +1676,7 @@ object TmpL {
     }
 
     /**
-     * An expression type which admits the null value when *canBeNull* is true.
+     * An expression type that admits the null value when *canBeNull* is true.
      */
     sealed interface NullableExprType : Tree, NullableType, ExprType {
         override fun deepCopy(): NullableExprType
@@ -2304,12 +2307,12 @@ object TmpL {
         }
         override fun hashCode(): Int {
             var hc = metadata.hashCode()
-            hc = 31 * hc + (qName?.hashCode() ?: 0)
+            hc = 31 * hc + qName.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + typeParameters.hashCode()
             hc = 31 * hc + args.hashCode()
             hc = 31 * hc + retType.hashCode()
-            hc = 31 * hc + (skeletalBody?.hashCode() ?: 0)
+            hc = 31 * hc + skeletalBody.hashCode()
             return hc
         }
         init {
@@ -2360,7 +2363,7 @@ object TmpL {
         }
         override fun hashCode(): Int {
             var hc = metadata.hashCode()
-            hc = 31 * hc + (qName?.hashCode() ?: 0)
+            hc = 31 * hc + qName.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + type.hashCode()
             return hc
@@ -2447,12 +2450,12 @@ object TmpL {
         override fun hashCode(): Int {
             var hc = metadata.hashCode()
             hc = 31 * hc + kind.hashCode()
-            hc = 31 * hc + (qName?.hashCode() ?: 0)
+            hc = 31 * hc + qName.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + formals.hashCode()
             hc = 31 * hc + qualifiers.hashCode()
             hc = 31 * hc + members.hashCode()
-            hc = 31 * hc + (visibility?.hashCode() ?: 0)
+            hc = 31 * hc + visibility.hashCode()
             return hc
         }
         init {
@@ -2471,16 +2474,16 @@ object TmpL {
                 { n -> (n as TypeDef).members },
             )
         }
-        val methods get() = members.mapNotNull { it as? MethodDef }
-        val properties get() = members.mapNotNull { it as? PropertyDef }
-        val staticMethods get() = members.mapNotNull { it as? StaticMethodDef }
-        val staticProperties get() = members.mapNotNull { it as? StaticPropertyDef }
+        val methods get() = members.filterIsInstance<MethodDef>()
+        val properties get() = members.filterIsInstance<PropertyDef>()
+        val staticMethods get() = members.filterIsInstance<StaticMethodDef>()
+        val staticProperties get() = members.filterIsInstance<StaticPropertyDef>()
 
         /** Instance methods and static methods */
-        val allMethods get() = members.mapNotNull { it as? AnyMethodDef }
+        val allMethods get() = members.filterIsInstance<AnyMethodDef>()
 
         /** Instance properties and static properties */
-        val allProperties get() = members.mapNotNull { it as? AnyPropertyDef }
+        val allProperties get() = members.filterIsInstance<AnyPropertyDef>()
     }
 
     sealed interface AnyPropertyDef : Tree, VariableOrPropertyDef, MemberDef {
@@ -2642,10 +2645,10 @@ object TmpL {
         }
         override fun hashCode(): Int {
             var hc = metadata.hashCode()
-            hc = 31 * hc + (qName?.hashCode() ?: 0)
+            hc = 31 * hc + qName.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + qualifiers.hashCode()
-            hc = 31 * hc + (visibility?.hashCode() ?: 0)
+            hc = 31 * hc + visibility.hashCode()
             return hc
         }
         init {
@@ -2725,7 +2728,7 @@ object TmpL {
         }
         override fun hashCode(): Int {
             var hc = extendsClauses.hashCode()
-            hc = 31 * hc + (supportsClauses?.hashCode() ?: 0)
+            hc = 31 * hc + supportsClauses.hashCode()
             hc = 31 * hc + forbidsClauses.hashCode()
             return hc
         }
@@ -2800,16 +2803,16 @@ object TmpL {
                 { n -> (n as TypeDefData).members },
             )
         }
-        val methods get() = members.mapNotNull { it as? MethodDefData }
-        val properties get() = members.mapNotNull { it as? PropertyDefData }
-        val staticMethods get() = members.mapNotNull { it as? StaticMethodDefData }
-        val staticProperties get() = members.mapNotNull { it as? StaticPropertyDefData }
+        val methods get() = members.filterIsInstance<MethodDefData>()
+        val properties get() = members.filterIsInstance<PropertyDefData>()
+        val staticMethods get() = members.filterIsInstance<StaticMethodDefData>()
+        val staticProperties get() = members.filterIsInstance<StaticPropertyDefData>()
 
         /** Instance methods and static methods */
-        val allMethods get() = members.mapNotNull { it as? AnyMethodDefData }
+        val allMethods get() = members.filterIsInstance<AnyMethodDefData>()
 
         /** Instance properties and static properties */
-        val allProperties get() = members.mapNotNull { it as? AnyPropertyDefData }
+        val allProperties get() = members.filterIsInstance<AnyPropertyDefData>()
     }
 
     sealed interface InstanceMemberDef : Tree, MemberDef {
@@ -2873,13 +2876,13 @@ object TmpL {
         }
         override fun hashCode(): Int {
             var hc = metadata.hashCode()
-            hc = 31 * hc + (visibility?.hashCode() ?: 0)
-            hc = 31 * hc + (qName?.hashCode() ?: 0)
+            hc = 31 * hc + visibility.hashCode()
+            hc = 31 * hc + qName.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + typeParameters.hashCode()
             hc = 31 * hc + args.hashCode()
             hc = 31 * hc + retType.hashCode()
-            hc = 31 * hc + (skeletalBody?.hashCode() ?: 0)
+            hc = 31 * hc + skeletalBody.hashCode()
             hc = 31 * hc + declaringTypeName.hashCode()
             return hc
         }
@@ -2956,13 +2959,13 @@ object TmpL {
         }
         override fun hashCode(): Int {
             var hc = metadata.hashCode()
-            hc = 31 * hc + (visibility?.hashCode() ?: 0)
-            hc = 31 * hc + (qName?.hashCode() ?: 0)
+            hc = 31 * hc + visibility.hashCode()
+            hc = 31 * hc + qName.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + typeParameters.hashCode()
             hc = 31 * hc + args.hashCode()
             hc = 31 * hc + retType.hashCode()
-            hc = 31 * hc + (skeletalBody?.hashCode() ?: 0)
+            hc = 31 * hc + skeletalBody.hashCode()
             hc = 31 * hc + declaringTypeName.hashCode()
             return hc
         }
@@ -3020,8 +3023,8 @@ object TmpL {
         }
         override fun hashCode(): Int {
             var hc = metadata.hashCode()
-            hc = 31 * hc + (visibility?.hashCode() ?: 0)
-            hc = 31 * hc + (qName?.hashCode() ?: 0)
+            hc = 31 * hc + visibility.hashCode()
+            hc = 31 * hc + qName.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + type.hashCode()
             hc = 31 * hc + declaringTypeName.hashCode()
@@ -3078,8 +3081,8 @@ object TmpL {
         }
         override fun hashCode(): Int {
             var hc = metadata.hashCode()
-            hc = 31 * hc + (visibility?.hashCode() ?: 0)
-            hc = 31 * hc + (qName?.hashCode() ?: 0)
+            hc = 31 * hc + visibility.hashCode()
+            hc = 31 * hc + qName.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + type.hashCode()
             hc = 31 * hc + declaringTypeName.hashCode()
@@ -3215,7 +3218,7 @@ object TmpL {
             return other is GarbageTopLevel && this.diagnostic == other.diagnostic
         }
         override fun hashCode(): Int {
-            return (diagnostic?.hashCode() ?: 0)
+            return diagnostic.hashCode()
         }
         init {
             this._diagnostic = updateTreeConnection(null, diagnostic)
@@ -3274,7 +3277,7 @@ object TmpL {
             return other is GarbageStatement && this.diagnostic == other.diagnostic
         }
         override fun hashCode(): Int {
-            return (diagnostic?.hashCode() ?: 0)
+            return diagnostic.hashCode()
         }
         init {
             this._diagnostic = updateTreeConnection(null, diagnostic)
@@ -3314,6 +3317,8 @@ object TmpL {
         override var diagnostic: Diagnostic?
             get() = _diagnostic
             set(newValue) { _diagnostic = updateTreeConnection(_diagnostic, newValue) }
+        override val passType: Type2
+            get() = WellKnownTypes.invalidType2
         override val type: Type2
             get() = WellKnownTypes.invalidType2
         override fun deepCopy(): GarbageExpression {
@@ -3327,7 +3332,7 @@ object TmpL {
             return other is GarbageExpression && this.diagnostic == other.diagnostic
         }
         override fun hashCode(): Int {
-            return (diagnostic?.hashCode() ?: 0)
+            return diagnostic.hashCode()
         }
         init {
             this._diagnostic = updateTreeConnection(null, diagnostic)
@@ -3385,7 +3390,7 @@ object TmpL {
             return other is GarbageCallable && this.diagnostic == other.diagnostic
         }
         override fun hashCode(): Int {
-            return (diagnostic?.hashCode() ?: 0)
+            return diagnostic.hashCode()
         }
         init {
             this._diagnostic = updateTreeConnection(null, diagnostic)
@@ -3436,7 +3441,7 @@ object TmpL {
             return other is GarbageType && this.diagnostic == other.diagnostic
         }
         override fun hashCode(): Int {
-            return (diagnostic?.hashCode() ?: 0)
+            return diagnostic.hashCode()
         }
         init {
             this._diagnostic = updateTreeConnection(null, diagnostic)
@@ -3566,7 +3571,7 @@ object TmpL {
      * used in documentation snippets.  See also [Genre.Documentation].
      *
      * Including the code in these boundaries in the compiled code
-     * allows us to produce [SSCCE](https://sscce.org)
+     * allows us to produce [S.S.C.C.E.](https://sscce.org)
      * (Short, Self-Contained, Correct examples) in our generated
      * documentation.
      *
@@ -3575,7 +3580,7 @@ object TmpL {
      *
      * Backends should, when translating documentation code, convert them
      * into comments that occur on their own lines, using the target
-     * language's comment convention that contain the text
+     * language's comment convention, that contain the text
      * <code>\#region \_\_BOILERPLATE\_\_ \{\{\{</code> and
      * <code>\#endregion \}\}\}</code> respectively, and must not
      * produce those sequences in other tokens.
@@ -3638,7 +3643,7 @@ object TmpL {
         }
         init {
             // Many backends have only line comments, so TmpLTranslator
-            // should take care to produce sequences of single line
+            // should take care to produce sequences of single-line
             // comments instead of relying on each backend to do their
             // own comment splitting.
             require(anyLineBreak.find(commentText) == null)
@@ -3846,7 +3851,7 @@ object TmpL {
      * corresponding to a [TypeDeclaration] is connected to a
      * backend-specific type name by the support network.
      *
-     * This serves to anchor the type name but most backends
+     * This serves to anchor the type name, but most backends
      * do not need to produce code for them.
      */
     class TypeConnection(
@@ -3999,7 +4004,7 @@ object TmpL {
             var hc = metadata.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + init.hashCode()
-            hc = 31 * hc + (descriptor?.hashCode() ?: 0)
+            hc = 31 * hc + descriptor.hashCode()
             return hc
         }
         init {
@@ -4064,7 +4069,7 @@ object TmpL {
             var hc = metadata.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + init.hashCode()
-            hc = 31 * hc + (descriptor?.hashCode() ?: 0)
+            hc = 31 * hc + descriptor.hashCode()
             return hc
         }
         init {
@@ -4137,7 +4142,7 @@ object TmpL {
         }
     }
 
-    /** A top level function declaration.  Might be exported or might not. */
+    /** A top-level function declaration.  Might be exported or might not. */
     class ModuleFunctionDeclaration(
         pos: Position,
         metadata: Iterable<DeclarationMetadata>,
@@ -4298,7 +4303,7 @@ object TmpL {
             var hc = metadata.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + type.hashCode()
-            hc = 31 * hc + (init?.hashCode() ?: 0)
+            hc = 31 * hc + init.hashCode()
             hc = 31 * hc + descriptor.hashCode()
             hc = 31 * hc + assignOnce.hashCode()
             return hc
@@ -4437,7 +4442,7 @@ object TmpL {
             var hc = metadata.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + type.hashCode()
-            hc = 31 * hc + (init?.hashCode() ?: 0)
+            hc = 31 * hc + init.hashCode()
             hc = 31 * hc + descriptor.hashCode()
             hc = 31 * hc + assignOnce.hashCode()
             return hc
@@ -4743,9 +4748,9 @@ object TmpL {
             return other is Parameters && this.thisName == other.thisName && this.parameters == other.parameters && this.restParameter == other.restParameter
         }
         override fun hashCode(): Int {
-            var hc = (thisName?.hashCode() ?: 0)
+            var hc = thisName.hashCode()
             hc = 31 * hc + parameters.hashCode()
-            hc = 31 * hc + (restParameter?.hashCode() ?: 0)
+            hc = 31 * hc + restParameter.hashCode()
             return hc
         }
         init {
@@ -4831,7 +4836,7 @@ object TmpL {
     }
 
     /**
-     * A nested function declaration which might close over names that are not defined at
+     * A nested function declaration that might close over names which are not defined at
      * a module top-level.
      */
     class LocalFunctionDeclaration(
@@ -4973,6 +4978,8 @@ object TmpL {
         var promise: Expression
             get() = _promise
             set(newValue) { _promise = updateTreeConnection(_promise, newValue) }
+        override val passType: Type2
+            get() = excludeBubble(type)
         override fun deepCopy(): AwaitExpression {
             return AwaitExpression(pos, promise = this.promise.deepCopy(), type = this.type)
         }
@@ -5080,7 +5087,7 @@ object TmpL {
         override fun hashCode(): Int {
             var hc = typeName.hashCode()
             hc = 31 * hc + params.hashCode()
-            hc = 31 * hc + (connectsFrom?.hashCode() ?: 0)
+            hc = 31 * hc + connectsFrom.hashCode()
             return hc
         }
         init {
@@ -5415,7 +5422,7 @@ object TmpL {
             return other is BreakStatement && this.label == other.label
         }
         override fun hashCode(): Int {
-            return (label?.hashCode() ?: 0)
+            return label.hashCode()
         }
         init {
             this._label = updateTreeConnection(null, label)
@@ -5465,7 +5472,7 @@ object TmpL {
             return other is ContinueStatement && this.label == other.label
         }
         override fun hashCode(): Int {
-            return (label?.hashCode() ?: 0)
+            return label.hashCode()
         }
         init {
             this._label = updateTreeConnection(null, label)
@@ -5479,7 +5486,7 @@ object TmpL {
 
     /**
      * May appear within a [ModuleInitBlock] to abort module initialization when
-     * un-handled failure occurs during module initialization.
+     * unhandled failure occurs during module initialization.
      */
     class ModuleInitFailed(
         pos: Position,
@@ -5546,7 +5553,7 @@ object TmpL {
             return other is ReturnStatement && this.expression == other.expression
         }
         override fun hashCode(): Int {
-            return (expression?.hashCode() ?: 0)
+            return expression.hashCode()
         }
         init {
             this._expression = updateTreeConnection(null, expression)
@@ -5591,7 +5598,7 @@ object TmpL {
     }
 
     /**
-     * Used when translating using [lang.temper.be.tmpl.BubbleBranchStrategy.CatchBubble]
+     * Used when translating using [lang.temper.be.tmpl.BubbleBranchStrategy.Exceptions]
      * instead of using the quasi-value [BubbleSentinel].
      */
     class ThrowStatement(
@@ -5763,7 +5770,7 @@ object TmpL {
         override fun hashCode(): Int {
             var hc = test.hashCode()
             hc = 31 * hc + consequent.hashCode()
-            hc = 31 * hc + (alternate?.hashCode() ?: 0)
+            hc = 31 * hc + alternate.hashCode()
             return hc
         }
         init {
@@ -5838,7 +5845,7 @@ object TmpL {
     }
 
     /**
-     * Used when translating using [lang.temper.be.tmpl.BubbleBranchStrategy.CatchBubble]
+     * Used when translating using [lang.temper.be.tmpl.BubbleBranchStrategy.Exceptions]
      * to decompile transitions to recovery from bubble via `orelse`.
      *
      * See also [ThrowStatement].
@@ -6223,7 +6230,7 @@ object TmpL {
 
     class ValueReference(
         pos: Position,
-        override var type: Type2,
+        override var passType: Type2,
         var value: Value<*>,
     ) : BaseTree(pos), Expression {
         override val operatorDefinition: TmpLOperatorDefinition?
@@ -6235,18 +6242,20 @@ object TmpL {
         }
         override val codeFormattingTemplate: CodeFormattingTemplate?
             get() = null
+        override val type: Type2
+            get() = passType
         override fun deepCopy(): ValueReference {
-            return ValueReference(pos, type = this.type, value = this.value)
+            return ValueReference(pos, passType = this.passType, value = this.value)
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is ValueReference && this.type == other.type && this.value == other.value
+            return other is ValueReference && this.passType == other.passType && this.value == other.value
         }
         override fun hashCode(): Int {
-            var hc = type.hashCode()
+            var hc = passType.hashCode()
             hc = 31 * hc + value.hashCode()
             return hc
         }
@@ -6283,8 +6292,10 @@ object TmpL {
             get() = sharedCodeFormattingTemplate157
         override val formatElementCount
             get() = 0
-        override val type: Type2
+        override val passType: Type2
             get() = WellKnownTypes.bubbleType2
+        override val type: Type2
+            get() = passType
         override fun deepCopy(): BubbleSentinel {
             return BubbleSentinel(pos)
         }
@@ -6303,7 +6314,7 @@ object TmpL {
         }
     }
 
-    /** A read of the variable, constant, or other referent with name [id]. */
+    /** A read of the variable, constant, or another referent with name [id]. */
     class Reference(
         pos: Position,
         id: Id,
@@ -6315,6 +6326,8 @@ object TmpL {
         override var id: Id
             get() = _id
             set(newValue) { _id = updateTreeConnection(_id, newValue) }
+        override val passType: Type2
+            get() = excludeBubble(type)
         override fun deepCopy(): Reference {
             return Reference(pos, id = this.id.deepCopy(), type = this.type)
         }
@@ -6338,7 +6351,7 @@ object TmpL {
     class This(
         pos: Position,
         id: Id,
-        override var type: DefinedType,
+        override var passType: DefinedType,
     ) : BaseTree(pos), Expression {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
@@ -6358,19 +6371,21 @@ object TmpL {
         var id: Id
             get() = _id
             set(newValue) { _id = updateTreeConnection(_id, newValue) }
+        override val type: Type2
+            get() = passType
         override fun deepCopy(): This {
-            return This(pos, id = this.id.deepCopy(), type = this.type)
+            return This(pos, id = this.id.deepCopy(), passType = this.passType)
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is This && this.id == other.id && this.type == other.type
+            return other is This && this.id == other.id && this.passType == other.passType
         }
         override fun hashCode(): Int {
             var hc = id.hashCode()
-            hc = 31 * hc + type.hashCode()
+            hc = 31 * hc + passType.hashCode()
             return hc
         }
         init {
@@ -6381,7 +6396,7 @@ object TmpL {
                 { n -> (n as This).id },
             )
         }
-        constructor(id: Id, type: DefinedType) : this(id.pos, id, type)
+        constructor(id: Id, passType: DefinedType) : this(id.pos, id, passType)
     }
 
     class CallExpression(
@@ -6389,7 +6404,6 @@ object TmpL {
         fn: Callable,
         typeActuals: CallTypeActuals,
         parameters: Iterable<Actual>,
-        override var type: Type2,
     ) : BaseTree(pos), Expression {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.Paren
@@ -6419,23 +6433,26 @@ object TmpL {
         var parameters: List<Actual>
             get() = _parameters
             set(newValue) { updateTreeConnections(_parameters, newValue) }
+        override val passType: Type2
+            get() = excludeBubble(type)
+        override val type: Type2
+            get() = contextualizedSig.returnType2
         val contextualizedSig: Signature2
             get() = contextualizeSig(fn.type, typeActuals.bindings)
         override fun deepCopy(): CallExpression {
-            return CallExpression(pos, fn = this.fn.deepCopy(), typeActuals = this.typeActuals.deepCopy(), parameters = this.parameters.deepCopy(), type = this.type)
+            return CallExpression(pos, fn = this.fn.deepCopy(), typeActuals = this.typeActuals.deepCopy(), parameters = this.parameters.deepCopy())
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is CallExpression && this.fn == other.fn && this.typeActuals == other.typeActuals && this.parameters == other.parameters && this.type == other.type
+            return other is CallExpression && this.fn == other.fn && this.typeActuals == other.typeActuals && this.parameters == other.parameters
         }
         override fun hashCode(): Int {
             var hc = fn.hashCode()
             hc = 31 * hc + typeActuals.hashCode()
             hc = 31 * hc + parameters.hashCode()
-            hc = 31 * hc + type.hashCode()
             return hc
         }
         init {
@@ -6454,13 +6471,14 @@ object TmpL {
             pos: Position,
             fn: Callable,
             parameters: Iterable<Actual>,
-            type: Type2
-        ) : this(pos, fn, CallTypeActuals.empty(fn.pos.rightEdge), parameters, type)
+        ) : this(pos, fn, CallTypeActuals.empty(fn.pos.rightEdge), parameters)
     }
 
     sealed interface Operation : Tree, Expression {
         override val operatorDefinition
             get() = op.kind
+        override val passType: Type2
+            get() = excludeBubble(op.tmpLOperator.returnType)
         override val type: Type2
             get() = op.tmpLOperator.returnType
         val op: Operator
@@ -6478,7 +6496,7 @@ object TmpL {
     class UncheckedNotNullExpression(
         pos: Position,
         expression: Expression,
-        override var type: Type2,
+        override var passType: Type2,
     ) : BaseTree(pos), Expression {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
@@ -6498,19 +6516,21 @@ object TmpL {
         var expression: Expression
             get() = _expression
             set(newValue) { _expression = updateTreeConnection(_expression, newValue) }
+        override val type: Type2
+            get() = passType
         override fun deepCopy(): UncheckedNotNullExpression {
-            return UncheckedNotNullExpression(pos, expression = this.expression.deepCopy(), type = this.type)
+            return UncheckedNotNullExpression(pos, expression = this.expression.deepCopy(), passType = this.passType)
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is UncheckedNotNullExpression && this.expression == other.expression && this.type == other.type
+            return other is UncheckedNotNullExpression && this.expression == other.expression && this.passType == other.passType
         }
         override fun hashCode(): Int {
             var hc = expression.hashCode()
-            hc = 31 * hc + type.hashCode()
+            hc = 31 * hc + passType.hashCode()
             return hc
         }
         init {
@@ -6523,11 +6543,11 @@ object TmpL {
         }
     }
 
-    /** Wraps a callable as an expression as when de-referencing a function pointer */
+    /** Wraps a callable as an expression as when dereferencing a function pointer */
     class FunInterfaceExpression(
         pos: Position,
         callable: Callable,
-        override var type: Type2,
+        override var passType: Type2,
     ) : BaseTree(pos), Expression, FunInterfaceConversion {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.As
@@ -6540,7 +6560,7 @@ object TmpL {
         ): IndexableFormattableTreeElement {
             return when (index) {
                 0 -> this.callable
-                1 -> IndexableFormattableTreeElement.wrap(this.type)
+                1 -> IndexableFormattableTreeElement.wrap(this.passType)
                 else -> throw IndexOutOfBoundsException("$index")
             }
         }
@@ -6548,19 +6568,21 @@ object TmpL {
         var callable: Callable
             get() = _callable
             set(newValue) { _callable = updateTreeConnection(_callable, newValue) }
+        override val type: Type2
+            get() = passType
         override fun deepCopy(): FunInterfaceExpression {
-            return FunInterfaceExpression(pos, callable = this.callable.deepCopy(), type = this.type)
+            return FunInterfaceExpression(pos, callable = this.callable.deepCopy(), passType = this.passType)
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is FunInterfaceExpression && this.callable == other.callable && this.type == other.type
+            return other is FunInterfaceExpression && this.callable == other.callable && this.passType == other.passType
         }
         override fun hashCode(): Int {
             var hc = callable.hashCode()
-            hc = 31 * hc + type.hashCode()
+            hc = 31 * hc + passType.hashCode()
             return hc
         }
         init {
@@ -6588,7 +6610,7 @@ object TmpL {
         pos: Position,
         parameterName: Id,
         index: ConstIndex,
-        override var type: Type2,
+        override var passType: Type2,
     ) : BaseTree(pos), Expression {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.Square
@@ -6613,20 +6635,22 @@ object TmpL {
         var index: ConstIndex
             get() = _index
             set(newValue) { _index = updateTreeConnection(_index, newValue) }
+        override val type: Type2
+            get() = passType
         override fun deepCopy(): RestParameterExpression {
-            return RestParameterExpression(pos, parameterName = this.parameterName.deepCopy(), index = this.index.deepCopy(), type = this.type)
+            return RestParameterExpression(pos, parameterName = this.parameterName.deepCopy(), index = this.index.deepCopy(), passType = this.passType)
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is RestParameterExpression && this.parameterName == other.parameterName && this.index == other.index && this.type == other.type
+            return other is RestParameterExpression && this.parameterName == other.parameterName && this.index == other.index && this.passType == other.passType
         }
         override fun hashCode(): Int {
             var hc = parameterName.hashCode()
             hc = 31 * hc + index.hashCode()
-            hc = 31 * hc + type.hashCode()
+            hc = 31 * hc + passType.hashCode()
             return hc
         }
         init {
@@ -6663,6 +6687,8 @@ object TmpL {
         var parameterName: Id
             get() = _parameterName
             set(newValue) { _parameterName = updateTreeConnection(_parameterName, newValue) }
+        override val passType: Type2
+            get() = WellKnownTypes.intType2
         override val type: Type2
             get() = WellKnownTypes.intType2
         override fun deepCopy(): RestParameterCountExpression {
@@ -6721,11 +6747,76 @@ object TmpL {
         override fun deepCopy(): GetProperty
     }
 
-    class CallTypeActuals(
+    /**
+     * A list of bindings for type parameters.  For example, `listMap` might be a generic function
+     * with two type formals `<INPUT, OUTPUT>`. A specific call to `listMap` that converts `Foo`s
+     * to `Bar`s, would have two actuals `<Foo, Bar>`.
+     *
+     * If those type actuals were explicitly specified in the Temper source, then [ExplicitCallTypeActuals]
+     * is used, but if they were inferred, then [ImplicitCallTypeActuals] is used.
+     * Backends may need to generate explicit type actuals even when the Temper provides implicit type
+     * actuals when the target language might infer types that are different in important ways.
+     * [ImplicitCallTypeActuals] generate no tokens when dumped to TmpL pseudocode and
+     * [ExplicitCallTypeActuals] do generate tokens.  One way a backend could figure out whether
+     * explicit type actuals are required might be to similarly generate invisible type actuals, and then
+     * simulate enough target-language type inference to determine whether to flip a switch to make a
+     * specific call's type actuals explicit.
+     */
+    sealed interface CallTypeActuals : Tree {
+        val types: List<AType>
+        val bindings: Map<lang.temper.type.TypeFormal, Type2>
+        override fun deepCopy(): CallTypeActuals
+        companion object {
+            fun empty(pos: Position) = ImplicitCallTypeActuals(pos, emptyList(), emptyMap())
+        }
+    }
+
+    class ImplicitCallTypeActuals(
         pos: Position,
         types: Iterable<AType>,
-        var bindings: Map<lang.temper.type.TypeFormal, Type2>,
-    ) : BaseTree(pos) {
+        override var bindings: Map<lang.temper.type.TypeFormal, Type2>,
+    ) : BaseTree(pos), CallTypeActuals {
+        override val operatorDefinition: TmpLOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate31
+        override val formatElementCount
+            get() = 0
+        private val _types: MutableList<AType> = mutableListOf()
+        override var types: List<AType>
+            get() = _types
+            set(newValue) { updateTreeConnections(_types, newValue) }
+        override fun deepCopy(): ImplicitCallTypeActuals {
+            return ImplicitCallTypeActuals(pos, types = this.types.deepCopy(), bindings = this.bindings)
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is ImplicitCallTypeActuals && this.types == other.types && this.bindings == other.bindings
+        }
+        override fun hashCode(): Int {
+            var hc = types.hashCode()
+            hc = 31 * hc + bindings.hashCode()
+            return hc
+        }
+        init {
+            updateTreeConnections(this._types, types)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as ImplicitCallTypeActuals).types },
+            )
+        }
+        constructor(src: CallTypeActuals): this(src.pos, src.types.deepCopy(), src.bindings)
+    }
+
+    class ExplicitCallTypeActuals(
+        pos: Position,
+        types: Iterable<AType>,
+        override var bindings: Map<lang.temper.type.TypeFormal, Type2>,
+    ) : BaseTree(pos), CallTypeActuals {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
@@ -6746,18 +6837,18 @@ object TmpL {
             }
         }
         private val _types: MutableList<AType> = mutableListOf()
-        var types: List<AType>
+        override var types: List<AType>
             get() = _types
             set(newValue) { updateTreeConnections(_types, newValue) }
-        override fun deepCopy(): CallTypeActuals {
-            return CallTypeActuals(pos, types = this.types.deepCopy(), bindings = this.bindings)
+        override fun deepCopy(): ExplicitCallTypeActuals {
+            return ExplicitCallTypeActuals(pos, types = this.types.deepCopy(), bindings = this.bindings)
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is CallTypeActuals && this.types == other.types && this.bindings == other.bindings
+            return other is ExplicitCallTypeActuals && this.types == other.types && this.bindings == other.bindings
         }
         override fun hashCode(): Int {
             var hc = types.hashCode()
@@ -6768,9 +6859,8 @@ object TmpL {
             updateTreeConnections(this._types, types)
         }
         companion object {
-            fun empty(pos: Position) = CallTypeActuals(pos, emptyList(), emptyMap())
             private val cmr = ChildMemberRelationships(
-                { n -> (n as CallTypeActuals).types },
+                { n -> (n as ExplicitCallTypeActuals).types },
             )
         }
     }
@@ -7084,8 +7174,8 @@ object TmpL {
             var hc = subject.hashCode()
             hc = 31 * hc + methodName.hashCode()
             hc = 31 * hc + type.hashCode()
-            hc = 31 * hc + (method?.hashCode() ?: 0)
-            hc = 31 * hc + (adjustments?.hashCode() ?: 0)
+            hc = 31 * hc + method.hashCode()
+            hc = 31 * hc + adjustments.hashCode()
             return hc
         }
         init {
@@ -7140,7 +7230,7 @@ object TmpL {
         override fun hashCode(): Int {
             var hc = typeName.hashCode()
             hc = 31 * hc + type.hashCode()
-            hc = 31 * hc + (method?.hashCode() ?: 0)
+            hc = 31 * hc + method.hashCode()
             return hc
         }
         init {
@@ -7299,6 +7389,8 @@ object TmpL {
         override var checkedType: AType
             get() = _checkedType
             set(newValue) { _checkedType = updateTreeConnection(_checkedType, newValue) }
+        override val passType: Type2
+            get() = WellKnownTypes.booleanType2
         override val type: Type2
             get() = WellKnownTypes.booleanType2
         override fun deepCopy(): InstanceOfExpression {
@@ -7334,13 +7426,18 @@ object TmpL {
         pos: Position,
         expr: Expression,
         checkedType: AType,
-        override var type: Type2,
         override var checkedFrontendType: Type2,
+        var canFail: Boolean,
     ) : BaseTree(pos), CheckedRttiExpression {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.Paren
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate172
+            get() =
+                if (canFail) {
+                    sharedCodeFormattingTemplate172
+                } else {
+                    sharedCodeFormattingTemplate173
+                }
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -7360,21 +7457,30 @@ object TmpL {
         override var checkedType: AType
             get() = _checkedType
             set(newValue) { _checkedType = updateTreeConnection(_checkedType, newValue) }
+        override val passType: Type2
+            get() = checkedFrontendType
+        override val type: Type2
+            get() =
+                if (canFail) {
+                    MkType2.result(checkedFrontendType, WellKnownTypes.bubbleType2).get()
+                } else {
+                    checkedFrontendType
+                }
         override fun deepCopy(): CastExpression {
-            return CastExpression(pos, expr = this.expr.deepCopy(), checkedType = this.checkedType.deepCopy(), type = this.type, checkedFrontendType = this.checkedFrontendType)
+            return CastExpression(pos, expr = this.expr.deepCopy(), checkedType = this.checkedType.deepCopy(), checkedFrontendType = this.checkedFrontendType, canFail = this.canFail)
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is CastExpression && this.expr == other.expr && this.checkedType == other.checkedType && this.type == other.type && this.checkedFrontendType == other.checkedFrontendType
+            return other is CastExpression && this.expr == other.expr && this.checkedType == other.checkedType && this.checkedFrontendType == other.checkedFrontendType && this.canFail == other.canFail
         }
         override fun hashCode(): Int {
             var hc = expr.hashCode()
             hc = 31 * hc + checkedType.hashCode()
-            hc = 31 * hc + type.hashCode()
             hc = 31 * hc + checkedFrontendType.hashCode()
+            hc = 31 * hc + canFail.hashCode()
             return hc
         }
         init {
@@ -7526,14 +7632,14 @@ object TmpL {
     /**
      * Reads a property directly.  These operations can only be performed from within
      * a `class`'s definition and cannot fail assuming that static checks passed for
-     * `const` property initialization and use before initialization in constructor
+     * `const` property initialization and use-before-initialization in constructors
      * and methods.
      */
     class GetBackedProperty(
         pos: Position,
         subject: Subject,
         property: PropertyId,
-        override var type: Type2,
+        override var passType: Type2,
     ) : BaseTree(pos), GetProperty {
         private var _subject: Subject
         override var subject: Subject
@@ -7543,18 +7649,20 @@ object TmpL {
         override var property: PropertyId
             get() = _property
             set(newValue) { _property = updateTreeConnection(_property, newValue) }
+        override val type: Type2
+            get() = passType
         override fun deepCopy(): GetBackedProperty {
-            return GetBackedProperty(pos, subject = this.subject.deepCopy(), property = this.property.deepCopy(), type = this.type)
+            return GetBackedProperty(pos, subject = this.subject.deepCopy(), property = this.property.deepCopy(), passType = this.passType)
         }
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is GetBackedProperty && this.subject == other.subject && this.property == other.property && this.type == other.type
+            return other is GetBackedProperty && this.subject == other.subject && this.property == other.property && this.passType == other.passType
         }
         override fun hashCode(): Int {
             var hc = subject.hashCode()
             hc = 31 * hc + property.hashCode()
-            hc = 31 * hc + type.hashCode()
+            hc = 31 * hc + passType.hashCode()
             return hc
         }
         init {
@@ -7583,6 +7691,8 @@ object TmpL {
         override var property: PropertyId
             get() = _property
             set(newValue) { _property = updateTreeConnection(_property, newValue) }
+        override val passType: Type2
+            get() = excludeBubble(type)
         override fun deepCopy(): GetAbstractProperty {
             return GetAbstractProperty(pos, subject = this.subject.deepCopy(), property = this.property.deepCopy(), type = this.type)
         }
@@ -7695,7 +7805,7 @@ object TmpL {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.Colon
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate173
+            get() = sharedCodeFormattingTemplate174
         override val formatElementCount
             get() = 3
         override fun formatElement(
@@ -7757,7 +7867,7 @@ object TmpL {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.Bar
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate174
+            get() = sharedCodeFormattingTemplate175
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -7802,7 +7912,7 @@ object TmpL {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.Amp
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate175
+            get() = sharedCodeFormattingTemplate176
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -7846,7 +7956,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate176
+            get() = sharedCodeFormattingTemplate177
         override val formatElementCount
             get() = 0
         override fun deepCopy(): TopType {
@@ -7873,7 +7983,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate177
+            get() = sharedCodeFormattingTemplate178
         override val formatElementCount
             get() = 0
         override fun deepCopy(): BubbleType {
@@ -7900,7 +8010,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate178
+            get() = sharedCodeFormattingTemplate179
         override val formatElementCount
             get() = 0
         override fun deepCopy(): NeverType {
@@ -8021,13 +8131,13 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (formals.isNotEmpty() && rest != null) {
-                    sharedCodeFormattingTemplate179
+                    sharedCodeFormattingTemplate180
                 } else if (formals.isNotEmpty()) {
                     sharedCodeFormattingTemplate65
                 } else if (rest != null) {
-                    sharedCodeFormattingTemplate180
-                } else {
                     sharedCodeFormattingTemplate181
+                } else {
+                    sharedCodeFormattingTemplate182
                 }
         override val formatElementCount
             get() = 2
@@ -8060,7 +8170,7 @@ object TmpL {
         }
         override fun hashCode(): Int {
             var hc = formals.hashCode()
-            hc = 31 * hc + (rest?.hashCode() ?: 0)
+            hc = 31 * hc + rest.hashCode()
             return hc
         }
         init {
@@ -8086,11 +8196,11 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (isOptional && name != null) {
-                    sharedCodeFormattingTemplate182
-                } else if (isOptional) {
                     sharedCodeFormattingTemplate183
-                } else {
+                } else if (isOptional) {
                     sharedCodeFormattingTemplate184
+                } else {
+                    sharedCodeFormattingTemplate185
                 }
         override val formatElementCount
             get() = 2
@@ -8122,7 +8232,7 @@ object TmpL {
             return other is ValueFormal && this.name == other.name && this.type == other.type && this.isOptional == other.isOptional
         }
         override fun hashCode(): Int {
-            var hc = (name?.hashCode() ?: 0)
+            var hc = name.hashCode()
             hc = 31 * hc + type.hashCode()
             hc = 31 * hc + isOptional.hashCode()
             return hc
@@ -8222,7 +8332,7 @@ object TmpL {
             hc = 31 * hc + type.hashCode()
             hc = 31 * hc + visibility.hashCode()
             hc = 31 * hc + assignOnce.hashCode()
-            hc = 31 * hc + (descriptor?.hashCode() ?: 0)
+            hc = 31 * hc + descriptor.hashCode()
             hc = 31 * hc + memberShape.hashCode()
             return hc
         }
@@ -8257,9 +8367,9 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (sameDotName) {
-                    sharedCodeFormattingTemplate185
-                } else {
                     sharedCodeFormattingTemplate186
+                } else {
+                    sharedCodeFormattingTemplate187
                 }
         override val formatElementCount
             get() = 5
@@ -8318,7 +8428,7 @@ object TmpL {
             hc = 31 * hc + type.hashCode()
             hc = 31 * hc + expression.hashCode()
             hc = 31 * hc + visibility.hashCode()
-            hc = 31 * hc + (descriptor?.hashCode() ?: 0)
+            hc = 31 * hc + descriptor.hashCode()
             hc = 31 * hc + memberShape.hashCode()
             return hc
         }
@@ -8368,13 +8478,13 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (sameDotName && body != null) {
-                    sharedCodeFormattingTemplate187
-                } else if (sameDotName) {
                     sharedCodeFormattingTemplate188
-                } else if (body != null) {
+                } else if (sameDotName) {
                     sharedCodeFormattingTemplate189
-                } else {
+                } else if (body != null) {
                     sharedCodeFormattingTemplate190
+                } else {
+                    sharedCodeFormattingTemplate191
                 }
         override val formatElementCount
             get() = 7
@@ -8443,7 +8553,7 @@ object TmpL {
             hc = 31 * hc + typeParameters.hashCode()
             hc = 31 * hc + parameters.hashCode()
             hc = 31 * hc + returnType.hashCode()
-            hc = 31 * hc + (body?.hashCode() ?: 0)
+            hc = 31 * hc + body.hashCode()
             hc = 31 * hc + visibility.hashCode()
             hc = 31 * hc + mayYield.hashCode()
             hc = 31 * hc + memberShape.hashCode()
@@ -8487,7 +8597,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate191
+            get() = sharedCodeFormattingTemplate192
         override val formatElementCount
             get() = 5
         override fun formatElement(
@@ -8553,7 +8663,7 @@ object TmpL {
             hc = 31 * hc + returnType.hashCode()
             hc = 31 * hc + visibility.hashCode()
             hc = 31 * hc + memberShape.hashCode()
-            hc = 31 * hc + (adjustments?.hashCode() ?: 0)
+            hc = 31 * hc + adjustments.hashCode()
             return hc
         }
         init {
@@ -8597,13 +8707,13 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (sameDotName && body != null) {
-                    sharedCodeFormattingTemplate192
-                } else if (sameDotName) {
                     sharedCodeFormattingTemplate193
-                } else if (body != null) {
+                } else if (sameDotName) {
                     sharedCodeFormattingTemplate194
-                } else {
+                } else if (body != null) {
                     sharedCodeFormattingTemplate195
+                } else {
+                    sharedCodeFormattingTemplate196
                 }
         override val formatElementCount
             get() = 7
@@ -8674,12 +8784,12 @@ object TmpL {
             hc = 31 * hc + typeParameters.hashCode()
             hc = 31 * hc + parameters.hashCode()
             hc = 31 * hc + returnType.hashCode()
-            hc = 31 * hc + (body?.hashCode() ?: 0)
+            hc = 31 * hc + body.hashCode()
             hc = 31 * hc + visibility.hashCode()
             hc = 31 * hc + overridden.hashCode()
             hc = 31 * hc + mayYield.hashCode()
             hc = 31 * hc + memberShape.hashCode()
-            hc = 31 * hc + (adjustments?.hashCode() ?: 0)
+            hc = 31 * hc + adjustments.hashCode()
             return hc
         }
         init {
@@ -8735,13 +8845,13 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (sameDotName && body != null) {
-                    sharedCodeFormattingTemplate196
-                } else if (sameDotName) {
                     sharedCodeFormattingTemplate197
-                } else if (body != null) {
+                } else if (sameDotName) {
                     sharedCodeFormattingTemplate198
-                } else {
+                } else if (body != null) {
                     sharedCodeFormattingTemplate199
+                } else {
+                    sharedCodeFormattingTemplate200
                 }
         override val formatElementCount
             get() = 7
@@ -8812,11 +8922,11 @@ object TmpL {
             hc = 31 * hc + typeParameters.hashCode()
             hc = 31 * hc + parameters.hashCode()
             hc = 31 * hc + returnType.hashCode()
-            hc = 31 * hc + (body?.hashCode() ?: 0)
+            hc = 31 * hc + body.hashCode()
             hc = 31 * hc + visibility.hashCode()
             hc = 31 * hc + overridden.hashCode()
             hc = 31 * hc + memberShape.hashCode()
-            hc = 31 * hc + (adjustments?.hashCode() ?: 0)
+            hc = 31 * hc + adjustments.hashCode()
             hc = 31 * hc + propertyShape.hashCode()
             return hc
         }
@@ -8865,13 +8975,13 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (sameDotName && body != null) {
-                    sharedCodeFormattingTemplate200
-                } else if (sameDotName) {
                     sharedCodeFormattingTemplate201
-                } else if (body != null) {
+                } else if (sameDotName) {
                     sharedCodeFormattingTemplate202
-                } else {
+                } else if (body != null) {
                     sharedCodeFormattingTemplate203
+                } else {
+                    sharedCodeFormattingTemplate204
                 }
         override val formatElementCount
             get() = 6
@@ -8940,12 +9050,12 @@ object TmpL {
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + parameters.hashCode()
             hc = 31 * hc + returnType.hashCode()
-            hc = 31 * hc + (body?.hashCode() ?: 0)
+            hc = 31 * hc + body.hashCode()
             hc = 31 * hc + typeParameters.hashCode()
             hc = 31 * hc + visibility.hashCode()
             hc = 31 * hc + overridden.hashCode()
             hc = 31 * hc + memberShape.hashCode()
-            hc = 31 * hc + (adjustments?.hashCode() ?: 0)
+            hc = 31 * hc + adjustments.hashCode()
             hc = 31 * hc + propertyShape.hashCode()
             return hc
         }
@@ -12219,8 +12329,21 @@ object TmpL {
             ),
         )
 
-    /** `fn {{0}} {{1}} : {{2}}` */
+    /** `safeCast ( {{0}} , {{1}} )` */
     private val sharedCodeFormattingTemplate173 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("safeCast", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+            ),
+        )
+
+    /** `fn {{0}} {{1}} : {{2}}` */
+    private val sharedCodeFormattingTemplate174 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
@@ -12232,33 +12355,33 @@ object TmpL {
         )
 
     /** `{{0*|}}` */
-    private val sharedCodeFormattingTemplate174 =
+    private val sharedCodeFormattingTemplate175 =
         CodeFormattingTemplate.GroupSubstitution(
             0,
             CodeFormattingTemplate.LiteralToken("|", OutputTokenType.Punctuation),
         )
 
     /** `{{0*&}}` */
-    private val sharedCodeFormattingTemplate175 =
+    private val sharedCodeFormattingTemplate176 =
         CodeFormattingTemplate.GroupSubstitution(
             0,
             CodeFormattingTemplate.LiteralToken("\u0026", OutputTokenType.Punctuation),
         )
 
     /** `Top` */
-    private val sharedCodeFormattingTemplate176 =
+    private val sharedCodeFormattingTemplate177 =
         CodeFormattingTemplate.LiteralToken("Top", OutputTokenType.Word)
 
     /** `Bubble` */
-    private val sharedCodeFormattingTemplate177 =
+    private val sharedCodeFormattingTemplate178 =
         CodeFormattingTemplate.LiteralToken("Bubble", OutputTokenType.Word)
 
     /** `Never` */
-    private val sharedCodeFormattingTemplate178 =
+    private val sharedCodeFormattingTemplate179 =
         CodeFormattingTemplate.LiteralToken("Never", OutputTokenType.Word)
 
     /** `( {{0*,}} , ... {{1}} )` */
-    private val sharedCodeFormattingTemplate179 =
+    private val sharedCodeFormattingTemplate180 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
@@ -12274,7 +12397,7 @@ object TmpL {
         )
 
     /** `( ... {{1}} )` */
-    private val sharedCodeFormattingTemplate180 =
+    private val sharedCodeFormattingTemplate181 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
@@ -12285,7 +12408,7 @@ object TmpL {
         )
 
     /** `( )` */
-    private val sharedCodeFormattingTemplate181 =
+    private val sharedCodeFormattingTemplate182 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
@@ -12294,7 +12417,7 @@ object TmpL {
         )
 
     /** `{{0}} ? : {{1}}` */
-    private val sharedCodeFormattingTemplate182 =
+    private val sharedCodeFormattingTemplate183 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -12305,7 +12428,7 @@ object TmpL {
         )
 
     /** `_ ? : {{1}}` */
-    private val sharedCodeFormattingTemplate183 =
+    private val sharedCodeFormattingTemplate184 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("_", OutputTokenType.Word),
@@ -12316,11 +12439,11 @@ object TmpL {
         )
 
     /** `{{1}}` */
-    private val sharedCodeFormattingTemplate184 =
+    private val sharedCodeFormattingTemplate185 =
         CodeFormattingTemplate.OneSubstitution(1)
 
     /** `{{0*}} static let {{2}} : {{3}} = {{4}} ;` */
-    private val sharedCodeFormattingTemplate185 =
+    private val sharedCodeFormattingTemplate186 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12339,7 +12462,7 @@ object TmpL {
         )
 
     /** `{{0*}} static let {{1}} {{2}} : {{3}} = {{4}} ;` */
-    private val sharedCodeFormattingTemplate186 =
+    private val sharedCodeFormattingTemplate187 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12359,7 +12482,7 @@ object TmpL {
         )
 
     /** `{{0*}} static let {{2}} {{3}} {{4}} : {{5}} {{6}}` */
-    private val sharedCodeFormattingTemplate187 =
+    private val sharedCodeFormattingTemplate188 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12378,7 +12501,7 @@ object TmpL {
         )
 
     /** `{{0*}} static let {{2}} {{3}} {{4}} : {{5}} ;` */
-    private val sharedCodeFormattingTemplate188 =
+    private val sharedCodeFormattingTemplate189 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12397,7 +12520,7 @@ object TmpL {
         )
 
     /** `{{0*}} static let {{1}} {{2}} {{3}} {{4}} : {{5}} {{6}}` */
-    private val sharedCodeFormattingTemplate189 =
+    private val sharedCodeFormattingTemplate190 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12417,7 +12540,7 @@ object TmpL {
         )
 
     /** `{{0*}} static let {{1}} {{2}} {{3}} {{4}} : {{5}} ;` */
-    private val sharedCodeFormattingTemplate190 =
+    private val sharedCodeFormattingTemplate191 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12437,7 +12560,7 @@ object TmpL {
         )
 
     /** `{{0*}} {{1}} {{2}} {{3}} {{4}}` */
-    private val sharedCodeFormattingTemplate191 =
+    private val sharedCodeFormattingTemplate192 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12452,7 +12575,7 @@ object TmpL {
         )
 
     /** `{{0*}} let {{2}} {{3}} {{4}} : {{5}} {{6}}` */
-    private val sharedCodeFormattingTemplate192 =
+    private val sharedCodeFormattingTemplate193 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12470,7 +12593,7 @@ object TmpL {
         )
 
     /** `{{0*}} let {{2}} {{3}} {{4}} : {{5}} ;` */
-    private val sharedCodeFormattingTemplate193 =
+    private val sharedCodeFormattingTemplate194 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12488,7 +12611,7 @@ object TmpL {
         )
 
     /** `{{0*}} let {{1}} {{2}} {{3}} {{4}} : {{5}} {{6}}` */
-    private val sharedCodeFormattingTemplate194 =
+    private val sharedCodeFormattingTemplate195 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12507,7 +12630,7 @@ object TmpL {
         )
 
     /** `{{0*}} let {{1}} {{2}} {{3}} {{4}} : {{5}} ;` */
-    private val sharedCodeFormattingTemplate195 =
+    private val sharedCodeFormattingTemplate196 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12526,7 +12649,7 @@ object TmpL {
         )
 
     /** `{{0*}} get {{2}} {{3}} {{4}} : {{5}} {{6}}` */
-    private val sharedCodeFormattingTemplate196 =
+    private val sharedCodeFormattingTemplate197 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12544,7 +12667,7 @@ object TmpL {
         )
 
     /** `{{0*}} get {{2}} {{3}} {{4}} : {{5}} ;` */
-    private val sharedCodeFormattingTemplate197 =
+    private val sharedCodeFormattingTemplate198 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12562,7 +12685,7 @@ object TmpL {
         )
 
     /** `{{0*}} get . {{1}} -> {{2}} {{3}} {{4}} : {{5}} {{6}}` */
-    private val sharedCodeFormattingTemplate198 =
+    private val sharedCodeFormattingTemplate199 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12583,7 +12706,7 @@ object TmpL {
         )
 
     /** `{{0*}} get . {{1}} -> {{2}} {{3}} {{4}} : {{5}} ;` */
-    private val sharedCodeFormattingTemplate199 =
+    private val sharedCodeFormattingTemplate200 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12604,7 +12727,7 @@ object TmpL {
         )
 
     /** `{{0*}} set {{2}} {{3}} : {{4}} {{5}}` */
-    private val sharedCodeFormattingTemplate200 =
+    private val sharedCodeFormattingTemplate201 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12621,7 +12744,7 @@ object TmpL {
         )
 
     /** `{{0*}} set {{2}} {{3}} : {{4}} ;` */
-    private val sharedCodeFormattingTemplate201 =
+    private val sharedCodeFormattingTemplate202 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12638,7 +12761,7 @@ object TmpL {
         )
 
     /** `{{0*}} set . {{1}} -> {{2}} {{3}} : {{4}} {{5}}` */
-    private val sharedCodeFormattingTemplate202 =
+    private val sharedCodeFormattingTemplate203 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12658,7 +12781,7 @@ object TmpL {
         )
 
     /** `{{0*}} set . {{1}} -> {{2}} {{3}} : {{4}} ;` */
-    private val sharedCodeFormattingTemplate203 =
+    private val sharedCodeFormattingTemplate204 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(

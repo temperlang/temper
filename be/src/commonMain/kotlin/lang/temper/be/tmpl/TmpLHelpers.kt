@@ -314,14 +314,8 @@ fun TmpL.Actual.isNullValue() = this is TmpL.ValueReference && value.typeTag is 
 
 val TmpL.Actual.typeOrInvalid
     get() = when (this) {
-        is TmpL.Expression -> type
+        is TmpL.Expression -> passType
         is TmpL.RestSpread -> WellKnownTypes.invalidType2
-    }
-
-val TmpL.Expression.typeOrReturnedType: Type2
-    get() = when (this) {
-        is TmpL.CallExpression -> contextualizedSig.returnType2
-        else -> type
     }
 
 fun TmpL.FunctionDeclaration.idKind() = when {
@@ -704,7 +698,7 @@ object GetStaticSupport : InlineTmpLSupportCode {
             pos,
             subject = typeName,
             property = propId,
-            type = returnType,
+            passType = returnType,
         )
     }
 
@@ -1094,7 +1088,6 @@ internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
                                 else -> TmpL.Reference(paramName, valueFormal)
                             }
                         },
-                    type = funType.returnType2,
                 ).let { call ->
                     val retType = funType.returnType2
                     when {

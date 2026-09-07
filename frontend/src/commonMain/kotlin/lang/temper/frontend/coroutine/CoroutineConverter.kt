@@ -1484,14 +1484,15 @@ private class CoroutineConverter(
         ) {
             val pos = valueExpr.pos
             val resultReturnName = outputDecl.parts!!.name.content as ResolvedName
+            val valueResultTypeArg = generatorResultType.bindings[0]
             val valueResultType = MkType2(WKT.valueResultTypeDefinition)
-                .actuals(listOf(generatorResultType.bindings[0]))
+                .actuals(listOf(valueResultTypeArg))
                 .get()
             val valueResultTypeOld = hackMapNewStyleToOld(valueResultType)
             val callType = CallTypeInferences(
                 valueResultTypeOld,
-                Signature2(valueResultType, false, listOf(valueResultType)),
-                mapOf(),
+                valueResultConstructorSig,
+                mapOf(valueResultConstructorSig.typeFormals[0] to hackMapNewStyleToOld(valueResultTypeArg)),
                 listOf(),
             )
             planting.Assign(pos, resultReturnName, hackMapNewStyleToOld(generatorResultType)) {
@@ -1635,3 +1636,16 @@ fun Planting.NotNullCall(
 
 private fun sameUserFn(a: MacroValue?, b: MacroValue?) =
     a is LongLivedUserFunction && b is LongLivedUserFunction && a.stayLeaf == b.stayLeaf
+
+private val valueResultConstructorSig = run {
+    val (typeFormal) = WKT.valueResultTypeDefinition.formals
+    val typeFormalRef = MkType2(typeFormal).get()
+    Signature2(
+        returnType2 = MkType2(WKT.valueResultTypeDefinition)
+            .actuals(listOf(typeFormalRef))
+            .get(),
+        hasThisFormal = false,
+        requiredInputTypes = listOf(typeFormalRef),
+        typeFormals = WKT.valueResultTypeDefinition.formals,
+    )
+}

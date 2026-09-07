@@ -351,7 +351,7 @@ object Java {
         }
         override fun hashCode(): Int {
             var hc = programMeta.hashCode()
-            hc = 31 * hc + (packageStatement?.hashCode() ?: 0)
+            hc = 31 * hc + packageStatement.hashCode()
             hc = 31 * hc + imports.hashCode()
             hc = 31 * hc + classDef.hashCode()
             return hc
@@ -1172,12 +1172,12 @@ object Java {
             return other is ClassDeclaration && this.javadoc == other.javadoc && this.anns == other.anns && this.mods == other.mods && this.name == other.name && this.params == other.params && this.classExtends == other.classExtends && this.classImplements == other.classImplements && this.permits == other.permits && this.body == other.body
         }
         override fun hashCode(): Int {
-            var hc = (javadoc?.hashCode() ?: 0)
+            var hc = javadoc.hashCode()
             hc = 31 * hc + anns.hashCode()
             hc = 31 * hc + mods.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + params.hashCode()
-            hc = 31 * hc + (classExtends?.hashCode() ?: 0)
+            hc = 31 * hc + classExtends.hashCode()
             hc = 31 * hc + classImplements.hashCode()
             hc = 31 * hc + permits.hashCode()
             hc = 31 * hc + body.hashCode()
@@ -1304,7 +1304,7 @@ object Java {
             return other is InterfaceDeclaration && this.javadoc == other.javadoc && this.anns == other.anns && this.mods == other.mods && this.name == other.name && this.params == other.params && this.classExtends == other.classExtends && this.permits == other.permits && this.body == other.body
         }
         override fun hashCode(): Int {
-            var hc = (javadoc?.hashCode() ?: 0)
+            var hc = javadoc.hashCode()
             hc = 31 * hc + anns.hashCode()
             hc = 31 * hc + mods.hashCode()
             hc = 31 * hc + name.hashCode()
@@ -1666,7 +1666,7 @@ object Java {
         override fun hashCode(): Int {
             var hc = anns.hashCode()
             hc = 31 * hc + type.hashCode()
-            hc = 31 * hc + (args?.hashCode() ?: 0)
+            hc = 31 * hc + args.hashCode()
             return hc
         }
         init {
@@ -1816,12 +1816,12 @@ object Java {
             return other is LocalClassDeclaration && this.javadoc == other.javadoc && this.anns == other.anns && this.mods == other.mods && this.name == other.name && this.params == other.params && this.classExtends == other.classExtends && this.classImplements == other.classImplements && this.body == other.body
         }
         override fun hashCode(): Int {
-            var hc = (javadoc?.hashCode() ?: 0)
+            var hc = javadoc.hashCode()
             hc = 31 * hc + anns.hashCode()
             hc = 31 * hc + mods.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + params.hashCode()
-            hc = 31 * hc + (classExtends?.hashCode() ?: 0)
+            hc = 31 * hc + classExtends.hashCode()
             hc = 31 * hc + classImplements.hashCode()
             hc = 31 * hc + body.hashCode()
             return hc
@@ -1963,7 +1963,7 @@ object Java {
             return other is LocalInterfaceDeclaration && this.javadoc == other.javadoc && this.anns == other.anns && this.name == other.name && this.params == other.params && this.classExtends == other.classExtends && this.body == other.body
         }
         override fun hashCode(): Int {
-            var hc = (javadoc?.hashCode() ?: 0)
+            var hc = javadoc.hashCode()
             hc = 31 * hc + anns.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + params.hashCode()
@@ -2161,7 +2161,7 @@ object Java {
         }
         override fun hashCode(): Int {
             var hc = annType.hashCode()
-            hc = 31 * hc + (args?.hashCode() ?: 0)
+            hc = 31 * hc + args.hashCode()
             return hc
         }
         init {
@@ -2279,7 +2279,7 @@ object Java {
         override fun hashCode(): Int {
             var hc = anns.hashCode()
             hc = 31 * hc + type.hashCode()
-            hc = 31 * hc + (args?.hashCode() ?: 0)
+            hc = 31 * hc + args.hashCode()
             return hc
         }
         init {
@@ -2351,7 +2351,7 @@ object Java {
         override fun hashCode(): Int {
             var hc = anns.hashCode()
             hc = 31 * hc + type.hashCode()
-            hc = 31 * hc + (args?.hashCode() ?: 0)
+            hc = 31 * hc + args.hashCode()
             return hc
         }
         init {
@@ -2611,7 +2611,7 @@ object Java {
             return other is FieldDeclaration && this.javadoc == other.javadoc && this.anns == other.anns && this.mods == other.mods && this.type == other.type && this.variables == other.variables
         }
         override fun hashCode(): Int {
-            var hc = (javadoc?.hashCode() ?: 0)
+            var hc = javadoc.hashCode()
             hc = 31 * hc + anns.hashCode()
             hc = 31 * hc + mods.hashCode()
             hc = 31 * hc + type.hashCode()
@@ -2759,7 +2759,7 @@ object Java {
             return other is MethodDeclaration && this.javadoc == other.javadoc && this.anns == other.anns && this.mods == other.mods && this.typeParams == other.typeParams && this.result == other.result && this.name == other.name && this.parameters == other.parameters && this.exceptionTypes == other.exceptionTypes && this.body == other.body
         }
         override fun hashCode(): Int {
-            var hc = (javadoc?.hashCode() ?: 0)
+            var hc = javadoc.hashCode()
             hc = 31 * hc + anns.hashCode()
             hc = 31 * hc + mods.hashCode()
             hc = 31 * hc + typeParams.hashCode()
@@ -2767,7 +2767,7 @@ object Java {
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + parameters.hashCode()
             hc = 31 * hc + exceptionTypes.hashCode()
-            hc = 31 * hc + (body?.hashCode() ?: 0)
+            hc = 31 * hc + body.hashCode()
             return hc
         }
         init {
@@ -3011,7 +3011,7 @@ object Java {
             return other is InterfaceFieldDeclaration && this.javadoc == other.javadoc && this.anns == other.anns && this.type == other.type && this.variables == other.variables
         }
         override fun hashCode(): Int {
-            var hc = (javadoc?.hashCode() ?: 0)
+            var hc = javadoc.hashCode()
             hc = 31 * hc + anns.hashCode()
             hc = 31 * hc + type.hashCode()
             hc = 31 * hc + variables.hashCode()
@@ -3193,14 +3193,14 @@ object Java {
             return other is InterfaceMethodDeclaration && this.javadoc == other.javadoc && this.anns == other.anns && this.typeParams == other.typeParams && this.result == other.result && this.name == other.name && this.parameters == other.parameters && this.exceptionTypes == other.exceptionTypes && this.body == other.body && this.mods == other.mods
         }
         override fun hashCode(): Int {
-            var hc = (javadoc?.hashCode() ?: 0)
+            var hc = javadoc.hashCode()
             hc = 31 * hc + anns.hashCode()
             hc = 31 * hc + typeParams.hashCode()
             hc = 31 * hc + result.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + parameters.hashCode()
             hc = 31 * hc + exceptionTypes.hashCode()
-            hc = 31 * hc + (body?.hashCode() ?: 0)
+            hc = 31 * hc + body.hashCode()
             hc = 31 * hc + mods.hashCode()
             return hc
         }
@@ -3328,7 +3328,7 @@ object Java {
         }
         override fun hashCode(): Int {
             var hc = variable.hashCode()
-            hc = 31 * hc + (initializer?.hashCode() ?: 0)
+            hc = 31 * hc + initializer.hashCode()
             return hc
         }
         init {
@@ -3981,9 +3981,9 @@ object Java {
         }
         override fun hashCode(): Int {
             var hc = mods.hashCode()
-            hc = 31 * hc + (type?.hashCode() ?: 0)
+            hc = 31 * hc + type.hashCode()
             hc = 31 * hc + name.hashCode()
-            hc = 31 * hc + (expr?.hashCode() ?: 0)
+            hc = 31 * hc + expr.hashCode()
             return hc
         }
         init {
@@ -4200,7 +4200,7 @@ object Java {
         override fun hashCode(): Int {
             var hc = test.hashCode()
             hc = 31 * hc + consequent.hashCode()
-            hc = 31 * hc + (alternate?.hashCode() ?: 0)
+            hc = 31 * hc + alternate.hashCode()
             return hc
         }
         init {
@@ -4275,7 +4275,7 @@ object Java {
         }
         override fun hashCode(): Int {
             var hc = test.hashCode()
-            hc = 31 * hc + (msg?.hashCode() ?: 0)
+            hc = 31 * hc + msg.hashCode()
             return hc
         }
         init {
@@ -4422,7 +4422,7 @@ object Java {
             var hc = resources.hashCode()
             hc = 31 * hc + bodyBlock.hashCode()
             hc = 31 * hc + catchBlocks.hashCode()
-            hc = 31 * hc + (finallyBlock?.hashCode() ?: 0)
+            hc = 31 * hc + finallyBlock.hashCode()
             return hc
         }
         init {
@@ -5075,7 +5075,7 @@ object Java {
             return other is BreakStatement && this.target == other.target
         }
         override fun hashCode(): Int {
-            return (target?.hashCode() ?: 0)
+            return target.hashCode()
         }
         init {
             this._target = updateTreeConnection(null, target)
@@ -5128,7 +5128,7 @@ object Java {
             return other is ContinueStatement && this.target == other.target
         }
         override fun hashCode(): Int {
-            return (target?.hashCode() ?: 0)
+            return target.hashCode()
         }
         init {
             this._target = updateTreeConnection(null, target)
@@ -5181,7 +5181,7 @@ object Java {
             return other is ReturnStatement && this.expr == other.expr
         }
         override fun hashCode(): Int {
-            return (expr?.hashCode() ?: 0)
+            return expr.hashCode()
         }
         init {
             this._expr = updateTreeConnection(null, expr)
@@ -6112,8 +6112,8 @@ object Java {
             return other is InstanceMethodInvocationExpr && this.expr == other.expr && this.typeArgs == other.typeArgs && this.method == other.method && this.args == other.args
         }
         override fun hashCode(): Int {
-            var hc = (expr?.hashCode() ?: 0)
-            hc = 31 * hc + (typeArgs?.hashCode() ?: 0)
+            var hc = expr.hashCode()
+            hc = 31 * hc + typeArgs.hashCode()
             hc = 31 * hc + method.hashCode()
             hc = 31 * hc + args.hashCode()
             return hc
@@ -6198,8 +6198,8 @@ object Java {
             return other is StaticMethodInvocationExpr && this.type == other.type && this.typeArgs == other.typeArgs && this.method == other.method && this.args == other.args
         }
         override fun hashCode(): Int {
-            var hc = (type?.hashCode() ?: 0)
-            hc = 31 * hc + (typeArgs?.hashCode() ?: 0)
+            var hc = type.hashCode()
+            hc = 31 * hc + typeArgs.hashCode()
             hc = 31 * hc + method.hashCode()
             hc = 31 * hc + args.hashCode()
             return hc
@@ -6282,7 +6282,7 @@ object Java {
         }
         override fun hashCode(): Int {
             var hc = type.hashCode()
-            hc = 31 * hc + (typeArgs?.hashCode() ?: 0)
+            hc = 31 * hc + typeArgs.hashCode()
             hc = 31 * hc + method.hashCode()
             hc = 31 * hc + args.hashCode()
             return hc
@@ -6367,9 +6367,9 @@ object Java {
         }
         override fun hashCode(): Int {
             var hc = type.hashCode()
-            hc = 31 * hc + (typeArgs?.hashCode() ?: 0)
+            hc = 31 * hc + typeArgs.hashCode()
             hc = 31 * hc + args.hashCode()
-            hc = 31 * hc + (classBody?.hashCode() ?: 0)
+            hc = 31 * hc + classBody.hashCode()
             return hc
         }
         init {
@@ -7047,7 +7047,7 @@ object Java {
         }
         override fun hashCode(): Int {
             var hc = mods.hashCode()
-            hc = 31 * hc + (type?.hashCode() ?: 0)
+            hc = 31 * hc + type.hashCode()
             hc = 31 * hc + name.hashCode()
             return hc
         }
@@ -7119,7 +7119,7 @@ object Java {
         }
         override fun hashCode(): Int {
             var hc = mods.hashCode()
-            hc = 31 * hc + (type?.hashCode() ?: 0)
+            hc = 31 * hc + type.hashCode()
             hc = 31 * hc + name.hashCode()
             return hc
         }

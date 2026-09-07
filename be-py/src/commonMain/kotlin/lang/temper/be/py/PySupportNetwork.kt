@@ -986,10 +986,10 @@ object DocConsoleLogInliner : InlineTmpLSupportCode {
                 subject = console,
                 methodName = TmpL.DotName(pos, "log"),
                 method = null,
-                type = printSig.copy(requiredInputTypes = listOf(console.type)),
+                type = printSig.copy(requiredInputTypes = listOf(console.passType)),
             )
         }
-        return TmpL.CallExpression(pos, callee, parameters = args, type = returnType)
+        return TmpL.CallExpression(pos, callee, parameters = args)
     }
 
     override val needsThisEquivalent get() = true

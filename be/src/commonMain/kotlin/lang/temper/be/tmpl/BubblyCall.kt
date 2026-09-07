@@ -10,6 +10,7 @@ import lang.temper.type2.mapType
 import lang.temper.value.CallTree
 import lang.temper.value.LeftNameLeaf
 import lang.temper.value.Tree
+import lang.temper.value.isAssignment
 
 internal data class BubblyCall(
     override val pos: Position,
@@ -24,7 +25,7 @@ internal fun unpackBubblyCall(t: Tree?): BubblyCall? {
     var call = t as? CallTree ?: return null
 
     var assigned: LeftNameLeaf? = null
-    if (isAssignmentCall(call)) {
+    if (isAssignment(call)) {
         assigned = call.childOrNull(1) as? LeftNameLeaf ?: return null
         call = call.childOrNull(2) as? CallTree ?: return null
     }

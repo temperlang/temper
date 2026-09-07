@@ -4,12 +4,12 @@ import lang.temper.type.WellKnownTypes
 import lang.temper.type2.Type2
 
 /**
- * A typed variant of something that is builtin in many languages, and
- * often represented using an infix operator so its natural for us to
+ * A typed variant of something that is builtin in many languages and
+ * often represented using an infix operator, so it's natural for TmpL to
  * treat it in the tree as an operation.
  *
  * Multiple variants may point to the same [TmpLOperatorDefinition] which
- * handle associativity and precedence.
+ * handles associativity and precedence.
  *
  * For example, there are multiple `+` variants for `Int` and other input
  * types.

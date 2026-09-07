@@ -200,7 +200,7 @@ object Rust {
         }
         override fun hashCode(): Int {
             var hc = attrs.hashCode()
-            hc = 31 * hc + (pub?.hashCode() ?: 0)
+            hc = 31 * hc + pub.hashCode()
             hc = 31 * hc + item.hashCode()
             return hc
         }
@@ -490,7 +490,7 @@ object Rust {
         override fun hashCode(): Int {
             var hc = attrs.hashCode()
             hc = 31 * hc + statements.hashCode()
-            hc = 31 * hc + (result?.hashCode() ?: 0)
+            hc = 31 * hc + result.hashCode()
             return hc
         }
         init {
@@ -555,8 +555,8 @@ object Rust {
             return other is BreakExpr && this.id == other.id && this.value == other.value
         }
         override fun hashCode(): Int {
-            var hc = (id?.hashCode() ?: 0)
-            hc = 31 * hc + (value?.hashCode() ?: 0)
+            var hc = id.hashCode()
+            hc = 31 * hc + value.hashCode()
             return hc
         }
         init {
@@ -695,7 +695,7 @@ object Rust {
         override fun hashCode(): Int {
             var hc = callee.hashCode()
             hc = 31 * hc + args.hashCode()
-            hc = 31 * hc + (where?.hashCode() ?: 0)
+            hc = 31 * hc + where.hashCode()
             hc = 31 * hc + needsParens.hashCode()
             return hc
         }
@@ -818,9 +818,9 @@ object Rust {
             return other is Closure && this.move == other.move && this.params == other.params && this.returnType == other.returnType && this.value == other.value
         }
         override fun hashCode(): Int {
-            var hc = (move?.hashCode() ?: 0)
+            var hc = move.hashCode()
             hc = 31 * hc + params.hashCode()
-            hc = 31 * hc + (returnType?.hashCode() ?: 0)
+            hc = 31 * hc + returnType.hashCode()
             hc = 31 * hc + value.hashCode()
             return hc
         }
@@ -905,7 +905,7 @@ object Rust {
             return other is ContinueExpr && this.id == other.id
         }
         override fun hashCode(): Int {
-            return (id?.hashCode() ?: 0)
+            return id.hashCode()
         }
         init {
             this._id = updateTreeConnection(null, id)
@@ -1165,9 +1165,9 @@ object Rust {
         }
         override fun hashCode(): Int {
             var hc = attrs.hashCode()
-            hc = 31 * hc + (pub?.hashCode() ?: 0)
+            hc = 31 * hc + pub.hashCode()
             hc = 31 * hc + id.hashCode()
-            hc = 31 * hc + (type?.hashCode() ?: 0)
+            hc = 31 * hc + type.hashCode()
             return hc
         }
         init {
@@ -1241,8 +1241,8 @@ object Rust {
         }
         override fun hashCode(): Int {
             var hc = attrs.hashCode()
-            hc = 31 * hc + (pub?.hashCode() ?: 0)
-            hc = 31 * hc + (type?.hashCode() ?: 0)
+            hc = 31 * hc + pub.hashCode()
+            hc = 31 * hc + type.hashCode()
             return hc
         }
         init {
@@ -1311,7 +1311,7 @@ object Rust {
         override fun hashCode(): Int {
             var hc = test.hashCode()
             hc = 31 * hc + consequent.hashCode()
-            hc = 31 * hc + (alternate?.hashCode() ?: 0)
+            hc = 31 * hc + alternate.hashCode()
             return hc
         }
         init {
@@ -1706,9 +1706,9 @@ object Rust {
             return other is Operation && this.left == other.left && this.operator == other.operator && this.right == other.right
         }
         override fun hashCode(): Int {
-            var hc = (left?.hashCode() ?: 0)
+            var hc = left.hashCode()
             hc = 31 * hc + operator.hashCode()
-            hc = 31 * hc + (right?.hashCode() ?: 0)
+            hc = 31 * hc + right.hashCode()
             return hc
         }
         init {
@@ -1763,7 +1763,7 @@ object Rust {
             return other is ReturnExpr && this.value == other.value
         }
         override fun hashCode(): Int {
-            return (value?.hashCode() ?: 0)
+            return value.hashCode()
         }
         init {
             this._value = updateTreeConnection(null, value)
@@ -2019,9 +2019,9 @@ object Rust {
             var hc = id.hashCode()
             hc = 31 * hc + generics.hashCode()
             hc = 31 * hc + params.hashCode()
-            hc = 31 * hc + (returnType?.hashCode() ?: 0)
+            hc = 31 * hc + returnType.hashCode()
             hc = 31 * hc + whereItems.hashCode()
-            hc = 31 * hc + (block?.hashCode() ?: 0)
+            hc = 31 * hc + block.hashCode()
             return hc
         }
         init {
@@ -2093,7 +2093,7 @@ object Rust {
         }
         override fun hashCode(): Int {
             var hc = pattern.hashCode()
-            hc = 31 * hc + (type?.hashCode() ?: 0)
+            hc = 31 * hc + type.hashCode()
             return hc
         }
         init {
@@ -2316,7 +2316,7 @@ object Rust {
         override fun hashCode(): Int {
             var hc = id.hashCode()
             hc = 31 * hc + bounds.hashCode()
-            hc = 31 * hc + (default?.hashCode() ?: 0)
+            hc = 31 * hc + default.hashCode()
             return hc
         }
         init {
@@ -2432,7 +2432,7 @@ object Rust {
             return other is IdPattern && this.mut == other.mut && this.id == other.id
         }
         override fun hashCode(): Int {
-            var hc = (mut?.hashCode() ?: 0)
+            var hc = mut.hashCode()
             hc = 31 * hc + id.hashCode()
             return hc
         }
@@ -2556,7 +2556,7 @@ object Rust {
         }
         override fun hashCode(): Int {
             var hc = generics.hashCode()
-            hc = 31 * hc + (trait?.hashCode() ?: 0)
+            hc = 31 * hc + trait.hashCode()
             hc = 31 * hc + type.hashCode()
             hc = 31 * hc + whereItems.hashCode()
             hc = 31 * hc + attrs.hashCode()
@@ -2671,7 +2671,7 @@ object Rust {
             return other is VisibilityPub && this.scope == other.scope
         }
         override fun hashCode(): Int {
-            return (scope?.hashCode() ?: 0)
+            return scope.hashCode()
         }
         init {
             this._scope = updateTreeConnection(null, scope)
@@ -2737,9 +2737,9 @@ object Rust {
             return other is Module && this.pub == other.pub && this.id == other.id && this.block == other.block
         }
         override fun hashCode(): Int {
-            var hc = (pub?.hashCode() ?: 0)
+            var hc = pub.hashCode()
             hc = 31 * hc + id.hashCode()
-            hc = 31 * hc + (block?.hashCode() ?: 0)
+            hc = 31 * hc + block.hashCode()
             return hc
         }
         init {
@@ -2808,7 +2808,7 @@ object Rust {
         override fun hashCode(): Int {
             var hc = id.hashCode()
             hc = 31 * hc + type.hashCode()
-            hc = 31 * hc + (value?.hashCode() ?: 0)
+            hc = 31 * hc + value.hashCode()
             return hc
         }
         init {
@@ -3273,8 +3273,8 @@ object Rust {
         override fun hashCode(): Int {
             var hc = attrs.hashCode()
             hc = 31 * hc + pattern.hashCode()
-            hc = 31 * hc + (type?.hashCode() ?: 0)
-            hc = 31 * hc + (value?.hashCode() ?: 0)
+            hc = 31 * hc + type.hashCode()
+            hc = 31 * hc + value.hashCode()
             return hc
         }
         init {
@@ -3741,7 +3741,7 @@ object Rust {
         }
         override fun hashCode(): Int {
             var hc = id.hashCode()
-            hc = 31 * hc + (expr?.hashCode() ?: 0)
+            hc = 31 * hc + expr.hashCode()
             return hc
         }
         init {
