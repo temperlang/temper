@@ -39,6 +39,7 @@ import lang.temper.name.BackendId
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ModuleName
 import lang.temper.stage.Stage
+import lang.temper.supportedBackends.defaultSupportedBackendList
 import lang.temper.value.TBoolean
 import lang.temper.value.toPseudoCode
 
@@ -94,6 +95,7 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
         lookupFactory = lookupFactory,
         onError = { error(it) },
     )
+    backendOrganization.addSharedStdConfigInjectors(defaultSupportedBackendList)
     for (bucket in backendOrganization.backendBuckets) {
         for (backendId in bucket) {
             generateCode(

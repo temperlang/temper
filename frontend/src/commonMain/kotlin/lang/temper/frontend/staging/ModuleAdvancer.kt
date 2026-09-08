@@ -15,10 +15,10 @@ import lang.temper.common.putMultiList
 import lang.temper.env.Exporter
 import lang.temper.env.InterpMode
 import lang.temper.format.ConsoleBackedContextualLogSink
+import lang.temper.frontend.BindingsInjector
 import lang.temper.frontend.Module
 import lang.temper.frontend.core.CoreModule
 import lang.temper.frontend.core.accessStdWrapped
-import lang.temper.frontend.staging.backend.JavaConfigInjector
 import lang.temper.fs.FileFilterRules
 import lang.temper.fs.FileSnapshot
 import lang.temper.fs.FileSystemSnapshot
@@ -77,6 +77,7 @@ import lang.temper.value.fileRestrictedBuiltinName
 import lang.temper.value.valueContained
 import lang.temper.value.void
 import java.io.IOException
+import java.util.Collections
 
 /** Makes an effort to resolve an imported specifier to an exporter. */
 interface ImportResolver {
@@ -1074,9 +1075,11 @@ private class ModuleAdvancerContinueConditionImpl : ContinueCondition {
 }
 
 /** Needed for including config for our bundled backends in std. */
-private val sharedStdConfigInjectors = setOf(
-    JavaConfigInjector,
-)
+private val sharedStdConfigInjectors = Collections.synchronizedSet(mutableSetOf<BindingsInjector>())
+
+fun addSharedStdConfigInjector(injector: BindingsInjector) {
+    sharedStdConfigInjectors.add(injector)
+}
 
 private val sharedStdModules = lazy {
     val logSink = ConsoleBackedContextualLogSink(

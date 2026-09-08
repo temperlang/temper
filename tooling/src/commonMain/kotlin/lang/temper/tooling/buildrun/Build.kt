@@ -70,6 +70,7 @@ import lang.temper.result.junit.TestSuite
 import lang.temper.result.junit.TestSuites
 import lang.temper.result.junit.parseJunitResults
 import lang.temper.stage.Stage
+import lang.temper.supportedBackends.defaultSupportedBackendList
 import lang.temper.supportedBackends.lookupFactory
 import lang.temper.supportedBackends.supportedBackends
 import lang.temper.value.Abort
@@ -358,6 +359,7 @@ fun doOneBuild(build: Build): BuildResult {
             }
         },
     )
+    backendOrganization.addSharedStdConfigInjectors(defaultSupportedBackendList)
 
     val (
         modulesInOrder,
