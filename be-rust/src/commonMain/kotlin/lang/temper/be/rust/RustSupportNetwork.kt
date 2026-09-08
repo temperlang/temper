@@ -171,6 +171,7 @@ private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): Supp
         // Required since using results for failure recovery
         BuiltinOperatorId.IsOkResult -> IsOkResult
         BuiltinOperatorId.PackOkResult -> PackOkResult
+        BuiltinOperatorId.RepackErrResult -> RepackErrResult
         BuiltinOperatorId.UnpackOkResult -> UnpackOkResult
 
         null -> null
@@ -1136,6 +1137,23 @@ private object PackOkResult : FunctionCall(
     builtinOperatorId = BuiltinOperatorId.PackOkResult,
     cloneEvenIfFirst = true,
 )
+
+private object RepackErrResult : RustInlineSupportCode(
+    baseName = "RepackErrResult",
+    builtinOperatorId = BuiltinOperatorId.RepackErrResult,
+) {
+    override fun inlineToTree(
+        pos: Position,
+        arguments: List<TypedArg<Rust.Tree>>,
+        returnType: Type2,
+        translator: RustTranslator,
+    ): Rust.Expr =
+        (arguments[0].expr as Rust.Expr).methodCall(
+            key = "unwrap_err",
+            args = listOf(),
+            pos = pos,
+        ).wrapErr()
+}
 
 private object UnpackOkResult : MethodCall(
     baseName = "UnpackOkResult",

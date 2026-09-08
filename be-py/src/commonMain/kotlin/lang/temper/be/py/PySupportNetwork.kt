@@ -146,6 +146,7 @@ internal object PySupportNetwork : SupportNetwork {
             // Using exceptions, not results.
             BuiltinOperatorId.IsOkResult,
             BuiltinOperatorId.PackOkResult,
+            BuiltinOperatorId.RepackErrResult,
             BuiltinOperatorId.UnpackOkResult,
             -> null
             null -> null

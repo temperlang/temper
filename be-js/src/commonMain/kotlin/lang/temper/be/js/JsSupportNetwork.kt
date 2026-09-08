@@ -2020,6 +2020,7 @@ private val builtinOperatorIdToSupportCode = BuiltinOperatorId.entries.mapNotNul
         // should not be used with BubbleBranchStrategy.Exceptions
         BuiltinOperatorId.IsOkResult,
         BuiltinOperatorId.PackOkResult,
+        BuiltinOperatorId.RepackErrResult,
         BuiltinOperatorId.UnpackOkResult,
         -> null
     }

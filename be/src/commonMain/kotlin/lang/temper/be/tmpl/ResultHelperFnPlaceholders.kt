@@ -118,6 +118,37 @@ object ResultHelperFnPlaceholders {
             return NotYet
         }
     }
+
+    private const val REPACK_ERR_RESULT_NAME = "repackErrResult"
+
+    /** Turns a non-ok result of one type into a non-ok result of another type. */
+    object RepackErrResult : BuiltinFun(
+        BuiltinName(REPACK_ERR_RESULT_NAME),
+        signature = run {
+            val (passIF, passIT) = makeTypeFormal(REPACK_ERR_RESULT_NAME, "PASSI")
+            val (failIF, failIT) = makeTypeFormal(REPACK_ERR_RESULT_NAME, "FAILI")
+            val (passOF, passOT) = makeTypeFormal(REPACK_ERR_RESULT_NAME, "PASSO")
+            val (failOF, failOT) = makeTypeFormal(REPACK_ERR_RESULT_NAME, "FAILO")
+            Signature2(
+                returnType2 = MkType2.result(passOT, failOT).get(),
+                hasThisFormal = false,
+                requiredInputTypes = listOf(
+                    MkType2.result(passIT, failIT).get(),
+                ),
+                typeFormals = listOf(passIF, failIF, passOF, failOF),
+            )
+        },
+        builtinOperatorId = BuiltinOperatorId.RepackErrResult,
+    ) {
+        override fun invoke(
+            args: ActualValues,
+            cb: InterpreterCallback,
+            interpMode: InterpMode,
+        ): PartialResult {
+            // Just an abstraction.
+            return NotYet
+        }
+    }
 }
 
 internal fun synthesizeCall(

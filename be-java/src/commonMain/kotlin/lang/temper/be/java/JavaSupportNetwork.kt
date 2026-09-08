@@ -140,6 +140,7 @@ class JavaSupportNetwork private constructor(private val javaLang: JavaLang) : S
             // using Exceptions not Results
             BuiltinOperatorId.IsOkResult,
             BuiltinOperatorId.PackOkResult,
+            BuiltinOperatorId.RepackErrResult,
             BuiltinOperatorId.UnpackOkResult,
             -> null
             BuiltinOperatorId.NotNull -> TODO("$opId not supported")

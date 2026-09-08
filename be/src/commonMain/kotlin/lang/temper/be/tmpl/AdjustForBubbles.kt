@@ -7,12 +7,14 @@ import lang.temper.name.ResolvedParsedName
 import lang.temper.type.MkType
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.hackMapNewStyleToOld
+import lang.temper.type2.withType
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.CallTree
 import lang.temper.value.NotFn
 import lang.temper.value.ReifiedType
 import lang.temper.value.RightNameLeaf
 import lang.temper.value.TType
+import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.typeSymbol
 
@@ -93,13 +95,35 @@ internal fun adjustForBubbles(
                 is BodyForFun -> {
                     // TODO: maybe have FreeFailure take the result variable name and
                     // adjust goal translators to do this where applicable.
+                    var resultExpr: Tree = RightNameLeaf(doc, afterCallPos, resultVarName).also {
+                        it.typeInferences = BasicTypeInferences(resultTypeOld, listOf())
+                    }
+                    if (resultType != bodyFor.sig.returnType2) {
+                        val (bodyCallPassType, bodyCallFailType) =
+                            withType(
+                                bodyFor.sig.returnType2,
+                                result = { p, fs, _ ->
+                                    p to (fs.firstOrNull() ?: WellKnownTypes.invalidType2)
+                                },
+                                fallback = {
+                                    it to WellKnownTypes.invalidType2
+                                },
+                            )
+                        resultExpr = synthesizeCall(
+                            doc,
+                            afterCallPos,
+                            ResultHelperFnPlaceholders.RepackErrResult,
+                            listOf(resultExpr),
+                            typeActuals = listOf(
+                                bubblyCall.passType, bubblyCall.failType,
+                                bodyCallPassType, bodyCallFailType,
+                            ),
+                        )
+                    }
+
                     PreTranslated.Return(
                         afterCallPos,
-                        PreTranslated.TreeWrapper(
-                            RightNameLeaf(doc, afterCallPos, resultVarName).also {
-                                it.typeInferences = BasicTypeInferences(resultTypeOld, listOf())
-                            },
-                        ),
+                        PreTranslated.TreeWrapper(resultExpr),
                         bodyFor,
                     )
                 }
