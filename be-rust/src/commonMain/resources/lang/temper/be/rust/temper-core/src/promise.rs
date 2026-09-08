@@ -1,3 +1,4 @@
+use super::{Error, Result};
 use crate::SafeGenerator;
 use std::{
     collections::VecDeque,
@@ -90,7 +91,7 @@ impl<T> Promise<T>
 where
     T: Clone,
 {
-    pub fn get(&self) -> Result<T, ()> {
+    pub fn get(&self) -> Result<T> {
         let (lock, cvar) = &*self.wait;
         let mut result = lock.lock().unwrap();
         while result.is_none() {
@@ -151,7 +152,7 @@ where
         let (lock, cvar) = &*self.wait;
         {
             let mut result = lock.lock().unwrap();
-            *result = Some(Err(()));
+            *result = Some(Err(Error::new()));
         }
         self.promise().next();
         cvar.notify_all();
@@ -177,4 +178,4 @@ where
 
 pub type Task = std::sync::Arc<dyn Fn() + Send + Sync>;
 
-type WaitPair<T> = Arc<(Mutex<Option<Result<T, ()>>>, Condvar)>;
+type WaitPair<T> = Arc<(Mutex<Option<Result<T>>>, Condvar)>;
