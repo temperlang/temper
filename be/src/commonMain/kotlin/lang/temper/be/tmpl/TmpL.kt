@@ -6438,7 +6438,7 @@ object TmpL {
         override val type: Type2
             get() = contextualizedSig.returnType2
         val contextualizedSig: Signature2
-            get() = contextualizeSig(fn.type, typeActuals.bindings)
+            get() = contextualizeSig(fn, typeActuals.bindings)
         override fun deepCopy(): CallExpression {
             return CallExpression(pos, fn = this.fn.deepCopy(), typeActuals = this.typeActuals.deepCopy(), parameters = this.parameters.deepCopy())
         }

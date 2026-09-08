@@ -263,7 +263,10 @@ internal object TranslateDotHelper {
                     desc = declaredCalleeType,
                     metadata = emptyMap(),
                 )
-                val callable = TmpL.FnReference(TmpL.Id(calleePos, name), declaredCalleeType)
+                val callable = TmpL.FnReference(
+                    TmpL.Id(calleePos, name),
+                    declaredCalleeType.copy(hasThisFormal = false),
+                )
 
                 return@translate when (connectedMethod.methodKind to dotHelper.memberAccessor) {
                     MethodKind.Normal to ExternalCall,
@@ -312,7 +315,7 @@ internal object TranslateDotHelper {
         if (isPulledOutMember) {
             @Suppress("USELESS_IS_CHECK")
             check(firstMember is VisibleMemberShape)
-            val sig = callTree.sig.orInvalid
+            val sig = declaredCalleeType.copy(hasThisFormal = false)
             return translatedExpr(
                 TmpL.CallExpression(
                     pos = pos,

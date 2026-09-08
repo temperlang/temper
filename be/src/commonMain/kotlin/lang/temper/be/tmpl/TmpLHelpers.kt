@@ -205,9 +205,9 @@ fun <T> TmpL.CallExpression.mapParameters(
             val type = formalType(formal)
             translate(actual, type, formal)
         }
-        val nFormals = adjustedSig.requiredInputTypes.size + adjustedSig.optionalInputTypes.size
         // Pad nulls for missing trailing args.
         if (optionalAsNullable) {
+            val nFormals = adjustedSig.requiredInputTypes.size + adjustedSig.optionalInputTypes.size
             while (this.size < nFormals) {
                 val index = this.size
                 val formal = adjustedSig.valueFormalForActual(index)
@@ -1322,6 +1322,15 @@ fun Visibility.toTmpL() = when (this) {
 
 val TmpL.Type.aType get() = TmpL.AType(this)
 val TmpL.NewType.aType get() = TmpL.AType(this)
+
+internal fun contextualizeSig(fn: TmpL.Callable, bindings: Map<TypeFormal, Type2>): Signature2 {
+    var sig = fn.type
+    if (sig.hasThisFormal && fn is TmpL.MethodReference && sig.requiredInputTypes.isNotEmpty()) {
+        // Elide the `this` parameter since it's curried in with the subject.
+        sig = sig.copy(hasThisFormal = false, requiredInputTypes = sig.requiredInputTypes.drop(1))
+    }
+    return sig.mapType(bindings).copy(typeFormals = emptyList())
+}
 
 internal fun contextualizeSig(sig: Signature2, bindings: Map<TypeFormal, Type2>): Signature2 =
     sig.mapType(bindings).copy(typeFormals = emptyList())

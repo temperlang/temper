@@ -1375,7 +1375,7 @@ CallExpression ::=
     & "(" & parameters%Actual*", " & ")"
     ;
 CallExpression.operatorDefinition = `TmpLOperatorDefinition.Paren`;
-CallExpression.contextualizedSig%`Signature2` = `contextualizeSig(fn.type, typeActuals.bindings)`;
+CallExpression.contextualizedSig%`Signature2` = `contextualizeSig(fn, typeActuals.bindings)`;
 CallExpression.type = `contextualizedSig.returnType2`;
 CallExpression.passType = `excludeBubble(type)`;
 CallExpression {
