@@ -1550,7 +1550,7 @@ class RustTranslator(
 
             else -> false
         }
-        val type = (actual as TmpL.Expression).passType // TODO Could crash on RestSpread
+        val type = (actual as TmpL.Expression).type // TODO Could crash on RestSpread
         val pos = actual.pos
         return when {
             !needFull && actual.supportCode() == Listify -> {
@@ -1617,7 +1617,7 @@ class RustTranslator(
             when (decl) {
                 null -> value
                 else -> value.maybeWrap(
-                    given = foundRight.passType.described(),
+                    given = foundRight.type.described(),
                     wanted = decl.typeFrom?.described(),
                     translator = this,
                 )
@@ -1812,7 +1812,7 @@ class RustTranslator(
                     avoidClone -> null
                     // Also special handling for function types for support codes.
                     !supportCode.wrapClosures && wantedTypeIsFunctional.value -> null
-                    else -> wantedType ?: supportCode.argType(call.passType)
+                    else -> wantedType ?: supportCode.argType(call.type)
                 }
 
                 val actual = translateActual(
@@ -1875,7 +1875,7 @@ class RustTranslator(
     private fun translateCastExpression(cast: TmpL.CastExpression): Rust.Expr {
         // TODO Bubbly found. Maybe some map expression? We don't ever expect bubbly wanted.
         // TODO Unify any of this with `translateInstanceOfExpression`?
-        val found = cast.expr.passType.described()
+        val found = cast.expr.type.described()
         val wanted = cast.checkedFrontendType.described()
         val pos = cast.pos
         val callee = buildCastCallee(pos, found, wanted)
@@ -1911,7 +1911,7 @@ class RustTranslator(
                 // see the claimed tmpl type as being bubbly.
                 wanted.definition() == WellKnownTypes.listedTypeDefinition -> result.wrapOk()
                 // For others, trust standard type expectations.
-                cast.passType.described().bubbly -> result.wrapOkOrElse(pos)
+                cast.type.described().bubbly -> result.wrapOkOrElse(pos)
                 else -> result.methodCall("unwrap") // such as for assertAs
             }
         }
@@ -2247,7 +2247,7 @@ class RustTranslator(
     private fun translateGetProperty(expression: TmpL.GetProperty, avoidClone: Boolean): Rust.Expr {
         val ref = translatePropertyReference(expression, lockName = "read")
         val reallyAvoidClone = avoidClone || expression.property is TmpL.ExternalPropertyId
-        return ref.maybeClone(expression.passType, avoidClone = reallyAvoidClone)
+        return ref.maybeClone(expression.type, avoidClone = reallyAvoidClone)
     }
 
     private fun translateGetter(
@@ -2406,7 +2406,7 @@ class RustTranslator(
 
     private fun translateInstanceOfExpression(expression: TmpL.InstanceOfExpression): Rust.Expr {
         // TODO Bubbly found. Maybe some map expression? We don't ever expect bubbly wanted.
-        val found = expression.expr.passType.described()
+        val found = expression.expr.type.described()
         val wanted = expression.checkedFrontendType.described()
         return translateExpression(expression.expr).let { expr ->
             val pos = expr.pos
@@ -2937,7 +2937,7 @@ class RustTranslator(
                 else -> null
             }
 
-            else -> translateExpression(expr!!).maybeWrap(given = expr.passType, wanted = returnType, translator = this)
+            else -> translateExpression(expr!!).maybeWrap(given = expr.type, wanted = returnType, translator = this)
         }
         return listOf(Rust.ExprStatement(pos, expr = Rust.ReturnExpr(pos, value = value)))
     }
@@ -2945,7 +2945,7 @@ class RustTranslator(
     private fun translateSetProperty(statement: TmpL.SetProperty): Rust.Statement {
         // Get the property type so we know if we need to wrap the value. TODO Factor out any of this?
         val subjectShape = when (val subject = statement.left.subject) {
-            is TmpL.Expression -> (subject.passType as? DefinedNonNullType)?.definition
+            is TmpL.Expression -> (subject.type as? DefinedNonNullType)?.definition
             is TmpL.TypeSubject -> subject.typeName.sourceDefinition as? TypeShape
         }
         val propertyText = when (val property = statement.left.property) {
@@ -2955,7 +2955,7 @@ class RustTranslator(
         val propertyType = subjectShape?.properties?.find { it.symbol.text == propertyText }?.descriptor
         // Wrap the value as needed.
         val right = translateExpression(statement.right)
-        val value = right.maybeWrap(given = statement.right.passType, wanted = propertyType, translator = this)
+        val value = right.maybeWrap(given = statement.right.type, wanted = propertyType, translator = this)
         // Set the property.
         return when (statement.left.property) {
             is TmpL.ExternalPropertyId -> {
@@ -3061,7 +3061,7 @@ class RustTranslator(
         return translateReference(
             id = thisNameExpressed.toKeyId(expression.pos), // "selfish" is fine here, too
             internalName = thisNameInternal,
-            type = expression.passType,
+            type = expression.type,
             // TODO Do we ever really want to avoid clone on this???
             avoidClone = avoidClone,
         )

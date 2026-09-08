@@ -436,7 +436,12 @@ class RustBackendTest {
                 |pub fn something(mut i__0: Option<i32>) -> temper_core::Result<i32> {
                 |    let return__0: i32;
                 |    let t___0: bool;
-                |    t___0 = i__0.is_some();
+                |    if ! i__0.is_none() {
+                |        t___0 = i__0.is_some();
+                |    } else {
+                |        t___0 = false;
+                |    }
+                |## That whole if block could've been `t___0 = i__0.is_some();`
                 |    if t___0 {
                 |        if i__0.is_none() {
                 |            return Err(temper_core::Error::new());
@@ -466,7 +471,7 @@ class RustBackendTest {
                 |    }
                 |    return Ok(return__1);
                 |}
-            """.trimMargin(),
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
         )
     }
 
@@ -780,7 +785,7 @@ class RustBackendTest {
         temper = """
             |@fun interface Handler(): Void;
             |class Hub {
-            |  private handlers: ListBuilder<Handler> = new ListBuilder();
+            |  private handlers: ListBuilder<Handler> = new ListBuilder<Handler>();
             |  public onAction(handler: Handler): Void {
             |    handlers.add(handler);
             |  }
@@ -966,7 +971,7 @@ class RustBackendTest {
                 |    INIT_ONCE.get_or_init(| |{
                 |            let thing__0: Apple = Apple::new(Banana::new());
                 |            let maybe__0: Option<Apple> = Some(thing__0.clone());
-                |            let nope___0: temper_core::Result<Carrot> = Ok(temper_core::cast::<Carrot>(thing__0.clone()).unwrap());
+                |            let nope___0: temper_core::Result<Carrot> = temper_core::cast::<Carrot>(thing__0.clone()).ok_or_else(| | temper_core::Error::new());
                 |            if ! nope___0.is_ok() {
                 |                return Err(temper_core::Error::new());
                 |            }
@@ -975,7 +980,7 @@ class RustBackendTest {
                 |            if maybe__0.is_none() {
                 |                return Err(temper_core::Error::new());
                 |            } else {
-                |                let alsoNope___0: temper_core::Result<Carrot> = Ok(maybe__0.clone().and_then(| x | temper_core::cast::<Carrot>(x)).unwrap());
+                |                let alsoNope___0: temper_core::Result<Carrot> = maybe__0.clone().and_then(| x | temper_core::cast::<Carrot>(x)).ok_or_else(| | temper_core::Error::new());
                 |                if ! alsoNope___0.is_ok() {
                 |                    return Err(temper_core::Error::new());
                 |                }
