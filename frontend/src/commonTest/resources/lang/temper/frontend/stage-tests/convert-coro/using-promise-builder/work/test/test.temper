@@ -1,0 +1,7 @@
+async { (): GeneratorResult<Empty> extends GeneratorFn =>
+  do {
+    let b = new PromiseBuilder<String>();
+    b.complete("Completed synchronously");
+    console.log(await b.promise);
+  } orelse panic();
+};

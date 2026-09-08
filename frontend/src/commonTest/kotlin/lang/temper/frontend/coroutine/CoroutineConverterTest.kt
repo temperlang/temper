@@ -141,6 +141,11 @@ class CoroutineConverterTest {
     fun netResponse() = assertConvertedCoroutine(
         StageTestDir("convert-coro/net-response"),
     )
+
+    @Test
+    fun usingPromiseBuilder() = assertConvertedCoroutine(
+        StageTestDir("convert-coro/using-promise-builder"),
+    )
 }
 
 /**

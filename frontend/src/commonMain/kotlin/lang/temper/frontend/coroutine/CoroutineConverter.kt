@@ -1232,7 +1232,7 @@ private class CoroutineConverter(
                                             val promiseNameInfo = localNameInfo.getValue(promiseName)
                                                 as HoistedNameInfo
                                             Assign(promiseTree.pos.leftEdge, promiseName, promiseType) {
-                                                Replant(freeTree(promiseTree))
+                                                Replant(maybeAdjustVars(freeTree(promiseTree)))
                                             }
                                             // Defer generating the awakeUpon call until after we've set
                                             // the next caseIndex based on followers to avoid race conditions
@@ -1499,7 +1499,7 @@ private class CoroutineConverter(
                 Call(pos, type = callType) {
                     V(pos.leftEdge, Value(New), WKT.functionType)
                     V(pos.leftEdge, Value(ReifiedType(valueResultType), TType), WKT.typeType)
-                    Replant(freeTree(valueExpr))
+                    Replant(maybeAdjustVars(freeTree(valueExpr)))
                 }
             }
         }

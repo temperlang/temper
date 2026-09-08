@@ -23,7 +23,7 @@
           orElse#25: {
             req__5 = new NetRequest("http://127.0.0.1");
             do_call_post(notNull(req__5), "[]", "application/json");
-            awaited#18 = do_call_send(req__5);
+            awaited#18 = do_call_send(notNull(req__5));
             caseIndex#21 = 2;
             awakeUpon(notNull(awaited#18), generator#20);
             return__4 = new ValueResult<Empty>({class: Empty__10});
@@ -48,7 +48,7 @@
         } else if (caseIndexLocal#23 == 4) {
           orElse#27: {
 ## This await was not being transformed due to a bug in MaximalPaths.
-            awaited#19 = do_get_bodyContent(resp__6);
+            awaited#19 = do_get_bodyContent(notNull(resp__6));
             caseIndex#21 = 5;
             awakeUpon(notNull(awaited#19), generator#20);
             return__4 = new ValueResult<Empty>({class: Empty__10});
