@@ -940,16 +940,16 @@ fun List<TmpL.Statement>.splitConstructorBody(): Pair<List<TmpL.Statement>, List
             predicate = { it is TmpL.This },
         ) || statement is TmpL.ReturnStatement && (
             statement.expression.isVoidish() ||
-            statement.expression!!.anyChildDepth { exprSub ->
-                val sneakyVoid = (exprSub as? TmpL.Id)?.name == voidReturnName
-                if (sneakyVoid) {
-                    // Simplify the return.
-                    adjustedStatement = statement.deepCopy()
-                    adjustedStatement.expression = null
+                statement.expression!!.anyChildDepth { exprSub ->
+                    val sneakyVoid = (exprSub as? TmpL.Id)?.name == voidReturnName
+                    if (sneakyVoid) {
+                        // Simplify the return.
+                        adjustedStatement = statement.deepCopy()
+                        adjustedStatement.expression = null
+                    }
+                    sneakyVoid
                 }
-                sneakyVoid
-            }
-        )
+            )
         if (!reachedUse && statement is TmpL.Assignment && statement.left.name == voidReturnName) {
             // Also prune out the assignment of void to the void return.
             continue@statements
