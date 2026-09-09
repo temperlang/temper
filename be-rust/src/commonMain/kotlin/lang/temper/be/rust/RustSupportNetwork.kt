@@ -1149,8 +1149,10 @@ private object RepackErrResult : RustInlineSupportCode(
         translator: RustTranslator,
     ): Rust.Expr =
         (arguments[0].expr as Rust.Expr).methodCall(
-            key = "unwrap_err",
-            args = listOf(),
+            key = "expect_err",
+            args = listOf(
+                Rust.StringLiteral(pos.rightEdge, "bubbling up err result"),
+            ),
             pos = pos,
         ).wrapErr()
 }
