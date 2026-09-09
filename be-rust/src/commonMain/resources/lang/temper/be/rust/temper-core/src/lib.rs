@@ -565,6 +565,17 @@ pub fn int64_to_string(i: i64, radix: Option<i32>) -> Arc<String> {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+pub fn repack_err_result<T, U, E>(r: &std::result::Result<T, E>) -> std::result::Result<U, E>
+where E: Clone {
+    // TODO: once `!` is out of experimental, the return type could be Result<!, E>.
+    match r {
+        Ok(_)  => panic!(
+            "calls to this should only be inside generated code that includes an !is_ok check"
+        ),
+        Err(x) => Err(x.clone()),
+    }
+}
+
 // String
 
 pub trait ToArcString {

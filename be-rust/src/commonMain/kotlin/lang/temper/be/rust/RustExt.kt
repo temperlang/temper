@@ -373,6 +373,8 @@ internal fun Rust.Expr.wrapLock() = Rust.Call(pos, callee = "$RW_LOCK_NAME::new"
 
 internal fun Rust.Expr.wrapOk() = Rust.Call(pos, callee = "Ok".toId(pos.leftEdge), args = listOf(this))
 
+internal fun Rust.Expr.wrapErr() = Rust.Call(pos, callee = "Err".toId(pos), args = listOf(this))
+
 /** Convert Option to Result. */
 internal fun Rust.Expr.wrapOkOrElse(pos: Position = this.pos) =
     methodCall("ok_or_else", listOf(Rust.Closure(pos, params = listOf(), value = makeError(pos))))

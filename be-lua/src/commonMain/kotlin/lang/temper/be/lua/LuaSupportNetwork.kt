@@ -109,6 +109,7 @@ internal fun operatorToName(
     null -> "null_op"
     BuiltinOperatorId.IsOkResult,
     BuiltinOperatorId.PackOkResult,
+    BuiltinOperatorId.RepackErrResult,
     BuiltinOperatorId.UnpackOkResult,
     -> error("Lua uses exceptions, not results")
 }

@@ -174,6 +174,7 @@ internal object CppSupportNetwork : SupportNetwork {
         // Using exceptions, not results
         BuiltinOperatorId.IsOkResult,
         BuiltinOperatorId.PackOkResult,
+        BuiltinOperatorId.RepackErrResult,
         BuiltinOperatorId.UnpackOkResult,
         -> null
     }

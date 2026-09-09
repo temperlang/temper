@@ -96,5 +96,6 @@ enum class BuiltinOperatorId {
     // treat bubbles as throwable exceptions.
     IsOkResult,
     PackOkResult,
+    RepackErrResult,
     UnpackOkResult,
 }

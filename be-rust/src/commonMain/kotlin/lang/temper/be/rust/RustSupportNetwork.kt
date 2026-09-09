@@ -171,6 +171,7 @@ private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): Supp
         // Required since using results for failure recovery
         BuiltinOperatorId.IsOkResult -> IsOkResult
         BuiltinOperatorId.PackOkResult -> PackOkResult
+        BuiltinOperatorId.RepackErrResult -> repackErrResult
         BuiltinOperatorId.UnpackOkResult -> UnpackOkResult
 
         null -> null
@@ -1139,6 +1140,17 @@ private object PackOkResult : FunctionCall(
     avoidDeref = true,
     builtinOperatorId = BuiltinOperatorId.PackOkResult,
     cloneEvenIfFirst = true,
+)
+
+// `.expect_err` and `.unwrap_err` both require the success type
+// implements the Debug trait so that they can produce a panic message.
+// `.unwrap_err_unchecked` is unsafe, and `.into_err` is nightly only.
+// So we have our own fn that gets the error and repacks it into a result.
+private val repackErrResult = FunctionCall(
+    baseName = "RepackErrResult",
+    builtinOperatorId = BuiltinOperatorId.RepackErrResult,
+    functionName = "temper_core::repack_err_result",
+    hasGeneric = true,
 )
 
 private object UnpackOkResult : MethodCall(

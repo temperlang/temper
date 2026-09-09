@@ -4333,6 +4333,73 @@ class TmpLBackendTest {
         """.trimMargin(),
     )
 
+    @Test
+    fun nestedFailureWithDistinctPassTypes() = assertGeneratedCode(
+        inputJsonPathToContent = """
+            |{
+            |  foo: {
+            |    foo.temper: ```
+            |      export let asInt64(content: String): Int64 throws Bubble {
+            |        content.toInt64() orelse content.toFloat64().toInt64()
+            |      }
+            |      ```
+            |  }
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  tmpl: {
+            |    foo.tmpl: {
+            |      content:
+            |        ```
+            |        //// work//foo/ => foo.tmpl
+            |        let StringToInt64#0 = builtins.StringToInt64;
+            |        let isOkResult#0 = builtins.isOkResult /* <isOkResultPASS extends AnyValue, isOkResultFAIL extends AnyValue>(Result<isOkResultPASS, isOkResultFAIL>) -> Boolean */;
+            |        let unpackOkResult#0 = builtins.unpackOkResult /* <unpackOkResultPASS extends AnyValue, unpackOkResultFAIL extends AnyValue>(Result<unpackOkResultPASS, unpackOkResultFAIL>) -> unpackOkResultPASS */;
+            |        let StringToFloat64#0 = builtins.StringToFloat64;
+            |        let repackErrResult#0 = builtins.repackErrResult /* <repackErrResultPASSI extends AnyValue, repackErrResultFAILI extends AnyValue, repackErrResultPASSO extends AnyValue, repackErrResultFAILO extends AnyValue>(Result<repackErrResultPASSI, repackErrResultFAILI>) -> Result<repackErrResultPASSO, repackErrResultFAILO> */;
+            |        let Float64ToInt64#0 = builtins.Float64ToInt64;
+            |        let packOkResult#0 = builtins.packOkResult /* <packOkResultPASS extends AnyValue, packOkResultFAIL extends AnyValue>(packOkResultPASS) -> Result<packOkResultPASS, packOkResultFAIL> */;
+            |        @QName("test-library/foo.asInt64()") let asInt64(@QName("test-library/foo.asInt64().(content)") content__0: String): Int64 | Bubble {
+            |          @QName("test-library/foo.asInt64().return") var return__0: Int64;
+            |          ok#0: {
+            |            orelse#0: {
+            |              let return#0: Int64 | Bubble = StringToInt64#0(content__0);
+            |              if (!isOkResult#0(return#0)) {
+            |                break orelse#0;
+            |              }
+            |              return__0 = unpackOkResult#0(return#0);
+            |              break ok#0;
+            |            }
+            |## This result variable is a `Float64 | Bubble`.  It's type does not agree
+            |## with the `Int64 | Bubble` return type, so the return below, when it's
+            |## a failure, needs to be adjusted to be consistent.
+            |## Because it's not an Ok result, the `| Bubble` is the operative part,
+            |## but types do need to line up.
+            |            let result#0: Float64 | Bubble = StringToFloat64#0(content__0);
+            |            if (!isOkResult#0(result#0)) {
+            |              return repackErrResult#0(result#0);
+            |            }
+            |            let t#0: Float64 = unpackOkResult#0(result#0);
+            |## This result matches the output so the return inside the `if` below does
+            |## not need repacking.
+            |            let return#1: Int64 | Bubble = Float64ToInt64#0(t#0);
+            |            if (!isOkResult#0(return#1)) {
+            |              return return#1;
+            |            }
+            |            return unpackOkResult#0(return#1);
+            |          }
+            |          return packOkResult#0(return__0);
+            |        }
+            |
+            |        ```
+            |    },
+            |    foo.tmpl.map: "__DO_NOT_CARE__",
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
     private fun assertGeneratedCode(
         inputJsonPathToContent: String,
         want: String,
