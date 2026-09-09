@@ -297,6 +297,7 @@ private class Float64Compare(
 internal open class FunctionCall(
     connectedNames: List<String>,
     val functionName: String,
+    val avoidDeref: Boolean = false,
     builtinOperatorId: BuiltinOperatorId? = null,
     cloneEvenIfFirst: Boolean = false,
     /** Non-null means the indicated param has a special-tailored fn borrow type. */
@@ -316,6 +317,7 @@ internal open class FunctionCall(
         baseName: String,
         functionName: String,
         builtinOperatorId: BuiltinOperatorId? = null,
+        avoidDeref: Boolean = false,
         cloneEvenIfFirst: Boolean = false,
         fnIndex: Int? = null,
         hasGeneric: Boolean = false,
@@ -324,6 +326,7 @@ internal open class FunctionCall(
     ) : this(
         connectedNames = listOf(baseName),
         functionName = functionName,
+        avoidDeref = avoidDeref,
         builtinOperatorId = builtinOperatorId,
         cloneEvenIfFirst = cloneEvenIfFirst,
         fnIndex = fnIndex,
@@ -350,7 +353,7 @@ internal open class FunctionCall(
                     // We don't do this in user code because we have less promises about how they intend to use it.
                     // TODO If we do add borrows to Temper, we could generalize better.
                     when {
-                        selfArg.type.described().isInterface() -> self.deref()
+                        !avoidDeref && selfArg.type.described().isInterface() -> self.deref()
                         else -> self
                     }
                 }.let { self ->
@@ -1133,6 +1136,7 @@ private object IsOkResult : MethodCall(
 private object PackOkResult : FunctionCall(
     baseName = "PackOkResult",
     functionName = "Ok",
+    avoidDeref = true,
     builtinOperatorId = BuiltinOperatorId.PackOkResult,
     cloneEvenIfFirst = true,
 )
