@@ -171,7 +171,7 @@ private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): Supp
         // Required since using results for failure recovery
         BuiltinOperatorId.IsOkResult -> IsOkResult
         BuiltinOperatorId.PackOkResult -> PackOkResult
-        BuiltinOperatorId.RepackErrResult -> RepackErrResult
+        BuiltinOperatorId.RepackErrResult -> repackErrResult
         BuiltinOperatorId.UnpackOkResult -> UnpackOkResult
 
         null -> null
@@ -1138,24 +1138,16 @@ private object PackOkResult : FunctionCall(
     cloneEvenIfFirst = true,
 )
 
-private object RepackErrResult : RustInlineSupportCode(
+// `.expect_err` and `.unwrap_err` both require the success type
+// implements the Debug trait so that they can produce a panic message.
+// `.unwrap_err_unchecked` is unsafe, and `.into_err` is nightly only.
+// So we have our own fn that gets the error and repacks it into a result.
+private val repackErrResult = FunctionCall(
     baseName = "RepackErrResult",
     builtinOperatorId = BuiltinOperatorId.RepackErrResult,
-) {
-    override fun inlineToTree(
-        pos: Position,
-        arguments: List<TypedArg<Rust.Tree>>,
-        returnType: Type2,
-        translator: RustTranslator,
-    ): Rust.Expr =
-        (arguments[0].expr as Rust.Expr).methodCall(
-            key = "expect_err",
-            args = listOf(
-                Rust.StringLiteral(pos.rightEdge, "bubbling up err result"),
-            ),
-            pos = pos,
-        ).wrapErr()
-}
+    functionName = "temper_core::repack_err_result",
+    hasGeneric = true,
+)
 
 private object UnpackOkResult : MethodCall(
     baseName = "UnpackOkResult",
