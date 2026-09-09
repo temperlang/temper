@@ -53,6 +53,7 @@ import lang.temper.log.SharedLocationContext
 import lang.temper.log.UNIX_FILE_SEGMENT_SEPARATOR
 import lang.temper.log.bannedPathSegmentNames
 import lang.temper.log.unknownPos
+import lang.temper.name.BackendId
 import lang.temper.name.CoreCodeLocation
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.LibraryNameLocationKey
@@ -966,7 +967,8 @@ private fun buildStdModules(
     advancer.configureLibrary(tentativeStdLibraryConfiguration)
     val stdModuleConfig = ModuleConfig.default.copy(mayRun = true)
 
-    val fs = accessStdWrapped() ?: throw IOException("Can't access std")
+    val configPluginSource = sharedStdConfigPlugins.values.joinToString("\n") { it.source }
+    val fs = accessStdWrapped(configPluginSource) ?: throw IOException("Can't access std")
     val snapshot = FilteringFileSystemSnapshot(fs, FileFilterRules.Allow)
 
     val libraryRoot = tentativeStdLibraryConfiguration.libraryRoot
@@ -993,8 +995,8 @@ private fun buildStdModules(
                     this[specifier] = module
                     // Also add config injectors.
                     if (module.isConfigModule) {
-                        for (injector in sharedStdConfigInjectors) {
-                            module.addBindingsInjector(injector)
+                        for (plugin in sharedStdConfigPlugins.values) {
+                            module.addBindingsInjector(plugin.injector)
                         }
                     }
                 }
@@ -1075,10 +1077,18 @@ private class ModuleAdvancerContinueConditionImpl : ContinueCondition {
 }
 
 /** Needed for including config for our bundled backends in std. */
-private val sharedStdConfigInjectors = Collections.synchronizedSet(mutableSetOf<BindingsInjector>())
+private val sharedStdConfigPlugins = Collections.synchronizedMap(mutableMapOf<BackendId, SharedStdConfigPlugin>())
 
-fun addSharedStdConfigInjector(injector: BindingsInjector) {
-    sharedStdConfigInjectors.add(injector)
+data class SharedStdConfigPlugin(
+    /** For defining config support especially config schema classes. */
+    val injector: BindingsInjector,
+
+    /** For actual std config, using the injected config support. */
+    val source: String,
+)
+
+fun plugInSharedStdConfig(backendId: BackendId, plugin: SharedStdConfigPlugin) {
+    sharedStdConfigPlugins[backendId] = plugin
 }
 
 private val sharedStdModules = lazy {

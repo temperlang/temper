@@ -26,8 +26,9 @@ import lang.temper.common.transitiveClosure
 import lang.temper.format.TokenSink
 import lang.temper.frontend.BindingsInjector
 import lang.temper.frontend.Module
-import lang.temper.frontend.staging.addSharedStdConfigInjector
+import lang.temper.frontend.staging.SharedStdConfigPlugin
 import lang.temper.frontend.staging.isConfigModule
+import lang.temper.frontend.staging.plugInSharedStdConfig
 import lang.temper.fs.AsyncSystemAccess
 import lang.temper.fs.AsyncSystemReadAccess
 import lang.temper.fs.ResourceDescriptor
@@ -818,6 +819,8 @@ abstract class Backend<SELF : Backend<SELF>>(
         val configBindingsInjector: BindingsInjector?
             get() = null
 
+        fun loadStdConfigSource(): String = ""
+
         /** Add environment bindings to the module as appropriate. */
         fun addEnvironmentBindings(module: Module) {
             module.addEnvironmentBindings(environmentBindings)
@@ -1023,12 +1026,12 @@ data class BackendOrganization(
     val adjusterFactories: Map<BackendId, BackendAdjusterFactory> = mapOf(),
 ) {
     /** Helper for registering std config injectors, including for backends that might not be active. */
-    fun addSharedStdConfigInjectors(defaultSupportedBackendList: List<BackendId>) {
+    fun addSharedStdConfigInjectors() {
         for (factory in factoriesById.values) {
-            factory.configBindingsInjector?.also { addSharedStdConfigInjector(it) }
-        }
-        for (backendId in defaultSupportedBackendList.toSet() - factoriesById.keys) {
-            lookupFactory(backendId)?.configBindingsInjector?.also { addSharedStdConfigInjector(it) }
+            factory.configBindingsInjector?.also { injector ->
+                val plugin = SharedStdConfigPlugin(injector, factory.loadStdConfigSource())
+                plugInSharedStdConfig(factory.backendId, plugin)
+            }
         }
     }
 }

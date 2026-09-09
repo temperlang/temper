@@ -391,6 +391,10 @@ class JavaBackend private constructor(
                 filePath("temper", "std", "regex", "Core.java"),
             ),
         )
+        private val stdConfigResource = declareResources(
+            baseDirPath + dirPath("temper-std"),
+            filePath("config.temper.md"),
+        ).first()
         open val perModuleFileSpecs: Map<QualifiedName, List<MetadataFileSpecification>> = emptyMap()
         internal open val defaultDependencies = listOf(temperCoreDependency)
 
@@ -398,6 +402,7 @@ class JavaBackend private constructor(
         val pomMime = MimeType("text", "xml")
 
         override val configBindingsInjector: BindingsInjector = JavaConfigInjector
+        override fun loadStdConfigSource(): String = stdConfigResource.load()
 
         override fun make(setup: BackendSetup<JavaBackend>) = JavaBackend(this, setup)
     }
