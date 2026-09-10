@@ -612,8 +612,6 @@ class RustBackendTest {
             |        crate::init(None);
             |        temper_std::init(None);
             |        let test___0 = temper_std::testing::Test::new();
-            |        let return__0: ();
-            |        return__0 = ();
             |        let mut sum__0: std::sync::Arc<std::sync::RwLock<i32>> = std::sync::Arc::new(std::sync::RwLock::new(0));
             |        #[derive(Clone)]
             |        struct ClosureGroup___0 {
@@ -652,7 +650,6 @@ class RustBackendTest {
             |            std::sync::Arc::new(move | | closure_group.fn__1())
             |        };
             |        test___0.assert(Some(actual___0) == Some(3), fn__1.clone());
-            |        return Ok(return__0);
             |        test___0.soft_fail_to_hard()
             |    }
             |    use super::*;
@@ -884,7 +881,6 @@ class RustBackendTest {
             |        crate::init(None);
             |        temper_std::init(None);
             |        let test___0 = temper_std::testing::Test::new();
-            |        let return__0: ();
             |        let nums__0: temper_core::List<i32> = std::sync::Arc::new(vec![0, 1]);
             |        let this__0: temper_core::List<i32> = nums__0.clone();
             |        let n__0: i32 = temper_core::ListedTrait::len( & this__0);
@@ -907,8 +903,6 @@ class RustBackendTest {
             |            };
             |            test___0.assert(i__1 < temper_core::ListedTrait::len( & nums__0), fn__0.clone());
             |        }
-            |        return__0 = ();
-            |        return Ok(return__0);
             |        test___0.soft_fail_to_hard()
             |    }
             |    use super::*;

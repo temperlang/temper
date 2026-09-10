@@ -4,6 +4,7 @@ import lang.temper.ast.anyChildDepth
 import lang.temper.be.Backend
 import lang.temper.common.RFailure
 import lang.temper.common.RSuccess
+import lang.temper.common.mapFirst
 import lang.temper.format.TokenSink
 import lang.temper.frontend.ModuleNamingContext
 import lang.temper.lexer.Genre
@@ -46,6 +47,7 @@ import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.mapType
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
+import lang.temper.value.BuiltinOperatorId
 import lang.temper.value.DependencyCategory
 import lang.temper.value.OccasionallyHelpful
 import lang.temper.value.TNull
@@ -913,6 +915,40 @@ fun TmpL.BlockStatement?.isPureVirtual(isFnPureVirtual: (TmpL.Callable) -> Boole
 }
 
 /**
+ * Returns a list with a single Void-typed var removed, which is expected to be
+ * a return var that lingers from the frontend.
+ *
+ * If no such var is found, returns original [this] instance.
+ */
+fun List<TmpL.Statement>.cleanOutVoidVar(): List<TmpL.Statement> {
+    val voidName = mapFirst { statement ->
+        when (statement) {
+            is TmpL.LocalDeclaration if statement.descriptor.isVoidLike -> statement.name.name
+            else -> null
+        }
+    } ?: return this
+    // Rewrite the return statement, but others leave whole or exclude.
+    val returnRewriter = object : TmpLTreeRewriter {
+        override fun rewriteExpression(x: TmpL.Expression): TmpL.Expression {
+            return when (x) {
+                is TmpL.Reference if x.id.name == voidName ->
+                    TmpL.ValueReference(x.pos, WellKnownTypes.voidType2, void)
+                else -> super.rewriteExpression(x)
+            }
+        }
+    }
+    // For efficiency, dig to immediate kids only, based on expected usage patterns.
+    return mapNotNull { statement ->
+        when (statement) {
+            is TmpL.LocalDeclaration if statement.name.name == voidName -> null
+            is TmpL.Assignment if statement.left.name == voidName -> null
+            is TmpL.ReturnStatement -> returnRewriter.rewriteReturnStatement(statement)
+            else -> statement
+        }
+    }
+}
+
+/**
  * Split into local var init for property storage, then remaining statements using `this`.
  * Presumes a constructor that needs to construct an instance between these two, then return it.
  */
@@ -920,14 +956,7 @@ fun List<TmpL.Statement>.splitConstructorBody(): Pair<List<TmpL.Statement>, List
     val initStatements = mutableListOf<TmpL.Statement>()
     val useStatements = mutableListOf<TmpL.Statement>()
     var reachedUse = false
-    var voidReturnName: ResolvedName? = null
     statements@ for (statement in this) {
-        if (statement is TmpL.LocalDeclaration && statement.descriptor.isVoidLike) {
-            // Track the name but prune out the actual declaraion.
-            voidReturnName = statement.name.name
-            continue@statements
-        }
-        var adjustedStatement = statement
         reachedUse = reachedUse || statement.anyChildDepth(
             within = { tree ->
                 when (tree) {
@@ -938,33 +967,25 @@ fun List<TmpL.Statement>.splitConstructorBody(): Pair<List<TmpL.Statement>, List
             },
             // Likewise, any `this` must be for the enclosing type.
             predicate = { it is TmpL.This },
-        ) || statement is TmpL.ReturnStatement && (
-            statement.expression.isVoidish() ||
-                statement.expression!!.anyChildDepth { exprSub ->
-                    val sneakyVoid = (exprSub as? TmpL.Id)?.name == voidReturnName
-                    if (sneakyVoid) {
-                        // Simplify the return.
-                        adjustedStatement = statement.deepCopy()
-                        adjustedStatement.expression = null
-                    }
-                    sneakyVoid
-                }
-            )
-        if (!reachedUse && statement is TmpL.Assignment && statement.left.name == voidReturnName) {
-            // Also prune out the assignment of void to the void return.
-            continue@statements
-        }
+        ) || statement is TmpL.ReturnStatement && statement.expression.isVoidish()
         // Keep other statements, adjusted if needed, placed in the correct group.
         when {
             !reachedUse -> initStatements
             else -> useStatements
-        }.add(adjustedStatement.deepCopy())
+        }.add(statement.deepCopy())
     }
     return initStatements to useStatements
 }
 
-/** True if either null or a void constant. */
+/** True if either null or a void constant or an ok-wrapped void constant. */
 fun TmpL.Expression?.isVoidish(): Boolean = when (this) {
+    is TmpL.CallExpression -> when (val callee = fn) {
+        is TmpL.SupportCodeWrapper ->
+            callee.supportCode.builtinOperatorId == BuiltinOperatorId.PackOkResult &&
+                parameters.size == 1 &&
+                (parameters.first() as? TmpL.Expression)?.isVoidConstant == true
+        else -> false
+    }
     null -> true
     else -> this.isVoidConstant
 }
