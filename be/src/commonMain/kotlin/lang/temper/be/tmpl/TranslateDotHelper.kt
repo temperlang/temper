@@ -15,12 +15,14 @@ import lang.temper.type.InternalCall
 import lang.temper.type.InternalGet
 import lang.temper.type.InternalMemberAccessor
 import lang.temper.type.InternalSet
+import lang.temper.type.InvalidType
 import lang.temper.type.MemberShape
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
 import lang.temper.type.OperatorMember
 import lang.temper.type.PropertyShape
 import lang.temper.type.SetMemberAccessor
+import lang.temper.type.StaticType
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
@@ -174,23 +176,27 @@ internal object TranslateDotHelper {
 
         val subjectIndexInCallTree = 1 + dotHelper.memberAccessor.firstArgumentIndex
         val subjectTree = callTree.children[subjectIndexInCallTree]
-        val subjectType = excludeBubble(subjectTree.typeOrInvalid)
-        val subjectTypeDefinition = subjectType.definition
-        val members: Set<MethodShape> = findMembers(subjectTypeDefinition, dotHelper)
+        val subjectTypeApproximate = excludeBubble(subjectTree.typeOrInvalid)
 
+        val members: Set<MethodShape> = findMembers(subjectTypeApproximate.definition, dotHelper)
         val firstMember: MethodShape? = members.firstOrNull()
         val adjustments = firstMember?.let {
             translator.metadataFetcher().read(it.name, SignatureAdjustments.KeyFactory)
                 ?.get(it.name as ResolvedName)
         }
 
+        val subjectTypeDefinition = firstMember?.enclosingType
+            ?: WellKnownTypes.invalidTypeDefinition
+        val subjectTypeInContext = translator.typeContext2
+            .superTypeTreeOf(subjectTypeApproximate)[subjectTypeDefinition]
+            .firstOrNull()
+            ?: WellKnownTypes.invalidType2
+
         val bindingsFromThis = buildMap {
-            if (subjectTypeDefinition is TypeShape) {
-                check(subjectType is DefinedType)
-                for ((i, formal) in subjectTypeDefinition.formals.withIndex()) {
-                    this[formal] = subjectType.bindings.getOrNull(i)
-                        ?: WellKnownTypes.invalidType2
-                }
+            check(subjectTypeInContext is DefinedType)
+            for ((i, formal) in subjectTypeDefinition.formals.withIndex()) {
+                this[formal] = subjectTypeInContext.bindings.getOrNull(i)
+                    ?: WellKnownTypes.invalidType2
             }
         }
 
@@ -225,13 +231,36 @@ internal object TranslateDotHelper {
         val otherArgs = mergedArgumentList.subListToEnd(1)
 
         val typeActualsPos = subjectTree.pos.rightEdge
-        val typeActuals = TmpL.ImplicitCallTypeActuals(
-            typeActualsPos,
-            subjectType.bindings.map {
+        val typeActuals = run {
+            val actualTypeList = mutableListOf<TmpL.AType>()
+            subjectTypeInContext.bindings.mapTo(actualTypeList) {
                 translator.translateType(typeActualsPos, it).aType
-            },
-            bindingsFromThis,
-        )
+            }
+            val actualBindings = mutableMapOf<TypeFormal, Type2>()
+            actualBindings.putAll(bindingsFromThis)
+
+            val callBindings = callTree.typeInferences?.bindings2 ?: emptyMap()
+            val unaugmentedDescriptor = firstMember?.descriptor
+            // Use the unaugmented descriptor to find any bindings specified on the method
+            // instead of the class/interface.
+            if (unaugmentedDescriptor != null) {
+                for (formal in unaugmentedDescriptor.typeFormals) {
+                    if (formal !in actualBindings) {
+                        val binding = hackMapOldStyleToNew(
+                            callBindings[formal] as? StaticType ?: InvalidType,
+                        )
+                        actualBindings[formal] = binding
+                        actualTypeList.add(translator.translateType(typeActualsPos, binding).aType)
+                    }
+                }
+            }
+
+            TmpL.ImplicitCallTypeActuals(
+                typeActualsPos,
+                actualTypeList.toList(),
+                actualBindings.toMap(),
+            )
+        }
 
         val connectedMemberInfo = findConnectedMember(members)
         if (connectedMemberInfo != null) {

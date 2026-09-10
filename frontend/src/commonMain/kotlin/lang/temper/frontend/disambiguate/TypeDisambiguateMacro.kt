@@ -39,6 +39,7 @@ import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
+import lang.temper.type.MutableTypeFormal
 import lang.temper.type.MutableTypeShape
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
@@ -943,6 +944,9 @@ internal fun typeDisambiguateMacro(
                                     "WellKnownTypes $stableFormalName variance out of sync with core.temper",
                                 ),
                             )
+                        }
+                        if (predefinedFormalDefinition.pos.right == 0) {
+                            (predefinedFormalDefinition as MutableTypeFormal).pos = formalPos
                         }
                         predefinedFormalDefinition
                     }
