@@ -10,6 +10,7 @@ import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLOperator
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.aType
+import lang.temper.be.tmpl.cleanOutVoidVar
 import lang.temper.be.tmpl.hasSplitSupers
 import lang.temper.be.tmpl.isNullValue
 import lang.temper.be.tmpl.isStdLib
@@ -661,6 +662,7 @@ class RustTranslator(
                 params = listOf(),
                 returnType = "()".toId(pos).wrapResult(),
                 block = translateBlock(
+                    pos = test.body.pos,
                     prefix = listOf(
                         // Init both our own crate and temper_std (in case our crate doesn't) before any tests.
                         // Init is idempotent, so multi-init is ok.
@@ -669,8 +671,10 @@ class RustTranslator(
                         Rust.ExprStatement(pos, Rust.Call(pos, stdInit, listOf("None".toId(pos)))),
                         Rust.LetStatement(pos, pattern = testObjectId, type = null, value = newTest),
                     ),
-                    block = test.body,
+                    statements = test.body.statements.cleanOutVoidVar(),
                     result = result,
+                    // Skip any final return so we can convert soft fail to hard right here instead.
+                    skipLastReturn = true,
                 ),
             ).toItem(
                 attrs = listOf(Rust.AttrOuter(pos, "test".toId(pos))),
@@ -1669,14 +1673,25 @@ class RustTranslator(
         skipLastReturn: Boolean = result != null,
         statementProcessor: StatementProcessor? = null,
     ): Rust.Block {
+        return translateBlock(block.pos, block.statements, prefix, result, skipLastReturn, statementProcessor)
+    }
+
+    private fun translateBlock(
+        pos: Position,
+        statements: List<TmpL.Statement>,
+        prefix: List<Rust.Statement> = listOf(),
+        result: Rust.Expr? = null,
+        skipLastReturn: Boolean = result != null,
+        statementProcessor: StatementProcessor? = null,
+    ): Rust.Block {
         return Rust.Block(
-            block.pos,
+            pos,
             statements = buildList {
                 addAll(prefix)
                 when (statementProcessor) {
-                    null -> processStatements(block.statements, results = this, skipLastReturn = skipLastReturn)
+                    null -> processStatements(statements, results = this, skipLastReturn = skipLastReturn)
                     else -> statementProcessor.processStatements(
-                        block.statements,
+                        statements,
                         results = this,
                         skipLastReturn = skipLastReturn,
                     )
@@ -1993,7 +2008,7 @@ class RustTranslator(
                 results: MutableList<Rust.Statement>,
                 skipLastReturn: Boolean, // ignorable here
             ) {
-                val (initStatements, useStatements) = statements.splitConstructorBody()
+                val (initStatements, useStatements) = statements.cleanOutVoidVar().splitConstructorBody()
                 val context = functionContextStack.last()
                 val inits = buildMap {
                     for (initStatement in initStatements) {
