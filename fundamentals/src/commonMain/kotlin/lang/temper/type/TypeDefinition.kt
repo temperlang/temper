@@ -192,7 +192,7 @@ sealed interface TypeFormal : TypeDefinition {
  * mutate.
  */
 class MutableTypeFormal(
-    override val pos: Position,
+    override var pos: Position,
     override val name: ResolvedName,
     override val word: Symbol?,
     override var variance: Variance,

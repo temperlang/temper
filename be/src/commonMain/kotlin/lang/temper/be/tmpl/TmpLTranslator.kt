@@ -77,6 +77,7 @@ import lang.temper.type2.MkType2
 import lang.temper.type2.Nullity.NonNull
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
+import lang.temper.type2.TypeContext2
 import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.type2.hackMapOldStyleActualsToNew
 import lang.temper.type2.hackMapOldStyleToNew
@@ -429,6 +430,7 @@ class TmpLTranslator internal constructor(
     private val thisNames = mutableMapOf<ResolvedName, DefinedNonNullType?>()
     private val topLevelMetadata = mutableMapOf<TemperName, List<TmpL.DeclarationMetadata>>()
     internal val translationAssistant: TranslationAssistant = TranslationAssistantImpl(this)
+    internal val typeContext2 = TypeContext2()
 
     /** Allows backend-type agnostic code to fetch metadata for the appropriate backend */
     internal class MetadataFetcher<BACKEND : Backend<BACKEND>>(
