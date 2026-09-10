@@ -358,6 +358,7 @@ fun doOneBuild(build: Build): BuildResult {
             }
         },
     )
+    backendOrganization.addSharedStdConfigInjectors()
 
     val (
         modulesInOrder,

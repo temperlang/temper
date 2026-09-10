@@ -114,7 +114,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
     open fun getDiagnosticPreferences(test: FunctionalTestBase): FunctionalTestDiagnosticPreferences =
         FunctionalTestDiagnosticPreferences.defaultPreferences
 
-    private val otherFactoryMap = otherFactories.associate { it.backendId to it }
+    private val otherFactoryMap = otherFactories.associateBy { it.backendId }
     open fun lookupFactory(backendId: BackendId): Backend.Factory<*>? = when (backendId) {
         // In case the factory is already specialized, use the given factory for the given id.
         factory.backendId -> factory
@@ -133,6 +133,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
             lookupFactory = ::lookupFactory,
             onError = { error(it) },
         )
+        backendOrganization.addSharedStdConfigInjectors()
         // TODO Actually build by buckets?
         val outputRoot = OutputRoot(MemoryFileSystem())
         val inputs = test.temperFiles.toList()

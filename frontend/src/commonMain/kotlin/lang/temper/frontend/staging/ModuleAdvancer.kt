@@ -15,10 +15,10 @@ import lang.temper.common.putMultiList
 import lang.temper.env.Exporter
 import lang.temper.env.InterpMode
 import lang.temper.format.ConsoleBackedContextualLogSink
+import lang.temper.frontend.BindingsInjector
 import lang.temper.frontend.Module
 import lang.temper.frontend.core.CoreModule
 import lang.temper.frontend.core.accessStdWrapped
-import lang.temper.frontend.staging.backend.JavaConfigInjector
 import lang.temper.fs.FileFilterRules
 import lang.temper.fs.FileSnapshot
 import lang.temper.fs.FileSystemSnapshot
@@ -53,6 +53,7 @@ import lang.temper.log.SharedLocationContext
 import lang.temper.log.UNIX_FILE_SEGMENT_SEPARATOR
 import lang.temper.log.bannedPathSegmentNames
 import lang.temper.log.unknownPos
+import lang.temper.name.BackendId
 import lang.temper.name.CoreCodeLocation
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.LibraryNameLocationKey
@@ -77,6 +78,7 @@ import lang.temper.value.fileRestrictedBuiltinName
 import lang.temper.value.valueContained
 import lang.temper.value.void
 import java.io.IOException
+import java.util.Collections
 
 /** Makes an effort to resolve an imported specifier to an exporter. */
 interface ImportResolver {
@@ -965,7 +967,8 @@ private fun buildStdModules(
     advancer.configureLibrary(tentativeStdLibraryConfiguration)
     val stdModuleConfig = ModuleConfig.default.copy(mayRun = true)
 
-    val fs = accessStdWrapped() ?: throw IOException("Can't access std")
+    val configPluginSource = sharedStdConfigPlugins.values.joinToString("\n") { it.source }
+    val fs = accessStdWrapped(configPluginSource) ?: throw IOException("Can't access std")
     val snapshot = FilteringFileSystemSnapshot(fs, FileFilterRules.Allow)
 
     val libraryRoot = tentativeStdLibraryConfiguration.libraryRoot
@@ -992,8 +995,8 @@ private fun buildStdModules(
                     this[specifier] = module
                     // Also add config injectors.
                     if (module.isConfigModule) {
-                        for (injector in sharedStdConfigInjectors) {
-                            module.addBindingsInjector(injector)
+                        for (plugin in sharedStdConfigPlugins.values) {
+                            module.addBindingsInjector(plugin.injector)
                         }
                     }
                 }
@@ -1074,9 +1077,19 @@ private class ModuleAdvancerContinueConditionImpl : ContinueCondition {
 }
 
 /** Needed for including config for our bundled backends in std. */
-private val sharedStdConfigInjectors = setOf(
-    JavaConfigInjector,
+private val sharedStdConfigPlugins = Collections.synchronizedMap(mutableMapOf<BackendId, SharedStdConfigPlugin>())
+
+data class SharedStdConfigPlugin(
+    /** For defining config support especially config schema classes. */
+    val injector: BindingsInjector,
+
+    /** For actual std config, using the injected config support. */
+    val source: String,
 )
+
+fun plugInSharedStdConfig(backendId: BackendId, plugin: SharedStdConfigPlugin) {
+    sharedStdConfigPlugins[backendId] = plugin
+}
 
 private val sharedStdModules = lazy {
     val logSink = ConsoleBackedContextualLogSink(

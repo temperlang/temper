@@ -1,4 +1,4 @@
-package lang.temper.frontend.staging.backend
+package lang.temper.frontend.staging
 
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.frontend.interpreterFeatureImplementations
@@ -17,6 +17,7 @@ import lang.temper.value.publicSymbol
 import lang.temper.value.typeSymbol
 import lang.temper.value.vWordSymbol
 import lang.temper.value.visibilitySymbol
+import kotlin.collections.iterator
 
 /** Builds an imu data class with nullable constructor properties only. */
 fun Planting.buildConfigType(

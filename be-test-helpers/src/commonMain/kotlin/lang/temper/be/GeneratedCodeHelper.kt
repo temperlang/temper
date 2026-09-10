@@ -94,6 +94,7 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
         lookupFactory = lookupFactory,
         onError = { error(it) },
     )
+    backendOrganization.addSharedStdConfigInjectors()
     for (bucket in backendOrganization.backendBuckets) {
         for (backendId in bucket) {
             generateCode(
