@@ -4400,6 +4400,71 @@ class TmpLBackendTest {
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
+    @Test
+    fun bubblyConstructorInNonBubblyCall() = assertGeneratedCode(
+        inputJsonPathToContent = """
+            |{
+            |  foo: {
+            |    foo.temper: ```
+            |      let { Bubbly, notBubbly } = import("../bar");
+            |
+            |      export let x = notBubbly(new Bubbly(true));
+            |      ```
+            |  },
+            |  bar: {
+            |    bar.temper: ```
+            |      export class Bubbly {
+            |        public constructor(b: Boolean): Void throws Bubble {
+            |          if (b) { bubble() }
+            |          ;
+            |        }
+            |      }
+            |
+            |      export let notBubbly(b: Bubbly?): Int32 {
+            |        if (b != null) { 123 } else { 234 }
+            |      }
+            |      ```
+            |  }
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  tmpl: {
+            |    foo.tmpl: {
+            |      content:
+            |        ```
+            |        //// work//foo/ => foo.tmpl
+            |        let {
+            |          Bubbly
+            |        }: @QName("test-library/bar.type Bubbly") type = import ("./bar.tmpl");
+            |        let {
+            |          notBubbly as notBubbly__0
+            |        }: @QName("test-library/bar.notBubbly()") fn (Bubbly?) -> Int32 = import ("./bar.tmpl");
+            |        let isOkResult#0 = builtins.isOkResult /* <isOkResultPASS extends AnyValue, isOkResultFAIL extends AnyValue>(Result<isOkResultPASS, isOkResultFAIL>) -> Boolean */;
+            |        let unpackOkResult#0 = builtins.unpackOkResult /* <unpackOkResultPASS extends AnyValue, unpackOkResultFAIL extends AnyValue>(Result<unpackOkResultPASS, unpackOkResultFAIL>) -> unpackOkResultPASS */;
+            |## This `new Bubbly` call cannot be nested inside the `notBubbly` call
+            |## farther down.
+            |## If it was we wouldn't be able to use statements to test whether construction
+            |## succeeded.
+            |        let result#0: Bubbly | Bubble = /*new*/ Bubbly(true);
+            |        module init {
+            |          if (!isOkResult#0(result#0)) {
+            |            abortLoad ();
+            |          }
+            |        }
+            |        let t#0: Bubbly = unpackOkResult#0(result#0);
+            |        @QName("test-library/foo.x") let x: Int32 = notBubbly__0(t#0);
+            |
+            |        ```
+            |    },
+            |    foo.tmpl.map: "__DO_NOT_CARE__",
+            |    bar.tmpl: "__DO_NOT_CARE__",
+            |    bar.tmpl.map: "__DO_NOT_CARE__",
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
     private fun assertGeneratedCode(
         inputJsonPathToContent: String,
         want: String,

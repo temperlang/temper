@@ -34,6 +34,7 @@ import lang.temper.frontend.ModuleNamingContext
 import lang.temper.frontend.adjustDeclarationMetadataWithSinglyAssignedHints
 import lang.temper.frontend.core.CoreModule
 import lang.temper.frontend.syntax.isAssignment
+import lang.temper.interp.New
 import lang.temper.interp.docgenalts.isPreserveCall
 import lang.temper.interp.forEachActual
 import lang.temper.log.LogEntry
@@ -1091,7 +1092,7 @@ internal class Typer(
         val inputBounds: List<InputBound> = buildList {
             // For each input, we have position metadata which comes in handy when generating
             // diagnostics.
-            // We also either know the inferred type, or the result inference variable for the
+            // We also either know the inferred type or the result inference variable for the
             // late-typed call that supplies whose result is the input.
             // If the bound is a value that we cannot pre-type, for example, an empty list or `null`,
             // we need to know which so that we can hand it off to the solver and then, after solving,
@@ -1297,6 +1298,7 @@ internal class Typer(
             // untypable constant inputs.  This handles `null`, but might extend
             // to list of null, for example.
             val sig = variant.sig
+            fixupCalleeTypePost(callTree, sig)
             for ((i, inputTree) in inputTrees.withIndex()) {
                 if (inputTree is ValueLeaf && ti.isUndecided(inputTree)) {
                     val formal = sig.valueFormalForActual(i)
@@ -1389,6 +1391,7 @@ internal class Typer(
                     explanations = explanations,
                 )
                 ti.decide(callSite, decision)
+                fixupCalleeTypePost(callSite, chosenCallee?.sig)
                 // Now that we have an exact variant and bindings, type any remaining function trees.
 
                 if (chosenCallee != null && call.inputTrees.any { it is FunTree && ti.isUndecided(it) }) {
@@ -2411,6 +2414,30 @@ internal class Typer(
             }
         }
         return variants
+    }
+
+    private fun fixupCalleeTypePost(
+        call: CallTree,
+        sig: Signature2?,
+    ) {
+        if (sig == null) { return }
+        val callee = call.childOrNull(0) ?: return
+        if (ti.decision(callee)?.type == functionType) {
+            if (New == callee.functionContained) {
+                // Make sure any bubbliness for the constructor is reflected in the
+                // callee type, so that the Weaver can recognize bubbly callee's and
+                // make sure their call is in statement position.
+                val adjustedForNew = sig.copy(
+                    hasThisFormal = false,
+                    requiredInputTypes = buildList {
+                        // New calls have their type constructed as an argument.
+                        add(WellKnownTypes.typeType2)
+                        addAll(sig.requiredInputTypes)
+                    },
+                )
+                ti.decide(callee, typeFromSignature(adjustedForNew))
+            }
+        }
     }
 
     private fun typeForGetp(t: CallTree): TypedVariants {
