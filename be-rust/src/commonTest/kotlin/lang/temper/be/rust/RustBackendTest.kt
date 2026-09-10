@@ -507,16 +507,14 @@ class RustBackendTest {
             |impl C {
             |    pub fn new(x__0: bool) -> temper_core::Result<C> {
             |        let x;
-            |        let return__0: ();
-            |        return__0 = ();
             |        if x__0 {
             |            return Err(temper_core::Error::new());
             |        }
             |        x = x__0;
-            |        return Ok(return__0);
             |        let selfish = C(std::sync::Arc::new(CStruct {
             |                    x
             |        }));
+            |        return Ok(selfish);
             |    }
             |    pub fn x(& self) -> bool {
             |        return self.0.x;

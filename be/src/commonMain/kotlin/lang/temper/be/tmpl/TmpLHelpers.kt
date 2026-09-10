@@ -34,6 +34,7 @@ import lang.temper.type.TypeShape
 import lang.temper.type.Visibility
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.helpfulFromMetadataValue
+import lang.temper.type.isVoidLike
 import lang.temper.type2.DefinedNonNullType
 import lang.temper.type2.Descriptor
 import lang.temper.type2.Nullity
@@ -919,7 +920,14 @@ fun List<TmpL.Statement>.splitConstructorBody(): Pair<List<TmpL.Statement>, List
     val initStatements = mutableListOf<TmpL.Statement>()
     val useStatements = mutableListOf<TmpL.Statement>()
     var reachedUse = false
-    for (statement in this) {
+    var voidReturnName: ResolvedName? = null
+    statements@ for (statement in this) {
+        if (statement is TmpL.LocalDeclaration && statement.descriptor.isVoidLike) {
+            // Track the name but prune out the actual declaraion.
+            voidReturnName = statement.name.name
+            continue@statements
+        }
+        var adjustedStatement = statement
         reachedUse = reachedUse || statement.anyChildDepth(
             within = { tree ->
                 when (tree) {
@@ -930,15 +938,27 @@ fun List<TmpL.Statement>.splitConstructorBody(): Pair<List<TmpL.Statement>, List
             },
             // Likewise, any `this` must be for the enclosing type.
             predicate = { it is TmpL.This },
-        ) || statement.anyChildDepth(
-            // We do nest functions, so only pay attention to outer returns.
-            within = { it !is TmpL.FunctionLike },
-            predicate = { it is TmpL.ReturnStatement && it.expression.isVoidish() },
-        )
+        ) || statement is TmpL.ReturnStatement && (
+            statement.expression.isVoidish() ||
+                statement.expression!!.anyChildDepth { exprSub ->
+                    val sneakyVoid = (exprSub as? TmpL.Id)?.name == voidReturnName
+                    if (sneakyVoid) {
+                        // Simplify the return.
+                        adjustedStatement = statement.deepCopy()
+                        adjustedStatement.expression = null
+                    }
+                    sneakyVoid
+                }
+            )
+        if (!reachedUse && statement is TmpL.Assignment && statement.left.name == voidReturnName) {
+            // Also prune out the assignment of void to the void return.
+            continue@statements
+        }
+        // Keep other statements, adjusted if needed, placed in the correct group.
         when {
             !reachedUse -> initStatements
             else -> useStatements
-        }.add(statement.deepCopy())
+        }.add(adjustedStatement.deepCopy())
     }
     return initStatements to useStatements
 }
