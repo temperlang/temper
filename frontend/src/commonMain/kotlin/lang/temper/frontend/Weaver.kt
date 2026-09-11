@@ -4,6 +4,7 @@ import lang.temper.ast.TreeVisit
 import lang.temper.ast.VisitCue
 import lang.temper.builtin.AwaitFn
 import lang.temper.builtin.BuiltinFuns
+import lang.temper.builtin.GetStaticOp
 import lang.temper.builtin.YieldFn
 import lang.temper.builtin.isRttiCall
 import lang.temper.common.compatReversed
@@ -956,6 +957,7 @@ internal fun shouldExtractForWeave(parent: Tree, childIndex: Int, varNames: Set<
             // These should stay in situ.
             when (child.childOrNull(0)?.functionContained) {
                 BuiltinFuns.angleFn -> child.size != 1 || shouldExtractForWeave(child, 1, varNames)
+                is GetStaticOp -> false
                 else -> true
             }
         }
