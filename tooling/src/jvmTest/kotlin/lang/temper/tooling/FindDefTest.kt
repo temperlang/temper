@@ -57,7 +57,7 @@ internal open class FindDefTest {
 
     @Test
     fun failToFindThisWithoutClassName() {
-        val goodContext = FileModuleDataTestContext("""class /*1@+0*/Hi { let hi(): Void { this/*0*/; } }""")
+        val goodContext = FileModuleDataTestContext("""class /*1@+0*/Hi { let hi(): Void { this/*0*/.hi(); } }""")
         goodContext.assertFound(refDef = "/*0*/" to "/*1@+0*/")
         // TODO(tjp, tooling): Anonymous classes are allowed, so this isn't bad code, and we might should handle it.
         val badContext = FileModuleDataTestContext(goodContext.moduleSource.replace("Hi", ""))
