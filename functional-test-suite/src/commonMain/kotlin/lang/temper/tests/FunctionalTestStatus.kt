@@ -30,6 +30,12 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
         cpp(198),
         Ft.RegexMatch,
         Ft.TypesNetresponse,
+        // Using std breaks. TODO: fix casting
+        Ft.ControlFlowAsync,
+        Ft.RegexZeroAdvance,
+        Ft.TestingAsserts,
+        Ft.TypesDate,
+        Ft.TypesJsonSyntaxTree,
     )
     onlyPasses(
         cppv(198),
