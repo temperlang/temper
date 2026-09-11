@@ -47,7 +47,6 @@ internal object OrElseTransform : ControlFlowTransform(Operator.OrElse.text!!) {
         //
         //     // on weaving ->
         //
-        //     var fail#0;
         //     //orelse#1: {
         //         let t#2;
         //         t#2 = f(fn { if (g()) { break orelse#1 } });

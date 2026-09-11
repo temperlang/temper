@@ -2534,8 +2534,8 @@ private fun hasInterestingType(t: Tree) =
     t !is DeclTree // Declarations are all Void
 
 private fun isProbablyMadeUp(t: Tree) =
-    // Variables like fail#123 have position metadata similar to \type metadata trees but very
-    // different type metadata
+    // Temporaries that capture part of an option may have position metadata similar to
+    // the trees we want but have different type metadata.
     (t is NameLeaf && t.content is Temporary) ||
         // Void nodes are often replacements for unreachable or garbage nodes.
         (t.valueContained == void) ||

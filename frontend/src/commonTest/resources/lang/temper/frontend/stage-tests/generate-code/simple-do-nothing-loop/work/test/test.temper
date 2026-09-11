@@ -1,8 +1,8 @@
-// This example is interesting because the infer result pass actually adds two assignments
-// to gather results from terminal expression.
+// This example is interesting because an older version of the infer result pass actually
+// added two assignments to gather results from terminal expression.
 //
-// This may be a bug, but in the meantime, it leads to a nested assignment of temporaries:
-// `t#0 = t#1 = hs(fail#2, i < 3)`
+// Nested assignment of temporaries like `t#0 = t#1 = i < 3` should not make it to later
+// stages.
 //
 // The generate code stage needs to unnest this assignment before the TmpL backend can
 // translate it.  If the TmpL backend were to try to handle this by creating temporaries,

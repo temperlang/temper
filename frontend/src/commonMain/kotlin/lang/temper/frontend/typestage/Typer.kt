@@ -2328,8 +2328,8 @@ internal class Typer(
     private fun rewriteUsingTypeInformation(
         root: BlockTree,
     ) {
-        // `fail#123` variables inserted by [lang.temper.frontend.MagicSecurityDust]
-        // which are found to always be false.
+        // casts or runtime checks inserted by prior passes which type information
+        // indicates are known at compile time.
         val nullOps = mutableListOf<Pair<CallTree, NullOpKind>>()
         val dotHelperCalls = mutableListOf<CallTree>()
 

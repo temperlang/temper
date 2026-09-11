@@ -2197,8 +2197,8 @@ class JavaTranslator(
          * This returns non-null for these constructs:
          *
          * - `awakeUpon(promise, generator)`
-         * - `name = getPromiseResultSync(fail#1, promise)`
-         * - `getPromiseResultSync(fail#1, promise)`
+         * - `name = getPromiseResultSync(promise)`
+         * - `getPromiseResultSync(promise)`
          */
         private fun convertedCoroutinePromiseHandler(
             s: TmpL.Statement,
