@@ -1361,7 +1361,7 @@ class CppTranslator(
         return when (value.typeTag) {
             TBoolean -> cpp.literal(TBoolean.unpack(value))
             TInt -> cpp.literal(TInt.unpack(value))
-            TInt64 -> cpp.literal(cpp.raw("${TInt64.unpack(value)}LL"))
+            TInt64 -> cpp.literal(TInt64.unpack(value))
             TFloat64 -> {
                 val d = TFloat64.unpack(value)
                 when {
