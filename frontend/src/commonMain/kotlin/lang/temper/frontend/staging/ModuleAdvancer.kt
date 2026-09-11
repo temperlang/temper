@@ -15,6 +15,7 @@ import lang.temper.common.putMultiList
 import lang.temper.env.Exporter
 import lang.temper.env.InterpMode
 import lang.temper.format.ConsoleBackedContextualLogSink
+import lang.temper.frontend.BindingsInjector
 import lang.temper.frontend.Module
 import lang.temper.frontend.core.CoreModule
 import lang.temper.frontend.core.accessStdWrapped
@@ -52,6 +53,7 @@ import lang.temper.log.SharedLocationContext
 import lang.temper.log.UNIX_FILE_SEGMENT_SEPARATOR
 import lang.temper.log.bannedPathSegmentNames
 import lang.temper.log.unknownPos
+import lang.temper.name.BackendId
 import lang.temper.name.CoreCodeLocation
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.LibraryNameLocationKey
@@ -76,6 +78,7 @@ import lang.temper.value.fileRestrictedBuiltinName
 import lang.temper.value.valueContained
 import lang.temper.value.void
 import java.io.IOException
+import java.util.Collections
 
 /** Makes an effort to resolve an imported specifier to an exporter. */
 interface ImportResolver {
@@ -672,7 +675,7 @@ private class GroupOfModulesToAdvanceTogether(
             val lastStageCompleted = m.stageCompleted
             val isConfigModule = m.isConfigModule
             if (lastStageCompleted == stageBeforeRun && readyToRun != null && !isConfigModule) {
-                readyToRun!!.add(m)
+                readyToRun.add(m)
                 continue
             }
             val shouldAdvance = when {
@@ -964,7 +967,10 @@ private fun buildStdModules(
     advancer.configureLibrary(tentativeStdLibraryConfiguration)
     val stdModuleConfig = ModuleConfig.default.copy(mayRun = true)
 
-    val fs = accessStdWrapped() ?: throw IOException("Can't access std")
+    val configPluginSource = sharedStdConfigPlugins.values
+        .filter { it.source.isNotEmpty() } // Just to keep things a bit cleaner.
+        .joinToString("\n") { it.source }
+    val fs = accessStdWrapped(configPluginSource) ?: throw IOException("Can't access std")
     val snapshot = FilteringFileSystemSnapshot(fs, FileFilterRules.Allow)
 
     val libraryRoot = tentativeStdLibraryConfiguration.libraryRoot
@@ -989,6 +995,12 @@ private fun buildStdModules(
                         ) { it.fullName }
                     }
                     this[specifier] = module
+                    // Also add config injectors.
+                    if (module.isConfigModule) {
+                        for (plugin in sharedStdConfigPlugins.values) {
+                            module.addBindingsInjector(plugin.injector)
+                        }
+                    }
                 }
             }
         }
@@ -1066,6 +1078,21 @@ private class ModuleAdvancerContinueConditionImpl : ContinueCondition {
     override fun toString(): String = "ModuleAdvancerContinueConditionImpl(${count[0]})"
 }
 
+/** Needed for including config for our bundled backends in std. */
+private val sharedStdConfigPlugins = Collections.synchronizedMap(mutableMapOf<BackendId, SharedStdConfigPlugin>())
+
+data class SharedStdConfigPlugin(
+    /** For defining config support especially config schema classes. */
+    val injector: BindingsInjector,
+
+    /** For actual std config, using the injected config support. */
+    val source: String,
+)
+
+fun plugInSharedStdConfig(backendId: BackendId, plugin: SharedStdConfigPlugin) {
+    sharedStdConfigPlugins[backendId] = plugin
+}
+
 private val sharedStdModules = lazy {
     val logSink = ConsoleBackedContextualLogSink(
         console,
@@ -1112,7 +1139,7 @@ private fun toLocalSpecifier(
     return null
 }
 
-private val Module.isConfigModule: Boolean
+val Module.isConfigModule: Boolean
     get() = when (loc) {
         is ModuleName -> when {
             loc.isPreface -> false
