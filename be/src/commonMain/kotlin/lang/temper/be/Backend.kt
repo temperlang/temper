@@ -1026,9 +1026,13 @@ data class BackendOrganization(
     val adjusterFactories: Map<BackendId, BackendAdjusterFactory> = mapOf(),
 ) {
     /** Helper for registering std config injectors, including for backends that might not be active. */
-    fun addSharedStdConfigInjectors() {
-        for (factory in factoriesById.values) {
-            factory.configBindingsInjector?.also { injector ->
+    fun addSharedStdConfigInjectors(supportedBackends: List<BackendId>) {
+        // It's likely that all our factory ids are in the supported list, but include all, just in case.
+        val allIds = factoriesById.keys + supportedBackends
+        for (id in allIds) {
+            // And use the factories we already have before looking up others.
+            val factory = factoriesById[id] ?: lookupFactory(id)
+            factory?.configBindingsInjector?.also { injector ->
                 val plugin = SharedStdConfigPlugin(injector, factory.loadStdConfigSource())
                 plugInSharedStdConfig(factory.backendId, plugin)
             }

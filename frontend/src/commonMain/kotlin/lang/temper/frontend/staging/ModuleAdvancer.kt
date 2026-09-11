@@ -967,7 +967,9 @@ private fun buildStdModules(
     advancer.configureLibrary(tentativeStdLibraryConfiguration)
     val stdModuleConfig = ModuleConfig.default.copy(mayRun = true)
 
-    val configPluginSource = sharedStdConfigPlugins.values.joinToString("\n") { it.source }
+    val configPluginSource = sharedStdConfigPlugins.values
+        .filter { it.source.isNotEmpty() } // Just to keep things a bit cleaner.
+        .joinToString("\n") { it.source }
     val fs = accessStdWrapped(configPluginSource) ?: throw IOException("Can't access std")
     val snapshot = FilteringFileSystemSnapshot(fs, FileFilterRules.Allow)
 

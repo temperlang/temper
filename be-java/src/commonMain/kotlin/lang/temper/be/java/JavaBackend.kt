@@ -401,7 +401,13 @@ class JavaBackend private constructor(
         val pomMime = MimeType("text", "xml")
 
         override val configBindingsInjector: BindingsInjector = JavaConfigInjector
-        override fun loadStdConfigSource(): String = stdConfigResource.load()
+
+        override fun loadStdConfigSource(): String = when (lang) {
+            // Any time java8 is available (or other potential variations), java also will be.
+            // And we we don't want duplicate code in std config, so go with just one.
+            JavaLang.Java17 -> stdConfigResource.load()
+            else -> ""
+        }
 
         override fun make(setup: BackendSetup<JavaBackend>) = JavaBackend(this, setup)
     }

@@ -45,6 +45,7 @@ import lang.temper.name.CoreCodeLocation
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ModuleLocation
 import lang.temper.name.ModuleName
+import lang.temper.supportedBackends.supportedBackends
 import lang.temper.tests.FunctionalTestBase
 import lang.temper.tests.FunctionalTestSuiteI
 import lang.temper.tests.PreparedFunctionalTest
@@ -133,7 +134,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
             lookupFactory = ::lookupFactory,
             onError = { error(it) },
         )
-        backendOrganization.addSharedStdConfigInjectors()
+        backendOrganization.addSharedStdConfigInjectors(supportedBackends)
         // TODO Actually build by buckets?
         val outputRoot = OutputRoot(MemoryFileSystem())
         val inputs = test.temperFiles.toList()
