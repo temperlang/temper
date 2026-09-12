@@ -1145,9 +1145,7 @@ class CppTranslator(
                 val numNonRest = numRequired +
                     optionalTypes.size
                 val isSuperCall = (fn as? TmpL.MethodReference)?.subject is TmpL.SuperSubject
-                val paramTypes = ctxSig.requiredInputTypes.drop(
-                    if (sig.hasThisFormal || isSuperCall) 1 else 0,
-                )
+                val paramTypes = ctxSig.requiredInputTypes
                 val translatedArgs = mutableListOf<Cpp.Expr>()
                 val parameters = when {
                     isSuperCall -> expr.parameters.subListToEnd(1) // called on (borrowed) `this`
