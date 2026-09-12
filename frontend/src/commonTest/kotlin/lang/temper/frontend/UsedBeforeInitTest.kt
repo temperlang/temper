@@ -293,18 +293,12 @@ class UsedBeforeInitTest {
             """
                 |{
                 |  pseudoCodeAfter: ```
-                |    let return__0;
-                |    var t#0, t#1, fail#0;
+                |    var return__0;
                 |    orelse#0: {
-                |      t#0 = hs(fail#0, randomInt(0, 100) / randomInt(0, 10));
-                |      if (fail#0) {
-                |        break orelse#0;
-                |      };
-                |      t#1 = t#0
+                |      return__0 = randomInt(0, 100) / randomInt(0, 10)
                 |    } orelse {
-                |      t#1 = -1
-                |    };
-                |    return__0 = t#1
+                |      return__0 = -1
+                |    }
                 |
                 |    ```,
                 |}

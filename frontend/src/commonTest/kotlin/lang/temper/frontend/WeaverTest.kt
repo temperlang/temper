@@ -1,687 +1,1304 @@
 package lang.temper.frontend
 
+import lang.temper.ast.TreeVisit
+import lang.temper.builtin.Assign
+import lang.temper.builtin.AwaitFn
 import lang.temper.builtin.BuiltinFuns
-import lang.temper.common.AtomicCounter
-import lang.temper.common.Console
-import lang.temper.common.ForwardOrBack
+import lang.temper.builtin.BuiltinLogicalOperators
+import lang.temper.builtin.Types
+import lang.temper.builtin.vTypeAngleFn
 import lang.temper.common.LeftOrRight
-import lang.temper.common.ListBackedLogSink
-import lang.temper.common.SnapshotKey
-import lang.temper.common.Snapshotter
 import lang.temper.common.TestDocumentContext
 import lang.temper.common.console
-import lang.temper.common.structure.Structured
+import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.common.testCodeLocation
-import lang.temper.common.testModuleName
-import lang.temper.common.toStringViaTextOutput
+import lang.temper.common.withCapturingConsole
 import lang.temper.env.InterpMode
 import lang.temper.format.CollectedTokens
 import lang.temper.format.OutToks
 import lang.temper.format.OutputToken
 import lang.temper.format.OutputTokenType
 import lang.temper.format.toStringViaTokenSink
-import lang.temper.frontend.staging.ModuleAdvancer
-import lang.temper.lexer.Genre
-import lang.temper.lexer.StandaloneLanguageConfig
-import lang.temper.log.Debug
-import lang.temper.log.FilePositions
+import lang.temper.frontend.typestage.MakeResultsExplicit
 import lang.temper.log.Position
-import lang.temper.log.excerpt
-import lang.temper.log.toReadablePosition
-import lang.temper.log.unknownPos
 import lang.temper.name.BuiltinName
+import lang.temper.name.ExportedName
 import lang.temper.name.ParsedName
-import lang.temper.name.ResolvedNameMaker
-import lang.temper.name.Symbol
-import lang.temper.name.TemperName
-import lang.temper.stage.Stage
 import lang.temper.type.TypeFormal
-import lang.temper.type.Variance
-import lang.temper.type.WellKnownTypes
+import lang.temper.type.plantCallWithTypeInfo
 import lang.temper.type2.MkType2
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
+import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.value.BlockChildReference
+import lang.temper.value.BlockPlanting
+import lang.temper.value.BlockTree
+import lang.temper.value.BubbleFn
 import lang.temper.value.ControlFlow
 import lang.temper.value.DefaultJumpSpecifier
 import lang.temper.value.Document
+import lang.temper.value.JumpLabel
 import lang.temper.value.MacroEnvironment
-import lang.temper.value.MaximalPaths
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.NamedJumpSpecifier
 import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
+import lang.temper.value.Planting
+import lang.temper.value.ReifiedType
 import lang.temper.value.StructuredFlow
 import lang.temper.value.TBoolean
+import lang.temper.value.TInt
+import lang.temper.value.TNull
+import lang.temper.value.TString
+import lang.temper.value.TType
 import lang.temper.value.UnresolvedJumpSpecifier
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 import lang.temper.value.blockPartialEvaluationOrder
-import lang.temper.value.forwardMaximalPaths
+import lang.temper.value.fnParsedName
+import lang.temper.value.freeTarget
 import lang.temper.value.isEmptyBlock
-import lang.temper.value.orderedPathIndices
+import lang.temper.value.returnParsedName
+import lang.temper.value.simplifyControlFlow
 import lang.temper.value.toPseudoCode
+import lang.temper.value.typeFromSignature
+import lang.temper.value.vLabelSymbol
+import lang.temper.value.vReturnDeclSymbol
+import lang.temper.value.vSsaSymbol
+import lang.temper.value.vStaySymbol
+import lang.temper.value.vTypeSymbol
+import lang.temper.value.vVarSymbol
+import lang.temper.value.varSymbol
 import lang.temper.value.void
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import lang.temper.type.WellKnownTypes as WKT
+
+// Below, we use fake builtin functions to simplify testing with various kinds of calls.
+// `b` and `bb` are boolean returning functions useful in conditions.  `bb` can bubble.
+// `f` and `ff` are `Int32` returning. `ff` can bubble.
+// `v` and `vv` are `void` returning. `vv` can bubble.
 
 class WeaverTest {
     @Test
     fun linear() = assertWovenRoot(
-        input = """
-            |f(1);
-            |f(2)
-        """.trimMargin(),
         want = """
-            |[[ var t#2 ]];
-            |[[ var fail#0 ]];
-            |[[ var fail#1 ]];
-            |[[ hs(fail#0, f(1)) ]];
-            |if ([[ fail#0 ]]) {
-            |  [[ bubble() ]];
-            |}
-            |[[ t#2 = hs(fail#1, f(2)) ]];
-            |if ([[ fail#1 ]]) {
-            |  [[ bubble() ]];
-            |}
-            |[[ t#2 ]];
+            |[[ let return__0 ]];
+            |[[ f(1) ]];
+            |[[ return__0 = f(1) ]];
         """.trimMargin(),
-    )
+    ) {
+        CallF { V(1) }
+        CallF { V(1) }
+    }
+
+    @Test
+    fun linearVoid() = assertWovenRoot(
+        want = """
+            |[[ let return__0 ]];
+            |[[ v(1) ]];
+            |[[ v(1) ]];
+            |[[ return__0 = void ]];
+        """.trimMargin(),
+    ) {
+        CallV { V(1) }
+        CallV { V(1) }
+    }
+
+    @Test
+    fun linearBubblyVoid() = assertWovenRoot(
+        want = """
+            |[[ let return__0 ]];
+            |[[ vv(1) ]];
+            |[[ vv(1) ]];
+            |[[ return__0 = void ]];
+        """.trimMargin(),
+    ) {
+        CallVV { V(1) }
+        CallVV { V(1) }
+    }
+
+    @Test
+    fun nestingAssignments() = assertWovenRoot(
+        // var a, b, c, d;
+        // a = b = c = d = f(0)
+        want = """
+            |[[ let return__4 ]];
+            |[[ let t#5 ]];
+            |[[ var a__0 ]];
+            |[[ var b__1 ]];
+            |[[ var c__2 ]];
+            |[[ var d__3 ]];
+            |[[ t#5 = f(0) ]];
+            |[[ d__3 = t#5 ]];
+            |[[ c__2 = t#5 ]];
+            |[[ b__1 = t#5 ]];
+            |[[ a__0 = t#5 ]];
+            |[[ return__4 = t#5 ]];
+        """.trimMargin(),
+    ) {
+        val vars = listOf("a", "b", "c", "d")
+            .map { nameMaker.unusedSourceName(ParsedName(it)) }
+        val (a, b, c, d) = vars
+        Block {
+            for (v in vars) {
+                Decl {
+                    Ln(v, WKT.intType)
+                    V(vVarSymbol)
+                    V(void)
+                }
+            }
+            Assign(a, WKT.intType) {
+                Assign(b, WKT.intType) {
+                    Assign(c, WKT.intType) {
+                        Assign(d, WKT.intType) {
+                            CallF { V(0) }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     @Test
     fun nestedIfs() = assertWovenRoot(
-        input = """
-            |if (b(1)) {
-            |  f(2);
-            |  if (f(3)) {
-            |    f(4)
-            |  } else {
-            |    f(5)
-            |  }
-            |} else {
-            |  f(6)
-            |}
-        """.trimMargin(),
+        /*
+         * if (b(1)) {
+         *   f(2);
+         *   if (bb(3)) {
+         *     f(4)
+         *   } else {
+         *     ff(5)
+         *   }
+         * } else {
+         *   f(6)
+         * }
+         */
         want = """
-            |[[ var t#8 ]];
-            |[[ var t#9 ]];
-            |[[ var t#10 ]];
-            |[[ var t#11 ]];
-            |[[ var t#12 ]];
-            |[[ var t#13 ]];
-            |[[ var t#14 ]];
-            |[[ var t#15 ]];
-            |[[ var fail#2 ]];
-            |[[ var fail#3 ]];
-            |[[ var fail#4 ]];
-            |[[ var fail#5 ]];
-            |[[ var fail#6 ]];
-            |[[ var fail#7 ]];
-            |[[ t#8 = hs(fail#2, b(1)) ]];
-            |if ([[ fail#2 ]]) {
-            |  [[ bubble() ]];
-            |}
-            |if ([[ t#8 ]]) {
-            |  [[ hs(fail#3, f(2)) ]];
-            |  if ([[ fail#3 ]]) {
-            |    [[ bubble() ]];
-            |  }
-            |  [[ t#9 = hs(fail#4, f(3)) ]];
-            |  if ([[ fail#4 ]]) {
-            |    [[ bubble() ]];
-            |  }
-            |  if ([[ t#9 ]]) {
-            |    [[ t#10 = hs(fail#5, f(4)) ]];
-            |    if ([[ fail#5 ]]) {
-            |      [[ bubble() ]];
-            |    }
-            |    [[ t#12 = t#10 ]];
+            |[[ let return__0 ]];
+            |if ([[ b(1) ]]) {
+            |  [[ f(2) ]];
+            |  [[ let t#1 ]];
+            |  [[ t#1 = bb(3) ]];
+            |  if ([[ t#1 ]]) {
+            |    [[ return__0 = f(4) ]];
             |  } else {
-            |    [[ t#11 = hs(fail#6, f(5)) ]];
-            |    if ([[ fail#6 ]]) {
-            |      [[ bubble() ]];
-            |    }
-            |    [[ t#12 = t#11 ]];
+            |    [[ return__0 = ff(5) ]];
             |  }
-            |  [[ t#13 = t#12 ]];
-            |  [[ t#15 = t#13 ]];
             |} else {
-            |  [[ t#14 = hs(fail#7, f(6)) ]];
-            |  if ([[ fail#7 ]]) {
-            |    [[ bubble() ]];
-            |  }
-            |  [[ t#15 = t#14 ]];
+            |  [[ return__0 = f(6) ]];
             |}
-            |[[ t#15 ]];
         """.trimMargin(),
+    ) {
+        If(
+            { CallB { V(1) } },
+            thn = {
+                CallF { V(2) }
+                If(
+                    { CallBB { V(3) } },
+                    thn = { CallF { V(4) } },
+                    els = { CallFF { V(5) } },
+                )
+            },
+            els = {
+                CallF { V(6) }
+            },
+        )
+    }
+
+    @Test
+    fun ifNoReturnVar() = assertWovenRoot(
+        runMakeResultsExplicit = false,
+        /*
+         * if (b(0)) {
+         *   "foo"
+         * } else {
+         *   "bar"
+         * }
+         */
+        want = """
+            |if ([[ b(0) ]]) {
+            |  [[ t#0 = "foo" ]];
+            |} else {
+            |  [[ t#0 = "bar" ]];
+            |}
+            |## And the temporary is ready for MakeResultsExplicit to run after.
+            |[[ t#0 ]];
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    ) {
+        If(
+            { CallB { V(0) } },
+            thn = {
+                V(Value("foo", TString), WKT.stringType)
+            },
+            els = {
+                V(Value("bar", TString), WKT.stringType)
+            },
+        )
+    }
+
+    @Test
+    fun nestedIfsWithDifferentAssignees() = assertWovenRoot(
+        buildInput = {
+            val x = nameMaker.unusedSourceName(ParsedName("x"))
+            val y = nameMaker.unusedSourceName(ParsedName("y"))
+            val z = nameMaker.unusedSourceName(ParsedName("z"))
+            If(
+                { CallB { V(1) } },
+                thn = {
+                    CallF { V(2) }
+                    If(
+                        { CallFF { V(3) } },
+                        thn = {
+                            Assign(y, WKT.booleanType) { V(TBoolean.valueFalse) }
+                            Assign(x, WKT.booleanType) { CallF { V(4) } }
+                        },
+                        els = {
+                            Assign(x, WKT.booleanType) { V(TBoolean.valueTrue) }
+                            Assign(y, WKT.booleanType) { CallFF { V(5) } }
+                        },
+                    )
+                },
+                els = {
+                    Assign(x, WKT.booleanType) {
+                        Assign(y, WKT.booleanType) {
+                            CallF { V(6) }
+                        }
+                    }
+                },
+            )
+            plantCallWithTypeInfo(BuiltinFuns.eqGenericFn) {
+                plantCallWithTypeInfo(BuiltinFuns.eqGenericFn) {
+                    Rn(x, WKT.booleanType)
+                    Rn(y, WKT.booleanType)
+                }
+                Rn(z, WKT.booleanType)
+            }
+        },
+        /*
+         * let x, y, z;
+         * z = if (b(1)) {
+         *   f(2);
+         *   if (bb(3)) {
+         *     y = false;
+         *     x = f(4)
+         *   } else {
+         *     x = true;
+         *     y = ff(5)
+         *   }
+         * } else {
+         *   x = y = f(6)
+         * };
+         * (x == y) == z
+         */
+        want = """
+            |## t#5, t#6, and t#7 are assigned inside the `if`s but used outside so cannot
+            |## be declared within.
+            |[[ let t#5 ]];
+            |[[ let return__3 ]];
+            |if ([[ b(1) ]]) {
+            |  [[ f(2) ]];
+            |## t#4 is not needed outside this scope, so it's allocated here.
+            |  [[ let t#4 ]];
+            |  [[ t#4 = ff(3) ]];
+            |  if ([[ t#4 ]]) {
+            |    [[ y__1 = false ]];
+            |    [[ x__0 = f(4) ]];
+            |## Here, the result of the assignment is captured but without
+            |## introducing a nesting assignment like `t#5 = x__0 = f(4)`.
+            |    [[ t#5 = x__0 ]];
+            |  } else {
+            |    [[ x__0 = true ]];
+            |    [[ y__1 = ff(5) ]];
+            |    [[ t#5 = y__1 ]];
+            |  }
+            |} else {
+            |  [[ y__1 = f(6) ]];
+            |  [[ x__0 = y__1 ]];
+            |  [[ t#5 = x__0 ]];
+            |## Same here, and the assignment `x = y = b(6)` has flattened out.
+            |}
+            |[[ return__3 = x__0 == y__1 == z__2 ]];
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
     @Test
-    fun labeledBreaksResolved() = assertWovenRoot(
-        input = """
-            |label: do {
-            |  if (b(1)) {
-            |    break label;
-            |  }
-            |  f(2);
-            |}
-        """.trimMargin(),
-        // The numerical suffix on label shows resolution.
+    fun orElse() = assertWovenRoot(
+        // var x;
+        // x =
+        //   do {
+        //     ff(1)
+        //   } orelse do {
+        //     f(2)
+        //   };
+        // !x
+        buildInput = {
+            val x = nameMaker.unusedSourceName(ParsedName("x"))
+            Decl {
+                Ln(x, WKT.booleanType)
+                V(varSymbol)
+                V(void)
+            }
+            Assign(x, WKT.booleanType) {
+                Block {
+                    OrElse(
+                        or = {
+                            Do {
+                                CallFF { V(1) }
+                            }
+                        },
+                        els = {
+                            Do {
+                                CallF { V(2) }
+                            }
+                        },
+                    )
+                }
+            }
+            plantCallWithTypeInfo(BuiltinFuns.notFn) {
+                Rn(x, WKT.booleanType)
+            }
+        },
         want = """
             |[[ var t#3 ]];
-            |[[ var t#4 ]];
-            |label__0: do {
-            |  [[ var fail#1 ]];
-            |  [[ var fail#2 ]];
-            |  [[ t#3 = hs(fail#1, b(1)) ]];
-            |  if ([[ fail#1 ]]) {
-            |    [[ bubble() ]];
-            |  }
-            |  if ([[ t#3 ]]) {
-            |    break label__0;
-            |  } else {}
-            |  [[ t#4 = hs(fail#2, f(2)) ]];
-            |  if ([[ fail#2 ]]) {
-            |    [[ bubble() ]];
-            |  }
-            |  [[ t#4 ]];
-            |}
-        """.trimMargin(),
-    )
-
-    @Test
-    fun localFailsResolvedToBreaks() = assertWovenRoot(
-        input = """
-            |do { ff(1) } orelse do { f(2) }
-        """.trimMargin(),
-        want = """
-            |[[ var t#3 ]];
-            |[[ var t#4 ]];
-            |[[ var t#5 ]];
-            |[[ var t#6 ]];
-            |[[ var t#7 ]];
-            |[[ var fail#1 ]];
-            |[[ var fail#2 ]];
-            |orelse#0: do {
-            |  [[ t#3 = hs(fail#1, ff(1)) ]];
-            |  if ([[ fail#1 ]]) {
-            |    break orelse#0;
-            |  }
-            |  [[ t#4 = t#3 ]];
-            |  [[ t#7 = t#4 ]];
+            |[[ let return__2 ]];
+            |[[ var x__0 ]];
+            |orElse#1: do {
+            |  [[ t#3 = ff(1) ]];
             |} orelse {
-            |  [[ t#5 = hs(fail#2, f(2)) ]];
-            |  if ([[ fail#2 ]]) {
-            |    [[ bubble() ]];
-            |  }
-            |  [[ t#6 = t#5 ]];
-            |  [[ t#7 = t#6 ]];
+            |  [[ t#3 = f(2) ]];
             |}
-            |[[ t#7 ]];
+            |[[ x__0 = t#3 ]];
+            |[[ return__2 = !x__0 ]];
         """.trimMargin(),
     )
 
     @Test
     fun localFailsWithoutSurroundingBlocks() = assertWovenRoot(
-        input = """
-            |ff(1) orelse f(2)
-        """.trimMargin(),
+        // ff(1) orelse f(2)
+        buildInput = {
+            Block {
+                OrElse({ CallFF { V(1) } }, { CallF { V(2) } })
+            }
+        },
+        // The return variable needs to be `var` so that later stages can
+        // do conservative analysis of the flow assuming that the assignment
+        // in the `else` clause can happen even after the first assignment
+        // succeeds.
         want = """
-            |[[ var t#3 ]];
-            |[[ var t#4 ]];
-            |[[ var t#5 ]];
-            |[[ var fail#1 ]];
-            |[[ var fail#2 ]];
-            |orelse#0: do {
-            |  [[ t#3 = hs(fail#1, ff(1)) ]];
-            |  if ([[ fail#1 ]]) {
-            |    break orelse#0;
-            |  }
-            |  [[ t#5 = t#3 ]];
+            |[[ var return__1 ]];
+            |orElse#0: do {
+            |  [[ return__1 = ff(1) ]];
             |} orelse {
-            |  [[ t#4 = hs(fail#2, f(2)) ]];
-            |  if ([[ fail#2 ]]) {
-            |    [[ bubble() ]];
-            |  }
-            |  [[ t#5 = t#4 ]];
+            |  [[ return__1 = f(2) ]];
             |}
-            |[[ t#5 ]];
         """.trimMargin(),
+    )
+
+    @Test
+    fun ifResultVarNotUsedOutOfScope() = assertWovenRoot(
+        // let y;
+        // y = 1 + do {
+        //   if (b(0)) {
+        //     let x;
+        //     if (b(1)) {
+        //       x = f(2);
+        //     } else {
+        //       x = f(3);
+        //     }
+        //   } else {
+        //     1
+        //   }
+        // };
+        buildInput = {
+            val x = nameMaker.unusedSourceName(ParsedName("x"))
+            val y = nameMaker.unusedSourceName(ParsedName("y"))
+            Block {
+                Decl { Ln(y, WKT.intType) }
+                Assign(y, WKT.intType) {
+                    plantCallWithTypeInfo(BuiltinFuns.plusIntIntFn) {
+                        V(1)
+                        Block {
+                            Decl { Ln(x, WKT.intType) }
+                            If(
+                                cond = { CallB { V(0) } },
+                                thn = {
+                                    If(
+                                        cond = { CallB { V(1) } },
+                                        thn = {
+                                            Assign(x, WKT.intType) { CallF { V(2) } }
+                                        },
+                                        els = {
+                                            Assign(x, WKT.intType) { CallF { V(3) } }
+                                        },
+                                    )
+                                },
+                                els = {
+                                    V(1)
+                                },
+                            )
+                        }
+                    }
+                }
+                V(void, WKT.voidType)
+            }
+        },
+        want = """
+            |[[ let return__2 ]];
+            |[[ return__2 = void ]];
+            |[[ let t#3 ]];
+            |[[ let y__1 ]];
+            |[[ let x__0 ]];
+            |if ([[ b(0) ]]) {
+            |  if ([[ b(1) ]]) {
+            |    [[ x__0 = f(2) ]];
+            |  } else {
+            |    [[ x__0 = f(3) ]];
+            |  }
+            |  [[ t#3 = x__0 ]];
+            |} else {
+            |  [[ t#3 = 1 ]];
+            |}
+            |[[ y__1 = 1 + t#3 ]];
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
     @Test
     fun loopContainingBreakAndContinue() = assertWovenRoot(
-        input = """
-            |while (b(0)) {
-            |  if (b(1)) {
-            |    f(2);
+        buildInput = {
+            While({ CallB { V(0) } }) {
+                If(
+                    { CallB { V(1) } },
+                    thn = {
+                        CallF { V(2) }
+                        Break()
+                        V(void)
+                    },
+                    els = {
+                        If(
+                            { CallB { V(3) } },
+                            thn = {
+                                CallF {
+                                    CallFF { V(4) }
+                                }
+                                Continue()
+                                V(void)
+                            },
+                            els = {
+                                CallF { V(5) }
+                                V(void)
+                            },
+                        )
+                    },
+                )
+                CallF { V(6) }
+                V(void)
+            }
+            CallF { V(7) }
+        },
+        /*
+         * while (b(0)) {
+         *   if (b(1)) {
+         *     f(2);
+         *     break;
+         *   } else if (b(3)) {
+         *     f(ff(4));
+         *     continue;
+         *   } else {
+         *     f(5);
+         *   }
+         *   f(6);
+         * }
+         * f(7)
+         */
+        want = """
+            |[[ let return__0 ]];
+            |for (;
+            |  [[ b(0) ]];
+            |) {
+            |  if ([[ b(1) ]]) {
+            |    [[ f(2) ]];
             |    break;
-            |  } else if (b(3)) {
-            |    f(4);
+            |  } else if ([[ b(3) ]]) {
+            |## Intermediate bubbly call is captured in a temporary.
+            |## But that temporary is never used outside the loop, so it
+            |## doesn't need to be declared `var`.
+            |    [[ let t#1 ]];
+            |    [[ t#1 = ff(4) ]];
+            |    [[ f(t#1) ]];
             |    continue;
             |  } else {
-            |    f(5);
+            |    [[ f(5) ]];
             |  }
-            |  f(6);
+            |  [[ f(6) ]];
             |}
-            |f(7)
-        """.trimMargin(),
-        want = """
-            |[[ var t#10 ]];
-            |[[ var t#11 ]];
-            |[[ var t#12 ]];
-            |[[ var t#13 ]];
-            |[[ var t#14 ]];
-            |[[ var fail#2 ]];
-            |[[ var fail#3 ]];
-            |[[ var fail#4 ]];
-            |[[ var fail#5 ]];
-            |[[ var fail#6 ]];
-            |[[ var fail#7 ]];
-            |[[ var fail#8 ]];
-            |[[ var fail#9 ]];
-            |for (;
-            |  [[ true ]];
-            |) {
-            |  [[ t#10 = hs(fail#2, b(0)) ]];
-            |  if ([[ fail#2 ]]) {
-            |    [[ bubble() ]];
-            |  }
-            |  if ([[ !t#10 ]]) {
-            |    break;
-            |  }
-            |  [[ t#11 = hs(fail#3, b(1)) ]];
-            |  if ([[ fail#3 ]]) {
-            |    [[ bubble() ]];
-            |  }
-            |  if ([[ t#11 ]]) {
-            |    [[ hs(fail#4, f(2)) ]];
-            |    if ([[ fail#4 ]]) {
-            |      [[ bubble() ]];
-            |    }
-            |    break;
-            |  } else {
-            |    [[ t#12 = hs(fail#5, b(3)) ]];
-            |    if ([[ fail#5 ]]) {
-            |      [[ bubble() ]];
-            |    }
-            |    if ([[ t#12 ]]) {
-            |      [[ hs(fail#6, f(4)) ]];
-            |      if ([[ fail#6 ]]) {
-            |        [[ bubble() ]];
-            |      }
-            |      continue;
-            |    } else {
-            |      [[ hs(fail#7, f(5)) ]];
-            |      if ([[ fail#7 ]]) {
-            |        [[ bubble() ]];
-            |      }
-            |    }
-            |  }
-            |  [[ t#13 = hs(fail#8, f(6)) ]];
-            |  if ([[ fail#8 ]]) {
-            |    [[ bubble() ]];
-            |  }
-            |  [[ t#13 ]];
-            |}
-            |[[ t#14 = hs(fail#9, f(7)) ]];
-            |if ([[ fail#9 ]]) {
-            |  [[ bubble() ]];
-            |}
-            |[[ t#14 ]];
-        """.trimMargin(),
+            |[[ return__0 = f(7) ]];
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
     @Test
     fun simpleDoWhileLoop() = assertWovenRoot(
-        input = """
-            |do {
-            |  f(0);
-            |} while (b(1));
-        """.trimMargin(),
+        /*
+         * do {
+         *  f(0);
+         * } while (b(1));
+         */
         want = """
-            |[[ var t#3 ]];
-            |[[ var fail#1 ]];
-            |[[ var fail#2 ]];
+            |[[ let return__0 ]];
+            |[[ return__0 = void ]];
             |do {
-            |  continue#4 & continue#4: do {
-            |    [[ hs(fail#2, f(0)) ]];
-            |    if ([[ fail#2 ]]) {
-            |      [[ bubble() ]];
+            |  [[ f(0) ]];
+            |} while ([[ b(1) ]]);
+        """.trimMargin(),
+    ) {
+        While(cond = { CallB { V(1) } }, testAt = LeftOrRight.Right) {
+            CallF { V(0) }
+        }
+    }
+
+    @Test
+    fun simpleWhileLoopWithBubblyCondition() = assertWovenRoot(
+        /*
+         * while (bb(1)) {
+         *   f(0);
+         * }
+         */
+        want = """
+            |[[ let return__0 ]];
+            |[[ return__0 = void ]];
+            |for (;
+            |  [[ true ]];
+            |) {
+            |  [[ let t#1 ]];
+            |  [[ t#1 = bb(1) ]];
+            |  if ([[ !t#1 ]]) {
+            |    break;
+            |  }
+            |  [[ f(0) ]];
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    ) {
+        While(cond = { CallBB { V(1) } }, testAt = LeftOrRight.Left) {
+            CallF { V(0) }
+        }
+    }
+
+    @Test
+    fun simpleWhileLoopWithTrappedBubblesInBody() = assertWovenRoot(
+        /*
+         * while (b(0)) {
+         *   let x = ff(1) orelse -1;
+         *   f(x);
+         * }
+         */
+        want = """
+            |[[ let return__2 ]];
+            |[[ return__2 = void ]];
+            |for (;
+            |  [[ b(0) ]];
+            |) {
+            |  [[ var t#3 ]];
+            |  [[ let x__0 ]];
+            |  orElse#1: do {
+            |    [[ t#3 = ff(1) ]];
+            |  } orelse {
+            |    [[ t#3 = -1 ]];
+            |  }
+            |  [[ x__0 = t#3 ]];
+            |  [[ f(x__0) ]];
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    ) {
+        val x = nameMaker.unusedSourceName(ParsedName("x"))
+        While(cond = { CallB { V(0) } }, testAt = LeftOrRight.Left) {
+            Decl { Ln(x) }
+            Assign(x, null) {
+                Block {
+                    OrElse(
+                        or = { Call(ffCallee) { V(1) } },
+                        els = { V(-1) },
+                    )
+                }
+            }
+            CallF { Rn(x) }
+        }
+    }
+
+    @Test
+    fun simpleDoWhileLoopWithBubblyCondition() = assertWovenRoot(
+        /*
+         * do {
+         *  f(0);
+         * } while (bb(1));
+         */
+        want = """
+            |[[ let return__0 ]];
+            |[[ return__0 = void ]];
+            |for (;
+            |  [[ true ]];
+            |) {
+            |  [[ let t#1 ]];
+            |  [[ f(0) ]];
+            |  [[ t#1 = bb(1) ]];
+            |  if ([[ !t#1 ]]) {
+            |    break;
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    ) {
+        While(cond = { CallBB { V(1) } }, testAt = LeftOrRight.Right) {
+            CallF { V(0) }
+        }
+    }
+
+    @Test
+    fun doWhileLoopWithBubblyConditionAndNestedContinue() = assertWovenRoot(
+        /*
+         * lbl: do {
+         *  if (b(0)) {
+         *    continue;
+         *  } else if (b(1)) {
+         *    break;
+         *  } else if (b(2)) {
+         *    continue lbl;
+         *  }
+         *  f(3);
+         * } while (bb(4));
+         */
+        want = """
+            |[[ let return__1 ]];
+            |[[ return__1 = void ]];
+            |lbl__0: for (;
+            |  [[ true ]];
+            |) {
+            |  [[ let t#3 ]];
+            |  continue#2 & continue#2: do {
+            |    if ([[ b(0) ]]) {
+            |## Rewritten continue
+            |      continue continue#2;
+            |    } else if ([[ b(1) ]]) {
+            |      break;
+            |    } else if ([[ b(2) ]]) {
+            |## Ditto
+            |      continue continue#2;
             |    }
+            |## Rest of body as normal
+            |    [[ f(3) ]];
             |  }
-            |  [[ t#3 = hs(fail#1, b(1)) ]];
-            |  if ([[ fail#1 ]]) {
-            |    [[ bubble() ]];
-            |  }
+            |##^ This end of block is where the continue goes to
+            |## so it's queued up for the condition that follows.
+            |  [[ t#3 = bb(4) ]];
             |  if ([[ !t#3 ]]) {
             |    break;
             |  }
-            |} while ([[ true ]]);
-        """.trimMargin(),
-    )
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    ) {
+        val lbl: JumpLabel = nameMaker.unusedSourceName(ParsedName("lbl"))
+        While(cond = { CallBB { V(4) } }, testAt = LeftOrRight.Right, label = lbl) {
+            If(
+                cond = { CallB { V(0) } },
+                thn = { Continue(label = null) },
+                els = {
+                    If(
+                        cond = { CallB { V(1) } },
+                        thn = { Break(label = null) },
+                        els = {
+                            If(
+                                cond = { CallB { V(2) } },
+                                thn = { Continue(label = lbl) },
+                                els = {},
+                            )
+                        },
+                    )
+                },
+            )
+            CallF { V(3) }
+        }
+    }
 
     @Test
     fun matchNums() = assertWovenRoot(
-        input = """
-            |when (x) {
-            |  0 -> "zero";
-            |  1 -> "one";
-            |  2 -> "two";
-            |  else -> "many";
-            |}
-        """.trimMargin(),
+        /*
+         * let s = when (x) {
+         *   0 -> "zero";
+         *   1 -> "one";
+         *   2 -> "two";
+         *   else -> "many";
+         * };
+         * s
+         *
+         * That is equivalent to:
+         *
+         * let s = if (x == 0) {
+         *   "zero"
+         * } else if (x == 1) {
+         *   "one"
+         * } else if (x == 2) {
+         *   "two"
+         * } else {
+         *   "many"
+         * };
+         * s
+         */
         want = """
-            |[[ var t#3 ]];
-            |if ([[ x == 0 ]]) {
-            |  [[ t#3 = "zero" ]];
-            |} else if ([[ x == 1 ]]) {
+            |## One temporary allocated even though results are KnownValueCaptureResults
+            |[[ let t#3 ]];
+            |[[ let return__2 ]];
+            |[[ let s__1 ]];
+            |if ([[ x__0 == 0 ]]) {
             |  [[ t#3 = "one" ]];
-            |} else if ([[ x == 2 ]]) {
+            |} else if ([[ x__0 == 1 ]]) {
             |  [[ t#3 = "two" ]];
+            |} else if ([[ x__0 == 3 ]]) {
+            |  [[ t#3 = "three" ]];
             |} else {
             |  [[ t#3 = "many" ]];
             |}
-            |[[ t#3 ]];
-        """.trimMargin(),
-    )
+            |[[ s__1 = t#3 ]];
+            |[[ return__2 = s__1 ]];
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    ) {
+        val x = nameMaker.unusedSourceName(ParsedName("x"))
+        val s = nameMaker.unusedSourceName(ParsedName("s"))
+        Decl { Ln(s, WKT.stringType) }
+        Assign(s, WKT.stringType) {
+            Block {
+                If(
+                    {
+                        plantCallWithTypeInfo(BuiltinFuns.eqIntFn) {
+                            Rn(x)
+                            V(0)
+                        }
+                    },
+                    thn = { V(Value("one", TString), WKT.stringType) },
+                    els = {
+                        If(
+                            {
+                                plantCallWithTypeInfo(BuiltinFuns.eqIntFn) {
+                                    Rn(x)
+                                    V(1)
+                                }
+                            },
+                            thn = { V(Value("two", TString), WKT.stringType) },
+                            els = {
+                                If(
+                                    {
+                                        plantCallWithTypeInfo(BuiltinFuns.eqIntFn) {
+                                            Rn(x)
+                                            V(3)
+                                        }
+                                    },
+                                    thn = { V(Value("three", TString), WKT.stringType) },
+                                    els = { V(Value("many", TString), WKT.stringType) },
+                                )
+                            },
+                        )
+                    },
+                )
+            }
+        }
+        Rn(s, WKT.stringType)
+    }
 
     @Test
     fun divOrElse() = assertWovenRoot(
-        input = """
-            |(x / y) orelse -1
-        """.trimMargin(),
+        // let z = (x / y) orelse -1;
+        // z
         want = """
-            |[[ var t#2 ]];
-            |[[ var t#3 ]];
-            |[[ var fail#1 ]];
-            |orelse#0: do {
-            |  [[ t#2 = hs(fail#1, x / y) ]];
-            |  if ([[ fail#1 ]]) {
-            |    break orelse#0;
-            |  }
-            |  [[ t#3 = t#2 ]];
+            |[[ var t#5 ]];
+            |[[ let return__4 ]];
+            |[[ let z__2 ]];
+            |orElse#3: do {
+            |  [[ t#5 = x__0 / y__1 ]];
             |} orelse {
-            |  [[ t#3 = -1 ]];
+            |  [[ t#5 = -1 ]];
             |}
-            |[[ t#3 ]];
+            |[[ z__2 = t#5 ]];
+            |[[ return__4 = z__2 ]];
         """.trimMargin(),
-    )
+    ) {
+        val x = nameMaker.unusedSourceName(ParsedName("x"))
+        val y = nameMaker.unusedSourceName(ParsedName("y"))
+        val z = nameMaker.unusedSourceName(ParsedName("z"))
+        Decl { Ln(z, WKT.intType) }
+        Assign(z, WKT.intType) {
+            Block {
+                OrElse(
+                    or = {
+                        plantCallWithTypeInfo(BuiltinFuns.divIntIntFn) {
+                            Rn(x)
+                            Rn(y)
+                        }
+                    },
+                    els = {
+                        V(-1)
+                    },
+                )
+            }
+        }
+        Rn(z, WKT.intType)
+    }
 
     @Test
     fun ifThenOrElseAssigned() = assertWovenRoot(
-        input = """
-            |let s(): String { panic() }
-            |
-            |let x: String? = (
-            |  if (b) {
-            |    s()
-            |  } else {
-            |    s()
-            |  }
-            |) orelse null // This `null` was not getting assigned to the same temporary as other branches.
-        """.trimMargin(),
+        /*
+         * let x: Int?;
+         * x = (
+         *   if (b(0)) {
+         *     f(1)
+         *   } else {
+         *     ff(2)
+         *   }
+         * ) orelse null
+         */
         want = """
-            |[[ var t#6 ]];
-            |[[ var t#7 ]];
-            |[[ @fn let s__2 ]];
-            |[[ s__2 = (@stay fn s /* return__1 */: String {
-            |    fn__4: do {
-            |      panic()
-            |    }
-            |}) ]];
-            |[[ let x__3: String? ]];
-            |orelse#5: do {
-            |  if ([[ b ]]) {
-            |    [[ t#6 = (fn s)() ]];
+            |[[ let return__2 ]];
+            |[[ let x__0: Int32? ]];
+            |[[ var t#3 ]];
+            |orElse#1: do {
+            |  if ([[ b(0) ]]) {
+            |    [[ t#3 = f(1) ]];
             |  } else {
-            |    [[ t#6 = (fn s)() ]];
+            |    [[ t#3 = ff(2) ]];
             |  }
-            |  [[ t#7 = t#6 ]];
             |} orelse {
-            |  [[ t#7 = null ]];
+            |  [[ t#3 = null ]];
             |}
-            |[[ x__3 = t#7 ]];
+            |[[ x__0 = t#3 ]];
+            |[[ return__2 = x__0 ]];
         """.trimMargin(),
-    )
+    ) {
+        val x = nameMaker.unusedSourceName(ParsedName("x"))
 
-    @Test
-    fun testPositionMetadata() = assertWovenRoot(
-        input = """
-            |f(0);
-            |if (b(1)) {
-            |  f(2);
-            |} // Implied empty else block here
-            |f(3);
-        """.trimMargin(),
-        outputFormat = WovenOutputFormat.SourceSnippetPerPath,
-        want = """
-            |Path#0 -> Path#7, Path#1
-            |test:1+0-4
-            |1: f(0);
-            |   ┗━━┛
-            |
-            |Path#1 -> Path#7, Path#2
-            |test:1+4 - 2+8
-            |  ┏━━━━┓
-            |1:┃f(0);
-            |2:┃if (b(1)) {
-            |  ┗━━━━━━━┛
-            |
-            |Path#2 -> Path#3, Path#4
-            |test:2+4-8
-            |2: if (b(1)) {
-            |       ┗━━┛
-            |
-            |Path#3 -> Path#7, Path#5
-            |test:2+10 - 3+6
-            |  ┏━━━━━━━━━━┓
-            |2:┃if (b(1)) {
-            |3:┃  f(2);
-            |  ┗━━━━━┛
-            |
-            |Path#4 -> Path#6
-            |test:4+1
-            |4: } // Implied empty el
-            |    ⇧
-            |
-            |Path#5 -> Path#6
-            |test:3+6
-            |3: f(2);
-            |       ⇧
-            |
-            |Path#6 -> Path#7, Path#8
-            |test:5+0-4
-            |5: f(3);
-            |   ┗━━┛
-            |
-            |Path#7
-            |test:1+0
-            |1: f(0);
-            |   ⇧
-            |
-            |Path#8
-            |test:5+0-4
-            |5: f(3);
-            |   ┗━━┛
-        """.trimMargin(),
-    )
+        val intOrNull = MkType2(WKT.intTypeDefinition).canBeNull().get()
+
+        Block {
+            Decl {
+                Ln(x, type = hackMapNewStyleToOld(intOrNull))
+                V(vTypeSymbol)
+                V(Value(ReifiedType(intOrNull), TType))
+            }
+
+            Assign(x, hackMapNewStyleToOld(intOrNull)) {
+                Block {
+                    OrElse(
+                        or = {
+                            If(
+                                cond = { CallB { V(0) } },
+                                thn = {
+                                    CallF { V(1) }
+                                },
+                                els = {
+                                    CallFF { V(2) }
+                                },
+                            )
+                        },
+                        els = {
+                            // This `null` was not getting assigned to the same temporary as other branches.
+                            V(
+                                TNull.value,
+                                type = hackMapNewStyleToOld(
+                                    MkType2(WKT.neverTypeDefinition)
+                                        .actuals(listOf(WKT.intType2))
+                                        .canBeNull(true)
+                                        .get(),
+                                ),
+                            )
+                        },
+                    )
+                }
+            }
+        }
+    }
 
     @Test
     fun returningBubblesJustBubbles() = assertWovenRoot(
-        input = """
-            |let x = bubble();
-            |x
-        """.trimMargin(),
+        // let x: Int32;
+        // x = bubble<Int32>();
+        // x
         want = """
-            |[[ let x__0 ]];
-            |[[ bubble() ]];
-            |[[ x__0 ]];
-        """.trimMargin(),
-    )
+            |[[ let return__1 ]];
+            |[[ let x__0: Int32 ]];
+            |[[ bubble<Int32>() ]];
+            |[[ x__0 = panic<Int32>() ]];
+            |## return__1 captures x so x needs to be assigned even though control cannot reach here.
+            |[[ return__1 = x__0 ]];
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    ) {
+        val x = nameMaker.unusedSourceName(ParsedName("x"))
+        Decl(x) {
+            V(vTypeSymbol)
+            V(Types.vInt)
+        }
+        Assign(x, WKT.intType) {
+            Call {
+                Call(vTypeAngleFn) {
+                    V(
+                        BuiltinFuns.vBubble,
+                        typeFromSignature(BubbleFn.sigs.first { it.typeFormals.isNotEmpty() }),
+                    )
+                    V(Types.vInt, WKT.typeType)
+                }
+            }
+        }
+        Rn(x)
+    }
 
     @Test
     fun pureVirtualIsNotAResult() = assertWovenRoot(
         want = """
+            |[[ let return__0 ]];
             |[[ pureVirtual() ]];
         """.trimMargin(),
-    ) { module: Module ->
-        val document = Document(module)
-        module.addEnvironmentBindings(
-            mapOf(
-                StagingFlags.moduleResultNeeded to TBoolean.valueTrue,
-            ),
-        )
-        module.deliverContent(
-            document.treeFarm.grow(Position(module.loc, 0, 0)) {
-                Call(BuiltinFuns.pureVirtualFn) {}
-            },
-        )
+    ) {
+        plantCallWithTypeInfo(BuiltinFuns.pureVirtualFn) {}
     }
 
     @Test
     fun awaitIsPulledToRoot() = assertWovenRoot(
-        // Calls to `await` pause, so the interpreter needs `await` in predictable places.
+        // Calls to `await` pause, so the interpreter needs `await`s in predictable places.
         // Pausing is at the statement level, so the interpreter can handle:
         // - await calls, `await(p);`, that are statements in ControlFlow.Stmt entries.
         // - assignments of await calls, `t#1 = await(p);`, that are likewise statements.
-        input = """
-            |let p: Promise<Int> = g();
-            |export let sum = await p + await p;
-        """.trimMargin(),
-        want = """
-            |[[ var t#5 ]];
-            |[[ var t#6 ]];
-            |[[ var t#7 ]];
-            |[[ var t#8 ]];
-            |[[ var fail#1 ]];
-            |[[ var fail#2 ]];
-            |[[ var fail#3 ]];
-            |[[ var fail#4 ]];
-            |[[ let p__0: Promise<Int32> ]];
-            |[[ t#5 = hs(fail#1, g()) ]];
-            |if ([[ fail#1 ]]) {
-            |  [[ bubble() ]];
-            |}
-            |[[ p__0 = t#5 ]];
-            |[[ let `test//`.sum ]];
-            |[[ t#6 = hs(fail#3, await p__0) ]];
-            |if ([[ fail#3 ]]) {
-            |  [[ bubble() ]];
-            |}
-            |[[ t#7 = hs(fail#4, await p__0) ]];
-            |if ([[ fail#4 ]]) {
-            |  [[ bubble() ]];
-            |}
-            |[[ t#8 = hs(fail#2, t#6 + t#7) ]];
-            |if ([[ fail#2 ]]) {
-            |  [[ bubble() ]];
-            |}
-            |[[ `test//`.sum = t#8 ]];
-        """.trimMargin(),
-    )
 
-    private fun assertWovenRoot(
-        input: String,
-        want: String,
-        outputFormat: WovenOutputFormat = WovenOutputFormat.StructureEmbeddingExpressions,
-    ): Unit = assertWovenRoot(
-        want = want,
-        outputFormat = outputFormat,
-    ) { module ->
-        module.deliverContent(
-            ModuleSource(
-                filePath = testCodeLocation,
-                fetchedContent = input,
-                languageConfig = StandaloneLanguageConfig,
-            ),
-        )
+        // let p: Promise<Int>;
+        // export let sum = await p + await p;
+
+        want = """
+            |[[ let t#2 ]];
+            |[[ let t#3 ]];
+            |[[ let return__1 ]];
+            |[[ return__1 = void ]];
+            |[[ let p__0: Promise<Int32> ]];
+            |[[ t#2 = await p__0 ]];
+            |[[ t#3 = await p__0 ]];
+            |[[ `test//`.sum = t#2 + t#3 ]];
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    ) {
+        val p = nameMaker.unusedSourceName(ParsedName("p"))
+        val promiseInt = MkType2(WKT.promiseTypeDefinition).actuals(listOf(WKT.intType2)).get()
+        val sum = ExportedName(nameMaker.namingContext, ParsedName("sum"))
+
+        Decl {
+            Ln(p, type = hackMapNewStyleToOld(promiseInt))
+            V(vTypeSymbol)
+            V(Value(ReifiedType(promiseInt)))
+        }
+
+        Assign(sum, WKT.intType) {
+            plantCallWithTypeInfo(BuiltinFuns.plusIntIntFn) {
+                plantCallWithTypeInfo(AwaitFn, listOf(WKT.intType)) {
+                    Rn(p, type = hackMapNewStyleToOld(promiseInt))
+                }
+                plantCallWithTypeInfo(AwaitFn, listOf(WKT.intType)) {
+                    Rn(p, type = hackMapNewStyleToOld(promiseInt))
+                }
+            }
+        }
+
+        // Splitting out an initializer always leaves a void at the end.
+        V(void, WKT.voidType)
     }
 
-    private fun assertWovenRoot(
-        want: String,
-        outputFormat: WovenOutputFormat = WovenOutputFormat.StructureEmbeddingExpressions,
-        provisionModule: (Module) -> Unit,
-    ) {
-        val logSink = ListBackedLogSink()
-        var stepsLeft = INTERP_STEP_LIMIT
-        var wovenControlFlow: ControlFlow? = null
-        var maximalPaths: MaximalPaths? = null
-        val referents = mutableMapOf<Int, CollectedTokens>()
-        val voidReferents = mutableSetOf<Int>()
-        val module = Module(
-            logSink,
-            testModuleName,
-            console,
-            continueCondition = {
-                stepsLeft-- >= 0
-            },
-        )
-        Debug.configure(
-            module,
-            Console(
-                console.textOutput,
-                snapshotter = object : Snapshotter {
-                    override fun <IR : Structured> snapshot(key: SnapshotKey<IR>, stepId: String, state: IR) {
-                        AstSnapshotKey.useIfSame(key, state) { block ->
-                            if (stepId == Debug.Frontend.TypeStage.AfterWeave.loggerName) {
-                                val flow = (block.flow as StructuredFlow).controlFlow.deepCopy()
-                                wovenControlFlow = flow
-                                maximalPaths = forwardMaximalPaths(block)
-                                for (childIndex in blockPartialEvaluationOrder(block)) {
-                                    val child = block.child(childIndex)
-                                    if (child is ValueLeaf && child.content == void) {
-                                        voidReferents.add(childIndex)
-                                    }
-                                    referents[childIndex] = CollectedTokens.collect {
-                                        child.toPseudoCode(it)
-                                    }
-                                }
+    @Test
+    fun nestedFn() = assertWovenRoot(
+        buildInput = {
+            // let x;
+            // x = foo(fn /* return__123 */: String {
+            //   "foo"
+            // });
+            val x = nameMaker.unusedSourceName(ParsedName("x"))
+            val preAllocatedReturn = nameMaker.unusedSourceName(returnParsedName)
+            val fnLabel = nameMaker.unusedSourceName(fnParsedName)
+            Block {
+                Decl {
+                    Ln(x, WKT.stringType)
+                }
+                Assign(x, WKT.stringType) {
+                    Call {
+                        Rn(BuiltinName("foo"))
+                        Fn {
+                            V(vReturnDeclSymbol)
+                            Decl {
+                                Ln(preAllocatedReturn, WKT.stringType)
+                                V(vTypeSymbol)
+                                V(Types.vString)
+                                V(vSsaSymbol)
+                                V(void)
+                            }
+                            V(vStaySymbol)
+                            Stay()
+                            Block {
+                                // CallF { V(0) }
+                                V(vLabelSymbol)
+                                Ln(fnLabel)
+                                V(Value("foo", TString), WKT.stringType)
                             }
                         }
                     }
-                },
-            ),
-        )
-        module.addEnvironmentBindings(extraEnvironmentBindings)
-        provisionModule(module)
-        val inputSourceText = module.sources.firstOrNull()?.fetchedContent?.toString()
+                }
 
-        val advancer = ModuleAdvancer(logSink)
-        advancer.addModule(module)
-        advancer.advanceModules(stopBefore = Stage.after(Stage.Type))
+                V(void)
+            }
+        },
+        want = """
+            |[[ let return__3 ]];
+            |[[ return__3 = void ]];
+            |[[ let x__0 ]];
+            |[[ x__0 = foo(@stay fn /* return__1 */: String {
+            |    fn__2: do {
+            |      return__1 = "foo"
+            |    };
+            |}) ]];
+        """.trimMargin(),
+    )
 
-        val got = if (wovenControlFlow == null) {
-            toStringViaTextOutput {
-                logSink.toConsole(
-                    Console(it),
-                    sources = if (inputSourceText != null) {
-                        mapOf(
-                            module.loc to
-                                (inputSourceText to FilePositions.fromSource(module.loc, inputSourceText)),
-                        )
-                    } else {
-                        mapOf()
-                    },
+    @Test
+    fun mixedExternalConstantNames() = assertWovenRoot(
+        buildInput = {
+            val (x, y, z) = listOf("x", "y", "z")
+                .map { nameMaker.unusedSourceName(ParsedName(it)) }
+
+            Decl { Ln(x, WKT.intType) }
+            Decl { Ln(y, WKT.intType) }
+            Fn {
+                Block {
+                    Decl { Ln(z, WKT.intType) }
+                    Assign(z, WKT.intType) {
+                        Block {
+                            If(
+                                cond = { CallB { V(0) } },
+                                thn = { Rn(x, WKT.intType) },
+                                els = { Rn(y, WKT.intType) },
+                            )
+                        }
+                    }
+                    CallF { Rn(z, WKT.intType) }
+                }
+            }
+        },
+        // let x = 1;
+        // let y = 2;
+        // fn {
+        //   let z = if (b(0)) {
+        //     x
+        //   } else {
+        //     y
+        //   };
+        //   f(z)
+        // }
+        want = """
+            |[[ let return__3 ]];
+            |[[ let x__0 ]];
+            |[[ let y__1 ]];
+            |[[ return__3 = fn /* return__4 */{
+            |  let t#5, z__2;
+            |  {
+            |    if (b(0)) {
+            |      t#5 = x__0
+            |    } else {
+            |      t#5 = y__1
+            |    }
+            |  };
+            |  z__2 = t#5;
+            |  return__4 = f(z__2);
+            |}
+            |]];
+        """.trimMargin(),
+    )
+
+    @Test
+    fun mixedIfAssignedEndsWithNullUntyped() = assertWovenRoot(
+        // let x =
+        //   if (b(0)) {
+        //     f(1)
+        //   } else if (b(2)) {
+        //     f(3)
+        //   } else {
+        //     null
+        //   };
+        buildInput = {
+            val x = nameMaker.unusedSourceName(ParsedName("x"))
+
+            Decl { Ln(x) }
+            Call(BuiltinFuns.vSetLocalFn) {
+                Ln(x)
+                Block {
+                    If(
+                        cond = {
+                            Call {
+                                Rn(BuiltinName("b"))
+                                V(Value(0, TInt))
+                            }
+                        },
+                        thn = {
+                            Call {
+                                Rn(BuiltinName("f"))
+                                V(Value(1, TInt))
+                            }
+                        },
+                        els = {
+                            If(
+                                cond = {
+                                    Call {
+                                        Rn(BuiltinName("b"))
+                                        V(Value(2, TInt))
+                                    }
+                                },
+                                thn = {
+                                    Call {
+                                        Rn(BuiltinName("f"))
+                                        V(Value(3, TInt))
+                                    }
+                                },
+                                els = {
+                                    V(TNull.value)
+                                },
+                            )
+                        },
+                    )
+                }
+            }
+            V(void)
+        },
+        want = """
+            |[[ let t#2 ]];
+            |[[ let return__1 ]];
+            |[[ return__1 = void ]];
+            |[[ let x__0 ]];
+            |if ([[ b(0) ]]) {
+            |  [[ t#2 = f(1) ]];
+            |} else if ([[ b(2) ]]) {
+            |  [[ t#2 = f(3) ]];
+            |} else {
+            |  [[ t#2 = null ]];
+            |}
+            |[[ x__0 = t#2 ]];
+        """.trimMargin(),
+    )
+
+    @Test
+    fun orElseInitializesNonVar() = assertWovenRoot(
+        buildInput = {
+            val (x, y, z) = listOf("x", "y", "z").map {
+                nameMaker.unusedSourceName(ParsedName(it))
+            }
+            Decl {
+                Ln(x, WKT.intType)
+            }
+            Assign(x, WKT.intType) {
+                Block {
+                    OrElse(
+                        or = {
+                            plantCallWithTypeInfo(
+                                BuiltinFuns.divIntIntFn,
+                            ) {
+                                Rn(y, WKT.intType)
+                                Rn(z, WKT.intType)
+                            }
+                        },
+                        els = {
+                            V(0)
+                        },
+                    )
+                }
+            }
+            V(void)
+        },
+        want = """
+            |[[ var t#5 ]];
+            |## This var temporary is necessary because it joins results from the `orelse`.
+            |## We can't use `x__0 =` below because it's a non-var declaration.
+            |[[ let return__4 ]];
+            |[[ return__4 = void ]];
+            |[[ let x__0 ]];
+            |orElse#3: do {
+            |  [[ t#5 = y__1 / z__2 ]];
+            |} orelse {
+            |  [[ t#5 = 0 ]];
+            |}
+            |[[ x__0 = t#5 ]];
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
+    private fun assertWovenRoot(
+        want: String,
+        runMakeResultsExplicit: Boolean = true,
+        verbose: Boolean = false,
+        buildInput: BlockPlanting.() -> Unit,
+    ): Unit = assertWovenRoot(
+        want = want,
+        block = run {
+            Document(TestDocumentContext()).treeFarm.grow(Position(testCodeLocation, 0, 0)) {
+                Block {
+                    buildInput()
+                }
+            }
+        },
+        runMakeResultsExplicit = runMakeResultsExplicit,
+        verbose = verbose,
+    )
+
+    private fun assertWovenRoot(
+        want: String,
+        block: BlockTree,
+        runMakeResultsExplicit: Boolean = true,
+        verbose: Boolean = false,
+    ) {
+        // Move each non-trivial flow-control construct into its own BlockTree,
+        // the way things are in staging before the first weaving.
+        val debugConsole = if (verbose) console else null
+        debugConsole?.group("Before reblock") {
+            block.toPseudoCode(debugConsole.textOutput)
+        }
+        reblock(block)
+        debugConsole?.group("After reblock") {
+            block.toPseudoCode(debugConsole.textOutput)
+        }
+
+        if (runMakeResultsExplicit) {
+            withCapturingConsole {
+                MakeResultsExplicit.makeAllResultsExplicit(
+                    console = debugConsole ?: it,
+                    moduleRoot = block,
+                    needResultForModuleRoot = true,
                 )
             }
-        } else {
-            when (outputFormat) {
-                WovenOutputFormat.StructureEmbeddingExpressions ->
-                    dumpStructureEmbedding(wovenControlFlow, referents, voidReferents)
-
-                WovenOutputFormat.SourceSnippetPerPath -> dumpSourceSnippetPerPath(
-                    maximalPaths!!,
-                    inputSourceText!!,
-                )
+            debugConsole?.group("After MakeResultsExplicit") {
+                block.toPseudoCode(debugConsole.textOutput)
             }
         }
+
+        Weaver.weave(
+            block,
+            sprinkleSecurityDust = true,
+            rttiCallSimplification = RttiCallSimplification.SeparateNullBranches,
+            pullSpecialsRootward = true,
+            nameAllFunctions = false,
+            resultsAlreadyCaptured = runMakeResultsExplicit,
+        )
+        debugConsole?.group("After weave") {
+            block.toPseudoCode(debugConsole.textOutput)
+        }
+
+        block.replaceFlow(
+            simplifyControlFlow(
+                block,
+                structureBlock(block).controlFlow,
+                assumeAllJumpsResolved = false,
+                assumeResultsCaptured = true,
+                assumeUseBeforeInitChecked = runMakeResultsExplicit,
+                logicalOperators = BuiltinLogicalOperators,
+            ),
+        )
+
+        val flow = (block.flow as StructuredFlow).controlFlow.deepCopy()
+        val got = dumpStructureEmbedding(block, flow)
 
         assertEquals(want.trimEnd(), got.trimEnd())
     }
 }
-
-private const val INTERP_STEP_LIMIT = 10_000
 
 private class PlaceholderFunction(
     override val name: String,
@@ -692,12 +1309,12 @@ private class PlaceholderFunction(
     override val sigs = listOf(
         Signature2(
             returnType2 = if (callMayFailPerSe) {
-                MkType2.result(returnType, WellKnownTypes.bubbleType2).get()
+                MkType2.result(returnType, WKT.bubbleType2).get()
             } else {
                 returnType
             },
             hasThisFormal = false,
-            requiredInputTypes = listOf(WellKnownTypes.intType2),
+            requiredInputTypes = listOf(WKT.intType2),
             typeFormals = typeFormals,
         ),
     )
@@ -709,33 +1326,30 @@ private class PlaceholderFunction(
         }
 }
 
-private val extraEnvironmentBindings: Map<TemperName, Value<*>> = run {
-    val testDocumentContext = TestDocumentContext()
-    val nameMaker = ResolvedNameMaker(testDocumentContext.namingContext, Genre.Library)
-    val tSymbol = Symbol("T")
-    val tf = TypeFormal(
-        unknownPos,
-        nameMaker.unusedSourceName(ParsedName(tSymbol.text)),
-        tSymbol,
-        Variance.Invariant,
-        AtomicCounter(),
-        listOf(WellKnownTypes.anyValueType),
-    )
-    val t = MkType2(tf).get()
-    mapOf(
-        StagingFlags.skipImportCore to TBoolean.valueTrue,
-        StagingFlags.moduleResultNeeded to TBoolean.valueTrue,
-        BuiltinName("f") to Value(PlaceholderFunction("f", false, WellKnownTypes.voidType2)),
-        BuiltinName("ff") to Value(PlaceholderFunction("ff", true, WellKnownTypes.voidType2)),
-        BuiltinName("b") to Value(PlaceholderFunction("b", false, WellKnownTypes.booleanType2)),
-        BuiltinName("bb") to Value(PlaceholderFunction("bb", true, WellKnownTypes.booleanType2)),
-        BuiltinName("g") to Value(PlaceholderFunction("g", false, t, listOf(tf))),
-    )
-}
+private val bCallee = Value(PlaceholderFunction("b", false, WKT.booleanType2))
+private val bbCallee = Value(PlaceholderFunction("bb", true, WKT.booleanType2))
+private val fCallee = Value(PlaceholderFunction("f", false, WKT.intType2))
+private val ffCallee = Value(PlaceholderFunction("ff", true, WKT.intType2))
+private val vCallee = Value(PlaceholderFunction("v", false, WKT.voidType2))
+private val vvCallee = Value(PlaceholderFunction("vv", true, WKT.voidType2))
 
-private enum class WovenOutputFormat {
-    StructureEmbeddingExpressions,
-    SourceSnippetPerPath,
+internal fun dumpStructureEmbedding(
+    block: BlockTree,
+    cf: ControlFlow,
+): String {
+    val referents = mutableMapOf<Int, CollectedTokens>()
+    val voidReferents = mutableSetOf<Int>()
+    for (childIndex in blockPartialEvaluationOrder(block)) {
+        val child = block.child(childIndex)
+        if (child is ValueLeaf && child.content == void) {
+            voidReferents.add(childIndex)
+        }
+        referents[childIndex] = CollectedTokens.collect {
+            child.toPseudoCode(it)
+        }
+    }
+
+    return dumpStructureEmbedding(cf, referents, voidReferents)
 }
 
 private fun dumpStructureEmbedding(
@@ -860,35 +1474,96 @@ private fun dumpStructureEmbedding(
     render(wovenControlFlow)
 }
 
-private fun dumpSourceSnippetPerPath(
-    maximalPaths: MaximalPaths,
-    input: String,
-): String {
-    val filePositions = FilePositions.fromSource(
-        maximalPaths[maximalPaths.entryPathIndex].diagnosticPosition.loc,
-        input,
-    )
+@Suppress("TestFunctionName") // Match planting style
+private fun Planting.CallB(args: Planting.() -> Unit) =
+    plantCallWithTypeInfo(bCallee) { args() }
 
-    val pathOrder = orderedPathIndices(maximalPaths, ForwardOrBack.Back)
-    return toStringViaTextOutput(isTtyLike = false) { out ->
-        for (pathIndex in pathOrder) {
-            val path = maximalPaths[pathIndex]
-            val headerString = buildString {
-                append("Path").append(path.pathIndex)
-                if (path.followers.isNotEmpty()) {
-                    append(" -> ")
-                    path.followers.joinTo(this) {
-                        "Path${it.pathIndex}"
+@Suppress("TestFunctionName")
+private fun Planting.CallBB(args: Planting.() -> Unit) =
+    plantCallWithTypeInfo(bbCallee) { args() }
+
+@Suppress("TestFunctionName")
+private fun Planting.CallF(args: Planting.() -> Unit) =
+    plantCallWithTypeInfo(fCallee) { args() }
+
+@Suppress("TestFunctionName")
+private fun Planting.CallFF(args: Planting.() -> Unit) =
+    plantCallWithTypeInfo(ffCallee) { args() }
+
+@Suppress("TestFunctionName")
+private fun Planting.CallV(args: Planting.() -> Unit) =
+    plantCallWithTypeInfo(vCallee) { args() }
+
+@Suppress("TestFunctionName")
+private fun Planting.CallVV(args: Planting.() -> Unit) =
+    plantCallWithTypeInfo(vvCallee) { args() }
+
+@Suppress("TestFunctionName")
+private fun Planting.V(n: Int) = V(Value(n, TInt), WKT.intType)
+
+private fun reblock(block: BlockTree) {
+    val flow = structureBlock(block)
+
+    TreeVisit.startingAt(block)
+        .forEachContinuing {
+            if (it is BlockTree && it != block) {
+                reblock(it)
+            }
+        }
+        .visitPostOrder()
+
+    fun splitOut(stmtBlock: ControlFlow.StmtBlock) {
+        val stmts = stmtBlock.stmts
+        for (i in stmts.indices) {
+            val stmt = stmts[i]
+            if (stmt is ControlFlow.Stmt) { continue }
+            // Recreate the stmt inside a new BlockTree
+            val indicesToTransfer = buildSet {
+                fun enumerateIndices(cf: ControlFlow) {
+                    val refIndex = cf.ref?.index
+                    if (refIndex != null) {
+                        add(refIndex)
+                    }
+                    for (c in cf.clauses) {
+                        enumerateIndices(c)
+                    }
+                }
+                enumerateIndices(stmt)
+            }
+            val indicesSorted = indicesToTransfer.sorted()
+            val newBlock = block.document.treeFarm.grow(stmtBlock.pos) {
+                Block(flowMaker = { StructuredFlow(ControlFlow.StmtBlock.wrap(stmt.deepCopy())) }) {
+                    if (indicesSorted.isNotEmpty()) {
+                        val max = indicesSorted.last()
+                        for (i in 0..max) {
+                            if (i !in indicesSorted) {
+                                V(void)
+                            } else {
+                                Replant(freeTarget(block.edge(i)))
+                            }
+                        }
                     }
                 }
             }
-            out.emitLine(headerString)
-            val pos = path.diagnosticPosition
-            val posPair = filePositions.filePositionAtOffset(pos.left) to
-                filePositions.filePositionAtOffset(pos.right)
-            out.emitLine(posPair.toReadablePosition("test"))
-            excerpt(pos, input, out)
-            out.endLine()
+            val newBlockIndex = block.size
+            block.add(newBlock)
+            val replacement = ControlFlow.Stmt(BlockChildReference(newBlockIndex, newBlock.pos))
+            stmtBlock.withMutableStmtList { mutStmtList ->
+                mutStmtList[i] = replacement
+            }
+            reblock(newBlock)
         }
+    }
+
+    val stmtBlock = flow.controlFlow
+    if (stmtBlock.stmts.size == 1) {
+        val loneStmt = stmtBlock.stmts[0]
+        for (clause in loneStmt.clauses) {
+            if (clause is ControlFlow.StmtBlock) {
+                splitOut(clause)
+            }
+        }
+    } else {
+        splitOut(stmtBlock)
     }
 }

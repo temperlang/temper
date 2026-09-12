@@ -1,0 +1,85 @@
+@typeDecl(NeedsConstructor__1) @stay let NeedsConstructor__1 = type (NeedsConstructor__1);
+@typeDecl(HasConstructorAndInitializedProperty__2) @stay let HasConstructorAndInitializedProperty__2 = type (HasConstructorAndInitializedProperty__2);
+@typeDecl(HasTooManyConstructors__5) @stay let HasTooManyConstructors__5 = type (HasTooManyConstructors__5);
+@typeDecl(HasConstructorAndParenthesizedArguments__8) @stay let HasConstructorAndParenthesizedArguments__8 = type (HasConstructorAndParenthesizedArguments__8);
+REM("OK", null, false);
+class(\word, \NeedsConstructor, \concrete, true, @typeDefined(NeedsConstructor__1) fn {
+    NeedsConstructor__1 extends AnyValue;
+    do {};
+    @constructorProperty @maybeVar @visibility(\public) let j__17: Int32;
+    @maybeVar @visibility(\public) let k__18: Int32;
+    @visibility(\public) let constructor__19 = fn constructor(@impliedThis(NeedsConstructor__1) this__10: NeedsConstructor__1, @constructorProperty i__20 /* aka i */: Int32, j__21 /* aka j */: Int32 = 1) /* return__11 */: Void {
+      do {
+        let t#40;
+        do_iset_j(type (NeedsConstructor__1), this(NeedsConstructor__1), t#40 = j__21);
+        t#40
+      };
+      do {
+        let t#39;
+        do_iset_k(type (NeedsConstructor__1), this(NeedsConstructor__1), t#39 = i__20 + 1);
+        t#39
+      };
+    };
+});
+REM("OK", null, false);
+class(\word, \HasConstructorAndInitializedProperty, \concrete, true, @typeDefined(HasConstructorAndInitializedProperty__2) fn {
+    HasConstructorAndInitializedProperty__2 extends AnyValue;
+    REM("This initializer should be pulled into the constructor.", null, false);
+    @visibility(\private) var b__22: Boolean;
+    @visibility(\private) let i__23: Int32;
+    @visibility(\public) @fn let constructor__24 = fn constructor(@impliedThis(HasConstructorAndInitializedProperty__2) this__3: HasConstructorAndInitializedProperty__2, i__25 /* aka i */: Int32) /* return__12 */: Void {
+      fn__26: do {
+        do_iset_b(type (HasConstructorAndInitializedProperty__2), this__3, false);
+        void;
+        do {
+          let t#38;
+          do_iset_i(type (HasConstructorAndInitializedProperty__2), this(HasConstructorAndInitializedProperty__2), t#38 = i__25);
+          t#38
+        };
+      }
+    };
+    @visibility(\public) @fn let f__27 = fn f(@impliedThis(HasConstructorAndInitializedProperty__2) this__4: HasConstructorAndInitializedProperty__2) /* return__13 */: (Int32) {
+      fn__28: do {
+        do {
+          let t#37;
+          do_iset_b(type (HasConstructorAndInitializedProperty__2), this(HasConstructorAndInitializedProperty__2), t#37 = !do_iget_b(type (HasConstructorAndInitializedProperty__2), this(HasConstructorAndInitializedProperty__2)));
+          t#37
+        };
+        do_iget_i(type (HasConstructorAndInitializedProperty__2), this(HasConstructorAndInitializedProperty__2)) + if(do_iget_b(type (HasConstructorAndInitializedProperty__2), this(HasConstructorAndInitializedProperty__2)), fn {
+            1
+          }, \else, fn (f#0) {
+            f#0(fn {
+                0
+            })
+        })
+      }
+    };
+});
+class(\word, \HasTooManyConstructors, \concrete, true, @typeDefined(HasTooManyConstructors__5) fn {
+    HasTooManyConstructors__5 extends AnyValue;
+    REM("The initializer here would need to be copied into multiple constructors,\nbut we do not want to copy code that is potentially large, so just ban it.", null, false);
+    error (MultipleConstructorsIncompatibleWIthInitializer);
+    @visibility(\public) @fn let constructor__29 = fn constructor(@impliedThis(HasTooManyConstructors__5) this__6: HasTooManyConstructors__5) /* return__14 */: Void {
+      fn__30: do {}
+    };
+    @visibility(\public) @fn let constructor__31 = fn constructor(@impliedThis(HasTooManyConstructors__5) this__7: HasTooManyConstructors__5, c__32 /* aka c */: Boolean) /* return__15 */: Void {
+      fn__33: do {
+        if(c__32, fn {
+            do {
+              let t#36;
+              do_iset_b(type (HasTooManyConstructors__5), this(HasTooManyConstructors__5), t#36 = !do_iget_b(type (HasTooManyConstructors__5), this(HasTooManyConstructors__5)));
+              t#36
+            };
+        })
+      }
+    };
+});
+REM("Not clear how to fold parenthesized constructor arguments into an existing\nconstructor.", null, false);
+class(\word, \HasConstructorAndParenthesizedArguments, \concrete, true, @typeDefined(HasConstructorAndParenthesizedArguments__8) fn {
+    HasConstructorAndParenthesizedArguments__8 extends AnyValue;
+    error (ExplicitConstructorIncompatibleWithInput);
+    @visibility(\public) @fn let constructor__34 = fn constructor(@impliedThis(HasConstructorAndParenthesizedArguments__8) this__9: HasConstructorAndParenthesizedArguments__8) /* return__16 */: Void {
+      fn__35: do {}
+    };
+});
+HasConstructorAndParenthesizedArguments__8

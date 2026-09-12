@@ -1,4 +1,4 @@
-package lang.temper.be.tmpl
+package lang.temper.value
 
 import lang.temper.type.TypeFormal
 import lang.temper.type.WellKnownTypes
@@ -7,20 +7,21 @@ import lang.temper.type2.Nullity
 import lang.temper.type2.Type2
 import lang.temper.type2.hackMapOldStyleToNewOrNull
 import lang.temper.type2.withNullity
-import lang.temper.value.TBoolean
-import lang.temper.value.TInt
-import lang.temper.value.TNull
-import lang.temper.value.TString
-import lang.temper.value.Value
-import lang.temper.value.void
 
 /**
  * For a type, lets us pick a value that can be used to initialize a declaration of that type.
+ *
+ * Not all types have zero values, most do not, but
  */
-internal object ZeroValues {
+object ZeroValues {
     operator fun get(type: Type2): ZeroValueRecord {
         if (type.nullity == Nullity.OrNull) {
-            return ZeroValueRecord(TNull.value, needsNullAdjustment = false, type)
+            return ZeroValueRecord(
+                TNull.value,
+                needsNullAdjustment = false,
+                unadjustedType = type,
+                adjustedType = type,
+            )
         }
 
         if (type is DefinedNonNullType) {
@@ -33,22 +34,43 @@ internal object ZeroValues {
             }
             val v = when (def) {
                 WellKnownTypes.intTypeDefinition -> Value(0, TInt)
+                WellKnownTypes.int64TypeDefinition -> Value(0L, TInt64)
+                WellKnownTypes.float64TypeDefinition -> Value(0.0, TFloat64)
+                WellKnownTypes.emptyTypeDefinition -> emptyValue
                 WellKnownTypes.booleanTypeDefinition -> TBoolean.valueFalse
                 WellKnownTypes.voidTypeDefinition -> void
                 WellKnownTypes.stringTypeDefinition -> Value("", TString)
+                WellKnownTypes.listTypeDefinition -> Value(listOf(), TList)
                 else -> null
             }
             if (v != null) {
-                return ZeroValueRecord(v, needsNullAdjustment = false, adjustedType = type)
+                return ZeroValueRecord(
+                    v,
+                    needsNullAdjustment = false,
+                    unadjustedType = type,
+                    adjustedType = type,
+                )
             }
         }
 
-        return ZeroValueRecord(TNull.value, needsNullAdjustment = true, type.withNullity(Nullity.OrNull))
+        return ZeroValueRecord(
+            TNull.value,
+            needsNullAdjustment = true,
+            unadjustedType = type,
+            adjustedType = type.withNullity(Nullity.OrNull),
+        )
     }
 }
 
-internal data class ZeroValueRecord(
+data class ZeroValueRecord(
     val value: Value<*>,
     val needsNullAdjustment: Boolean,
+    val unadjustedType: Type2,
     val adjustedType: Type2,
+)
+
+/** The value of the type [WellKnownTypes.emptyType] */
+val emptyValue = Value(
+    InstancePropertyRecord(mutableMapOf()),
+    TClass(WellKnownTypes.emptyTypeDefinition),
 )

@@ -1,0 +1,26 @@
+  @fn let `test//`.f, @fn `test//`.g, @fn `test//`.h;
+  `test//`.f = (@stay fn f(x__0 /* aka x */: StringIndexOption?) /* return__0 */: (Boolean | Bubble) {
+      let t#0;
+      if (isNull(x__0)) {
+        bubble()
+      } else {
+## Even once null is ruled out, casting from StringIndexOption to StringIndex
+## requires a check.
+        t#0 = x__0 as StringIndex
+      };
+      return__0 = t#0 > getStatic(String, \begin)
+  });
+  `test//`.g = (@stay fn g(x__1 /* aka x */: StringIndex?) /* return__1 */: (Boolean | Bubble) {
+      if (isNull(x__1)) {
+        bubble()
+      };
+## Once null is rulled out, only StringIndex remains, so this is a safe up-cast.
+      return__1 = assertAs(x__1, StringIndex) > getStatic(String, \begin)
+  });
+  `test//`.h = (@stay fn h(x__2 /* aka x */: StringIndex?) /* return__2 */: Boolean {
+      if (isNull(x__2)) {
+        return__2 = false
+      } else {
+        return__2 = assertAs(notNull(x__2), StringIndex) > getStatic(String, \begin)
+      }
+  })

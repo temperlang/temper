@@ -4,6 +4,7 @@ import lang.temper.ast.anyChildDepth
 import lang.temper.be.Backend
 import lang.temper.common.RFailure
 import lang.temper.common.RSuccess
+import lang.temper.common.mapFirst
 import lang.temper.format.TokenSink
 import lang.temper.frontend.ModuleNamingContext
 import lang.temper.lexer.Genre
@@ -34,6 +35,7 @@ import lang.temper.type.TypeShape
 import lang.temper.type.Visibility
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.helpfulFromMetadataValue
+import lang.temper.type.isVoidLike
 import lang.temper.type2.DefinedNonNullType
 import lang.temper.type2.Descriptor
 import lang.temper.type2.Nullity
@@ -45,6 +47,7 @@ import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.mapType
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
+import lang.temper.value.BuiltinOperatorId
 import lang.temper.value.DependencyCategory
 import lang.temper.value.OccasionallyHelpful
 import lang.temper.value.TNull
@@ -58,6 +61,7 @@ import lang.temper.value.qNameSymbol
 import lang.temper.value.reachSymbol
 import lang.temper.value.testSymbol
 import lang.temper.value.typeDeclSymbol
+import lang.temper.value.void
 
 internal fun dotNameMatchesName(dotName: TmpL.DotName, name: TmpL.Id): Boolean =
     dotName.dotNameText == (name.name as? SourceName)?.baseName?.nameText
@@ -204,9 +208,9 @@ fun <T> TmpL.CallExpression.mapParameters(
             val type = formalType(formal)
             translate(actual, type, formal)
         }
-        val nFormals = adjustedSig.requiredInputTypes.size + adjustedSig.optionalInputTypes.size
         // Pad nulls for missing trailing args.
         if (optionalAsNullable) {
+            val nFormals = adjustedSig.requiredInputTypes.size + adjustedSig.optionalInputTypes.size
             while (this.size < nFormals) {
                 val index = this.size
                 val formal = adjustedSig.valueFormalForActual(index)
@@ -313,7 +317,7 @@ fun TmpL.Actual.isNullValue() = this is TmpL.ValueReference && value.typeTag is 
 
 val TmpL.Actual.typeOrInvalid
     get() = when (this) {
-        is TmpL.Expression -> type
+        is TmpL.Expression -> passType
         is TmpL.RestSpread -> WellKnownTypes.invalidType2
     }
 
@@ -697,7 +701,7 @@ object GetStaticSupport : InlineTmpLSupportCode {
             pos,
             subject = typeName,
             property = propId,
-            type = returnType,
+            passType = returnType,
         )
     }
 
@@ -911,6 +915,40 @@ fun TmpL.BlockStatement?.isPureVirtual(isFnPureVirtual: (TmpL.Callable) -> Boole
 }
 
 /**
+ * Returns a list with a single Void-typed var removed, which is expected to be
+ * a return var that lingers from the frontend.
+ *
+ * If no such var is found, returns original [this] instance.
+ */
+fun List<TmpL.Statement>.cleanOutVoidVar(): List<TmpL.Statement> {
+    val voidName = mapFirst { statement ->
+        when (statement) {
+            is TmpL.LocalDeclaration if statement.descriptor.isVoidLike -> statement.name.name
+            else -> null
+        }
+    } ?: return this
+    // Rewrite the return statement, but others leave whole or exclude.
+    val returnRewriter = object : TmpLTreeRewriter {
+        override fun rewriteExpression(x: TmpL.Expression): TmpL.Expression {
+            return when (x) {
+                is TmpL.Reference if x.id.name == voidName ->
+                    TmpL.ValueReference(x.pos, WellKnownTypes.voidType2, void)
+                else -> super.rewriteExpression(x)
+            }
+        }
+    }
+    // For efficiency, dig to immediate kids only, based on expected usage patterns.
+    return mapNotNull { statement ->
+        when (statement) {
+            is TmpL.LocalDeclaration if statement.name.name == voidName -> null
+            is TmpL.Assignment if statement.left.name == voidName -> null
+            is TmpL.ReturnStatement -> returnRewriter.rewriteReturnStatement(statement)
+            else -> statement
+        }
+    }
+}
+
+/**
  * Split into local var init for property storage, then remaining statements using `this`.
  * Presumes a constructor that needs to construct an instance between these two, then return it.
  */
@@ -918,7 +956,7 @@ fun List<TmpL.Statement>.splitConstructorBody(): Pair<List<TmpL.Statement>, List
     val initStatements = mutableListOf<TmpL.Statement>()
     val useStatements = mutableListOf<TmpL.Statement>()
     var reachedUse = false
-    for (statement in this) {
+    statements@ for (statement in this) {
         reachedUse = reachedUse || statement.anyChildDepth(
             within = { tree ->
                 when (tree) {
@@ -929,17 +967,27 @@ fun List<TmpL.Statement>.splitConstructorBody(): Pair<List<TmpL.Statement>, List
             },
             // Likewise, any `this` must be for the enclosing type.
             predicate = { it is TmpL.This },
-        ) || statement.anyChildDepth(
-            // We do nest functions, so only pay attention to outer returns.
-            within = { it !is TmpL.FunctionLike },
-            predicate = { it is TmpL.ReturnStatement && it.expression == null },
-        )
+        ) || statement is TmpL.ReturnStatement && statement.expression.isVoidish()
+        // Keep other statements, adjusted if needed, placed in the correct group.
         when {
             !reachedUse -> initStatements
             else -> useStatements
         }.add(statement.deepCopy())
     }
     return initStatements to useStatements
+}
+
+/** True if either null or a void constant or an ok-wrapped void constant. */
+fun TmpL.Expression?.isVoidish(): Boolean = when (this) {
+    is TmpL.CallExpression -> when (val callee = fn) {
+        is TmpL.SupportCodeWrapper ->
+            callee.supportCode.builtinOperatorId == BuiltinOperatorId.PackOkResult &&
+                parameters.size == 1 &&
+                (parameters.first() as? TmpL.Expression)?.isVoidConstant == true
+        else -> false
+    }
+    null -> true
+    else -> this.isVoidConstant
 }
 
 private fun List<TmpL.DeclarationMetadata>.dependencyCategory() =
@@ -1081,7 +1129,6 @@ internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
                                 else -> TmpL.Reference(paramName, valueFormal)
                             }
                         },
-                    type = funType.returnType2,
                 ).let { call ->
                     val retType = funType.returnType2
                     when {
@@ -1259,25 +1306,10 @@ data class DependencyGrouping(
 
 fun TmpL.Statement.isYieldingStatement(): Boolean =
     when (this) {
-        is TmpL.BoilerplateCodeFoldBoundary,
-        is TmpL.BreakStatement,
-        is TmpL.ContinueStatement,
-        is TmpL.EmbeddedComment,
-        is TmpL.GarbageStatement,
-        is TmpL.Declaration,
-        is TmpL.ModuleInitFailed,
-        is TmpL.ReturnStatement,
-        is TmpL.SetProperty,
-        is TmpL.ThrowStatement,
-        -> false
-
         is TmpL.YieldStatement -> true
+        is TmpL.Assignment -> right is TmpL.AwaitExpression
         is TmpL.ExpressionStatement -> expression is TmpL.AwaitExpression
-        is TmpL.HandlerScope -> handled is TmpL.AwaitExpression
-        is TmpL.Assignment -> when (val right = this.right) {
-            is TmpL.Expression -> right is TmpL.AwaitExpression
-            is TmpL.HandlerScope -> right.isYieldingStatement()
-        }
+        is TmpL.LocalDeclaration -> this.init is TmpL.AwaitExpression
 
         is TmpL.BlockStatement ->
             this.statements.any { it.isYieldingStatement() }
@@ -1289,7 +1321,22 @@ fun TmpL.Statement.isYieldingStatement(): Boolean =
         is TmpL.TryStatement -> this.tried.isYieldingStatement() ||
             this.recover.isYieldingStatement()
         is TmpL.WhileStatement -> this.body.isYieldingStatement()
+
+        is TmpL.BoilerplateCodeFoldBoundary,
+        is TmpL.BreakStatement,
+        is TmpL.ContinueStatement,
+        is TmpL.EmbeddedComment,
+        is TmpL.GarbageStatement,
+        is TmpL.Declaration,
+        is TmpL.ModuleInitFailed,
+        is TmpL.ReturnStatement,
+        is TmpL.SetProperty,
+        is TmpL.ThrowStatement,
+        -> false
     }
+
+val TmpL.Expression.isVoidConstant: Boolean get() =
+    this is TmpL.ValueReference && this.value == void
 
 fun qNameFor(d: TmpL.Declaration): QName? {
     val md = d.metadata.firstOrNull { it.key.symbol == qNameSymbol }
@@ -1316,6 +1363,15 @@ fun Visibility.toTmpL() = when (this) {
 
 val TmpL.Type.aType get() = TmpL.AType(this)
 val TmpL.NewType.aType get() = TmpL.AType(this)
+
+internal fun contextualizeSig(fn: TmpL.Callable, bindings: Map<TypeFormal, Type2>): Signature2 {
+    var sig = fn.type
+    if (sig.hasThisFormal && fn is TmpL.MethodReference && sig.requiredInputTypes.isNotEmpty()) {
+        // Elide the `this` parameter since it's curried in with the subject.
+        sig = sig.copy(hasThisFormal = false, requiredInputTypes = sig.requiredInputTypes.drop(1))
+    }
+    return sig.mapType(bindings).copy(typeFormals = emptyList())
+}
 
 internal fun contextualizeSig(sig: Signature2, bindings: Map<TypeFormal, Type2>): Signature2 =
     sig.mapType(bindings).copy(typeFormals = emptyList())

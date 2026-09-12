@@ -17,7 +17,7 @@ Define local types, too. We'll import other types syntactically further down.
       public toString(): String {
 
 Tangent on referencing members inside a lambda to check a problem we had in JS.
-Yes, the code is silly but it tests the condition. We also had an issue later
+Yes, the code is silly, but it tests the condition. We also had an issue later
 with capturing `this` in Rust, so this test is useful.
 
         let ageText = [0].join("") { unused => age.toString() };
@@ -63,7 +63,7 @@ Circle of radius 1
 ## Custom and overloaded constructors
 
 Object literals correspond to constructor calls, not to classes and their named
-properties. Unfortunately at present, even if we recognize a matching class, we
+properties. Unfortunately, at present, even if we recognize a matching class, we
 don't handle incompatible overloaded constructors well in other stages, so the
 test for now sticks to single custom constructors rather than overloads.
 
@@ -93,15 +93,16 @@ TODO Test overloaded constructors or factories if/when we support them.
     new Whatever(456);
     { blech: 321 };
 
-Again try out imported types as well, since these are handled differently in
+Again, try out imported types as well, since these are handled differently in
 the internal processing. And use implied classes/constructors only here.
 
 TODO Overloaded constructors or factories or whatever we move to.
 
-    // { width: 7, height: 8 };
+    { width: 7, height: 8 };
     // IMPORTANT! Don't ever reference `Rectangle` explicitly in this module,
-    // so we can test that reorder works on just the implied constructor.
-    { squareWidth: 5 };
+    // outside the `import` below so we can test that reorder works on just the
+    // implied constructor.
+    // { squareWidth: 5 };
 
 ## Nested scopes
 

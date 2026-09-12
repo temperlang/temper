@@ -6,7 +6,6 @@ import lang.temper.common.ListBackedLogSink
 import lang.temper.common.Log
 import lang.temper.common.OpenOrClosed
 import lang.temper.common.RFailure
-import lang.temper.common.RResult
 import lang.temper.common.RSuccess
 import lang.temper.common.asciiUnTitleCase
 import lang.temper.common.assertStructure
@@ -19,7 +18,6 @@ import lang.temper.common.json.JsonValue
 import lang.temper.common.json.JsonValueBuilder
 import lang.temper.common.json.buildJsonNestedObject
 import lang.temper.common.putMultiList
-import lang.temper.common.splitLinesPreservingTerminators
 import lang.temper.common.structure.Hints
 import lang.temper.common.structure.PropertySink
 import lang.temper.common.structure.StructureHint
@@ -53,7 +51,11 @@ import lang.temper.name.ResolvedName
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.stage.Stage
+import lang.temper.testdir.DataFileConverter
+import lang.temper.testdir.FileContentStringConverter
+import lang.temper.testdir.ParseJsonTolerantConverter
 import lang.temper.testdir.TestFileBundle
+import lang.temper.testdir.TestResourceFileRelationship
 import lang.temper.testdir.readTestDir
 import lang.temper.testdir.regenerateFiles
 import lang.temper.type.Abstractness
@@ -76,6 +78,7 @@ import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.staticTypeContained
 import lang.temper.value.staySymbol
+import lang.temper.value.toPseudoCode
 import kotlin.test.fail
 
 /**
@@ -102,10 +105,12 @@ private fun shouldRegenerateStageTest(
     ignore(stageTestDir)
     ignore(isEmpty)
 
+    // Set to true temporarily if you want to regenerate test output, which you should then check
+    // with `git diff`.
     return false
 }
 
-/** The URL for reading test resource files. A `file:` URL which allows enumerating resources. */
+/** The URL for reading test resource files. A `file:` URL that allows enumerating resources. */
 internal expect val stageTestDirFileRoot: Url
 
 /** The `file:` URL under which to write changes when regenerating test resource files. */
@@ -126,6 +131,8 @@ internal fun assertModuleAtStage(
     loc: ModuleName? = null,
     stagingFlags: Set<BuiltinName> = emptySet(),
     stackTracesForErrors: Boolean = false,
+    /** Set to true to get console spam. */
+    verboseDebug: Boolean = false,
     logEntryWanted: (LogEntry) -> Boolean = { it.level >= Log.Warn },
 ) {
     assertModuleAtStage(
@@ -139,6 +146,7 @@ internal fun assertModuleAtStage(
         loc = loc,
         stagingFlags = stagingFlags,
         stackTracesForErrors = stackTracesForErrors,
+        verboseDebug = verboseDebug,
         logEntryWanted = logEntryWanted,
     ) { module, moduleAdvancer, testDir ->
         provisionModuleForStageTest(testDir, module, moduleAdvancer)
@@ -160,6 +168,7 @@ internal fun assertModuleAtStage(
     moduleResultNeeded: Boolean = false,
     stagingFlags: Set<BuiltinName> = emptySet(),
     stackTracesForErrors: Boolean = false,
+    verboseDebug: Boolean = false,
     logEntryWanted: (LogEntry) -> Boolean = { it.level >= Log.Warn },
     provisionModule: (Module, ModuleAdvancer, TestFileBundle) -> Unit,
 ) {
@@ -179,6 +188,7 @@ internal fun assertModuleAtStage(
     var stageNeeded = stage ?: Stage.Parse
     // Inspect the expect/... data files to assemble a bundle of JSON to
     // diff against the got bundle.
+    val originals = mutableMapOf<StageTestResourceFileRelationship, JsonValue>()
     val wantJson = buildJsonNestedObject {
         for ((relPath, content) in testDir.files) {
             if (relPath.segments.firstOrNull()?.fullName != "expect") {
@@ -193,12 +203,15 @@ internal fun assertModuleAtStage(
             if (stage == null && relStage != null && relStage > stageNeeded) {
                 stageNeeded = relStage
             }
-            when (val jsonResult = rel.converter.fromFileContent(content)) {
+            when (val jsonResult = rel.r.converter.fromFileContent(content)) {
                 is RFailure<*> -> throw IllegalArgumentException(
                     "Malformed test data file `${stageTestDir.url}//$relPath`",
                     jsonResult.failure,
                 )
-                is RSuccess<*, *> -> property(rel.jsonProperties, jsonResult.result)
+                is RSuccess<*, *> -> {
+                    originals[rel] = JsonString(content)
+                    property(rel.r.jsonProperties, jsonResult.result)
+                }
             }
         }
     }
@@ -207,6 +220,13 @@ internal fun assertModuleAtStage(
     var exitKind: ExitKind = ExitKind.Normal
     var isTestModule: (Module) -> Boolean = { _ -> false } // reassigned
     val moduleHook = ModuleCustomizeHook { module, _ ->
+        if (verboseDebug) {
+            module.treeForDebug?.let { ast ->
+                console.group("${module.loc} ${module.stageCompleted?.toString() ?: "start"}") {
+                    ast.toPseudoCode(console.textOutput)
+                }
+            }
+        }
         if (isTestModule(module)) {
             val outputTree = module.treeForDebug?.copy(copyInferences = true)
             val stageDone = module.stageCompleted
@@ -342,21 +362,24 @@ internal fun assertModuleAtStage(
         } finally {
             if (!passed && shouldRegenerateStageTest(stageTestDir, isEmpty = testDir.isEmpty())) {
                 console.info("assertModuleAtStage is regenerating test files under ${stageTestDir.url}")
+                val gotJson = run {
+                    val b = JsonValueBuilder()
+                    gotReconciled.destructure(b)
+                    b.getRoot()
+                }
+
                 val regeneratedFiles = testDir.files.mapNotNull { (relPath) ->
-                    val gotJson = run {
-                        val b = JsonValueBuilder()
-                        gotReconciled.destructure(b)
-                        b.getRoot()
-                    }
                     testResourceFileRelationships[relPath]?.let { rel ->
                         var value: JsonValue? = gotJson
-                        for (prop in rel.jsonProperties) {
+                        for (prop in rel.r.jsonProperties) {
                             value = (value as? JsonObject)?.getOrNull(prop)
                         }
-                        value?.let {
-                            rel.converter.toFileContent(it).result?.let { content ->
-                                Url(rel.relFilePath.join()) to Either.Left(content)
-                            }
+                        value?.let { value ->
+                            val oldValue = originals[rel]
+                            rel.r.converter.toFileContent(value = value, oldValue = oldValue)
+                                .result?.let { content ->
+                                    Url(rel.r.relFilePath.join()) to Either.Left(content)
+                                }
                         }
                     }
                 }
@@ -805,55 +828,18 @@ internal class DumpStackTracesForThoseErrors(private val logSink: LogSink) : Log
     }
 }
 
-/** Converts between test data file content and JSONValues in both directions. */
-private interface DataFileConverter {
-    fun fromFileContent(content: String): RResult<JsonValue, Throwable>
-    fun toFileContent(value: JsonValue): RResult<String, Throwable>
-}
-
-private object FileContentStringConverter : DataFileConverter {
-    override fun fromFileContent(content: String): RResult<JsonValue, Throwable> {
-        var adjustedContent = content
-        // If the file contains ## lines, and the rest are indented, remove the ## comments.
-        val lines = content.splitLinesPreservingTerminators()
-        if (
-            lines.any { it.startsWith("##") } &&
-            lines.all { it.isBlank() || it.startsWith("##") || it.startsWith("  ") }
-        ) {
-            adjustedContent = lines.joinToString("") {
-                when {
-                    it.startsWith("  ") -> it.drop(2)
-                    it.startsWith("##") -> ""
-                    else -> it
-                }
-            }
-        }
-        return RSuccess(JsonString(adjustedContent))
-    }
-
-    override fun toFileContent(value: JsonValue): RResult<String, Throwable> =
-        RResult.of(ClassCastException::class) { (value as JsonString).s }
-}
-
-private object ParseJsonTolerantConverter : DataFileConverter {
-    override fun fromFileContent(content: String): RResult<JsonValue, Throwable> =
-        JsonValue.parse(content, tolerant = true)
-
-    override fun toFileContent(value: JsonValue): RResult<String, Throwable> =
-        RSuccess(value.toJsonString(extensions = true))
-}
-
-private data class TestResourceFileRelationship(
+private data class StageTestResourceFileRelationship(
     val stage: Stage?,
-    val jsonProperties: List<String>,
-    val relFilePath: FilePath,
-    val converter: DataFileConverter,
+    val r: TestResourceFileRelationship,
 )
 
-private val testResourceFileRelationships: Map<FilePath, TestResourceFileRelationship> =
+private val testResourceFileRelationships: Map<FilePath, StageTestResourceFileRelationship> =
     buildMap {
-        fun put(rel: TestResourceFileRelationship) {
-            this[rel.relFilePath] = rel
+        fun put(stage: Stage?, jsonProperties: List<String>, relFilePath: FilePath, converter: DataFileConverter) {
+            this[relFilePath] = StageTestResourceFileRelationship(
+                stage,
+                TestResourceFileRelationship(jsonProperties, relFilePath, converter),
+            )
         }
         for (stage in Stage.entries) {
             if (stage >= Stage.Parse && stage < Stage.Run) {
@@ -861,83 +847,65 @@ private val testResourceFileRelationships: Map<FilePath, TestResourceFileRelatio
 
                 // AST forms
                 put(
-                    TestResourceFileRelationship(
-                        stage,
-                        listOf(stageLower, "body", "code"),
-                        filePath("expect", "$stageLower.temper"),
-                        FileContentStringConverter,
-                    ),
+                    stage,
+                    listOf(stageLower, "body", "code"),
+                    filePath("expect", "$stageLower.temper"),
+                    FileContentStringConverter,
                 )
                 put(
-                    TestResourceFileRelationship(
-                        stage,
-                        listOf(stageLower, "body", "tree"),
-                        filePath("expect", "$stageLower.lispy"),
-                        ParseJsonTolerantConverter,
-                    ),
+                    stage,
+                    listOf(stageLower, "body", "tree"),
+                    filePath("expect", "$stageLower.lispy"),
+                    ParseJsonTolerantConverter,
                 )
 
                 // metadata
                 put(
-                    TestResourceFileRelationship(
-                        stage,
-                        listOf(stageLower, "appendix"),
-                        filePath("expect", "$stageLower-appendix.json"),
-                        ParseJsonTolerantConverter,
-                    ),
+                    stage,
+                    listOf(stageLower, "appendix"),
+                    filePath("expect", "$stageLower-appendix.json"),
+                    ParseJsonTolerantConverter,
                 )
                 put(
-                    TestResourceFileRelationship(
-                        stage,
-                        listOf(stageLower, "types"),
-                        filePath("expect", "$stageLower-types.json"),
-                        ParseJsonTolerantConverter,
-                    ),
+                    stage,
+                    listOf(stageLower, "types"),
+                    filePath("expect", "$stageLower-types.json"),
+                    ParseJsonTolerantConverter,
                 )
                 put(
-                    TestResourceFileRelationship(
-                        stage,
-                        listOf(stageLower, "exports"),
-                        filePath("expect", "$stageLower-exports.json"),
-                        ParseJsonTolerantConverter,
-                    ),
+                    stage,
+                    listOf(stageLower, "exports"),
+                    filePath("expect", "$stageLower-exports.json"),
+                    ParseJsonTolerantConverter,
                 )
             }
         }
 
         // Run stage outputs
         put(
-            TestResourceFileRelationship(
-                Stage.Run,
-                listOf("run"),
-                filePath("expect", "run-result.json"),
-                ParseJsonTolerantConverter,
-            ),
+            Stage.Run,
+            listOf("run"),
+            filePath("expect", "run-result.json"),
+            ParseJsonTolerantConverter,
         )
         put(
-            TestResourceFileRelationship(
-                Stage.Run,
-                listOf("stdout"),
-                filePath("expect", "stdout.txt"),
-                FileContentStringConverter,
-            ),
+            Stage.Run,
+            listOf("stdout"),
+            filePath("expect", "stdout.txt"),
+            FileContentStringConverter,
         )
 
         // Overall outputs
         put(
-            TestResourceFileRelationship(
-                null,
-                listOf("errors"),
-                filePath("expect", "errors.json"),
-                ParseJsonTolerantConverter,
-            ),
+            null,
+            listOf("errors"),
+            filePath("expect", "errors.json"),
+            ParseJsonTolerantConverter,
         )
         put(
-            TestResourceFileRelationship(
-                null,
-                listOf("stageCompleted"),
-                filePath("expect", "stage-completed.json"),
-                ParseJsonTolerantConverter,
-            ),
+            null,
+            listOf("stageCompleted"),
+            filePath("expect", "stage-completed.json"),
+            ParseJsonTolerantConverter,
         )
     }

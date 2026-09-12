@@ -1,12 +1,7 @@
   @fn let `test//`.noStrings;
   `test//`.noStrings = (@stay fn noStrings /* return__0 */: (Listed<String>) {
-      void;
-      fn__0: do {
-        var fail#0;
-## Above, `as Listed`, here `... as Listed<String>`
-        return__0 = hs(fail#0, list() as Listed<String>);
-        if (fail#0) {
-          bubble()
-        };
+      fn__1: do {
+        return__0 = list() as Listed<String>;
+## In input `as Listed`, here `... as Listed<String>`
       }
   })

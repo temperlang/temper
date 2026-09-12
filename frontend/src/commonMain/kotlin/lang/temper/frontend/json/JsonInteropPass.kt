@@ -218,7 +218,7 @@ private class Subsidiaries(
 
         for (typeFormal in typeFormals) {
             if (typeFormal.needsAdapting) {
-                val newName = p.nameMaker.unusedSourceNameWithPrefix(prefix = "adapterFor", typeFormal.name)
+                val newName = p.resolvedNameMaker.unusedSourceNameWithPrefix(prefix = "adapterFor", typeFormal.name)
                 val nt = MkType2(typeFormal).get()
                 if (nt !in this) {
                     this[nt] = Subsidiary(nt, newName, typeFormal, wasAllocated = true)
@@ -328,7 +328,7 @@ internal class JsonInteropPass(
     val details: JsonInteropDetails,
 ) {
     val docContext = document.context
-    val nameMaker = ResolvedNameMaker(docContext.namingContext, docContext.genre)
+    val resolvedNameMaker = ResolvedNameMaker(docContext.namingContext, docContext.genre)
     private val addedMethods =
         mutableMapOf<ResolvedName, MutableList<JsonInteropChanges.AddedMethod>>()
     private val adapterClasses = mutableListOf<JsonInteropChanges.AddedType>()
@@ -371,11 +371,11 @@ internal class JsonInteropPass(
             typeDecl,
             enc = { pos, adaptFormals, subs ->
                 // Argument to encode
-                val x = nameMaker.unusedSourceName(ParsedName("x"))
+                val x = resolvedNameMaker.unusedSourceName(ParsedName("x"))
                 val xType = MkType2(typeDecl.definition)
                     .actuals(adaptFormals.allFormals.map { MkType2(it).get() })
                     .get()
-                val p = nameMaker.unusedSourceName(ParsedName("p"))
+                val p = resolvedNameMaker.unusedSourceName(ParsedName("p"))
                 Fn(pos) {
                     Decl(x) {
                         V(typeSymbol)
@@ -406,8 +406,8 @@ internal class JsonInteropPass(
                 }
             },
             dec = { pos, adaptFormals, subs ->
-                val t = nameMaker.unusedSourceName(ParsedName("t"))
-                val ic = nameMaker.unusedSourceName(ParsedName("ic"))
+                val t = resolvedNameMaker.unusedSourceName(ParsedName("t"))
+                val ic = resolvedNameMaker.unusedSourceName(ParsedName("ic"))
                 val decodedType = MkType2(typeDecl.definition)
                     .actuals(adaptFormals.allFormals.map { MkType2(it).get() })
                     .get()
@@ -476,7 +476,7 @@ internal class JsonInteropPass(
                 visibility = Visibility.Public,
                 name = encodeToJsonDotName.dotName,
                 body = {
-                    val p = nameMaker.unusedSourceName(ParsedName("p"))
+                    val p = resolvedNameMaker.unusedSourceName(ParsedName("p"))
                     val subs = Subsidiaries(this@JsonInteropPass, typeDecl.typeFormals)
                     Fn(extraMethodPos) {
                         Decl(p) {
@@ -602,7 +602,7 @@ internal class JsonInteropPass(
         defineDecodeFromJsonFromJsonObject(typeDecl) { ic, adapted, subs, decodedType, objLocal ->
             val namePropertyPairs = properties.mapNotNull {
                 if (it.shouldEncode && it.type != null && it.abstractness == Abstractness.Concrete) {
-                    nameMaker.unusedModularName(it.name) to it
+                    resolvedNameMaker.unusedModularName(it.name) to it
                 } else {
                     null
                 }
@@ -760,7 +760,7 @@ internal class JsonInteropPass(
                 visibility = Visibility.Public,
                 name = encodeToJsonDotName.dotName,
                 body = {
-                    val p = nameMaker.unusedSourceName(ParsedName("p"))
+                    val p = resolvedNameMaker.unusedSourceName(ParsedName("p"))
                     val x = ParsedName("x")
                     val subs = Subsidiaries(this@JsonInteropPass, typeDecl.typeFormals)
                     Fn(extraMethodPos) {
@@ -925,7 +925,7 @@ internal class JsonInteropPass(
                     is DecisionTree.Inner -> {
                         val propertyKey = d.discriminant
                         // let valueFor$KEY = obj.propertyValueOrNull("$KEY")
-                        val propertyValueName = nameMaker.unusedSourceName(
+                        val propertyValueName = resolvedNameMaker.unusedSourceName(
                             ParsedName(
                                 "valueFor${
                                     jsonPropertyKeyToCamel(propertyKey).asciiTitleCase()
@@ -1050,15 +1050,15 @@ internal class JsonInteropPass(
         plantDecodeBody: Planting.(ic: SourceName, AdaptFormals, Subsidiaries, Type2, obj: SourceName) -> Unit,
     ) {
         val extraMethodPos = typeDecl.pos.rightEdge
-        val t = nameMaker.unusedSourceName(ParsedName("t"))
-        val ic = nameMaker.unusedSourceName(ParsedName("ic"))
-        val adapted = AdaptFormals(typeDecl.pos, docContext, nameMaker, typeDecl.typeFormals)
+        val t = resolvedNameMaker.unusedSourceName(ParsedName("t"))
+        val ic = resolvedNameMaker.unusedSourceName(ParsedName("ic"))
+        val adapted = AdaptFormals(typeDecl.pos, docContext, resolvedNameMaker, typeDecl.typeFormals)
         val subs = Subsidiaries(this@JsonInteropPass, adapted.allFormals)
         val decodedType = MkType2(typeDecl.definition)
             .actuals(adapted.allFormals.map { MkType2(it).get() })
             .get()
         val returnType = MkType2.result(decodedType, WellKnownTypes.bubbleType2).get()
-        val objLocal = nameMaker.unusedSourceName(ParsedName("obj"))
+        val objLocal = resolvedNameMaker.unusedSourceName(ParsedName("obj"))
         addedMethods.putMultiList(
             typeDecl.name,
             JsonInteropChanges.AddedMethod(
@@ -1110,9 +1110,9 @@ internal class JsonInteropPass(
             is ResolvedParsedName -> ParsedName("${name.baseName.nameText}JsonAdapter")
             else -> ParsedName("JsonAdapterImpl")
         }
-        val adapterName = nameMaker.unusedSourceName(baseName)
+        val adapterName = resolvedNameMaker.unusedSourceName(baseName)
         val extraMethodPos = typeDecl.pos.rightEdge
-        val classAdaptedFormals = AdaptFormals(extraMethodPos, docContext, nameMaker, typeDecl.typeFormals)
+        val classAdaptedFormals = AdaptFormals(extraMethodPos, docContext, resolvedNameMaker, typeDecl.typeFormals)
         val adapterFormalToAdapterPropertyName = buildMap {
             classAdaptedFormals.allFormals.forEach { typeFormal ->
                 val baseNameSuffix = when (val formalName = typeFormal.name) {
@@ -1196,7 +1196,7 @@ internal class JsonInteropPass(
                 //    class CJsonAdapter<T> extends JsonAdapter<C<T>> {
                 //      public tAdapter: JsonAdapter<T>;
                 //    }
-                val adaptedFormals = AdaptFormals(extraMethodPos, docContext, nameMaker, typeDecl.typeFormals)
+                val adaptedFormals = AdaptFormals(extraMethodPos, docContext, resolvedNameMaker, typeDecl.typeFormals)
                 val adaptedType = MkType2(typeDecl.definition)
                     .actuals(adaptedFormals.allFormals.map { MkType2(it).get() })
                     .get()

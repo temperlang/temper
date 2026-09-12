@@ -121,8 +121,7 @@ The return type of `() => x / y` is `Int | Bubble` so `<NO_RESULT>` unifies with
 `<NO_RESULT>` must be a (non-strict) sub-type of `Bubble` and the greatest lower bound of
 `Int | Bubble` and `Bubble` is `Bubble`.
 
-So the type of the call result is `Int | Bubble` and the compiler *cannot* eliminate any
-handler scope around the call.
+So the type of the call result is `Int | Bubble`.
 
 ```typescript
 // Case 2
@@ -137,6 +136,5 @@ So the type of this call is `Int | Never`.
 *Never* can be simplified out of unions, the way that *Top* can be simplified out of intersections,
 so the type is `Int`.
 
-The compiler can conclude that any handler scope around the call will
-assign `false` to its failure variable any time its operand halts, and safely eliminate
-branches where the failure variable is true.
+The compiler can conclude that the return value will always safely unpack any time
+its operand halts, and safely eliminate failure handling branches.

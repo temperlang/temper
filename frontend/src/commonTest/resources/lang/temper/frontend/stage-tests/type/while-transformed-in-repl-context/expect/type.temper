@@ -1,5 +1,5 @@
-let return__1;
+let return__0;
+return__0 = void;
 while (c) {
-  f();
+  f()
 };
-return__1 = void

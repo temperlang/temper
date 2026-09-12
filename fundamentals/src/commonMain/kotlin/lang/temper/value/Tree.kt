@@ -461,7 +461,7 @@ class BlockTree(
 
     fun dereference(reference: BlockChildReference): TEdge? {
         val index = reference.index
-        return if (index != null && index in 0 until size) {
+        return if (index != null && index in indices) {
             edge(index)
         } else {
             null
@@ -1091,6 +1091,7 @@ private fun destructureControlFlow(
                 }
             }
         }
+        controlFlow.pos.positionPropertiesTo(this, Hints.u)
     }
 }
 

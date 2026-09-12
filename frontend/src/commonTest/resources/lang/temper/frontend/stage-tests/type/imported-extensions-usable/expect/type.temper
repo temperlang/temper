@@ -1,6 +1,6 @@
   @stay @imported(\(`half//`.intHalf)) @fn @extension("half") let intHalf__0;
   intHalf__0 = (fn intHalf);
-  do_call_log(doPure(@stay fn /* return__0 */: Console {
-        return__0 = getConsole();
-    }), do_call_toString(intHalf__0(84)));
-##                             ^^^^^^^^^^ extension resolved across module boundaries
+  do_call_log(doPure(@stay fn /* return__2 */: Console {
+        return__2 = getConsole();
+    }), do_call_toString(intHalf__0(84)))
+##                       ^^^^^^^^^^ extension resolved across module boundaries

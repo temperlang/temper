@@ -74,12 +74,6 @@ internal interface TmpLTreeRewriter {
 
     fun rewriteSupportCode(x: SupportCode) = x
 
-    fun rewriteHandlerScope(x: TmpL.HandlerScope): TmpL.HandlerScope = TmpL.HandlerScope(
-        pos = x.pos,
-        failed = rewriteId(x.failed),
-        handled = rewriteHandled(x.handled),
-    )
-
     fun rewriteBoilerplateCodeFoldBoundary(
         x: TmpL.BoilerplateCodeFoldBoundary,
     ): TmpL.BoilerplateCodeFoldBoundary =
@@ -97,18 +91,8 @@ internal interface TmpLTreeRewriter {
     fun rewriteEmbeddedComment(x: TmpL.EmbeddedComment): TmpL.EmbeddedComment =
         TmpL.EmbeddedComment(pos = x.pos, commentText = x.commentText)
 
-    fun rewriteHandled(x: TmpL.Handled): TmpL.Handled = when (x) {
-        is TmpL.Expression -> rewriteExpression(x)
-        is TmpL.SetAbstractProperty ->
-            when (val rewrite = rewriteSetAbstractProperty(x)) {
-                is TmpL.SetAbstractProperty -> rewrite
-                is TmpL.ExpressionStatement -> rewrite.expression
-                else -> error("$x")
-            }
-    }
-
     fun rewriteValueReference(x: TmpL.ValueReference): TmpL.Expression {
-        return TmpL.ValueReference(pos = x.pos, type = x.type, value = x.value)
+        return TmpL.ValueReference(pos = x.pos, passType = x.passType, value = x.value)
     }
 
     fun rewriteAwaitExpression(x: TmpL.AwaitExpression): TmpL.Expression {
@@ -132,7 +116,7 @@ internal interface TmpLTreeRewriter {
     }
 
     fun rewriteThis(x: TmpL.This): TmpL.Expression {
-        return TmpL.This(pos = x.pos, id = rewriteId(x.id), type = x.type)
+        return TmpL.This(pos = x.pos, id = rewriteId(x.id), passType = x.passType)
     }
 
     fun rewriteCallExpression(x: TmpL.CallExpression): TmpL.Expression {
@@ -141,12 +125,23 @@ internal interface TmpLTreeRewriter {
             fn = rewriteCallable(x.fn),
             typeActuals = rewriteCallTypeActuals(x.typeActuals),
             parameters = x.parameters.map { rewriteActual(it) },
-            type = x.type,
         )
     }
 
-    fun rewriteCallTypeActuals(x: TmpL.CallTypeActuals): TmpL.CallTypeActuals =
-        TmpL.CallTypeActuals(
+    fun rewriteCallTypeActuals(x: TmpL.CallTypeActuals): TmpL.CallTypeActuals = when (x) {
+        is TmpL.ExplicitCallTypeActuals -> rewriteExplicitCallTypeActuals(x)
+        is TmpL.ImplicitCallTypeActuals -> rewriteImplicitCallTypeActuals(x)
+    }
+
+    fun rewriteExplicitCallTypeActuals(x: TmpL.ExplicitCallTypeActuals): TmpL.CallTypeActuals =
+        TmpL.ExplicitCallTypeActuals(
+            x.pos,
+            x.types.map { rewriteAType(it) },
+            x.bindings,
+        )
+
+    fun rewriteImplicitCallTypeActuals(x: TmpL.ImplicitCallTypeActuals): TmpL.CallTypeActuals =
+        TmpL.ImplicitCallTypeActuals(
             x.pos,
             x.types.map { rewriteAType(it) },
             x.bindings,
@@ -183,8 +178,8 @@ internal interface TmpLTreeRewriter {
             pos = x.pos,
             expr = rewriteExpression(x.expr),
             checkedType = rewriteAType(x.checkedType),
-            type = x.type,
             checkedFrontendType = x.checkedFrontendType,
+            canFail = x.canFail,
         )
     }
 
@@ -192,7 +187,7 @@ internal interface TmpLTreeRewriter {
         return TmpL.UncheckedNotNullExpression(
             pos = x.pos,
             expression = rewriteExpression(x.expression),
-            type = x.type,
+            passType = x.passType,
         )
     }
 
@@ -201,7 +196,7 @@ internal interface TmpLTreeRewriter {
             pos = x.pos,
             parameterName = rewriteId(x.parameterName),
             index = x.index.deepCopy(),
-            type = x.type,
+            passType = x.passType,
         )
     }
 
@@ -244,12 +239,12 @@ internal interface TmpLTreeRewriter {
             pos = x.pos,
             subject = rewriteSubject(x.subject),
             property = x.property.deepCopy(),
-            type = x.type,
+            passType = x.passType,
         )
     }
 
     fun rewriteFunInterfaceExpression(x: TmpL.FunInterfaceExpression): TmpL.Expression {
-        return TmpL.FunInterfaceExpression(x.pos, rewriteCallable(x.callable), x.type)
+        return TmpL.FunInterfaceExpression(x.pos, rewriteCallable(x.callable), x.passType)
     }
 
     fun rewriteFunInterfaceCallable(x: TmpL.FunInterfaceCallable): TmpL.Callable {
@@ -275,7 +270,6 @@ internal interface TmpLTreeRewriter {
         is TmpL.ThrowStatement -> rewriteThrowStatement(x)
         is TmpL.TryStatement -> rewriteTryStatement(x)
         is TmpL.WhileStatement -> rewriteWhileStatement(x)
-        is TmpL.HandlerScope -> rewriteHandlerScope(x)
         is TmpL.BoilerplateCodeFoldBoundary -> rewriteBoilerplateCodeFoldBoundary(x)
         is TmpL.EmbeddedComment -> rewriteEmbeddedComment(x)
     }
@@ -354,7 +348,7 @@ internal interface TmpLTreeRewriter {
         return TmpL.Assignment(
             pos = x.pos,
             left = rewriteId(x.left),
-            right = rewriteRightHandSide(x.right),
+            right = rewriteExpression(x.right),
             type = x.type,
         )
     }
@@ -483,11 +477,6 @@ internal interface TmpLTreeRewriter {
 
     fun rewriteRestSpread(x: TmpL.RestSpread): TmpL.Actual =
         TmpL.RestSpread(pos = x.pos, parameterName = rewriteId(x.parameterName))
-
-    fun rewriteRightHandSide(x: TmpL.RightHandSide): TmpL.RightHandSide = when (x) {
-        is TmpL.Expression -> rewriteExpression(x)
-        is TmpL.HandlerScope -> rewriteHandlerScope(x)
-    }
 
     fun rewriteTopLevel(x: TmpL.TopLevel): TmpL.TopLevel = when (x) {
         is TmpL.BoilerplateCodeFoldBoundary -> rewriteBoilerplateCodeFoldBoundary(x)

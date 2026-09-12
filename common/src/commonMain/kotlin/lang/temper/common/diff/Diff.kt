@@ -135,15 +135,15 @@ object Diff {
                     val items: List<T>
                     var nLeftItems = 0
                     var nRightItems = 0
-                    if (changeType == ChangeType.Addition) {
-                        items = right.subList(rightPatchIndex, rightPatchIndex + nItems)
-                        nRightItems = nItems
-                    } else {
-                        items = left.subList(leftPatchIndex, leftPatchIndex + nItems)
-                        if (changeType == ChangeType.Unchanged) {
-                            nRightItems = nItems
-                        }
+                    if (changeType == ChangeType.Deletion) {
                         nLeftItems = nItems
+                        items = left.subList(leftPatchIndex, leftPatchIndex + nItems)
+                    } else {
+                        items = right.subList(rightPatchIndex, rightPatchIndex + nItems)
+                        if (changeType == ChangeType.Unchanged) {
+                            nLeftItems = nItems
+                        }
+                        nRightItems = nItems
                     }
                     changes.add(
                         Change(

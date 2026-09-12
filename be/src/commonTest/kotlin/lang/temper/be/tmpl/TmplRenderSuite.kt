@@ -239,8 +239,6 @@ class TmplRenderSuite : TranslatorTests(
                     |}
                     |return 42;
                 """.trimMargin(),
-            "assignToHse" to """val#7 = hs (failed#8, "dummy");""",
-            "exprStatementHse" to """hs (failed#7, "dummy");""",
             "expressionAssociativityLeftAmp" to "(a && b) && c",
             "expressionAssociativityRightAmp" to "a && b && c",
             "expressionAssociativityLeftPlus" to "a + b + c",

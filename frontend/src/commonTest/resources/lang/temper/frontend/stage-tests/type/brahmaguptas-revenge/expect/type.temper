@@ -1,11 +1,6 @@
-let return__0;
-var t#1, fail#3;
-orelse#1: {
-  t#1 = hs(fail#3, 0 / 0);
-  if (fail#3) {
-    break orelse#1;
-  };
-  return__0 = t#1
+var return__1;
+orelse#0: {
+  return__1 = 0 / 0
 } orelse {
-  return__0 = 0
-};
+  return__1 = 0
+}

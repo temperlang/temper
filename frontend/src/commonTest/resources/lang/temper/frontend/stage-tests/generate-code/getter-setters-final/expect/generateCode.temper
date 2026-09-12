@@ -1,19 +1,19 @@
-let return__0;
-@constructorProperty @property(\prop) @visibility(\public) @stay @fromType(C__0) var prop__0: Int32;
-@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) let constructor__0;
-constructor__0 = (@stay fn constructor(@impliedThis(C__0) this__0: C__0, prop__1 /* aka prop */: Int32) /* return__1 */: Void {
-    setp(prop__0, this__0, prop__1);
-    return__1 = void
+let return__14;
+@constructorProperty @property(\prop) @visibility(\public) @stay @fromType(C__0) var prop__3: Int32;
+@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) let constructor__4;
+constructor__4 = (@stay fn constructor(@impliedThis(C__0) this__1: C__0, prop__5 /* aka prop */: Int32) /* return__2 */: Void {
+    return__2 = void;
+    setp(prop__3, this__1, prop__5)
 });
-@getter @method(\prop) @fn @visibility(\public) @stay @fromType(C__0) let getprop__0;
-getprop__0 = (@stay fn (@impliedThis(C__0) this__1: C__0) /* return__2 */: Int32 {
-    return__2 = getp(prop__0, this__1)
+@getter @method(\prop) @fn @visibility(\public) @stay @fromType(C__0) let getprop__7;
+getprop__7 = (@stay fn (@impliedThis(C__0) this__8: C__0) /* return__9 */: Int32 {
+    return__9 = getp(prop__3, this__8)
 });
-@setter @method(\prop) @fn @visibility(\public) @stay @fromType(C__0) let setprop__0;
-setprop__0 = (@stay fn (@impliedThis(C__0) this__2: C__0, newProp__0: Int32) /* return__3 */: Void {
-    setp(prop__0, this__2, newProp__0);
-    return__3 = void
+@setter @method(\prop) @fn @visibility(\public) @stay @fromType(C__0) let setprop__10;
+setprop__10 = (@stay fn (@impliedThis(C__0) this__12: C__0, newProp__11: Int32) /* return__13 */: Void {
+    return__13 = void;
+    setp(prop__3, this__12, newProp__11)
 });
 @typeDecl(C__0) @stay let C__0;
 C__0 = type (C__0);
-return__0 = type (C__0)
+return__14 = type (C__0)

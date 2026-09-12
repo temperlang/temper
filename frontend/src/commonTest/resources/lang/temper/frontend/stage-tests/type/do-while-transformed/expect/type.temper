@@ -1,4 +1,5 @@
-let return__2;
+let return__1;
+return__1 = void;
 do {
-  return__2 = f();
+  f()
 } while (c);

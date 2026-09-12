@@ -83,3 +83,7 @@ fun <T> Cons<T>.filter(f: (T) -> Boolean): Cons<T> = when (this) {
         }
     }
 }
+operator fun <T> Cons<T>.contains(x: T): Boolean = when (this) {
+    is Cons.Empty -> false
+    is Cons.NotEmpty -> this.head == x || this.tail.contains(x)
+}

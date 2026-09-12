@@ -1,19 +1,16 @@
 @fn let `test//`.fi, @fn `test//`.ff, @fn `test//`.fs;
 `test//`.fi = (@stay fn fi(i__0 /* aka i */: Int32) /* return__0 */: Int32 {
-    void;
     fn__0: do {
-      return__0 = identity(i__0);
-    }
+      return__0 = identity(i__0)
+    };
 });
 `test//`.ff = (@stay fn ff(f__0 /* aka f */: Float64) /* return__1 */: Float64 {
-    void;
     fn__1: do {
-      return__1 = identity(f__0);
-    }
+      return__1 = identity(f__0)
+    };
 });
 `test//`.fs = (@stay fn fs(s__0 /* aka s */: String) /* return__2 */: String {
-    void;
     fn__2: do {
-      return__2 = +s__0;
-    }
+      return__2 = +s__0
+    };
 })

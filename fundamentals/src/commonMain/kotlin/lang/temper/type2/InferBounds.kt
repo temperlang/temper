@@ -3,6 +3,7 @@ package lang.temper.type2
 import lang.temper.common.Either
 import lang.temper.common.Log
 import lang.temper.common.ignore
+import lang.temper.format.TokenSerializable
 import lang.temper.log.LogEntry
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
@@ -23,6 +24,9 @@ import lang.temper.value.applicationOrderForActuals
 import kotlin.math.min
 import lang.temper.type.WellKnownTypes as WKT
 
+/**
+ * @throws [InternalTyperFailureException]
+ */
 fun inferBounds(
     typeContext: TypeContext,
     typeContext2: TypeContext2,
@@ -150,39 +154,11 @@ fun inferBounds(
                         // When solving `x as Foo`, we need to recognize that `Foo` might be
                         // a partial type.  We need to establish it as a bound for the type
                         // parameter that can be solved.
-                        val (_, reifiedType, typeArgIndex, typeArgVar) = inputBound
-                        relateTypeVarToTypeActual(typeArgIndex, typeArgVar)
-                        val wellFormedBound = run {
-                            val incomplete = reifiedType.type2
-                            when (val defn = incomplete.definition) {
-                                is TypeShape -> {
-                                    val typeParameters = defn.typeParameters
-                                    val n = incomplete.bindings.size
-                                    val m = typeParameters.size
-                                    if (n < m) {
-                                        PartialType.from(
-                                            defn,
-                                            buildList bindings@{
-                                                addAll(incomplete.bindings)
-                                                val typeWord = defn.word?.text ?: ""
-                                                for (i in size until m) {
-                                                    val typeArgWord = typeParameters[i].definition.word?.text ?: "T$i"
-                                                    val typeVar = solverVarNamer.unusedTypeVar(
-                                                        "$typeWord$typeArgWord",
-                                                    )
-                                                    add(TypeVarRef(typeVar, Nullity.NonNull))
-                                                }
-                                            },
-                                            incomplete.nullity,
-                                            (incomplete as? PositionedType)?.pos,
-                                        )
-                                    } else {
-                                        incomplete
-                                    }
-                                }
-                                is TypeFormal -> incomplete // complete actually
-                            }
-                        }
+                        val typeArgVar = inputBound.typeVar
+                        relateTypeVarToTypeActual(inputBound.typeArgumentIndex, typeArgVar)
+                        val wellFormedBound =
+                            setUpSolverForIncompleteReification(solverVarNamer, inputBound)
+
                         solver.sameAs(wellFormedBound, typeArgVar)
                         inputBound.describedValueArgumentIndex?.let { i ->
                             boundaries[i]?.let { boundary ->
@@ -216,6 +192,19 @@ fun inferBounds(
         call.contextType?.let { contextType ->
             solver.assignable(contextType, callPass)
         }
+        for (outputBound in call.outputBounds) {
+            when (outputBound) {
+                is InputBound.IncompleteReification -> {
+                    val typeVar = outputBound.typeVar
+                    val wellFormedBound =
+                        setUpSolverForIncompleteReification(solverVarNamer, outputBound)
+                    solver.sameAs(wellFormedBound, typeVar)
+                    solver.sameAs(callPass, typeVar)
+                }
+                is InputBound.Pretyped -> solver.sameAs(callPass, outputBound.type)
+            }
+        }
+
         solver.called(
             callees = callees,
             calleeChoice = calleeChoice,
@@ -230,7 +219,14 @@ fun inferBounds(
         CallBundle(call, calleeChoice, typeActuals, callPass = callPass, callFail = callFail)
     }
 
-    solver.solve()
+    val preSolver = solver.allConstraintsForDebug.toList()
+    @Suppress("TooGenericExceptionCaught")
+    try {
+        solver.solve()
+    } catch (e: RuntimeException) {
+        // Catchall to turn solver errors into InternalTyperError messages.
+        throw InternalTyperFailureException(e, preSolver)
+    }
 
     for (callBundle in callBundles) {
         val call = callBundle.call
@@ -408,8 +404,8 @@ fun inferBounds(
         call.explanations = explanations.toList()
 
         // Store any solution for inputs that needed
-        for (inputBound in call.inputBounds) {
-            when (inputBound) {
+        for (bound in (call.inputBounds + call.outputBounds)) {
+            when (bound) {
                 is InputBound.Pretyped,
                 is InputBound.Typeless,
                 -> {}
@@ -419,11 +415,11 @@ fun inferBounds(
                 is InputBound.UntypedCallInput -> {}
                 // Store the type.
                 is InputBound.ValueInput -> {
-                    inputBound.valueSolvedType = inputBound.solvedType(solver)
+                    bound.valueSolvedType = bound.solvedType(solver)
                 }
                 is InputBound.IncompleteReification -> {
                     // Store any reified type for an `as` or `is` operator back in the tree.
-                    val (_, reifiedType, _, typeVar, edge) = inputBound
+                    val (_, reifiedType, _, typeVar, edge) = bound
                     val solution = solver[typeVar]
                     if (edge != null && solution is Type2) {
                         val incomplete = reifiedType.type2
@@ -458,3 +454,46 @@ data class ResolutionProblemReason(
         resolutionProblem.logTo(logSink, pos)
     }
 }
+
+private fun setUpSolverForIncompleteReification(
+    solverVarNamer: SolverVarNamer,
+    bound: InputBound.IncompleteReification,
+): TypeOrPartialType {
+    val reifiedType = bound.reifiedType
+    val incomplete = reifiedType.type2
+    return when (val defn = incomplete.definition) {
+        is TypeShape -> {
+            val typeParameters = defn.typeParameters
+            val n = incomplete.bindings.size
+            val m = typeParameters.size
+            if (n < m) {
+                PartialType.from(
+                    defn,
+                    buildList bindings@{
+                        addAll(incomplete.bindings)
+                        val typeWord = defn.word?.text ?: ""
+                        for (i in size until m) {
+                            val typeArgWord =
+                                typeParameters[i].definition.word?.text ?: "T$i"
+                            val typeVar = solverVarNamer.unusedTypeVar(
+                                "$typeWord$typeArgWord",
+                            )
+                            add(TypeVarRef(typeVar, Nullity.NonNull))
+                        }
+                    },
+                    incomplete.nullity,
+                    (incomplete as? PositionedType)?.pos,
+                )
+            } else {
+                incomplete
+            }
+        }
+
+        is TypeFormal -> incomplete // complete actually
+    }
+}
+
+class InternalTyperFailureException(
+    cause: Throwable?,
+    val constraintDump: List<TokenSerializable>,
+) : RuntimeException(cause)

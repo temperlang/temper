@@ -15,9 +15,9 @@ import kotlin.io.path.toPath
 typealias Url = URI
 
 /** Builder for a list of files to regenerate */
-typealias RegeneratedFilesList = MutableList<Pair<Url, Either<String, ByteArray>>>
+typealias RegeneratedFilesList = List<Pair<Url, Either<String, ByteArray>>>
 
-fun regenerateFiles(testDirRoot: Url, files: List<Pair<Url, Either<String, ByteArray>>>) {
+fun regenerateFiles(testDirRoot: Url, files: RegeneratedFilesList) {
     for ((relUrl, content) in files) {
         val path = testDirRoot.resolve(relUrl).toPath()
         Files.createDirectories(path.parent)

@@ -128,6 +128,8 @@ object WellKnownTypes {
     val invalidType2: DefinedNonNullType
     val mapKeyType: NominalType
     val mapKeyType2: DefinedNonNullType
+    val problemType: NominalType
+    val problemType2: DefinedNonNullType
     val promiseBuilderType: NominalType
     val stringType: NominalType
     val stringType2: DefinedNonNullType
@@ -317,6 +319,8 @@ object WellKnownTypes {
         invalidType2 = MkType2(invalidTypeDefinition).get() as DefinedNonNullType
         mapKeyType = MkType.nominal(mapKeyTypeDefinition)
         mapKeyType2 = MkType2(mapKeyTypeDefinition).get() as DefinedNonNullType
+        problemType = MkType.nominal(problemTypeDefinition)
+        problemType2 = MkType2(problemTypeDefinition).get() as DefinedNonNullType
         promiseBuilderType = MkType.nominal(
             promiseBuilderTypeDefinition,
             listOf(MkType.nominal(promiseBuilderTypeDefinition.typeParameters.first().definition)),

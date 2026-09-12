@@ -1,0 +1,15 @@
+f { (x: Int32, y: Int32) : GeneratorResult<Int32> extends GeneratorFn =>
+  // This helper closes over arguments but not local state.
+  // It can be left in place.
+  let sum(): Int32 { x + y }
+  yield sum();
+
+  let sum2 = x + y;
+  let negSum = -sum2;
+  // When we yoink this, we also have to yoink negSum.
+  let halfNegSum(): Int32 { negSum / 2 }
+  yield halfNegSum();
+
+  // And here's another basic block that uses halfNegSum.
+  yield halfNegSum() + 1;
+}

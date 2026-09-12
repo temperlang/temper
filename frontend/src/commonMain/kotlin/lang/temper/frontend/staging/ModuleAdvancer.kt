@@ -35,6 +35,7 @@ import lang.temper.lexer.defaultClassifyTemperSource
 import lang.temper.library.LibraryConfiguration
 import lang.temper.library.LibraryConfigurationLocationKey
 import lang.temper.library.LibraryConfigurationsBundle
+import lang.temper.log.AbstractMaxLevelLogSink
 import lang.temper.log.CodeLocation
 import lang.temper.log.CodeLocationKey
 import lang.temper.log.ConfigurationKey
@@ -47,6 +48,7 @@ import lang.temper.log.FileRelatedCodeLocation
 import lang.temper.log.LogEntry
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
+import lang.temper.log.MessageTemplateI
 import lang.temper.log.Position
 import lang.temper.log.SharedLocationContext
 import lang.temper.log.UNIX_FILE_SEGMENT_SEPARATOR
@@ -142,13 +144,13 @@ interface ModuleCollector {
  */
 class ModuleAdvancer(
     /**
-     * Log sink for non-module specific errors
+     * Log sink for non-module-specific errors
      * and for modules created by [createModule].
      */
     var projectLogSink: LogSink,
     /**
      * Called to resolve imports that are not local path imports.
-     * This is not called for std. As a convenience, and to avoid slowing down
+     * This is not called for std. As a convenience and to avoid slowing down
      * tests, std modules are compiled once and cached globally.
      */
     private val nonLocalImportResolver: ImportResolver = ImportResolver.ImportNone,
@@ -954,6 +956,7 @@ private class ImportHandler(
 private fun buildStdModules(
     advancer: ModuleAdvancer,
     console: Console,
+    logSink: CollectingLogSink,
 ): StdModules {
     val tentativeStdLibraryConfiguration = LibraryConfiguration(
         libraryName = DashedIdentifier.temperStandardLibraryIdentifier,
@@ -1013,13 +1016,14 @@ private fun buildStdModules(
 
     val stdLibraryConfiguration = // After processing std/config.temper.md
         advancer.getLibraryConfiguration(tentativeStdLibraryConfiguration.libraryRoot)!!
-    val stdModules = StdModules(modulesByFullSpecifier, stdLibraryConfiguration)
+    val stdModules = StdModules(modulesByFullSpecifier, stdLibraryConfiguration, logSink.logEntryList)
     return stdModules
 }
 
 private class StdModules(
     val modulesByFullSpecifier: Map<String, Module>,
     val libraryConfiguration: LibraryConfiguration,
+    val logEntries: List<LogEntry>,
 ) : ImportResolver {
     override fun lookup(specifier: String, collector: ModuleCollector): Exporter? {
         val m = modulesByFullSpecifier[specifier]
@@ -1067,19 +1071,23 @@ private class ModuleAdvancerContinueConditionImpl : ContinueCondition {
 }
 
 private val sharedStdModules = lazy {
+    val collectingLogSink = CollectingLogSink()
     val logSink = ConsoleBackedContextualLogSink(
         console,
         null,
-        null,
+        collectingLogSink,
         CustomValueFormatter.Nope,
     )
     val advancer = ModuleAdvancer(logSink)
-    buildStdModules(advancer, console)
+    buildStdModules(advancer, console, collectingLogSink)
 }
 
 /** Allows introspective access to std/ modules.  Shared by unit tests.  Do not mutate. */
 fun getSharedStdModules(): List<Module> =
     sharedStdModules.value.modulesByFullSpecifier.values.toList()
+
+internal fun getSharedStdModulesLogEntries(): List<LogEntry> =
+    sharedStdModules.value.logEntries
 
 /** Try to convert a non-local specifier to a local specifier when the importer is in the same library. */
 private fun toLocalSpecifier(
@@ -1279,4 +1287,14 @@ private fun addInOrder(modules: Iterable<Module>, out: MutableCollection<Module>
         }
     }
     partiallyOrderTo(modules, afterMap, out) { it }
+}
+
+private class CollectingLogSink : AbstractMaxLevelLogSink() {
+    private val logEntries = mutableListOf<LogEntry>()
+
+    override fun doLog(level: Log.Level, template: MessageTemplateI, pos: Position, values: List<Any>, fyi: Boolean) {
+        logEntries.add(LogEntry(level, template, pos, values, fyi))
+    }
+
+    val logEntryList get() = logEntries.toList()
 }

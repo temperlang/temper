@@ -1,7 +1,7 @@
-let console#0;
-console#0 = doPure(@stay fn: Console {
+let console#1;
+console#1 = doPure(@stay fn: Console {
     getConsole()
 });
 do_call_forEach(list("foo"), @stay fn (x__0) {
-    do_call_log(console#0, x__0)
+    do_call_log(console#1, x__0)
 })

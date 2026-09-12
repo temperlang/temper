@@ -78,7 +78,7 @@ object Lua {
         }
         override fun hashCode(): Int {
             var hc = body.hashCode()
-            hc = 31 * hc + (last?.hashCode() ?: 0)
+            hc = 31 * hc + last.hashCode()
             return hc
         }
         init {
@@ -300,7 +300,7 @@ object Lua {
             var hc = cond.hashCode()
             hc = 31 * hc + then.hashCode()
             hc = 31 * hc + elseIfs.hashCode()
-            hc = 31 * hc + (els?.hashCode() ?: 0)
+            hc = 31 * hc + els.hashCode()
             return hc
         }
         init {
@@ -1034,7 +1034,7 @@ object Lua {
         }
         override fun hashCode(): Int {
             var hc = id.hashCode()
-            hc = 31 * hc + (sourceIdentifier?.hashCode() ?: 0)
+            hc = 31 * hc + sourceIdentifier.hashCode()
             return hc
         }
         companion object {

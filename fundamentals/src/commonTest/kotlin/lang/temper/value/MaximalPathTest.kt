@@ -5,7 +5,11 @@ import lang.temper.common.ForwardOrBack
 import lang.temper.common.LeftOrRight
 import lang.temper.common.TestDocumentContext
 import lang.temper.common.console
+import lang.temper.common.soleElement
+import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
+import lang.temper.frontend.structureBlock
 import lang.temper.log.Position
+import lang.temper.name.BuiltinName
 import lang.temper.name.ParsedName
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -23,9 +27,8 @@ class MaximalPathTest {
                 |
                 |Path#0
             """.trimMargin(),
-            expectedTerminalExpressions = "Sometimes",
         ) {
-            StmtBlock()
+            Do {}
         }
     }
 
@@ -41,15 +44,11 @@ class MaximalPathTest {
                 |- ref#0: `foo()`
                 |- ref#1: `bar()`
             """.trimMargin(),
-            expectedTerminalExpressions = """
-                |- ref#1: `bar()`
-                |Always
-            """.trimMargin(),
         ) {
-            StmtBlock(
-                Stmt("foo"),
-                Stmt("bar"),
-            )
+            Do {
+                Stmt("foo")
+                Stmt("bar")
+            }
         }
     }
 
@@ -76,20 +75,15 @@ class MaximalPathTest {
                 |
                 |Path#3
             """.trimMargin(),
-            expectedTerminalExpressions = """
-                |- ref#2: `foo()`
-                |- ref#3: `bar()`
-                |Always
-            """.trimMargin(),
         ) {
-            StmtBlock(
-                Stmt("init"),
+            Do {
+                Stmt("init")
                 If(
-                    Ref("wot"),
-                    Stmt("foo"),
-                    elseClause = Stmt("bar"),
-                ),
-            )
+                    cond = { Stmt("wot") },
+                    thn = { Stmt("foo") },
+                    els = { Stmt("bar") },
+                )
+            }
         }
     }
 
@@ -112,15 +106,11 @@ class MaximalPathTest {
                 |
                 |Path#2
             """.trimMargin(),
-            expectedTerminalExpressions = """
-                |- ref#2: `foo()`
-                |Sometimes
-            """.trimMargin(),
         ) {
-            StmtBlock(
-                Stmt("init"),
-                If(Ref("wot"), Stmt("foo")),
-            )
+            Do {
+                Stmt("init")
+                If({ Stmt("wot") }, { Stmt("foo") }, {})
+            }
         }
     }
 
@@ -133,26 +123,19 @@ class MaximalPathTest {
                 |Fail exits
                 |
                 |Path#0
-                |- ref#0: `beforeBreak()`
-                |if (ref#1?: `x()`) -> Path#1
+                |- ref#2: `beforeBreak()`
+                |if (ref#3?: `x()`) -> Path#1
                 |else -> Path#1
                 |
                 |Path#1
             """.trimMargin(),
-            expectedTerminalExpressions = """
-                |- ref#0: `beforeBreak()`
-                |Always
-            """.trimMargin(),
         ) {
             // my_label: beforeBreak { if (x()) { break my_label } }
-            val label = label("my_label")
-            Labeled(
-                label,
-                StmtBlock(
-                    Stmt("beforeBreak"),
-                    If(Ref("x"), BreakTo(label)),
-                ),
-            )
+            val label = nameMaker.unusedSourceName(ParsedName("my_label"))
+            Do(label = label) {
+                Stmt("beforeBreak")
+                If({ Stmt("x") }, { Break(label) }, {})
+            }
         }
     }
 
@@ -173,14 +156,12 @@ class MaximalPathTest {
                 |
                 |Path#2
             """.trimMargin(),
-            expectedTerminalExpressions = """
-                |- ref#0: `beforeBubble()`
-                |Sometimes
-            """.trimMargin(),
         ) {
-            StmtBlock(
-                Stmt("beforeBubble"),
-                If(Ref("x"), Bubble()),
+            Stmt("beforeBubble")
+            If(
+                cond = { Stmt("x") },
+                thn = { Bubble() },
+                els = {},
             )
         }
     }
@@ -196,14 +177,9 @@ class MaximalPathTest {
                 |Path#0
                 |- ref#0: `beforeBubble()`
             """.trimMargin(),
-            expectedTerminalExpressions = """
-                |Never
-            """.trimMargin(),
         ) {
-            StmtBlock(
-                Stmt("beforeBubble"),
-                Bubble(),
-            )
+            Stmt("beforeBubble")
+            Bubble()
         }
     }
 
@@ -216,34 +192,31 @@ class MaximalPathTest {
                 |Fail exits
                 |
                 |Path#0
-                |if (ref#0?: `bad()`) -> Path#1
-                |else -> Path#2
+                |if (ref#0?: `bad()`) -> Path#2
+                |else -> Path#1
                 |
                 |Path#1
-                |- ref#3: `recover()`
+                |- ref#2: `known_safe()`
                 |-> Path#3
                 |
-                |Path#2
-                |- ref#2: `known_safe()`
+                |Path#2 catches from orElse#0
+                |- ref#3: `recover()`
                 |-> Path#3
                 |
                 |Path#3
-            """.trimMargin(),
-            expectedTerminalExpressions = """
-                |- ref#2: `known_safe()`
-                |- ref#3: `recover()`
-                |Always
-            """.trimMargin(),
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
         ) {
             OrElse(
-                onFailLabel = null, // surprise me
-                orClause = StmtBlock(
-                    If(Ref("bad"), Bubble()),
-                    Stmt("known_safe"),
-                ),
-                elseClause = StmtBlock(
-                    Stmt("recover"),
-                ),
+                or = {
+                    If(
+                        cond = { Stmt("bad") },
+                        thn = { Bubble() },
+                        els = { Stmt("known_safe") },
+                    )
+                },
+                els = {
+                    Stmt("recover")
+                },
             )
         }
     }
@@ -267,26 +240,19 @@ class MaximalPathTest {
                 |Path#2
                 |- ref#2: `start_body()`
                 |if (ref#3?: `x()`) -> Path#3
-                |else -> Path#4
+                |else if (ref#4?: `y()`) -> Path#4
+                |else -> Path#5
                 |
                 |Path#3
                 |- ref#7: `after_loop()`
                 |
-                |Path#4
-                |if (ref#4?: `y()`) -> Path#5
-                |else -> Path#6
-                |
-                |Path#6
+                |Path#5
                 |- ref#5: `notX_notY()`
                 |- ref#6: `end_body()`
-                |-> Path#5
+                |-> Path#4
                 |
-                |Path#5
+                |Path#4
                 |<- Path#1
-            """.trimMargin(),
-            expectedTerminalExpressions = """
-                |- ref#7: `after_loop()`
-                |Always
             """.trimMargin(),
         ) {
             // before_loop()
@@ -302,26 +268,26 @@ class MaximalPathTest {
             //   end_body();
             // }
             // after_loop();
-            StmtBlock(
-                Stmt("before_loop"),
-                While(
-                    Ref("keepGoing"),
-                    StmtBlock(
-                        Stmt("start_body"),
-                        If(
-                            Ref("x"),
-                            BreakTo(null),
-                            elseClause = If(
-                                Ref("y"),
-                                ContinueTo(null),
-                                elseClause = Stmt("notX_notY"),
-                            ),
-                        ),
-                        Stmt("end_body"),
-                    ),
-                ),
-                Stmt("after_loop"),
+            Stmt("before_loop")
+            While(
+                cond = { Stmt("keepGoing") },
+                body = {
+                    Stmt("start_body")
+                    If(
+                        cond = { Stmt("x") },
+                        thn = { Break() },
+                        els = {
+                            If(
+                                cond = { Stmt("y") },
+                                thn = { Continue() },
+                                els = { Stmt("notX_notY") },
+                            )
+                        },
+                    )
+                    Stmt("end_body")
+                },
             )
+            Stmt("after_loop")
         }
     }
 
@@ -330,7 +296,7 @@ class MaximalPathTest {
         assertMaximalPaths(
             want = """
                 |Entry Path#0
-                |Exits Path#5
+                |Exits Path#3
                 |Fail exits
                 |
                 |Path#0
@@ -338,32 +304,28 @@ class MaximalPathTest {
                 |-> Path#1
                 |
                 |Path#1
-                |if (ref#1?: `keepGoing()`) -> Path#2
-                |else -> Path#5
+                |if (ref#3?: `keepGoing()`) -> Path#2
+                |else -> Path#3
                 |
                 |Path#2
-                |- ref#2: `start_body()`
-                |if (ref#3?: `x()`) -> Path#3
-                |else -> Path#4
-                |
-                |Path#4
-                |- ref#4: `not_continuing()`
-                |- ref#5: `end_body()`
-                |-> Path#3
+                |- ref#4: `start_body()`
+                |if (ref#5?: `x()`) -> Path#4
+                |else -> Path#5
                 |
                 |Path#3
-                |- ref#6: `increment()`
-                |<- Path#1
+                |- ref#11: `after_loop()`
                 |
                 |Path#5
-                |- ref#7: `after_loop()`
-            """.trimMargin(),
-            expectedTerminalExpressions = """
-                |- ref#7: `after_loop()`
-                |Always
+                |- ref#8: `not_continuing()`
+                |- ref#9: `end_body()`
+                |-> Path#4
+                |
+                |Path#4
+                |- ref#10: `increment()`
+                |<- Path#1
             """.trimMargin(),
         ) {
-            val loopLabel = label("loop_label")
+            val loopLabel = nameMaker.unusedSourceName(ParsedName("loop_label"))
             // before_loop();
             // label: for (; keepGoing(); increment()) {
             //   start_body();
@@ -375,24 +337,22 @@ class MaximalPathTest {
             //   end_body();
             // }
             // after_loop();
-            StmtBlock(
-                Stmt("before_loop"),
-                While(
-                    label = loopLabel,
-                    condition = Ref("keepGoing"),
-                    body = StmtBlock(
-                        Stmt("start_body"),
-                        If(
-                            Ref("x"),
-                            ContinueTo(loopLabel),
-                            elseClause = Stmt("not_continuing"),
-                        ),
-                        Stmt("end_body"),
-                    ),
-                    increment = Stmt("increment"),
-                ),
-                Stmt("after_loop"),
+            Stmt("before_loop")
+            While(
+                label = loopLabel,
+                cond = { Stmt("keepGoing") },
+                body = {
+                    Stmt("start_body")
+                    If(
+                        cond = { Stmt("x") },
+                        thn = { Continue(loopLabel) },
+                        els = { Stmt("not_continuing") },
+                    )
+                    Stmt("end_body")
+                },
+                increment = { Stmt("increment") },
             )
+            Stmt("after_loop")
         }
     }
 
@@ -405,8 +365,8 @@ class MaximalPathTest {
                 |Fail exits
                 |
                 |Path#0
-                |- ref#0: `body()`
-                |if (ref#1?: `cond()`) -> Path#1
+                |- ref#1: `body()`
+                |if (ref#0?: `cond()`) -> Path#1
                 |else -> Path#2
 
                 |Path#1
@@ -414,17 +374,12 @@ class MaximalPathTest {
                 |
                 |Path#2
             """.trimMargin(),
-            expectedTerminalExpressions = """
-                |- ref#0: `body()`
-                |Always
-            """.trimMargin(),
         ) {
             // do { "body" } while ("cond");
-            DoWhile(
-                StmtBlock(
-                    Stmt("body"),
-                ),
-                Ref("cond"),
+            While(
+                testAt = LeftOrRight.Right,
+                body = { Stmt("body") },
+                cond = { Stmt("cond") },
             )
         }
     }
@@ -437,99 +392,76 @@ class MaximalPathTest {
             |Fail exits
             |
             |Path#0
-            |- ref#0: `var t#3`
-            |- ref#1: `var t#4`
-            |- ref#2: `var fail#2`
-            |- ref#3: `t#3 = hs(fail#2, x__0 / y__1)`
-            |if (ref#4?: `fail#2`) -> Path#1
-            |else -> Path#2
+            |- ref#0: `var t#2`
+            |- ref#1: `var t#3`
+            |- ref#4: `t#2 = x__0 / y__1`
+            |if (bubbled) -> Path#2
+            |else -> Path#1
             |
             |Path#1
-            |- ref#6: `t#4 = -1`
+            |- ref#5: `t#3 = t#2`
             |-> Path#3
             |
-            |Path#2
-            |- ref#5: `t#4 = t#3`
+            |Path#2 catches from orelse__4
+            |- ref#6: `t#3 = -1`
             |-> Path#3
             |
             |Path#3
-            |- ref#7: `t#4`
+            |- ref#7: `t#3`
         """.trimMargin(),
     ) {
         // WeaverTest.divOrElseTest produces output like this:
-        val x = doc.nameMaker.unusedSourceName(ParsedName("x"))
-        val y = doc.nameMaker.unusedSourceName(ParsedName("y"))
-        val fail1 = doc.nameMaker.unusedTemporaryName("fail")
-        val t2 = doc.nameMaker.unusedTemporaryName("t")
-        val t3 = doc.nameMaker.unusedTemporaryName("t")
-        val orelse0 = label("orelse")
-        StmtBlock(
-            // [[ var t#2 ]];
-            Stmt {
-                Decl(t2) {
-                    V(varSymbol)
-                    V(void)
-                }
-            },
-            // [[ var t#3 ]];
-            Stmt {
-                Decl(t3) {
-                    V(varSymbol)
-                    V(void)
-                }
-            },
-            // [[ var fail#1 ]];
-            Stmt {
-                Decl(fail1) {
-                    V(varSymbol)
-                    V(void)
-                }
-            },
-            // orelse#0: do {
-            OrElse(
-                onFailLabel = orelse0,
-                orClause = StmtBlock(
-                    // [[ t#2 = hs(fail#1, x / y) ]];
-                    Stmt {
-                        Call(BuiltinFuns.setLocalFn) {
-                            Ln(t2)
-                            Call(BuiltinFuns.handlerScope) {
-                                Ln(fail1)
-                                Call(BuiltinFuns.divIntIntFn) {
-                                    Rn(x)
-                                    Rn(y)
-                                }
-                            }
-                        }
-                    },
-                    // if ([[ fail#1 ]]) {
-                    //   break orelse#0;
-                    // }
-                    If(
-                        Ref { Rn(fail1) },
-                        BreakTo(orelse0),
-                    ),
-                    // [[ t#3 = t#2 ]];
-                    Stmt {
-                        Call(BuiltinFuns.setLocalFn) {
-                            Ln(t3)
-                            Rn(t2)
-                        }
-                    },
-                ),
-                // } orelse {
-                //   [[ t#3 = -1 ]];
-                // }
-                elseClause = Stmt {
-                    Call(BuiltinFuns.setLocalFn) {
-                        Ln(t3)
-                        V(Value(-1, TInt))
+        val x = nameMaker.unusedSourceName(ParsedName("x"))
+        val y = nameMaker.unusedSourceName(ParsedName("y"))
+        val t2 = nameMaker.unusedTemporaryName("t")
+        val t3 = nameMaker.unusedTemporaryName("t")
+        val orelse0 = nameMaker.unusedSourceName(ParsedName("orelse"))
+
+        // [[ var t#2 ]];
+        Decl(t2) {
+            V(varSymbol)
+            V(void)
+        }
+
+        // [[ var t#3 ]];
+        Decl(t3) {
+            V(varSymbol)
+            V(void)
+        }
+        // orelse#0: do {
+        OrElse(
+            label = orelse0,
+            or = {
+                // Use of bubbly version of `/`
+                // [[ t#2 = x / y ]];
+                Call(BuiltinFuns.setLocalFn) {
+                    Ln(t2)
+                    Call {
+                        val div = BuiltinFuns.divIntIntFn
+                        val divType = typeFromSignature(div.sigs!!.soleElement!!)
+                        V(Value(div), divType)
+                        Rn(x)
+                        Rn(y)
                     }
-                },
-            ),
-            // [[ t#3 ]];
-            Stmt { Rn(t3) },
+                }
+                // [[ t#3 = t#2 ]];
+                Call(BuiltinFuns.setLocalFn) {
+                    Ln(t3)
+                    Rn(t2)
+                }
+            },
+            // } orelse {
+            //   [[ t#3 = -1 ]];
+            // }
+            els = {
+                Call(BuiltinFuns.setLocalFn) {
+                    Ln(t3)
+                    V(Value(-1, TInt))
+                }
+            },
         )
+        // [[ t#3 ]];
+        Rn(t3)
     }
 
     @Test
@@ -551,20 +483,19 @@ class MaximalPathTest {
             |- ref#4: `else_y()`
             |<- Path#2
         """.trimMargin(),
-        expectedTerminalExpressions = """
-            |Never
-        """.trimMargin(),
     ) {
         If(
-            Ref("question"),
-            While(
-                Ref { V(TBoolean.valueTrue) },
-                Stmt("then_y"),
-            ),
-            While(
-                Ref { V(TBoolean.valueTrue) },
-                Stmt("else_y"),
-            ),
+            cond = { Stmt("question") },
+            thn = {
+                While(cond = { V(TBoolean.valueTrue) }) {
+                    Stmt("then_y")
+                }
+            },
+            els = {
+                While({ V(TBoolean.valueTrue) }) {
+                    Stmt("else_y")
+                }
+            },
         )
     }
 
@@ -579,14 +510,10 @@ class MaximalPathTest {
             |- ref#1: `body()`
             |<- Path#0
         """.trimMargin(),
-        expectedTerminalExpressions = """
-            |Never
-        """.trimMargin(),
     ) {
-        While(
-            Ref { V(TBoolean.valueTrue) },
-            Stmt("body"),
-        )
+        While({ V(TBoolean.valueTrue) }) {
+            Stmt("body")
+        }
     }
 
     @Test
@@ -597,19 +524,14 @@ class MaximalPathTest {
             |Fail exits
             |
             |Path#0
-            |- ref#0: `body()`
-            |-> Path#1
-            |
-            |Path#1
+            |- ref#1: `body()`
             |<- Path#0
         """.trimMargin(),
-        expectedTerminalExpressions = """
-            |Never
-        """.trimMargin(),
     ) {
-        DoWhile(
-            Stmt("body"),
-            Ref { V(TBoolean.valueTrue) },
+        While(
+            testAt = LeftOrRight.Right,
+            body = { Stmt("body") },
+            cond = { V(TBoolean.valueTrue) },
         )
     }
 
@@ -621,22 +543,17 @@ class MaximalPathTest {
             |Fail exits
             |
             |Path#0
-            |- ref#0: `body()`
-            |-> Path#1
-            |
-            |Path#1
+            |- ref#1: `body()`
             |<- Path#0
         """.trimMargin(),
-        expectedTerminalExpressions = """
-            |Never
-        """.trimMargin(),
     ) {
-        DoWhile(
-            StmtBlock(
-                Stmt("body"),
-                ContinueTo(null),
-            ),
-            Ref { V(TBoolean.valueTrue) },
+        While(
+            testAt = LeftOrRight.Right,
+            body = {
+                Stmt("body")
+                Continue()
+            },
+            cond = { V(TBoolean.valueTrue) },
         )
     }
 
@@ -648,33 +565,29 @@ class MaximalPathTest {
             |Fail exits Path#1
             |
             |Path#0
-            |if (ref#0?: `thereIsAProblem()`) -> Path#1
+            |if (ref#1?: `thereIsAProblem()`) -> Path#1
             |else -> Path#2
             |
             |Path#1
             |
             |Path#2
-            |- ref#2: `ok()`
-            |-> Path#3
-            |
-            |Path#3
+            |- ref#3: `ok()`
             |<- Path#0
         """.trimMargin(),
-        expectedTerminalExpressions = """
-            |Never
-        """.trimMargin(),
     ) {
-        DoWhile(
-            StmtBlock(
+        While(
+            testAt = LeftOrRight.Right,
+            body = {
                 If(
-                    Ref("thereIsAProblem"),
-                    Bubble(),
+                    cond = { Stmt("thereIsAProblem") },
+                    thn = { Bubble() },
                     // If it's not from the Chimerpagne region,
                     // it's just sparkling control flow.
-                ),
-                Stmt("ok"),
-            ),
-            Ref { V(TBoolean.valueTrue) },
+                    els = {},
+                )
+                Stmt("ok")
+            },
+            cond = { V(TBoolean.valueTrue) },
         )
     }
 
@@ -695,18 +608,14 @@ class MaximalPathTest {
             |- ref#2: `body()`
             |<- Path#0
         """.trimMargin(),
-        expectedTerminalExpressions = """
-            |Sometimes
-        """.trimMargin(),
     ) {
-        While(
-            Ref { V(TBoolean.valueTrue) },
+        While(cond = { V(TBoolean.valueTrue) }) {
             If(
-                Ref("shouldBreak"),
-                BreakTo(null),
-                Stmt("body"),
-            ),
-        )
+                cond = { Stmt("shouldBreak") },
+                thn = { Break() },
+                els = { Stmt("body") },
+            )
+        }
     }
 
     @Test
@@ -717,29 +626,26 @@ class MaximalPathTest {
             |Fail exits
             |
             |Path#0
-            |if (ref#0?: `shouldBreak()`) -> Path#1
+            |if (ref#1?: `shouldBreak()`) -> Path#1
             |else -> Path#2
             |
             |Path#1
             |
             |Path#2
-            |- ref#1: `body()`
-            |-> Path#3
-            |
-            |Path#3
+            |- ref#2: `body()`
             |<- Path#0
         """.trimMargin(),
-        expectedTerminalExpressions = """
-            |Sometimes
-        """.trimMargin(),
     ) {
-        DoWhile(
-            If(
-                Ref("shouldBreak"),
-                BreakTo(null),
-                Stmt("body"),
-            ),
-            Ref { V(TBoolean.valueTrue) },
+        While(
+            testAt = LeftOrRight.Right,
+            body = {
+                If(
+                    cond = { Stmt("shouldBreak") },
+                    thn = { Break() },
+                    els = { Stmt("body") },
+                )
+            },
+            cond = { V(TBoolean.valueTrue) },
         )
     }
 
@@ -747,124 +653,101 @@ class MaximalPathTest {
     fun whileFalse() = assertMaximalPaths(
         want = """
             |Entry Path#0
-            |Exits Path#1
+            |Exits Path#0
             |Fail exits
             |
             |Path#0
             |- ref#0: `before()`
-            |-> Path#1
-            |
-            |Path#1
             |- ref#1?: `false`
             |- ref#3: `after()`
         """.trimMargin(),
-        expectedTerminalExpressions = """
-            |- ref#3: `after()`
-            |Always
-        """.trimMargin(),
     ) {
-        StmtBlock(
-            Stmt("before"),
-            While(
-                Ref { V(TBoolean.valueFalse) },
-                Stmt("body"),
-            ),
-            Stmt("after"),
+        Stmt("before")
+        While(
+            cond = { V(TBoolean.valueFalse) },
+            body = { Stmt("body") },
         )
+        Stmt("after")
     }
 
     @Test
     fun doWhileFalse() = assertMaximalPaths(
         want = """
             |Entry Path#0
-            |Exits Path#1
+            |Exits Path#0
             |Fail exits
             |
             |Path#0
             |- ref#0: `before()`
-            |-> Path#1
-            |
-            |Path#1
-            |- ref#1: `body()`
+            |- ref#2: `body()`
             |- ref#3: `after()`
-        """.trimMargin(),
-        expectedTerminalExpressions = """
-            |- ref#3: `after()`
-            |Always
         """.trimMargin(),
     ) {
-        StmtBlock(
-            Stmt("before"),
-            DoWhile(
-                Stmt("body"),
-                Ref { V(TBoolean.valueFalse) },
-            ),
-            Stmt("after"),
+        Stmt("before")
+        While(
+            testAt = LeftOrRight.Right,
+            body = { Stmt("body") },
+            cond = { V(TBoolean.valueFalse) },
         )
+        Stmt("after")
     }
 
     @Test
     fun unconvertedContinueInWrappedBody() = assertMaximalPaths(
         want = """
             |Entry Path#0
-            |Exits Path#4
+            |Exits Path#2
             |Fail exits
             |
             |Path#0
             |if (ref#0?: `keepOnLooping()`) -> Path#1
-            |else -> Path#4
+            |else -> Path#2
             |
             |Path#1
-            |- ref#1: `startBody()`
-            |if (ref#2?: `skipEndBody()`) -> Path#2
-            |else -> Path#3
-            |
-            |Path#3
-            |- ref#3: `endBody()`
-            |-> Path#2
+            |- ref#5: `startBody()`
+            |if (ref#6?: `skipEndBody()`) -> Path#3
+            |else -> Path#4
             |
             |Path#2
-            |- ref#4: `incr()`
-            |<- Path#0
+            |- ref#9: `afterLoop()`
             |
             |Path#4
-            |- ref#5: `afterLoop()`
-        """.trimMargin(),
-        expectedTerminalExpressions = """
-            |- ref#5: `afterLoop()`
-            |Always
+            |- ref#7: `endBody()`
+            |-> Path#3
+            |
+            |Path#3
+            |- ref#8: `incr()`
+            |<- Path#0
         """.trimMargin(),
     ) {
-        val bodyLabel = label("body")
-        StmtBlock(
-            While(
-                Ref("keepOnLooping"),
-                Labeled(
+        val bodyLabel = nameMaker.unusedSourceName(ParsedName("body"))
+        While(
+            cond = { Stmt("keepOnLooping") },
+            body = {
+                Do(
                     label = bodyLabel,
                     continueLabel = bodyLabel,
-                    body = StmtBlock(
-                        Stmt("startBody"),
-                        If(
-                            Ref("skipEndBody"),
-                            ContinueTo(null),
-                        ),
-                        Stmt("endBody"),
-                    ),
-                ),
-                increment = Stmt("incr"),
-            ),
-            Stmt("afterLoop"),
+                ) {
+                    Stmt("startBody")
+                    If(
+                        cond = { Stmt("skipEndBody") },
+                        thn = { Continue() },
+                        els = {},
+                    )
+                    Stmt("endBody")
+                }
+            },
+            increment = { Stmt("incr") },
         )
+        Stmt("afterLoop")
     }
 
-    private fun makeYieldExample(cfm: ControlFlowMaker) = cfm.run {
-        StmtBlock(
-            Stmt("first"),
-            Stmt { Call { Rn(YieldingFnKind.yield.builtinName) } },
-            Stmt("second"),
-            Stmt { Call { Rn(YieldingFnKind.yield.builtinName) } },
-            Stmt("third"),
-        )
+    private fun BlockPlanting.makeYieldExample() {
+        Stmt("first")
+        Call { Rn(YieldingFnKind.yield.builtinName) }
+        Stmt("second")
+        Call { Rn(YieldingFnKind.yield.builtinName) }
+        Stmt("third")
     }
 
     @Test
@@ -882,7 +765,7 @@ class MaximalPathTest {
             |- ref#4: `third()`
         """.trimMargin(),
     ) {
-        makeYieldExample(this)
+        makeYieldExample()
     }
 
     @Test
@@ -907,7 +790,7 @@ class MaximalPathTest {
         """.trimMargin(),
         yieldingCallsEndPaths = true,
     ) {
-        makeYieldExample(this)
+        makeYieldExample()
     }
 
     @Test
@@ -933,28 +816,26 @@ class MaximalPathTest {
             |Path#3
         """.trimMargin(),
     ) {
-        StmtBlock(
-            Stmt { Call { Rn(YieldingFnKind.yield.builtinName) } },
-            Stmt { Call { Rn(YieldingFnKind.yield.builtinName) } },
-            Stmt { Call { Rn(YieldingFnKind.yield.builtinName) } },
-        )
+        Call { Rn(YieldingFnKind.yield.builtinName) }
+        Call { Rn(YieldingFnKind.yield.builtinName) }
+        Call { Rn(YieldingFnKind.yield.builtinName) }
     }
 
     @Test
     fun elseVisited() = assertMaximalPaths(
-        assumeFailureCanHappen = true,
+        fails = ConservativeFailure.AtEndOfOr,
         want = """
             |Entry Path#0
             |Exits Path#2
             |Fail exits
             |
             |Path#0
-            |- ref#0: `f()`
-            |-> Path#1
+            |- ref#2: `f()`
+            |if (bubbled) -> Path#1
             |else -> Path#2
             |
-            |Path#1
-            |- ref#1: `g()`
+            |Path#1 catches from orelse__0
+            |- ref#3: `g()`
             |-> Path#2
             |
             |Path#2
@@ -962,9 +843,9 @@ class MaximalPathTest {
         """.trimMargin(),
     ) {
         OrElse(
-            label("orelse"),
-            Stmt("f"),
-            Stmt("g"),
+            label = nameMaker.unusedSourceName(ParsedName("orelse")),
+            or = { Stmt("f") },
+            els = { Stmt("g") },
         )
     }
 
@@ -977,62 +858,296 @@ class MaximalPathTest {
             |Fail exits Path#1
             |
             |Path#0
-            |if (ref#0?: `fail#0`) -> Path#1
+            |if (ref#6?: `fail#0`) -> Path#1
             |else -> Path#2
             |
             |Path#1
             |
             |Path#2
-            |- ref#2: `void`
-        """.trimMargin(),
-        expectedTerminalExpressions = """
-            |- ref#2: `void`
-            |Sometimes
+            |- ref#8: `void`
         """.trimMargin(),
     ) {
-        val fail = doc.nameMaker.unusedTemporaryName("fail")
-        val defunctLoopLabel = label("loop")
-        val fakeBreakLabel = label("fake_break")
-        Labeled(
-            label = defunctLoopLabel,
-            body = StmtBlock(
-                Labeled(
-                    label = fakeBreakLabel,
-                    continueLabel = defunctLoopLabel,
-                    body = StmtBlock(
-                        If(
-                            Ref { Rn(fail) },
-                            Stmt { Call(BubbleFn) {} },
-                        ),
-                        Stmt { V(void) },
-                        ContinueTo(null),
-                    ),
-                ),
-            ),
-        )
+        val fail = nameMaker.unusedTemporaryName("fail")
+        val defunctLoopLabel = nameMaker.unusedSourceName(ParsedName("loop"))
+        val fakeBreakLabel = nameMaker.unusedSourceName(ParsedName("fake_break"))
+        Do(label = defunctLoopLabel) {
+            Do(label = fakeBreakLabel, continueLabel = defunctLoopLabel) {
+                If(
+                    cond = { Rn(fail) },
+                    thn = { Bubble() },
+                    els = {},
+                )
+                V(void)
+                Continue()
+            }
+        }
     }
+
+    @Test
+    fun inStartAndEndModeNoPathIsGuardedByTwoOrs() {
+        assertMaximalPaths(
+            fails = ConservativeFailure.AtStartAndEndOnly,
+            // f();
+            // do {
+            //   g();
+            //   do {
+            //     h();
+            //     i();
+            //   } orelse do {
+            //     a()
+            //   }
+            //   j();
+            //   k();
+            // } orelse do {
+            //   b()
+            // }
+            want = """
+                |Entry Path#0
+                |Exits Path#6
+                |Fail exits
+                |
+                |Path#0
+                |- ref#0: `f()`
+                |if (bubbled) -> Path#2
+                |else -> Path#1
+                |
+                |## g() flows directly into h(), but the bubbled below
+                |## prevents them from being in the same basic block
+                |## which is important because h() has a different failure
+                |## handler than g().
+                |##
+                |## Same with f() and g().
+                |Path#1
+                |- ref#1: `g()`
+                |if (bubbled) -> Path#4
+                |else -> Path#3
+                |
+                |Path#3
+                |- ref#2: `h()`
+                |- ref#3: `i()`
+                |if (bubbled) -> Path#4
+                |else -> Path#5
+                |
+                |## After a() in the else block, control
+                |## flows to j() same as from i().
+                |Path#4 catches from orElse#0
+                |- ref#4: `a()`
+                |-> Path#5
+                |
+                |Path#5
+                |- ref#5: `j()`
+                |- ref#6: `k()`
+                |if (bubbled) -> Path#2
+                |else -> Path#6
+                |
+                |Path#2 catches from orElse#1
+                |- ref#7: `b()`
+                |-> Path#6
+                |
+                |Path#6
+            """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        ) {
+            Stmt("f")
+            OrElse(
+                or = {
+                    Stmt("g")
+                    OrElse(
+                        or = {
+                            Stmt("h")
+                            Stmt("i")
+                        },
+                        els = { Stmt("a") },
+                    )
+                    Stmt("j")
+                    Stmt("k")
+                },
+                els = { Stmt("b") },
+            )
+        }
+    }
+
+    @Test
+    fun twoAwaitsWithAssignmentsInComplexFlow() = assertMaximalPaths(
+        fails = ConservativeFailure.AtStartAndEndOnly,
+        yieldingCallsEndPaths = true,
+        ignoreConstantConditions = false,
+        makeControlFlow = {
+            val (x, y, z, w, v) =
+                listOf("x", "y", "z", "w", "v").map {
+                    nameMaker.unusedSourceName(ParsedName(it))
+                }
+            OrElse(
+                or = {
+                    Decl(x) {}
+                    Call(BuiltinFuns.vSetLocalFn) {
+                        Ln(x)
+                        Stmt("a")
+                    }
+                    Call {
+                        Rn(BuiltinName("f"))
+                        Rn(x)
+                    }
+                    Decl(y) {}
+                    Call(BuiltinFuns.vSetLocalFn) {
+                        Ln(y)
+                        Call(BuiltinFuns.vAwait) {
+                            Rn(BuiltinName("g"))
+                            Rn(x)
+                        }
+                    }
+                    If(
+                        cond = {
+                            Call {
+                                Rn(BuiltinName("h"))
+                                Rn(y)
+                            }
+                        },
+                        thn = {
+                            Decl(z) {}
+                            Call(BuiltinFuns.vSetLocalFn) {
+                                Ln(z)
+                                Call(BuiltinFuns.vAwait) {
+                                    Call {
+                                        Rn(BuiltinName("i"))
+                                        Rn(y)
+                                    }
+                                }
+                            }
+                            Decl(w) {}
+                            If(
+                                cond = {
+                                    Call(vIsNullFn) {
+                                        Rn(z)
+                                    }
+                                },
+                                thn = {
+                                    Call(BuiltinFuns.vSetLocalFn) {
+                                        Ln(w)
+                                        V(Value("null", TString))
+                                    }
+                                },
+                                els = {
+                                    Call(BuiltinFuns.vSetLocalFn) {
+                                        Ln(w)
+                                        Call(BuiltinFuns.vNotNullFn) {
+                                            Rn(z)
+                                        }
+                                    }
+                                },
+                            )
+                            Decl(v) {}
+                            Call(BuiltinFuns.vSetLocalFn) {
+                                Ln(v)
+                                Call {
+                                    Rn(BuiltinName("j"))
+                                    Rn(w)
+                                }
+                            }
+                            Call {
+                                Rn(BuiltinName("k"))
+                                Rn(v)
+                            }
+                        },
+                        els = {
+                            Call {
+                                Rn(BuiltinName("m"))
+                                Rn(y)
+                            }
+                        },
+                    )
+                },
+                els = {
+                    Stmt("printFailed")
+                },
+            )
+            Do {}
+        },
+        want = """
+            |Entry Path#0
+            |Exits Path#10
+            |Fail exits
+            |
+            |Path#0
+            |if (bubbled) -> Path#2
+            |else -> Path#1
+            |
+            |Path#1
+            |- ref#0: `let x__0`
+            |- ref#1: `x__0 = a()`
+            |- ref#2: `f(x__0)`
+            |- ref#3: `let y__1`
+            |- ref#4: `y__1 = await(g, x__0)`
+            |if (ref#5?: `h(y__1)`) -> Path#3
+            |else -> Path#4
+            |
+            |Path#3
+            |- ref#6: `let z__2`
+            |- ref#7: `z__2 = await i(y__1)`
+            |###### This await is followed by a let but must be last in
+            |###### its basic block.
+            |-> Path#5
+            |
+            |Path#5
+            |- ref#8: `let w__3`
+            |if (ref#9?: `isNull(z__2)`) -> Path#6
+            |else -> Path#7
+            |
+            |Path#6
+            |- ref#10: `w__3 = "null"`
+            |-> Path#8
+            |
+            |Path#7
+            |- ref#11: `w__3 = notNull(z__2)`
+            |-> Path#8
+            |
+            |Path#8
+            |- ref#12: `let v__4`
+            |- ref#13: `v__4 = j(w__3)`
+            |- ref#14: `k(v__4)`
+            |-> Path#9
+            |
+            |Path#4
+            |- ref#15: `m(y__1)`
+            |-> Path#9
+            |
+            |Path#9
+            |if (bubbled) -> Path#2
+            |else -> Path#10
+            |
+            |Path#2 catches from orElse#5
+            |- ref#16: `printFailed()`
+            |-> Path#10
+            |
+            |Path#10
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
 
     private fun assertMaximalPaths(
         want: String,
-        expectedTerminalExpressions: String? = null,
         yieldingCallsEndPaths: Boolean = false,
         ignoreConstantConditions: Boolean = false,
-        assumeFailureCanHappen: Boolean = false,
-        makeControlFlow: ControlFlowMaker.() -> ControlFlow,
+        fails: ConservativeFailure = ConservativeFailure.CalleeTypeOnly,
+        dumpMermaid: Boolean = false, // Helpful for interactive debugging
+        makeControlFlow: BlockPlanting.() -> Unit,
     ) {
-        val maker = ControlFlowMaker()
-        val controlFlow = maker.run {
-            makeControlFlow()
+        val documentContext = TestDocumentContext()
+        val document = Document(documentContext)
+        val block = document.treeFarm.grow(Position(documentContext.loc, 0, 0)) {
+            Block {
+                makeControlFlow()
+            }
         }
-        val block = maker.buildBlockTree(controlFlow)
-        check(block.flow is StructuredFlow)
+        structureBlock(block)
 
         val maximalPaths = forwardMaximalPaths(
             root = block,
+            fails = fails,
             yieldingCallsEndPaths = yieldingCallsEndPaths,
             ignoreConstantConditions = ignoreConstantConditions,
-            assumeFailureCanHappen = assumeFailureCanHappen,
         )
+        if (dumpMermaid) {
+            console.log(maximalPaths.toMermaid(block))
+        }
         val got = basicBlocksToString(block, maximalPaths)
 
         var passed = false
@@ -1041,22 +1156,6 @@ class MaximalPathTest {
 
             assertEquals(want.trimEnd(), got.trimEnd())
 
-            if (expectedTerminalExpressions != null) {
-                val (actualTerminalExpressions, freq) = block.getTerminalExpressions()
-                val terminalExpressionsStr = buildString {
-                    actualTerminalExpressions.forEach {
-                        append("- ")
-                        appendRef(block, it.ref, isCondition = false)
-                        append('\n')
-                    }
-                    append(freq)
-                }
-                assertEquals(
-                    expectedTerminalExpressions.trimEnd(),
-                    terminalExpressionsStr.trimEnd(),
-                )
-            }
-
             passed = true
         } finally {
             if (!passed) {
@@ -1064,200 +1163,6 @@ class MaximalPathTest {
             }
         }
     }
-}
-
-// Methods mirror ControlFlow type names, but make parts optional where it's convenient
-// for tests even where that'd be a maintenance hazard for prod code.
-@Suppress("TestFunctionName")
-internal class ControlFlowMaker {
-    val doc = Document(TestDocumentContext())
-    private val defaultPos = Position(doc.context.namingContext.loc, 0, 0)
-    private val childList = mutableListOf<Tree>()
-
-    fun buildBlockTree(controlFlow: ControlFlow, pos: Position = defaultPos) = BlockTree(
-        document = doc,
-        pos = pos,
-        children = childList,
-        flow = StructuredFlow(ControlFlow.StmtBlock.wrap(controlFlow)),
-    )
-
-    fun label(nameText: String): JumpLabel =
-        doc.nameMaker.unusedSourceName(ParsedName(nameText))
-
-    fun Ref(
-        id: String,
-        pos: Position = defaultPos,
-    ): BlockChildReference = Ref(pos = pos) {
-        Call {
-            Rn(ParsedName(id))
-        }
-    }
-
-    fun Ref(
-        pos: Position = defaultPos,
-        make: Planting.() -> UnpositionedTreeTemplate<*>,
-    ): BlockChildReference {
-        val index = childList.size
-        childList.add(
-            doc.treeFarm.grow(pos) {
-                make()
-            },
-        )
-        return BlockChildReference(index, pos)
-    }
-
-    fun Stmt(
-        id: String,
-        pos: Position = defaultPos,
-    ) = ControlFlow.Stmt(Ref(id, pos = pos))
-
-    fun Stmt(
-        pos: Position = defaultPos,
-        makeTree: Planting.() -> UnpositionedTreeTemplate<*>,
-    ) = ControlFlow.Stmt(Ref(pos, makeTree))
-
-    fun If(
-        condition: BlockChildReference,
-        thenClause: ControlFlow,
-        elseClause: ControlFlow? = null,
-        pos: Position = defaultPos,
-    ): ControlFlow.If = ControlFlow.If(
-        pos = pos,
-        condition = condition,
-        thenClause = ControlFlow.StmtBlock.wrap(thenClause),
-        elseClause = elseClause?.let { ControlFlow.StmtBlock.wrap(it) }
-            ?: ControlFlow.StmtBlock(pos, emptyList()),
-    )
-
-    fun OrElse(
-        onFailLabel: JumpLabel?,
-        orClause: ControlFlow,
-        elseClause: ControlFlow,
-        pos: Position = defaultPos,
-    ): ControlFlow.OrElse {
-        val label = onFailLabel ?: doc.nameMaker.unusedTemporaryName("orelse")
-        return ControlFlow.OrElse(
-            pos = pos,
-            orClause = ControlFlow.Labeled(
-                pos = orClause.pos,
-                breakLabel = label,
-                continueLabel = null,
-                stmts = ControlFlow.StmtBlock.wrap(orClause),
-            ),
-            elseClause = ControlFlow.StmtBlock.wrap(elseClause),
-        )
-    }
-
-    fun Loop(
-        condition: BlockChildReference,
-        body: ControlFlow,
-        label: JumpLabel? = null,
-        checkPosition: LeftOrRight = LeftOrRight.Left,
-        increment: ControlFlow? = null,
-        pos: Position = defaultPos,
-    ): ControlFlow.Loop = ControlFlow.Loop(
-        label = label,
-        pos = pos,
-        checkPosition = checkPosition,
-        condition = condition,
-        body = ControlFlow.StmtBlock.wrap(body),
-        increment = increment?.let { ControlFlow.StmtBlock.wrap(it) }
-            ?: ControlFlow.StmtBlock(condition.pos.rightEdge, emptyList()),
-    )
-
-    fun While(
-        condition: BlockChildReference,
-        body: ControlFlow,
-        label: JumpLabel? = null,
-        increment: ControlFlow? = null,
-        pos: Position = defaultPos,
-    ): ControlFlow.Loop = Loop(
-        condition = condition,
-        body = body,
-        label = label,
-        checkPosition = LeftOrRight.Left,
-        increment = increment,
-        pos = pos,
-    )
-
-    fun DoWhile(
-        body: ControlFlow,
-        condition: BlockChildReference,
-        label: JumpLabel? = null,
-        increment: ControlFlow? = null,
-        pos: Position = defaultPos,
-    ): ControlFlow.Loop = Loop(
-        condition = condition,
-        body = body,
-        label = label,
-        checkPosition = LeftOrRight.Right,
-        increment = increment,
-        pos = pos,
-    )
-
-    fun StmtBlock(
-        vararg stmts: ControlFlow,
-        pos: Position = defaultPos,
-    ) = StmtBlock(
-        stmts.toList() as Iterable<ControlFlow>,
-        pos = pos,
-    )
-
-    fun StmtBlock(
-        stmts: Iterable<ControlFlow>,
-        pos: Position = defaultPos,
-    ) = ControlFlow.StmtBlock(
-        pos = pos,
-        stmts = stmts.toList(),
-    )
-
-    fun Labeled(
-        label: JumpLabel,
-        body: ControlFlow,
-        pos: Position = defaultPos,
-        continueLabel: JumpLabel? = null,
-    ): ControlFlow {
-        if (body is ControlFlow.Loop && body.label == null) {
-            return ControlFlow.Loop(
-                pos = body.pos,
-                label = label,
-                checkPosition = body.checkPosition,
-                condition = body.condition,
-                body = body.body.deepCopy(),
-                increment = body.increment.deepCopy(),
-            )
-        }
-        return ControlFlow.Labeled(
-            pos = pos,
-            breakLabel = label,
-            continueLabel = continueLabel,
-            stmts = ControlFlow.StmtBlock.wrap(body),
-        )
-    }
-
-    fun Bubble(pos: Position = defaultPos) = ControlFlow.Stmt(
-        Ref(pos = pos) {
-            Call(BuiltinFuns.bubble) {}
-        },
-    )
-
-    fun BreakTo(
-        label: JumpLabel?,
-        pos: Position = defaultPos,
-    ) = ControlFlow.Break(
-        pos = pos,
-        target = label?.let { NamedJumpSpecifier(it) }
-            ?: DefaultJumpSpecifier,
-    )
-
-    fun ContinueTo(
-        label: JumpLabel?,
-        pos: Position = defaultPos,
-    ) = ControlFlow.Continue(
-        pos = pos,
-        target = label?.let { NamedJumpSpecifier(it) }
-            ?: DefaultJumpSpecifier,
-    )
 }
 
 private fun basicBlocksToString(
@@ -1285,14 +1190,24 @@ private fun basicBlocksToString(
     }
     append('\n')
 
-    fun appendElement(element: MaximalPath.Element) {
+    fun appendElement(element: MaximalPath.AstElement) {
         appendRef(block, element.ref, isCondition = element.isCondition)
+    }
+
+    fun appendCondition(cond: MaximalPath.PathElement) {
+        when (cond) {
+            is MaximalPath.Bubbled -> append("bubbled")
+            is MaximalPath.AstElement -> appendElement(cond)
+        }
     }
 
     pathOrder.forEach { pi ->
         val mp = maximalPaths[pi]
         append("Path")
         append(mp.pathIndex)
+        if (mp.orLabel != null) {
+            append(" catches from ${mp.orLabel}")
+        }
         append('\n')
 
         for (element in mp.elements) {
@@ -1307,7 +1222,7 @@ private fun basicBlocksToString(
             val condition = it.condition
             if (condition != null) {
                 append("if (")
-                appendElement(condition)
+                appendCondition(condition)
                 append(") ")
             }
             append(
@@ -1340,9 +1255,7 @@ private fun checkCoherence(maximalPaths: MaximalPaths, block: BlockTree) {
             assertEquals(
                 path.pathIndex,
                 e.pathIndex,
-                "Element ${
-                    block.dereference(e.ref)?.target?.toPseudoCode()
-                } has mismatched path index",
+                "Element ${e.toDebugString(block)} has mismatched path index",
             )
         }
         // For each preceder, there is a follower, and vice versa
@@ -1373,3 +1286,16 @@ private fun checkCoherence(maximalPaths: MaximalPaths, block: BlockTree) {
         }
     }
 }
+
+@Suppress("TestFunctionName")
+internal fun Planting.Stmt(nameText: String) =
+    Call {
+        Rn(ParsedName(nameText))
+    }
+
+@Suppress("TestFunctionName")
+internal fun Planting.Bubble() =
+    Call(BuiltinFuns.vBubble) {}
+
+fun Planting.label(text: String): JumpLabel =
+    nameMaker.unusedSourceName(ParsedName(text))

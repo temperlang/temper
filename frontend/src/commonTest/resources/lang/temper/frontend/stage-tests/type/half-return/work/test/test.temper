@@ -1,0 +1,8 @@
+// has a `return` statement along one exiting branch
+// but an implicit result along another
+let halfAndHalf(b: Boolean): String {
+  if (b) {
+    return "true"
+  }
+  "false" // implicit assignment along only one path
+}

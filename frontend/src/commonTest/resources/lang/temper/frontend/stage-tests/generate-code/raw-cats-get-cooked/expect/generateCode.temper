@@ -1,6 +1,6 @@
-@fn @reach(\none) let f__0;
-f__0 = (@stay fn f(s__0 /* aka s */: String) /* return__1 */: Void {
-    cat(s__0);
-    cat(what);
-    return__1 = void
+@fn @reach(\none) let f__1;
+f__1 = (@stay fn f(s__2 /* aka s */: String) /* return__0 */: Void {
+    return__0 = void;
+    cat(s__2);
+    cat(what)
 })

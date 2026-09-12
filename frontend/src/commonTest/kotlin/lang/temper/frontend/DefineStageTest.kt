@@ -486,7 +486,6 @@ class DefineStageTest {
     @Test
     fun jsonInteropMixedIn() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/json-interop-mixed-in"),
-        // ## lines below are stripped, explanatory comments.
     )
 
     @Test

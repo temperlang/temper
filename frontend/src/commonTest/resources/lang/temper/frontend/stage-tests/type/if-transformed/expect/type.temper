@@ -1,6 +1,6 @@
-let return__2;
+let return__1;
 if (c) {
-  return__2 = f();
+  return__1 = f()
 } else {
-  return__2 = g();
+  return__1 = g()
 };

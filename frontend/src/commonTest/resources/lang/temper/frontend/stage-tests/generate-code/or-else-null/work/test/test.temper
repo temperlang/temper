@@ -1,0 +1,3 @@
+let x: Float64? = "four".toFloat64() orelse null;
+// Should infer type Float64? for x.
+console.log(x?.toString() ?? "NaN");

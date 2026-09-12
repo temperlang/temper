@@ -1,11 +1,11 @@
 let console#6;
-console#6 = doPure(@stay fn /* return__37 */: Console {
-    return__37 = getConsole();
+console#6 = doPure(@stay fn /* return__8 */: Console {
+    return__8 = getConsole();
 });
 @fn let runItThrice__1;
 runItThrice__1 = fn runItThrice(factory__2 /* aka factory */: (fn (): SafeGenerator<Empty>)) /* return__0 */: Void {
-  void;
   fn__3: do {
+    return__0 = void;
     let generator__4: SafeGenerator<Empty>;
     generator__4 = factory__2();
     do_call_nextSafe(generator__4);
@@ -13,8 +13,7 @@ runItThrice__1 = fn runItThrice(factory__2 /* aka factory */: (fn (): SafeGenera
     do_call_nextSafe(generator__4);
     do_call_log(console#6, ",");
     do_call_nextSafe(generator__4);
-    do_call_log(console#6, ".");
-    return__0 = void
+    do_call_log(console#6, ".")
   }
 };
 runItThrice__1(fn /* return__7 */{
@@ -26,6 +25,6 @@ runItThrice__1(fn /* return__7 */{
         do_call_log(console#6, "Third");
         yield();
         do_call_log(console#6, "Fourth");
-        return__5 = core.doneResult<Empty>()
-    })
-});
+        return__5 = core.doneResult<Empty>();
+    });
+})

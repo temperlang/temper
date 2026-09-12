@@ -1,6 +1,7 @@
 package lang.temper.be.csharp
 
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
 import lang.temper.be.tmpl.InlineSupportCode
@@ -43,9 +44,10 @@ import kotlin.lazy
 
 object CSharpSupportNetwork : SupportNetwork {
     override val backendDescription = "C# Backend"
-    override val bubbleStrategy = BubbleBranchStrategy.CatchBubble
+    override val bubbleStrategy = BubbleBranchStrategy.Exceptions
     override val coroutineStrategy = CoroutineStrategy.TranslateToGenerator
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionType
+    override val computedJumpStrategy = ComputedJumpStrategy.IsDefaultBreakScope
     override fun representationOfVoid(genre: Genre) = RepresentationOfVoid.DoNotReifyVoid
     override val simplifyOrTypes: Boolean get() = true
 
@@ -220,6 +222,7 @@ object CSharpSupportNetwork : SupportNetwork {
         if (builtinOperatorId == BuiltinOperatorId.IsNull) {
             return null
         }
+        val fromActualPassType = passTypeOf(fromActualType)
         val fromDeclaredPassType = passTypeOf(fromDeclaredType)
         val toDeclaredPassType = passTypeOf(toDeclaredType)
         val toActualPassType = passTypeOf(toActualType)
@@ -230,7 +233,7 @@ object CSharpSupportNetwork : SupportNetwork {
             hasOptional == needsOptional -> null
             // wrap as an optional when needed
             needsOptional -> WrapAsOptional(
-                toActualPassType.withNullity(Nullity.NonNull) as NonNullType,
+                fromActualPassType.withNullity(Nullity.NonNull) as NonNullType,
             )
             // receiver has no expectations about the value.  Possibly an is-null check or other RTTI operator.
             toDeclaredPassType.definition == WellKnownTypes.anyValueTypeDefinition -> null
@@ -305,6 +308,12 @@ private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): Supp
         BuiltinOperatorId.SafeAdaptGeneratorFn,
         -> null
         null -> null
+        // Using exceptions, not results.
+        BuiltinOperatorId.IsOkResult,
+        BuiltinOperatorId.PackOkResult,
+        BuiltinOperatorId.RepackErrResult,
+        BuiltinOperatorId.UnpackOkResult,
+        -> null
     }
 }
 

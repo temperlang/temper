@@ -210,13 +210,13 @@ object Cpp {
             return other is FuncDecl && this.attr == other.attr && this.mod == other.mod && this.ret == other.ret && this.convention == other.convention && this.name == other.name && this.args == other.args && this.qual == other.qual
         }
         override fun hashCode(): Int {
-            var hc = (attr?.hashCode() ?: 0)
-            hc = 31 * hc + (mod?.hashCode() ?: 0)
-            hc = 31 * hc + (ret?.hashCode() ?: 0)
-            hc = 31 * hc + (convention?.hashCode() ?: 0)
+            var hc = attr.hashCode()
+            hc = 31 * hc + mod.hashCode()
+            hc = 31 * hc + ret.hashCode()
+            hc = 31 * hc + convention.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + args.hashCode()
-            hc = 31 * hc + (qual?.hashCode() ?: 0)
+            hc = 31 * hc + qual.hashCode()
             return hc
         }
         init {
@@ -702,13 +702,13 @@ object Cpp {
             return other is FuncDef && this.attr == other.attr && this.mod == other.mod && this.ret == other.ret && this.convention == other.convention && this.name == other.name && this.args == other.args && this.qual == other.qual && this.body == other.body
         }
         override fun hashCode(): Int {
-            var hc = (attr?.hashCode() ?: 0)
-            hc = 31 * hc + (mod?.hashCode() ?: 0)
-            hc = 31 * hc + (ret?.hashCode() ?: 0)
-            hc = 31 * hc + (convention?.hashCode() ?: 0)
+            var hc = attr.hashCode()
+            hc = 31 * hc + mod.hashCode()
+            hc = 31 * hc + ret.hashCode()
+            hc = 31 * hc + convention.hashCode()
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + args.hashCode()
-            hc = 31 * hc + (qual?.hashCode() ?: 0)
+            hc = 31 * hc + qual.hashCode()
             hc = 31 * hc + body.hashCode()
             return hc
         }
@@ -788,10 +788,10 @@ object Cpp {
             return other is VarDef && this.mod == other.mod && this.type == other.type && this.name == other.name && this.init == other.init
         }
         override fun hashCode(): Int {
-            var hc = (mod?.hashCode() ?: 0)
+            var hc = mod.hashCode()
             hc = 31 * hc + type.hashCode()
             hc = 31 * hc + name.hashCode()
-            hc = 31 * hc + (init?.hashCode() ?: 0)
+            hc = 31 * hc + init.hashCode()
             return hc
         }
         init {
@@ -901,7 +901,7 @@ object Cpp {
             return other is Namespace && this.name == other.name && this.body == other.body
         }
         override fun hashCode(): Int {
-            var hc = (name?.hashCode() ?: 0)
+            var hc = name.hashCode()
             hc = 31 * hc + body.hashCode()
             return hc
         }
@@ -957,7 +957,7 @@ object Cpp {
         }
         override fun hashCode(): Int {
             var hc = name.hashCode()
-            hc = 31 * hc + (value?.hashCode() ?: 0)
+            hc = 31 * hc + value.hashCode()
             return hc
         }
         init {
@@ -1267,7 +1267,7 @@ object Cpp {
             var hc = cond.hashCode()
             hc = 31 * hc + ifTrue.hashCode()
             hc = 31 * hc + elifs.hashCode()
-            hc = 31 * hc + (ifFalse?.hashCode() ?: 0)
+            hc = 31 * hc + ifFalse.hashCode()
             return hc
         }
         init {
@@ -1406,7 +1406,7 @@ object Cpp {
         }
         override fun hashCode(): Int {
             var hc = id.hashCode()
-            hc = 31 * hc + (sourceIdentifier?.hashCode() ?: 0)
+            hc = 31 * hc + sourceIdentifier.hashCode()
             return hc
         }
         companion object {
@@ -1504,7 +1504,7 @@ object Cpp {
             return other is BaseSpec && this.virt == other.virt && this.base == other.base
         }
         override fun hashCode(): Int {
-            var hc = (virt?.hashCode() ?: 0)
+            var hc = virt.hashCode()
             hc = 31 * hc + base.hashCode()
             return hc
         }
@@ -1713,7 +1713,7 @@ object Cpp {
         }
         override fun hashCode(): Int {
             var hc = name.hashCode()
-            hc = 31 * hc + (dim?.hashCode() ?: 0)
+            hc = 31 * hc + dim.hashCode()
             return hc
         }
         init {
@@ -2166,7 +2166,7 @@ object Cpp {
             return other is ReturnStmt && this.value == other.value
         }
         override fun hashCode(): Int {
-            return (value?.hashCode() ?: 0)
+            return value.hashCode()
         }
         init {
             this._value = updateTreeConnection(null, value)
@@ -2421,7 +2421,7 @@ object Cpp {
         override fun hashCode(): Int {
             var hc = cond.hashCode()
             hc = 31 * hc + ifTrue.hashCode()
-            hc = 31 * hc + (ifFalse?.hashCode() ?: 0)
+            hc = 31 * hc + ifFalse.hashCode()
             return hc
         }
         init {
@@ -3014,7 +3014,7 @@ object Cpp {
         override fun hashCode(): Int {
             var hc = captures.hashCode()
             hc = 31 * hc + params.hashCode()
-            hc = 31 * hc + (mut?.hashCode() ?: 0)
+            hc = 31 * hc + mut.hashCode()
             hc = 31 * hc + ret.hashCode()
             hc = 31 * hc + body.hashCode()
             return hc

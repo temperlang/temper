@@ -1,12 +1,14 @@
 # Extra class definitions
 
+We'll be using these classes from the main module.
+
 First, we include an interface just to make things a bit more interesting.
 
     export interface Stringable {
       public toString(): String;
     }
 
-Now create some classes, one with a single implicit constructor ...
+Now create some classes, one with a single implicit constructor:
 
     export class Circle(
       public radius: Int,
@@ -16,25 +18,19 @@ Now create some classes, one with a single implicit constructor ...
       }
     }
 
-And another with custom constructor(s). We'll be using these classes from the
-main test module.
+And another with custom constructors.
 
     export class Rectangle(
       public width: Int,
       public height: Int,
     ) {
 
-TODO Test overloaded constructors once we support those.
+TODO: Once we have factory functions, expose this secondary one as
+a factory and update ./object-literals.temper to uncomment the
+property bag that uses it.
 
-```temper inert
-      public constructor(width: Int, height: Int) {
-        this.width = width;
-        this.height = height;
-      }
-```
+    //@factory public static createSquare(squareWidth: Int): Rectangle {
+    //  ({ width: squareWidth, height: squareWidth })
+    //}
 
-      public constructor(squareWidth: Int) {
-        width = squareWidth;
-        height = squareWidth;
-      }
     }

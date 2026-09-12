@@ -1,14 +1,14 @@
-@fn @reach(\none) let f__0;
-f__0 = (@stay fn f(i__0 /* aka i */: StringIndexOption?) /* return__0 */: (Int32 | Bubble) {
-    var t#0;
-    if (!isNull(i__0)) {
-      t#0 = i__0 is StringIndexOption
+@fn @reach(\none) let f__2;
+f__2 = (@stay fn f(i__3 /* aka i */: StringIndexOption?) /* return__1 */: (Int32 | Bubble) {
+    let t#6;
+    if (!isNull(i__3)) {
+      t#6 = i__3 is StringIndexOption
     } else {
-      t#0 = false
+      t#6 = false
     };
-    if (t#0) {
-      return__0 = 0
+    if (t#6) {
+      return__1 = 0
     } else {
-      return__0 = 1
+      return__1 = 1
     }
 })

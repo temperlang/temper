@@ -15,7 +15,6 @@ import lang.temper.common.console
 import lang.temper.common.toStringViaBuilder
 import lang.temper.cst.CstComment
 import lang.temper.cst.NameConstants
-import lang.temper.interp.emptyValue
 import lang.temper.lexer.Lexer
 import lang.temper.log.FilePositions
 import lang.temper.log.Position

@@ -17,8 +17,8 @@ import lang.temper.type.WellKnownTypes
 class FnParts internal constructor(
     val typeFormals: List<Pair<TEdge, TypeFormal?>>,
     val formals: List<DeclTree>,
-    // Since the actual type of the varArg from the caller's perspective doesn't exist as a decl
-    // we need a more advanced type here
+    // Since the actual type of the varArg from the caller's perspective doesn't exist as
+    // a declaration, we need a more advanced type here.
     val restFormal: RestFormal?,
     val connected: Boolean,
     metadataSymbolMultimap: MetadataMultimap,

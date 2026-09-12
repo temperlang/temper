@@ -5,7 +5,7 @@ import lang.temper.common.compatRemoveLast
 import lang.temper.common.isEmpty
 import lang.temper.log.Position
 
-internal fun TmpL.RightHandSide.isPureVirtual(): Boolean {
+internal fun TmpL.Expression.isPureVirtual(): Boolean {
     if (this !is TmpL.CallExpression) return false
     val fn = this.fn
     if (fn !is TmpL.InlineSupportCodeWrapper) return false

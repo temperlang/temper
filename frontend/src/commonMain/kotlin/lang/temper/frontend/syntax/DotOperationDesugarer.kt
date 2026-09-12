@@ -15,7 +15,6 @@ import lang.temper.log.LogEntry
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
-import lang.temper.log.spanningPosition
 import lang.temper.name.BuiltinName
 import lang.temper.name.ResolvedName
 import lang.temper.name.Symbol
@@ -40,19 +39,15 @@ import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.DefinedNonNullType
 import lang.temper.value.BINARY_OP_CALL_ARG_COUNT
-import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.CallTypeInferences
-import lang.temper.value.ControlFlow
 import lang.temper.value.DeclTree
-import lang.temper.value.FlowMaker
 import lang.temper.value.FunTree
 import lang.temper.value.IsNullFn
 import lang.temper.value.NameLeaf
 import lang.temper.value.Planting
 import lang.temper.value.RightNameLeaf
-import lang.temper.value.StructuredFlow
 import lang.temper.value.TEdge
 import lang.temper.value.TNull
 import lang.temper.value.TString
@@ -617,46 +612,7 @@ private fun desugarDotOperation(
                     null
                 }
 
-            // Set when we create children
-            var conditionIndex: Int = -1
-            var thenClauseIndex: Int = -1
-            var elseClauseIndex: Int = -1
-
-            // Create a flow control with an if/then/else based on whether
-            // the subject is null.
-            val flowMaker: FlowMaker = { block ->
-                fun stmt(i: Int) =
-                    ControlFlow.Stmt(BlockChildReference(i, block.children[i].pos))
-                StructuredFlow(
-                    ControlFlow.StmtBlock(
-                        block.pos,
-                        buildList {
-                            (0 until conditionIndex).mapTo(this, ::stmt)
-                            add(
-                                ControlFlow.If(
-                                    block.pos,
-                                    // The condition: isNull(subject)
-                                    stmt(conditionIndex).ref,
-                                    // then null
-                                    ControlFlow.StmtBlock.wrap(stmt(thenClauseIndex)),
-                                    // else, the rest of the output from the non-null-chaining replacer
-                                    (elseClauseIndex until block.size)
-                                        .map(::stmt)
-                                        .let { stmts ->
-                                            ControlFlow.StmtBlock(
-                                                stmts.spanningPosition(block.pos.rightEdge),
-                                                stmts,
-                                            )
-                                        },
-                                ),
-                            )
-                        },
-                    ),
-                )
-            }
-
-            Block(dotCall.pos, flowMaker) {
-                var childIndex = 0 // Keep track of child indices for BlockChildReferences
+            Block(dotCall.pos) {
                 // Declare any temporary
                 val simpleSubject: Tree
                 if (temporary != null) {
@@ -668,12 +624,10 @@ private fun desugarDotOperation(
                         }
                     }
                     Decl(temporary)
-                    childIndex++
                     Call(BuiltinFuns.vSetLocalFn) {
                         Ln(temporary)
                         Replant(subjectExpr)
                     }
-                    childIndex++
                 } else {
                     val subject = subjectEdge.target
                     simpleSubject = subject.copy()
@@ -686,7 +640,7 @@ private fun desugarDotOperation(
                         }
                     }
                 }
-                conditionIndex = childIndex++
+
                 val subjectTypeNullable = simpleSubject.typeInferences?.type?.let {
                     MkType.nullable(it)
                 }
@@ -699,14 +653,18 @@ private fun desugarDotOperation(
                         listOf(),
                     )
                 }
-                Call(subjectPos.leftEdge, type = isNullCallType) {
-                    V(vIsNullFn, isNullFnType)
-                    Replant(simpleSubject)
-                }
-                thenClauseIndex = childIndex++
-                V(subjectPos.leftEdge, TNull.value, subjectTypeNullable)
-                elseClauseIndex = childIndex
-                replacer()
+                If(
+                    cond = {
+                        Call(subjectPos.leftEdge, type = isNullCallType) {
+                            V(vIsNullFn, isNullFnType)
+                            Replant(simpleSubject)
+                        }
+                    },
+                    thn = {
+                        V(subjectPos.leftEdge, TNull.value, subjectTypeNullable)
+                    },
+                    els = { replacer() },
+                )
             }
         }
     }

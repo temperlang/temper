@@ -1,10 +1,9 @@
 package lang.temper.be.tmpl
 
 import lang.temper.log.Position
-import lang.temper.type.WellKnownTypes
+import lang.temper.type2.Signature2
 import lang.temper.value.BreakOrContinue
 import lang.temper.value.JumpSpecifier
-import lang.temper.value.void
 
 sealed class GoalSpecifier
 
@@ -22,6 +21,8 @@ internal interface GoalTranslator {
     val translator: TmpLTranslator
     val cfOptions get() = translator.cfOptions
     val supportNetwork: SupportNetwork get() = translator.supportNetwork
+    val bodyFor: BodyFor
+    val genre get() = translator.genre
 
     fun translateGoal(p: Position, goalSpecifier: GoalSpecifier) = when (goalSpecifier) {
         ExitGoalSpecifier -> translateExit(p)
@@ -37,31 +38,10 @@ internal interface GoalTranslator {
         OneStmt(translator.untranslatableStmt(p, "Cannot translate $diagnostic"))
 }
 
-internal class DefaultGoalTranslator(
-    override val translator: TmpLTranslator,
-) : GoalTranslator {
+internal sealed class BodyFor
 
-    override fun translateJump(
-        p: Position,
-        kind: BreakOrContinue,
-        target: JumpSpecifier,
-    ): Stmt = untranslatable(p, "$kind $target")
+/** `return` is not valid in this body context. */
+internal data object BodyForModule : BodyFor()
 
-    override fun translateFreeFailure(p: Position): Stmt =
-        when (cfOptions.nrbStrategy) {
-            BubbleBranchStrategy.IfHandlerScopeVar -> OneStmt(
-                TmpL.ReturnStatement(p, TmpL.BubbleSentinel(p)),
-            )
-            BubbleBranchStrategy.CatchBubble -> OneStmt(
-                TmpL.ThrowStatement(p),
-            )
-        }
-    override fun translateExit(p: Position): Stmt {
-        val expression = when (cfOptions.representationOfVoid) {
-            RepresentationOfVoid.DoNotReifyVoid -> null
-            RepresentationOfVoid.ReifyVoid ->
-                TmpL.ValueReference(p, WellKnownTypes.voidType2, void)
-        }
-        return OneStmt(TmpL.ReturnStatement(p, expression))
-    }
-}
+/** `return` is valid and must comport with the signature's return type. */
+internal data class BodyForFun(val sig: Signature2) : BodyFor()

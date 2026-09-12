@@ -201,10 +201,10 @@ internal class CleanupTemporaries private constructor(
         return DataTables(readsAndWrites, edits)
     }
 
-    private val MaximalPath.Element.edge: TEdge? get() = root.dereference(ref)
+    private val MaximalPath.AstElement.edge: TEdge? get() = root.dereference(ref)
 
     /** True when the containing flow element is a reference to `void`. */
-    private val MaximalPath.Element.isNoop: Boolean get() {
+    private val MaximalPath.AstElement.isNoop: Boolean get() {
         val edge = root.dereference(ref) ?: return false
         val tree = edge.target
         return tree is ValueLeaf && tree.content == void
@@ -344,7 +344,7 @@ internal class CleanupTemporaries private constructor(
                             chainStart
                         }
 
-                        // Now we have a range of assignments in chainStart..i
+                        // Now we have a range of assignments in chainStart..i.
                         // First, take the start of the chain and assign the name to it.
                         val initalAssignmentEdge = elements[chainStart].edge!!
                         val namedName = secondLeft.content
@@ -485,7 +485,7 @@ internal class CleanupTemporaries private constructor(
                     // no write to `x` is live during a read of `y`
                     // that does not have a live write of `y` that also
                     // has that write of `x` live.
-                    val elementsWithReadsOfY = mutableSetOf<MaximalPath.Element>()
+                    val elementsWithReadsOfY = mutableSetOf<MaximalPath.AstElement>()
                     readsOfY.mapNotNullTo(elementsWithReadsOfY) { it.containingPathElement }
                     elementsWithReadsOfY.all { elementContainingReadOfY ->
                         val yLiveForRead = readsAndWrites.writesLive(y, elementContainingReadOfY)
@@ -671,7 +671,7 @@ internal class CleanupTemporaries private constructor(
     ): RStrategy? {
         // See the comments above about renaming x to y or y to x
         val canRenameXToY = lazy(LazyThreadSafetyMode.NONE) {
-            // writes to x are all assignments so the name can just change
+            // writes to x are all assignments, so the name can just change
             readsAndWrites.writes[x]?.all { it.writeKind.isAssignment } == true &&
                 // y is not declared late
                 !declaredAfterAssignment(declared = y, assigned = x, readsAndWrites = readsAndWrites) &&
@@ -773,7 +773,6 @@ internal class CleanupTemporaries private constructor(
             val deadForName = mutableListOf<TEdge>()
             for (write in writesOfName) {
                 if (write.writeKind != WriteKind.SimpleAssignment) {
-                    // TODO: can we eliminate hs calls whose fail vars are unchecked
                     continue
                 }
                 // Don't convert invalid code into valid code by eliminating dead writes.
@@ -846,6 +845,16 @@ internal class CleanupTemporaries private constructor(
         for (x in localNames) {
             if (x !is Temporary) { continue }
             val writesToX = readsAndWrites.writes[x] ?: continue
+            val xWrittenInOrElse by lazy {
+                writesToX.any { w ->
+                    var controlFlow: ControlFlow? = w.containingPathElement?.stmt
+                    while (controlFlow != null) {
+                        if (controlFlow is ControlFlow.OrElse) { return@any true }
+                        controlFlow = controlFlow.parent
+                    }
+                    false
+                }
+            }
             for (writeToX in writesToX) {
                 val writeToXTree = writeToX.tree
                 if (writeToXTree == null || writeToX.writeKind != WriteKind.SimpleAssignment) { continue }
@@ -861,6 +870,8 @@ internal class CleanupTemporaries private constructor(
                     // Since x is a Temporary and y is not, this is monotonic so
                     // does not risk that.
                     if (y is Temporary) { continue }
+                    val yDeclParts = readsAndWrites.declarations[y]?.firstOrNull()?.parts
+                        ?: continue
                     val strategy = renameStrategyFor(
                         x = x,
                         y = y,
@@ -884,7 +895,14 @@ internal class CleanupTemporaries private constructor(
                             // Is there a readOfY such that
                             // there is a writeToX upstream of readToY
                             // that is also upstream of the readOfX in a writeToY.
-                            // If so, we cannot rename.
+                            // If so, we cannot rename it.
+
+                            if (!canMakeVar(yDeclParts, readsAndWrites) && xWrittenInOrElse) {
+                                // If the write to x is in an or-else then replacing
+                                // with writes to y would mean potentially having to
+                                // make something `var` that cannot be made `var`.
+                                return@canRenameXToY false
+                            }
 
                             val readsOfY = readsAndWrites.reads[y]
                             if (!readsOfY.isNullOrEmpty()) {
@@ -973,10 +991,10 @@ internal class CleanupTemporaries private constructor(
         //   For example, the read of `g` is a no-op and `f(x)` cannot change its value,
         //   so we can reorder `f(x)` after it.
 
-        // Finally review in reverse order to make it easier to inline a sequence
+        // Finally, review in reverse order to make it easier to inline a sequence
         // of assignments all at once. That can help in common degenerate cases like
         // 1000s of items going into the same list.
-        val inlinedElements = mutableSetOf<MaximalPath.Element>()
+        val inlinedElements = mutableSetOf<MaximalPath.AstElement>()
         val inlinedReadTrees = mutableSetOf<Tree>()
 
         for (name in readsAndWrites.localNames.asReversed()) {
@@ -1011,7 +1029,7 @@ internal class CleanupTemporaries private constructor(
                 // the read, then we check the tree to find intervening nodes.
                 val targetElement = read.containingPathElement
                 if (targetElement?.pathIndex != writeElement.pathIndex) { continue }
-                val nextElement: MaximalPath.Element? = run {
+                val nextElement: MaximalPath.PathElement? = run {
                     val path = readsAndWrites.paths[writeElement.pathIndex]
                     var elementIndex = path.elements.indexOf(writeElement)
                     while (0 <= elementIndex && elementIndex < path.elements.lastIndex) {
@@ -1479,8 +1497,7 @@ internal class CleanupTemporaries private constructor(
 fun isNestedFunctionBody(t: Tree): Boolean {
     val incoming = t.incoming
     val parent = incoming?.source
-    if (parent !is FunTree) { return false }
-    return parent.lastChild === t
+    return parent is FunTree && parent.lastChild === t
 }
 
 private fun canMakeVar(declParts: DeclParts, readsAndWrites: ReadsAndWrites): Boolean {
@@ -1493,7 +1510,7 @@ private fun canMakeVar(declParts: DeclParts, readsAndWrites: ReadsAndWrites): Bo
         return false
     }
     // Do not muck with function or module signatures.
-    if (name in readsAndWrites.inputNames || name == readsAndWrites.outputName) {
+    if (name in readsAndWrites.inputNames) {
         return false
     }
     val metadataMap = declParts.metadataSymbolMultimap
@@ -1546,7 +1563,7 @@ private fun simpleAssignedForRead(read: Read, root: BlockTree): Pair<Tree, Resol
     val parent = edge?.source
     if (parent is CallTree && isAssignment(parent) && edge == parent.edgeOrNull(2)) {
         val ref = read.containingPathElement!!.ref // Since we know tree is non-null
-        if (parent.incoming == root.dereference(ref)) { // is not nested in an hs(...) call
+        if (parent.incoming == root.dereference(ref)) {
             val left = parent.child(1)
             if (left is LeftNameLeaf) {
                 val leftName = left.content as ResolvedName
@@ -1673,7 +1690,6 @@ private fun mustRemainAtStatementLevel(t: Tree): Boolean {
         val fn = t.childOrNull(0)?.functionContained
         when (fn) {
             BuiltinFuns.await,
-            BuiltinFuns.handlerScope,
             BuiltinFuns.setLocalFn,
             BuiltinFuns.setpFn,
             -> return true

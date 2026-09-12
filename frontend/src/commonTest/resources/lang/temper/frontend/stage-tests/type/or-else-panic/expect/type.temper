@@ -1,19 +1,13 @@
-let return__0 ⦂ String;
-var t#0 ⦂ String, fail#0 ⦂ Boolean;
-@fn let `test//`.f ⦂(fn (): String | Bubble);
-`test//`.f = (@stay fn f /* return__1 */: (String | Bubble) {
-    fn__0: do {
+let return__4 ⦂ String, @fn `test//`.f ⦂(fn (): String | Bubble);
+`test//`.f = (@stay fn f /* return__0 */: (String | Bubble) {
+    fn__2: do {
       bubble ⋖ String ⋗()
     }
 });
-let x__0 ⦂ String;
-orelse#0: {
-  t#0 = hs ⋖ String ⋗(fail#0, (fn f)());
-  if (fail#0) {
-    break orelse#0;
-  };
-  x__0 = t#0
+var x__1 ⦂ String;
+orelse#3: {
+  x__1 = (fn f)()
 } orelse {
-  x__0 = panic ⋖ String ⋗()
+  x__1 = panic ⋖ String ⋗()
 };
-return__0 = x__0
+return__4 = x__1;

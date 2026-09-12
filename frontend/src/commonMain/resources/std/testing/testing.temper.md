@@ -133,7 +133,7 @@ implementation of testing within the interpreter.
           messages
         };
         // Package up with test name.
-        new Pair(key, failures)
+        new TestResult(key, failures)
       }
     }
 

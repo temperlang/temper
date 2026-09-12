@@ -1,30 +1,30 @@
-let return__0;
-@constructorProperty @property(\x) @visibility(\private) @stay @fromType(C__0) var x__0: Int32;
-@constructorProperty @property(\y) @visibility(\private) @stay @fromType(C__0) var y__0: Int32;
-@method(\f) @visibility(\public) @fn @stay @fromType(C__0) let f__0;
-f__0 = (@stay fn f(@impliedThis(C__0) this__0: C__0) /* return__1 */: Int32 {
-    return__1 = oneTwoThree();
-    setp(y__0, this__0, return__1);
-    setp(x__0, this__0, return__1)
+let return__20;
+@constructorProperty @property(\x) @visibility(\private) @stay @fromType(C__0) var x__5: Int32;
+@constructorProperty @property(\y) @visibility(\private) @stay @fromType(C__0) var y__6: Int32;
+@method(\f) @visibility(\public) @fn @stay @fromType(C__0) let f__7;
+f__7 = (@stay fn f(@impliedThis(C__0) this__1: C__0) /* return__4 */: Int32 {
+    return__4 = oneTwoThree();
+    setp(y__6, this__1, return__4);
+    setp(x__5, this__1, return__4)
 });
-@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) let constructor__0;
-constructor__0 = (@stay fn constructor(@impliedThis(C__0) this__1: C__0, @optional(true) x__1 /* aka x */: Int32?, @optional(true) y__1 /* aka y */: Int32?) /* return__2 */: Void {
-    let x__2 /* aka x */: Int32;
-    if (isNull(x__1)) {
-      x__2 = 0
+@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) let constructor__9;
+constructor__9 = (@stay fn constructor(@impliedThis(C__0) this__2: C__0, @optional(true) x__16 /* aka x */: Int32?, @optional(true) y__17 /* aka y */: Int32?) /* return__3 */: Void {
+    return__3 = void;
+    let x__10 /* aka x */: Int32;
+    if (isNull(x__16)) {
+      x__10 = 0
     } else {
-      x__2 = notNull(x__1)
+      x__10 = notNull(x__16)
     };
-    let y__2 /* aka y */: Int32;
-    if (isNull(y__1)) {
-      y__2 = 0
+    let y__11 /* aka y */: Int32;
+    if (isNull(y__17)) {
+      y__11 = 0
     } else {
-      y__2 = notNull(y__1)
+      y__11 = notNull(y__17)
     };
-    setp(x__0, this__1, x__2);
-    setp(y__0, this__1, y__2);
-    return__2 = void
+    setp(x__5, this__2, x__10);
+    setp(y__6, this__2, y__11)
 });
 @typeDecl(C__0) @stay let C__0;
 C__0 = type (C__0);
-return__0 = type (C__0)
+return__20 = type (C__0)

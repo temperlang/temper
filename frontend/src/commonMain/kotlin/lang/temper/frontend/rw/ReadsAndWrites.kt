@@ -27,6 +27,7 @@ import lang.temper.type.NominalType
 import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
+import lang.temper.value.ConservativeFailure
 import lang.temper.value.DeclTree
 import lang.temper.value.Document
 import lang.temper.value.FunTree
@@ -36,7 +37,6 @@ import lang.temper.value.MaximalPathIndex
 import lang.temper.value.MaximalPaths
 import lang.temper.value.NameLeaf
 import lang.temper.value.Preceder
-import lang.temper.value.ReifiedType
 import lang.temper.value.RightNameLeaf
 import lang.temper.value.TFunction
 import lang.temper.value.TType
@@ -45,13 +45,14 @@ import lang.temper.value.ValueLeaf
 import lang.temper.value.debug
 import lang.temper.value.forwardMaximalPaths
 import lang.temper.value.isCore
-import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.orderedPathIndices
 import lang.temper.value.ssaSymbol
 import lang.temper.value.toPseudoCode
 import lang.temper.value.valueContained
 
 private const val DEBUG = false
+
+@Suppress("SimplifyBooleanWithConstants")
 private val Document.debugging get() = DEBUG && !isCore
 private inline fun Document.debug(body: () -> Unit) {
     if (debugging) {
@@ -92,10 +93,10 @@ internal data class ReadsAndWrites(
     /** [Read]s that are downstream of [Write]s */
     val downstream: Map<Write, Set<AbstractRead>>,
     val pathDiagnosticPositions: Map<MaximalPathIndex, Position>,
-    val blockChildrenToPathElements: Map<BlockChildReference, MaximalPath.Element>,
-    val declsByPathElement: Map<MaximalPath.Element, DeclTree>,
-    val readsByPathElement: Map<MaximalPath.Element, List<AbstractRead>>,
-    val writesByPathElement: Map<MaximalPath.Element, List<Write>>,
+    val blockChildrenToPathElements: Map<BlockChildReference, MaximalPath.AstElement>,
+    val declsByPathElement: Map<MaximalPath.AstElement, DeclTree>,
+    val readsByPathElement: Map<MaximalPath.AstElement, List<AbstractRead>>,
+    val writesByPathElement: Map<MaximalPath.AstElement, List<Write>>,
     val writesToInputParameters: Map<ResolvedName, Write>,
 ) : Structured {
     override fun destructure(structureSink: StructureSink) = structureSink.obj {
@@ -206,7 +207,7 @@ internal data class ReadsAndWrites(
                 }
             }
 
-            val maximalPaths = forwardMaximalPaths(root, assumeFailureCanHappen = true)
+            val maximalPaths = forwardMaximalPaths(root, ConservativeFailure.AtEndOfOr)
             root.document.debug {
                 maximalPaths.debug(console, root)
             }
@@ -258,10 +259,10 @@ internal data class ReadsAndWrites(
             }
 
             val blockChildrenToPathElements =
-                mutableMapOf<BlockChildReference, MaximalPath.Element>()
+                mutableMapOf<BlockChildReference, MaximalPath.AstElement>()
             for (path in maximalPaths.maximalPaths) {
                 fun leftNameFor(t: Tree?) = (t as? NameLeaf)?.content as ResolvedName?
-                fun readAt(element: MaximalPath.Element, t: Tree?): AbstractRead? {
+                fun readAt(element: MaximalPath.AstElement, t: Tree?): AbstractRead? {
                     when (t) {
                         is RightNameLeaf -> {
                             val name = t.content as ResolvedName
@@ -272,7 +273,7 @@ internal data class ReadsAndWrites(
                             val value = t.valueContained
                             val reifiedType = TType.unpackOrNull(value)
                             if (reifiedType != null) {
-                                val type = (reifiedType as? ReifiedType)?.type
+                                val type = reifiedType.type
                                 if (type is NominalType) {
                                     val name = type.definition.name
                                     return ReifiedRead(name, t, element, lineNo = module.lineFor(t))
@@ -296,7 +297,7 @@ internal data class ReadsAndWrites(
                     return null
                 }
 
-                fun visit(element: MaximalPath.Element) {
+                fun visit(element: MaximalPath.AstElement) {
                     val ref = element.ref
                     blockChildrenToPathElements[ref] = element
                     val tree = root.dereference(ref)?.target ?: return
@@ -304,27 +305,18 @@ internal data class ReadsAndWrites(
                     // There are a couple different kinds of writes:
                     // - `a = b`
                     //   A simple assignment
-                    // - `a = hs(fail, b)`
-                    //   An assignment guarded by hs() that also writes a fail bit
-                    //   that tells us whether the assigned value is usable.
-                    // - `hs(fail, a = b)`
-                    //   An assignment that may fail in the interpreter due to a type error.
-                    //   This will either be found as safe during type checking in a late stage
-                    //   or turned into an error node, but we need to deal with it now.
                     // - `setp(propertyName, b)`
                     //   A non-assignment to a backed property from within a method
                     //   of the declaring type.
 
-                    // Recurse to find writes looking through `=` and `hs` calls.
+                    // Recurse to find writes looking through `=` calls.
                     // Assume the weaver pulled other assignments to the root.
                     fun findWrites(t: Tree, nested: Boolean): Tree? {
                         if (t !is CallTree || !writesArgument1(t)) { return null }
                         val name = leftNameFor(t.childOrNull(1)) ?: return null
 
-                        val isAssignment = isAssignment(t) // Is a simple `=`, not, for example, an `hs` call.
-                        val isHsCall = !isAssignment && isHandlerScopeCall(t)
-
-                        val rightTree: Tree? = if (isAssignment || isHsCall) {
+                        val isAssignment = isAssignment(t)
+                        val rightTree: Tree? = if (isAssignment) {
                             t.childOrNull(2)?.let { child ->
                                 findWrites(child, nested = true) ?: child
                             }
@@ -390,7 +382,10 @@ internal data class ReadsAndWrites(
 
                 path.elements.forEach { visit(it) }
                 path.followers.forEach { (condition) ->
-                    if (condition != null) { visit(condition) }
+                    when (condition) {
+                        is MaximalPath.Bubbled? -> {}
+                        is MaximalPath.AstElement -> visit(condition)
+                    }
                 }
             }
 
@@ -456,7 +451,7 @@ internal data class ReadsAndWrites(
                         declsByPathElement[condition] != null ||
                         !writesByPathElement[condition].isNullOrEmpty()
                     ) {
-                        error("${root.dereference(condition.ref)?.target?.toPseudoCode()}")
+                        error(condition.toDebugString(root))
                     }
                 }
                 delta
@@ -486,7 +481,7 @@ internal data class ReadsAndWrites(
                     val sizeBefore = usedSet?.size ?: 0
                     if (usedSet == null) {
                         usedSet = mutableSetOf()
-                        fun addUsesToSet(element: MaximalPath.Element?) {
+                        fun addUsesToSet(element: MaximalPath.AstElement?) {
                             declsByPathElement[element]?.let {
                                 val name = it.parts?.name?.content as ResolvedName?
                                 if (name != null) { usedSet.add(name) }
@@ -500,7 +495,7 @@ internal data class ReadsAndWrites(
                         }
                         path.elements.forEach { addUsesToSet(it) }
                         path.followers.forEach { (condition) ->
-                            addUsesToSet(condition)
+                            addUsesToSet(condition as? MaximalPath.AstElement)
                         }
                         // Treat the result as being read by the caller.
                         if (pathIndex in maximalPaths.exitPathIndices && readOfReturn != null) {
@@ -610,7 +605,7 @@ internal data class ReadsAndWrites(
             // along a path, and we see a name written or a declaration
             // we clobber all of them, because paths internally are linear.
             fun maskPreviousWritesToSameName(
-                el: MaximalPath.Element,
+                el: MaximalPath.AstElement,
                 writesLive: MutableMap<ResolvedName, Set<Write>>,
             ) {
                 val decl = declsByPathElement[el]
@@ -635,7 +630,7 @@ internal data class ReadsAndWrites(
                     val live = writesLiveAtStart.getValue(pathIndex).toMutableMap()
 
                     // Walk the path again propagating liveness but also populating upstream
-                    fun considerPathElement(el: MaximalPath.Element?) {
+                    fun considerPathElement(el: MaximalPath.AstElement?) {
                         if (el == null) {
                             return
                         }
@@ -648,7 +643,7 @@ internal data class ReadsAndWrites(
                     }
                     path.elements.forEach { considerPathElement(it) }
                     path.followers.forEach { (cond) ->
-                        considerPathElement(cond)
+                        considerPathElement(cond as? MaximalPath.AstElement)
                     }
                     liveAtEnd[pathIndex] = live
                 }
@@ -717,7 +712,7 @@ internal data class ReadsAndWrites(
 
 internal sealed class AbstractRead(
     val name: ResolvedName,
-    val containingPathElement: MaximalPath.Element?,
+    val containingPathElement: MaximalPath.AstElement?,
     /** Useful for testing and debugging */
     val lineNo: Int,
 ) : Structured {
@@ -734,7 +729,7 @@ internal sealed class AbstractRead(
 internal class Read(
     name: ResolvedName,
     override val tree: NameLeaf?,
-    containingPathElement: MaximalPath.Element?,
+    containingPathElement: MaximalPath.AstElement?,
     lineNo: Int,
 ) : AbstractRead(name, containingPathElement, lineNo) {
     override fun hashCode(): Int = tree.hashCode()
@@ -752,7 +747,7 @@ internal class Read(
 internal class ReifiedRead(
     name: ResolvedName,
     override val tree: ValueLeaf?,
-    containingPathElement: MaximalPath.Element?,
+    containingPathElement: MaximalPath.AstElement?,
     lineNo: Int,
 ) : AbstractRead(name, containingPathElement, lineNo) {
     override fun hashCode(): Int = tree.hashCode()
@@ -780,7 +775,7 @@ internal enum class WriteKind {
 
 internal class Write(
     val name: ResolvedName,
-    val containingPathElement: MaximalPath.Element?,
+    val containingPathElement: MaximalPath.AstElement?,
     val tree: Tree?,
     val writeKind: WriteKind,
     val assigned: AbstractRead?,
@@ -828,7 +823,7 @@ internal class Write(
 internal class NestedFunction(
     val name: ResolvedName?,
     val tree: FunTree,
-    val containingPathElement: MaximalPath.Element,
+    val containingPathElement: MaximalPath.AstElement,
     private val lineNo: Int,
 ) : Structured {
     override fun destructure(structureSink: StructureSink) {
@@ -877,7 +872,7 @@ internal fun ReadsAndWrites.writesLive(
     /**
      * Must be an element from [ReadsAndWrites.paths].
      */
-    location: MaximalPath.Element,
+    location: MaximalPath.AstElement,
 ): Iterable<Write> {
     val readsAndWrites = this
     return object : Iterable<Write> {
@@ -913,10 +908,10 @@ internal fun ReadsAndWrites.writesLive(
 
 private class LiveIterator<T : Any>(
     val readsAndWrites: ReadsAndWrites,
-    val start: MaximalPath.Element,
+    val start: MaximalPath.AstElement,
     val extras: Iterator<T>,
     /** Non-null output emits the found items and stops following the containing path. */
-    val elementToItems: (MaximalPath.Element) -> Iterator<T>?,
+    val conditionToItems: (MaximalPath.PathElement) -> Iterator<T>?,
 ) : Iterator<T> {
     override fun hasNext(): Boolean = findPending() != null
     override fun next(): T {
@@ -971,7 +966,7 @@ private class LiveIterator<T : Any>(
                         // See note in init above.
                         continue@pathIteratorsLoop
                     }
-                    val newItemIterator = elementToItems(element)
+                    val newItemIterator = conditionToItems(element)
                     if (newItemIterator != null) {
                         this.itemIterator = newItemIterator
                         // The items in newItemIterator block any liveness
@@ -998,10 +993,10 @@ private class LiveIterator<T : Any>(
     }
 }
 
-private class PathIterator(val path: MaximalPath) : Iterator<MaximalPath.Element> {
+private class PathIterator(val path: MaximalPath) : Iterator<MaximalPath.PathElement> {
     override fun hasNext(): Boolean = peek() != null
 
-    override fun next(): MaximalPath.Element {
+    override fun next(): MaximalPath.PathElement {
         val result = peek() ?: throw NoSuchElementException()
         if (followerIndex >= 0) {
             followerIndex -= 1
@@ -1015,7 +1010,7 @@ private class PathIterator(val path: MaximalPath) : Iterator<MaximalPath.Element
     private var followerIndex = path.followers.lastIndex
     private var elementIndex = path.elements.lastIndex
 
-    fun peek(): MaximalPath.Element? {
+    fun peek(): MaximalPath.PathElement? {
         while (followerIndex >= 0) {
             val condition = path.followers[followerIndex].condition
             if (condition == null) {

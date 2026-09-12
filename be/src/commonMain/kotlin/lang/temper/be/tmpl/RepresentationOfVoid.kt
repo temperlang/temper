@@ -27,7 +27,7 @@ import lang.temper.value.Tree
  *
  * ```java
  * void f() { // This line is ok
- *   void x = ...;  // This line is not OK.
+ *   void x = foo();  // This line is not OK.
  *                  // `void` may not be used for locals
  *   return x;
  * }

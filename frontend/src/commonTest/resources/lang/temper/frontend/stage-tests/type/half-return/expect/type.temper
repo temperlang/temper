@@ -1,0 +1,10 @@
+@fn let halfAndHalf__0;
+halfAndHalf__0 = (@stay fn halfAndHalf(b__0 /* aka b */: Boolean) /* return__0 */: String {
+    fn__0: do {
+      if (b__0) {
+        return__0 = "true";
+        break fn__0;
+      };
+      return__0 = "false"
+    };
+});

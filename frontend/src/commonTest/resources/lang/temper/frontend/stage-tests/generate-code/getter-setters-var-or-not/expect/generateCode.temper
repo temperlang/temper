@@ -3,81 +3,88 @@
 @typeDecl(C) @stay let `test//`.C;
 `test//`.C = type (C);
 @fn let `test//`.alsoUpdate;
-@visibility(\public) @stay @fromType(I) let superGetter__0;
-@visibility(\public) @fn @stay @fromType(I) let nym`get.superGetter__1`;
-nym`get.superGetter__1` = (@stay fn nym`get.superGetter`(@impliedThis(I) this__0: I) /* return__0 */: Int32 {
-    return__0 = 10
+@visibility(\public) @stay @fromType(I) let superGetter__6;
+@visibility(\public) @fn @stay @fromType(I) let nym`get.superGetter__17`;
+nym`get.superGetter__17` = (@stay fn nym`get.superGetter`(@impliedThis(I) this__0: I) /* return__8 */: Int32 {
+    return__8 = 10
 });
-@visibility(\public) @stay @fromType(I) let superSetter__0;
-@visibility(\public) @fn @stay @fromType(I) let nym`set.superSetter__1`;
-nym`set.superSetter__1` = (@stay fn nym`set.superSetter`(@impliedThis(I) this__1: I, i__0 /* aka i */: Int32) /* return__1 */: Void {
-    return__1 = void
-});
-@visibility(\public) @stay @fromType(C) let propNotVar__0: Int32;
-@visibility(\public) @stay @fromType(C) var propVar__0: Int32;
-@visibility(\public) @fn @stay @fromType(C) let constructor__0;
-constructor__0 = (@stay fn constructor(@impliedThis(C) this__2: C) /* return__2 */: Void {
-    var t#0, t#1, t#2, t#3, t#4;
-    setp(propNotVar__0, this__2, 1);
-    setp(propVar__0, this__2, 2);
-    setp(propVar__0, this__2, 3);
-    do_iset_wrong(type (C), this__2, 4);
-    t#0 = do_iget_extraSetter(type (C), this__2);
-    do_iset_extraGetter(type (C), this__2, t#0);
-    t#1 = do_iget_extraGetter(type (C), this__2);
-    do_iset_extraSetter(type (C), this__2, t#1);
-    t#2 = do_iget_superGetter(type (C), this__2);
-    do_iset_extraSetter(type (C), this__2, t#2);
-    t#3 = getp(propNotVar__0, this__2);
-    do_iset_superGetter(type (C), this__2, t#3);
-    t#4 = getp(propNotVar__0, this__2);
-    do_iset_superSetter(type (C), this__2, t#4);
-    return__2 = void
-});
-@visibility(\public) @fn @stay @fromType(C) let update__0;
-update__0 = (@stay fn update(@impliedThis(C) this__3: C, i__1 /* aka i */: Int32) /* return__3 */: Void {
-    setp(propNotVar__0, this__3, i__1);
-    setp(propVar__0, this__3, "hi");
-    return__3 = void
-});
-@visibility(\public) @stay @fromType(C) let extraSetter__0;
-@visibility(\public) @fn @stay @fromType(C) let nym`set.extraSetter__1`;
-nym`set.extraSetter__1` = (@stay fn nym`set.extraSetter`(@impliedThis(C) this__4: C, k__0 /* aka k */: Int32) /* return__4 */: Void {
-    setp(propVar__0, this__4, k__0);
-    return__4 = void
-});
-@visibility(\public) @stay @fromType(C) let extraGetter__0;
-@visibility(\public) @fn @stay @fromType(C) let nym`get.extraGetter__1`;
-nym`get.extraGetter__1` = (@stay fn nym`get.extraGetter`(@impliedThis(C) this__5: C) /* return__5 */: Int32 {
-    return__5 = getp(propVar__0, this__5)
-});
-@fn @visibility(\public) @stay @fromType(C) let getpropNotVar__0;
-getpropNotVar__0 = (@stay fn (@impliedThis(C) this__6: C) /* return__6 */: Int32 {
-    return__6 = getp(propNotVar__0, this__6)
-});
-@fn @visibility(\public) @stay @fromType(C) let getpropVar__0;
-getpropVar__0 = (@stay fn (@impliedThis(C) this__7: C) /* return__7 */: Int32 {
-    return__7 = getp(propVar__0, this__7)
-});
-@fn @visibility(\public) @stay @fromType(C) let setpropVar__0;
-setpropVar__0 = (@stay fn (@impliedThis(C) this__8: C, newPropVar__0: Int32) /* return__8 */: Void {
-    setp(propVar__0, this__8, newPropVar__0);
-    return__8 = void
-});
-`test//`.alsoUpdate = (@stay fn alsoUpdate(c__0 /* aka c */: C, j__0 /* aka j */: Int32) /* return__9 */: Void {
-    var t#5, t#6, t#7, t#8;
-    let t#9;
-    t#9 = j__0;
-    do_set_propNotVar(c__0, t#9);
-    t#5 = j__0;
-    do_set_propVar(c__0, t#5);
-    do_set_propVar(c__0, "bye");
-    t#6 = j__0;
-    do_set_extraSetter(c__0, t#6);
-    t#7 = j__0;
-    do_set_extraGetter(c__0, t#7);
-    t#8 = j__0;
-    do_set_extraWrong(c__0, t#8);
-    do_set_superSetter(c__0, j__0);
+@visibility(\public) @stay @fromType(I) let superSetter__7;
+@visibility(\public) @fn @stay @fromType(I) let nym`set.superSetter__19`;
+nym`set.superSetter__19` = (@stay fn nym`set.superSetter`(@impliedThis(I) this__1: I, i__20 /* aka i */: Int32) /* return__9 */: Void {
     return__9 = void
+});
+@visibility(\public) @stay @fromType(C) let propNotVar__22: Int32;
+@visibility(\public) @stay @fromType(C) var propVar__23: Int32;
+@visibility(\public) @fn @stay @fromType(C) let constructor__24;
+constructor__24 = (@stay fn constructor(@impliedThis(C) this__2: C) /* return__12 */: Void {
+    return__12 = void;
+    setp(propNotVar__22, this__2, 1);
+    setp(propVar__23, this__2, 2);
+    setp(propVar__23, this__2, 3);
+    do_iset_wrong(type (C), this__2, 4);
+    let t#49;
+    t#49 = do_iget_extraSetter(type (C), this__2);
+    do_iset_extraGetter(type (C), this__2, t#49);
+    let t#48;
+    t#48 = do_iget_extraGetter(type (C), this__2);
+    do_iset_extraSetter(type (C), this__2, t#48);
+    let t#47;
+    t#47 = do_iget_superGetter(type (C), this__2);
+    do_iset_extraSetter(type (C), this__2, t#47);
+    let t#46;
+    t#46 = getp(propNotVar__22, this__2);
+    do_iset_superGetter(type (C), this__2, t#46);
+    let t#45;
+    t#45 = getp(propNotVar__22, this__2);
+    do_iset_superSetter(type (C), this__2, t#45)
+});
+@visibility(\public) @fn @stay @fromType(C) let update__26;
+update__26 = (@stay fn update(@impliedThis(C) this__3: C, i__27 /* aka i */: Int32) /* return__13 */: Void {
+    return__13 = void;
+    setp(propNotVar__22, this__3, i__27);
+    setp(propVar__23, this__3, "hi")
+});
+@visibility(\public) @stay @fromType(C) let extraSetter__10;
+@visibility(\public) @fn @stay @fromType(C) let nym`set.extraSetter__29`;
+nym`set.extraSetter__29` = (@stay fn nym`set.extraSetter`(@impliedThis(C) this__4: C, k__30 /* aka k */: Int32) /* return__14 */: Void {
+    return__14 = void;
+    setp(propVar__23, this__4, k__30)
+});
+@visibility(\public) @stay @fromType(C) let extraGetter__11;
+@visibility(\public) @fn @stay @fromType(C) let nym`get.extraGetter__32`;
+nym`get.extraGetter__32` = (@stay fn nym`get.extraGetter`(@impliedThis(C) this__5: C) /* return__15 */: Int32 {
+    return__15 = getp(propVar__23, this__5)
+});
+@fn @visibility(\public) @stay @fromType(C) let getpropNotVar__50;
+getpropNotVar__50 = (@stay fn (@impliedThis(C) this__51: C) /* return__52 */: Int32 {
+    return__52 = getp(propNotVar__22, this__51)
+});
+@fn @visibility(\public) @stay @fromType(C) let getpropVar__53;
+getpropVar__53 = (@stay fn (@impliedThis(C) this__54: C) /* return__55 */: Int32 {
+    return__55 = getp(propVar__23, this__54)
+});
+@fn @visibility(\public) @stay @fromType(C) let setpropVar__56;
+setpropVar__56 = (@stay fn (@impliedThis(C) this__58: C, newPropVar__57: Int32) /* return__59 */: Void {
+    return__59 = void;
+    setp(propVar__23, this__58, newPropVar__57)
+});
+`test//`.alsoUpdate = (@stay fn alsoUpdate(c__34 /* aka c */: C, j__35 /* aka j */: Int32) /* return__16 */: Void {
+    return__16 = void;
+    let t#42;
+    t#42 = j__35;
+    do_set_propNotVar(c__34, t#42);
+    let t#41;
+    t#41 = j__35;
+    do_set_propVar(c__34, t#41);
+    do_set_propVar(c__34, "bye");
+    let t#40;
+    t#40 = j__35;
+    do_set_extraSetter(c__34, t#40);
+    let t#39;
+    t#39 = j__35;
+    do_set_extraGetter(c__34, t#39);
+    let t#38;
+    t#38 = j__35;
+    do_set_extraWrong(c__34, t#38);
+    do_set_superSetter(c__34, j__35)
 })

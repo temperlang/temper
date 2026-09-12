@@ -5,7 +5,6 @@ import lang.temper.be.TranslatorTests
 import lang.temper.be.names.LookupNameVisitor
 import lang.temper.be.tmpl.TmpL
 import lang.temper.lexer.Genre
-import kotlin.test.Ignore
 import kotlin.test.Test
 
 @SuppressWarnings("MaxLineLength")
@@ -39,10 +38,6 @@ class PyTranslatorTest : TranslatorTests(PyBackend.Python3.backendMeta, PySuppor
     /** Override to allow IntelliJ to detect tests. */
     @Test
     override fun overrideThis() = Unit
-
-    @Ignore // Py backend uses BubbleBranchStrategy.CatchBubble
-    @Test
-    override fun assignToHse() = Unit
 
     // override fun missingTest(testName: String) = Unit
 
@@ -205,10 +200,6 @@ class PyTranslatorTest : TranslatorTests(PyBackend.Python3.backendMeta, PySuppor
                     |                if early_predicate_11():
                     |                    outer_7.break_()
                     |return 42
-                """.trimMargin(),
-            "exprStatementHse" to
-                """
-                    |failed_7 = 'dummy' is NO_RESULT0
                 """.trimMargin(),
             "expressionAssociativityLeftAmp" to "a and b and c",
             "expressionAssociativityRightAmp" to "a and (b and c)",

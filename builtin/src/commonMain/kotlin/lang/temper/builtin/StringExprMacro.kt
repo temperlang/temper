@@ -32,7 +32,6 @@ import lang.temper.value.CallTree
 import lang.temper.value.Fail
 import lang.temper.value.FunTree
 import lang.temper.value.FunctionSpecies
-import lang.temper.value.IfThenElse
 import lang.temper.value.LinearFlow
 import lang.temper.value.MacroEnvironment
 import lang.temper.value.NameLeaf
@@ -207,7 +206,8 @@ object StringExprMacro : BuiltinStatelessMacroValue, NamedBuiltinFun {
                             if (arg.isStringValueLeaf) {
                                 Replant(arg)
                             } else {
-                                Call(arg.pos, CoerceToString) {
+                                Call(arg.pos) {
+                                    V(arg.pos.leftEdge, vCoerceToString)
                                     Replant(arg)
                                 }
                             }
@@ -570,7 +570,8 @@ private fun pointAppendsAtAccumulator(funTree: FunTree, isTagged: Boolean) {
                                         if (isTagged) {
                                             Replant(next)
                                         } else {
-                                            Call(next.pos, CoerceToString) {
+                                            Call(next.pos) {
+                                                V(next.pos.leftEdge, vCoerceToString)
                                                 Replant(next)
                                             }
                                         }
@@ -730,11 +731,23 @@ internal object CoerceToString : SpecialFunction, BuiltinMacro("str", null) {
             InterpMode.Partial -> {
                 val arg = args.valueTree(0)
                 val type = arg.typeInferences?.type
+                val value = arg.valueContained
+                val stage = macroEnv.stage
                 if (type != null) {
                     macroEnv.replaceMacroCallWith {
                         buildStringifyCall(freeTree(arg), type)
                     }
-                } else if (macroEnv.stage == Stage.GenerateCode) {
+                } else if (value != null && stage > Stage.Type) {
+                    if (value.typeTag == TNull) {
+                        macroEnv.replaceMacroCallWith {
+                            V(macroEnv.pos, Value("null", TString), WellKnownTypes.stringType)
+                        }
+                    } else {
+                        macroEnv.replaceMacroCallWith {
+                            buildStringifyCall(freeTree(arg), typeForValue(value))
+                        }
+                    }
+                } else if (stage == Stage.GenerateCode) {
                     val problem = LogEntry(
                         Log.Error,
                         MessageTemplate.InternalErrorMacroNotErased,
@@ -744,9 +757,9 @@ internal object CoerceToString : SpecialFunction, BuiltinMacro("str", null) {
                     problem.logTo(macroEnv.logSink)
                     macroEnv.replaceMacroCallWithErrorNode(problem)
                 }
-                arg.valueContained?.let {
+                value?.let { value ->
                     try {
-                        stringify(it, macroEnv, interpMode, arg.pos) as? Value<*>
+                        stringify(value, macroEnv, interpMode, arg.pos) as? Value<*>
                     } catch (_: Panic) {
                         null
                     }
@@ -765,6 +778,7 @@ internal object CoerceToString : SpecialFunction, BuiltinMacro("str", null) {
         ),
     )
 }
+private val vCoerceToString = Value(CoerceToString)
 
 private fun Planting.buildToStringCall(subject: Value<*>) =
     Call {
@@ -786,25 +800,27 @@ private fun Planting.buildStringifyCall(arg: Tree, argType: StaticType?) {
         Replant(freeTree(arg))
     } else if (argType is InvalidType? || canBeNull(argType)) {
         // if (isNull(arg)) { "null" } else { arg.toString() }
-        fun Planting.plantNullSafeCall(toCheck: Tree, subject: Tree) = IfThenElse(
-            {
-                Call(vIsNullFn) {
-                    Replant(toCheck)
-                }
-            },
-            {
-                V(arg.pos, Value(OutToks.nullWord.text, TString), WellKnownTypes.stringType)
-            },
-            {
-                buildToStringCall(
-                    arg.document.treeFarm.grow(subject.pos) {
-                        Call(BuiltinFuns.vNotNullFn) {
-                            Replant(subject)
-                        }
-                    },
-                )
-            },
-        )
+        fun Planting.plantNullSafeCall(toCheck: Tree, subject: Tree) = Block {
+            If(
+                cond = {
+                    Call(vIsNullFn) {
+                        Replant(toCheck)
+                    }
+                },
+                thn = {
+                    V(arg.pos, Value(OutToks.nullWord.text, TString), WellKnownTypes.stringType)
+                },
+                els = {
+                    buildToStringCall(
+                        arg.document.treeFarm.grow(subject.pos) {
+                            Call(BuiltinFuns.vNotNullFn) {
+                                Replant(subject)
+                            }
+                        },
+                    )
+                },
+            )
+        }
         when (arg) {
             is ValueLeaf, is NameLeaf -> plantNullSafeCall(freeTree(arg), arg.copy())
             else -> Block(arg.pos) {

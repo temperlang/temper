@@ -649,7 +649,7 @@ private class ModuleParts(
                 Lua.Exprs(
                     stmt.right.pos,
                     listOf(
-                        translateExpr(stmt.right as TmpL.Expression),
+                        translateExpr(stmt.right),
                     ),
                 ),
             ),
@@ -860,10 +860,6 @@ private class ModuleParts(
     private fun translateStmt(
         stmt: TmpL.GarbageStatement,
     ): List<Lua.Stmt> = listOf(Lua.Comment(stmt.pos, "garbage"))
-
-    private fun translateStmt(
-        stmt: TmpL.HandlerScope,
-    ): List<Lua.Stmt> = listOf(Lua.Comment(stmt.pos, "handler"))
 
     private fun translateStmt(
         stmt: TmpL.IfStatement,
@@ -1669,7 +1665,6 @@ private class ModuleParts(
         is TmpL.EmbeddedComment -> translateStmt(statement)
         is TmpL.ExpressionStatement -> translateStmt(statement)
         is TmpL.GarbageStatement -> translateStmt(statement)
-        is TmpL.HandlerScope -> translateStmt(statement)
         is TmpL.IfStatement -> translateStmt(statement)
         is TmpL.LabeledStatement -> translateStmt(statement)
         is TmpL.LocalDeclaration -> translateStmt(statement)

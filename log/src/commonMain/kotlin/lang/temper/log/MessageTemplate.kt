@@ -96,7 +96,7 @@ enum class MessageTemplate(
         CompilationPhase.TreeBuild,
     ),
 
-    // Detected during string unpacking, but only reported later.
+    // Detected during string unpacking but only reported later.
     InvalidUnicode("Invalid Unicode scalar value", CompilationPhase.TreeBuild),
     InvalidUnicodeBecauseLarge("Invalid Unicode scalar value, too large", CompilationPhase.TreeBuild),
     InvalidUnicodeBecauseSurrogate(
@@ -153,7 +153,7 @@ enum class MessageTemplate(
 
     /**
      * Position is the position of the downstream use.
-     * Second argument is a list of positions of branches that fail to initialize.
+     * The second argument is a list of positions of branches that fail to initialize.
      */
     UseBeforeInitialization("%s is not initialized along branches at %s", CompilationPhase.Interpreter),
     ArityMismatch("Wrong number of arguments.  Expected %d", CompilationPhase.Interpreter),
@@ -171,6 +171,14 @@ enum class MessageTemplate(
     MissingDeclaration("No declaration for %s", CompilationPhase.Interpreter),
     MissingProperty("No property %s declared in type %s", CompilationPhase.Interpreter),
     PropertyNotInitializedInConstructor("Property %s not initialized in constructor", CompilationPhase.Interpreter),
+    ExplicitConstructorIncompatibleWithInput(
+        "Constructor input %s specified but there is already a constructor at %s",
+        CompilationPhase.Interpreter,
+    ),
+    MultipleConstructorsIncompatibleWIthInitializer(
+        "More than one constructor needs to adopt initializer for property %s at %s",
+        CompilationPhase.Interpreter,
+    ),
     CannotSetAbstractProperty("Cannot assign abstract property %s", CompilationPhase.Interpreter),
     CannotInstantiateAbstractType("Cannot instantiate abstract type %s", CompilationPhase.Interpreter),
     MissingType("No type for %s", CompilationPhase.Interpreter),
@@ -210,7 +218,6 @@ enum class MessageTemplate(
     ),
     Unreached("Never reached by macro expander %s", CompilationPhase.Interpreter),
     Aborted("Interpretation aborted", CompilationPhase.Interpreter),
-    MalformedFlow("Block has broken flow graph", CompilationPhase.Interpreter),
     InterpreterCannotEvaluateErrorExpression(
         "Interpreter encountered error()",
         CompilationPhase.Interpreter,
@@ -219,8 +226,8 @@ enum class MessageTemplate(
     NotApplicable("Cannot apply %s to %s:%s", CompilationPhase.Interpreter),
     InternalInterpreterError("Internal error: %s", CompilationPhase.Interpreter),
     InternalErrorMacroNotErased("Internal error: %s did not erase", CompilationPhase.Interpreter),
-    CouldNotStoreFailureBit(
-        "Internal error: failed to set failure bit",
+    InternalErrorTyper(
+        "Internal error: failed to resolve constraints [%s] from %s",
         CompilationPhase.Interpreter,
     ),
     ReturnOutsideFn("Return outside function body", CompilationPhase.Interpreter),

@@ -45,7 +45,6 @@ interface NameVisitor {
 
     // fun formalVarDecl(name: ResolvedName, decl: TmpL.RestFormal) {}
     fun localVarDecl(name: ResolvedName, decl: TmpL.LocalDeclaration) {}
-    fun localVarDeclMisc(name: ResolvedName, decl: TmpL.HandlerScope) {}
 
     // Imports
     fun import(localName: ResolvedName?, externalName: ResolvedName, decl: TmpL.Import) {}
@@ -242,10 +241,6 @@ open class LookupNameVisitor private constructor(
     override fun localVarDecl(name: ResolvedName, decl: TmpL.LocalDeclaration) {
         super.localVarDecl(name, decl)
         declareWithContext(name, decl, decl.metadata)
-    }
-    override fun localVarDeclMisc(name: ResolvedName, decl: TmpL.HandlerScope) {
-        super.localVarDeclMisc(name, decl)
-        declareWithContext(name, decl)
     }
 
     override fun import(localName: ResolvedName?, externalName: ResolvedName, decl: TmpL.Import) {

@@ -16,6 +16,7 @@ import lang.temper.value.RightNameLeaf
 import lang.temper.value.Tree
 import lang.temper.value.condSymbol
 import lang.temper.value.dotBuiltinName
+import lang.temper.value.emptyValue
 import lang.temper.value.flowInitSymbol
 import lang.temper.value.freeTree
 import lang.temper.value.incrSymbol
@@ -195,7 +196,7 @@ internal object LoopTransform : ControlFlowTransform("for") {
             // Is it time to desugar?
             // We want to desugar when `.` is still waiting to be turned
             // into dot helpers.
-            // (We could synthesize a method call helper here but that
+            // (We could synthesize a method-call helper here, but that
             // would be complicated by a need to separately handle private
             // forEach methods).
             (stage >= Stage.Define || ofCallDeclMigrated(first as CallTree))

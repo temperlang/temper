@@ -34,7 +34,6 @@ class CppBackendTest {
                 |  void greet(std::string name) {
                 |    temper::core::Console::log(console_0, "Hi:");
                 |    temper::core::Console::log(console_0, name);
-                |    return;
                 |  }
                 |  void global_init_something() {
                 |    static bool initialized = false;
@@ -56,6 +55,56 @@ class CppBackendTest {
                 |namespace my_test_library {
                 |  void greet(std::string);
                 |  void global_init_something();
+                |}
+                |
+            """,
+        )
+    }
+
+    @Test
+    fun bubbles() {
+        assertGenerated(
+            temper = """
+                |export let f(x: Int32, y: Int32): Int32 throws Bubble {
+                |  (x / y) orelse do {
+                |    if (x != 0) { x } else { bubble() }
+                |  }
+                |}
+            """,
+            hpp = """
+                |#pragma once
+                |#include <temper-core/core.hpp>
+                |namespace my_test_library {
+                |  int32_t f(int32_t, int32_t);
+                |  void global_init_something();
+                |}
+                |
+            """,
+            cpp = """
+                |#include <my-test-library/something.hpp>
+                |namespace my_test_library {
+                |  int32_t f(int32_t x, int32_t y) {
+                |    try {
+                |      {
+                |        return temper::core::Int::div_wrap(x, y);
+                |      }
+                |    }catch(const temper::core::TemperBubble & ) {
+                |      if(x != 0) {
+                |        {
+                |          return x;
+                |        }
+                |      }else {
+                |        throw temper::core::TemperBubble();
+                |      }
+                |    }
+                |  }
+                |  void global_init_something() {
+                |    static bool initialized = false;
+                |    if(initialized) {
+                |      return;
+                |    }
+                |    initialized = true;
+                |  }
                 |}
                 |
             """,

@@ -192,7 +192,7 @@ class TemperCodeSnippetExtractorTest {
                             |```temper
                             |// Division by zero fails
                             |1 / 0
-                            |// ❌
+                            |// ❌ Division by zero!
                             |```
                         """.trimMargin(),
                     ),

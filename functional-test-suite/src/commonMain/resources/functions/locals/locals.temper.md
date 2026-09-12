@@ -200,7 +200,8 @@ This could represent any kind of event system.
     @fun interface Handler<T>(item: T): Void;
 
     class Hub<T> {
-      private handlers: ListBuilder<Handler<T>> = new ListBuilder();
+      private handlers: ListBuilder<Handler<T>> =
+        new ListBuilder<Handler<T>>();
 
       public onAction(handler: Handler<T>): Void {
         handlers.add(handler);

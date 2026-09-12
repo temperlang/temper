@@ -1,16 +1,14 @@
-let console#0;
-console#0 = doPure(@stay fn /* return__0 */: Console {
-    return__0 = getConsole();
+let console#4;
+console#4 = doPure(@stay fn /* return__5 */: Console {
+    return__5 = getConsole();
 });
-@fn let f__0;
-f__0 = (@stay fn f(returnEarly__0 /* aka returnEarly */: Boolean) /* return__1 */: Void {
-    void;
-    fn__0: do {
-      if (returnEarly__0) {
-        return__1 = void;
-        break fn__0;
+@fn let f__1;
+f__1 = (@stay fn f(returnEarly__2 /* aka returnEarly */: Boolean) /* return__0 */: Void {
+    fn__3: do {
+      return__0 = void;
+      if (returnEarly__2) {
+        break fn__3;
       };
-      do_call_log(console#0, "Did not return early");
-      return__1 = void
+      do_call_log(console#4, "Did not return early")
     }
-})
+});

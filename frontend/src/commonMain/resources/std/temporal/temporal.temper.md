@@ -74,7 +74,8 @@ Some facts about the Gregorian calendar.
     }
 
     // Relates months (one-indexed) to numbers used in day-of-week
-    // computations non-leapy.
+    // computations.  The leapy one works for leap years, and the
+    // non-leapy one for non-leap years.
     let dayOfWeekLookupTableLeapy: List<Int> = [
       0, // Not a month
       0, 3, 4, 0, 2, 5, 0, 3, 6, 1, 4, 6,

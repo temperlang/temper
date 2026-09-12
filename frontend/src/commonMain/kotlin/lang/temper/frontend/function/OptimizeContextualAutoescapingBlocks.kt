@@ -53,6 +53,7 @@ import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.CallableValue
+import lang.temper.value.ConservativeFailure
 import lang.temper.value.DeclTree
 import lang.temper.value.Fail
 import lang.temper.value.InstancePropertyRecord
@@ -587,9 +588,9 @@ private fun optimizeAutoescaperUse(
 
     val paths = forwardMaximalPaths(
         block,
+        ConservativeFailure.CalleeTypeOnly,
         yieldingCallsEndPaths = false,
         ignoreConstantConditions = true,
-        assumeFailureCanHappen = true,
     )
 
     // Figure out where we need to start traversal.
@@ -987,8 +988,8 @@ private fun optimizeAutoescaperUse(
                     // context propagation in another.
                     val stateBeforeCondition = deepValueCopy(autoescState)
                     val stateForFollower = when (val cond = follower.condition) {
-                        null -> stateBeforeCondition
-                        else -> (propagateOverStmt(stateBeforeCondition, cond.ref) ?: return).first
+                        is MaximalPath.Bubbled? -> stateBeforeCondition
+                        is MaximalPath.AstElement -> (propagateOverStmt(stateBeforeCondition, cond.ref) ?: return).first
                     }
                     startStateMap.putMultiSet(key, stateForFollower)
                     val remaining = predecessorCount.getValue(key) - 1

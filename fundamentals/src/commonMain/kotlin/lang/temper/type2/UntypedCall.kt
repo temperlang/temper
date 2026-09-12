@@ -3,6 +3,7 @@ package lang.temper.type2
 import lang.temper.log.Position
 import lang.temper.type.StaticType
 import lang.temper.type.TypeFormal
+import lang.temper.type.excludeBubble
 import lang.temper.value.CallTree
 import lang.temper.value.Tree
 import lang.temper.value.TypeReasonElement
@@ -14,6 +15,11 @@ data class UntypedCall(
     val explicitActuals: List<Pair<StaticType, Position>>?,
     /** For each input, its inferred type, or if it is delayed, an inference variable. */
     val inputBounds: List<InputBound>,
+    /**
+     * Equivalence bounds on the pass type.
+     * This is different from [contextType] which establishes an assignable to bound.
+     */
+    val outputBounds: List<OutputBound>,
     val hasTrailingBlock: Boolean,
     /**
      * null or a type for the context in which the call is used.
@@ -38,4 +44,6 @@ data class UntypedCall(
     var bindings: Map<TypeFormal, StaticType>? = null
     var explanations: List<TypeReasonElement>? = null
     var chosenCallee: Int? = null
+
+    val passType: StaticType? get() = resultType?.let { excludeBubble(it) }
 }

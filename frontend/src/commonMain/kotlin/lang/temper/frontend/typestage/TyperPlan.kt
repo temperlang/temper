@@ -19,9 +19,11 @@ import lang.temper.type.WellKnownTypes
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
+import lang.temper.value.ConservativeFailure
 import lang.temper.value.DeclTree
 import lang.temper.value.FunTree
 import lang.temper.value.LeftNameLeaf
+import lang.temper.value.MaximalPath
 import lang.temper.value.NameLeaf
 import lang.temper.value.RightNameLeaf
 import lang.temper.value.TEdge
@@ -32,7 +34,6 @@ import lang.temper.value.blockPartialEvaluationOrder
 import lang.temper.value.forwardMaximalPaths
 import lang.temper.value.fromTypeSymbol
 import lang.temper.value.functionContained
-import lang.temper.value.isHandlerScopeCall
 import lang.temper.value.isNullaryNeverCall
 import lang.temper.value.orderedPathIndices
 import lang.temper.value.staticTypeContained
@@ -61,11 +62,8 @@ import lang.temper.value.wordSymbol
  * - All control flow structures have been converted to [blocks][BlockTree].
  * - All blocks are either function or module bodies.
  * - All calls to `=` are direct children of a block &dagger;
- * - All calls to `hs` are one of:
- *   - the direct child of a block &dagger;
- *   - the right-hand-side of an assignment
  *
- * The assumptions about `hs` and `=` allow us to more easily correlate the order we infer types
+ * The assumptions about `=` allow us to more easily correlate the order we infer types
  * in with relationships between variables and declared types.
  *
  * &dagger;: or are a function or module body
@@ -369,7 +367,7 @@ import lang.temper.value.wordSymbol
  * To type uses of local types, including `new LocallyDeclaredType()` and
  * `myInstanceOfLocallyDeclaredType.member`, we need to know which local names correspond to members
  * so that when we figure out the type of the local name, we can associate it with the member via
- * [lang.temper.type.VisibleMemberShape.staticType].
+ * [lang.temper.type.VisibleMemberShape.descriptor].
  */
 internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
     /**
@@ -497,7 +495,7 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
                             assignedName = (tree.childOrNull(1) as? LeftNameLeaf)?.content
                         }
                     }
-                    // Keep assignment site counts up-to-date
+                    // Keep assignment site counts up to date.
                     if (assignedName != null) {
                         assignmentCounts[assignedName] = 1 +
                             (assignmentCounts[assignedName] ?: 0)
@@ -510,7 +508,7 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
             val childOrder = if (tree is BlockTree) {
                 blockPartialEvaluationOrder(tree)
             } else {
-                0 until tree.size
+                tree.indices
             }
             var deferredTypeOrder: MutableList<Tree>? = null
             for (childIndex in childOrder) {
@@ -643,7 +641,7 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
                 if (tree is BlockTree) {
                     // The minimal set of maximal paths breaks the flow graph into sequences of
                     // subtrees that are executed in order.
-                    val paths = forwardMaximalPaths(tree, assumeFailureCanHappen = true)
+                    val paths = forwardMaximalPaths(tree, ConservativeFailure.AtStartOfOr)
 
                     // Walk the basic block graph again keeping track of which names have
                     // been assigned what possible values.
@@ -653,7 +651,7 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
                     for (pathIndex in pathIndices) {
                         val path = paths[pathIndex]
                         for (pathElement in path.elementsAndConditions) {
-                            if (pathElement.isCondition) {
+                            if (pathElement is MaximalPath.AstElement && pathElement.isCondition) {
                                 val ref = pathElement.ref
                                 tree.dereference(ref)?.let {
                                     usedAsCondition.add(it)
@@ -669,7 +667,10 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
                         }
 
                         for (follower in path.followers) {
-                            val condEdge = follower.condition?.ref?.let { tree.dereference(it) }
+                            val condEdge = when (val cond = follower.condition) {
+                                is MaximalPath.Bubbled? -> null
+                                is MaximalPath.AstElement -> tree.dereference(cond.ref)
+                            }
                             if (condEdge != null) {
                                 usesForPath = findInitializers(condEdge.target, usesForPath)
                             }
@@ -705,17 +706,8 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
 
         val aliasedCalls = mutableListOf<AliasedCall>()
         for (call in calls) {
-            if (isAssignment(call) || isHandlerScopeCall(call)) { continue }
+            if (isAssignment(call)) { continue }
             var edge = call.incoming!! // safe because root is a block, not a CallTree
-            val hs: CallTree? = run {
-                val parent = edge.source
-                if (parent is CallTree && isHandlerScopeCall(parent) && edge.edgeIndex == 2) {
-                    edge = parent.incoming!! // root is a block
-                    parent
-                } else {
-                    null
-                }
-            }
             val assignment: CallTree? = run {
                 val parent = edge.source
                 if (parent is CallTree && isAssignment(parent) && edge.edgeIndex == 2) {
@@ -748,7 +740,6 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
                     aliasedCalls.add(
                         AliasedCall(
                             aliased = call,
-                            hs = hs,
                             assignment = assignment,
                             alias = name,
                             use = readsForName[0],
@@ -792,11 +783,10 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
     /**
      * A call that is aliased and which may be used by that alias in another call.
      *
-     * An aliased call is one that:
-     * - appears as the right-side of an assignment, or in an `hs` call that is the right-hand side
-     *   of an assignment
-     * - is assigned to a name which is read in one location or which is assigned to a variable that
-     *   is read in one location, or etc. transitively.
+     * An aliased call is one that
+     * appears as the right-side of an assignment,
+     * or is assigned to a name which is read in one location or which is assigned to a variable that
+     * is read in one location, or etc. transitively.
      *
      * Aliased calls are interesting when deciding whether generic calls should be inter-twined as
      * explained above.
@@ -804,9 +794,7 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
     data class AliasedCall(
         /** The call that's aliased */
         val aliased: CallTree,
-        /** Any call to [lang.temper.builtin.BuiltinFuns.handlerScope] that wraps [aliased] */
-        val hs: CallTree?,
-        /** The call to the assignment where [hs]?:[aliased] is the right-hand-side. */
+        /** The call to the assignment where [aliased] is the right-hand-side. */
         val assignment: CallTree,
         /**
          * The name by which [aliased] is aliased.  If there are a sequence of calls, this is the

@@ -270,7 +270,7 @@ internal class UseBeforeInit(
             //      f(y);
 
             fun checkElement(
-                element: MaximalPath.Element,
+                element: MaximalPath.AstElement,
                 missingCoverage: MutableMap<ResolvedName, MutableSet<MaximalPathIndex>>,
             ) {
                 val reads = readsAndWrites.readsByPathElement[element]
@@ -438,7 +438,7 @@ internal class UseBeforeInit(
                     checkElement(element, missingCoverage)
                 }
                 for (follower in path.followers) {
-                    follower.condition?.let { checkElement(it, missingCoverage) }
+                    (follower.condition as? MaximalPath.AstElement)?.let { checkElement(it, missingCoverage) }
                 }
 
                 missingCoverageAtEnd[pathIndex] = missingCoverage

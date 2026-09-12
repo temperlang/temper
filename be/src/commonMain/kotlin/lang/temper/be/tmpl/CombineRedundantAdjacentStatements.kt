@@ -7,7 +7,7 @@ import lang.temper.log.spanningPosition
  * Some code generates some awkward sequences of statements that clog up the
  * printed form making the debug output harder to read.
  *
- * This step is semantically unnecessary, but makes the debug output easier to read.
+ * This step is semantically unnecessary but makes the debug output easier to read.
  */
 internal fun combineRedundantAdjacentStatements(stmts: MutableList<TmpL.Statement>) {
     for (i in (1 until stmts.size).reversed()) {
@@ -54,8 +54,8 @@ internal fun combineRedundantAdjacentStatements(stmts: MutableList<TmpL.Statemen
                 }
             }
             prev is TmpL.LocalDeclaration && stmt is TmpL.Assignment && prev.init == null &&
-                prev.name == stmt.left && stmt.right is TmpL.Expression -> {
-                val right = stmt.right as TmpL.Expression
+                prev.name == stmt.left -> {
+                val right = stmt.right
                 stmt.right = TmpL.BubbleSentinel(right.pos)
                 prev.init = right
                 prev

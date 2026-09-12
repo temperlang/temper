@@ -1,24 +1,29 @@
 package lang.temper.frontend.typestage
 
 import lang.temper.builtin.BuiltinFuns
+import lang.temper.common.Console
 import lang.temper.common.MultilineOutput
 import lang.temper.common.TextTable
 import lang.temper.common.benchmarkIf
-import lang.temper.frontend.Module
+import lang.temper.frontend.CaptureDigest
+import lang.temper.frontend.CaptureInfo
+import lang.temper.frontend.NameCaptureResult
 import lang.temper.frontend.allRootsOfAsBlocks
 import lang.temper.frontend.core.CoreModule
 import lang.temper.frontend.prefixBlockWith
 import lang.temper.frontend.prefixWith
-import lang.temper.frontend.structureBlock
 import lang.temper.name.ExportedName
+import lang.temper.name.InternalModularName
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedName
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.isVoidLike
 import lang.temper.type2.SuperTypeTree2
 import lang.temper.type2.Type2
+import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
+import lang.temper.value.ControlFlow
 import lang.temper.value.DeclTree
 import lang.temper.value.FnParts
 import lang.temper.value.FunTree
@@ -32,7 +37,7 @@ import lang.temper.value.UnpositionedTreeTemplate
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 import lang.temper.value.freeTarget
-import lang.temper.value.getTerminalExpressions
+import lang.temper.value.freeTree
 import lang.temper.value.isCore
 import lang.temper.value.isPureVirtualBody
 import lang.temper.value.outTypeSymbol
@@ -42,6 +47,9 @@ import lang.temper.value.toPseudoCode
 import lang.temper.value.typeSymbol
 import lang.temper.value.vReturnDeclSymbol
 import lang.temper.value.vTypeSymbol
+import lang.temper.value.vVarSymbol
+import lang.temper.value.valueContained
+import lang.temper.value.varSymbol
 import lang.temper.value.void
 
 private const val BENCHMARK = true
@@ -52,19 +60,31 @@ private const val DEBUG = false
  * semicolon, treat it as the result of the block by inserting an assignment
  * to the `return__123` name for that module/function.
  *
- * A terminal expression is one that appears just before an exit from the
- * control-flow graph.
+ * This is useful for REPL contexts and testing so that a passage of Temper code
+ * can be evaluated for a result.
+ *
+ * A terminal expression is classified based on analysis of [ControlFlow].
+ * - `if`s can have a terminal expression in both their *then* and *else* branches.
+ * - `orelse`s can too.
+ * - Branch conditions are never terminal expressions: those boolean expressions in loops and `if`s.
+ * - A statement block can only have a terminal expression as its last member.
+ * - Loops, including `while`, `do...while` and `for` loops never contain a terminal
+ *   expression.  Even though `do...while` loops always execute their body,
+ *   their expression result is effectively `void`.
+ *
+ * The `return` macro inserts assignments to the `return` variable
+ * (allocating one if necessary), so we never consider an expression terminal if
+ * there is a pre-existing `return` variable and an assignment on all branches leading
+ * to the expression.
  *
  * If there is no such thing, then we assign `void` unless the body is the
  * body of a *GeneratorFn* which `yield`s *ValueResult*s and implicitly returns
  * *DoneResult*s.
  */
 internal class MakeResultsExplicit private constructor(
-    val module: Module,
+    private val console: Console,
 ) {
-    private val console = module.console
-
-    private fun explicate(root: BlockTree): ResolvedName? {
+    private fun explicate(root: BlockTree): Pair<ResolvedName?, CaptureInfo> {
         val doc = root.document
 
         val incoming = root.incoming
@@ -72,33 +92,29 @@ internal class MakeResultsExplicit private constructor(
         val parent = incoming?.source
         val newDeclarations = mutableListOf<DeclTree>()
         val rootIsFunctionBody = parent is FunTree && root == parent.parts?.body
-        var returnTypeTree: Tree? = if (rootIsFunctionBody) {
+        var returnTypeTree: Tree? = null
+        val returnDeclTree: DeclTree?
+        if (rootIsFunctionBody) {
             val fnParts = parent.parts!!
-            fnParts.metadataSymbolMap[outTypeSymbol]?.let { outTypeEdge ->
+            returnTypeTree = fnParts.metadataSymbolMap[outTypeSymbol]?.let { outTypeEdge ->
                 val edgeIndex = outTypeEdge.edgeIndex
                 outTypeEdge.target.also {
                     // Splice it out
                     outTypeEdge.source!!.replace(edgeIndex - 1..edgeIndex) {}
                 }
             }
+            returnDeclTree = fnParts.returnDecl
         } else {
-            null
+            returnDeclTree = null
         }
-        var needToDeclareOutputName = false
 
+        var needToDeclareOutputName = false
         val outputName = console.benchmarkIf(BENCHMARK, "findOutputName") {
             var outputName: NameLeaf? = null
-            if (rootIsFunctionBody) {
-                @Suppress("USELESS_IS_CHECK")
-                require(parent is FunTree)
-                // This is the root of a function.  Look at its output parameters.
-                val fnParts = parent.parts
-                val returnDecl = fnParts?.returnDecl
-                if (returnDecl != null) {
-                    val returnDeclParts = returnDecl.parts
-                    returnTypeTree = returnDeclParts?.type?.target
-                    outputName = returnDeclParts?.name
-                }
+            if (returnDeclTree != null) {
+                val returnDeclParts = returnDeclTree.parts
+                returnTypeTree = returnDeclParts?.type?.target
+                outputName = returnDeclParts?.name
             }
 
             if (outputName == null) {
@@ -116,9 +132,6 @@ internal class MakeResultsExplicit private constructor(
             outputName
         }
 
-        // Next, walk forwards from the entry, looking for terminal expressions, and
-        // keeping track of which names are set before reaching it.
-        var needToInitializeOutputNameToSingleton = false
         val isGeneratorFn = rootIsFunctionBody && parent.parts?.mayYield == true
         // In a generator function, the implicit end result is core.doneResult,
         // but we don't want to call the function that produces that while processing
@@ -126,9 +139,16 @@ internal class MakeResultsExplicit private constructor(
         // terminal expressions there.
         val endWithDoneResult = isGeneratorFn && !doc.isCore
         val returnType = returnTypeTree?.reifiedTypeContained?.type2
-        val isValidResultKnown = returnType?.isVoidLike == true || endWithDoneResult
+        // In some cases, we know exactly what the result is; there can be only one.
+        var knownResultBasedOnType = when {
+            endWithDoneResult -> KnownResult.Done
+            returnType?.isVoidLike == true -> KnownResult.Void
+            else -> null
+        }
 
-        val unsetTerminalExpressions =
+        // Next, walk forwards from the entry looking for terminal expressions and
+        // keeping track of which names are set before reaching it.
+        val terminalExpressions =
             console.benchmarkIf(BENCHMARK, "findingTerminals") {
                 findUnsetTerminalExpressions(
                     root,
@@ -136,37 +156,82 @@ internal class MakeResultsExplicit private constructor(
                 )
             }
 
+        val needToInitializeOutputNameToSingleton = when {
+            // Just assign the return value at the front of the function's body
+            // and simplify any assignments found.
+            // We have to check that the assigned values are
+            knownResultBasedOnType == KnownResult.Void &&
+                terminalExpressions.existingAssignments.all { it.child(2).valueContained == void } &&
+                terminalExpressions.unsetTerminalExpressionEdges.all { it.target.valueContained == void } -> {
+                eliminateExistingAssignments(terminalExpressions)
+                true
+            }
+            // Otherwise, if we don't have terminal expressions, and we don't have assignments,
+            // just initialize it up front.
+            knownResultBasedOnType != null && terminalExpressions.existingAssignments.isEmpty() &&
+                terminalExpressions.unsetTerminalExpressionEdges.isEmpty() -> true
+            // Normalize Void returns: if there are void assignments and all the assignments are void-like,
+            // just preassign void.
+            (
+                terminalExpressions.existingAssignments.isNotEmpty() ||
+                    terminalExpressions.unsetTerminalExpressionEdges.isNotEmpty()
+                ) &&
+                knownResultBasedOnType == null &&
+                terminalExpressions.unsetTerminalExpressionEdges.all { it.target.valueContained == void } &&
+                terminalExpressions.existingAssignments.all { it.child(2).valueContained == void }
+            -> {
+                knownResultBasedOnType = KnownResult.Void
+                eliminateExistingAssignments(terminalExpressions)
+                true
+            }
+            // In the REPL, it can be the case that we want a result, don't know the desired type, and have
+            // a loop at the end.  In that case, just assume that void is the result.
+            knownResultBasedOnType == null &&
+                !rootIsFunctionBody && returnTypeTree == null &&
+                terminalExpressions.existingAssignments.isEmpty() &&
+                terminalExpressions.unsetTerminalExpressionEdges.isEmpty() &&
+                terminalExpressions.blocksMissingTerminators.isNotEmpty() &&
+                terminalExpressions.blocksMissingTerminators.all { (_, cf) -> endsWithLoop(cf) } -> true
+            else -> false
+        }
+
         if (DEBUG) {
-            console.logMulti(
-                TextTable(
-                    listOf(
-                        listOf(
-                            MultilineOutput.of("terminal"),
-                        ),
-                    ) +
-                        unsetTerminalExpressions.unsetTerminalExpressionEdges.map { terminal ->
-                            listOf(
-                                MultilineOutput.of(terminal.target.toPseudoCode()),
-                            )
-                        },
-                ),
-            )
-            console.log("setsOutputName=${unsetTerminalExpressions.setsName}")
-            console.log("reachesExit=${unsetTerminalExpressions.reachesExit}")
+            fun <T> table(title: String, ls: List<T>, xform: (T) -> MultilineOutput) {
+                if (ls.isEmpty()) { return }
+                console.logMulti(
+                    TextTable(
+                        listOf(listOf(MultilineOutput.of(title))) +
+                            ls.map { listOf(xform(it)) },
+                    ),
+                )
+            }
+            console.group("MakeResultsExplicit") {
+                root.toPseudoCode(console.textOutput)
+            }
+            table("terminal", terminalExpressions.unsetTerminalExpressionEdges) {
+                MultilineOutput.of(it.target.toPseudoCode())
+            }
+            table("blocksMissingTerminators", terminalExpressions.blocksMissingTerminators) { (t, cf) ->
+                MultilineOutput.of(
+                    if (cf != null) {
+                        "$cf"
+                    } else {
+                        t.toPseudoCode()
+                    },
+                )
+            }
+            table("existing assignments", terminalExpressions.existingAssignments) {
+                MultilineOutput.of(it.toPseudoCode())
+            }
+            console.log("knownResultBasedOnType=${knownResultBasedOnType}")
+            console.log("needToInitializeOutputNameToSingleton=$needToInitializeOutputNameToSingleton")
             console.log("returnType=${returnTypeTree?.toPseudoCode()}")
         }
 
-        if (
-            !unsetTerminalExpressions.setsName &&
-            unsetTerminalExpressions.unsetTerminalExpressionEdges.isEmpty() &&
-            // If it always bubbles, don't throw a (possibly type-unsafe) assignment
-            // to void in there.
-            (unsetTerminalExpressions.reachesExit || isValidResultKnown)
-        ) {
-            needToInitializeOutputNameToSingleton = true
-        } else {
+        var captureInfo = CaptureInfo.empty
+        if (!needToInitializeOutputNameToSingleton) {
             console.benchmarkIf(BENCHMARK, "addImplicitAssignments") {
-                for (terminal in unsetTerminalExpressions.unsetTerminalExpressionEdges) {
+                for (terminal in terminalExpressions.unsetTerminalExpressionEdges) {
                     val target = terminal.target
                     if (endWithDoneResult && target is ValueLeaf && target.content == void) {
                         terminal.replace {
@@ -175,20 +240,37 @@ internal class MakeResultsExplicit private constructor(
                     }
                     addImplicitAssignment(terminal, outputName)
                 }
+                if (terminalExpressions.terminalsNeedVar && returnDeclTree != null &&
+                    returnDeclTree.parts?.metadataSymbolMap?.containsKey(varSymbol) == false
+                ) {
+                    returnDeclTree.insert(returnDeclTree.size) {
+                        val pos = returnDeclTree.pos.leftEdge
+                        V(pos, varSymbol)
+                        V(pos, void)
+                    }
+                }
             }
-        }
-
-        if (needToInitializeOutputNameToSingleton) {
+            val capturedIn = outputName.content as? InternalModularName
+            if (terminalExpressions.haveUnsetTerminalExpressions.isNotEmpty() && capturedIn != null) {
+                val result = NameCaptureResult(capturedIn, returnType?.let { hackMapNewStyleToOld(it) })
+                val m = terminalExpressions.haveUnsetTerminalExpressions.associate {
+                    it.pos to result
+                }
+                captureInfo = CaptureInfo(listOf(CaptureDigest(m)))
+            }
+        } else {
             prefixBlockWith(
                 listOf(
                     doc.treeFarm.grow {
                         Call(root.pos.rightEdge) {
                             V(BuiltinFuns.vSetLocalFn)
                             Ln(outputName.content)
-                            if (endWithDoneResult) {
-                                makeDoneResult(parent.parts!!)
-                            } else {
-                                V(void)
+                            when (knownResultBasedOnType) {
+                                null, KnownResult.Void -> V(void)
+                                KnownResult.Done -> {
+                                    check(parent is FunTree)
+                                    makeDoneResult(parent.parts!!)
+                                }
                             }
                         }
                     },
@@ -202,16 +284,18 @@ internal class MakeResultsExplicit private constructor(
             val resultDecl = DeclTree(
                 doc,
                 pos,
-                listOf(outputName) +
+                buildList {
+                    add(outputName)
                     if (returnTypeTree != null) {
                         // Mark as an output parameter.
-                        listOf(
-                            ValueLeaf(doc, pos, vTypeSymbol),
-                            returnTypeTree,
-                        )
-                    } else {
-                        emptyList()
-                    },
+                        add(ValueLeaf(doc, pos, vTypeSymbol))
+                        add(returnTypeTree)
+                    }
+                    if (terminalExpressions.terminalsNeedVar) {
+                        add(ValueLeaf(doc, pos, vVarSymbol))
+                        add(ValueLeaf(doc, pos, void))
+                    }
+                },
             )
             if (rootIsFunctionBody) {
                 @Suppress("USELESS_IS_CHECK")
@@ -228,7 +312,7 @@ internal class MakeResultsExplicit private constructor(
 
         prefixBlockWith(newDeclarations, root)
 
-        return outputName.content as ResolvedName?
+        return (outputName.content as ResolvedName?) to captureInfo
     }
 
     private fun addImplicitAssignment(
@@ -236,47 +320,37 @@ internal class MakeResultsExplicit private constructor(
         outputName: NameLeaf,
     ) {
         val tree = edge.target
-        if (tree is BlockTree) {
-            structureBlock(tree)
-            val (terminalExpressions) = tree.getTerminalExpressions()
-            for (terminalExpression in terminalExpressions) {
-                val ref = terminalExpression.ref
-                tree.dereference(ref)?.let {
-                    if (!it.target.isPureVirtualBody()) {
-                        addImplicitAssignment(it, outputName)
-                    }
-                }
-            }
+        if (tree is DeclTree || tree.isPureVirtualBody()) {
+            // Just don't.
+            // TODO: explain
         } else {
-            if (tree is DeclTree || tree.isPureVirtualBody()) {
-                // Just don't.
-                // TODO: explain
-            } else {
-                edge.replace { p ->
-                    Call(p) {
-                        V(p.leftEdge, setLocalValue)
-                        Replant(outputName.copyLeft())
-                        Replant(freeTarget(edge))
-                    }
+            edge.replace { p ->
+                Call(p) {
+                    V(p.leftEdge, setLocalValue)
+                    Replant(outputName.copyLeft())
+                    Replant(freeTarget(edge))
                 }
             }
         }
     }
 
     companion object {
-        operator fun invoke(
-            module: Module,
+        fun makeAllResultsExplicit(
+            console: Console,
             moduleRoot: BlockTree,
             needResultForModuleRoot: Boolean,
-        ): ResolvedName? {
+        ): Pair<ResolvedName?, CaptureInfo> {
             val resultNamesByRoot = mutableMapOf<Tree, ResolvedName?>()
+            val captureResults = mutableListOf<CaptureDigest>()
             for (root in allRootsOfAsBlocks(moduleRoot)) {
                 if (needResultForModuleRoot || root != moduleRoot) {
-                    resultNamesByRoot[root] = MakeResultsExplicit(module)
+                    val (resultName, captureInfo) = MakeResultsExplicit(console)
                         .explicate(root) // I do not think that word means what you think it means.
+                    resultNamesByRoot[root] = resultName
+                    captureResults.addAll(captureInfo.digests)
                 }
             }
-            return resultNamesByRoot[moduleRoot]
+            return resultNamesByRoot[moduleRoot] to CaptureInfo(captureResults.toList())
         }
     }
 }
@@ -306,6 +380,24 @@ private fun Planting.makeDoneResult(generatorFnParts: FnParts): UnpositionedTree
             }
         } else {
             Rn(doneResultName)
+        }
+    }
+}
+
+private enum class KnownResult {
+    Void,
+    Done, // A yielded result is also valid
+}
+
+private fun endsWithLoop(cf: ControlFlow.StmtBlock?): Boolean =
+    cf?.stmts?.lastOrNull() is ControlFlow.Loop
+
+private fun eliminateExistingAssignments(terminalExpressions: UnsetTerminalExpressions) {
+    terminalExpressions.existingAssignments.forEach { assignment ->
+        val edge = assignment.incoming!!
+        edge.replace {
+            // Just replace it with the right-hand side.
+            Replant(freeTree(assignment.child(2)))
         }
     }
 }

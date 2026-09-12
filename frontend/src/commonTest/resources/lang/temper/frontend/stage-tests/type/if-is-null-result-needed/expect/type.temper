@@ -1,12 +1,12 @@
-let return__0, @fn `test//`.thing;
-`test//`.thing = (@stay fn thing(x__0 /* aka x */: Int32?) /* return__1 */: Int32 {
-    void;
-    fn__0: do {
-      if (isNull(x__0)) {
+let return__5;
+return__5 = void;
+@fn let `test//`.thing;
+`test//`.thing = (@stay fn thing(x__2 /* aka x */: Int32?) /* return__1 */: Int32 {
+    fn__3: do {
+      if (isNull(x__2)) {
         return__1 = 0
       } else {
-        return__1 = notNull(x__0) + 1;
-      };
-    }
-});
-return__0 = void
+        return__1 = notNull(x__2) + 1
+      }
+    };
+})

@@ -1,10 +1,12 @@
 package lang.temper.tests
 
+import lang.temper.common.CustomValueFormatter
 import lang.temper.common.ListBackedLogSink
 import lang.temper.common.Log
 import lang.temper.common.console
 import lang.temper.common.emptyByteArray
 import lang.temper.common.printStackTraceBestEffort
+import lang.temper.format.ConsoleBackedContextualLogSink
 import lang.temper.frontend.Module
 import lang.temper.frontend.staging.ModuleAdvancer
 import lang.temper.frontend.staging.ModuleConfig
@@ -87,9 +89,17 @@ fun prepareModulesForFunctionalTest(
         val allModules = moduleAdvancer.getAllModules()
         val allOk = allModules.all { it.ok }
         if (!allOk) {
-            for (module in allModules) {
-                if (!module.ok) {
-                    module.failLog.logReasonForFailure(projectLogSink)
+            val consoleBackedContextualLogSink = ConsoleBackedContextualLogSink(
+                console,
+                sharedLocationContext = moduleAdvancer.sharedLocationContext,
+                null,
+                CustomValueFormatter.Nope,
+                simplifying = true,
+                allowDuplicateLogPositions = true,
+            )
+            for (entry in projectLogSink.allEntries) {
+                if (entry.level >= Log.Warn) {
+                    entry.logTo(consoleBackedContextualLogSink)
                 }
             }
             fail("Failed before runtime")

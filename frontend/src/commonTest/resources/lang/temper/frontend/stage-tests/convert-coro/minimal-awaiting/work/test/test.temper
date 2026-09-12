@@ -1,0 +1,4 @@
+let p = new PromiseBuilder<Empty>().promise;
+async { (): GeneratorResult<Empty> extends GeneratorFn =>
+  await(p) orelse panic();
+}

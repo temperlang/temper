@@ -21,7 +21,7 @@ sealed interface InputBound : Positioned, TokenSerializable {
 
     data class Pretyped(
         val type: PositionedType,
-    ) : InputBound, Positioned by type {
+    ) : InputBound, OutputBound, Positioned by type {
         override fun renderTo(tokenSink: TokenSink) {
             type.renderTo(tokenSink)
         }
@@ -49,9 +49,9 @@ sealed interface InputBound : Positioned, TokenSerializable {
     /**
      * Reifies a reified type value that bounds a type variable as `List` in `expr as List` or `expr is List`.
      * There, `List` is incomplete because it needs some type parameter.  For example, if *expr* resolved to
-     * a `Listed<String>`, then the Typer should conclude that the type binding for the function calls include
-     * the type actual *List<String>*, and to simplify translation, the IR should change to include the completed,
-     * reified type in the IR.
+     * a `Listed<String>`, then the Typer should conclude that the type bindings for the function calls include
+     * the type actual *List<String>*.  To simplify translation later on, the IR should change to include the
+     * completed, reified type in the IR.
      */
     data class IncompleteReification(
         override val pos: Position,
@@ -63,7 +63,7 @@ sealed interface InputBound : Positioned, TokenSerializable {
         val reificationEdge: TEdge?,
         /** Which value actual is described by the type. */
         val describedValueArgumentIndex: Int?,
-    ) : InputBound {
+    ) : InputBound, OutputBound {
         override fun renderTo(tokenSink: TokenSink) {
             reifiedType.renderTo(tokenSink)
             tokenSink.word("reifies")
@@ -113,8 +113,8 @@ sealed interface InputBound : Positioned, TokenSerializable {
                         ?: InvalidType
                 },
                 null,
-                returnBound?.let {
-                    (typeSolver[it] as? Type2)?.let { hackMapNewStyleToOld(it) }
+                returnBound?.let { typeBoundary ->
+                    (typeSolver[typeBoundary] as? Type2)?.let { hackMapNewStyleToOld(it) }
                 } ?: InvalidType,
             )
             return MkType2.from(hackMapOldStyleToNew(fnT))
@@ -141,3 +141,14 @@ sealed interface InputBound : Positioned, TokenSerializable {
             MkType2.Companion(WellKnownTypes.invalidTypeDefinition).position(pos).get() as PositionedType
     }
 }
+
+/**
+ * Some input bounds are also output bounds.
+ *
+ * For example, in `new Foo()` and `x as Foo`, `Foo` gives tight bounds on
+ * the passing component of the output type because of the nature of the
+ * operation.
+ *
+ * For generic types, `new Pair(x, y)`, the bound might not be complete.
+ */
+sealed interface OutputBound : Positioned, TokenSerializable

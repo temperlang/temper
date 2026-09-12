@@ -2,6 +2,7 @@ package lang.temper.be.js
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
 import lang.temper.be.tmpl.GetStaticSupport
@@ -96,7 +97,7 @@ internal object JsSupportNetwork : SupportNetwork {
             val thisName = nameMaker.unusedSourceName(thisParsedName)
             val visibility = Visibility.Public
             val jsonAdapterSig = Signature2( // Fn(): JsonAdapter<C>
-                MkType2((marshalToJsonObjectSig.value.requiredInputTypes[0] as DefinedType).definition)
+                MkType2((marshalToJsonObjectSig.requiredInputTypes[0] as DefinedType).definition)
                     .actuals(listOf(type))
                     .get(),
                 false,
@@ -111,6 +112,7 @@ internal object JsSupportNetwork : SupportNetwork {
                 methodKind = MethodKind.Normal,
                 openness = OpenOrClosed.Closed,
             )
+
             adjustedMembers = buildList {
                 addAll(adjustedMembers)
                 add(
@@ -152,7 +154,7 @@ internal object JsSupportNetwork : SupportNetwork {
                                         fn = translationAssistant.supportCodeReference(
                                             p,
                                             coreMarshalToJsonObject,
-                                            marshalToJsonObjectSig.value,
+                                            marshalToJsonObjectSig,
                                         ),
                                         parameters = listOf(
                                             TmpL.CallExpression(
@@ -165,11 +167,14 @@ internal object JsSupportNetwork : SupportNetwork {
                                                     method = methodShape,
                                                 ),
                                                 parameters = emptyList(),
-                                                type = jsonAdapterSig.returnType2,
                                             ),
                                             TmpL.This(p, TmpL.Id(p, thisName), type),
                                         ),
-                                        type = marshalToJsonObjectSig.value.returnType2,
+                                        typeActuals = TmpL.ImplicitCallTypeActuals(
+                                            p,
+                                            listOf(translationAssistant.translateType(p, type).aType),
+                                            mapOf(marshalToJsonObjectSig.typeFormals[0] to type),
+                                        ),
                                     ),
                                 ),
                             ),
@@ -379,9 +384,10 @@ internal object JsSupportNetwork : SupportNetwork {
         return super.translateRuntimeTypeOperation(pos, rto, sourceType, targetType)
     }
 
-    override val bubbleStrategy = BubbleBranchStrategy.CatchBubble
+    override val bubbleStrategy = BubbleBranchStrategy.Exceptions
     override val coroutineStrategy = CoroutineStrategy.TranslateToGenerator
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionType
+    override val computedJumpStrategy = ComputedJumpStrategy.IsDefaultBreakScope
 
     override fun representationOfVoid(genre: Genre): RepresentationOfVoid =
         RepresentationOfVoid.ReifyVoid
@@ -948,7 +954,7 @@ private data object JsBackendNamingContext : NamingContext() {
     override val loc: ModuleLocation = ModuleName(filePath("-be", "js"), 2, isPreface = false)
     val counter = AtomicCounter()
 }
-private val marshalToJsonObjectSig = lazy {
+private val marshalToJsonObjectSig by lazy {
     val stdJson = getSharedStdModules().first { "json" in (it.loc as ModuleName).sourceFile.last().baseName }
     val jsonObjectExport = stdJson.exports!!.first { it.name.baseName.nameText == "JsonObject" }
     val jsonAdapterExport = stdJson.exports!!.first { it.name.baseName.nameText == "JsonAdapter" }
@@ -1511,7 +1517,7 @@ private val ignoreIdiomExpander: Inliner =
             val voidValue = Js.UnaryExpression(pos, Js.Operator(pos, "void"), Js.NumericLiteral(pos, 0))
             when (val arg = arguments.getOrNull(0)) {
                 // Usually we've reduced things to just identifiers, where we can just ignore them here.
-                // We could replace with nothing if we know we're unused.
+                // We could replace them with nothing if we know we're unused.
                 // Maybe can do that after Temper handles void more.
                 // Meanwhile, minifiers I tried could discard these entirely when unused inside functions.
                 // And at least some can't discard calls to empty functions, so this is still useful.
@@ -2009,6 +2015,13 @@ private val builtinOperatorIdToSupportCode = BuiltinOperatorId.entries.mapNotNul
         // should not be used with CoroutineStrategy.TranslateToGenerator
         BuiltinOperatorId.AdaptGeneratorFn,
         BuiltinOperatorId.SafeAdaptGeneratorFn,
+        -> null
+
+        // should not be used with BubbleBranchStrategy.Exceptions
+        BuiltinOperatorId.IsOkResult,
+        BuiltinOperatorId.PackOkResult,
+        BuiltinOperatorId.RepackErrResult,
+        BuiltinOperatorId.UnpackOkResult,
         -> null
     }
 }.toMap()

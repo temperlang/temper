@@ -9,6 +9,7 @@ import lang.temper.type.StaticType
 import lang.temper.type.TypeActual
 import lang.temper.type.TypeFormal
 import lang.temper.type.isVoidLike
+import lang.temper.type2.Signature2
 
 sealed class TypeInferences : Structured {
     abstract val type: StaticType
@@ -55,6 +56,13 @@ data class CallTypeInferences(
     val bindings2: Map<TypeFormal, TypeActual>,
     override val explanations: List<TypeReasonElement>,
 ) : TypeInferences() {
+    constructor(
+        type: StaticType,
+        variant: Signature2,
+        bindings2: Map<TypeFormal, TypeActual>,
+        explanations: List<TypeReasonElement>,
+    ) : this(type, typeFromSignature(variant), bindings2, explanations)
+
     override fun destructureUncommonProperties(propertySink: PropertySink) = propertySink.run {
         key("variant") { value(variant) }
         key("bindings", isDefault = bindings2.isNotEmpty()) { value(bindings2) }
@@ -91,7 +99,6 @@ val CallTypeInferences?.returnsVoid: Boolean
 
 val CallTree.returnsVoidClearly: Boolean
     get() {
-        // TODO: Make this first hack away once we've got Never<Void> as a distinct return type
-        if (isNullaryNeverCall(this)) { return false }
-        return typeInferences.returnsVoid
+        // TODO: Take this nullaryNeverCall case away once we've got Never<Void> as a distinct return type.
+        return !isNullaryNeverCall(this) && typeInferences.returnsVoid
     }

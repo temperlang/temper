@@ -157,6 +157,7 @@ The set of *\@connected* methods from Temper's *CoreModule* are:
 - `core.type PromiseBuilder.constructor()`
 - `core.type PromiseBuilder.get promise()`
 - `core.type SafeGenerator.next()`
+- `core.type SafeGenerator.nextSafe()`
 - `core.type String.begin`
 - `core.type String.countBetween()`
 - `core.type String.forEach()`

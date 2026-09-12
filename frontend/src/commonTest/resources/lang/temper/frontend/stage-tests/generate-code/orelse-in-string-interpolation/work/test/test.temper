@@ -1,0 +1,7 @@
+let parseZero(s: String): Int throws Bubble {
+  if (s != "0") { bubble() }
+  return 0
+}
+
+console.log("parseZero(\"0\")            = ${ parseZero("0") }");
+console.log("parseZero(\"hi\") orelse -1 = ${ parseZero("hi") orelse -1 }");

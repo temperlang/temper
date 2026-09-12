@@ -41,8 +41,10 @@ let imports = """
   "lang.temper.type.TypeShape
   "lang.temper.type.VisibleMemberShape
   "lang.temper.type.WellKnownTypes
+  "lang.temper.type.excludeBubble
   "lang.temper.type2.Descriptor
   "lang.temper.type2.DefinedType
+  "lang.temper.type2.MkType2
   "lang.temper.type2.Signature2
   "lang.temper.type2.Type2
   "lang.temper.type2.withType
@@ -154,7 +156,7 @@ ModulePath(
 );
 
 /**
- * Relative path from this module's outputPath to the targets output path.
+ * Relative path from this module's outputPath to the target's output path.
  */
 SameLibraryPath.relativePath%`List<FilePathSegmentOrPseudoSegment>` = `
 run {
@@ -203,8 +205,8 @@ tokenSink.emit(
  * Allows backends to recognize, before processing a [Module] body, which names in [Id]s
  * are defined externally, so that it can:
  *
- * - generate its own linking directives,
- * - compute complete (non-transitive) dependency metadata,
+ * - Generate its own linking directives.
+ * - Or compute complete (non-transitive) dependency metadata.
  */
 Import ::=
       metadata%DeclarationMetadata*""
@@ -461,7 +463,7 @@ fun typeDefinition(dependencies: Dependencies<*>): TypeDefData =
 NonNullType = NonNullExprType | ResultType | VoidType;
 
 /**
- * A type which admits the null value when *canBeNull* is true.
+ * A type that admits the null value when *canBeNull* is true.
  */
 NullableType = NullableExprType;
 NullableType(
@@ -482,7 +484,7 @@ RetType = ResultType | PassType;
  * can evaluate.
  * Expressions that never evaluate to a result can still be described using
  * the semi-special *Never\<IF_I_DID>* type.
- * Expressions have *first-class* values meaning they can be stored in variables
+ * Expressions have *first-class* values, meaning they can be stored in variables
  * and passed as arguments in function calls.
  */
 ExprType = NonNullExprType | NullableExprType;
@@ -493,7 +495,7 @@ ExprType ::= name
 /** An expression type that excludes the null value. */
 NonNullExprType = RegularTypeNotNull | TypeArgNotNull;
 /**
- * An expression type which admits the null value when *canBeNull* is true.
+ * An expression type that admits the null value when *canBeNull* is true.
  */
 NullableExprType = RegularType | TypeArg;
 /** A reference to a type argument like *\<T>*. */
@@ -714,28 +716,28 @@ TypeDef ::=
 
 TypeDef {
 `
-val methods get() = members.mapNotNull { it as? MethodDef }
-val properties get() = members.mapNotNull { it as? PropertyDef }
-val staticMethods get() = members.mapNotNull { it as? StaticMethodDef }
-val staticProperties get() = members.mapNotNull { it as? StaticPropertyDef }
+val methods get() = members.filterIsInstance<MethodDef>()
+val properties get() = members.filterIsInstance<PropertyDef>()
+val staticMethods get() = members.filterIsInstance<StaticMethodDef>()
+val staticProperties get() = members.filterIsInstance<StaticPropertyDef>()
 /** Instance methods and static methods */
-val allMethods get() = members.mapNotNull { it as? AnyMethodDef }
+val allMethods get() = members.filterIsInstance<AnyMethodDef>()
 /** Instance properties and static properties */
-val allProperties get() = members.mapNotNull { it as? AnyPropertyDef }
+val allProperties get() = members.filterIsInstance<AnyPropertyDef>()
 `
 }
 
 data TypeDefData from TypeDef;
 TypeDefData {
 `
-val methods get() = members.mapNotNull { it as? MethodDefData }
-val properties get() = members.mapNotNull { it as? PropertyDefData }
-val staticMethods get() = members.mapNotNull { it as? StaticMethodDefData }
-val staticProperties get() = members.mapNotNull { it as? StaticPropertyDefData }
+val methods get() = members.filterIsInstance<MethodDefData>()
+val properties get() = members.filterIsInstance<PropertyDefData>()
+val staticMethods get() = members.filterIsInstance<StaticMethodDefData>()
+val staticProperties get() = members.filterIsInstance<StaticPropertyDefData>()
 /** Instance methods and static methods */
-val allMethods get() = members.mapNotNull { it as? AnyMethodDefData }
+val allMethods get() = members.filterIsInstance<AnyMethodDefData>()
 /** Instance properties and static properties */
-val allProperties get() = members.mapNotNull { it as? AnyPropertyDefData }
+val allProperties get() = members.filterIsInstance<AnyPropertyDefData>()
 `
 }
 
@@ -839,6 +841,7 @@ GarbageType {
 `constructor(diagnostic: Diagnostic) : this(diagnostic.pos, diagnostic)`
 };
 GarbageCallable.type = `invalidSig`;
+GarbageExpression.passType = `WellKnownTypes.invalidType2`;
 GarbageExpression.type = `WellKnownTypes.invalidType2`;
 
 Diagnostic(text%`String`);
@@ -970,11 +973,11 @@ FunctionDeclaration ::=
 FunctionDeclaration(sig%`Signature2`);
 FunctionDeclaration.descriptor%`Signature2` = `sig`;
 
-/** A top level function declaration.  Might be exported or might not. */
+/** A top-level function declaration.  Might be exported or might not. */
 ModuleFunctionDeclaration;
 ModuleFunctionDeclaration.descriptor%`Signature2!` = `sig`;
 /**
- * A nested function declaration which might close over names that are not defined at
+ * A nested function declaration that might close over names which are not defined at
  * a module top-level.
  */
 LocalFunctionDeclaration;
@@ -1017,7 +1020,7 @@ TypeDeclaration.descriptor%`Nothing?` = `null`;
  * corresponding to a [TypeDeclaration] is connected to a
  * backend-specific type name by the support network.
  *
- * This serves to anchor the type name but most backends
+ * This serves to anchor the type name, but most backends
  * do not need to produce code for them.
  */
 TypeConnection ::=
@@ -1099,7 +1102,6 @@ Statement =
     | Assignment
     | BreakStatement
     | ContinueStatement
-    | HandlerScope
     | LocalDeclaration
     | LocalFunctionDeclaration
     | ModuleInitFailed
@@ -1127,18 +1129,7 @@ NestingStatement(nestedStatements%Statement*"");
 JumpUpStatement = BreakStatement | ContinueStatement;
 JumpUpStatement(label%JumpLabel?);
 
-/** Identifies an operation that may fail. */
-Handled = Expression | SetAbstractProperty;
-/**
- * [failed] is set to `true` when [handled] fails, or `false` otherwise.
- * The result is the result of [handled] when it passes,
- * or [BubbleSentinel] otherwise.
- */
-HandlerScope ::= "hs" & "(" & failed%Id & "," & handled%Handled & ")";
-
-/** That which may be assigned to a something that can hold a value. */
-RightHandSide = Expression | HandlerScope;
-Assignment ::= left%Id & "=" & right%RightHandSide & ";";
+Assignment ::= left%Id & "=" & right%Expression & ";";
 Assignment.operatorDefinition = `TmpLOperatorDefinition.Eq`;
 Assignment(type%`Type2`);
 
@@ -1193,9 +1184,9 @@ ReturnStatement ::= "return" & (expression%Expression || ()) & ";";
 
 /**
  * May appear within a [ModuleInitBlock] to abort module initialization when
- * un-handled failure occurs during module initialization.
+ * unhandled failure occurs during module initialization.
  */
-ModuleInitFailed ::= "abortLoad" & ";";
+ModuleInitFailed ::= "abortLoad" & "(" & ")" & ";";
 
 IfStatement ::=
       "if" & "(" & test%Expression & ")"
@@ -1212,7 +1203,7 @@ alternate != null &&
 IfStatement.nestedStatements = `listOfNotNull(consequent, alternate)`;
 
 /**
- * Used when translating using [lang.temper.be.tmpl.BubbleBranchStrategy.CatchBubble]
+ * Used when translating using [lang.temper.be.tmpl.BubbleBranchStrategy.Exceptions]
  * to decompile transitions to recovery from bubble via `orelse`.
  *
  * See also [ThrowStatement].
@@ -1225,7 +1216,7 @@ TryStatement ::=
 TryStatement.nestedStatements = `listOf(tried, recover)`;
 
 /**
- * Used when translating using [lang.temper.be.tmpl.BubbleBranchStrategy.CatchBubble]
+ * Used when translating using [lang.temper.be.tmpl.BubbleBranchStrategy.Exceptions]
  * instead of using the quasi-value [BubbleSentinel].
  */
 ThrowStatement ::= "throw" & ";";
@@ -1268,7 +1259,7 @@ ComputedJumpStatement.nestedStatements = `buildList {
  * used in documentation snippets.  See also [Genre.Documentation].
  *
  * Including the code in these boundaries in the compiled code
- * allows us to produce [SSCCE](https://sscce.org)
+ * allows us to produce [S.S.C.C.E.](https://sscce.org)
  * (Short, Self-Contained, Correct examples) in our generated
  * documentation.
  *
@@ -1277,7 +1268,7 @@ ComputedJumpStatement.nestedStatements = `buildList {
  *
  * Backends should, when translating documentation code, convert them
  * into comments that occur on their own lines, using the target
- * language's comment convention that contain the text
+ * language's comment convention, that contain the text
  * <code>\#region \_\_BOILERPLATE\_\_ \{\{\{</code> and
  * <code>\#endregion \}\}\}</code> respectively, and must not
  * produce those sequences in other tokens.
@@ -1321,7 +1312,7 @@ EmbeddedComment(commentText%`String`) {
 `
 init {
     // Many backends have only line comments, so TmpLTranslator
-    // should take care to produce sequences of single line
+    // should take care to produce sequences of single-line
     // comments instead of relying on each backend to do their
     // own comment splitting.
     require(anyLineBreak.find(commentText) == null)
@@ -1368,9 +1359,14 @@ Expression =
     ;
 Expression(
     /**
-     * The Temper type produced by the expression.
+     * The Temper type produced by the expression when it exits normally.
      */
-    type%`Type2`
+    passType%`Type2`,
+    /**
+     * The Temper type produced by the expression, possibly a result type.
+     */
+    type%`Type2`,
+
 );
 
 CallExpression ::=
@@ -1379,27 +1375,52 @@ CallExpression ::=
     & "(" & parameters%Actual*", " & ")"
     ;
 CallExpression.operatorDefinition = `TmpLOperatorDefinition.Paren`;
-CallExpression.contextualizedSig%`Signature2` = `contextualizeSig(fn.type, typeActuals.bindings)`;
+CallExpression.contextualizedSig%`Signature2` = `contextualizeSig(fn, typeActuals.bindings)`;
+CallExpression.type = `contextualizedSig.returnType2`;
+CallExpression.passType = `excludeBubble(type)`;
 CallExpression {
 `
 constructor(
     pos: Position,
     fn: Callable,
     parameters: Iterable<Actual>,
-    type: Type2
-) : this(pos, fn, CallTypeActuals.empty(fn.pos.rightEdge), parameters, type)
+) : this(pos, fn, CallTypeActuals.empty(fn.pos.rightEdge), parameters)
 `
 };
 
-CallTypeActuals ::= ((types%AType => "<" & types*", " & ">") || ());
-CallTypeActuals(bindings%`Map<lang.temper.type.TypeFormal, Type2>`);
+/**
+ * A list of bindings for type parameters.  For example, `listMap` might be a generic function
+ * with two type formals `<INPUT, OUTPUT>`. A specific call to `listMap` that converts `Foo`s
+ * to `Bar`s, would have two actuals `<Foo, Bar>`.
+ *
+ * If those type actuals were explicitly specified in the Temper source, then [ExplicitCallTypeActuals]
+ * is used, but if they were inferred, then [ImplicitCallTypeActuals] is used.
+ * Backends may need to generate explicit type actuals even when the Temper provides implicit type
+ * actuals when the target language might infer types that are different in important ways.
+ * [ImplicitCallTypeActuals] generate no tokens when dumped to TmpL pseudocode and
+ * [ExplicitCallTypeActuals] do generate tokens.  One way a backend could figure out whether
+ * explicit type actuals are required might be to similarly generate invisible type actuals, and then
+ * simulate enough target-language type inference to determine whether to flip a switch to make a
+ * specific call's type actuals explicit.
+ */
+CallTypeActuals = ImplicitCallTypeActuals | ExplicitCallTypeActuals;
+CallTypeActuals(types%AType*"", bindings%`Map<lang.temper.type.TypeFormal, Type2>`);
 CallTypeActuals {
 `
 companion object {
-    fun empty(pos: Position) = CallTypeActuals(pos, emptyList(), emptyMap())
+    fun empty(pos: Position) = ImplicitCallTypeActuals(pos, emptyList(), emptyMap())
 }
 `
 }
+
+ExplicitCallTypeActuals ::= ((types => "<" & types*", " & ">") || ());
+
+ImplicitCallTypeActuals ::= ();
+ImplicitCallTypeActuals {
+  `
+  constructor(src: CallTypeActuals) : this(src.pos, src.types.deepCopy(), src.bindings)
+  `
+};
 
 /**
  * An input to a [call][CallExpression].
@@ -1413,6 +1434,7 @@ Operation =
 Operation(op%Operator);
 Operation.operatorDefinition = `op.kind`;
 Operation.type = `op.tmpLOperator.returnType`;
+Operation.passType = `excludeBubble(op.tmpLOperator.returnType)`;
 
 // TODO: Do we need to allow calling on arbitrary expressions?  Is this a translatability hazard?
 Callable = FnReference | MethodReferenceLike | InlineSupportCodeWrapper | FunInterfaceCallable
@@ -1427,10 +1449,11 @@ FunInterfaceConversion(
 );
 /** Allows invoking an expression as a callable as when calling a functional interface instance's `apply` method */
 FunInterfaceCallable   ::= expr%Expression   & "as"               & type%`Signature2`;
-/** Wraps a callable as an expression as when de-referencing a function pointer */
-FunInterfaceExpression ::= callable%Callable & "as" & "@" & "fun" & type%`Type2`;
+/** Wraps a callable as an expression as when dereferencing a function pointer */
+FunInterfaceExpression ::= callable%Callable & "as" & "@" & "fun" & passType%`Type2`;
 FunInterfaceCallable.operatorDefinition = `TmpLOperatorDefinition.As`;
 FunInterfaceExpression.operatorDefinition = `TmpLOperatorDefinition.As`;
+FunInterfaceExpression.type%`Type2` = `passType`;
 
 /**
  * A reference to a thing on an object, combines with [CallExpression] to represent a whole method invocation
@@ -1503,23 +1526,26 @@ companion object {
 ValueReference.renderTo = `
 value.renderTo(tokenSink)
 `;
+ValueReference.type = `passType`;
 
 /** A sentinel value indicating failure. */
 BubbleSentinel ::= "failure";
-BubbleSentinel.type = `WellKnownTypes.bubbleType2`;
+BubbleSentinel.passType = `WellKnownTypes.bubbleType2`;
+BubbleSentinel.type = `passType`;
 
 /** A reference may be used as an expression */
 AnyReference = Reference | FnReference;
 AnyReference ::= id%Id;
 AnyReference(type%`Descriptor`);
 
-/** A read of the variable, constant, or other referent with name [id]. */
+/** A read of the variable, constant, or another referent with name [id]. */
 Reference(type%`Type2`);
 Reference {
 `
 constructor(id: Id, type: Type2) : this(id.pos, id, type)
 `
 };
+Reference.passType = `excludeBubble(type)`;
 
 /**
  * A reference to a named function.
@@ -1540,12 +1566,13 @@ This(
      * The `this` type.
      * Significant for backends that nest classes.
      */
-    type%`DefinedType`
+    passType%`DefinedType`
 ) {
 `
-constructor(id: Id, type: DefinedType) : this(id.pos, id, type)
+constructor(id: Id, passType: DefinedType) : this(id.pos, id, passType)
 `
 }
+This.type = `passType`;
 
 Operator = InfixOperator | PrefixOperator;
 Operator(
@@ -1566,14 +1593,24 @@ CheckedRttiExpression(expr%Expression, checkedType%AType, checkedFrontendType%`T
 
 InstanceOfExpression ::= expr & "instanceof" & checkedType;
 InstanceOfExpression.operatorDefinition = `TmpLOperatorDefinition.Instanceof`;
+InstanceOfExpression.passType = `WellKnownTypes.booleanType2`;
 InstanceOfExpression.type = `WellKnownTypes.booleanType2`;
 
 /** A cast based on a type tag check. */
-CastExpression ::= "cast" & "(" & expr & "," & checkedType & ")";
+CastExpression ::= ((canFail%`Boolean` => "cast") || "safeCast") & "(" & expr & "," & checkedType & ")";
 CastExpression.operatorDefinition = `TmpLOperatorDefinition.Paren`;
+CastExpression.passType = `checkedFrontendType`;
+CastExpression.type = `
+    if (canFail) {
+        MkType2.result(checkedFrontendType, WellKnownTypes.bubbleType2).get()
+    } else {
+        checkedFrontendType
+    }
+`;
 
 /** Wraps an expression to assert, based on static analysis, that the result is not null. */
 UncheckedNotNullExpression ::= "notNull" & "(" & expression%Expression & ")";
+UncheckedNotNullExpression.type = `passType`;
 
 /**
  * A reference to a specific position within a rest argument list
@@ -1588,9 +1625,11 @@ UncheckedNotNullExpression ::= "notNull" & "(" & expression%Expression & ")";
  */
 RestParameterExpression ::= parameterName%Id & "[" & index%ConstIndex & "]";
 RestParameterExpression.operatorDefinition = `TmpLOperatorDefinition.Square`;
+RestParameterExpression.type = `passType`;
 
 RestParameterCountExpression ::= parameterName%Id & "." & "length";
 RestParameterCountExpression.operatorDefinition = `TmpLOperatorDefinition.Dot`;
+RestParameterCountExpression.passType = `WellKnownTypes.intType2`;
 RestParameterCountExpression.type = `WellKnownTypes.intType2`;
 
 RestSpread ::= "..." & parameterName%Id;
@@ -1634,10 +1673,11 @@ GetProperty =
 /**
  * Reads a property directly.  These operations can only be performed from within
  * a `class`'s definition and cannot fail assuming that static checks passed for
- * `const` property initialization and use before initialization in constructor
+ * `const` property initialization and use-before-initialization in constructors
  * and methods.
  */
 GetBackedProperty;
+GetBackedProperty.type = `passType`;
 /**
  * An invocation of a type's getter.
  * Unlike [GetBackedProperty] these operations can be performed either within,
@@ -1645,6 +1685,7 @@ GetBackedProperty;
  * Getter invocations may fail.
  */
 GetAbstractProperty(subject%Expression);
+GetAbstractProperty.passType = `excludeBubble(type)`;
 /**
  * Assigns a value to a property of an object either via a setter or directly.
  */
@@ -1674,6 +1715,7 @@ PropertyLValue;
  * on some backends, the running thread is interrupted.
  */
 AwaitExpression ::= "await" & "(" & promise%Expression & ")";
+AwaitExpression.passType = `excludeBubble(type)`;
 
 Type =
       NominalType

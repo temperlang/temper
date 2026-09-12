@@ -8,40 +8,40 @@
         ],
         "properties": [
             {
-                "name": "next__12",
+                "name": "next__5",
                 "abstract": true,
-                "getter": "get.next__13",
-                "setter": "set.next__16",
+                "getter": "get.next__15",
+                "setter": "set.next__17",
                 "visibility": "public"
             },
             {
-                "name": "i__9",
+                "name": "i__12",
                 "abstract": false,
                 "visibility": "private"
             }
         ],
         "methods": [
             {
-                "name": "get.next__13",
+                "name": "get.next__15",
                 "symbol": "next",
                 "open": false,
                 "visibility": "public",
                 "kind": "Getter"
             },
             {
-                "name": "set.next__16",
+                "name": "set.next__17",
                 "symbol": "next",
                 "open": false,
                 "visibility": "private",
                 "kind": "Setter"
             },
             {
-                "name": "f__10",
+                "name": "f__13",
                 "open": false,
                 "visibility": "public"
             },
             {
-                "name": "constructor__19",
+                "name": "constructor__20",
                 "open": false,
                 "visibility": "public",
                 "kind": "Constructor"
@@ -55,7 +55,7 @@
         ],
         "properties": [
             {
-                "name": "next__7",
+                "name": "next__11",
                 "abstract": true,
                 "visibility": "public"
             }

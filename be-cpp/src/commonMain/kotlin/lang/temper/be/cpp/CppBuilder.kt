@@ -386,7 +386,32 @@ class CppBuilder(
             literal(raw("false"))
         }
 
-    fun literal(value: Number): Cpp.LiteralExpr = literal(raw(value.toString()))
+    fun literal(value: Number): Cpp.Expr {
+        if (value is Long) {
+            if (value == Long.MIN_VALUE) {
+                // -9223372036854775808LL is technically an application
+                // of unary negation to a positive constant that does not
+                // fit in a signed long long.
+                @Suppress("SpellCheckingInspection") // No, IDE, FFFFLL is not a misspelling of FLUFF. Good try tho.
+                return Cpp.UnaryExpr(
+                    pos,
+                    Cpp.UnaryOp(pos.leftEdge, UnaryOpEnum.BitNot),
+                    Cpp.LiteralExpr(pos, Cpp.Raw(pos, "0x7FFFFFFFFFFFFFFFLL")),
+                )
+            }
+            return literal(raw("${value}LL"))
+        }
+        if (value is Int) {
+            if (value == Int.MIN_VALUE) {
+                return Cpp.UnaryExpr(
+                    pos,
+                    Cpp.UnaryOp(pos.leftEdge, UnaryOpEnum.BitNot),
+                    Cpp.LiteralExpr(pos, Cpp.Raw(pos, "0x7FFFFFFF")),
+                )
+            }
+        }
+        return literal(raw("$value"))
+    }
 
     fun literal(value: String): Cpp.LiteralExpr {
         // Encode the whole string as UTF-8 bytes for correct multi-byte character handling

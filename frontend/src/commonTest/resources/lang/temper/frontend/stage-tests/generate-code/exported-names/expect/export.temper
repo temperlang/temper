@@ -1,3 +1,3 @@
 let return__0, `test//`.answer;
 `test//`.answer = 42;
-return__0 = 42
+return__0 = 42;

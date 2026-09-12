@@ -2,10 +2,9 @@ package lang.temper.be.rust
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
-import lang.temper.be.tmpl.ConvertedCoroutineAwakeUponFn
+import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
-import lang.temper.be.tmpl.GetPromiseResultSyncFn
 import lang.temper.be.tmpl.InlineSupportCode
 import lang.temper.be.tmpl.NamedSupportCode
 import lang.temper.be.tmpl.OptionalSupportCodeKind
@@ -18,6 +17,8 @@ import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.builtin.RuntimeTypeOperation
 import lang.temper.common.subListToEnd
 import lang.temper.format.TokenSink
+import lang.temper.frontend.coroutine.CoroHelperSpecials.ConvertedCoroutineAwakeUponFn
+import lang.temper.frontend.coroutine.CoroHelperSpecials.GetPromiseResultSyncFn
 import lang.temper.lexer.Genre
 import lang.temper.log.Position
 import lang.temper.name.OutName
@@ -36,9 +37,10 @@ import lang.temper.value.pureVirtualBuiltinName
 object RustSupportNetwork : SupportNetwork {
     override val backendDescription = "Rust Backend"
 
-    override val bubbleStrategy = BubbleBranchStrategy.IfHandlerScopeVar
+    override val bubbleStrategy = BubbleBranchStrategy.Results
     override val coroutineStrategy = CoroutineStrategy.TranslateToRegularFunction
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionType
+    override val computedJumpStrategy = ComputedJumpStrategy.Use
 
     override fun representationOfVoid(genre: Genre) = RepresentationOfVoid.ReifyVoid
     override val simplifyOrTypes: Boolean = true
@@ -166,6 +168,12 @@ private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): Supp
         BuiltinOperatorId.AdaptGeneratorFn -> adaptGeneratorFn
         BuiltinOperatorId.SafeAdaptGeneratorFn -> adaptGeneratorFnSafe
 
+        // Required since using results for failure recovery
+        BuiltinOperatorId.IsOkResult -> isOkResult
+        BuiltinOperatorId.PackOkResult -> packOkResult
+        BuiltinOperatorId.RepackErrResult -> RepackErrResult
+        BuiltinOperatorId.UnpackOkResult -> unpackOkResult
+
         null -> null
     }
 }
@@ -290,6 +298,7 @@ private class Float64Compare(
 internal open class FunctionCall(
     connectedNames: List<String>,
     val functionName: String,
+    val avoidDeref: Boolean = false,
     builtinOperatorId: BuiltinOperatorId? = null,
     cloneEvenIfFirst: Boolean = false,
     /** Non-null means the indicated param has a special-tailored fn borrow type. */
@@ -309,6 +318,7 @@ internal open class FunctionCall(
         baseName: String,
         functionName: String,
         builtinOperatorId: BuiltinOperatorId? = null,
+        avoidDeref: Boolean = false,
         cloneEvenIfFirst: Boolean = false,
         fnIndex: Int? = null,
         hasGeneric: Boolean = false,
@@ -317,6 +327,7 @@ internal open class FunctionCall(
     ) : this(
         connectedNames = listOf(baseName),
         functionName = functionName,
+        avoidDeref = avoidDeref,
         builtinOperatorId = builtinOperatorId,
         cloneEvenIfFirst = cloneEvenIfFirst,
         fnIndex = fnIndex,
@@ -343,7 +354,7 @@ internal open class FunctionCall(
                     // We don't do this in user code because we have less promises about how they intend to use it.
                     // TODO If we do add borrows to Temper, we could generalize better.
                     when {
-                        selfArg.type.described().isInterface() -> self.deref()
+                        !avoidDeref && selfArg.type.described().isInterface() -> self.deref()
                         else -> self
                     }
                 }.let { self ->
@@ -521,7 +532,7 @@ private class CmpStrStr(
         // And propagate `wantedType` because it might be nullable.
         val expr = (actual as? TmpL.Expression) ?: return null
         val outExpr = translator.translateExpression(expr, avoidClone = true).methodCall("as_str")
-        return outExpr.maybeWrap(given = expr.type, wanted = wantedType, translator = translator)
+        return outExpr.maybeWrap(given = expr.passType, wanted = wantedType, translator = translator)
     }
 }
 
@@ -1116,6 +1127,50 @@ private val timesFltFlt = Infix("TimesFltFlt", BuiltinOperatorId.TimesFltFlt, Ru
 private val timesIntInt = MethodCall("TimesIntInt", "wrapping_mul", BuiltinOperatorId.TimesIntInt)
 private val valueResultConstructor =
     FunctionCall("core.type ValueResult.constructor()", "Some", cloneEvenIfFirst = true, hasGeneric = true)
+
+private val isOkResult = MethodCall(
+    baseName = "IsOkResult",
+    memberName = "is_ok",
+    builtinOperatorId = BuiltinOperatorId.IsOkResult,
+)
+
+private val packOkResult = FunctionCall(
+    baseName = "PackOkResult",
+    functionName = "Ok",
+    avoidDeref = true,
+    builtinOperatorId = BuiltinOperatorId.PackOkResult,
+    cloneEvenIfFirst = true,
+)
+
+private object RepackErrResult : RustInlineSupportCode(
+    baseName = "RepackErrResult",
+    builtinOperatorId = BuiltinOperatorId.RepackErrResult,
+    hasGeneric = true,
+) {
+    override fun inlineToTree(
+        pos: Position,
+        arguments: List<TypedArg<Rust.Tree>>,
+        returnType: Type2,
+        translator: RustTranslator,
+    ): Rust.Tree {
+        return Rust.Call(
+            pos,
+            callee = "Err".toId(pos),
+            // `.expect_err` and `.unwrap_err` both require the success type
+            // implements the Debug trait so that they can produce a panic message,
+            // `.unwrap_err_unchecked` is unsafe, and `.into_err` is nightly only.
+            // So live on `.err().unwrap()` instead.
+            // Meanwhile, we use these just for finished results, so avoid clone here.
+            args = listOf((arguments[0].expr as Rust.Expr).methodCall("err").methodCall("unwrap")),
+        )
+    }
+}
+
+private val unpackOkResult = MethodCall(
+    baseName = "UnpackOkResult",
+    memberName = "unwrap",
+    builtinOperatorId = BuiltinOperatorId.UnpackOkResult,
+)
 
 private val connectedReferences = listOf(
     CmpGeneric,

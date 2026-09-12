@@ -1,0 +1,24 @@
+  @imported(\(`support-types//`.C)) let C__6;
+  C__6 = type (C);
+  @stay @imported(\(`support-types//`.I)) let I__5;
+  I__5 = type (I);
+  @fn let f__1, c__2: C<String, Int32>;
+## Full types on `new` here and for d's and e's initializers below
+  c__2 = new C<String, Int32>("", 0);
+  let d__3: I<String, Int32>;
+  d__3 = new C<String, Int32>("", 0);
+  let e__4: C<String, Int32>;
+  e__4 = new C<String, Int32>(null, null);
+  f__1 = (@stay fn f(x__7 /* aka x */: I<Boolean, String>) /* return__0 */: Void {
+      fn__8: do {
+        return__0 = void;
+        void;
+## `is` and `as` (assertAs) have completed types.
+        if (x__7 is C<Boolean, String>) {
+          let t#13;
+## These nested assertAs are not ideal.
+          t#13 = assertAs(assertAs(x__7, C<Boolean, String>), C<Boolean, String>);
+          do_call_foo(t#13)
+        }
+      }
+  });

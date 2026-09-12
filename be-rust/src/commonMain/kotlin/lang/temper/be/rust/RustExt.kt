@@ -371,7 +371,9 @@ internal fun Rust.Expr.wrapClone() = methodCall("clone")
 
 internal fun Rust.Expr.wrapLock() = Rust.Call(pos, callee = "$RW_LOCK_NAME::new".toId(pos), args = listOf(this))
 
-internal fun Rust.Expr.wrapOk() = Rust.Call(pos, callee = "Ok".toId(pos), args = listOf(this))
+internal fun Rust.Expr.wrapOk() = Rust.Call(pos, callee = "Ok".toId(pos.leftEdge), args = listOf(this))
+
+internal fun Rust.Expr.wrapErr() = Rust.Call(pos, callee = "Err".toId(pos), args = listOf(this))
 
 /** Convert Option to Result. */
 internal fun Rust.Expr.wrapOkOrElse(pos: Position = this.pos) =

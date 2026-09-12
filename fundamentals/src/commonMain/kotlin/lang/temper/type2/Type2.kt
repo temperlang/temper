@@ -509,6 +509,8 @@ fun Type2.withNullity(nullity: Nullity): Type2 = if (this.nullity == nullity) {
     }
 }
 
+fun Type2.at(pos: Position) = MkType2.from(this).position(pos).get() as PositionedType
+
 /**
  * Builder for [Type2] instances that avoid some representational hazards:
  *

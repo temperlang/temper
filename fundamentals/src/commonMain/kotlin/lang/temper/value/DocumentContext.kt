@@ -40,7 +40,7 @@ interface DocumentContext : ConfigurationKey.Holder {
         if (sourceFile != null) {
             val positions = filePositions[sourceFile]
             positions?.spanning(pos)?.toReadablePosition(sourceFile.diagnostic)?.let {
-                return it
+                return@formatPosition it
             }
         }
         return "$pos"

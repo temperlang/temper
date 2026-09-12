@@ -21,6 +21,7 @@ internal fun simplifyFlow(
     // See simplifyControlFlow for the meaning of these flags.
     assumeAllJumpsResolved: Boolean = false,
     assumeResultsCaptured: Boolean = false,
+    assumeUseBeforeInitChecked: Boolean = false,
 ) {
     TreeVisit
         .startingAt(tree)
@@ -33,6 +34,7 @@ internal fun simplifyFlow(
                         flow = flow,
                         assumeAllJumpsResolved = assumeAllJumpsResolved,
                         assumeResultsCaptured = assumeResultsCaptured,
+                        assumeUseBeforeInitChecked = assumeUseBeforeInitChecked,
                         logicalOperators = BuiltinLogicalOperators,
                     )
                 }

@@ -1,0 +1,2 @@
+parseZero("0")            = 0
+parseZero("hi") orelse -1 = -1

@@ -1,8 +1,8 @@
-fn (b__0 /* aka b */) /* return__1 */{
+fn (b__1 /* aka b */) /* return__0 */{
   fn__2: do {
-    if(b__0, fn {
+    if(b__1, fn {
         do {
-          return__1 = 1;
+          return__0 = 1;
           break(\label, fn__2)
         }
     });

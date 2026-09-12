@@ -84,6 +84,7 @@ internal class YieldOrDoNotYieldThereIsNoTry(
             },
         )
         is CSharp.LabeledStatement -> convertLabeled(statement, currentCatchLabel)
+        is CSharp.SwitchStatement -> convertSwitch(statement, currentCatchLabel)
         is CSharp.TryStatement -> convertTry(statement, currentCatchLabel) // non-yielding
         is CSharp.WhileStatement -> maybeExtractTestIntoTry(
             currentCatchLabel = currentCatchLabel,
@@ -333,6 +334,23 @@ internal class YieldOrDoNotYieldThereIsNoTry(
         return CSharp.LabeledStatement(statement.pos, statement.label.deepCopy(), body)
     }
 
+    private fun convertSwitch(
+        statement: CSharp.SwitchStatement,
+        currentCatchLabel: OutName?,
+    ): CSharp.SwitchStatement {
+        return CSharp.SwitchStatement(
+            statement.pos,
+            statement.expr.deepCopy(),
+            statement.cases.map { switchCase ->
+                CSharp.SwitchCase(
+                    switchCase.pos,
+                    switchCase.expr?.deepCopy(),
+                    switchCase.block?.let { convertBlock(it, currentCatchLabel) },
+                )
+            },
+        )
+    }
+
     private fun convertTry(
         statement: CSharp.TryStatement,
         outerCatchLabel: OutName?,
@@ -448,6 +466,9 @@ internal class YieldOrDoNotYieldThereIsNoTry(
         }
         is CSharp.IfStatement -> yields(s.consequent) || yields(s.alternate)
         is CSharp.LabeledStatement -> yields(s.statement)
+        is CSharp.SwitchStatement -> s.cases.any { c ->
+            c.block?.let { yields(it) } ?: false
+        }
         is CSharp.TryStatement -> yields(s.tryBlock) || yields(s.catchBlock) || yields(s.finallyBlock)
         is CSharp.WhileStatement -> yields(s.body)
     }
