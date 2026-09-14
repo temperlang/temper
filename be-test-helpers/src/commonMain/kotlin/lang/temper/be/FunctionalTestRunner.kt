@@ -133,6 +133,8 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
             lookupFactory = ::lookupFactory,
             onError = { error(it) },
         )
+        // We only get here from backend-specific test classes, so no need for other backends.
+        backendOrganization.addSharedStdConfigInjectors(listOf())
         // TODO Actually build by buckets?
         val outputRoot = OutputRoot(MemoryFileSystem())
         val inputs = test.temperFiles.toList()
@@ -141,10 +143,12 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
         val preparedModules = prepareModulesForFunctionalTest(
             test,
             projectLogSink = logSink,
-            customizeModule = { module, _ ->
-                module.addEnvironmentBindings(server.makeBindings())
-                for (factory in backendOrganization.factoriesById.values) {
-                    module.addEnvironmentBindings(factory.environmentBindings)
+            customizeModule = { module, isNew ->
+                if (isNew) {
+                    module.addEnvironmentBindings(server.makeBindings())
+                    for (factory in backendOrganization.factoriesById.values) {
+                        factory.addEnvironmentBindings(module)
+                    }
                 }
             },
         )

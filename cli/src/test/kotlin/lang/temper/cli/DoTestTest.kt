@@ -13,20 +13,20 @@ import lang.temper.be.rust.RustBackend
 import lang.temper.common.Console
 import lang.temper.common.Log
 import lang.temper.common.console
+import lang.temper.frontend.staging.ModuleConfig
 import lang.temper.fs.read
 import lang.temper.fs.runWithTemporaryDirCopyOf
 import lang.temper.log.dirPath
 import lang.temper.name.BackendId
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.interpBackendId
-import lang.temper.tooling.buildrun.Build
 import lang.temper.tooling.buildrun.BuildDoneResult
-import lang.temper.tooling.buildrun.BuildHarness
 import lang.temper.tooling.buildrun.BuildInitFailed
 import lang.temper.tooling.buildrun.BuildNotNeededResult
 import lang.temper.tooling.buildrun.DoRunResult
 import lang.temper.tooling.buildrun.RunTask
 import lang.temper.tooling.buildrun.doOneBuild
+import lang.temper.tooling.buildrun.prepareBuild
 import org.junit.jupiter.api.Timeout
 import java.nio.file.Path
 import java.util.concurrent.ForkJoinPool
@@ -135,7 +135,7 @@ class DoTestTest {
 
     @Test
     @Timeout(JAVA_TIMEOUT_SECONDS)
-    fun connectedsJava17All() {
+    fun connectedsJava17() {
         checkPassing("ConnectedsJava17", "/testing/connecteds", listOf(JavaBackend.Java17.backendId))
     }
 
@@ -409,18 +409,14 @@ private fun doTestResult(
     }
 
     val realBackends = backendIds.filter { it != interpBackendId }
-    val harness = BuildHarness(
+    val libraries: Set<DashedIdentifier>? = libraryName?.let { setOf(it) }
+    val build = prepareBuild(
         executorService = ForkJoinPool.commonPool(),
         backends = realBackends,
         workRoot = workRoot,
         ignoreFile = null,
-        outDir = null,
-        keepDir = null,
         shellPreferences = shellPreferences,
-    )
-    val libraries: Set<DashedIdentifier>? = libraryName?.let { setOf(it) }
-    val build = Build(
-        harness = harness,
+        moduleConfig = ModuleConfig.default,
         runTask = RunTask(
             request = RunTestsRequest(
                 libraries = libraries,
@@ -428,7 +424,7 @@ private fun doTestResult(
             ),
             backends = backendIds.toSet(),
         ),
-    )
+    )!!
     build.checkpoints.on(CliEnv.Checkpoint.postInstall) { cliEnv, _ ->
         checkInstall(cliEnv)
     }

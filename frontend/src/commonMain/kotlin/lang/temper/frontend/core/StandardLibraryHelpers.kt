@@ -48,8 +48,8 @@ import lang.temper.value.unpackOrFail
 import lang.temper.value.void
 
 /** Returns the std file system, if available, wrapped under a subdir prefix. */
-fun accessStdWrapped(): FileSystem? {
-    return accessStd()?.let {
+fun accessStdWrapped(configPluginSource: String): FileSystem? {
+    return accessStd(configPluginSource)?.let {
         StitchedFileSystem(
             mapOf(dirPath(STANDARD_LIBRARY_NAME) to it),
         )
