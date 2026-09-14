@@ -65,7 +65,7 @@ class ImuChecker(
     fun check(tree: Tree) {
         for (child in tree.children) {
             if (child is DeclTree) {
-                child.parts!!.metadataSymbolMap[typeDeclSymbol]?.target
+                child.parts?.metadataSymbolMap[typeDeclSymbol]?.target
                     ?.typeShapeAtLeafOrNull?.let { typeShape ->
                         check(typeShape)
                     }

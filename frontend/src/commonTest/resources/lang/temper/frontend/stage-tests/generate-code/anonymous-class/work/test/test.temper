@@ -1,0 +1,13 @@
+// Anonymous alone was already getting through the front end
+// before starting this test.
+class {}
+
+// Initial goal here is to keep this from crashing the front end.
+export let plain = class {};
+
+// But check out some variations to see what happens.
+@imu
+export let decorated = class {};
+
+// Including this invalid syntax, just for thinking about.
+export let decoratedInside = @imu class {};
