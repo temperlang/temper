@@ -5,6 +5,7 @@ import lang.temper.frontend.interpreterFeatureImplementations
 import lang.temper.interp.MetadataDecorator
 import lang.temper.interp.importExport.ExportDecorator
 import lang.temper.interp.imuDecorator
+import lang.temper.name.BuiltinName
 import lang.temper.name.ParsedName
 import lang.temper.value.InternalFeatureKeys
 import lang.temper.value.Planting
@@ -25,7 +26,7 @@ fun Planting.buildConfigType(
     properties: Map<String, Planting.() -> Any?>,
 ) {
     Call {
-        Rn(ParsedName(imuDecorator.name))
+        Rn(BuiltinName(imuDecorator.name))
         // Using the value directly here doesn't work.
         // Call(ExportDecorator) { ... }
         Call {
