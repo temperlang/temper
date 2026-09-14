@@ -134,7 +134,8 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
             lookupFactory = ::lookupFactory,
             onError = { error(it) },
         )
-        backendOrganization.addSharedStdConfigInjectors(supportedBackends)
+        // We only get here from backend-specific test classes, so no need for other backends.
+        backendOrganization.addSharedStdConfigInjectors(listOf())
         // TODO Actually build by buckets?
         val outputRoot = OutputRoot(MemoryFileSystem())
         val inputs = test.temperFiles.toList()
