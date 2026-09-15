@@ -1976,18 +1976,13 @@ class RustTranslator(
                     else -> connectedModule
                 }
             }.extendWith(translateId(decl.name, style = NameStyle.Snake)).call(
-                buildList {
-                    for ((tmpl, rust) in decl.parameters.parameters.zip(translateParameters(decl.parameters))) {
-                        when {
-                            tmpl.optional -> {
-                                val name = defaulting.parameterMapping.getValue(tmpl.name.name)
-                                translateIdFromName(pos, name)
-                            }
-                            // TODO Validate frontend cases that shouldn't get here.
-                            else -> rust.toId(approximate = true)
-                        }.also { add(it) }
-                    }
-                },
+                defaulting.buildConnectedArgs(
+                    fn = decl,
+                    backendParams = translateParameters(decl.parameters),
+                    tmplToArg = { pos, name -> translateIdFromName(pos, name) },
+                    // TODO Validate frontend cases that shouldn't get here.
+                    backendToArg = { it.toId(approximate = true) },
+                ),
             ),
         )
     }
