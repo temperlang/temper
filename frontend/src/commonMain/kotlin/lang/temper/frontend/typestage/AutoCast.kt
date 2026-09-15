@@ -4,12 +4,15 @@ import lang.temper.ast.TreeVisit
 import lang.temper.ast.VisitCue
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.name.TemperName
+import lang.temper.type.DotHelper
+import lang.temper.type.OperatorMember
 import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.ControlFlow
 import lang.temper.value.DeclTree
 import lang.temper.value.IsNullFn
+import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.RightNameLeaf
 import lang.temper.value.StructuredFlow
 import lang.temper.value.TNull
@@ -110,12 +113,17 @@ internal class AutoCast(val root: BlockTree) {
         if (cond.size == CALLEE_AND_TWO_ARGS && cond.children.any { it.valueContained == TNull.value }) {
             // Is it an equality check with a relevant branch?
             // TODO Check for (... is T) calls also. And maybe isNull if we care about later stages here sometime.
-            when (cond.childOrNull(0)?.functionContained) {
-                // == null so go to else body
-                BuiltinFuns.equalsFn -> elseCasts.add(Cast(name, null))
-                // != null so go to if body
-                BuiltinFuns.notEqualsFn -> thenCasts.add(Cast(name, null))
+            // TODO: Now that `==` and `!=` desugar early, do we still need this?
+            val builtinKey = when (val fn = cond.childOrNull(0)?.functionContained) {
+                is DotHelper -> (fn.member as? OperatorMember)?.operator
+                is NamedBuiltinFun -> fn.name
                 else -> Unit
+            }
+            when (builtinKey) {
+                // == null so go to else body
+                "==" -> elseCasts.add(Cast(name, null))
+                // != null so go to if body
+                "!=" -> thenCasts.add(Cast(name, null))
             }
         } else if (isIsNullCall(cond)) {
             elseCasts.add(Cast(name, null))

@@ -70,31 +70,24 @@ class JavaSupportNetwork private constructor(private val javaLang: JavaLang) : S
             BuiltinOperatorId.CmpIntInt -> integerCmp
             BuiltinOperatorId.CmpFltFlt -> doubleCmp
             BuiltinOperatorId.CmpStrStr -> comparableCmp
-            BuiltinOperatorId.CmpGeneric -> genericCmp
             BuiltinOperatorId.GtIntInt -> operatorGt
             BuiltinOperatorId.GtFltFlt -> doubleGt
             BuiltinOperatorId.GtStrStr -> comparableGt
-            BuiltinOperatorId.GtGeneric -> genericGt
             BuiltinOperatorId.LtIntInt -> operatorLt
             BuiltinOperatorId.LtFltFlt -> doubleLt
             BuiltinOperatorId.LtStrStr -> comparableLt
-            BuiltinOperatorId.LtGeneric -> genericLt
             BuiltinOperatorId.GeIntInt -> operatorGe
             BuiltinOperatorId.GeFltFlt -> doubleGe
             BuiltinOperatorId.GeStrStr -> comparableGe
-            BuiltinOperatorId.GeGeneric -> genericGe
             BuiltinOperatorId.LeIntInt -> operatorLe
             BuiltinOperatorId.LeFltFlt -> doubleLe
             BuiltinOperatorId.LeStrStr -> comparableLe
-            BuiltinOperatorId.LeGeneric -> genericLe
             BuiltinOperatorId.EqIntInt -> operatorEq
             BuiltinOperatorId.EqFltFlt -> doubleEq
             BuiltinOperatorId.EqStrStr -> comparableEq
-            BuiltinOperatorId.EqGeneric -> genericEq
             BuiltinOperatorId.NeIntInt -> operatorNe
             BuiltinOperatorId.NeFltFlt -> doubleNe
             BuiltinOperatorId.NeStrStr -> comparableNe
-            BuiltinOperatorId.NeGeneric -> genericNe
             BuiltinOperatorId.PlusIntInt, BuiltinOperatorId.PlusIntInt64 -> plusIntInt
             BuiltinOperatorId.PlusFltFlt -> plusDubDub
             BuiltinOperatorId.MinusIntInt, BuiltinOperatorId.MinusIntInt64 -> minusIntInt
@@ -354,86 +347,11 @@ private fun Iterable<TypedArg<J.Expression>>.unpackArgs() = map { it.expr.asArgu
 private fun Iterable<TypedArg<J.Expression>>.unpackExpr() = map { it.expr }
 
 // Relational operations
-val JavaLang.genericCmp by receiver {
-    inlineSupport(BuiltinOperatorId.CmpGeneric, 2) { pos, args, resultType ->
-        val name: QualifiedName = when (strongestType(args, resultType)) {
-            Jst.JstBool -> javaLangBooleanCompare
-            Jst.JstDouble -> javaLangDoubleCompare
-            Jst.JstInt -> javaLangIntegerCompare
-            else -> temperGenericCompare
-        }
-        name.staticMethod(args.unpackArgs(), pos)
-    }
-}
 val JavaLang.integerCmp by receiver { separateCode(javaLangIntegerCompare) }
 val JavaLang.doubleCmp by receiver { separateCode(javaLangDoubleCompare) }
 val JavaLang.comparableCmp by receiver {
     inlineSupport("comparableCmp", 2) { pos, args ->
         args[0].method("compareTo", args[1], pos = pos)
-    }
-}
-
-private fun genericRelational(
-    op: JavaOperator,
-): ExprFactoryTyped =
-    { pos, args, resultType ->
-        when (strongestType(args, resultType)) {
-            Jst.JstVoid -> garbageExpr(pos, "$op", "Unexpected void in argument")
-            Jst.JstObject -> op.infix(
-                temperGenericCompare.staticMethod(
-                    args[0].expr,
-                    args[1].expr,
-                    pos = pos,
-                ),
-                J.IntegerLiteral(pos, 0),
-                pos = pos,
-            )
-            Jst.JstBool -> op.infix(
-                javaLangBooleanCompare.staticMethod(
-                    args[0].expr,
-                    args[1].expr,
-                    pos = pos,
-                ),
-                J.IntegerLiteral(pos, 0),
-                pos = pos,
-            )
-            Jst.JstDouble -> doubleRelational(op, pos, args.unpackExpr())
-            Jst.JstInt, Jst.JstLong -> operatorRelational(op)(pos, args.unpackExpr())
-        }
-    }
-val JavaLang.genericGt by receiver {
-    inlineSupport(BuiltinOperatorId.GtGeneric, 2, factory = genericRelational(JavaOperator.GreaterThan))
-}
-val JavaLang.genericGe by receiver {
-    inlineSupport(BuiltinOperatorId.GtGeneric, 2, factory = genericRelational(JavaOperator.GreaterEquals))
-}
-val JavaLang.genericLt by receiver {
-    inlineSupport(BuiltinOperatorId.GtGeneric, 2, factory = genericRelational(JavaOperator.LessThan))
-}
-val JavaLang.genericLe by receiver {
-    inlineSupport(BuiltinOperatorId.GtGeneric, 2, factory = genericRelational(JavaOperator.LessEquals))
-}
-val JavaLang.genericEq by receiver {
-    inlineSupport(BuiltinOperatorId.EqGeneric, 2) { pos, args, resultType ->
-        when (strongestType(args, resultType)) {
-            Jst.JstVoid -> garbageExpr(pos, "genericEq", "unexpected void in argument")
-            Jst.JstObject -> javaUtilObjectsEquals.staticMethod(args.unpackArgs(), pos = pos)
-            Jst.JstDouble -> doubleRelational(JavaOperator.Equals, pos, args.unpackExpr())
-            Jst.JstInt, Jst.JstLong, Jst.JstBool -> operatorRelational(JavaOperator.Equals)(pos, args.unpackExpr())
-        }
-    }
-}
-val JavaLang.genericNe by receiver {
-    inlineSupport(BuiltinOperatorId.NeGeneric, 2) { pos, args, resultType ->
-        when (strongestType(args, resultType)) {
-            Jst.JstVoid -> garbageExpr(pos, "genericNe", "unexpected void in argument")
-            Jst.JstObject -> JavaOperator.BoolComplement.prefix(
-                javaUtilObjectsEquals.staticMethod(args.unpackArgs(), pos = pos),
-            )
-            Jst.JstDouble -> doubleRelational(JavaOperator.NotEquals, pos, args.unpackExpr())
-            Jst.JstInt, Jst.JstLong, Jst.JstBool ->
-                operatorRelational(JavaOperator.NotEquals)(pos, args.unpackExpr())
-        }
     }
 }
 
@@ -843,6 +761,11 @@ val JavaLang.intMax by receiver {
 }
 val JavaLang.intMin by receiver {
     inlineSupport("core.type Int32.min()", 2) { pos, args -> javaMathMin.staticMethod(args[0], args[1], pos = pos) }
+}
+val JavaLang.intSignum by receiver {
+    inlineSupport("core.type Int32.signum()", -1, needsSelf = true) { pos, args ->
+        javaLangIntegerSignum.staticMethod(args[0], pos = pos)
+    }
 }
 val JavaLang.int64Max by receiver {
     inlineSupport("core.type Int64.max()", 2) { pos, args -> javaMathMax.staticMethod(args[0], args[1], pos = pos) }
@@ -1494,6 +1417,7 @@ private val connections: Map<String, ((JavaLang) -> SupportCode)> = mapOf(
     "core.type Generator.next()" to { it.generatorNext },
     "core.type Int32.max()" to { it.intMax },
     "core.type Int32.min()" to { it.intMin },
+    "core.type Int32.signum()" to { it.intSignum },
     "core.type Int32.toFloat64()" to { it.intToFloat64 },
     "core.type Int32.toInt64()" to { it.intToInt64 },
     "core.type Int32.toString()" to { it.intToString },

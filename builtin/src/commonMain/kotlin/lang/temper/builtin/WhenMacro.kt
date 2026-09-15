@@ -366,7 +366,7 @@ private fun Planting.growCase(subject: NameLeaf, postponedCaseCall: Tree): TreeT
 }
 
 private fun Planting.growEq(subject: NameLeaf, test: Tree) = Call(test.pos) {
-    V(test.pos, Value(BuiltinFuns.equalsFn))
+    V(test.pos, EqMacro.value)
     Rn(subject.pos, subject.content)
     Replant(freeTree(test))
 }

@@ -20,7 +20,6 @@ fun addTypeNamesMentionedTo(typeActual: TypeActual, out: MutableSet<ResolvedName
         InvalidType -> Unit
         is OrType -> typeActual.members.forEach { addTypeNamesMentionedTo(it, out) }
         is AndType -> typeActual.members.forEach { addTypeNamesMentionedTo(it, out) }
-        is InfiniBinding -> Unit
     }
 }
 

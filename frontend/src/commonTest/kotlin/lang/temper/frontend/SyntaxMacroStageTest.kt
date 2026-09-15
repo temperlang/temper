@@ -504,4 +504,11 @@ class SyntaxMacroStageTest {
         stageTestDir = StageTestDir("syntax-macro/constructors-and-property-initialization"),
         stagingFlags = setOf(StagingFlags.skipImportCore),
     )
+
+    @Test
+    fun desugarEquivalenceAndComparisonOps() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/desugar-equivalence-and-comparison-ops"),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
+        pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
+    )
 }

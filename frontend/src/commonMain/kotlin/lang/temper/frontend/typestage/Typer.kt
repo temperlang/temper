@@ -3224,9 +3224,7 @@ private fun typeBindingMapper(basis: NominalType): ((StaticType) -> StaticType)?
     val formalToActual =
         (formals zip actuals).associate { it.first.name to it.second }
     val mapper = TypeBindingMapper(formalToActual)
-    return { t ->
-        MkType.map(t, mapper, mutableMapOf())
-    }
+    return { t -> MkType.map(t, mapper) }
 }
 
 private val Tree.isDirectlyNestedCallParameter: Boolean

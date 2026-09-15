@@ -246,6 +246,7 @@ fun builtinLibraryConnecteds() = listOf(
     StringFns.ToInt64,
     StringFns.GetNone,
     StringFns.StringIndexOptionCompareTo,
+    StringFns.StringIndexOptionEq,
 ).associate<SigFnBuilder, String, (Signature2) -> Value<*>> { it.name to { sig -> it.fn(sig) } }
 
 fun standardLibraryConnecteds() = builtinLibraryConnecteds() + mapOf(

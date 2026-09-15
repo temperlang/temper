@@ -53,14 +53,6 @@ private object Builtins {
     val nameKeyToValue: Map<String, Value<*>>
     init {
         val m = mutableMapOf(
-            "<" to Value(BuiltinFuns.lessThanFn),
-            ">" to Value(BuiltinFuns.greaterThanFn),
-            "<=" to Value(BuiltinFuns.lessEqualsFn),
-            ">=" to Value(BuiltinFuns.greaterEqualsFn),
-            "==" to Value(BuiltinFuns.equalsFn),
-            "!=" to Value(BuiltinFuns.notEqualsFn),
-            "<=>" to Value(BuiltinFuns.cmpFn),
-
             "=" to BuiltinFuns.vSetLocalFn,
 
             keyPair(BuiltinFuns.vNotFn),

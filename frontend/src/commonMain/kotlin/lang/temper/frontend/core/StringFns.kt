@@ -307,4 +307,10 @@ internal object StringFns {
             return StringIndexSupport.compare(args, cb, interpMode)
         }
     }
+
+    object StringIndexOptionEq : SigFnBuilder("core.type StringIndexOption.eq()") {
+        override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
+            return StringIndexSupport.equals(args, cb, interpMode)
+        }
+    }
 }

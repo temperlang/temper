@@ -133,7 +133,7 @@ data class RestFormal(val name: TemperName, val type: StaticType, val position: 
  * the formal *A* is bound to the actual `String` and *B* is bound to *Int*.
  */
 sealed interface TypeFormal : TypeDefinition {
-    override val word: Symbol?
+    abstract override val word: Symbol?
     override val formals get() = emptyList<Nothing>()
     override val hasFormals: Boolean get() = false
 
@@ -146,22 +146,6 @@ sealed interface TypeFormal : TypeDefinition {
 
     override fun addStays(s: StaySink) {
         upperBounds.forEach { it.addStays(s) }
-    }
-
-    override fun renderTo(tokenSink: TokenSink) {
-        variance.keyword?.let {
-            tokenSink.emit(OutputToken(it, OutputTokenType.Word, TokenAssociation.Prefix))
-        }
-        tokenSink.emit(name.toToken(inOperatorPosition = false))
-        if (upperBounds.isNotEmpty()) {
-            tokenSink.emit(OutToks.extendsWord)
-            upperBounds.forEachIndexed { i, t ->
-                if (i != 0) {
-                    tokenSink.emit(OutToks.amp)
-                }
-                t.renderTo(tokenSink)
-            }
-        }
     }
 
     companion object {
@@ -183,6 +167,10 @@ sealed interface TypeFormal : TypeDefinition {
             stayLeaf,
         )
     }
+}
+
+internal val TypeFormal.internal: MutableTypeFormal get() = when (this) {
+    is MutableTypeFormal -> this
 }
 
 /**
@@ -216,6 +204,24 @@ class MutableTypeFormal(
         super.addStays(s)
     }
 
+    override fun renderTo(tokenSink: TokenSink) = renderTo(tokenSink, ButNotRecursively())
+
+    internal fun renderTo(tokenSink: TokenSink, bnr: ButNotRecursively) {
+        variance.keyword?.let {
+            tokenSink.emit(OutputToken(it, OutputTokenType.Word, TokenAssociation.Prefix))
+        }
+        tokenSink.emit(name.toToken(inOperatorPosition = false))
+        if (upperBounds.isNotEmpty()) {
+            tokenSink.emit(OutToks.extendsWord)
+            upperBounds.forEachIndexed { i, t ->
+                if (i != 0) {
+                    tokenSink.emit(OutToks.amp)
+                }
+                t.renderTo(tokenSink, bnr)
+            }
+        }
+    }
+
     override fun toString() = toStringViaBuilder {
         it.append("(TypeFormal ")
         if (!variance.keyword.isNullOrEmpty()) {
@@ -229,26 +235,66 @@ class MutableTypeFormal(
         it.append(')')
     }
 
+    // TODO: can we just do equality based on name?
+    // TODO: this === other
     override fun equals(other: Any?): Boolean =
-        other is MutableTypeFormal && this.name == other.name &&
-            this.variance == other.variance && this.upperBounds == other.upperBounds
+        this === other || other is MutableTypeFormal &&
+            this.equals(other, ButNotRecursively())
 
-    override fun hashCode(): Int =
-        name.hashCode() + 31 * (variance.hashCode() + 31 * upperBounds.hashCode())
+    private data object EqualsTaskKey : ButNotRecursively.TaskKey<Pair<TypeFormal, TypeFormal>, Boolean>
+    internal fun equals(other: MutableTypeFormal, bnr: ButNotRecursively): Boolean {
+        if (this.name != other.name) { return false }
+        if (this.variance != other.variance) { return false }
+        if (this.upperBounds.size != other.upperBounds.size) { return false }
+        return bnr.compute(
+            EqualsTaskKey,
+            this to other,
+            tentativeOutput = true,
+        ) {
+            val aUpperBounds = upperBounds
+            val bUpperBounds = other.upperBounds
+            for (i in aUpperBounds.indices) {
+                val a = aUpperBounds[i]
+                val b = bUpperBounds[i]
+                if (!a.equals(b, bnr)) {
+                    return@compute false
+                }
+            }
+            true
+        }
+    }
+
+    override fun hashCode(): Int = name.hashCode()
 
     override val minions: List<LawfulEvil> get() = listOf(upperBounds)
 
-    override fun destructure(structureSink: StructureSink) = structureSink.obj {
-        key("name") { value(name) }
-        key("word", Hints.u) { value(word) }
-        key("variance", isDefault = variance == Variance.Default) { value(variance) }
-        val extendsOnlyAnyValue = upperBounds.size == 1 &&
-            upperBounds[0].let { upperBound ->
-                upperBound.definition.name == WellKnownTypes.anyValueTypeDefinition.name &&
-                    upperBound.bindings.isEmpty()
+    override fun destructure(structureSink: StructureSink) =
+        destructure(structureSink, ButNotRecursively())
+
+    private data object DestructureTaskKey : ButNotRecursively.TaskKey<TypeFormal, Boolean>
+    internal fun destructure(structureSink: StructureSink, bnr: ButNotRecursively) {
+        val done = bnr.compute(DestructureTaskKey, this, false) {
+            structureSink.obj {
+                key("name") { value(name) }
+                key("word", Hints.u) { value(word) }
+                key("variance", isDefault = variance == Variance.Default) { value(variance) }
+                val extendsOnlyAnyValue = upperBounds.size == 1 &&
+                    upperBounds[0].let { upperBound ->
+                        upperBound.definition.name == WellKnownTypes.anyValueTypeDefinition.name &&
+                            upperBound.bindings.isEmpty()
+                    }
+                key("upperBounds", isDefault = extendsOnlyAnyValue) {
+                    arr {
+                        for (ub in upperBounds) {
+                            ub.destructure(this, bnr)
+                        }
+                    }
+                }
             }
-        key("upperBounds", isDefault = extendsOnlyAnyValue) {
-            value(upperBounds)
+            true
+        }
+        if (!done) {
+            structureSink.value("...")
         }
     }
 }
