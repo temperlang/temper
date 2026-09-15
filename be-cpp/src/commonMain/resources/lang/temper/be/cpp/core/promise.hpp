@@ -147,10 +147,9 @@ namespace temper {
         // setting the caller's `fail` flag; the state machine then branches to its
         // failure case (e.g. an `orelse`).
         template<class T>
-        T get_promise_result_sync(bool& fail, std::shared_ptr<Promise<T>> promise) {
+        T get_promise_result_sync(std::shared_ptr<Promise<T>> promise) {
             if (promise->is_broken()) {
-                fail = true;
-                return T();
+                throw TemperBubble();
             }
             return promise->get();
         }

@@ -98,6 +98,10 @@ private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): Supp
         BuiltinOperatorId.TimesIntInt, BuiltinOperatorId.TimesIntInt64 -> timesIntInt
         BuiltinOperatorId.StrCat -> strCat
         BuiltinOperatorId.BooleanNegation -> boolNeg
+        BuiltinOperatorId.IsOkResult -> isOkResult
+        BuiltinOperatorId.PackOkResult -> packOkResult
+        BuiltinOperatorId.RepackErrResult -> RepackErrResult
+        BuiltinOperatorId.UnpackOkResult -> unpackOkResult
         else -> null
     }
 }
@@ -201,6 +205,7 @@ internal class MethodCall(
     val name: String,
     connectedNames: List<String>,
     builtinOperatorId: BuiltinOperatorId? = null,
+    val useDot: Boolean = false,
 ) : CppInlineSupportCode(connectedNames, builtinOperatorId) {
     override fun inlineToTree(
         arguments: List<TypedArg<Cpp.Tree>>,
@@ -208,14 +213,15 @@ internal class MethodCall(
         translator: CppTranslator,
         cpp: CppBuilder,
     ): Cpp.Tree = run {
-        cpp.callExpr(
-            cpp.binaryExpr(
+        val callee = when {
+            useDot -> cpp.memberExpr(arguments.first().expr as Cpp.Expr, cpp.singleName(name))
+            else -> cpp.binaryExpr(
                 arguments.first().expr as Cpp.Expr,
                 Cpp.BinaryOp(cpp.pos, BinaryOpEnum.Arrow),
                 cpp.singleName(name),
-            ),
-            arguments.subListToEnd(1).map { it.expr as Cpp.Expr },
-        )
+            )
+        }
+        cpp.callExpr(callee, arguments.subListToEnd(1).map { it.expr as Cpp.Expr })
     }
 }
 
@@ -296,6 +302,43 @@ private val toString = FunctionCall("to_string", listOf("core.type Int32.toStrin
 private val toInt32 = FunctionCall("to_int32", listOf("core.type Int64.toInt32()", "core.type String.toInt32()"))
 private val toInt64 = FunctionCall("to_int64", listOf("core.type String.toInt64()"))
 private val boolNeg = Prefix("not", UnaryOpEnum.Not, BuiltinOperatorId.BooleanNegation)
+
+private val isOkResult = MethodCall(
+    name = "has_value",
+    connectedNames = listOf("IsOk"),
+    builtinOperatorId = BuiltinOperatorId.IsOkResult,
+    useDot = true,
+)
+
+private val packOkResult = FunctionCall(
+    name = "Expected",
+    connectedNames = listOf("PackOkResult"),
+    builtinOperatorId = BuiltinOperatorId.PackOkResult,
+)
+
+private object RepackErrResult : CppInlineSupportCode(
+    connectedNames = listOf("RepackErrResult"),
+    builtinOperatorId = BuiltinOperatorId.RepackErrResult,
+) {
+    override fun inlineToTree(
+        arguments: List<TypedArg<Cpp.Tree>>,
+        returnType: Type2,
+        translator: CppTranslator,
+        cpp: CppBuilder,
+    ): Cpp.Tree {
+        return cpp.callExpr(
+            cpp.name(TEMPER_CORE_NAMESPACE, "Unexpected"),
+            cpp.callExpr(cpp.memberExpr(arguments.first().expr as Cpp.Expr, cpp.singleName("error"))),
+        )
+    }
+}
+
+private val unpackOkResult = MethodCall(
+    name = "value",
+    connectedNames = listOf("UnpackOkResult"),
+    builtinOperatorId = BuiltinOperatorId.UnpackOkResult,
+    useDot = true,
+)
 
 private val connectedReferences = listOf(
     ConsoleLog,
