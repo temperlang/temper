@@ -28,7 +28,8 @@ connected code needs to have access to.
 
     /* unexported */ class Hidden(public i: Int) {}
 
-Also try a function with a nullable default parameter that defaults to null.
+Also try a function with a nullable default parameter that defaults to null. Our
+implementations of `length` for this test are sloppy, so only pass in ASCII.
 
     @connected
     export let length(string: String? = null): Int;
