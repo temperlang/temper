@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <temper-core/core.hpp>
 #include <work/init.hpp>
 
 namespace work {

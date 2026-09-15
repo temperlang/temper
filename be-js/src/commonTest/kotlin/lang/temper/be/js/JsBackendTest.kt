@@ -2456,6 +2456,9 @@ class JsBackendTest {
                 |        export let inc(i: Int): Int {
                 |            sum(i, 1)
                 |        }
+                |
+                |        @connected
+                |        export let length(s: String? = null): Int;
                 |        ```,
                 |      _connected.js: ```
                 |        // Importing with "../" required here. See layout later for more.
@@ -2523,6 +2526,13 @@ class JsBackendTest {
             |             */
             |            export function inc(i_2) {
             |              return sum(i_2, 1);
+            |            };
+            |            /**
+            |             * @param {string | null} [s_0]
+            |             * @returns {number}
+            |             */
+            |            export function length(s_0) {
+            |              return _connected.length(s_0);
             |            };
             |
             |            ```

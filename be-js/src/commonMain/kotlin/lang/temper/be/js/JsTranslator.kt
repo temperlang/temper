@@ -1750,17 +1750,12 @@ internal class JsTranslator(
                         else -> jsNames.jsNameNotThis(name)
                     }.let { Js.Identifier(pos, it, d.name.name) },
                 ),
-                arguments = buildList {
-                    for ((tmpl, java) in d.parameters.parameters.zip(params)) {
-                        when {
-                            tmpl.optional -> {
-                                val defaultedName = defaulting.parameterMapping.getValue(tmpl.name.name)
-                                Js.Identifier(pos, jsNames.jsNameNotThis(defaultedName), tmpl.name.name)
-                            }
-                            else -> (java.pattern as? Js.Identifier)?.deepCopy()
-                        }?.also { add(it) }
-                    }
-                },
+                arguments = defaulting.buildConnectedArgs(
+                    fn = d,
+                    backendParams = params,
+                    tmplToArg = { pos, name -> Js.Identifier(pos, jsNames.jsNameNotThis(name), null) },
+                    backendToArg = { (it.pattern as? Js.Identifier)?.deepCopy() },
+                ),
             ).let { call ->
                 when {
                     d.returnType.isVoid -> Js.ExpressionStatement(pos, call)
