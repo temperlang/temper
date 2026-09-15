@@ -881,10 +881,11 @@ internal class CSharpTranslator(
                 ),
                 args = buildList {
                     for ((tmpl, csharp) in decl.parameters.parameters.zip(parameters)) {
-                        when {
-                            tmpl.optional -> translateName(pos, defaulting.parameterMapping.getValue(tmpl.name.name))
-                            else -> csharp.name.deepCopy()
-                        }.also { add(it) }
+                        val argName = when {
+                            tmpl.optional -> defaulting.parameterMapping[tmpl.name.name]?.let { translateName(pos, it) }
+                            else -> null
+                        } ?: csharp.name.deepCopy()
+                        add(argName)
                     }
                 },
             ).also { call ->
