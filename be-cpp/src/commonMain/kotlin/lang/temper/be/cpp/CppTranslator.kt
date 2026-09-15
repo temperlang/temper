@@ -2980,11 +2980,11 @@ class CppTranslator(
                 expr = cpp.name(cpp.name("_connected"), cpp.name(fn.name)),
                 args = buildList {
                     for ((tmpl, cppName) in fn.parameters.parameters.zip(paramNames)) {
-                        when {
-                            tmpl.optional ->
-                                cpp.name(defaulting.parameterMapping.getValue(tmpl.name.name))
-                            else -> cppName
-                        }.also { add(it) }
+                        val argName = when {
+                            tmpl.optional -> defaulting.parameterMapping[tmpl.name.name]?.let { cpp.name(it) }
+                            else -> null
+                        } ?: cppName
+                        add(argName)
                     }
                 },
             ).let { call ->
