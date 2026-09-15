@@ -54,7 +54,6 @@ import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
 import lang.temper.type.FunctionType
 import lang.temper.type.GetMemberAccessor
-import lang.temper.type.InfiniBinding
 import lang.temper.type.InvalidType
 import lang.temper.type.NominalType
 import lang.temper.type.OperatorMember
@@ -1714,9 +1713,6 @@ internal class PseudoType(override val pos: Position, val type: TypeActual) : Ps
                 Operator.Amp,
                 t.members.mapOpTreeJoining(OutToks.amp) { reduceTypeActual(pos, it) },
             )
-            is InfiniBinding ->
-                // TODO maybe scan first so we can refer back to rendered chunk?
-                Tok(pos, OutputToken("∞", OutputTokenType.Punctuation))
         }
     }
 }

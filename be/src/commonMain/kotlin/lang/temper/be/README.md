@@ -33,6 +33,7 @@ The set of *\@connected* methods from Temper's *CoreModule* are:
 - `core.empty()`
 - `core.getConsole()`
 - `core.ignore()`
+- `core.type Boolean.eq()`
 - `core.type Boolean.toString()`
 - `core.type Console.log()`
 - `core.type DenseBitVector.constructor()`
@@ -44,6 +45,7 @@ The set of *\@connected* methods from Temper's *CoreModule* are:
 - `core.type Deque.removeFirst()`
 - `core.type DoneResult`
 - `core.type Empty`
+- `core.type Empty.eq()`
 - `core.type Float64.abs()`
 - `core.type Float64.acos()`
 - `core.type Float64.asin()`
@@ -53,6 +55,7 @@ The set of *\@connected* methods from Temper's *CoreModule* are:
 - `core.type Float64.cos()`
 - `core.type Float64.cosh()`
 - `core.type Float64.e`
+- `core.type Float64.eq()`
 - `core.type Float64.exp()`
 - `core.type Float64.expm1()`
 - `core.type Float64.floor()`
@@ -83,6 +86,8 @@ The set of *\@connected* methods from Temper's *CoreModule* are:
 - `core.type Generator.next()`
 - `core.type GeneratorResult`
 - `core.type GlobalConsole.globalLog()`
+- `core.type Int32.eq()`
+- `core.type Int32.get signum()`
 - `core.type Int32.max()`
 - `core.type Int32.min()`
 - `core.type Int32.pred()`
@@ -90,6 +95,7 @@ The set of *\@connected* methods from Temper's *CoreModule* are:
 - `core.type Int32.toFloat64()`
 - `core.type Int32.toInt64()`
 - `core.type Int32.toString()`
+- `core.type Int64.eq()`
 - `core.type Int64.max()`
 - `core.type Int64.min()`
 - `core.type Int64.pred()`
@@ -160,6 +166,7 @@ The set of *\@connected* methods from Temper's *CoreModule* are:
 - `core.type SafeGenerator.nextSafe()`
 - `core.type String.begin`
 - `core.type String.countBetween()`
+- `core.type String.eq()`
 - `core.type String.forEach()`
 - `core.type String.fromCodePoint()`
 - `core.type String.fromCodePoints()`
@@ -190,6 +197,7 @@ The set of *\@connected* methods from Temper's *CoreModule* are:
 - `core.type StringIndex.none`
 - `core.type StringIndexOption`
 - `core.type StringIndexOption.compareTo()`
+- `core.type StringIndexOption.eq()`
 - `core.type ValueResult`
 - `core.type ValueResult.constructor()`
 <!-- end CoreModule-connected -->

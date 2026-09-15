@@ -117,7 +117,6 @@ object WellKnownTypes {
     val consoleType2: DefinedNonNullType
     val emptyType: NominalType
     val emptyType2: DefinedNonNullType
-    val equatableType: NominalType
     val float64Type: NominalType
     val float64Type2: DefinedNonNullType
     val functionType: NominalType
@@ -126,8 +125,6 @@ object WellKnownTypes {
     val int64Type: NominalType
     val int64Type2: DefinedNonNullType
     val invalidType2: DefinedNonNullType
-    val mapKeyType: NominalType
-    val mapKeyType2: DefinedNonNullType
     val problemType: NominalType
     val problemType2: DefinedNonNullType
     val promiseBuilderType: NominalType
@@ -189,7 +186,11 @@ object WellKnownTypes {
         anyValueType2 = MkType2(anyValueTypeDefinition).get() as DefinedNonNullType
         superType = anyValueType
 
-        fun TypeShape.addTypeParameter(text: String = "T", variance: Variance = Variance.Invariant) {
+        fun TypeShape.addTypeParameter(
+            text: String = "T",
+            variance: Variance = Variance.Invariant,
+            upperBounds: List<NominalType> = listOf(MkType.nominal(anyValueTypeDefinition)),
+        ) {
             (this as MutableTypeShape).typeParameters.add(
                 TypeParameterShape(
                     this,
@@ -199,7 +200,7 @@ object WellKnownTypes {
                         Symbol(text),
                         variance,
                         mutationCounter,
-                        listOf(MkType.nominal(anyValueTypeDefinition)),
+                        upperBounds,
                     ),
                     Symbol(text),
                     null,
@@ -218,6 +219,7 @@ object WellKnownTypes {
         doneResultTypeDefinition.addTypeParameter("YIELD", variance = Variance.Covariant)
         emptyTypeDefinition = wellKnownTypeShape(BuiltinName("Empty"), Concrete)
         equatableTypeDefinition = wellKnownTypeShape(BuiltinName("Equatable"), Abstract)
+        equatableTypeDefinition.addTypeParameter("EQ", variance = Variance.Invariant)
         float64TypeDefinition = wellKnownTypeShape(TFloat64.name, Concrete)
         functionTypeDefinition = wellKnownTypeShape(TFunction.name, Abstract)
         generatorTypeDefinition = wellKnownTypeShape(BuiltinName("Generator"), Abstract)
@@ -238,13 +240,13 @@ object WellKnownTypes {
         listBuilderTypeDefinition = wellKnownTypeShape(TListBuilder.name, Concrete)
         listBuilderTypeDefinition.addTypeParameter()
         mapTypeDefinition = wellKnownTypeShape(BuiltinName("Map"), Concrete)
-        mapTypeDefinition.addTypeParameter(text = "K", variance = Variance.Contravariant)
+        mapTypeDefinition.addTypeParameter(text = "K", variance = Variance.Contravariant, upperBounds = listOf())
         mapTypeDefinition.addTypeParameter(text = "V", variance = Variance.Covariant)
         mappedTypeDefinition = wellKnownTypeShape(BuiltinName("Mapped"), Abstract)
-        mappedTypeDefinition.addTypeParameter(text = "K", variance = Variance.Contravariant)
+        mappedTypeDefinition.addTypeParameter(text = "K", variance = Variance.Contravariant, upperBounds = listOf())
         mappedTypeDefinition.addTypeParameter(text = "V", variance = Variance.Invariant)
         mapBuilderTypeDefinition = wellKnownTypeShape(BuiltinName("MapBuilder"), Concrete)
-        mapBuilderTypeDefinition.addTypeParameter(text = "K")
+        mapBuilderTypeDefinition.addTypeParameter(text = "K", upperBounds = listOf())
         mapBuilderTypeDefinition.addTypeParameter(text = "V")
         neverTypeDefinition = wellKnownTypeShape(BuiltinName("Never"), Abstract)
         // Never has `out` variance because it is a sensible return type but not a sensible input type.
@@ -273,6 +275,7 @@ object WellKnownTypes {
         pairTypeDefinition.addTypeParameter(text = "K", variance = Variance.Covariant)
         pairTypeDefinition.addTypeParameter(text = "V", variance = Variance.Covariant)
         mapKeyTypeDefinition = wellKnownTypeShape(BuiltinName("MapKey"), Abstract)
+        mapKeyTypeDefinition.addTypeParameter("EQ", variance = Variance.Invariant)
         promiseTypeDefinition = wellKnownTypeShape(BuiltinName("Promise"), Concrete)
         promiseTypeDefinition.addTypeParameter(text = "R", variance = Variance.Covariant)
         promiseBuilderTypeDefinition = wellKnownTypeShape(BuiltinName("PromiseBuilder"), Concrete)
@@ -296,7 +299,7 @@ object WellKnownTypes {
         symbolTypeDefinition = wellKnownTypeShape(TSymbol.name, Concrete)
         typeTypeDefinition = wellKnownTypeShape(TType.name, Concrete)
         voidTypeDefinition = wellKnownTypeShape(TVoid.name, Concrete, anyValueSuper = false)
-        // Adding entries here warrant adding an entry to TmpLTranslators
+        // Adding entries here warrants adding an entry to TmpLTranslators
         // definition -> type tag map.
 
         this.byName = byName.toMap()
@@ -308,7 +311,6 @@ object WellKnownTypes {
         consoleType2 = MkType2(consoleTypeDefinition).get() as DefinedNonNullType
         emptyType = MkType.nominal(emptyTypeDefinition)
         emptyType2 = MkType2(emptyTypeDefinition).get() as DefinedNonNullType
-        equatableType = MkType.nominal(equatableTypeDefinition)
         float64Type = MkType.nominal(float64TypeDefinition)
         float64Type2 = MkType2(float64TypeDefinition).get() as DefinedNonNullType
         functionType = MkType.nominal(functionTypeDefinition)
@@ -317,8 +319,6 @@ object WellKnownTypes {
         int64Type = MkType.nominal(int64TypeDefinition)
         int64Type2 = MkType2(int64TypeDefinition).get() as DefinedNonNullType
         invalidType2 = MkType2(invalidTypeDefinition).get() as DefinedNonNullType
-        mapKeyType = MkType.nominal(mapKeyTypeDefinition)
-        mapKeyType2 = MkType2(mapKeyTypeDefinition).get() as DefinedNonNullType
         problemType = MkType.nominal(problemTypeDefinition)
         problemType2 = MkType2(problemTypeDefinition).get() as DefinedNonNullType
         promiseBuilderType = MkType.nominal(
@@ -334,21 +334,26 @@ object WellKnownTypes {
         voidType = MkType.nominal(voidTypeDefinition)
         voidType2 = MkType2(voidTypeDefinition).get() as DefinedNonNullType
 
-        booleanTypeDefinition extends equatableType
+        booleanTypeDefinition extends
+            MkType.nominal(equatableTypeDefinition, listOf(booleanType))
         doneResultTypeDefinition extends MkType.nominal(
             generatorResultTypeDefinition,
             listOf(MkType.nominal(doneResultTypeDefinition.formals.first())),
         )
-        emptyTypeDefinition extends equatableType
-        float64TypeDefinition extends equatableType
+        emptyTypeDefinition extends
+            MkType.nominal(equatableTypeDefinition, listOf(emptyType))
+        float64TypeDefinition extends
+            MkType.nominal(equatableTypeDefinition, listOf(float64Type))
         generatorFnTypeDefinition extends functionType
         generatorFnWrapperTypeDefinition.let {
             val tYield = MkType.nominal(it.formals[0])
             it extends MkType.nominal(generatorTypeDefinition, listOf(tYield))
         }
         globalConsoleTypeDefinition extends MkType.nominal(consoleTypeDefinition)
-        intTypeDefinition extends mapKeyType
-        int64TypeDefinition extends equatableType
+        intTypeDefinition extends
+            MkType.nominal(mapKeyTypeDefinition, listOf(intType))
+        int64TypeDefinition extends
+            MkType.nominal(equatableTypeDefinition, listOf(int64Type))
         listTypeDefinition extends MkType.nominal(
             listedTypeDefinition,
             listOf(MkType.nominal(listTypeDefinition.formals[0])),
@@ -357,24 +362,25 @@ object WellKnownTypes {
             listedTypeDefinition,
             listOf(MkType.nominal(listBuilderTypeDefinition.formals[0])),
         )
-        mapTypeDefinition extends MkType.nominal(
-            mappedTypeDefinition,
-            mapTypeDefinition.typeParameters.map {
-                MkType.nominal(it.definition)
-            },
-        )
-        mapTypeDefinition.formals[0] extends mapKeyType
-        mappedTypeDefinition.formals[0] extends mapKeyType
-        mapBuilderTypeDefinition extends MkType.nominal(
-            mappedTypeDefinition,
-            mapBuilderTypeDefinition.typeParameters.map {
-                MkType.nominal(it.definition)
-            },
-        )
-        mapBuilderTypeDefinition.formals[0] extends mapKeyType
-        mapKeyTypeDefinition extends equatableType
+        // KEY extends MapKey<KEY>,
+        // MappedSubClass<K, V> extends Mapped<K, V>
+        for (mt in listOf(mapTypeDefinition, mappedTypeDefinition, mapBuilderTypeDefinition)) {
+            mt.formals[0] extends
+                MkType.nominal(mapKeyTypeDefinition, listOf(MkType.nominal(mt.formals[0])))
+            if (mt != mappedTypeDefinition) {
+                mt extends MkType.nominal(
+                    mappedTypeDefinition,
+                    mt.typeParameters.map {
+                        MkType.nominal(it.definition)
+                    },
+                )
+            }
+        }
+        mapKeyTypeDefinition extends
+            MkType.nominal(equatableTypeDefinition, listOf(MkType.nominal(mapKeyTypeDefinition.formals[0])))
         noStringIndexTypeDefinition extends stringIndexOptionType
-        nullTypeDefinition extends equatableType
+        nullTypeDefinition extends
+            MkType.nominal(equatableTypeDefinition, listOf(MkType.nominal(nullTypeDefinition)))
         safeGeneratorTypeDefinition extends MkType.nominal(
             generatorTypeDefinition,
             listOf(MkType.nominal(safeGeneratorTypeDefinition.formals.first())),
@@ -383,9 +389,11 @@ object WellKnownTypes {
             val tYield = MkType.nominal(it.formals[0])
             it extends MkType.nominal(safeGeneratorTypeDefinition, listOf(tYield))
         }
-        stringTypeDefinition extends mapKeyType
+        stringTypeDefinition extends
+            MkType.nominal(mapKeyTypeDefinition, listOf(stringType))
         stringIndexTypeDefinition extends stringIndexOptionType
-        stringIndexOptionTypeDefinition extends equatableType
+        stringIndexOptionTypeDefinition extends
+            MkType.nominal(equatableTypeDefinition, listOf(stringIndexOptionType))
         valueResultTypeDefinition extends MkType.nominal(
             generatorResultTypeDefinition,
             listOf(MkType.nominal(valueResultTypeDefinition.formals.first())),

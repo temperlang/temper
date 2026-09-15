@@ -439,7 +439,6 @@ internal class TypeChecker(
                     override fun mapBinding(b: TypeActual): TypeActual = b
                     override fun mapDefinition(d: TypeDefinition) = d
                 },
-                mutableMapOf(),
             )
 
         fun checkAgainstCalleeType(calleeType: StaticType) {

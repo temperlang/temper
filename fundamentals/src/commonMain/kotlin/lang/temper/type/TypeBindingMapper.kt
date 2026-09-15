@@ -26,4 +26,6 @@ class TypeBindingMapper(private val formalNameToActual: Map<ResolvedName, TypeAc
         }
 
     override fun mapDefinition(d: TypeDefinition) = d
+
+    override fun toString(): String = "TypeBindingMapper($formalNameToActual)"
 }

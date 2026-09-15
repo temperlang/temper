@@ -24,7 +24,7 @@ import lang.temper.value.connectedSymbol
 import lang.temper.value.parameterNameSymbols
 
 internal class TypeDeclChecker(val module: Module, val logSink: LogSink) {
-    private val abstractMethodCache = mutableMapOf<TypeShape, List<MethodDescriptor>>()
+    private val abstractMethodCache = mutableMapOf<TypeShape, List<MethodInfo>>()
 
     fun checkDeclaredTypeShapes() {
         for (typeShape in module.declaredTypeShapes) {
@@ -55,25 +55,55 @@ internal class TypeDeclChecker(val module: Module, val logSink: LogSink) {
     private fun checkAllMethodsOverridden(typeShape: TypeShape, superTypeShapes: Set<TypeShape>) {
         val isProcessingCore = module.isEffectivelyCore
         val isStd = module.isEffectivelyStd
-        val allAbstractMethodDescriptors = mutableListOf<MethodDescriptor>()
-        for (strictSuperTypeShape in superTypeShapes) {
-            val abstractMethods = abstractMethodCache.getOrPut(strictSuperTypeShape) {
-                strictSuperTypeShape.methods.mapNotNull { m ->
-                    if (isProcessingCore && connectedSymbol in m.metadata) {
-                        null // Some Core methods have no body because they must connect.
-                    } else if (isStd && m.visibility == Visibility.Private && connectedSymbol in m.metadata) {
-                        null // std has some required connections too which are sneakily hidden away
-                    } else if (m.methodKind != MethodKind.Constructor && m.isPureVirtual) {
-                        MethodDescriptor(m.symbol, m.methodKind, m)
-                    } else {
-                        null
+        val allMethodInfos = mutableListOf<MethodInfo>()
+        for (superTypeShape in superTypeShapes) {
+            val typeShapeDepth = superTypeShape.inheritanceDepth
+            val methodInfos = abstractMethodCache.getOrPut(superTypeShape) {
+                superTypeShape.methods.map { m ->
+                    val hasImplementation = when {
+                        // Some Core methods have no body because they must connect.
+                        isProcessingCore && connectedSymbol in m.metadata -> true
+                        // std has some required connections too which are sneakily hidden away
+                        isStd && m.visibility == Visibility.Private && connectedSymbol in m.metadata -> true
+                        m.methodKind != MethodKind.Constructor && m.isPureVirtual -> false
+                        else -> true
                     }
+                    MethodInfo(
+                        methodShape = m,
+                        hasImplementation = hasImplementation,
+                        depth = typeShapeDepth,
+                    )
                 }
             }
-            allAbstractMethodDescriptors.addAll(abstractMethods)
+            allMethodInfos.addAll(methodInfos)
         }
 
-        val needed = allAbstractMethodDescriptors.filter { abstractMember ->
+        val abstractMethodDescriptors = buildList {
+            val groupedByWord = allMethodInfos.groupBy { it.methodShape.symbol }
+            // Here, we're treating any descriptor at a deeper depth as potentially implementing
+            // a method from a shallower depth.
+            // TODO: should we only filter out based on masking?  Do we have that info available?
+            for ((word, methodInfos) in groupedByWord) {
+                var maxDepth: MethodInfo? = null
+                for (methodInfo in methodInfos) {
+                    if (
+                        maxDepth == null || maxDepth.depth < methodInfo.depth ||
+                        maxDepth.depth == methodInfo.depth && methodInfo.hasImplementation
+                    ) {
+                        maxDepth = methodInfo
+                    }
+                }
+                check(maxDepth != null) // no empty lists from groupBy
+                if (!maxDepth.hasImplementation) {
+                    val methodShape = maxDepth.methodShape
+                    add(
+                        MethodDescriptor(word, methodShape.methodKind, methodShape),
+                    )
+                }
+            }
+        }
+
+        val needed = abstractMethodDescriptors.filter { abstractMember ->
             val word = abstractMember.word
             val kind = abstractMember.methodKind
             superTypeShapes.none { superTypeShape ->
@@ -212,6 +242,12 @@ internal class TypeDeclChecker(val module: Module, val logSink: LogSink) {
         append(sig.returnType2)
     }
 }
+
+private class MethodInfo(
+    val methodShape: MethodShape,
+    val hasImplementation: Boolean,
+    val depth: Int,
+)
 
 private class MethodDescriptor(
     val word: Symbol,

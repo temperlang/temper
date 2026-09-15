@@ -68,6 +68,11 @@ class InterpreterFunctionalTests : FunctionalTestSuiteI {
         super.algosHelloWorld()
     }
 
+    @Test
+    override fun typesMap() {
+        super.typesMap()
+    }
+
     override fun runFunctionalTest(
         test: FunctionalTestBase,
         verbose: Boolean,
