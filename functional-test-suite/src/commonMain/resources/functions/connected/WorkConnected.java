@@ -8,4 +8,8 @@ class WorkConnected {
     static int prod(Hidden hidden, int j) {
         return new Support().prod(hidden.i, j);
     }
+
+    public static int length(String s) {
+        return s == null ? -1 : s.length();
+    }
 }

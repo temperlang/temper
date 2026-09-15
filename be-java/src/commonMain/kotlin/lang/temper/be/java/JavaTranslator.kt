@@ -476,17 +476,14 @@ class JavaTranslator(
                     pos,
                     type = J.QualIdentifier(pos, listOf(J.Identifier(pos, moduleInfo.connectedClassName))),
                     method = names.method(fn.name),
-                    args = buildList {
-                        for ((tmpl, java) in fn.parameters.parameters.zip(parameters(fn.parameters).parameters)) {
-                            when {
-                                tmpl.optional -> {
-                                    val name = defaulting.parameterMapping.getValue(tmpl.name.name)
-                                    names.lookupRegularLocalNameObj(name).asIdentifier(tmpl.pos)
-                                }
-                                else -> java.name
-                            }.also { add(it.asNameExpr().asArgument()) }
-                        }
-                    },
+                    args = defaulting.buildConnectedArgs(
+                        fn = fn,
+                        backendParams = parameters(fn.parameters).parameters,
+                        tmplToArg = { pos, name ->
+                            names.lookupRegularLocalNameObj(name).asIdentifier(pos).asNameExpr().asArgument()
+                        },
+                        backendToArg = { it.name.asNameExpr().asArgument() },
+                    ),
                 ).let { call ->
                     adjuster?.adjustConnectedCall(fn, call as J.ExpressionStatementExpr) ?: call
                 }.exprOrReturnStatement(shouldReturn = result !is J.VoidType).also { add(it) }

@@ -704,6 +704,7 @@ class PyBackendTest {
             |      export let inc(i: Int): Int {
             |          sum(i, 1)
             |      }
+            |
             |      @connected
             |      export let length(s: String? = null): Int;
             |      ```,
