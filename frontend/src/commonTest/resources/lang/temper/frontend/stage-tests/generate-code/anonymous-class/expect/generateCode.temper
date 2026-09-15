@@ -1,0 +1,21 @@
+@fn @visibility(\public) @stay @fromType(Anon__0) @reach(\none) let constructor__12;
+constructor__12 = (@stay fn constructor(@impliedThis(Anon__0) this__6: Anon__0) /* return__7 */: Void {
+    return__7 = void
+});
+@typeDecl(Anon__0) @stay @reach(\none) @reach(\none) let t#1;
+t#1 = type (Anon__0);
+@fn @visibility(\public) @stay @fromType(Anon__2) let constructor__13;
+constructor__13 = (@stay fn constructor(@impliedThis(Anon__2) this__8: Anon__2) /* return__9 */: Void {
+    return__9 = void
+});
+@typeDecl(Anon__2) @stay @reach(\none) let t#3;
+t#3 = type (Anon__2);
+let[inconceivable];
+@fn @visibility(\public) @stay @fromType(Anon__4) let constructor__14;
+constructor__14 = (@stay fn constructor(@impliedThis(Anon__4) this__10: Anon__4) /* return__11 */: Void {
+    return__11 = void
+});
+@typeDecl(Anon__4) @stay @reach(\none) let t#5;
+t#5 = type (Anon__4);
+let[inconceivable];
+error (list("@", "`(Leaf`", "export", "`Leaf)`", "`(Eq`", "`(Leaf`", "let", "decoratedInside", "`Leaf)`", "=", "`Eq)`", "`(At`", "@", "`(Leaf`", "imu", "`Leaf)`", "`(Curly`", "`(Leaf`", "class", "`Leaf)`", "{", "}", "`Curly)`", "`At)`"))
