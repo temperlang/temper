@@ -231,7 +231,24 @@ fun <T> TmpL.CallExpression.mapParameters(
 data class DefaultStatementsInfo(
     val defaultStatements: List<TmpL.Statement>,
     val parameterMapping: Map<ResolvedName, ResolvedName>,
-)
+) {
+    inline fun <BACKEND_PARAM, ARG> buildConnectedArgs(
+        fn: TmpL.FunctionDeclaration,
+        backendParams: List<BACKEND_PARAM>,
+        tmplToArg: (Position, ResolvedName) -> ARG,
+        backendToArg: (BACKEND_PARAM) -> ARG?,
+    ): List<ARG> {
+        return buildList {
+            for ((tmpl, backend) in fn.parameters.parameters.zip(backendParams)) {
+                val arg = when {
+                    tmpl.optional -> parameterMapping[tmpl.name.name]?.let { tmplToArg(tmpl.pos, it) }
+                    else -> null
+                } ?: backendToArg(backend)
+                arg?.also { add(it) }
+            }
+        }
+    }
+}
 
 /**
  * Return just the statements needed to provide defaults to optional parameters,
