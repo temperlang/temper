@@ -1150,13 +1150,13 @@ class PyTranslator(
                 name = pyNames.choosePrettyName(func.name.name as ResolvedParsedName, TmpL.IdKind.Value),
                 args = buildList {
                     for ((tmpl, py) in func.parameters.parameters.zip(args.args)) {
-                        when {
-                            tmpl.optional -> name(
-                                pos = tmpl.pos,
-                                name = defaulting.parameterMapping.getValue(tmpl.name.name),
-                            )
-                            else -> py.arg?.asName() // where null might be `/`, so unexpected here
-                        }?.also { add(it) }
+                        val argName = when {
+                            tmpl.optional -> defaulting.parameterMapping[tmpl.name.name]?.let { defaulted ->
+                                name(pos = tmpl.pos, name = defaulted)
+                            }
+                            else -> null
+                        } ?: py.arg?.asName() // where null might be `/`, so unexpected here
+                        argName?.also { add(it) }
                     }
                 },
                 // And in Python, void as None is always returnable, so just always return here.

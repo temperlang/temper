@@ -6,3 +6,6 @@ class _connected:
 
     def prod(hidden: "_Hidden", j: int) -> int:
         return _connected.Support().prod(hidden.i, j)
+
+    def length(string: str | None) -> int:
+        return -1 if string is None else len(string)
