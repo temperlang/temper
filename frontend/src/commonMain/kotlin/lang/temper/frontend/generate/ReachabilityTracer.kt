@@ -20,6 +20,8 @@ import lang.temper.value.ValueLeaf
 import lang.temper.value.fromTypeSymbol
 import lang.temper.value.functionContained
 import lang.temper.value.importedSymbol
+import lang.temper.value.keepSymbol
+import lang.temper.value.keepTestSymbol
 import lang.temper.value.returnParsedName
 import lang.temper.value.testSymbol
 import lang.temper.value.typeDefContained
@@ -185,13 +187,13 @@ internal class ReachabilityTracer {
             // Various mutually exclusive things we care about.
             when {
                 tree is DeclTree -> {
+                    val metadata = tree.parts?.metadataSymbolMap ?: return@tree VisitCue.SkipOne
                     try {
-                        val metadataSymbolMap = tree.parts?.metadataSymbolMap ?: return@tree VisitCue.SkipOne
-                        if (varSymbol in metadataSymbolMap) {
+                        if (varSymbol in metadata) {
                             vars.add(name)
                         }
                         when {
-                            metadataSymbolMap.containsKey(testSymbol) -> {
+                            metadata.containsKey(testSymbol) -> {
                                 added = true
                                 tests.add(tree)
                                 // Track so we can also find the definitions.
@@ -199,18 +201,25 @@ internal class ReachabilityTracer {
                             }
 
                             else -> {
-                                metadataSymbolMap[importedSymbol]?.let { imported ->
+                                metadata[importedSymbol]?.let { imported ->
                                     (imported.target.childOrNull(0) as? RightNameLeaf)?.let { leaf ->
                                         importedNames[leaf.content] = name
                                     }
                                     return@tree VisitCue.SkipOne
                                 }
-                                val relatedType = metadataSymbolMap[fromTypeSymbol]?.target
-                                    ?: metadataSymbolMap[typePlaceholderSymbol]?.target ?: return@tree VisitCue.SkipOne
+                                val relatedType = metadata[fromTypeSymbol]?.target
+                                    ?: metadata[typePlaceholderSymbol]?.target ?: return@tree VisitCue.SkipOne
                                 val relatedTypeName = relatedType.typeNameContained() ?: return@tree VisitCue.SkipOne
+                                val (typeKept, typeTestKept) =
+                                    when (val typeDecl = relatedType.typeDefContained()?.stayLeaf?.incoming?.source) {
+                                        is DeclTree -> typeDecl.parts?.metadataSymbolMap?.let { typeMetadata ->
+                                            (keepSymbol in typeMetadata) to (keepTestSymbol in typeMetadata)
+                                        }
+                                        else -> null
+                                    } ?: (false to false)
                                 // TODO Skip if private for `fromType`?
                                 when {
-                                    relatedTypeName is ExportedName -> {
+                                    relatedTypeName is ExportedName || typeKept -> {
                                         // If it's from a type, the name isn't exported, but it's still an export root.
                                         added = true
                                         exports.add(tree)
@@ -219,6 +228,10 @@ internal class ReachabilityTracer {
                                     }
 
                                     !added -> {
+                                        if (typeTestKept) {
+                                            tests.add(tree)
+                                            testNames.add(name)
+                                        }
                                         // Associate this decl with the type name.
                                         defs.getOrPut(relatedTypeName) { mutableListOf() }.add(tree)
                                     }
@@ -227,8 +240,12 @@ internal class ReachabilityTracer {
                         }
                     } finally {
                         if (!added) {
-                            // Not a root, so we need to evaluate later.
-                            unreachedMap[name] = tree
+                            when {
+                                keepSymbol in metadata -> exportNames.add(name)
+                                keepTestSymbol in metadata -> testNames.add(name)
+                                // Not a root, so we need to evaluate later.
+                                else -> unreachedMap[name] = tree
+                            }
                         }
                     }
                 }
