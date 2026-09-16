@@ -879,14 +879,12 @@ internal class CSharpTranslator(
                     expr = connectedClassName.toIdentifier(pos) as CSharp.PrimaryExpression,
                     id = translateId(decl.name, style = NameStyle.PrettyPascal),
                 ),
-                args = buildList {
-                    for ((tmpl, csharp) in decl.parameters.parameters.zip(parameters)) {
-                        when {
-                            tmpl.optional -> translateName(pos, defaulting.parameterMapping.getValue(tmpl.name.name))
-                            else -> csharp.name.deepCopy()
-                        }.also { add(it) }
-                    }
-                },
+                args = defaulting.buildConnectedArgs(
+                    fn = decl,
+                    backendParams = parameters,
+                    tmplToArg = { pos, name -> translateName(pos, name) },
+                    backendToArg = { it.name.deepCopy() },
+                ),
             ).also { call ->
                 when {
                     decl.returnType.isVoidish() -> CSharp.ExpressionStatement(pos, call)

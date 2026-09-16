@@ -2103,6 +2103,9 @@ class JavaBackendTest {
                 |      export let inc(i: Int): Int {
                 |          sum(i, 1)
                 |      }
+                |
+                |      @connected
+                |      export let length(s: String? = null): Int;
                 |      ```,
                 |    SubConnected.java: ```
                 |      package my_test_library.sub;
@@ -2153,6 +2156,12 @@ class JavaBackendTest {
             |                }
             |                public static int inc(int i__1) {
             |                    return SubGlobal.sum(i__1, 1);
+            |                }
+            |                public static int length(@Nullable String s__0) {
+            |                    return SubConnected.length(s__0);
+            |                }
+            |                public static int length() {
+            |                    return length(null);
             |                }
             |            }
             |

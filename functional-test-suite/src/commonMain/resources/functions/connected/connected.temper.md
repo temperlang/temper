@@ -28,15 +28,28 @@ connected code needs to have access to.
 
     /* unexported */ class Hidden(public i: Int) {}
 
-A simple test will do. And this can't be inlined by Temper, since Temper the
-Temper implementation can only panic.
+Also try a function with a nullable default parameter that defaults to null. Our
+implementations of `length` for this test are sloppy, so only pass in ASCII.
 
-    console.log("sum(1, 2): ${sum(1, 2)}")
-    console.log("prod(new Hidden(1), 2): ${prod(new Hidden(1), 2)}")
+    @connected
+    export let length(string: String? = null): Int;
+
+A simple test will do. And this can't be inlined by Temper, since the Temper
+implementation can only panic.
+
+TODO How to test interpreter fallback? Different `log` blocks for interp?
+
+    console.log("sum(1, 2): ${sum(1, 2)}");
+    console.log("prod(new Hidden(1), 2): ${prod(new Hidden(1), 2)}");
+    console.log("""
+      ~length "" vs null vs ():
+      ~ ${length("")} vs ${length(null)} vs ${length()}
+    );
 
 ```log
 sum(1, 2): 3
 prod(new Hidden(1), 2): 2
+length "" vs null vs (): 0 vs -1 vs -1
 ```
 
 ## Instance methods

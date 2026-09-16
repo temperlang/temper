@@ -200,6 +200,9 @@ class RustBackendTest {
                 |      export let inc(i: Int): Int {
                 |          sum(i, 1)
                 |      }
+                |
+                |      @connected
+                |      export let length(s: String? = null): Int;
                 |      ```,
                 |    _connected.rs: ```
                 |## This submodule declaration in connected code is why we make a subdir later.
@@ -251,6 +254,10 @@ class RustBackendTest {
             |              }
             |              pub fn inc(i__1: i32) -> i32 {
             |                  return sum(i__1, 1, None);
+            |              }
+            |              pub fn length(s__0: Option<impl temper_core::ToArcString>) -> i32 {
+            |## It might be nice to stringify all semi-string before calling connected functions.
+            |                  _connected::length(s__0)
             |              }
             |
             |              ```

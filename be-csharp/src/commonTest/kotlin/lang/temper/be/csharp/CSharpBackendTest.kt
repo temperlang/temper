@@ -1551,6 +1551,9 @@ class CSharpBackendTest {
                     |export let inc(i: Int): Int {
                     |    sum(i, 1)
                     |}
+                    |
+                    |@connected
+                    |export let length(s: String? = null): Int;
                 """.trimMargin(),
                 filePath("test", "IgnoreMe.txt") to """
                     |Hi there!!!
@@ -1578,6 +1581,10 @@ class CSharpBackendTest {
                     |    public static int Inc(int i__1)
                     |    {
                     |        return Sum(i__1, 1);
+                    |    }
+                    |    public static int Length(string ? s = null)
+                    |    {
+                    |        return TestConnected.Length(s);
                     |    }
                     |}
                     """.trimMargin(),
