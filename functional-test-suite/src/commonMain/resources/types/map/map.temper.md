@@ -2,7 +2,7 @@
 
 Here we test the `Map` type as well as related types `Mapped`, `MapBuilder`, and
 `Pair`. These are similar to `Listed`, `ListBuilder`, and `ListEntry`. We
-also have marker interface `MapKey`, which might allow for custom key types in
+also have interface `MapKey`, which might allow for custom key types in
 the future but for now just marks `Int` and `String` as usable keys.
 
 
