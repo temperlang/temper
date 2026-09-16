@@ -657,6 +657,11 @@ class GenerateCodeStageTest {
     fun anonymousClass() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/anonymous-class"),
     )
+
+    @Test
+    fun reachability() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/reachability"),
+    )
 }
 
 // Provide an extra binding to a function whose call does not inline so does not trigger any

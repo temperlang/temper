@@ -1,0 +1,22 @@
+@fn let `test//`.exported, @fn @keep @reach(\none) kept__7, @fn @keepTest @reach(\none) testKept__8, @fn @reach(\none) usedByExported__9, @fn @reach(\none) usedByKept__10, @fn @reach(\none) usedByTestKept__11, @fn @reach(\none) usedByNothing__12;
+usedByExported__9 = (@stay fn usedByExported /* return__3 */: Void {
+    return__3 = void
+});
+`test//`.exported = (@stay fn exported /* return__0 */: Void {
+    return__0 = void
+});
+usedByKept__10 = (@stay fn usedByKept /* return__4 */: Void {
+    return__4 = void
+});
+kept__7 = (@stay fn kept /* return__1 */: Void {
+    return__1 = void
+});
+usedByTestKept__11 = (@stay fn usedByTestKept /* return__5 */: Void {
+    return__5 = void
+});
+testKept__8 = (@stay fn testKept /* return__2 */: Void {
+    return__2 = void
+});
+usedByNothing__12 = (@stay fn usedByNothing /* return__6 */: Void {
+    return__6 = void
+})

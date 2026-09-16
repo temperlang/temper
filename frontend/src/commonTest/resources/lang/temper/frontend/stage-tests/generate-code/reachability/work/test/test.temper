@@ -1,0 +1,18 @@
+export let exported(): Void {
+  usedByExported();
+}
+
+@keep
+let kept(): Void {
+  usedByKept();
+}
+
+@keepTest
+let testKept(): Void {
+  usedByTestKept();
+}
+
+let usedByExported(): Void {}
+let usedByKept(): Void {}
+let usedByTestKept(): Void {}
+let usedByNothing(): Void {}
