@@ -3584,6 +3584,26 @@ console.log(jsonOut.toJsonString());
 
 <!-- /snippet: builtin/@jsonName -->
 
+<!-- snippet: builtin/@keep -->
+
+<a name="builtin&#45;&#64;keep" class="snippet-anchor-name"></a>
+
+### `@keep` decorator
+Mark a non-exported item for being treated as reachable so it's kept in
+translations for backend connected code to access.
+See also [`@keepTest` decorator](#builtin-@keepTest).
+
+<!-- /snippet: builtin/@keep -->
+
+<!-- snippet: builtin/@keepTest -->
+
+<a name="builtin&#45;&#64;keepTest" class="snippet-anchor-name"></a>
+
+### `@keepTest` decorator
+Acts like [`@keep` decorator](#builtin-@keep) but for test reachability.
+
+<!-- /snippet: builtin/@keepTest -->
+
 <!-- snippet: builtin/@mayDowncastTo -->
 
 <a name="builtin&#45;&#64;mayDowncastTo" class="snippet-anchor-name"></a>
