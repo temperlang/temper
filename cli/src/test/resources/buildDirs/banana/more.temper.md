@@ -9,12 +9,32 @@
       2.0 * x
     }
 
+The following should be kept in translated code, even though unused.
+
+    @keep
+    let keepMeForProd(): Void {
+      console.log("I'm just here for checking in on.");
+    }
+
+And for contrast, the following should be pruned out in backends that prune.
+
+    let pruneMe(): Void {
+      console.log("I'm also here for checking in on.");
+    }
+
 # Test Code
 
     test("twice works") { test =>
       let something = new Something(2.0);
       halveValueIn(test, something);
       assert(twice(0.5) == something.value);
+    }
+
+The following should be kept in test code by backends, even though unused.
+
+    @keepTest
+    let keepMeForTest(): Void {
+      console.log("I'm yet another that's here for checking in on.");
     }
 
 This includes helper things that hopefully we can avoid inlining.

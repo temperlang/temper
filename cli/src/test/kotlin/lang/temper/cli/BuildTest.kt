@@ -368,6 +368,10 @@ class BuildTest {
             assertNotContains(text, "temper_std.testing")
             assertContains(text, "def twice")
             assertNotContains(text, "nobody_wants_me")
+            // Keep decoration and reachability tests. Prod should be here but not test.
+            assertContains(text, "keep_me_for_prod")
+            assertNotContains(text, "keep_me_for_test")
+            assertNotContains(text, "prune_me")
         }
         topDir.withTextOf("temper.out/py/banana/tests/test_banana.py") { text ->
             assertContains(text, "temper_std.testing")
@@ -375,6 +379,10 @@ class BuildTest {
             assertContains(text, "class _Something")
             assertContains(text, "def halve_value_in")
             assertNotContains(text, "nobody_wants_me")
+            // Keep decoration and reachability tests. Now test should be here but not prod.
+            assertNotContains(text, "keep_me_for_prod")
+            assertContains(text, "keep_me_for_test")
+            assertNotContains(text, "prune_me")
         }
     }
 

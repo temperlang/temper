@@ -1,77 +1,109 @@
-let console#47;
-console#47 = getConsole();
-@fn let `test//`.exportedFunction, @fn conditionallyExportReachable__20, @fn @reach(\test) transitivelyTestReachable__21, @fn exportAndTestReachable__22, @fn initReachable__23, @fn transitivelyInitReachable__24, @fn @reach(\none) unreachableFunction__25;
+let console#70;
+console#70 = getConsole();
+@fn let `test//`.exportedFunction, @fn conditionallyExportReachable__30, @fn @reach(\test) transitivelyTestReachable__31, @fn exportAndTestReachable__32, @fn initReachable__33, @fn transitivelyInitReachable__34, @fn @reach(\none) unreachableFunction__35;
 @typeDecl(ExportedClass) @stay let `test//`.ExportedClass;
 `test//`.ExportedClass = type (ExportedClass);
 @typeDecl(TestReachableClass__1) @stay @reach(\test) let TestReachableClass__1;
 TestReachableClass__1 = type (TestReachableClass__1);
-@fn @test("testCase") let testCase__26;
+@fn @test("testCase") let testCase__36;
 @typeDecl(UsedOnlyAsPropertyType__3) @stay let UsedOnlyAsPropertyType__3;
 UsedOnlyAsPropertyType__3 = type (UsedOnlyAsPropertyType__3);
-let `test//`.exportedInt;
+@fn let keepReachable__37, @fn @reach(\test) testKeepReachable__38, @fn @keep kept__39;
+@typeDecl(KeptClass__4) @stay @keep let KeptClass__4;
+KeptClass__4 = type (KeptClass__4);
+@fn @keepTest @reach(\test) let testKept__40, @fn @keepTest @reach(\test) testKeptAndTestCalled__41, `test//`.exportedInt;
 `test//`.exportedInt = 1;
-@reach(\none) let unreachableInt__27;
-unreachableInt__27 = 2;
-conditionallyExportReachable__20 = (@stay fn conditionallyExportReachable /* return__5 */: Void {
-    do_call_log(console#47, "");
-    return__5 = void
-});
-`test//`.exportedFunction = (@stay fn exportedFunction(b__28 /* aka b */: Boolean) /* return__4 */: Void {
-    if (b__28) {
-      conditionallyExportReachable__20();
-      return__4 = void
-    } else {
-      return__4 = void
-    }
-});
-transitivelyTestReachable__21 = (@stay fn transitivelyTestReachable /* return__6 */: Void {
-    do_call_log(console#47, "");
-    return__6 = void
-});
-exportAndTestReachable__22 = (@stay fn exportAndTestReachable /* return__7 */: Void {
-    do_call_log(console#47, "");
+@reach(\none) let unreachableInt__42;
+unreachableInt__42 = 2;
+conditionallyExportReachable__30 = (@stay fn conditionallyExportReachable /* return__7 */: Void {
+    do_call_log(console#70, "");
     return__7 = void
 });
-transitivelyInitReachable__24 = (@stay fn transitivelyInitReachable /* return__9 */: Void {
-    do_call_log(console#47, "");
-    return__9 = void
+`test//`.exportedFunction = (@stay fn exportedFunction(b__43 /* aka b */: Boolean) /* return__6 */: Void {
+    if (b__43) {
+      conditionallyExportReachable__30();
+      return__6 = void
+    } else {
+      return__6 = void
+    }
 });
-initReachable__23 = (@stay fn initReachable /* return__8 */: Void {
-    transitivelyInitReachable__24();
-    do_call_log(console#47, "");
+transitivelyTestReachable__31 = (@stay fn transitivelyTestReachable /* return__8 */: Void {
+    do_call_log(console#70, "");
     return__8 = void
 });
-unreachableFunction__25 = (@stay fn unreachableFunction /* return__10 */: Void {
-    do_call_log(console#47, "");
+exportAndTestReachable__32 = (@stay fn exportAndTestReachable /* return__9 */: Void {
+    do_call_log(console#70, "");
+    return__9 = void
+});
+transitivelyInitReachable__34 = (@stay fn transitivelyInitReachable /* return__11 */: Void {
+    do_call_log(console#70, "");
+    return__11 = void
+});
+initReachable__33 = (@stay fn initReachable /* return__10 */: Void {
+    transitivelyInitReachable__34();
+    do_call_log(console#70, "");
     return__10 = void
 });
-@fn @method(\constructor) @visibility(\public) @stay @fromType(UsedOnlyAsPropertyType__3) let constructor__45;
-constructor__45 = (@stay fn constructor(@impliedThis(UsedOnlyAsPropertyType__3) this__18: UsedOnlyAsPropertyType__3) /* return__19 */: Void {
-    return__19 = void
+unreachableFunction__35 = (@stay fn unreachableFunction /* return__12 */: Void {
+    do_call_log(console#70, "");
+    return__12 = void
 });
-@constructorProperty @property(\propertyOfExportedClass) @visibility(\private) @stay @fromType(ExportedClass) let propertyOfExportedClass__36: UsedOnlyAsPropertyType__3;
-@method(\methodOfExportedClass) @visibility(\private) @fn @stay @fromType(ExportedClass) let methodOfExportedClass__37;
-methodOfExportedClass__37 = (@stay fn methodOfExportedClass(@impliedThis(ExportedClass) this__0: ExportedClass) /* return__13 */: Void {
-    exportAndTestReachable__22();
-    return__13 = void
+@fn @method(\constructor) @visibility(\public) @stay @fromType(UsedOnlyAsPropertyType__3) let constructor__60;
+constructor__60 = (@stay fn constructor(@impliedThis(UsedOnlyAsPropertyType__3) this__20: UsedOnlyAsPropertyType__3) /* return__21 */: Void {
+    return__21 = void
 });
-@fn @method(\constructor) @visibility(\public) @stay @fromType(ExportedClass) let constructor__39;
-constructor__39 = (@stay fn constructor(@impliedThis(ExportedClass) this__11: ExportedClass, propertyOfExportedClass__40 /* aka propertyOfExportedClass */: UsedOnlyAsPropertyType__3) /* return__12 */: Void {
-    return__12 = void;
-    setp(propertyOfExportedClass__36, this__11, propertyOfExportedClass__40)
-});
-@method(\methodOfTestReachable) @visibility(\private) @fn @stay @fromType(TestReachableClass__1) @reach(\test) let methodOfTestReachable__41;
-methodOfTestReachable__41 = (@stay fn methodOfTestReachable(@impliedThis(TestReachableClass__1) this__2: TestReachableClass__1) /* return__16 */: Void {
-    transitivelyTestReachable__21();
-    exportAndTestReachable__22();
-    return__16 = void
-});
-@fn @method(\constructor) @visibility(\public) @stay @fromType(TestReachableClass__1) @reach(\test) let constructor__43;
-constructor__43 = (@stay fn constructor(@impliedThis(TestReachableClass__1) this__14: TestReachableClass__1) /* return__15 */: Void {
+@constructorProperty @property(\propertyOfExportedClass) @visibility(\private) @stay @fromType(ExportedClass) let propertyOfExportedClass__51: UsedOnlyAsPropertyType__3;
+@method(\methodOfExportedClass) @visibility(\private) @fn @stay @fromType(ExportedClass) let methodOfExportedClass__52;
+methodOfExportedClass__52 = (@stay fn methodOfExportedClass(@impliedThis(ExportedClass) this__0: ExportedClass) /* return__15 */: Void {
+    exportAndTestReachable__32();
     return__15 = void
 });
-testCase__26 = (@stay fn testCase /* return__17 */: Void {
-    return__17 = void;
-    new TestReachableClass__1()
+@fn @method(\constructor) @visibility(\public) @stay @fromType(ExportedClass) let constructor__54;
+constructor__54 = (@stay fn constructor(@impliedThis(ExportedClass) this__13: ExportedClass, propertyOfExportedClass__55 /* aka propertyOfExportedClass */: UsedOnlyAsPropertyType__3) /* return__14 */: Void {
+    return__14 = void;
+    setp(propertyOfExportedClass__51, this__13, propertyOfExportedClass__55)
 });
-initReachable__23()
+@method(\methodOfTestReachable) @visibility(\private) @fn @stay @fromType(TestReachableClass__1) @reach(\test) let methodOfTestReachable__56;
+methodOfTestReachable__56 = (@stay fn methodOfTestReachable(@impliedThis(TestReachableClass__1) this__2: TestReachableClass__1) /* return__18 */: Void {
+    return__18 = void;
+    transitivelyTestReachable__31();
+    exportAndTestReachable__32()
+});
+@fn @method(\constructor) @visibility(\public) @stay @fromType(TestReachableClass__1) @reach(\test) let constructor__58;
+constructor__58 = (@stay fn constructor(@impliedThis(TestReachableClass__1) this__16: TestReachableClass__1) /* return__17 */: Void {
+    return__17 = void
+});
+testKeptAndTestCalled__41 = (@stay fn testKeptAndTestCalled /* return__29 */: Void {
+    return__29 = void;
+    do_call_log(console#70, "")
+});
+testCase__36 = (@stay fn testCase /* return__19 */: Void {
+    return__19 = void;
+    new TestReachableClass__1();
+    testKeptAndTestCalled__41()
+});
+initReachable__33();
+keepReachable__37 = (@stay fn keepReachable /* return__22 */: Void {
+    return__22 = void;
+    do_call_log(console#70, "")
+});
+testKeepReachable__38 = (@stay fn testKeepReachable /* return__23 */: Void {
+    return__23 = void;
+    do_call_log(console#70, "")
+});
+kept__39 = (@stay fn kept /* return__24 */: Void {
+    return__24 = void;
+    keepReachable__37()
+});
+@method(\keptClassMethod) @visibility(\public) @fn @stay @fromType(KeptClass__4) let keptClassMethod__64;
+keptClassMethod__64 = (@stay fn keptClassMethod(@impliedThis(KeptClass__4) this__5: KeptClass__4) /* return__27 */: Void {
+    return__27 = void
+});
+@fn @method(\constructor) @visibility(\public) @stay @fromType(KeptClass__4) let constructor__66;
+constructor__66 = (@stay fn constructor(@impliedThis(KeptClass__4) this__25: KeptClass__4) /* return__26 */: Void {
+    return__26 = void
+});
+testKept__40 = (@stay fn testKept /* return__28 */: Void {
+    return__28 = void;
+    testKeepReachable__38()
+})

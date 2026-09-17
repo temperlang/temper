@@ -242,7 +242,14 @@ internal class ReachabilityTracer {
                         if (!added) {
                             when {
                                 keepSymbol in metadata -> exportNames.add(name)
-                                keepTestSymbol in metadata -> testNames.add(name)
+                                keepTestSymbol in metadata -> {
+                                    testNames.add(name)
+                                    // This effective root also needs reachability marked.
+                                    tree.replace(tree.size until tree.size) {
+                                        V(vReachSymbol)
+                                        V(vTestSymbol)
+                                    }
+                                }
                                 // Not a root, so we need to evaluate later.
                                 else -> unreachedMap[name] = tree
                             }
