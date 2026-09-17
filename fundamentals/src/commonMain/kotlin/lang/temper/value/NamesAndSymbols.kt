@@ -527,6 +527,15 @@ val vImportedSymbol = Value(importedSymbol)
 val reachSymbol = Symbol("reach")
 val vReachSymbol = Value(reachSymbol)
 
+/**
+ * Marker to treat unreached code as reachable in order to keep it in translations.
+ * The primary use case is helper code for use by backend connected code.
+ */
+val keepSymbol = Symbol("keep")
+
+/** Same as [keepSymbol] but for test reachability. */
+val keepTestSymbol = Symbol("keepTest")
+
 /** Available for general use. For reachability, indicates unreachable. */
 val noneSymbol = Symbol("none")
 val vNoneSymbol = Value(noneSymbol)

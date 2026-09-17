@@ -71,3 +71,5 @@ Just about any basic test of functionality will do here.
       bitset.add(5050);
       assert(bitset.contains(5050));
     }
+
+TODO Test connected used by the test and a `@keepTest` helper for that.

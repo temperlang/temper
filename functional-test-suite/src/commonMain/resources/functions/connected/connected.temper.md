@@ -78,3 +78,18 @@ And reuse the same hider instance just for fun.
 new Hider(3).plus(4): 7
 new Hider(3).times(4): 12
 ```
+
+## Kept definitions
+
+TODO Use this for backends as we provide stable naming for unexported things.
+
+Some connected code might want to use a unexported helper written in Temper in
+the same module, so a `@keep` decorator prevents such from being pruned.
+
+    @keep
+    let sumOf3(a: Int, b: Int, c: Int): Int {
+      a + b + c
+    }
+
+There's also a `@keepTest` decorator to retain code for connected code for tests
+only, but we don't test testing here.
