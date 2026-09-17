@@ -2,7 +2,7 @@
 
 Here we test the `Map` type as well as related types `Mapped`, `MapBuilder`, and
 `Pair`. These are similar to `Listed`, `ListBuilder`, and `ListEntry`. We
-also have marker interface `MapKey`, which might allow for custom key types in
+also have interface `MapKey`, which might allow for custom key types in
 the future but for now just marks `Int` and `String` as usable keys.
 
 
@@ -13,7 +13,7 @@ testing against both read-only Map and read-write MapBuilder.
 
 Also demonstrate use of the ambivalent Mapped type.
 
-    let listKeys<K extends MapKey, V>(mapped: Mapped<K, V>): List<K> {
+    let listKeys<K extends MapKey<K>, V>(mapped: Mapped<K, V>): List<K> {
       // TODO Lambda return type inference doesn't work here.
       mapped.toList().map { (entry): K => entry.key }
     }

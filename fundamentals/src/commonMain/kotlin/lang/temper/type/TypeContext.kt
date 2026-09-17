@@ -69,7 +69,7 @@ class TypeContext {
                 }
                 (mergeUpOrNull(t, u) ?: mergeUpOrNull(u, t))?.let { return@lubHelper it }
                 if (simplify && t is NominalType && u is NominalType) {
-                    return leastCommonSuperType(listOf(t, u))
+                    return@lub leastCommonSuperType(listOf(t, u))
                 }
                 // Tried everything else. Take the easy way out.
                 if (simplify) {
@@ -86,7 +86,7 @@ class TypeContext {
      */
     fun leastCommonSuperType(types: Iterable<NominalType>): StaticType {
         val superGroups = types.map { superTypeTreeOf(it).byDefinition }
-        // First narrow down to common generic definitions.
+        // First, narrow down to common generic definitions.
         val commons = superGroups.map { it.keys }.intersectAll()
         // For now, just find valid parameterizations in common that are supertypes of all.
         val valids = commons.associateWith { typeDef ->
@@ -94,7 +94,7 @@ class TypeContext {
             // TODO Variance-aware supertype bindings. Or even just go to all `Wildcard` bindings?
             allTypes.filter { type -> types.all { isSubType(it, type) } }.toSet()
         }.filter { it.value.isNotEmpty() }
-        // Keep only the nearest/least type definitions, and presume we want the earlier valid types for each.
+        // Keep only the nearest/least type definitions and presume we want the earlier valid types for each.
         val validTypes = valids.values.flatten()
         val leasts = buildSet {
             addAll(valids.keys)
@@ -149,7 +149,7 @@ class TypeContext {
                 if (isValueType(t) && isValueType(u)) {
                     // Never if they're disjoint
                     if (t is FunctionType && u is FunctionType) {
-                        // Not equal and no sub-typing relationship
+                        // Not equal and no subtyping relationship
                         return@glbHelper OrType.emptyOrType
                     } else if (t is NominalType && u is NominalType) {
                         // If they're disjoint, then Never.
@@ -211,10 +211,12 @@ class TypeContext {
      * > Like lub (§4.10.4), upward projection and downward projection may
      * > produce infinite types, due to the recursion on type variable bounds.
      *
-     * To avoid infinite recursion in isSubType on types like
+     * We need to avoid infinite recursion in isSubType on types like the below:
+     *
      *     Comparable<T extends Comparable<T>>
-     * we capture pairs that we're checking and assume true if we reenter
-     * with the same pair.
+     *
+     * To that end, we capture pairs that we're checking and assume true if we
+     * reenter with the same pair.
      */
     private val optimisticIfSubTypesRecursivelyReached =
         mutableSetOf<Pair<StaticType, StaticType>>()
@@ -223,7 +225,7 @@ class TypeContext {
      * True if t1 is a subtype of t2 per a subtype relation analogous to
      * https://docs.oracle.com/javase/specs/jls/se8/html/jls-4.html#jls-4.10.2
      *
-     * @param t the possible sub-type.
+     * @param t the possible subtype.
      * @param u the possible super-type.
      */
     fun isSubType(t: StaticType, u: StaticType): Boolean {
@@ -340,15 +342,44 @@ class TypeContext {
     }
 
     /**
-     * If we're comparing two types like
-     * *     fn<T__0>(T__0): T__0
+     * The empty list if the given actual can bind to the given type formal.
      *
-     * and
-     * *     fn<T__1>(T__1): T__1
+     * Otherwise, the list of [formal]'s [upper bounds][TypeFormal.upperBounds] that are not
+     * compatible with [actual].
+     */
+    fun checkCanBindTo(
+        actual: StaticType,
+        formal: TypeFormal,
+        allBindings: TypeBindingMapper,
+    ): List<StaticType> {
+        // We might have a situation like this:
+
+        // Actual: <T extends MapKey<T>>
+        // Formal: <U extends MapKey<U>>
+
+        // In that case, allBindings should map U to T, so
+        // we can adjust U's upperBounds below to `extends MapKey<T>`
+        // and when we check if `T` is a subtype of each of U's
+        // upper bounds, we end up checking if T is a subtype of MapKey<T>,
+        // which it is by its own `extends` clause.
+
+        return formal.upperBounds.filter { upperBound ->
+            val adjustedUpperBound = MkType.map(upperBound, allBindings)
+
+            !isSubType(actual, adjustedUpperBound)
+        }
+    }
+
+    /**
+     * Maybe we're comparing two types like the below which each have their own type formals.
      *
-     * the names of the formals do not matter.
+     *     fn<T__0>(T__0): T__0
      *
-     * We substitute the names so that we can do structural comparison when sub-typing.
+     *     fn<T__1>(T__1): T__1
+     *
+     * When comparing those two, the names of the formals do not matter.
+     *
+     * We substitute the names so that we can do structural comparison when subtyping.
      */
     private fun formalCompatibleFunctionType(
         t: FunctionType,
@@ -373,18 +404,8 @@ class TypeContext {
                 override fun mapDefinition(d: TypeDefinition): TypeDefinition =
                     compatibleTypeFormalMap[d] ?: d
             },
-            mutableMapOf(),
         ) as FunctionType
     }
-
-    private data class SubBindingCheckRecord(
-        val b: TypeActual,
-        val c: TypeActual,
-        val formalIndex: Int,
-        val typeDef: TypeDefinition,
-    )
-    private val optimisticIfBindingsRecursivelyReached =
-        mutableSetOf<SubBindingCheckRecord>()
 
     /**
      * @param b The potential sub-binding
@@ -402,20 +423,6 @@ class TypeContext {
     ): Boolean {
         if (b == c) { // Handles value bindings
             return true
-        }
-        if (b is InfiniBinding || c is InfiniBinding) {
-            val subBindingCheckRecord = SubBindingCheckRecord(b, c, formalIndex, typeDef)
-            if (subBindingCheckRecord in optimisticIfBindingsRecursivelyReached) {
-                return true
-            }
-            val bf = if (b is InfiniBinding) b.get() else b
-            val cf = if (c is InfiniBinding) c.get() else c
-            optimisticIfBindingsRecursivelyReached.add(subBindingCheckRecord)
-            try {
-                return isSubBinding(bf, cf, formalIndex, typeDef)
-            } finally {
-                optimisticIfBindingsRecursivelyReached.remove(subBindingCheckRecord)
-            }
         }
         if (b is StaticType && c is StaticType) {
             val formal = typeDef.formals[formalIndex]

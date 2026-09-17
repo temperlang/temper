@@ -927,8 +927,8 @@ class RustBackendTest {
             |let things = [1, 2] as List<AnyValue>; // making a list of ints but expect list of AnyValue
             |let more = [1 as AnyValue, 2 as AnyValue]; // cast elided in frontend?
             |let still: List<AnyValue> = [1, 2]; // again list of ints treated as list of AnyValue
-            |let yet = [1, "two"];
-            |let yetAgain: List<MapKey> = yet; // MapKey only supported for constraint, not yet explicit value type
+            |let yet = ["one", "two"];
+            |let yetAgain: List<MapKey<String>> = yet; // MapKey only supported for constraint, not yet explicit value type
         """.trimMargin(),
         // TODO Some would be fixed by changes recommended in `TyperTest.typeContextWinsOverInsidesButNotYet` comments.
         // TODO But especially trying to `ok_or_else` with no Result-producing code probably needs some RustTranslator
@@ -942,8 +942,8 @@ class RustBackendTest {
             |            let things__0: temper_core::List<temper_core::AnyValue> = std::sync::Arc::new(vec![1, 2]).unwrap();
             |            let more__0: temper_core::List<i32> = std::sync::Arc::new(vec![1, 2]);
             |            let still__0: temper_core::List<temper_core::AnyValue> = std::sync::Arc::new(vec![1, 2]);
-            |            let yet__0: temper_core::List<temper_core::MapKey> = std::sync::Arc::new(vec![temper_core::MapKey::new(1), temper_core::MapKey::new(std::sync::Arc::new("two".to_string()))]);
-            |            let yetAgain__0: temper_core::List<temper_core::MapKey> = yet__0.clone();
+            |            let yet__0: temper_core::List<std::sync::Arc<String>> = std::sync::Arc::new(vec![std::sync::Arc::new("one".to_string()), std::sync::Arc::new("two".to_string())]);
+            |            let yetAgain__0: temper_core::List<temper_core::MapKey<std::sync::Arc<String>>> = yet__0.clone();
             |            Ok(())
             |    }).clone()
             |}
@@ -1969,7 +1969,7 @@ class RustBackendTest {
         assertGenerateWanted(
             // Both required and optional constructor params here.
             temper = """
-                |export class Hi<T, U extends MapKey>(
+                |export class Hi<T, U extends MapKey<U>>(
                 |  public t: T?,
                 |  private u: U,
                 |  public i: Int = 42,

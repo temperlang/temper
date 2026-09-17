@@ -913,6 +913,7 @@ internal fun typeDisambiguateMacro(
             }
             for (problem in problems) {
                 errorNodes.add(errorNodeFor(freeTarget(nextEdge), problem))
+                problem.logTo(macroEnv.logSink)
             }
 
             val formalSymbol = (formalName as? NameLeaf)?.content?.toSymbol()
@@ -926,9 +927,19 @@ internal fun typeDisambiguateMacro(
                     emptyList(),
                 )
                 errorNodes.add(errorNodeFor(nextEdge.target, problem))
+                problem.logTo(macroEnv.logSink)
             } else {
-                val predefinedFormalDefinition = predefinedFormalDecls?.first {
-                    it.word == formalSymbol
+                val predefinedFormalDefinition = try {
+                    predefinedFormalDecls?.first {
+                        it.word == formalSymbol
+                    }
+                } catch (e: NoSuchElementException) {
+                    // If you're here, you're editing Core.temper and need
+                    // to make corresponding changes to WellKnownTypes.kt,
+                    // or vice versa.
+                    throw NoSuchElementException(
+                        "${doc.context.formatPosition(formalPos)}: No formal $formalSymbol in $typeShape",
+                    ).initCause(e)
                 }
                 val stableFormalName = predefinedFormalDefinition?.name
                     ?: doc.nameMaker.unusedSourceName(ParsedName(formalSymbol.text))

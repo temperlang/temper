@@ -249,7 +249,7 @@ class TyperTest {
         |    // which may be required for backwards compatibility.
         |
         |    first(str, int);
-        |/// ┗━━━━━━━━━━━━━┛ : MapKey
+        |/// ┗━━━━━━━━━━━━━┛ : AnyValue
         |
         """.trimMargin(),
     )
@@ -1468,7 +1468,7 @@ class TyperTest {
         |    }
         """.trimMargin(),
         wantErrors = listOf(
-            "2+23-35: No member toString in Equatable | AnyValue!",
+            "2+23-35: No member toString in AnyValue!",
             "2+23-35: Type Invalid mentions Invalid",
             "2+25-33: Type Invalid mentions Invalid",
         ),

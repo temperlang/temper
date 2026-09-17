@@ -40,7 +40,7 @@ A patch is a list of [changes][Change].
 The diff function compares two inputs, and computes a [Patch]: the changes
 from [left] required to derive [right].
 
-    export let diff<T extends Equatable /*-| Change<T> | List<T> | Patch<T> */>(
+    export let diff<T extends Equatable<T> /*-| Change<T> | List<T> | Patch<T> */>(
       left: List<T>,
       right: List<T>,
       /** Are two items the same? */

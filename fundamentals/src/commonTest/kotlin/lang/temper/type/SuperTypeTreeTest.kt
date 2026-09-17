@@ -76,4 +76,44 @@ class SuperTypeTreeTest {
 
         assertEquals(orNullStr, superTypeTree.type)
     }
+
+    @Test
+    fun referenceToFormal() = TypeTestHarness(
+        """
+            |interface Foo<T>;
+            |interface Bar extends Foo<String>;
+            |interface Baz;
+            |interface Boo;
+            |
+            |interface I<U extends Bar & Baz>;
+        """.trimMargin(),
+    ).run {
+        val defFoo = getDefinition("Foo") as TypeShape
+        val defBar = getDefinition("Bar") as TypeShape
+        val defBaz = getDefinition("Baz") as TypeShape
+        val defBoo = getDefinition("Boo") as TypeShape
+
+        val defU = getDefinition("I")!!.formals[0]
+
+        val stt = SuperTypeTree.of(MkType.nominal(defU))
+        val fooSupers = stt[defFoo]
+        val barSupers = stt[defBar]
+        val bazSupers = stt[defBaz]
+        val booSupers = stt[defBoo]
+
+        assertEquals(
+            """
+                |Foo : [Foo<String>]
+                |Bar : [Bar]
+                |Baz : [Baz]
+                |Boo : []
+            """.trimMargin(),
+            """
+                |Foo : $fooSupers
+                |Bar : $barSupers
+                |Baz : $bazSupers
+                |Boo : $booSupers
+            """.trimMargin().replace(Regex("""__\d+"""), ""),
+        )
+    }
 }
