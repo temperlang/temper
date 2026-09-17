@@ -42,6 +42,36 @@ class PyBackendTest {
     )
 
     @Test
+    fun unexported() = assertGeneratedCode(
+        input = $$"""
+            |let game(name: String): String { "Hello, ${name}" }
+            |class Fame {
+            |  private shame(name: String): String { game(name) }
+            |  public blame(name: String): String { "${shame(name)}!" }
+            |}
+            |export let tame(name: String): String { new Fame().blame(name) }
+        """.trimMargin(),
+        want = """
+            |from builtins import str as str1
+            |from temper_core import str_cat as str_cat0
+            |str_cat_21 = str_cat0
+            |class _Fame:
+            |    __slots__ = ()
+            |    def shame_12(this_1, name_13: 'str1', /) -> 'str1':
+            |        return game_9(name_13)
+            |    def blame(this_2, name_16: 'str1', /) -> 'str1':
+            |        return str_cat_21(this_2.shame_12(name_16), '!')
+            |    def __init__(this, /) -> None:
+            |        pass
+            |def game_9(name_10: 'str1', /) -> 'str1':
+            |    return str_cat_21('Hello, ', name_10)
+            |def tame(name_19: 'str1', /) -> 'str1':
+            |    return _Fame().blame(name_19)
+            |
+        """.trimMargin(),
+    )
+
+    @Test
     fun overloadedMethods() = assertGeneratedCode(
         input = """
             |export class IntMaker(public radix: Int32) {
