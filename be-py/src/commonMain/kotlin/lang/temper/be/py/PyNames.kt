@@ -67,11 +67,13 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
             val (localName, descriptor) = findLocal(module, name)
             val kind = descriptor?.idKind() ?: TmpL.IdKind.Value
             val reach = descriptor?.idReach(ignoreImport = true) ?: TmpL.IdReach.Internal
-            val outName = pythonizeName(localName, kind, reach).let { outName ->
+            // TODO Also treat params as non-local?
+            val local = context?.node?.let { it is TmpL.TopLevel || it is TmpL.DotAccessible } == false
+            val outName = pythonizeName(localName, kind, reach, local = local).let { outName ->
                 when (chosenNames.putIfAbsent(module to outName, name)) {
                     null, name -> outName
-                    else -> pythonizeName(localName, kind, TmpL.IdReach.Private).also { uniqueOutName ->
-                        chosenNames[module to uniqueOutName] = name
+                    else -> pythonizeName(localName, kind, TmpL.IdReach.Private, local = local).also { unique ->
+                        chosenNames[module to unique] = name
                     }
                 }
             }
@@ -143,10 +145,10 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
 
     fun isDeclaredTopLevel(name: ResolvedName): Boolean = nameInfo[module to name]?.isDeclaredTopLevel != false
 
-    private fun pythonizeName(name: ResolvedName, kind: TmpL.IdKind, reach: TmpL.IdReach) =
+    private fun pythonizeName(name: ResolvedName, kind: TmpL.IdKind, reach: TmpL.IdReach, local: Boolean = false) =
         when (name) {
-            is Temporary -> chooseSourceName(name, name.nameHint, name.uid, kind, TmpL.IdReach.Private)
-            is SourceName -> chooseSourceName(name, name.baseName.nameText, name.uid, kind, reach)
+            is Temporary -> chooseSourceName(name, name.nameHint, name.uid, kind, TmpL.IdReach.Private, local = local)
+            is SourceName -> chooseSourceName(name, name.baseName.nameText, name.uid, kind, reach, local = local)
             is BuiltinName -> OutName(styleName(name.builtinKey, kind), sourceName = name)
             is ExportedName -> {
                 val styledName = styleName(toSafePrefix(name), kind)
@@ -168,6 +170,7 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
         uid: Int,
         kind: TmpL.IdKind,
         reach: TmpL.IdReach,
+        local: Boolean,
     ): OutName {
         val styledName = styleName(safeIdent(prefix), kind)
         val safeName = when (reach) {
@@ -175,8 +178,13 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
                 TmpL.IdKind.Type ->
                     "_$styledName" // won't be keyword if not starting with `_`, which has other issues
                 // Type formals still need suffices for uniqueness right now.
-                TmpL.IdKind.TypeFormal, TmpL.IdKind.Value ->
-                    concatIfVerbose(styledName, "_$uid") // numeric suffix, won't be a keyword
+                TmpL.IdKind.TypeFormal, TmpL.IdKind.Value -> {
+                    val adjusted = when {
+                        local -> styledName
+                        else -> "_$styledName" // hint hidden if not local
+                    }
+                    concatIfVerbose(adjusted, "_$uid") // numeric suffix, won't be a keyword
+                }
             }
             TmpL.IdReach.Internal -> "_$styledName"
             TmpL.IdReach.External -> avoidReserved(styledName)
