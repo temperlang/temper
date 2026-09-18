@@ -32,6 +32,7 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
     private var nameCounter = 0
     private val supportCodeMap = mutableMapOf<SupportCode, OutName>()
     private val nameInfo = mutableMapOf<Pair<ModuleName, ResolvedName>, PyInfo>()
+    private val chosenNames = mutableMapOf<Pair<ModuleName, OutName>, ResolvedName>()
     private val pendingImports = mutableMapOf<Pair<ModuleName, ResolvedName>, (PyIdentifierName) -> Unit>()
     private val importedNames = mutableMapOf<Pair<ModuleName, ResolvedName>, OutName>()
     private var moduleName: ModuleName? = null
@@ -66,7 +67,14 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
             val (localName, descriptor) = findLocal(module, name)
             val kind = descriptor?.idKind() ?: TmpL.IdKind.Value
             val reach = descriptor?.idReach(ignoreImport = true) ?: TmpL.IdReach.Internal
-            val outName = pythonizeName(localName, kind, reach)
+            val outName = pythonizeName(localName, kind, reach).let { outName ->
+                when (chosenNames.putIfAbsent(module to outName, name)) {
+                    null, name -> outName
+                    else -> pythonizeName(localName, kind, TmpL.IdReach.Private).also { uniqueOutName ->
+                        chosenNames[module to uniqueOutName] = name
+                    }
+                }
+            }
             nameInfo[module to name] = PyInfo(
                 outName = outName,
                 isDeclaredTopLevel = descriptor?.node is TmpL.TopLevelDeclaration,
@@ -89,7 +97,7 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
                 importedName = null,
             )
             lookup.allModules.forEach { module ->
-                nameInfo[module to name] = info
+                nameInfo.putIfAbsent(module to name, info)
             }
         }
         visitor.importData { moduleName, externalName, localName ->
@@ -163,13 +171,14 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
     ): OutName {
         val styledName = styleName(safeIdent(prefix), kind)
         val safeName = when (reach) {
-            TmpL.IdReach.Internal -> when (kind) {
+            TmpL.IdReach.Private -> when (kind) {
                 TmpL.IdKind.Type ->
                     "_$styledName" // won't be keyword if not starting with `_`, which has other issues
                 // Type formals still need suffices for uniqueness right now.
                 TmpL.IdKind.TypeFormal, TmpL.IdKind.Value ->
                     concatIfVerbose(styledName, "_$uid") // numeric suffix, won't be a keyword
             }
+            TmpL.IdReach.Internal -> "_$styledName"
             TmpL.IdReach.External -> avoidReserved(styledName)
         }
         return OutName(safeName, sourceName = name)

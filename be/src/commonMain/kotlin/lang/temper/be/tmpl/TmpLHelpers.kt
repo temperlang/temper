@@ -358,13 +358,13 @@ fun TmpL.FunctionDeclaration.idReach() = when (name.name) {
 fun Visibility.idReach() = if (this >= Visibility.Protected) {
     TmpL.IdReach.External
 } else {
-    TmpL.IdReach.Internal
+    TmpL.IdReach.Private
 }
 
 fun TmpL.Visibility.idReach() = if (this.ordinal >= TmpL.Visibility.Protected.ordinal) {
     TmpL.IdReach.External
 } else {
-    TmpL.IdReach.Internal
+    TmpL.IdReach.Private
 }
 
 fun TmpL.VisibilityModifier.idReach() = visibility.idReach()

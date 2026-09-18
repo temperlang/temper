@@ -95,6 +95,7 @@ object TmpL {
     enum class IdReach : FormattableEnum {
         External,
         Internal,
+        Private,
     }
 
     enum class TypeDeclarationKind : FormattableEnum {

@@ -22,21 +22,34 @@ class PyBackendTest {
             |export class Thing<T> {
             |  public identity<U>(u: U, f: fn (U): T): T { f(u) }
             |}
+            |let ls: List<Int> = [0, 1, 2, 3];
+            |export let evens = ls.filter { x => (x & 1) == 0 };
+            |export let odds = ls.filter { x => (x & 1) == 1 };
         """.trimMargin(),
         want = """
-            |from typing import Any as Any0, TypeVar as TypeVar1, Generic as Generic2, Callable as Callable3
-            |T_1 = TypeVar1('T_1', bound = Any0)
-            |U_3 = TypeVar1('U_3', bound = Any0)
-            |class Thing(Generic2[T_1]):
+            |from typing import Any as Any1, TypeVar as TypeVar2, Generic as Generic3, Callable as Callable4, Sequence as Sequence5
+            |from builtins import int as int6, bool as bool7
+            |from temper_core import list_filter as list_filter0
+            |_list_filter = list_filter0
+            |T_1 = TypeVar2('T_1', bound = Any1)
+            |U_3 = TypeVar2('U_3', bound = Any1)
+            |class Thing(Generic3[T_1]):
             |    __slots__ = ()
-            |    def identity(this_2, u_11: 'U_3', f_12: 'Callable3[[U_3], T_1]', /) -> 'T_1':
-            |        return f_12(u_11)
+            |    def identity(this_2, u_12: 'U_3', f_13: 'Callable4[[U_3], T_1]', /) -> 'T_1':
+            |        return f_13(u_12)
             |    def __init__(this, /) -> None:
             |        pass
-            |T_0 = TypeVar1('T_0', bound = Any0)
-            |def identity(t_8: 'T_0', /) -> 'T_0':
+            |T_0 = TypeVar2('T_0', bound = Any1)
+            |def identity(t_9: 'T_0', /) -> 'T_0':
             |    "They're the same thing!\n\nt__0: T__0\n  The thing to return\n"
-            |    return t_8
+            |    return t_9
+            |_ls: 'Sequence5[int6]' = (0, 1, 2, 3)
+            |def _fn(x_16: 'int6', /) -> 'bool7':
+            |    return x_16 & 1 == 0
+            |evens: 'Sequence5[int6]' = _list_filter(_ls, _fn)
+            |def fn_20(x_17: 'int6', /) -> 'bool7':
+            |    return x_17 & 1 == 1
+            |odds: 'Sequence5[int6]' = _list_filter(_ls, fn_20)
             |
         """.trimMargin(),
     )
@@ -44,9 +57,10 @@ class PyBackendTest {
     @Test
     fun unexported() = assertGeneratedCode(
         input = $$"""
-            |let game(name: String): String { "Hello, ${name}" }
+            |// `str_cat` was `game` for rhyming, but `str_cat` lets us conflict with import.
+            |let str_cat(name: String): String { "Hello, ${name}" }
             |class Fame {
-            |  private shame(name: String): String { game(name) }
+            |  private shame(name: String): String { str_cat(name) }
             |  public blame(name: String): String { "${shame(name)}!" }
             |}
             |export let tame(name: String): String { new Fame().blame(name) }
@@ -54,17 +68,17 @@ class PyBackendTest {
         want = """
             |from builtins import str as str1
             |from temper_core import str_cat as str_cat0
-            |str_cat_21 = str_cat0
+            |_str_cat = str_cat0
             |class _Fame:
             |    __slots__ = ()
             |    def shame_12(this_1, name_13: 'str1', /) -> 'str1':
-            |        return game_9(name_13)
+            |        return _game(name_13)
             |    def blame(this_2, name_16: 'str1', /) -> 'str1':
-            |        return str_cat_21(this_2.shame_12(name_16), '!')
+            |        return _str_cat(this_2.shame_12(name_16), '!')
             |    def __init__(this, /) -> None:
             |        pass
-            |def game_9(name_10: 'str1', /) -> 'str1':
-            |    return str_cat_21('Hello, ', name_10)
+            |def _game(name_10: 'str1', /) -> 'str1':
+            |    return _str_cat('Hello, ', name_10)
             |def tame(name_19: 'str1', /) -> 'str1':
             |    return _Fame().blame(name_19)
             |
