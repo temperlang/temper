@@ -11,6 +11,7 @@ import lang.temper.be.py.PyIdentifierGrammar.safeIdent
 import lang.temper.be.tmpl.SupportCode
 import lang.temper.be.tmpl.TmpL
 import lang.temper.common.sprintf
+import lang.temper.lexer.Genre
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.ExportedName
@@ -27,7 +28,11 @@ import lang.temper.name.Temporary
 import lang.temper.name.identifiers.IdentStyle
 import lang.temper.type.WellKnownTypes
 
-class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = false) {
+class PyNames(
+    visit: LookupNameVisitor?,
+    private val abbreviated: Boolean = false,
+    private val genre: Genre = Genre.Library,
+) {
     private val nameExclusion = pyReservedWordsAndNames.toMutableSet()
     private var nameCounter = 0
     private val supportCodeMap = mutableMapOf<SupportCode, OutName>()
@@ -186,7 +191,10 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
                     concatIfVerbose(adjusted, "_$uid") // numeric suffix, won't be a keyword
                 }
             }
-            TmpL.IdReach.Internal -> "_$styledName"
+            TmpL.IdReach.Internal -> when (genre) {
+                Genre.Documentation -> styledName
+                Genre.Library -> "_$styledName"
+            }
             TmpL.IdReach.External -> avoidReserved(styledName)
         }
         return OutName(safeName, sourceName = name)
