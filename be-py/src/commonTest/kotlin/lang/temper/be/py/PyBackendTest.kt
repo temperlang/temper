@@ -30,7 +30,7 @@ class PyBackendTest {
             |from typing import Any as Any1, TypeVar as TypeVar2, Generic as Generic3, Callable as Callable4, Sequence as Sequence5
             |from builtins import int as int6, bool as bool7
             |from temper_core import list_filter as list_filter0
-            |_list_filter = list_filter0
+            |list_filter_22 = list_filter0
             |T_1 = TypeVar2('T_1', bound = Any1)
             |U_3 = TypeVar2('U_3', bound = Any1)
             |class Thing(Generic3[T_1]):
@@ -46,10 +46,10 @@ class PyBackendTest {
             |_ls: 'Sequence5[int6]' = (0, 1, 2, 3)
             |def _fn(x_16: 'int6', /) -> 'bool7':
             |    return x_16 & 1 == 0
-            |evens: 'Sequence5[int6]' = _list_filter(_ls, _fn)
+            |evens: 'Sequence5[int6]' = list_filter_22(_ls, _fn)
             |def fn_20(x_17: 'int6', /) -> 'bool7':
             |    return x_17 & 1 == 1
-            |odds: 'Sequence5[int6]' = _list_filter(_ls, fn_20)
+            |odds: 'Sequence5[int6]' = list_filter_22(_ls, fn_20)
             |
         """.trimMargin(),
     )
@@ -68,17 +68,17 @@ class PyBackendTest {
         want = """
             |from builtins import str as str1
             |from temper_core import str_cat as str_cat0
-            |_str_cat = str_cat0
+            |str_cat_21 = str_cat0
             |class _Fame:
             |    __slots__ = ()
             |    def shame_12(this_1, name_13: 'str1', /) -> 'str1':
-            |        return _game(name_13)
+            |        return _str_cat(name_13)
             |    def blame(this_2, name_16: 'str1', /) -> 'str1':
-            |        return _str_cat(this_2.shame_12(name_16), '!')
+            |        return str_cat_21(this_2.shame_12(name_16), '!')
             |    def __init__(this, /) -> None:
             |        pass
-            |def _game(name_10: 'str1', /) -> 'str1':
-            |    return _str_cat('Hello, ', name_10)
+            |def _str_cat(name_10: 'str1', /) -> 'str1':
+            |    return str_cat_21('Hello, ', name_10)
             |def tame(name_19: 'str1', /) -> 'str1':
             |    return _Fame().blame(name_19)
             |
@@ -111,7 +111,7 @@ class PyBackendTest {
             |class IntMaker:
             |    radix_7: 'int3'
             |    __slots__ = ('radix_7',)
-            |    def int64_to_int(this_0, int_9: 'int64_24', /) -> 'int3':
+            |    def int64_to_int(this_0, int_9: '_int64', /) -> 'int3':
             |        return int64_to_int32_26(int_9)
             |    def string_to_int(this_1, string_12: 'str4', /) -> 'int3':
             |        return string_to_int32_27(string_12, this_1.radix_7)
@@ -120,7 +120,7 @@ class PyBackendTest {
             |    @property
             |    def radix(this_24, /) -> 'int3':
             |        return this_24.radix_7
-            |def crazy_sum(int_maker_16: 'IntMaker', int_17: 'int64_24', string_18: 'str4', /) -> 'int3':
+            |def crazy_sum(int_maker_16: 'IntMaker', int_17: '_int64', string_18: 'str4', /) -> 'int3':
             |    int_int_20: 'int3' = int_maker_16.int64_to_int(int_17)
             |    string_int_21: 'int3' = int_maker_16.string_to_int(string_18)
             |    return int_add_28(int_int_20, string_int_21)
@@ -192,19 +192,19 @@ class PyBackendTest {
             |console_4: 'LoggingConsole3' = LoggingConsole3(__name__)
             |def f() -> 'Dict4[str5, int6]':
             |    return {}
-            |m_1: 'Union7[(Dict4[str5, int6]), None]' = None
-            |this_9: 'Sequence8[int6]' = (1, 2, 3)
-            |n_11: 'int6' = len_16(this_9)
-            |i_12: 'int6' = 0
-            |while i_12 < n_11:
-            |    el_13: 'int6' = list_get_17(this_9, i_12)
-            |    i_12 = int_add_18(i_12, 1)
+            |_m: 'Union7[(Dict4[str5, int6]), None]' = None
+            |_this: 'Sequence8[int6]' = (1, 2, 3)
+            |_n: 'int6' = len_16(_this)
+            |_i: 'int6' = 0
+            |while _i < _n:
+            |    el_13: 'int6' = list_get_17(_this, _i)
+            |    _i = int_add_18(_i, 1)
             |    e_3: 'int6' = el_13
             |    if e_3 == 2:
-            |        m_1 = {}
+            |        _m = {}
             |t_7: 'bool9'
-            |if not m_1 is None:
-            |    t_7 = isinstance10(m_1, Dict4)
+            |if not _m is None:
+            |    t_7 = isinstance10(_m, Dict4)
             |else:
             |    t_7 = False
             |if t_7:
@@ -255,9 +255,9 @@ class PyBackendTest {
             |from builtins import int as int2, list as list0
             |from temper_core import list_builder_add as list_builder_add3
             |list_1 = list0
-            |b_0: 'MutableSequence1[int2]' = list_1()
-            |b_0.append(1)
-            |list_builder_add3(b_0, 2, 0)
+            |_b: 'MutableSequence1[int2]' = list_1()
+            |_b.append(1)
+            |list_builder_add3(_b, 2, 0)
             |
         """.trimMargin(),
     )
@@ -312,7 +312,7 @@ class PyBackendTest {
             |        pass
             |class C:
             |    __slots__ = ()
-            |    def __init__(this, /) -> None:
+            |    def __init__(this_0, /) -> None:
             |        pass
             |    def encode_to_json(this_20, p_15: 'JsonProducer', /) -> 'None':
             |        p_15.start_object()
@@ -479,7 +479,7 @@ class PyBackendTest {
             |    @staticmethod
             |    def g(n_53: 'int2', /) -> 'int2':
             |        return int_add_69(D.f_49(n_53), n_53)
-            |    def __init__(this, /) -> None:
+            |    def __init__(this_22, /) -> None:
             |        pass
             |D._i = 1
             |
@@ -702,7 +702,7 @@ class PyBackendTest {
             |            async_launch_22 = async_launch1
             |            console_5: 'LoggingConsole2' = LoggingConsole2(__name__)
             |            @adapt_generator_factory3
-            |            def fn_16(do_await_4) -> 'Generator8[empty, None, None]':
+            |            def _fn(do_await_4) -> 'Generator8[empty, None, None]':
             |                try:
             |                    r_3: 'NetResponse' = yield do_await_4(NetRequest('data:text/plain,Hello World!').send())
             |                    if r_3.status == 200:
@@ -721,7 +721,7 @@ class PyBackendTest {
             |                        console_5.log(str_cat_21('Got ', body_4, ' / ', t_14))
             |                except Exception7:
             |                    console_5.log('failed')
-            |            async_launch_22(fn_16)
+            |            async_launch_22(_fn)
             |
             |            ```,
             |        },

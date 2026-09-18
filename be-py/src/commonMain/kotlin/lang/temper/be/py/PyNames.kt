@@ -145,7 +145,7 @@ class PyNames(visit: LookupNameVisitor?, private val abbreviated: Boolean = fals
 
     private fun pythonizeName(name: ResolvedName, kind: TmpL.IdKind, reach: TmpL.IdReach) =
         when (name) {
-            is Temporary -> chooseSourceName(name, name.nameHint, name.uid, kind, reach)
+            is Temporary -> chooseSourceName(name, name.nameHint, name.uid, kind, TmpL.IdReach.Private)
             is SourceName -> chooseSourceName(name, name.baseName.nameText, name.uid, kind, reach)
             is BuiltinName -> OutName(styleName(name.builtinKey, kind), sourceName = name)
             is ExportedName -> {
